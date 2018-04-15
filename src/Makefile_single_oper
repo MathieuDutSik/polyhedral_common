@@ -1,0 +1,26 @@
+#PROGRAM		= sv_exact
+PROGRAM		= LATT_lll
+
+
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I.
+
+
+SRC_CPP		= $(PROGRAM:%=%.cpp)
+SRC_H           = $(wildcard *.h)
+
+CXX		= g++ -std=c++11
+#CXX		= g++
+DEBUGFLAG       = -g
+CFLAGS 		= -Wall -ansi -O3
+INCFLAG 	= -I$(EIGEN_PATH)
+LIBS		= -L/usr/local/lib -lm -lgmp -lgmpxx
+
+all:	$(PROGRAM)
+
+$(PROGRAM): 	$(SRC_CPP) $(SRC_H)
+		@echo
+		@echo link $@
+		$(CXX) $(DEBUGFLAG) $(CFLAGS) $(INCFLAG) $(CLOCAL) $@.cpp $(LIBS) -o $@
+
+clean:;
+	rm -f $(PROGRAM)

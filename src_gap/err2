@@ -1,0 +1,675 @@
+SEARCH : Doing the ordinary Schreier Sims
+   StabChainStrong call at eLev=0 |newgens|=2
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=0 |Stot.stabilizer|=1
+BPT/POS bpt=454 pos=-1
+InsertTrivialStabilizer pnt=0 bpt=454 pos=-1
+   Initializing cycles
+|Stot.stabilizer|=2 eLev=0
+|Stot.stabilizer[eLev].orbit|=1
+old = 1
+Before genlabels =
+Before test old = 1 0 0
+transversal = 0 -1 -1 -1 -1 -1 -1 -1 -1 -1
+After genlabels = 1 2
+Before cycles = 0
+i=0
+  j=1
+    After the test img=9
+  j=2
+    After the test img=1
+i=1
+  j=1
+    After the test img=8
+  j=2
+    After the test img=9
+i=2
+  j=1
+    After the test img=0
+  j=2
+    After the test img=0
+i=3
+  j=1
+    After the test img=7
+  j=2
+    After the test img=8
+i=4
+  j=1
+    After the test img=6
+  j=2
+    After the test img=7
+i=5
+  j=1
+    After the test img=5
+  j=2
+    After the test img=6
+i=6
+  j=1
+    After the test img=4
+  j=2
+    After the test img=5
+i=7
+  j=1
+    After the test img=3
+  j=2
+    After the test img=4
+i=8
+  j=1
+    After the test img=2
+  j=2
+    After the test img=3
+i=9
+  j=1
+    After the test img=1
+  j=2
+    After the test img=2
+After cycles = 0 1 1 1 1 1 1 1 1 1
+   pnts = 1 2 3 4 5 6 7 8 9 Usecycle=1 cycles= 0 1 1 1 1 1 1 1 1 1
+   2: Calling StabChainStrong with sch=(1,2,3,4,5,6,7,8,9)
+   StabChainStrong call at eLev=1 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=1 |Stot.stabilizer|=2
+BPT/POS bpt=454 pos=-1
+InsertTrivialStabilizer pnt=1 bpt=454 pos=-1
+   Initializing cycles
+|Stot.stabilizer|=3 eLev=1
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0
+Before genlabels =
+Before test old = 1 0 0 0
+transversal = -1 0 -1 -1 -1 -1 -1 -1 -1 -1
+After genlabels = 3
+Before cycles = 0
+i=0
+  j=3
+    After the test img=9
+i=1
+  j=3
+    After the test img=8
+i=2
+  j=3
+    After the test img=7
+i=3
+  j=3
+    After the test img=6
+i=4
+  j=3
+    After the test img=5
+i=5
+  j=3
+    After the test img=4
+i=6
+  j=3
+    After the test img=3
+i=7
+  j=3
+    After the test img=2
+i=8
+  j=3
+    After the test img=1
+After cycles = 0 0 0 0 0 0 0 0 1
+   pnts = 8 Usecycle=1 cycles= 0 0 0 0 0 0 0 0 1
+   2: Calling StabChainStrong with sch=(8,9)
+   StabChainStrong call at eLev=1 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=1 |Stot.stabilizer|=3
+BPT/POS bpt=1 pos=1
+|Stot.stabilizer|=3 eLev=1
+|Stot.stabilizer[eLev].orbit|=9
+old = 1 0 0 1
+Before genlabels = 3
+Before test old = 1 0 0 1 0
+transversal = -1 0 3 3 3 3 3 3 3 3
+After genlabels = 3 4
+Before cycles = 0 0 0 0 0 0 0 0 1
+i=0
+  j=3
+  j=4
+    After the test img=1
+i=1
+  j=3
+  j=4
+    After the test img=8
+i=2
+  j=3
+  j=4
+    After the test img=9
+i=3
+  j=3
+  j=4
+    After the test img=7
+i=4
+  j=3
+  j=4
+    After the test img=6
+i=5
+  j=3
+  j=4
+    After the test img=5
+i=6
+  j=3
+  j=4
+    After the test img=4
+i=7
+  j=3
+  j=4
+    After the test img=3
+i=8
+  j=3
+  j=4
+    After the test img=2
+After cycles = 1 1 1 1 1 1 1 1 1
+   1: Calling StabChainStrong with eGen=(8,9)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=3
+BPT/POS bpt=454 pos=-1
+InsertTrivialStabilizer pnt=8 bpt=454 pos=-1
+   Initializing cycles
+|Stot.stabilizer|=4 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 0
+Before genlabels =
+Before test old = 1 0 0 0 0
+transversal = -1 -1 -1 -1 -1 -1 -1 -1 0 -1
+After genlabels = 4
+Before cycles = 0
+i=0
+  j=4
+    After the test img=9
+i=1
+  j=4
+    After the test img=8
+After cycles = 0 1
+   pnts = 1 Usecycle=1 cycles= 0 1
+   pnts = 0 1 2 3 4 5 6 7 8 Usecycle=1 cycles= 1 1 1 1 1 1 1 1 1
+   2: Calling StabChainStrong with sch=(7,8)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=4
+BPT/POS bpt=8 pos=8
+InsertTrivialStabilizer pnt=7 bpt=8 pos=8
+   Initializing cycles
+|Stot.stabilizer|=5 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1
+Before genlabels = 4
+Before test old = 1 0 0 0 1 0
+transversal = -1 -1 -1 -1 -1 -1 -1 0 -1 -1
+After genlabels = 4 5
+Before cycles = 0
+i=0
+  j=4
+  j=5
+    After the test img=8
+i=1
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+i=2
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+After cycles = 0 1 1
+   pnts = 1 2 Usecycle=1 cycles= 0 1 1
+   2: Calling StabChainStrong with sch=(6,7)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=5
+BPT/POS bpt=7 pos=7
+InsertTrivialStabilizer pnt=6 bpt=7 pos=7
+   Initializing cycles
+|Stot.stabilizer|=6 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1 1
+Before genlabels = 4 5
+Before test old = 1 0 0 0 1 1 0
+transversal = -1 -1 -1 -1 -1 -1 0 -1 -1 -1
+After genlabels = 4 5 6
+Before cycles = 0
+i=0
+  j=4
+  j=5
+  j=6
+    After the test img=7
+i=1
+  j=4
+    After the test img=7
+  j=5
+    After the test img=8
+  j=6
+    After the test img=6
+i=2
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+  j=6
+    After the test img=8
+i=3
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+  j=6
+    After the test img=9
+After cycles = 0 1 1 1
+   pnts = 1 2 3 Usecycle=1 cycles= 0 1 1 1
+   2: Calling StabChainStrong with sch=(5,6)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=6
+BPT/POS bpt=6 pos=6
+InsertTrivialStabilizer pnt=5 bpt=6 pos=6
+   Initializing cycles
+|Stot.stabilizer|=7 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1 1 1
+Before genlabels = 4 5 6
+Before test old = 1 0 0 0 1 1 1 0
+transversal = -1 -1 -1 -1 -1 0 -1 -1 -1 -1
+After genlabels = 4 5 6 7
+Before cycles = 0
+i=0
+  j=4
+  j=5
+  j=6
+  j=7
+    After the test img=6
+i=1
+  j=4
+    After the test img=6
+  j=5
+    After the test img=6
+  j=6
+    After the test img=7
+  j=7
+    After the test img=5
+i=2
+  j=4
+    After the test img=7
+  j=5
+    After the test img=8
+  j=6
+    After the test img=6
+  j=7
+    After the test img=7
+i=3
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+  j=6
+    After the test img=8
+  j=7
+    After the test img=8
+i=4
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+  j=6
+    After the test img=9
+  j=7
+    After the test img=9
+After cycles = 0 1 1 1 1
+   pnts = 1 2 3 4 Usecycle=1 cycles= 0 1 1 1 1
+   2: Calling StabChainStrong with sch=(4,5)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=7
+BPT/POS bpt=5 pos=5
+InsertTrivialStabilizer pnt=4 bpt=5 pos=5
+   Initializing cycles
+|Stot.stabilizer|=8 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1 1 1 1
+Before genlabels = 4 5 6 7
+Before test old = 1 0 0 0 1 1 1 1 0
+transversal = -1 -1 -1 -1 0 -1 -1 -1 -1 -1
+After genlabels = 4 5 6 7 8
+Before cycles = 0
+i=0
+  j=4
+  j=5
+  j=6
+  j=7
+  j=8
+    After the test img=5
+i=1
+  j=4
+    After the test img=5
+  j=5
+    After the test img=5
+  j=6
+    After the test img=5
+  j=7
+    After the test img=6
+  j=8
+    After the test img=4
+i=2
+  j=4
+    After the test img=6
+  j=5
+    After the test img=6
+  j=6
+    After the test img=7
+  j=7
+    After the test img=5
+  j=8
+    After the test img=6
+i=3
+  j=4
+    After the test img=7
+  j=5
+    After the test img=8
+  j=6
+    After the test img=6
+  j=7
+    After the test img=7
+  j=8
+    After the test img=7
+i=4
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+  j=6
+    After the test img=8
+  j=7
+    After the test img=8
+  j=8
+    After the test img=8
+i=5
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+  j=6
+    After the test img=9
+  j=7
+    After the test img=9
+  j=8
+    After the test img=9
+After cycles = 0 1 1 1 1 1
+   pnts = 1 2 3 4 5 Usecycle=1 cycles= 0 1 1 1 1 1
+   2: Calling StabChainStrong with sch=(3,4)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=8
+BPT/POS bpt=4 pos=4
+InsertTrivialStabilizer pnt=3 bpt=4 pos=4
+   Initializing cycles
+|Stot.stabilizer|=9 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1 1 1 1 1
+Before genlabels = 4 5 6 7 8
+Before test old = 1 0 0 0 1 1 1 1 1 0
+transversal = -1 -1 -1 0 -1 -1 -1 -1 -1 -1
+After genlabels = 4 5 6 7 8 9
+Before cycles = 0
+i=0
+  j=4
+  j=5
+  j=6
+  j=7
+  j=8
+  j=9
+    After the test img=4
+i=1
+  j=4
+    After the test img=4
+  j=5
+    After the test img=4
+  j=6
+    After the test img=4
+  j=7
+    After the test img=4
+  j=8
+    After the test img=5
+  j=9
+    After the test img=3
+i=2
+  j=4
+    After the test img=5
+  j=5
+    After the test img=5
+  j=6
+    After the test img=5
+  j=7
+    After the test img=6
+  j=8
+    After the test img=4
+  j=9
+    After the test img=5
+i=3
+  j=4
+    After the test img=6
+  j=5
+    After the test img=6
+  j=6
+    After the test img=7
+  j=7
+    After the test img=5
+  j=8
+    After the test img=6
+  j=9
+    After the test img=6
+i=4
+  j=4
+    After the test img=7
+  j=5
+    After the test img=8
+  j=6
+    After the test img=6
+  j=7
+    After the test img=7
+  j=8
+    After the test img=7
+  j=9
+    After the test img=7
+i=5
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+  j=6
+    After the test img=8
+  j=7
+    After the test img=8
+  j=8
+    After the test img=8
+  j=9
+    After the test img=8
+i=6
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+  j=6
+    After the test img=9
+  j=7
+    After the test img=9
+  j=8
+    After the test img=9
+  j=9
+    After the test img=9
+After cycles = 0 1 1 1 1 1 1
+   pnts = 1 2 3 4 5 6 Usecycle=1 cycles= 0 1 1 1 1 1 1
+   2: Calling StabChainStrong with sch=(2,3)
+   StabChainStrong call at eLev=2 |newgens|=1
+base = 0 1 2 3 4 5 6 7 8 9
+eLev=2 |Stot.stabilizer|=9
+BPT/POS bpt=3 pos=3
+InsertTrivialStabilizer pnt=2 bpt=3 pos=3
+   Initializing cycles
+|Stot.stabilizer|=10 eLev=2
+|Stot.stabilizer[eLev].orbit|=1
+old = 1 0 0 0 1 1 1 1 1 1
+Before genlabels = 4 5 6 7 8 9
+Before test old = 1 0 0 0 1 1 1 1 1 1 0
+transversal = -1 -1 0 -1 -1 -1 -1 -1 -1 -1
+After genlabels = 4 5 6 7 8 9 10
+Before cycles = 0
+i=0
+  j=4
+  j=5
+  j=6
+  j=7
+  j=8
+  j=9
+  j=10
+    After the test img=3
+i=1
+  j=4
+    After the test img=3
+  j=5
+    After the test img=3
+  j=6
+    After the test img=3
+  j=7
+    After the test img=3
+  j=8
+    After the test img=3
+  j=9
+    After the test img=4
+  j=10
+    After the test img=2
+i=2
+  j=4
+    After the test img=4
+  j=5
+    After the test img=4
+  j=6
+    After the test img=4
+  j=7
+    After the test img=4
+  j=8
+    After the test img=5
+  j=9
+    After the test img=3
+  j=10
+    After the test img=4
+i=3
+  j=4
+    After the test img=5
+  j=5
+    After the test img=5
+  j=6
+    After the test img=5
+  j=7
+    After the test img=6
+  j=8
+    After the test img=4
+  j=9
+    After the test img=5
+  j=10
+    After the test img=5
+i=4
+  j=4
+    After the test img=6
+  j=5
+    After the test img=6
+  j=6
+    After the test img=7
+  j=7
+    After the test img=5
+  j=8
+    After the test img=6
+  j=9
+    After the test img=6
+  j=10
+    After the test img=6
+i=5
+  j=4
+    After the test img=7
+  j=5
+    After the test img=8
+  j=6
+    After the test img=6
+  j=7
+    After the test img=7
+  j=8
+    After the test img=7
+  j=9
+    After the test img=7
+  j=10
+    After the test img=7
+i=6
+  j=4
+    After the test img=9
+  j=5
+    After the test img=7
+  j=6
+    After the test img=8
+  j=7
+    After the test img=8
+  j=8
+    After the test img=8
+  j=9
+    After the test img=8
+  j=10
+    After the test img=8
+i=7
+  j=4
+    After the test img=8
+  j=5
+    After the test img=9
+  j=6
+    After the test img=9
+  j=7
+    After the test img=9
+  j=8
+    After the test img=9
+  j=9
+    After the test img=9
+  j=10
+    After the test img=9
+After cycles = 0 1 1 1 1 1 1 1
+   pnts = 1 2 3 4 5 6 7 Usecycle=1 cycles= 0 1 1 1 1 1 1 1
+S=n=10 identity=()
+labels=[() , (0,1,2,3,4,5,6,7,8,9) , (0,1) , (1,2,3,4,5,6,7,8,9) , (8,9) , (7,8) , (6,7) , (5,6) , (4,5) , (3,4) , (2,3)]
+iLev=0
+  transversal = 0 2 1 1 1 1 1 1 1 1
+  orbit= 0 9 1 8 7 6 5 4 3 2
+  genlabels= 1 2
+iLev=1
+  transversal = -1 0 3 3 3 3 3 3 3 3
+  orbit= 1 9 8 7 6 5 4 3 2
+  genlabels= 3 4
+iLev=2
+  transversal = -1 -1 0 10 9 8 7 6 5 4
+  orbit= 2 3 4 5 6 7 8 9
+  genlabels= 4 5 6 7 8 9 10
+iLev=3
+  transversal = -1 -1 -1 0 9 8 7 6 5 4
+  orbit= 3 4 5 6 7 8 9
+  genlabels= 4 5 6 7 8 9
+iLev=4
+  transversal = -1 -1 -1 -1 0 8 7 6 5 4
+  orbit= 4 5 6 7 8 9
+  genlabels= 4 5 6 7 8
+iLev=5
+  transversal = -1 -1 -1 -1 -1 0 7 6 5 4
+  orbit= 5 6 7 8 9
+  genlabels= 4 5 6 7
+iLev=6
+  transversal = -1 -1 -1 -1 -1 -1 0 6 5 4
+  orbit= 6 7 8 9
+  genlabels= 4 5 6
+iLev=7
+  transversal = -1 -1 -1 -1 -1 -1 -1 0 5 4
+  orbit= 7 8 9
+  genlabels= 4 5
+iLev=8
+  transversal = -1 -1 -1 -1 -1 -1 -1 -1 0 4
+  orbit= 8 9
+  genlabels= 4
+iLev=9
+  transversal =
+  orbit=
+  genlabels=
+
+Completion of the program
