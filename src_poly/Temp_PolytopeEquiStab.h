@@ -15,6 +15,7 @@
 #include "COMB_Combinatorics_elem.h"
 
 
+
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
 {
@@ -29,6 +30,8 @@ T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
   return MaxNorm;
 }
 
+
+
 template<typename T>
 int WeighMatrix_IsNear(T eVal1, T eVal2, T eVal3)
 {
@@ -38,6 +41,8 @@ int WeighMatrix_IsNear(T eVal1, T eVal2, T eVal3)
     return 1;
   return 0;
 }
+
+
 
 template<typename T>
 int WeighMatrix_IsNear(std::vector<T> V1, std::vector<T> V2, T eVal3)
@@ -54,13 +59,6 @@ int WeighMatrix_IsNear(std::vector<T> V1, std::vector<T> V2, T eVal3)
 
 
 
-
-
-
-
-
-
-
 template<typename T1, typename T2>
 struct WeightMatrix {
 public:
@@ -70,7 +68,6 @@ public:
     TheTol=-1;
     nbRow=-1;
   }
-
   WeightMatrix(int const& inpNbRow, T2 const& inpTheTol)
   {
     TheTol=inpTheTol;
@@ -208,12 +205,12 @@ private:
 };
 
 
+
 template<typename T1, typename T2>
 struct WeightMatrixFCT {
 public:
   // no accidental construction, i.e. temporaries and the like
   WeightMatrixFCT() = delete;
-
   WeightMatrixFCT(int inpNbRow, T2 inpTheTol, std::function<T1(int,int)> const& eFCT)
   {
     TheTol=inpTheTol;
@@ -317,7 +314,6 @@ private:
 
 
 
-
 template<typename T>
 WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
 {
@@ -330,6 +326,7 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
     }
   return WMat;
 }
+
 
 
 bliss::Graph* ReadGraphFromFile(FILE *f, unsigned int &nof_vertices)
@@ -364,6 +361,8 @@ bliss::Graph* ReadGraphFromFile(FILE *f, unsigned int &nof_vertices)
   return g;
 }
 
+
+
 template<typename T>
 MyMatrix<T> GetQmatrix(MyMatrix<T> const& TheEXT)
 {
@@ -379,7 +378,6 @@ MyMatrix<T> GetQmatrix(MyMatrix<T> const& TheEXT)
     }
   return Inverse(QMat);
 }
-
 
 
 
@@ -403,21 +401,12 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 
 
 
-
-
 template<typename T>
 WeightMatrix<T, T> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 {
   MyMatrix<T> Qmat=GetQmatrix(TheEXT);
   return GetSimpleWeightMatrix(TheEXT, Qmat);
 }
-
-
-
-
-
-
-
 
 
 
@@ -566,22 +555,21 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
 
 
 
-
-
-
-
-
 template<typename T>
 void GetSymmGenerateValue(T const& rVal, T & eRet)
 {
   eRet=rVal;
 }
 
+
+
 template<typename T>
 void GetSymmGenerateValue(T const& rVal, std::vector<T> & eVect)
 {
   eVect.push_back(rVal);
 }
+
+
 
 template<typename T1, typename T2>
 WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
@@ -627,6 +615,7 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 }
 
 
+
 template<typename T1, typename T2>
 TheGroupFormat GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
@@ -646,6 +635,7 @@ TheGroupFormat GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 }
 
 
+
 template<typename T1, typename T2>
 EquivTest<permlib::Permutation> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
 {
@@ -663,8 +653,6 @@ EquivTest<permlib::Permutation> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T
 
 
 
-
-
 static void report_aut_vectvectint(void* param, const unsigned int n, const unsigned int* aut)
 {
   std::vector<int> eVect;
@@ -673,10 +661,13 @@ static void report_aut_vectvectint(void* param, const unsigned int n, const unsi
   ((VectVectInt*)param)->push_back(eVect);
 }
 
+
+
 static inline void report_aut_void(void* param, const unsigned int n, const unsigned int* aut)
 {
 
 }
+
 
 
 /*
@@ -688,6 +679,7 @@ static void report_aut_print(void* param, const unsigned int n, const unsigned i
   fprintf((FILE*)param, "\n");
 }
 */
+
 
 
 TheGroupFormat GetGraphAutomorphismGroup(bliss::Graph *g, unsigned int nof_vertices)
@@ -713,6 +705,8 @@ TheGroupFormat GetGraphAutomorphismGroup(bliss::Graph *g, unsigned int nof_verti
   return GRP;
 }
 
+
+
 int GetNeededPower(int nb)
 {
   int h=0;
@@ -724,6 +718,8 @@ int GetNeededPower(int nb)
     eExpo=eExpo*2;
   }
 }
+
+
 
 std::vector<int> GetBinaryExpression(int eVal, int h)
 {
@@ -740,6 +736,8 @@ std::vector<int> GetBinaryExpression(int eVal, int h)
   }
   return eVect;
 }
+
+
 
 template<typename T1, typename T2, typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, Face const& eSet)
@@ -763,6 +761,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, 
   }
   return eInv;
 }
+
 
 
 template<typename T1, typename T2>
@@ -904,6 +903,8 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
   return WMat;
 }
 
+
+
 struct LocalInvInfo {
   int nbDiagCoeff;
   int nbOffCoeff;
@@ -912,6 +913,7 @@ struct LocalInvInfo {
   MyMatrix<int> ListChosenTriple;
   WeightMatrix<int,int> WMatInt;
 };
+
 
 
 template<typename T1, typename T2>
@@ -1057,7 +1059,6 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
 
 
 
-
 template<typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& LocalInv, Face const& eSet)
 {
@@ -1150,10 +1151,6 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
 
 
 
-
-
-
-
 template<typename T>
 inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvariantWeightMatrix(WeightMatrix<T,T> const& WMat)
 {
@@ -1200,11 +1197,6 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
 
 
 
-
-
-
-
-
 template<typename T>
 WeightMatrix<T,T> ReadWeightedMatrix(std::istream &is)
 {
@@ -1232,6 +1224,8 @@ WeightMatrix<T,T> ReadWeightedMatrix(std::istream &is)
   return WMat;
 }
 
+
+
 template<typename T>
 void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
 {
@@ -1257,6 +1251,8 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
   }
 }
 
+
+
 template<typename T>
 void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
 {
@@ -1281,10 +1277,6 @@ void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
 
 
 
-
-
-
-
 template<typename T>
 void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 {
@@ -1301,6 +1293,8 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
     os << "\n";
   }
 }
+
+
 
 template<typename Tgr>
 bliss::Graph GetBlissGraphFromGraph(Tgr const& eGR)
@@ -1422,7 +1416,6 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
       else {
 	return false;
       }
-      
     }
     return false;
   };
@@ -1435,8 +1428,6 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
   eGR.SetFColor(fColor);
   return eGR;
 }
-
-
 
 
 
@@ -1472,9 +1463,6 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
   WMat2.ReorderingOfWeights(gListRev);
   return true;
 }
-
-
-
 
 
 
@@ -1587,6 +1575,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatri
 }
 
 
+
 template<typename T1, typename T2>
 EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> &WMat2)
 {
@@ -1595,8 +1584,6 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2>
     return {false, {}};
   return TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
 }
-
-
 
 
 
@@ -1641,6 +1628,8 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
   return {true, permlib::Permutation(eList)};
 }
 
+
+
 template<typename T1, typename T2>
 TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 {
@@ -1671,6 +1660,7 @@ TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 }
 
 
+
 template<typename T1, typename T2>
 WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
@@ -1688,8 +1678,6 @@ WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
   WMatNaked.SetWeight(ListWeight);
   return WMatNaked;
 }
-
-
 
 
 
@@ -1724,14 +1712,6 @@ permlib::Permutation CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 
 
 
-
-
-
-
-
-
-
-
 template<typename T>
 TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 {
@@ -1739,6 +1719,8 @@ TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
   return GetStabilizerWeightMatrix(WMat);
 }
+
+
 
 template<typename Tgr>
 int GetNbColor(Tgr const& eGR)
@@ -1753,6 +1735,8 @@ int GetNbColor(Tgr const& eGR)
   nbColor++;
   return nbColor;
 }
+
+
 
 template<typename Tgr>
 void NAUTY_PrintPartition(std::ostream & os, Tgr const& eGR)
@@ -1775,6 +1759,7 @@ void NAUTY_PrintPartition(std::ostream & os, Tgr const& eGR)
   }
   os << "]\n";
 }
+
 
 
 template<typename Tgr>
@@ -1806,6 +1791,7 @@ void NAUTY_AUTO_WriteFile(std::ostream & os, std::vector<MyMatrix<T> > const& Li
 }
 
 
+
 template<typename T, typename Tgr>
 bool NAUTY_ISOM_WriteFile(std::ostream & os,
 			 std::vector<MyMatrix<T> > const& ListMatrix1, MyMatrix<T> const& SHV1,
@@ -1829,6 +1815,8 @@ bool NAUTY_ISOM_WriteFile(std::ostream & os,
   os << "x ##\n";
   return true;
 }
+
+
 
 template<typename Tgr>
 TheGroupFormat GRAPH_Automorphism_Nauty(Tgr const& eGR)
@@ -1866,6 +1854,7 @@ TheGroupFormat GRAPH_Automorphism_Nauty(Tgr const& eGR)
   //
   return GRP;
 }
+
 
 
 template<typename Tgr>
@@ -1945,6 +1934,8 @@ EquivTest<permlib::Permutation> LinPolytopeGram_Isomorphism_Nauty(std::vector<My
   return {true, permlib::Permutation(eListRed)};
 }
 
+
+
 template<typename T, typename Tgr>
 TheGroupFormat LinPolytopeGram_Automorphism_Nauty(std::vector<MyMatrix<T> > const& ListMatrix, MyMatrix<int> const& SHV)
 {
@@ -1968,9 +1959,6 @@ TheGroupFormat LinPolytopeGram_Automorphism_Nauty(std::vector<MyMatrix<T> > cons
 
 
 
-
-
-
 template<typename T>
 MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1,
 				       MyMatrix<T> const& EXT2,
@@ -1989,6 +1977,8 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1,
   MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
   return M1inv*M2;
 }
+
+
 
 template<typename T>
 permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
@@ -2091,6 +2081,7 @@ std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 }
 
 
+
 template<typename Tobj, typename Tgen>
 std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTotal,
 					    std::vector<Tgen> const& ListGen,
@@ -2122,7 +2113,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 		ListTotal.erase(fObj);
 	      }
 	      else {
-		std::cerr << "Orbit do not matched, PANIC!!!\n";
+		std::cerr << "Orbit do not match, PANIC!!!\n";
 		throw TerminalException{1};
 	      }
 	    }
@@ -2161,11 +2152,9 @@ std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
   std::vector<Local> ListLocal;
   auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
     std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
-    //      if (fLocal.eInv == eInv)
     for (auto const& fLocal : ListLocal) {
       bool testCL=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 0).TheReply;
-      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;
-      
+      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;      
       bool test=TestEquivalence(SmaGRP, fLocal.eFace, testList);
       os << "fLocal.eFace=\n";
       WriteFace(os, fLocal.eFace);
@@ -2238,6 +2227,7 @@ std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
   os << "Likely not reachable stage\n";
   throw TerminalException{1};
 }
+
 
 
 std::vector<Face> OrbitSplittingListOrbit(TheGroupFormat const& BigGRP, TheGroupFormat const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
