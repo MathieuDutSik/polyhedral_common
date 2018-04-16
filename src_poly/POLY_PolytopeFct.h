@@ -470,7 +470,7 @@ void ComputeFileFaceLatticeInfo(std::string const& eFile, MyMatrix<T> const& EXT
 
 
 template<typename T>
-void ComputeFaceLatticeToFile(std::string const& eFile, MyMatrix<T> const& EXT, MyMatrix<T> const& FAC)
+void ComputeEngelPolyhedralSubordinationFile(std::string const& eFile, MyMatrix<T> const& EXT, MyMatrix<T> const& FAC)
 {
   EngelPolyhedralSubordination eEngel=ComputeEngelPolyhedralSubordination(EXT, FAC);
   std::ofstream os(eFile);
