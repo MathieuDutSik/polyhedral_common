@@ -60,24 +60,24 @@ Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const& eMat, MyMatrix<Tint> 
 
 
 
-template<typename T>
+template<typename T, typename Tint>
 struct resultCVP {
   T TheNorm;
-  MyMatrix<T> ListVect;
+  MyMatrix<Tint> ListVect;
 };
 
-template<typename T>
-bool operator==(resultCVP<T> const& x, resultCVP<T> const& y)
+template<typename T,typename Tint>
+bool operator==(resultCVP<T,Tint> const& x, resultCVP<T,Tint> const& y)
 {
   if (x.TheNorm != y.TheNorm)
     return false;
-  MyMatrix<T> ListVectSort1=SortMatrix(x.ListVect);
-  MyMatrix<T> ListVectSort2=SortMatrix(y.ListVect);
+  MyMatrix<Tint> ListVectSort1=SortMatrix(x.ListVect);
+  MyMatrix<Tint> ListVectSort2=SortMatrix(y.ListVect);
   return ListVectSort1 == ListVectSort2;
 }
 
-template<typename T>
-bool operator!=(resultCVP<T> const& x, resultCVP<T> const& y)
+template<typename T,typename Tint>
+bool operator!=(resultCVP<T,Tint> const& x, resultCVP<T,Tint> const& y)
 {
   if (x == y)
     return false;

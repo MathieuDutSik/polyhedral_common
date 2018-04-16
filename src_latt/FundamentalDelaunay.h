@@ -10,14 +10,14 @@
 
 
 
-template<typename T>
-resultCVP<T> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> const& eV, std::string const& NameMeth)
+template<typename T, typename Tint>
+resultCVP<T,Tint> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> const& eV, std::string const& NameMeth)
 {
   bool DoCheck=false;
   if (DoCheck) {
-    resultCVP<T> res1=CVPVallentinProgram_exact(GramMat, eV);
+    resultCVP<T,Tint> res1=CVPVallentinProgram_exact(GramMat, eV);
     //  resultCVP<T> res2=CVPVallentinProgram_double(GramMat, eV);
-    resultCVP<T> res2=CVP_N23_24A1(eV);
+    resultCVP<T,Tint> res2=CVP_N23_24A1(eV);
     if (res1 != res2) {
       std::cerr << "res1.TheNorm=" << res1.TheNorm << "\n";
       std::cerr << "res2.TheNorm=" << res2.TheNorm << "\n";
@@ -32,16 +32,15 @@ resultCVP<T> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> const& 
     std::cerr << "All correct\n";
     return res1;
   }
-
-    //
+  //
   if (NameMeth == "SVexact")
-    return CVPVallentinProgram_exact(GramMat, eV);
+    return CVPVallentinProgram_exact<T,Tint>(GramMat, eV);
   //
   if (NameMeth == "SVdouble")
-    return CVPVallentinProgram_double(GramMat, eV);
+    return CVPVallentinProgram_double<T,Tint>(GramMat, eV);
   //
   if (NameMeth == "CVP_N23_24A1")
-    return CVP_N23_24A1(eV);
+    return CVP_N23_24A1<T,Tint>(eV);
   //
   std::cerr << "No matching method found\n";
   throw TerminalException{1};
@@ -105,7 +104,7 @@ MyMatrix<T> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string const& 
     MyVector<T> eVect=eSol.DirectSolution;
     T TheNorm=EvaluationQuadForm<T,T>(GramMat, eVect);
     //    std::cerr << "Before CVPVallentinProgram\n";
-    resultCVP<T> TheCVP=CVPVallentinProgram(GramMat, eVect, CVPmethod);
+    resultCVP<T,Tint> TheCVP=CVPVallentinProgram<T,Tint>(GramMat, eVect, CVPmethod);
     //    std::cerr << "After CVPVallentinProgram\n";
     int nbVectTot=TheCVP.ListVect.rows();
     if (TheCVP.TheNorm == TheNorm) {
@@ -205,8 +204,8 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const& GramMat, MyMatrix<T
 
 
 
-template<typename T>
-MyMatrix<T> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix<T> const& EXT, Face const& eInc, std::string const& CVPmethod)
+template<typename T, typename Tint>
+MyMatrix<Tint> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix<T> const& EXT, Face const& eInc, std::string const& CVPmethod)
 {
   //  std::cerr << "FindAdjacentDelaunayPolytope, step 1\n";
   int dim=GramMat.rows();
@@ -272,7 +271,7 @@ MyMatrix<T> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix<T>
     }
   };
   fGraverUpdate();
-  resultCVP<T> reply;
+  resultCVP<T,Tint> reply;
   //  std::cerr << "FindAdjacentDelaunayPolytope, step 6\n";
   while(true) {
     CP<T> eCP=GetCenterRadius(SelectedVertex);
@@ -280,7 +279,7 @@ MyMatrix<T> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix<T>
     for (int i=0; i<dim; i++)
       eCenter(i)=eCP.eCent(i+1);
     //    std::cerr << "Before CVPVallentinProgram\n";
-    reply=CVPVallentinProgram(GramMat, eCenter, CVPmethod);
+    reply=CVPVallentinProgram<T,Tint>(GramMat, eCenter, CVPmethod);
     //    std::cerr << "After CVPVallentinProgram\n";
     if (reply.TheNorm == eCP.SquareRadius)
       break;
@@ -290,7 +289,7 @@ MyMatrix<T> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix<T>
   }
   //  std::cerr << "FindAdjacentDelaunayPolytope, step 7\n";
   int nbVect=reply.ListVect.rows();
-  MyMatrix<T> RetEXT(nbVect,dim+1);
+  MyMatrix<Tint> RetEXT(nbVect,dim+1);
   for (int iVect=0; iVect<nbVect; iVect++) {
     RetEXT(iVect,0)=1;
     for (int i=0; i<dim; i++)

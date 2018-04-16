@@ -7,8 +7,8 @@
 #include <la_support.h>
 
 
-template<typename T>
-MyMatrix<int> T_ShortVector(MyMatrix<T> const& eMat, T const&MaxNorm)
+template<typename T, typename Tint>
+MyMatrix<Tint> T_ShortVector(MyMatrix<T> const& eMat, T const&MaxNorm)
 {
   int check, mode, number;
   double bound, **gram_matrix;
@@ -18,7 +18,7 @@ MyMatrix<int> T_ShortVector(MyMatrix<T> const& eMat, T const&MaxNorm)
   double FudgeFact=1.1;
   //  std::cerr << "T_ShortVector, step 1\n";
   if (dim == 1) {
-    MyMatrix<int> TheSHV(2,1);
+    MyMatrix<Tint> TheSHV(2,1);
     TheSHV(0,0)=1;
     TheSHV(1,0)=1;
     return TheSHV;
@@ -79,7 +79,7 @@ MyMatrix<int> T_ShortVector(MyMatrix<T> const& eMat, T const&MaxNorm)
     Status[i]=ePos;
   }
   //  std::cerr << "T_ShortVector, step 8\n";
-  MyMatrix<int> TheSHV(2*nbShort, dim);
+  MyMatrix<Tint> TheSHV(2*nbShort, dim);
   int idx=0;
   for (int iShort=0; iShort<PreNbVect; iShort++) {
     if (Status[iShort] == 0) {
@@ -106,8 +106,8 @@ MyMatrix<int> T_ShortVector(MyMatrix<T> const& eMat, T const&MaxNorm)
 }
 
 
-template<typename T>
-resultCVP<T> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVector<T> const& eV)
+template<typename T, typename Tint>
+resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVector<T> const& eV)
 {
   int check, mode, number;
   double **gram_matrix;
@@ -212,7 +212,7 @@ template<typename T, typename Tint>
 Tshortest<T,Tint> T_ShortestVector(MyMatrix<T> const& eMat)
 {
   T MinNorm=MinimumDiagonal(eMat);
-  MyMatrix<Tint> TheSHVall=T_ShortVector(eMat, MinNorm);
+  MyMatrix<Tint> TheSHVall=T_ShortVector<T,Tint>(eMat, MinNorm);
   return SelectShortestVector(eMat, TheSHVall);
 }
 
@@ -221,7 +221,7 @@ template<typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::function<bool(MyMatrix<Tint> const&)> const& fCorrect)
 {
   T MaxNorm=MaximumDiagonal(eMat);
-  MyMatrix<Tint> SHVall=T_ShortVector(eMat, MaxNorm);
+  MyMatrix<Tint> SHVall=T_ShortVector<T,Tint>(eMat, MaxNorm);
   /*  std::cerr << "MaxNorm = " << MaxNorm << " eMat =\n";
   WriteMatrix(std::cerr, eMat);
   std::cerr << "|SHVall|=" << SHVall.rows() << "\n";
