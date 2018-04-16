@@ -890,7 +890,7 @@ template<typename T, typename Tint>
   };
   NewEnumerationWork<SimplePerfect<T,Tint>> ListOrbit(AllArr.Saving, AllArr.eMemory, eData.PrefixPerfect, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
   auto FuncInsert=[&](SimplePerfect<T,Tint> const& x, std::ostream&os) -> int {
-    SimplePerfectInv<T> eInv=ComputeInvariantSimplePerfect<T>(x.Gram);
+    SimplePerfectInv<T> eInv=ComputeInvariantSimplePerfect<T,Tint>(x.Gram);
     return ListOrbit.InsertEntry({x, eInv}, os);
   };
   int nbPresentOrbit=ListOrbit.GetNbEntry();
