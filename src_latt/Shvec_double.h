@@ -190,7 +190,7 @@ resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVecto
       }
     }
   }
-  MyMatrix<T> ListVect(nbShort, dim);
+  MyMatrix<Tint> ListVect(nbShort, dim);
   int idx=0;
   for (int iShort=0; iShort<PreNbVect; iShort++)
     if (Status[iShort] == 1) {

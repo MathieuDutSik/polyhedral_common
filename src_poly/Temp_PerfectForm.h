@@ -712,26 +712,26 @@ template <typename T,typename Tint>
   typedef MyMatrix<Tint> equiv_type;
 };
 
-template<typename T>
+template<typename T,typename Tint>
 SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const& eGram)
 {
   int n=eGram.rows();
-  Tshortest<T,int> RecSHV=T_ShortestVector<T,int>(eGram);
+  Tshortest<T,Tint> RecSHV=T_ShortestVector<T,Tint>(eGram);
   MyMatrix<T> eG = eGram / RecSHV.eMin;
   int nbSHV=RecSHV.SHV.size();
   T eDet=DeterminantMat(eG);
-  int PreIndex=Int_IndexLattice(RecSHV.SHV);
-  int eIndex=T_abs(PreIndex);
+  Tint PreIndex=Int_IndexLattice(RecSHV.SHV);
+  Tint eIndex=T_abs(PreIndex);
   WeightMatrix<T,T> WMat(nbSHV,0);
   for (int i=0; i<nbSHV-1; i++)
     for (int j=i+1; j<nbSHV; j++) {
-      MyVector<int> V1(n);
-      MyVector<int> V2(n);
+      MyVector<Tint> V1(n);
+      MyVector<Tint> V2(n);
       for (int iCol=0; iCol<n; iCol++) {
 	V1(i)=RecSHV.SHV(i,iCol);
 	V2(i)=RecSHV.SHV(j,iCol);
       }
-      T eScal=ScalarProductQuadForm<T,int>(eGram, V1, V2);
+      T eScal=ScalarProductQuadForm<T,Tint>(eGram, V1, V2);
       WMat.Update(i,j,eScal);
     }
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);

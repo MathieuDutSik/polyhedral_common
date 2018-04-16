@@ -524,8 +524,8 @@ int T_computeShvec(T_shvec_info<T> &info)
 }
 
 
-template<typename T>
-resultCVP<T> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector<T> const& eV)
+template<typename T,typename Tint>
+resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector<T> const& eV)
 {
   int dim=GramMat.rows();
   MyVector<T> cosetVect(dim);
@@ -537,9 +537,9 @@ resultCVP<T> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector<T> c
   //  std::cerr << "\n";
   if (IsIntegralVector(eV)) {
     T TheNorm=0;
-    MyMatrix<T> ListVect(1,dim);
+    MyMatrix<Tint> ListVect(1,dim);
     for (int i=0; i<dim; i++)
-      ListVect(0,i)=eV(i);
+      ListVect(0,i)=UniversalTypeConversion<Tint,T>(eV(i));
     return {TheNorm, ListVect};
   }
   T bound=0; // should not be used
@@ -560,13 +560,13 @@ resultCVP<T> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector<T> c
     throw TerminalException{1};
   }
   int nbVect=info.short_vectors_number;
-  MyMatrix<T> ListClos(nbVect, dim);
+  MyMatrix<Tint> ListClos(nbVect, dim);
   for (int iVect=0; iVect<nbVect; iVect++)
     for (int i=0; i<dim; i++)
       ListClos(iVect,i)=info.short_vectors[iVect](i);
   MyVector<T> eDiff(dim);
   for (int i=0; i<dim; i++)
-    eDiff(i)=ListClos(0,i) - eV[i];
+    eDiff(i)=ListClos(0,i) - eV(i);
   T TheNorm=EvaluationQuadForm<T,T>(GramMat, eDiff);
   return {TheNorm, ListClos};
 }

@@ -19,8 +19,8 @@
 // we are led to
 // q0[ fV - eCosInv - y]
 //
-template<typename T>
-resultCVP<T> CVP_N23_24A1_Version1(MyVector<T> const& eV)
+template<typename T,typename Tint>
+resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
 {
   
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
@@ -105,12 +105,12 @@ resultCVP<T> CVP_N23_24A1_Version1(MyVector<T> const& eV)
       break;
   }
   int nbFinal=ListNearest.size();
-  MyMatrix<T> MatNearest(nbFinal,24);
+  MyMatrix<Tint> MatNearest(nbFinal,24);
   for (int iFin=0; iFin<nbFinal; iFin++) {
     MyVector<T> fVnear=ListNearest[iFin];
     MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
     for (int i=0; i<24; i++)
-      MatNearest(iFin,i)=eVnear(i);
+      MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
   }
   T NearestNorm=2*MinNorm;
   //  std::cerr << "End of CVP_N23_24A1\n";
@@ -120,8 +120,8 @@ resultCVP<T> CVP_N23_24A1_Version1(MyVector<T> const& eV)
 
 // This version has a more ordered iteration
 // over cosets. This turned to give no gain. Now 9m32s vs 9m30 for Version1.
-template<typename T>
-resultCVP<T> CVP_N23_24A1_Version2(MyVector<T> const& eV)
+template<typename T,typename Tint>
+resultCVP<T,Tint> CVP_N23_24A1_Version2(MyVector<T> const& eV)
 {
   
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
@@ -265,8 +265,8 @@ MyMatrix<T> GetShiftedMatrix(MyMatrix<T> const& eMat, int const& eSize)
 // to the iteration over he cosets. Definitely less
 // operations are needed.
 // Time is 9m18s vs 9m32s before. Slight improvement.
-template<typename T>
-resultCVP<T> CVP_N23_24A1_Version3(MyVector<T> const& eV)
+template<typename T,typename Tint>
+resultCVP<T,Tint> CVP_N23_24A1_Version3(MyVector<T> const& eV)
 {
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
   MyMatrix<T> InvBasis=Get_N23_InvBasis<T>();
@@ -368,7 +368,7 @@ resultCVP<T> CVP_N23_24A1_Version3(MyVector<T> const& eV)
       MyVector<T> fVnear= W + fTransCoset;
       MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
       for (int i=0; i<24; i++)
-	MatNearest(iFin,i)=eVnear(i);
+	MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
       iFin++;
       int val=BlCVP.IncrementShow();
       if (val == -1)
@@ -385,8 +385,8 @@ resultCVP<T> CVP_N23_24A1_Version3(MyVector<T> const& eV)
 
 // We change the rounding function.
 // hopefully faster.
-template<typename T>
-resultCVP<T> CVP_N23_24A1(MyVector<T> const& eV)
+template<typename T,typename Tint>
+resultCVP<T,Tint> CVP_N23_24A1(MyVector<T> const& eV)
 {
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
   MyMatrix<T> InvBasis=Get_N23_InvBasis<T>();
@@ -453,8 +453,8 @@ resultCVP<T> CVP_N23_24A1(MyVector<T> const& eV)
   }
   //  std::cerr << "nbFinal=" << nbFinal << "\n";
   int iFin=0;
-  MyMatrix<T> MatNearest(nbFinal,24);
   MyVector<T> ListUpp(24);
+  MyMatrix<Tint> MatNearest(nbFinal,24);
   for (auto & fTransCoset : ListTransCoset) {
     //    std::cerr << "Iterate, step 1\n";
     MyVector<T> eSumVect=fV - fTransCoset;
@@ -488,7 +488,7 @@ resultCVP<T> CVP_N23_24A1(MyVector<T> const& eV)
       MyVector<T> fVnear= W + fTransCoset;
       MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
       for (int i=0; i<24; i++)
-	MatNearest(iFin,i)=eVnear(i);
+	MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
       iFin++;
       int val=BlCVP.IncrementShow();
       if (val == -1)

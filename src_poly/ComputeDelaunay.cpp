@@ -12,9 +12,12 @@ int main(int argc, char *argv[])
       NAMELIST_WriteNamelistFile(std::cerr, eFull);
       return -1;
     }
+    using T=mpq_class;
+    using Tint=mpz_class;
+    //
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    TreatDelaunayEntry<mpq_class>(eFull);
+    TreatDelaunayEntry<T,Tint>(eFull);
     std::cerr << "Completion of the program\n";
   }
   catch (TerminalException const& e) {

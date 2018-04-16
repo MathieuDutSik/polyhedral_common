@@ -15,9 +15,9 @@ resultCVP<T,Tint> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> co
 {
   bool DoCheck=false;
   if (DoCheck) {
-    resultCVP<T,Tint> res1=CVPVallentinProgram_exact(GramMat, eV);
+    resultCVP<T,Tint> res1=CVPVallentinProgram_exact<T,Tint>(GramMat, eV);
     //  resultCVP<T> res2=CVPVallentinProgram_double(GramMat, eV);
-    resultCVP<T,Tint> res2=CVP_N23_24A1(eV);
+    resultCVP<T,Tint> res2=CVP_N23_24A1<T,Tint>(eV);
     if (res1 != res2) {
       std::cerr << "res1.TheNorm=" << res1.TheNorm << "\n";
       std::cerr << "res2.TheNorm=" << res2.TheNorm << "\n";
@@ -64,8 +64,8 @@ MyVector<T> FuncRandomDirection(int const& n, int const& siz)
 
 
 
-template<typename T>
-MyMatrix<T> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string const& CVPmethod, std::ostream&os)
+template<typename T, typename Tint>
+MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string const& CVPmethod, std::ostream&os)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim=GramMat.rows();
@@ -108,7 +108,7 @@ MyMatrix<T> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string const& 
     //    std::cerr << "After CVPVallentinProgram\n";
     int nbVectTot=TheCVP.ListVect.rows();
     if (TheCVP.TheNorm == TheNorm) {
-      MyMatrix<T> RetEXT(nbVectTot, dim+1);
+      MyMatrix<Tint> RetEXT(nbVectTot, dim+1);
       for (int iVect=0; iVect<nbVectTot; iVect++) {
 	RetEXT(iVect,0)=1;
 	for (int i=0; i<dim; i++)
@@ -118,8 +118,9 @@ MyMatrix<T> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string const& 
     }
     else {
       for (int iVect=0; iVect<nbVectTot; iVect++) {
-	MyVector<T> fVect=GetMatrixRow(TheCVP.ListVect, iVect);
-	ListRelevantPoint.push_back(fVect);
+	MyVector<Tint> fVect=GetMatrixRow(TheCVP.ListVect, iVect);
+	MyVector<T> fVect_T=ConvertVectorUniversal<T,Tint>(fVect);
+	ListRelevantPoint.push_back(fVect_T);
       }
     }
     os << "|ListRelevantPoint|=" << ListRelevantPoint.size() << "\n";
