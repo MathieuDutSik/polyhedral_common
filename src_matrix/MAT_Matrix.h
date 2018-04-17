@@ -1427,6 +1427,12 @@ template<typename T>
 SolMatResult<T> SolutionMat(MyMatrix<T> const& eMat, MyVector<T> const& eVect)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  if (eMat.rows() == 0) {
+    if (!IsZeroVector(eVect))
+      return {false,{}};
+    MyVector<T> eSol(0);
+    return {true, eSol};
+  }
   int nbRow=eMat.rows();
   int nbCol=eMat.cols();
   SelectionRowCol<T> eSelect=TMat_SelectRowCol(eMat);

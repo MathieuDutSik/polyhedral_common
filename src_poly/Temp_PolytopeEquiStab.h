@@ -327,6 +327,37 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
   return WMat;
 }
 
+template<typename T>
+WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
+{
+  int nbRow=eMat.rows();
+  std::set<T> SetScal;
+  for (int iRow=0; iRow<nbRow; iRow++)
+    for (int iCol=0; iCol<nbRow; iCol++) {
+      T eVal=eMat(iRow, iCol);
+      SetScal.insert(eVal);
+    }
+  std::vector<T> VectScal;
+  for (auto & eVal : SetScal)
+    VectScal.push_back(eVal);
+  std::vector<int> TheMat(nbRow*nbRow);
+  idx idx=0;
+  for (int iCol=0; iCol<nbRow; iCol++) {
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      T eVal=eMat(iRow,iCol);
+      std::set<T>::iterator it = SetScal.find(eVal);
+      int pos = std::distance(SetScal.first(), it);
+      TheMat[idx] = pos;
+      idx++;
+    }
+  }
+  T TheTol=0;
+  return WeightMatrix<T,T>(nbRow, ThaMat, VectScal, TheTol);
+}
+
+
+
+
 
 
 bliss::Graph* ReadGraphFromFile(FILE *f, unsigned int &nof_vertices)
@@ -1365,6 +1396,47 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
     }
   return eGR;
 }
+
+
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+// 
+template<typename T1, typename T2, typename Tgr>
+std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
+{
+  Tgr eGR=GetGraphFromWeightedMatrix<T,T,Tgr>(WMat);
+  bliss::Graph g=GetBlissGraphFromGraph(eGR);
+  int nof_vertices=eGR.GetNbVert();
+  bliss::Stats stats;
+  const unsigned int* cl;
+  cl=g.canonical_form(stats, &report_aut_void, stderr);
+  std::vector<int> clR(nof_vertices);
+  for (int i=0; i<nof_vertices; i++)
+    clR[cl[i]]=i;
+  //
+  int hS = nof_vertices / nbRow;
+  std::vector<int> MapVect(nbRow, -1), MapVectRev(nbRow,-1);
+  std::vector<int> ListStatus(nof_vertices,1);
+  int posCanonic=0;
+  for (int i=0, i<nof_vertices; i++) {
+    if (ListStatus[i] == 1) {
+      int iNative=clR[i];
+      int iVertNative=iNative % nbRow;
+      MapVectRev[posCanonic] = iVertNative;
+      MapVect[iVertNative] = posCanonic;
+      for (int iH=0; iH<hS; iH++) {
+	int uVertNative = iVertNative + nbRow * hS;
+	int j=cl[uVertNative];
+	ListStatus[j] = 0;
+      }
+      posCanonic++;
+    }
+  }
+  return {MapVect,MapVectRev};
+}
+
 
 
 
