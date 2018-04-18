@@ -520,12 +520,17 @@ mpq_class GetDenominator(mpq_class const& x)
 
 int GetDenominator(int const& x)
 {
-  return x;
+  return 1;
 }
 
 long GetDenominator(long const& x)
 {
-  return x;
+  return 1;
+}
+
+mpz_class GetDenominator(mpz_class const& x)
+{
+  return 1;
 }
 
 

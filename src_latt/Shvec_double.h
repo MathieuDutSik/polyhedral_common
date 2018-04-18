@@ -2,6 +2,7 @@
 #define SHVEC_DOUBLE_INCLUDE
 
 #include "LatticeDefinitions.h"
+#include "Temp_Positivity.h"
 
 #include <shvec.h>
 #include <la_support.h>

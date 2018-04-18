@@ -341,18 +341,18 @@ WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
   for (auto & eVal : SetScal)
     VectScal.push_back(eVal);
   std::vector<int> TheMat(nbRow*nbRow);
-  idx idx=0;
+  int idx=0;
   for (int iCol=0; iCol<nbRow; iCol++) {
     for (int iRow=0; iRow<nbRow; iRow++) {
       T eVal=eMat(iRow,iCol);
-      std::set<T>::iterator it = SetScal.find(eVal);
-      int pos = std::distance(SetScal.first(), it);
+      typename std::set<T>::iterator it = SetScal.find(eVal);
+      int pos = std::distance(SetScal.begin(), it);
       TheMat[idx] = pos;
       idx++;
     }
   }
   T TheTol=0;
-  return WeightMatrix<T,T>(nbRow, ThaMat, VectScal, TheTol);
+  return WeightMatrix<T,T>(nbRow, TheMat, VectScal, TheTol);
 }
 
 
@@ -1406,7 +1406,8 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
-  Tgr eGR=GetGraphFromWeightedMatrix<T,T,Tgr>(WMat);
+  int nbRow=WMat.rows();
+  Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
@@ -1420,7 +1421,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   std::vector<int> MapVect(nbRow, -1), MapVectRev(nbRow,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
-  for (int i=0, i<nof_vertices; i++) {
+  for (int i=0; i<nof_vertices; i++) {
     if (ListStatus[i] == 1) {
       int iNative=clR[i];
       int iVertNative=iNative % nbRow;

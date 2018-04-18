@@ -4,6 +4,8 @@
 
 #include "Shvec_double.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "MAT_MatrixInt.h"
+#include "MatrixGroup.h"
 
 
 
@@ -13,7 +15,7 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   //
   // Computing the Z-basis on which the computation relies.
   //
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis(inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
   //
   // Computing the scalar product matrix
   //
@@ -49,13 +51,13 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   for (int iRowCan=0; iRowCan<nbRow; iRowCan++) {
     int iRowNative = MapVectRev[iRowCan];
     MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
-    MyVector<T>    eRow_T    = ConvertVectorUniversal<T,Tint>(eRow);
+    MyVector<T>    eRow_T    = ConvertVectorUniversal<T,Tint>(eRow_Tint);
     SolMatResult<T> TheSol = SolutionMat(OldBasis_MatT, eRow_T);
     if (TheSol.result) {
-      MyVector<T> eVect_T = ZeroVector<T> eSum(n);
+      MyVector<T> eVect_T = ZeroVector<T>(n);
       for (int u=0; u<TheDim; u++)
 	eVect_T += TheSol.eSol(u) * OldBasis_T[u];
-      if (!IsIntegralVector(eVect)) {
+      if (!IsIntegralVector(eVect_T)) {
 	std::cerr << "Error the vector should be integral\n";
 	throw TerminalException{1};
       }
@@ -68,8 +70,8 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
       OldBasis_MatT = MatrixFromVectorFamily(OldBasis_T);
       MyVector<Tint> TheVect = ZeroVector<Tint>(n);
       if (TheDim == 0) {
-	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoef(eRow_Tint);
-	TheVect(0) = T_Abs(eFr.TheMult);
+	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoeff(eRow_Tint);
+	TheVect(0) = T_abs(eFr.TheMult);
       }
       else {
 	MyMatrix<Tint> OldBasis_MatTint = MatrixFromVectorFamily(OldBasis_Tint);
@@ -86,8 +88,8 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 	    eScal += OrthMat(uS,iCol) * eRow_Tint(iCol);
 	  ScalVect(uS)=eScal;
 	}
-	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoef(ScalVect);
-	TheVect(TheDim) = T_Abs(eFr.TheMult);
+	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoeff(ScalVect);
+	TheVect(TheDim) = T_abs(eFr.TheMult);
       }
       NewBasis_Tint.push_back(TheVect);
       AssignMatrixRow(SHVred, iRowNative, TheVect);
@@ -96,7 +98,8 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   }
   MyMatrix<T> SHVred_T = ConvertMatrixUniversal<T,Tint>(SHVred);
   MyMatrix<T> SHV_T    = ConvertMatrixUniversal<T,Tint>(SHV);
-  MyMatrix<T> MatEquiv_T = FindTransformation(SHV_T, SHVred_T);
+  permlib::Permutation ePerm=IdentityPermutation(nbRow);
+  MyMatrix<T> MatEquiv_T = FindTransformation(SHV_T, SHVred_T, ePerm);
   if (!IsIntegralMatrix(MatEquiv_T)) {
     std::cerr << "The Matrix MatEquiv_T should be integral\n";
     throw TerminalException{1};
