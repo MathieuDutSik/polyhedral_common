@@ -405,15 +405,20 @@ int QuoInt(int const& a, int const& b)
 mpz_class QuoInt(mpz_class const& a, mpz_class const& b)
 {
   mpz_class res_z=a % b;
+  mpz_class b_abs;
+  if (b > 0)
+    b_abs = b;
+  else
+    b_abs = -b;
   while(true) {
-    if (res_z >= 0 && res_z < b)
+    if (res_z >= 0 && res_z < b_abs)
       break;
     if (res_z < 0)
-      res_z += b;
-    if (res_z >= b)
-      res_z -= b;
+      res_z += b_abs;
+    if (res_z >= b_abs)
+      res_z -= b_abs;
   }
-  mpz_class quot_z=(a -res_z)/b;
+  mpz_class quot_z=(a - res_z)/b;
   return quot_z;
 }
 
@@ -713,14 +718,14 @@ mpq_class NearestInteger_rni(mpq_class const& x)
 
 void NearestInteger(mpq_class const& xI, mpq_class & xO)
 {
-  std::cerr << "NearestInteger mpq -> mpq\n";
+  //  std::cerr << "NearestInteger mpq -> mpq\n";
   xO=NearestInteger_rni(xI);
 }
 
 
 void NearestInteger(mpq_class const& xI, mpz_class & xO)
 {
-  std::cerr << "NearestInteger mpq -> mpz\n";
+  //  std::cerr << "NearestInteger mpq -> mpz\n";
   mpq_class xO_q=NearestInteger_rni(xI);
   xO=xO_q.get_den();
 }

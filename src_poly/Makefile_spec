@@ -1,18 +1,11 @@
 #PROGRAM		= LATT_lll
 #PROGRAM		= SHORT_SplitVectorFamily
 #PROGRAM		= SHORT_EnumerateCyclicCases
-PROGRAM		= CP_CopositiveKernelMin CP_CopositiveListCone CP_CopositiveMin CP_TestCompletePositivity
-#PROGRAM		= CP_TestCompletePositivity
-#PROGRAM		= CP_CopositiveMin
-#PROGRAM		= CP_TestCopositivity
-#PROGRAM		= CP_ComputeCopositiveMin
-#PROGRAM		= CP_CopositiveKernelMin
-#PROGRAM		= CP_CopositiveMin CP_TestCompletePositivity
 #PROGRAM		= SHORT_GetShortestVector
 #PROGRAM		= SHORT_ReduceVectorFamilyGAP
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_FaceLatticeDirect
-#PROGRAM		= SHORT_TestRealizability
+PROGRAM		= LATT_canonicalize
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -30,7 +23,7 @@ CC		= g++ -std=c++11 -Wall -O9
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I.
 
 
 CFLAGS 		= -I$(GMP_INCDIR)  -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) -I$(FLINT_INCDIR) -I$(TBB_INCDIR) -I$(GSL_INCDIR) $(MPREAL_INCLUDE) $(GLPK_INCLUDE)

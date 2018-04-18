@@ -1406,36 +1406,64 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
+  std::cerr << "GetCanonicalizationVector, step 1\n";
   int nbRow=WMat.rows();
+  std::cerr << "GetCanonicalizationVector, step 2\n";
   Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
+  std::cerr << "GetCanonicalizationVector, step 3\n";
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
+  std::cerr << "GetCanonicalizationVector, step 4\n";
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
   const unsigned int* cl;
   cl=g.canonical_form(stats, &report_aut_void, stderr);
-  std::vector<int> clR(nof_vertices);
+  std::vector<int> clR(nof_vertices,-1);
   for (int i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
-  int hS = nof_vertices / nbRow;
-  std::vector<int> MapVect(nbRow, -1), MapVectRev(nbRow,-1);
+  int nbVert=nbRow+2;
+  int hS = nof_vertices / nbVert;
+  if (hS * nbVert != nof_vertices) {
+    std::cerr << "Error in the number of vertices\n";
+    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
+  std::vector<int> MapVect(nbVert, -1), MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
   for (int i=0; i<nof_vertices; i++) {
     if (ListStatus[i] == 1) {
       int iNative=clR[i];
-      int iVertNative=iNative % nbRow;
+      int iVertNative=iNative % nbVert;
+      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
       MapVectRev[posCanonic] = iVertNative;
       MapVect[iVertNative] = posCanonic;
       for (int iH=0; iH<hS; iH++) {
-	int uVertNative = iVertNative + nbRow * hS;
+	int uVertNative = iVertNative + nbVert * iH;
 	int j=cl[uVertNative];
+	if (ListStatus[j] == 0) {
+	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
+	  throw TerminalException{1};
+	}
 	ListStatus[j] = 0;
       }
       posCanonic++;
     }
   }
-  return {MapVect,MapVectRev};
+  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  int posCanonicB=0;
+  for (int iCan=0; iCan<nbVert; iCan++) {
+    int iNative=MapVectRev[iCan];
+    if (iNative < nbRow) {
+      MapVectRev2[posCanonicB] = iNative;
+      MapVect2[iNative] = posCanonicB;
+      posCanonicB++;
+    }
+  }
+  std::cerr << "nbRow=" << nbRow << "\n";
+  std::cerr << "GetCanonicalizationVector, step 6\n";
+  return {MapVect2,MapVectRev2};
 }
 
 

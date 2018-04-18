@@ -96,29 +96,38 @@ T Int_IndexLattice(MyMatrix<T> const& eMat)
 	  }
     if (IsFirst)
       return 0;
+    std::cerr << "MinPivot=" << MinPivot << " iRowF=" << iRowF << " iColF=" << iColF << "\n";
     if (MinPivot == 0) {
       std::cerr << "Clear error in the code of IndexLattice\n";
       throw TerminalException{1};
     }
+    std::cerr << "Before row operations\n";
     T ThePivot=eMatW(iRowF, iColF);
     bool IsFinished=true;
-    for (int iRow=0; iRow<nbRow; iRow++)
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      std::cerr << "iRow=" << iRow << " nbRow=" << nbRow << "\n";
       if (rowStat[iRow] == 1 && iRow != iRowF) {
 	T eVal=eMatW(iRow, iColF);
+	std::cerr << "eVal=" << eVal << "\n";
 	if (eVal != 0) {
 	  IsFinished=false;
 	  T TheQ=QuoInt(eVal, ThePivot);
+	  std::cerr << "eVal=" << eVal << " ThePivot=" << ThePivot << " TheQ=" << TheQ << "\n";
 	  eMatW.row(iRow) -= TheQ*eMatW.row(iRowF);
 	}
       }
+    }
+    std::cerr << "After row operations IsFinished=" << IsFinished << "\n";
     if (IsFinished) {
       colStat[iColF]=0;
       rowStat[iRowF]=0;
       nbDone++;
       TheIndex=TheIndex*ThePivot;
     }
+    std::cerr << "Now updated index\n";
     if (nbDone == nbCol)
       return TheIndex;
+    std::cerr << "Continuing loop\n";
   }
 }
 
