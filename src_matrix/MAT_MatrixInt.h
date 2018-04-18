@@ -97,10 +97,12 @@ T Int_IndexLattice(MyMatrix<T> const& eMat)
     if (IsFirst)
       return 0;
     std::cerr << "MinPivot=" << MinPivot << " iRowF=" << iRowF << " iColF=" << iColF << "\n";
+#ifdef DEBUG
     if (MinPivot == 0) {
       std::cerr << "Clear error in the code of IndexLattice\n";
       throw TerminalException{1};
     }
+#endif
     std::cerr << "Before row operations\n";
     T ThePivot=eMatW(iRowF, iColF);
     bool IsFinished=true;
@@ -351,7 +353,23 @@ inline typename std::enable_if<(not is_float_arithmetic<T>::value),MyVector<T>>:
 }
 
 
-
+// In this function we do not care about the invertible elements of the ring
+// Below is the Z-case where we just have +1, -1.
+template<typename T>
+inline typename std::enable_if<is_totally_ordered<T>::value,MyVector<T>>::type CanonicalizeVectorToInvertible(MyVector<T> const& V)
+{
+  MyVector<T> eVect = CanonicalizeVector(V);
+  int len=eVect.size();
+  int FirstNZ = -1;
+  for (int u=0; u<len; u++)
+    if (eVect(u) != 0 && FirstNZ == -1)
+      FirstNZ = u;
+  if (FirstNZ == -1)
+    return eVect;
+  if (eVect(FirstNZ) < 0)
+    return -eVect;
+  return eVect;
+}
 
 
 
@@ -470,10 +488,12 @@ void INT_ClearColumn(MyMatrix<T> & eMat, int const& iCol, int const& MinAllowedR
 	nbFound++;
       }
     }
+#ifdef DEBUG
     if (nbFound == 0) {
       std::cerr << "The column is zero. No work possible\n";
       throw TerminalException{1};
     }
+#endif
     T ThePivot=eMat(iRowFound, iCol);
     for (int iRow=0; iRow<nbRow; iRow++)
       if (iRow != iRowFound) {
@@ -600,10 +620,12 @@ MyMatrix<T> NullspaceIntTrMat(MyMatrix<T> const& eMat)
       T eSum=0;
       for (int iCol=0; iCol<nbCol; iCol++)
 	eSum += eMat(iRow, iCol) * retNSP(iVect, iCol);
+#ifdef DEBUG
       if (eSum != 0) {
 	std::cerr << "There are remaining errors in NullspaceIntTrMat\n";
 	throw TerminalException{1};
       }
+#endif
     }
   return retNSP;
 }
@@ -652,15 +674,19 @@ MyMatrix<T> ComplementToBasis(MyVector<T> const& TheV)
 	    }
 	}
       }
+#ifdef DEBUG
     if (idxSelect == -1) {
       std::cerr << "Inconsistency in computation of value\n";
       throw TerminalException{1};
     }
+#endif
     if (nbDiffZero == 1) {
+#ifdef DEBUG
       if (AbsVal != 1) {
 	std::cerr << "Wrong value for AbsVal\n";
 	throw TerminalException{1};
       }
+#endif
       break;
     }
     for (int j=0; j<n; j++)
@@ -701,6 +727,7 @@ MyMatrix<T> ComplementToBasis(MyVector<T> const& TheV)
     T eVal=TheVcopy(i2) + eCoeff*TheVcopy(i1);
     TheVcopy(i2)=eVal;
   }
+#ifdef DEBUG
   if (!TestEquality(TheVcopy, TheV)) {
     std::cerr << "TheVcopy =";
     WriteVector(std::cerr, TheVcopy);
@@ -709,6 +736,7 @@ MyMatrix<T> ComplementToBasis(MyVector<T> const& TheV)
     std::cerr << "Bookkeeping error\n";
     throw TerminalException{1};
   }
+#endif
   return TheReturn;
 }
 
@@ -929,10 +957,12 @@ ResultSolutionIntMat<T> SolutionIntMat(MyMatrix<T> const& TheMat, MyVector<T> co
 	}
       if (nbDiff == 1 || nbDiff == 0)
 	break;
+#ifdef DEBUG
       if (MinValue == 0) {
 	std::cerr << "MinValue should not be zero\n";
 	throw TerminalException{1};
       }
+#endif
       //      std::cerr << "i=" << i << " iVectFound=" << iVectFound << " nbDiff=" << nbDiff << " MinValue=" << MinValue << "\n";
       for (int iVect=0; iVect<nbVect; iVect++)
 	if (VectStatus[iVect] == 1 && iVect != iVectFound) {
@@ -952,10 +982,12 @@ ResultSolutionIntMat<T> SolutionIntMat(MyMatrix<T> const& TheMat, MyVector<T> co
 	}*/
     }
     if (nbDiff == 1) {
+#ifdef DEBUG
       if (iVectFound == -1) {
         std::cerr << "Clear error in the program\n";
 	throw TerminalException{1};
       }
+#endif
       VectStatus[iVectFound]=0;
       /*      std::cerr << "TheMatWork=\n";
 	      WriteMatrix(std::cerr, TheMatWork);*/
@@ -1003,10 +1035,12 @@ CanSolIntMat<T> ComputeCanonicalFormFastReduction(MyMatrix<T> const& TheMat)
   int nbDiff;
   int nbVect=TheMat.rows();
   int nbCol=TheMat.cols();
+#ifdef DEBUG
   if (nbVect == 0) {
     std::cerr << "Need to write the code here\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<T> eEquivMat=IdentityMat<T>(nbVect);
   MyMatrix<T> TheMatWork=TheMat;
   std::vector<int> VectStatus(nbVect,1);
@@ -1040,10 +1074,12 @@ CanSolIntMat<T> ComputeCanonicalFormFastReduction(MyMatrix<T> const& TheMat)
 	}
       if (nbDiff == 1 || nbDiff == 0)
 	break;
+#ifdef DEBUG
       if (MinValue == 0) {
 	std::cerr << "MinValue should not be zero\n";
 	throw TerminalException{1};
       }
+#endif
       for (int iVect=0; iVect<nbVect; iVect++)
 	if (VectStatus[iVect] == 1 && iVect != iVectFound) {
 	  T prov1b=TheMatWork(iVectFound, i);
@@ -1063,10 +1099,12 @@ CanSolIntMat<T> ComputeCanonicalFormFastReduction(MyMatrix<T> const& TheMat)
       eVal=iVectFound;
       //      ListRow.push_back(iVectFound);
       //      ListCol.push_back(i);
+#ifdef DEBUG
       if (iVectFound == -1) {
         std::cerr << "Clear error in the program\n";
 	throw TerminalException{1};
       }
+#endif
       VectStatus[iVectFound]=0;
     }
     else {
@@ -1306,6 +1344,7 @@ AffineBasisResult Kernel_ComputeAffineBasis(MyMatrix<T> const& EXT)
     for (int iCol=0; iCol<nbCol; iCol++)
       if (eCol == -1 && EXTwork(iVect, iCol) != 0 && ColumnStatus[iCol] == 1)
 	eCol=iCol;
+#ifdef DEBUG
     std::cerr << "eCol=" << eCol << "\n";
     if (eCol == -1) {
       std::cerr << "This should not be selected\n";
@@ -1315,6 +1354,7 @@ AffineBasisResult Kernel_ComputeAffineBasis(MyMatrix<T> const& EXT)
       }
       throw TerminalException{1};
     }
+#endif
     V1=EXTwork.row(iVect);
     std::cerr << "V1 rows=" << V1.rows() << " cols=" << V1.cols() << "\n";
     ListExp(iVect, idx)=1;
@@ -1503,6 +1543,13 @@ std::vector<MyVector<int>> ComputeTranslationClasses(MyMatrix<T> const& M)
 // such that all vi are expressed integrally in term of wi
 // and uniquely.
 // This always exist as opposed to affine basis.
+//
+// As it happens, the algorithms works canonically.
+// That is if you replace the family of vectors V by VP
+// for some invertible P then we have
+// Zbasis(VP) = Zbasis(V) P
+// But of course this depends on the ordering of the operations.
+//
 template<typename T>
 MyMatrix<T> GetZbasis(MyMatrix<T> const& ListElement)
 {
@@ -1525,6 +1572,7 @@ MyMatrix<T> GetZbasis(MyMatrix<T> const& ListElement)
     //    std::cerr << "After TheRedMat construction\n";
     MyMatrix<T> NSP=NullspaceIntMat(TheRedMat);
     //    std::cerr << "We have NSP\n";
+#ifdef DEBUG
     if (NSP.rows() != 1) {
       std::cerr << "|NSP|=" << NSP.rows() << " when it should be 1\n";
       std::cerr << "TheRedMat:\n";
@@ -1534,7 +1582,9 @@ MyMatrix<T> GetZbasis(MyMatrix<T> const& ListElement)
       std::cerr << "Inconsistency that needs to be corrected\n";
       throw TerminalException{1};
     }
-    MyVector<T> eVect=GetMatrixRow(NSP,0);
+#endif
+    MyVector<T> eVect_pre=GetMatrixRow(NSP,0);
+    MyVector<T> eVect = CanonicalizeVectorToInvertible(eVect_pre);
     /*    std::cerr << "eVect=";
 	  WriteVector(std::cerr, eVect);*/
     int n2=DimLoc+1;
@@ -1573,8 +1623,8 @@ MyMatrix<T> GetZbasis(MyMatrix<T> const& ListElement)
       for (int iCol=0; iCol<n2; iCol++)
 	if (iCol != ThePivot) {
 	  T q=QuoInt(eVect(iCol), eVect(ThePivot));
-	  TheRedMat.row(ThePivot)=TheRedMat.row(ThePivot) + q*TheRedMat.row(iCol);
-	  eVect(iCol)=eVect(iCol) - q*eVect(ThePivot);
+	  TheRedMat.row(ThePivot) += q*TheRedMat.row(iCol);
+	  eVect(iCol) -= q*eVect(ThePivot);
 	}
     }
   };
@@ -1634,38 +1684,38 @@ MyMatrix<T> GetZbasis(MyMatrix<T> const& ListElement)
     fInsert(eElt);
     //    std::cerr << "After fInsert\n";
   }
-  bool DoCheck=true;
-  if (DoCheck) {
-    int DimSpace=TheBasis.rows();
-    for (int iBas=0; iBas<DimSpace; iBas++) {
-      MyVector<T> eLine=GetMatrixRow(TheBasis, iBas);
-      //      std::cerr << "Before SolutionIntMat, iBas=" << iBas << "\n";
-      ResultSolutionIntMat<T> eResIntMat=SolutionIntMat(ListElement, eLine);
-      /*      std::cerr << "ListElement=\n";
-      WriteMatrixGAP(std::cerr, ListElement);
-      std::cerr << "eLine=\n";
-      WriteVectorGAP(std::cerr, eLine);
-      std::cerr << "After SolutionIntMat 1\n";*/
-      if (!eResIntMat.TheRes) {
-	std::cerr << "Error in GetZbasis 1\n";
-	throw TerminalException{1};
-      }
-    }
-    for (int iElt=0; iElt<nbElt; iElt++) {
-      MyVector<T> eElt=GetMatrixRow(ListElement, iElt);
-      //      std::cerr << "Before SolutionIntMat, iElt=" << iElt << "\n";
-      ResultSolutionIntMat<T> eResIntMat=SolutionIntMat(TheBasis, eElt);
-      /*      std::cerr << "TheBasis=\n";
-      WriteMatrixGAP(std::cerr, TheBasis);
-      std::cerr << "eElt=\n";
-      WriteVectorGAP(std::cerr, eElt);
-      std::cerr << "After SolutionIntMat 2 eResIntMat.TheRes=" << eResIntMat.TheRes << "\n";*/
-      if (!eResIntMat.TheRes) {
-	std::cerr << "Error in GetZbasis 2\n";
-	throw TerminalException{1};
-      }
+
+#ifdef DEBUG
+  int DimSpace=TheBasis.rows();
+  for (int iBas=0; iBas<DimSpace; iBas++) {
+    MyVector<T> eLine=GetMatrixRow(TheBasis, iBas);
+    //      std::cerr << "Before SolutionIntMat, iBas=" << iBas << "\n";
+    ResultSolutionIntMat<T> eResIntMat=SolutionIntMat(ListElement, eLine);
+    /*      std::cerr << "ListElement=\n";
+	    WriteMatrixGAP(std::cerr, ListElement);
+	    std::cerr << "eLine=\n";
+	    WriteVectorGAP(std::cerr, eLine);
+	    std::cerr << "After SolutionIntMat 1\n";*/
+    if (!eResIntMat.TheRes) {
+      std::cerr << "Error in GetZbasis 1\n";
+      throw TerminalException{1};
     }
   }
+  for (int iElt=0; iElt<nbElt; iElt++) {
+    MyVector<T> eElt=GetMatrixRow(ListElement, iElt);
+    //      std::cerr << "Before SolutionIntMat, iElt=" << iElt << "\n";
+    ResultSolutionIntMat<T> eResIntMat=SolutionIntMat(TheBasis, eElt);
+    /*      std::cerr << "TheBasis=\n";
+	    WriteMatrixGAP(std::cerr, TheBasis);
+	    std::cerr << "eElt=\n";
+	    WriteVectorGAP(std::cerr, eElt);
+	    std::cerr << "After SolutionIntMat 2 eResIntMat.TheRes=" << eResIntMat.TheRes << "\n";*/
+    if (!eResIntMat.TheRes) {
+      std::cerr << "Error in GetZbasis 2\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   return TheBasis;
 }
 
