@@ -55,15 +55,15 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   std::vector<MyVector<Tint>> NewBasis_Tint;
   int TheDim=0;
   for (int iRowCan=0; iRowCan<nbRow; iRowCan++) {
-    std::cerr << "iRowCan=" << iRowCan << "\n";
     int iRowNative = MapVectRev[iRowCan];
+    std::cerr << "iRowCan=" << iRowCan << " iRowNative=" << iRowNative << "\n";
     MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
     MyVector<T>    eRow_T    = ConvertVectorUniversal<T,Tint>(eRow_Tint);
     SolMatResult<T> TheSol = SolutionMat(OldBasis_MatT, eRow_T);
     if (TheSol.result) {
       MyVector<T> eVect_T = ZeroVector<T>(n);
       for (int u=0; u<TheDim; u++)
-	eVect_T += TheSol.eSol(u) * OldBasis_T[u];
+	eVect_T += TheSol.eSol(u) * NewBasis_T[u];
       if (!IsIntegralVector(eVect_T)) {
 	std::cerr << "Error the vector should be integral\n";
 	throw TerminalException{1};
@@ -72,10 +72,12 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
       AssignMatrixRow(SHVred, iRowNative, eVect_Tint);
     }
     else {
-      MyVector<Tint> TheVect = ZeroVector<Tint>(n);
+      MyVector<T> TheVect_T = ZeroVector<T>(n);
+      MyVector<Tint> TheVect_Tint = ZeroVector<Tint>(n);
+      Tint eMult;
       if (TheDim == 0) {
 	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoeff(eRow_Tint);
-	TheVect(0) = T_abs(eFr.TheMult);
+	eMult = T_abs(eFr.TheMult);
       }
       else {
 	MyMatrix<Tint> OldBasis_MatTint = MatrixFromVectorFamily(OldBasis_Tint);
@@ -97,16 +99,22 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 	  ScalVect(uS)=eScal;
 	}
 	FractionVector<Tint> eFr = RemoveFractionVectorPlusCoeff(ScalVect);
-	TheVect(TheDim) = T_abs(eFr.TheMult);
+	eMult = T_abs(eFr.TheMult);
       }
+      std::cerr << "TheDim=" << TheDim << " eMult=" << eMult << "\n";
+      TheVect_T(TheDim) = eMult;
+      TheVect_Tint(TheDim) = eMult;
       OldBasis_T.push_back(eRow_T);
       OldBasis_Tint.push_back(eRow_Tint);
       OldBasis_MatT = MatrixFromVectorFamily(OldBasis_T);
-      NewBasis_Tint.push_back(TheVect);
-      AssignMatrixRow(SHVred, iRowNative, TheVect);
+      NewBasis_T.push_back(TheVect_T);
+      NewBasis_Tint.push_back(TheVect_Tint);
+      AssignMatrixRow(SHVred, iRowNative, TheVect_Tint);
       TheDim++;
     }
   }
+  std::cerr << "OldBasis_MatT=\n";
+  WriteMatrix(std::cerr, OldBasis_MatT);
   MyMatrix<T> SHVred_T = ConvertMatrixUniversal<T,Tint>(SHVred);
   MyMatrix<T> SHV_T    = ConvertMatrixUniversal<T,Tint>(SHV);
   permlib::Permutation ePerm=IdentityPermutation(nbRow);
