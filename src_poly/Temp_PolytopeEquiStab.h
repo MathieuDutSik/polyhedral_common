@@ -177,12 +177,14 @@ public:
   {
     int nbEnt=ListWeight.size();
     int siz=gListRev.size();
+#ifdef DEBUG
     if (nbEnt != siz) {
       std::cerr << "We should have nbEnt = siz\n";
       std::cerr << "nbEnt=" << nbEnt << "\n";
       std::cerr << "siz=" << siz << "\n";
       throw TerminalException{1};
     }
+#endif
     for (int iRow=0; iRow<nbRow; iRow++)
       for (int iCol=0; iCol<nbRow; iCol++) {
 	int idx=iRow + nbRow*iCol;
@@ -277,10 +279,12 @@ public:
   {
     T1 eVal=FCT(iRow,iCol);
     int pos=GetPositionWeight(eVal);
+#ifdef DEBUG
     if (pos == -1) {
       std::cerr << "We should not reach that stage\n";
       throw TerminalException{1};
     }
+#endif
     return pos;
   }
   void SetWeight(std::vector<T1> const & inpWeight)
@@ -568,10 +572,12 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
       T eScal=GetValue(iShort,jShort);
       PairData test{eScal,0};
       auto iter=setWeightIdx.find(test);
+#ifdef DEBUG
       if (iter == setWeightIdx.end()) {
 	std::cerr << "Without a doubt a bug\n";
 	throw TerminalException{1};
       }
+#endif
       int idxret=iter->idx;
       //      std::cerr << "idx=" << idx << "\n";
       int pos1=iShort + nbShort*jShort;
@@ -892,26 +898,26 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
 	  int jImg=eGen->at(j);
 	  auto aInsert=[&](int const& u, int const& v) -> void {
 	    int eVal1=WMat.GetValue(u,v);
-	    if (DoDebug) {
-	      if (IsDiag) {
-		if (u != v) {
-		  std::cerr << "IsDiag=" << IsDiag << "\n";
-		  std::cerr << "  i=" << i << " j=" << j << "\n";
-		  std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
-		  std::cerr << "  Error u=" << u << " v=" << v << "\n";
-		  throw TerminalException{1};
-		}
-	      }
-	      else {
-		if (u == v) {
-		  std::cerr << "IsDiag=" << IsDiag << "\n";
-		  std::cerr << "  i=" << i << " j=" << j << "\n";
-		  std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
-		  std::cerr << "  Error u=" << u << " v=" << v << "\n";
-		  throw TerminalException{1};
-		}
+#ifdef DEBUG
+	    if (IsDiag) {
+	      if (u != v) {
+		std::cerr << "IsDiag=" << IsDiag << "\n";
+		std::cerr << "  i=" << i << " j=" << j << "\n";
+		std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
+		std::cerr << "  Error u=" << u << " v=" << v << "\n";
+		throw TerminalException{1};
 	      }
 	    }
+	    else {
+	      if (u == v) {
+		std::cerr << "IsDiag=" << IsDiag << "\n";
+		std::cerr << "  i=" << i << " j=" << j << "\n";
+		std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
+		std::cerr << "  Error u=" << u << " v=" << v << "\n";
+		throw TerminalException{1};
+	      }
+	    }
+#endif
 	    if (eVal1 == -1)
 	      FuncInsertIChoice(iChoiceB, {u, v});
 	  };
@@ -1206,10 +1212,12 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
     int iWeight=jWeight-1;
     int i=ePerm.at(iWeight);
     int j=ePerm.at(jWeight);
+#ifdef DEBUG
     if (ListWeight[i] > ListWeight[j]) {
       std::cerr << "Logical error in the comparison\n";
       throw TerminalException{1};
     }
+#endif
   }
   T eMainInv=0;
   for (int iInv=0; iInv<nbInv; iInv++) {
@@ -1423,11 +1431,13 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   //
   int nbVert=nbRow+2;
   int hS = nof_vertices / nbVert;
+#ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
     std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
     throw TerminalException{1};
   }
+#endif
   std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
   std::vector<int> MapVect(nbVert, -1), MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
@@ -1436,16 +1446,18 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
     if (ListStatus[i] == 1) {
       int iNative=clR[i];
       int iVertNative=iNative % nbVert;
-      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
+      //      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
       MapVectRev[posCanonic] = iVertNative;
       MapVect[iVertNative] = posCanonic;
       for (int iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
 	int j=cl[uVertNative];
+#ifdef DEBUG
 	if (ListStatus[j] == 0) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
 	  throw TerminalException{1};
 	}
+#endif
 	ListStatus[j] = 0;
       }
       posCanonic++;
@@ -1589,14 +1601,17 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
     std::vector<permlib::dom_int> gList(nbRow);
     for (int iVert=0; iVert<nbRow; iVert++) {
       int jVert=ListGen[iGen][iVert];
+#ifdef DEBUG
       if (jVert >= nbRow) {
 	std::cerr << "jVert is too large\n";
 	std::cerr << "jVert=" << jVert << "\n";
 	std::cerr << "nbRow=" << nbRow << "\n";
 	throw TerminalException{1};
       }
+#endif
       gList[iVert]=jVert;
     }
+#ifdef DEBUG
     for (int iRow=0; iRow<nbRow; iRow++)
       for (int jRow=0; jRow<nbRow; jRow++) {
 	int iRowI=gList[iRow];
@@ -1610,6 +1625,7 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 	  throw TerminalException{1};
 	}
       }
+#endif
     generatorList.push_back(permlib::Permutation(gList));
   }
   return GetPermutationGroup(nbRow, generatorList);
@@ -1653,6 +1669,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatri
   std::vector<permlib::dom_int> TheEquiv(nbRow);
   for (int i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
+#ifdef DEBUG
   for (int iVert1=0; iVert1<nbRow; iVert1++) {
     int iVert2=TheEquiv[iVert1];
     for (int jVert1=0; jVert1<nbRow; jVert1++) {
@@ -1671,6 +1688,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatri
       }
     }
   }
+#endif
   permlib::Permutation ePerm(TheEquiv);
   return {true, ePerm};
 }
@@ -2097,6 +2115,7 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
   permlib::Permutation ePerm1=SortingPerm(EXTrow1);
   permlib::Permutation ePerm2=SortingPerm(EXTrow2);
   permlib::Permutation ePermRet=(~ePerm1) * ePerm2;
+#ifdef DEBUG
   for (int iVect=0; iVect<nbVect; iVect++) {
     int jVect=ePermRet.at(iVect);
     if (EXTrow2[jVect] != EXTrow1[iVect]) {
@@ -2132,6 +2151,7 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
       throw TerminalException{1};
     }
   }
+#endif
   return ePermRet;
 }
 
@@ -2164,10 +2184,12 @@ std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 		NewElts.insert(fSet);
 		ListTotal.erase(fSet);
 	      }
+#ifdef DEBUG
 	      else {
 		std::cerr << "Orbit do not matched, PANIC!!!\n";
 		throw TerminalException{1};
 	      }
+#endif
 	    }
 	  }
 	}
@@ -2213,10 +2235,12 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 		NewElts.insert(fObj);
 		ListTotal.erase(fObj);
 	      }
+#ifdef DEBUG
 	      else {
 		std::cerr << "Orbit do not match, PANIC!!!\n";
 		throw TerminalException{1};
 	      }
+#endif
 	    }
 	  }
 	}
