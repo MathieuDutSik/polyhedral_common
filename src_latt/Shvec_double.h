@@ -295,7 +295,6 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const& eMat)
   std::cerr << "recLLL.GramMatRed=\n";
   WriteMatrix(std::cerr, recLLL.GramMatRed);
   MyMatrix<T> Pmat_T = ConvertMatrixUniversal<T,Tint>(recLLL.Pmat);
-  MyMatrix<Tint> PmatInv = Inverse(recLLL.Pmat);
   //
   std::cerr << "eMat=\n";
   WriteMatrix(std::cerr, eMat);
@@ -304,8 +303,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const& eMat)
   WriteMatrix(std::cerr, eMatRed);
   //
   MyMatrix<Tint> SHVred = ExtractInvariantVectorFamilyZbasis_Kernel<T,Tint>(eMatRed);
-  MyMatrix<Tint> SHVret = SHVred * PmatInv;
-  return SHVred;
+  MyMatrix<Tint> SHVret = SHVred * recLLL.Pmat;
+  return SHVret;
 }
 
 
