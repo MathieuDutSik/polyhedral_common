@@ -2,7 +2,6 @@
 #define TEMP_POLYTOPE_INT_INCLUDE
 
 #include "COMB_Combinatorics.h"
-#include "NumberTheory.h"
 
 
 template<typename T>
