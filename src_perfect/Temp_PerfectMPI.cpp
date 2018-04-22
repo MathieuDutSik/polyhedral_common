@@ -12,8 +12,8 @@ int main()
   using T=mpq_class;
   using Tint=mpz_class;
   struct TypePerfectExch {
-    MyMatrix<Tint> eMat;
     int incd; // the number of shortest vectors divided by 2
+    MyMatrix<T> eMat;
   };
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT();
@@ -61,17 +61,32 @@ int main()
     }
     return -1;
   };
-  
   //
   // The list of matrices being treated
   //
-  std::map<TypePerfectExch,KeyData> ListCases;
+  std::map<TypePerfectExch,KeyData> ListCasesNotDone;
+  std::map<TypePerfectExch,KeyData> ListCasesDone;
   auto fInsert=[&](TypePerfectExch const& NewMat) -> void {
-    auto it = ListCases.find(NewMat);
-    if (it != ListCases.end())
+    auto it1 = ListCasesDone.find(NewMat);
+    if (it1 != ListCasesDone.end())
       return;
-    ListCases[NewMat] = 0;
+    auto it2 = ListCasesNotDone.find(NewMat);
+    if (it2 != ListCasesNotDone.end())
+      return;
+    ListCasesNotDone[NewMat] = 0;
     os << "Inserting new form, now we have |ListCases|=" << ListCases.size() << "\n";
+  };
+  auto GetLowestIncidenceUndone=[&]() -> boost::optional<TypePerfectExch> {
+    auto it1 = ListCasesNotDone.begin();
+    if (it1 == ListCasesNotDone.end())
+      return {};
+    if (it1->incd > MaxIncidenceTreating)
+      return {};
+    return boost::optional(*it1);
+  };
+  auto SetMatrixAsDone=[&](TypePerfectExch const& TheMat) -> void {
+    ListCasesNotDone.erase(TheMat);
+    ListCasesDone[TheMat] = 1;
   };
   //
   // The system for sending matrices
@@ -83,9 +98,6 @@ int main()
     RequestStatus[u] = 1;
   };
   std::vector<TypePerfectMatrix> ListMatrixUnsent;
-  auto fInsertUnsent=[&](TypePerfectMatrix const& eMat) -> void {
-    ListMatrixUnsent.push_back(eMat);
-  };
   auto ClearUnsentAsPossible=[&]() -> void {
     int pos=ListMatrixUnsent.size() - 1;
     while(true) {
@@ -95,7 +107,19 @@ int main()
       if (idx == -1)
 	break;
       fSendMatrix(ListMatrixUnsent[pos]);
+      ListMatrixUnsent.pop_back();
       pos--;
+    }
+  };
+  auto fInsertUnsent=[&](TypePerfectMatrix const& eMat) -> void {
+    int KeyInv=IntegerDiscriminantInvariant(eMat);
+    int res=KeyInv % size;
+    if (res == irank) {
+      fInsert(eMat);
+    }
+    else {
+      ListMatrixUnsent.push_back(eMat);
+      ClearUnsentAsPossible();
     }
   };
   for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
@@ -123,10 +147,20 @@ int main()
       }
     }
     else {
-      
-
-      
-      std::vector<MyMatrix<Tint>> ListAdjacent = 
+      if (ListMatrixUnsent.size() < MaxStoredUnsentMatrices) {
+	boost::optional<TypePerfectExch> eReq=GetLowestIncidenceUndone();
+	if (eReq) {
+	  SetMatrixAsDone(*eReq);
+	  std::vector<MyMatrix<Tint>> ListAdjacent = GetAdjacentFormDirectMethod(eReq->eMat);
+	  for (auto & eMat : ListAdjacent) {
+	    MyMatrix<T> eMatCan = ComputeCanonicalForm<T,Tint>(eMat);
+	    Tshortest<T,Tint> eRec = T_ShortestVector(eMatCan);
+	    int incd = (eRec.SHV.rows()) / 2;
+	    TypePerfectMatrix RecMat{incd, eMatCan};
+	    fInsertUnsent(RecMat);
+	  }
+	}
+      }
     }
     ClearUnsentAsPossible();
   }
