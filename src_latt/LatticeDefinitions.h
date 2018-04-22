@@ -380,7 +380,7 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
       }
       //      std::cerr << "Sec While loop, step 8\n";
       
-      if (k>2) k--;
+      if (k>1) k--;
       RED( k-1 );
       //      std::cerr << "Sec While loop, step 9\n";
     }
