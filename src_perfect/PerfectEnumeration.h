@@ -14,8 +14,9 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT()
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListIntValues1["n"]=9;
   ListIntValues1["MaxNumberFlyingMessage"]=100;
-  ListIntValues1["MaxIncidenceTreating"]=100;
-  ListStringValues1["PrefixDataSave"]="Output_";
+  ListIntValues1["MaxIncidenceTreating"]=45 + 20;
+  ListIntValues1["MaxStoredUnsentMatrices"]=1000;
+  //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues=ListIntValues1;
   BlockDATA.ListBoolValues=ListBoolValues1;
