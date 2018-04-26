@@ -3,7 +3,6 @@
 
 #include "POLY_PolytopeFct.h"
 #include "Temp_PolytopeEquiStab.h"
-#include "Shvec_double.h"
 #include "Temp_Positivity.h"
 
 
