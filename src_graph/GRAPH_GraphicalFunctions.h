@@ -274,7 +274,6 @@ std::vector<std::vector<int>> GRAPH_FindAllShortestPath(Tgr const& GR, int const
   }
   return ListPath;
 }
-  
 
 
 
