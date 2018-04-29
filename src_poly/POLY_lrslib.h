@@ -1178,11 +1178,10 @@ lrs_dic<T> *new_lrs_dic (long m, long d, long m_A)
 
   p = new lrs_dic<T>;
 
-  p->B   = (long *)malloc ((m + 1)*sizeof (long));
-  p->Row = (long *)malloc ((m + 1)*sizeof (long));
-
-  p->C   = (long *)malloc ((d + 1)*sizeof (long));
-  p->Col = (long *)malloc ((d + 1)*sizeof (long));
+  p->B   = new long[m+1];
+  p->Row = new long[m+1];
+  p->C   = new long[d+1];
+  p->Col = new long[d+1];
 
   p->d_orig=d;
 
@@ -1276,7 +1275,7 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
   d = P->d;
   lastdv = Q->lastdv;
 
-  Cobasic = (long *) malloc((m + d + 2)*sizeof (long));
+  Cobasic = new long[m + d + 2];
 
   /* set Cobasic flags */
   for (i = 0; i < m + d + 1; i++)
@@ -1309,7 +1308,7 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
        pivot (P, Q, ii, k);
        update (P, Q, &ii, &k);
       } else {
-       free(Cobasic);
+	delete [] Cobasic;
        return globals::FALSE;
       }
     }
@@ -1323,13 +1322,12 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
   for (i = lastdv + 1; i <= m; i++)
     if (negative(A[Row[i]][0]))
       {
-        free(Cobasic);
+        delete [] Cobasic;
 	return globals::FALSE;
       }
-  free(Cobasic);
+  delete [] Cobasic;
   return globals::TRUE;
-
-}				/* end of restartpivots */
+}
 
 
 
@@ -1653,10 +1651,14 @@ void copy_dict (lrs_dat<T> * global, lrs_dic<T> * dest, lrs_dic<T> * src)
 
   dest->det = src->det;
 
-  memcpy (dest->B, src->B, (m + 1) * sizeof (long));
-  memcpy (dest->C, src->C, (d + 1) * sizeof (long));
-  memcpy (dest->Row, src->Row, (m + 1) * sizeof (long));
-  memcpy (dest->Col, src->Col, (d + 1) * sizeof (long));
+  for (int u=0; u<m+1; u++) {
+    dest->B[u] = src->B[u];
+    dest->Row[u] = src->Row[u];
+  }
+  for (int u=0; u<d+1; u++) {
+    dest->C[u] = src->C[u];
+    dest->Col[u] = src->Col[u];
+  }
 }
 
 /* 
@@ -1751,13 +1753,10 @@ void lrs_free_dic (lrs_dic<T> * P, lrs_dat<T> *Q)
     delete [] P->A[i];
   delete [] P->A;
 
-/* "it is a ghastly error to free something not assigned my malloc" KR167 */
-/* so don't try: free (P->det);                                           */
-
-  free (P->Row);
-  free (P->Col);
-  free (P->C);
-  free (P->B);
+  delete [] P->Row;
+  delete [] P->Col;
+  delete [] P->C;
+  delete [] P->B;
 
 /* go to next record in cache if any */
   P1 =P->next;
@@ -1773,14 +1772,13 @@ template<typename T>
 void lrs_free_dat ( lrs_dat<T> *Q )
 {
 /* most of these items were allocated in lrs_alloc_dic */
-
-  free (Q->inequality);
-  free (Q->facet);
-  free (Q->redundcol);
-  free (Q->linearity);
-  free (Q->minratio);
-  free (Q->temparray);
-  free (Q->saved_C);
+  delete [] Q->inequality;
+  delete [] Q->linearity;
+  delete [] Q->facet;
+  delete [] Q->redundcol;
+  delete [] Q->minratio;
+  delete [] Q->temparray;
+  delete [] Q->saved_C;
   delete Q;
 }
 
@@ -1852,21 +1850,21 @@ lrs_dic<T> * lrs_alloc_dic (lrs_dat<T> * Q)
     for (j = 0; j <= d; j++)
       p->A[i][j]=0;
 
-  Q->inequality = (long*)malloc((m + 1)*sizeof (long));
+  Q->inequality = new long[m+1];
   for (i=0; i<=m; i++)
     Q->inequality[i]=0;
   if (Q->nlinearity == 0)   /* linearity may already be allocated */
-    Q->linearity = (long *)malloc((m + 1)*sizeof (long));
+    Q->linearity = new long[m+1];
   for (i=0; i<=m; i++)
     Q->linearity[i]=0;
 
-  Q->facet = (long *)malloc((d + 1)*sizeof (long));
-  Q->redundcol = (long *)malloc((d + 1)*sizeof (long));
-  Q->minratio = (long *)malloc((m + 1)*sizeof (long));
-  Q->temparray = (long *)malloc((d + 1)*sizeof (long));
+  Q->facet = new long[d+1];
+  Q->redundcol = new long[d+1];
+  Q->minratio = new long[m+1];
+  Q->temparray = new long[d+1];
 
   Q->inequality[0] = 2L;
-  Q->saved_C = (long *)malloc((d + 1)*sizeof (long));
+  Q->saved_C = new long[d+1];
 
   Q->lastdv = d;      /* last decision variable may be decreased */
                       /* if there are redundant columns          */

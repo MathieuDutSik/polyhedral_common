@@ -457,13 +457,13 @@ std::list<int> ComputeFullOrbitPoint(TheGroupFormat const& TheGRP, int const& eP
 {
   IntegerSubsetStorage *Vorb;
   IntegerSubsetStorage *Vactive;
+  Vorb = new IntegerSubsetStorage;
+  Vactive = new IntegerSubsetStorage;
   std::list<int> eList;
   std::list<permlib::Permutation::ptr> ListGen;
   int TheFirst;
   permlib::dom_int n=TheGRP.n;
   ListGen=TheGRP.group->S;
-  Vorb=(IntegerSubsetStorage*)malloc(sizeof(IntegerSubsetStorage));
-  Vactive=(IntegerSubsetStorage*)malloc(sizeof(IntegerSubsetStorage));
   VSLT_InitializeStorage(Vorb, n);
   VSLT_InitializeStorage(Vactive, n);
   VSLT_StoreValue(Vactive, ePoint);
@@ -482,17 +482,17 @@ std::list<int> ComputeFullOrbitPoint(TheGroupFormat const& TheGRP, int const& eP
   }
   VSLT_FreeStorage(Vorb);
   VSLT_FreeStorage(Vactive);
-  free(Vorb);
-  free(Vactive);
+  delete Vorb;
+  delete Vactive;
   return eList;
 }
 
 std::vector<Face> DecomposeOrbitPoint(TheGroupFormat const& TheGRP, Face const& eList)
 {
   IntegerSubsetStorage *Vlist;
+  Vlist = new IntegerSubsetStorage;
   std::vector<Face> ListOrb;
   int len, i, TheFirst;
-  Vlist=(IntegerSubsetStorage*)malloc(sizeof(IntegerSubsetStorage));
   len=eList.count();
   int nbPoint=TheGRP.n;
   VSLT_InitializeStorage(Vlist, nbPoint);
@@ -514,7 +514,7 @@ std::vector<Face> DecomposeOrbitPoint(TheGroupFormat const& TheGRP, Face const& 
     ListOrb.push_back(vectOrb);
   }
   VSLT_FreeStorage(Vlist);
-  free(Vlist);
+  delete Vlist;
   return ListOrb;
 }
 
