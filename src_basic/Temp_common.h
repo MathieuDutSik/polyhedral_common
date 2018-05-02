@@ -813,6 +813,39 @@ std::vector<T> Filtered(std::vector<T> const& V, std::function<bool(T const&)> c
   return LRet;
 }
 
+// Returned fields {v1,v2}
+// v1 is the field returning the sorted index to the original index
+// v2 is the field returning the original index to the sorted index
+template<typename T>
+std::pair<std::vector<int>,std::vector<int>> SortingList(std::vector<T> const & ListV)
+{
+  struct PairData {
+    std::size_t i;
+    T x;
+  };
+  std::size_t len=ListV.size();
+  std::vector<PairData> ListPair(len);
+  for (std::size_t i=0; i<len; i++) {
+    PairData ePair{i, ListV[i]};
+    ListPair[i]=ePair;
+  }
+  sort(ListPair.begin(), ListPair.end(),
+       [](PairData const & x1, PairData const& x2) -> bool {
+         if (x1.x < x2.x)
+           return true;
+         if (x2.x < x1.x)
+           return false;
+         return x1.i< x2.i;
+       });
+  std::vector<int> v1(len);
+  std::vector<int> v2(len);
+  for (std::size_t i=0; i<len; i++) {
+    int eIdx=ListPair[i].i;
+    v1[i]=eIdx;
+    v2[eIdx]=i;
+  }
+  return {v1,v2};
+}
 
 
 

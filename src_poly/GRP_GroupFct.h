@@ -779,6 +779,9 @@ permlib::Permutation SortingPerm(std::vector<T> const & ListV)
 }
 
 
+
+
+
 std::vector<int> PermutationOrbit(permlib::Permutation const& ePerm)
 {
   //  std::cerr << "  Beginning of PermutationOrbit\n";
