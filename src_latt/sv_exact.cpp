@@ -22,6 +22,8 @@
 
 int main(int argc, char *argv[])
 {
+  using T=mpq_class;
+  using Tint=mpz_class;
   try {
     int i, j, mode, number, coset;
     mpq_class bound = 0;
@@ -77,7 +79,7 @@ int main(int argc, char *argv[])
     //
     int dim;
     std::cin >> dim;
-    MyMatrix<mpq_class> gram_matrix(dim,dim);
+    MyMatrix<T> gram_matrix(dim,dim);
     mpq_class eT;
     for (i = 0; i < dim; i++)
       for (j = 0; j <= i; j++) {
@@ -85,7 +87,7 @@ int main(int argc, char *argv[])
 	gram_matrix(i,j)=eT;
 	gram_matrix(j,i)=eT;
       }
-    MyVector<mpq_class> cosetVect(dim);
+    MyVector<T> cosetVect(dim);
     if (coset) {
       for (i = 0; i < dim; i++)
 	{
@@ -100,8 +102,8 @@ int main(int argc, char *argv[])
     //
     // Defining info and computing with it
     //
-    T_shvec_info<mpq_class> info;
-    initShvecReq<mpq_class>(dim, gram_matrix, info);
+    T_shvec_info<T,Tint> info;
+    initShvecReq<T,Tint>(dim, gram_matrix, info);
     info.request.bound = bound;
     info.request.mode = mode;
     info.request.number = number;

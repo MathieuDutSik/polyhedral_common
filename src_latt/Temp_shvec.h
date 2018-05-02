@@ -27,19 +27,19 @@ struct T_shvec_request {
   MyMatrix<T> gram_matrix;
 };
 
-template<typename T>
+template<typename T, typename Tint>
 struct T_shvec_info {
   T_shvec_request<T> request;
   int short_vectors_count;
   int short_vectors_number;
-  std::vector<MyVector<int>> short_vectors;
+  std::vector<MyVector<Tint>> short_vectors;
   T minimum;
 };
 
 
-template<typename T>
-int insertBound(T_shvec_info<T> &info,
-		MyVector<int> const& vector, 
+template<typename T, typename Tint>
+  int insertBound(T_shvec_info<T,Tint> &info,
+		MyVector<Tint> const& vector, 
 		int coset,
 		T norm)
 {
@@ -49,7 +49,7 @@ int insertBound(T_shvec_info<T> &info,
   info.short_vectors_number++;
   //  std::cerr << "short_vectors_number=" << info.short_vectors_number << "\n";
   
-  if (norm < info.minimum || info.minimum == -1.0)
+  if (norm < info.minimum || info.minimum == -1)
     info.minimum = norm;
 
   if (info.short_vectors_number == info.request.number)
@@ -108,8 +108,8 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
 // n<= sqrt(a) + b < n+1
 // And so to n - b <= sqrt(a) (and opposite for n+1)
 // And so to (n-b)^2 <= a
-template<typename T>
-int Infinitesimal_Floor(T const& a, T const& b)
+template<typename T, typename Tint>
+Tint Infinitesimal_Floor(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
@@ -118,8 +118,8 @@ int Infinitesimal_Floor(T const& a, T const& b)
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
   double eD1=floor(alpha);
   long int eD2=lround(eD1);
-  int eReturn=eD2;
-  auto f=[&](int const& x) -> bool {
+  Tint eReturn=eD2;
+  auto f=[&](Tint const& x) -> bool {
     T eDiff=x - b;
     if (eDiff <= 0)
       return true;
@@ -151,8 +151,8 @@ int Infinitesimal_Floor(T const& a, T const& b)
 // n-1 < -sqrt(a) + b <= n
 // And so to -sqrt(a) <= n - b  (and opposite for n-1)
 // And so to (n-b)^2 <= a (and opposite for n-1)
-template<typename T>
-int Infinitesimal_Ceil(T const& a, T const& b)
+template<typename T, typename Tint>
+Tint Infinitesimal_Ceil(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
@@ -161,8 +161,8 @@ int Infinitesimal_Ceil(T const& a, T const& b)
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
   double eD1=ceil(alpha);
   long int eD2=lround(eD1);
-  int eReturn=eD2;
-  auto f=[&](int const& x) -> bool {
+  Tint eReturn=eD2;
+  auto f=[&](Tint const& x) -> bool {
     T eDiff=x - b;
     if (eDiff >= 0)
       return true;
@@ -188,9 +188,9 @@ int Infinitesimal_Ceil(T const& a, T const& b)
 
 
 
-template<typename T>
-int insertStop(T_shvec_info<T> &info,
-	       MyVector<int> const& vector, 
+template<typename T, typename Tint>
+int insertStop(T_shvec_info<T,Tint> &info,
+	       MyVector<Tint> const& vector, 
 	       int coset,
 	       T norm)
 {
@@ -200,26 +200,27 @@ int insertStop(T_shvec_info<T> &info,
   return TempShvec_globals::STOP_COMPUTATION;
 }
 
-template<typename T>
-int computeIt(T_shvec_info<T> &info,
-	      int (*insert)(T_shvec_info<T> &info,
-			    MyVector<int> const& vector, 
+template<typename T, typename Tint>
+int computeIt(T_shvec_info<T,Tint> &info,
+	      int (*insert)(T_shvec_info<T,Tint> &info,
+			    MyVector<Tint> const& vector, 
 			    int coset,
 			    T norm))
 {
-  int coset, result, not_finished, needs_new_bound, i, j, dim;
+  int coset, result, not_finished, i, j, dim;
+  bool needs_new_bound;
   T sum, Z, bound;
   //  double eQuot_doubl;
   result = 0;
   dim = info.request.dim;
   bound = info.request.bound;
   //  std::cerr << "bound=" << bound << "\n";
-  MyVector<int> Lower(dim);
-  MyVector<int> Upper(dim);
+  MyVector<Tint> Lower(dim);
+  MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
   MyVector<T> C(dim);
-  MyVector<int> x(dim);
+  MyVector<Tint> x(dim);
   MyMatrix<T> g = info.request.gram_matrix;
   /*
   std::cerr << "g=\n";
@@ -258,7 +259,7 @@ int computeIt(T_shvec_info<T> &info,
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
   not_finished = 1;
-  needs_new_bound = 1;
+  needs_new_bound = true;
   i = dim - 1;
   Trem(i) = bound;
   U(i) = 0;
@@ -269,10 +270,10 @@ int computeIt(T_shvec_info<T> &info,
       T eSum = - U(i) - C(i);
       //      GET_DOUBLE(eQuot, eQuot_doubl);
       //      std::cerr << "eQuot_doubl=" << eQuot_doubl << "\n";
-      Upper(i) = Infinitesimal_Floor(eQuot, eSum);
-      Lower(i) = Infinitesimal_Ceil(eQuot, eSum);
+      Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
+      Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       x(i) = Lower(i);
-      needs_new_bound = 0;
+      needs_new_bound = false;
     }
     x(i)=x(i)+1;
     //    std::cerr << "dim=" << dim << "\n";
@@ -354,7 +355,7 @@ int computeIt(T_shvec_info<T> &info,
 	U(i) = sum;
 	T hVal=x(i+1) + C(i+1) + U(i+1);
 	Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal * hVal;
-	needs_new_bound = 1;
+	needs_new_bound = true;
       }
       //      std::cerr << "Case 8 i=" << i << "\n";
     }
@@ -369,8 +370,8 @@ int computeIt(T_shvec_info<T> &info,
   return 0;
 }
 
-template<typename T>
-int computeMinimum(T_shvec_info<T> &info)
+template<typename T, typename Tint>
+int computeMinimum(T_shvec_info<T,Tint> &info)
 {
   int result, dim, coset, i, j;
   dim = info.request.dim;
@@ -429,10 +430,10 @@ int computeMinimum(T_shvec_info<T> &info)
 
 
 
-template<typename T>
+template<typename T, typename Tint>
 void initShvecReq(int dim,
-		  MyMatrix<T> gram_matrix,
-		  T_shvec_info<T> &info)
+		  MyMatrix<T> const& gram_matrix,
+		  T_shvec_info<T,Tint> &info)
 {
   if (dim < 2) {
     std::cerr << "shvec: (initShvecReq) wrong input!\n";
@@ -440,18 +441,18 @@ void initShvecReq(int dim,
     throw TerminalException{1};
   }
   info.request.dim = dim;
-  info.request.coset=MyVector<T>(dim);
+  info.request.coset = MyVector<T>(dim);
   info.request.gram_matrix=gram_matrix;
   info.request.mode = 0;
   info.request.bound = 0.0;
   info.request.number = 0;
   info.short_vectors_count = 0;
   info.short_vectors_number = 0;
-  info.minimum = -1.0;
+  info.minimum = -1;
 }
 
-template<typename T>
-int T_computeShvec(T_shvec_info<T> &info)
+template<typename T, typename Tint>
+int T_computeShvec(T_shvec_info<T,Tint> &info)
 {
   int dim, coset, i;
   dim = info.request.dim;
@@ -504,20 +505,20 @@ int T_computeShvec(T_shvec_info<T> &info)
   int result = -99;
   if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
     std::cerr << "Before computeIt, case 2\n";
-    result = computeIt(info, &insertBound);
+    result = computeIt<T,Tint>(info, &insertBound);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
-    result = computeMinimum(info);
+    result = computeMinimum<T,Tint>(info);
     info.request.bound = info.minimum;
     //    std::cerr << "Assign info.request.bound\n";
     //    std::cerr << "Before computeIt, case 3\n";
-    result = computeIt(info, &insertBound);
+    result = computeIt<T,Tint>(info, &insertBound);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
-    result = computeMinimum(info);
+    result = computeMinimum<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-    result = computeIt(info, &insertBound);
+    result = computeIt<T,Tint>(info, &insertBound);
   }
   return result;
   //  std::cerr << "result=" << result << "\n";
@@ -545,7 +546,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   T bound=0; // should not be used
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
   int number=0;
-  T_shvec_info<T> info;
+  T_shvec_info<T,Tint> info;
   initShvecReq<T>(dim, GramMat, info);
   info.request.bound = bound;
   info.request.mode = mode;
@@ -574,7 +575,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
 
 
 template<typename T, typename Tint>
-MyMatrix<int> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
+MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
 {
   int dim=GramMat.rows();
   if (dim == 1) {
@@ -600,7 +601,7 @@ MyMatrix<int> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   int number=0;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
-  T_shvec_info<T> info;
+  T_shvec_info<T,Tint> info;
   initShvecReq<T>(dim, GramMat, info);
   info.request.bound = bound;
   info.request.mode = mode;
@@ -614,12 +615,7 @@ MyMatrix<int> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
     throw TerminalException{1};
   }
   //
-  std::vector<MyVector<Tint>> ListVect;
-  for (auto & eVect : info.short_vectors) {
-    MyVector<Tint> eVectImg = ConvertVectorUniversal<Tint,int>(eVect);
-    ListVect.push_back(eVectImg);
-  }
-  return MatrixFromVectorFamily(ListVect);
+  return MatrixFromVectorFamily(info.short_vectors);
 }
 
 

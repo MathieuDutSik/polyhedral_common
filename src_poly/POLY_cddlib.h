@@ -206,8 +206,8 @@ typedef long dd_bigrange;
 
 typedef set_type dd_rowset;
 typedef set_type dd_colset;
-typedef long *dd_rowindex;   
-typedef int *dd_rowflag;   
+typedef long *dd_rowindex;
+typedef int *dd_rowflag;
 typedef long *dd_colindex;
 typedef set_type *dd_SetVector;
 typedef set_type *dd_Aincidence;
@@ -567,7 +567,7 @@ void set_initialize(set_type *setp, long length)
      /* if negative length is requested, it generates the shortest length */
 
     forlim1=set_blocks(len);
-    *setp=(unsigned long *) malloc(forlim1*sizeof(unsigned long));
+    *setp=new (unsigned long)[forlim1];
     (*setp)[0]=(unsigned long) len;  /* size of the ground set */
     for (i=1; i<forlim1; i++)
       (*setp)[i]=0U;
@@ -576,7 +576,7 @@ void set_initialize(set_type *setp, long length)
 void set_free(set_type set)
 /* Free the space created with the set pointer set*/
 {
-    free(set);
+    delete [] set;
 }
 
 void set_emptyset(set_type set)
@@ -748,8 +748,8 @@ dd_SetFamilyPtr dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize)
     s0=ssize; s1=ssize;
   }
 
-  F=(dd_SetFamilyPtr) malloc (sizeof(dd_SetFamilyType));
-  F->set=(set_type*) calloc(f1,sizeof(set_type));
+  F = new dd_SetFamilyType;
+  F->set = new set_type[f1];
   for (i=0; i<f1; i++)
     set_initialize(&(F->set[i]), s1);
   F->famsize=f0;
@@ -1076,8 +1076,8 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
   /* if (newpos!=nullptr) free(newpos); */
   m= M->rowsize;
   d= M->colsize;
-  roworder=(long *)calloc(m+1,sizeof(long));
-  *newpos=(long *)calloc(m+1,sizeof(long));
+  roworder = new long[m+1];
+  *newpos = new long[m+1];
   if (m >=0 && d >=0){
     Mnorm=dd_MatrixNormalizedCopy(M);
     Mcopy=dd_CreateMatrix<T>(m, d);
@@ -1097,7 +1097,7 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
     Mcopy->objective=M->objective;
     dd_FreeMatrix(Mnorm);
   }
-  free(roworder);
+  delete [] roworder;
   return Mcopy;
 }
 
@@ -1117,11 +1117,10 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)
   dd_colrange d;
   dd_rowindex roworder;
 
-  /* if (newpos!=nullptr) free(newpos); */
   m= M->rowsize;
   d= M->colsize;
   preferredrows=M->linset;
-  roworder=(long *)calloc(m+1,sizeof(long));
+  roworder = new long[m+1];
   if (m >=0 && d >=0){
     for(i=1; i<=m; i++) roworder[i]=i;
     dd_UniqueRows(roworder, 1, m, M->matrix, d,preferredrows, &uniqrows);
@@ -1156,11 +1155,10 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
   dd_colrange d;
   dd_rowindex newpos1=nullptr,newpos1r=nullptr,newpos2=nullptr;
 
-  /* if (newpos!=nullptr) free(newpos); */
   m= M->rowsize;
   d= M->colsize;
-  *newpos=(long *)calloc(m+1,sizeof(long));  
-  newpos1r=(long *)calloc(m+1,sizeof(long));  
+  *newpos = new long[m+1];
+  newpos1r = new long[m+1];
   if (m>=0 && d>=0){
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1175,7 +1173,10 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
          (*newpos)[i]=-newpos1r[-newpos2[newpos1[i]]];
       }
     }
-  dd_FreeMatrix(M1);free(newpos1);free(newpos2);free(newpos1r);
+  dd_FreeMatrix(M1);
+  delete [] newpos1;
+  delete [] newpos2;
+  delete [] newpos1r;
   }
   
   return M2;
@@ -1192,11 +1193,10 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   dd_colrange d;
   dd_rowindex newpos1=nullptr,newpos1r=nullptr,newpos2=nullptr;
 
-  /* if (newpos!=nullptr) free(newpos); */
   m= M->rowsize;
   d= M->colsize;
-  *newpos=(long *)calloc(m+1,sizeof(long));  
-  newpos1r=(long *)calloc(m+1,sizeof(long));  
+  *newpos = new long[m+1];
+  newpos1r = new long[m+1];
   if (m>=0 && d>=0){
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1224,7 +1224,9 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
       }
     }
 
-    free(newpos1);free(newpos2);free(newpos1r);
+    delete [] newpos1;
+    delete [] newpos2;
+    delete [] newpos1r;
   }
   
   return M2;
@@ -1318,7 +1320,7 @@ int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r, dd_rowindex *newpos
   d=(*M)->colsize;
 
   if (r >= 1 && r <=m){
-    roworder=(long *)calloc(m+1,sizeof(long));
+    roworder = new long[m+1];
     (*M)->rowsize=m-1;
     dd_FreeArow((*M)->matrix[r-1]);
     set_delelem((*M)->linset,r);
@@ -1386,7 +1388,7 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2(dd_matrixdata<T> *M, dd_rowset delset,dd_r
   d= M->colsize;
   msub=m;
   if (m >=0 && d >=0){
-    roworder=(long *)calloc(m+1,sizeof(long));
+    roworder = new long[m+1];
     for (i=1; i<=m; i++) {
        if (set_member(i,delset)) msub-=1;
     }
@@ -1427,7 +1429,7 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,dd_
   d= M->colsize;
   msub=m;
   if (m >=0 && d >=0){
-    roworder=(long *)calloc(m+1,sizeof(long));
+    roworder = new long[m+1];
     for (i=1; i<=m; i++) {
        if (set_member(i,delset)) msub-=1;
     }
@@ -1497,7 +1499,7 @@ int dd_MatrixShiftupLinearity(dd_matrixdata<T> **M,dd_rowindex *newpos) /* 094 *
   dd_FreeMatrix(*M);
   *M=Msub;
   
-  set_free(delset);
+  delete [] delset;
   success=1;
   return success;
 }
@@ -1522,7 +1524,7 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
   poly->representation       =dd_Inequality;
   poly->homogeneous =globals::dd_FALSE;
 
-  poly->EqualityIndex=(int *)calloc(m+2, sizeof(int));  
+  poly->EqualityIndex = new int[m+2];
     /* size increased to m+2 in 092b because it is used by the child cone, 
        This is a bug fix suggested by Thao Dang. */
     /* ith component is 1 if it is equality, -1 if it is strict inequality, 0 otherwise. */
@@ -1611,10 +1613,10 @@ dd_boolean dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **
   (*cone)->Edges=new dd_adjacencydata<T>*[(*cone)->m_alloc];
   for (j=0; j<(*cone)->m_alloc; j++)
     (*cone)->Edges[j]=nullptr;
-  (*cone)->InitialRayIndex=(long*)calloc(d+1,sizeof(long));
-  (*cone)->OrderVector=(long*)calloc((*cone)->m_alloc+1,sizeof(long));
+  (*cone)->InitialRayIndex = new long[d+1];
+  (*cone)->OrderVector = new long[(*cone)->m_alloc+1];
 
-  (*cone)->newcol=(long*)calloc(((*cone)->d)+1,sizeof(long));
+  (*cone)->newcol = new long[((*cone)->d)+1];
   for (j=0; j<=(*cone)->d; j++) (*cone)->newcol[j]=j;  /* identity map, initially */
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
   (*cone)->ColReduced   = globals::dd_FALSE;
@@ -1794,7 +1796,7 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
       !(poly->homogeneous) && poly->representation==Inequality,
       it is poly->m+1.   See dd_ConeDataLoad.
    */
-  poly->Ainc=(set_type*)calloc(m1, sizeof(set_type));
+  poly->Ainc = new set_type[m1];
   for(i=1; i<=m1; i++) set_initialize(&(poly->Ainc[i-1]),poly->n);
   set_initialize(&(poly->Ared), m1); 
   set_initialize(&(poly->Adom), m1); 
@@ -1860,7 +1862,8 @@ dd_boolean dd_InputAdjacentQ(set_type &common,
 
   if (poly->AincGenerated==globals::dd_FALSE) dd_ComputeAinc<T>(poly, smallVal);
   if (lastn!=poly->n){
-    if (lastn >0) set_free(common);
+    if (lastn >0)
+      set_free(common);
     set_initialize(&common, poly->n);
     lastn=poly->n;
   }
@@ -2131,7 +2134,7 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   *error=dd_NoError;
   m= M->rowsize;
   d= M->colsize;
-  delindex=(long*)calloc(d+1,sizeof(long));
+  delindex = new long[d+1];
   k=0; delsize=0;
   for (j=1; j<=d; j++){
     if (set_member(j, delset)){
@@ -2192,7 +2195,7 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   if (localdebug) printf("Size of the projection system: %ld x %ld\n", mproj, dproj);
   
   dd_FreePolyhedra(dualpoly);
-  free(delindex);
+  delete [] delindex;
   dd_FreeMatrix(Mdual);
   dd_FreeMatrix(Gdual);
   return Mproj;
@@ -2251,9 +2254,9 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
   }
 
   /* Create temporary spaces to be removed at the end of this function */
-  posrowindex=(long*)calloc(m+1,sizeof(long));
-  negrowindex=(long*)calloc(m+1,sizeof(long));
-  zerorowindex=(long*)calloc(m+1,sizeof(long));
+  posrowindex = new long[m+1];
+  negrowindex = new long[m+1];
+  zerorowindex = new long[m+1];
 
   for (i = 1; i <= m; i++) {
     if (dd_Positive(M->matrix[i-1][d-1], smallVal)){
@@ -2307,9 +2310,9 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
   } 
 
 
-  free(posrowindex);
-  free(negrowindex);
-  free(zerorowindex);
+  delete [] posrowindex;
+  delete [] negrowindex;
+  delete [] zerorowindex;
 
  _L99:
   return Mnew;
@@ -2341,7 +2344,7 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
   dd_set(lps->optvalue,lp->optvalue);  /* optimal value */
   dd_InitializeArow(lp->d+1,&(lps->sol));
   dd_InitializeArow(lp->d+1,&(lps->dsol));
-  lps->nbindex=(long*) calloc((lp->d)+1,sizeof(long));  /* dual solution */
+  lps->nbindex = new long[(lp->d)+1];
   for (j=0; j<=lp->d; j++){
     dd_set(lps->sol[j],lp->sol[j]);
     dd_set(lps->dsol[j],lp->dsol[j]);
@@ -2373,8 +2376,8 @@ dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
   lp->LPS=dd_LPSundecided;
   lp->eqnumber=0;  /* the number of equalities */
 
-  lp->nbindex=(long*) calloc(d+1,sizeof(long));
-  lp->given_nbindex=(long*) calloc(d+1,sizeof(long));
+  lp->nbindex = new long[d+1];
+  lp->given_nbindex = new long[d+1];
   set_initialize(&(lp->equalityset),m);  
     /* i must be in the set iff i-th row is equality . */
 
@@ -2581,8 +2584,8 @@ void dd_FreeLPData(dd_lpdata<T> *lp)
     set_free(lp->redset_extra);
     set_free(lp->redset_accum);
     set_free(lp->posset_extra);
-    free(lp->nbindex);
-    free(lp->given_nbindex);
+    delete [] lp->nbindex;
+    delete [] lp->given_nbindex;
     delete lp;
   }
 }
@@ -2591,7 +2594,7 @@ template<typename T>
 void dd_FreeLPSolution(dd_lpsolution<T> *lps)
 {
   if (lps!=nullptr){
-    free(lps->nbindex);
+    delete [] lps->nbindex;
     dd_FreeArow(lps->dsol);
     dd_FreeArow(lps->sol);
     
@@ -3292,7 +3295,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   dd_set(maxcost,smallVal); dd_neg(maxcost,maxcost);
   dd_set(maxratio,smallVal); dd_neg(maxratio,maxratio);  
   rcost=new T[d_size];
-  nbindex_ref=(long*) calloc(d_size+1,sizeof(long));
+  nbindex_ref = new long[d_size+1];
 
   *err=dd_NoError; *lps=dd_LPSundecided; *s=0;
   local_m_size=m_size+1;  /* increase m_size by 1 */
@@ -3408,7 +3411,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   }
 _L99:
   delete [] rcost;
-  free(nbindex_ref);
+  delete [] nbindex_ref;
 
 
   *pivot_no=pivots_p1;
@@ -3456,9 +3459,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   set_emptyset(lp->redset_extra);
   for (i=0; i<= 4; i++) lp->pivots[i]=0;
   maxpivots=maxpivfactor*lp->d;  /* maximum pivots to be performed before cc pivot is applied. */
-  OrderVector=(long *)calloc(lp->m+1,sizeof(*OrderVector));
-  bflag=(long *) calloc(lp->m+2,sizeof(*bflag));  /* one more element for an auxiliary variable  */
-  nbindex_ref=(long*) calloc(lp->d+1,sizeof(long));
+  OrderVector = new long[lp->m+1];
+  bflag = new long[lp->m+2];
+  nbindex_ref = new long[lp->d+1];
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
 
@@ -3486,9 +3489,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   
   if (*err==dd_LPCycling || *err==dd_NumericallyInconsistent) {
     dd_CrissCrossMaximize(lp,err, smallVal);
-    free(OrderVector);
-    free(bflag);
-    free(nbindex_ref);
+    delete [] OrderVector;
+    delete [] bflag;
+    delete [] nbindex_ref;
     return;
   }
 
@@ -3548,9 +3551,9 @@ _L99:
   lp->pivots[2]=pivots_ds;
   lp->pivots[3]=pivots_pc;
   dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag, smallVal);
-  free(OrderVector);
-  free(bflag);
-  free(nbindex_ref);
+  delete [] OrderVector;
+  delete [] bflag;
+  delete [] nbindex_ref;
 }
 
 
@@ -3592,10 +3595,11 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_colindex nbtemp;
 
   *err=dd_NoError;
-  nbtemp=(long *) calloc(lp->d+1,sizeof(long));
-  for (i=0; i<= 4; i++) lp->pivots[i]=0;
-  bflag=(long *) calloc(lp->m+1,sizeof(long));
-  OrderVector=(long *)calloc(lp->m+1,sizeof(long)); 
+  nbtemp = new long[lp->d+1];
+  for (i=0; i<= 4; i++)
+    lp->pivots[i]=0;
+  bflag = new long[lp->m+1];
+  OrderVector = new long[lp->m+1];
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
 
@@ -3641,9 +3645,9 @@ _L99:
   lp->pivots[1]+=pivots1;
   dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,
 		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag, smallVal);
-  free(nbtemp);
-  free(bflag);   /* called previously with different lp->m */
-  free(OrderVector);
+  delete [] nbtemp;
+  delete [] bflag;   /* called previously with different lp->m */
+  delete [] OrderVector;
 }
 
 template<typename T>
@@ -4508,7 +4512,7 @@ dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_
         printf("dd_MatrixRedundancyRemove: the row %ld is redundant. The new matrix has %ld rows.\n", k, M1->rowsize);
         /* dd_WriteMatrix(stderr, M1);  */
       }
-      free(newpos1);
+      delete [] newpos1;
     } else {
       if (set_card(redset1)>0) {
         dd_MatrixRowsRemove2(&M1,redset1,&newpos1);
@@ -4524,7 +4528,7 @@ dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_
         }
         set_free(redset1);
         set_initialize(&redset1, M1->rowsize);
-        free(newpos1);
+        delete [] newpos1;
       }
       if (localdebug) {
         printf("dd_MatrixRedundancyRemove: the row %ld is essential. The new matrix has %ld rows.\n", k, M1->rowsize);
@@ -4733,7 +4737,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   dd_InitializeArow(d, &shootdir);
   dd_InitializeArow(d, &cvec);
 
-  rowflag=(long *)calloc(m+1, sizeof(long)); 
+  rowflag = new long[m+1];
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find. */
   lp0=dd_Matrix2LP(M, &err, smallVal);
@@ -4810,7 +4814,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   dd_FreeMatrix(M1);
   dd_FreeArow(shootdir);
   dd_FreeArow(cvec);
-  free(rowflag);
+  delete [] rowflag;
   return redset;
 }
 
@@ -5169,7 +5173,7 @@ dd_boolean dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_
   
   *impl_linset=linrows;
   success=globals::dd_TRUE;
-  free(newpos1);
+  delete [] newpos1;
   set_free(basisrows);
   set_free(basiscols);
   set_free(ignoredrows);
@@ -5188,13 +5192,13 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
    redundancies will be returned by *redset.
 */
   dd_rowrange i,k,m;
-  dd_rowindex newpos1,revpos;
+  dd_rowindex newpos1, revpos;
   dd_rowset redset1;
   dd_boolean success=globals::dd_TRUE;
   
   m=(*M)->rowsize;
   set_initialize(redset, m);
-  revpos=(long *)calloc(m+1,sizeof(long));
+  revpos = new long[m+1];
   
   success=dd_MatrixCanonicalizeLinearity(M, impl_linset, newpos, error, smallVal);
 
@@ -5220,8 +5224,8 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
 
 _L99:
   set_free(redset1);
-  free(newpos1);
-  free(revpos);
+  delete [] newpos1;
+  delete [] revpos;
   return success;
 }
 
@@ -5437,10 +5441,11 @@ arithmetics.
   dd_boolean localdebug=globals::dd_FALSE;
 
   if (dd_debug) localdebug=dd_debug;
-  nbtemp=(long *) calloc(d_size+1,sizeof(long));
-  for (i=0; i<= 4; i++) pivots[i]=0;
-  bflag=(long *) calloc(m_size+1,sizeof(long));
-  OrderVector=(long *)calloc(m_size+1,sizeof(long));
+  nbtemp = new long[d_size+1];
+  for (i=0; i<= 4; i++)
+    pivots[i]=0;
+  bflag = new long[m_size+1];
+  OrderVector = new long[m_size+1];
 
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(m_size,d_size,A,OrderVector,dd_MinIndex,rseed, smallVal);
@@ -5545,9 +5550,9 @@ arithmetics.
 
   
 _L99:
-  free(nbtemp);
-  free(bflag);
-  free(OrderVector);
+  delete [] nbtemp;
+  delete [] bflag;
+  delete [] OrderVector;
 }
 
 template<typename T>
@@ -6029,7 +6034,7 @@ void dd_FreeDDMemory0(dd_conedata<T> *cone)
     count=0;
     for (Ptr=cone->ArtificialRay->Next; Ptr!=nullptr; Ptr=Ptr->Next){
       delete [] PrevPtr->Ray;
-      free(PrevPtr->ZeroSet);
+      delete [] PrevPtr->ZeroSet;
       delete PrevPtr;
       count++;
       PrevPtr=Ptr;
@@ -6053,9 +6058,9 @@ void dd_FreeDDMemory0(dd_conedata<T> *cone)
   set_free(cone->AddedHalfspaces); 
   set_free(cone->WeaklyAddedHalfspaces); 
   set_free(cone->InitialHalfspaces);
-  free(cone->InitialRayIndex);
-  free(cone->OrderVector);
-  free(cone->newcol);
+  delete [] cone->InitialRayIndex;
+  delete [] cone->OrderVector;
+  delete [] cone->newcol;
 
 /* Fixed by Shawn Rusaw.  Originally it was cone->d instead of cone->d_alloc */
   dd_FreeBmatrix(cone->d_alloc,cone->B);
@@ -6083,12 +6088,12 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
   if ((poly)->child != nullptr) dd_FreeDDMemory(poly);
   dd_FreeAmatrix((poly)->m_alloc,poly->d_alloc, poly->A);
   dd_FreeArow((poly)->c);
-  free((poly)->EqualityIndex);
+  delete [] (poly)->EqualityIndex;
   if (poly->AincGenerated){
     for (i=1; i<=poly->m1; i++){
       set_free(poly->Ainc[i-1]);
     }
-    free(poly->Ainc);
+    delete [] poly->Ainc;
     set_free(poly->Ared);
     set_free(poly->Adom);
     poly->Ainc=nullptr;
@@ -6208,8 +6213,8 @@ void dd_FreeSetFamily(dd_SetFamilyPtr F)
     for (i=0; i<f1; i++) {
       set_free(F->set[i]);
     }
-    free(F->set);
-    free(F);
+    delete [] F->set;
+    delete [] F;
   }
 }
 
@@ -6278,9 +6283,9 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   set_copy(ColSelected,ignoredcols);
   dd_InitializeBmatrix(M->colsize, &B);
   dd_SetToIdentity(M->colsize, B);
-  roworder=(long *)calloc(M->rowsize+1,sizeof(long));
-  for (r=0; r<M->rowsize; r++){roworder[r+1]=r+1;
-  }
+  roworder = new long[M->rowsize+1];
+  for (r=0; r<M->rowsize; r++)
+    roworder[r+1]=r+1;
 
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,dd_MinIndex,roworder,
@@ -6300,7 +6305,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
       if (rank==M->colsize) stop = globals::dd_TRUE;
   } while (!stop);
   dd_FreeBmatrix(M->colsize,B);
-  free(roworder);
+  delete [] roworder;
   set_free(ColSelected);
   set_free(NopivotRow);
   set_free(PriorityRow);

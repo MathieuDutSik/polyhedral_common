@@ -753,19 +753,6 @@ std::vector<U> operator+(std::vector<U> const& L1, std::vector<U> const& L2)
 */
 
 
-/*
-  Solution using fold-expression.
-  It works, but we are forced to having to use operator +. No way to use ConcatenationTwo
-  as it is forbidden by the standard that only allows one of the 32 operators.
-  No way to put the operator+ inside of Concatenation. Since this is explicit forbidden to
-  write routine inside a routine.
-
-template<typename... T>
-auto Concatenation(T... s)
-{
-  return (... + s);
-}
-*/
 
 template<typename T>
 std::vector<T> Concatenation(std::vector<T> const& L)

@@ -727,7 +727,7 @@ void NearestInteger(mpq_class const& xI, mpz_class & xO)
 {
   //  std::cerr << "NearestInteger mpq -> mpz\n";
   mpq_class xO_q=NearestInteger_rni(xI);
-  xO=xO_q.get_den();
+  xO=xO_q.get_num();
 }
 
 

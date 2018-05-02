@@ -53,14 +53,9 @@ void VSLT_ZeroAssignment(IntegerSubsetStorage *VSLT)
 
 void VSLT_InitializeStorage(IntegerSubsetStorage *VSLT, int const& MaxElement)
 {
-  int Maxp2;
-  Maxp2=MaxElement+2;
-  if ((VSLT->ListNext = (int*)malloc(Maxp2*sizeof(int))) == 0) {
-    throw TerminalException{1};
-  }
-  if ((VSLT->ListPrev = (int*)malloc(Maxp2*sizeof(int))) == 0) {
-    throw TerminalException{1};
-  }
+  int Maxp2 = MaxElement+2;
+  VSLT->ListNext = new int[Maxp2];
+  VSLT->ListPrev = new int[Maxp2];
   VSLT->MaxElement=MaxElement;
   VSLT_ZeroAssignment(VSLT);
 }
@@ -83,8 +78,8 @@ int VSLT_NrElement(IntegerSubsetStorage *VSLT)
 
 void VSLT_FreeStorage(IntegerSubsetStorage *VSLT)
 {
-  free(VSLT->ListNext);
-  free(VSLT->ListPrev);
+  delete [] VSLT->ListNext;
+  delete [] VSLT->ListPrev;
 }
 
 int VSLT_TheFirstPosition(IntegerSubsetStorage *VSLT)
