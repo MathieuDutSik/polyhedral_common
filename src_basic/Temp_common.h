@@ -804,7 +804,7 @@ std::vector<T> Filtered(std::vector<T> const& V, std::function<bool(T const&)> c
 // v1 is the field returning the sorted index to the original index
 // v2 is the field returning the original index to the sorted index
 template<typename T>
-std::pair<std::vector<int>,std::vector<int>> SortingList(std::vector<T> const & ListV)
+std::pair<std::vector<int>,std::vector<int>> SortingLists(std::vector<T> const & ListV)
 {
   struct PairData {
     std::size_t i;
