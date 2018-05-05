@@ -71,6 +71,29 @@ std::string FILE_GetNakedFilename(std::string const& eFileFull)
   return eLast;
 }
 
+std::string FILE_GetDirectoryOfFileName(std::string const& eFileFull)
+{
+  int len=eFileFull.size();
+  int posfound=-1;
+  for (int u=0; u<len; u++) {
+    std::string eChar=eFileFull.substr(u,1);
+    if (eChar == "/")
+      posfound=u;
+  }
+  if (posfound == -1) {
+    std::cerr << "The file has no / so cannot find the directory\n";
+    throw TerminalException{1};
+  }
+  std::string retStr="";
+  for (int u=0; u<=posfound; u++) {
+    std::string eChar=eFileFull.substr(u,1);
+    retStr += eChar;
+  }
+  return retStr;
+}
+
+
+
 
 
 std::vector<std::string> FILE_GetDirectoryListFile(std::string const& eDir)
