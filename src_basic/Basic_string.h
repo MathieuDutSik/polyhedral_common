@@ -51,6 +51,31 @@ int STRING_GetCharPositionInString(std::string const& eStr, std::string const& e
 
 
 
+bool IsFullyNumeric(std::string const& eStr)
+{
+  std::string eLS="0123456789.";
+  int nbChar=eStr.size();
+  for (int uChar=0; uChar<nbChar; uChar++) {
+    std::string eChar=eStr.substr(uChar,1);
+    auto TheFind=[&](std::string const& eCharIn) -> bool {
+      int nbCase=eLS.size();
+      for (int iCase=0; iCase<nbCase; iCase++) {
+	std::string eCase=eLS.substr(iCase,1);
+	if (eCase == eCharIn)
+	  return true;
+      }
+      return false;
+    };
+    if (TheFind(eChar) == false)
+      return false;
+  }
+  return true;
+
+
+}
+
+
+
 
 std::string DoubleTo4dot2f(double const& x)
 {
