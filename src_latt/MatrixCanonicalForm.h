@@ -2,7 +2,7 @@
 #define MATRIC_CANONICAL_FORM_H
 
 
-#include "Shvec_exact.h"
+#include "Temp_shvec.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
