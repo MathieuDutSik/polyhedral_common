@@ -567,8 +567,9 @@ void set_initialize(set_type *setp, long length)
      /* if negative length is requested, it generates the shortest length */
 
     forlim1=set_blocks(len);
-    *setp=new (unsigned long)[forlim1];
-    (*setp)[0]=(unsigned long) len;  /* size of the ground set */
+    using ulong=unsigned long;
+    *setp=new ulong[forlim1];
+    (*setp)[0]=ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
       (*setp)[i]=0U;
 }
