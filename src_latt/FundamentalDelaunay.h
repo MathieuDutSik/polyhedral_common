@@ -1,8 +1,7 @@
 #ifndef DELAUNAY_FUNCTION_INCLUDE
 #define DELAUNAY_FUNCTION_INCLUDE
 
-#include "Temp_shvec.h"
-#include "Shvec_double.h"
+#include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
 #include "POLY_LinearProgramming.h"
 #include "CVP_NiemeierAlgo.h"
@@ -45,6 +44,10 @@ resultCVP<T,Tint> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> co
   std::cerr << "No matching method found\n";
   throw TerminalException{1};
 }
+
+
+
+
 
 
 

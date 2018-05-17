@@ -1,6 +1,8 @@
 #ifndef DEFINE_INVARIANT_VECTOR_FAMILY_H
 #define DEFINE_INVARIANT_VECTOR_FAMILY_H
 
+#include "ShortestUniversal.h"
+
 
 template<typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::function<bool(MyMatrix<Tint> const&)> const& fCorrect)

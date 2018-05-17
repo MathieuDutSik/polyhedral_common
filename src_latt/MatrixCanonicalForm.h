@@ -2,7 +2,9 @@
 #define MATRIC_CANONICAL_FORM_H
 
 
-#include "Temp_shvec.h"
+
+#include "ShortestUniversal.h"
+#include "InvariantVectorFamily.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"

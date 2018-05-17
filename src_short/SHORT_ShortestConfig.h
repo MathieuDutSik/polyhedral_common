@@ -12,6 +12,7 @@
 #include "Parallel_Classes.h"
 #include "POLY_PolytopeInt.h"
 #include "LatticeDefinitions.h"
+#include "InvariantVectorFamily.h"
 
 template<typename Tint>
 MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const& M)

@@ -44,24 +44,24 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
     std::cerr << "Let us die now, it was nice so far...\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "T_ShortVector, step 3\n";
+  //  std::cerr << "T_ShortVector_double, step 3\n";
   request->ints.ComputeTheta=0;
   initShvecReq(dim, gram_matrix, NULL, check, request);
   
   request->bound = bound;
   request->mode = mode;
   request->number = number;
-  //  std::cerr << "T_ShortVector, step 4\n";
+  //  std::cerr << "T_ShortVector_double, step 4\n";
   info = (shvec_info) malloc(sizeof(struct shvec_info_struct));
   if (info == NULL) {
     std::cerr << "Let us die now, it was nice so far...\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "T_ShortVector, step 5\n";
+  //  std::cerr << "T_ShortVector_double, step 5\n";
   initShvecInfo(info);
-  //  std::cerr << "T_ShortVector, step 6\n";
+  //  std::cerr << "T_ShortVector_double, step 6\n";
   computeShvec(request, info);
-  //  std::cerr << "T_ShortVector, step 7\n";
+  //  std::cerr << "T_ShortVector_double, step 7\n";
 
   /* output results */
   int PreNbVect=info->short_vectors_number;
@@ -79,7 +79,7 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
     }
     Status[i]=ePos;
   }
-  //  std::cerr << "T_ShortVector, step 8\n";
+  //  std::cerr << "T_ShortVector_double, step 8\n";
   MyMatrix<Tint> TheSHV(2*nbShort, dim);
   int idx=0;
   for (int iShort=0; iShort<PreNbVect; iShort++) {
@@ -92,17 +92,17 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
       idx++;
     }
   }
-  //  std::cerr << "T_ShortVector, step 9\n";
+  //  std::cerr << "T_ShortVector_double, step 9\n";
   destroyShvecInfo(info);
-  //  std::cerr << "T_ShortVector, step 10\n";
+  //  std::cerr << "T_ShortVector_double, step 10\n";
   destroyShvecReq(request);
-  //  std::cerr << "T_ShortVector, step 11\n";
+  //  std::cerr << "T_ShortVector_double, step 11\n";
   doubleDestroySquareMatrix(dim, &gram_matrix);
-  //  std::cerr << "T_ShortVector, step 12\n";
+  //  std::cerr << "T_ShortVector_double, step 12\n";
   free(request);
-  //  std::cerr << "T_ShortVector, step 13\n";
+  //  std::cerr << "T_ShortVector_double, step 13\n";
   free(info);
-  //  std::cerr << "T_ShortVector, step 14\n";
+  //  std::cerr << "T_ShortVector_double, step 14\n";
   return TheSHV;
 }
 
@@ -209,6 +209,7 @@ resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVecto
   return {MinNorm, ListVect};
 }
 
+/*
 template<typename T, typename Tint>
 Tshortest<T,Tint> T_ShortestVector_double(MyMatrix<T> const& eMat)
 {
@@ -216,7 +217,7 @@ Tshortest<T,Tint> T_ShortestVector_double(MyMatrix<T> const& eMat)
   MyMatrix<Tint> TheSHVall=T_ShortVector<T,Tint>(eMat, MinNorm);
   return SelectShortestVector(eMat, TheSHVall);
 }
-
+*/
 
 
 
