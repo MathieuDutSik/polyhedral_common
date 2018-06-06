@@ -53,7 +53,7 @@ int STRING_GetCharPositionInString(std::string const& eStr, std::string const& e
 
 bool IsFullyNumeric(std::string const& eStr)
 {
-  std::string eLS="0123456789.";
+  std::string eLS=" 0123456789.";
   int nbChar=eStr.size();
   for (int uChar=0; uChar<nbChar; uChar++) {
     std::string eChar=eStr.substr(uChar,1);
@@ -70,8 +70,6 @@ bool IsFullyNumeric(std::string const& eStr)
       return false;
   }
   return true;
-
-
 }
 
 
