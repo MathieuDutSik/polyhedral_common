@@ -4,6 +4,7 @@
 #include "POLY_PolytopeFct.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
+#include "ShortestUniversal.h"
 
 
 // Here we use SuperMat as an array because if we declare

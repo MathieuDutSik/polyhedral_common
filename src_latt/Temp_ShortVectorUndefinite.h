@@ -2,6 +2,7 @@
 #define TEMP_SHORT_VECTOR_Undefinite_H
 
 #include "mpreal_related.h"
+#include "Temp_Positivity.h"
 
 template<typename Tint, typename T, typename Tfloat>
 MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero, bool &result)

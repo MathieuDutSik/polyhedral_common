@@ -176,8 +176,8 @@ public:
   void ReorderingOfWeights(std::vector<int> const& gListRev)
   {
     int nbEnt=ListWeight.size();
-    int siz=gListRev.size();
 #ifdef DEBUG
+    int siz=gListRev.size();
     if (nbEnt != siz) {
       std::cerr << "We should have nbEnt = siz\n";
       std::cerr << "nbEnt=" << nbEnt << "\n";
