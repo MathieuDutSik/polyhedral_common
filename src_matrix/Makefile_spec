@@ -1,5 +1,6 @@
 #PROGRAM		= AnalysisSingMat
-PROGRAM		= StandaloneSparseSolver
+#PROGRAM		= StandaloneSparseSolver
+PROGRAM		= ZbasisComputation
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

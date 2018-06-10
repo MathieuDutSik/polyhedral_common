@@ -1,6 +1,6 @@
 #		  Temp_ImagQuadPerfect
 #		  Temp_ImagQuadPerfect_flint
-PROGRAM		= AnalysisSingMat StandaloneSparseSolver StandaloneSparseSolver_NNZ NullspaceComputation
+PROGRAM		= AnalysisSingMat StandaloneSparseSolver StandaloneSparseSolver_NNZ NullspaceComputation ZbasisComputation
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

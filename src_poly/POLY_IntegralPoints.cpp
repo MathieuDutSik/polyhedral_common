@@ -1,4 +1,6 @@
 #include "POLY_PolytopeInt.h"
+#include "NumberTheory.h"
+
 int main(int argc, char *argv[])
 {
   try {

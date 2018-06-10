@@ -2,7 +2,6 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_ThreadedADM \
 		  POLY_CreateAffineBasis \
 		  ComputeDelaunay \
-		  ComputePerfect \
 		  POLY_IntegralPoints \
 		  POLY_lcdd \
 		  POLY_lrs \
