@@ -87,6 +87,20 @@ std::string DoubleTo4dot2f(double const& x)
 }
 
 
+std::string DoubleTo4dot1f(double const& x)
+{
+  char buffer[150];
+  int n=sprintf(buffer, "%4.1f", x);
+  if (n == 0) {
+    std::cerr << "Clear error in DoubleTo4dot2f\n";
+    throw TerminalException{1};
+  }
+  return std::string(buffer);
+}
+
+
+
+
 std::string DoubleToString(double const& x)
 {
   std::stringstream s;
