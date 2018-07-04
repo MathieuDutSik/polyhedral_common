@@ -173,6 +173,10 @@ std::string NAMELIST_ConvertFortranStringToCppString(std::string const& eStr)
   return eStr;
 }
 
+struct NamelistException {
+  int val;
+};
+
 std::vector<std::string> NAMELIST_ConvertFortranListStringToCppListString(std::string const& eStr)
 {
   //  std::cerr << "NAMELIST_ConvertFortranListStringToCppListString, begin\n";
@@ -185,19 +189,19 @@ std::vector<std::string> NAMELIST_ConvertFortranListStringToCppListString(std::s
   if (eFirstChar != "'" && eFirstChar != "\"") {
     std::cerr << "eStr=" << eStr << "\n";
     std::cerr << "For list of strings, one should use string \"  \"   or '    '   \n";
-    throw TerminalException{1};
+    throw NamelistException{1};
   }
   if (eLastChar != "'" && eLastChar != "\"") {
     std::cerr << "eStr=" << eStr << "\n";
     std::cerr << "For list of strings, one should use string \"  \"   or '    '   \n";
-    throw TerminalException{1};
+    throw NamelistException{1};
   }
   if (eFirstChar != eLastChar) {
     std::cerr << "eStr=" << eStr << "\n";
     std::cerr << "eFirstChar=" << eFirstChar << "\n";
     std::cerr << "eLastChar=" << eLastChar << "\n";
     std::cerr << "No coherency in endings\n";
-    throw TerminalException{1};
+    throw NamelistException{1};
   }
   std::string eSepChar=eFirstChar;
   int IsInString=0;
@@ -477,8 +481,16 @@ void NAMELIST_ReadNamelistFile(std::string const& eFileName, FullNamelist &eFull
 	      eFullNamelist.ListBlock[eBlockName].ListListIntValues[eVarName]=eVal;
 	    }
 	    if (eVarNature == "liststring") {
-	      std::vector<std::string> eVal=NAMELIST_ConvertFortranListStringToCppListString(eVarValue);
-	      eFullNamelist.ListBlock[eBlockName].ListListStringValues[eVarName]=eVal;
+	      try {
+		std::vector<std::string> eVal=NAMELIST_ConvertFortranListStringToCppListString(eVarValue);
+		eFullNamelist.ListBlock[eBlockName].ListListStringValues[eVarName]=eVal;
+	      }
+	      catch (NamelistException & e) {
+		std::cerr << "Error reading in the block " << eBlockName << "\n";
+		std::cerr << "Variable eVarName=" << eVarName << " should be a list of strings\n";
+		std::cerr << "Please correct your input file\n";
+		throw TerminalException{1};
+	      }
 	    }
 	  }
 	  else {
