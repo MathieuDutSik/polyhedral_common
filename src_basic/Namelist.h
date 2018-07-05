@@ -133,6 +133,10 @@ std::string NAMELIST_ClearEndOfLine(std::string const& eStr)
 
 
 
+struct NamelistException {
+  int val;
+};
+
 
 bool NAMELIST_ReadBoolValue(std::string const& eVarValue)
 {
@@ -147,7 +151,7 @@ bool NAMELIST_ReadBoolValue(std::string const& eVarValue)
   std::cerr << "Boolean value has not been found\n";
   std::cerr << "eVarValue = " << eVarValue << "\n";
   std::cerr << "Allowed: T / F / .T. / .F.\n";
-  throw TerminalException{1};
+  throw NamelistException{1};
 }
 
 std::string NAMELIST_ConvertFortranStringToCppString(std::string const& eStr)
@@ -165,7 +169,7 @@ std::string NAMELIST_ConvertFortranStringToCppString(std::string const& eStr)
       std::cerr << "eFirstChar = " << eFirstChar << "\n";
       std::cerr << " eLastChar = " << eLastChar << "\n";
       std::cerr << "The character used for noting beginning and end of string should be identical\n";
-      throw TerminalException{1};
+      throw NamelistException{1};
     }
   }
   if (RemovableEnding == 1)
@@ -173,9 +177,6 @@ std::string NAMELIST_ConvertFortranStringToCppString(std::string const& eStr)
   return eStr;
 }
 
-struct NamelistException {
-  int val;
-};
 
 std::vector<std::string> NAMELIST_ConvertFortranListStringToCppListString(std::string const& eStr)
 {
@@ -457,9 +458,16 @@ void NAMELIST_ReadNamelistFile(std::string const& eFileName, FullNamelist &eFull
 	      eFullNamelist.ListBlock[eBlockName].ListIntValues[eVarName]=eVal;
 	    }
 	    if (eVarNature == "bool") {
-	      bool eVal=NAMELIST_ReadBoolValue(eVarValue);
-	      //	      std::cerr << "Inserting eVarName=" << eVarName << " eVal=" << eVal << "\n";
-	      eFullNamelist.ListBlock[eBlockName].ListBoolValues[eVarName]=eVal;
+	      try {
+		bool eVal=NAMELIST_ReadBoolValue(eVarValue);
+		eFullNamelist.ListBlock[eBlockName].ListBoolValues[eVarName]=eVal;
+	      }
+	      catch (NamelistException & e) {
+		std::cerr << "Error reading in the block " << eBlockName << "\n";
+		std::cerr << "Variable eVarName=" << eVarName << " should be a list of strings\n";
+		std::cerr << "Please correct your input file\n";
+		throw TerminalException{1};
+	      }
 	    }
 	    if (eVarNature == "double") {
 	      double eVal;
@@ -469,8 +477,16 @@ void NAMELIST_ReadNamelistFile(std::string const& eFileName, FullNamelist &eFull
 	    if (eVarNature == "string") {
 	      //	      std::cerr << "eVarName=" << eVarName << "\n";
 	      //	      std::cerr << "eVarValue=" << eVarValue << "\n";
-	      std::string eVal=NAMELIST_ConvertFortranStringToCppString(eVarValue);
-	      eFullNamelist.ListBlock[eBlockName].ListStringValues[eVarName]=eVal;
+	      try {
+		std::string eVal=NAMELIST_ConvertFortranStringToCppString(eVarValue);
+		eFullNamelist.ListBlock[eBlockName].ListStringValues[eVarName]=eVal;
+	      }
+	      catch (NamelistException & e) {
+		std::cerr << "Error reading in the block " << eBlockName << "\n";
+		std::cerr << "Variable eVarName=" << eVarName << " should be a list of strings\n";
+		std::cerr << "Please correct your input file\n";
+		throw TerminalException{1};
+	      }
 	    }
 	    if (eVarNature == "listdouble") {
 	      std::vector<double> eVal=NAMELIST_ConvertFortranStringListDoubleToCppVectorDouble(eVarValue);
