@@ -166,7 +166,7 @@ bool FILE_IsRegularFile(std::string const& eFile)
 std::vector<std::string> FILE_GetDirectoryFilesRecursively(std::string const& eDir)
 {
   //  std::cerr << "Beginning of FILE_GetDirectoryFilesRecursively\n";
-  std::vector<std::string> ListDir={eDir};
+  std::vector<std::string> ListDir{eDir};
   std::vector<std::string> ListFile;
   while(true) {
     std::vector<std::string> NewListDir;
@@ -292,6 +292,29 @@ void RemoveFileSpecificExtension(std::string const& ThePrefix, std::string const
 	RemoveFile(eFileTot);
       }
     }
+  }
+}
+
+
+void RemoveFileInDirectory(std::string const& ThePrefix)
+{
+  bool test=IsExistingDirectory(ThePrefix);
+  if (!test)
+    return;
+  std::vector<std::string> ListFile=FILE_GetDirectoryListFile(ThePrefix);
+  for (auto & eFile : ListFile) {
+    std::string eFileTot=ThePrefix + eFile;
+    if (!FILE_IsRegularFile(eFileTot)) {
+      std::cerr << "We have subdirectories in ThePrefix=" << ThePrefix << "\n";
+      std::cerr << "Therefore it seems unwise to remove automatically by program\n";
+      std::cerr << "the entries in the directory since it is far too likely to destroy valuable file.\n";
+      std::cerr << "If not an error, please remove things manually\n";
+      throw TerminalException{1};
+    }
+  }
+  for (auto & eFile : ListFile) {
+    std::string eFileTot=ThePrefix + eFile;
+    RemoveFile(eFileTot);
   }
 }
 
