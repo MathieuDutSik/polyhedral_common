@@ -71,6 +71,26 @@ std::string FILE_GetNakedFilename(std::string const& eFileFull)
   return eLast;
 }
 
+std::string FILE_RemoveExtension(std::string const& eFileIn)
+{
+  int pos=-1;
+  int len=eFileIn.size();
+  std::string eChar=".";
+  for (int i=0; i<len; i++) {
+    if (eFileIn.substr(i,1) == eChar) {
+      pos=i;
+    }
+  }
+  if (pos == -1) {
+    std::cerr << "Failed to find the dot .\n";
+    std::cerr << "eFileIn=" << eFileIn << "\n";
+    throw TerminalException{1};
+  }
+  return eFileIn.substr(0,pos);
+}
+
+
+
 std::string FILE_GetDirectoryOfFileName(std::string const& eFileFull)
 {
   int len=eFileFull.size();
