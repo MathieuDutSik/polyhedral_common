@@ -1,0 +1,4 @@
+[submodule "basic_common_cpp"]
+	path = basic_common_cpp
+	url = git@github.com:MathieuDutSik/basic_common_cpp.git
+	branch = master
