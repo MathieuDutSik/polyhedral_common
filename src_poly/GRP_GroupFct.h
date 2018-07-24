@@ -6,7 +6,7 @@
 #include "Basic_string.h"
 #include "COMB_Stor.h"
 #include "NumberTheory.h"
-#include "Face_bitset.h"
+#include "Boost_bitset.h"
 #include <permlib/permlib_api.h>
 
 typedef std::shared_ptr<permlib::PermutationGroup> PermutationGroupPtr;

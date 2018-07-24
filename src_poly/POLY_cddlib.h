@@ -21,7 +21,7 @@
 #include <string.h>
 
 #include "MAT_Matrix.h"
-#include "Face_bitset.h"
+#include "Boost_bitset.h"
 
 namespace cdd {
   typedef unsigned long *set_type;   /* set type definition */

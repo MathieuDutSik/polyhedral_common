@@ -24,7 +24,7 @@
 
 
 #include "MAT_Matrix.h"
-#include "Face_bitset.h"
+#include "Boost_bitset.h"
 #include "MAT_MatrixInt.h"
 
 namespace lrs {

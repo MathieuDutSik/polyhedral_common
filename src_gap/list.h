@@ -2,7 +2,7 @@
 #define SRC_GAP_LIST_H
 
 #include <vector>
-#include <Face_bitset.h>
+#include <Boost_bitset.h>
 
 template<typename T>
 std::vector<T> Reversed(std::vector<T> const& eList)
