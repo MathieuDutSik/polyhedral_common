@@ -1208,17 +1208,17 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
     }
   permlib::Permutation ePerm=SortingPerm(ListWeight);
   //  std::cerr << "nbWeight=" << nbWeight << "\n";
+#ifdef DEBUG
   for (int jWeight=1; jWeight<nbWeight; jWeight++) {
     int iWeight=jWeight-1;
     int i=ePerm.at(iWeight);
     int j=ePerm.at(jWeight);
-#ifdef DEBUG
     if (ListWeight[i] > ListWeight[j]) {
       std::cerr << "Logical error in the comparison\n";
       throw TerminalException{1};
     }
-#endif
   }
+#endif
   T eMainInv=0;
   for (int iInv=0; iInv<nbInv; iInv++) {
     T eInv=0;
