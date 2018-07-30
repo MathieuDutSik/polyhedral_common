@@ -10,7 +10,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= clang++ -O2 -Weverything -std=c++11 -DDEBUG
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++11 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
-CC		= g++ -v -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
+CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
 #CC		= g++ -std=c++11 -Wall -O9
 #CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
 

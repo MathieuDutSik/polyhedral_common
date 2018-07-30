@@ -6,6 +6,9 @@
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
 
+#define CHECK_BASIC_CONSISTENCY
+
+
 
 namespace TempShvec_globals {
   const int TEMP_SHVEC_MODE_UNDEF=-1;
@@ -65,6 +68,15 @@ int Infinitesimal_Floor_V1(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
+#ifdef CHECK_BASIC_CONSISTENCY
+  if (a < 0) {
+    std::cerr << "Error in Infinitesimal_Floor_V1\n";
+    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
+    std::cerr << "a=" << a << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  
   GET_DOUBLE(a, a_doubl);
   GET_DOUBLE(b, b_doubl);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
@@ -85,6 +97,14 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
+#ifdef CHECK_BASIC_CONSISTENCY
+  if (a < 0) {
+    std::cerr << "Error in Infinitesimal_Ceil_V1\n";
+    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
+    std::cerr << "a=" << a << "\n";
+    throw TerminalException{1};
+  }
+#endif
   GET_DOUBLE(a, a_doubl);
   GET_DOUBLE(b, b_doubl);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
@@ -113,12 +133,25 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
+#ifdef CHECK_BASIC_CONSISTENCY
+  if (a < 0) {
+    std::cerr << "Error in Infinitesimal_Floor\n";
+    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
+    std::cerr << "a=" << a << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::cerr << "a=" << a << " b=" << b << "\n";
   GET_DOUBLE(a, a_doubl);
   GET_DOUBLE(b, b_doubl);
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
+  std::cerr << "alpha=" << alpha << "\n";
   double eD1=floor(alpha);
+  std::cerr << "eD1=" << eD1 << "\n";
   long int eD2=lround(eD1);
+  std::cerr << "eD2=" << eD2 << "\n";
   Tint eReturn=eD2;
+  std::cerr << "initial value eReturn=" << eReturn << "\n";
   auto f=[&](Tint const& x) -> bool {
     T eDiff=x - b;
     if (eDiff <= 0)
@@ -129,12 +162,12 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
   };
   //  std::cerr << "a=" << a << "\n";
   //  std::cerr << "b=" << b << "\n";
-  //  std::cerr << "Infinitesimal_floor, before while loop\n";
+  std::cerr << "Infinitesimal_floor, before while loop\n";
   while(true) {
-    //    std::cerr << "eReturn=" << eReturn << "\n";
+    std::cerr << "eReturn=" << eReturn << "\n";
     bool test1=f(eReturn);
     bool test2=f(eReturn+1);
-    //    std::cerr << "test1=" << test1 << " test2=" << test2 << "\n";
+    std::cerr << "test1=" << test1 << " test2=" << test2 << "\n";
     if (test1 && !test2)
       break;
     if (!test1)
@@ -142,7 +175,7 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     if (test2)
       eReturn++;
   }
-  //  std::cerr << "Infinitesimal_floor, after while loop\n";
+  std::cerr << "Infinitesimal_floor, after while loop\n";
   return eReturn;
 }
 
@@ -156,6 +189,14 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 {
   double a_doubl, b_doubl;
   double epsilon=0.000000001;
+#ifdef CHECK_BASIC_CONSISTENCY
+  if (a < 0) {
+    std::cerr << "Error in Infinitesimal_Ceil\n";
+    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
+    std::cerr << "a=" << a << "\n";
+    throw TerminalException{1};
+  }
+#endif
   GET_DOUBLE(a, a_doubl);
   GET_DOUBLE(b, b_doubl);
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
@@ -170,7 +211,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
       return true;
     return false;
   };
-  //  std::cerr << "Infinitesimal_ceil, before while loop\n";
+  std::cerr << "Infinitesimal_ceil, before while loop\n";
   while(true) {
     bool test1=f(eReturn -1);
     bool test2=f(eReturn);
@@ -181,7 +222,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     if (!test2)
       eReturn++;
   }
-  //  std::cerr << "Infinitesimal_ceil, after while loop\n";
+  std::cerr << "Infinitesimal_ceil, after while loop\n";
   return eReturn - 1;
 }
 
@@ -275,7 +316,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
       x(i) = Lower(i);
       needs_new_bound = false;
     }
-    x(i)=x(i)+1;
+    x(i) += 1;
     //    std::cerr << "dim=" << dim << "\n";
     //    std::cerr << "needs_new_bound=" << needs_new_bound << "\n";
     //    std::cerr << "Case 2 i=" << i << "\n";
@@ -315,12 +356,15 @@ int computeIt(T_shvec_info<T,Tint> &info,
 	for (int i2=0; i2<dim; i2++)
 	  for (int j2=0; j2<dim; j2++)
 	    norm=norm + g(i2,j2)*(x(i2) + C(i2)) * (x(j2) + C(j2));
+#ifdef CHECK_BASIC_CONSISTENCY
 	if (norm != eNorm) {
 	  std::cerr << "Norm inconsistency\n";
 	  std::cerr << "norm=" << norm << "\n";
 	  std::cerr << "eNorm=" << eNorm << "\n";
 	  throw TerminalException{1};
 	}
+#endif
+#ifdef CHECK_BASIC_CONSISTENCY
 	if (eNorm > bound) {
 	  std::cerr << "eNorm is too large\n";
 	  double bound_doubl, eNorm_doubl, eDiff_doubl;
@@ -336,6 +380,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
 	  std::cerr << "eNorm=" << eNorm << "\n";
 	  throw TerminalException{1};
 	}
+#endif
 
 	//	std::cerr << "Case 6 i=" << i << "\n";
 	result = insert(info, x, coset, eNorm);
@@ -454,15 +499,14 @@ void initShvecReq(int dim,
 template<typename T, typename Tint>
 int T_computeShvec(T_shvec_info<T,Tint> &info)
 {
-  int dim, coset, i;
-  dim = info.request.dim;
-  coset = 0;
-  i = 0;
+  int dim = info.request.dim;
+  int coset = 0;
+  int i = 0;
   while (i < dim && !coset) {
     coset = (info.request.coset(i) != 0.0);
     i++;
   }
-  //  std::cerr << "computeShvec mode=" << info.request.mode << "\n";
+  std::cerr << "computeShvec mode=" << info.request.mode << "\n";
   switch (info.request.mode)
     {
     case TempShvec_globals::TEMP_SHVEC_MODE_UNDEF:
@@ -502,22 +546,26 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
 	throw TerminalException{1};
       }
     }
+  std::cerr << "After switch loop\n";
   int result = -99;
   if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
     std::cerr << "Before computeIt, case 2\n";
     result = computeIt<T,Tint>(info, &insertBound);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
+    std::cerr << "Before computeMinimum\n";
     result = computeMinimum<T,Tint>(info);
     info.request.bound = info.minimum;
     //    std::cerr << "Assign info.request.bound\n";
-    //    std::cerr << "Before computeIt, case 3\n";
+    std::cerr << "Before computeIt, case 3\n";
     result = computeIt<T,Tint>(info, &insertBound);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
+    std::cerr << "Before computeIt, case 4\n";
     result = computeMinimum<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
+    std::cerr << "Before computeIt, case 5\n";
     result = computeIt<T,Tint>(info, &insertBound);
   }
   return result;
