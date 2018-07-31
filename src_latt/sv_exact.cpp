@@ -105,12 +105,13 @@ int main(int argc, char *argv[])
     info.minimum = -44;
     std::cerr << "Before computeShvec mode=" << info.request.mode << "\n";
     int result=T_computeShvec(info);
-    std::cerr << "After computeShvec |V|=" << info.short_vectors_number << "\n";
+    int nbVect=info.short_vectors.size();
+    std::cerr << "After computeShvec |V|=" << nbVect << "\n";
     //
     // Data output
     //
-    std::cout << info.short_vectors_number << "\n";
-    for (i = 0; i < info.short_vectors_number; i++) {
+    std::cout << nbVect << "\n";
+    for (i = 0; i < nbVect; i++) {
       std::cout << "[ unset ]: ";
       for (int iCol=0; iCol<dim; iCol++)
 	std::cout << " " << info.short_vectors[i](iCol);

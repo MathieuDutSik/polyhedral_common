@@ -33,31 +33,11 @@ struct T_shvec_request {
 template<typename T, typename Tint>
 struct T_shvec_info {
   T_shvec_request<T> request;
-  int short_vectors_number;
   std::vector<MyVector<Tint>> short_vectors;
   T minimum;
 };
 
 
-template<typename T, typename Tint>
-int insertBound(T_shvec_info<T,Tint> &info,
-		MyVector<Tint> const& vector, 
-		int coset,
-		T norm)
-{
-  info.short_vectors.push_back(vector);
-  //  std::cerr << "FUNCTION insertBound\n";
-  info.short_vectors_number++;
-  //  std::cerr << "short_vectors_number=" << info.short_vectors_number << "\n";
-  
-  if (norm < info.minimum || info.minimum == -1)
-    info.minimum = norm;
-
-  if (info.short_vectors_number == 0)
-    return TempShvec_globals::STOP_COMPUTATION;
-  else
-    return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
-}
 
 // We return
 // floor(sqrt(A) + epsilon + B) 
@@ -220,28 +200,10 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 
 
 
-template<typename T, typename Tint>
-int insertStop(T_shvec_info<T,Tint> &info,
-	       MyVector<Tint> const& vector, 
-	       int coset,
-	       T norm)
-{
-  //  std::cerr << "Assignation of info.minimum\n";
-  //  std::cerr << "norm=" << norm << "\n";
-  info.minimum = norm;
-  return TempShvec_globals::STOP_COMPUTATION;
-}
-
-
-
 
 
 template<typename T, typename Tint>
-int computeIt(T_shvec_info<T,Tint> & info,
-	      int (*insert)(T_shvec_info<T,Tint> &info,
-			    MyVector<Tint> const& vector, 
-			    int coset,
-			    T norm))
+int computeIt(T_shvec_info<T,Tint> & info)
 {
   int coset, i, j;
   //  double eQuot_doubl;
@@ -304,7 +266,7 @@ int computeIt(T_shvec_info<T,Tint> & info,
     if (needs_new_bound) {
       T eQuot = Trem(i) / q(i,i);
       T eSum = - U(i) - C(i);
-      std::cerr << "i=" << i << " eQuot=" << eQuot << "\n";
+      //      std::cerr << "i=" << i << " eQuot=" << eQuot << "\n";
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
       Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       x(i) = Lower(i);
@@ -374,8 +336,13 @@ int computeIt(T_shvec_info<T,Tint> & info,
 	}
 #endif
 
-	//	std::cerr << "Case 6 i=" << i << "\n";
-	result = insert(info, x, coset, eNorm);
+	if (eNorm < info.minimum || info.minimum == -1) {
+	  info.short_vectors.clear();
+	  info.minimum = eNorm;
+	  return TempShvec_globals::STOP_COMPUTATION;
+	}
+	info.short_vectors.push_back(x);
+	
 	//	std::cerr << "Case 7 i=" << i << "\n";
 	//	std::cerr << "result=" << result << "\n";
 	if (result == TempShvec_globals::STOP_COMPUTATION) {
@@ -436,12 +403,8 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
       if (info.minimum > info.request.gram_matrix(i,i))
 	info.minimum = info.request.gram_matrix(i,i);
   }
-  T eNum=1;
-  T eDen=10000;
-  T min_step_size=eNum/eDen;
-  T step_size=info.minimum;
   while (true) {
-    info.request.bound = info.minimum - step_size;
+    info.request.bound = info.minimum;
     //    double step_size_doubl = UniversalTypeConversion<double,T>(step_size);
     //    double min_doubl = UniversalTypeConversion<double,T>(info.minimum);
     //    std::cerr << "min            =" << info.minimum << "\n";
@@ -450,17 +413,16 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
     //    std::cerr << "step_size_doubl=" << step_size_doubl << "\n";
     //    std::cerr << "min_step_size  =" << min_step_size << "\n";
     //    std::cerr << "Before computeIt, case 1\n";
-    result = computeIt(info, &insertStop);
+    result = computeIt(info);
     //    std::cerr << "result=" << result << "\n";
-    if (result != TempShvec_globals::STOP_COMPUTATION) {
-      if (step_size < min_step_size)
-	break;
-      step_size=step_size/2;
+    if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
+      break;
     }
   }  
   //  std::cerr << "After while loop\n";
   //  std::cerr << "info.minimum=" << info.minimum << "\n";
-  info.minimum = info.request.bound + step_size;
+  //  info.minimum = info.request.bound + step_size;
+  std::cerr << "Exiting from computeMinimum\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
@@ -481,7 +443,6 @@ void initShvecReq(int dim,
   info.request.gram_matrix = gram_matrix;
   info.request.mode = 0;
   info.request.bound = 0;
-  info.short_vectors_number = 0;
   info.minimum = -1;
 }
 
@@ -534,7 +495,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
   int result = -99;
   if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
     std::cerr << "Before computeIt, case 2\n";
-    result = computeIt<T,Tint>(info, &insertBound);
+    result = computeIt<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     std::cerr << "Before computeMinimum\n";
@@ -542,7 +503,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
     info.request.bound = info.minimum;
     //    std::cerr << "Assign info.request.bound\n";
     std::cerr << "Before computeIt, case 3\n";
-    result = computeIt<T,Tint>(info, &insertBound);
+    result = computeIt<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
     std::cerr << "Before computeIt, case 4\n";
@@ -550,7 +511,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
     std::cerr << "Before computeIt, case 5\n";
-    result = computeIt<T,Tint>(info, &insertBound);
+    result = computeIt<T,Tint>(info);
   }
   return result;
   //  std::cerr << "result=" << result << "\n";
@@ -590,7 +551,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
     std::cerr << "Probably wrong\n";
     throw TerminalException{1};
   }
-  int nbVect=info.short_vectors_number;
+  int nbVect=info.short_vectors.size();
   MyMatrix<Tint> ListClos(nbVect, dim);
   for (int iVect=0; iVect<nbVect; iVect++)
     for (int i=0; i<dim; i++)
