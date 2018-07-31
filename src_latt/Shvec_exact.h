@@ -248,13 +248,12 @@ int computeIt(T_shvec_info<T,Tint> &info,
 			    int coset,
 			    T norm))
 {
-  int coset, result, not_finished, i, j, dim;
-  bool needs_new_bound;
-  T sum, Z, bound;
+  int coset, i, j;
+  //  T Z;
   //  double eQuot_doubl;
-  result = 0;
-  dim = info.request.dim;
-  bound = info.request.bound;
+  int result = 0;
+  int dim = info.request.dim;
+  T bound = info.request.bound;
   //  std::cerr << "bound=" << bound << "\n";
   MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
@@ -299,8 +298,8 @@ int computeIt(T_shvec_info<T,Tint> &info,
   }
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
-  not_finished = 1;
-  needs_new_bound = true;
+  bool not_finished = true;
+  bool needs_new_bound = true;
   i = dim - 1;
   Trem(i) = bound;
   U(i) = 0;
@@ -343,7 +342,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
 	//	std::cerr << "\n";
 	if (!coset) {
 	  j = dim - 1;
-	  not_finished = 0;
+	  not_finished = false;
 	  while (j >= 0 && !not_finished) {
 	    not_finished = (x(j) != 0);
 	    j--;
@@ -394,7 +393,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
       }
       else {
 	i--;
-	sum=0;
+	T sum=0;
 	for (j = i + 1; j < dim; j++)
 	  sum += q(i,j) * (x(j) + C(j));
 	U(i) = sum;
@@ -407,7 +406,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
     else {
       //      std::cerr << "Case 9 i=" << i << "\n";
       i++;
-      if (i >= dim) not_finished = 0;
+      if (i >= dim) not_finished = false;
       //      std::cerr << "Case 10 i=" << i << "\n";
     }
     //    std::cerr << "Case 11 i=" << i << "\n";
@@ -418,8 +417,8 @@ int computeIt(T_shvec_info<T,Tint> &info,
 template<typename T, typename Tint>
 int computeMinimum(T_shvec_info<T,Tint> &info)
 {
-  int result, dim, coset, i, j;
-  dim = info.request.dim;
+  int result, coset, i, j;
+  int dim = info.request.dim;
   MyVector<T> C(dim);
   //  std::cerr << "Passing by computeMinimum\n";
   coset = 0;
