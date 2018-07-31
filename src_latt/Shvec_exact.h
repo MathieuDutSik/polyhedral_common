@@ -341,6 +341,11 @@ int computeIt(T_shvec_info<T,Tint> & info)
 	  info.minimum = eNorm;
 	  return TempShvec_globals::STOP_COMPUTATION;
 	}
+	/*
+	std::cerr << "x=";
+	for (int u=0; u<dim; u++)
+	  std::cerr << " " << x(u);
+	  std::cerr << "\n";*/
 	info.short_vectors.push_back(x);
 	
 	//	std::cerr << "Case 7 i=" << i << "\n";
@@ -500,10 +505,10 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     std::cerr << "Before computeMinimum\n";
     result = computeMinimum<T,Tint>(info);
-    info.request.bound = info.minimum;
+    //    info.request.bound = info.minimum;
     //    std::cerr << "Assign info.request.bound\n";
-    std::cerr << "Before computeIt, case 3\n";
-    result = computeIt<T,Tint>(info);
+    //    std::cerr << "Before computeIt, case 3\n";
+    //    result = computeIt<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
     std::cerr << "Before computeIt, case 4\n";
