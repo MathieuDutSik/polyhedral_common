@@ -281,9 +281,6 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
       WMat.Update(i,j,eNorm);
     }
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);
-  //  double ePolyInv_d;
-  //  GET_DOUBLE(ePolyInv_T, ePolyInv_d);
-  //  int ePolyInv_i=int(round(ePolyInv_d));
   DelaunayInv<T,Tint> eInv{nbVert, eIndex, ePolyInv_T};
   return eInv;
 }

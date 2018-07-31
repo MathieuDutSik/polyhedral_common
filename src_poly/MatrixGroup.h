@@ -669,11 +669,6 @@ EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> const
 template<typename T>
 EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, TheGroupFormat const& GRP1, permlib::Permutation const& ePerm, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
 {
-  std::function<int(T const&)> fFromT=[](T const& x) -> int {
-    double x_d;
-    GET_DOUBLE(x, x_d);
-    return int(round(x_d));
-  };
   IteratorGrp eIter=GetInitialIterator(GRP1);
   while(true) {
     permlib::Permutation fPerm=GetPermutation(eIter);

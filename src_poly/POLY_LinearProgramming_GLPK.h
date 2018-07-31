@@ -74,8 +74,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
   //
   std::function<void(std::ostream&,T)> PrintValue=[&](std::ostream& os, T const& eVal) -> void {
     if (eGLPKoption.UseDouble) {
-      double eVal_d;
-      GET_DOUBLE(eVal, eVal_d);
+      double eVal_d = UniversalTypeConversion<double,T>(eVal);
       os << eVal_d;
     }
     else {
