@@ -66,7 +66,6 @@ template<typename T, typename Tint>
 template<typename T>
 int Infinitesimal_Floor_V1(T const& a, T const& b)
 {
-  double a_doubl, b_doubl;
   double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
@@ -76,9 +75,8 @@ int Infinitesimal_Floor_V1(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  
-  GET_DOUBLE(a, a_doubl);
-  GET_DOUBLE(b, b_doubl);
+  double a_doubl = UniversalTypeConversion<double,T>(a);
+  double b_doubl = UniversalTypeConversion<double,T>(b);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
   //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
@@ -95,7 +93,6 @@ int Infinitesimal_Floor_V1(T const& a, T const& b)
 template<typename T>
 int Infinitesimal_Ceil_V1(T const& a, T const& b)
 {
-  double a_doubl, b_doubl;
   double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
@@ -105,8 +102,8 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  GET_DOUBLE(a, a_doubl);
-  GET_DOUBLE(b, b_doubl);
+  double a_doubl = UniversalTypeConversion<double,T>(a);
+  double b_doubl = UniversalTypeConversion<double,T>(b);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
   //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
@@ -131,7 +128,6 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
 template<typename T, typename Tint>
 Tint Infinitesimal_Floor(T const& a, T const& b)
 {
-  double a_doubl, b_doubl;
   double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
@@ -141,17 +137,17 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  std::cerr << "a=" << a << " b=" << b << "\n";
-  GET_DOUBLE(a, a_doubl);
-  GET_DOUBLE(b, b_doubl);
+  //  std::cerr << "a=" << a << " b=" << b << "\n";
+  double a_doubl = UniversalTypeConversion<double,T>(a);
+  double b_doubl = UniversalTypeConversion<double,T>(b);
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
-  std::cerr << "alpha=" << alpha << "\n";
+  //  std::cerr << "alpha=" << alpha << "\n";
   double eD1=floor(alpha);
-  std::cerr << "eD1=" << eD1 << "\n";
+  //  std::cerr << "eD1=" << eD1 << "\n";
   long int eD2=lround(eD1);
-  std::cerr << "eD2=" << eD2 << "\n";
+  //  std::cerr << "eD2=" << eD2 << "\n";
   Tint eReturn=eD2;
-  std::cerr << "initial value eReturn=" << eReturn << "\n";
+  //  std::cerr << "initial value eReturn=" << eReturn << "\n";
   auto f=[&](Tint const& x) -> bool {
     T eDiff=x - b;
     if (eDiff <= 0)
@@ -160,14 +156,12 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
       return true;
     return false;
   };
-  //  std::cerr << "a=" << a << "\n";
-  //  std::cerr << "b=" << b << "\n";
-  std::cerr << "Infinitesimal_floor, before while loop\n";
+  //  std::cerr << "Infinitesimal_floor, before while loop\n";
   while(true) {
-    std::cerr << "eReturn=" << eReturn << "\n";
+    //    std::cerr << "eReturn=" << eReturn << "\n";
     bool test1=f(eReturn);
     bool test2=f(eReturn+1);
-    std::cerr << "test1=" << test1 << " test2=" << test2 << "\n";
+    //    std::cerr << "test1=" << test1 << " test2=" << test2 << "\n";
     if (test1 && !test2)
       break;
     if (!test1)
@@ -175,7 +169,7 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     if (test2)
       eReturn++;
   }
-  std::cerr << "Infinitesimal_floor, after while loop\n";
+  //  std::cerr << "Infinitesimal_floor, after while loop\n";
   return eReturn;
 }
 
@@ -187,7 +181,6 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
 template<typename T, typename Tint>
 Tint Infinitesimal_Ceil(T const& a, T const& b)
 {
-  double a_doubl, b_doubl;
   double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
@@ -197,8 +190,8 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  GET_DOUBLE(a, a_doubl);
-  GET_DOUBLE(b, b_doubl);
+  double a_doubl = UniversalTypeConversion<double,T>(a);
+  double b_doubl = UniversalTypeConversion<double,T>(b);
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
   double eD1=ceil(alpha);
   long int eD2=lround(eD1);
@@ -211,7 +204,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
       return true;
     return false;
   };
-  std::cerr << "Infinitesimal_ceil, before while loop\n";
+  //  std::cerr << "Infinitesimal_ceil, before while loop\n";
   while(true) {
     bool test1=f(eReturn -1);
     bool test2=f(eReturn);
@@ -222,7 +215,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     if (!test2)
       eReturn++;
   }
-  std::cerr << "Infinitesimal_ceil, after while loop\n";
+  //  std::cerr << "Infinitesimal_ceil, after while loop\n";
   return eReturn - 1;
 }
 
@@ -241,6 +234,10 @@ int insertStop(T_shvec_info<T,Tint> &info,
   return TempShvec_globals::STOP_COMPUTATION;
 }
 
+
+
+
+
 template<typename T, typename Tint>
 int computeIt(T_shvec_info<T,Tint> &info,
 	      int (*insert)(T_shvec_info<T,Tint> &info,
@@ -249,12 +246,11 @@ int computeIt(T_shvec_info<T,Tint> &info,
 			    T norm))
 {
   int coset, i, j;
-  //  T Z;
   //  double eQuot_doubl;
   int result = 0;
   int dim = info.request.dim;
   T bound = info.request.bound;
-  //  std::cerr << "bound=" << bound << "\n";
+  std::cerr << "computeIt : bound=" << bound << "\n";
   MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
@@ -308,8 +304,7 @@ int computeIt(T_shvec_info<T,Tint> &info,
     if (needs_new_bound) {
       T eQuot = Trem(i) / q(i,i);
       T eSum = - U(i) - C(i);
-      //      GET_DOUBLE(eQuot, eQuot_doubl);
-      //      std::cerr << "eQuot_doubl=" << eQuot_doubl << "\n";
+      std::cerr << "i=" << i << " eQuot=" << eQuot << "\n";
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
       Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       x(i) = Lower(i);
@@ -351,26 +346,24 @@ int computeIt(T_shvec_info<T,Tint> &info,
 	}
 	T hVal=x(0) + C(0) + U(0);
 	T eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
+#ifdef CHECK_BASIC_CONSISTENCY
 	T norm=0;
 	for (int i2=0; i2<dim; i2++)
 	  for (int j2=0; j2<dim; j2++)
-	    norm=norm + g(i2,j2)*(x(i2) + C(i2)) * (x(j2) + C(j2));
-#ifdef CHECK_BASIC_CONSISTENCY
+	    norm += g(i2,j2)*(x(i2) + C(i2)) * (x(j2) + C(j2));
 	if (norm != eNorm) {
 	  std::cerr << "Norm inconsistency\n";
 	  std::cerr << "norm=" << norm << "\n";
 	  std::cerr << "eNorm=" << eNorm << "\n";
 	  throw TerminalException{1};
 	}
-#endif
-#ifdef CHECK_BASIC_CONSISTENCY
 	if (eNorm > bound) {
 	  std::cerr << "eNorm is too large\n";
-	  double bound_doubl, eNorm_doubl, eDiff_doubl;
+	  //	  double bound_doubl, eNorm_doubl, eDiff_doubl;
 	  T eDiff=eNorm - bound;
-	  GET_DOUBLE(bound, bound_doubl);
-	  GET_DOUBLE(eNorm, eNorm_doubl);
-	  GET_DOUBLE(eDiff, eDiff_doubl);
+	  double bound_doubl = UniversalTypeConversion<double,T>(bound);
+	  double eNorm_doubl = UniversalTypeConversion<double,T>(eNorm);
+	  double eDiff_doubl = UniversalTypeConversion<double,T>(eDiff);
 	  
 	  std::cerr << "bound_doubl=" << bound_doubl << "\n";
 	  std::cerr << "eNorm_doubl=" << eNorm_doubl << "\n";
@@ -433,7 +426,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
     T eNorm=0;
     for (i=0; i<dim; i++)
       for (j=0; j<dim; j++)
-	eNorm = eNorm + info.request.gram_matrix(i,j)*C(i)*C(j);
+	eNorm += info.request.gram_matrix(i,j)*C(i)*C(j);
     info.minimum=eNorm;
   }
   else {
@@ -448,10 +441,8 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   T step_size=info.minimum;
   while(true) {
     info.request.bound = info.minimum - step_size;
-    double step_size_doubl;
-    double min_doubl;
-    GET_DOUBLE(info.minimum, min_doubl);
-    GET_DOUBLE(step_size, step_size_doubl);
+    //    double step_size_doubl = UniversalTypeConversion<double,T>(step_size);
+    //    double min_doubl = UniversalTypeConversion<double,T>(info.minimum);
     //    std::cerr << "min            =" << info.minimum << "\n";
     //    std::cerr << "min_doubl      =" << min_doubl << "\n";
     //    std::cerr << "step_size      =" << step_size << "\n";
