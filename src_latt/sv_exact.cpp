@@ -13,7 +13,7 @@
 #include "ShortestUniversal.h"
 
 
-[[ noreturn]] void die_sv(std::string last_words)
+[[ noreturn]] void die_sv(std::string const& last_words)
 {
   std::cout << "sv.c: " << last_words << "\n";
   throw TerminalException{1};
@@ -25,9 +25,8 @@ int main(int argc, char *argv[])
   using T=mpq_class;
   using Tint=mpz_class;
   try {
-    int i, j, mode, number, coset;
+    int i, j, mode, coset;
     mpq_class bound = 0;
-    number = 0;
     mode = TempShvec_globals::TEMP_SHVEC_MODE_UNDEF;
     coset = 0;
     int NeedBound=0;
@@ -39,7 +38,6 @@ int main(int argc, char *argv[])
 	  printf("Usage: sv [options] <file\n");
 	  printf("-h  show this help\n");
 	  printf("-bN compute vectors v with (v, v) <= N\n");
-	  printf("-sN print maximal N vectors\n");
 	  printf("-tN compute the first N coefficients of the theta-series\n");
 	  printf("-v determine the vectors with (v-c, v-c) <= N with N defined later\n");
 	  printf("-m  determine the minimum\n");
@@ -50,9 +48,6 @@ int main(int argc, char *argv[])
 	case 'b':
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
 	  NeedBound=1;
-	  break;
-	case 's':
-	  number = atoi(optarg);
 	  break;
 	case 'M':
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
@@ -106,7 +101,6 @@ int main(int argc, char *argv[])
     initShvecReq<T,Tint>(dim, gram_matrix, info);
     info.request.bound = bound;
     info.request.mode = mode;
-    info.request.number = number;
     info.request.coset = cosetVect;
     info.minimum = -44;
     std::cerr << "Before computeShvec mode=" << info.request.mode << "\n";
@@ -118,9 +112,8 @@ int main(int argc, char *argv[])
     std::cout << info.short_vectors_number << "\n";
     for (i = 0; i < info.short_vectors_number; i++) {
       std::cout << "[ unset ]: ";
-      for (int iCol=0; iCol<dim; iCol++) {
+      for (int iCol=0; iCol<dim; iCol++)
 	std::cout << " " << info.short_vectors[i](iCol);
-      }
       std::cout << "\n";
     }
     return result;

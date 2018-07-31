@@ -18,6 +18,7 @@ namespace TempShvec_globals {
   const int TEMP_SHVEC_MODE_THETA_SERIES=3;
   const int TEMP_SHVEC_MODE_VINBERG=4;
   const int STOP_COMPUTATION=666;
+  const int NORMAL_TERMINATION_COMPUTATION=555;
 }
 
 template<typename T>
@@ -25,7 +26,6 @@ struct T_shvec_request {
   int dim;
   int mode;
   T bound;
-  int number;
   MyVector<T> coset;
   MyMatrix<T> gram_matrix;
 };
@@ -33,7 +33,6 @@ struct T_shvec_request {
 template<typename T, typename Tint>
 struct T_shvec_info {
   T_shvec_request<T> request;
-  int short_vectors_count;
   int short_vectors_number;
   std::vector<MyVector<Tint>> short_vectors;
   T minimum;
@@ -41,24 +40,23 @@ struct T_shvec_info {
 
 
 template<typename T, typename Tint>
-  int insertBound(T_shvec_info<T,Tint> &info,
+int insertBound(T_shvec_info<T,Tint> &info,
 		MyVector<Tint> const& vector, 
 		int coset,
 		T norm)
 {
   info.short_vectors.push_back(vector);
   //  std::cerr << "FUNCTION insertBound\n";
-  info.short_vectors_count++;
   info.short_vectors_number++;
   //  std::cerr << "short_vectors_number=" << info.short_vectors_number << "\n";
   
   if (norm < info.minimum || info.minimum == -1)
     info.minimum = norm;
 
-  if (info.short_vectors_number == info.request.number)
+  if (info.short_vectors_number == 0)
     return TempShvec_globals::STOP_COMPUTATION;
   else
-    return 0;
+    return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
 // We return
@@ -157,7 +155,7 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     return false;
   };
   //  std::cerr << "Infinitesimal_floor, before while loop\n";
-  while(true) {
+  while (true) {
     //    std::cerr << "eReturn=" << eReturn << "\n";
     bool test1=f(eReturn);
     bool test2=f(eReturn+1);
@@ -205,7 +203,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     return false;
   };
   //  std::cerr << "Infinitesimal_ceil, before while loop\n";
-  while(true) {
+  while (true) {
     bool test1=f(eReturn -1);
     bool test2=f(eReturn);
     if (!test1 && test2)
@@ -239,7 +237,7 @@ int insertStop(T_shvec_info<T,Tint> &info,
 
 
 template<typename T, typename Tint>
-int computeIt(T_shvec_info<T,Tint> &info,
+int computeIt(T_shvec_info<T,Tint> & info,
 	      int (*insert)(T_shvec_info<T,Tint> &info,
 			    MyVector<Tint> const& vector, 
 			    int coset,
@@ -250,6 +248,8 @@ int computeIt(T_shvec_info<T,Tint> &info,
   int result = 0;
   int dim = info.request.dim;
   T bound = info.request.bound;
+  // The value of bound is assumed to be correct.
+  // Thus the Trem values should be strictly positive.
   std::cerr << "computeIt : bound=" << bound << "\n";
   MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
@@ -404,7 +404,8 @@ int computeIt(T_shvec_info<T,Tint> &info,
     }
     //    std::cerr << "Case 11 i=" << i << "\n";
   }
-  return 0;
+  std::cerr << "Normal return of computeIt\n";
+  return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
 template<typename T, typename Tint>
@@ -439,7 +440,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   T eDen=10000;
   T min_step_size=eNum/eDen;
   T step_size=info.minimum;
-  while(true) {
+  while (true) {
     info.request.bound = info.minimum - step_size;
     //    double step_size_doubl = UniversalTypeConversion<double,T>(step_size);
     //    double min_doubl = UniversalTypeConversion<double,T>(info.minimum);
@@ -460,7 +461,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   //  std::cerr << "After while loop\n";
   //  std::cerr << "info.minimum=" << info.minimum << "\n";
   info.minimum = info.request.bound + step_size;
-  return 0;
+  return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
 
@@ -477,11 +478,9 @@ void initShvecReq(int dim,
   }
   info.request.dim = dim;
   info.request.coset = MyVector<T>(dim);
-  info.request.gram_matrix=gram_matrix;
+  info.request.gram_matrix = gram_matrix;
   info.request.mode = 0;
-  info.request.bound = 0.0;
-  info.request.number = 0;
-  info.short_vectors_count = 0;
+  info.request.bound = 0;
   info.short_vectors_number = 0;
   info.minimum = -1;
 }
@@ -505,25 +504,20 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
 	throw TerminalException{1};
       }
     case TempShvec_globals::TEMP_SHVEC_MODE_BOUND:
-      if (info.request.bound <= 0.0)
-	{
-	  std::cerr << "bound=" << info.request.bound << "\n";
-	  std::cerr << "shvec.c (computeShvec): MODE_BOUND info.request.bound !\n";
-	  throw TerminalException{1};
-	}
-      if (info.request.number < 0) {
-	std::cerr << "shvec.c (computeShvec): MODE_BOUND info.request.number!\n";
+      if (info.request.bound <= 0.0) {
+	std::cerr << "bound=" << info.request.bound << "\n";
+	std::cerr << "shvec.c (computeShvec): MODE_BOUND info.request.bound !\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS:
-      if (info.request.bound != 0.0 || info.request.number < 0) {
+      if (info.request.bound != 0.0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_SHORTEST_VECTORS!\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM:
-      if (info.request.bound != 0.0 || info.request.number != 0) {
+      if (info.request.bound != 0.0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_MINIMUM!\n";
 	throw TerminalException{1};
       }
@@ -583,12 +577,10 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   }
   T bound=0; // should not be used
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
-  int number=0;
   T_shvec_info<T,Tint> info;
   initShvecReq<T>(dim, GramMat, info);
   info.request.bound = bound;
   info.request.mode = mode;
-  info.request.number = number;
   info.request.coset = cosetVect;
   info.minimum = -44;
   //  std::cerr << "Before T_computeShvec\n";
@@ -622,7 +614,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
     eVect(0)=0;
     ListVect.push_back(eVect);
     int idx=1;
-    while(1) {
+    while (true) {
       T norm = idx*idx * GramMat(0,0);
       if (norm > MaxNorm)
 	break;
@@ -637,13 +629,11 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   }
   T bound=MaxNorm;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
-  int number=0;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
   T_shvec_info<T,Tint> info;
   initShvecReq<T>(dim, GramMat, info);
   info.request.bound = bound;
   info.request.mode = mode;
-  info.request.number = number;
   info.request.coset = cosetVect;
   info.minimum = -44;
   //

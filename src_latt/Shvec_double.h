@@ -63,7 +63,6 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
   computeShvec(request, info);
   //  std::cerr << "T_ShortVector_double, step 7\n";
 
-  /* output results */
   int PreNbVect=info->short_vectors_number;
   std::vector<int> Status(PreNbVect);
   int nbShort=0;
@@ -158,7 +157,6 @@ resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVecto
   initShvecInfo(info);
   computeShvec(request, info);
 
-  /* output results */
   int PreNbVect=info->short_vectors_number;
   std::vector<int> Status(PreNbVect);
   T MinNorm;
