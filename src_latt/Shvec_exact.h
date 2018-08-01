@@ -205,8 +205,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 template<typename T, typename Tint>
 int computeIt(T_shvec_info<T,Tint> & info)
 {
-  int coset, i, j;
-  //  double eQuot_doubl;
+  int i, j;
   int result = 0;
   int dim = info.request.dim;
   T bound = info.request.bound;
@@ -248,7 +247,7 @@ int computeIt(T_shvec_info<T,Tint> & info)
     Lower(ik)=0;
     Upper(ik)=0;
   }
-  coset = 0;
+  bool coset = false;
   i = 0;
   while (i < dim && !coset) {
     coset = (info.request.coset(i) != 0.0);
@@ -347,14 +346,6 @@ int computeIt(T_shvec_info<T,Tint> & info)
 	  std::cerr << " " << x(u);
 	  std::cerr << "\n";*/
 	info.short_vectors.push_back(x);
-	
-	//	std::cerr << "Case 7 i=" << i << "\n";
-	//	std::cerr << "result=" << result << "\n";
-	if (result == TempShvec_globals::STOP_COMPUTATION) {
-	  //	  std::cerr << "Before return statement\n";
-	  return result;
-	}
-	//	std::cerr << "Case 7.1 i=" << i << "\n";
       }
       else {
 	i--;
