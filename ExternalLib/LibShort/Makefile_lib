@@ -51,13 +51,13 @@ LIBNAME2	= libshort.so.1.0.1
 %.o: %.c
 	@echo
 	@echo compile $<
-	$(CC) -o $@ $(CFLAGS) $(NOLINKFLAG) $<
+	$(CC) $(CFLAGS) $(NOLINKFLAG) $< -o $@
 
 all:	lib
 
 lib: 	$(OBJECTS)
 	@echo
-	$(CC) $(LINKFLAG),$(LIBNAME1) -o $(LIBNAME2) $(LINKOBJECTS) $(LIBS)
+	$(CC) $(LINKFLAG),$(LIBNAME1) $(LINKOBJECTS) $(LIBS) -o $(LIBNAME2)
 
 
 install:	lib
