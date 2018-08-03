@@ -1,6 +1,7 @@
 #ifndef MATRIX_GROUP_INCLUDE
 #define MATRIX_GROUP_INCLUDE
 
+#include "factorizations.h"
 #include "MAT_MatrixInt.h"
 #include "GRP_GroupFct.h"
 

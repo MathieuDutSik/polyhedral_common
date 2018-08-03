@@ -2,6 +2,7 @@
 #define TEMP_SHORT_VECTOR_Undefinite_H
 
 #include "mpreal_related.h"
+#include "TypeConversion.h"
 #include "Temp_Positivity.h"
 
 template<typename Tint, typename T, typename Tfloat>
