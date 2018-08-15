@@ -17,17 +17,20 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
+    using T=mpq_class;
+    using Tint=int;
+    //
     std::string eFile=argv[1];
     if (!IsExistingFile(eFile)) {
       std::cerr << "File eFile=" << eFile << " is missing\n";
       throw TerminalException{1};
     }
     std::ifstream SYMMfs(eFile);
-    MyMatrix<mpq_class> eSymmMat=ReadMatrix<mpq_class>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
     std::cerr << "eSymmMat=\n";
     WriteMatrix(std::cerr, eSymmMat);
     //
-    SingleTestResult eResult = TestCopositivity(eSymmMat);
+    SingleTestResult<Tint> eResult = TestCopositivity<T,Tint>(eSymmMat);
     if (eResult.test) {
       std::cerr << "The matrix is indeed copositive\n";
     }

@@ -22,12 +22,13 @@ int main(int argc, char *argv[])
       throw TerminalException{1};
     }
     using T=mpq_class;
+    using Tint=int;
     std::ifstream SYMMfs(eFile);
     MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
     std::cerr << "eSymmMat=\n";
     WriteMatrix(std::cerr, eSymmMat);
     //
-    Tshortest<T,int> eSh = T_CopositiveShortestVector(eSymmMat);
+    Tshortest<T,Tint> eSh = T_CopositiveShortestVector<T,Tint>(eSymmMat);
     std::cerr << "eMin=" << eSh.eMin << "\n";
     WriteMatrix(std::cerr, eSh.SHV);
     //
