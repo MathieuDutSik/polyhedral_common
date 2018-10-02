@@ -7,10 +7,10 @@ int main(int argc, char *argv[])
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_canonicalize [DATAEXT] [DATAFAC]\n";
+      std::cerr << "LATT_canonicalize [GramI] [GramO]\n";
       std::cerr << "\n";
-      std::cerr << "DATAEXT (in) : The polytope vertices\n";
-      std::cerr << "DATAEXT (out): The polytope facets\n";
+      std::cerr << "GramI (input) : The gram matrix on input\n";
+      std::cerr << "GramO (output): The gram matrix on output\n";
       return -1;
     }
     using T=mpq_class;
