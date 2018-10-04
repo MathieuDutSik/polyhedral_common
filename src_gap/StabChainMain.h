@@ -8,7 +8,6 @@
 
 namespace gap {
 
-
   
 // The main function
 // Right now we do not implement the PCGS algorithm

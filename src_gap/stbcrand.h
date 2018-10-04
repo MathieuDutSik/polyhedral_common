@@ -703,7 +703,7 @@ Telt VerifyStabilizer(StabChain<Telt> const& Stot, int const& eLev, Telt const& 
   for (int j=0; j<nbLeader; j++) {
     if (result.isIdentity()) {
       int i = leaders[nbLeader - 1 - j];
-      ChangeStabChain(chain, {i}, false);
+      ChangeStabChain(chain, 0, {i}, false);
       Telt w1, w1inv;
       if (i == pt2) {
         w1 = z;

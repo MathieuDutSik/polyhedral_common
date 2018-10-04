@@ -40,6 +40,12 @@
 
 namespace gap {
 
+static const int int_reducedm1 = -1;
+static const int int_false = 0;
+static const int int_true = 1;
+static const int int_fail = 2;
+static const int int_perm = 3;
+static const int int_group = 4;
 
   
 template<typename Telt>
@@ -486,7 +492,7 @@ bool IsTrivial(std::vector<Telt> const& G)
   return true;
 }
 
-template<tpename Telt>
+template<typename Telt>
 std::vector<int> MovedPoints(StabChain<Telt> const& S)
 {
   std::set<int> LIdx;
@@ -901,8 +907,6 @@ void ConjugateStabChain(StabChain<Telt> & Stot, int const& TheLev, Telt const& c
   }
 }
 
-static const int int
-
 // value of reduced
 //  reduced = -1 corresponds to reduced = -1 in GAP code
 //  reduced = 0  corresponds to reduced = false in GAP code
@@ -1007,8 +1011,8 @@ bool TestEqualityAtLevel(StabChain<Telt> const& L, StabChain<Telt> const& R, int
       return false;
     if (L.stabilizer[eLev].transversal.size() != R.stabilizer[eLev].transversal.size())
       return false;
-    ine lenL=L.stabilizer[eLev].transversal.size();
-    if (int u=0; u<lenL; u++) {
+    int lenL=L.stabilizer[eLev].transversal.size();
+    for (int u=0; u<lenL; u++) {
       if (L.stabilizer[eLev].transversal[u] == -1 && R.stabilizer[eLev].transversal[u] != -1)
 	return false;
       if (L.stabilizer[eLev].transversal[u] != -1 && R.stabilizer[eLev].transversal[u] == -1)

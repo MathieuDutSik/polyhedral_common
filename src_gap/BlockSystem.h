@@ -7,6 +7,8 @@
 #include "PermGroup.h"
 
 
+namespace gap {
+
 template<typename Telt>
 std::pair<std::vector<std::vector<int>>,std::vector<Face>> Blocks_Kernel(std::vector<Telt> const& ListGen, std::vector<int> const& Omega, std::vector<int> const& seed)
 {
@@ -213,6 +215,7 @@ int GetNonTrivialPointInBlock(std::vector<int> const& eBlock, int const& ePt)
   return -1;
 }
 
+}
 
 #endif
 

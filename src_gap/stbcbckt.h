@@ -1,3 +1,6 @@
+#ifndef DEFINE_STBCBCKT_H
+#define DEFINE_STBCBCKT_H
+
 #include "StabChainMain.h"
 /*
 #############################################################################
@@ -11,13 +14,7 @@
 ##
 */
 
-static const int int_reducedm1 = -1;
-static const int int_false = 0;
-static const int int_true = 1;
-static const int int_fail = 2;
-static const int int_perm = 3;
-static const int int_group = 4;
-
+namespace gap {
 
 
 template<typename Telt>
@@ -980,3 +977,7 @@ ResultPBT<Telt> RepOpSetsPermGroup(StabChain<Telt> const& G, bool const& repr, F
   };
   return PartitionBacktrack( G, Pr, repr, rbase, [ Q ], L, R );
 }
+
+}
+
+#endif
