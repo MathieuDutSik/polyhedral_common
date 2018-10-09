@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
     MyMatrix<T> eMat=ReadMatrix<T>(is);
-    MyMatrix<T> eMatCan=ComputeCanonicalForm<T,Tint>(eMat);
+    MyMatrix<T> eMatCan=ComputeCanonicalForm<T,Tint>(eMat).second;
     //
     std::ofstream os(argv[2]);
     WriteMatrix(os, eMatCan);

@@ -12,7 +12,7 @@
 
 
 template<typename T,typename Tint>
-MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
+std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 {
   //
   // Computing the Z-basis on which the computation relies.
@@ -57,6 +57,7 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
     AssignMatrixRow(SHVcan_T, iRowCan, eRow_T);
   }
   MyMatrix<T> BasisCan_T = GetZbasis(SHVcan_T);
+  MyMatrix<Tint> BasisCan_Tint = ConvertMatrixUniversal<Tint,T>(BasisCan_T);
 #ifdef DEBUG
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
@@ -66,7 +67,7 @@ MyMatrix<T> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   }
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
-  return RetMat;
+  return {BasisCan_Tint, RetMat};
 }
 
 
