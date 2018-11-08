@@ -56,3 +56,9 @@ The src_latt directory contains the LATT_canonicalize for computing
 the canonical form of a positive definite form.
 The code uses Tint/T template types.
 
+Short vector configurations
+---------------------------
+
+The directory src_short contains a set of functions for dealing with
+configuration of vectors that can occur as set of minimum vectors
+of positive definite forms.
