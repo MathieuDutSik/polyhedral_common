@@ -21,13 +21,22 @@ which are in a number of independent directories:
 Copositivity
 ------------
 
-in src_copos
+In src_copos there is a number of functionality for working with copositive forms.
+The subprograms are:
+ * CP_ComputeCopositiveMin: It tests is a matrix is copositive.
+ * CP_TestCompletePositivity: We test if a matrix is completely positive.
+ * CP_CopositiveMin: Get the list of positive vectors of small norms
+
 
 
 Shortest vectors
 ----------------
 
-the src_latt directory contains the sv_exact program for 
+The src_latt directory contains the sv_exact program for computing the set of
+closest points of a positive definite form. The code is general and has
+two template types:
+ * an integer type Tint for the integer coefficients.
+ * a coefficient type T for the coefficient of the Gram matrix.
 
 
 
@@ -36,6 +45,8 @@ LLL computation
 
 The src_latt directory contains the LATT_lll programs for
 computing the LLL reduced form of a positive definite form.
+The code uses Tint/T template types.
+
 
 
 Canonical form
@@ -43,3 +54,5 @@ Canonical form
 
 The src_latt directory contains the LATT_canonicalize for computing
 the canonical form of a positive definite form.
+The code uses Tint/T template types.
+
