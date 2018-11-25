@@ -186,7 +186,7 @@ readrat (lrs_mp Na, lrs_mp Da)	/* read a rational or integer and convert to lrs_
 	       /* returns true if denominator is not one       */
 {
   char in[MAXINPUT], num[MAXINPUT], den[MAXINPUT];
-  fscanf (lrs_ifp, "%s", in);
+  (void)fscanf (lrs_ifp, "%s", in);
   atoaa (in, num, den);		/*convert rational to num/dem strings */
   atomp (num, Na);
   if (den[0] == '\0')
@@ -233,7 +233,7 @@ void
 readmp (lrs_mp a)               /* read an integer and convert to lrs_mp */
 {
   long in;
-  fscanf (lrs_ifp, "%ld", &in);
+  (void)fscanf (lrs_ifp, "%ld", &in);
   itomp (in, a);
 }
 

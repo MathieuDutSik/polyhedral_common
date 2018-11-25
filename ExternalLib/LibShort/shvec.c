@@ -130,7 +130,7 @@ int insertBound(shvec_info info,
    */
   /*  fprintf(stderr, "ComputeTheta=%d\n", info->request.ints.ComputeTheta); */
   if (info->request.ints.integral && info->request.ints.ComputeTheta && !coset) {
-    fprintf(stderr, "theta_series_bound=%d vector_norm=%d\n", info->theta_series_bound, vector_norm);
+    fprintf(stderr, "theta_series_bound=%f vector_norm=%d\n", info->theta_series_bound, vector_norm);
     if (info->theta_series_bound < vector_norm) {
       fprintf(stderr, "reallocating\n");
       info->theta_series =
