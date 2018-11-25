@@ -974,7 +974,6 @@ AbstractGraph::search(const bool canonical, Stats& stats)
        */
       {
 	unsigned int  next_split_element = UINT_MAX;
-	unsigned int* next_split_element_pos = 0;
 	unsigned int* ep = p.elements + cell->first;
 	if(current_node.fp_on)
 	  {
@@ -985,7 +984,6 @@ AbstractGraph::search(const bool canonical, Stats& stats)
 		 *ep < next_split_element and
 		 first_path_orbits.is_minimal_representative(*ep)) {
 		next_split_element = *ep;
-		next_split_element_pos = ep;
 	      }
 	    }
 	  }
@@ -1001,7 +999,6 @@ AbstractGraph::search(const bool canonical, Stats& stats)
 		  current_node.long_prune_redundant.find(*ep) ==
 		  current_node.long_prune_redundant.end())) {
 		next_split_element = *ep;
-		next_split_element_pos = ep;
 	      }
 	    }
 	  }
@@ -1015,7 +1012,6 @@ AbstractGraph::search(const bool canonical, Stats& stats)
 		  current_node.long_prune_redundant.find(*ep) ==
 		  current_node.long_prune_redundant.end())) {
 		next_split_element = *ep;
-		next_split_element_pos = ep;
 	      }
 	    }
 	  }
