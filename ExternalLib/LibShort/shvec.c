@@ -37,7 +37,7 @@
 void die_shvec(char* last_words)
 {
   printf("shvec.c: ");
-  printf(last_words);
+  printf("last_words=%s\n", last_words);
   exit(EXIT_FAILURE);
 }
 
@@ -94,7 +94,7 @@ int insertBound(shvec_info info,
 		int coset,
 		double norm)
 {
-  int *sigma, number, i, vector_norm, shell_bound, dim;
+  int *sigma, number, i, vector_norm=-1, shell_bound, dim;
 
   dim = info->request.ints.dim;
   number = info->short_vectors_number;
@@ -861,7 +861,7 @@ void computeShvec(shvec_request request, shvec_info info)
     {
       result = computeIt(info, insertBound);
     }
-
+  fprintf(stderr, "result=%d\n", result);
   /*
    * 0-th coefficient of theta-series is always 1
    */

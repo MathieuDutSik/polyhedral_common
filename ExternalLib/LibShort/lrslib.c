@@ -622,7 +622,10 @@ lrs_read_dat (lrs_dat * Q, int argc, char *argv[])
 
 
 /* process input file */
-  (void)fscanf (lrs_ifp, "%s", name);
+  if (fscanf (lrs_ifp, "%s", name) == EOF) {
+    fprintf (lrs_ofp, "\nParse error");
+    return (FALSE);
+  }
 
   while (strcmp (name, "begin") != 0)	/*skip until "begin" found processing options */
     {
@@ -789,7 +792,11 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 	{
 	  long seconds;
 
-	  (void)fscanf (lrs_ifp, "%ld", &seconds);
+	  if (fscanf (lrs_ifp, "%ld", &seconds) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
+
 #ifdef SIGNALS
 	  if (seconds > 0)
 	    {
@@ -802,7 +809,11 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 
       if (strcmp (name, "debug") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld %ld", &Q->strace, &Q->etrace);
+	  if (fscanf (lrs_ifp, "%ld %ld", &Q->strace, &Q->etrace) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
+
 	  fprintf (lrs_ofp, "\n*%s from B#%ld to B#%ld", name, Q->strace, Q->etrace);
           Q->verbose=TRUE;
 	  if (Q->strace <= 1)
@@ -826,17 +837,26 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 	  Q->restart = TRUE;
           if(Q->voronoi)
            {
-             (void)fscanf (lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0], &Q->count[2], &P->depth);
+             if (fscanf (lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0], &Q->count[2], &P->depth) == EOF) {
+	       fprintf (lrs_ofp, "\nParse error");
+	       return (FALSE);
+	     }
              fprintf (lrs_ofp, "\n*%s V#%ld R#%ld B#%ld h=%ld data points", name, Q->count[1], Q->count[0], Q->count[2], P->depth);
             }
           else if(hull)
             {
-	     (void)fscanf (lrs_ifp, "%ld %ld %ld", &Q->count[0], &Q->count[2], &P->depth);
-	     fprintf (lrs_ofp, "\n*%s F#%ld B#%ld h=%ld vertices/rays", name, Q->count[0], Q->count[2], P->depth);
+	      if (fscanf (lrs_ifp, "%ld %ld %ld", &Q->count[0], &Q->count[2], &P->depth) == EOF) {
+		fprintf (lrs_ofp, "\nParse error");
+		return (FALSE);
+	      }
+	      fprintf (lrs_ofp, "\n*%s F#%ld B#%ld h=%ld vertices/rays", name, Q->count[0], Q->count[2], P->depth);
             }
           else
             {
-	     (void)fscanf (lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0], &Q->count[2], &P->depth);
+	      if (fscanf (lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0], &Q->count[2], &P->depth) == EOF) {
+		fprintf (lrs_ofp, "\nParse error");
+		return (FALSE);
+	      }
 	     fprintf (lrs_ofp, "\n*%s V#%ld R#%ld B#%ld h=%ld facets", name, Q->count[1], Q->count[0], Q->count[2], P->depth);
             }
 	  if (!readfacets (Q, Q->facet))
@@ -924,7 +944,10 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 
       if (strcmp (name, "printcobasis") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &Q->frequency);
+	  if (fscanf (lrs_ifp, "%ld", &Q->frequency) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*%s", name);
           if (Q->frequency > 0)
             fprintf(lrs_ofp," %ld", Q->frequency);
@@ -933,7 +956,10 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 
       if (strcmp (name, "cache") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &dict_limit);
+	  if (fscanf (lrs_ifp, "%ld", &dict_limit) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*cache %ld", dict_limit);
 	  if (dict_limit < 1)
 	    dict_limit = 1;
@@ -946,12 +972,18 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 
       if (strcmp (name, "maxdepth") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &Q->maxdepth);
+	  if (fscanf (lrs_ifp, "%ld", &Q->maxdepth) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*%s  %ld", name, Q->maxdepth);
 	}
       if (strcmp (name, "mindepth") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &Q->mindepth);
+	  if (fscanf (lrs_ifp, "%ld", &Q->mindepth) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*%s  %ld", name, Q->mindepth);
 	}
       if (strcmp (name, "truncate") == 0)
@@ -975,13 +1007,19 @@ lrs_read_dic (lrs_dic * P, lrs_dat * Q)
 
       if (strcmp (name, "seed") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &Q->seed);
+	  if (fscanf (lrs_ifp, "%ld", &Q->seed) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*seed= %ld ", Q->seed);
 	}
 
       if (strcmp (name, "estimates") == 0)
 	{
-	  (void)fscanf (lrs_ifp, "%ld", &Q->runs);
+	  if (fscanf (lrs_ifp, "%ld", &Q->runs) == EOF) {
+	    fprintf (lrs_ofp, "\nParse error");
+	    return (FALSE);
+	  }
 	  fprintf (lrs_ofp, "\n*%ld %s", Q->runs, name);
 	}
 
@@ -1043,7 +1081,7 @@ lrs_getfirstbasis (lrs_dic ** D_p, lrs_dat * Q, lrs_mp_matrix * Lin, long no_out
 /* assign local variables to structures */
 
   lrs_mp_matrix A;
-  long *B, *C, *Row, *Col;
+  long *B, *C, *Col;
   long *inequality;
   long *linearity;
   long hull = Q->hull;
@@ -1064,7 +1102,7 @@ lrs_getfirstbasis (lrs_dic ** D_p, lrs_dat * Q, lrs_mp_matrix * Lin, long no_out
   A = D->A;
   B = D->B;
   C = D->C;
-  Row = D->Row;
+  /*  Row = D->Row;*/
   Col = D->Col;
   inequality = Q->inequality;
 
@@ -1473,12 +1511,12 @@ lrs_getvertex (lrs_dic * P, lrs_dat * Q, lrs_mp_vector output)
   long *redundcol = Q->redundcol;
   long *count = Q->count;
   long hull;
-  long m, d;
+  /*  long m, d;*/
   long lexflag;
 
   hull = Q->hull;
-  m = P->m;
-  d = P->d;
+  /*  m = P->m;
+      d = P->d;*/
   lexflag = P->lexflag;
 
   if (lexflag || Q->allbases)
@@ -1725,8 +1763,8 @@ lrs_printtotals (lrs_dic * P, lrs_dat * Q)
   long homogeneous = Q->homogeneous;
   long nlinearity = Q->nlinearity;
   long nredundcol = Q->nredundcol;
-  long m, d, lastdv;
-  m = P->m;
+  long d, lastdv;
+  /*  m = P->m;*/
   d = P->d;
   lastdv = Q->lastdv;
 
@@ -2105,11 +2143,11 @@ pivot (lrs_dic * P, lrs_dat * Q, long bas, long cob)
   long *C = P->C;
   long *Row = P->Row;
   long *Col = P->Col;
-  long m, d, m_A;
+  long d, m_A;
 
   lrs_alloc_mp(Ns); lrs_alloc_mp(Nt); lrs_alloc_mp(Ars);
 
-  m = P->m;
+  /*  m = P->m;*/
   d = P->d;
   m_A = P->m_A;
   Q->count[3]++;    /* count the pivot */
@@ -2804,13 +2842,13 @@ lrs_degenerate (lrs_dic * P, lrs_dat * Q)
 /* not thoroughly tested   2000/02/15                  */
 {
   long i;
-  long *B, *Row;
+  long *Row;
 
   lrs_mp_matrix A = P->A;
   long d = P->d;
   long m = P->m;
 
-  B = P->B;
+  /*  B = P->B;*/
   Row = P->Row;
 
   for (i = d + 1; i <= m; i++)
@@ -2965,12 +3003,12 @@ checkredund (lrs_dic * P, lrs_dat * Q)
 
 /* assign local variables to structures */
   lrs_mp_matrix A = P->A;
-  long *B, *C, *Row, *Col;
+  long *Row, *Col;
   long d = P->d;
 
   lrs_alloc_mp(Ns); lrs_alloc_mp(Nt);
-  B = P->B;
-  C = P->C;
+  /*  B = P->B;
+      C = P->C;*/
   Row = P->Row;
   Col = P->Col;
 
@@ -3150,7 +3188,10 @@ lreadrat (long *Num, long *Den)
  /* returns true if denominator is not one        */
 {
   char in[MAXINPUT], num[MAXINPUT], den[MAXINPUT];
-  (void)fscanf (lrs_ifp, "%s", in);
+  if (fscanf (lrs_ifp, "%s", in) == EOF) {
+    fprintf (lrs_ofp, "\nParse error");
+    return (FALSE);
+  }
   atoaa (in, num, den);         /*convert rational to num/dem strings */
   *Num = atol (num);
   if (den[0] == '\0')
@@ -3198,7 +3239,10 @@ readlinearity (lrs_dat * Q)	/* read in and check linearity list */
 {
   long i, j;
   long nlinearity;
-  (void)fscanf (lrs_ifp, "%ld", &nlinearity);
+  if (fscanf (lrs_ifp, "%ld", &nlinearity) == EOF) {
+    fprintf (lrs_ofp, "\nParse error");
+    return (FALSE);
+  }
   if (nlinearity < 1)
     {
       fprintf (lrs_ofp, "\nLinearity option invalid, indices must be positive");
@@ -3209,7 +3253,10 @@ readlinearity (lrs_dat * Q)	/* read in and check linearity list */
 
   for (i = 0; i < nlinearity; i++)
     {
-      (void)fscanf (lrs_ifp, "%ld", &j);
+      if (fscanf (lrs_ifp, "%ld", &j) == EOF) {
+	fprintf (lrs_ofp, "\nParse error");
+	return (FALSE);
+      }
       Q->linearity[i] = j;	
 
     }
@@ -3236,7 +3283,10 @@ readfacets (lrs_dat * Q, long facet[])
 
   for (j = Q->nlinearity; j < d; j++)	/* note we place these after the linearity indices */
     {
-      (void)fscanf (lrs_ifp, "%ld", &facet[j]);
+      if (fscanf (lrs_ifp, "%ld", &facet[j]) == EOF) {
+	fprintf (lrs_ofp, "\nParse error");
+	return (FALSE);
+      }
       fprintf (lrs_ofp, " %ld", facet[j]);
       if (facet[j] < 1 || facet[j] > m)
 	{
@@ -3270,10 +3320,10 @@ printA (lrs_dic * P, lrs_dat * Q)	/* print the integer m by n array A
   long *C = P->C;
   long *Row = P->Row;
   long *Col = P->Col;
-  long m, d, lastdv;
+  long m, d;
   m = P->m;
   d = P->d;
-  lastdv = Q->lastdv;
+  /*  lastdv = Q->lastdv; */
 
   fprintf (lrs_ofp, "\n Basis    ");
   for (i = 0; i <= m; i++)
@@ -3876,21 +3926,21 @@ void
 lrs_set_row(lrs_dic *P, lrs_dat *Q, long row, long num[], long den[], long ineq)
 /* convert to lrs_mp then call lrs_set_row */
 {
- lrs_mp_vector Num, Den;
- long m,d;
- long j;
+  lrs_mp_vector Num, Den;
+  long d;
+  long j;
  
-  m = P->m;
+  /*m = P->m;*/
   d = P->d;
 
   Num=lrs_alloc_mp_vector(d+1);
   Den=lrs_alloc_mp_vector(d+1);
 
   for (j=0;j<=d;j++)
-  {
-  itomp(num[j],Num[j]);
-  itomp(den[j],Den[j]);
-  }
+    {
+      itomp(num[j],Num[j]);
+      itomp(den[j],Den[j]);
+    }
  
   lrs_set_row_mp(P,Q,row,Num,Den,ineq);
 
@@ -3915,11 +3965,11 @@ lrs_set_row_mp(lrs_dic *P, lrs_dat *Q, long row, lrs_mp_vector num, lrs_mp_vecto
   lrs_mp_matrix A;
   lrs_mp_vector Gcd, Lcm;
   long hull;
-  long m, d;
+  long d;
   lrs_alloc_mp(Temp); lrs_alloc_mp(mpone);
   hull = Q->hull;
   A = P->A;
-  m = P->m;
+  /*m = P->m;*/
   d = P->d;
   Gcd = Q->Gcd;
   Lcm = Q->Lcm;
