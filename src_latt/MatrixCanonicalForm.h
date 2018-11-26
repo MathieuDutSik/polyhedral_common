@@ -125,5 +125,37 @@ MyMatrix<Tint> ComputeCanonicalSpanningSet(MyMatrix<T> const& inpMat)
 
 
 
+template<typename T,typename Tint>
+MyMatrix<T> ComputeMatrixScalarProducts(MyMatrix<T> const& inpMat)
+{
+  //
+  // Computing the Z-basis on which the computation relies.
+  //
+  std::cerr << "inpMat=\n";
+  WriteMatrix(std::cerr, inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
+  std::cerr << "SHV=\n";
+  WriteMatrix(std::cerr, SHV);
+  //
+  // Computing the scalar product matrix
+  //
+  int nbRow=SHV.rows();
+  MyMatrix<T> eMat(nbRow,nbRow);
+  for (int iRow1=0; iRow1<nbRow; iRow1++) {
+    MyVector<Tint> V1 = GetMatrixRow(SHV, iRow1);
+    for (int iRow2=iRow1; iRow2<nbRow; iRow2++) {
+      MyVector<Tint> V2 = GetMatrixRow(SHV, iRow2);
+      T eScal = ScalarProductQuadForm(inpMat, V1, V2);
+      eMat(iRow1,iRow2) = eScal;
+      eMat(iRow2,iRow1) = eScal;
+    }
+  }
+  return eMat;
+}
+
+
+
+
+
 
 #endif

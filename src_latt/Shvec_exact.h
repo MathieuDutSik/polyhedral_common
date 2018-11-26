@@ -250,9 +250,10 @@ int computeIt(T_shvec_info<T,Tint> & info)
   bool coset = false;
   i = 0;
   while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0.0);
+    coset = (info.request.coset(i) != 0);
     i++;
   }
+  std::cerr << "computeIt, coset=" << coset << "\n";
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
   bool not_finished = true;
@@ -449,7 +450,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
   int coset = 0;
   int i = 0;
   while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0.0);
+    coset = (info.request.coset(i) != 0);
     i++;
   }
   std::cerr << "computeShvec mode=" << info.request.mode << "\n";
@@ -600,7 +601,17 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
     throw TerminalException{1};
   }
   //
-  return MatrixFromVectorFamily(info.short_vectors);
+  MyMatrix<Tint> eMat_Tint = MatrixFromVectorFamily(info.short_vectors);
+  int nbRow=eMat_Tint.rows();
+  int nbCol=eMat_Tint.cols();
+  MyMatrix<Tint> eMatRet(2*nbRow, nbCol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      eMatRet(2*iRow, iCol)   =  eMat_Tint(iRow, iCol);
+      eMatRet(2*iRow+1, iCol) = -eMat_Tint(iRow, iCol);
+    }
+  }
+  return eMatRet;
 }
 
 
