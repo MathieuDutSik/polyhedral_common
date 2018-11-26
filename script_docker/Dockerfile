@@ -17,14 +17,17 @@ RUN apt-get install -y wget emacs joe
 RUN apt-get install -y g++ gcc gfortran
 RUN apt-get install -y git mercurial cmake
 
+
 # GMP
 RUN apt-get install -y libgmp-dev
 ENV GMP_INCDIR "/usr/include"
 ENV GMP_CXX_LINK "-lm -lgmp -lgmpxx"
 
+
 # BOOST
 RUN apt-get install -y libboost-dev
 ENV BOOST_INCDIR "/usr/include"
+
 
 # downloading eigen (no compiling needed)
 RUN mkdir -p /opt
@@ -77,13 +80,13 @@ ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 RUN ls -la /opt/glpk-4.65/lib
 
 
-
 # mpfrc++
 RUN apt-get install -y libmpfr-dev
 ENV MPFR_INCDIR /usr/include
 ENV MPFR_LINK "-lmpfr"
 ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.2"
 RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.2 /opt/mpfrc++-3.6.2
+
 
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common/src_latt && make
