@@ -382,7 +382,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   coset = 0;
   i = 0;
   while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0.0);
+    coset = (info.request.coset(i) != 0);
     i++;
   }
   for (i = 0; i < dim; i++)
@@ -446,14 +446,8 @@ void initShvecReq(int dim,
 template<typename T, typename Tint>
 int T_computeShvec(T_shvec_info<T,Tint> &info)
 {
-  int dim = info.request.dim;
-  int coset = 0;
-  int i = 0;
-  while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0);
-    i++;
-  }
-  std::cerr << "computeShvec mode=" << info.request.mode << "\n";
+  //  int dim = info.request.dim;
+  //  std::cerr << "computeShvec mode=" << info.request.mode << "\n";
   switch (info.request.mode)
     {
     case TempShvec_globals::TEMP_SHVEC_MODE_UNDEF:
@@ -462,20 +456,20 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
 	throw TerminalException{1};
       }
     case TempShvec_globals::TEMP_SHVEC_MODE_BOUND:
-      if (info.request.bound <= 0.0) {
+      if (info.request.bound <= 0) {
 	std::cerr << "bound=" << info.request.bound << "\n";
 	std::cerr << "shvec.c (computeShvec): MODE_BOUND info.request.bound !\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS:
-      if (info.request.bound != 0.0) {
+      if (info.request.bound != 0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_SHORTEST_VECTORS!\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM:
-      if (info.request.bound != 0.0) {
+      if (info.request.bound != 0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_MINIMUM!\n";
 	throw TerminalException{1};
       }
@@ -607,7 +601,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   MyMatrix<Tint> eMatRet(2*nbRow, nbCol);
   for (int iRow=0; iRow<nbRow; iRow++) {
     for (int iCol=0; iCol<nbCol; iCol++) {
-      eMatRet(2*iRow, iCol)   =  eMat_Tint(iRow, iCol);
+      eMatRet(2*iRow  , iCol) =  eMat_Tint(iRow, iCol);
       eMatRet(2*iRow+1, iCol) = -eMat_Tint(iRow, iCol);
     }
   }
