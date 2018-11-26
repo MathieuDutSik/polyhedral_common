@@ -1,5 +1,6 @@
 #PROGRAM		= LATT_canonicalize
-PROGRAM		= sv_exact
+PROGRAM		= LATT_cannspanset
+#PROGRAM		= sv_exact
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
