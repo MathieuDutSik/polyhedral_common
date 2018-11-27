@@ -253,6 +253,7 @@ int computeIt(T_shvec_info<T,Tint> & info)
     coset = (info.request.coset(i) != 0);
     i++;
   }
+  bool central=!coset;
   std::cerr << "computeIt, coset=" << coset << "\n";
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
@@ -297,7 +298,7 @@ int computeIt(T_shvec_info<T,Tint> & info)
 	//	for (int j3=0; j3<dim; j3++)
 	//	  std::cerr << " " << x(j3);
 	//	std::cerr << "\n";
-	if (!coset) {
+	if (central) {
 	  j = dim - 1;
 	  not_finished = false;
 	  while (j >= 0 && !not_finished) {
@@ -347,6 +348,8 @@ int computeIt(T_shvec_info<T,Tint> & info)
 	  std::cerr << " " << x(u);
 	  std::cerr << "\n";*/
 	info.short_vectors.push_back(x);
+	if (central)
+	  info.short_vectors.push_back(-x);
       }
       else {
 	i--;
@@ -595,17 +598,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
     throw TerminalException{1};
   }
   //
-  MyMatrix<Tint> eMat_Tint = MatrixFromVectorFamily(info.short_vectors);
-  int nbRow=eMat_Tint.rows();
-  int nbCol=eMat_Tint.cols();
-  MyMatrix<Tint> eMatRet(2*nbRow, nbCol);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbCol; iCol++) {
-      eMatRet(2*iRow  , iCol) =  eMat_Tint(iRow, iCol);
-      eMatRet(2*iRow+1, iCol) = -eMat_Tint(iRow, iCol);
-    }
-  }
-  return eMatRet;
+  return MatrixFromVectorFamily(info.short_vectors);
 }
 
 
