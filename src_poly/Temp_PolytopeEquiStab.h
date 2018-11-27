@@ -1414,13 +1414,13 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
-  std::cerr << "GetCanonicalizationVector, step 1\n";
+  //  std::cerr << "GetCanonicalizationVector, step 1\n";
   int nbRow=WMat.rows();
-  std::cerr << "GetCanonicalizationVector, step 2\n";
+  //  std::cerr << "GetCanonicalizationVector, step 2\n";
   Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
-  std::cerr << "GetCanonicalizationVector, step 3\n";
+  //  std::cerr << "GetCanonicalizationVector, step 3\n";
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  std::cerr << "GetCanonicalizationVector, step 4\n";
+  //  std::cerr << "GetCanonicalizationVector, step 4\n";
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
   const unsigned int* cl;
@@ -1438,7 +1438,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
     throw TerminalException{1};
   }
 #endif
-  std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
+  //  std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
   std::vector<int> MapVect(nbVert, -1), MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
@@ -1473,8 +1473,8 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
       posCanonicB++;
     }
   }
-  std::cerr << "nbRow=" << nbRow << "\n";
-  std::cerr << "GetCanonicalizationVector, step 6\n";
+  //  std::cerr << "nbRow=" << nbRow << "\n";
+  //  std::cerr << "GetCanonicalizationVector, step 6\n";
   return {MapVect2,MapVectRev2};
 }
 

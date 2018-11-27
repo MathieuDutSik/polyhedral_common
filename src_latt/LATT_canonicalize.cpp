@@ -16,15 +16,17 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     using Tint=mpz_class;
     //
-    std::cerr << "Reading input\n";
+    //    std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
     MyMatrix<T> eMat=ReadMatrix<T>(is);
     MyMatrix<T> eMatCan=ComputeCanonicalForm<T,Tint>(eMat).second;
     //
     std::ofstream os(argv[2]);
     WriteMatrix(os, eMatCan);
+    std::cerr << "Normal termination of LATT_canonicalize\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
     exit(e.eVal);
   }
 }

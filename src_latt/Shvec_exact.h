@@ -211,7 +211,7 @@ int computeIt(T_shvec_info<T,Tint> & info)
   T bound = info.request.bound;
   // The value of bound is assumed to be correct.
   // Thus the Trem values should be strictly positive.
-  std::cerr << "computeIt : bound=" << bound << "\n";
+  //  std::cerr << "computeIt : bound=" << bound << "\n";
   MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
@@ -254,7 +254,7 @@ int computeIt(T_shvec_info<T,Tint> & info)
     i++;
   }
   bool central=!coset;
-  std::cerr << "computeIt, coset=" << coset << "\n";
+  //  std::cerr << "computeIt, coset=" << coset << "\n";
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
   bool not_finished = true;
@@ -422,7 +422,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   //  std::cerr << "After while loop\n";
   //  std::cerr << "info.minimum=" << info.minimum << "\n";
   //  info.minimum = info.request.bound + step_size;
-  std::cerr << "Exiting from computeMinimum\n";
+  //  std::cerr << "Exiting from computeMinimum\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
@@ -485,14 +485,14 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
 	throw TerminalException{1};
       }
     }
-  std::cerr << "After switch loop\n";
+  //  std::cerr << "After switch loop\n";
   int result = -99;
   if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
-    std::cerr << "Before computeIt, case 2\n";
+    //    std::cerr << "Before computeIt, case 2\n";
     result = computeIt<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
-    std::cerr << "Before computeMinimum\n";
+    //    std::cerr << "Before computeMinimum\n";
     result = computeMinimum<T,Tint>(info);
     //    info.request.bound = info.minimum;
     //    std::cerr << "Assign info.request.bound\n";
@@ -500,11 +500,11 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
     //    result = computeIt<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
-    std::cerr << "Before computeIt, case 4\n";
+    //    std::cerr << "Before computeIt, case 4\n";
     result = computeMinimum<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-    std::cerr << "Before computeIt, case 5\n";
+    //    std::cerr << "Before computeIt, case 5\n";
     result = computeIt<T,Tint>(info);
   }
   return result;

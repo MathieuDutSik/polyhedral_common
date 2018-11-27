@@ -25,7 +25,7 @@ resultCVP<T,Tint> CVPVallentinProgram_choice(MyMatrix<T> const& GramMat, MyVecto
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
     }
-    std::cerr << "All correct\n";
+    //    std::cerr << "All correct\n";
     return res1;
   }
   //
@@ -57,7 +57,7 @@ resultCVP<T,Tint> CVPVallentinProgram(MyMatrix<T> const& GramMat, MyVector<T> co
 template<typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector(MyMatrix<T> const& GramMat, T const& MaxNorm)
 {
-  std::cerr << "Before T_ShortVector_exact\n";
+  //  std::cerr << "Before T_ShortVector_exact\n";
   return T_ShortVector_exact<T,Tint>(GramMat, MaxNorm);
 }
 
