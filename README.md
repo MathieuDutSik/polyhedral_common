@@ -38,7 +38,7 @@ The subprograms are:
 Shortest vectors
 ----------------
 
-The *src_latt* directory contains the sv_exact program for computing the set of
+The *src_latt* directory contains the **sv_exact** program for computing the set of
 closest points of a positive definite form. The code is general and has
 two template types:
  * an integer type **Tint** for the integer coefficients.
