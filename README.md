@@ -9,6 +9,13 @@ Since this repository uses submodules, the cloning command is
 $ git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
 ```
 
+In order to update the submodule the command is
+```sh
+$ git submodule update --remote
+```
+
+
+
 There is a number of programs for polytopes, lattices and quadratic
 which are in a number of independent directories:
   * *src_copos*: for copositivity / strict copositivity functionalities.
@@ -28,7 +35,6 @@ The subprograms are:
  * **CP_CopositiveMin**: Get the list of positive vectors of small norms
 
 
-
 Shortest vectors
 ----------------
 
@@ -39,14 +45,12 @@ two template types:
  * a coefficient type **T** for the coefficient of the Gram matrix.
 
 
-
 LLL computation
 ---------------
 
 The *src_latt* directory contains the **LATT_lll** programs for
 computing the LLL reduced form of a positive definite form.
 The code uses **Tint**/**T** template types.
-
 
 
 Canonical form
@@ -56,6 +60,7 @@ The *src_latt* directory contains the **LATT_canonicalize** for computing
 the canonical form of a positive definite form.
 The code uses **Tint**/**T** template types.
 
+
 Short vector configurations
 ---------------------------
 
@@ -63,9 +68,11 @@ The directory *src_short* contains a set of functions for dealing with
 configuration of vectors that can occur as set of minimum vectors
 of positive definite forms.
 
+
 Sparse solver
 -------------
 
 The directory *src_sparse_solver* contains the code for a solver of the
 equations **Ax = b** by finding sparse solution **x** for sparse matrices
-**A** and **b**.
+**A** and **b**. The algorithmic method used is Generalized Approximate
+Message Passing.
