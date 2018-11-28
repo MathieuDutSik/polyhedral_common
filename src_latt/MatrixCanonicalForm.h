@@ -71,11 +71,4 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
 }
 
 
-
-
-
-
-
-
-
 #endif
