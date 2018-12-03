@@ -81,5 +81,5 @@ Compilation
 -----------
 
 The compilation of the software is relatively complex. However in
-script_docker/Dockerfile a dockerfile is given that should make everything
+**script_docker/Dockerfile** a dockerfile is given that should make everything
 clear.
