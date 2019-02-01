@@ -225,7 +225,6 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
   WMat.ReorderingOfWeights(g);
 #ifdef DEBUG
   std::vector<T1> ListWeightB=WMat.GetWeight();
-  int nbEnt=ListWeightB.size();
   for (int iEnt=1; iEnt<nbEnt; iEnt++) {
     if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
       std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
@@ -266,7 +265,7 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
   std::vector<T1> ListWeight1=WMatRef.GetWeight();
   std::vector<T1> ListWeight2=WMat2.GetWeight();
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-    if (WeighMatrix_IsNear(ListWeight1[i], ListWeight2[i], TheTol) == 1) {
+    if (WeighMatrix_IsNear(ListWeight1[iEnt], ListWeight2[iEnt], TheTol) == 1) {
       std::cerr << "ERROR: The reordering failed\n";
       throw TerminalException{1};
     }
