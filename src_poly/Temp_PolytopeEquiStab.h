@@ -220,7 +220,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
     T1 eVal = ListWeight[iEnt];
     typename std::set<T1>::iterator it = SetWeight.find(eVal);
     int pos = std::distance(SetWeight.begin(), it);
-    g[pos] = iEnt;
+    g[iEnt] = pos;
   }
   WMat.ReorderingOfWeights(g);
 #ifdef DEBUG
