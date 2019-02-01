@@ -20,25 +20,24 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
   //  std::cerr << "inpMat=\n";
   //  WriteMatrix(std::cerr, inpMat);
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
+  int nbRow=SHV.rows();
+  int n=SHV.cols();
+#ifdef DEBUG
+  if (!CheckCentralSymmetry(SHV)) {
+    std::cerr << "The set of vector does not respect the central symmetry condition\n";
+    throw TerminalException{1};
+  }
+#endif
+
+  
   //  std::cerr << "SHV=\n";
   //  WriteMatrix(std::cerr, SHV);
   //
   // Computing the scalar product matrix
   //
-  int nbRow=SHV.rows();
-  int n=SHV.cols();
-  MyMatrix<T> eMat(nbRow,nbRow);
-  for (int iRow1=0; iRow1<nbRow; iRow1++) {
-    MyVector<Tint> V1 = GetMatrixRow(SHV, iRow1);
-    for (int iRow2=iRow1; iRow2<nbRow; iRow2++) {
-      MyVector<Tint> V2 = GetMatrixRow(SHV, iRow2);
-      T eScal = ScalarProductQuadForm(inpMat, V1, V2);
-      eMat(iRow1,iRow2) = eScal;
-      eMat(iRow2,iRow1) = eScal;
-    }
-  }
-  WeightMatrix<T,T> WMat = T_TranslateToMatrixOrder(eMat);
-  //  std::cerr << "We have WMat\n";
+  T TheTol=0;
+  WeightMatrix<T,T> WMat = T_TranslateToMatrix_QM_SHV(inpMat, SHV, TheTol);
+  ReorderingSetWeight(WMat);
   //
   // Computing the canonicalization of the scalar product matrix
   //

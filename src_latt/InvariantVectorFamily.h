@@ -73,6 +73,25 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis_Kernel(MyMatrix<T> const& eMat
 
 
 
+template<typename Tint>
+bool CheckCentralSymmetry(MyMatrix<Tint> const& M)
+{
+  int nbRow=M.rows();
+  int n=M.cols();
+  int res=nbRow % 2;
+  if (res == 1)
+    return false;
+  int nbPair=nbRow/2;
+  for (int iPair=0; iPair<nbPair; iPair++) {
+    for (int i=0; i<n; i++) {
+      Tint eSum = M(2*iPair,i) + M(2*iPair+1,i);
+      if (eSum != 0)
+	return false;
+    }
+  }
+  return true;
+}
+
 
 template<typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const& eMat)

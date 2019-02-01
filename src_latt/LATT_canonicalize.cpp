@@ -14,7 +14,9 @@ int main(int argc, char *argv[])
       return -1;
     }
     using T=mpq_class;
-    using Tint=mpz_class;
+    //    using T=mpz_class;
+    //    using Tint=mpz_class;
+    using Tint=long;
     //
     //    std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);

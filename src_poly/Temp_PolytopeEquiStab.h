@@ -207,6 +207,75 @@ private:
 };
 
 
+template<typename T1, typename T2>
+void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
+{
+  std::vector<T1> ListWeight=WMat.GetWeight();
+  std::set<T1> SetWeight;
+  for (auto & eVal : ListWeight)
+    SetWeight.insert(eVal);
+  int nbEnt=ListWeight.size();
+  std::vector<int> g(nbEnt);
+  for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+    T1 eVal = ListWeight[iEnt];
+    typename std::set<T1>::iterator it = SetWeight.find(eVal);
+    int pos = std::distance(SetWeight.begin(), it);
+    g[pos] = iEnt;
+  }
+  WMat.ReorderingOfWeights(g);
+#ifdef DEBUG
+  std::vector<T1> ListWeightB=WMat.GetWeight();
+  int nbEnt=ListWeightB.size();
+  for (int iEnt=1; iEnt<nbEnt; iEnt++) {
+    if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
+      std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+}
+
+
+
+template<typename T1, typename T2>
+bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T1, T2> &WMat2)
+{
+  int nbRow=WMatRef.rows();
+  int nbRow2=WMat2.rows();
+  if (nbRow != nbRow2)
+    return false;
+  int nbEnt=WMatRef.GetWeightSize();
+  int nbEnt2=WMat2.GetWeightSize();
+  if (nbEnt != nbEnt2)
+    return false;
+  std::vector<T1> ListWeightRef=WMatRef.GetWeight();
+  std::vector<T1> ListWeight=WMat2.GetWeight();
+  std::vector<int> gListRev(nbEnt);
+  T2 TheTol=WMatRef.GetTol();
+  for (int i=0; i<nbEnt; i++) {
+    int jFound=-1;
+    for (int j=0; j<nbEnt; j++)
+      if (WeighMatrix_IsNear(ListWeightRef[i], ListWeight[j], TheTol) == 1)
+	jFound=j;
+    if (jFound == -1)
+      return false;
+    gListRev[jFound]=i;
+  }
+  WMat2.ReorderingOfWeights(gListRev);
+#ifdef DEBUG
+  std::vector<T1> ListWeight1=WMatRef.GetWeight();
+  std::vector<T1> ListWeight2=WMat2.GetWeight();
+  for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+    if (WeighMatrix_IsNear(ListWeight1[i], ListWeight2[i], TheTol) == 1) {
+      std::cerr << "ERROR: The reordering failed\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return true;
+}
+
+
 
 template<typename T1, typename T2>
 struct WeightMatrixFCT {
@@ -330,6 +399,48 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
     }
   return WMat;
 }
+
+
+
+template<typename T, typename Tint>
+WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV, T const & TheTol)
+{
+  int nbRow=SHV.rows();
+  int n=qMat.rows();
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow, TheTol);
+  int nbPair=nbRow / 2;
+  for (int iPair=0; iPair<nbPair; iPair++) {
+    MyVector<T> V(n);
+    for (int i=0; i<n; i++) {
+      T eVal=0;
+      for (int j=0; j<n; j++)
+	eVal += qMat(j,i) * SHV(2*iPair, j);
+      V(i) = eVal;
+    }
+    for (int jPair=iPair; jPair<nbPair; jPair++) {
+      T eScal=0;
+      for (int i=0; i<n; i++)
+	eScal += V(i)*SHV(2*jPair,i);
+      WMat.Update(2*iPair  , 2*jPair  , eScal);
+      WMat.Update(2*iPair+1, 2*jPair  , -eScal);
+      WMat.Update(2*iPair  , 2*jPair+1, -eScal);
+      WMat.Update(2*iPair+1, 2*jPair+1, eScal);
+      if (iPair != jPair) {
+	WMat.Update(2*jPair  , 2*iPair  , eScal);
+	WMat.Update(2*jPair+1, 2*iPair  , -eScal);
+	WMat.Update(2*jPair  , 2*iPair+1, -eScal);
+	WMat.Update(2*jPair+1, 2*iPair+1, eScal);
+      }
+    }
+  }
+  return WMat;
+}
+
+
+
+
+
+
 
 template<typename T>
 WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
@@ -1543,39 +1654,6 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
-
-template<typename T1, typename T2>
-bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T1, T2> &WMat2)
-{
-  int jFound, nbEnt, nbEnt2;
-  int nbRow, nbRow2;
-  nbRow=WMatRef.rows();
-  nbRow2=WMat2.rows();
-  T2 TheTol=WMatRef.GetTol();
-  if (nbRow != nbRow2) {
-    return false;
-  }
-  nbEnt=WMatRef.GetWeightSize();
-  nbEnt2=WMat2.GetWeightSize();
-  if (nbEnt != nbEnt2) {
-    return false;
-  }
-  std::vector<T1> ListWeightRef=WMatRef.GetWeight();
-  std::vector<T1> ListWeight=WMat2.GetWeight();
-  std::vector<int> gListRev(nbEnt);
-  for (int i=0; i<nbEnt; i++) {
-    jFound=-1;
-    for (int j=0; j<nbEnt; j++)
-      if (WeighMatrix_IsNear(ListWeightRef[i], ListWeight[j], TheTol) == 1)
-	jFound=j;
-    if (jFound == -1) {
-      return false;
-    }
-    gListRev[jFound]=i;
-  }
-  WMat2.ReorderingOfWeights(gListRev);
-  return true;
-}
 
 
 
