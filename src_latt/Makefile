@@ -1,6 +1,7 @@
 PROGRAM		= sv_exact \
 		  LATT_lll \
-		  LATT_canonicalize
+		  LATT_canonicalize \
+		  LATT_canonicalize_int
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
