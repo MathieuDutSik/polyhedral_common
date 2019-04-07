@@ -21,7 +21,7 @@ int main()
   NAMELIST_ReadNamelistFile(eFileName, eFull);
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
   int n=BlDATA.ListIntValues.at("n");
-  int MaxNumberFlyingMessage=BlDATA.ListIntValues.at("MaxNumerFlyingMessage");
+  int MaxNumberFlyingMessage=BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxIncidenceTreating=BlDATA.ListIntValues.at("MaxIncidenceTreating");
   int MaxStoredUnsentMatrices=BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   //
