@@ -1,10 +1,51 @@
+#include "MAT_Matrix.h"
+#include "NumberTheory.h"
+#include "Namelist.h"
+#include "MatrixCanonicalForm.h"
+
+
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 namespace mpi = boost::mpi;
 
-#include "MAT_Matrix.h"
 
-static tag_new_form = 37;
+FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListIntValues1["n"]=9;
+  ListIntValues1["MaxNumberFlyingMessage"]=100;
+  ListIntValues1["MaxIncidenceTreating"]=45 + 20;
+  ListIntValues1["MaxStoredUnsentMatrices"]=1000;
+  //  ListStringValues1["PrefixDataSave"]="Output_";
+  SingleBlock BlockDATA;
+  BlockDATA.ListIntValues=ListIntValues1;
+  BlockDATA.ListBoolValues=ListBoolValues1;
+  BlockDATA.ListDoubleValues=ListDoubleValues1;
+  BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListListStringValues=ListListStringValues1;
+  ListBlock["DATA"]=BlockDATA;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
+
+template<typename T>
+int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
+{
+  T TheDet=DeterminantMat(NewMat);
+  int TheDet_i = UniversalTypeConversion<int,T>(TheDet);
+  return TheDet_i;
+}
+
+
+
+
+static int tag_new_form = 37;
 
 
 int main()
@@ -13,10 +54,10 @@ int main()
   using Tint=mpz_class;
   struct TypePerfectExch {
     int incd; // the number of shortest vectors divided by 2
-    MyMatrix<T> eMat;
+    MyMatrix<Tint> eMat;
   };
   //
-  FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT();
+  FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI();
   std::string eFileName = "perfectenum.nml";
   NAMELIST_ReadNamelistFile(eFileName, eFull);
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
@@ -53,7 +94,7 @@ int main()
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
 	  std::cerr << "something went wrong in the MPI\n";
-	  throw TerminalExeption{1};
+	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
 	return u;
@@ -73,31 +114,31 @@ int main()
     auto it2 = ListCasesNotDone.find(NewMat);
     if (it2 != ListCasesNotDone.end())
       return;
-    ListCasesNotDone[NewMat] = 0;
-    os << "Inserting new form, now we have |ListCases|=" << ListCases.size() << "\n";
+    ListCasesNotDone[NewMat] = {0};
+    log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<TypePerfectExch> {
     auto it1 = ListCasesNotDone.begin();
     if (it1 == ListCasesNotDone.end())
       return {};
-    if (it1->incd > MaxIncidenceTreating)
+    if (it1->first.incd > MaxIncidenceTreating)
       return {};
-    return boost::optional(*it1);
+    return boost::optional<TypePerfectExch>(it1->first);
   };
   auto SetMatrixAsDone=[&](TypePerfectExch const& TheMat) -> void {
     ListCasesNotDone.erase(TheMat);
-    ListCasesDone[TheMat] = 1;
+    ListCasesDone[TheMat] = {1};
   };
   //
   // The system for sending matrices
   //
-  auto fSendMatrix=[&](TypePerfectMatrix const& NewMat, int const& u) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(NewMat);
+  auto fSendMatrix=[&](TypePerfectExch const& eRecMat, int const& u) -> void {
+    int KeyInv=IntegerDiscriminantInvariant(eRecMat.eMat);
     int res=KeyInv % size;
-    ListRequest[u] = world.isend(res, tag_new_form, NewMat);
+    ListRequest[u] = world.isend(res, tag_new_form, eRecMat);
     RequestStatus[u] = 1;
   };
-  std::vector<TypePerfectMatrix> ListMatrixUnsent;
+  std::vector<TypePerfectExch> ListMatrixUnsent;
   auto ClearUnsentAsPossible=[&]() -> void {
     int pos=ListMatrixUnsent.size() - 1;
     while(true) {
@@ -106,33 +147,42 @@ int main()
       int idx = GetFreeIndex();
       if (idx == -1)
 	break;
-      fSendMatrix(ListMatrixUnsent[pos]);
+      fSendMatrix(ListMatrixUnsent[pos], idx);
       ListMatrixUnsent.pop_back();
       pos--;
     }
   };
-  auto fInsertUnsent=[&](TypePerfectMatrix const& eMat) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(eMat);
+  auto fInsertUnsent=[&](TypePerfectExch const& eRecMat) -> void {
+    int KeyInv=IntegerDiscriminantInvariant(eRecMat.eMat);
     int res=KeyInv % size;
     if (res == irank) {
-      fInsert(eMat);
+      fInsert(eRecMat);
     }
     else {
-      ListMatrixUnsent.push_back(eMat);
+      ListMatrixUnsent.push_back(eRecMat);
       ClearUnsentAsPossible();
     }
   };
   for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
     int eStatus;
     is >> eStatus;
+    int incd;
+    is >> incd;
     MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
-    KeyData eData{eStatus,TheMat};
+    TypePerfectExch eRecMat{incd, TheMat};
+    KeyData eData{eStatus};
     int KeyInv=IntegerDiscriminantInvariant(TheMat);
     int res=KeyInv % size;
-    if (res == irank)
-      ListCases.push_back(eData);
+    if (res == irank) {
+      if (eStatus == 0) {
+        ListCasesNotDone[eRecMat] = eData;
+      }
+      else {
+        ListCasesDone[eRecMat] = eData;
+      }
+    }
   }
-  os << "Reading finished, we have |ListCases|=" << ListCases.size() << "\n";
+  log << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
   //
   // The main loop itself.
   //
@@ -147,7 +197,7 @@ int main()
       }
     }
     else {
-      if (ListMatrixUnsent.size() < MaxStoredUnsentMatrices) {
+      if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
 	boost::optional<TypePerfectExch> eReq=GetLowestIncidenceUndone();
 	if (eReq) {
 	  SetMatrixAsDone(*eReq);
@@ -156,7 +206,7 @@ int main()
 	    MyMatrix<T> eMatCan = ComputeCanonicalForm<T,Tint>(eMat);
 	    Tshortest<T,Tint> eRec = T_ShortestVector(eMatCan);
 	    int incd = (eRec.SHV.rows()) / 2;
-	    TypePerfectMatrix RecMat{incd, eMatCan};
+	    TypePerfectExch RecMat{incd, eMatCan};
 	    fInsertUnsent(RecMat);
 	  }
 	}
@@ -164,5 +214,4 @@ int main()
     }
     ClearUnsentAsPossible();
   }
-  
 }
