@@ -2,6 +2,7 @@
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
+#include "Temp_PerfectForm.h"
 
 
 #include <boost/mpi/environment.hpp>
@@ -37,14 +38,36 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
 
 
 
-template<typename T>
-std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMat)
+template<typename T, typename Tint>
+std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 {
+  Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMatIn);
+  int n=eRec.SHV.cols();
+  int nbShort=eRec.SHV.rows() / 2;
+  int dimSymm=n*(n+1)/2;
+  MyMatrix<Tint> SHVred(nbShort, n);
+  for (int iShort=0; iShort<nbShort; iShort++) {
+    for (int i=0; i<n; i++)
+      SHVred(iShort,i) = eRec.SHV(2*iShort,i);
+  }
+  MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T,Tint>(SHVred);
+  std::vector<Face> ListIncd = lrs::DualDescription_temp_incd(ConeClassical);
+  MyVector<T> Wvect = GetSymmetricMatrixWeightVector<T>(n);
   std::vector<MyMatrix<T>> ListAdjMat;
-  std::cerr << "Need to program down the code\n";
-  throw TerminalException{1};
+  for (auto & eIncd : ListIncd) {
+    MyVector<T> eFacet=FindFacetInequality(ConeClassical, eIncd);
+    MyVector<T> Vexpand(dimSymm);
+    for (int i=0; i<dimSymm; i++)
+      Vexpand(i) = eFacet(i) / Wvect(i);
+    MyMatrix<T> eMatDir=VectorToSymmetricMatrix(Vexpand, n);
+    MyMatrix<T> eMatAdj = Flipping_Perfect(eMatIn, eMatDir);
+    ListAdjMat.push_back(eMatAdj);
+  }
   return ListAdjMat;
 }
+
+
+
 
 
 
@@ -267,7 +290,7 @@ int main()
 	if (eReq) {
 	  SetMatrixAsDone(*eReq);
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->eMat);
-	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod(eMat_T);
+	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
 	  for (auto & eMat : ListAdjacent) {
 	    MyMatrix<T> eMatCan = ComputeCanonicalForm<T,Tint>(eMat).second;
 	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMatCan);

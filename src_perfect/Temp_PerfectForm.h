@@ -322,7 +322,7 @@ void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId,
     TheGroupFormat PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
     std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
              TheId, TheBank,
-	     PerfDomEXT, PerfDomGRP, 
+	     PerfDomEXT, PerfDomGRP,
 	     AllArr);
     for (auto& eOrbB : TheOutput) {
       MyVector<T> eVectOrb=FindFacetInequality(PerfDomEXT, eOrbB);
