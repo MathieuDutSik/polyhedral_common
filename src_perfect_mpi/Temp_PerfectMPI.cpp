@@ -74,7 +74,6 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 template<typename T>
 struct TypePerfectExch {
   int incd; // the number of shortest vectors divided by 2
-  T emin;
   MyMatrix<T> eMat;
 };
 
@@ -87,11 +86,6 @@ namespace std {
       if (eTPE1.incd < eTPE2.incd)
         return true;
       if (eTPE1.incd > eTPE2.incd)
-        return false;
-      //
-      if (eTPE1.emin < eTPE2.emin)
-        return true;
-      if (eTPE1.emin > eTPE2.emin)
         return false;
       //
       int nbRow=eTPE1.eMat.rows();
@@ -123,7 +117,6 @@ namespace boost { namespace serialization {
                             const unsigned int version)
       {
         ar & make_nvp("incd", eRecMat.incd);
-        ar & make_nvp("emin", eRecMat.emin);
         int rows = eRecMat.eMat.rows();
         int cols = eRecMat.eMat.cols();
         ar & make_nvp("rows", rows);
@@ -255,10 +248,8 @@ int main()
     is >> eStatus;
     int incd;
     is >> incd;
-    Tint emin;
-    is >> emin;
     MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
-    TypePerfectExch<Tint> eRecMat{incd, emin, TheMat};
+    TypePerfectExch<Tint> eRecMat{incd, TheMat};
     KeyData eData{eStatus};
     int KeyInv=IntegerDiscriminantInvariant(TheMat);
     int res=KeyInv % size;
@@ -291,13 +282,13 @@ int main()
 	  SetMatrixAsDone(*eReq);
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->eMat);
 	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
-	  for (auto & eMat : ListAdjacent) {
-	    MyMatrix<T> eMatCan = ComputeCanonicalForm<T,Tint>(eMat).second;
-	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMatCan);
+	  for (auto & eMat1 : ListAdjacent) {
+	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
+	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
 	    int incd = (eRec.SHV.rows()) / 2;
-            MyMatrix<Tint> eMatI;
-            int emin = -1;
-	    TypePerfectExch<Tint> RecMat{incd, emin, eMatI};
+            MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
+            MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
+	    TypePerfectExch<Tint> RecMat{incd, eMat4};
 	    fInsertUnsent(RecMat);
 	  }
 	}
