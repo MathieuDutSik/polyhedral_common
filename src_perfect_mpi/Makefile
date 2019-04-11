@@ -1,4 +1,4 @@
-PROGRAM		= Temp_PerfectMPI
+PROGRAM		= Temp_PerfectMPI MakeInitial_FileMatrix
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
