@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     std::string FileOut = argv[2];
     //
     std::ifstream is(FileIn);
-    std::ifstream os(FileIn);
+    std::ofstream os(FileIn);
     int nbPerfect;
     is >> nbPerfect;
     os << nbPerfect << "\n";
