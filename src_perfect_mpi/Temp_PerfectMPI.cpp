@@ -68,7 +68,11 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 
 
 
-
+struct TypeIndex {
+  int iProc;
+  int idxMatrix;
+  int iAdj;
+};
 
 
 template<typename T>
@@ -76,6 +80,37 @@ struct TypePerfectExch {
   int incd; // the number of shortest vectors divided by 2
   MyMatrix<T> eMat;
 };
+
+
+template<typename T>
+struct PairExch {
+  TypePerfectExch<T> ePerfect;
+  TypeIndex eIndex;
+};
+
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, TypePerfectExch<T> const& obj)
+{
+  os << obj.incd;
+  int nbRow=obj.eMat.rows();
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iCol=0; iCol<nbRow; iCol++)
+      os << " " << obj.eMat(iRow, iCol);
+    os << "\n";
+  }
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, TypeIndex const& obj)
+{
+  os << obj.iProc << " , " << obj.idxMatrix << " , " << obj.iAdj;
+  return os;
+}
+
+
+
+
 
 
 namespace std {
@@ -111,6 +146,7 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
 }
 
 namespace boost { namespace serialization {
+    // TypePerfectExch
     template<class Archive, typename T>
       inline void serialize(Archive & ar,
                             TypePerfectExch<T> & eRecMat,
@@ -126,7 +162,34 @@ namespace boost { namespace serialization {
           for(int c = 0; c < cols; ++c)
             ar & make_nvp("val", eRecMat.eMat(r,c));
       }
+
+    // TypePerfectExch
+    template<class Archive>
+      inline void serialize(Archive & ar,
+                            TypeIndex & eTypIdx,
+                            const unsigned int version)
+      {
+        ar & make_nvp("iProc", eTypIdx.iProc);
+        ar & make_nvp("idxMatrix", eTypIdx.idxMatrix);
+        ar & make_nvp("iAdj", eTypIdx.iAdj);
+      }
+
+    // PairExch
+    template<class Archive, typename T>
+      inline void serialize(Archive & ar,
+                            PairExch<T> & ePair,
+                            const unsigned int version)
+      {
+        ar & make_nvp("perfect", ePair.ePerfect);
+        ar & make_nvp("index"  , ePair.eIndex);
+      }
+
+
   }}
+
+
+
+
 
 
 static int tag_new_form = 37;
@@ -159,8 +222,9 @@ int main()
   int nbMatrixStart;
   is >> nbMatrixStart;
   struct KeyData {
-    int StatusTreatedForm; // 0: untreated, 1: treated but status not written on disk, 2: done and treated
+    int idxMatrix;
   };
+  // int StatusTreatedForm; // 0: untreated, 1: treated but status not written on disk, 2: done and treated
   //
   // The list of requests.
   //
@@ -187,38 +251,47 @@ int main()
   //
   std::map<TypePerfectExch<Tint>,KeyData> ListCasesNotDone;
   std::map<TypePerfectExch<Tint>,KeyData> ListCasesDone;
-  auto fInsert=[&](TypePerfectExch<Tint> const& NewMat) -> void {
-    auto it1 = ListCasesDone.find(NewMat);
+  int idxMatrixCurrent=0;
+  auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
+    TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
+    auto it1 = ListCasesDone.find(ePerfect);
     if (it1 != ListCasesDone.end())
       return;
-    auto it2 = ListCasesNotDone.find(NewMat);
+    auto it2 = ListCasesNotDone.find(ePerfect);
     if (it2 != ListCasesNotDone.end())
       return;
-    ListCasesNotDone[NewMat] = {0};
+    ListCasesNotDone[ePerfect] = {idxMatrixCurrent};
+    idxMatrixCurrent++;
+    log << "Inserting New perfect form\n";
+    log << ePair.ePerfect;
+    log << "Obtained from " << ePair.eIndex << "\n";
+    log << "COMMENT\n";
     log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
   };
-  auto GetLowestIncidenceUndone=[&]() -> boost::optional<TypePerfectExch<Tint>> {
+  auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
     auto it1 = ListCasesNotDone.begin();
     if (it1 == ListCasesNotDone.end())
       return {};
     if (it1->first.incd > MaxIncidenceTreating)
       return {};
-    return boost::optional<TypePerfectExch<Tint>>(it1->first);
+    std::pair<TypePerfectExch<Tint>,int> ePair {it1->first, it1->second.idxMatrix};
+    return boost::optional<std::pair<TypePerfectExch<Tint>,int>>(ePair);
   };
   auto SetMatrixAsDone=[&](TypePerfectExch<Tint> const& TheMat) -> void {
+    KeyData eKey = ListCasesNotDone.at(TheMat);
     ListCasesNotDone.erase(TheMat);
-    ListCasesDone[TheMat] = {1};
+    ListCasesDone[TheMat] = eKey;
   };
   //
   // The system for sending matrices
   //
-  auto fSendMatrix=[&](TypePerfectExch<Tint> const& eRecMat, int const& u) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(eRecMat.eMat);
+  auto fSendMatrix=[&](PairExch<Tint> const& ePair, int const& u) -> void {
+    int KeyInv=IntegerDiscriminantInvariant(ePair.ePerfect.eMat);
     int res=KeyInv % size;
-    ListRequest[u] = world.isend(res, tag_new_form, eRecMat);
+    ListRequest[u] = world.isend(res, tag_new_form, ePair);
     RequestStatus[u] = 1;
   };
-  std::vector<TypePerfectExch<Tint>> ListMatrixUnsent;
+  std::vector<PairExch<Tint>> ListMatrixUnsent;
   auto ClearUnsentAsPossible=[&]() -> void {
     int pos=ListMatrixUnsent.size() - 1;
     while(true) {
@@ -232,14 +305,14 @@ int main()
       pos--;
     }
   };
-  auto fInsertUnsent=[&](TypePerfectExch<Tint> const& eRecMat) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(eRecMat.eMat);
+  auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
+    int KeyInv=IntegerDiscriminantInvariant(ePair.ePerfect.eMat);
     int res=KeyInv % size;
     if (res == irank) {
-      fInsert(eRecMat);
+      fInsert(ePair);
     }
     else {
-      ListMatrixUnsent.push_back(eRecMat);
+      ListMatrixUnsent.push_back(ePair);
       ClearUnsentAsPossible();
     }
   };
@@ -270,18 +343,21 @@ int main()
     boost::optional<boost::mpi::status> prob = world.iprobe();
     if (prob) {
       if (prob->tag() == tag_new_form) {
-	TypePerfectExch<Tint> eRecMat;
-	world.recv(prob->source(), prob->tag(), eRecMat);
-        fInsert(eRecMat);
+	PairExch<Tint> ePair;
+	world.recv(prob->source(), prob->tag(), ePair);
+        fInsert(ePair);
       }
     }
     else {
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
-	boost::optional<TypePerfectExch<Tint>> eReq=GetLowestIncidenceUndone();
+	boost::optional<std::pair<TypePerfectExch<Tint>,int>> eReq=GetLowestIncidenceUndone();
 	if (eReq) {
-	  SetMatrixAsDone(*eReq);
-          MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->eMat);
+	  SetMatrixAsDone(eReq->first);
+          MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
+          int idxMatrixF = eReq->second;
 	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
+          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << "\n";
+          int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
 	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
 	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
@@ -289,7 +365,10 @@ int main()
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
             MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
 	    TypePerfectExch<Tint> RecMat{incd, eMat4};
-	    fInsertUnsent(RecMat);
+            TypeIndex eIndex{irank, idxMatrixF, iAdj};
+            PairExch<Tint> ePair{RecMat, eIndex};
+	    fInsertUnsent(ePair);
+            iAdj++;
 	  }
 	}
       }
