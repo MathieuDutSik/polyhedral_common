@@ -1,18 +1,18 @@
-#include "MAT_Matrix.h"
+#include "PerfectMPI_types.h"
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PerfectForm.h"
 
 
-struct TypeIndex {
+struct TypeIndexRed {
   int iProc;
   int idxMatrix;
 };
 
 template<typename T>
 struct InformationMatrix {
-  MyMatrix<T> eMat;
+  TypePerfectExch<T> ePerfect;
   int nbAdjacent;
   std::vector<int> ListIDaj;
 };
@@ -25,14 +25,11 @@ int main(int argc, char* argv[])
   //
   try {
     if (argc != 3) {
-      std::cerr << "MargePartialLogs [FileIn] [PrefixLog] [FileOut]\n";
+      std::cerr << "MargePartialLogs [PrefixLog] [FileOut]\n";
       throw TerminalException{1};
     }
-    std::string FileIn    = argv[1];
-    std::string PrefixLog = argv[2];
-    std::string FileOut   = argv[3];
-    //
-    std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
+    std::string PrefixLog = argv[1];
+    std::string FileOut   = argv[2];
     //
     std::unordered_map<TypeIndex,InformationMatrix<Tint>> ListInfoMatrices;
     int iProc=0;
@@ -53,15 +50,52 @@ int main(int argc, char* argv[])
           TypeIndex eTyp{iProc, idxMatrixF};
           auto iter=ListInfoMatrices.find(eTyp);
           if (iter == ListInfoMatrices.end()) {
-            std::cerr << "Failed to find entry\n";
-            throw TerminalException{1};
+            ListInfoMatrices[eTyp] = {};
           }
-          iter.second.nbAdjacent = nbAdjacent;
+          ListInfoMatrices[eTyp].nbAdjacent = nbAdjacent;
         }
         //
-        LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New perfect form", "Obtained from ", "END"});
+        LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New perfect form", " idxMatrixCurrent=", " Obtained from ", "END"});
         if (LStrParse.size() > 0) {
-          
+          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch(LStrParse[0]);
+          int idxMatrixCurrent=StringToInt(LStrParse[1]);
+          TypeIndex eIndex = ParseStringToPerfectExch(LStrParse[2]);
+          TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrixF};
+          auto iter1=ListInfoMatrices.find(eIndexRed1);
+          if (iter1 == ListInfoMatrices.end()) {
+            ListInfoMatrices[eIndexRed1] = {};
+          }
+          ListInfoMatrices[eIndexRed1].ListIAdj.push_back(eIndex.iAdj);
+          //
+          TypeIndexRed eIndexRed2{iProc, eIndex.idxMatrix};
+          auto iter2=ListInfoMatrices.find(eIndexRed2);
+          if (iter1 == ListInfoMatrices.end()) {
+            ListInfoMatrices[eIndexRed2] = {};
+          }
+          ListInfoMatrices[eIndexRed2].ePerfect = ePerfect;
+        }
+        //
+        LStrParse = STRING_ParseSingleLine(eLine, {"Reading existing matrix=", " idxMatrixCurrent=", "END"});
+        if (LStrParse.size() > 0) {
+          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch(LStrParse[0]);
+          int idxMatrix=StringToInt(LStrParse[1]);
+          TypeIndexRed eIndexRed{iProc, idxMatrix};
+          auto iter=ListInfoMatrices.find(eIndexRed);
+          if (iter == ListInfoMatrices.end()) {
+            ListInfoMatrices[eIndexRed] = {};
+          }
+          ListInfoMatrices[eIndexRed].ePerfect = ePerfect;
+        }
+        //
+        LStrParse = STRING_ParseSingleLine(eLine, {"Processed entry=", "END"});
+        if (LStrParse.size() > 0) {
+          TypeIndex eIndex = ParseStringToPerfectExch(LStrParse[0]);
+          TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrixF};
+          auto iter=ListInfoMatrices.find(eIndexRed);
+          if (iter == ListInfoMatrices.end()) {
+            ListInfoMatrices[eIndexRed] = {};
+          }
+          ListInfoMatrices[eIndexRed].ListIAdj.push_back(eIndex.iAdj);
         }
       }
     }

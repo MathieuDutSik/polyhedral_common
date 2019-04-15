@@ -1,4 +1,4 @@
-#include "MAT_Matrix.h"
+
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
@@ -68,73 +68,6 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 
 
 
-struct TypeIndex {
-  int iProc;
-  int idxMatrix;
-  int iAdj;
-};
-
-
-template<typename T>
-struct TypePerfectExch {
-  int incd; // the number of shortest vectors divided by 2
-  MyMatrix<T> eMat;
-};
-
-
-template<typename T>
-struct PairExch {
-  TypePerfectExch<T> ePerfect;
-  TypeIndex eIndex;
-};
-
-
-template<typename T>
-std::ostream& operator<<(std::ostream& os, TypePerfectExch<T> const& obj)
-{
-  os << obj.incd;
-  int nbRow=obj.eMat.rows();
-  os << " " << nbRow;
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbRow; iCol++)
-      os << " " << obj.eMat(iRow, iCol);
-  }
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, TypeIndex const& obj)
-{
-  os << obj.iProc << " " << obj.idxMatrix << " " << obj.iAdj;
-  return os;
-}
-
-
-
-
-
-
-namespace std {
-  template<typename T>
-  struct less<TypePerfectExch<T>> {
-    bool operator()(TypePerfectExch<T> const& eTPE1, TypePerfectExch<T> const& eTPE2) const
-    {
-      if (eTPE1.incd < eTPE2.incd)
-        return true;
-      if (eTPE1.incd > eTPE2.incd)
-        return false;
-      //
-      int nbRow=eTPE1.eMat.rows();
-      for (int iRow=0; iRow<nbRow; iRow++)
-        for (int iCol=0; iCol<nbRow; iCol++) {
-          if (eTPE1.eMat(iRow,iCol) < eTPE2.eMat(iRow,iCol))
-            return true;
-          if (eTPE1.eMat(iRow,iCol) > eTPE2.eMat(iRow,iCol))
-            return false;
-        }
-      return false;
-    }
-  };
-}
 
 
 template<typename T>
@@ -144,50 +77,6 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
   int TheDet_i = UniversalTypeConversion<int,T>(TheDet);
   return TheDet_i;
 }
-
-namespace boost { namespace serialization {
-    // TypePerfectExch
-    template<class Archive, typename T>
-      inline void serialize(Archive & ar,
-                            TypePerfectExch<T> & eRecMat,
-                            const unsigned int version)
-      {
-        ar & make_nvp("incd", eRecMat.incd);
-        int rows = eRecMat.eMat.rows();
-        int cols = eRecMat.eMat.cols();
-        ar & make_nvp("rows", rows);
-        ar & make_nvp("cols", cols);
-        eRecMat.eMat.resize(rows, cols);
-        for(int r = 0; r < rows; ++r)
-          for(int c = 0; c < cols; ++c)
-            ar & make_nvp("val", eRecMat.eMat(r,c));
-      }
-
-    // TypePerfectExch
-    template<class Archive>
-      inline void serialize(Archive & ar,
-                            TypeIndex & eTypIdx,
-                            const unsigned int version)
-      {
-        ar & make_nvp("iProc", eTypIdx.iProc);
-        ar & make_nvp("idxMatrix", eTypIdx.idxMatrix);
-        ar & make_nvp("iAdj", eTypIdx.iAdj);
-      }
-
-    // PairExch
-    template<class Archive, typename T>
-      inline void serialize(Archive & ar,
-                            PairExch<T> & ePair,
-                            const unsigned int version)
-      {
-        ar & make_nvp("perfect", ePair.ePerfect);
-        ar & make_nvp("index"  , ePair.eIndex);
-      }
-
-
-  }}
-
-
 
 
 
@@ -255,15 +144,19 @@ int main()
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
     TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
     auto it1 = ListCasesDone.find(ePerfect);
-    if (it1 != ListCasesDone.end())
+    if (it1 != ListCasesDone.end()) {
+      log << "Processed entry=" << ePair.eIndex << "END\n";
       return;
+    }
     auto it2 = ListCasesNotDone.find(ePerfect);
-    if (it2 != ListCasesNotDone.end())
+    if (it2 != ListCasesNotDone.end()) {
+      log << "Processed entry=" << ePair.eIndex << "END\n";
       return;
+    }
     ListCasesNotDone[ePerfect] = {idxMatrixCurrent};
-    idxMatrixCurrent++;
-    log << "Inserting New perfect form" << ePair.ePerfect << "Obtained from " << ePair.eIndex << "END\n";
+    log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END\n";
     log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    idxMatrixCurrent++;
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
     auto it1 = ListCasesNotDone.begin();
@@ -330,6 +223,8 @@ int main()
       else {
         ListCasesDone[eRecMat] = eData;
       }
+      log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END\n";
+      idxMatrixCurrent++;
     }
   }
   log << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
