@@ -5,22 +5,25 @@
 #include "Temp_PerfectForm.h"
 
 
-struct TypeIndexRed {
+using TypeIndexRed = std::pair<int,int>;
+
+
+/*struct TypeIndexRed {
   int iProc;
   int idxMatrix;
-};
+  };*/
 
 template<typename T>
 struct InformationMatrix {
   TypePerfectExch<T> ePerfect;
   int nbAdjacent;
-  std::vector<int> ListIDaj;
+  std::vector<int> ListIAdj;
 };
 
 
 int main(int argc, char* argv[])
 {
-  using T=mpq_class;
+  //  using T=mpq_class;
   using Tint=int;
   //
   try {
@@ -31,23 +34,26 @@ int main(int argc, char* argv[])
     std::string PrefixLog = argv[1];
     std::string FileOut   = argv[2];
     //
-    std::unordered_map<TypeIndex,InformationMatrix<Tint>> ListInfoMatrices;
+    std::map<TypeIndexRed,InformationMatrix<Tint>> ListInfoMatrices;
     int iProc=0;
     while(true) {
       std::stringstream s;
-      s << PrefixLog + iProc;
-      string eFileLog(s.str());
+      s << PrefixLog << iProc;
+      std::string eFileLog(s.str());
+      if (!(IsExistingFile(eFileLog))) {
+        break;
+      }
       //
       std::vector<std::string> ListLines=ReadFullFile(eFileLog);
-      std::vector<string> LStrParse;
-      for (int iLine=0; iLine<ListLines.size(); iLine++) {
+      std::vector<std::string> LStrParse;
+      for (int iLine=0; iLine<int(ListLines.size()); iLine++) {
         std::string eLine = ListLines[iLine];
         // Looking for number of adjacent matrices
         LStrParse = STRING_ParseSingleLine(eLine, {"Number of Adjacent for idxMatrixF=", " nbAdjacent=", " END"});
         if (LStrParse.size() > 0) {
           int idxMatrixF=StringToInt(LStrParse[0]);
           int nbAdjacent=StringToInt(LStrParse[1]);
-          TypeIndex eTyp{iProc, idxMatrixF};
+          TypeIndexRed eTyp{iProc, idxMatrixF};
           auto iter=ListInfoMatrices.find(eTyp);
           if (iter == ListInfoMatrices.end()) {
             ListInfoMatrices[eTyp] = {};
@@ -57,19 +63,19 @@ int main(int argc, char* argv[])
         //
         LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New perfect form", " idxMatrixCurrent=", " Obtained from ", "END"});
         if (LStrParse.size() > 0) {
-          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch(LStrParse[0]);
+          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch<Tint>(LStrParse[0]);
           int idxMatrixCurrent=StringToInt(LStrParse[1]);
-          TypeIndex eIndex = ParseStringToPerfectExch(LStrParse[2]);
-          TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrixF};
+          TypeIndex eIndex = ParseStringToTypeIndex(LStrParse[2]);
+          TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrix};
           auto iter1=ListInfoMatrices.find(eIndexRed1);
           if (iter1 == ListInfoMatrices.end()) {
             ListInfoMatrices[eIndexRed1] = {};
           }
           ListInfoMatrices[eIndexRed1].ListIAdj.push_back(eIndex.iAdj);
           //
-          TypeIndexRed eIndexRed2{iProc, eIndex.idxMatrix};
+          TypeIndexRed eIndexRed2{iProc, idxMatrixCurrent};
           auto iter2=ListInfoMatrices.find(eIndexRed2);
-          if (iter1 == ListInfoMatrices.end()) {
+          if (iter2 == ListInfoMatrices.end()) {
             ListInfoMatrices[eIndexRed2] = {};
           }
           ListInfoMatrices[eIndexRed2].ePerfect = ePerfect;
@@ -77,7 +83,7 @@ int main(int argc, char* argv[])
         //
         LStrParse = STRING_ParseSingleLine(eLine, {"Reading existing matrix=", " idxMatrixCurrent=", "END"});
         if (LStrParse.size() > 0) {
-          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch(LStrParse[0]);
+          TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch<Tint>(LStrParse[0]);
           int idxMatrix=StringToInt(LStrParse[1]);
           TypeIndexRed eIndexRed{iProc, idxMatrix};
           auto iter=ListInfoMatrices.find(eIndexRed);
@@ -89,8 +95,8 @@ int main(int argc, char* argv[])
         //
         LStrParse = STRING_ParseSingleLine(eLine, {"Processed entry=", "END"});
         if (LStrParse.size() > 0) {
-          TypeIndex eIndex = ParseStringToPerfectExch(LStrParse[0]);
-          TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrixF};
+          TypeIndex eIndex = ParseStringToTypeIndex(LStrParse[0]);
+          TypeIndexRed eIndexRed{eIndex.iProc, eIndex.idxMatrix};
           auto iter=ListInfoMatrices.find(eIndexRed);
           if (iter == ListInfoMatrices.end()) {
             ListInfoMatrices[eIndexRed] = {};
@@ -99,6 +105,20 @@ int main(int argc, char* argv[])
         }
       }
     }
+    //
+    // Now writing down the file
+    //
+    std::ofstream os(FileOut);
+    os << ListInfoMatrices.size();
+    for (auto & ePair : ListInfoMatrices) {
+      int eStatus=0;
+      if (ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size()))
+        eStatus=1;
+      os << eStatus << "\n";
+      os << ePair.second.ePerfect.incd << "\n";
+      WriteMatrix(os, ePair.second.ePerfect.eMat);
+    }
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

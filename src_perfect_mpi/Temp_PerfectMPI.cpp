@@ -1,4 +1,4 @@
-
+#include "PerfectMPI_types.h"
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
