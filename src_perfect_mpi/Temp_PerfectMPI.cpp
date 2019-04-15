@@ -94,17 +94,17 @@ std::ostream& operator<<(std::ostream& os, TypePerfectExch<T> const& obj)
 {
   os << obj.incd;
   int nbRow=obj.eMat.rows();
+  os << " " << nbRow;
   for (int iRow=0; iRow<nbRow; iRow++) {
     for (int iCol=0; iCol<nbRow; iCol++)
       os << " " << obj.eMat(iRow, iCol);
-    os << "\n";
   }
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, TypeIndex const& obj)
 {
-  os << obj.iProc << " , " << obj.idxMatrix << " , " << obj.iAdj;
+  os << obj.iProc << " " << obj.idxMatrix << " " << obj.iAdj;
   return os;
 }
 
@@ -262,10 +262,7 @@ int main()
       return;
     ListCasesNotDone[ePerfect] = {idxMatrixCurrent};
     idxMatrixCurrent++;
-    log << "Inserting New perfect form\n";
-    log << ePair.ePerfect;
-    log << "Obtained from " << ePair.eIndex << "\n";
-    log << "COMMENT\n";
+    log << "Inserting New perfect form" << ePair.ePerfect << "Obtained from " << ePair.eIndex << "END\n";
     log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
@@ -356,7 +353,7 @@ int main()
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
 	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << "\n";
+          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END\n";
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
 	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
