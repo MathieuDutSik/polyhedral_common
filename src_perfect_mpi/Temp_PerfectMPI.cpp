@@ -138,8 +138,8 @@ int main()
   //
   // The list of matrices being treated
   //
-  std::map<TypePerfectExch<Tint>,KeyData> ListCasesNotDone;
-  std::map<TypePerfectExch<Tint>,KeyData> ListCasesDone;
+  std::unordered_map<TypePerfectExch<Tint>,KeyData> ListCasesNotDone;
+  std::unordered_map<TypePerfectExch<Tint>,KeyData> ListCasesDone;
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
     TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
