@@ -3,7 +3,7 @@
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PerfectForm.h"
-
+#include <unordered_map>
 
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
@@ -164,7 +164,7 @@ int main()
       return {};
     if (it1->first.incd > MaxIncidenceTreating)
       return {};
-    std::pair<TypePerfectExch<Tint>,int> ePair {it1->first, it1->second.idxMatrix};
+    std::pair<TypePerfectExch<Tint>,int> ePair = {it1->first, it1->second.idxMatrix};
     return boost::optional<std::pair<TypePerfectExch<Tint>,int>>(ePair);
   };
   auto SetMatrixAsDone=[&](TypePerfectExch<Tint> const& TheMat) -> void {

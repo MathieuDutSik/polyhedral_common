@@ -3,7 +3,7 @@
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PerfectForm.h"
-
+#include <unordered_map>
 
 using TypeIndexRed = std::pair<int,int>;
 
@@ -74,8 +74,8 @@ int main(int argc, char* argv[])
         // Looking for number of adjacent matrices
         LStrParse = STRING_ParseSingleLine(eLine, {"Number of Adjacent for idxMatrixF=", " nbAdjacent=", " END"});
         if (LStrParse.size() > 0) {
-          int idxMatrixF=StringToInt(LStrParse[0]);
-          int nbAdjacent=StringToInt(LStrParse[1]);
+          int idxMatrixF=std::stoi(LStrParse[0]);
+          int nbAdjacent=std::stoi(LStrParse[1]);
           TypeIndexRed eTyp{iProc, idxMatrixF};
           auto iter=ListInfoMatrices.find(eTyp);
           if (iter == ListInfoMatrices.end()) {
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New perfect form", " idxMatrixCurrent=", " Obtained from ", "END"});
         if (LStrParse.size() > 0) {
           TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch<Tint>(LStrParse[0]);
-          int idxMatrixCurrent=StringToInt(LStrParse[1]);
+          int idxMatrixCurrent=std::stoi(LStrParse[1]);
           TypeIndex eIndex = ParseStringToTypeIndex(LStrParse[2]);
           TypeIndexRed eIndexRed1{eIndex.iProc, eIndex.idxMatrix};
           auto iter1=ListInfoMatrices.find(eIndexRed1);
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         LStrParse = STRING_ParseSingleLine(eLine, {"Reading existing matrix=", " idxMatrixCurrent=", "END"});
         if (LStrParse.size() > 0) {
           TypePerfectExch<Tint> ePerfect = ParseStringToPerfectExch<Tint>(LStrParse[0]);
-          int idxMatrix=StringToInt(LStrParse[1]);
+          int idxMatrix=std::stoi(LStrParse[1]);
           TypeIndexRed eIndexRed{iProc, idxMatrix};
           auto iter=ListInfoMatrices.find(eIndexRed);
           if (iter == ListInfoMatrices.end()) {
