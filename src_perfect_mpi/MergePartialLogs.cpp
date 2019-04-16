@@ -8,6 +8,29 @@
 using TypeIndexRed = std::pair<int,int>;
 
 
+
+namespace std {
+  template <>
+  struct hash<TypeIndexRed>
+  {
+    std::size_t operator()(const TypeIndexRed& k) const
+    {
+      using std::size_t;
+      using std::hash;
+      using std::string;
+
+      // Compute individual hash values for first,
+      // second and third and combine them using XOR
+      // and bit shifting:
+
+      return ((hash<int>()(k.first)
+               ^ (hash<int>()(k.second) << 1)) >> 1);
+    }
+  };
+
+}
+
+
 /*struct TypeIndexRed {
   int iProc;
   int idxMatrix;
@@ -34,7 +57,7 @@ int main(int argc, char* argv[])
     std::string PrefixLog = argv[1];
     std::string FileOut   = argv[2];
     //
-    std::map<TypeIndexRed,InformationMatrix<Tint>> ListInfoMatrices;
+    std::unordered_map<TypeIndexRed,InformationMatrix<Tint>> ListInfoMatrices;
     int iProc=0;
     while(true) {
       std::stringstream s;
