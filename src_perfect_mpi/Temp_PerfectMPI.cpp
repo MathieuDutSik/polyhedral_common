@@ -36,35 +36,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
   return {ListBlock, "undefined"};
 }
 
-template<typename Tint>
-Tint GCDPair( Tint a, Tint b ) {
-    a = abs(a);
-    b = abs(b);
-    Tint tmp;
-    while( b != 0 ) {
-        tmp = b;
-        b = a % b;
-        a = tmp;
-    }
-    return a;
-}
-
-template<typename Tint>
-void RemoveMultipleMatrixInPlace( MyMatrix<Tint> & eMatIn ) {
-    int n = eMatIn.rows();
-    int m = eMatIn.cols();
-    Tint gcd = Tint(0);
-    for( int i=0; i<n; i++ ) {
-        for( int j=0; j<m; j++ ) {
-            gcd = GCDPair(eMatIn(i,j), gcd);
-        }
-    }
-    for( int i=0; i<n; i++ ) {
-        for( int j=0; j<m; j++ ) {
-            eMatIn(i,j) = eMatIn(i,j) / gcd;
-        }
-    }
-}
 
 template<typename T, typename Tint>
 std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
@@ -285,7 +256,6 @@ int main()
 	    int incd = (eRec.SHV.rows()) / 2;
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
             MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
-	        RemoveMultipleMatrixInPlace(eMat4);
             TypePerfectExch<Tint> RecMat{incd, eMat4};
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
             PairExch<Tint> ePair{RecMat, eIndex};
