@@ -36,7 +36,35 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
   return {ListBlock, "undefined"};
 }
 
+template<typename Tint>
+Tint GCDPair( Tint a, Tint b ) {
+    a = abs(a);
+    b = abs(b);
+    Tint tmp;
+    while( b != 0 ) {
+        tmp = b;
+        b = a % b;
+        a = tmp;
+    }
+    return a;
+}
 
+template<typename Tint>
+void RemoveMultipleMatrixInPlace( MyMatrix<Tint> & eMatIn ) {
+    int n = eMatIn.rows();
+    int m = eMatIn.cols();
+    Tint gcd = Tint(0);
+    for( int i=0; i<n; i++ ) {
+        for( int j=0; j<m; j++ ) {
+            gcd = GCDPair(eMatIn(i,j), gcd);
+        }
+    }
+    for( int i=0; i<n; i++ ) {
+        for( int j=0; j<m; j++ ) {
+            eMatIn(i,j) = eMatIn(i,j) / gcd;
+        }
+    }
+}
 
 template<typename T, typename Tint>
 std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
@@ -103,9 +131,9 @@ int main()
   boost::mpi::communicator world;
   int irank=world.rank();
   int size=world.size();
-  std::string eFileO="LOG_" + irank;
+  std::string eFileO="LOG_" + IntToString(irank);
   std::ofstream log(eFileO);
-  log << "Initial log entry\n";
+  log << "Initial log entry" << std::endl;
   //
   std::ifstream is(FileMatrix);
   int nbMatrixStart;
@@ -126,7 +154,7 @@ int main()
       boost::optional<boost::mpi::status> stat = ListRequest[u].test();
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
-	  std::cerr << "something went wrong in the MPI\n";
+	  std::cerr << "something went wrong in the MPI" << std::endl;
 	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
@@ -145,17 +173,17 @@ int main()
     TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
     auto it1 = ListCasesDone.find(ePerfect);
     if (it1 != ListCasesDone.end()) {
-      log << "Processed entry=" << ePair.eIndex << "END\n";
+      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     auto it2 = ListCasesNotDone.find(ePerfect);
     if (it2 != ListCasesNotDone.end()) {
-      log << "Processed entry=" << ePair.eIndex << "END\n";
+      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     ListCasesNotDone[ePerfect] = {idxMatrixCurrent};
-    log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END\n";
-    log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
+    log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << std::endl;
     idxMatrixCurrent++;
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
@@ -223,11 +251,11 @@ int main()
       else {
         ListCasesDone[eRecMat] = eData;
       }
-      log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END\n";
+      log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
       idxMatrixCurrent++;
     }
   }
-  log << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
+  log << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << std::endl;
   //
   // The main loop itself.
   //
@@ -247,8 +275,9 @@ int main()
 	  SetMatrixAsDone(eReq->first);
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
-	  std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END\n";
+	  log << "Starting Adjacent Form Method" << std::endl;
+      std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
+          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END" << std::endl;
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
 	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
@@ -256,7 +285,8 @@ int main()
 	    int incd = (eRec.SHV.rows()) / 2;
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
             MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
-	    TypePerfectExch<Tint> RecMat{incd, eMat4};
+	        RemoveMultipleMatrixInPlace(eMat4);
+            TypePerfectExch<Tint> RecMat{incd, eMat4};
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
             PairExch<Tint> ePair{RecMat, eIndex};
 	    fInsertUnsent(ePair);
