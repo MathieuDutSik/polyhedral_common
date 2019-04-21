@@ -23,6 +23,8 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxIncidenceTreating"]=45 + 20;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
+  ListIntValues1["MinIncidenceRealized"]=0;
+  ListIntValues1["MaxIncidenceRealized"]=1000;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
@@ -96,6 +98,8 @@ int main()
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxIncidenceTreating = BlDATA.ListIntValues.at("MaxIncidenceTreating");
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
+  int MinIncidenceRealized = BlDATA.ListIntValues.at("MinIncidenceRealized");
+  int MaxIncidenceRealized = BlDATA.ListIntValues.at("MaxIncidenceRealized");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
   boost::mpi::environment env;
@@ -137,7 +141,8 @@ int main()
   //
   // The list of matrices being treated
   //
-  std::unordered_map<TypePerfectExch<Tint>,KeyData> ListCasesNotDone;
+  int nbCaseIncidence=MaxIncidenceRealized + 1 - MinIncidenceRealized;
+  std::vector<std::unordered_map<TypePerfectExch<Tint>,KeyData>> ListCasesNotDone(nbCaseIncidence);
   std::unordered_map<TypePerfectExch<Tint>,KeyData> ListCasesDone;
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
@@ -147,28 +152,34 @@ int main()
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
-    auto it2 = ListCasesNotDone.find(ePerfect);
-    if (it2 != ListCasesNotDone.end()) {
+    int pos = ePerfect.incd - MinIncidenceRealized;
+    auto it2 = ListCasesNotDone[pos].find(ePerfect);
+    if (it2 != ListCasesNotDone[pos].end()) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
-    ListCasesNotDone[ePerfect] = {idxMatrixCurrent};
+    ListCasesNotDone[pos][ePerfect] = {idxMatrixCurrent};
     log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
-    log << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << std::endl;
+    std::cerr << "Inserting new form, now we have pos=" << pos << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[pos].size() << " |ListCasesDone|=" << ListCasesDone.size() << std::endl;
     idxMatrixCurrent++;
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
-    auto it1 = ListCasesNotDone.begin();
-    if (it1 == ListCasesNotDone.end())
-      return {};
-    if (it1->first.incd > MaxIncidenceTreating)
-      return {};
-    std::pair<TypePerfectExch<Tint>,int> ePair = {it1->first, it1->second.idxMatrix};
-    return boost::optional<std::pair<TypePerfectExch<Tint>,int>>(ePair);
+    for (int iCaseIncidence=0; iCaseIncidence<nbCaseIncidence; iCaseIncidence++) {
+      int incd = iCaseIncidence + MinIncidenceRealized;
+      if (incd <= MaxIncidenceTreating) {
+        auto it1 = ListCasesNotDone[iCaseIncidence].begin();
+        if (it1 != ListCasesNotDone[iCaseIncidence].end()) {
+          std::pair<TypePerfectExch<Tint>,int> ePair = {it1->first, it1->second.idxMatrix};
+          return boost::optional<std::pair<TypePerfectExch<Tint>,int>>(ePair);
+        }
+      }
+    }
+    return {};
   };
   auto SetMatrixAsDone=[&](TypePerfectExch<Tint> const& TheMat) -> void {
-    KeyData eKey = ListCasesNotDone.at(TheMat);
-    ListCasesNotDone.erase(TheMat);
+    int pos = TheMat.incd - MinIncidenceRealized;
+    KeyData eKey = ListCasesNotDone[pos].at(TheMat);
+    ListCasesNotDone[pos].erase(TheMat);
     ListCasesDone[TheMat] = eKey;
   };
   //
@@ -217,7 +228,8 @@ int main()
     int res=KeyInv % size;
     if (res == irank) {
       if (eStatus == 0) {
-        ListCasesNotDone[eRecMat] = eData;
+        int pos = incd - MinIncidenceRealized;
+        ListCasesNotDone[pos][eRecMat] = eData;
       }
       else {
         ListCasesDone[eRecMat] = eData;
@@ -226,13 +238,18 @@ int main()
       idxMatrixCurrent++;
     }
   }
-  log << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << std::endl;
+  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << "\n";
+  for (int iCaseIncidence=0; iCaseIncidence<nbCaseIncidence; iCaseIncidence++) {
+    int incd = iCaseIncidence + MinIncidenceRealized;
+    std::cerr << "iCaseIncidence=" << iCaseIncidence << " incd=" << incd << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[iCaseIncidence].size() << "\n";
+  }
   //
   // The main loop itself.
   //
   while(true) {
     boost::optional<boost::mpi::status> prob = world.iprobe();
     if (prob) {
+      std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
 	PairExch<Tint> ePair;
 	world.recv(prob->source(), prob->tag(), ePair);
@@ -240,31 +257,47 @@ int main()
       }
     }
     else {
+      std::cerr << "|ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
 	boost::optional<std::pair<TypePerfectExch<Tint>,int>> eReq=GetLowestIncidenceUndone();
 	if (eReq) {
+          std::cerr << "eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
-	  log << "Starting Adjacent Form Method" << std::endl;
-      std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
+          std::cerr << "Starting Adjacent Form Method" << std::endl;
+          std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
+          int nbAdjacent = ListAdjacent.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END" << std::endl;
+          std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
+            std::cerr << "Process, step 1 iAdj=" << iAdj << " / " << nbAdjacent << "\n";
 	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
+            std::cerr << "Process, step 2\n";
 	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
+            std::cerr << "Process, step 3\n";
 	    int incd = (eRec.SHV.rows()) / 2;
+            std::cerr << "Process, step 4\n";
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
+            std::cerr << "Process, step 5\n";
             MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
+            std::cerr << "Process, step 6\n";
             TypePerfectExch<Tint> RecMat{incd, eMat4};
+            std::cerr << "Process, step 7\n";
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
+            std::cerr << "Process, step 8\n";
             PairExch<Tint> ePair{RecMat, eIndex};
+            std::cerr << "Process, step 9\n";
 	    fInsertUnsent(ePair);
+            std::cerr << "Process, step 10\n";
             iAdj++;
 	  }
 	}
       }
     }
+    std::cerr << "Before ClearUnsentAsPossible\n";
     ClearUnsentAsPossible();
+    std::cerr << " After ClearUnsentAsPossible\n";
   }
 }

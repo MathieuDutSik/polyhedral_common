@@ -373,7 +373,8 @@ struct RecShort {
 
 
 
-#define DEBUG_FLIP
+#undef DEBUG_FLIP
+//#define DEBUG_FLIP
 template<typename T, typename Tint>
 MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
 {

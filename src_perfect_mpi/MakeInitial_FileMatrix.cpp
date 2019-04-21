@@ -27,6 +27,7 @@ int main(int argc, char* argv[])
     os << nbPerfect << "\n";
     std::cerr << "nbPerfect=" << nbPerfect << "\n";
     for (int iPerfect=0; iPerfect<nbPerfect; iPerfect++) {
+      std::cerr << "iPerfect=" << iPerfect << " / " << nbPerfect << "\n";
       MyMatrix<Tint> ePerfect_Tint = ReadMatrix<Tint>(is);
       MyMatrix<T>    ePerfect_T = ConvertMatrixUniversal<T,Tint>(ePerfect_Tint);
       //
