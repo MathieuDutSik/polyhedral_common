@@ -160,7 +160,8 @@ int main()
     }
     ListCasesNotDone[pos][ePerfect] = {idxMatrixCurrent};
     log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
-    std::cerr << "Inserting new form, now we have pos=" << pos << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[pos].size() << " |ListCasesDone|=" << ListCasesDone.size() << std::endl;
+    std::cerr << "Inserting new form, now we have pos=" << pos << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[pos].size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    std::cerr << "ePerfect = " << ePair.ePerfect << "\n";
     idxMatrixCurrent++;
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
@@ -272,25 +273,16 @@ int main()
           std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
-            std::cerr << "Process, step 1 iAdj=" << iAdj << " / " << nbAdjacent << "\n";
+            //            std::cerr << "Process, step 1 iAdj=" << iAdj << " / " << nbAdjacent << "\n";
 	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
-            std::cerr << "Process, step 2\n";
 	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
-            std::cerr << "Process, step 3\n";
 	    int incd = (eRec.SHV.rows()) / 2;
-            std::cerr << "Process, step 4\n";
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
-            std::cerr << "Process, step 5\n";
             MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
-            std::cerr << "Process, step 6\n";
             TypePerfectExch<Tint> RecMat{incd, eMat4};
-            std::cerr << "Process, step 7\n";
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
-            std::cerr << "Process, step 8\n";
             PairExch<Tint> ePair{RecMat, eIndex};
-            std::cerr << "Process, step 9\n";
 	    fInsertUnsent(ePair);
-            std::cerr << "Process, step 10\n";
             iAdj++;
 	  }
 	}
