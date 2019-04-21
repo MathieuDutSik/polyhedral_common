@@ -1,5 +1,5 @@
-#PROGRAM		= Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
-PROGRAM		= Temp_PerfectMPI
+PROGRAM		= Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
+#PROGRAM		= Temp_PerfectMPI
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -56,6 +56,8 @@ int main(int argc, char* argv[])
     }
     std::string PrefixLog = argv[1];
     std::string FileOut   = argv[2];
+    MyMatrix<Tint> ZerMat(0,0);
+    InformationMatrix<Tint> eInfo { {0, ZerMat}, -1, {}};
     //
     std::unordered_map<TypeIndexRed,InformationMatrix<Tint>> ListInfoMatrices;
     int iProc=0;
@@ -63,13 +65,17 @@ int main(int argc, char* argv[])
       std::stringstream s;
       s << PrefixLog << iProc;
       std::string eFileLog(s.str());
+      std::cerr << "eFileLog=" << eFileLog << "\n";
       if (!(IsExistingFile(eFileLog))) {
         break;
       }
+      std::cerr << "File exists, processing it\n";
       //
       std::vector<std::string> ListLines=ReadFullFile(eFileLog);
       std::vector<std::string> LStrParse;
-      for (int iLine=0; iLine<int(ListLines.size()); iLine++) {
+      int nbLine=ListLines.size();
+      for (int iLine=0; iLine<nbLine; iLine++) {
+        std::cerr << "iLine=" << iLine << " / " << nbLine << "\n";
         std::string eLine = ListLines[iLine];
         // Looking for number of adjacent matrices
         LStrParse = STRING_ParseSingleLine(eLine, {"Number of Adjacent for idxMatrixF=", " nbAdjacent=", " END"});
@@ -79,7 +85,7 @@ int main(int argc, char* argv[])
           TypeIndexRed eTyp{iProc, idxMatrixF};
           auto iter=ListInfoMatrices.find(eTyp);
           if (iter == ListInfoMatrices.end()) {
-            ListInfoMatrices[eTyp] = {};
+            ListInfoMatrices[eTyp] = eInfo;
           }
           ListInfoMatrices[eTyp].nbAdjacent = nbAdjacent;
         }
@@ -127,6 +133,7 @@ int main(int argc, char* argv[])
           ListInfoMatrices[eIndexRed].ListIAdj.push_back(eIndex.iAdj);
         }
       }
+      iProc++;
     }
     //
     // Now writing down the file
@@ -138,6 +145,10 @@ int main(int argc, char* argv[])
       if (ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size()))
         eStatus=1;
       os << eStatus << "\n";
+      if (ePair.second.ePerfect.incd == 0) {
+        std::cerr << "The incidence is zero. This is not allowed\n";
+        throw TerminalException{1};
+      }
       os << ePair.second.ePerfect.incd << "\n";
       WriteMatrix(os, ePair.second.ePerfect.eMat);
     }
