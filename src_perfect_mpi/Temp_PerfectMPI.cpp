@@ -258,20 +258,20 @@ int main()
       }
     }
     else {
-      std::cerr << "|ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
+      std::cerr << "irank=" << irank << " |ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
 	boost::optional<std::pair<TypePerfectExch<Tint>,int>> eReq=GetLowestIncidenceUndone();
 	if (eReq) {
-          std::cerr << "eReq is non zero\n";
+          std::cerr << "irank=" << irank << " eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
-          std::cerr << "Treating ePerfect=" << eReq->first << "\n";
+          std::cerr << "irank=" << irank << " ePerfect=" << eReq->first << "\n";
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
-          std::cerr << "Starting Adjacent Form Method" << std::endl;
+          std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
           std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
           int nbAdjacent = ListAdjacent.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END" << std::endl;
-          std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
+          std::cerr << "irank=" << irank << " Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
             //            std::cerr << "Process, step 1 iAdj=" << iAdj << " / " << nbAdjacent << "\n";
@@ -289,8 +289,8 @@ int main()
 	}
       }
     }
-    std::cerr << "Before ClearUnsentAsPossible\n";
+    std::cerr << "irank=" << irank << " Before ClearUnsentAsPossible\n";
     ClearUnsentAsPossible();
-    std::cerr << " After ClearUnsentAsPossible\n";
+    std::cerr << "irank=" << irank << " After ClearUnsentAsPossible\n";
   }
 }
