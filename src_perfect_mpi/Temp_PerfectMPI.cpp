@@ -161,7 +161,7 @@ int main()
     ListCasesNotDone[pos][ePerfect] = {idxMatrixCurrent};
     log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
     std::cerr << "Inserting new form, now we have pos=" << pos << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[pos].size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
-    std::cerr << "ePerfect = " << ePair.ePerfect << "\n";
+    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " ePerfect = " << ePair.ePerfect << "\n";
     idxMatrixCurrent++;
   };
   auto GetLowestIncidenceUndone=[&]() -> boost::optional<std::pair<TypePerfectExch<Tint>,int>> {
@@ -224,10 +224,10 @@ int main()
     is >> incd;
     MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
     TypePerfectExch<Tint> eRecMat{incd, TheMat};
-    KeyData eData{eStatus};
     int KeyInv=IntegerDiscriminantInvariant(TheMat);
     int res=KeyInv % size;
     if (res == irank) {
+      KeyData eData{idxMatrixCurrent};
       if (eStatus == 0) {
         int pos = incd - MinIncidenceRealized;
         ListCasesNotDone[pos][eRecMat] = eData;
@@ -264,6 +264,7 @@ int main()
 	if (eReq) {
           std::cerr << "eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
+          std::cerr << "Treating ePerfect=" << eReq->first << "\n";
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
           std::cerr << "Starting Adjacent Form Method" << std::endl;
