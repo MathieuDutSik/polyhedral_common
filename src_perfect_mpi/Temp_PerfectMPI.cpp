@@ -25,6 +25,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MinIncidenceRealized"]=0;
   ListIntValues1["MaxIncidenceRealized"]=1000;
+  ListIntValues1["MaxRunTimeSecond"]=-1;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
@@ -100,6 +101,7 @@ int main()
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MinIncidenceRealized = BlDATA.ListIntValues.at("MinIncidenceRealized");
   int MaxIncidenceRealized = BlDATA.ListIntValues.at("MaxIncidenceRealized");
+  int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
   boost::mpi::environment env;
@@ -247,6 +249,7 @@ int main()
   //
   // The main loop itself.
   //
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   while(true) {
     boost::optional<boost::mpi::status> prob = world.iprobe();
     if (prob) {
@@ -292,5 +295,17 @@ int main()
     std::cerr << "irank=" << irank << " Before ClearUnsentAsPossible\n";
     ClearUnsentAsPossible();
     std::cerr << "irank=" << irank << " After ClearUnsentAsPossible\n";
+    //
+    // Checking for termination of the program
+    //
+    std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
+    int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
+    if (MaxRunTimeSecond  > 0) {
+      if (elapsed_seconds > MaxRunTimeSecond) {
+        std::cerr << "Exiting because the runtime is higher than the one expected\n";
+        break;
+      }
+    }
   }
+  std::cerr << "Normal termination of the program\n";
 }
