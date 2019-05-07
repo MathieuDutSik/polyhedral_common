@@ -75,10 +75,36 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 template<typename T>
 int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
 {
-  T TheDet=DeterminantMat(NewMat);
-  int TheDet_i = UniversalTypeConversion<int,T>(TheDet);
-  return TheDet_i;
+  int TheChoice=2;
+  if (TheChoice == 1) {
+    T TheDet=DeterminantMat(NewMat);
+    int TheDet_i = UniversalTypeConversion<int,T>(TheDet);
+    return TheDet_i;
+  }
+  if (TheChoice == 2) {
+    int nRow=NewMat.rows();
+    int nCol=NewMat.cols();
+    int TheInvariant=0;
+    for (int iRow=0; iRow<nRow; iRow++)
+      for (int iCol=0; iCol<nCol; iCol++) {
+        int eCoeff1 = 2 + 3*iRow + 5*iCol;
+        int eVal=NewMat(iRow,iCol);
+        int eCoeff2;
+        if (eVal < 0) {
+          eCoeff2 = -2*eVal;
+        }
+        else {
+          eCoeff2 = 2*eVal + 1;
+        }
+        TheInvariant += eCoeff1 * eCoeff2;
+      }
+    return TheInvariant;
+  }
+  return 0;
 }
+
+
+
 
 
 
