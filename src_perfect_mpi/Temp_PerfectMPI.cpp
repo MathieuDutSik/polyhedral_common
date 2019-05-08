@@ -7,6 +7,7 @@
 
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
+#include "md5sum.h"
 namespace mpi = boost::mpi;
 
 
@@ -73,13 +74,13 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
 
 
 template<typename T>
-int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
+int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat, int const& size)
 {
-  int TheChoice=2;
+  int TheChoice=3;
   if (TheChoice == 1) {
     T TheDet=DeterminantMat(NewMat);
     int TheDet_i = UniversalTypeConversion<int,T>(TheDet);
-    return TheDet_i;
+    return TheDet_i % size;
   }
   if (TheChoice == 2) {
     int nRow=NewMat.rows();
@@ -87,7 +88,7 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
     int TheInvariant=0;
     for (int iRow=0; iRow<nRow; iRow++)
       for (int iCol=0; iCol<nCol; iCol++) {
-        int eCoeff1 = 2 + 3*iRow + 5*iCol;
+        int eCoeff1 = 3 + 5*iRow + 7*iCol;
         int eVal=NewMat(iRow,iCol);
         int eCoeff2;
         if (eVal < 0) {
@@ -97,9 +98,27 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat)
           eCoeff2 = 2*eVal + 1;
         }
         TheInvariant += eCoeff1 * eCoeff2;
+        std::cerr << "iRow=" << iRow << " iCol=" << iCol << " eCoeff1=" << eCoeff1 << " eCoeff2=" << eCoeff2 << " eVal=" << eVal << " TheInvariant=" << TheInvariant << "\n";
       }
-    return TheInvariant;
+    std::cerr << "TheInvariant=" << TheInvariant << "\n";
+    return TheInvariant % size;
   }
+  if (TheChoice == 3) {
+    std::stringstream s;
+    int nbRow=NewMat.rows();
+    int nbCol=NewMat.cols();
+    for (int iRow=0; iRow<nbRow; iRow++)
+      for (int iCol=0; iCol<nbCol; iCol++)
+        s << " " << NewMat(iRow, iCol);
+    std::string converted(s.str());
+    mpz_class e_hash_mpz = MD5_hash_mpz(converted);
+    mpz_class e_modulo = size;
+    mpz_class e_res = e_hash_mpz % e_modulo;
+    int residue = UniversalTypeConversion<int,mpz_class>(e_res);
+    std::cerr << "e_hash_mpz=" << e_hash_mpz << " e_modulo=" << e_modulo << " e_res=" << e_res << " residue=" << residue << "\n";
+    return residue;
+  }
+  
   return 0;
 }
 
@@ -215,8 +234,7 @@ int main()
   // The system for sending matrices
   //
   auto fSendMatrix=[&](PairExch<Tint> const& ePair, int const& u) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(ePair.ePerfect.eMat);
-    int res=KeyInv % size;
+    int res=IntegerDiscriminantInvariant(ePair.ePerfect.eMat, size);
     ListRequest[u] = world.isend(res, tag_new_form, ePair);
     RequestStatus[u] = 1;
   };
@@ -235,8 +253,7 @@ int main()
     }
   };
   auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    int KeyInv=IntegerDiscriminantInvariant(ePair.ePerfect.eMat);
-    int res=KeyInv % size;
+    int res=IntegerDiscriminantInvariant(ePair.ePerfect.eMat, size);
     if (res == irank) {
       fInsert(ePair);
     }
@@ -245,6 +262,7 @@ int main()
       ClearUnsentAsPossible();
     }
   };
+  int nbCaseNotDone=0;
   for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
     int eStatus;
     is >> eStatus;
@@ -252,13 +270,13 @@ int main()
     is >> incd;
     MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
     TypePerfectExch<Tint> eRecMat{incd, TheMat};
-    int KeyInv=IntegerDiscriminantInvariant(TheMat);
-    int res=KeyInv % size;
+    int res=IntegerDiscriminantInvariant(TheMat, size);
     if (res == irank) {
       KeyData eData{idxMatrixCurrent};
       if (eStatus == 0) {
         int pos = incd - MinIncidenceRealized;
         ListCasesNotDone[pos][eRecMat] = eData;
+        nbCaseNotDone++;
       }
       else {
         ListCasesDone[eRecMat] = eData;
@@ -267,7 +285,7 @@ int main()
       idxMatrixCurrent++;
     }
   }
-  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << "\n";
+  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " nbCaseNotDone=" << nbCaseNotDone << "\n";
   for (int iCaseIncidence=0; iCaseIncidence<nbCaseIncidence; iCaseIncidence++) {
     int incd = iCaseIncidence + MinIncidenceRealized;
     std::cerr << "iCaseIncidence=" << iCaseIncidence << " incd=" << incd << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[iCaseIncidence].size() << "\n";
