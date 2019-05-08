@@ -4,5 +4,5 @@
  MaxIncidenceTreating = 65
  MaxStoredUnsentMatrices = 1000,
  ListMatrixInput = "ListFileForm_sec_8",
- MaxRunTimeSecond = 3600
+ MaxRunTimeSecond = 30
 /

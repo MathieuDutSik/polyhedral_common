@@ -140,10 +140,13 @@ int main(int argc, char* argv[])
     //
     std::ofstream os(FileOut);
     os << ListInfoMatrices.size();
+    int SumStatus=0;
     for (auto & ePair : ListInfoMatrices) {
       int eStatus=0;
-      if (ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size()))
+      //      std::cerr << "ePair.second.nbAdjacent=" << ePair.second.nbAdjacent << " |ListIAdj|=" << ePair.second.ListIAdj.size() << "\n";
+      if ((ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size())) && ePair.second.nbAdjacent > 0)
         eStatus=1;
+      SumStatus += eStatus;
       os << eStatus << "\n";
       if (ePair.second.ePerfect.incd == 0) {
         std::cerr << "The incidence is zero. This is not allowed\n";
@@ -152,6 +155,7 @@ int main(int argc, char* argv[])
       os << ePair.second.ePerfect.incd << "\n";
       WriteMatrix(os, ePair.second.ePerfect.eMat);
     }
+    std::cerr << "SumStatus=" << SumStatus << " |ListInfoMatrices|=" << ListInfoMatrices.size() << "\n";
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {

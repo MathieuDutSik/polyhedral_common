@@ -115,7 +115,6 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat, int const& size)
     mpz_class e_modulo = size;
     mpz_class e_res = e_hash_mpz % e_modulo;
     int residue = UniversalTypeConversion<int,mpz_class>(e_res);
-    std::cerr << "e_hash_mpz=" << e_hash_mpz << " e_modulo=" << e_modulo << " e_res=" << e_res << " residue=" << residue << "\n";
     return residue;
   }
   
