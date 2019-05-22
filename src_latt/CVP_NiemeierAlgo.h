@@ -8,7 +8,7 @@
 
 
 //
-// We have eBasis*GramMat*TransposedMat(eBasis) = q0 
+// We have eBasis*GramMat*TransposedMat(eBasis) = q0
 // with q0 the diagonal matrix having 2 on the diagonal.
 // Therefore, we have GramMat = Inv(eBasis)*Q0*TransposedMat(Inv(eBasis))
 // So, we have the equation GramMat[eV - x] to solve with
@@ -22,7 +22,6 @@
 template<typename T,typename Tint>
 resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
 {
-  
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
   MyMatrix<T> InvBasis=Get_N23_InvBasis<T>();
   MyMatrix<T> TotBasisQuotInv=Get_N23_TotBasisQuotInv<T>();
@@ -59,7 +58,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff*eDiff;
-      if (IsInteger(eDiff - eHalf)) 
+      if (IsInteger(eDiff - eHalf))
 	ListDimPair.push_back(i);
     }
     bool WeAppend=false;
@@ -123,7 +122,6 @@ resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
 template<typename T,typename Tint>
 resultCVP<T,Tint> CVP_N23_24A1_Version2(MyVector<T> const& eV)
 {
-  
   MyMatrix<T> eBasis=Get_N23_eBasis<T>();
   MyMatrix<T> InvBasis=Get_N23_InvBasis<T>();
   MyMatrix<T> TotBasisQuotInv=Get_N23_TotBasisQuotInv<T>();
@@ -208,7 +206,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version2(MyVector<T> const& eV)
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       //      eNorm += eDiff*eDiff;
-      if (IsInteger(eDiff - eHalf)) 
+      if (IsInteger(eDiff - eHalf))
 	ListDimPair.push_back(i);
     }
     //    std::cerr << "eNorm=" << eNorm << "\n";
@@ -348,7 +346,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version3(MyVector<T> const& eV)
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       //      eNorm += eDiff*eDiff;
-      if (IsInteger(eDiff - eHalf)) 
+      if (IsInteger(eDiff - eHalf))
 	ListDimPair.push_back(i);
     }
     //    std::cerr << "eNorm=" << eNorm << "\n";
@@ -468,7 +466,7 @@ resultCVP<T,Tint> CVP_N23_24A1(MyVector<T> const& eV)
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       //      eNorm += eDiff*eDiff;
-      if (IsInteger(eDiff - eHalf)) 
+      if (IsInteger(eDiff - eHalf))
 	ListDimPair.push_back(i);
     }
     //    std::cerr << "eNorm=" << eNorm << "\n";

@@ -2,15 +2,9 @@
 /* Version July 11, 2005                                      */
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
 
-//#include <ctype.h>
-//#include <malloc.h>
-//#include <stdlib.h>
-//#include <stdio.h>
-//#include <unistd.h>
-//#include <getopt.h>
-//#include <gmp.h>
-
 #include "ShortestUniversal.h"
+//#include "Shvec_double.h"
+#include "Shvec_exact.h"
 
 
 [[ noreturn]] void die_sv(std::string const& last_words)
