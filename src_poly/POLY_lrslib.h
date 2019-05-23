@@ -2390,32 +2390,19 @@ std::vector<Face> DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int 
 
 
 
-
- 
-
-
-
-
-
-
- 
-
 template<typename T>
 std::vector<Face> DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
   using Tring = typename underlying_ring<T>::ring_type;
   //  typedef typename underlying_ring<T>::ring_type Tring;
-  std::function<Tring(T const&)> fConv=[&](T const& eVal) -> Tring {
-    return GetRingElement(eVal);
-  };
   int nbCol=EXTwork.cols();
   int nbRow=EXTwork.rows();
   MyMatrix<Tring> EXTring(nbRow,nbCol);
   for (int iRow=0; iRow<nbRow; iRow++) {
     MyVector<T> eRow1=GetMatrixRow(EXTwork, iRow);
     MyVector<T> eRow2=RemoveFractionVector(eRow1);
-    MyVector<Tring> eRow3=ConvertVector(eRow2, fConv);
+    MyVector<Tring> eRow3=ConvertVectorUniversal<Tring,T>(eRow2);
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   std::vector<Face> ListIncd;
