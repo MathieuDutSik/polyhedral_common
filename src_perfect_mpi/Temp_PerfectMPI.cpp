@@ -62,7 +62,7 @@ std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
     MyVector<T> Vexpand(dimSymm);
     for (int i=0; i<dimSymm; i++)
       Vexpand(i) = eFacet(i) / Wvect(i);
-    MyMatrix<T> eMatDir=VectorToSymmetricMatrix(Vexpand, n);
+    MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
     MyMatrix<T> eMatAdj = Flipping_Perfect(eMatIn, eMatDir);
     ListAdjMat.push_back(eMatAdj);
   }

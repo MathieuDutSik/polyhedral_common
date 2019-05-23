@@ -378,7 +378,21 @@ struct RecShort {
 template<typename T, typename Tint>
 MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
 {
-  Tshortest<T,Tint> const RecSHVperf=eRecShort.ShortestFunction(eMatIn);
+  std::vector<MyMatrix<T>> ListMat;
+  std::vector<Tshortest<T,Tint>> ListShort;
+  auto RetriveShortestDesc=[&](MyMatrix<T> const& eMat) -> Tshortest<T,Tint> {
+    int len=ListMat.size();
+    for (int i=0; i<len; i++) {
+      if (ListMat[i] == eMat)
+        return ListShort[i];
+    }
+    Tshortest<T,Tint> RecSHV=eRecShort.ShortestFunction(eMat);
+    ListMat.push_back(eMat);
+    ListShort.push_back(RecSHV);
+    return RecSHV;
+  };
+  
+  Tshortest<T,Tint> const RecSHVperf=RetriveShortestDesc(eMatIn);
 #ifdef DEBUG_FLIP
   std::cerr << "Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV=RecSHVperf.SHV.rows();
@@ -432,7 +446,7 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
     if (!test)
       TheUpperBound=(TheUpperBound + TheLowerBound)/2;
     else {
-      Tshortest<T,Tint> RecSHV=eRecShort.ShortestFunction(Qupp);
+      Tshortest<T,Tint> RecSHV=RetriveShortestDesc(Qupp);
 #ifdef DEBUG_FLIP
       std::cerr << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
       std::cerr << "ITER: RecSHV.SHV=\n";
@@ -457,8 +471,8 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
 #endif
     MyMatrix<T> Qlow = eMatIn + TheLowerBound*eMatDir;
     MyMatrix<T> Qupp = eMatIn + TheUpperBound*eMatDir;
-    Tshortest<T,Tint> RecSHVlow=eRecShort.ShortestFunction(Qlow);
-    Tshortest<T,Tint> RecSHVupp=eRecShort.ShortestFunction(Qupp);
+    Tshortest<T,Tint> RecSHVlow=RetriveShortestDesc(Qlow);
+    Tshortest<T,Tint> RecSHVupp=RetriveShortestDesc(Qupp);
 #ifdef DEBUG_FLIP
     std::cerr << "RecSHVupp.eMin=" << RecSHVupp.eMin << " RecSHVlow.eMin=" << RecSHVlow.eMin << "\n";
     MyMatrix<T> ConeClassicalLow = GetNakedPerfectConeClassical<T>(RecSHVlow.SHV);
@@ -495,7 +509,7 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
     std::cerr << "Qgamma=\n";
     WriteMatrix(std::cerr, Qgamma);
 #endif
-    Tshortest<T,Tint> RecSHVgamma=eRecShort.ShortestFunction(Qgamma);
+    Tshortest<T,Tint> RecSHVgamma=RetriveShortestDesc(Qgamma);
 #ifdef DEBUG_FLIP
     std::cerr << "|RecSHVgamma.SHV|=" << RecSHVgamma.SHV.rows() << "\n";
     WriteMatrix(std::cerr, RecSHVgamma.SHV);
