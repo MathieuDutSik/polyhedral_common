@@ -8,7 +8,15 @@ template<typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::function<bool(MyMatrix<Tint> const&)> const& fCorrect)
 {
   T MaxNorm=MaximumDiagonal(eMat);
+#ifdef DEBUG_TIME
+  std::cerr << "Begining of ExtractInvariantVectorFamily\n";
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   MyMatrix<Tint> SHVall=T_ShortVector<T,Tint>(eMat, MaxNorm);
+#ifdef DEBUG_TIME
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Time(T_ShortVector) = " << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
+#endif
   //  std::cerr << "MaxNorm = " << MaxNorm << " eMat =\n";
   //  WriteMatrix(std::cerr, eMat);
   //  std::cerr << "|SHVall|=" << SHVall.rows() << "\n";
@@ -22,6 +30,10 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
     ListNorm[iSHV]=eNorm;
     SetNorm.insert(eNorm);
   }
+#ifdef DEBUG_TIME
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "Time(Preparation) = " << std::chrono::duration_cast<std::chrono::seconds>(time3 - time2).count() << "\n";
+#endif
   std::vector<MyVector<Tint>> ListVect;
   for (auto const& eNorm : SetNorm) {
     //    std::cerr << "eNorm=" << eNorm << "\n";
@@ -96,7 +108,15 @@ bool CheckCentralSymmetry(MyMatrix<Tint> const& M)
 template<typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const& eMat)
 {
+#ifdef DEBUG_TIME
+  std::cerr << "Begining of ExtractInvariantVectorFamilyZbasis\n";
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   LLLreduction<T,Tint> recLLL = LLLreducedBasis<T,Tint>(eMat);
+#ifdef DEBUG_TIME
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Time(LLL) = " << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
+#endif
   //  std::cerr << "recLLL.GramMatRed=\n";
   //  WriteMatrix(std::cerr, recLLL.GramMatRed);
   MyMatrix<T> Pmat_T = ConvertMatrixUniversal<T,Tint>(recLLL.Pmat);

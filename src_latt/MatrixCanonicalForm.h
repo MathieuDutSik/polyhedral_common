@@ -10,8 +10,6 @@
 #include "MatrixGroup.h"
 
 
-#undef DEBUG_TIME
-//#define DEBUG_TIME
 template<typename T,typename Tint>
 std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 {
