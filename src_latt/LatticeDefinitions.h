@@ -272,7 +272,7 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
       //      std::cerr << "RED step 7\n";
     }
   };
-  T y=T(3)/T(4);
+  T y=T(99)/T(100);
   //  std::cerr << " y=" << y << "\n";
   int i=0;
   while(true) {

@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
       int incd = (eRec.SHV.rows()) / 2;
       //
       std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-      MyMatrix<T>    eMatCan_T = ComputeCanonicalForm<T,Tint>(ePerfect_T).second;
+      MyMatrix<T>    eMatCan_T = ComputeCanonicalForm<T,Tint>(ePerfect_Tint).second;
       MyMatrix<Tint> eMatCan_Tint = ConvertMatrixUniversal<Tint,T>(eMatCan_T);
       std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
       int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
