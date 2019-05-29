@@ -77,7 +77,8 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "SHVcan : time6 - time5=" << std::chrono::duration_cast<std::chrono::milliseconds>(time6 - time5).count() << "\n";
 #endif
-  MyMatrix<Tint> BasisCan_Tint = ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+  MyMatrix<Tint> BasisCan_Tint_pre = ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+  MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   std::cerr << "SHVcan_Tint=\n";
   WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef DEBUG_TIME
@@ -97,9 +98,11 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
   WriteMatrix(std::cerr, BasisCan_T);
   std::cerr << "inpMat=\n";
   WriteMatrix(std::cerr, inpMat);
-  
-  
+
+
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
+  std::cerr << "RetMat=\n";
+  WriteMatrix(std::cerr, RetMat);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
   std::cerr << "Matrix products : time8 - time7=" << std::chrono::duration_cast<std::chrono::milliseconds>(time8 - time7).count() << "\n";
