@@ -13,6 +13,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   MyMatrix<Tint> SHVall=T_ShortVector<T,Tint>(eMat, MaxNorm);
+  std::cerr << "MaxNorm=" << MaxNorm << " |SHVall|=" << SHVall.rows() << "\n";
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Time(T_ShortVector) = " << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";

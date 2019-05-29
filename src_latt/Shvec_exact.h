@@ -203,8 +203,9 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 
 
 template<typename T, typename Tint>
-int computeIt(T_shvec_info<T,Tint> & info)
+int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
   int result = 0;
   int dim = info.request.dim;
@@ -226,7 +227,6 @@ int computeIt(T_shvec_info<T,Tint> & info)
       std::cerr << " " << g(i,j);
     std::cerr << "\n";
     }*/
-  
   MyMatrix<T> q = info.request.gram_matrix;
   for (i=0; i<dim; i++) {
     for (j=i+1; j<dim; j++) {
@@ -236,7 +236,6 @@ int computeIt(T_shvec_info<T,Tint> & info)
     for (int i2=i+1; i2<dim; i2++)
       for (int j2=i+1; j2<dim; j2++)
 	q(i2,j2)=q(i2,j2) - q(i,i)*q(i,i2)*q(i,j2);
-    
     //    std::cerr << "diag q=" << q(i,i) << "\n";
     /*for (int j=i+1; j<dim; j++)
       std::cerr << "   j=" << j << " q=" << q(i,j) << "\n";
@@ -374,6 +373,36 @@ int computeIt(T_shvec_info<T,Tint> & info)
   std::cerr << "Normal return of computeIt\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
+
+
+template<typename T, typename Tint>
+inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(T_shvec_info<T,Tint> & info)
+{
+  return computeIt_Kernel(info);
+}
+
+template<typename T, typename Tint>
+inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(T_shvec_info<T,Tint> & info)
+{
+  using Tfield=typename overlying_field<T>::field_type;
+  //
+  T_shvec_request<Tfield> request_field{info.request.dim, info.request.mode,
+      UniversalTypeConversion<Tfield,T>(info.request.bound),
+      ConvertVectorUniversal<Tfield,T>(info.request.coset),
+      ConvertMatrixUniversal<Tfield,T>(info.request.gram_matrix)};
+  //
+  T_shvec_info<Tfield,Tint> info_field{request_field, info.short_vectors, UniversalTypeConversion<Tfield,T>(info.minimum)};
+  int retVal = computeIt_Kernel(info_field);
+  info.short_vectors = info_field.short_vectors;
+  info.minimum = UniversalTypeConversion<T,Tfield>(info_field.minimum);
+  return retVal;
+}
+
+
+
+
+
+
 
 template<typename T, typename Tint>
 int computeMinimum(T_shvec_info<T,Tint> &info)
