@@ -19,7 +19,7 @@ Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const& eMat, MyMatrix<Tint> 
   int nbRow=SHV.rows();
   std::vector<int> ListStatus(nbRow, 0);
   int nbShort=0;
-  T MinNorm;
+  T MinNorm = -1;
   for (int iRow=0; iRow<nbRow; iRow++) {
     MyVector<Tint> eVect=SHV.row(iRow);
     T eNorm=EvaluationQuadForm(eMat, eVect);
