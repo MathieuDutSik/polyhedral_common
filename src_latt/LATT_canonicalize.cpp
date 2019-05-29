@@ -13,8 +13,10 @@ int main(int argc, char *argv[])
       std::cerr << "GramO (output): The gram matrix on output\n";
       return -1;
     }
-    using T=mpq_class;
+    //    using T=mpq_class;
+    using T=long;
     //    using T=mpz_class;
+    
     //    using Tint=mpz_class;
     using Tint=long;
     //

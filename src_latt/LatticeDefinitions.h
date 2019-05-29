@@ -227,10 +227,11 @@ struct LLLreduction {
 //
 // Adapted from LLLReducedBasis   in zlattice.gi GAP code
 //
-template<typename T, typename Tint>
-LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
+template<typename Tmat, typename Tint>
+LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
 {
-  MyMatrix<T> gram = GramMat;
+  using Tfield=typename overlying_field<Tmat>::field_type;
+  MyMatrix<Tmat> gram = GramMat;
   int nbRow=gram.rows();
   int nbCol=gram.cols();
   //  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
@@ -240,14 +241,14 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
   int n = nbRow;
   int k = 1;
   int kmax = 0;
-  MyMatrix<T>  mue = ZeroMatrix<T>(n,n);
+  MyMatrix<Tfield> mue = ZeroMatrix<Tfield>(n,n);
   int r = -1;
-  MyVector<T> ak(n);
+  MyVector<Tfield> ak(n);
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   auto RED=[&](int const& l) -> void {
     //    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
     if (1 < mue(k,l) * 2 || mue(k,l) * 2 < -1) {
-      Tint q=UniversalNearestInteger<Tint,T>(mue(k,l));
+      Tint q=UniversalNearestInteger<Tint,Tfield>(mue(k,l));
       //      std::cerr << "RED, before oper q=" << q << "\n";
       //      WriteMatrix(std::cerr, gram);
       gram(k,k) -= q * gram(k,l);
@@ -272,13 +273,13 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
       //      std::cerr << "RED step 7\n";
     }
   };
-  T y=T(99)/T(100);
+  Tfield y=Tfield(99)/Tfield(100);
   //  std::cerr << " y=" << y << "\n";
   int i=0;
   while(true) {
-    T eVal = gram(i,i);
+    Tmat eVal = gram(i,i);
     //    std::cerr << "i=" << i << " eVal=" << eVal << "\n";
-    if (gram(i,i) > 0)
+    if (eVal > 0)
       break;
     i++;
     if (i == n)
@@ -301,23 +302,23 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
     }
   }
   //  std::cerr << "After the if test r=" << r << " k=" << k << " kmax=" << kmax << "\n";
-  MyVector<T> B(n);
-  B(0) = gram(0,0);
+  MyVector<Tfield> B(n);
+  B(0) = UniversalTypeConversion<Tfield,Tmat>(gram(0,0));
   //  std::cerr << "Before while loop\n";
   while (k < n) {
     //    std::cerr << "While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
     if (k > kmax) {
-      kmax= k;
-      B(k) = gram(k,k);
+      kmax = k;
+      B(k) = UniversalTypeConversion<Tfield,Tmat>(gram(k,k));
       for (int u=0; u<n; u++)
 	mue(k,u) = 0;
       for (int j=r+1; j<=k-1; j++) {
-        ak(j) = gram(k,j);
+        ak(j) = UniversalTypeConversion<Tfield,Tmat>(gram(k,j));
         for (int i=r+1; i<=j-1; i++)
           ak(j) -= mue(j,i) * ak(i);
         mue(k,j) = ak(j) / B(j);
 	//	std::cerr << "j=" << j << " ak(j)=" << ak(j) << " B(j) = " << B(j) << " mue(k,l)=" << mue(k,j) << "\n";
-        B(k) -= mue(k,j)*ak(j);
+        B(k) -= mue(k,j) * ak(j);
       }
     }
     //    std::cerr << "While loop, step 2 k=" << k << "\n";
@@ -339,8 +340,8 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
       for (int j=r+1; j<=k-2; j++)
         std::swap(mue(k,j), mue(k-1,j));
       //      std::cerr << "Sec While loop, step 6\n";
-      T mmue = mue(k,k-1);
-      T BB= B(k) + mmue * mmue * B(k-1);
+      Tfield mmue = mue(k,k-1);
+      Tfield BB= B(k) + mmue * mmue * B(k-1);
       //      std::cerr << "Sec While loop, step 7 BB=" << BB << "\n";
       if (BB == 0) {
 	B(k)   = B(k-1);
@@ -358,7 +359,7 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
 	}
 	else {
 	  //	  std::cerr << "Sec While loop, step 7.2.1\n";
-	  T q= B(k-1) / BB;
+	  Tfield q= B(k-1) / BB;
 	  //	  std::cerr << "Sec While loop, step 7.2.2\n";
 	  mue(k,k-1) = mmue * q;
 	  //	  std::cerr << "Sec While loop, step 7.2.3\n";
@@ -368,7 +369,7 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
 	  //	  std::cerr << "Sec While loop, step 7.2.5 kmax=" << kmax << " n=" << n << "\n";
 	  for (int i=k+1; i<=kmax; i++) {
 	    //	    std::cerr << "Sec While loop, step 7.2.5.1\n";
-	    T q= mue(i,k);
+	    Tfield q= mue(i,k);
 	    //	    std::cerr << "Sec While loop, step 7.2.5.2\n";
 	    mue(i,k)= mue(i,k-1) - mmue * q;
 	    //	    std::cerr << "Sec While loop, step 7.2.5.3\n";
@@ -379,7 +380,6 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
 	}
       }
       //      std::cerr << "Sec While loop, step 8\n";
-      
       if (k>1) k--;
       RED( k-1 );
       //      std::cerr << "Sec While loop, step 9\n";
@@ -397,8 +397,8 @@ LLLreduction<T,Tint> LLLreducedBasis(MyMatrix<T> const & GramMat)
   for (int i=1; i<n; i++)
     for (int j=0; j<i; j++)
       gram(j,i) = gram(i,j);
-  MyMatrix<T> prod1 = MatrixProduct_T1_T2_T3<Tint,T,T>(H, GramMat);
-  MyMatrix<T> eProd = MatrixProduct_T1_T2_T3<T,Tint,T>(prod1, TransposedMat(H));
+  MyMatrix<Tmat> prod1 = MatrixProduct_T1_T2_T3<Tint,Tmat,Tmat>(H, GramMat);
+  MyMatrix<Tmat> eProd = MatrixProduct_T1_T2_T3<Tmat,Tint,Tmat>(prod1, TransposedMat(H));
   if (!TestEqualityMatrix(eProd, gram)) {
     std::cerr << "The needed equality is not satisfied in LLL. DEBUG!!!!\n";
     throw TerminalException{1};
