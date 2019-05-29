@@ -24,7 +24,6 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
-  std::cerr << "|SHV|=" << SHV.rows() << "\n";
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "ExtractInvariantVectorFamilyZbasis : time2 - time1=" << std::chrono::duration_cast<std::chrono::milliseconds>(time2 - time1).count() << "\n";
@@ -79,8 +78,8 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
 #endif
   MyMatrix<Tint> BasisCan_Tint_pre = ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
-  std::cerr << "SHVcan_Tint=\n";
-  WriteMatrix(std::cerr, SHVcan_Tint);
+  //  std::cerr << "SHVcan_Tint=\n";
+  //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
   std::cerr << "ReductionMatrix : time7 - time6=" << std::chrono::duration_cast<std::chrono::milliseconds>(time7 - time6).count() << "\n";
@@ -94,15 +93,7 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
     throw TerminalException{1};
   }
 #endif
-  std::cerr << "BasisCan_T=\n";
-  WriteMatrix(std::cerr, BasisCan_T);
-  std::cerr << "inpMat=\n";
-  WriteMatrix(std::cerr, inpMat);
-
-
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
-  std::cerr << "RetMat=\n";
-  WriteMatrix(std::cerr, RetMat);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
   std::cerr << "Matrix products : time8 - time7=" << std::chrono::duration_cast<std::chrono::milliseconds>(time8 - time7).count() << "\n";
