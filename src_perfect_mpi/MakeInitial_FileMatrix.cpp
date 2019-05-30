@@ -14,8 +14,8 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     //
-    using Tmat=int;
-    using Tint=int;
+    using Tmat=mpq_class;
+    using Tint=mpz_class;
     //
     std::string FileIn  = argv[1];
     std::string FileOut = argv[2];
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     os << nbPerfect << "\n";
     std::cerr << "nbPerfect=" << nbPerfect << "\n";
     for (int iPerfect=0; iPerfect<nbPerfect; iPerfect++) {
-      MyMatrix<Tmat> ePerfect_Tmat = ReadMatrix<Tint>(is);
+      MyMatrix<Tmat> ePerfect_Tmat = ReadMatrix<Tmat>(is);
       //
       int eStatus=0;
       //
