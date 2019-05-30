@@ -316,9 +316,6 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
 /* P may get changed if lin. space Lin found    */
 /* no_output is globals::TRUE supresses output headers   */
 {
-  //  lrs_dic<T> * D = *D_p;
-  T scale, Temp;
-
   long i, j, k;
 
 /* assign local variables to structures */
@@ -648,7 +645,6 @@ long lrs_getray (lrs_dic<T> * P, lrs_dat<T> * Q, long col, long redcol, T* &outp
   long *count = Q->count;
   long hull = Q->hull;
   long n = Q->n;
-  T dettest;
   if (redcol == n)
     ++count[0];
   i = 1;
@@ -906,7 +902,7 @@ void  pivot (lrs_dic<T> * P, lrs_dat<T> * Q, long bas, long cob)
 {
   long r, s;
   long i, j;
-  T Ns, Nt, Ars;
+  T Ars;
 /* assign local variables to structures */
 
   T** A = P->A;
@@ -1939,8 +1935,6 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, long row, T* num, long ineq)
 /* ineq = 1 (globals::GE)   - ordinary row  */
 /*      = 0 (globals::EQ)   - linearity     */
 {
-  T Temp, mpone;
-
   long i, j;
 
 /* assign local variables to structures */
@@ -2084,75 +2078,6 @@ long phaseone (lrs_dic<T> * P, lrs_dat<T> * Q)
   return (globals::TRUE);
 }
 
-/*
-long 
-lrs_read_dic (lrs_dic * P, lrs_dat * Q)
-{
-  lrs_mp Temp,Tempn,Tempd, mpone, mpten;
-  lrs_mp_vector oD;
-
-  long i, j;
-  char name[100];
-  int c;
-
-  lrs_mp_matrix A;
-  lrs_mp_vector Gcd, Lcm;
-  long hull = Q->hull;
-  long m, d;
-  long dualperturb=FALSE;
-
-  lrs_alloc_mp(Temp); lrs_alloc_mp(mpone);
-  lrs_alloc_mp(Tempn); lrs_alloc_mp(Tempd); lrs_alloc_mp(mpten);
-  A = P->A;
-  m = Q->m;
-  d = Q->inputd;
-  Gcd = Q->Gcd;
-  Lcm = Q->Lcm;
-
-  oD = lrs_alloc_mp_vector (d);
-
-
-  itomp (ONE, mpone);
-  itomp (ONE, A[0][0]);
-  itomp (ONE, Lcm[0]);
-  itomp (ONE, Gcd[0]);
-
-  for (i = 1; i <= m; i++)
-    {
-      itomp (ONE, Lcm[i]);
-      itomp (ZERO, Gcd[i]);
-      for (j = hull; j <= d; j++)
-	{
-	  if (readrat (A[i][j], A[0][j]))
-	    lcm (Lcm[i], A[0][j]);
-	  copy (Temp, A[i][j]);
-	  gcd (Gcd[i], Temp);
-	}
-      if (!zero (A[i][hull]))
-	Q->homogeneous = FALSE;
-      storesign (Gcd[i], POS);
-      storesign (Lcm[i], POS);
-      if (greater (Gcd[i], mpone) || greater (Lcm[i], mpone))
-	for (j = 0; j <= d; j++)
-	  {
-	    exactdivint (A[i][j], Gcd[i], Temp);
-	    mulint (Lcm[i], Temp, Temp);
-	    exactdivint (Temp, A[0][j], A[i][j]);
-	  }
-
-    }
-  return TRUE;
-}
-*/
-
-/* readrat is the function that reads off the values from the input file
-   The entries in the first line are supposed to be the lcm or the Linear programming 
-   The function lrs_read_dic remains potentially very dangerous 
-   and we have to be very wary of its potential to create trouble 
-   The readrat(Na, Da) returns the value Na/Da 
-   Thus the read readrat (A[i][j], A[0][j])) puts the numerator in A[i][j] */
-  
- 
 
  
 template<typename T>

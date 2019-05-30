@@ -132,7 +132,7 @@ static int tag_new_form = 37;
 
 int main()
 {
-  using T=mpq_class;
+  using T=int;
   using Tint=int;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI();

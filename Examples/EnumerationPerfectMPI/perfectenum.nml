@@ -1,8 +1,8 @@
 &DATA
  n = 9,
- MaxNumberFlyingMessage = 100,
+ MaxNumberFlyingMessage = 1000,
  MaxIncidenceTreating = 65
- MaxStoredUnsentMatrices = 1000,
+ MaxStoredUnsentMatrices = 10000,
  ListMatrixInput = "ListFileForm_sec_8",
- MaxRunTimeSecond = 30
+ MaxRunTimeSecond = 120
 /
