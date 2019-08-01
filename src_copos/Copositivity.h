@@ -7,9 +7,6 @@
 #include "POLY_LinearProgramming.h"
 #include "LatticeDefinitions.h"
 
-//#include "Temp_Positivity.h"
-
-
 
 
 template<typename T>
@@ -65,17 +62,9 @@ int FindLargest(T const& a, T const& b, T const& C)
     std::cerr << "C should be strictly positive. C=" << C << "\n";
     throw TerminalException{1};
   }
-  //    std::cerr << "a=" << a << " b=" << b << " C=" << C << "\n";
 #endif
   double delta=a2_doubl*a2_doubl + 4*C2_doubl;
   double x1=0.5*(-a2_doubl + sqrt(delta));
-#ifdef DEBUG_UNDER_POS_COND
-  /*
-    double x2=0.5*(-a2_doubl - sqrt(delta));
-    std::cerr << " delta=" << delta << "\n";
-    std::cerr << " x1=" << x1 << "\n";
-    std::cerr << " x2=" << x2 << "\n";*/
-#endif
   double eD1=floor(x1);
   long int eD2=lround(eD1);
   int eReturn=eD2;
@@ -88,9 +77,6 @@ int FindLargest(T const& a, T const& b, T const& C)
   while(true) {
     bool test1=f(eReturn);
     bool test2=f(eReturn+1);
-#ifdef DEBUG_UNDER_POS_COND
-    //    std::cerr << "eReturn=" << eReturn << " test1=" << test1 << " test2=" << test2 << "\n";
-#endif
     if (test1 && !test2)
       break;
     if (!test1)
@@ -98,9 +84,6 @@ int FindLargest(T const& a, T const& b, T const& C)
     if (test2)
       eReturn++;
   }
-#ifdef DEBUG_UNDER_POS_COND
-  //  std::cerr << "a=" << a << " b=" << b << " C=" << C << " eReturn=" << eReturn << "\n";
-#endif
   return eReturn;
 }
 
@@ -128,21 +111,10 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
     throw TerminalException{1};
   }
 #endif
-  //  std::cerr << "ENUMERATE SHORT VECTOR IN CONE\n";
   BasisReduction<Tint> eRedBas=ComputeBasisReduction(TheBasis);
-  //  MyMatrix<int> eProd = TheBasis * eRedBas.Pmat;
   MyMatrix<Tint> TheBasisReord=eRedBas.TheBasisReord;
-  //  std::cerr << "TheBasisReord=\n";
-  //  WriteMatrix(std::cerr, TheBasisReord);
   MyMatrix<T> Pmat_T=ConvertMatrixUniversal<T,Tint>(eRedBas.Pmat);
-  //  std::cerr << "det(eRedBas.Pmat)=" << DeterminantMat(eRedBas.Pmat) << " eRedBas.Pmat=\n";
-  //  WriteMatrix(std::cerr, eRedBas.Pmat);
-  //  std::cerr << "det(Pmat_T)=" << DeterminantMat(Pmat_T) << " Pmat_T=\n";
-  //  WriteMatrix(std::cerr, Pmat_T);
-  
   MyMatrix<T> Pinv=Pmat_T.inverse().eval();
-  //  std::cerr << "det(Pinv)=" << DeterminantMat(Pinv) << " Pinv=\n";
-  //  WriteMatrix(std::cerr, Pinv);
   MyMatrix<Tint> Pinv_int=ConvertMatrixUniversal<Tint,T>(Pinv);
   MyMatrix<Tint> Pinv_cgr=Pinv_int.transpose();
   MyMatrix<T> eSymmMatB=Pinv*eSymmMat*Pinv.transpose();
@@ -158,8 +130,6 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
   WriteMatrix(std::cerr, eSymmMatB);
   std::cerr << "TheBasisReord=\n";
   WriteMatrix(std::cerr, TheBasisReord);
-  //  std::cerr << "eProd=\n";
-  //  WriteMatrix(std::cerr, eProd);
 #endif
   MyMatrix<T> TheBasisReord_T=ConvertMatrixUniversal<T,Tint>(TheBasisReord);
   MyMatrix<T> eSymmMatC=TheBasisReord_T*eSymmMatB*TheBasisReord_T.transpose();
@@ -193,8 +163,7 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
   // q_0 is the full quadratic form.
   // q_i(Z_i, Z_{i+1}, Z_{n-1}) = q_ii Z_i^2 + q_{i+1}(Z_{i+1}, Z_{i+2}, ..., Z_{n-1})
   //        + W_{i} Z_i
-  // 
-    
+  //
 
   // Partial norms of vectors
   std::vector<T> ListNorm(n);
@@ -220,9 +189,7 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
       T eNumber=0;
       for (int j=i+1; j<n; j++)
 	eNumber += TheBasisReord(j,i)*Lambda[j];
-      //      T eQuot=-eNumber/AII[i];
       T eFr=FractionalPart(-eNumber) / AII[i];
-      //      std::cerr << "i=" << i << " eNumber=" << eNumber << " eFr=" << eFr << "\n";
       ListH[i]=eFr;
       T eZ=Z[i];
       Lambda[i]=eZ/AII[i] + ListH[i];
@@ -255,8 +222,6 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
     for (int i=0; i<n; i++)
       std::cerr << " " << ListH[i];
     std::cerr << "\n";
-
-    
     std::cerr << "Computing norms and Zmax\n";
     std::cerr << "n=" << n << "\n";
 #endif
@@ -314,7 +279,7 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
 #endif
   //
   // The tree search function
-  // 
+  //
   auto NextInTree=[&]() -> bool {
 #ifdef DEBUG_UNDER_POS_COND
     for (int i=0; i<n; i++)
@@ -437,7 +402,6 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
 	int y=eSum-x;
 	T val1 = a * x + b * y;
 	T val2 = b * x + c * y;
-	//	std::cerr << "x=" << x << " y=" << y << " val1=" << val1 << " val2=" << val2 << "\n";
 	if (val1 >= 0 && val2 >= 0)
 	  return {Tint(x),Tint(y)};
       }
@@ -450,18 +414,15 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
   T MaxValQuot=0;
   for (int i=0; i<n-1; i++)
     for (int j=i+1; j<n; j++) {
-      //      std::cerr << "i=" << i << " j=" << j << " n=" << n << "\n";
       T a=eSymmMatB(i,i);
       T b=eSymmMatB(i,j);
       T c=eSymmMatB(j,j);
-      //      std::cerr << "a=" << a << " b=" << b << " c=" << c << "\n";
       if (b < 0) {
 	std::pair<Tint,Tint> CandXY;
 	Tint sumCoef=0;
 	T eQuot=0;
 	if (OptMinimum == 1) {
 	  CandXY = {1, 1};
-	  //	  CandXY = GetSplit(a, b, c);
 	  eQuot = (b*b) / (a*c);
 	}
 	if (OptMinimum == 2) {
@@ -486,7 +447,6 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
 	  return false;
 	};
 	bool test=InsertValue();
-	//	std::cerr << " test=" << test << "\n";
 	if (test) {
 	  PairXY_found = CandXY;
 	  PairIJ_found = {i, j};
@@ -495,7 +455,6 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
     }
   int iFound = PairIJ_found.first;
   int jFound = PairIJ_found.second;
-  //  std::cerr << "iFound=" << iFound << " jFound=" << jFound << " x=" << PairXY_found.first << " y=" << PairXY_found.second << "\n";
   if (iFound == -1) {
     std::cerr << "iFound=" << iFound << " jFound=" << jFound << " x=" << PairXY_found.first << " y=" << PairXY_found.second << "\n";
     std::cerr << "eSymmMatB=\n";
@@ -537,16 +496,6 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
   MyMatrix<T> TheBasis2_T=ConvertMatrixUniversal<T,Tint>(TheBasis2);
   MyMatrix<T> eSymmMatB1=TheBasis1_T*eSymmMat*TheBasis1_T.transpose();
   MyMatrix<T> eSymmMatB2=TheBasis2_T*eSymmMat*TheBasis2_T.transpose();
-  /*
-  std::cerr << "eSymmMatB=\n";
-  WriteMatrix(std::cerr, eSymmMatB);
-  std::cerr << "eSymmMatB1=\n";
-  WriteMatrix(std::cerr, eSymmMatB1);
-  std::cerr << "eSymmMatB2=\n";
-  WriteMatrix(std::cerr, eSymmMatB2);*/
-  //  std::cerr << "PairXY_found=" << PairXY_found.first << " / " << PairXY_found.second << "\n";
-  //  std::cerr << "eVectMid=";
-  //  WriteVector(std::cerr, eVectMid);
   if (OptMinimum == 2) {
     if (eSymmMatB1(iFound, jFound) < 0 || eSymmMatB2(iFound, jFound) < 0) {
       std::cerr << "We clearly have a bug in our computation\n";
@@ -563,11 +512,10 @@ template<typename T, typename Tint>
 SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat, MyMatrix<Tint> const& TheBasis, MyMatrix<T> const& eSymmMatB)
 {
   int n=eSymmMat.rows();
-  MyVector<Tint> eVectZero;  
+  MyVector<Tint> eVectZero;
   for (int i=0; i<n; i++)
     if (eSymmMatB(i,i) <= 0)
       return {false, "Not Positive diag", TheBasis.row(i)};
-  //  std::cerr << "After the diagonal tests\n";
   for (int i=0; i<n; i++)
     for (int j=i+1; j<n; j++) {
       T a=eSymmMatB(i,i);
@@ -589,15 +537,12 @@ SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat,
 	    for (int x=1; x<eSum; x++) {
 	      int y=eSum - x;
 	      T qVal = a * x*x + 2*b * x*y + c * y*y;
-	      //	      std::cerr << "a=" << a << " b=" << b << " c=" << c << "\n";
-	      //	      std::cerr << "x=" << x << " y=" << y << " qVal=" << qVal << "\n";
 	      if (qVal < 0) {
 		MyVector<Tint> eVect = x * TheBasis.row(i) + y * TheBasis.row(j);
 		return {false, "Off diagonal violation", eVect};
 	      }
 	    }
 	    eSum++;
-	    //	  std::cerr << "Now eSum=" << eSum << "\n";
 	  }
 	}
       }
@@ -614,7 +559,6 @@ SingleTestResult<Tint> SingleTestCopositivity(MyMatrix<T> const& eSymmMat, MyMat
   for (int i=0; i<n; i++)
     if (eSymmMatB(i,i) < 0)
       return {false, "Not Positive diag", TheBasis.row(i)};
-  //  std::cerr << "After the diagonal tests\n";
   for (int i=0; i<n; i++)
     for (int j=i+1; j<n; j++) {
       T a=eSymmMatB(i,i);
@@ -632,7 +576,6 @@ SingleTestResult<Tint> SingleTestCopositivity(MyMatrix<T> const& eSymmMat, MyMat
 	    }
 	  }
 	  eSum++;
-	  //	  std::cerr << "Now eSum=" << eSum << "\n";
 	}
       }
     }
@@ -671,7 +614,6 @@ SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const& eSymmMat)
   LpSolution<T> eSol=CDD_LinearProgramming(FAC, ToBeMinimized);
   if (!eSol.PrimalDefined)
     return {true, "on the surface ok", eVectZero};
-  //  using Tring = typename underlying_ring<T>::ring_type;
   MyVector<T> eVect1(nbCol);
   for (int iCol=0; iCol<nbCol; iCol++) {
     T eSum=0;
@@ -679,14 +621,8 @@ SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const& eSymmMat)
       eSum += eSol.DirectSolution(iNSP) * NSP(iNSP,iCol);
     eVect1(iCol) = eSum;
   }
-  //  std::cerr << "eVect1=";
-  //  WriteVector(std::cerr, eVect1);
   MyVector<T> eVect2=RemoveFractionVector(eVect1);
-  //  std::cerr << "eVect2=";
-  //  WriteVector(std::cerr, eVect2);
   MyVector<Tint> eVect3=ConvertVectorUniversal<Tint,T>(eVect2);
-  //  std::cerr << "eVect3=";
-  //  WriteVector(std::cerr, eVect3);
   return {false, "Zero vector from kernel", eVect3};
 }
 
@@ -763,7 +699,6 @@ SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& 
     int siz=ListPair.size();
     if (pos == siz) {
       ListPair.push_back(ePair);
-      //      std::cerr << "Now |ListPair|=" << ListPair.size() << "\n";
     }
     else {
       ListPair[pos] = ePair;
@@ -797,7 +732,6 @@ SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& 
     return {0, ListBasis[0], ListBasis[1]};
   };
   auto NextInTree=[&]() -> bool {
-    //    std::cerr << "NextInTree beginning\n";
     MyMatrix<Tint> TheBasis = GetBasis();
     //
     // If we have vi A vj >= 0 then direct approach works.
@@ -903,7 +837,6 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(MyMatrix<T> const
 {
   SingleTestResult<Tint> kerResult = SearchByZeroInKernel<T,Tint>(eSymmMat);
   if (!kerResult.test) {
-    //    std::cerr << "Conclude by zero vector in kernel\n";
     return {false, 0, {}, {}, kerResult};
   }
   int nbCone=0;
@@ -993,11 +926,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(MyMatrix<T> const& e
 {
 //#define FULL_DEBUG
 #ifdef FULL_DEBUG
-  //  std::cerr << "eSymmMat=\n";
-  //  WriteMatrix(std::cerr, eSymmMat);
-  //  std::cerr << "Before compute res1\n";
   CopositivityEnumResult<Tint> res1 = EnumerateCopositiveShortVector_V1(eSymmMat, CopoReq);
-  //  std::cerr << "Before compute res2\n";
   CopositivityEnumResult<Tint> res2 = EnumerateCopositiveShortVector_V2(eSymmMat, CopoReq);
   if (res1.test != res2.test) {
     std::cerr << "Inconsistency in computing res1.test and res2.test\n";
@@ -1029,7 +958,6 @@ Tshortest<T,Tint> T_CopositiveShortestVector_V1(MyMatrix<T> const& eSymmMat)
 {
   int n=eSymmMat.rows();
   T MaxNorm=MinimumDiagonal(eSymmMat);
-  //  std::cerr << "MaxNorm=" << MaxNorm << "\n";
   RequestCopositivity<T> CopoReq{MaxNorm, false};
   CopositivityEnumResult<Tint> CopoRes=EnumerateCopositiveShortVector(eSymmMat, CopoReq);
   if (!CopoRes.test) {
@@ -1037,16 +965,11 @@ Tshortest<T,Tint> T_CopositiveShortestVector_V1(MyMatrix<T> const& eSymmMat)
     throw TerminalException{1};
   }
   int nbVect=CopoRes.TotalListVect.size();
-  //  std::cerr << "nbVect=" << nbVect << "\n";
   MyMatrix<int> SHV(nbVect, n);
   for (int iVect=0; iVect<nbVect; iVect++) {
     MyVector<Tint> V = CopoRes.TotalListVect[iVect];
-    //    std::cerr << "iVect=" << iVect << " V=";
-    //    WriteVector(std::cerr, V);
     AssignMatrixRow(SHV, iVect, V);
   }
-  //  std::cerr << "SHV=\n";
-  //  WriteMatrix(std::cerr, SHV);
   return SelectShortestVector<T,Tint>(eSymmMat, SHV);
 }
 
