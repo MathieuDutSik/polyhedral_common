@@ -49,8 +49,10 @@ int main(int argc, char *argv[])
     }
     MySparseMatrix<double> A(nbVert, nbVert);
     A.setFromTriplets(tripletList_A.begin(), tripletList_A.end());
+    std::cerr << "We have A matrix\n";
     MySparseMatrix<double> D(nbVert, nbVert);
     D.setFromTriplets(tripletList_D.begin(), tripletList_D.end());
+    std::cerr << "We have D matrix\n";
     //
     auto GetEigenvalues=[&](MySparseMatrix<double> const& SpMat) -> MyVector<double> {
       Eigen::SelfAdjointEigenSolver<MySparseMatrix<double>> eig(SpMat);
@@ -62,17 +64,36 @@ int main(int argc, char *argv[])
     };
     //
     MyVector<double> mu = GetEigenvalues(A);
+    std::cerr << "We have mu eigenvalues\n";
     MyVector<double> delta = GetEigenvalues(A + D);
+    std::cerr << "We have delta eigenvalues\n";
     MyVector<double> theta = GetEigenvalues(D - A);
+    std::cerr << "We have theta eigenvalues\n";
     int n = nbVert;
     //
+    double BestLowerBound = 0;
+    std::string RealizingBound = "unset";
+    auto UpdateBounds=[&](double const& eBound, std::string const& RealBound) -> void {
+      if (eBound > BestLowerBound) {
+        BestLowerBound = eBound;
+        RealizingBound = RealBound;
+      }
+    };
+    //
     double LowerBoundHoffman = 1 + mu(0) / (- mu(n-1));
+    UpdateBounds(LowerBoundHoffman, "Hoffman bound");
     std::cerr << "Hoffman lower bound = " << LowerBoundHoffman << "\n";
+    //
     double LowerBoundNifikorov = 1 + mu(0) / (theta(0) - mu(0));
+    UpdateBounds(LowerBoundNifikorov, "Nifikorov bound");
     std::cerr << "Nifikorov lower bound = " << LowerBoundNifikorov << "\n";
+    //
     double LowerBoundKotolina1 = 1 + mu(0) / (mu(0) - delta(0) + theta(0));
+    UpdateBounds(LowerBoundKotolina1, "Kotolina1 bound");
     std::cerr << "Kotolina lower bound 1 = " << LowerBoundKotolina1 << "\n";
+    //
     double LowerBoundKotolina2 = 1 + mu(0) / (mu(0) - delta(n-1) + theta(n-1));
+    UpdateBounds(LowerBoundKotolina2, "Kotolina2 bound");
     std::cerr << "Kotolina lower bound 2 = " << LowerBoundKotolina2 << "\n";
     //
     for (int m=1; m<=n; m++) {
@@ -86,6 +107,7 @@ int main(int argc, char *argv[])
         sum2 += mu(n+1-i - 1);
       }
       double UnifiedLower1 = 1 + sum1 / (-sum2);
+      UpdateBounds(UnifiedLower1, "Unified lower bound 1: m=" + std::to_string(m));
       std::cerr << "Elphick Wocjan unified lower bound 1 = " << UnifiedLower1 << "\n";
       //
       sum1=0;
@@ -95,6 +117,7 @@ int main(int argc, char *argv[])
         sum2 += theta(i-1) - mu(i-1);
       }
       double UnifiedLower2 = 1 + sum1 / sum2;
+      UpdateBounds(UnifiedLower2, "Unified lower bound 2: m=" + std::to_string(m));
       std::cerr << "Elphick Wocjan unified lower bound 2 = " << UnifiedLower2 << "\n";
       //
       sum1=0;
@@ -104,6 +127,7 @@ int main(int argc, char *argv[])
         sum2 += mu(i - 1) - delta(i-1) + theta(i-1);
       }
       double UnifiedLower3 = 1 + sum1 / sum2;
+      UpdateBounds(UnifiedLower3, "Unified lower bound 3: m=" + std::to_string(m));
       std::cerr << "Elphick Wocjan unified lower bound 3 = " << UnifiedLower3 << "\n";
       //
       sum1=0;
@@ -113,6 +137,7 @@ int main(int argc, char *argv[])
         sum2 += mu(i - 1) - delta(n-i) + theta(n-i);
       }
       double UnifiedLower4 = 1 + sum1 / sum2;
+      UpdateBounds(UnifiedLower4, "Unified lower bound 4: m=" + std::to_string(m));
       std::cerr << "Elphick Wocjan unified lower bound 4 = " << UnifiedLower4 << "\n";
     }
     //
@@ -125,6 +150,7 @@ int main(int argc, char *argv[])
         sminus += mu(i) * mu(i);
     }
     double LowerBoundAndoLin = 1 + splus / sminus;
+    UpdateBounds(LowerBoundAndoLin, "Ando/Lin lower bound");
     std::cerr << "Ando Lin lower bound = " << LowerBoundAndoLin << "\n";
     //
     double nPlus = 0;
@@ -136,8 +162,10 @@ int main(int argc, char *argv[])
         nMinus++;
     }
     double LowerBoundInertia = 1 + std::max(nMinus / nPlus , nPlus / nMinus);
+    UpdateBounds(LowerBoundInertia, "Inertia lower bound");
     std::cerr << "Elphick Wocjan inertial lower bound = " << LowerBoundInertia << "\n";
     //
+    std::cerr << "Realizing method=" << RealizingBound << " BestLowerBound=" << BestLowerBound << "\n";
     std::cerr << "Normal termination of ComputeChromaticLowerBounds\n";
   }
   catch (TerminalException const& e) {
