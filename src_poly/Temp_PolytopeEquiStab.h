@@ -1,12 +1,7 @@
 #ifndef TEMP_POLYTOPE_EQUI_STAB
 #define TEMP_POLYTOPE_EQUI_STAB
 
-#include "defs.hh"
-#include "graph.hh"
-#include "partition.hh"
-#include "timer.hh"
-#include "utils.hh"
-
+#include "GRAPH_bliss.h"
 #include "MAT_Matrix.h"
 #include "Basic_string.h"
 #include "Basic_file.h"
@@ -809,23 +804,6 @@ static void report_aut_vectvectint(void* param, const unsigned int n, const unsi
 }
 
 
-
-static inline void report_aut_void(void* param, const unsigned int n, const unsigned int* aut)
-{
-
-}
-
-
-
-/*
-static void report_aut_print(void* param, const unsigned int n, const unsigned int* aut)
-{
-  assert(param);
-  fprintf((FILE*)param, "Generator: ");
-  bliss::print_permutation((FILE*)param, n, aut, 1);
-  fprintf((FILE*)param, "\n");
-}
-*/
 
 
 
