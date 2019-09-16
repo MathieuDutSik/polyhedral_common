@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     //
     TestStrictPositivity<T,Tint> StrictPos = TestingAttemptStrictPositivity<T,Tint>(eSymmMat);
     WriteStrictPositivityResult(std::cerr, StrictPos);
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal completion of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	}
       }
     }
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal completion of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

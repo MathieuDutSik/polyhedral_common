@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     std::cerr << "eMin=" << eSh.eMin << "\n";
     WriteMatrix(std::cerr, eSh.SHV);
     //
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal completion of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);
