@@ -1423,21 +1423,6 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 
 
 
-template<typename Tgr>
-bliss::Graph GetBlissGraphFromGraph(Tgr const& eGR)
-{
-  int nbVert=eGR.GetNbVert();
-  bliss::Graph g(nbVert);
-  for (int iVert=0; iVert<nbVert; iVert++) {
-    int eColor=eGR.GetColor(iVert);
-    g.change_color(iVert, eColor);
-  }
-  for (int iVert=0; iVert<nbVert-1; iVert++)
-    for (int jVert=iVert+1; jVert<nbVert; jVert++)
-      if (eGR.IsAdjacent(iVert,jVert))
-	g.add_edge(iVert,jVert);
-  return g;
-}
 
 
 
