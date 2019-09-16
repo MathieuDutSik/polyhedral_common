@@ -684,6 +684,11 @@ CopositivityEnumResult<Tint> KernelEnumerateShortVectorInCone(MyMatrix<T> const&
 
 // This is supposed to be a tree version and so faster than KernelEnumerateShortVectorInCone
 // The other program is recursive and so has a problem with too large level.
+//
+// ---fSingleTest checks if the cone is adequate for conclusion.
+//    If yes, then the conclusion is returned.
+// ---fInsert checks if the cone is adequate and do the business (insert vector, add nbCone, etc.)
+//    if it is not a boolean is returned and the cone is further subdivided.
 template<typename T, typename Tint>
 SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& eSymmMat, std::function<bool(MyMatrix<Tint> const&,MyMatrix<T> const&)> const& fInsert, std::function<SingleTestResult<Tint>(MyMatrix<Tint> const&, MyMatrix<T> const&)> const& fSingleTest)
 {
@@ -733,22 +738,22 @@ SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& 
   };
   auto NextInTree=[&]() -> bool {
     MyMatrix<Tint> TheBasis = GetBasis();
-    //
-    // If we have vi A vj >= 0 then direct approach works.
-    //
     MyMatrix<T> TheBasis_T=ConvertMatrixUniversal<T,Tint>(TheBasis);
     MyMatrix<T> eSymmMatB=TheBasis_T*eSymmMat*TheBasis_T.transpose();
-    bool testB=fInsert(TheBasis, eSymmMatB);
-    if (testB) {
-      return GoUpNextInTree();
-    }
     //
-    // If we have some negative values then we exit by failure
+    // If we can conclude the computation then we do so.
     //
     SingleTestResult<Tint> fResult=fSingleTest(TheBasis, eSymmMatB);
     if (!fResult.test) {
       eResult = fResult;
       return false;
+    }
+    //
+    // If we have vi A vj >= 0 then direct approach works.
+    //
+    bool testB=fInsert(TheBasis, eSymmMatB);
+    if (testB) {
+      return GoUpNextInTree();
     }
     //
     // Now doing the split
@@ -872,6 +877,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(MyMatrix<T> const
 template<typename T, typename Tint>
 SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const& eSymmMat)
 {
+  std::cerr << "Begin of TestCopositivity\n";
   int n=eSymmMat.rows();
   int nbCone=0;
   std::function<bool(MyMatrix<int> const&, MyMatrix<T> const&)> fInsert=[&](MyMatrix<int> const& TheBasis, MyMatrix<T> const& eSymmMatB) -> bool {
@@ -889,7 +895,6 @@ SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const& eSymmMat)
   std::cerr << "nbCone=" << nbCone << "\n";
   return eResult;
 }
-
 
 
 
