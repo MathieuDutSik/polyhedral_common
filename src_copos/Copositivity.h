@@ -692,7 +692,6 @@ CopositivityEnumResult<Tint> KernelEnumerateShortVectorInCone(MyMatrix<T> const&
 template<typename T, typename Tint>
 SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& eSymmMat, std::function<bool(MyMatrix<Tint> const&,MyMatrix<T> const&)> const& fInsert, std::function<SingleTestResult<Tint>(MyMatrix<Tint> const&, MyMatrix<T> const&)> const& fSingleTest)
 {
-  std::cerr << "Begin of EnumerateCopositiveShortVector_Kernel\n";
   int n=eSymmMat.rows();
   struct DataPair {
     int idx;
@@ -777,7 +776,7 @@ Tshortest<T,Tint> T_CopositiveShortestVector(MyMatrix<T> const& eSymmMat)
 {
   SingleTestResult<Tint> kerResult = SearchByZeroInKernel<T,Tint>(eSymmMat);
   if (!kerResult.test) {
-    std::cerr << "Inconsistency in the run\n";
+    std::cerr << "Inconsistency in the run. A bug to be solved\n";
     throw TerminalException{1};
   }
   int n=eSymmMat.rows();
@@ -877,7 +876,6 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(MyMatrix<T> const
 template<typename T, typename Tint>
 SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const& eSymmMat)
 {
-  std::cerr << "Begin of TestCopositivity\n";
   int n=eSymmMat.rows();
   int nbCone=0;
   std::function<bool(MyMatrix<int> const&, MyMatrix<T> const&)> fInsert=[&](MyMatrix<int> const& TheBasis, MyMatrix<T> const& eSymmMatB) -> bool {
@@ -892,7 +890,7 @@ SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const& eSymmMat)
     return SingleTestCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(eSymmMat, fInsert, fSingleTest);
-  std::cerr << "nbCone=" << nbCone << "\n";
+  std::cerr << "Total number of cones used in the computation nbCone=" << nbCone << "\n";
   return eResult;
 }
 

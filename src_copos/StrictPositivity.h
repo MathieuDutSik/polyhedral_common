@@ -71,15 +71,15 @@ TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& e
   int nbIter=0;
   while(true) {
     nbIter++;
-    std::cerr << "Before CopositiveShortestVector nbIter=" << nbIter << "\n";
+    //    std::cerr << "Before CopositiveShortestVector nbIter=" << nbIter << "\n";
     Tshortest<T,Tint> RecSHV=T_CopositiveShortestVector<T,Tint>(SearchMatrix);
-    std::cerr << "Before GetNakedPerfectCone nbIter=" << nbIter << "\n";
+    //    std::cerr << "Before GetNakedPerfectCone nbIter=" << nbIter << "\n";
     NakedPerfect<T,Tint> eNaked=GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV);
     int nbBlock=eNaked.ListBlock.size();
 
 
     T ScalMat = MatrixScalarProduct(SearchMatrix, eMat);
-    std::cerr << "ScalMat=" << ScalMat << "\n";
+    //    std::cerr << "ScalMat=" << ScalMat << "\n";
     if (ScalMat <= 0) {
       std::cerr << "We obtained proof of non strict CP property\n";
       return {false, {}, {}, SearchMatrix};
