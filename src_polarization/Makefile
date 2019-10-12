@@ -1,4 +1,6 @@
-PROGRAM	= hot polarization_gaussian test_lambda
+#PROGRAM	= hot polarization_gaussian test_lambda
+PROGRAM	= polarization_gaussian
+#PROGRAM	= hot_param
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

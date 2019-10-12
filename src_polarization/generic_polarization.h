@@ -17,9 +17,10 @@ dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::
   for (int i=0; i<n; i++) {
     for (int j=0; j<=i; j++) {
       int eFactor = i == j ? 1 : 2;
-      ListI.push_back(i);
-      ListJ.push_back(j);
-      ListFactor.push_back(eFactor);
+      //      std::cerr << "i=" << i << " j=" << j << " eF=" << eFactor << "\n";
+      ListI[idx] = i;
+      ListJ[idx] = j;
+      ListFactor[idx] = eFactor;
       idx++;
     }
   }
@@ -27,6 +28,7 @@ dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::
   //
   BlockIterationMultiple Blk(Ranges_Ext);
   dual2nd RetVal=0;
+
   while(true) {
     std::vector<int> eVect = Blk.GetVect();
     std::vector<int> xVect(n);
@@ -35,17 +37,49 @@ dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::
     //
     dual2nd Aval=0;
     for (int idx=0; idx<TotDim; idx++) {
-      int eFactor=ListFactor[idx];
+      double eFactor=double(ListFactor[idx]);
       int i=ListI[idx];
       int j=ListJ[idx];
       Aval += eFactor * (c[i] - xVect[i]) * A[idx] * (c[j] - xVect[j]);
     }
-    RetVal += f(Aval);
+    //    Aval += A[0];
+    //    RetVal += f(Aval);
+    RetVal += Aval;
     int test = Blk.IncrementShow();
     if (test == -1)
       break;
   }
+
+
+  
+  /*
+  while(true) {
+    std::vector<int> eVect = Blk.GetVect();
+    std::vector<int> xVect(n);
+    for (int i=0; i<n; i++)
+      xVect[i] = eVect[i] - Ranges[i];
+    //
+    dual2nd Aval=0;
+    for (int idx=0; idx<TotDim; idx++) {
+      double eFactor=double(ListFactor[idx]);
+      int i=ListI[idx];
+      int j=ListJ[idx];
+      //      Aval += eFactor * (c[i] - xVect[i]) * A[idx] * (c[j] - xVect[j]);
+      Aval += eFactor * A[idx];
+    }
+    //    RetVal += f(Aval);
+    double fact = 2;
+    RetVal += fact * A[0];
+    int test = Blk.IncrementShow();
+    if (test == -1)
+      break;
+  }
+*/
   return RetVal;
 }
+
+
+
+
 
 #endif
