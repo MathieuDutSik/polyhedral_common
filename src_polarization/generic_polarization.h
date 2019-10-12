@@ -3,9 +3,10 @@
 
 #include "Temp_common.h"
 #include "autodiff.h"
+#include "COMB_Combinatorics.h"
 
-
-dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, double const& MaxNorm, std::vector<dual2nd> const& c, std::vector<dual2nd> const& A, dualnd std::function<dualnd(dualnd const&)> const& f)
+// Maybe use MaxNorm?
+dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::vector<dual2nd> const& c, std::vector<dual2nd> const& A, std::function<dual2nd(dual2nd const&)> const& f)
 {
   std::vector<int> Ranges_Ext(n);
   for (int i=0; i<n; i++)

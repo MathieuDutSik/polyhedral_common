@@ -5,7 +5,7 @@
 #include <autodiff/forward.hpp>
 
 // Define a 2nd order dual type using HigherOrderDual<N> construct.
-using dual2nd = HigherOrderDual<2>;
+using dual2nd = autodiff::HigherOrderDual<2>;
 
 
 #endif

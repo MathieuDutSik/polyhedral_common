@@ -1,4 +1,4 @@
-PROGRAM	= hot
+PROGRAM	= hot polarization_gaussian test_lambda
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -11,7 +11,7 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_number -I../src -I../src_matrix -I../src_basic -I../src_comb
 
-CFLAGS 		= $(AUTODIFF_INCLUDE)
+CFLAGS 		= $(AUTODIFF_INCLUDE) -I$(EIGEN_PATH)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK)
 
