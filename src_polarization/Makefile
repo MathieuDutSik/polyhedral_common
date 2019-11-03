@@ -1,6 +1,8 @@
 #PROGRAM	= hot polarization_gaussian test_lambda
-PROGRAM	= polarization_gaussian
+#PROGRAM	= polarization_gaussian
 #PROGRAM	= hot_param
+#PROGRAM	= test_hessian
+PROGRAM	= test_hessian_quadratic
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -22,13 +22,31 @@ int main()
 
   //  dual2nd u = Compute_Polarization(2, Ranges, c, A, f);
 
-
-  for (int i=0; i<n; i++) {
+  dual2nd u = Compute_Polarization(n, Ranges, cA, f);
+  double u_d = u.val.val;
+  std::cout << "u=" << u << " u_d=" << u_d << "\n";
+  
+  int nPtot = n + TotDim;
+  MyVector<double> gradC(n);
+  for (int i=0; i<nPtot; i++) {
     autodiff::dual ux = derivative(Compute_Polarization, wrt(cA[i]), at(2, Ranges, cA, f));
-    std::cout << "grad_c(" << i << ")=" << ux << "\n";
+    double ux_val = ux.val;
+    double ux_grad = ux.grad;
+    std::cout << "grad_cA(" << i << "), ux=" << ux << " ux_val=" << ux_val << " ux_grad=" << ux_grad << "\n";
   }
-  for (int idx=0; idx<TotDim; idx++) {
-    autodiff::dual ux = derivative(Compute_Polarization, wrt(cA[n+idx]), at(2, Ranges, cA, f));
-    std::cout << "grad_A(" << idx << ")=" << ux << "\n";
-  }
+  MyMatrix<double> Hess(nPtot,nPtot);
+  for (int i=0; i<nPtot; i++)
+    for (int j=0; j<nPtot; j++) {
+      double eVal;
+      //      std::cout << "Before i=" << i << " j=" << j << "\n";
+      if (i == j) {
+        eVal = derivative(Compute_Polarization, autodiff::wrt<2>(cA[i]), at(n, Ranges, cA, f));
+      }
+      else {
+        eVal = derivative(Compute_Polarization, autodiff::wrt(cA[i],cA[j]), at(n, Ranges, cA, f));
+      }
+      //      std::cout << "After i=" << i << " j=" << j << "\n";
+      Hess(i,j) = eVal;
+    }
+  
 }
