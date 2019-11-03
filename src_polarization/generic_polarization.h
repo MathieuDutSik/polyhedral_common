@@ -103,6 +103,53 @@ dual2nd Senergy(int const& n, std::vector<int> const& Ranges, std::vector<dual2n
   return RetVal;
 }
 
+
+
+
+/* Code inspired by 
+   http://www.cplusplus.com/reference/algorithm/next_permutation/
+   for iterating over the elements of a symmetric group.
+*/
+dual2nd determinantSymMat_function(int const& n, std::vector<dual2nd> const& Acoeff)
+{
+  // Building of the correspondences.
+  int TotDim=n*(n+1)/2;
+  std::vector<int> ListI(TotDim), ListJ(TotDim);
+  MyMatrix<int> MatRev(n,n);
+  int idx=0;
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<=i; j++) {
+      ListI[idx] = i;
+      ListJ[idx] = j;
+      MatRev(i,j) = idx;
+      MatRev(j,i) = idx;
+      idx++;
+    }
+  }
+  // The vector of positions
+  std::vector<int> eVect(n);
+  for (int i=0; i<n; i++)
+    eVect[i]=i;
+  dual2nd RetVal=0;
+  do {
+    // Computing the signature
+    int eProd=1;
+    for (int i=0; i<n; i++)
+      for (int j=i+1; j<n; j++)
+        if (eVect[j] > eVect[i])
+          eProd *= -1;
+    // Computing the matrix term
+    dual2nd Aval = 1;
+    for (int i=0; i<n; i++) {
+      int j=eVect[i];
+      int idx=MatRev(i,j);
+      Aval *= Acoeff[idx];
+    }
+    RetVal += eProd * Aval;
+  } while (std::next_permutation(eVect.begin(), eVect.end()));
+  return RetVal;
+}
+
 /*
 MyMatrix<double> NewtonIterationOptimization(MyMatrix<double> const& Ainit, std::function<dual2nd(dual2nd const&)> const& f)
 {
