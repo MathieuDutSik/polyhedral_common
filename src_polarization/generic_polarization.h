@@ -6,7 +6,7 @@
 #include "COMB_Combinatorics.h"
 
 // Maybe use MaxNorm?
-dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::vector<dual2nd> const& c, std::vector<dual2nd> const& A, std::function<dual2nd(dual2nd const&)> const& f)
+dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::vector<dual2nd> const& cA, std::function<dual2nd(dual2nd const&)> const& f)
 {
   std::vector<int> Ranges_Ext(n);
   for (int i=0; i<n; i++)
@@ -24,7 +24,6 @@ dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::
       idx++;
     }
   }
-  
   //
   BlockIterationMultiple Blk(Ranges_Ext);
   dual2nd RetVal=0;
@@ -40,18 +39,16 @@ dual2nd Compute_Polarization(int const& n, std::vector<int> const& Ranges, std::
       double eFactor=double(ListFactor[idx]);
       int i=ListI[idx];
       int j=ListJ[idx];
-      Aval += eFactor * (c[i] - xVect[i]) * A[idx] * (c[j] - xVect[j]);
+      Aval += eFactor * (cA[i] - xVect[i]) * cA[n+idx] * (cA[j] - xVect[j]);
     }
     //    Aval += A[0];
     //    RetVal += f(Aval);
-    RetVal += Aval;
+    RetVal += f(Aval);
     int test = Blk.IncrementShow();
     if (test == -1)
       break;
   }
 
-
-  
   /*
   while(true) {
     std::vector<int> eVect = Blk.GetVect();
