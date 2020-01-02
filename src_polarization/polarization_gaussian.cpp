@@ -12,8 +12,8 @@ int main()
   int TotDim=n*(n+1)/2;
   const double expo = 2;
   std::function<dual2nd(dual2nd const&)> f = [&expo](dual2nd const& Aval) -> dual2nd {
-    return Aval;
-    //    return exp(-expo * Aval);
+    //    return Aval;
+    return exp(-expo * Aval);
   };
   double onethird=double(1) / double(3);
   //  double onethird=0;
@@ -48,5 +48,7 @@ int main()
       //      std::cout << "After i=" << i << " j=" << j << "\n";
       Hess(i,j) = eVal;
     }
-  
+  while(true) {
+    
+  }
 }

@@ -2,7 +2,7 @@
 #PROGRAM	= polarization_gaussian
 #PROGRAM	= hot_param
 #PROGRAM	= test_hessian
-PROGRAM	= test_hessian_quadratic
+PROGRAM	= test_hessian_quadratic test_hot test_hot_param polarization_gaussian test_lambda
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
