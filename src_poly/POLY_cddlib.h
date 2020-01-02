@@ -2632,6 +2632,8 @@ int dd_LPReplaceRow(dd_lpdata<T> *lp, dd_rowrange i, T* a)
   return success;
 }
 
+/*
+  APPEAR Not to be used at all.
 template<typename T>
 T* dd_LPCopyRow(dd_lpdata<T> *lp, dd_rowrange i)
 {
@@ -2647,7 +2649,7 @@ T* dd_LPCopyRow(dd_lpdata<T> *lp, dd_rowrange i)
   }
   return a;
 }
-
+*/
 
 void dd_SetNumberType(char *line,dd_NumberType *number,dd_ErrorType *Error)
 {
