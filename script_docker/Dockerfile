@@ -1,6 +1,12 @@
-# The Docker environment can be compiled by doing
-# 
-# docker build -t standard_working_environment:build-env .
+# This dockerfile allows you to access to functionality of C++ polyhedral
+#
+# It is used in the following way:
+# ---Copy this "Dockerfile" to a directory, e.g. "docker".
+#    Do NOT rename the file.
+# ---Compile the dockerfile with the command
+#    docker build -t standard_working_environment:build-env .
+# ---Run the docker and access a bash by doing
+#    docker run -i -t standard_working_environment:build-env /bin/bash
 #
 # Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
 
