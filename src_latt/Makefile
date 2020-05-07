@@ -1,6 +1,7 @@
 PROGRAM		= sv_exact \
 		  LATT_lll \
-		  LATT_canonicalize
+		  CheckPositiveSemiDefinite \
+		  LATT_canonicalize 
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
