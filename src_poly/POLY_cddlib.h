@@ -2644,7 +2644,6 @@ T* dd_LPCopyRow(dd_lpdata<T> *lp, dd_rowrange i)
     dd_InitializeArow(lp->d, &a);
     for (j=1; j<=lp->d; j++) {
       dd_set(a[j-1],lp->A[i-1][j-1]);
-      /* copying the i-th row to a */
     }
   }
   return a;

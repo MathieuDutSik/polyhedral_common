@@ -12,7 +12,15 @@
 
 
 template<typename T,typename Tint>
-std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
+struct Canonic_PosDef {
+  MyMatrix<Tint> Basis;
+  MyMatrix<Tint> SHV;
+  MyMatrix<T> Mat;
+};
+
+
+template<typename T,typename Tint>
+Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 {
   //
   // Computing the Z-basis on which the computation relies.
@@ -98,7 +106,7 @@ std::pair<MyMatrix<Tint>,MyMatrix<T>> ComputeCanonicalForm(MyMatrix<T> const& in
   std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
   std::cerr << "Matrix products : time8 - time7=" << std::chrono::duration_cast<std::chrono::milliseconds>(time8 - time7).count() << "\n";
 #endif
-  return {BasisCan_Tint, RetMat};
+  return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
 
 
