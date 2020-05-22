@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     TreatDelaunayEntry<T,Tint>(eFull);
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

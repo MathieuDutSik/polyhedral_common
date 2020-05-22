@@ -20,27 +20,29 @@ int main(int argc, char *argv[])
       }
     std::cerr << "Reading input\n";
     std::ifstream EXTfs(argv[1]);
-    MyMatrix<mpq_class> TheEXT=ReadMatrix<mpq_class>(EXTfs);
-    
+    using T=mpq_class;
+    MyMatrix<T> TheEXT=ReadMatrix<T>(EXTfs);
+
     std::ifstream GRPfs(argv[2]);
     TheGroupFormat TheGRP=ReadGroup(GRPfs);
-    
+
     LevSearch=atoi(argv[3]);
     std::cerr << "LevSearch=" << LevSearch << "\n";
-    
+
     std::cerr << "Step main 5\n";
-    std::vector<std::vector<Face> > ListListOrb=EnumerationFaces<mpq_class>(TheGRP, TheEXT, LevSearch);
+    std::vector<std::vector<Face> > ListListOrb=EnumerationFaces<T>(TheGRP, TheEXT, LevSearch);
     std::cerr << "Completion of the program\n";
-    
+
     std::ofstream OUTfs(argv[4]);
     PrintListListOrb_IntGAP(OUTfs, ListListOrb);
-    
+
     nbLev=ListListOrb.size();
     std::cerr << "nbLev=" << nbLev << "\n";
     for (int iLev=0; iLev<nbLev; iLev++) {
       int nbOrb=ListListOrb[iLev].size();
       std::cerr << "  iLev=" << iLev << " nbOrb=" << nbOrb << "\n";
     }
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

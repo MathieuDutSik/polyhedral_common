@@ -15,7 +15,8 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> ListIneq=ReadMatrixLrsCdd<mpq_class>(is);
+    using T=mpq_class;
+    MyMatrix<T> ListIneq=ReadMatrixLrsCdd<T>(is);
     std::string eChoice;
     is >> eChoice;
     if (eChoice != "minimize") {
@@ -23,16 +24,17 @@ int main(int argc, char *argv[])
       throw TerminalException{1};
     }
     int nbCol=ListIneq.cols();
-    MyVector<mpq_class> ToBeMinimized(nbCol);
+    MyVector<T> ToBeMinimized(nbCol);
     for (int iCol=0; iCol<nbCol; iCol++) {
-      mpq_class eVal;
+      T eVal;
       is >> eVal;
       ToBeMinimized(iCol)=eVal;
     }
-    LpSolution<mpq_class> eSol=CDD_LinearProgramming(ListIneq, ToBeMinimized);
+    LpSolution<T> eSol=CDD_LinearProgramming(ListIneq, ToBeMinimized);
     //
     std::cerr << "PrimalDefined = " << eSol.PrimalDefined << "\n";
     std::cerr << "  DualDefined = " << eSol.DualDefined << "\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     //
     std::string eFileO=argv[2];
     ComputeEngelPolyhedralSubordinationFile(eFileO, EXT, FAC);
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -18,12 +18,13 @@ int main(int argc, char *argv[])
     //  std::cerr << "Reading input\n";
     //
     std::ifstream isFAC(argv[1]);
-    MyMatrix<mpq_class> FAC=ReadMatrix<mpq_class>(isFAC);
+    using T=mpq_class;
+    MyMatrix<T> FAC=ReadMatrix<T>(isFAC);
     //
     std::ifstream isEXT(argv[2]);
-    MyMatrix<mpq_class> EXT=ReadMatrix<mpq_class>(isEXT);
+    MyMatrix<T> EXT=ReadMatrix<T>(isEXT);
     //
-    std::vector<MyVector<mpq_class>> ListPoint=GetListIntegralPoint(FAC, EXT);
+    std::vector<MyVector<T>> ListPoint=GetListIntegralPoint(FAC, EXT);
     //
     int len=ListPoint.size();
     std::ofstream os(argv[3]);
@@ -34,7 +35,7 @@ int main(int argc, char *argv[])
       WriteVectorGAP(os, ListPoint[i]);
     }
     os << "];\n";
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

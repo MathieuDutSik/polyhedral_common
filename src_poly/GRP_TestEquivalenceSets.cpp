@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     EquivTest<permlib::Permutation>  eReply=TestEquivalenceGeneralNaked(GRP, ListFace[0], ListFace[1], 1);
     //
     std::cerr << "result=" << eReply.TheReply << "\n";
-
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

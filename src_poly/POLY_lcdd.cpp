@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> EXT=ReadMatrixLrsCdd<mpq_class>(is);
+    using T=mpq_class;
+    MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
     int rnk=RankMat(EXT);
     int nbCol=EXT.cols();
     if (rnk != nbCol) {
@@ -27,16 +28,17 @@ int main(int argc, char *argv[])
       exit(1);
     }
     //
-    mpq_class smallVal=0;
+    T smallVal=0;
     std::vector<Face> ListIncd=cdd::DualDescription_incd(EXT, smallVal);
     //
     int nbFace=ListIncd.size();
     std::ofstream os(argv[2]);
     os << nbFace << " " << nbCol << "\n";
     for (auto & eFace : ListIncd) {
-      MyVector<mpq_class> eV=FindFacetInequality(EXT, eFace);
+      MyVector<T> eV=FindFacetInequality(EXT, eFace);
       WriteVector(os, eV);
     }
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
     std::vector<Face> ListFaceSma=OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
     std::cerr << "|ListFaceSma|=" << ListFaceSma.size() << "\n";
     //
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

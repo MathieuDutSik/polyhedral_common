@@ -13,6 +13,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
                   GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting \
                   GRP_VectorSplitting \
+                  POLY_LinPolytope_Automorphism \
 		  POLY_ComputeEngelSymbol \
 		  POLY_FaceLatticeDirect
 

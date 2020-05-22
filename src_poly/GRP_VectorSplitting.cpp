@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
     };
     EnumerateOrbitPrimitiveVector<int>(ListMat, pPrime, n, FCT);
     os << "];\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -15,14 +15,15 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
+    using T=mpq_class;
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> EXT=ReadMatrix<mpq_class>(is);
-    MyMatrix<mpq_class> FAC=ReadMatrix<mpq_class>(is);
+    MyMatrix<T> EXT=ReadMatrix<T>(is);
+    MyMatrix<T> FAC=ReadMatrix<T>(is);
     std::cerr << "After read matrix\n";
     //
     std::string eFileO=argv[2];
     ComputeFileFaceLatticeInfo(eFileO, EXT, FAC);
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

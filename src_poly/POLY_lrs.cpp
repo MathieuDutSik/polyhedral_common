@@ -14,14 +14,15 @@ int main(int argc, char *argv[])
     }
     //
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> EXT=ReadMatrixLrsCdd<mpq_class>(is);
+    using T=mpq_class;
+    MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
     int nbCol=EXT.cols();
     //
     std::cout << "V-representation\n";
     std::cout << "begin\n";
     std::cout << "****** " << nbCol << " rational\n";
     long nVertices=0;
-    std::function<void(mpq_class*)> fPrint=[&](mpq_class* out) -> void {
+    std::function<void(T*)> fPrint=[&](T* out) -> void {
       for (int iCol=0; iCol<nbCol; iCol++)
 	std::cout << " " << out[iCol];
       std::cout << "\n";
@@ -30,6 +31,7 @@ int main(int argc, char *argv[])
     lrs::Kernel_DualDescription(EXT, fPrint);
     std::cout << "end\n";
     std::cout << "*Total: nvertices=" << nVertices << "\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

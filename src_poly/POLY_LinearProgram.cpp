@@ -14,10 +14,11 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> FAC=ReadMatrix<mpq_class>(is);
-    MyVector<mpq_class> eMinimize=ReadVector<mpq_class>(is);
+    using T=mpq_class;
+    MyMatrix<T> FAC=ReadMatrix<T>(is);
+    MyVector<T> eMinimize=ReadVector<T>(is);
     //
-    LpSolution<mpq_class> eSol=CDD_LinearProgramming(FAC, eMinimize);
+    LpSolution<T> eSol=CDD_LinearProgramming(FAC, eMinimize);
     //
     std::ofstream os(argv[2]);
     os << "return rec(FAC:=";
@@ -36,6 +37,7 @@ int main(int argc, char *argv[])
     os << ", face:=";
     WriteFaceGAP(os, eSol.eFace);
     os << ", rankDirectSol:=" << eSol.rankDirectSol << ");\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

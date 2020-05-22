@@ -16,13 +16,14 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     std::ifstream Ifs(argv[1]);
-    MyMatrix<mpq_class> FAC=ReadMatrix<mpq_class>(Ifs);
+    using T=mpq_class;
+    MyMatrix<T> FAC=ReadMatrix<T>(Ifs);
     //
-    MyMatrix<mpq_class> LinSpace=LinearDeterminedByInequalities(FAC);
+    MyMatrix<T> LinSpace=LinearDeterminedByInequalities(FAC);
     std::cerr << "LinSpace=\n";
     WriteMatrix(std::cerr, LinSpace);
     //
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

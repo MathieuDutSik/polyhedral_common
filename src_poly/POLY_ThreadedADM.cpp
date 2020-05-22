@@ -13,10 +13,11 @@ int main(int argc, char *argv[])
       return -1;
     }
     std::string eFileName=argv[1];
+    using T=mpq_class;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionComputeDualDesc<mpq_class>(eFull);
-    std::cerr << "Completion of the program\n";
+    MainFunctionComputeDualDesc<T>(eFull);
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

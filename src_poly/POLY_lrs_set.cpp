@@ -14,10 +14,12 @@ int main(int argc, char *argv[])
     }
     //
     std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> EXT=ReadMatrixLrsCdd<mpq_class>(is);
+    using T=mpq_class;
+    MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
     //
     std::vector<Face> ListFace=lrs::DualDescription_temp_incd(EXT);
     std::cerr << "nbVert = " << ListFace.size() << "\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

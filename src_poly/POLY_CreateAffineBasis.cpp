@@ -13,11 +13,12 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
+    using T=mpq_class;
     std::ifstream EXTfs(argv[1]);
-    MyMatrix<mpq_class> eMat=ReadMatrix<mpq_class>(EXTfs);
+    MyMatrix<T> eMat=ReadMatrix<T>(EXTfs);
     std::cerr << "After read matrix\n";
     //
-    AffineBasisResult eBasRes=ComputeAffineBasis<mpq_class>(eMat);
+    AffineBasisResult eBasRes=ComputeAffineBasis<T>(eMat);
     std::cerr << "result=" << eBasRes.result << "\n";
     if (eBasRes.result == true) {
       int n=eBasRes.ListIdx.size();
@@ -26,15 +27,15 @@ int main(int argc, char *argv[])
 	std::cerr << eBasRes.ListIdx[i] << " ";
       std::cerr << "\n";
       //
-      MyMatrix<mpq_class> eBasis=SelectRow(eMat, eBasRes.ListIdx);
-      mpq_class eDet=DeterminantMat(eBasis);
+      MyMatrix<T> eBasis=SelectRow(eMat, eBasRes.ListIdx);
+      T eDet=DeterminantMat(eBasis);
       std::cerr << "eDet=" << eDet << "\n";
       std::ofstream BASfs(argv[2]);
       BASfs << "return ";
       WriteMatrixGAP(BASfs, eBasis);
       BASfs << ";\n";
     }
-    std::cerr << "Completion of the program\n";
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);
