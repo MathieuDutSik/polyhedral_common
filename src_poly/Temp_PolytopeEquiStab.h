@@ -396,6 +396,42 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
 
 
 
+// The matrices in ListMat do not have to be symmetric.
+template<typename T, typename Tint>
+WeightMatrix<T,std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, T const & TheTol)
+{
+  int nbRow=SHV.rows();
+  int nbMat=ListMat.size();
+  int n=qMat.rows();
+  WeightMatrix<T,std::vector<T>> WMat=WeightMatrix<T,std::vector<T>>(nbRow, TheTol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    std::vector<MyVector<T>> ListV(nbMat);
+    for (int iMat=0; iMat<nbMat; iMat++) {
+      MyVector<T> V(n);
+      for (int i=0; i<n; i++) {
+        T eVal=0;
+        for (int j=0; j<n; j++)
+          eVal += ListMat[iMat](j,i) * SHV(iRow, j);
+        V(i) = eVal;
+      }
+      ListV[iMat] = V;
+    }
+    for (int jRow=iPair; jRow<nbRow; jRow++) {
+      std::vector<T> ListScal(nbMat);
+      for (int iMat=0; iMat<nbMat; iMat++) {
+        T eScal=0;
+        for (int i=0; i<n; i++)
+          eScal += ListV[iMat](i)*SHV(jRow,i);
+        ListScal[iMat] = eScal;
+      }
+      WMat.Update(iRow, jRow, ListScal);
+    }
+  }
+  return WMat;
+}
+
+
+
 template<typename T, typename Tint>
 WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV, T const & TheTol)
 {
