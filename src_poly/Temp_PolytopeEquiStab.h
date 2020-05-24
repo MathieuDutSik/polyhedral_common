@@ -398,12 +398,12 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
 
 // The matrices in ListMat do not have to be symmetric.
 template<typename T, typename Tint>
-WeightMatrix<T,std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, T const & TheTol)
+WeightMatrix<std::vector<T>,T> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, T const & TheTol)
 {
   int nbRow=SHV.rows();
+  int n = SHV.cols();
   int nbMat=ListMat.size();
-  int n=qMat.rows();
-  WeightMatrix<T,std::vector<T>> WMat=WeightMatrix<T,std::vector<T>>(nbRow, TheTol);
+  WeightMatrix<std::vector<T>,T> WMat(nbRow, TheTol);
   for (int iRow=0; iRow<nbRow; iRow++) {
     std::vector<MyVector<T>> ListV(nbMat);
     for (int iMat=0; iMat<nbMat; iMat++) {
@@ -416,7 +416,7 @@ WeightMatrix<T,std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMat
       }
       ListV[iMat] = V;
     }
-    for (int jRow=iPair; jRow<nbRow; jRow++) {
+    for (int jRow=0; jRow<nbRow; jRow++) {
       std::vector<T> ListScal(nbMat);
       for (int iMat=0; iMat<nbMat; iMat++) {
         T eScal=0;
@@ -1551,23 +1551,23 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   std::vector<int> MapVect(nbVert, -1), MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
-  for (int i=0; i<nof_vertices; i++) {
-    if (ListStatus[i] == 1) {
-      int iNative=clR[i];
+  for (int iCan=0; iCan<nof_vertices; iCan++) {
+    if (ListStatus[iCan] == 1) {
+      int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
       //      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
       MapVectRev[posCanonic] = iVertNative;
       MapVect[iVertNative] = posCanonic;
       for (int iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
-	int j=cl[uVertNative];
+	int jCan=cl[uVertNative];
 #ifdef DEBUG
-	if (ListStatus[j] == 0) {
+	if (ListStatus[jCan] == 0) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
 	  throw TerminalException{1};
 	}
 #endif
-	ListStatus[j] = 0;
+	ListStatus[jCan] = 0;
       }
       posCanonic++;
     }
@@ -1585,6 +1585,37 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   //  std::cerr << "nbRow=" << nbRow << "\n";
   //  std::cerr << "GetCanonicalizationVector, step 6\n";
   return {MapVect2,MapVectRev2};
+}
+
+
+
+std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
+{
+  int nbEnt=PairVectSymm.first.size() / 2;
+  std::vector<int> MapVect(nbEnt, -1), MapVectRev(nbEnt, -1);
+  std::vector<int> ListStatus(2*nbEnt,1);
+  int jEntCan=0;
+  for (int iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
+    if (ListStatus[iEntCan] == 1) {
+      int iEntNative = PairVectSymm.second[iEntCan];
+      int jEntNative = iEntNative % nbEnt;
+      MapVectRev[jEntCan] = jEntNative;
+      MapVect[jEntNative] = jEntCan;
+      for (int iH=0; iH<2; iH++) {
+	int iEntNativeB = iEntNative + nbEnt * iH;
+	int iEntCanB=PairVectSymm.first[iEntNativeB];
+#ifdef DEBUG
+	if (ListStatus[iEntCanB] == 0) {
+	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
+	  throw TerminalException{1};
+	}
+#endif
+	ListStatus[iEntCanB] = 0;
+      }
+      jEntCan++;
+    }
+  }
+  return {MapVect, MapVectRev};
 }
 
 
