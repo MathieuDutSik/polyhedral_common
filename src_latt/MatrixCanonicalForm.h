@@ -206,4 +206,27 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
 }
 
 
+template<typename T,typename Tint>
+Canonic_PosDef<T,Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const& inpMat)
+{
+  int n_tot = inpMat.rows();
+  if (n_tot % 2 == 1) {
+    std::cerr << "The dimension is odd\n";
+    throw TerminalException{1};
+  }
+  int n = n_tot / 2;
+  MyMatrix<Tint> SympFormMat = ZeroMatrix<Tint>(2*n, 2*n);
+  for (int i=0; i<n; i++) {
+    SympFormMat(i,n+i) = 1;
+    SympFormMat(n+i,i) = -1;
+  }
+  Canonic_PosDef<T,Tint> CanPosDef = ComputeCanonicalFormMultiple<T,Tint>({inpMat, SympFormMat});
+  MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
+  MyMatrix<T> BasisSymp_T = ConvertMatrixUniversal<T,Tint>(BasisSymp_Tint);
+  MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);
+  return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
+}
+
+
+
 #endif

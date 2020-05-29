@@ -1592,17 +1592,20 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
 {
   int nbEnt=PairVectSymm.first.size() / 2;
+  //  std::cerr << "nbEnt=" << nbEnt << "\n";
   std::vector<int> MapVect(nbEnt, -1), MapVectRev(nbEnt, -1);
   std::vector<int> ListStatus(2*nbEnt,1);
   int jEntCan=0;
   for (int iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
+    //    std::cerr << "iEntCan=" << iEntCan << "\n";
     if (ListStatus[iEntCan] == 1) {
       int iEntNative = PairVectSymm.second[iEntCan];
       int jEntNative = iEntNative % nbEnt;
+      //      std::cerr << "iEntNative=" << iEntNative << " jEntNative=" << jEntNative << "\n";
       MapVectRev[jEntCan] = jEntNative;
       MapVect[jEntNative] = jEntCan;
       for (int iH=0; iH<2; iH++) {
-	int iEntNativeB = iEntNative + nbEnt * iH;
+	int iEntNativeB = jEntNative + nbEnt * iH;
 	int iEntCanB=PairVectSymm.first[iEntNativeB];
 #ifdef DEBUG
 	if (ListStatus[iEntCanB] == 0) {
