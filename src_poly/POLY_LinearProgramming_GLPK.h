@@ -58,10 +58,10 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
   std::string ePrefix="/tmp/LP_" + eRand + "/";
   CreateDirectory(ePrefix);
   //
-  std::string FileMath=ePrefix + "GLP.mod";
-  std::string FileOut=ePrefix + "GLP.out";
-  std::string FileErr1=ePrefix + "GLP.err1";
-  std::string FileErr2=ePrefix + "GLP.err2";
+  std::string FileMath = ePrefix + "GLP.mod";
+  std::string FileOut  = ePrefix + "GLP.out";
+  std::string FileErr1 = ePrefix + "GLP.err1";
+  std::string FileErr2 = ePrefix + "GLP.err2";
   std::function<void(void)> CleanAtLeaving=[&](void) -> void {
     /*
     RemoveFileIfExist(FileMath);
