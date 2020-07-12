@@ -237,8 +237,8 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
 	eFace[iRow]=1;
     }
     int nbIncd=eFace.count();
-    if (nbIncd == 0 || nbIncd == nbRow) {
-      std::cerr << "We have nbIncd=" << nbIncd << " while we should have 0 < nbIncd < nbRow with nbRow=" << nbRow << "\n";
+    if (nbIncd == 0) {
+      std::cerr << "We have nbIncd=" << nbIncd << " while we should have 0 < nbIncd <= with nbRow=" << nbRow << "\n";
       throw TerminalException{1};
     }
     eSol.eFace=eFace;

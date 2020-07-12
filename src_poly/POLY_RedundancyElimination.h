@@ -246,6 +246,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       std::cerr << "The algorithm failed to treat all the points\n";
       throw TerminalException{1};
     }
+  std::sort(ListKnownIrred.begin(), ListKnownIrred.end());
   return ListKnownIrred;
 }
 
