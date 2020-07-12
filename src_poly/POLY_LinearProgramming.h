@@ -246,10 +246,8 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
     int rnk=RankMat(eMatRed);
     eSol.rankDirectSol=rnk;
   }
-  MyVector<T> eVectDualSolution(nbRow);
+  MyVector<T> eVectDualSolution=ZeroVector<T>(nbRow);
   if (DualDefined) {
-    for (int jRow=0; jRow<nbRow; jRow++)
-      eVectDualSolution(jRow)=0;
     for (j=1; j<lp->d; j++) {
       idx=lp->nbindex[j+1];
       if (idx>0)
@@ -1023,7 +1021,7 @@ MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const& FAC)
     for (int i_col=0; i_col<=n_cols; i_col++)
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
-  LpSolution<T> eSol=CDD_LinearProgramming(MatInequalities, ToBeMinimized);
+  LpSolution<T> eSol=CDD_LinearProgramming(ListInequalities, ToBeMinimized);
   if (!eSol.PrimalSolution || !eSol.DualDefined) {
     std::cerr << "Failed to find an interior point by linear programming\n";
     std::cerr << "Maybe the cone is actually not full dimensional\n";
