@@ -961,7 +961,7 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const& ListIneq, MyVecto
 }
 
 
-  
+
 
 
 
@@ -1005,6 +1005,45 @@ MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const& FAC)
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC));
 }
+
+/* Finds an interior point in the cone determined by the inequalities.
+   No group used here nor any equalities.
+ */
+template<typename T>
+MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const& FAC)
+{
+  int n_rows=FAC.rows();
+  int n_cols=FAC.cols();
+  MyMatrix<T> ListInequalities=ZeroMatrix<T>(n_rows, n_cols+1);
+  MyVector<T> ToBeMinimized=ZeroVector<T>(n_cols+1);
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    ListInequalities(i_row, 0) = -1;
+    for (int i_col=0; i_col<n_cols; i_col++)
+      ListInequalities(i_row,i_col+1) = FAC(i_row,i_col);
+    for (int i_col=0; i_col<=n_cols; i_col++)
+      ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
+  }
+  LpSolution<T> eSol=CDD_LinearProgramming(MatInequalities, ToBeMinimized);
+  if (!eSol.PrimalSolution || !eSol.DualDefined) {
+    std::cerr << "Failed to find an interior point by linear programming\n";
+    std::cerr << "Maybe the cone is actually not full dimensional\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> eVect = eSol.DirectSolution;
+  MyVector<T> ListScal = FAC * eVect;
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    T eScal = ListScal(i_row);
+    if (eScal <= 0) {
+      std::cerr << "We have eScal=" << eScal << " which should be positive\n";
+      throw TerminalException{1};
+    }
+  }
+  return eVect;
+}
+
+
+
+
 
 
 template<typename T>
