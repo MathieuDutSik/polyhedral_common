@@ -1,9 +1,9 @@
 /* sv.c  simple driver for shvec                              */
 /* Version July 11, 2005                                      */
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
+/* Further correction by Mathieu Dutour Sikiric mathieu.dutour@gmail.com */
 
 #include <ctype.h>
-#include <malloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -110,9 +110,9 @@ int main(int argc, char *argv[])
   if (request == NULL)
     die_sv("request == NULL.\n");
   if (mode == SHVEC_MODE_THETA_SERIES)
-    request.ComputeTheta = 1;
+    request->ints.ComputeTheta = 1;
   else
-    request.ComputeTheta = 0;
+    request->ints.ComputeTheta = 0;
 
   initShvecReq(dim, gram_matrix, NULL, check, request);
   
