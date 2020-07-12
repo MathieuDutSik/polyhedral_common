@@ -13,15 +13,15 @@ struct FacetizationInfo {
 
 
 template<typename T>
-Facetization<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& BoundingFac)
+FacetizationInfo<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& BoundingFac)
 {
   int n_rows=EXT.rows();
   int n_cols=EXT.cols();
-  MyVector<T> TheSum=ZeroVector<T>(n_cols);
+  MyMatrix<T> TheSum=ZeroMatrix<T>(1,n_cols);
   for (int i_row=0; i_row<n_rows; i_row++)
     for (int i_col=0; i_col<n_cols; i_col++)
-      TheSum(i_col) += EXT(i_row, i_col);
-  MyMatrix<T> EXTtot = Concatenate(TransposedMat(TheSum), EXT);
+      TheSum(0, i_col) += EXT(i_row, i_col);
+  MyMatrix<T> EXTtot = Concatenate(TheSum, EXT);
   MyMatrix<T> EXTbas = RowReduction(EXTtot);
   MyMatrix<T> eInvMat = Inverse(EXTbas);
   MyMatrix<T> EXT_ret = EXT * eInvMat;
@@ -38,10 +38,10 @@ Facetization<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& Boun
 template<typename T>
 std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
 {
-  int n_rows=M.rows();
-  int n_cols=M.cols();
+  int n_rows=EXT.rows();
+  int n_cols=EXT.cols();
   MyMatrix<T> BoundingFac(0, n_cols);
-  Facetization<T> RegCone = FacetizationCone(EXT, BoundingFac);
+  FacetizationInfo<T> RegCone = FacetizationCone(EXT, BoundingFac);
   MyMatrix<T> EXT_work = RegCone.EXT;
   // return true if it is redundant. False otherwise.
   // If true, also returns a list of indices showing up positively in the decomposition
@@ -167,7 +167,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     // Updating indexes
     // If we found less than n_cols then we know more can be found
     if (nbFoundIrred >= n_cols) {
-      if (nbRun > 100 * nbFoundIrred) {
+      if (nbRuns > 100 * nbFoundIrred) {
         break;
       }
     }
@@ -194,7 +194,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
         LIdx.push_back(eIdx);
     }
     return {true, LIdx};
-  }
+  };
   // If this function return false then the facet IS irredundant
   // If it is true then it may or may not be.
   auto FastStatusDetermination=[&](int const& i_row) -> bool {

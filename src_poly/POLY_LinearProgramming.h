@@ -1022,7 +1022,7 @@ MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const& FAC)
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
   LpSolution<T> eSol=CDD_LinearProgramming(ListInequalities, ToBeMinimized);
-  if (!eSol.PrimalSolution || !eSol.DualDefined) {
+  if (!eSol.PrimalDefined || !eSol.DualDefined) {
     std::cerr << "Failed to find an interior point by linear programming\n";
     std::cerr << "Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
