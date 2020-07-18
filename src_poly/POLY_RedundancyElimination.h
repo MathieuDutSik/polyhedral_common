@@ -36,7 +36,7 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& 
 
 
 
-
+#define DEBUG_REDUND
 
 template<typename T>
 std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
@@ -58,12 +58,14 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     std::cerr << " iRow=" << iRow << "\n";
     MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT, iRow);
+    std::cerr << "Before call to CDD_LinearProgramming\n";
     LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
+    std::cerr << " After call to CDD_LinearProgramming\n";
     if (!eSol.DualDefined || !eSol.PrimalDefined) {
-      return {false,{}};
+      return {false, {}};
     }
     if (eSol.OptimalValue < 0)
-      return {false,{}};
+      return {false, {}};
     std::cerr << "OptimalValue=" << eSol.OptimalValue << "\n";
     std::vector<int> ListIdx;
     int n_rows=ListIRow.size();
@@ -80,14 +82,15 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       if (e_val > 0)
         ListIdx.push_back(ListIRow[i_row]);
     }
-    return {true,ListIdx};
+    std::cerr << "Exiting GetRedundancyInfo\n";
+    return {true, ListIdx};
   };
   //
   // The variables showing our current state
   //
   // -1: Still unknown 0: redundant 1: irredundant
   std::vector<int> RedundancyStatus(n_rows,-1);
-  std::vector<int> ListKnownIrred;
+  std::set<int> ListKnownIrred;
   //
   // Now computing one interior point.
   //
@@ -176,7 +179,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     if (idxFound != -1) {
       if (RedundancyStatus[idxFound] == -1) {
         RedundancyStatus[idxFound] = 1;
-        ListKnownIrred.push_back(idxFound);
+        ListKnownIrred.insert(idxFound);
         nbFoundIrred++;
       }
     }
@@ -191,6 +194,10 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     }
   }
   std::cerr << "nbFoundIrred=" << nbFoundIrred << " nbRuns=" << nbRuns << "\n";
+  std::cerr << "ListKnownIrred =";
+  for (auto & eVal : ListKnownIrred)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
   //
   // Above we have determined an initial list of facets.
   // Now we use it to do the full enumeration
@@ -223,9 +230,13 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
         ListIRow.push_back(j_row);
     return GetRedundancyInfo(ListIRow, i_row).first;
   };
-  auto FindOneMoreFacet=[&](std::vector<int> const& LIdx) -> void {
-    std::vector<int> WorkLIdx = LIdx;
+  auto FindOneMoreFacet=[&](int const& i_start) -> void {
+    std::vector<int> WorkLIdx{i_start};
     while(true) {
+      std::cerr << "WorkLIdx =";
+      for (auto& eVal : WorkLIdx)
+        std::cerr << " " << eVal;
+      std::cerr << "\n";
       std::set<int> NewCand;
       for (auto& eIdx : WorkLIdx) {
         std::pair<bool,std::vector<int>> ePair = DetermineStatusSurely(eIdx);
@@ -235,7 +246,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
             NewCand.insert(fIdx);
         } else { // The facet is irredundant. End of story
           RedundancyStatus[eIdx] = 1;
-          ListKnownIrred.push_back(eIdx);
+          ListKnownIrred.insert(eIdx);
           return;
         }
       }
@@ -243,31 +254,43 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       for (auto& eIdx : NewCand)
         if (RedundancyStatus[eIdx] == -1)
           WorkLIdx.push_back(eIdx);
+#ifdef DEBUG_REDUND
+      if (WorkLIdx.size() == 0) {
+        std::cerr << "WorkLIdx is empty. Not allowed\n";
+        throw TerminalException{1};
+      }
+#endif
     }
   };
   auto ProcessOnePoint=[&](int const& i_row) -> void {
     bool test = FastStatusDetermination(i_row);
-    std::cerr << "i_row=" << i_row << " test=" << test << "\n";
-    if (!test) { // The heuristic works. We conclude
+    std::cerr << "FastStatusDetermination : i_row=" << i_row << " test=" << test << "\n";
+    if (test) { // The heuristic works. We conclude
       RedundancyStatus[i_row] = 0;
       return;
     }
     // If the heuristic fails then it means that we miss one irreducible facet and we should
     // find at least one
-    FindOneMoreFacet({i_row});
+    FindOneMoreFacet(i_row);
   };
   // Now processing all the data
   for (int i_row=0; i_row<n_rows; i_row++) {
-    if (RedundancyStatus[i_row] == -1)
+    if (RedundancyStatus[i_row] == -1) {
+      std::cerr << "Before ProcessOnePoint\n";
       ProcessOnePoint(i_row);
+      std::cerr << " After ProcessOnePoint\n";
+    }
   }
   for (int i_row=0; i_row<n_rows; i_row++)
     if (RedundancyStatus[i_row] == -1) {
       std::cerr << "The algorithm failed to treat all the points\n";
       throw TerminalException{1};
     }
-  std::sort(ListKnownIrred.begin(), ListKnownIrred.end());
-  return ListKnownIrred;
+  std::vector<int> ListKnownIrred_vect;
+  for (auto & eVal : ListKnownIrred)
+    ListKnownIrred_vect.push_back(eVal);
+  std::cerr << "|ListKnownIrred|=" << ListKnownIrred_vect.size() << "\n";
+  return ListKnownIrred_vect;
 }
 
 
