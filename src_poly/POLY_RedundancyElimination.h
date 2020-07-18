@@ -22,7 +22,10 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& 
     for (int i_col=0; i_col<n_cols; i_col++)
       TheSum(0, i_col) += EXT(i_row, i_col);
   MyMatrix<T> EXTtot = Concatenate(TheSum, EXT);
+  std::cerr << "FacetizationCone\n";
   MyMatrix<T> EXTbas = RowReduction(EXTtot);
+  std::cerr << "EXTbas=\n";
+  WriteMatrix(std::cerr, EXTbas);
   MyMatrix<T> eInvMat = Inverse(EXTbas);
   MyMatrix<T> EXT_ret = EXT * eInvMat;
   //
@@ -40,12 +43,19 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
 {
   int n_rows=EXT.rows();
   int n_cols=EXT.cols();
+  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
   MyMatrix<T> BoundingFac(0, n_cols);
   FacetizationInfo<T> RegCone = FacetizationCone(EXT, BoundingFac);
   MyMatrix<T> EXT_work = RegCone.EXT;
+  std::cerr << "EXT_work=\n";
+  WriteMatrix(std::cerr, EXT_work);
   // return true if it is redundant. False otherwise.
   // If true, also returns a list of indices showing up positively in the decomposition
   auto GetRedundancyInfo=[&](std::vector<int> const& ListIRow, int const& iRow) -> std::pair<bool,std::vector<int>> {
+    std::cerr << "ListIRow =";
+    for (auto& eVal : ListIRow)
+      std::cerr << " " << eVal;
+    std::cerr << " iRow=" << iRow << "\n";
     MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT, iRow);
     LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
@@ -54,12 +64,17 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     }
     if (eSol.OptimalValue < 0)
       return {false,{}};
+    std::cerr << "OptimalValue=" << eSol.OptimalValue << "\n";
     std::vector<int> ListIdx;
     int n_rows=ListIRow.size();
     for (int i_row=0; i_row<n_rows; i_row++) {
-      T e_val = eSol.DualSolution(i_row);
+      T e_val = -eSol.DualSolution(i_row);
       if (e_val < 0) {
         std::cerr << "The coefficient should be non-negative\n";
+        for (int j_row=0; j_row<n_rows; j_row++) {
+          std::cerr << " " << eSol.DualSolution(j_row);
+        }
+        std::cerr << "\n";
         throw TerminalException{1};
       }
       if (e_val > 0)
@@ -77,6 +92,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   // Now computing one interior point.
   //
   MyVector<T> eVectInterior = GetSpaceInteriorPoint_Basic(EXT_work);
+  std::cerr << "We have eVectInterior\n";
   MyVector<T> ListScalInterior = EXT_work * eVectInterior;
   for (int i_row=0; i_row<n_rows; i_row++) {
     T eScal = ListScalInterior(i_row);
@@ -145,6 +161,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     int h = 0;
     while(true) {
       bool test = HasOneViolatedFacet(h);
+      std::cerr << "h=" << h << "\n";
       if (test)
         return GetSmallestValue(h);
       h++;
@@ -153,6 +170,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   int nbFoundIrred=0;
   int nbRuns=0;
   while(true) {
+    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
     MyVector<T> eVect = GetRandomVector();
     int idxFound = GetRandomOutsideVector_and_HitAndRun(eVect);
     if (idxFound != -1) {
@@ -167,11 +185,12 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     // Updating indexes
     // If we found less than n_cols then we know more can be found
     if (nbFoundIrred >= n_cols) {
-      if (nbRuns > 100 * nbFoundIrred) {
+      if (nbRuns > 20 * nbFoundIrred) {
         break;
       }
     }
   }
+  std::cerr << "nbFoundIrred=" << nbFoundIrred << " nbRuns=" << nbRuns << "\n";
   //
   // Above we have determined an initial list of facets.
   // Now we use it to do the full enumeration
@@ -228,6 +247,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   };
   auto ProcessOnePoint=[&](int const& i_row) -> void {
     bool test = FastStatusDetermination(i_row);
+    std::cerr << "i_row=" << i_row << " test=" << test << "\n";
     if (!test) { // The heuristic works. We conclude
       RedundancyStatus[i_row] = 0;
       return;

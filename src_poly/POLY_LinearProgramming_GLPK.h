@@ -171,8 +171,6 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
     for (int i=0; i<lenA; i++)
       ListPair[i].eVal=eVectNew(i+1);
   };
-
-  
   int iConst=0;
   std::vector<std::vector<PairCV> > LLPair(nbIneq);
   for (int k=0; k<Aspmat.outerSize(); ++k)
@@ -477,7 +475,6 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(MySparseMa
   if (glp_get_status(prob) != GLP_OPT) {
     return {false, double(0), nbRow, nbCol, {}, {}, ColumnStatus, RowStatus};
   }
-  
 
   std::cerr << "DirectSolution, step 1\n";
   MyVector<double> DirectSolution(nbVar);
@@ -512,11 +509,7 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(MySparseMa
     ColumnStatus(iCol) = ConversionValue(val);
   }
   double TheOptimal = glp_get_obj_val(prob);
-  
-  LpSolutionSimple<double> eSol;
-  eSol.DirectSolution = DirectSolution;
-  eSol.DirectSolutionExt = DirectSolutionExt;
-  
+
   glp_erase_prob(prob);
   return {true, TheOptimal, nbRow, nbCol, DirectSolution, DirectSolutionExt, ColumnStatus, RowStatus};
 }
