@@ -218,28 +218,38 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
     //    std::cerr << "eVectDirSolExt=";
     //    WriteVector(std::cerr, eVectDirSolExt);
     Face eFace(nbRow);
-    for (int iRow=0; iRow<nbRow; iRow++) {
-      T eSum=0;
-      for (int iCol=0; iCol<nbCol; iCol++)
-	eSum += eVectDirSolExt(iCol)*TheEXT(iRow, iCol);
-      if (eSum < 0) {
-	std::cerr << "CDD_LinearProgramming Error eSum=" << eSum <<"\n";
-	std::cerr << "TheEXT=\n";
-	WriteMatrix(std::cerr, TheEXT);
-	std::cerr << "eVect=\n";
-	WriteVector(std::cerr, eVect);
-	std::cerr << "Obtained vertex solution is not valid\n";
-	std::cerr << "Please debug. Before calling TerminalEnding\n";
-	throw TerminalException{1};
-	//	TerminalEnding();
+    if (DualDefined) {
+      // The comparison with values makes sense only of the dual program is defined.
+      // Otherwise, what we may get is actually a primal_direction and it would just not
+      // make sense with negative values for eSum.
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        T eSum=0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eSum += eVectDirSolExt(iCol)*TheEXT(iRow, iCol);
+        if (eSum < 0) {
+          std::cerr << "CDD_LinearProgramming Error iRow=" << iRow << " eSum=" << eSum <<"\n";
+          std::cerr << "DualDefined=" << DualDefined << " PrimalDefined=" << PrimalDefined << "\n";
+          std::cerr << "eVectDirSolExt =";
+          for (int iCol=0; iCol<nbCol; iCol++)
+            std::cerr << " " << eVectDirSolExt(iCol);
+          std::cerr << "\n";
+          std::cerr << "TheEXT=\n";
+          WriteMatrix(std::cerr, TheEXT);
+          std::cerr << "eVect=\n";
+          WriteVector(std::cerr, eVect);
+          std::cerr << "Obtained vertex solution is not valid\n";
+          std::cerr << "Please debug. Before calling TerminalEnding\n";
+          throw TerminalException{1};
+          //	TerminalEnding();
+        }
+        if (eSum == 0)
+          eFace[iRow]=1;
       }
-      if (eSum == 0)
-	eFace[iRow]=1;
-    }
-    int nbIncd=eFace.count();
-    if (nbIncd == 0) {
-      std::cerr << "We have nbIncd=" << nbIncd << " while we should have 0 < nbIncd <= with nbRow=" << nbRow << "\n";
-      throw TerminalException{1};
+      int nbIncd=eFace.count();
+      if (nbIncd == 0) {
+        std::cerr << "We have nbIncd=" << nbIncd << " while we should have 0 < nbIncd <= with nbRow=" << nbRow << "\n";
+        throw TerminalException{1};
+      }
     }
     eSol.eFace=eFace;
     MyMatrix<T> eMatRed=SelectRow(TheEXT, eFace);
@@ -829,7 +839,6 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const& ListVect, Constraint cons
   //  std::cerr << "End of write\n";
   int nbRelation=NSP.rows();
   std::vector<MyVector<T>> ListInequalities;
-  
   for (auto & eVect : eConstraint.ListStrictlyPositive) {
     MyVector<T> eV(nbRelation+1);
     eV(0) = -1;

@@ -58,6 +58,21 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     std::cerr << " iRow=" << iRow << "\n";
     MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT, iRow);
+    std::cerr << "-------------------\n";
+    std::cerr << "H-representation\n";
+    std::cerr << "begin\n";
+    std::cerr << " " << EXT_sel.rows() << " " << EXT_sel.cols() << " integer\n";
+    for (int i_r=0; i_r<EXT_sel.rows(); i_r++) {
+      for (int i_c=0; i_c<EXT_sel.cols(); i_c++)
+        std::cerr << " " << EXT_sel(i_r, i_c);
+      std::cerr << "\n";
+    }
+    std::cerr << "end\n";
+    std::cerr << "minimize\n";
+    for (int i_c=0; i_c<EXT_sel.cols(); i_c++)
+      std::cerr << " " << eRow(i_c);
+    std::cerr << "\n";
+    std::cerr << "-------------------\n";
     std::cerr << "Before call to CDD_LinearProgramming\n";
     LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
     std::cerr << " After call to CDD_LinearProgramming\n";
@@ -68,12 +83,12 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       return {false, {}};
     std::cerr << "OptimalValue=" << eSol.OptimalValue << "\n";
     std::vector<int> ListIdx;
-    int n_rows=ListIRow.size();
-    for (int i_row=0; i_row<n_rows; i_row++) {
+    int n_rows_ineq=ListIRow.size();
+    for (int i_row=0; i_row<n_rows_ineq; i_row++) {
       T e_val = -eSol.DualSolution(i_row);
       if (e_val < 0) {
         std::cerr << "The coefficient should be non-negative\n";
-        for (int j_row=0; j_row<n_rows; j_row++) {
+        for (int j_row=0; j_row<n_rows_ineq; j_row++) {
           std::cerr << " " << eSol.DualSolution(j_row);
         }
         std::cerr << "\n";
@@ -214,7 +229,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   auto DetermineStatusSurely=[&](int const& i_row) -> std::pair<bool,std::vector<int>> {
     std::vector<int> ListIRow;
     for (int j_row=0; j_row<n_rows; j_row++)
-      if (RedundancyStatus[j_row] != 0)
+      if (RedundancyStatus[j_row] != 0 && j_row != i_row)
         ListIRow.push_back(j_row);
     std::pair<bool,std::vector<int>> ePair = GetRedundancyInfo(ListIRow, i_row);
     if (!ePair.first)
@@ -248,18 +263,22 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       std::set<int> NewCand;
       for (auto& eIdx : WorkLIdx) {
         std::pair<bool,std::vector<int>> ePair = DetermineStatusSurely(eIdx);
+        std::cerr << "ePair=" << ePair.first << " V =";
+        for (auto& fIdx : ePair.second)
+          std::cerr << " " << fIdx;
+        std::cerr << "\n";
         if (ePair.first) { // The facet is redundant
           RedundancyStatus[eIdx] = 0;
           for (auto& fIdx : ePair.second)
             NewCand.insert(fIdx);
-        } else { // The facet is irredundant. End of story
+        } else { // The facet is irredundant. Mission accomplished.
           SetIRowIrredundant(eIdx);
           return;
         }
       }
       WorkLIdx.clear();
       for (auto& eIdx : NewCand)
-        if (RedundancyStatus[eIdx] == -1)
+        if (RedundancyStatus[eIdx] == -1) // Only those unconcluded need to be considered.
           WorkLIdx.push_back(eIdx);
 #ifdef DEBUG_REDUND
       if (WorkLIdx.size() == 0) {
