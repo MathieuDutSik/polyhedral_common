@@ -92,10 +92,10 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   std::vector<int> RedundancyStatus(n_rows,-1);
   std::set<int> ListKnownIrred;
   int nbFoundIrred=0;
-  RankTool tool(n_cols);
-  auto SetIRowIrredundant(int const& i_row) -> void {
-      RedundancyStatus[idxFound] = 1;
-      ListKnownIrred.insert(idxFound);
+  RankTool<T> tool(n_cols);
+  auto SetIRowIrredundant=[&](int const& i_row) -> void {
+      RedundancyStatus[i_row] = 1;
+      ListKnownIrred.insert(i_row);
       nbFoundIrred++;
       MyVector<T> V = GetMatrixRow(EXT, i_row);
       tool.insert_if_indep(V);
