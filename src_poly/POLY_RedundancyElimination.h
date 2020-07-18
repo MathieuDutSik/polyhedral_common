@@ -49,7 +49,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   MyMatrix<T> EXT_work = RegCone.EXT;
   std::cerr << "EXT_work=\n";
   WriteMatrix(std::cerr, EXT_work);
-  // return true if it is redundant. False otherwise.
+  // return true if it is redundant. False if irredundant
   // If true, also returns a list of indices showing up positively in the decomposition
   auto GetRedundancyInfo=[&](std::vector<int> const& ListIRow, int const& iRow) -> std::pair<bool,std::vector<int>> {
     std::cerr << "ListIRow =";
@@ -91,6 +91,15 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   // -1: Still unknown 0: redundant 1: irredundant
   std::vector<int> RedundancyStatus(n_rows,-1);
   std::set<int> ListKnownIrred;
+  int nbFoundIrred=0;
+  RankTool tool(n_cols);
+  auto SetIRowIrredundant(int const& i_row) -> void {
+      RedundancyStatus[idxFound] = 1;
+      ListKnownIrred.insert(idxFound);
+      nbFoundIrred++;
+      MyVector<T> V = GetMatrixRow(EXT, i_row);
+      tool.insert_if_indep(V);
+  };
   //
   // Now computing one interior point.
   //
@@ -170,25 +179,21 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       h++;
     }
   };
-  int nbFoundIrred=0;
   int nbRuns=0;
   while(true) {
     std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
     MyVector<T> eVect = GetRandomVector();
     int idxFound = GetRandomOutsideVector_and_HitAndRun(eVect);
     if (idxFound != -1) {
-      if (RedundancyStatus[idxFound] == -1) {
-        RedundancyStatus[idxFound] = 1;
-        ListKnownIrred.insert(idxFound);
-        nbFoundIrred++;
-      }
+      if (RedundancyStatus[idxFound] == -1)
+        SetIRowIrredundant(idxFound);
     }
     nbRuns++;
 
     // Updating indexes
     // If we found less than n_cols then we know more can be found
     if (nbFoundIrred >= n_cols) {
-      if (nbRuns > 20 * nbFoundIrred) {
+      if (nbRuns > 100 * nbFoundIrred) {
         break;
       }
     }
@@ -221,9 +226,12 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     }
     return {true, LIdx};
   };
-  // If this function return false then the facet IS irredundant
-  // If it is true then it may or may not be.
+  // If it is true then it is redundant.
+  // If this function return false then the facet is redundant or not.
   auto FastStatusDetermination=[&](int const& i_row) -> bool {
+    MyVector<T> V = GetMatrixRow(EXT, i_row);
+    if (!tool.is_in_span(V))
+      return false; // We cannot conclude because the vector does not belong to the span.
     std::vector<int> ListIRow;
     for (int j_row=0; j_row<n_rows; j_row++)
       if (RedundancyStatus[j_row] == 1)
@@ -245,8 +253,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
           for (auto& fIdx : ePair.second)
             NewCand.insert(fIdx);
         } else { // The facet is irredundant. End of story
-          RedundancyStatus[eIdx] = 1;
-          ListKnownIrred.insert(eIdx);
+          SetIRowIrredundant(eIdx);
           return;
         }
       }
@@ -265,7 +272,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   auto ProcessOnePoint=[&](int const& i_row) -> void {
     bool test = FastStatusDetermination(i_row);
     std::cerr << "FastStatusDetermination : i_row=" << i_row << " test=" << test << "\n";
-    if (test) { // The heuristic works. We conclude
+    if (test) { // The heuristic works. Facet is redundant. We do conclude.
       RedundancyStatus[i_row] = 0;
       return;
     }
