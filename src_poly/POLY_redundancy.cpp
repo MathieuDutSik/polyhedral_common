@@ -23,12 +23,10 @@ int main(int argc, char *argv[])
     std::ofstream os(argv[2]);
     os << "return [";
     int nbIrred=ListIrred.size();
-    std::cerr << "nbIrred=" << nbIrred << "\n";
     for (int i=0; i<nbIrred; i++) {
       if (i>0)
         os << ",";
       int eVal = ListIrred[i] + 1;
-      std::cerr << "i=" << i << " eVal=" << eVal << "\n";
       os << eVal;
     }
     os << "];\n";

@@ -22,10 +22,10 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& 
     for (int i_col=0; i_col<n_cols; i_col++)
       TheSum(0, i_col) += EXT(i_row, i_col);
   MyMatrix<T> EXTtot = Concatenate(TheSum, EXT);
-  std::cerr << "FacetizationCone\n";
+  //  std::cerr << "FacetizationCone\n";
   MyMatrix<T> EXTbas = RowReduction(EXTtot);
-  std::cerr << "EXTbas=\n";
-  WriteMatrix(std::cerr, EXTbas);
+  //  std::cerr << "EXTbas=\n";
+  //  WriteMatrix(std::cerr, EXTbas);
   MyMatrix<T> eInvMat = Inverse(EXTbas);
   MyMatrix<T> EXT_ret = EXT * eInvMat;
   //
@@ -36,28 +36,33 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const& EXT, MyMatrix<T> const& 
 
 
 
-#define DEBUG_REDUND
+#undef DEBUG_REDUND
+#undef UNSET_OUTPUT
 
 template<typename T>
 std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
 {
   int n_rows=EXT.rows();
   int n_cols=EXT.cols();
-  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+  //  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
   MyMatrix<T> BoundingFac(0, n_cols);
   FacetizationInfo<T> RegCone = FacetizationCone(EXT, BoundingFac);
   MyMatrix<T> EXT_work = RegCone.EXT;
-  std::cerr << "EXT_work=\n";
-  WriteMatrix(std::cerr, EXT_work);
+  //  std::cerr << "EXT_work=\n";
+  //  WriteMatrix(std::cerr, EXT_work);
   // return true if it is redundant. False if irredundant
   // If true, also returns a list of indices showing up positively in the decomposition
   auto GetRedundancyInfo=[&](std::vector<int> const& ListIRow, int const& iRow) -> std::pair<bool,std::vector<int>> {
+#ifdef UNSET_OUTPUT
     std::cerr << "ListIRow =";
     for (auto& eVal : ListIRow)
       std::cerr << " " << eVal;
     std::cerr << " iRow=" << iRow << "\n";
+#endif
+    //    std::cerr << "|ListIRow|=" << ListIRow.size() << " iRow=" << iRow << "\n";
     MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT, iRow);
+#ifdef UNSET_OUTPUT
     std::cerr << "-------------------\n";
     std::cerr << "H-representation\n";
     std::cerr << "begin\n";
@@ -73,19 +78,21 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       std::cerr << " " << eRow(i_c);
     std::cerr << "\n";
     std::cerr << "-------------------\n";
-    std::cerr << "Before call to CDD_LinearProgramming\n";
+#endif
+    //    std::cerr << "Before call to CDD_LinearProgramming\n";
     LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
-    std::cerr << " After call to CDD_LinearProgramming\n";
+    //    std::cerr << " After call to CDD_LinearProgramming\n";
     if (!eSol.DualDefined || !eSol.PrimalDefined) {
       return {false, {}};
     }
     if (eSol.OptimalValue < 0)
       return {false, {}};
-    std::cerr << "OptimalValue=" << eSol.OptimalValue << "\n";
     std::vector<int> ListIdx;
     int n_rows_ineq=ListIRow.size();
+    //    std::cerr << "n_rows_ineq=" << n_rows_ineq << " OptimalValue=" << eSol.OptimalValue << "\n";
     for (int i_row=0; i_row<n_rows_ineq; i_row++) {
       T e_val = -eSol.DualSolution(i_row);
+#ifdef UNSET_OUTPUT
       if (e_val < 0) {
         std::cerr << "The coefficient should be non-negative\n";
         for (int j_row=0; j_row<n_rows_ineq; j_row++) {
@@ -94,10 +101,10 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
         std::cerr << "\n";
         throw TerminalException{1};
       }
+#endif
       if (e_val > 0)
         ListIdx.push_back(ListIRow[i_row]);
     }
-    std::cerr << "Exiting GetRedundancyInfo\n";
     return {true, ListIdx};
   };
   //
@@ -105,22 +112,22 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   //
   // -1: Still unknown 0: redundant 1: irredundant
   std::vector<int> RedundancyStatus(n_rows,-1);
-  std::set<int> ListKnownIrred;
+  std::vector<int> ListKnownIrred;
   int nbFoundIrred=0;
   RankTool<T> tool(n_cols);
   auto SetIRowIrredundant=[&](int const& i_row) -> void {
-      RedundancyStatus[i_row] = 1;
-      ListKnownIrred.insert(i_row);
-      nbFoundIrred++;
-      MyVector<T> V = GetMatrixRow(EXT, i_row);
-      tool.insert_if_indep(V);
+    RedundancyStatus[i_row] = 1;
+    ListKnownIrred.push_back(i_row);
+    nbFoundIrred++;
+    MyVector<T> V = GetMatrixRow(EXT, i_row);
+    tool.insert_if_indep(V);
   };
   //
   // Now computing one interior point.
   //
   MyVector<T> eVectInterior = GetSpaceInteriorPoint_Basic(EXT_work);
-  std::cerr << "We have eVectInterior\n";
   MyVector<T> ListScalInterior = EXT_work * eVectInterior;
+#ifdef DEBUG_REDUND
   for (int i_row=0; i_row<n_rows; i_row++) {
     T eScal = ListScalInterior(i_row);
     if (eScal <= 0) {
@@ -128,27 +135,27 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       throw TerminalException{1};
     }
   }
+#endif
   //
   // Now running the hit and run operations.
   //
   int N=10;
-  auto GetRandomVector=[&]() -> MyVector<T> {
-    MyVector<T> eVect(n_cols);
+  MyVector<T> eVect(n_cols);
+  auto SetRandomVector=[&]() -> void {
     for (int i_col=0; i_col<n_cols; i_col++) {
       int val = -N + rand() % (2*N+1);
       eVect(i_col) = val;
     }
-    return eVect;
   };
   // Return the found facet if successful. Returns -1 otherwise.
-  auto GetRandomOutsideVector_and_HitAndRun=[&](MyVector<T> const& eVect) -> int {
-    MyVector<T> ListScal = EXT_work * eVect;
+  MyVector<T> ListScal;
+  auto GetRandomOutsideVector_and_HitAndRun=[&]() -> int {
+    ListScal.noalias() = EXT_work * eVect;
     auto HasOneViolatedFacet=[&](int const& h) -> bool {
       for (int i_row=0; i_row<n_rows; i_row++) {
         T eScal = ListScal(i_row) - h * ListScalInterior(i_row);
-        if (eScal < 0) {
+        if (eScal < 0)
           return true;
-        }
       }
       return false;
     };
@@ -188,21 +195,46 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     int h = 0;
     while(true) {
       bool test = HasOneViolatedFacet(h);
-      std::cerr << "h=" << h << "\n";
+      //      std::cerr << "h=" << h << "\n";
       if (test)
         return GetSmallestValue(h);
       h++;
     }
   };
   int nbRuns=0;
+#ifdef UNSET_TRIES
+  for (int i_col=0; i_col<n_cols; i_col++) {
+    eVect(i_col) = 0;
+  }
+  for (int i_col=0; i_col<n_cols; i_col++) {
+    for (int i=0; i<2; i++) {
+      eVect(i_col) = -1 + 2*i;
+      int idxFound = GetRandomOutsideVector_and_HitAndRun();
+      if (idxFound != -1)
+        if (RedundancyStatus[idxFound] == -1)
+          SetIRowIrredundant(idxFound);
+    }
+    eVect(i_col) = 0;
+  }
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    for (int i=0; i<2; i++) {
+      int alpha = -1 + 2*i;
+      for (int i_col=0; i_col<n_cols; i_col++)
+        eVect(i_col) = EXT_work(i_row,i_col) * alpha;
+      int idxFound = GetRandomOutsideVector_and_HitAndRun();
+      if (idxFound != -1)
+        if (RedundancyStatus[idxFound] == -1)
+          SetIRowIrredundant(idxFound);
+    }
+  }
+#endif
   while(true) {
-    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
-    MyVector<T> eVect = GetRandomVector();
-    int idxFound = GetRandomOutsideVector_and_HitAndRun(eVect);
-    if (idxFound != -1) {
+    //    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
+    SetRandomVector();
+    int idxFound = GetRandomOutsideVector_and_HitAndRun();
+    if (idxFound != -1)
       if (RedundancyStatus[idxFound] == -1)
         SetIRowIrredundant(idxFound);
-    }
     nbRuns++;
 
     // Updating indexes
@@ -213,11 +245,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
       }
     }
   }
-  std::cerr << "nbFoundIrred=" << nbFoundIrred << " nbRuns=" << nbRuns << "\n";
-  std::cerr << "ListKnownIrred =";
-  for (auto & eVal : ListKnownIrred)
-    std::cerr << " " << eVal;
-  std::cerr << "\n";
+  //  std::cerr << "nbFoundIrred=" << nbFoundIrred << " nbRuns=" << nbRuns << "\n";
   //
   // Above we have determined an initial list of facets.
   // Now we use it to do the full enumeration
@@ -235,10 +263,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     if (!ePair.first)
       return {false, {}};
     std::vector<int> LIdx;
-    for (auto & eIdx : ePair.second) {
+    for (auto & eIdx : ePair.second)
       if (RedundancyStatus[eIdx] == -1)
         LIdx.push_back(eIdx);
-    }
     return {true, LIdx};
   };
   // If it is true then it is redundant.
@@ -256,17 +283,21 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   auto FindOneMoreFacet=[&](int const& i_start) -> void {
     std::vector<int> WorkLIdx{i_start};
     while(true) {
+#ifdef UNSET_OUTPUT
       std::cerr << "WorkLIdx =";
       for (auto& eVal : WorkLIdx)
         std::cerr << " " << eVal;
       std::cerr << "\n";
+#endif
       std::set<int> NewCand;
       for (auto& eIdx : WorkLIdx) {
         std::pair<bool,std::vector<int>> ePair = DetermineStatusSurely(eIdx);
+#ifdef UNSET_OUTPUT
         std::cerr << "ePair=" << ePair.first << " V =";
         for (auto& fIdx : ePair.second)
           std::cerr << " " << fIdx;
         std::cerr << "\n";
+#endif
         if (ePair.first) { // The facet is redundant
           RedundancyStatus[eIdx] = 0;
           for (auto& fIdx : ePair.second)
@@ -290,7 +321,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
   };
   auto ProcessOnePoint=[&](int const& i_row) -> void {
     bool test = FastStatusDetermination(i_row);
-    std::cerr << "FastStatusDetermination : i_row=" << i_row << " test=" << test << "\n";
+    //    std::cerr << "FastStatusDetermination : i_row=" << i_row << " test=" << test << "\n";
     if (test) { // The heuristic works. Facet is redundant. We do conclude.
       RedundancyStatus[i_row] = 0;
       return;
@@ -300,33 +331,20 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
     FindOneMoreFacet(i_row);
   };
   // Now processing all the data
-  for (int i_row=0; i_row<n_rows; i_row++) {
-    if (RedundancyStatus[i_row] == -1) {
-      std::cerr << "Before ProcessOnePoint\n";
+  for (int i_row=0; i_row<n_rows; i_row++)
+    if (RedundancyStatus[i_row] == -1)
       ProcessOnePoint(i_row);
-      std::cerr << " After ProcessOnePoint\n";
-    }
-  }
+#ifdef DEBUG_REDUND
   for (int i_row=0; i_row<n_rows; i_row++)
     if (RedundancyStatus[i_row] == -1) {
       std::cerr << "The algorithm failed to treat all the points\n";
       throw TerminalException{1};
     }
-  std::vector<int> ListKnownIrred_vect;
-  for (auto & eVal : ListKnownIrred)
-    ListKnownIrred_vect.push_back(eVal);
-  std::cerr << "|ListKnownIrred|=" << ListKnownIrred_vect.size() << "\n";
-  return ListKnownIrred_vect;
+#endif
+  std::sort(ListKnownIrred.begin(), ListKnownIrred.end());
+  //  std::cerr << "|ListKnownIrred|=" << ListKnownIrred.size() << "\n";
+  return ListKnownIrred;
 }
-
-
-
-
-
-
-
-
-
 
 
 
