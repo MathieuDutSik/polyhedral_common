@@ -6,7 +6,8 @@
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
-PROGRAM		= POLY_redundancy
+#PROGRAM		= POLY_redundancy
+PROGRAM		= POLY_redundancyClarkson
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

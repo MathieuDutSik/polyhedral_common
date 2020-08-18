@@ -198,8 +198,6 @@ void dd_abs(T &absval, T val)
 
 
 
-
-
 typedef long dd_rowrange;
 typedef long dd_colrange;
 typedef long dd_bigrange;
@@ -211,6 +209,20 @@ typedef int *dd_rowflag;
 typedef long *dd_colindex;
 typedef set_type *dd_SetVector;
 typedef set_type *dd_Aincidence;
+
+template<typename T>
+void dd_InnerProduct(T prod, dd_colrange d, T* v1, T* v2)
+{
+  T temp;
+  dd_colrange j;
+  dd_set_si(prod, 0);
+  for (j = 0; j < d; j++){
+    dd_mul(temp,v1[j],v2[j]);
+    dd_add(prod,prod,temp);
+  }
+}
+
+
 
 //typedef char dd_DataFileType[dd_filenamelen];
 //typedef char dd_LineType[globals::dd_linelenmax];
@@ -811,7 +823,7 @@ void dd_InitializeAmatrix(dd_rowrange m,dd_colrange d,T** *A)
 }
 
 template<typename T>
-void dd_InitializeArow(dd_colrange d,T* *a)
+void dd_InitializeArow(dd_colrange d, T* *a)
 {
   if (d>0) *a=new T[d];
 }
@@ -1285,11 +1297,8 @@ template<typename T>
 int dd_MatrixRowRemove(dd_matrixdata<T> **M, dd_rowrange r) /* 092 */
 {
   dd_rowrange i,m;
-  dd_colrange d;
   dd_boolean success=0;
-
   m=(*M)->rowsize;
-  d=(*M)->colsize;
 
   if (r >= 1 && r <=m){
     (*M)->rowsize=m-1;
@@ -3952,7 +3961,6 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp, T smallVal)
   dd_rowrange i;
   dd_colrange j;
   T bm,bmax,bceil;
-  int localdebug=globals::dd_FALSE;
 
   bm=2;
   bmax=1;
@@ -3988,9 +3996,6 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp, T smallVal)
     lpnew->A[m-1][j-1]=0;  /* new obj row with (0,...,0,1) */
   }
   lpnew->A[m-1][d-1]=1;
-
-  if (localdebug) dd_WriteAmatrix(stderr, lp->A, lp->m, lp->d);
-  if (localdebug) dd_WriteAmatrix(stderr, lpnew->A, lpnew->m, lpnew->d);
 
   return lpnew;
 }
@@ -4110,7 +4115,6 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  dd_boolean localdebug=globals::dd_FALSE;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
@@ -4133,7 +4137,6 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T
       for (j = 1; j <= M->colsize; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-1]);
       }  /*of j*/
-      if (localdebug) fprintf(stderr,"equality row %ld generates the reverse row %ld.\n",i,irev);
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
@@ -4144,7 +4147,7 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T
     dd_set(lp->A[m-1][j-1],M->matrix[itest-1][j-1]);
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
-  dd_add(lp->A[itest-1][0],lp->A[itest-1][0],1); /* relax the original inequality by one */
+  dd_add<T>(lp->A[itest-1][0],lp->A[itest-1][0],1); /* relax the original inequality by one */
 
   return lp;
 }
@@ -4156,7 +4159,6 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  dd_boolean localdebug=globals::dd_FALSE;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
@@ -4187,7 +4189,6 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       for (j = 2; j <= (M->colsize)+1; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-2]);
       }  /*of j*/
-      if (localdebug) fprintf(stderr,"equality row %ld generates the reverse row %ld.\n",i,irev);
     }
     for (j = 2; j <= (M->colsize)+1; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-2]);
@@ -4198,8 +4199,6 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
   lp->A[m-1][0]=0;   /* the constant term for the objective is zero */
-
-  if (localdebug) dd_WriteLP(stdout, lp);
 
   return lp;
 }
@@ -4224,7 +4223,6 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  dd_boolean localdebug=globals::dd_FALSE;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc+2;
@@ -4256,7 +4254,6 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       for (j = 2; j <= (M->colsize)+1; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-2]);
       }  /*of j*/
-      if (localdebug) fprintf(stderr,"equality row %ld generates the reverse row %ld.\n",i,irev);
     }
     for (j = 2; j <= (M->colsize)+1; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-2]);
@@ -4268,8 +4265,6 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       /* to make an LP bounded.  */
   }  /*of j*/
   lp->A[m-2][0]=1;   /* the constant term for the bounding constraint is 1 */
-
-  if (localdebug) dd_WriteLP(stdout, lp);
 
   return lp;
 }
@@ -4323,7 +4318,7 @@ dd_boolean dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, 
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
   }
 
   dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
@@ -4380,7 +4375,7 @@ dd_boolean dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* cert
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
   }
 
   lp->redcheck_extensive=globals::dd_TRUE;
@@ -4416,7 +4411,7 @@ _L99:
 }
 
 template<typename T>
-dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
+dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, T smallVal)
 {
   dd_rowrange i,m;
   dd_colrange d;
@@ -4435,7 +4430,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_InitializeArow(d,&cvec);
   set_initialize(&redset, m);
   for (i=m; i>=1; i--) {
-    if (dd_Redundant(Mcopy, i, cvec, error)) {
+    if (dd_Redundant(Mcopy, i, cvec, error, smallVal)) {
       if (localdebug) printf("dd_RedundantRows: the row %ld is redundant.\n", i);
       set_addelem(redset, i);
       dd_MatrixRowRemove(&Mcopy, i);
@@ -4615,7 +4610,7 @@ dd_boolean dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
   }
 
   dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
@@ -4719,8 +4714,10 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
                    k > 0    if it is nonredundant and assigned to the (k-1)th row of M1.
     */
   dd_matrixdata<T> *M1;
-  T* shootdir, cvec=nullptr;
-  dd_lpdata<T> *lp0, lp;
+  T* shootdir;
+  T* cvec=nullptr;
+  dd_lpdata<T>* lp0;
+  dd_lpdata<T>* lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
@@ -4738,7 +4735,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find. */
   lp0=dd_Matrix2LP(M, &err, smallVal);
-  lp=dd_MakeLPforInteriorFinding(lp0);
+  lp=dd_MakeLPforInteriorFinding(lp0, smallVal);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err, smallVal);  /* Solve the LP */
   lps=dd_CopyLPSolution(lp);
@@ -4749,7 +4746,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
     for (j=1; j<d; j++){
       for (k=1; k<=d; k++) shootdir[k-1]=0;
       shootdir[j]=1;  /* j-th unit vector */
-      ired=dd_RayShooting(M, lps->sol, shootdir);
+      ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4758,7 +4755,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
       }
 
       shootdir[j]=-1;  /* negative of the j-th unit vector */
-      ired=dd_RayShooting(M, lps->sol, shootdir);
+      ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4780,9 +4777,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
         if (localdebug) fprintf(stderr, "Checking redundancy of %ld th inequality\n", i);
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[i-1][k-1]);
-        if (!dd_Redundant(M1, irow, cvec, &err)){
+        if (!dd_Redundant(M1, irow, cvec, &err, smallVal)){
           for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lps->sol[k-1]);
-          ired=dd_RayShooting(M, lps->sol, shootdir);
+          ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
           rowflag[ired]=irow;
           for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[ired-1][k-1]);
           if (localdebug) {
@@ -4802,7 +4799,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   } else {
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
-    redset=dd_RedundantRows(M, error);
+    redset=dd_RedundantRows(M, error, smallVal);
   }
 
   dd_FreeLPData(lp);
@@ -4943,7 +4940,7 @@ dd_boolean dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certi
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
   }
 
   lp->objective = dd_LPmax;  /* the lp->objective is set by CreateLP* to LPmin */
@@ -5355,7 +5352,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
 /* 092, find the first inequality "hit" by a ray from an intpt.  */
   dd_rowrange imin=-1,i,m;
   dd_colrange j, d;
-  T* vecmin, vec;
+  T *vecmin, *vec;
   T min,t1,t2,alpha, t1min;
   dd_boolean started=globals::dd_FALSE;
   T dd_one;
@@ -7224,18 +7221,6 @@ void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrang
   }
 }
 
-template<typename T>
-void dd_InnerProduct(T prod, dd_colrange d, T* v1, T* v2)
-{
-  T temp;
-  dd_colrange j;
-  dd_set_si(prod, 0);
-  for (j = 0; j < d; j++){
-    dd_mul(temp,v1[j],v2[j]);
-    dd_add(prod,prod,temp);
-  }
-}
-
 /* end of cddcore.c */
 
 
@@ -7616,7 +7601,23 @@ std::vector<Face> ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T
 
 
 
-
+template<typename T>
+std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
+{
+  dd_ErrorType err;
+  int nbRow=TheEXT.rows();
+  dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
+  T smallVal = 0;
+  dd_rowset rows = dd_RedundantRowsViaShooting(M, &err, smallVal);
+  std::vector<int> ListIdx;
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    bool isin = set_member(i_row, rows);
+    if (isin) ListIdx.push_back(i_row);
+  }
+  dd_FreeMatrix(M);
+  set_free(rows);
+  return ListIdx;
+}
 
 
 
