@@ -1323,7 +1323,6 @@ int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r, dd_rowindex *newpos
   dd_rowrange i,m;
   dd_colrange d;
   dd_boolean success=0;
-  dd_rowindex roworder;
 
   m=(*M)->rowsize;
   d=(*M)->colsize;
