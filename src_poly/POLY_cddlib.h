@@ -126,6 +126,15 @@ int dd_cmp(T val1, T val2)
 
 
 template<typename T>
+void dd_WriteT(std::ostream & os, T* a, int d)
+{
+  os << "dd_Write T a=";
+  for (int i=0; i<d; i++)
+    os << " " << a[i];
+  os << "\n";
+}
+
+template<typename T>
 dd_boolean dd_Nonnegative(T val, T smallVal)
 {
   T rVal;
@@ -211,7 +220,7 @@ typedef set_type *dd_SetVector;
 typedef set_type *dd_Aincidence;
 
 template<typename T>
-void dd_InnerProduct(T prod, dd_colrange d, T* v1, T* v2)
+void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
 {
   T temp;
   dd_colrange j;
@@ -570,7 +579,7 @@ unsigned long set_blocks(long len)
 void set_initialize(set_type *setp, long length)
 /* Make a set with a given bit lengths  */
 {
-	long i,forlim1,len;
+    long i,forlim1,len;
 
     if (length<=0)
       len=1;
@@ -4721,7 +4730,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   dd_lpsolution<T> *lps;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
-  dd_boolean localdebug=globals::dd_FALSE;
+  dd_boolean localdebug=globals::dd_TRUE;
 
   m=M->rowsize;
   d=M->colsize;
@@ -4732,6 +4741,8 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   dd_InitializeArow(d, &cvec);
 
   rowflag = new long[m+1];
+  for (int i=0; i<=m; i++)
+    rowflag[i] = 0;
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find. */
   lp0=dd_Matrix2LP(M, &err, smallVal);
@@ -4741,11 +4752,13 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   lps=dd_CopyLPSolution(lp);
 
   if (dd_Positive(lps->optvalue, smallVal)){
+    if (localdebug) std::cout << "dd_Positive=T case\n";
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
     for (j=1; j<d; j++){
       for (k=1; k<=d; k++) shootdir[k-1]=0;
       shootdir[j]=1;  /* j-th unit vector */
+      if (localdebug) dd_WriteT(std::cerr, shootdir, d);
       ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
@@ -4773,6 +4786,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
 
     i=1;
     while(i<=m){
+      if (localdebug) std::cout << "i=" << i << " rowflag=" << rowflag[i] << "\n";
       if (rowflag[i]==0){ /* the ith inequality is not yet checked */
         if (localdebug) fprintf(stderr, "Checking redundancy of %ld th inequality\n", i);
         irow++;  M1->rowsize=irow;
@@ -4793,10 +4807,12 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
           i++;
         }
       } else {
+        if (localdebug) std::cout << "Case rowflag != 0\n";
         i++;
       }
     } /* endwhile */
   } else {
+    if (localdebug) std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
     redset=dd_RedundantRows(M, error, smallVal);
@@ -5349,12 +5365,12 @@ _L99:
 template<typename T>
 dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
 {
-/* 092, find the first inequality "hit" by a ray from an intpt.  */
-  dd_rowrange imin=-1,i,m;
+  dd_rowrange imin=-1, i, m;
   dd_colrange j, d;
   T *vecmin, *vec;
-  T min,t1,t2,alpha, t1min;
+  T min, t1, t2, alpha, t1min;
   dd_boolean started=globals::dd_FALSE;
+  dd_boolean localdebug=globals::dd_TRUE;
   T dd_one;
   dd_one=1;
   m=M->rowsize;
@@ -5373,6 +5389,9 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
 
   for (i=1; i<=m; i++){
     dd_InnerProduct(t1, d, M->matrix[i-1], p);
+    if (localdebug) {
+      std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
+    }
     if (dd_Positive(t1, smallVal)) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
       dd_div(alpha, t2, t1);
@@ -5380,10 +5399,16 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
         imin=i;  dd_set(min, alpha);
         dd_set(t1min, t1);  /* store the denominator. */
         started=globals::dd_TRUE;
+        if (localdebug) {
+          std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
+        }
       } else {
         if (dd_Smaller(alpha, min,smallVal)){
           imin=i;  dd_set(min, alpha);
           dd_set(t1min, t1);  /* store the denominator. */
+          if (localdebug) {
+            std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
+          }
         } else {
           if (dd_Equal(alpha, min,smallVal)) { /* tie break */
             for (j=1; j<= d; j++){
@@ -5393,6 +5418,9 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
             if (dd_LexSmaller(vec,vecmin, d, smallVal)){
               imin=i;  dd_set(min, alpha);
               dd_set(t1min, t1);  /* store the denominator. */
+              if (localdebug) {
+                std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+              }
             }
           }
         }
@@ -7518,7 +7546,10 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
   dd_RepresentationType rep;
+  dd_boolean localdebug=globals::dd_TRUE;
+
   T value;
+
   dd_NumberType NT;
   m_input=TheEXT.rows();
   d_input=TheEXT.cols();
@@ -7536,6 +7567,7 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
       {
 	value=TheEXT(i-1, j-1);
 	M->matrix[i-1][j - 1]=value;
+        if (localdebug) std::cerr << "i=" << i << " j=" << j << " value=" << value << "\n";
       }
   return M;
 }
@@ -7606,13 +7638,15 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
 {
   dd_ErrorType err;
   int nbRow=TheEXT.rows();
+  std::cerr << "TheEXT=\n";
+  WriteMatrix(std::cout, TheEXT);
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
   T smallVal = 0;
   dd_rowset rows = dd_RedundantRowsViaShooting(M, &err, smallVal);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {
-    bool isin = set_member(i_row, rows);
-    if (isin) ListIdx.push_back(i_row);
+    bool isin = set_member(i_row+1, rows);
+    if (!isin) ListIdx.push_back(i_row);
   }
   dd_FreeMatrix(M);
   set_free(rows);
