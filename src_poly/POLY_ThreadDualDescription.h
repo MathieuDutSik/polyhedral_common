@@ -871,7 +871,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	return {test, {}};
       };
       OrbitMinimumArr ArrMin=GetInitialMinimumArray(TheGRPrelevant);
-      GetRecord=[ArrMin,&TheGRPrelevant](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+      GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
 	ResultMinimum ResMin=GetMinimumRecord(ArrMin, eOrb);
 	int siz=eOrb.count();
 	SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
