@@ -1099,7 +1099,11 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
   m= M->rowsize;
   d= M->colsize;
   roworder = new long[m+1];
+  for (int i=0; i<=m; i++)
+    roworder[i] = 0;
   *newpos = new long[m+1];
+  for (int i=0; i<=m; i++)
+    (*newpos)[i] = 0;
   if (m >=0 && d >=0){
     Mnorm=dd_MatrixNormalizedCopy(M);
     Mcopy=dd_CreateMatrix<T>(m, d);
@@ -1143,6 +1147,8 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)
   d= M->colsize;
   preferredrows=M->linset;
   roworder = new long[m+1];
+  for (int i=0; i<=m; i++)
+    roworder[i] = 0;
   if (m >=0 && d >=0){
     for(i=1; i<=m; i++) roworder[i]=i;
     dd_UniqueRows(roworder, 1, m, M->matrix, d,preferredrows, &uniqrows);
@@ -1180,7 +1186,11 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
   m= M->rowsize;
   d= M->colsize;
   *newpos = new long[m+1];
+  for (int i=0; i<=m; i++)
+    (*newpos)[i] = 0;
   newpos1r = new long[m+1];
+  for (int i=0; i<=m; i++)
+    newpos1r[i] = 0;
   if (m>=0 && d>=0){
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1217,7 +1227,11 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   m= M->rowsize;
   d= M->colsize;
   *newpos = new long[m+1];
+  for (int i=0; i<=m; i++)
+    (*newpos)[i] = 0;
   newpos1r = new long[m+1];
+  for (int i=0; i<=m; i++)
+    newpos1r[i] = 0;
   if (m>=0 && d>=0){
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1402,6 +1416,8 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2(dd_matrixdata<T> *M, dd_rowset delset,dd_r
   msub=m;
   if (m >=0 && d >=0){
     roworder = new long[m+1];
+    for (int i=0; i<=m; i++)
+      roworder[i] = 0;
     for (i=1; i<=m; i++) {
        if (set_member(i,delset)) msub-=1;
     }
@@ -1443,6 +1459,8 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,dd_
   msub=m;
   if (m >=0 && d >=0){
     roworder = new long[m+1];
+    for (int i=0; i<=m; i++)
+      roworder[i] = 0;
     for (i=1; i<=m; i++) {
        if (set_member(i,delset)) msub-=1;
     }
@@ -1627,9 +1645,15 @@ dd_boolean dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **
   for (j=0; j<(*cone)->m_alloc; j++)
     (*cone)->Edges[j]=nullptr;
   (*cone)->InitialRayIndex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    (*cone)->InitialRayIndex[i] = 0;
   (*cone)->OrderVector = new long[(*cone)->m_alloc+1];
+  for (int i=0; i<=(*cone)->m_alloc; i++)
+    (*cone)->OrderVector[i] = 0;
 
   (*cone)->newcol = new long[((*cone)->d)+1];
+  for (int i=0; i<=(*cone)->d; i++)
+    (*cone)->newcol[i] = 0;
   for (j=0; j<=(*cone)->d; j++) (*cone)->newcol[j]=j;  /* identity map, initially */
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
   (*cone)->ColReduced   = globals::dd_FALSE;
@@ -2148,6 +2172,8 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   m= M->rowsize;
   d= M->colsize;
   delindex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    delindex[i] = 0;
   k=0; delsize=0;
   for (j=1; j<=d; j++){
     if (set_member(j, delset)){
@@ -2268,8 +2294,14 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
 
   /* Create temporary spaces to be removed at the end of this function */
   posrowindex = new long[m+1];
+  for (int i=0; i<=m; i++)
+    posrowindex[i] = 0;
   negrowindex = new long[m+1];
+  for (int i=0; i<=m; i++)
+    negrowindex[i] = 0;
   zerorowindex = new long[m+1];
+  for (int i=0; i<=m; i++)
+    zerorowindex[i] = 0;
 
   for (i = 1; i <= m; i++) {
     if (dd_Positive(M->matrix[i-1][d-1], smallVal)){
@@ -2390,7 +2422,11 @@ dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
   lp->eqnumber=0;  /* the number of equalities */
 
   lp->nbindex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    lp->nbindex[i] = 0;
   lp->given_nbindex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    lp->given_nbindex[i] = 0;
   set_initialize(&(lp->equalityset),m);
     /* i must be in the set iff i-th row is equality . */
 
@@ -3310,6 +3346,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   dd_set(maxratio,smallVal); dd_neg(maxratio,maxratio);
   rcost=new T[d_size];
   nbindex_ref = new long[d_size+1];
+  for (int i=0; i<=d_size; i++)
+    nbindex_ref[i] = 0;
 
   *err=dd_NoError; *lps=dd_LPSundecided; *s=0;
   local_m_size=m_size+1;  /* increase m_size by 1 */
@@ -3474,8 +3512,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   for (i=0; i<= 4; i++) lp->pivots[i]=0;
   maxpivots=maxpivfactor*lp->d;  /* maximum pivots to be performed before cc pivot is applied. */
   OrderVector = new long[lp->m+1];
+  for (int i=0; i<=lp->m; i++)
+    OrderVector[i] = 0;
   bflag = new long[lp->m+2];
+  for (int i=0; i<=lp->m+1; i++)
+    bflag[i] = 0;
   nbindex_ref = new long[lp->d+1];
+  for (int i=0; i<=lp->d; i++)
+    nbindex_ref[i] = 0;
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
 
@@ -3610,10 +3654,16 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   *err=dd_NoError;
   nbtemp = new long[lp->d+1];
+  for (int i=0; i<=lp->d; i++)
+    nbtemp[i] = 0;
   for (i=0; i<= 4; i++)
     lp->pivots[i]=0;
   bflag = new long[lp->m+1];
+  for (int i=0; i<=lp->m; i++)
+    bflag[i] = 0;
   OrderVector = new long[lp->m+1];
+  for (int i=0; i<=lp->m; i++)
+    OrderVector[i] = 0;
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
 
@@ -5209,6 +5259,8 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
   m=(*M)->rowsize;
   set_initialize(redset, m);
   revpos = new long[m+1];
+  for (int i=0; i<=m; i++)
+    revpos[i] = 0;
 
   success=dd_MatrixCanonicalizeLinearity(M, impl_linset, newpos, error, smallVal);
 
@@ -5464,10 +5516,16 @@ arithmetics.
 
   if (dd_debug) localdebug=dd_debug;
   nbtemp = new long[d_size+1];
+  for (int i=0; i<=d_size; i++)
+    nbtemp[i] = 0;
   for (i=0; i<= 4; i++)
     pivots[i]=0;
   bflag = new long[m_size+1];
+  for (int i=0; i<=m_size; i++)
+    bflag[i] = 0;
   OrderVector = new long[m_size+1];
+  for (int i=0; i<=m_size; i++)
+    OrderVector[i] = 0;
 
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(m_size,d_size,A,OrderVector,dd_MinIndex,rseed, smallVal);
@@ -6308,6 +6366,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   roworder = new long[M->rowsize+1];
   for (r=0; r<M->rowsize; r++)
     roworder[r+1]=r+1;
+  roworder[M->rowsize] = 0;
 
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,dd_MinIndex,roworder,
