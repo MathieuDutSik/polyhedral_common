@@ -2625,24 +2625,6 @@ int dd_LPReplaceRow(dd_lpdata<T> *lp, dd_rowrange i, T* a)
   return success;
 }
 
-/*
-  APPEAR Not to be used at all.
-template<typename T>
-T* dd_LPCopyRow(dd_lpdata<T> *lp, dd_rowrange i)
-{
-  dd_colrange j;
-  T* a;
-
-  if (i>=1 && i<=lp->m){
-    dd_InitializeArow(lp->d, &a);
-    for (j=1; j<=lp->d; j++) {
-      dd_set(a[j-1],lp->A[i-1][j-1]);
-    }
-  }
-  return a;
-}
-*/
-
 void dd_SetNumberType(char *line,dd_NumberType *number,dd_ErrorType *Error)
 {
   if (strncmp(line,"integer",7)==0) {
@@ -3257,7 +3239,7 @@ template<typename T>
 void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     T** A,T** Ts,
     dd_colindex nbindex,dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
-			      dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no, long maxpivots)
+    dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no, long maxpivots)
 {
   /* Find a dual feasible basis using Phase I of Dual Simplex method.
      If the problem is dual feasible,
