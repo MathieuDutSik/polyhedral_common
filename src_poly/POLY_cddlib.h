@@ -1762,13 +1762,6 @@ void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
         /* original column is redundant and removed for computation */
     }
   }
-
-  dd_set(b,a[0]);
-  if (rep==dd_Generator && dd_Nonzero(b)){
-    a[0]=1;
-    for (j = 2; j <= d_origsize; j++)
-       dd_div(a[j-1],a[j-1],b);    /* normalization for generators */
-  }
 }
 
 
@@ -2023,16 +2016,8 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly)
   }
   for (j=2; j<=poly->d; j++){
     if (poly->child->newcol[j]==0){
-      // original column j is dependent on others and removed for the cone
-      dd_set(b,poly->child->Bsave[0][j-1]);
-      if (outputrep==dd_Generator && dd_Positive(b)){
-        M->matrix[i][0]=1;  // dd_Normalize
-        for (j1=1; j1<poly->d; j1++)
-          dd_div(M->matrix[i][j1],(poly->child->Bsave[j1][j-1]),b);
-      } else {
-        for (j1=0; j1<poly->d; j1++)
-          dd_set(M->matrix[i][j1],poly->child->Bsave[j1][j-1]);
-      }
+      for (j1=0; j1<poly->d; j1++)
+        dd_set(M->matrix[i][j1],poly->child->Bsave[j1][j-1]);
       set_addelem(M->linset, i+1);
       i++;
     }
@@ -2206,8 +2191,7 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
 
 
 template<typename T>
-void dd_LinearComb(T &lc, T v1, T c1, T v2, T c2)
-/*  lc := v1 * c1 + v2 * c2   */
+inline void dd_LinearComb(T &lc, T v1, T c1, T v2, T c2)
 {
   T temp;
   dd_mul(lc,v1,c1);
@@ -2313,7 +2297,6 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
           M->matrix[posrowindex[ip]-1][d-1]);
         dd_set(Mnew->matrix[inew-1][j-1],temp2);
       }
-      dd_Normalize(dnew,Mnew->matrix[inew-1]);
     }
   }
 
@@ -2956,7 +2939,6 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
       for (j1 = 1; j1 <= d_size; j1++){
         dd_mul(Xtemp1,Xtemp,Ts[j1-1][s - 1]);
         dd_sub(Ts[j1-1][j-1],Ts[j1-1][j-1],Xtemp1);
- /*     T[j1-1][j-1] -= T[j1-1][s - 1] * Xtemp / Xtemp0;  */
       }
     }
   }
@@ -6146,32 +6128,6 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
 }
 
 template<typename T>
-void dd_Normalize(dd_colrange d_size, T *V)
-{
-  long j;
-  T temp,min;
-  bool nonzerofound=false;
-
-  if (d_size>0){
-    dd_abs(min,V[0]);
-    if (dd_Positive(min)) nonzerofound=true;
-    for (j = 1; j < d_size; j++) {
-      dd_abs(temp,V[j]);
-      if (dd_Positive(temp)){
-        if (!nonzerofound || dd_Smaller(temp,min)){
-          nonzerofound=true;
-          dd_set(min, temp);
-        }
-      }
-    }
-    if (dd_Positive(min)){
-      for (j = 0; j < d_size; j++) dd_div(V[j], V[j], min);
-    }
-  }
-}
-
-
-template<typename T>
 void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T** A, T *x, dd_rowset ZS)
 {
   dd_rowrange i;
@@ -6204,7 +6160,6 @@ template<typename T>
 void dd_CopyNormalizedArow(T *acopy, T *a, dd_colrange d)
 {
   dd_CopyArow(acopy, a, d);
-  dd_Normalize(d,acopy);
 }
 
 
@@ -6474,7 +6429,6 @@ void dd_CreateNewRay(dd_conedata<T> *cone,
   for (j = 0; j < cone->d; j++){
     dd_LinearComb(NewRay[j], Ptr1->Ray[j],v2,Ptr2->Ray[j],v1);
   }
-  dd_Normalize(cone->d, NewRay);
   dd_AddRay(cone, NewRay);
   delete [] NewRay;
 }
@@ -7410,23 +7364,18 @@ void dd_InitialDataSetup(dd_conedata<T> *cone)
   set_copy(cone->AddedHalfspaces, cone->InitialHalfspaces);
   set_copy(cone->WeaklyAddedHalfspaces, cone->InitialHalfspaces);
   dd_UpdateRowOrderVector(cone, cone->InitialHalfspaces);
-  for (r = 1; r <= cone->d; r++)
-    {
-      for (j = 0; j < cone->d; j++)
-	{
-	  dd_set(Vector1[j], cone->B[j][r-1]);
-	  dd_neg(Vector2[j], cone->B[j][r-1]);
-	}
-      dd_Normalize(cone->d, Vector1);
-      dd_Normalize(cone->d, Vector2);
-      dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1, ZSet);
-      if (set_subset(cone->EqualitySet, ZSet))
-	{
-	  dd_AddRay(cone, Vector1);
-	  if (cone->InitialRayIndex[r]==0)
-	    dd_AddRay(cone, Vector2);
-	}
+  for (r = 1; r <= cone->d; r++) {
+    for (j = 0; j < cone->d; j++) {
+      dd_set(Vector1[j], cone->B[j][r-1]);
+      dd_neg(Vector2[j], cone->B[j][r-1]);
     }
+    dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1, ZSet);
+    if (set_subset(cone->EqualitySet, ZSet)) {
+      dd_AddRay(cone, Vector1);
+      if (cone->InitialRayIndex[r]==0)
+        dd_AddRay(cone, Vector2);
+    }
+  }
   dd_CreateInitialEdges(cone);
   cone->Iteration = cone->d + 1;
   if (cone->Iteration > cone->m) cone->CompStatus=dd_AllFound; /* 0.94b  */
