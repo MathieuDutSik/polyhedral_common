@@ -487,12 +487,6 @@ struct dd_polyhedradata {
     /* dominant set of rows (those containing all rays). */
 };
 
-
-
-/* Global Variables */
-extern bool dd_debug;
-extern bool dd_log;
-
 /* end of cddtypes.h */
 /* cdd.h: Header file for cddlib.c
    written by Komei Fukuda, fukuda@ifor.math.ethz.ch
@@ -861,8 +855,8 @@ dd_matrixdata<T> *dd_MatrixCopy(dd_matrixdata<T> *M)
   dd_rowrange m;
   dd_colrange d;
 
-  m= M->rowsize;
-  d= M->colsize;
+  m = M->rowsize;
+  d = M->colsize;
   if (m >=0 && d >=0){
     Mcopy=dd_CreateMatrix<T>(m, d);
     dd_CopyAmatrix(Mcopy->matrix, M->matrix, m, d);
@@ -3286,7 +3280,6 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   T scaling,svalue;  /* random scaling mytype value */
   T minval;
   minval=0; // added by MDS
-  if (dd_debug) localdebug=dd_debug;
   maxcost = 0;
   maxratio = 0;
   rcost=new T[d_size];
@@ -3846,7 +3839,6 @@ When LP is dual-inconsistent then *se returns the evidence column.
   ddf_ErrorType errf;
   bool LPScorrect=false;
   bool localdebug=false;
-  if (dd_debug) localdebug=dd_debug;
 #endif
 
   *err=dd_NoError;
@@ -5407,7 +5399,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
           }
         } else {
           if (dd_Equal(alpha, min)) { /* tie break */
-            for (j=1; j<= d; j++){
+            for (j=1; j<= d; j++) {
               dd_div(vecmin[j-1], M->matrix[imin-1][j-1], t1min);
               dd_div(vec[j-1], M->matrix[i-1][j-1], t1);
             }
@@ -5459,7 +5451,6 @@ arithmetics.
   //  dd_LPStatusType ddlps;
   bool localdebug=false;
 
-  if (dd_debug) localdebug=dd_debug;
   nbtemp = new long[d_size+1];
   for (int i=0; i<=d_size; i++)
     nbtemp[i] = 0;
@@ -5627,7 +5618,6 @@ void dd_CheckAdjacency(dd_conedata<T> *cone,
   set_initialize(&Face, cone->m);
   set_initialize(&Face1, cone->m);
 
-  if (dd_debug) localdebug=true;
   *adjacent = true;
   set_int(Face1, (*RP1)->ZeroSet, (*RP2)->ZeroSet);
   set_int(Face, Face1, cone->AddedHalfspaces);
@@ -5719,7 +5709,7 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p, bool *feasible)
   dd_colrange j;
   T temp;
   dd_raydata<T> *RR;
-  bool localdebug=dd_debug;
+  bool localdebug=false;
 
   RR=cone->LastRay;
   *feasible = true;
@@ -5793,24 +5783,25 @@ template<typename T>
 void dd_AddRay(dd_conedata<T> *cone, T *p)
 {
   bool feasible, weaklyfeasible;
+  bool localdebug=false;
 
   if (cone->FirstRay == nullptr) {
     cone->FirstRay = new dd_raydata<T>;
     cone->FirstRay->Ray = new T[cone->d];
-    if (dd_debug)
+    if (localdebug)
       fprintf(stderr,"Create the first ray pointer\n");
     cone->LastRay = cone->FirstRay;
     cone->ArtificialRay->Next = cone->FirstRay;
   } else {
     cone->LastRay->Next = new dd_raydata<T>;
     cone->LastRay->Next->Ray = new T[cone->d];
-    if (dd_debug) fprintf(stderr,"Create a new ray pointer\n");
+    if (localdebug) fprintf(stderr,"Create a new ray pointer\n");
     cone->LastRay = cone->LastRay->Next;
   }
   cone->LastRay->Next = nullptr;
   cone->RayCount++;
   cone->TotalRayCount++;
-  if (dd_debug) {
+  if (localdebug) {
     if (cone->TotalRayCount % 100 == 0) {
       fprintf(stderr,"*Rays (Total, Currently Active, Feasible) =%8ld%8ld%8ld\n",
 	 cone->TotalRayCount, cone->RayCount, cone->FeasibleRayCount);
@@ -5836,6 +5827,7 @@ void dd_AddArtificialRay(dd_conedata<T> *cone)
   T* zerovector;
   dd_colrange d1;
   bool feasible;
+  bool localdebug=false;
 
   if (cone->d<=0) d1=1; else d1=cone->d;
   dd_InitializeArow(d1, &zerovector);
@@ -5847,7 +5839,7 @@ void dd_AddArtificialRay(dd_conedata<T> *cone)
   cone->ArtificialRay = new dd_raydata<T>;
   cone->ArtificialRay->Ray = new T[d1];
 
-  if (dd_debug) fprintf(stderr,"Create the artificial ray pointer\n");
+  if (localdebug) fprintf(stderr,"Create the artificial ray pointer\n");
 
   cone->LastRay=cone->ArtificialRay;
   dd_StoreRay1(cone, zerovector, &feasible);
@@ -6005,6 +5997,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
   bool ptr2found,quit;
   long count=0,pos1, pos2;
   float workleft,prevworkleft=110.0,totalpairs;
+  bool localdebug=false;
 
   totalpairs=(cone->ZeroRayCount-1.0)*(cone->ZeroRayCount-2.0)+1.0;
   Ptr2begin = nullptr;
@@ -6037,12 +6030,14 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
     Ptr1=Ptr1->Next;
     pos1++;
     workleft = 100.0 * (cone->ZeroRayCount-pos1) * (cone->ZeroRayCount - pos1-1.0) / totalpairs;
-    if (cone->ZeroRayCount>=500 && dd_debug && pos1%10 ==0 && prevworkleft-workleft>=10 ) {
-      fprintf(stderr,"*Work of iteration %5ld(/%ld): %4ld/%4ld => %4.1f%% left\n",
-	     cone->Iteration, cone->m, pos1, cone->ZeroRayCount, workleft);
-      prevworkleft=workleft;
+    if (localdebug) {
+      if (cone->ZeroRayCount>=500 && pos1%10 ==0 && prevworkleft-workleft>=10 ) {
+        fprintf(stderr,"*Work of iteration %5ld(/%ld): %4ld/%4ld => %4.1f%% left\n",
+                cone->Iteration, cone->m, pos1, cone->ZeroRayCount, workleft);
+        prevworkleft=workleft;
+      }
     }
-  }while(Ptr1!=RRend && Ptr1!=nullptr);
+  } while (Ptr1!=RRend && Ptr1!=nullptr);
 _L99:;
 }
 
@@ -6221,11 +6216,9 @@ template<typename T>
 void dd_FreeMatrix(dd_matrixdata<T> *M)
 {
   dd_rowrange m1;
-  dd_colrange d1;
 
   if (M!=nullptr) {
     if (M->rowsize<=0) m1=1; else m1=M->rowsize;
-    if (M->colsize<=0) d1=1; else d1=M->colsize;
     if (M!=nullptr) {
       dd_FreeAmatrix(m1, M->matrix);
       dd_FreeArow(M->rowvec);
@@ -6269,6 +6262,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   dd_rowrange r;
   dd_colrange s;
   long rank;
+  bool localdebug=false;
 
   rank = 0;
   stop = false;
@@ -6289,7 +6283,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,roworder,
 		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
-      if (dd_debug && chosen)
+      if (localdebug && chosen)
         fprintf(stderr,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
         set_addelem(NopivotRow, r);
@@ -6320,6 +6314,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   dd_colset ColSelected;
   dd_rowrange r;
   dd_colrange j,s;
+  bool localdebug=false;
 
   *rank = 0;
   stop = false;
@@ -6332,7 +6327,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
 		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
-      if (dd_debug && chosen)
+      if (localdebug && chosen)
         fprintf(stderr,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
         set_addelem(cone->InitialHalfspaces, r);
@@ -6358,6 +6353,7 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found)
   dd_rowrange i;
   long rank;
   dd_RowOrderType roworder_save=dd_LexMin;
+  bool localdebug=false;
 
   *found = false;
   set_initialize(&CandidateRows, cone->m);
@@ -6372,13 +6368,13 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found)
     /*all rows not in NonequalitySet are candidates for initial cone*/
   dd_FindBasis(cone, &rank);
   cone->LinearityDim=cone->d - rank;
-  if (dd_debug) fprintf(stderr,"Linearity Dimension = %ld\n", cone->LinearityDim);
+  if (localdebug) fprintf(stderr,"Linearity Dimension = %ld\n", cone->LinearityDim);
   if (cone->LinearityDim > 0) {
      dd_ColumnReduce(cone);
      dd_FindBasis(cone, &rank);
   }
   if (!set_subset(cone->EqualitySet,cone->InitialHalfspaces)) {
-    if (dd_debug) {
+    if (localdebug) {
       fprintf(stderr,"Equality set is dependent. Equality Set and an initial basis:\n");
     };
   }
@@ -6398,8 +6394,9 @@ template<typename T>
 void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **RP2, bool *equal)
 {
   long j;
+  bool localdebug=false;
 
-  if (dd_debug)
+  if (localdebug)
     fprintf(stderr,"Check equality of two rays\n");
   *equal = true;
   j = 1;
@@ -6776,6 +6773,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   double prevprogress, progress;
   T value1, value2;
   bool adj, equal, completed;
+  bool localdebug=false;
 
   dd_EvaluateARay1(hnew, cone);
    /*Check feasibility of rays w.r.t. hnew
@@ -6829,7 +6827,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     }
     pos1++;
     progress = 100.0 * ((double)pos1 / pos2) * (2.0 * pos2 - pos1) / pos2;
-    if (progress-prevprogress>=10 && pos1%10==0 && dd_debug) {
+    if (progress-prevprogress>=10 && pos1%10==0 && localdebug) {
       fprintf(stderr,"*Progress of iteration %5ld(/%ld):   %4ld/%4ld => %4.1f%% done\n",
 	     cone->Iteration, cone->m, pos1, pos2, progress);
       prevprogress=progress;
@@ -6843,6 +6841,7 @@ template<typename T>
 void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 /* This procedure must be used under PreOrderedRun mode */
 {
+  bool localdebug=false;
   //  dd_raydata<T> *RayPtr0;
   dd_raydata<T> *RayPtr1;
   dd_raydata<T> *RayPtr2;
@@ -6885,7 +6884,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 
   if (cone->Iteration<cone->m){
     if (cone->ZeroHead!=nullptr && cone->ZeroHead!=cone->LastRay){
-      if (cone->ZeroRayCount>200 && dd_debug) fprintf(stderr,"*New edges being scanned...\n");
+      if (cone->ZeroRayCount>200 && localdebug) fprintf(stderr,"*New edges being scanned...\n");
       dd_UpdateEdges(cone, cone->ZeroHead, cone->LastRay);
     }
   }
@@ -6974,9 +6973,8 @@ void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 template<typename T>
 void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
-  /*Choose the next hyperplane with the most unbalanced cut*/
   long i, fea, inf, max, tmax, fi=0, infi=0;
-      /*feasibility and infeasibility numbers*/
+  bool localdebug=false;
 
   max = -1;
   for (i = 1; i <= cone->m; i++) {
@@ -6994,12 +6992,12 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       }
     }
   }
-  if (!dd_debug)
-    return;
-  if (max == fi) {
-    fprintf(stderr,"*infeasible rays (min) =%5ld, #feas rays =%5ld\n", infi, fi);
-  } else {
-    fprintf(stderr,"*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi, fi);
+  if (localdebug) {
+    if (max == fi) {
+      fprintf(stderr,"*infeasible rays (min) =%5ld, #feas rays =%5ld\n", infi, fi);
+    } else {
+      fprintf(stderr,"*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi, fi);
+    }
   }
 }
 
@@ -7014,13 +7012,13 @@ void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
   v1 = nullptr;
   for (i = 1; i <= cone->m; i++) {
     if (!set_member(i, excluded)) {
-	  v2 = cone->A[i - 1];
+      v2 = cone->A[i - 1];
       if (minindex == 0) {
-	    minindex = i;
-	    v1=v2;
+        minindex = i;
+        v1=v2;
       } else if (dd_LexSmaller(v2,v1,cone->d)) {
         minindex = i;
-	    v1=v2;
+        v1=v2;
       }
     }
   }
@@ -7261,14 +7259,6 @@ void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrang
 */
 
 
-/* Global Variables */
-bool dd_debug               =false;
-bool dd_log                 =false;
-/* GLOBAL CONSTANTS and STATICS VARIABLES (to be set by dd_set_global_constants() */
-
-/* #include <profile.h>    THINK C PROFILER */
-/* #include <console.h>    THINK C PROFILER */
-
 template<typename T>
 void dd_DDInit(dd_conedata<T> *cone)
 {
@@ -7289,7 +7279,7 @@ template<typename T>
 void dd_DDMain(dd_conedata<T> *cone)
 {
   dd_rowrange hh, itemp, otemp;
-  bool locallog=dd_log; /* if dd_log=false, no log will be written.  */
+  bool localdebug=false;
 
   if (cone->d<=0){
     cone->Iteration=cone->m;
@@ -7300,7 +7290,7 @@ void dd_DDMain(dd_conedata<T> *cone)
   while (cone->Iteration <= cone->m) {
     dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces, &hh);
     if (set_member(hh,cone->NonequalitySet)){  /* Skip the row hh */
-      if (dd_debug) {
+      if (localdebug) {
         fprintf(stderr,"*The row # %3ld should be inactive and thus skipped.\n", hh);
       }
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
@@ -7322,7 +7312,7 @@ void dd_DDMain(dd_conedata<T> *cone)
       cone->OrderVector[itemp]=otemp;
         /* store the dynamic ordering in ordervec */
     }
-    if (locallog){
+    if (localdebug) {
       fprintf(stderr,"(Iter, Row, #Total, #Curr, #Feas)= %5ld %5ld %9ld %6ld %6ld\n",
         cone->Iteration, hh, cone->TotalRayCount, cone->RayCount,
         cone->FeasibleRayCount);
