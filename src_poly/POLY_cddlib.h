@@ -2861,7 +2861,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
 }
 
 
-void dd_SelectPreorderedNext2(dd_rowrange m_size,dd_colrange d_size,
+void dd_SelectPreorderedNext2(dd_rowrange m_size,
     rowset excluded,dd_rowindex OV,dd_rowrange *hnext)
 {
   dd_rowrange i,k;
@@ -2877,7 +2877,7 @@ void dd_SelectPreorderedNext2(dd_rowrange m_size,dd_colrange d_size,
 
 template<typename T>
 void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
-		     dd_RowOrderType roworder,dd_rowindex ordervec, rowset equalityset,
+		     dd_rowindex ordervec, rowset equalityset,
 		     dd_rowrange rowmax,rowset NopivotRow,
 		     colset NopivotCol,dd_rowrange *r,dd_colrange *s,
 		     bool *selected)
@@ -2906,7 +2906,7 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
       }
       i++;
     }
-    if (rtemp==0) dd_SelectPreorderedNext2(m_size,d_size,rowexcluded,ordervec,&rtemp);;
+    if (rtemp==0) dd_SelectPreorderedNext2(m_size, rowexcluded,ordervec,&rtemp);;
     if (rtemp>=1) {
       *r=rtemp;
       *s=1;
@@ -2933,7 +2933,7 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
 }
 
 template<typename T>
-void dd_GaussianColumnPivot(dd_rowrange m_size, dd_colrange d_size,
+void dd_GaussianColumnPivot(dd_colrange d_size,
     T** X, T** Ts, dd_rowrange r, dd_colrange s)
 /* Update the Transformation matrix T with the pivot operation on (r,s)
    This procedure performs a implicit pivot operation on the matrix X by
@@ -2966,7 +2966,7 @@ void dd_GaussianColumnPivot(dd_rowrange m_size, dd_colrange d_size,
 }
 
 template<typename T>
-void dd_GaussianColumnPivot2(dd_rowrange m_size,dd_colrange d_size,
+void dd_GaussianColumnPivot2(dd_colrange d_size,
     T** A,T** Ts,dd_colindex nbindex,dd_rowindex bflag,dd_rowrange r,dd_colrange s)
 /* Update the Transformation matrix T with the pivot operation on (r,s)
    This procedure performs a implicit pivot operation on the matrix A by
@@ -2975,7 +2975,7 @@ void dd_GaussianColumnPivot2(dd_rowrange m_size,dd_colrange d_size,
 {
   long entering;
 
-  dd_GaussianColumnPivot(m_size,d_size,A,Ts,r,s);
+  dd_GaussianColumnPivot(d_size,A,Ts,r,s);
   entering=nbindex[s];
   bflag[r]=s;     /* the nonbasic variable r corresponds to column s */
   nbindex[s]=r;   /* the nonbasic variable on s column is r */
@@ -3159,12 +3159,12 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
 
   stop=false;
   do {   /* Find a LP basis */
-    dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset,
+    dd_SelectPivot2(m_size,d_size,A,Ts,OV,equalityset,
 		    m_size,RowSelected,ColSelected,&r,&s,&chosen);
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
-      dd_GaussianColumnPivot2(m_size,d_size,A,Ts,nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s);
       pivots_p0++;
       rank++;
     } else {
@@ -3238,12 +3238,12 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
 
   stop=false;
   do {   /* Find a LP basis */
-    dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
+    dd_SelectPivot2(m_size,d_size,A,Ts,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
 
-      dd_GaussianColumnPivot2(m_size,d_size,A,Ts,nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s);
       pivots_p0++;
       rank++;
     } else{
@@ -3254,7 +3254,7 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
       if (negcount){
         /* Now it tries to pivot on rows that are supposed to be dependent. */
         set_diff(ColSelected, ColSelected, DependentCols);
-        dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
+        dd_SelectPivot2(m_size,d_size,A,Ts,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
         if (chosen) *found=false;  /* not supposed to be independent */
         else *found=true;
         if (localdebug){
@@ -3365,7 +3365,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     }
 
     /* Pivot on (local_m_size,ms) so that the dual basic solution becomes feasible */
-    dd_GaussianColumnPivot2(local_m_size,d_size,A,Ts,nbindex,bflag,local_m_size,ms);
+    dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,local_m_size,ms);
     pivots_p1=pivots_p1+1;
     if (localdebug) {
       printf("\ndd_FindDualFeasibleBasis: Pivot on %ld %ld.\n",local_m_size,ms);
@@ -3412,11 +3412,11 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
           goto _L99;
         }
 
-        dd_GaussianColumnPivot2(local_m_size,d_size,A,Ts,nbindex,bflag,r_val,ms);
+        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,ms);
         pivots_p1++;
         stop=true;
       } else {
-        dd_GaussianColumnPivot2(local_m_size,d_size,A,Ts,nbindex,bflag,r_val,s_val);
+        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,s_val);
         pivots_p1=pivots_p1+1;
         if (bflag[local_m_size]<0) {
           stop=true;
@@ -3553,7 +3553,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       if (chosen) pivots_pc=pivots_pc+1;
     }
     if (chosen) {
-      dd_GaussianColumnPivot2(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
     } else {
       switch (lp->LPS){
       case dd_Inconsistent: lp->re=r; break;
@@ -3571,7 +3571,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 _L99:
   lp->pivots[2]=pivots_ds;
   lp->pivots[3]=pivots_pc;
-  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag);
+  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra, lp->re,lp->se,bflag);
   delete [] OrderVector;
   delete [] bflag;
   delete [] nbindex_ref;
@@ -3651,7 +3651,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
 			     lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
     if (chosen) {
-      dd_GaussianColumnPivot2(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
       pivots1++;
     } else {
       switch (lp->LPS){
@@ -3671,7 +3671,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 _L99:
   lp->pivots[1]+=pivots1;
   dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,
-		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag);
+		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra, lp->re,lp->se,bflag);
   delete [] nbtemp;
   delete [] bflag;   /* called previously with different lp->m */
   delete [] OrderVector;
@@ -3681,7 +3681,7 @@ template<typename T>
 void dd_SetSolutions(dd_rowrange m_size,dd_colrange d_size,
    T** A,T** Ts,
    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
-   T & optvalue,T* sol,T* dsol,dd_rowset posset, dd_colindex nbindex,
+   T & optvalue,T* sol,T* dsol,dd_rowset posset,
 		     dd_rowrange re,dd_colrange se,dd_rowindex bflag)
 /*
 Assign the solution vectors to sol,dsol,*optvalue after solving
@@ -5588,7 +5588,7 @@ arithmetics.
   /*  ddlps=LPSf2LPS(LPS);*/
 
   dd_SetSolutions(m_size,d_size,A,Ts,
-   objrow,rhscol,LPS,optvalue,sol,dsol,posset,nbindex,re,senew,bflag);
+   objrow,rhscol,LPS,optvalue,sol,dsol,posset,re,senew,bflag);
   *nse=senew;
 
 
@@ -6332,7 +6332,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   roworder[M->rowsize] = 0;
 
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,dd_MinIndex,roworder,
+      dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,roworder,
 		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
       if (dd_debug && chosen)
         fprintf(stderr,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
@@ -6342,7 +6342,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
         set_addelem(ColSelected, s);
         set_addelem(*colbasis, s);
         rank++;
-        dd_GaussianColumnPivot(M->rowsize, M->colsize, M->matrix, B, r, s);
+        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s);
       } else {
         stop=true;
       }
@@ -6375,7 +6375,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   set_copy(NopivotRow,cone->NonequalitySet);
   dd_SetToIdentity(cone->d, cone->B);
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(cone->m, cone->d,cone->A,cone->B,cone->HalfspaceOrder,cone->OrderVector,
+      dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
 		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
       if (dd_debug && chosen)
         fprintf(stderr,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
@@ -6385,7 +6385,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
         set_addelem(ColSelected, s);
         cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
         (*rank)++;
-        dd_GaussianColumnPivot(cone->m, cone->d, cone->A, cone->B, r, s);
+        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s);
       } else {
         stop=true;
       }
