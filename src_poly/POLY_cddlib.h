@@ -28,98 +28,71 @@ namespace cdd {
   typedef enum {
     dd_CrissCross, dd_DualSimplex
   } dd_LPSolverType;
-  namespace globals {
-    const int dd_FALSE=0;
-    const int dd_TRUE=1;
-    //    int dd_wordlenmax=1024;
-    //    int dd_linelenmax=4096;
-  }
   const dd_LPSolverType dd_choiceLPSolverDefault=dd_DualSimplex;  /* Default LP solver Algorithm */
   const dd_LPSolverType dd_choiceRedcheckAlgorithm=dd_DualSimplex;  /* Redundancy Checking Algorithm */
-  const int dd_choiceLexicoPivotQ=globals::dd_TRUE;    /* whether to use the lexicographic pivot */
+  const bool dd_choiceLexicoPivotQ=true;    /* whether to use the lexicographic pivot */
   typedef unsigned char set_card_lut_t;
-  typedef int dd_boolean;
+
+  template<typename T>
+  inline void dd_set(T& a, T b)
+  {
+    a=b;
+  }
+
+  template<typename T>
+  inline void dd_set_si(T& a, int b)
+  {
+    a=b;
+  }
 
 template<typename T>
-void dd_set(T& a, T b)
+inline void dd_set_si2(T& a, int b)
 {
   a=b;
 }
 
 template<typename T>
-void dd_set_si(T& a, int b)
-{
-  a=b;
-}
-
-template<typename T>
-void dd_set_si2(T& a, int b)
-{
-  a=b;
-}
-
-template<typename T>
-void dd_add(T &a, T b, T c)
+inline void dd_add(T &a, T b, T c)
 {
   a=b + c;
 }
 
 template<typename T>
-void dd_sub(T &a, T b, T c)
+inline void dd_sub(T &a, T b, T c)
 {
   a=b - c;
 }
 
 template<typename T>
-void dd_mul(T &a, T b, T c)
+inline void dd_mul(T &a, T b, T c)
 {
   a=b * c;
 }
 
 template<typename T>
-void dd_div(T &a, T b, T c)
+inline void dd_div(T &a, T b, T c)
 {
   a=b / c;
 }
 
 template<typename T>
-void dd_neg(T &a, T b)
+inline void dd_neg(T &a, T b)
 {
   a=-b;
 }
 
 template<typename T>
-void dd_inv(T &a, T b)
+inline void dd_inv(T &a, T b)
 {
   a=1/b;
 }
 
 template<typename T>
-int dd_pos(T a, T b)
+inline int dd_pos(T a, T b)
 {
   if (a>b)
     return 1;
   if (a<b)
-    return -1;
-  return 0;
-}
-
-template<typename T>
-int dd_sgn(T a)
-{
-  if (a>0)
-    return 1;
-  if (a<0)
-    return -1;
-  return 0;
-}
-
-template<typename T>
-int dd_cmp(T val1, T val2)
-{
-  if (val1 > val2)
-    return 1;
-  if (val1 < val2)
     return -1;
   return 0;
 }
@@ -135,71 +108,61 @@ void dd_WriteT(std::ostream & os, T* a, int d)
 }
 
 template<typename T>
-dd_boolean dd_Nonnegative(T val, T smallVal)
+inline bool dd_Nonnegative(T val)
 {
-  T rVal;
-  rVal=-smallVal;
-  if (dd_cmp(val,rVal)>=0)
-    return globals::dd_TRUE;
-  return globals::dd_FALSE;
+  return val >= 0;
 }
 
 template<typename T>
-dd_boolean dd_Nonpositive(T val, T smallVal)
+inline bool dd_Nonpositive(T val)
 {
-  if (dd_cmp(val,smallVal)<=0) return globals::dd_TRUE;
-  else return globals::dd_FALSE;
+  return val <= 0;
 }
 
 template<typename T>
-dd_boolean dd_Positive(T val, T smallVal)
+inline bool dd_Positive(T val)
 {
-  return !dd_Nonpositive(val, smallVal);
+  return val > 0;
 }
 
 template<typename T>
-dd_boolean dd_Negative(T val, T smallVal)
+inline bool dd_Negative(T val)
 {
-  return !dd_Nonnegative(val, smallVal);
+  return val < 0;
 }
 
 template<typename T>
-dd_boolean dd_EqualToZero(T val, T smallVal)
+inline bool dd_EqualToZero(T val)
 {
-  return (dd_Nonnegative(val, smallVal) && dd_Nonpositive(val, smallVal));
+  return val == 0;
 }
 
 template<typename T>
-dd_boolean dd_Nonzero(T val, T smallVal)
+inline bool dd_Nonzero(T val)
 {
-  return (dd_Positive(val,smallVal) || dd_Negative(val,smallVal));
+  return val != 0;
 }
 
 template<typename T>
-dd_boolean dd_Larger(T val1,T val2, T smallVal)
+inline bool dd_Larger(T val1,T val2)
 {
-  T temp;
-  dd_boolean answer;
-
-  dd_sub(temp,val1, val2);
-  answer=dd_Positive(temp, smallVal);
-  return answer;
+  return val1 > val2;
 }
 
 template<typename T>
-dd_boolean dd_Smaller(T val1,T val2, T smallVal)
+inline bool dd_Smaller(T val1,T val2)
 {
-  return dd_Larger(val2,val1, smallVal);
+  return val1 < val2;
 }
 
 template<typename T>
-dd_boolean dd_Equal(T val1,T val2, T smallVal)
+inline bool dd_Equal(T val1,T val2)
 {
-  return (!dd_Larger(val1,val2, smallVal) && !dd_Smaller(val1,val2, smallVal));
+  return val1 == val2;
 }
 
 template<typename T>
-void dd_abs(T &absval, T val)
+inline void dd_abs(T &absval, T val)
 {
   if (val < 0) dd_neg(absval,val);
   else dd_set(absval,val);
@@ -220,7 +183,7 @@ typedef set_type *dd_SetVector;
 typedef set_type *dd_Aincidence;
 
 template<typename T>
-void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
+inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
 {
   T temp;
   dd_colrange j;
@@ -242,7 +205,7 @@ struct dd_raydata {
   T *Ray;
   dd_rowset ZeroSet;
   dd_rowrange FirstInfeasIndex;  /* the first inequality the ray violates */
-  dd_boolean feasible;  /* flag to store the feasibility */
+  bool feasible;  /* flag to store the feasibility */
   T ARay;   /* temporary area to store some row of A*Ray */
   dd_raydata<T> *Next;
 };
@@ -345,7 +308,7 @@ struct dd_lpdata {
   //  dd_DataFileType filename;
   dd_LPObjectiveType objective;
   dd_LPSolverType solver;
-  dd_boolean Homogeneous;
+  bool Homogeneous;
      /* The first column except for the obj row is all zeros. */
   dd_rowrange m;
   dd_colrange d;
@@ -357,13 +320,13 @@ struct dd_lpdata {
   dd_rowrange eqnumber;  /* the number of equalities */
   dd_rowset equalityset;
 
-  dd_boolean redcheck_extensive;  /* Apply the extensive redundancy check. */
+  bool redcheck_extensive;  /* Apply the extensive redundancy check. */
   dd_rowrange ired; /* the row index for the redundancy checking */
   dd_rowset redset_extra;  /* a set of rows that are newly recognized redundan by the extensive search. */
   dd_rowset redset_accum;  /* the accumulated set of rows that are recognized redundant */
   dd_rowset posset_extra;  /* a set of rows that are recognized non-linearity */
 
-  dd_boolean lexicopivot;  /* flag to use the lexicogrphic pivot rule (symbolic perturbation). */
+  bool lexicopivot;  /* flag to use the lexicogrphic pivot rule (symbolic perturbation). */
 
   dd_LPStatusType LPS;  /* the current solution status */
   dd_rowrange m_alloc; /* the allocated row size of matrix A */
@@ -453,7 +416,7 @@ struct dd_conedata {
   dd_adjacencydata<T> **Edges;  /* adjacency relation storage for iteration k */
   unsigned int rseed;  /* random seed for random row permutation */
 
-  dd_boolean ColReduced;  /* flag to indicate that a column basis is computed and reduced */
+  bool ColReduced;  /* flag to indicate that a column basis is computed and reduced */
   dd_bigrange LinearityDim;
            /*  the dimension of the linearity space (when input is H), and
                the size of a minimal system of equations to determine the space (when V). */
@@ -462,8 +425,8 @@ struct dd_conedata {
 
   dd_colindex InitialRayIndex;   /* InitialRayIndex[s] (s>=1) stores the corr. row index */
   dd_rowindex OrderVector;
-  dd_boolean RecomputeRowOrder;
-  dd_boolean PreOrderedRun;
+  bool RecomputeRowOrder;
+  bool PreOrderedRun;
   dd_rowset GroundSet, EqualitySet, NonequalitySet,
        AddedHalfspaces, WeaklyAddedHalfspaces, InitialHalfspaces;
   long RayCount, FeasibleRayCount, WeaklyFeasibleRayCount,
@@ -484,7 +447,7 @@ struct dd_conedata {
 template<typename T>
 struct dd_polyhedradata {
   dd_RepresentationType representation;  /* given representation */
-  dd_boolean homogeneous;
+  bool homogeneous;
   dd_colrange d;
   dd_rowrange m;
   T** A;   /* Inequality System:  m times d matrix */
@@ -497,18 +460,18 @@ struct dd_polyhedradata {
   dd_rowflag EqualityIndex;
     /* ith component is 1 if it is equality, -1 if it is strict inequality, 0 otherwise. */
 
-  dd_boolean IsEmpty;  /* This is to tell whether the set is empty or not */
+  bool IsEmpty;  /* This is to tell whether the set is empty or not */
 
-  dd_boolean NondegAssumed;
-  dd_boolean InitBasisAtBottom;
-  dd_boolean RestrictedEnumeration;
-  dd_boolean RelaxedEnumeration;
+  bool NondegAssumed;
+  bool InitBasisAtBottom;
+  bool RestrictedEnumeration;
+  bool RelaxedEnumeration;
 
   dd_rowrange m1;
     /* = m or m+1 (when representation=Inequality && !homogeneous)
        This data is written after dd_ConeDataLoad is called.  This
        determines the size of Ainc. */
-  dd_boolean AincGenerated;
+  bool AincGenerated;
     /* Indicates whether Ainc, Ared, Adom are all computed.
        All the variables below are valid only when this is TRUE */
   dd_colrange ldim;   /* linearity dimension */
@@ -527,8 +490,8 @@ struct dd_polyhedradata {
 
 
 /* Global Variables */
-extern dd_boolean dd_debug;
-extern dd_boolean dd_log;
+extern bool dd_debug;
+extern bool dd_log;
 
 /* end of cddtypes.h */
 /* cdd.h: Header file for cddlib.c
@@ -595,7 +558,7 @@ void set_initialize(set_type *setp, long length)
       (*setp)[i]=0U;
 }
 
-void set_free(set_type set)
+inline void set_free(set_type set)
 /* Free the space created with the set pointer set*/
 {
     delete [] set;
@@ -801,9 +764,9 @@ dd_NumberType dd_GetNumberType(const char *line)
 }
 
 template<typename T>
-dd_boolean dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M, T smallVal)
+bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
 {
-  dd_boolean success=globals::dd_FALSE;
+  bool success=false;
   dd_matrixdata<T> *Mpoly,Mnew=nullptr;
   dd_ErrorType err;
 
@@ -812,10 +775,10 @@ dd_boolean dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
     Mpoly=dd_CopyInput(*poly);
     Mnew=dd_AppendMatrix(Mpoly, M);
     dd_FreePolyhedra(*poly);
-    *poly=dd_DDMatrix2Poly(Mnew,&err, smallVal);
+    *poly=dd_DDMatrix2Poly(Mnew,&err);
     dd_FreeMatrix(Mpoly);
     dd_FreeMatrix(Mnew);
-    if (err==dd_NoError) success=globals::dd_TRUE;
+    if (err==dd_NoError) success=true;
   }
   return success;
 }
@@ -1010,20 +973,20 @@ void dd_RandomPermutation2(dd_rowindex OV,long t,unsigned int seed)
 
 
 template<typename T>
-dd_boolean dd_LexSmaller(T *v1, T *v2, long dmax, T smallVal)
+bool dd_LexSmaller(T *v1, T *v2, long dmax)
 { /* dmax is the size of vectors v1,v2 */
-  dd_boolean determined, smaller;
+  bool determined, smaller;
   dd_colrange j;
 
-  smaller = globals::dd_FALSE;
-  determined = globals::dd_FALSE;
+  smaller = false;
+  determined = false;
   j = 1;
   do {
-    if (!dd_Equal(v1[j - 1],v2[j - 1],smallVal)) {  /* 086 */
-      if (dd_Smaller(v1[j - 1],v2[j - 1],smallVal)) {  /*086 */
-	    smaller = globals::dd_TRUE;
+    if (!dd_Equal(v1[j - 1],v2[j - 1])) {  /* 086 */
+      if (dd_Smaller(v1[j - 1],v2[j - 1])) {  /*086 */
+	    smaller = true;
 	  }
-      determined = globals::dd_TRUE;
+      determined = true;
     } else
       j++;
   } while (!(determined) && (j <= dmax));
@@ -1031,13 +994,13 @@ dd_boolean dd_LexSmaller(T *v1, T *v2, long dmax, T smallVal)
 }
 
 template<typename T>
-dd_boolean dd_LexLarger(T *v1, T *v2, long dmax, T smallVal)
+bool dd_LexLarger(T *v1, T *v2, long dmax)
 {
-  return dd_LexSmaller(v2, v1, dmax, smallVal);
+  return dd_LexSmaller(v2, v1, dmax);
 }
 
 template<typename T>
-long dd_Partition(dd_rowindex OV, long p, long r, T** A, long dmax, T smallVal)
+long dd_Partition(dd_rowindex OV, long p, long r, T** A, long dmax)
 {
   T *x;
   long i,j,ovi;
@@ -1046,16 +1009,16 @@ long dd_Partition(dd_rowindex OV, long p, long r, T** A, long dmax, T smallVal)
 
   i=p-1;
   j=r+1;
-  while (globals::dd_TRUE)
+  while (true)
     {
       do
 	{
 	  j--;
-	} while (dd_LexLarger(A[OV[j]-1],x,dmax, smallVal));
+	} while (dd_LexLarger(A[OV[j]-1],x,dmax));
       do
 	{
 	  i++;
-	} while (dd_LexSmaller(A[OV[i]-1],x,dmax, smallVal));
+	} while (dd_LexSmaller(A[OV[i]-1],x,dmax));
       if (i<j)
 	{
 	  ovi=OV[i];
@@ -1073,19 +1036,19 @@ long dd_Partition(dd_rowindex OV, long p, long r, T** A, long dmax, T smallVal)
 
 
 template<typename T>
-void dd_QuickSort(dd_rowindex OV, long p, long r, T** A, long dmax, T smallVal)
+void dd_QuickSort(dd_rowindex OV, long p, long r, T** A, long dmax)
 {
   long q;
 
   if (p < r){
-    q = dd_Partition(OV, p, r, A, dmax, smallVal);
-    dd_QuickSort(OV, p, q, A, dmax, smallVal);
-    dd_QuickSort(OV, q+1, r, A, dmax, smallVal);
+    q = dd_Partition(OV, p, r, A, dmax);
+    dd_QuickSort(OV, p, q, A, dmax);
+    dd_QuickSort(OV, q+1, r, A, dmax);
   }
 }
 
 template<typename T>
-dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex *newpos, T smallVal)  /* 094 */
+dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)  /* 094 */
 {
   /* Sort the rows of Amatrix lexicographically, and return a link to this sorted copy.
   The vector newpos is allocated, where newpos[i] returns the new row index
@@ -1110,7 +1073,7 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
     for(i=1; i<=m; i++) roworder[i]=i;
 
     dd_RandomPermutation(roworder, m, 123);
-    dd_QuickSort(roworder,1,m,Mnorm->matrix,d, smallVal);
+    dd_QuickSort(roworder,1,m,Mnorm->matrix,d);
 
     dd_PermuteCopyAmatrix(Mcopy->matrix, Mnorm->matrix, m, d, roworder);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
@@ -1154,7 +1117,7 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)
     dd_UniqueRows(roworder, 1, m, M->matrix, d,preferredrows, &uniqrows);
 
     Mcopy=dd_CreateMatrix<T>(uniqrows, d);
-    dd_PermutePartialCopyAmatrix(Mcopy->matrix, M->matrix, m, d, roworder,1,m);
+    dd_PermutePartialCopyAmatrix(Mcopy->matrix, M->matrix, m, d, roworder);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
     for(i=1; i<=m; i++) {
       if (roworder[i]>0 && set_member(i,M->linset)) set_addelem(Mcopy->linset, roworder[i]);
@@ -1169,7 +1132,7 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)
 
 
 template<typename T>
-dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos, T smallVal) /* 094 */
+dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos) /* 094 */
 {
   /* Sort and remove row duplicates, and return a link to this sorted copy.
      Linearity rows have priority over the other rows.
@@ -1192,7 +1155,7 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
   for (int i=0; i<=m; i++)
     newpos1r[i] = 0;
   if (m>=0 && d>=0){
-    M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
+    M1=dd_MatrixNormalizedSortedCopy(M,&newpos1);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
     M2=dd_MatrixUniqueCopy(M1,&newpos2);
     set_emptyset(M2->linset);
@@ -1214,7 +1177,7 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
 }
 
 template<typename T>
-dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos, T smallVal)  /* 094 */
+dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)  /* 094 */
 {
   /* Same as dd_MatrixNormalizedSortedUniqueCopy except that it returns a unnormalized origial data
      with original ordering.
@@ -1233,7 +1196,7 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   for (int i=0; i<=m; i++)
     newpos1r[i] = 0;
   if (m>=0 && d>=0){
-    M1=dd_MatrixNormalizedSortedCopy(M,&newpos1, smallVal);
+    M1=dd_MatrixNormalizedSortedCopy(M,&newpos1);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
     M2=dd_MatrixUniqueCopy(M1,&newpos2);
     dd_FreeMatrix(M1);
@@ -1279,7 +1242,7 @@ int dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
   dd_matrixdata<T> *M=nullptr;
   dd_rowrange i, m,m1,m2;
   dd_colrange j, d,d1,d2;
-  dd_boolean success=0;
+  bool success=0;
 
   m1=(*M1)->rowsize;
   d1=(*M1)->colsize;
@@ -1320,7 +1283,7 @@ template<typename T>
 int dd_MatrixRowRemove(dd_matrixdata<T> **M, dd_rowrange r) /* 092 */
 {
   dd_rowrange i,m;
-  dd_boolean success=0;
+  bool success=0;
   m=(*M)->rowsize;
 
   if (r >= 1 && r <=m){
@@ -1341,11 +1304,11 @@ int dd_MatrixRowRemove(dd_matrixdata<T> **M, dd_rowrange r) /* 092 */
 }
 
 template<typename T>
-int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r, dd_rowindex *newpos) /* 094 */
+int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
 {
   dd_rowrange i,m;
   dd_colrange d;
-  dd_boolean success=0;
+  bool success=0;
 
   m=(*M)->rowsize;
   d=(*M)->colsize;
@@ -1553,7 +1516,7 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
   dd_InitializeAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
   dd_InitializeArow(d,&(poly->c));           /* cost vector */
   poly->representation       =dd_Inequality;
-  poly->homogeneous =globals::dd_FALSE;
+  poly->homogeneous =false;
 
   poly->EqualityIndex = new int[m+2];
     /* size increased to m+2 in 092b because it is used by the child cone,
@@ -1563,12 +1526,12 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
 
   poly->IsEmpty                 = -1;  /* initially set to -1, neither TRUE nor FALSE, meaning unknown */
 
-  poly->NondegAssumed           = globals::dd_FALSE;
-  poly->InitBasisAtBottom       = globals::dd_FALSE;
-  poly->RestrictedEnumeration   = globals::dd_FALSE;
-  poly->RelaxedEnumeration      = globals::dd_FALSE;
+  poly->NondegAssumed           = false;
+  poly->InitBasisAtBottom       = false;
+  poly->RestrictedEnumeration   = false;
+  poly->RelaxedEnumeration      = false;
 
-  poly->AincGenerated=globals::dd_FALSE;  /* Ainc is a set array to store the input incidence. */
+  poly->AincGenerated=false;  /* Ainc is a set array to store the input incidence. */
 
   return poly;
 }
@@ -1588,9 +1551,9 @@ void dd_InitializeBmatrix(dd_colrange d,T** *B)
 
 
 template<typename T>
-dd_boolean dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
+bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
 {
-  dd_boolean success=globals::dd_TRUE;
+  bool success=true;
   dd_colrange j;
 
   (*cone)=new dd_conedata<T>;
@@ -1617,8 +1580,8 @@ dd_boolean dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **
   (*cone)->PosLast=nullptr;
   (*cone)->ZeroLast=nullptr;
   (*cone)->NegLast=nullptr;
-  (*cone)->RecomputeRowOrder  = globals::dd_TRUE;
-  (*cone)->PreOrderedRun      = globals::dd_FALSE;
+  (*cone)->RecomputeRowOrder  = true;
+  (*cone)->PreOrderedRun      = false;
   set_initialize(&((*cone)->GroundSet),(*cone)->m_alloc);
   set_initialize(&((*cone)->EqualitySet),(*cone)->m_alloc);
   set_initialize(&((*cone)->NonequalitySet),(*cone)->m_alloc);
@@ -1656,7 +1619,7 @@ dd_boolean dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **
     (*cone)->newcol[i] = 0;
   for (j=0; j<=(*cone)->d; j++) (*cone)->newcol[j]=j;  /* identity map, initially */
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
-  (*cone)->ColReduced   = globals::dd_FALSE;
+  (*cone)->ColReduced   = false;
   (*cone)->d_orig = d;
 
 /* STATES: variables to represent current state. */
@@ -1723,7 +1686,7 @@ void dd_SetLinearity(dd_matrixdata<T> *M, char *line)
 }
 
 template<typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
+dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange i;
   dd_colrange j;
@@ -1736,7 +1699,7 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, T 
   }
   poly=dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
   poly->representation=M->representation;
-  poly->homogeneous=globals::dd_TRUE;
+  poly->homogeneous=true;
 
   for (i = 1; i <= M->rowsize; i++)
     {
@@ -1744,16 +1707,16 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, T 
 	poly->EqualityIndex[i]=1;
       for (j = 1; j <= M->colsize; j++) {
 	dd_set(poly->A[i-1][j-1], M->matrix[i-1][j-1]);
-	if (j==1 && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) poly->homogeneous = globals::dd_FALSE;
+	if (j==1 && dd_Nonzero(M->matrix[i-1][j-1])) poly->homogeneous = false;
       }
     }
-  dd_DoubleDescription(poly,err, smallVal);
+  dd_DoubleDescription(poly,err);
 _L99:
   return poly;
 }
 
 template<typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder, dd_ErrorType *err, T smallVal)
+dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder, dd_ErrorType *err)
 {
   dd_rowrange i;
   dd_colrange j;
@@ -1766,7 +1729,7 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType hord
   }
   poly=dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
   poly->representation=M->representation;
-  poly->homogeneous=globals::dd_TRUE;
+  poly->homogeneous=true;
 
   for (i = 1; i <= M->rowsize; i++) {
     if (set_member(i, M->linset)) {
@@ -1774,17 +1737,17 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType hord
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(poly->A[i-1][j-1], M->matrix[i-1][j-1]);
-      if (j==1 && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) poly->homogeneous = globals::dd_FALSE;
+      if (j==1 && dd_Nonzero(M->matrix[i-1][j-1])) poly->homogeneous = false;
     }
   }
-  dd_DoubleDescription2(poly, horder, err, smallVal);
+  dd_DoubleDescription2(poly, horder, err);
 _L99:
   return poly;
 }
 
 template<typename T>
 void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
-		dd_RepresentationType rep, dd_colindex reducedcol, T smallVal)
+		dd_RepresentationType rep, dd_colindex reducedcol)
 {
   long j,j1;
   T b;
@@ -1801,7 +1764,7 @@ void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
   }
 
   dd_set(b,a[0]);
-  if (rep==dd_Generator && dd_Nonzero(b,smallVal)){
+  if (rep==dd_Generator && dd_Nonzero(b)){
     a[0]=1;
     for (j = 2; j <= d_origsize; j++)
        dd_div(a[j-1],a[j-1],b);    /* normalization for generators */
@@ -1811,7 +1774,7 @@ void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
 
 
 template<typename T>
-void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
+void dd_ComputeAinc(dd_polyhedradata<T> *poly)
 {
 /* This generates the input incidence array poly->Ainc, and
    two sets: poly->Ared, poly->Adom.
@@ -1819,13 +1782,13 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
   dd_bigrange k;
   dd_rowrange i,m1;
   dd_colrange j;
-  dd_boolean redundant;
+  bool redundant;
   dd_matrixdata<T> *M=nullptr;
   T sum,temp;
 
-  if (poly->AincGenerated==globals::dd_TRUE) return;
+  if (poly->AincGenerated==true) return;
 
-  M=dd_CopyOutput(poly, smallVal);
+  M=dd_CopyOutput(poly);
   poly->n=M->rowsize;
   m1=poly->m1;
    /* this number is same as poly->m, except when
@@ -1845,12 +1808,12 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
         dd_mul(temp,poly->A[i-1][j-1],M->matrix[k-1][j-1]);
         dd_add(sum,sum,temp);
       }
-      if (dd_EqualToZero(sum, smallVal)) {
+      if (dd_EqualToZero(sum)) {
         set_addelem(poly->Ainc[i-1], k);
       }
     }
     if (!(poly->homogeneous) && poly->representation==dd_Inequality){
-      if (dd_EqualToZero(M->matrix[k-1][0], smallVal)) {
+      if (dd_EqualToZero(M->matrix[k-1][0])) {
         set_addelem(poly->Ainc[m1-1], k);  /* added infinity inequality (1,0,0,...,0) */
       }
     }
@@ -1863,15 +1826,15 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
   }
   for (i=m1; i>=1; i--){
     if (set_card(poly->Ainc[i-1])==0){
-      redundant=globals::dd_TRUE;
+      redundant=true;
       set_addelem(poly->Ared, i);
     }else {
-      redundant=globals::dd_FALSE;
+      redundant=false;
       for (k=1; k<=m1; k++) {
         if (k!=i && !set_member(k, poly->Ared)  && !set_member(k, poly->Adom) &&
             set_subset(poly->Ainc[i-1], poly->Ainc[k-1])){
           if (!redundant){
-            redundant=globals::dd_TRUE;
+            redundant=true;
           }
           set_addelem(poly->Ared, i);
         }
@@ -1879,14 +1842,14 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly, T smallVal)
     }
   }
   dd_FreeMatrix(M);
-  poly->AincGenerated=globals::dd_TRUE;
+  poly->AincGenerated=true;
 }
 
 template<typename T>
-dd_boolean dd_InputAdjacentQ(set_type &common,
+bool dd_InputAdjacentQ(set_type &common,
 			     long & lastn,
 			     dd_polyhedradata<T> *poly,
-			     dd_rowrange i1, dd_rowrange i2, T smallVal)
+			     dd_rowrange i1, dd_rowrange i2)
 /* Before calling this function, RedundantSet must be
    a set of row indices whose removal results in a minimal
    nonredundant system to represent the input polyhedron,
@@ -1894,10 +1857,10 @@ dd_boolean dd_InputAdjacentQ(set_type &common,
    active at every extreme points/rays.
 */
 {
-  dd_boolean adj=globals::dd_TRUE;
+  bool adj=true;
   dd_rowrange i;
 
-  if (poly->AincGenerated==globals::dd_FALSE) dd_ComputeAinc<T>(poly, smallVal);
+  if (poly->AincGenerated==false) dd_ComputeAinc<T>(poly);
   if (lastn!=poly->n){
     if (lastn >0)
       set_free(common);
@@ -1905,21 +1868,21 @@ dd_boolean dd_InputAdjacentQ(set_type &common,
     lastn=poly->n;
   }
   if (set_member(i1, poly->Ared) || set_member(i2, poly->Ared)){
-    adj=globals::dd_FALSE;
+    adj=false;
     goto _L99;
   }
   if (set_member(i1, poly->Adom) || set_member(i2, poly->Adom)){
   // dominant inequality is considered adjacencent to all others.
-    adj=globals::dd_TRUE;
+    adj=true;
     goto _L99;
   }
   set_int(common, poly->Ainc[i1-1], poly->Ainc[i2-1]);
   i=0;
-  while (i<poly->m1 && adj==globals::dd_TRUE){
+  while (i<poly->m1 && adj==true){
     i++;
     if (i!=i1 && i!=i2 && !set_member(i, poly->Ared) &&
         !set_member(i, poly->Adom) && set_subset(common,poly->Ainc[i-1])){
-      adj=globals::dd_FALSE;
+      adj=false;
     }
   }
 _L99:;
@@ -1928,14 +1891,14 @@ _L99:;
 
 
 template<typename T>
-dd_SetFamilyPtr dd_CopyIncidence(dd_polyhedradata<T> *poly, T smallVal)
+dd_SetFamilyPtr dd_CopyIncidence(dd_polyhedradata<T> *poly)
 {
   dd_SetFamilyPtr F=nullptr;
   dd_bigrange k;
   dd_rowrange i;
 
   if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
-  if (poly->AincGenerated==globals::dd_FALSE) dd_ComputeAinc(poly, smallVal);
+  if (poly->AincGenerated==false) dd_ComputeAinc(poly);
   F=dd_CreateSetFamily(poly->n, poly->m1);
   for (i=1; i<=poly->m1; i++)
     for (k=1; k<=poly->n; k++)
@@ -1945,13 +1908,13 @@ _L99:;
 }
 
 template<typename T>
-dd_SetFamilyPtr dd_CopyInputIncidence(dd_polyhedradata<T> *poly, T smallVal)
+dd_SetFamilyPtr dd_CopyInputIncidence(dd_polyhedradata<T> *poly)
 {
   dd_rowrange i;
   dd_SetFamilyPtr F=nullptr;
 
   if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
-  if (poly->AincGenerated==globals::dd_FALSE) dd_ComputeAinc(poly, smallVal);
+  if (poly->AincGenerated==false) dd_ComputeAinc(poly);
   F=dd_CreateSetFamily(poly->m1, poly->n);
   for(i=0; i< poly->m1; i++){
     set_copy(F->set[i], poly->Ainc[i]);
@@ -1969,7 +1932,7 @@ dd_SetFamilyPtr dd_CopyAdjacency(dd_polyhedradata<T> *poly)
   long pos1, pos2;
   dd_bigrange lstart,k,n;
   set_type linset,allset;
-  dd_boolean adj;
+  bool adj;
 
   if (poly->n==0 && poly->homogeneous && poly->representation==dd_Inequality){
     n=1; /* the origin (the unique vertex) should be output. */
@@ -2008,18 +1971,18 @@ _L99:;
 }
 
 template<typename T>
-dd_SetFamilyPtr dd_CopyInputAdjacency(dd_polyhedradata<T> *poly, T smallVal)
+dd_SetFamilyPtr dd_CopyInputAdjacency(dd_polyhedradata<T> *poly)
 {
   dd_rowrange i,j;
   dd_SetFamilyPtr F=nullptr;
   set_type common;
   long lastn=0;
   if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
-  if (poly->AincGenerated==globals::dd_FALSE) dd_ComputeAinc(poly, smallVal);
+  if (poly->AincGenerated==false) dd_ComputeAinc(poly);
   F=dd_CreateSetFamily(poly->m1, poly->m1);
   for (i=1; i<=poly->m1; i++)
     for (j=1; j<=poly->m1; j++)
-      if (i!=j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j, smallVal))
+      if (i!=j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j))
         set_addelem(F->set[i-1],j);
 _L99:;
   return F;
@@ -2027,7 +1990,7 @@ _L99:;
 
 
 template<typename T>
-dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly, T smallVal)
+dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly)
 {
   dd_raydata<T> *RayPtr;
   dd_matrixdata<T> *M=nullptr;
@@ -2036,7 +1999,7 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly, T smallVal)
   dd_colrange j, j1;
   T b;
   dd_RepresentationType outputrep=dd_Inequality;
-  dd_boolean outputorigin=globals::dd_FALSE;
+  bool outputorigin=false;
 
   total=poly->child->LinearityDim + poly->child->FeasibleRayCount;
 
@@ -2044,7 +2007,7 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly, T smallVal)
   if (poly->representation==dd_Inequality) outputrep=dd_Generator;
   if (total==0 && poly->homogeneous && poly->representation==dd_Inequality){
     total=1;
-    outputorigin=globals::dd_TRUE;
+    outputorigin=true;
     // the origin (the unique vertex) should be output.
   }
   if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
@@ -2053,7 +2016,7 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly, T smallVal)
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      dd_CopyRay(M->matrix[i], poly->d, RayPtr, outputrep, poly->child->newcol, smallVal);
+      dd_CopyRay(M->matrix[i], poly->d, RayPtr, outputrep, poly->child->newcol);
       i++;
     }
     RayPtr = RayPtr->Next;
@@ -2062,7 +2025,7 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly, T smallVal)
     if (poly->child->newcol[j]==0){
       // original column j is dependent on others and removed for the cone
       dd_set(b,poly->child->Bsave[0][j-1]);
-      if (outputrep==dd_Generator && dd_Positive(b, smallVal)){
+      if (outputrep==dd_Generator && dd_Positive(b)){
         M->matrix[i][0]=1;  // dd_Normalize
         for (j1=1; j1<poly->d; j1++)
           dd_div(M->matrix[i][j1],(poly->child->Bsave[j1][j-1]),b);
@@ -2110,27 +2073,27 @@ dd_matrixdata<T> *dd_CopyInput(dd_polyhedradata<T> *poly)
 }
 
 template<typename T>
-dd_matrixdata<T> *dd_CopyGenerators(dd_polyhedradata<T> *poly, T smallVal)
+dd_matrixdata<T> *dd_CopyGenerators(dd_polyhedradata<T> *poly)
 {
   dd_matrixdata<T> *M=nullptr;
 
   if (poly->representation==dd_Generator){
     M=dd_CopyInput(poly);
   } else {
-    M=dd_CopyOutput(poly, smallVal);
+    M=dd_CopyOutput(poly);
   }
   return M;
 }
 
 template<typename T>
-dd_matrixdata<T> *dd_CopyInequalities(dd_polyhedradata<T> *poly, T smallVal)
+dd_matrixdata<T> *dd_CopyInequalities(dd_polyhedradata<T> *poly)
 {
   dd_matrixdata<T> *M=nullptr;
 
   if (poly->representation==dd_Inequality){
     M=dd_CopyInput(poly);
   } else {
-    M=dd_CopyOutput(poly, smallVal);
+    M=dd_CopyOutput(poly);
   }
   return M;
 }
@@ -2144,7 +2107,7 @@ long set_groundsize(set_type set)
 
 
 template<typename T>
-dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_ErrorType *error, T smallVal)
+dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_ErrorType *error)
 /* Eliminate the variables (columns) delset by
    the Block Elimination with dd_DoubleDescription algorithm.
 
@@ -2166,7 +2129,7 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   T temp,prod;
   dd_polyhedradata<T> *dualpoly;
   dd_ErrorType err=dd_NoError;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   *error=dd_NoError;
   m= M->rowsize;
@@ -2207,8 +2170,8 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   }
 
   /* 2. Compute the generators of the dual system. */
-  dualpoly=dd_DDMatrix2Poly(Mdual, &err, smallVal);
-  Gdual=dd_CopyGenerators(dualpoly, smallVal);
+  dualpoly=dd_DDMatrix2Poly(Mdual, &err);
+  Gdual=dd_CopyGenerators(dualpoly);
 
   /* 3. Take the linear combination of the original system with each generator.  */
   dproj=d-delsize;
@@ -2253,7 +2216,7 @@ void dd_LinearComb(T &lc, T v1, T c1, T v2, T c2)
 }
 
 template<typename T>
-dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error, T smallVal)
+dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
 /* Eliminate the last variable (column) from the given H-matrix using
    the standard Fourier Elimination.
  */
@@ -2263,7 +2226,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
   dd_colrange j,d,dnew;
   dd_rowindex posrowindex, negrowindex,zerorowindex;
   T temp1,temp2;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   *error=dd_NoError;
   m= M->rowsize;
@@ -2304,10 +2267,10 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
     zerorowindex[i] = 0;
 
   for (i = 1; i <= m; i++) {
-    if (dd_Positive(M->matrix[i-1][d-1], smallVal)){
+    if (dd_Positive(M->matrix[i-1][d-1])){
       mpos++;
       posrowindex[mpos]=i;
-    } else if (dd_Negative(M->matrix[i-1][d-1], smallVal)) {
+    } else if (dd_Negative(M->matrix[i-1][d-1])) {
       mneg++;
       negrowindex[mneg]=i;
     } else {
@@ -2350,7 +2313,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error,
           M->matrix[posrowindex[ip]-1][d-1]);
         dd_set(Mnew->matrix[inew-1][j-1],temp2);
       }
-      dd_Normalize(dnew,Mnew->matrix[inew-1], smallVal);
+      dd_Normalize(dnew,Mnew->matrix[inew-1]);
     }
   }
 
@@ -2430,7 +2393,7 @@ dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
   set_initialize(&(lp->equalityset),m);
     /* i must be in the set iff i-th row is equality . */
 
-  lp->redcheck_extensive=globals::dd_FALSE; /* this is on only for RedundantExtensive */
+  lp->redcheck_extensive=false; /* this is on only for RedundantExtensive */
   lp->ired=0;
   set_initialize(&(lp->redset_extra),m);
     /* i is in the set if i-th row is newly recognized redundant (during the checking the row ired). */
@@ -2452,7 +2415,7 @@ dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
 
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
+dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
@@ -2466,7 +2429,7 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
   d=M->colsize;
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_TRUE;
+  lp->Homogeneous = true;
   lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -2481,7 +2444,7 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) lp->Homogeneous = globals::dd_FALSE;
+      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   for (j = 1; j <= M->colsize; j++) {
@@ -2492,7 +2455,7 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err, T smallVal)
+dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
 /* Load a matrix to create an LP object for feasibility.   It is
    essentially the dd_Matrix2LP except that the objject function
    is set to identically ZERO (maximization).
@@ -2510,7 +2473,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err, T sm
      /* We represent each equation by two inequalities.
         This is not the best way but makes the code simple. */
 
-  lp=dd_Matrix2LP(M, err, smallVal);
+  lp=dd_Matrix2LP(M, err);
   lp->objective = dd_LPmax;   /* since the objective is zero, this is not important */
   for (j = 1; j <= M->colsize; j++) {
     lp->A[m-1][j-1]=0;  /* set the objective to zero. */
@@ -2520,7 +2483,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err, T sm
 }
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err, T smallVal)
+dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err)
 /* Load a matrix to create an LP object for feasibility with additional equality and
    strict inequality constraints given by R and S.  There are three types of inequalities:
 
@@ -2561,7 +2524,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
   d=M->colsize+1;
 
   lp=dd_CreateLPData<T>(dd_LPmax, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_TRUE;
+  lp->Homogeneous = true;
   lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -2578,7 +2541,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) lp->Homogeneous = globals::dd_FALSE;
+      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   for (j = 1; j <= d; j++) {
@@ -2596,7 +2559,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
 }
 
 template<typename T>
-void dd_FreeAmatrix(dd_rowrange m,dd_colrange d,T** A)
+void dd_FreeAmatrix(dd_rowrange m, T** A)
 {
   dd_rowrange i;
 
@@ -2628,7 +2591,7 @@ void dd_FreeLPData(dd_lpdata<T> *lp)
     dd_FreeArow(lp->dsol);
     dd_FreeArow(lp->sol);
     dd_FreeBmatrix(lp->d_alloc,lp->B);
-    dd_FreeAmatrix(lp->m_alloc,lp->d_alloc,lp->A);
+    dd_FreeAmatrix(lp->m_alloc,lp->A);
     set_free(lp->equalityset);
     set_free(lp->redset_extra);
     set_free(lp->redset_accum);
@@ -2725,7 +2688,7 @@ void dd_SetNumberType(char *line,dd_NumberType *number,dd_ErrorType *Error)
 
 
 template<typename T>
-void dd_TableauEntry(T & x,dd_rowrange m_size, dd_colrange d_size, T** X, T** Ts,
+void dd_TableauEntry(T & x, dd_colrange d_size, T** X, T** Ts,
 				dd_rowrange r, dd_colrange s)
 /* Compute the (r,s) entry of X.T   */
 {
@@ -2741,21 +2704,21 @@ void dd_TableauEntry(T & x,dd_rowrange m_size, dd_colrange d_size, T** X, T** Ts
 
 template<typename T>
 void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
-				 dd_colindex nbindex,dd_rowindex bflag, dd_rowset redset, T smallVal)
+				 dd_rowindex bflag, dd_rowset redset)
 /* Some basic variables that are forced to be nonnegative will be output.  These are
    variables whose dictionary row components are all nonnegative.   */
 {
   dd_colrange j;
   dd_rowrange i;
   T x;
-  dd_boolean red=globals::dd_FALSE;
+  bool red=false;
   long numbred=0;
 
   for (i=1; i<= m_size; i++) {
-    red=globals::dd_TRUE;
+    red=true;
     for (j=1; j<= d_size; j++) {
-      dd_TableauEntry(x,m_size,d_size,A,Ts,i,j);
-      if (red && dd_Negative(x, smallVal)) red=globals::dd_FALSE;
+      dd_TableauEntry(x, d_size,A,Ts,i,j);
+      if (red && dd_Negative(x)) red=false;
     }
     if (bflag[i]<0 && red) {
       numbred+=1;
@@ -2767,22 +2730,22 @@ void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T**
 
 template<typename T>
 void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
-    int Phase1,T** A,T** Ts,dd_rowindex OV,
-    dd_colindex nbindex_ref, dd_colindex nbindex,dd_rowindex bflag,
-    dd_rowrange objrow,dd_colrange rhscol, dd_boolean lexicopivot,
-    dd_rowrange *r,dd_colrange *s,int *selected,dd_LPStatusType *lps, T smallVal)
+    int Phase1,T** A,T** Ts,
+    dd_colindex nbindex_ref, dd_rowindex bflag,
+    dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
+    dd_rowrange *r, dd_colrange *s, bool *selected,dd_LPStatusType *lps)
 {
   /* selects a dual simplex pivot (*r,*s) if the current
      basis is dual feasible and not optimal. If not dual feasible,
-     the procedure returns *selected=globals::dd_FALSE and *lps=LPSundecided.
-     If Phase1=globals::dd_TRUE, the RHS column will be considered as the negative
+     the procedure returns *selected=false and *lps=LPSundecided.
+     If Phase1=true, the RHS column will be considered as the negative
      of the column of the largest variable (==m_size).  For this case, it is assumed
      that the caller used the auxiliary row (with variable m_size) to make the current
      dictionary dual feasible before calling this routine so that the nonbasic
      column for m_size corresponds to the auxiliary variable.
   */
-  dd_boolean colselected=globals::dd_FALSE,rowselected=globals::dd_FALSE,
-    dualfeasible=globals::dd_TRUE;
+  bool colselected=false,rowselected=false,
+    dualfeasible=true;
   dd_rowrange i,iref;
   dd_colrange j,k;
   T val,valn, minval,rat,minrat;
@@ -2796,13 +2759,13 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
   set_initialize(&stieset,d_size);
 
   *r=0; *s=0;
-  *selected=globals::dd_FALSE;
+  *selected=false;
   *lps=dd_LPSundecided;
   for (j=1; j<=d_size; j++){
     if (j!=rhscol){
-      dd_TableauEntry(rcost[j-1],m_size,d_size,A,Ts,objrow,j);
-      if (dd_Positive(rcost[j-1], smallVal)) {
-        dualfeasible=globals::dd_FALSE;
+      dd_TableauEntry(rcost[j-1], d_size,A,Ts,objrow,j);
+      if (dd_Positive(rcost[j-1])) {
+        dualfeasible=false;
       }
     }
   }
@@ -2811,41 +2774,41 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
       for (i=1; i<=m_size; i++) {
         if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
           if (Phase1){
-            dd_TableauEntry(val, m_size,d_size,A,Ts,i,bflag[m_size]);
+            dd_TableauEntry(val, d_size,A,Ts,i,bflag[m_size]);
             dd_neg(val,val);
             /* for dual Phase I.  The RHS (dual objective) is the negative of the auxiliary variable column. */
           }
-          else {dd_TableauEntry(val,m_size,d_size,A,Ts,i,rhscol);}
-          if (dd_Smaller(val,minval,smallVal)) {
+          else {dd_TableauEntry(val, d_size,A,Ts,i,rhscol);}
+          if (dd_Smaller(val,minval)) {
             *r=i;
             dd_set(minval,val);
           }
         }
       }
-      if (dd_Nonnegative(minval,smallVal)) {
+      if (dd_Nonnegative(minval)) {
         *lps=dd_Optimal;
       }
       else {
-        rowselected=globals::dd_TRUE;
+        rowselected=true;
         set_emptyset(tieset);
         for (j=1; j<=d_size; j++){
-          dd_TableauEntry(val,m_size,d_size,A,Ts,*r,j);
-          if (j!=rhscol && dd_Positive(val, smallVal)) {
+          dd_TableauEntry(val, d_size,A,Ts,*r,j);
+          if (j!=rhscol && dd_Positive(val)) {
             dd_div(rat,rcost[j-1],val);
             dd_neg(rat,rat);
-            if (*s==0 || dd_Smaller(rat,minrat,smallVal)){
+            if (*s==0 || dd_Smaller(rat,minrat)){
               dd_set(minrat,rat);
               *s=j;
               set_emptyset(tieset);
               set_addelem(tieset, j);
-            } else if (dd_Equal(rat,minrat,smallVal)){
+            } else if (dd_Equal(rat,minrat)){
               set_addelem(tieset,j);
             }
           }
         }
         if (*s>0) {
           if (!lexicopivot || set_card(tieset)==1){
-            colselected=globals::dd_TRUE; *selected=globals::dd_TRUE;
+            colselected=true; *selected=true;
           } else { /* lexicographic rule with respect to the given reference cobasis.  */
             *s=0;
             k=2; /* k runs through the column indices except RHS. */
@@ -2856,7 +2819,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
                 if (j>0) {
                   if (set_member(j,tieset) && set_card(tieset)==1) {
                     *s=j;
-                     colselected=globals::dd_TRUE;
+                     colselected=true;
                   } else {
                     set_delelem(tieset, j);
                     /* iref is cobasic, and the corresponding col is not the pivot column except it is the last one. */
@@ -2865,28 +2828,28 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
                   *s=0;
                   for (j=1; j<=d_size; j++){
                     if (set_member(j,tieset)) {
-                      dd_TableauEntry(val,m_size,d_size,A,Ts,*r,j);
-                      dd_TableauEntry(valn,m_size,d_size,A,Ts,iref,j);
-                      if (j!=rhscol && dd_Positive(val, smallVal)) {
+                      dd_TableauEntry(val, d_size,A,Ts,*r,j);
+                      dd_TableauEntry(valn, d_size,A,Ts,iref,j);
+                      if (j!=rhscol && dd_Positive(val)) {
                         dd_div(rat,valn,val);
-                        if (*s==0 || dd_Smaller(rat,minrat,smallVal)){
+                        if (*s==0 || dd_Smaller(rat,minrat)){
                           dd_set(minrat,rat);
                           *s=j;
                           set_emptyset(stieset);
                           set_addelem(stieset, j);
-                        } else if (dd_Equal(rat,minrat,smallVal)){
+                        } else if (dd_Equal(rat,minrat)){
                           set_addelem(stieset,j);
                         }
                       }
                     }
                   }
                   set_copy(tieset,stieset);
-                  if (set_card(tieset)==1) colselected=globals::dd_TRUE;
+                  if (set_card(tieset)==1) colselected=true;
                 }
               }
               k+=1;
             } while (!colselected && k<=d_size);
-            *selected=globals::dd_TRUE;
+            *selected=true;
           }
         } else *lps=dd_Inconsistent;
       }
@@ -2917,7 +2880,7 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
 		     dd_RowOrderType roworder,dd_rowindex ordervec, rowset equalityset,
 		     dd_rowrange rowmax,rowset NopivotRow,
 		     colset NopivotCol,dd_rowrange *r,dd_colrange *s,
-		     dd_boolean *selected, T smallVal)
+		     bool *selected)
 /* Select a position (*r,*s) in the matrix A.T such that (A.T)[*r][*s] is nonzero
    The choice is feasible, i.e., not on NopivotRow and NopivotCol, and
    best with respect to the specified roworder
@@ -2928,13 +2891,13 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
   rowset rowexcluded;
   T Xtemp;
 
-  stop = globals::dd_FALSE;
+  stop = false;
   set_initialize(&rowexcluded,m_size);
   set_copy(rowexcluded,NopivotRow);
   for (i=rowmax+1;i<=m_size;i++) {
     set_addelem(rowexcluded,i);   /* cannot pivot on any row > rmax */
   }
-  *selected = globals::dd_FALSE;
+  *selected = false;
   do {
     rtemp=0; i=1;
     while (i<=m_size && rtemp==0) {  /* equalityset vars have highest priorities */
@@ -2948,10 +2911,10 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
       *r=rtemp;
       *s=1;
       while (*s <= d_size && !*selected) {
-        dd_TableauEntry(Xtemp,m_size,d_size,A,Ts,*r,*s);
-        if (!set_member(*s,NopivotCol) && dd_Nonzero(Xtemp,smallVal)) {
-          *selected = globals::dd_TRUE;
-          stop = globals::dd_TRUE;
+        dd_TableauEntry(Xtemp, d_size,A,Ts,*r,*s);
+        if (!set_member(*s,NopivotCol) && dd_Nonzero(Xtemp)) {
+          *selected = true;
+          stop = true;
         } else {
           (*s)++;
         }
@@ -2963,7 +2926,7 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
     else {
       *r = 0;
       *s = 0;
-      stop = globals::dd_TRUE;
+      stop = true;
     }
   } while (!stop);
   set_free(rowexcluded);
@@ -2983,7 +2946,7 @@ void dd_GaussianColumnPivot(dd_rowrange m_size, dd_colrange d_size,
   Rtemp=new T[d_size];
 
   for (j=1; j<=d_size; j++) {
-    dd_TableauEntry(Rtemp[j-1], m_size, d_size, X, Ts, r,j);
+    dd_TableauEntry(Rtemp[j-1], d_size, X, Ts, r,j);
   }
   dd_set(Xtemp0,Rtemp[s-1]);
   for (j = 1; j <= d_size; j++) {
@@ -3070,28 +3033,28 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
 			      T** A,T** Ts,
 			      dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
 			      dd_rowrange *r,dd_colrange *s,
-			      int *selected,dd_LPStatusType *lps, T smallVal)
+			      bool *selected,dd_LPStatusType *lps)
 {
-  int colselected=globals::dd_FALSE,rowselected=globals::dd_FALSE;
+  int colselected=false,rowselected=false;
   dd_rowrange i;
   T val;
 
-  *selected=globals::dd_FALSE;
+  *selected=false;
   *lps=dd_LPSundecided;
   while ((*lps==dd_LPSundecided) && (!rowselected) && (!colselected)) {
     for (i=1; i<=m_size; i++) {
       if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
-        dd_TableauEntry(val,m_size,d_size,A,Ts,i,rhscol);
-        if (dd_Negative(val, smallVal)) {
-          rowselected=globals::dd_TRUE;
+        dd_TableauEntry(val, d_size,A,Ts,i,rhscol);
+        if (dd_Negative(val)) {
+          rowselected=true;
           *r=i;
           break;
         }
       }
       else if (bflag[i] >0) { /* i is nonbasic variable */
-        dd_TableauEntry(val,m_size,d_size,A,Ts,objrow,bflag[i]);
-        if (dd_Positive(val, smallVal)) {
-          colselected=globals::dd_TRUE;
+        dd_TableauEntry(val, d_size,A,Ts,objrow,bflag[i]);
+        if (dd_Positive(val)) {
+          colselected=true;
           *s=bflag[i];
           break;
         }
@@ -3104,11 +3067,11 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
     else if (rowselected) {
      for (i=1; i<=m_size; i++) {
        if (bflag[i] >0) { /* i is nonbasic variable */
-          dd_TableauEntry(val,m_size,d_size,A,Ts,*r,bflag[i]);
-          if (dd_Positive(val, smallVal)) {
-            colselected=globals::dd_TRUE;
+          dd_TableauEntry(val, d_size,A,Ts,*r,bflag[i]);
+          if (dd_Positive(val)) {
+            colselected=true;
             *s=bflag[i];
-            *selected=globals::dd_TRUE;
+            *selected=true;
             break;
           }
         }
@@ -3117,11 +3080,11 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
     else if (colselected) {
       for (i=1; i<=m_size; i++) {
         if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
-          dd_TableauEntry(val,m_size,d_size,A,Ts,i,*s);
-          if (dd_Negative(val, smallVal)) {
-            rowselected=globals::dd_TRUE;
+          dd_TableauEntry(val, d_size,A,Ts,i,*s);
+          if (dd_Negative(val)) {
+            rowselected=true;
             *r=i;
-            *selected=globals::dd_TRUE;
+            *selected=true;
             break;
           }
         }
@@ -3137,15 +3100,15 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
 }
 
 template<typename T>
-void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err, T smallVal)
+void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 {
   switch (lp->objective) {
     case dd_LPmax:
-      dd_CrissCrossMaximize(lp,err, smallVal);
+      dd_CrissCrossMaximize(lp,err);
       break;
 
     case dd_LPmin:
-      dd_CrissCrossMinimize(lp,err, smallVal);
+      dd_CrissCrossMinimize(lp,err);
       break;
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
@@ -3154,15 +3117,15 @@ void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err, T smallVal)
 }
 
 template<typename T>
-void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err, T smallVal)
+void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 {
   switch (lp->objective) {
     case dd_LPmax:
-      dd_DualSimplexMaximize(lp,err, smallVal);
+      dd_DualSimplexMaximize(lp,err);
       break;
 
     case dd_LPmin:
-      dd_DualSimplexMinimize(lp,err, smallVal);
+      dd_DualSimplexMinimize(lp,err);
       break;
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
@@ -3174,9 +3137,9 @@ template<typename T>
 void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
 		    T** A, T** Ts,dd_rowindex OV,dd_rowset equalityset, dd_colindex nbindex,
 		    dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
-		    dd_colrange *cs,int *found,dd_LPStatusType *lps,long *pivot_no, T smallVal)
+		    dd_colrange *cs, bool *found,dd_LPStatusType *lps,long *pivot_no)
 {
-  int chosen,stop;
+  bool chosen,stop;
   long pivots_p0=0,rank;
   colset ColSelected;
   rowset RowSelected;
@@ -3185,8 +3148,8 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
   dd_rowrange r;
   dd_colrange j,s;
 
-  *found=globals::dd_FALSE; *cs=0; rank=0;
-  stop=globals::dd_FALSE;
+  *found=false; *cs=0; rank=0;
+  stop=false;
   *lps=dd_LPSundecided;
 
   set_initialize(&RowSelected,m_size);
@@ -3194,10 +3157,10 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
   set_addelem(RowSelected,objrow);
   set_addelem(ColSelected,rhscol);
 
-  stop=globals::dd_FALSE;
+  stop=false;
   do {   /* Find a LP basis */
     dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset,
-		    m_size,RowSelected,ColSelected,&r,&s,&chosen, smallVal);
+		    m_size,RowSelected,ColSelected,&r,&s,&chosen);
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
@@ -3207,22 +3170,22 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
     } else {
       for (j=1;j<=d_size  && *lps==dd_LPSundecided; j++) {
         if (j!=rhscol && nbindex[j]<0){
-          dd_TableauEntry(val,m_size,d_size,A,Ts,objrow,j);
-          if (dd_Nonzero(val,smallVal)){  /* dual inconsistent */
+          dd_TableauEntry(val, d_size,A,Ts,objrow,j);
+          if (dd_Nonzero(val)){  /* dual inconsistent */
             *lps=dd_StrucDualInconsistent;
             *cs=j;
             /* dual inconsistent because the nonzero reduced cost */
           }
         }
       }
-      if (*lps==dd_LPSundecided) *found=globals::dd_TRUE;
+      if (*lps==dd_LPSundecided) *found=true;
          /* dependent columns but not dual inconsistent. */
-      stop=globals::dd_TRUE;
+      stop=true;
     }
     /* printf("d_size=%ld, rank=%ld\n",d_size,rank); */
     if (rank==d_size-1) {
-      stop = globals::dd_TRUE;
-      *found=globals::dd_TRUE;
+      stop = true;
+      *found=true;
     }
   } while (!stop);
 
@@ -3236,10 +3199,10 @@ template<typename T>
 void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
     T** A, T** Ts,dd_rowindex OV,dd_rowset equalityset, dd_colindex nbindex,
     dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
-		     dd_colrange *cs,int *found,long *pivot_no, T smallVal)
+		     dd_colrange *cs, bool *found,long *pivot_no)
 {
   /* Similar to dd_FindLPBasis but it is much simpler.  This tries to recompute T for
-  the specified basis given by nbindex.  It will return *found=globals::dd_FALSE if the specified
+  the specified basis given by nbindex.  It will return *found=false if the specified
   basis is not a basis.
   */
   int chosen,stop;
@@ -3247,12 +3210,12 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
   dd_colset ColSelected,DependentCols;
   dd_rowset RowSelected, NopivotRow;
   T val;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   dd_rowrange r,negcount=0;
   dd_colrange j,s;
 
-  *found=globals::dd_FALSE; *cs=0; rank=0;
+  *found=false; *cs=0; rank=0;
 
   set_initialize(&RowSelected,m_size);
   set_initialize(&DependentCols,d_size);
@@ -3273,9 +3236,9 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
 
   set_uni(RowSelected, RowSelected, NopivotRow);  /* RowSelected is the set of rows not allowed to poviot on */
 
-  stop=globals::dd_FALSE;
+  stop=false;
   do {   /* Find a LP basis */
-    dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen, smallVal);
+    dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
@@ -3284,25 +3247,25 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
       pivots_p0++;
       rank++;
     } else{
-      *found=globals::dd_FALSE;   /* cannot pivot on any of the spacified positions. */
-      stop=globals::dd_TRUE;
+      *found=false;   /* cannot pivot on any of the spacified positions. */
+      stop=true;
     }
     if (rank==d_size-1-negcount) {
       if (negcount){
         /* Now it tries to pivot on rows that are supposed to be dependent. */
         set_diff(ColSelected, ColSelected, DependentCols);
-        dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen, smallVal);
-        if (chosen) *found=globals::dd_FALSE;  /* not supposed to be independent */
-        else *found=globals::dd_TRUE;
+        dd_SelectPivot2(m_size,d_size,A,Ts,dd_MinIndex,OV,equalityset, m_size,RowSelected,ColSelected,&r,&s,&chosen);
+        if (chosen) *found=false;  /* not supposed to be independent */
+        else *found=true;
         if (localdebug){
           printf("Try to check the dependent cols:");
           if (chosen) printf("They are not dependent.  Can still pivot on (%ld, %ld)\n",r, s);
           else printf("They are indeed dependent.\n");
         }
       } else {
-        *found=globals::dd_TRUE;
+        *found=true;
      }
-     stop = globals::dd_TRUE;
+     stop = true;
     }
   } while (!stop);
 
@@ -3316,9 +3279,9 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
 
 template<typename T>
 void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
-    T** A,T** Ts,dd_rowindex OV,
-    dd_colindex nbindex,dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol, dd_boolean lexicopivot,
-			      dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no, long maxpivots, T smallVal)
+    T** A,T** Ts,
+    dd_colindex nbindex,dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
+			      dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no, long maxpivots)
 {
   /* Find a dual feasible basis using Phase I of Dual Simplex method.
      If the problem is dual feasible,
@@ -3328,8 +3291,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
      Caution: matrix A must have at least one extra row:  the row space A[m_size] must
      have been allocated.
   */
-  dd_boolean phase1,dualfeasible=globals::dd_TRUE;
-  dd_boolean localdebug=globals::dd_FALSE,chosen,stop;
+  bool phase1,dualfeasible=true;
+  bool localdebug=false,chosen,stop;
   dd_LPStatusType LPSphase1;
   long pivots_p1=0;
   dd_rowrange i,r_val;
@@ -3342,8 +3305,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   T minval;
   minval=0; // added by MDS
   if (dd_debug) localdebug=dd_debug;
-  dd_set(maxcost,smallVal); dd_neg(maxcost,maxcost);
-  dd_set(maxratio,smallVal); dd_neg(maxratio,maxratio);
+  maxcost = 0;
+  maxratio = 0;
   rcost=new T[d_size];
   nbindex_ref = new long[d_size+1];
   for (int i=0; i<=d_size; i++)
@@ -3355,11 +3318,11 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   ms=0;  /* ms will be the index of column which has the largest reduced cost */
   for (j=1; j<=d_size; j++){
     if (j!=rhscol){
-      dd_TableauEntry(rcost[j-1],local_m_size,d_size,A,Ts,objrow,j);
-      if (dd_Larger(rcost[j-1],maxcost,smallVal)) {dd_set(maxcost,rcost[j-1]); ms = j;}
+      dd_TableauEntry(rcost[j-1], d_size,A,Ts,objrow,j);
+      if (dd_Larger(rcost[j-1],maxcost)) {dd_set(maxcost,rcost[j-1]); ms = j;}
     }
   }
-  if (dd_Positive(maxcost, smallVal)) dualfeasible=globals::dd_FALSE;
+  if (dd_Positive(maxcost)) dualfeasible=false;
 
   if (!dualfeasible){
     for (j=1; j<=d_size; j++){
@@ -3380,16 +3343,16 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
      /* Ratio Test: ms will be now the index of column which has the largest reduced cost
         over the auxiliary row entry */
     for (j=1; j<=d_size; j++) {
-      if ((j!=rhscol) && dd_Positive(rcost[j-1], smallVal)){
-        dd_TableauEntry(axvalue,local_m_size,d_size,A,Ts,local_m_size,j);
-        if (dd_Nonnegative(axvalue,smallVal)) {
+      if ((j!=rhscol) && dd_Positive(rcost[j-1])){
+        dd_TableauEntry(axvalue, d_size,A,Ts,local_m_size,j);
+        if (dd_Nonnegative(axvalue)) {
           *err=dd_NumericallyInconsistent;
            /* This should not happen as they are set negative above.  Quit the phase I.*/
           goto _L99;
         }
         dd_neg(axvalue,axvalue);
         dd_div(axvalue,rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
-        if (dd_Larger(axvalue,maxratio,smallVal)) {
+        if (dd_Larger(axvalue,maxratio)) {
           dd_set(maxratio,axvalue);
           ms = j;
         }
@@ -3411,15 +3374,15 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   for (j=1; j<=d_size; j++) nbindex_ref[j]=nbindex[j];
      /* set the reference basis to be the current feasible basis. */
 
-    phase1=globals::dd_TRUE; stop=globals::dd_FALSE;
+    phase1=true; stop=false;
     do {   /* Dual Simplex Phase I */
-      chosen=globals::dd_FALSE; LPSphase1=dd_LPSundecided;
+      chosen=false; LPSphase1=dd_LPSundecided;
       if (pivots_p1>maxpivots) {
         *err=dd_LPCycling;
         goto _L99;  /* failure due to max no. of pivots performed */
       }
-      dd_SelectDualSimplexPivot(local_m_size,d_size,phase1,A,Ts,OV,nbindex_ref,nbindex,bflag,
-				objrow,rhscol,lexicopivot,&r_val,&s_val,&chosen,&LPSphase1, smallVal);
+      dd_SelectDualSimplexPivot(local_m_size,d_size,phase1,A,Ts,nbindex_ref,bflag,
+				objrow,rhscol,lexicopivot,&r_val,&s_val,&chosen,&LPSphase1);
       if (!chosen) {
         /* The current dictionary is terminal.  There are two cases:
            dd_TableauEntry(local_m_size,d_size,A,T,objrow,ms) is negative or zero.
@@ -3427,8 +3390,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
            and the latter implies dual feasible but local_m_size is still in nonbasis.
            We must pivot in the auxiliary variable local_m_size.
         */
-        dd_TableauEntry(x,local_m_size,d_size,A,Ts,objrow,ms);
-        if (dd_Negative(x, smallVal)){
+        dd_TableauEntry(x, d_size,A,Ts,objrow,ms);
+        if (dd_Negative(x)){
           *err=dd_NoError; *lps=dd_DualInconsistent;  *s=ms;
         }
 
@@ -3436,8 +3399,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         for (i=1; i<=local_m_size; i++){
           if (bflag[i]<0) {
              /* i is basic and not the objective variable */
-            dd_TableauEntry(val,local_m_size,d_size,A,Ts,i,ms);  /* auxiliary column*/
-            if (dd_Smaller(val, minval,smallVal)) {
+            dd_TableauEntry(val, d_size,A,Ts,i,ms);  /* auxiliary column*/
+            if (dd_Smaller(val, minval)) {
               r_val=i;
               dd_set(minval,val);
             }
@@ -3451,12 +3414,12 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
 
         dd_GaussianColumnPivot2(local_m_size,d_size,A,Ts,nbindex,bflag,r_val,ms);
         pivots_p1++;
-        stop=globals::dd_TRUE;
+        stop=true;
       } else {
         dd_GaussianColumnPivot2(local_m_size,d_size,A,Ts,nbindex,bflag,r_val,s_val);
         pivots_p1=pivots_p1+1;
         if (bflag[local_m_size]<0) {
-          stop=globals::dd_TRUE;
+          stop=true;
         }
       }
     } while(!stop);
@@ -3470,13 +3433,13 @@ _L99:
 }
 
 template<typename T>
-void dd_DualSimplexMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
+void dd_DualSimplexMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
 {
    dd_colrange j;
    *err=dd_NoError;
    for (j=1; j<=lp->d; j++)
      dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
-   dd_DualSimplexMaximize(lp,err, smallVal);
+   dd_DualSimplexMaximize(lp,err);
    dd_neg(lp->optvalue,lp->optvalue);
    for (j=1; j<=lp->d; j++) {
      if (lp->LPS!=dd_Inconsistent)
@@ -3489,15 +3452,15 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
    work also with floating point arithmetic */
 
 template<typename T>
-void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
+void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
 */
 {
-  int stop,chosen,phase1,found;
+  bool stop,chosen,phase1,found;
   long pivots_ds=0,pivots_p0=0,pivots_p1=0,pivots_pc=0,maxpivots,maxpivfactor=20;
-  dd_boolean localdebug1=globals::dd_FALSE;
+  bool localdebug1=false;
   dd_rowrange i,r;
   dd_colrange j,s;
   dd_rowindex bflag;
@@ -3521,14 +3484,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   for (int i=0; i<=lp->d; i++)
     nbindex_ref[i] = 0;
   /* Initializing control variables. */
-  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
+  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed);
 
   lp->re=0; lp->se=0;
 
   dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,bflag,lp->objrow,lp->rhscol);
 
   dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->equalityset,lp->nbindex,bflag,
-		 lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots_p0, smallVal);
+		 lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots_p0);
   lp->pivots[0]=pivots_p0;
 
   if (!found){
@@ -3538,15 +3501,15 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
      Output the evidence column. */
   }
 
-  dd_FindDualFeasibleBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->nbindex,bflag,
-			   lp->objrow,lp->rhscol,lp->lexicopivot,&s, err,&(lp->LPS),&pivots_p1, maxpivots, smallVal);
+  dd_FindDualFeasibleBasis(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,
+			   lp->objrow,lp->rhscol,lp->lexicopivot,&s, err,&(lp->LPS),&pivots_p1, maxpivots);
   lp->pivots[1]=pivots_p1;
 
   for (j=1; j<=lp->d; j++) nbindex_ref[j]=lp->nbindex[j];
      /* set the reference basis to be the current feasible basis. */
 
   if (*err==dd_LPCycling || *err==dd_NumericallyInconsistent) {
-    dd_CrissCrossMaximize(lp,err, smallVal);
+    dd_CrissCrossMaximize(lp,err);
     delete [] OrderVector;
     delete [] bflag;
     delete [] nbindex_ref;
@@ -3561,17 +3524,17 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   }
 
   /* Dual Simplex Method */
-  stop=globals::dd_FALSE;
+  stop=false;
   do {
-    chosen=globals::dd_FALSE; lp->LPS=dd_LPSundecided; phase1=globals::dd_FALSE;
+    chosen=false; lp->LPS=dd_LPSundecided; phase1=false;
     if (pivots_ds<maxpivots) {
-      dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,OrderVector,nbindex_ref,lp->nbindex,bflag,
-				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS), smallVal);
+      dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,nbindex_ref,bflag,
+				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS));
     }
     if (chosen) {
       pivots_ds=pivots_ds+1;
       if (lp->redcheck_extensive) {
-        dd_GetRedundancyInformation(lp->m,lp->d,lp->A,lp->B,lp->nbindex, bflag, lp->redset_extra, smallVal);
+        dd_GetRedundancyInformation(lp->m,lp->d,lp->A,lp->B, bflag, lp->redset_extra);
         set_uni(lp->redset_accum, lp->redset_accum,lp->redset_extra);
       }
     }
@@ -3586,7 +3549,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
 
       dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
-			       lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS), smallVal);
+			       lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
       if (chosen) pivots_pc=pivots_pc+1;
     }
     if (chosen) {
@@ -3602,13 +3565,13 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       case dd_StrucDualInconsistent: break;
       case dd_Optimal: break;
       }
-      stop=globals::dd_TRUE;
+      stop=true;
     }
   } while(!stop);
 _L99:
   lp->pivots[2]=pivots_ds;
   lp->pivots[3]=pivots_pc;
-  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag, smallVal);
+  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag);
   delete [] OrderVector;
   delete [] bflag;
   delete [] nbindex_ref;
@@ -3617,14 +3580,14 @@ _L99:
 
 
 template<typename T>
-void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
+void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
 {
    dd_colrange j;
 
    *err=dd_NoError;
    for (j=1; j<=lp->d; j++)
      dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
-   dd_CrissCrossMaximize(lp,err, smallVal);
+   dd_CrissCrossMaximize(lp,err);
    dd_neg(lp->optvalue,lp->optvalue);
    for (j=1; j<=lp->d; j++){
      if (lp->LPS!=dd_Inconsistent) {
@@ -3636,13 +3599,13 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
 }
 
 template<typename T>
-void dd_CrissCrossMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, T smallVal)
+void dd_CrissCrossMaximize(dd_lpdata<T> *lp,dd_ErrorType *err)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
 */
 {
-  int stop,chosen,found;
+  bool stop,chosen,found;
   long pivots0,pivots1;
 
   dd_rowrange i,r;
@@ -3665,14 +3628,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   for (int i=0; i<=lp->m; i++)
     OrderVector[i] = 0;
   /* Initializing control variables. */
-  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed, smallVal);
+  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed);
 
   lp->re=0; lp->se=0; pivots1=0;
 
   dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,bflag,lp->objrow,lp->rhscol);
 
   dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->equalityset,
-		 lp->nbindex,bflag,lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots0, smallVal);
+		 lp->nbindex,bflag,lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots0);
   lp->pivots[0]+=pivots0;
 
   if (!found){
@@ -3682,11 +3645,11 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
      Output the evidence column. */
   }
 
-  stop=globals::dd_FALSE;
+  stop=false;
   do {   /* Criss-Cross Method */
 
     dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
-			     lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS), smallVal);
+			     lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
     if (chosen) {
       dd_GaussianColumnPivot2(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
       pivots1++;
@@ -3701,14 +3664,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       case dd_StrucInconsistent: break;
       case dd_StrucDualInconsistent: break;
       }
-      stop=globals::dd_TRUE;
+      stop=true;
     }
   } while(!stop);
 
 _L99:
   lp->pivots[1]+=pivots1;
   dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,
-		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag, smallVal);
+		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lp->nbindex,lp->re,lp->se,bflag);
   delete [] nbtemp;
   delete [] bflag;   /* called previously with different lp->m */
   delete [] OrderVector;
@@ -3719,7 +3682,7 @@ void dd_SetSolutions(dd_rowrange m_size,dd_colrange d_size,
    T** A,T** Ts,
    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
    T & optvalue,T* sol,T* dsol,dd_rowset posset, dd_colindex nbindex,
-		     dd_rowrange re,dd_colrange se,dd_rowindex bflag, T smallVal)
+		     dd_rowrange re,dd_colrange se,dd_rowindex bflag)
 /*
 Assign the solution vectors to sol,dsol,*optvalue after solving
 the LP.
@@ -3728,21 +3691,21 @@ the LP.
   dd_rowrange i;
   dd_colrange j;
   T x,sw;
-  int localdebug=globals::dd_FALSE;
+  int localdebug=false;
 
   if (localdebug) fprintf(stderr,"SetSolutions:\n");
   switch (LPS){
   case dd_Optimal:
     for (j=1;j<=d_size; j++) {
       dd_set(sol[j-1],Ts[j-1][rhscol-1]);
-      dd_TableauEntry(x,m_size,d_size,A,Ts,objrow,j);
+      dd_TableauEntry(x, d_size,A,Ts,objrow,j);
       dd_neg(dsol[j-1],x);
-      dd_TableauEntry(optvalue,m_size,d_size,A,Ts,objrow,rhscol);
+      dd_TableauEntry(optvalue, d_size,A,Ts,objrow,rhscol);
     }
     for (i=1; i<=m_size; i++) {
       if (bflag[i]==-1) {  /* i is a basic variable */
-        dd_TableauEntry(x,m_size,d_size,A,Ts,i,rhscol);
-        if (dd_Positive(x, smallVal)) set_addelem(posset, i);
+        dd_TableauEntry(x, d_size,A,Ts,i,rhscol);
+        if (dd_Positive(x)) set_addelem(posset, i);
       }
     }
 
@@ -3751,7 +3714,7 @@ the LP.
     if (localdebug) fprintf(stderr,"SetSolutions: LP is inconsistent.\n");
     for (j=1;j<=d_size; j++) {
       dd_set(sol[j-1],Ts[j-1][rhscol-1]);
-      dd_TableauEntry(x,m_size,d_size,A,Ts,re,j);
+      dd_TableauEntry(x, d_size,A,Ts,re,j);
       dd_neg(dsol[j-1],x);
     }
     break;
@@ -3777,18 +3740,18 @@ the LP.
     if (localdebug) printf( "SetSolutions: LP is dual inconsistent.\n");
     for (j=1;j<=d_size; j++) {
       dd_set(sol[j-1],Ts[j-1][se-1]);
-      dd_TableauEntry(x,m_size,d_size,A,Ts,objrow,j);
+      dd_TableauEntry(x, d_size,A,Ts,objrow,j);
       dd_neg(dsol[j-1],x);
     }
 	break;
 
   case dd_StrucDualInconsistent:
-    dd_TableauEntry(x,m_size,d_size,A,Ts,objrow,se);
-    if (dd_Positive(x, smallVal)) sw=1;
+    dd_TableauEntry(x, d_size,A,Ts,objrow,se);
+    if (dd_Positive(x)) sw=1;
     else sw=-1;
     for (j=1;j<=d_size; j++) {
       dd_mul(sol[j-1],sw,Ts[j-1][se-1]);
-      dd_TableauEntry(x,m_size,d_size,A,Ts,objrow,j);
+      dd_TableauEntry(x, d_size,A,Ts,objrow,j);
       dd_neg(dsol[j-1],x);
     }
     if (localdebug) fprintf(stderr,"SetSolutions: LP is dual inconsistent.\n");
@@ -3801,7 +3764,7 @@ the LP.
 
 template<typename T>
 void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
-			       dd_rowindex OV,dd_RowOrderType ho,unsigned int rseed, T smallVal)
+			       dd_rowindex OV,dd_RowOrderType ho,unsigned int rseed)
 {
   long i,itemp;
 
@@ -3813,12 +3776,12 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
 
   case dd_LexMin:
     for(i=1; i<=m_size; i++) OV[i]=i;
-    dd_QuickSort(OV,1,m_size,A,d_size, smallVal);
+    dd_QuickSort(OV,1,m_size,A,d_size);
    break;
 
   case dd_LexMax:
     for(i=1; i<=m_size; i++) OV[i]=i;
-    dd_QuickSort(OV,1,m_size,A,d_size, smallVal);
+    dd_QuickSort(OV,1,m_size,A,d_size);
     for(i=1; i<=m_size/2;i++){   /* just reverse the order */
       itemp=OV[i];
       OV[i]=OV[m_size-i+1];
@@ -3864,7 +3827,7 @@ ddf_LPPtr dd_LPgmp2LPf(dd_lpdata<T> *lp)
   dd_colrange j;
   ddf_LPType *lpf;
   double val;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   if (localdebug) fprintf(stderr,"Converting a GMP-LP to a float-LP.\n");
 
@@ -3885,7 +3848,7 @@ ddf_LPPtr dd_LPgmp2LPf(dd_lpdata<T> *lp)
 */
 
 template<typename T>
-dd_boolean dd_LPSolve(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err, T smallVal)
+bool dd_LPSolve(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics first
 and then with the specified arithimetics if it is GMP.
@@ -3895,12 +3858,12 @@ When LP is dual-inconsistent then *se returns the evidence column.
 */
 {
   int i;
-  dd_boolean found=globals::dd_FALSE;
+  bool found=false;
 #ifdef GMPRATIONAL
   ddf_LPPtr lpf;
   ddf_ErrorType errf;
-  dd_boolean LPScorrect=globals::dd_FALSE;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool LPScorrect=false;
+  bool localdebug=false;
   if (dd_debug) localdebug=dd_debug;
 #endif
 
@@ -3912,10 +3875,10 @@ When LP is dual-inconsistent then *se returns the evidence column.
 #ifndef GMPRATIONAL
   switch (lp->solver) {
     case dd_CrissCross:
-      dd_CrissCrossSolve(lp,err, smallVal);
+      dd_CrissCrossSolve(lp,err);
       break;
     case dd_DualSimplex:
-      dd_DualSimplexSolve(lp,err, smallVal);
+      dd_DualSimplexSolve(lp,err);
       break;
   }
 #else
@@ -3925,10 +3888,10 @@ When LP is dual-inconsistent then *se returns the evidence column.
       ddf_CrissCrossSolve(lpf,&errf);    /* First, run with double float. */
 	  if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
         dd_BasisStatus(lpf,lp, &LPScorrect);    /* Check the basis. */
-	  } else {LPScorrect=globals::dd_FALSE;}
+	  } else {LPScorrect=false;}
       if (!LPScorrect) {
          if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
-         dd_CrissCrossSolve(lp,err, smallVal);  /* Rerun with GMP if fails. */
+         dd_CrissCrossSolve(lp,err);  /* Rerun with GMP if fails. */
       } else {
          if (localdebug) printf("BasisStatus: the current basis is verified with GMP. The LP Solved.\n");
       }
@@ -3937,10 +3900,10 @@ When LP is dual-inconsistent then *se returns the evidence column.
       ddf_DualSimplexSolve(lpf,&errf);    /* First, run with double float. */
       if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
         dd_BasisStatus(lpf,lp, &LPScorrect);    /* Check the basis. */
-      } else {LPScorrect=globals::dd_FALSE;}
+      } else {LPScorrect=false;}
       if (!LPScorrect){
 	if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
-	dd_DualSimplexSolve(lp,err, smallVal);  /* Rerun with GMP if fails. */
+	dd_DualSimplexSolve(lp,err);  /* Rerun with GMP if fails. */
 	if (localdebug){
 	  printf("*total number pivots = %ld (ph0 = %ld, ph1 = %ld, ph2 = %ld, ph3 = %ld, ph4 = %ld)\n",
 		 lp->total_pivots,lp->pivots[0],lp->pivots[1],lp->pivots[2],lp->pivots[3],lp->pivots[4]);
@@ -3958,13 +3921,13 @@ When LP is dual-inconsistent then *se returns the evidence column.
   time(&lp->endtime);
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
-  if (*err==dd_NoError) found=globals::dd_TRUE;
+  if (*err==dd_NoError) found=true;
   return found;
 }
 
 
 template<typename T>
-dd_boolean dd_LPSolve0(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err, T smallVal)
+bool dd_LPSolve0(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
 /*
 The original version of dd_LPSolve that solves an LP with specified arithimetics.
 
@@ -3973,7 +3936,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
 */
 {
   int i;
-  dd_boolean found=globals::dd_FALSE;
+  bool found=false;
 
   *err=dd_NoError;
   lp->solver=solver;
@@ -3981,23 +3944,23 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
   switch (lp->solver) {
     case dd_CrissCross:
-      dd_CrissCrossSolve(lp,err, smallVal);
+      dd_CrissCrossSolve(lp,err);
       break;
     case dd_DualSimplex:
-      dd_DualSimplexSolve(lp,err, smallVal);
+      dd_DualSimplexSolve(lp,err);
       break;
   }
 
   time(&lp->endtime);
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
-  if (*err==dd_NoError) found=globals::dd_TRUE;
+  if (*err==dd_NoError) found=true;
   return found;
 }
 
 
 template<typename T>
-dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp, T smallVal)
+dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 /* Delete the objective row,
    add an extra column with -1's to the matrix A,
    add an extra row with (bceil, 0,...,0,-1),
@@ -4030,7 +3993,7 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp, T smallVal)
   lpnew=dd_CreateLPData<T>(obj, numbtype, m, d);
 
   for (i=1; i<=lp->m; i++) {
-    if (dd_Larger(lp->A[i-1][lp->rhscol-1],bmax,smallVal))
+    if (dd_Larger(lp->A[i-1][lp->rhscol-1],bmax))
       dd_set(bmax,lp->A[i-1][lp->rhscol-1]);
   }
   dd_mul(bceil,bm,bmax);
@@ -4060,12 +4023,12 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp, T smallVal)
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M, T smallVal)
+dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc+1;
@@ -4074,10 +4037,10 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M, T smallVal)
   d=M->colsize+1;
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_TRUE;
+  lp->Homogeneous = true;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
-  lp->redcheck_extensive=globals::dd_FALSE;  /* this is default */
+  lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -4093,7 +4056,7 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M, T smallVal)
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) lp->Homogeneous = globals::dd_FALSE;
+      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   lp->A[m-2][0]=1;
@@ -4117,7 +4080,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc+1;
@@ -4129,10 +4092,10 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 /* The below must be modified for V-representation!!!  */
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_FALSE;
+  lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
-  lp->redcheck_extensive=globals::dd_FALSE;  /* this is default */
+  lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -4168,7 +4131,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T smallVal)
+dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
@@ -4181,10 +4144,10 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T
   d=M->colsize;
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_TRUE;
+  lp->Homogeneous = true;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
-  lp->redcheck_extensive=globals::dd_FALSE;  /* this is default */
+  lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -4198,7 +4161,7 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, T
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1],smallVal)) lp->Homogeneous = globals::dd_FALSE;
+      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   for (j = 1; j <= M->colsize; j++) {
@@ -4228,10 +4191,10 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 /* The below must be modified for V-representation!!!  */
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_FALSE;
+  lp->Homogeneous = false;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
-  lp->redcheck_extensive=globals::dd_FALSE;  /* this is default */
+  lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -4294,7 +4257,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 /* The below must be modified for V-representation!!!  */
 
   lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
-  lp->Homogeneous = globals::dd_FALSE;
+  lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
 
@@ -4328,7 +4291,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 }
 
 template<typename T>
-dd_boolean dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error, T smallVal)
+bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error)
   /* 092 */
 {
   /* Checks whether the row itest is redundant for the representation.
@@ -4364,7 +4327,7 @@ dd_boolean dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, 
   dd_lpdata<T> *lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
-  dd_boolean answer=globals::dd_FALSE,localdebug=globals::dd_FALSE;
+  bool answer=false,localdebug=false;
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)){
@@ -4376,10 +4339,10 @@ dd_boolean dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, 
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
+    lp=dd_CreateLP_H_Redundancy(M, itest);
   }
 
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
+  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -4390,11 +4353,11 @@ dd_boolean dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, 
       dd_set(certificate[j], lps->sol[j]);
     }
 
-    if (dd_Negative(lps->optvalue, smallVal)){
-      answer=globals::dd_FALSE;
+    if (dd_Negative(lps->optvalue)){
+      answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
-      answer=globals::dd_TRUE;
+      answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
     }
     dd_FreeLPSolution(lps);
@@ -4406,8 +4369,8 @@ _L99:
 }
 
 template<typename T>
-dd_boolean dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
-				 dd_rowset *redset,dd_ErrorType *error, T smallVal)
+bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
+				 dd_rowset *redset,dd_ErrorType *error)
   /* 094 */
 {
   /* This uses the same LP construction as dd_Reduandant.  But, while it is checking
@@ -4421,7 +4384,7 @@ dd_boolean dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* cert
   dd_lpdata<T> *lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
-  dd_boolean answer=globals::dd_FALSE,localdebug=globals::dd_FALSE;
+  bool answer=false,localdebug=false;
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)){
@@ -4433,12 +4396,12 @@ dd_boolean dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* cert
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
+    lp=dd_CreateLP_H_Redundancy(M, itest);
   }
 
-  lp->redcheck_extensive=globals::dd_TRUE;
+  lp->redcheck_extensive=true;
 
-  dd_LPSolve0(lp,dd_DualSimplex,&err, smallVal);
+  dd_LPSolve0(lp,dd_DualSimplex,&err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -4453,11 +4416,11 @@ dd_boolean dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* cert
       dd_set(certificate[j], lps->sol[j]);
     }
 
-    if (dd_Negative(lps->optvalue, smallVal)){
-      answer=globals::dd_FALSE;
+    if (dd_Negative(lps->optvalue)){
+      answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
-      answer=globals::dd_TRUE;
+      answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
     }
     dd_FreeLPSolution(lps);
@@ -4469,14 +4432,14 @@ _L99:
 }
 
 template<typename T>
-dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, T smallVal)
+dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
 {
   dd_rowrange i,m;
   dd_colrange d;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
   T* cvec; /* certificate */
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   m=M->rowsize;
   if (M->representation==dd_Generator){
@@ -4488,7 +4451,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, T smallVal)
   dd_InitializeArow(d,&cvec);
   set_initialize(&redset, m);
   for (i=m; i>=1; i--) {
-    if (dd_Redundant(Mcopy, i, cvec, error, smallVal)) {
+    if (dd_Redundant(Mcopy, i, cvec, error)) {
       if (localdebug) printf("dd_RedundantRows: the row %ld is redundant.\n", i);
       set_addelem(redset, i);
       dd_MatrixRowRemove(&Mcopy, i);
@@ -4505,7 +4468,7 @@ _L99:
 
 
 template<typename T>
-dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowindex *newpos, dd_ErrorType *error, T smallVal)
+bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowindex *newpos, dd_ErrorType *error)
 {
   /* It returns the set of all redundant rows.  This should be called after all
      implicit linearity are recognized with dd_MatrixCanonicalizeLinearity.
@@ -4518,11 +4481,11 @@ dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_
   dd_rowindex newpos1;
   dd_matrixdata<T> *M1=nullptr;
   T* cvec; /* certificate */
-  dd_boolean success=globals::dd_FALSE, localdebug=globals::dd_FALSE;
+  bool success=false, localdebug=false;
 
   m=(*M)->rowsize;
   set_initialize(redset, m);
-  M1=dd_MatrixSortedUniqueCopy(*M,newpos, smallVal);
+  M1=dd_MatrixSortedUniqueCopy(*M,newpos);
   for (i=1; i<=m; i++){
     if ((*newpos)[i]<=0) set_addelem(*redset,i);
     if (localdebug) printf(" %ld:%ld",i,(*newpos)[i]);
@@ -4543,7 +4506,7 @@ dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_
   set_initialize(&redset1, M1->rowsize);
   k=1;
   do {
-    if (dd_RedundantExtensive(M1, k, cvec, &redset1,error, smallVal)) {
+    if (dd_RedundantExtensive(M1, k, cvec, &redset1,error)) {
       set_addelem(redset1, k);
       dd_MatrixRowsRemove2(&M1,redset1,&newpos1);
       for (i=1; i<=m; i++){
@@ -4589,7 +4552,7 @@ dd_boolean dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_
     if (*error!=dd_NoError) goto _L99;
   } while  (k<=M1->rowsize);
   if (localdebug) dd_WriteMatrix(stderr, M1);
-  success=globals::dd_TRUE;
+  success=true;
 
 _L99:
   dd_FreeMatrix(*M);
@@ -4601,7 +4564,7 @@ _L99:
 
 
 template<typename T>
-dd_boolean dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error, T smallVal)
+bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error)
 {
   /* Checks whether the row itest is strongly redundant for the representation.
      A row is strongly redundant in H-representation if every point in
@@ -4656,7 +4619,7 @@ dd_boolean dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
   dd_lpdata<T> *lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
-  dd_boolean answer=globals::dd_FALSE,localdebug=globals::dd_FALSE;
+  bool answer=false,localdebug=false;
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)){
@@ -4668,10 +4631,10 @@ dd_boolean dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
+    lp=dd_CreateLP_H_Redundancy(M, itest);
   }
 
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
+  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -4683,30 +4646,30 @@ dd_boolean dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
     }
 
     if (M->representation==dd_Inequality){
-      if (dd_Positive(lps->optvalue, smallVal)){
-          answer=globals::dd_TRUE;
+      if (dd_Positive(lps->optvalue)){
+          answer=true;
           if (localdebug) fprintf(stderr,"==> %ld th inequality is strongly redundant.\n",itest);
         } else {
-          answer=globals::dd_FALSE;
+          answer=false;
           if (localdebug) fprintf(stderr,"==> %ld th inequality is not strongly redundant.\n",itest);
         }
     } else {
-      if (dd_Negative(lps->optvalue, smallVal)){
-          answer=globals::dd_FALSE;
+      if (dd_Negative(lps->optvalue)){
+          answer=false;
           if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
         } else {
           /* for V-representation, we have to solve another LP */
           dd_FreeLPData(lp);
           dd_FreeLPSolution(lps);
           lp=dd_CreateLP_V_SRedundancy(M, itest);
-          dd_LPSolve(lp,dd_DualSimplex,&err, smallVal);
+          dd_LPSolve(lp,dd_DualSimplex,&err);
           lps=dd_CopyLPSolution(lp);
           if (localdebug) dd_WriteLPResult(stdout,lp,err);
-          if (dd_Positive(lps->optvalue, smallVal)){
-            answer=globals::dd_FALSE;
+          if (dd_Positive(lps->optvalue)){
+            answer=false;
             if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
           } else {
-            answer=globals::dd_TRUE;
+            answer=true;
             if (localdebug) fprintf(stderr,"==> %ld th point is strongly redundant.\n",itest);
           }
        }
@@ -4727,7 +4690,7 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
   T* cvec; /* certificate */
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   m=M->rowsize;
   if (M->representation==dd_Generator){
@@ -4755,7 +4718,7 @@ _L99:
 }
 
 template<typename T>
-dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, T smallVal)
+dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
 {
   /*
      For H-representation only and not quite reliable,
@@ -4779,7 +4742,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
   dd_lpsolution<T> *lps;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
-  dd_boolean localdebug=globals::dd_TRUE;
+  bool localdebug=false;
 
   m=M->rowsize;
   d=M->colsize;
@@ -4794,13 +4757,13 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
     rowflag[i] = 0;
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find. */
-  lp0=dd_Matrix2LP(M, &err, smallVal);
-  lp=dd_MakeLPforInteriorFinding(lp0, smallVal);
+  lp0=dd_Matrix2LP(M, &err);
+  lp=dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
-  dd_LPSolve(lp, solver, &err, smallVal);  /* Solve the LP */
+  dd_LPSolve(lp, solver, &err);  /* Solve the LP */
   lps=dd_CopyLPSolution(lp);
 
-  if (dd_Positive(lps->optvalue, smallVal)){
+  if (dd_Positive(lps->optvalue)){
     if (localdebug) std::cout << "dd_Positive=T case\n";
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
@@ -4808,7 +4771,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
       for (k=1; k<=d; k++) shootdir[k-1]=0;
       shootdir[j]=1;  /* j-th unit vector */
       if (localdebug) dd_WriteT(std::cerr, shootdir, d);
-      ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
+      ired=dd_RayShooting(M, lps->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4817,7 +4780,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
       }
 
       shootdir[j]=-1;  /* negative of the j-th unit vector */
-      ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
+      ired=dd_RayShooting(M, lps->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4840,9 +4803,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
         if (localdebug) fprintf(stderr, "Checking redundancy of %ld th inequality\n", i);
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[i-1][k-1]);
-        if (!dd_Redundant(M1, irow, cvec, &err, smallVal)){
+        if (!dd_Redundant(M1, irow, cvec, &err)){
           for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lps->sol[k-1]);
-          ired=dd_RayShooting(M, lps->sol, shootdir, smallVal);
+          ired=dd_RayShooting(M, lps->sol, shootdir);
           rowflag[ired]=irow;
           for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[ired-1][k-1]);
           if (localdebug) {
@@ -4864,7 +4827,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error, 
     if (localdebug) std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
-    redset=dd_RedundantRows(M, error, smallVal);
+    redset=dd_RedundantRows(M, error);
   }
 
   dd_FreeLPData(lp);
@@ -4956,13 +4919,13 @@ _L999:
 
 
 template<typename T>
-dd_boolean dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error, T smallVal)
+bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error)
   /* 092 */
 {
   /* Checks whether the row itest is implicit linearity for the representation.
-     All linearity rows are not checked and considered non implicit linearity (globals::dd_FALSE).
+     All linearity rows are not checked and considered non implicit linearity (false).
      This code works for both H- and V-representations.  A certificate is
-     given in the case of globals::dd_FALSE, showing a feasible solution x satisfying the itest
+     given in the case of false, showing a feasible solution x satisfying the itest
      strict inequality for H-representation, a hyperplane RHS and normal (x_0, x) that
      separates the itest from the rest.  More explicitly, the LP to be setup is
      the same thing as redundancy case but with maximization:
@@ -4993,7 +4956,7 @@ dd_boolean dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certi
   dd_lpdata<T> *lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
-  dd_boolean answer=globals::dd_FALSE,localdebug=globals::dd_FALSE;
+  bool answer=false,localdebug=false;
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)){
@@ -5005,11 +4968,11 @@ dd_boolean dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certi
   if (M->representation==dd_Generator){
     lp=dd_CreateLP_V_Redundancy(M, itest);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest, smallVal);
+    lp=dd_CreateLP_H_Redundancy(M, itest);
   }
 
   lp->objective = dd_LPmax;  /* the lp->objective is set by CreateLP* to LPmin */
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
+  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -5020,11 +4983,11 @@ dd_boolean dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certi
       dd_set(certificate[j], lps->sol[j]);
     }
 
-    if (lps->LPS==dd_Optimal && dd_EqualToZero(lps->optvalue, smallVal)){
-      answer=globals::dd_TRUE;
+    if (lps->LPS==dd_Optimal && dd_EqualToZero(lps->optvalue)){
+      answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th data is an implicit linearity.\n",itest);
     } else {
-      answer=globals::dd_FALSE;
+      answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th data is not an implicit linearity.\n",itest);
     }
     dd_FreeLPSolution(lps);
@@ -5037,7 +5000,7 @@ _L99:
 
 
 template<typename T>
-int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *imp_linrows, dd_ErrorType *error, T smallVal)
+int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *imp_linrows, dd_ErrorType *error)
   /* 092 */
 {
   /* Checks whether the matrix M constains any implicit linearity at all.
@@ -5072,7 +5035,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
   dd_ErrorType err=dd_NoError;
   T* cvec; /* certificate for implicit linearity */
 
-  int answer=0,localdebug=globals::dd_FALSE;
+  int answer=0,localdebug=false;
 
   *error=dd_NoError;
   /* Create an LP data for redundancy checking */
@@ -5082,7 +5045,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     lp=dd_CreateLP_H_ImplicitLinearity(M);
   }
 
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err, smallVal);
+  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -5106,10 +5069,10 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     set_initialize(imp_linrows,m);
 
     if (lp->LPS==dd_Optimal){
-      if (dd_Positive(lp->optvalue, smallVal)){
+      if (dd_Positive(lp->optvalue)){
         answer=1;
         if (localdebug) fprintf(stderr,"==> The matrix has no implicit linearity.\n");
-      } else if (dd_Negative(lp->optvalue, smallVal)) {
+      } else if (dd_Negative(lp->optvalue)) {
           answer=-1;
           if (localdebug) fprintf(stderr,"==> The matrix defines the trivial system.\n");
         } else {
@@ -5155,7 +5118,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M, dd_ErrorType *error)  /*
   dd_rowset imp_linset;
   T* cvec; /* certificate */
   int foi;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   if (M->representation==dd_Generator){
     d=(M->colsize)+2;
@@ -5192,8 +5155,8 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M, dd_ErrorType *error)  /*
 }
 
 template<typename T>
-dd_boolean dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_linset,dd_rowindex *newpos,
-					  dd_ErrorType *error, T smallVal) /* 094 */
+bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_linset,dd_rowindex *newpos,
+					  dd_ErrorType *error) /* 094 */
 {
 /* This is to recongnize all implicit linearities, and put all linearities at the top of
    the matrix.    All implicit linearities will be returned by *impl_linset.
@@ -5203,7 +5166,7 @@ dd_boolean dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_
   dd_colset ignoredcols,basiscols;
   dd_rowrange i,k,m;
   dd_rowindex newpos1;
-  dd_boolean success=globals::dd_FALSE;
+  bool success=false;
 
   linrows=dd_ImplicitLinearityRows(*M, error);
   if (*error!=dd_NoError) goto _L99;
@@ -5218,7 +5181,7 @@ dd_boolean dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_
   set_initialize(&ignoredrows,  (*M)->rowsize);
   set_initialize(&ignoredcols,  (*M)->colsize);
   set_compl(ignoredrows,  (*M)->linset);
-  rank=dd_MatrixRank(*M,ignoredrows,ignoredcols,&basisrows,&basiscols, smallVal);
+  rank=dd_MatrixRank(*M,ignoredrows,ignoredcols,&basisrows,&basiscols);
   set_diff(ignoredrows,  (*M)->linset, basisrows);
   dd_MatrixRowsRemove2(M,ignoredrows,newpos);
 
@@ -5232,7 +5195,7 @@ dd_boolean dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_
   }
 
   *impl_linset=linrows;
-  success=globals::dd_TRUE;
+  success=true;
   delete [] newpos1;
   set_free(basisrows);
   set_free(basiscols);
@@ -5243,8 +5206,8 @@ _L99:
 }
 
 template<typename T>
-dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, dd_rowset *redset,
-				 dd_rowindex *newpos, dd_ErrorType *error, T smallVal) /* 094 */
+bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, dd_rowset *redset,
+				 dd_rowindex *newpos, dd_ErrorType *error) /* 094 */
 {
 /* This is to find a canonical representation of a matrix *M by
    recognizing all implicit linearities and all redundancies.
@@ -5254,7 +5217,7 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
   dd_rowrange i,k,m;
   dd_rowindex newpos1, revpos;
   dd_rowset redset1;
-  dd_boolean success=globals::dd_TRUE;
+  bool success=true;
 
   m=(*M)->rowsize;
   set_initialize(redset, m);
@@ -5262,7 +5225,7 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
   for (int i=0; i<=m; i++)
     revpos[i] = 0;
 
-  success=dd_MatrixCanonicalizeLinearity(M, impl_linset, newpos, error, smallVal);
+  success=dd_MatrixCanonicalizeLinearity(M, impl_linset, newpos, error);
 
   if (!success) goto _L99;
 
@@ -5271,7 +5234,7 @@ dd_boolean dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, d
     if (k>0) revpos[k]=i;  /* inverse of *newpos[] */
   }
 
-  success=dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error, smallVal);  /* 094 */
+  success=dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error);  /* 094 */
 
   if (!success) goto _L99;
 
@@ -5293,7 +5256,7 @@ _L99:
 
 
 template<typename T>
-dd_boolean dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err, T smallVal)
+bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err)
 /* 0.94 */
 {
 /* This function checkes if there is a point that satifies all the constraints of
@@ -5302,7 +5265,7 @@ specified by R and additional strict inequality constraints specified by S.
 The set S is supposed to be disjoint from both R and M->linset.   When it is not,
 the set S will be considered as S\(R U M->linset).
 */
-  dd_boolean answer=globals::dd_FALSE;
+  bool answer=false;
   dd_lpdata<T> *lp=nullptr;
 
 /*
@@ -5311,15 +5274,15 @@ the set S will be considered as S\(R U M->linset).
   printf("S = "); set_write(S);
 */
 
-  lp=dd_Matrix2Feasibility2(M, R, S, err, smallVal);
+  lp=dd_Matrix2Feasibility2(M, R, S, err);
 
   if (*err!=dd_NoError) goto _L99;
 
 /* Solve the LP by cdd LP solver. */
-  dd_LPSolve(lp, dd_DualSimplex, err, smallVal);  /* Solve the LP */
+  dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
   if (*err!=dd_NoError) goto _L99;
-  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue, smallVal)) {
-    answer=globals::dd_TRUE;
+  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue)) {
+    answer=true;
   }
 
   dd_FreeLPData(lp);
@@ -5328,7 +5291,7 @@ _L99:
 }
 
 template<typename T>
-dd_boolean dd_ExistsRestrictedFace2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_lpsolution<T> **lps, dd_ErrorType *err, T smallVal)
+bool dd_ExistsRestrictedFace2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_lpsolution<T> **lps, dd_ErrorType *err)
 /* 0.94 */
 {
 /* This function checkes if there is a point that satifies all the constraints of
@@ -5339,7 +5302,7 @@ the set S will be considered as S\(R U M->linset).
 
 This function returns a certificate of the answer in terms of the associated LP solutions.
 */
-  dd_boolean answer=globals::dd_FALSE;
+  bool answer=false;
   dd_lpdata<T> *lp=nullptr;
 
 /*
@@ -5348,15 +5311,15 @@ This function returns a certificate of the answer in terms of the associated LP 
   printf("S = "); set_write(S);
 */
 
-  lp=dd_Matrix2Feasibility2(M, R, S, err, smallVal);
+  lp=dd_Matrix2Feasibility2(M, R, S, err);
 
   if (*err!=dd_NoError) goto _L99;
 
 /* Solve the LP by cdd LP solver. */
-  dd_LPSolve(lp, dd_DualSimplex, err, smallVal);  /* Solve the LP */
+  dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
   if (*err!=dd_NoError) goto _L99;
-  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue, smallVal)) {
-    answer=globals::dd_TRUE;
+  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue)) {
+    answer=true;
   }
 
 
@@ -5367,7 +5330,7 @@ _L99:
 }
 
 template<typename T>
-dd_boolean dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL, dd_rowset *Lbasis, dd_lpsolution<T> **lps, dd_ErrorType *err, T smallVal)
+bool dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL, dd_rowset *Lbasis, dd_lpsolution<T> **lps, dd_ErrorType *err)
 /* 0.94 */
 {
 /* This function computes a point in the relative interior of the H-polyhedron given by M.
@@ -5381,7 +5344,7 @@ that the dimension of the polyhedron is M->colsize - set_card(Lbasis) -1.
 
   dd_rowset S;
   dd_colset Tc, Lbasiscols;
-  dd_boolean success=globals::dd_FALSE;
+  bool success=false;
   dd_rowrange i;
   dd_colrange rank;
 
@@ -5398,11 +5361,11 @@ that the dimension of the polyhedron is M->colsize - set_card(Lbasis) -1.
   }
   if (dd_ExistsRestrictedFace2(M, *ImL, S, lps, err)){
     /* printf("a relative interior point found\n"); */
-    success=globals::dd_TRUE;
+    success=true;
   }
 
   set_initialize(&Tc,  M->colsize); /* empty set */
-  rank=dd_MatrixRank(M,S,Tc,Lbasis,&Lbasiscols, smallVal); /* the rank of the linearity submatrix of M.  */
+  rank=dd_MatrixRank(M,S,Tc,Lbasis,&Lbasiscols); /* the rank of the linearity submatrix of M.  */
 
   set_free(S);
   set_free(Tc);
@@ -5414,23 +5377,23 @@ _L99:
 
 
 template<typename T>
-dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
+dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
 {
   dd_rowrange imin=-1, i, m;
   dd_colrange j, d;
   T *vecmin, *vec;
   T min, t1, t2, alpha, t1min;
-  dd_boolean started=globals::dd_FALSE;
-  dd_boolean localdebug=globals::dd_TRUE;
+  bool started=false;
+  bool localdebug=false;
   T dd_one;
   dd_one=1;
   m=M->rowsize;
   d=M->colsize;
-  if (!dd_Equal(dd_one, p[0],smallVal)){
+  if (!dd_Equal(dd_one, p[0])){
     fprintf(stderr, "Warning: RayShooting is called with a point with first coordinate not 1.\n");
     dd_set(p[0],dd_one);
   }
-  if (!dd_EqualToZero(r[0], smallVal)){
+  if (!dd_EqualToZero(r[0])){
     fprintf(stderr, "Warning: RayShooting is called with a direction with first coordinate not 0.\n");
     r[0]=0;
   }
@@ -5443,30 +5406,30 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r, T smallVal)
     if (localdebug) {
       std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
     }
-    if (dd_Positive(t1, smallVal)) {
+    if (dd_Positive(t1)) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
       dd_div(alpha, t2, t1);
       if (!started){
         imin=i;  dd_set(min, alpha);
         dd_set(t1min, t1);  /* store the denominator. */
-        started=globals::dd_TRUE;
+        started=true;
         if (localdebug) {
           std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
         }
       } else {
-        if (dd_Smaller(alpha, min,smallVal)){
+        if (dd_Smaller(alpha, min)){
           imin=i;  dd_set(min, alpha);
           dd_set(t1min, t1);  /* store the denominator. */
           if (localdebug) {
             std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
           }
         } else {
-          if (dd_Equal(alpha, min,smallVal)) { /* tie break */
+          if (dd_Equal(alpha, min)) { /* tie break */
             for (j=1; j<= d; j++){
               dd_div(vecmin[j-1], M->matrix[imin-1][j-1], t1min);
               dd_div(vec[j-1], M->matrix[i-1][j-1], t1);
             }
-            if (dd_LexSmaller(vec,vecmin, d, smallVal)){
+            if (dd_LexSmaller(vec,vecmin, d)){
               imin=i;  dd_set(min, alpha);
               dd_set(t1min, t1);  /* store the denominator. */
               if (localdebug) {
@@ -5490,7 +5453,7 @@ void dd_BasisStatusMaximize(dd_rowrange m_size,dd_colrange d_size,
 			    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
 			    T &optvalue,T* sol,T* dsol,dd_rowset posset, dd_colindex nbindex,
 			    dd_rowrange re,dd_colrange se, dd_colrange *nse, long *pivots,
-			    int *found, int *LPScorrect, T smallVal)
+			    int *found, int *LPScorrect)
 /*  This is just to check whether the status LPS of the basis given by
 nbindex with extra certificates se or re is correct.  It is done
 by recomputing the basis inverse matrix T.  It does not solve the LP
@@ -5512,7 +5475,7 @@ arithmetics.
   T val;
   dd_colindex nbtemp;
   //  dd_LPStatusType ddlps;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
 
   if (dd_debug) localdebug=dd_debug;
   nbtemp = new long[d_size+1];
@@ -5528,7 +5491,7 @@ arithmetics.
     OrderVector[i] = 0;
 
   /* Initializing control variables. */
-  dd_ComputeRowOrderVector2(m_size,d_size,A,OrderVector,dd_MinIndex,rseed, smallVal);
+  dd_ComputeRowOrderVector2(m_size,d_size,A,OrderVector,dd_MinIndex,rseed);
 
   pivots1=0;
 
@@ -5544,7 +5507,7 @@ arithmetics.
   }
 
   if (fbasisrank<d_size-1) {
-    *found=globals::dd_FALSE;
+    *found=false;
     goto _L99;
     /* Suspicious case.  Rerun the LP solver with GMP. */
   }
@@ -5552,7 +5515,7 @@ arithmetics.
 
 
   dd_FindLPBasis2(m_size,d_size,A,Ts,OrderVector, equalityset,nbindex,bflag,
-		  objrow,rhscol,&s,found,&pivots0, smallVal);
+		  objrow,rhscol,&s,found,&pivots0);
 
 /* set up the new se column and corresponding variable */
   senew=bflag[is];
@@ -5566,20 +5529,20 @@ arithmetics.
 
 
   /* Check whether a recomputed basis is of the type specified by LPS */
-  *LPScorrect=globals::dd_TRUE;
+  *LPScorrect=true;
   switch (LPS){
      case dd_Optimal:
        for (i=1; i<=m_size; i++) {
          if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
-            dd_TableauEntry(val,m_size,d_size,A,Ts,i,rhscol);
-            if (dd_Negative(val, smallVal)) {
-               *LPScorrect=globals::dd_FALSE;
+            dd_TableauEntry(val, d_size,A,Ts,i,rhscol);
+            if (dd_Negative(val)) {
+               *LPScorrect=false;
                break;
             }
           } else if (bflag[i] >0) { /* i is nonbasic variable */
-            dd_TableauEntry(val,m_size,d_size,A,Ts,objrow,bflag[i]);
-            if (dd_Positive(val, smallVal)) {
-               *LPScorrect=globals::dd_FALSE;
+            dd_TableauEntry(val, d_size,A,Ts,objrow,bflag[i]);
+            if (dd_Positive(val)) {
+               *LPScorrect=false;
                break;
             }
           }
@@ -5587,14 +5550,14 @@ arithmetics.
        break;
      case dd_Inconsistent:
        for (j=1; j<=d_size; j++){
-          dd_TableauEntry(val,m_size,d_size,A,Ts,re,j);
+          dd_TableauEntry(val, d_size,A,Ts,re,j);
           if (j==rhscol){
-	    if (dd_Nonnegative(val,smallVal)){
-               *LPScorrect=globals::dd_FALSE;
+	    if (dd_Nonnegative(val)){
+               *LPScorrect=false;
                break;
              }
-	  } else if (dd_Positive(val, smallVal)){
-               *LPScorrect=globals::dd_FALSE;
+	  } else if (dd_Positive(val)){
+               *LPScorrect=false;
                break;
            }
        };
@@ -5607,14 +5570,14 @@ arithmetics.
 
      case dd_DualInconsistent:
         for (i=1; i<=m_size; i++){
-          dd_TableauEntry(val,m_size,d_size,A,Ts,i,bflag[is]);
+          dd_TableauEntry(val, d_size,A,Ts,i,bflag[is]);
           if (i==objrow){
-	    if (dd_Nonpositive(val, smallVal)){
-               *LPScorrect=globals::dd_FALSE;
+	    if (dd_Nonpositive(val)){
+               *LPScorrect=false;
                break;
              }
-	  } else if (dd_Negative(val, smallVal)){
-               *LPScorrect=globals::dd_FALSE;
+	  } else if (dd_Negative(val)){
+               *LPScorrect=false;
                break;
            }
        };
@@ -5674,20 +5637,20 @@ void dd_BasisStatusMinimize(dd_rowrange m_size,dd_colrange d_size,
 
 template<typename T>
 void dd_CheckAdjacency(dd_conedata<T> *cone,
-    dd_raydata<T> **RP1, dd_raydata<T> **RP2, dd_boolean *adjacent)
+    dd_raydata<T> **RP1, dd_raydata<T> **RP2, bool *adjacent)
 {
   dd_raydata<T> *TempRay;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
   dd_rowset Face, Face1;
   set_initialize(&Face, cone->m);
   set_initialize(&Face1, cone->m);
 
-  if (dd_debug) localdebug=globals::dd_TRUE;
-  *adjacent = globals::dd_TRUE;
+  if (dd_debug) localdebug=true;
+  *adjacent = true;
   set_int(Face1, (*RP1)->ZeroSet, (*RP2)->ZeroSet);
   set_int(Face, Face1, cone->AddedHalfspaces);
   if (set_card(Face)< cone->d - 2) {
-    *adjacent = globals::dd_FALSE;
+    *adjacent = false;
     if (localdebug) {
       fprintf(stderr,"non adjacent: set_card(face) %ld < %ld = cone->d.\n",
         set_card(Face),cone->d);
@@ -5697,7 +5660,7 @@ void dd_CheckAdjacency(dd_conedata<T> *cone,
     return;
   }
   else if (cone->parent->NondegAssumed) {
-    *adjacent = globals::dd_TRUE;
+    *adjacent = true;
     set_free(Face);
     set_free(Face1);
     return;
@@ -5706,7 +5669,7 @@ void dd_CheckAdjacency(dd_conedata<T> *cone,
   while (TempRay != nullptr && *adjacent) {
     if (TempRay != *RP1 && TempRay != *RP2) {
     	set_int(Face1, TempRay->ZeroSet, cone->AddedHalfspaces);
-      	if (set_subset(Face, Face1)) *adjacent = globals::dd_FALSE;
+      	if (set_subset(Face, Face1)) *adjacent = false;
     }
     TempRay = TempRay->Next;
   }
@@ -5768,16 +5731,16 @@ void dd_AValue(T *val, dd_colrange d_size, T** A, T *p, dd_rowrange i)
 }
 
 template<typename T>
-void dd_StoreRay1(dd_conedata<T> *cone, T *p, dd_boolean *feasible, T smallVal)
-{  /* Original ray storing routine when RelaxedEnumeration is globals::dd_FALSE */
+void dd_StoreRay1(dd_conedata<T> *cone, T *p, bool *feasible)
+{  /* Original ray storing routine when RelaxedEnumeration is false */
   dd_rowrange i,k,fii=cone->m+1;
   dd_colrange j;
   T temp;
   dd_raydata<T> *RR;
-  dd_boolean localdebug=dd_debug;
+  bool localdebug=dd_debug;
 
   RR=cone->LastRay;
-  *feasible = globals::dd_TRUE;
+  *feasible = true;
   set_initialize(&(RR->ZeroSet),cone->m);
   for (j = 0; j < cone->d; j++){
     dd_set(RR->Ray[j],p[j]);
@@ -5785,17 +5748,17 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p, dd_boolean *feasible, T smallVal)
   for (i = 1; i <= cone->m; i++) {
     k=cone->OrderVector[i];
     dd_AValue(&temp, cone->d, cone->A, p, k);
-    if (dd_EqualToZero(temp, smallVal)) {
+    if (dd_EqualToZero(temp)) {
       set_addelem(RR->ZeroSet, k);
       if (localdebug) {
         fprintf(stderr,"recognized zero!\n");
       }
     }
-    if (dd_Negative(temp, smallVal)){
+    if (dd_Negative(temp)){
       if (localdebug) {
         fprintf(stderr,"recognized negative!\n");
       }
-      *feasible = globals::dd_FALSE;
+      *feasible = false;
       if (fii>cone->m) fii=i;  /* the first violating inequality index */
     }
   }
@@ -5805,8 +5768,8 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p, dd_boolean *feasible, T smallVal)
 
 template<typename T>
 void dd_StoreRay2(dd_conedata<T> *cone, T *p,
-		  dd_boolean *feasible, dd_boolean *weaklyfeasible, T smallVal)
-   /* Ray storing routine when RelaxedEnumeration is globals::dd_TRUE.
+		  bool *feasible, bool *weaklyfeasible)
+   /* Ray storing routine when RelaxedEnumeration is true.
        weaklyfeasible is true iff it is feasible with
        the strict_inequality conditions deleted. */
 {
@@ -5816,8 +5779,8 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
   T temp;
 
   RR=cone->LastRay;
-  *feasible = globals::dd_TRUE;
-  *weaklyfeasible = globals::dd_TRUE;
+  *feasible = true;
+  *weaklyfeasible = true;
   set_initialize(&(RR->ZeroSet),cone->m);
   for (j = 0; j < cone->d; j++){
     dd_set(RR->Ray[j],p[j]);
@@ -5825,17 +5788,17 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
   for (i = 1; i <= cone->m; i++) {
     k=cone->OrderVector[i];
     dd_AValue(&temp, cone->d, cone->A, p, k);
-    if (dd_EqualToZero(temp, smallVal)){
+    if (dd_EqualToZero(temp)){
       set_addelem(RR->ZeroSet, k);
       if (cone->parent->EqualityIndex[k]==-1)
-        *feasible=globals::dd_FALSE;  /* strict inequality required */
+        *feasible=false;  /* strict inequality required */
     }
 /*    if (temp < -zero){ */
-    if (dd_Negative(temp, smallVal)){
-      *feasible = globals::dd_FALSE;
+    if (dd_Negative(temp)){
+      *feasible = false;
       if (fii>cone->m && cone->parent->EqualityIndex[k]>=0) {
         fii=i;  /* the first violating inequality index */
-        *weaklyfeasible=globals::dd_FALSE;
+        *weaklyfeasible=false;
       }
     }
   }
@@ -5845,9 +5808,9 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
 
 
 template<typename T>
-void dd_AddRay(dd_conedata<T> *cone, T *p, T smallVal)
+void dd_AddRay(dd_conedata<T> *cone, T *p)
 {
-  dd_boolean feasible, weaklyfeasible;
+  bool feasible, weaklyfeasible;
 
   if (cone->FirstRay == nullptr) {
     cone->FirstRay = new dd_raydata<T>;
@@ -5872,10 +5835,10 @@ void dd_AddRay(dd_conedata<T> *cone, T *p, T smallVal)
     }
   }
   if (cone->parent->RelaxedEnumeration){
-    dd_StoreRay2(cone, p, &feasible, &weaklyfeasible, smallVal);
+    dd_StoreRay2(cone, p, &feasible, &weaklyfeasible);
     if (weaklyfeasible) (cone->WeaklyFeasibleRayCount)++;
   } else {
-    dd_StoreRay1(cone, p, &feasible, smallVal);
+    dd_StoreRay1(cone, p, &feasible);
     if (feasible) (cone->WeaklyFeasibleRayCount)++;
     /* weaklyfeasible is equiv. to feasible in this case. */
   }
@@ -5886,11 +5849,11 @@ void dd_AddRay(dd_conedata<T> *cone, T *p, T smallVal)
 }
 
 template<typename T>
-void dd_AddArtificialRay(dd_conedata<T> *cone, T smallVal)
+void dd_AddArtificialRay(dd_conedata<T> *cone)
 {
   T* zerovector;
   dd_colrange d1;
-  dd_boolean feasible;
+  bool feasible;
 
   if (cone->d<=0) d1=1; else d1=cone->d;
   dd_InitializeArow(d1, &zerovector);
@@ -5905,7 +5868,7 @@ void dd_AddArtificialRay(dd_conedata<T> *cone, T smallVal)
   if (dd_debug) fprintf(stderr,"Create the artificial ray pointer\n");
 
   cone->LastRay=cone->ArtificialRay;
-  dd_StoreRay1(cone, zerovector, &feasible, smallVal);
+  dd_StoreRay1(cone, zerovector, &feasible);
   cone->ArtificialRay->Next = nullptr;
   delete [] zerovector; /* 086 */
 }
@@ -5915,12 +5878,12 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
     dd_raydata<T> *Ray1, dd_raydata<T> *Ray2, dd_raydata<T> *ValidFirstRay)
 {
   long it,it_row,fii1,fii2,fmin,fmax;
-  dd_boolean adjacent,lastchance;
+  bool adjacent,lastchance;
   dd_raydata<T> *TempRay;
   dd_raydata<T> *Rmin;
   dd_raydata<T> *Rmax;
   dd_adjacencydata<T> *NewEdge;
-  dd_boolean localdebug=globals::dd_FALSE;
+  bool localdebug=false;
   dd_rowset ZSmin, ZSmax;
   dd_rowset Face, Face1;
 
@@ -5952,7 +5915,7 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
     if (localdebug) fprintf(stderr,"dd_ConditionalAddEdge: No strong separation -> No edge added\n");
   }
   else {  /* the pair will be separated at the iteration fmin */
-    lastchance=globals::dd_TRUE;
+    lastchance=true;
     /* flag to check it will be the last chance to store the edge candidate */
     set_int(Face1, ZSmax, ZSmin);
     (cone->count_int)++;
@@ -5967,20 +5930,20 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
     for (it=cone->Iteration+1; it < fmin && lastchance; it++){
       it_row=cone->OrderVector[it];
       if (cone->parent->EqualityIndex[it_row]>=0 && set_member(it_row, Face1)){
-        lastchance=globals::dd_FALSE;
+        lastchance=false;
         (cone->count_int_bad)++;
       }
     }
     if (lastchance){
-      adjacent = globals::dd_TRUE;
+      adjacent = true;
       (cone->count_int_good)++;
       /* adjacent checking */
       set_int(Face, Face1, cone->AddedHalfspaces);
       if (set_card(Face)< cone->d - 2) {
-        adjacent = globals::dd_FALSE;
+        adjacent = false;
       }
       else if (cone->parent->NondegAssumed) {
-    	adjacent = globals::dd_TRUE;
+    	adjacent = true;
       }
       else{
         TempRay = ValidFirstRay;  /* the first ray for adjacency checking */
@@ -5988,7 +5951,7 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
           if (TempRay != Ray1 && TempRay != Ray2) {
             set_int(Face1, TempRay->ZeroSet, cone->AddedHalfspaces);
             if (set_subset(Face, Face1)) {
-              adjacent = globals::dd_FALSE;
+              adjacent = false;
             }
           }
           TempRay = TempRay->Next;
@@ -6021,7 +5984,7 @@ void dd_CreateInitialEdges(dd_conedata<T> *cone)
   dd_raydata<T> *Ptr2;
   dd_rowrange fii1,fii2;
   long count=0;
-  dd_boolean adj;
+  bool adj;
 
   cone->Iteration=cone->d;  /* CHECK */
   if (cone->FirstRay ==nullptr || cone->LastRay==nullptr){
@@ -6057,7 +6020,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
   dd_raydata<T> *Ptr2;
   dd_raydata<T> *Ptr2begin;
   dd_rowrange fii1;
-  dd_boolean ptr2found,quit;
+  bool ptr2found,quit;
   long count=0,pos1, pos2;
   float workleft,prevworkleft=110.0,totalpairs;
 
@@ -6070,23 +6033,23 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
   Ptr1=RRbegin;
   pos1=1;
   do{
-    ptr2found=globals::dd_FALSE;
-    quit=globals::dd_FALSE;
+    ptr2found=false;
+    quit=false;
     fii1=Ptr1->FirstInfeasIndex;
     pos2=2;
     for (Ptr2=Ptr1->Next; !ptr2found && !quit; Ptr2=Ptr2->Next,pos2++){
       if  (Ptr2->FirstInfeasIndex > fii1){
         Ptr2begin=Ptr2;
-        ptr2found=globals::dd_TRUE;
+        ptr2found=true;
       }
-      else if (Ptr2==RRend) quit=globals::dd_TRUE;
+      else if (Ptr2==RRend) quit=true;
     }
     if (ptr2found){
-      quit=globals::dd_FALSE;
+      quit=false;
       for (Ptr2=Ptr2begin; !quit ; Ptr2=Ptr2->Next){
         count++;
         dd_ConditionalAddEdge(cone, Ptr1,Ptr2,RRbegin);
-        if (Ptr2==RRend || Ptr2->Next==nullptr) quit=globals::dd_TRUE;
+        if (Ptr2==RRend || Ptr2->Next==nullptr) quit=true;
       }
     }
     Ptr1=Ptr1->Next;
@@ -6147,7 +6110,7 @@ void dd_FreeDDMemory0(dd_conedata<T> *cone)
   dd_FreeBmatrix(cone->d_alloc,cone->Bsave);
 
 /* Fixed by Marc Pfetsch 010219*/
-  dd_FreeAmatrix(cone->m_alloc,cone->d_alloc,cone->A);
+  dd_FreeAmatrix(cone->m_alloc, cone->A);
   cone->A = nullptr;
 
   delete cone;
@@ -6166,7 +6129,7 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
   dd_bigrange i;
 
   if ((poly)->child != nullptr) dd_FreeDDMemory(poly);
-  dd_FreeAmatrix((poly)->m_alloc,poly->d_alloc, poly->A);
+  dd_FreeAmatrix((poly)->m_alloc, poly->A);
   dd_FreeArow((poly)->c);
   delete [] (poly)->EqualityIndex;
   if (poly->AincGenerated){
@@ -6183,25 +6146,25 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
 }
 
 template<typename T>
-void dd_Normalize(dd_colrange d_size, T *V, T smallVal)
+void dd_Normalize(dd_colrange d_size, T *V)
 {
   long j;
   T temp,min;
-  dd_boolean nonzerofound=globals::dd_FALSE;
+  bool nonzerofound=false;
 
   if (d_size>0){
     dd_abs(min,V[0]);
-    if (dd_Positive(min, smallVal)) nonzerofound=globals::dd_TRUE;
+    if (dd_Positive(min)) nonzerofound=true;
     for (j = 1; j < d_size; j++) {
       dd_abs(temp,V[j]);
-      if (dd_Positive(temp, smallVal)){
-        if (!nonzerofound || dd_Smaller(temp,min,smallVal)){
-          nonzerofound=globals::dd_TRUE;
+      if (dd_Positive(temp)){
+        if (!nonzerofound || dd_Smaller(temp,min)){
+          nonzerofound=true;
           dd_set(min, temp);
         }
       }
     }
-    if (dd_Positive(min, smallVal)){
+    if (dd_Positive(min)){
       for (j = 0; j < d_size; j++) dd_div(V[j], V[j], min);
     }
   }
@@ -6209,7 +6172,7 @@ void dd_Normalize(dd_colrange d_size, T *V, T smallVal)
 
 
 template<typename T>
-void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T** A, T *x, dd_rowset ZS, T smallVal)
+void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T** A, T *x, dd_rowset ZS)
 {
   dd_rowrange i;
   T temp;
@@ -6218,7 +6181,7 @@ void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T** A, T *x, dd_row
   set_emptyset(ZS);
   for (i = 1; i <= m_size; i++) {
     dd_AValue(&temp, d_size, A, x, i);
-    if (dd_EqualToZero(temp, smallVal)) set_addelem(ZS, i);
+    if (dd_EqualToZero(temp)) set_addelem(ZS, i);
   }
 
 }
@@ -6238,20 +6201,20 @@ void dd_CopyBmatrix(dd_colrange d_size, T** Ts, T** TCOPY)
 
 
 template<typename T>
-void dd_CopyNormalizedArow(T *acopy, T *a, dd_colrange d, T smallVal)
+void dd_CopyNormalizedArow(T *acopy, T *a, dd_colrange d)
 {
   dd_CopyArow(acopy, a, d);
-  dd_Normalize(d,acopy, smallVal);
+  dd_Normalize(d,acopy);
 }
 
 
 template<typename T>
-void dd_CopyNormalizedAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, T smallVal)
+void dd_CopyNormalizedAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d)
 {
   dd_rowrange i;
 
   for (i = 0; i< m; i++) {
-    dd_CopyNormalizedArow(Acopy[i],A[i],d, smallVal);
+    dd_CopyNormalizedArow(Acopy[i],A[i],d);
   }
 }
 
@@ -6266,7 +6229,7 @@ void dd_PermuteCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_ro
 }
 
 template<typename T>
-void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_rowindex roworder,dd_rowrange p, dd_rowrange q)
+void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_rowindex roworder)
 {
  /* copy the rows of A whose roworder is positive.  roworder[i] is the row index of the copied row. */
   dd_rowrange i,k;
@@ -6309,7 +6272,7 @@ void dd_FreeMatrix(dd_matrixdata<T> *M)
     if (M->rowsize<=0) m1=1; else m1=M->rowsize;
     if (M->colsize<=0) d1=1; else d1=M->colsize;
     if (M!=nullptr) {
-      dd_FreeAmatrix(m1,d1,M->matrix);
+      dd_FreeAmatrix(m1, M->matrix);
       dd_FreeArow(M->rowvec);
       set_free(M->linset);
       delete M;
@@ -6337,13 +6300,13 @@ void dd_ColumnReduce(dd_conedata<T> *cone)
   cone->d=j1;  /* update the dimension. cone->d_orig remembers the old. */
   dd_CopyBmatrix(cone->d_orig, cone->B, cone->Bsave);
     /* save the dual basis inverse as Bsave.  This matrix contains the linearity space generators. */
-  cone->ColReduced=globals::dd_TRUE;
+  cone->ColReduced=true;
 }
 
 template<typename T>
-long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignoredcols, dd_rowset *rowbasis, dd_colset *colbasis, T smallVal)
+long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignoredcols, dd_rowset *rowbasis, dd_colset *colbasis)
 {
-  dd_boolean stop, chosen;
+  bool stop, chosen;
   dd_rowset NopivotRow,PriorityRow;
   dd_colset ColSelected;
   T** B;
@@ -6353,7 +6316,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   long rank;
 
   rank = 0;
-  stop = globals::dd_FALSE;
+  stop = false;
   set_initialize(&ColSelected, M->colsize);
   set_initialize(&NopivotRow, M->rowsize);
   set_initialize(rowbasis, M->rowsize);
@@ -6370,7 +6333,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
 
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,dd_MinIndex,roworder,
-		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen, smallVal);
+		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
       if (dd_debug && chosen)
         fprintf(stderr,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
@@ -6381,9 +6344,9 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
         rank++;
         dd_GaussianColumnPivot(M->rowsize, M->colsize, M->matrix, B, r, s);
       } else {
-        stop=globals::dd_TRUE;
+        stop=true;
       }
-      if (rank==M->colsize) stop = globals::dd_TRUE;
+      if (rank==M->colsize) stop = true;
   } while (!stop);
   dd_FreeBmatrix(M->colsize,B);
   delete [] roworder;
@@ -6395,16 +6358,16 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
 
 
 template<typename T>
-void dd_FindBasis(dd_conedata<T> *cone, long *rank, T smallVal)
+void dd_FindBasis(dd_conedata<T> *cone, long *rank)
 {
-  dd_boolean stop, chosen;
+  bool stop, chosen;
   dd_rowset NopivotRow;
   dd_colset ColSelected;
   dd_rowrange r;
   dd_colrange j,s;
 
   *rank = 0;
-  stop = globals::dd_FALSE;
+  stop = false;
   for (j=0;j<=cone->d;j++) cone->InitialRayIndex[j]=0;
   set_emptyset(cone->InitialHalfspaces);
   set_initialize(&ColSelected, cone->d);
@@ -6413,7 +6376,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank, T smallVal)
   dd_SetToIdentity(cone->d, cone->B);
   do {   /* Find a set of rows for a basis */
       dd_SelectPivot2(cone->m, cone->d,cone->A,cone->B,cone->HalfspaceOrder,cone->OrderVector,
-		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen, smallVal);
+		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
       if (dd_debug && chosen)
         fprintf(stderr,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
@@ -6424,9 +6387,9 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank, T smallVal)
         (*rank)++;
         dd_GaussianColumnPivot(cone->m, cone->d, cone->A, cone->B, r, s);
       } else {
-        stop=globals::dd_TRUE;
+        stop=true;
       }
-      if (*rank==cone->d) stop = globals::dd_TRUE;
+      if (*rank==cone->d) stop = true;
   } while (!stop);
   set_free(ColSelected);
   set_free(NopivotRow);
@@ -6434,60 +6397,60 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank, T smallVal)
 
 
 template<typename T>
-void dd_FindInitialRays(dd_conedata<T> *cone, dd_boolean *found, T smallVal)
+void dd_FindInitialRays(dd_conedata<T> *cone, bool *found)
 {
   dd_rowset CandidateRows;
   dd_rowrange i;
   long rank;
   dd_RowOrderType roworder_save=dd_LexMin;
 
-  *found = globals::dd_FALSE;
+  *found = false;
   set_initialize(&CandidateRows, cone->m);
-  if (cone->parent->InitBasisAtBottom==globals::dd_TRUE) {
+  if (cone->parent->InitBasisAtBottom==true) {
     roworder_save=cone->HalfspaceOrder;
     cone->HalfspaceOrder=dd_MaxIndex;
-    cone->PreOrderedRun=globals::dd_FALSE;
+    cone->PreOrderedRun=false;
   }
-  else cone->PreOrderedRun=globals::dd_TRUE;
+  else cone->PreOrderedRun=true;
   for (i = 1; i <= cone->m; i++)
     if (!set_member(i,cone->NonequalitySet)) set_addelem(CandidateRows, i);
     /*all rows not in NonequalitySet are candidates for initial cone*/
-  dd_FindBasis(cone, &rank, smallVal);
+  dd_FindBasis(cone, &rank);
   cone->LinearityDim=cone->d - rank;
   if (dd_debug) fprintf(stderr,"Linearity Dimension = %ld\n", cone->LinearityDim);
   if (cone->LinearityDim > 0) {
      dd_ColumnReduce(cone);
-     dd_FindBasis(cone, &rank, smallVal);
+     dd_FindBasis(cone, &rank);
   }
   if (!set_subset(cone->EqualitySet,cone->InitialHalfspaces)) {
     if (dd_debug) {
       fprintf(stderr,"Equality set is dependent. Equality Set and an initial basis:\n");
     };
   }
-  *found = globals::dd_TRUE;
+  *found = true;
   set_free(CandidateRows);
-  if (cone->parent->InitBasisAtBottom==globals::dd_TRUE) {
+  if (cone->parent->InitBasisAtBottom==true) {
     cone->HalfspaceOrder=roworder_save;
   }
   if (cone->HalfspaceOrder==dd_MaxCutoff||
       cone->HalfspaceOrder==dd_MinCutoff||
       cone->HalfspaceOrder==dd_MixCutoff){
-    cone->PreOrderedRun=globals::dd_FALSE;
-  } else cone->PreOrderedRun=globals::dd_TRUE;
+    cone->PreOrderedRun=false;
+  } else cone->PreOrderedRun=true;
 }
 
 template<typename T>
-void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **RP2, dd_boolean *equal, T smallVal)
+void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **RP2, bool *equal)
 {
   long j;
 
   if (dd_debug)
     fprintf(stderr,"Check equality of two rays\n");
-  *equal = globals::dd_TRUE;
+  *equal = true;
   j = 1;
   while (j <= d_size && *equal) {
-    if (!dd_Equal((*RP1)->Ray[j - 1],(*RP2)->Ray[j - 1],smallVal))
-      *equal = globals::dd_FALSE;
+    if (!dd_Equal((*RP1)->Ray[j - 1],(*RP2)->Ray[j - 1]))
+      *equal = false;
     j++;
   }
   if (*equal)
@@ -6496,7 +6459,7 @@ void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **R
 
 template<typename T>
 void dd_CreateNewRay(dd_conedata<T> *cone,
-		     dd_raydata<T> *Ptr1, dd_raydata<T> *Ptr2, dd_rowrange ii, T smallVal)
+		     dd_raydata<T> *Ptr1, dd_raydata<T> *Ptr2, dd_rowrange ii)
 {
   /*Create a new ray by taking a linear combination of two rays*/
   dd_colrange j;
@@ -6511,13 +6474,13 @@ void dd_CreateNewRay(dd_conedata<T> *cone,
   for (j = 0; j < cone->d; j++){
     dd_LinearComb(NewRay[j], Ptr1->Ray[j],v2,Ptr2->Ray[j],v1);
   }
-  dd_Normalize(cone->d, NewRay, smallVal);
-  dd_AddRay(cone, NewRay, smallVal);
+  dd_Normalize(cone->d, NewRay);
+  dd_AddRay(cone, NewRay);
   delete [] NewRay;
 }
 
 template<typename T>
-void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
+void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
 /* Evaluate the ith component of the vector  A x RD.Ray
     and rearrange the linked list so that
     the infeasible rays with respect to  i  will be
@@ -6543,7 +6506,7 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
     }
     dd_set(Ptr->ARay,temp);
 /*    if ( temp <= -zero && Ptr != cone->FirstRay) {*/
-    if ( dd_Negative(temp, smallVal) && Ptr != cone->FirstRay) {
+    if ( dd_Negative(temp) && Ptr != cone->FirstRay) {
       /* fprintf(stderr,"Moving an infeasible record w.r.t. %ld to FirstRay\n",i); */
       if (Ptr==cone->LastRay) cone->LastRay=PrevPtr;
       TempPtr=Ptr;
@@ -6561,7 +6524,7 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
 }
 
 template<typename T>
-void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
+void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
 /* Evaluate the ith component of the vector  A x RD.Ray
    and rearrange the linked list so that
    the infeasible rays with respect to  i  will be
@@ -6573,7 +6536,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
   T temp,tnext;
   dd_raydata<T> *Ptr;
   dd_raydata<T> *NextPtr;
-  dd_boolean zerofound=globals::dd_FALSE,negfound=globals::dd_FALSE,posfound=globals::dd_FALSE;
+  bool zerofound=false,negfound=false,posfound=false;
 
   if (cone==nullptr || cone->TotalRayCount<=0) goto _L99;
   cone->PosHead=nullptr;cone->ZeroHead=nullptr;cone->NegHead=nullptr;
@@ -6591,9 +6554,9 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
     }
     dd_set(Ptr->ARay,temp);
 /*    if ( temp < -zero) {*/
-    if ( dd_Negative(temp, smallVal)) {
+    if ( dd_Negative(temp)) {
       if (!negfound){
-        negfound=globals::dd_TRUE;
+        negfound=true;
         cone->NegHead=Ptr;
         cone->NegLast=Ptr;
       }
@@ -6603,9 +6566,9 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
       }
     }
 /*    else if (temp > zero){*/
-    else if (dd_Positive(temp, smallVal)){
+    else if (dd_Positive(temp)){
       if (!posfound){
-        posfound=globals::dd_TRUE;
+        posfound=true;
         cone->PosHead=Ptr;
         cone->PosLast=Ptr;
       }
@@ -6616,7 +6579,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
     }
     else {
       if (!zerofound){
-        zerofound=globals::dd_TRUE;
+        zerofound=true;
         cone->ZeroHead=Ptr;
         cone->ZeroLast=Ptr;
       }
@@ -6670,7 +6633,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone, T smallVal)
 }
 
 template<typename T>
-void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
+void dd_DeleteNegativeRays(dd_conedata<T> *cone)
 /* Eliminate the infeasible rays with respect to  i  which
    are supposed to be consecutive from the head of the dd_Ray list,
    and sort the zero list assumed to be consecutive at the
@@ -6684,7 +6647,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
   dd_raydata<T> *NextPtr;
   dd_raydata<T> *ZeroPtr1;
   dd_raydata<T> *ZeroPtr0;
-  dd_boolean found, completed, zerofound=globals::dd_FALSE,negfound=globals::dd_FALSE,posfound=globals::dd_FALSE;
+  bool found, completed, zerofound=false,negfound=false,posfound=false;
 
   cone->PosHead=nullptr;cone->ZeroHead=nullptr;cone->NegHead=nullptr;
   cone->PosLast=nullptr;cone->ZeroLast=nullptr;cone->NegLast=nullptr;
@@ -6694,15 +6657,15 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
   Ptr = cone->FirstRay;
   if (PrevPtr->Next != Ptr)
     fprintf(stderr,"Error at dd_DeleteNegativeRays: ArtificialRay does not point the FirstRay.\n");
-  completed=globals::dd_FALSE;
+  completed=false;
   while (Ptr != nullptr && !completed){
 /*    if ( (Ptr->ARay) < -zero ){ */
-    if ( dd_Negative(Ptr->ARay, smallVal)){
+    if ( dd_Negative(Ptr->ARay)){
       dd_Eliminate(cone, &PrevPtr);
       Ptr=PrevPtr->Next;
     }
     else{
-      completed=globals::dd_TRUE;
+      completed=true;
     }
   }
 
@@ -6712,16 +6675,16 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
   while (Ptr != nullptr) {
     NextPtr=Ptr->Next;  /* remember the Next record */
     dd_set(temp,Ptr->ARay);
-    if ( dd_Negative(temp, smallVal)) {
+    if ( dd_Negative(temp)) {
       if (!negfound){
         fprintf(stderr,"Error: An infeasible ray found after their removal\n");
-        negfound=globals::dd_TRUE;
+        negfound=true;
       }
     }
 /*    else if (temp > zero){*/
-    else if (dd_Positive(temp, smallVal)){
+    else if (dd_Positive(temp)){
       if (!posfound){
-        posfound=globals::dd_TRUE;
+        posfound=true;
         cone->PosHead=Ptr;
         cone->PosLast=Ptr;
       }
@@ -6732,19 +6695,19 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
     else {
       (cone->ZeroRayCount)++;
       if (!zerofound){
-        zerofound=globals::dd_TRUE;
+        zerofound=true;
         cone->ZeroHead=Ptr;
         cone->ZeroLast=Ptr;
         cone->ZeroLast->Next=nullptr;
       }
       else{/* Find a right position to store the record sorted w.r.t. FirstInfeasIndex */
         fii=Ptr->FirstInfeasIndex;
-        found=globals::dd_FALSE;
+        found=false;
         ZeroPtr1=nullptr;
         for (ZeroPtr0=cone->ZeroHead; !found && ZeroPtr0!=nullptr ; ZeroPtr0=ZeroPtr0->Next){
           fiitest=ZeroPtr0->FirstInfeasIndex;
           if (fiitest >= fii){
-            found=globals::dd_TRUE;
+            found=true;
           }
           else ZeroPtr1=ZeroPtr0;
         }
@@ -6794,7 +6757,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone, T smallVal)
 }
 
 template<typename T>
-void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<T> *cone, T smallVal)
+void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<T> *cone)
 {
   /*Evaluate the number of feasible rays and infeasible rays*/
   /*  w.r.t the hyperplane  i*/
@@ -6811,7 +6774,7 @@ void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<
       dd_mul(tnext, cone->A[i - 1][j],Ptr->Ray[j]);
       dd_add(temp, temp, tnext);
     }
-    if (dd_Nonnegative(temp,smallVal))
+    if (dd_Nonnegative(temp))
       (*fnum)++;
     else
       (*infnum)++;
@@ -6821,18 +6784,18 @@ void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<
 
 
 template<typename T>
-dd_boolean dd_LexEqual(T *v1, T *v2, long dmax, T smallVal)
+bool dd_LexEqual(T *v1, T *v2, long dmax)
 { /* dmax is the size of vectors v1,v2 */
-  dd_boolean determined, equal;
+  bool determined, equal;
   dd_colrange j;
 
-  equal = globals::dd_TRUE;
-  determined = globals::dd_FALSE;
+  equal = true;
+  determined = false;
   j = 1;
   do {
-    if (!dd_Equal(v1[j - 1],v2[j - 1],smallVal)) {  /* 093c */
-	equal = globals::dd_FALSE;
-        determined = globals::dd_TRUE;
+    if (!dd_Equal(v1[j - 1],v2[j - 1])) {  /* 093c */
+	equal = false;
+        determined = true;
     } else {
       j++;
     }
@@ -6841,8 +6804,8 @@ dd_boolean dd_LexEqual(T *v1, T *v2, long dmax, T smallVal)
 }
 
 template<typename T>
-void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
-/* This procedure 1 must be used with PreorderedRun=globals::dd_FALSE
+void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
+/* This procedure 1 must be used with PreorderedRun=false
    This procedure is the most elementary implementation of
    DD and can be used with any type of ordering, including
    dynamic ordering of rows, e.g. MaxCutoff, MinCutoff.
@@ -6858,23 +6821,23 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
   long pos1, pos2;
   double prevprogress, progress;
   T value1, value2;
-  dd_boolean adj, equal, completed;
+  bool adj, equal, completed;
 
-  dd_EvaluateARay1(hnew, cone, smallVal);
+  dd_EvaluateARay1(hnew, cone);
    /*Check feasibility of rays w.r.t. hnew
      and put all infeasible ones consecutively */
 
   RayPtr0 = cone->ArtificialRay;   /*Pointer pointing RayPrt1*/
   RayPtr1 = cone->FirstRay;        /*1st hnew-infeasible ray to scan and compare with feasible rays*/
   dd_set(value1,cone->FirstRay->ARay);
-  if (dd_Nonnegative(value1,smallVal)) {
+  if (dd_Nonnegative(value1)) {
     if (cone->RayCount==cone->WeaklyFeasibleRayCount) cone->CompStatus=dd_AllFound;
     goto _L99;        /* Sicne there is no hnew-infeasible ray and nothing to do */
   }
   else {
     RayPtr2s = RayPtr1->Next;/* RayPtr2s must point the first feasible ray */
     pos2=1;
-    while (RayPtr2s!=nullptr && dd_Negative(RayPtr2s->ARay, smallVal)) {
+    while (RayPtr2s!=nullptr && dd_Negative(RayPtr2s->ARay)) {
       RayPtr2s = RayPtr2s->Next;
       pos2++;
     }
@@ -6890,25 +6853,25 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
   RayPtr3 = cone->LastRay;    /*Last feasible for scanning*/
   prevprogress=-10.0;
   pos1 = 1;
-  completed=globals::dd_FALSE;
+  completed=false;
   while ((RayPtr1 != RayPtr2s) && !completed) {
     dd_set(value1,RayPtr1->ARay);
     dd_set(value2,RayPtr2->ARay);
-    dd_CheckEquality(cone->d, &RayPtr1, &RayPtr2, &equal, smallVal);
-    if ((dd_Positive(value1, smallVal) && dd_Negative(value2, smallVal)) || (dd_Negative(value1, smallVal) && dd_Positive(value2, smallVal))){
+    dd_CheckEquality(cone->d, &RayPtr1, &RayPtr2, &equal);
+    if ((dd_Positive(value1) && dd_Negative(value2)) || (dd_Negative(value1) && dd_Positive(value2))){
       dd_CheckAdjacency(cone, &RayPtr1, &RayPtr2, &adj);
-      if (adj) dd_CreateNewRay(cone, RayPtr1, RayPtr2, hnew, smallVal);
+      if (adj) dd_CreateNewRay(cone, RayPtr1, RayPtr2, hnew);
     }
     if (RayPtr2 != RayPtr3) {
       RayPtr2 = RayPtr2->Next;
       continue;
     }
-    if (dd_Negative(value1, smallVal) || equal) {
+    if (dd_Negative(value1) || equal) {
       dd_Eliminate(cone, &RayPtr0);
       RayPtr1 = RayPtr0->Next;
       RayPtr2 = RayPtr2s;
     } else {
-      completed=globals::dd_TRUE;
+      completed=true;
     }
     pos1++;
     progress = 100.0 * ((double)pos1 / pos2) * (2.0 * pos2 - pos1) / pos2;
@@ -6923,7 +6886,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
 }
 
 template<typename T>
-void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
+void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 /* This procedure must be used under PreOrderedRun mode */
 {
   //  dd_raydata<T> *RayPtr0;
@@ -6933,7 +6896,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
   dd_adjacencydata<T> *EdgePtr, *EdgePtr0;
   dd_rowrange fii1, fii2;
 
-  dd_EvaluateARay2(hnew, cone, smallVal);
+  dd_EvaluateARay2(hnew, cone);
    /* Check feasibility of rays w.r.t. hnew
       and sort them. ( -rays, +rays, 0rays)*/
 
@@ -6951,7 +6914,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
     RayPtr1=EdgePtr->Ray1;
     RayPtr2=EdgePtr->Ray2;
     fii1=RayPtr1->FirstInfeasIndex;
-    dd_CreateNewRay(cone, RayPtr1, RayPtr2, hnew, smallVal);
+    dd_CreateNewRay(cone, RayPtr1, RayPtr2, hnew);
     fii2=cone->LastRay->FirstInfeasIndex;
     if (fii1 != fii2)
       dd_ConditionalAddEdge(cone,RayPtr1,cone->LastRay,cone->PosHead);
@@ -6962,7 +6925,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew, T smallVal)
   }
   cone->Edges[cone->Iteration]=nullptr;
 
-  dd_DeleteNegativeRays(cone, smallVal);
+  dd_DeleteNegativeRays(cone);
 
   set_addelem(cone->AddedHalfspaces, hnew);
 
@@ -6983,15 +6946,15 @@ void dd_SelectNextHalfspace0(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 {
   /*A natural way to choose the next hyperplane.  Simply the largest index*/
   long i;
-  dd_boolean determined;
+  bool determined;
 
   i = cone->m;
-  determined = globals::dd_FALSE;
+  determined = false;
   do {
     if (set_member(i, excluded))
       i--;
     else
-      determined = globals::dd_TRUE;
+      determined = true;
   } while (!determined && i>=1);
   if (determined)
     *hnext = i;
@@ -7004,15 +6967,15 @@ void dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 {
   /*Natural way to choose the next hyperplane.  Simply the least index*/
   long i;
-  dd_boolean determined;
+  bool determined;
 
   i = 1;
-  determined = globals::dd_FALSE;
+  determined = false;
   do {
     if (set_member(i, excluded))
       i++;
     else
-      determined = globals::dd_TRUE;
+      determined = true;
   } while (!determined && i<=cone->m);
   if (determined)
     *hnext = i;
@@ -7021,14 +6984,14 @@ void dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 }
 
 template<typename T>
-void dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext, T smallVal)
+void dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
   long i, fea, inf, infmin;   /*feasibility and infeasibility numbers*/
 
   infmin = cone->RayCount + 1;
   for (i = 1; i <= cone->m; i++) {
     if (!set_member(i, excluded)) {
-      dd_FeasibilityIndices(&fea, &inf, i, cone, smallVal);
+      dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf < infmin) {
 	infmin = inf;
 	*hnext = i;
@@ -7038,7 +7001,7 @@ void dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 }
 
 template<typename T>
-void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext, T smallVal)
+void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
   /*Choose the next hyperplane with maximum infeasibility*/
   long i, fea, inf, infmax;   /*feasibility and infeasibility numbers*/
@@ -7046,7 +7009,7 @@ void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
   infmax = -1;
   for (i = 1; i <= cone->m; i++)
     if (!set_member(i, excluded)) {
-      dd_FeasibilityIndices(&fea, &inf, i, cone, smallVal);
+      dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf > infmax) {
 	infmax = inf;
 	*hnext = i;
@@ -7055,7 +7018,7 @@ void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 }
 
 template<typename T>
-void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext, T smallVal)
+void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
   /*Choose the next hyperplane with the most unbalanced cut*/
   long i, fea, inf, max, tmax, fi=0, infi=0;
@@ -7064,7 +7027,7 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
   max = -1;
   for (i = 1; i <= cone->m; i++) {
     if (!set_member(i, excluded)) {
-      dd_FeasibilityIndices(&fea, &inf, i, cone, smallVal);
+      dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (fea <= inf)
         tmax = inf;
       else
@@ -7087,7 +7050,7 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 }
 
 template<typename T>
-void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext, T smallVal)
+void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
   /*Choose the next hyperplane which is lexico-min*/
   long i, minindex;
@@ -7101,7 +7064,7 @@ void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       if (minindex == 0) {
 	    minindex = i;
 	    v1=v2;
-      } else if (dd_LexSmaller(v2,v1,cone->d, smallVal)) {
+      } else if (dd_LexSmaller(v2,v1,cone->d)) {
         minindex = i;
 	    v1=v2;
       }
@@ -7112,7 +7075,7 @@ void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 
 
 template<typename T>
-void dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext, T smallVal)
+void dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
 {
   /*Choose the next hyperplane which is lexico-max*/
   long i, maxindex;
@@ -7126,7 +7089,7 @@ void dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       if (maxindex == 0) {
         maxindex = i;
         v1=v2;
-      } else if (dd_LexLarger(v2, v1, cone->d, smallVal)) {
+      } else if (dd_LexLarger(v2, v1, cone->d)) {
         maxindex = i;
         v1=v2;
      }
@@ -7184,7 +7147,7 @@ void dd_UniqueRows(dd_rowindex OV, long p, long r, T** A, long dmax, dd_rowset p
 
 
 template<typename T>
-void dd_ComputeRowOrderVector(dd_conedata<T> *cone, T smallVal)
+void dd_ComputeRowOrderVector(dd_conedata<T> *cone)
 {
   long i,itemp;
 
@@ -7201,13 +7164,13 @@ void dd_ComputeRowOrderVector(dd_conedata<T> *cone, T smallVal)
   case dd_LexMin: case dd_MinCutoff: case dd_MixCutoff: case dd_MaxCutoff:
     for(i=1; i<=cone->m; i++) cone->OrderVector[i]=i;
     dd_RandomPermutation(cone->OrderVector, cone->m, cone->rseed);
-    dd_QuickSort(cone->OrderVector, 1, cone->m, cone->A, cone->d, smallVal);
+    dd_QuickSort(cone->OrderVector, 1, cone->m, cone->A, cone->d);
     break;
 
   case dd_LexMax:
     for(i=1; i<=cone->m; i++) cone->OrderVector[i]=i;
     dd_RandomPermutation(cone->OrderVector, cone->m, cone->rseed);
-    dd_QuickSort(cone->OrderVector, 1, cone->m, cone->A, cone->d, smallVal);
+    dd_QuickSort(cone->OrderVector, 1, cone->m, cone->A, cone->d);
     for(i=1; i<=cone->m/2;i++){   /* just reverse the order */
       itemp=cone->OrderVector[i];
       cone->OrderVector[i]=cone->OrderVector[cone->m-i+1];
@@ -7231,16 +7194,16 @@ in highest order.
 {
   dd_rowrange i,j,k,j1=0,oj=0;
   long rr;
-  dd_boolean found;
+  bool found;
 
-  found=globals::dd_TRUE;
+  found=true;
   rr=set_card(PriorityRows);
   for (i=1; i<=rr; i++){
-    found=globals::dd_FALSE;
+    found=false;
     for (j=i; j<=cone->m && !found; j++){
       oj=cone->OrderVector[j];
       if (set_member(oj, PriorityRows)){
-        found=globals::dd_TRUE;
+        found=true;
         j1=j;
       }
     }
@@ -7271,7 +7234,7 @@ void dd_SelectPreorderedNext(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
 }
 
 template<typename T>
-void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hh, T smallVal)
+void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hh)
 {
   if (cone->PreOrderedRun){
     dd_SelectPreorderedNext(cone, excluded, hh);
@@ -7289,15 +7252,15 @@ void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrang
       break;
 
     case dd_MinCutoff:
-      dd_SelectNextHalfspace2(cone, excluded, hh, smallVal);
+      dd_SelectNextHalfspace2(cone, excluded, hh);
       break;
 
     case dd_MaxCutoff:
-      dd_SelectNextHalfspace3(cone, excluded, hh, smallVal);
+      dd_SelectNextHalfspace3(cone, excluded, hh);
       break;
 
     case dd_MixCutoff:
-      dd_SelectNextHalfspace4(cone, excluded, hh, smallVal);
+      dd_SelectNextHalfspace4(cone, excluded, hh);
       break;
 
     case dd_LexMin: case dd_LexMax: case dd_RandomRow:
@@ -7345,15 +7308,15 @@ void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrang
 
 
 /* Global Variables */
-dd_boolean dd_debug               =globals::dd_FALSE;
-dd_boolean dd_log                 =globals::dd_FALSE;
+bool dd_debug               =false;
+bool dd_log                 =false;
 /* GLOBAL CONSTANTS and STATICS VARIABLES (to be set by dd_set_global_constants() */
 
 /* #include <profile.h>    THINK C PROFILER */
 /* #include <console.h>    THINK C PROFILER */
 
 template<typename T>
-void dd_DDInit(dd_conedata<T> *cone, T smallVal)
+void dd_DDInit(dd_conedata<T> *cone)
 {
   cone->Error=dd_NoError;
   cone->CompStatus=dd_InProgress;
@@ -7364,15 +7327,15 @@ void dd_DDInit(dd_conedata<T> *cone, T smallVal)
   cone->EdgeCount=0; /* active edge count */
   cone->TotalEdgeCount=0; /* active edge count */
   dd_SetInequalitySets(cone);
-  dd_ComputeRowOrderVector(cone, smallVal);
-  cone->RecomputeRowOrder=globals::dd_FALSE;
+  dd_ComputeRowOrderVector(cone);
+  cone->RecomputeRowOrder=false;
 }
 
 template<typename T>
-void dd_DDMain(dd_conedata<T> *cone, T smallVal)
+void dd_DDMain(dd_conedata<T> *cone)
 {
   dd_rowrange hh, itemp, otemp;
-  dd_boolean locallog=dd_log; /* if dd_log=globals::dd_FALSE, no log will be written.  */
+  bool locallog=dd_log; /* if dd_log=false, no log will be written.  */
 
   if (cone->d<=0){
     cone->Iteration=cone->m;
@@ -7381,7 +7344,7 @@ void dd_DDMain(dd_conedata<T> *cone, T smallVal)
     goto _L99;
   }
   while (cone->Iteration <= cone->m) {
-    dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces, &hh, smallVal);
+    dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces, &hh);
     if (set_member(hh,cone->NonequalitySet)){  /* Skip the row hh */
       if (dd_debug) {
         fprintf(stderr,"*The row # %3ld should be inactive and thus skipped.\n", hh);
@@ -7389,9 +7352,9 @@ void dd_DDMain(dd_conedata<T> *cone, T smallVal)
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
     } else {
       if (cone->PreOrderedRun)
-        dd_AddNewHalfspace2(cone, hh, smallVal);
+        dd_AddNewHalfspace2(cone, hh);
       else{
-        dd_AddNewHalfspace1(cone, hh, smallVal);
+        dd_AddNewHalfspace1(cone, hh);
       }
       set_addelem(cone->AddedHalfspaces, hh);
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
@@ -7428,7 +7391,7 @@ void dd_DDMain(dd_conedata<T> *cone, T smallVal)
 
 
 template<typename T>
-void dd_InitialDataSetup(dd_conedata<T> *cone, T smallVal)
+void dd_InitialDataSetup(dd_conedata<T> *cone)
 {
   long j, r;
   dd_rowset ZSet;
@@ -7438,12 +7401,12 @@ void dd_InitialDataSetup(dd_conedata<T> *cone, T smallVal)
   Vector1=new T[cone->d];
   Vector2=new T[cone->d];
 
-  cone->RecomputeRowOrder=globals::dd_FALSE;
+  cone->RecomputeRowOrder=false;
   cone->ArtificialRay = nullptr;
   cone->FirstRay = nullptr;
   cone->LastRay = nullptr;
   set_initialize(&ZSet,cone->m);
-  dd_AddArtificialRay(cone, smallVal);
+  dd_AddArtificialRay(cone);
   set_copy(cone->AddedHalfspaces, cone->InitialHalfspaces);
   set_copy(cone->WeaklyAddedHalfspaces, cone->InitialHalfspaces);
   dd_UpdateRowOrderVector(cone, cone->InitialHalfspaces);
@@ -7454,14 +7417,14 @@ void dd_InitialDataSetup(dd_conedata<T> *cone, T smallVal)
 	  dd_set(Vector1[j], cone->B[j][r-1]);
 	  dd_neg(Vector2[j], cone->B[j][r-1]);
 	}
-      dd_Normalize(cone->d, Vector1, smallVal);
-      dd_Normalize(cone->d, Vector2, smallVal);
-      dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1, ZSet, smallVal);
+      dd_Normalize(cone->d, Vector1);
+      dd_Normalize(cone->d, Vector2);
+      dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1, ZSet);
       if (set_subset(cone->EqualitySet, ZSet))
 	{
-	  dd_AddRay(cone, Vector1, smallVal);
+	  dd_AddRay(cone, Vector1);
 	  if (cone->InitialRayIndex[r]==0)
-	    dd_AddRay(cone, Vector2, smallVal);
+	    dd_AddRay(cone, Vector2);
 	}
     }
   dd_CreateInitialEdges(cone);
@@ -7473,32 +7436,32 @@ void dd_InitialDataSetup(dd_conedata<T> *cone, T smallVal)
 }
 
 template<typename T>
-dd_boolean dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err, T smallVal)
+bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err)
 {
   dd_rowset R, S;
   dd_matrixdata<T> *M=nullptr;
-  dd_boolean answer=globals::dd_FALSE;
+  bool answer=false;
 
   *err=dd_NoError;
 
   if (poly->representation==dd_Inequality){
-    M=dd_CopyInequalities(poly, smallVal);
+    M=dd_CopyInequalities(poly);
 	set_initialize(&R, M->rowsize);
 	set_initialize(&S, M->rowsize);
-	if (!dd_ExistsRestrictedFace(M, R, S, err, smallVal)){
+	if (!dd_ExistsRestrictedFace(M, R, S, err)){
 	  poly->child->CompStatus=dd_AllFound;
-	  poly->IsEmpty=globals::dd_TRUE;
+	  poly->IsEmpty=true;
 	  poly->n=0;
-	  answer=globals::dd_TRUE;
+	  answer=true;
 	}
 	set_free(R);
 	set_free(S);
 	dd_FreeMatrix(M);
   } else if (poly->representation==dd_Generator && poly->m<=0){
 	*err=dd_EmptyVrepresentation;
-	poly->IsEmpty=globals::dd_TRUE;
+	poly->IsEmpty=true;
 	poly->child->CompStatus=dd_AllFound;
-	answer=globals::dd_TRUE;
+	answer=true;
 	poly->child->Error=*err;
   }
 
@@ -7507,10 +7470,10 @@ dd_boolean dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err, T sma
 
 
 template<typename T>
-dd_boolean dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err, T smallVal)
+bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err)
 {
   dd_conedata<T> *cone=nullptr;
-  dd_boolean found=globals::dd_FALSE;
+  bool found=false;
 
   *err=dd_NoError;
 
@@ -7518,21 +7481,21 @@ dd_boolean dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err, T 
     cone=dd_ConeDataLoad(poly);
     /* create a cone associated with poly by homogenization */
     time(&cone->starttime);
-    dd_DDInit(cone, smallVal);
+    dd_DDInit(cone);
     if (poly->representation==dd_Generator && poly->m<=0){
        *err=dd_EmptyVrepresentation;
        cone->Error=*err;
        goto _L99;
     }
     /* Check emptiness of the polyhedron */
-    dd_CheckEmptiness(poly,err, smallVal);
+    dd_CheckEmptiness(poly,err);
 
     if (cone->CompStatus!=dd_AllFound){
-      dd_FindInitialRays(cone, &found, smallVal);
+      dd_FindInitialRays(cone, &found);
       if (found) {
-	dd_InitialDataSetup(cone, smallVal);
+	dd_InitialDataSetup(cone);
 	if (cone->CompStatus==dd_AllFound) goto _L99;
-	dd_DDMain(cone, smallVal);
+	dd_DDMain(cone);
 	if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent; /* cddlib-093d */
       }
     }
@@ -7543,10 +7506,10 @@ _L99: ;
 }
 
 template<typename T>
-dd_boolean dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd_ErrorType *err, T smallVal)
+bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd_ErrorType *err)
 {
   dd_conedata<T> *cone=nullptr;
-  dd_boolean found=globals::dd_FALSE;
+  bool found=false;
 
   *err=dd_NoError;
 
@@ -7555,21 +7518,21 @@ dd_boolean dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType hord
     // create a cone associated with poly by homogenization
     cone->HalfspaceOrder=horder;  // set the row order
     time(&cone->starttime);
-    dd_DDInit(cone, smallVal);
+    dd_DDInit(cone);
     if (poly->representation==dd_Generator && poly->m<=0){
       *err=dd_EmptyVrepresentation;
       cone->Error=*err;
       goto _L99;
     }
     // Check emptiness of the polyhedron
-    dd_CheckEmptiness(poly,err, smallVal);
+    dd_CheckEmptiness(poly,err);
 
     if (cone->CompStatus!=dd_AllFound){
-      dd_FindInitialRays(cone, &found, smallVal);
+      dd_FindInitialRays(cone, &found);
 	  if (found) {
-	    dd_InitialDataSetup(cone, smallVal);
+	    dd_InitialDataSetup(cone);
 	    if (cone->CompStatus==dd_AllFound) goto _L99;
-	    dd_DDMain(cone, smallVal);
+	    dd_DDMain(cone);
 	    if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent;
 	  }
 	}
@@ -7580,17 +7543,17 @@ _L99: ;
 }
 
 template<typename T>
-dd_boolean dd_DDInputAppend(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
-			    dd_ErrorType *err, T smallVal)
+bool dd_DDInputAppend(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
+			    dd_ErrorType *err)
 {
   /* This is imcomplete.  It simply solves the problem from scratch.  */
-  dd_boolean found;
+  bool found;
   dd_ErrorType error;
 
   if ((*poly)->child!=nullptr) dd_FreeDDMemory(*poly);
-  dd_AppendMatrix2Poly(poly, M, smallVal);
+  dd_AppendMatrix2Poly(poly, M);
   (*poly)->representation=dd_Inequality;
-  found=dd_DoubleDescription(*poly, &error, smallVal);
+  found=dd_DoubleDescription(*poly, &error);
   *err=error;
   return found;
 }
@@ -7604,7 +7567,7 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
   dd_RepresentationType rep;
-  dd_boolean localdebug=globals::dd_TRUE;
+  bool localdebug=false;
 
   T value;
 
@@ -7666,8 +7629,8 @@ template<typename T>
 std::vector<Face> ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T> const& EXT)
 {
   std::vector<Face> ListIncd;
-  int nbCol=EXT.cols();
-  int nbRow=EXT.rows();
+  size_t nbCol=EXT.cols();
+  size_t nbRow=EXT.rows();
   MyVector<T> eFac(nbCol);
   dd_raydata<T> *RayPtr;
   RayPtr = poly->child->FirstRay;
@@ -7700,7 +7663,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   WriteMatrix(std::cout, TheEXT);
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
   T smallVal = 0;
-  dd_rowset rows = dd_RedundantRowsViaShooting(M, &err, smallVal);
+  dd_rowset rows = dd_RedundantRowsViaShooting(M, &err);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {
     bool isin = set_member(i_row+1, rows);
@@ -7714,14 +7677,14 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
 
 
 template<typename T>
-MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT, T smallVal)
+MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
 {
   dd_polyhedradata<T> *poly;
   dd_matrixdata<T> *M;
   dd_ErrorType err;
   int nbCol=TheEXT.cols();
   M=MyMatrix_PolyFile2Matrix(TheEXT);
-  poly=dd_DDMatrix2Poly(M, &err, smallVal);
+  poly=dd_DDMatrix2Poly(M, &err);
   MyMatrix<T> TheFAC=FAC_from_poly(poly, nbCol);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
@@ -7730,36 +7693,19 @@ MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT, T smallVal)
 
 
 template<typename T>
-std::vector<Face> DualDescription_incd(MyMatrix<T> const&TheEXT, T smallVal)
+std::vector<Face> DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
   dd_polyhedradata<T> *poly;
   dd_matrixdata<T> *M;
   dd_ErrorType err;
   M=MyMatrix_PolyFile2Matrix(TheEXT);
-  poly=dd_DDMatrix2Poly(M, &err, smallVal);
+  poly=dd_DDMatrix2Poly(M, &err);
   std::vector<Face> ListIncd=ListIncd_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
   return ListIncd;
 }
 
-
-
-
-
-template<typename T>
-MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
-{
-  T smallVal;
-  smallVal=0;
-  return cdd::DualDescription(TheEXT, smallVal);
 }
-
-}
-
-
-
-
-
 
 #endif
