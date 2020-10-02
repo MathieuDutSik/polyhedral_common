@@ -19,6 +19,9 @@
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
+#include<cassert>
+
+#define DEBUG_CDD
 
 namespace cdd {
   typedef enum {
@@ -146,15 +149,46 @@ inline bool dd_Larger(T val1,T val2)
 }
 
 template<typename T>
+inline bool dd_LargerFrac(T val1, T q1, T val2, T q2)
+{
+#ifdef DEBUG_CDD
+  assert(q1>0);
+  assert(q2>0);
+#endif
+  return val1 * q2 > val2 * q1;
+}
+
+template<typename T>
 inline bool dd_Smaller(T val1,T val2)
 {
   return val1 < val2;
 }
 
 template<typename T>
+inline bool dd_SmallerFrac(T val1, T q1, T val2, T q2)
+// We want to have val1 / q1 < val2 / q2 which is equivalent to val1 * q2 < val2 * q1
+{
+#ifdef DEBUG_CDD
+  assert(q1>0);
+  assert(q2>0);
+#endif
+  return val1 * q2 < val2 * q1;
+}
+
+template<typename T>
 inline bool dd_Equal(T val1,T val2)
 {
   return val1 == val2;
+}
+
+template<typename T>
+inline bool dd_EqualFrac(T val1,T q1, T val2, T q2)
+{
+#ifdef DEBUG_CDD
+  assert(q1>0);
+  assert(q2>0);
+#endif
+  return val1 * q2 < val2 * q1;
 }
 
 template<typename T>
@@ -554,11 +588,11 @@ struct data_temp_simplex {
 template<typename T>
 data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
 {
-  data_temp_simplex<T>* data_simplex = new data_temp_simplex<T>;
-  data_simplex->rcost = new T[d_size];
-  set_initialize(&data_simplex->tieset,d_size);
-  set_initialize(&data_simplex->stieset,d_size);
-  return data_simplex;
+  data_temp_simplex<T>* data = new data_temp_simplex<T>;
+  data->rcost = new T[d_size];
+  set_initialize(&data->tieset,d_size);
+  set_initialize(&data->stieset,d_size);
+  return data;
 }
 
 template<typename T>
@@ -1209,8 +1243,6 @@ void dd_RandomPermutation2(dd_rowindex OV,long t,unsigned int seed)
   }
 }
 
-
-
 template<typename T>
 bool dd_LexSmaller(T *v1, T *v2, long dmax)
 { /* dmax is the size of vectors v1,v2 */
@@ -1223,6 +1255,27 @@ bool dd_LexSmaller(T *v1, T *v2, long dmax)
   do {
     if (!dd_Equal(v1[j - 1],v2[j - 1])) {  /* 086 */
       if (dd_Smaller(v1[j - 1],v2[j - 1])) {  /*086 */
+	    smaller = true;
+	  }
+      determined = true;
+    } else
+      j++;
+  } while (!(determined) && (j <= dmax));
+  return smaller;
+}
+
+template<typename T>
+bool dd_LexSmallerFrac(T *v1, T q1, T *v2, T q2, long dmax)
+{ /* dmax is the size of vectors v1,v2 */
+  bool determined, smaller;
+  dd_colrange j;
+
+  smaller = false;
+  determined = false;
+  j = 1;
+  do {
+    if (!dd_EqualFrac(v1[j - 1], q1, v2[j - 1], q2)) {  /* 086 */
+      if (dd_SmallerFrac(v1[j - 1], q1, v2[j - 1], q2)) {  /*086 */
 	    smaller = true;
 	  }
       determined = true;
@@ -2639,7 +2692,7 @@ void dd_SetNumberType(char *line,dd_NumberType *number,dd_ErrorType *Error)
 
 template<typename T>
 void dd_TableauEntry(T & x, dd_colrange d_size, T** X, T** Ts,
-				dd_rowrange r, dd_colrange s)
+                     dd_rowrange r, dd_colrange s)
 /* Compute the (r,s) entry of X.T   */
 {
   dd_colrange j;
@@ -2695,11 +2748,10 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
      dictionary dual feasible before calling this routine so that the nonbasic
      column for m_size corresponds to the auxiliary variable.
   */
-  bool colselected=false,rowselected=false,
-    dualfeasible=true;
+  bool colselected=false,rowselected=false, dualfeasible=true;
   dd_rowrange i,iref;
   dd_colrange j,k;
-  T val, valn, minval=0, rat, minrat=0;
+  T val, valn, minval=0, rat, minrat=0, minrat_q = 1;
   //  T* rcost;
   //  dd_colset tieset;
   //  dd_colset stieset;  /* store the column indices with tie */
@@ -2707,7 +2759,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
   //  set_initialize(&tieset,d_size);
   //  set_initialize(&stieset,d_size);
 
-  *r=0; *s=0;
+  *r=0;
+  *s=0;
   *selected=false;
   *lps=dd_LPSundecided;
   for (j=1; j<=d_size; j++){
@@ -2743,15 +2796,27 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
         for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,*r,j);
           if (j!=rhscol && dd_Positive(val)) {
-            dd_div(rat,data->rcost[j-1],val);
-            dd_neg(rat,rat);
-            if (*s==0 || dd_Smaller(rat,minrat)){
-              dd_set(minrat,rat);
-              *s=j;
-              set_emptyset(data->tieset);
-              set_addelem(data->tieset, j);
-            } else if (dd_Equal(rat,minrat)){
-              set_addelem(data->tieset,j);
+            if constexpr(is_ring_field<T>::value) {
+                rat = - data->rcost[j-1] / val;
+                if (*s==0 || dd_Smaller(rat, minrat)) {
+                  dd_set(minrat,rat);
+                  *s=j;
+                  set_emptyset(data->tieset);
+                  set_addelem(data->tieset, j);
+                } else if (dd_Equal(rat, minrat)) {
+                  set_addelem(data->tieset,j);
+                }
+              } else { // ring case
+              rat = - data->rcost[j-1];
+              if (*s==0 || dd_SmallerFrac(rat, val, minrat, minrat_q)){
+                dd_set(minrat  ,rat);
+                dd_set(minrat_q,val);
+                *s=j;
+                set_emptyset(data->tieset);
+                set_addelem(data->tieset, j);
+              } else if (dd_EqualFrac(rat, val, minrat, minrat_q)){
+                set_addelem(data->tieset,j);
+              }
             }
           }
         }
@@ -2780,8 +2845,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
                       dd_TableauEntry(val, d_size,A,Ts,*r,j);
                       dd_TableauEntry(valn, d_size,A,Ts,iref,j);
                       if (j!=rhscol && dd_Positive(val)) {
-                        dd_div(rat,valn,val);
-                        if (*s==0 || dd_Smaller(rat,minrat)){
+                        rat = valn / val;
+                        if (*s==0 || dd_Smaller(rat,minrat)) {
                           dd_set(minrat,rat);
                           *s=j;
                           set_emptyset(data->stieset);
@@ -3245,10 +3310,10 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   long pivots_p1=0;
   dd_rowrange i,r_val;
   dd_colrange j,l,ms=0,s_val,local_m_size;
-  T x, val, maxcost=0, axvalue, maxratio=0;
+  T x, val, maxcost=0, axvalue, maxratio=0, maxratio_q=1;
   T* rcost;
   dd_colindex nbindex_ref; /* to be used to store the initial feasible basis for lexico rule */
-  data_temp_simplex<T>* data_simplex = allocate_data_simplex<T>(d_size);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(d_size);
 
   T scaling,svalue;  /* random scaling mytype value */
   T minval=0;
@@ -3295,11 +3360,21 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
            /* This should not happen as they are set negative above.  Quit the phase I.*/
           goto _L99;
         }
+        // So now axvalue < 0
         dd_neg(axvalue,axvalue);
-        dd_div(axvalue,rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
-        if (dd_Larger(axvalue,maxratio)) {
-          dd_set(maxratio,axvalue);
-          ms = j;
+        // So now axvalue > 0
+        if constexpr(is_ring_field<T>::value) {
+            dd_div(axvalue,rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
+            if (dd_Larger(axvalue, maxratio)) {
+              dd_set(maxratio,axvalue);
+              ms = j;
+            }
+          } else {
+          if (dd_LargerFrac(rcost[j-1], axvalue, maxratio, maxratio_q)) {
+            dd_set(maxratio,rcost[j-1]);
+            dd_set(maxratio_q,axvalue);
+            ms = j;
+          }
         }
       }
     }
@@ -3328,7 +3403,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
       }
       dd_SelectDualSimplexPivot(local_m_size, d_size, phase1, A, Ts, nbindex_ref, bflag,
 				objrow, rhscol, lexicopivot, &r_val, &s_val, &chosen, &LPSphase1,
-                                data_simplex);
+                                data);
       if (!chosen) {
         /* The current dictionary is terminal.  There are two cases:
            dd_TableauEntry(local_m_size,d_size,A,T,objrow,ms) is negative or zero.
@@ -3373,7 +3448,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
 _L99:
   delete [] rcost;
   delete [] nbindex_ref;
-  free_data_simplex(data_simplex);
+  free_data_simplex(data);
   *pivot_no=pivots_p1;
 }
 
@@ -3411,7 +3486,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   unsigned int rseed=1;
   r=-40000; // values designed to create segfault in case it is not set later
-  data_temp_simplex<T>* data_simplex = allocate_data_simplex<T>(lp->d);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
 
   /* *err=dd_NoError; */
   set_emptyset(lp->redset_extra);
@@ -3473,7 +3548,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     if (pivots_ds<maxpivots) {
       dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,nbindex_ref,bflag,
 				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS),
-                                data_simplex);
+                                data);
     }
     if (chosen) {
       pivots_ds=pivots_ds+1;
@@ -3519,7 +3594,7 @@ _L99:
   delete [] OrderVector;
   delete [] bflag;
   delete [] nbindex_ref;
-  free_data_simplex(data_simplex);
+  free_data_simplex(data);
 }
 
 
@@ -5293,41 +5368,60 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
 
   for (i=1; i<=m; i++){
     dd_InnerProduct(t1, d, M->matrix[i-1], p);
-    if (localdebug) {
-      std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
-    }
+    if (localdebug) std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
     if (dd_Positive(t1)) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
-      dd_div(alpha, t2, t1);
-      if (!started){
-        imin=i;  dd_set(min, alpha);
-        dd_set(t1min, t1);  /* store the denominator. */
-        started=true;
-        if (localdebug) {
-          std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
-        }
-      } else {
-        if (dd_Smaller(alpha, min)){
-          imin=i;  dd_set(min, alpha);
-          dd_set(t1min, t1);  /* store the denominator. */
-          if (localdebug) {
-            std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
-          }
-        } else {
-          if (dd_Equal(alpha, min)) { /* tie break */
-            for (j=1; j<= d; j++) {
-              dd_div(vecmin[j-1], M->matrix[imin-1][j-1], t1min);
-              dd_div(vec[j-1], M->matrix[i-1][j-1], t1);
-            }
-            if (dd_LexSmaller(vec,vecmin, d)){
+      if constexpr(is_ring_field<T>::value) {
+          dd_div(alpha, t2, t1);
+          if (!started){
+            imin=i;  dd_set(min, alpha);
+            dd_set(t1min, t1);  /* store the denominator. */
+            started=true;
+            if (localdebug) std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
+          } else {
+            if (dd_Smaller(alpha, min)){
               imin=i;  dd_set(min, alpha);
               dd_set(t1min, t1);  /* store the denominator. */
-              if (localdebug) {
-                std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+              if (localdebug) std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
+            } else {
+              if (dd_Equal(alpha, min)) { /* tie break */
+                for (j=1; j<= d; j++) {
+                  dd_div(vecmin[j-1], M->matrix[imin-1][j-1], t1min);
+                  dd_div(vec[j-1], M->matrix[i-1][j-1], t1);
+                }
+                if (dd_LexSmaller(vec,vecmin, d)){
+                  imin=i;  dd_set(min, alpha);
+                  dd_set(t1min, t1);  /* store the denominator. */
+                  if (localdebug) std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+                }
               }
             }
           }
-        }
+        } else {
+          if (!started){
+            imin=i;
+            dd_set(min, t2);
+            dd_set(t1min, t1);  /* store the denominator. */
+            started=true;
+            if (localdebug) std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
+          } else {
+            if (dd_SmallerFrac(t2, t1, min, t1min)){
+              imin=i;
+              dd_set(min, t2);
+              dd_set(t1min, t1);  /* store the denominator. */
+              if (localdebug) std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
+            } else {
+              if (dd_EqualFrac(t2, t1, min, t1min)) { /* tie break */
+                if (dd_LexSmallerFrac(M->matrix[i-1], t1, M->matrix[imin-1], t1min, d)){
+                  imin=i;
+                  dd_set(min, t2);
+                  dd_set(t1min, t1);  /* store the denominator. */
+                  if (localdebug) std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+                }
+              }
+            }
+          }
+
       }
     }
   }
