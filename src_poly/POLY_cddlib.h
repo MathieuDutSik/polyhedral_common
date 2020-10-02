@@ -71,6 +71,7 @@ inline void dd_mul(T &a, T b, T c)
 template<typename T>
 inline void dd_div(T &a, T b, T c)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   a=b / c;
 }
 
@@ -583,6 +584,8 @@ template<typename T>
 struct data_temp_simplex {
   T* rcost;
   dd_colset tieset, stieset;
+  T* Rtemp;
+  dd_colindex nbindex_ref;
 };
 
 template<typename T>
@@ -592,6 +595,8 @@ data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
   data->rcost = new T[d_size];
   set_initialize(&data->tieset,d_size);
   set_initialize(&data->stieset,d_size);
+  data->Rtemp = new T[d_size];
+  data->nbindex_ref = new long[d_size+1];
   return data;
 }
 
@@ -601,6 +606,8 @@ void free_data_simplex(data_temp_simplex<T>* data)
   delete [] data->rcost;
   set_free(data->tieset);
   set_free(data->stieset);
+  delete [] data->Rtemp;
+  delete [] data->nbindex_ref;
 }
 
 
@@ -2733,7 +2740,7 @@ void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T**
 
 template<typename T>
 void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
-    int Phase1,T** A,T** Ts,
+    int Phase1, T** A, T** Ts,
     dd_colindex nbindex_ref, dd_rowindex bflag,
     dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
     dd_rowrange *r, dd_colrange *s, bool *selected, dd_LPStatusType *lps,
@@ -2869,9 +2876,6 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
       }
     } /* end of while */
   }
-  //  delete [] rcost;
-  //  set_free(tieset);
-  //  set_free(stieset);
 }
 
 
@@ -2948,7 +2952,7 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
 
 template<typename T>
 void dd_GaussianColumnPivot(dd_colrange d_size,
-    T** X, T** Ts, dd_rowrange r, dd_colrange s)
+    T** X, T** Ts, dd_rowrange r, dd_colrange s, T* Rtemp)
 /* Update the Transformation matrix T with the pivot operation on (r,s)
    This procedure performs a implicit pivot operation on the matrix X by
    updating the dual basis inverse  T.
@@ -2956,31 +2960,38 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
 {
   dd_colrange j, j1;
   T Xtemp0, Xtemp1, Xtemp;
-  T* Rtemp;
-  Rtemp=new T[d_size];
 
   for (j=1; j<=d_size; j++) {
-    dd_TableauEntry(Rtemp[j-1], d_size, X, Ts, r,j);
+    dd_TableauEntry(Rtemp[j-1], d_size, X, Ts, r, j);
   }
-  dd_set(Xtemp0,Rtemp[s-1]);
-  for (j = 1; j <= d_size; j++) {
-    if (j != s) {
-      dd_div(Xtemp,Rtemp[j-1],Xtemp0);
-      Xtemp1=0;
-      for (j1 = 1; j1 <= d_size; j1++){
-        dd_mul(Xtemp1,Xtemp,Ts[j1-1][s - 1]);
-        dd_sub(Ts[j1-1][j-1],Ts[j1-1][j-1],Xtemp1);
+  if constexpr(is_ring_field<T>::value) {
+      dd_set(Xtemp0, Rtemp[s-1]);
+      for (j = 1; j <= d_size; j++) {
+        if (j != s) {
+          dd_div(Xtemp, Rtemp[j-1], Xtemp0);
+          Xtemp1=0;
+          for (j1 = 1; j1 <= d_size; j1++){
+            dd_mul(Xtemp1, Xtemp, Ts[j1-1][s-1]);
+            dd_sub(Ts[j1-1][j-1], Ts[j1-1][j-1], Xtemp1);
+          }
+        }
       }
-    }
+      for (j = 1; j <= d_size; j++)
+        dd_div(Ts[j-1][s - 1], Ts[j-1][s - 1], Xtemp0);
+    } else { // ring case now
+      for (j = 1; j <= d_size; j++) {
+        if (j != s) {
+          for (j1 = 1; j1 <= d_size; j1++) {
+            Ts[j1-1][j-1] = Rtemp[s-1] * Ts[j1-1][j-1] - Rtemp[j-1] * Ts[j1-1][s-1];
+          }
+        }
+      }
   }
-  for (j = 1; j <= d_size; j++)
-    dd_div(Ts[j-1][s - 1],Ts[j-1][s - 1],Xtemp0);
-  delete [] Rtemp;
 }
 
 template<typename T>
 void dd_GaussianColumnPivot2(dd_colrange d_size,
-    T** A,T** Ts,dd_colindex nbindex,dd_rowindex bflag,dd_rowrange r,dd_colrange s)
+    T** A,T** Ts,dd_colindex nbindex,dd_rowindex bflag,dd_rowrange r,dd_colrange s, T* Rtemp)
 /* Update the Transformation matrix T with the pivot operation on (r,s)
    This procedure performs a implicit pivot operation on the matrix A by
    updating the dual basis inverse  T.
@@ -2988,7 +2999,7 @@ void dd_GaussianColumnPivot2(dd_colrange d_size,
 {
   long entering;
 
-  dd_GaussianColumnPivot(d_size,A,Ts,r,s);
+  dd_GaussianColumnPivot(d_size, A, Ts, r, s, Rtemp);
   entering=nbindex[s];
   bflag[r]=s;     /* the nonbasic variable r corresponds to column s */
   nbindex[s]=r;   /* the nonbasic variable on s column is r */
@@ -3115,34 +3126,37 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
 template<typename T>
 void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 {
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   switch (lp->objective) {
     case dd_LPmax:
-      dd_CrissCrossMaximize(lp,err);
+      dd_CrissCrossMaximize(lp, err, data);
       break;
 
     case dd_LPmin:
-      dd_CrissCrossMinimize(lp,err);
+      dd_CrissCrossMinimize(lp, err, data);
       break;
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
   }
-
+  free_data_simplex(data);
 }
 
 template<typename T>
 void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 {
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   switch (lp->objective) {
     case dd_LPmax:
-      dd_DualSimplexMaximize(lp,err);
+      dd_DualSimplexMaximize(lp, err, data);
       break;
 
     case dd_LPmin:
-      dd_DualSimplexMinimize(lp,err);
+      dd_DualSimplexMinimize(lp, err, data);
       break;
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
   }
+  free_data_simplex(data);
 }
 
 
@@ -3150,7 +3164,8 @@ template<typename T>
 void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
 		    T** A, T** Ts,dd_rowindex OV,dd_rowset equalityset, dd_colindex nbindex,
 		    dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
-		    dd_colrange *cs, bool *found,dd_LPStatusType *lps,long *pivot_no)
+		    dd_colrange *cs, bool *found,dd_LPStatusType *lps,long *pivot_no,
+                    data_temp_simplex<T>* data)
 {
   bool chosen,stop;
   long pivots_p0=0,rank;
@@ -3177,7 +3192,7 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
-      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s, data->Rtemp);
       pivots_p0++;
       rank++;
     } else {
@@ -3210,9 +3225,9 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
 
 template<typename T>
 void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
-    T** A, T** Ts,dd_rowindex OV,dd_rowset equalityset, dd_colindex nbindex,
-    dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
-		     dd_colrange *cs, bool *found,long *pivot_no)
+                     T** A, T** Ts,dd_rowindex OV,dd_rowset equalityset, dd_colindex nbindex,
+                     dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol,
+		     dd_colrange *cs, bool *found,long *pivot_no, data_temp_simplex<T>* data)
 {
   /* Similar to dd_FindLPBasis but it is much simpler.  This tries to recompute T for
   the specified basis given by nbindex.  It will return *found=false if the specified
@@ -3256,7 +3271,7 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
 
-      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s, data->Rtemp);
       pivots_p0++;
       rank++;
     } else{
@@ -3292,9 +3307,11 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
 
 template<typename T>
 void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
-    T** A,T** Ts,
-    dd_colindex nbindex,dd_rowindex bflag,dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
-    dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no, long maxpivots)
+                              T** A,T** Ts,
+                              dd_colindex nbindex,dd_rowindex bflag,dd_rowrange objrow,
+                              dd_colrange rhscol, bool lexicopivot,
+                              dd_colrange *s,dd_ErrorType *err,dd_LPStatusType *lps,long *pivot_no,
+                              long maxpivots, data_temp_simplex<T>* data)
 {
   /* Find a dual feasible basis using Phase I of Dual Simplex method.
      If the problem is dual feasible,
@@ -3311,16 +3328,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   dd_rowrange i,r_val;
   dd_colrange j,l,ms=0,s_val,local_m_size;
   T x, val, maxcost=0, axvalue, maxratio=0, maxratio_q=1;
-  T* rcost;
-  dd_colindex nbindex_ref; /* to be used to store the initial feasible basis for lexico rule */
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(d_size);
 
   T scaling,svalue;  /* random scaling mytype value */
   T minval=0;
-  rcost=new T[d_size];
-  nbindex_ref = new long[d_size+1];
-  for (int i=0; i<=d_size; i++)
-    nbindex_ref[i] = 0;
 
   *err=dd_NoError; *lps=dd_LPSundecided; *s=0;
   local_m_size=m_size+1;  /* increase m_size by 1 */
@@ -3328,8 +3338,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   ms=0;  /* ms will be the index of column which has the largest reduced cost */
   for (j=1; j<=d_size; j++){
     if (j!=rhscol){
-      dd_TableauEntry(rcost[j-1], d_size,A,Ts,objrow,j);
-      if (dd_Larger(rcost[j-1],maxcost)) {dd_set(maxcost,rcost[j-1]); ms = j;}
+      dd_TableauEntry(data->rcost[j-1], d_size,A,Ts,objrow,j);
+      if (dd_Larger(data->rcost[j-1],maxcost)) {dd_set(maxcost,data->rcost[j-1]); ms = j;}
     }
   }
   if (dd_Positive(maxcost)) dualfeasible=false;
@@ -3353,7 +3363,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
      /* Ratio Test: ms will be now the index of column which has the largest reduced cost
         over the auxiliary row entry */
     for (j=1; j<=d_size; j++) {
-      if ((j!=rhscol) && dd_Positive(rcost[j-1])){
+      if ((j!=rhscol) && dd_Positive(data->rcost[j-1])){
         dd_TableauEntry(axvalue, d_size,A,Ts,local_m_size,j);
         if (dd_Nonnegative(axvalue)) {
           *err=dd_NumericallyInconsistent;
@@ -3364,14 +3374,14 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         dd_neg(axvalue,axvalue);
         // So now axvalue > 0
         if constexpr(is_ring_field<T>::value) {
-            dd_div(axvalue,rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
+            dd_div(axvalue,data->rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
             if (dd_Larger(axvalue, maxratio)) {
               dd_set(maxratio,axvalue);
               ms = j;
             }
           } else {
-          if (dd_LargerFrac(rcost[j-1], axvalue, maxratio, maxratio_q)) {
-            dd_set(maxratio,rcost[j-1]);
+          if (dd_LargerFrac(data->rcost[j-1], axvalue, maxratio, maxratio_q)) {
+            dd_set(maxratio,data->rcost[j-1]);
             dd_set(maxratio_q,axvalue);
             ms = j;
           }
@@ -3385,13 +3395,13 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     }
 
     /* Pivot on (local_m_size,ms) so that the dual basic solution becomes feasible */
-    dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,local_m_size,ms);
+    dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,local_m_size,ms, data->Rtemp);
     pivots_p1=pivots_p1+1;
     if (localdebug) {
       printf("\ndd_FindDualFeasibleBasis: Pivot on %ld %ld.\n",local_m_size,ms);
     }
 
-  for (j=1; j<=d_size; j++) nbindex_ref[j]=nbindex[j];
+  for (j=1; j<=d_size; j++) data->nbindex_ref[j]=nbindex[j];
      /* set the reference basis to be the current feasible basis. */
 
     phase1=true; stop=false;
@@ -3401,7 +3411,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         *err=dd_LPCycling;
         goto _L99;  /* failure due to max no. of pivots performed */
       }
-      dd_SelectDualSimplexPivot(local_m_size, d_size, phase1, A, Ts, nbindex_ref, bflag,
+      dd_SelectDualSimplexPivot(local_m_size, d_size, phase1, A, Ts, data->nbindex_ref, bflag,
 				objrow, rhscol, lexicopivot, &r_val, &s_val, &chosen, &LPSphase1,
                                 data);
       if (!chosen) {
@@ -3433,11 +3443,11 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
           goto _L99;
         }
 
-        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,ms);
+        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,ms, data->Rtemp);
         pivots_p1++;
         stop=true;
       } else {
-        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,s_val);
+        dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,s_val, data->Rtemp);
         pivots_p1=pivots_p1+1;
         if (bflag[local_m_size]<0) {
           stop=true;
@@ -3446,30 +3456,27 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     } while(!stop);
   }
 _L99:
-  delete [] rcost;
-  delete [] nbindex_ref;
-  free_data_simplex(data);
   *pivot_no=pivots_p1;
 }
 
 template<typename T>
-void dd_DualSimplexMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
+void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
    dd_colrange j;
    *err=dd_NoError;
    for (j=1; j<=lp->d; j++)
-     dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
-   dd_DualSimplexMaximize(lp,err);
-   dd_neg(lp->optvalue,lp->optvalue);
+     dd_neg(lp->A[lp->objrow-1][j-1], lp->A[lp->objrow-1][j-1]);
+   dd_DualSimplexMaximize(lp, err, data);
+   dd_neg(lp->optvalue, lp->optvalue);
    for (j=1; j<=lp->d; j++) {
      if (lp->LPS!=dd_Inconsistent)
-       dd_neg(lp->dsol[j-1],lp->dsol[j-1]);
-     dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
+       dd_neg(lp->dsol[j-1], lp->dsol[j-1]);
+     dd_neg(lp->A[lp->objrow-1][j-1], lp->A[lp->objrow-1][j-1]);
    }
 }
 
 template<typename T>
-void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err)
+void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3486,7 +3493,6 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   unsigned int rseed=1;
   r=-40000; // values designed to create segfault in case it is not set later
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
 
   /* *err=dd_NoError; */
   set_emptyset(lp->redset_extra);
@@ -3509,7 +3515,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,bflag,lp->objrow,lp->rhscol);
 
   dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->equalityset,lp->nbindex,bflag,
-		 lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots_p0);
+		 lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots_p0, data);
   lp->pivots[0]=pivots_p0;
 
   if (!found){
@@ -3520,14 +3526,15 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   }
 
   dd_FindDualFeasibleBasis(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,
-			   lp->objrow,lp->rhscol,lp->lexicopivot,&s, err,&(lp->LPS),&pivots_p1, maxpivots);
+			   lp->objrow,lp->rhscol,lp->lexicopivot,&s, err,&(lp->LPS),&pivots_p1, maxpivots,
+                           data);
   lp->pivots[1]=pivots_p1;
 
   for (j=1; j<=lp->d; j++) nbindex_ref[j]=lp->nbindex[j];
      /* set the reference basis to be the current feasible basis. */
 
   if (*err==dd_LPCycling || *err==dd_NumericallyInconsistent) {
-    dd_CrissCrossMaximize(lp,err);
+    dd_CrissCrossMaximize(lp, err, data);
     delete [] OrderVector;
     delete [] bflag;
     delete [] nbindex_ref;
@@ -3572,7 +3579,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       if (chosen) pivots_pc=pivots_pc+1;
     }
     if (chosen) {
-      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s, data->Rtemp);
     } else {
       switch (lp->LPS){
       case dd_Inconsistent: lp->re=r; break;
@@ -3594,21 +3601,20 @@ _L99:
   delete [] OrderVector;
   delete [] bflag;
   delete [] nbindex_ref;
-  free_data_simplex(data);
 }
 
 
 
 template<typename T>
-void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
+void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 {
    dd_colrange j;
 
    *err=dd_NoError;
    for (j=1; j<=lp->d; j++)
      dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
-   dd_CrissCrossMaximize(lp,err);
-   dd_neg(lp->optvalue,lp->optvalue);
+   dd_CrissCrossMaximize(lp, err, data);
+   dd_neg(lp->optvalue, lp->optvalue);
    for (j=1; j<=lp->d; j++){
      if (lp->LPS!=dd_Inconsistent) {
 	   /* Inconsistent certificate stays valid for minimization, 0.94e */
@@ -3619,7 +3625,7 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
 }
 
 template<typename T>
-void dd_CrissCrossMaximize(dd_lpdata<T> *lp,dd_ErrorType *err)
+void dd_CrissCrossMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3655,7 +3661,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,bflag,lp->objrow,lp->rhscol);
 
   dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->equalityset,
-		 lp->nbindex,bflag,lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots0);
+		 lp->nbindex,bflag,lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots0, data);
   lp->pivots[0]+=pivots0;
 
   if (!found){
@@ -3671,7 +3677,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
 			     lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
     if (chosen) {
-      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s);
+      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s, data->Rtemp);
       pivots1++;
     } else {
       switch (lp->LPS){
@@ -5437,7 +5443,7 @@ void dd_BasisStatusMaximize(dd_rowrange m_size,dd_colrange d_size,
 			    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
 			    T &optvalue,T* sol,T* dsol,dd_rowset posset, dd_colindex nbindex,
 			    dd_rowrange re,dd_colrange se, dd_colrange *nse, long *pivots,
-			    int *found, int *LPScorrect)
+			    int *found, int *LPScorrect, data_temp_simplex<T>* data)
 /*  This is just to check whether the status LPS of the basis given by
 nbindex with extra certificates se or re is correct.  It is done
 by recomputing the basis inverse matrix T.  It does not solve the LP
@@ -5498,7 +5504,7 @@ arithmetics.
 
 
   dd_FindLPBasis2(m_size,d_size,A,Ts,OrderVector, equalityset,nbindex,bflag,
-		  objrow,rhscol,&s,found,&pivots0);
+		  objrow,rhscol,&s,found,&pivots0, data);
 
 /* set up the new se column and corresponding variable */
   senew=bflag[is];
@@ -5567,8 +5573,6 @@ arithmetics.
        break;
 ;
   }
-
-  /*  ddlps=LPSf2LPS(LPS);*/
 
   dd_SetSolutions(m_size,d_size,A,Ts,
    objrow,rhscol,LPS,optvalue,sol,dsol,posset,re,senew,bflag);
@@ -6273,6 +6277,8 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   dd_colrange s;
   long rank;
   bool localdebug=false;
+  T* Rtemp;
+  Rtemp = new T[M->colsize];
 
   rank = 0;
   stop = false;
@@ -6301,7 +6307,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
         set_addelem(ColSelected, s);
         set_addelem(*colbasis, s);
         rank++;
-        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s);
+        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp);
       } else {
         stop=true;
       }
@@ -6312,6 +6318,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   set_free(ColSelected);
   set_free(NopivotRow);
   set_free(PriorityRow);
+  delete [] Rtemp;
   return rank;
 }
 
@@ -6325,6 +6332,8 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   dd_rowrange r;
   dd_colrange j,s;
   bool localdebug=false;
+  T* Rtemp;
+  Rtemp = new T[cone->d];
 
   *rank = 0;
   stop = false;
@@ -6345,7 +6354,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
         set_addelem(ColSelected, s);
         cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
         (*rank)++;
-        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s);
+        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp);
       } else {
         stop=true;
       }
@@ -6353,6 +6362,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   } while (!stop);
   set_free(ColSelected);
   set_free(NopivotRow);
+  delete [] Rtemp;
 }
 
 
