@@ -28,8 +28,7 @@ int main(int argc, char *argv[])
       exit(1);
     }
     //
-    T smallVal=0;
-    std::vector<Face> ListIncd=cdd::DualDescription_incd(EXT, smallVal);
+    std::vector<Face> ListIncd=cdd::DualDescription_incd(EXT);
     //
     int nbFace=ListIncd.size();
     std::ofstream os(argv[2]);

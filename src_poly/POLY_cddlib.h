@@ -12,19 +12,15 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define dd_COPYRIGHT   "Copyright (C) 1996, Komei Fukuda, fukuda@ifor.math.ethz.ch"
-#define dd_DDVERSION   "Version 0.94g (March 23, 2012)"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
+/* The original author of the CDD code is Komei Fukuda.
+   This C++ version is adapted by Mathieu Dutour Sikiric
+*/
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
 
 namespace cdd {
-  typedef unsigned long *set_type;   /* set type definition */
   typedef enum {
     dd_CrissCross, dd_DualSimplex
   } dd_LPSolverType;
@@ -174,13 +170,219 @@ typedef long dd_rowrange;
 typedef long dd_colrange;
 typedef long dd_bigrange;
 
-typedef set_type dd_rowset;
-typedef set_type dd_colset;
 typedef long *dd_rowindex;
 typedef int *dd_rowflag;
 typedef long *dd_colindex;
+
+// API for the set systems.
+typedef unsigned long *set_type;   /* set type definition */
+
+inline void set_free(set_type set)
+/* Free the space created with the set pointer set*/
+{
+    delete [] set;
+}
+
+
+#define SETBITS (sizeof(long) * 8)
+
+#define LUTBLOCKS(set) (((set[0]-1)/SETBITS+1)*(sizeof(long)/sizeof(set_card_lut_t)))
+
+static unsigned char set_card_lut[]={
+0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
+1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
+/* End of Definitions for optimized set_card */
+
+unsigned long set_blocks(long len)
+{
+	long blocks=1L;
+
+	if (len>0) blocks=((long)len-1)/SETBITS+2;
+	return blocks;
+}
+
+void set_initialize(set_type *setp, long length)
+/* Make a set with a given bit lengths  */
+{
+    long i,forlim1,len;
+
+    if (length<=0)
+      len=1;
+    else
+      len=length;
+     /* if negative length is requested, it generates the shortest length */
+
+    forlim1=set_blocks(len);
+    using ulong=unsigned long;
+    *setp=new ulong[forlim1];
+    (*setp)[0]=ulong(len);  /* size of the ground set */
+    for (i=1; i<forlim1; i++)
+      (*setp)[i]=0U;
+}
+
+void set_emptyset(set_type set)
+/* Set set to be the emptyset  */
+{
+	long i,forlim;
+
+	forlim=set_blocks(set[0])-1;
+	for (i=1; i<=forlim; i++)
+		set[i]=0U;
+}
+
+void set_copy(set_type setcopy,set_type set)
+/* Copy the set set[] to setcopy[] with setcopy[] length */
+{
+	long i,forlim;
+
+	forlim=set_blocks(setcopy[0])-1;
+	for (i=1; i<=forlim; i++)
+		setcopy[i]=set[i];
+}
+
+void set_addelem(set_type set, long elem)
+/* add elem only if it is within the set[] range */
+{
+  long i,j;
+  unsigned long change;
+  unsigned long one=1U;
+
+  if (elem<=(long)set[0])
+    {
+      i=(elem-1)/SETBITS+1;
+      j=(elem-1)%SETBITS;
+      change= one << j;  /* put 1 in jth position */
+      set[i]=set[i] | change;
+    }
+}
+
+void set_delelem(set_type set, long elem)
+/* delete elem only if it is within the set[] range */
+{
+	long  i,j;
+	unsigned long change;
+	unsigned long one=1U;
+
+	if (elem<=(long)set[0])
+	{
+		i=(elem-1)/SETBITS+1;
+		j=(elem-1)%SETBITS;
+		change=one << j;  /* put 1 in jth position */
+		set[i]=(set[i] | change) ^ change;
+	}
+}
+
+void set_int(set_type set,set_type set1,set_type set2)
+/* Set intersection, assuming set1 and set2 have the same length as set */
+{
+  long  i,forlim;
+
+  forlim=set_blocks(set[0])-1;
+  for (i=1;i<=forlim;i++)
+    set[i]=(set1[i] & set2[i]);
+}
+
+void set_uni(set_type set,set_type set1,set_type set2)
+/* Set union,assuming set1 and set2 have the same length as set */
+{
+	long  i,forlim;
+
+	forlim=set_blocks(set[0])-1;
+	for (i=1;i<=forlim;i++)
+		set[i]=set1[i] | set2[i];
+}
+
+void set_diff(set_type set,set_type set1,set_type set2)
+/* Set difference se1/set2, assuming set1 and set2 have the same length as set */
+{
+	long  i,forlim;
+
+	forlim=set_blocks(set[0])-1;
+	for (i=1;i<=forlim;i++)
+		set[i]=set1[i] & (~set2[i]);
+}
+
+void set_compl(set_type set,set_type set1)
+/* set[] will be set to the complement of set1[] */
+{
+	long  i,j,l,forlim;
+	unsigned long change;
+	unsigned long one=1U;
+
+	forlim=set_blocks(set[0])-1;
+	for (i=1;i<=forlim;i++)
+		set[i]= ~set1[i];
+	l=(set[0]-1)%SETBITS; /* the position of the last elem in the last block */
+    	for (j=l+1; j<=(long)SETBITS-1; j++){
+		change=one << j;
+		set[forlim]=(set[forlim] | change) ^ change;
+    	}
+}
+
+int set_subset(set_type set1,set_type set2)
+/* Set containment check, set1 <= set2 */
+{
+	int  yes=1;
+	long i,forlim;
+
+	forlim=set_blocks(set2[0])-1;
+	for (i=1;i<=forlim && yes;i++)
+		if ((set1[i] | set2[i])!=set2[i])
+			yes=0;
+	return yes;
+}
+
+int set_member(long elem, set_type set)
+/* Set membership check, elem in set */
+{
+	int  yes=0;
+	long  i,j;
+	unsigned long testset;
+	unsigned long one=1U;
+
+	if (elem<=(long)set[0])
+	{
+		i=(elem-1)/SETBITS+1;
+		j=(elem-1)%SETBITS;
+		testset=set[i] | (one<<j);   /* add elem to set[i] */
+		if (testset==set[i])
+			yes=1;
+	}
+	return yes;
+}
+
+/*set cardinality, modified by David Bremner bremner@cs.mcgill.ca
+   to optimize for speed.*/
+long set_card(set_type set)
+{
+  unsigned long block;
+  long car=0;
+  set_card_lut_t *p;
+
+  p=(set_card_lut_t *)&set[1];
+  for (block=0; block< LUTBLOCKS(set);block++) {
+    car+=set_card_lut[p[block]];
+  }
+  return car;
+}
+
+typedef set_type dd_rowset;
+typedef set_type dd_colset;
 typedef set_type *dd_SetVector;
 typedef set_type *dd_Aincidence;
+typedef set_type rowset;  /* set_type defined in setoper.h */
+typedef set_type colset;
+
+
+// More functionalities
+
+
 
 template<typename T>
 inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
@@ -194,11 +396,6 @@ inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
   }
 }
 
-
-
-//typedef char dd_DataFileType[dd_filenamelen];
-//typedef char dd_LineType[globals::dd_linelenmax];
-//typedef char dd_WordType[dd_wordlenmax];
 
 template<typename T>
 struct dd_raydata {
@@ -343,12 +540,41 @@ struct dd_lpdata {
   long total_pivots;
   int use_given_basis;  /* switch to indicate the use of the given basis */
   dd_colindex given_nbindex;  /* given basis represented by nonbasic indices */
-  time_t starttime;
-  time_t endtime;
 };
 
 
 /*----  end of LP Types ----- */
+
+template<typename T>
+struct data_temp_simplex {
+  T* rcost;
+  dd_colset tieset, stieset;
+};
+
+template<typename T>
+data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
+{
+  data_temp_simplex<T>* data_simplex = new data_temp_simplex<T>;
+  data_simplex->rcost = new T[d_size];
+  set_initialize(&data_simplex->tieset,d_size);
+  set_initialize(&data_simplex->stieset,d_size);
+  return data_simplex;
+}
+
+template<typename T>
+void free_data_simplex(data_temp_simplex<T>* data)
+{
+  delete [] data->rcost;
+  set_free(data->tieset);
+  set_free(data->stieset);
+}
+
+
+
+
+
+
+/* Containing data sets */
 
 
 template<typename T>
@@ -437,10 +663,8 @@ struct dd_conedata {
   T** B;
   T** Bsave;  /* a copy of the dual basis inverse used to reduce the matrix A */
 
-/* STATES: variables to represent current state. */
   dd_ErrorType Error;
   dd_CompStatusType CompStatus;  /* Computation Status */
-  time_t starttime, endtime;
 };
 
 
@@ -487,227 +711,6 @@ struct dd_polyhedradata {
     /* dominant set of rows (those containing all rays). */
 };
 
-/* end of cddtypes.h */
-/* cdd.h: Header file for cddlib.c
-   written by Komei Fukuda, fukuda@ifor.math.ethz.ch
-   Version 0.94g, March 23, 2012
-*/
-
-/* cddlib.c : C-Implementation of the double description method for
-   computing all vertices and extreme rays of the polyhedron
-   P= {x :  b - A x >= 0}.
-   Please read COPYING (GNU General Public Licence) and
-   the manual cddlibman.tex for detail.
-*/
-
-
-#define SETBITS (sizeof(long) * 8)
-/* (Number of chars in a long) * (number of bits in a char) */
-
-/* Definitions for optimized set_card function
-   by David Bremner bremner@cs.mcgill.ca
-*/
-
-/* Caution!!!
-   Bremner's technique depends on the assumption that CHAR_BIT == 8.
-*/
-
-#define LUTBLOCKS(set) (((set[0]-1)/SETBITS+1)*(sizeof(long)/sizeof(set_card_lut_t)))
-
-static unsigned char set_card_lut[]={
-0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
-1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
-/* End of Definitions for optimized set_card */
-
-unsigned long set_blocks(long len)
-{
-	long blocks=1L;
-
-	if (len>0) blocks=((long)len-1)/SETBITS+2;
-	return blocks;
-}
-
-void set_initialize(set_type *setp, long length)
-/* Make a set with a given bit lengths  */
-{
-    long i,forlim1,len;
-
-    if (length<=0)
-      len=1;
-    else
-      len=length;
-     /* if negative length is requested, it generates the shortest length */
-
-    forlim1=set_blocks(len);
-    using ulong=unsigned long;
-    *setp=new ulong[forlim1];
-    (*setp)[0]=ulong(len);  /* size of the ground set */
-    for (i=1; i<forlim1; i++)
-      (*setp)[i]=0U;
-}
-
-inline void set_free(set_type set)
-/* Free the space created with the set pointer set*/
-{
-    delete [] set;
-}
-
-void set_emptyset(set_type set)
-/* Set set to be the emptyset  */
-{
-	long i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1; i<=forlim; i++)
-		set[i]=0U;
-}
-
-void set_copy(set_type setcopy,set_type set)
-/* Copy the set set[] to setcopy[] with setcopy[] length */
-{
-	long i,forlim;
-
-	forlim=set_blocks(setcopy[0])-1;
-	for (i=1; i<=forlim; i++)
-		setcopy[i]=set[i];
-}
-
-void set_addelem(set_type set, long elem)
-/* add elem only if it is within the set[] range */
-{
-  long i,j;
-  unsigned long change;
-  unsigned long one=1U;
-
-  if (elem<=(long)set[0])
-    {
-      i=(elem-1)/SETBITS+1;
-      j=(elem-1)%SETBITS;
-      change= one << j;  /* put 1 in jth position */
-      set[i]=set[i] | change;
-    }
-}
-
-void set_delelem(set_type set, long elem)
-/* delete elem only if it is within the set[] range */
-{
-	long  i,j;
-	unsigned long change;
-	unsigned long one=1U;
-
-	if (elem<=(long)set[0])
-	{
-		i=(elem-1)/SETBITS+1;
-		j=(elem-1)%SETBITS;
-		change=one << j;  /* put 1 in jth position */
-		set[i]=(set[i] | change) ^ change;
-	}
-}
-
-void set_int(set_type set,set_type set1,set_type set2)
-/* Set intersection, assuming set1 and set2 have the same length as set */
-{
-  long  i,forlim;
-
-  forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
-    set[i]=(set1[i] & set2[i]);
-}
-
-void set_uni(set_type set,set_type set1,set_type set2)
-/* Set union,assuming set1 and set2 have the same length as set */
-{
-	long  i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]=set1[i] | set2[i];
-}
-
-void set_diff(set_type set,set_type set1,set_type set2)
-/* Set difference se1/set2, assuming set1 and set2 have the same length as set */
-{
-	long  i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]=set1[i] & (~set2[i]);
-}
-
-void set_compl(set_type set,set_type set1)
-/* set[] will be set to the complement of set1[] */
-{
-	long  i,j,l,forlim;
-	unsigned long change;
-	unsigned long one=1U;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]= ~set1[i];
-
-/* the following is necessary to remove 1's in the unused bits.
-   Bremner's trick counts these bits as well.  (000601KF)
-*/
-	l=(set[0]-1)%SETBITS; /* the position of the last elem in the last block */
-    	for (j=l+1; j<=(long)SETBITS-1; j++){
-		change=one << j;
-		set[forlim]=(set[forlim] | change) ^ change;
-    	}
-}
-
-int set_subset(set_type set1,set_type set2)
-/* Set containment check, set1 <= set2 */
-{
-	int  yes=1;
-	long i,forlim;
-
-	forlim=set_blocks(set2[0])-1;
-	for (i=1;i<=forlim && yes;i++)
-		if ((set1[i] | set2[i])!=set2[i])
-			yes=0;
-	return yes;
-}
-
-int set_member(long elem, set_type set)
-/* Set membership check, elem in set */
-{
-	int  yes=0;
-	long  i,j;
-	unsigned long testset;
-	unsigned long one=1U;
-
-	if (elem<=(long)set[0])
-	{
-		i=(elem-1)/SETBITS+1;
-		j=(elem-1)%SETBITS;
-		testset=set[i] | (one<<j);   /* add elem to set[i] */
-		if (testset==set[i])
-			yes=1;
-	}
-	return yes;
-}
-
-/*set cardinality, modified by David Bremner bremner@cs.mcgill.ca
-   to optimize for speed.*/
-long set_card(set_type set)
-{
-  unsigned long block;
-  long car=0;
-  set_card_lut_t *p;
-
-  p=(set_card_lut_t *)&set[1];
-  for (block=0; block< LUTBLOCKS(set);block++) {
-    car+=set_card_lut[p[block]];
-  }
-  return car;
-}
-
 
 dd_SetFamilyPtr dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize)
 {
@@ -736,27 +739,6 @@ dd_SetFamilyPtr dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize)
   return F;
 }
 
-
-
-dd_NumberType dd_GetNumberType(const char *line)
-{
-  dd_NumberType nt;
-
-  if (strncmp(line, "integer", 7)==0) {
-    nt = dd_Integer;
-  }
-  else if (strncmp(line, "rational", 8)==0) {
-    nt = dd_Rational;
-  }
-  else if (strncmp(line, "real", 4)==0) {
-    nt = dd_Real;
-  }
-  else {
-    nt=dd_Unknown;
-  }
-  return nt;
-}
-
 template<typename T>
 bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
 {
@@ -777,6 +759,7 @@ bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
   return success;
 }
 
+// Basic Initialization procedures
 
 template<typename T>
 void dd_InitializeAmatrix(dd_rowrange m,dd_colrange d,T** *A)
@@ -794,6 +777,18 @@ void dd_InitializeArow(dd_colrange d, T* *a)
   if (d>0) *a=new T[d];
 }
 
+template<typename T>
+void dd_InitializeBmatrix(dd_colrange d,T** *B)
+{
+  dd_colrange j;
+
+  (*B)=new T*[d];
+  for (j = 0; j < d; j++) {
+    (*B)[j]=new T[d];
+  }
+}
+
+// More sophisticated creation functionalities.
 
 template<typename T>
 dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
@@ -825,6 +820,256 @@ dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
   M->representation=dd_Unspecified;
   return M;
 }
+
+template<typename T>
+dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
+{
+  dd_rowrange i;
+  dd_polyhedradata<T> *poly=nullptr;
+
+  poly=new dd_polyhedradata<T>;
+  poly->child       =nullptr; /* this links the homogenized cone data */
+  poly->m           =m;
+  poly->d           =d;
+  poly->n           =-1;  /* the size of output is not known */
+  poly->m_alloc     =m+2; /* the allocated row size of matrix A */
+  poly->d_alloc     =d;   /* the allocated col size of matrix A */
+  poly->ldim		=0;   /* initialize the linearity dimension */
+  poly->numbtype=dd_Real;
+  dd_InitializeAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
+  dd_InitializeArow(d,&(poly->c));           /* cost vector */
+  poly->representation       =dd_Inequality;
+  poly->homogeneous =false;
+
+  poly->EqualityIndex = new int[m+2];
+    /* size increased to m+2 in 092b because it is used by the child cone,
+       This is a bug fix suggested by Thao Dang. */
+    /* ith component is 1 if it is equality, -1 if it is strict inequality, 0 otherwise. */
+  for (i = 0; i <= m+1; i++) poly->EqualityIndex[i]=0;
+
+  poly->IsEmpty                 = -1;  /* initially set to -1, neither TRUE nor FALSE, meaning unknown */
+
+  poly->NondegAssumed           = false;
+  poly->InitBasisAtBottom       = false;
+  poly->RestrictedEnumeration   = false;
+  poly->RelaxedEnumeration      = false;
+
+  poly->AincGenerated=false;  /* Ainc is a set array to store the input incidence. */
+
+  return poly;
+}
+
+template<typename T>
+bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
+{
+  bool success=true;
+  dd_colrange j;
+
+  (*cone)=new dd_conedata<T>;
+
+/* INPUT: A given representation of a cone: inequality */
+  (*cone)->m=m;
+  (*cone)->d=d;
+  (*cone)->m_alloc=m+2; /* allocated row size of matrix A */
+  (*cone)->d_alloc=d;   /* allocated col size of matrix A, B and Bsave */
+  (*cone)->numbtype=dd_Real;
+  (*cone)->parent=nullptr;
+
+/* CONTROL: variables to control computation */
+  (*cone)->Iteration=0;
+
+  (*cone)->HalfspaceOrder=dd_LexMin;
+
+  (*cone)->ArtificialRay=nullptr;
+  (*cone)->FirstRay=nullptr;
+  (*cone)->LastRay=nullptr; /* The second description: Generator */
+  (*cone)->PosHead=nullptr;
+  (*cone)->ZeroHead=nullptr;
+  (*cone)->NegHead=nullptr;
+  (*cone)->PosLast=nullptr;
+  (*cone)->ZeroLast=nullptr;
+  (*cone)->NegLast=nullptr;
+  (*cone)->RecomputeRowOrder  = true;
+  (*cone)->PreOrderedRun      = false;
+  set_initialize(&((*cone)->GroundSet),(*cone)->m_alloc);
+  set_initialize(&((*cone)->EqualitySet),(*cone)->m_alloc);
+  set_initialize(&((*cone)->NonequalitySet),(*cone)->m_alloc);
+  set_initialize(&((*cone)->AddedHalfspaces),(*cone)->m_alloc);
+  set_initialize(&((*cone)->WeaklyAddedHalfspaces),(*cone)->m_alloc);
+  set_initialize(&((*cone)->InitialHalfspaces),(*cone)->m_alloc);
+  (*cone)->RayCount=0;
+  (*cone)->FeasibleRayCount=0;
+  (*cone)->WeaklyFeasibleRayCount=0;
+  (*cone)->TotalRayCount=0;
+  (*cone)->ZeroRayCount=0;
+  (*cone)->EdgeCount=0;
+  (*cone)->TotalEdgeCount=0;
+  (*cone)->count_int=0;
+  (*cone)->count_int_good=0;
+  (*cone)->count_int_bad=0;
+  (*cone)->rseed=1;  /* random seed for random row permutation */
+
+  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->B));
+  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->Bsave));
+  dd_InitializeAmatrix((*cone)->m_alloc,(*cone)->d_alloc,&((*cone)->A));
+
+  (*cone)->Edges=new dd_adjacencydata<T>*[(*cone)->m_alloc];
+  for (j=0; j<(*cone)->m_alloc; j++)
+    (*cone)->Edges[j]=nullptr;
+  (*cone)->InitialRayIndex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    (*cone)->InitialRayIndex[i] = 0;
+  (*cone)->OrderVector = new long[(*cone)->m_alloc+1];
+  for (int i=0; i<=(*cone)->m_alloc; i++)
+    (*cone)->OrderVector[i] = 0;
+
+  (*cone)->newcol = new long[((*cone)->d)+1];
+  for (int i=0; i<=(*cone)->d; i++)
+    (*cone)->newcol[i] = 0;
+  for (j=0; j<=(*cone)->d; j++) (*cone)->newcol[j]=j;  /* identity map, initially */
+  (*cone)->LinearityDim = -2; /* -2 if it is not computed */
+  (*cone)->ColReduced   = false;
+  (*cone)->d_orig = d;
+
+/* STATES: variables to represent current state. */
+/*(*cone)->Error;
+  (*cone)->CompStatus;
+  (*cone)->starttime;
+  (*cone)->endtime;
+*/
+
+  return success;
+}
+
+template<typename T>
+dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly)
+{
+  dd_conedata<T> *cone=nullptr;
+  dd_colrange d,j;
+  dd_rowrange m,i;
+
+  m=poly->m;
+  d=poly->d;
+  if (!(poly->homogeneous) && poly->representation==dd_Inequality){
+    m=poly->m+1;
+  }
+  poly->m1=m;
+
+  dd_InitializeConeData(m, d, &cone);
+  cone->representation=poly->representation;
+
+/* Points to the original polyhedra data, and reversely */
+  cone->parent=poly;
+  poly->child=cone;
+
+  for (i=1; i<=poly->m; i++)
+    for (j=1; j<=cone->d; j++)
+      dd_set(cone->A[i-1][j-1],poly->A[i-1][j-1]);
+
+  if (poly->representation==dd_Inequality && !(poly->homogeneous)){
+    cone->A[m-1][0]=1;
+    for (j=2; j<=d; j++) cone->A[m-1][j-1]=0;
+  }
+
+  return cone;
+}
+
+template<typename T>
+dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
+{
+  dd_lpsolution<T> *lps;
+  dd_colrange j;
+
+  lps=new dd_lpsolution<T>;
+  //  for (i=1; i<=globals::dd_filenamelen; i++) lps->filename[i-1]=lp->filename[i-1];
+  lps->objective=lp->objective;
+  lps->solver=lp->solver;
+  lps->m=lp->m;
+  lps->d=lp->d;
+  lps->numbtype=lp->numbtype;
+
+  lps->LPS=lp->LPS;  /* the current solution status */
+
+  dd_set(lps->optvalue,lp->optvalue);  /* optimal value */
+  dd_InitializeArow(lp->d+1,&(lps->sol));
+  dd_InitializeArow(lp->d+1,&(lps->dsol));
+  lps->nbindex = new long[(lp->d)+1];
+  for (j=0; j<=lp->d; j++){
+    dd_set(lps->sol[j],lp->sol[j]);
+    dd_set(lps->dsol[j],lp->dsol[j]);
+    lps->nbindex[j]=lp->nbindex[j];
+  }
+  lps->pivots[0]=lp->pivots[0];
+  lps->pivots[1]=lp->pivots[1];
+  lps->pivots[2]=lp->pivots[2];
+  lps->pivots[3]=lp->pivots[3];
+  lps->pivots[4]=lp->pivots[4];
+  lps->total_pivots=lp->total_pivots;
+
+  return lps;
+}
+
+template<typename T>
+dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
+   dd_NumberType nt,dd_rowrange m,dd_colrange d)
+{
+  dd_lpdata<T> *lp;
+  lp=new dd_lpdata<T>;
+  lp->solver=dd_choiceLPSolverDefault;  /* set the default lp solver */
+  lp->d=d;
+  lp->m=m;
+  lp->numbtype=nt;
+  lp->objrow=m;
+  lp->rhscol=1L;
+  lp->objective=dd_LPnone;
+  lp->LPS=dd_LPSundecided;
+  lp->eqnumber=0;  /* the number of equalities */
+
+  lp->nbindex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    lp->nbindex[i] = 0;
+  lp->given_nbindex = new long[d+1];
+  for (int i=0; i<=d; i++)
+    lp->given_nbindex[i] = 0;
+  set_initialize(&(lp->equalityset),m);
+    /* i must be in the set iff i-th row is equality . */
+
+  lp->redcheck_extensive=false; /* this is on only for RedundantExtensive */
+  lp->ired=0;
+  set_initialize(&(lp->redset_extra),m);
+    /* i is in the set if i-th row is newly recognized redundant (during the checking the row ired). */
+  set_initialize(&(lp->redset_accum),m);
+    /* i is in the set if i-th row is recognized redundant (during the checking the row ired). */
+  set_initialize(&(lp->posset_extra),m);
+    /* i is in the set if i-th row is recognized non-linearity (during the course of computation). */
+  lp->lexicopivot=dd_choiceLexicoPivotQ;  /* dd_choice... is set in dd_set_global_constants() */
+
+  lp->m_alloc=lp->m+2;
+  lp->d_alloc=lp->d+2;
+  lp->objective=obj;
+  dd_InitializeBmatrix(lp->d_alloc,&(lp->B));
+  dd_InitializeAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
+  dd_InitializeArow(lp->d_alloc,&(lp->sol));
+  dd_InitializeArow(lp->d_alloc,&(lp->dsol));
+  return lp;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 template<typename T>
@@ -1493,173 +1738,6 @@ int dd_MatrixShiftupLinearity(dd_matrixdata<T> **M,dd_rowindex *newpos) /* 094 *
 }
 
 template<typename T>
-dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
-{
-  dd_rowrange i;
-  dd_polyhedradata<T> *poly=nullptr;
-
-  poly=new dd_polyhedradata<T>;
-  poly->child       =nullptr; /* this links the homogenized cone data */
-  poly->m           =m;
-  poly->d           =d;
-  poly->n           =-1;  /* the size of output is not known */
-  poly->m_alloc     =m+2; /* the allocated row size of matrix A */
-  poly->d_alloc     =d;   /* the allocated col size of matrix A */
-  poly->ldim		=0;   /* initialize the linearity dimension */
-  poly->numbtype=dd_Real;
-  dd_InitializeAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
-  dd_InitializeArow(d,&(poly->c));           /* cost vector */
-  poly->representation       =dd_Inequality;
-  poly->homogeneous =false;
-
-  poly->EqualityIndex = new int[m+2];
-    /* size increased to m+2 in 092b because it is used by the child cone,
-       This is a bug fix suggested by Thao Dang. */
-    /* ith component is 1 if it is equality, -1 if it is strict inequality, 0 otherwise. */
-  for (i = 0; i <= m+1; i++) poly->EqualityIndex[i]=0;
-
-  poly->IsEmpty                 = -1;  /* initially set to -1, neither TRUE nor FALSE, meaning unknown */
-
-  poly->NondegAssumed           = false;
-  poly->InitBasisAtBottom       = false;
-  poly->RestrictedEnumeration   = false;
-  poly->RelaxedEnumeration      = false;
-
-  poly->AincGenerated=false;  /* Ainc is a set array to store the input incidence. */
-
-  return poly;
-}
-
-
-template<typename T>
-void dd_InitializeBmatrix(dd_colrange d,T** *B)
-{
-  dd_colrange j;
-
-  (*B)=new T*[d];
-  for (j = 0; j < d; j++) {
-    (*B)[j]=new T[d];
-  }
-}
-
-
-
-template<typename T>
-bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
-{
-  bool success=true;
-  dd_colrange j;
-
-  (*cone)=new dd_conedata<T>;
-
-/* INPUT: A given representation of a cone: inequality */
-  (*cone)->m=m;
-  (*cone)->d=d;
-  (*cone)->m_alloc=m+2; /* allocated row size of matrix A */
-  (*cone)->d_alloc=d;   /* allocated col size of matrix A, B and Bsave */
-  (*cone)->numbtype=dd_Real;
-  (*cone)->parent=nullptr;
-
-/* CONTROL: variables to control computation */
-  (*cone)->Iteration=0;
-
-  (*cone)->HalfspaceOrder=dd_LexMin;
-
-  (*cone)->ArtificialRay=nullptr;
-  (*cone)->FirstRay=nullptr;
-  (*cone)->LastRay=nullptr; /* The second description: Generator */
-  (*cone)->PosHead=nullptr;
-  (*cone)->ZeroHead=nullptr;
-  (*cone)->NegHead=nullptr;
-  (*cone)->PosLast=nullptr;
-  (*cone)->ZeroLast=nullptr;
-  (*cone)->NegLast=nullptr;
-  (*cone)->RecomputeRowOrder  = true;
-  (*cone)->PreOrderedRun      = false;
-  set_initialize(&((*cone)->GroundSet),(*cone)->m_alloc);
-  set_initialize(&((*cone)->EqualitySet),(*cone)->m_alloc);
-  set_initialize(&((*cone)->NonequalitySet),(*cone)->m_alloc);
-  set_initialize(&((*cone)->AddedHalfspaces),(*cone)->m_alloc);
-  set_initialize(&((*cone)->WeaklyAddedHalfspaces),(*cone)->m_alloc);
-  set_initialize(&((*cone)->InitialHalfspaces),(*cone)->m_alloc);
-  (*cone)->RayCount=0;
-  (*cone)->FeasibleRayCount=0;
-  (*cone)->WeaklyFeasibleRayCount=0;
-  (*cone)->TotalRayCount=0;
-  (*cone)->ZeroRayCount=0;
-  (*cone)->EdgeCount=0;
-  (*cone)->TotalEdgeCount=0;
-  (*cone)->count_int=0;
-  (*cone)->count_int_good=0;
-  (*cone)->count_int_bad=0;
-  (*cone)->rseed=1;  /* random seed for random row permutation */
-
-  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->B));
-  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->Bsave));
-  dd_InitializeAmatrix((*cone)->m_alloc,(*cone)->d_alloc,&((*cone)->A));
-
-  (*cone)->Edges=new dd_adjacencydata<T>*[(*cone)->m_alloc];
-  for (j=0; j<(*cone)->m_alloc; j++)
-    (*cone)->Edges[j]=nullptr;
-  (*cone)->InitialRayIndex = new long[d+1];
-  for (int i=0; i<=d; i++)
-    (*cone)->InitialRayIndex[i] = 0;
-  (*cone)->OrderVector = new long[(*cone)->m_alloc+1];
-  for (int i=0; i<=(*cone)->m_alloc; i++)
-    (*cone)->OrderVector[i] = 0;
-
-  (*cone)->newcol = new long[((*cone)->d)+1];
-  for (int i=0; i<=(*cone)->d; i++)
-    (*cone)->newcol[i] = 0;
-  for (j=0; j<=(*cone)->d; j++) (*cone)->newcol[j]=j;  /* identity map, initially */
-  (*cone)->LinearityDim = -2; /* -2 if it is not computed */
-  (*cone)->ColReduced   = false;
-  (*cone)->d_orig = d;
-
-/* STATES: variables to represent current state. */
-/*(*cone)->Error;
-  (*cone)->CompStatus;
-  (*cone)->starttime;
-  (*cone)->endtime;
-*/
-
-  return success;
-}
-
-template<typename T>
-dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly)
-{
-  dd_conedata<T> *cone=nullptr;
-  dd_colrange d,j;
-  dd_rowrange m,i;
-
-  m=poly->m;
-  d=poly->d;
-  if (!(poly->homogeneous) && poly->representation==dd_Inequality){
-    m=poly->m+1;
-  }
-  poly->m1=m;
-
-  dd_InitializeConeData(m, d, &cone);
-  cone->representation=poly->representation;
-
-/* Points to the original polyhedra data, and reversely */
-  cone->parent=poly;
-  poly->child=cone;
-
-  for (i=1; i<=poly->m; i++)
-    for (j=1; j<=cone->d; j++)
-      dd_set(cone->A[i-1][j-1],poly->A[i-1][j-1]);
-
-  if (poly->representation==dd_Inequality && !(poly->homogeneous)){
-    cone->A[m-1][0]=1;
-    for (j=2; j<=d; j++) cone->A[m-1][j-1]=0;
-  }
-
-  return cone;
-}
-
-template<typename T>
 void dd_SetLinearity(dd_matrixdata<T> *M, char *line)
 {
   int i=0;
@@ -2304,93 +2382,6 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
 }
 
 
-
-#define dd_CDDLPVERSION  "Version 0.94b (August 25, 2005)"
-
-typedef set_type rowset;  /* set_type defined in setoper.h */
-typedef set_type colset;
-
-template<typename T>
-dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
-{
-  dd_lpsolution<T> *lps;
-  dd_colrange j;
-
-  lps=new dd_lpsolution<T>;
-  //  for (i=1; i<=globals::dd_filenamelen; i++) lps->filename[i-1]=lp->filename[i-1];
-  lps->objective=lp->objective;
-  lps->solver=lp->solver;
-  lps->m=lp->m;
-  lps->d=lp->d;
-  lps->numbtype=lp->numbtype;
-
-  lps->LPS=lp->LPS;  /* the current solution status */
-
-  dd_set(lps->optvalue,lp->optvalue);  /* optimal value */
-  dd_InitializeArow(lp->d+1,&(lps->sol));
-  dd_InitializeArow(lp->d+1,&(lps->dsol));
-  lps->nbindex = new long[(lp->d)+1];
-  for (j=0; j<=lp->d; j++){
-    dd_set(lps->sol[j],lp->sol[j]);
-    dd_set(lps->dsol[j],lp->dsol[j]);
-    lps->nbindex[j]=lp->nbindex[j];
-  }
-  lps->pivots[0]=lp->pivots[0];
-  lps->pivots[1]=lp->pivots[1];
-  lps->pivots[2]=lp->pivots[2];
-  lps->pivots[3]=lp->pivots[3];
-  lps->pivots[4]=lp->pivots[4];
-  lps->total_pivots=lp->total_pivots;
-
-  return lps;
-}
-
-template<typename T>
-dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
-   dd_NumberType nt,dd_rowrange m,dd_colrange d)
-{
-  dd_lpdata<T> *lp;
-  lp=new dd_lpdata<T>;
-  lp->solver=dd_choiceLPSolverDefault;  /* set the default lp solver */
-  lp->d=d;
-  lp->m=m;
-  lp->numbtype=nt;
-  lp->objrow=m;
-  lp->rhscol=1L;
-  lp->objective=dd_LPnone;
-  lp->LPS=dd_LPSundecided;
-  lp->eqnumber=0;  /* the number of equalities */
-
-  lp->nbindex = new long[d+1];
-  for (int i=0; i<=d; i++)
-    lp->nbindex[i] = 0;
-  lp->given_nbindex = new long[d+1];
-  for (int i=0; i<=d; i++)
-    lp->given_nbindex[i] = 0;
-  set_initialize(&(lp->equalityset),m);
-    /* i must be in the set iff i-th row is equality . */
-
-  lp->redcheck_extensive=false; /* this is on only for RedundantExtensive */
-  lp->ired=0;
-  set_initialize(&(lp->redset_extra),m);
-    /* i is in the set if i-th row is newly recognized redundant (during the checking the row ired). */
-  set_initialize(&(lp->redset_accum),m);
-    /* i is in the set if i-th row is recognized redundant (during the checking the row ired). */
-  set_initialize(&(lp->posset_extra),m);
-    /* i is in the set if i-th row is recognized non-linearity (during the course of computation). */
-  lp->lexicopivot=dd_choiceLexicoPivotQ;  /* dd_choice... is set in dd_set_global_constants() */
-
-  lp->m_alloc=lp->m+2;
-  lp->d_alloc=lp->d+2;
-  lp->objective=obj;
-  dd_InitializeBmatrix(lp->d_alloc,&(lp->B));
-  dd_InitializeAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
-  dd_InitializeArow(lp->d_alloc,&(lp->sol));
-  dd_InitializeArow(lp->d_alloc,&(lp->dsol));
-  return lp;
-}
-
-
 template<typename T>
 dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
@@ -2692,7 +2683,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
     int Phase1,T** A,T** Ts,
     dd_colindex nbindex_ref, dd_rowindex bflag,
     dd_rowrange objrow,dd_colrange rhscol, bool lexicopivot,
-    dd_rowrange *r, dd_colrange *s, bool *selected,dd_LPStatusType *lps)
+    dd_rowrange *r, dd_colrange *s, bool *selected, dd_LPStatusType *lps,
+    data_temp_simplex<T>* data)
 {
   /* selects a dual simplex pivot (*r,*s) if the current
      basis is dual feasible and not optimal. If not dual feasible,
@@ -2707,23 +2699,21 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
     dualfeasible=true;
   dd_rowrange i,iref;
   dd_colrange j,k;
-  T val,valn, minval,rat,minrat;
-  T* rcost;
-  minrat=0; // added by MDS
-  minval=0; // added by MDS
-  dd_colset tieset;
-  dd_colset stieset;  /* store the column indices with tie */
-  rcost=new T[d_size];
-  set_initialize(&tieset,d_size);
-  set_initialize(&stieset,d_size);
+  T val, valn, minval=0, rat, minrat=0;
+  //  T* rcost;
+  //  dd_colset tieset;
+  //  dd_colset stieset;  /* store the column indices with tie */
+  //  rcost=new T[d_size];
+  //  set_initialize(&tieset,d_size);
+  //  set_initialize(&stieset,d_size);
 
   *r=0; *s=0;
   *selected=false;
   *lps=dd_LPSundecided;
   for (j=1; j<=d_size; j++){
     if (j!=rhscol){
-      dd_TableauEntry(rcost[j-1], d_size,A,Ts,objrow,j);
-      if (dd_Positive(rcost[j-1])) {
+      dd_TableauEntry(data->rcost[j-1], d_size,A,Ts,objrow,j);
+      if (dd_Positive(data->rcost[j-1])) {
         dualfeasible=false;
       }
     }
@@ -2749,24 +2739,24 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
       }
       else {
         rowselected=true;
-        set_emptyset(tieset);
+        set_emptyset(data->tieset);
         for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,*r,j);
           if (j!=rhscol && dd_Positive(val)) {
-            dd_div(rat,rcost[j-1],val);
+            dd_div(rat,data->rcost[j-1],val);
             dd_neg(rat,rat);
             if (*s==0 || dd_Smaller(rat,minrat)){
               dd_set(minrat,rat);
               *s=j;
-              set_emptyset(tieset);
-              set_addelem(tieset, j);
+              set_emptyset(data->tieset);
+              set_addelem(data->tieset, j);
             } else if (dd_Equal(rat,minrat)){
-              set_addelem(tieset,j);
+              set_addelem(data->tieset,j);
             }
           }
         }
         if (*s>0) {
-          if (!lexicopivot || set_card(tieset)==1){
+          if (!lexicopivot || set_card(data->tieset)==1){
             colselected=true; *selected=true;
           } else { /* lexicographic rule with respect to the given reference cobasis.  */
             *s=0;
@@ -2776,17 +2766,17 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
               if (iref>0) {
                 j=bflag[iref];
                 if (j>0) {
-                  if (set_member(j,tieset) && set_card(tieset)==1) {
+                  if (set_member(j,data->tieset) && set_card(data->tieset)==1) {
                     *s=j;
                      colselected=true;
                   } else {
-                    set_delelem(tieset, j);
+                    set_delelem(data->tieset, j);
                     /* iref is cobasic, and the corresponding col is not the pivot column except it is the last one. */
                   }
                 } else {
                   *s=0;
                   for (j=1; j<=d_size; j++){
-                    if (set_member(j,tieset)) {
+                    if (set_member(j,data->tieset)) {
                       dd_TableauEntry(val, d_size,A,Ts,*r,j);
                       dd_TableauEntry(valn, d_size,A,Ts,iref,j);
                       if (j!=rhscol && dd_Positive(val)) {
@@ -2794,16 +2784,16 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
                         if (*s==0 || dd_Smaller(rat,minrat)){
                           dd_set(minrat,rat);
                           *s=j;
-                          set_emptyset(stieset);
-                          set_addelem(stieset, j);
+                          set_emptyset(data->stieset);
+                          set_addelem(data->stieset, j);
                         } else if (dd_Equal(rat,minrat)){
-                          set_addelem(stieset,j);
+                          set_addelem(data->stieset,j);
                         }
                       }
                     }
                   }
-                  set_copy(tieset,stieset);
-                  if (set_card(tieset)==1) colselected=true;
+                  set_copy(data->tieset,data->stieset);
+                  if (set_card(data->tieset)==1) colselected=true;
                 }
               }
               k+=1;
@@ -2814,9 +2804,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
       }
     } /* end of while */
   }
-  delete [] rcost;
-  set_free(tieset);
-  set_free(stieset);
+  //  delete [] rcost;
+  //  set_free(tieset);
+  //  set_free(stieset);
 }
 
 
@@ -3255,15 +3245,13 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   long pivots_p1=0;
   dd_rowrange i,r_val;
   dd_colrange j,l,ms=0,s_val,local_m_size;
-  T x,val,maxcost,axvalue,maxratio;
+  T x, val, maxcost=0, axvalue, maxratio=0;
   T* rcost;
   dd_colindex nbindex_ref; /* to be used to store the initial feasible basis for lexico rule */
+  data_temp_simplex<T>* data_simplex = allocate_data_simplex<T>(d_size);
 
   T scaling,svalue;  /* random scaling mytype value */
-  T minval;
-  minval=0; // added by MDS
-  maxcost = 0;
-  maxratio = 0;
+  T minval=0;
   rcost=new T[d_size];
   nbindex_ref = new long[d_size+1];
   for (int i=0; i<=d_size; i++)
@@ -3338,8 +3326,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         *err=dd_LPCycling;
         goto _L99;  /* failure due to max no. of pivots performed */
       }
-      dd_SelectDualSimplexPivot(local_m_size,d_size,phase1,A,Ts,nbindex_ref,bflag,
-				objrow,rhscol,lexicopivot,&r_val,&s_val,&chosen,&LPSphase1);
+      dd_SelectDualSimplexPivot(local_m_size, d_size, phase1, A, Ts, nbindex_ref, bflag,
+				objrow, rhscol, lexicopivot, &r_val, &s_val, &chosen, &LPSphase1,
+                                data_simplex);
       if (!chosen) {
         /* The current dictionary is terminal.  There are two cases:
            dd_TableauEntry(local_m_size,d_size,A,T,objrow,ms) is negative or zero.
@@ -3384,8 +3373,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
 _L99:
   delete [] rcost;
   delete [] nbindex_ref;
-
-
+  free_data_simplex(data_simplex);
   *pivot_no=pivots_p1;
 }
 
@@ -3404,9 +3392,6 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp,dd_ErrorType *err)
      dd_neg(lp->A[lp->objrow-1][j-1],lp->A[lp->objrow-1][j-1]);
    }
 }
-#define CDD_FLOATPOINT
-/* This acts as a precaution, because we want to
-   work also with floating point arithmetic */
 
 template<typename T>
 void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err)
@@ -3426,6 +3411,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   unsigned int rseed=1;
   r=-40000; // values designed to create segfault in case it is not set later
+  data_temp_simplex<T>* data_simplex = allocate_data_simplex<T>(lp->d);
 
   /* *err=dd_NoError; */
   set_emptyset(lp->redset_extra);
@@ -3486,7 +3472,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     chosen=false; lp->LPS=dd_LPSundecided; phase1=false;
     if (pivots_ds<maxpivots) {
       dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,nbindex_ref,bflag,
-				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS));
+				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS),
+                                data_simplex);
     }
     if (chosen) {
       pivots_ds=pivots_ds+1;
@@ -3532,6 +3519,7 @@ _L99:
   delete [] OrderVector;
   delete [] bflag;
   delete [] nbindex_ref;
+  free_data_simplex(data_simplex);
 }
 
 
@@ -3762,48 +3750,6 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
  }
 }
 
-/*
-ddf_LPObjectiveType Obj2Obj(dd_LPObjectiveType obj)
-{
-   ddf_LPObjectiveType objf=ddf_LPnone;
-
-   switch (obj) {
-   case dd_LPnone: objf=ddf_LPnone; break;
-   case dd_LPmax: objf=ddf_LPmax; break;
-   case dd_LPmin: objf=ddf_LPmin; break;
-   }
-   return objf;
-}
-*/
-
- /*
-template<typename T>
-ddf_LPPtr dd_LPgmp2LPf(dd_lpdata<T> *lp)
-{
-  dd_rowrange i;
-  dd_colrange j;
-  ddf_LPType *lpf;
-  double val;
-  bool localdebug=false;
-
-  if (localdebug) fprintf(stderr,"Converting a GMP-LP to a float-LP.\n");
-
-  lpf=ddf_CreateLPData(Obj2Obj(lp->objective), ddf_Real, lp->m, lp->d);
-  lpf->Homogeneous = lp->Homogeneous;
-  lpf->eqnumber=lp->eqnumber;
-
-  for (i = 1; i <= lp->m; i++) {
-    if (set_member(i, lp->equalityset)) set_addelem(lpf->equalityset,i);
-      for (j = 1; j <= lp->d; j++) {
-        val=mpq_get_d(lp->A[i-1][j-1]);
-        ddf_set_d(lpf->A[i-1][j-1],val);
-      }
-  }
-
-  return lpf;
-}
-*/
-
 template<typename T>
 bool dd_LPSolve(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
 /*
@@ -3816,17 +3762,9 @@ When LP is dual-inconsistent then *se returns the evidence column.
 {
   int i;
   bool found=false;
-#ifdef GMPRATIONAL
-  ddf_LPPtr lpf;
-  ddf_ErrorType errf;
-  bool LPScorrect=false;
-  bool localdebug=false;
-#endif
 
   *err=dd_NoError;
   lp->solver=solver;
-
-   time(&lp->starttime);
 
 #ifndef GMPRATIONAL
   switch (lp->solver) {
@@ -3874,7 +3812,6 @@ When LP is dual-inconsistent then *se returns the evidence column.
   ddf_FreeLPData(lpf);
 #endif
 
-  time(&lp->endtime);
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
   if (*err==dd_NoError) found=true;
@@ -3896,7 +3833,6 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
   *err=dd_NoError;
   lp->solver=solver;
-  time(&lp->starttime);
 
   switch (lp->solver) {
     case dd_CrissCross:
@@ -3907,7 +3843,6 @@ When LP is dual-inconsistent then *se returns the evidence column.
       break;
   }
 
-  time(&lp->endtime);
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
   if (*err==dd_NoError) found=true;
@@ -4327,7 +4262,6 @@ _L99:
 template<typename T>
 bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
 				 dd_rowset *redset,dd_ErrorType *error)
-  /* 094 */
 {
   /* This uses the same LP construction as dd_Reduandant.  But, while it is checking
      the redundancy of itest, it also tries to find some other variable that are
@@ -7401,7 +7335,6 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err)
   if (poly!=nullptr && (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound)){
     cone=dd_ConeDataLoad(poly);
     /* create a cone associated with poly by homogenization */
-    time(&cone->starttime);
     dd_DDInit(cone);
     if (poly->representation==dd_Generator && poly->m<=0){
        *err=dd_EmptyVrepresentation;
@@ -7420,7 +7353,6 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err)
 	if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent; /* cddlib-093d */
       }
     }
-    time(&cone->endtime);
   }
 _L99: ;
   return found;
@@ -7438,7 +7370,6 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd
     cone=dd_ConeDataLoad(poly);
     // create a cone associated with poly by homogenization
     cone->HalfspaceOrder=horder;  // set the row order
-    time(&cone->starttime);
     dd_DDInit(cone);
     if (poly->representation==dd_Generator && poly->m<=0){
       *err=dd_EmptyVrepresentation;
@@ -7450,14 +7381,13 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd
 
     if (cone->CompStatus!=dd_AllFound){
       dd_FindInitialRays(cone, &found);
-	  if (found) {
-	    dd_InitialDataSetup(cone);
-	    if (cone->CompStatus==dd_AllFound) goto _L99;
-	    dd_DDMain(cone);
-	    if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent;
-	  }
-	}
-    time(&cone->endtime);
+      if (found) {
+        dd_InitialDataSetup(cone);
+        if (cone->CompStatus==dd_AllFound) goto _L99;
+        dd_DDMain(cone);
+        if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent;
+      }
+    }
   }
 _L99: ;
   return found;
@@ -7489,14 +7419,12 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   dd_colrange d_input, j;
   dd_RepresentationType rep;
   bool localdebug=false;
-
   T value;
 
   dd_NumberType NT;
   m_input=TheEXT.rows();
   d_input=TheEXT.cols();
 
-  /*  NT=dd_GetNumberType("integer");*/
   NT=dd_Rational;
   rep=dd_Generator; /* using dd_Inequality led to horrible bugs */
   /*  NT=dd_dd_Integer;*/
@@ -7518,10 +7446,8 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
 template<typename T>
 MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const& nbCol)
 {
-  dd_raydata<T> *RayPtr;
-  int iRay, nbRay;
-  RayPtr = poly->child->FirstRay;
-  nbRay=0;
+  dd_raydata<T>* RayPtr = poly->child->FirstRay;
+  int nbRay=0;
   while (RayPtr != nullptr)
     {
       if (RayPtr->feasible)
@@ -7529,7 +7455,7 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const& nbCol)
       RayPtr = RayPtr->Next;
     }
   MyMatrix<T> TheFAC=MyMatrix<T>(nbRay, nbCol);
-  iRay=0;
+  int iRay=0;
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr)
     {
@@ -7553,15 +7479,14 @@ std::vector<Face> ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T
   size_t nbCol=EXT.cols();
   size_t nbRow=EXT.rows();
   MyVector<T> eFac(nbCol);
-  dd_raydata<T> *RayPtr;
-  RayPtr = poly->child->FirstRay;
+  dd_raydata<T>* RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      for (int iCol=0; iCol<nbCol; iCol++)
+      for (size_t iCol=0; iCol<nbCol; iCol++)
 	eFac(iCol)=RayPtr->Ray[iCol];
       MyVector<T> ListScal=ListScalarProduct(eFac, EXT);
       Face V(nbRow);
-      for (int iRow=0; iRow<nbRow; iRow++) {
+      for (size_t iRow=0; iRow<nbRow; iRow++) {
 	T eVal=ListScal(iRow);
 	if (eVal == 0)
 	  V[iRow]=1;
