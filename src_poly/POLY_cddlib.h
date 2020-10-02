@@ -2068,11 +2068,13 @@ dd_SetFamilyPtr dd_CopyAdjacency(dd_polyhedradata<T> *poly)
   F=dd_CreateSetFamily(n, n);
   if (n<=0) goto _L99;
   poly->child->LastRay->Next=nullptr;
-  for (RayPtr1=poly->child->FirstRay, pos1=1;RayPtr1 != nullptr;
-				RayPtr1 = RayPtr1->Next, pos1++){
-    for (RayPtr2=poly->child->FirstRay, pos2=1; RayPtr2 != nullptr;
-					RayPtr2 = RayPtr2->Next, pos2++){
-      if (RayPtr1!=RayPtr2){
+  for (RayPtr1=poly->child->FirstRay, pos1=1;
+       RayPtr1 != nullptr;
+       RayPtr1 = RayPtr1->Next, pos1++) {
+    for (RayPtr2=poly->child->FirstRay, pos2=1;
+         RayPtr2 != nullptr;
+         RayPtr2 = RayPtr2->Next, pos2++) {
+      if (RayPtr1 != RayPtr2) {
         dd_CheckAdjacency(poly->child, &RayPtr1, &RayPtr2, &adj);
         if (adj){
           set_addelem(F->set[pos1-1], pos2);
@@ -2803,7 +2805,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
         for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,*r,j);
           if (j!=rhscol && dd_Positive(val)) {
-            if constexpr(is_ring_field<T>::value) {
+            bool is_field=false;
+            if (is_field) {
                 rat = - data->rcost[j-1] / val;
                 if (*s==0 || dd_Smaller(rat, minrat)) {
                   dd_set(minrat,rat);
@@ -2964,7 +2967,8 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
   for (j=1; j<=d_size; j++) {
     dd_TableauEntry(Rtemp[j-1], d_size, X, Ts, r, j);
   }
-  if constexpr(is_ring_field<T>::value) {
+  bool is_field = true;
+  if (is_field) {
       dd_set(Xtemp0, Rtemp[s-1]);
       for (j = 1; j <= d_size; j++) {
         if (j != s) {
@@ -2979,13 +2983,13 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
       for (j = 1; j <= d_size; j++)
         dd_div(Ts[j-1][s - 1], Ts[j-1][s - 1], Xtemp0);
     } else { // ring case now
-      for (j = 1; j <= d_size; j++) {
-        if (j != s) {
-          for (j1 = 1; j1 <= d_size; j1++) {
-            Ts[j1-1][j-1] = Rtemp[s-1] * Ts[j1-1][j-1] - Rtemp[j-1] * Ts[j1-1][s-1];
-          }
+    for (j = 1; j <= d_size; j++) {
+      if (j != s) {
+        for (j1 = 1; j1 <= d_size; j1++) {
+          Ts[j1-1][j-1] = Rtemp[s-1] * Ts[j1-1][j-1] - Rtemp[j-1] * Ts[j1-1][s-1];
         }
       }
+    }
   }
 }
 
@@ -3373,7 +3377,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         // So now axvalue < 0
         dd_neg(axvalue,axvalue);
         // So now axvalue > 0
-        if constexpr(is_ring_field<T>::value) {
+        bool is_field=false;
+        if (is_field) {
             dd_div(axvalue,data->rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
             if (dd_Larger(axvalue, maxratio)) {
               dd_set(maxratio,axvalue);
@@ -5377,7 +5382,8 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
     if (localdebug) std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
     if (dd_Positive(t1)) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
-      if constexpr(is_ring_field<T>::value) {
+      bool is_field=false;
+      if (is_field) {
           dd_div(alpha, t2, t1);
           if (!started){
             imin=i;  dd_set(min, alpha);
