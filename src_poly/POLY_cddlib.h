@@ -407,6 +407,7 @@ long set_card(set_type set)
   return car;
 }
 
+
 typedef set_type dd_rowset;
 typedef set_type dd_colset;
 typedef set_type *dd_SetVector;
@@ -614,6 +615,34 @@ void free_data_simplex(data_temp_simplex<T>* data)
 
 
 template<typename T>
+void dd_FreeAmatrix(dd_rowrange m, T** A)
+{
+  dd_rowrange i;
+
+  if (A!=nullptr) {
+    for (i = 0; i < m; i++) {
+      delete [] A[i];
+    }
+    delete [] A;
+  }
+}
+
+template<typename T>
+void dd_FreeBmatrix(dd_colrange d,T** B)
+{
+  dd_colrange j;
+
+  if (B!=nullptr) {
+    for (j = 0; j < d; j++) {
+      delete [] B[j];
+    }
+    delete [] B;
+  }
+}
+
+
+
+template<typename T>
 struct dd_matrixdata {
   dd_rowrange rowsize;
   dd_rowset linset;
@@ -627,12 +656,70 @@ struct dd_matrixdata {
   T* rowvec;
 };
 
+template<typename T>
+void dd_FreeArow(T* a)
+{
+  delete [] a;
+}
+
+template<typename T>
+void dd_FreeMatrix(dd_matrixdata<T> *M)
+{
+  dd_rowrange m1;
+
+  if (M!=nullptr) {
+    if (M->rowsize<=0) m1=1; else m1=M->rowsize;
+    if (M!=nullptr) {
+      dd_FreeAmatrix(m1, M->matrix);
+      dd_FreeArow(M->rowvec);
+      set_free(M->linset);
+      delete M;
+    }
+  }
+}
+
+
+
+template<typename T>
+void dd_FreeShallowMatrix(dd_matrixdata<T> *M)
+{
+  dd_rowrange m1;
+
+  if (M!=nullptr) {
+    if (M!=nullptr) {
+      delete [] M->matrix;
+      dd_FreeArow(M->rowvec);
+      set_free(M->linset);
+      delete M;
+    }
+  }
+}
+
 typedef struct dd_setfamily *dd_SetFamilyPtr;
 typedef struct dd_setfamily {
   dd_bigrange famsize;
   dd_bigrange setsize;
   dd_SetVector set;
 } dd_SetFamilyType;
+
+
+
+void dd_FreeSetFamily(dd_SetFamilyPtr F)
+{
+  dd_bigrange i,f1;
+
+  if (F!=nullptr){
+    if (F->famsize<=0) f1=1; else f1=F->famsize;
+      /* the smallest created size is one */
+    for (i=0; i<f1; i++) {
+      set_free(F->set[i]);
+    }
+    delete [] F->set;
+    delete [] F;
+  }
+}
+
+
 
 
 typedef struct dd_nodedata *dd_NodePtr;
@@ -852,6 +939,45 @@ dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
   M->representation=dd_Unspecified;
   return M;
 }
+
+
+/* This is a kind of shallow copy. The matrix entries are not assigned but supposed
+   to be obtained via pointer assignment from another matrix.
+   However, we may lose some speed due to alignment stuff, so it is unsure
+   if this makes sense at all.
+*/
+template<typename T>
+dd_matrixdata<T> *dd_CreateShallowMatrix(dd_rowrange m_size,dd_colrange d_size)
+{
+  dd_matrixdata<T> *M;
+  dd_rowrange m0,m1;
+  dd_colrange d0,d1;
+
+  if (m_size<=0){
+    m0=0; m1=1;
+    /* if m_size <=0, the number of rows is set to zero, the actual size is 1 */
+  } else {
+    m0=m_size; m1=m_size;
+  }
+  if (d_size<=0){
+    d0=0; d1=1;
+    /* if d_size <=0, the number of cols is set to zero, the actual size is 1 */
+  } else {
+    d0=d_size; d1=d_size;
+  }
+  M=new dd_matrixdata<T>;
+  M->matrix = new T*[m1];
+  dd_InitializeArow(d1,&(M->rowvec));
+  M->rowsize=m0;
+  set_initialize(&(M->linset), m1);
+  M->colsize=d0;
+  M->objective=dd_LPnone;
+  M->representation=dd_Unspecified;
+  return M;
+}
+
+
+
 
 template<typename T>
 dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
@@ -1551,12 +1677,6 @@ int dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
     success=1;
   }
   return success;
-}
-
-template<typename T>
-void dd_FreeArow(T* a)
-{
-  delete [] a;
 }
 
 template<typename T>
@@ -2563,32 +2683,6 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
 
   set_free(L);
   return lp;
-}
-
-template<typename T>
-void dd_FreeAmatrix(dd_rowrange m, T** A)
-{
-  dd_rowrange i;
-
-  if (A!=nullptr) {
-    for (i = 0; i < m; i++) {
-      delete [] A[i];
-    }
-    delete [] A;
-  }
-}
-
-template<typename T>
-void dd_FreeBmatrix(dd_colrange d,T** B)
-{
-  dd_colrange j;
-
-  if (B!=nullptr) {
-    for (j = 0; j < d; j++) {
-      delete [] B[j];
-    }
-    delete [] B;
-  }
 }
 
 template<typename T>
@@ -4674,7 +4768,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   T* cvec=nullptr;
   dd_lpdata<T>* lp0;
   dd_lpdata<T>* lp;
-  dd_lpsolution<T> *lps;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
   bool localdebug=false;
@@ -4696,9 +4789,8 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   lp=dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err);  /* Solve the LP */
-  lps=dd_CopyLPSolution(lp);
 
-  if (dd_Positive(lps->optvalue)){
+  if (dd_Positive(lp->optvalue)){
     if (localdebug) std::cout << "dd_Positive=T case\n";
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
@@ -4706,7 +4798,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       for (k=1; k<=d; k++) shootdir[k-1]=0;
       shootdir[j]=1;  /* j-th unit vector */
       if (localdebug) dd_WriteT(std::cerr, shootdir, d);
-      ired=dd_RayShooting(M, lps->sol, shootdir);
+      ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4715,7 +4807,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       }
 
       shootdir[j]=-1;  /* negative of the j-th unit vector */
-      ired=dd_RayShooting(M, lps->sol, shootdir);
+      ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
@@ -4739,8 +4831,8 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[i-1][k-1]);
         if (!dd_Redundant(M1, irow, cvec, &err)){
-          for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lps->sol[k-1]);
-          ired=dd_RayShooting(M, lps->sol, shootdir);
+          for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lp->sol[k-1]);
+          ired=dd_RayShooting(M, lp->sol, shootdir);
           rowflag[ired]=irow;
           for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[ired-1][k-1]);
           if (localdebug) {
@@ -4766,9 +4858,8 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   }
 
   dd_FreeLPData(lp);
-  dd_FreeLPSolution(lps);
 
-  M1->rowsize=m; M1->colsize=d;  /* recover the original sizes */
+  M1->rowsize=m; M1->colsize=d;  /* recover the original sizes. Needed for the deallocation */
   dd_FreeMatrix(M1);
   dd_FreeArow(shootdir);
   dd_FreeArow(cvec);
@@ -6171,38 +6262,6 @@ void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d
 
 
 
-
-void dd_FreeSetFamily(dd_SetFamilyPtr F)
-{
-  dd_bigrange i,f1;
-
-  if (F!=nullptr){
-    if (F->famsize<=0) f1=1; else f1=F->famsize;
-      /* the smallest created size is one */
-    for (i=0; i<f1; i++) {
-      set_free(F->set[i]);
-    }
-    delete [] F->set;
-    delete [] F;
-  }
-}
-
-
-template<typename T>
-void dd_FreeMatrix(dd_matrixdata<T> *M)
-{
-  dd_rowrange m1;
-
-  if (M!=nullptr) {
-    if (M->rowsize<=0) m1=1; else m1=M->rowsize;
-    if (M!=nullptr) {
-      dd_FreeAmatrix(m1, M->matrix);
-      dd_FreeArow(M->rowvec);
-      set_free(M->linset);
-      delete M;
-    }
-  }
-}
 
 template<typename T>
 void dd_ColumnReduce(dd_conedata<T> *cone)
