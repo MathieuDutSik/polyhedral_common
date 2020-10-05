@@ -460,10 +460,6 @@ typedef enum {
 } dd_RowOrderType;
 
 typedef enum {
-  dd_Unknown=0, dd_Real, dd_Rational, dd_Integer
-} dd_NumberType;
-
-typedef enum {
   dd_Unspecified=0, dd_Inequality, dd_Generator
 } dd_RepresentationType;
 
@@ -519,7 +515,6 @@ struct dd_lpsolution {
   dd_LPSolverType solver;
   dd_rowrange m;
   dd_colrange d;
-  dd_NumberType numbtype;
 
   dd_LPStatusType LPS;  /* the current solution status */
   T optvalue;  /* optimal value */
@@ -548,7 +543,6 @@ struct dd_lpdata {
   T** B;
   dd_rowrange objrow;
   dd_colrange rhscol;
-  dd_NumberType numbtype;
   dd_rowrange eqnumber;  /* the number of equalities */
   dd_rowset equalityset;
 
@@ -591,6 +585,7 @@ struct data_temp_simplex {
 template<typename T>
 data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
 {
+  std::cout << "allocate_data_simplex with d_size=" << d_size << "\n";
   data_temp_simplex<T>* data = new data_temp_simplex<T>;
   data->rcost = new T[d_size];
   set_initialize(&data->tieset,d_size);
@@ -627,7 +622,6 @@ struct dd_matrixdata {
         for H-representation. */
   dd_colrange colsize;
   dd_RepresentationType representation;
-  dd_NumberType numbtype;
   T** matrix;
   dd_LPObjectiveType objective;
   T* rowvec;
@@ -663,7 +657,6 @@ struct dd_conedata {
   dd_rowrange m;
   dd_colrange d;
   T** A;
-  dd_NumberType numbtype;
   dd_polyhedradata<T> *parent;  /* pointing to the original polyhedra data */
   dd_rowrange m_alloc; /* allocated row size of matrix A */
   dd_colrange d_alloc; /* allocated col size of matrix A */
@@ -716,7 +709,6 @@ struct dd_polyhedradata {
   dd_colrange d;
   dd_rowrange m;
   T** A;   /* Inequality System:  m times d matrix */
-  dd_NumberType numbtype;
   dd_conedata<T> *child;  /* pointing to the homogenized cone data */
   dd_rowrange m_alloc; /* allocated row size of matrix A */
   dd_colrange d_alloc; /* allocated col size of matrix A */
@@ -857,7 +849,6 @@ dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
   set_initialize(&(M->linset), m1);
   M->colsize=d0;
   M->objective=dd_LPnone;
-  M->numbtype=dd_Unknown;
   M->representation=dd_Unspecified;
   return M;
 }
@@ -876,7 +867,6 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
   poly->m_alloc     =m+2; /* the allocated row size of matrix A */
   poly->d_alloc     =d;   /* the allocated col size of matrix A */
   poly->ldim		=0;   /* initialize the linearity dimension */
-  poly->numbtype=dd_Real;
   dd_InitializeAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
   dd_InitializeArow(d,&(poly->c));           /* cost vector */
   poly->representation       =dd_Inequality;
@@ -913,7 +903,6 @@ bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
   (*cone)->d=d;
   (*cone)->m_alloc=m+2; /* allocated row size of matrix A */
   (*cone)->d_alloc=d;   /* allocated col size of matrix A, B and Bsave */
-  (*cone)->numbtype=dd_Real;
   (*cone)->parent=nullptr;
 
 /* CONTROL: variables to control computation */
@@ -1027,7 +1016,6 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
   lps->solver=lp->solver;
   lps->m=lp->m;
   lps->d=lp->d;
-  lps->numbtype=lp->numbtype;
 
   lps->LPS=lp->LPS;  /* the current solution status */
 
@@ -1052,14 +1040,13 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
 
 template<typename T>
 dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
-   dd_NumberType nt,dd_rowrange m,dd_colrange d)
+   dd_rowrange m,dd_colrange d)
 {
   dd_lpdata<T> *lp;
   lp=new dd_lpdata<T>;
   lp->solver=dd_choiceLPSolverDefault;  /* set the default lp solver */
   lp->d=d;
   lp->m=m;
-  lp->numbtype=nt;
   lp->objrow=m;
   lp->rhscol=1L;
   lp->objective=dd_LPnone;
@@ -1148,7 +1135,6 @@ dd_matrixdata<T> *dd_MatrixCopy(dd_matrixdata<T> *M)
     dd_CopyAmatrix(Mcopy->matrix, M->matrix, m, d);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
     set_copy(Mcopy->linset,M->linset);
-    Mcopy->numbtype=M->numbtype;
     Mcopy->representation=M->representation;
     Mcopy->objective=M->objective;
   }
@@ -1175,7 +1161,6 @@ dd_matrixdata<T> *dd_MatrixNormalizedCopy(dd_matrixdata<T> *M)
     dd_CopyNormalizedAmatrix(Mcopy->matrix, M->matrix, m, d);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
     set_copy(Mcopy->linset,M->linset);
-    Mcopy->numbtype=M->numbtype;
     Mcopy->representation=M->representation;
     Mcopy->objective=M->objective;
   }
@@ -1211,7 +1196,6 @@ dd_matrixdata<T> *dd_MatrixAppend(dd_matrixdata<T> *M1, dd_matrixdata<T> *M2)
          /* append the second matrix */
        if (set_member(i+1,M2->linset)) set_addelem(M->linset,m1+i+1);
     }
-    M->numbtype=M1->numbtype;
   }
   return M;
 }
@@ -1380,7 +1364,6 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
       if (set_member(roworder[i],M->linset)) set_addelem(Mcopy->linset, i);
       (*newpos)[roworder[i]]=i;
     }
-    Mcopy->numbtype=M->numbtype;
     Mcopy->representation=M->representation;
     Mcopy->objective=M->objective;
     dd_FreeMatrix(Mnorm);
@@ -1421,7 +1404,6 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *newpos)
     for(i=1; i<=m; i++) {
       if (roworder[i]>0 && set_member(i,M->linset)) set_addelem(Mcopy->linset, roworder[i]);
     }
-    Mcopy->numbtype=M->numbtype;
     Mcopy->representation=M->representation;
     Mcopy->objective=M->objective;
   }
@@ -1564,7 +1546,6 @@ int dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
          /* append the second matrix */
        if (set_member(i+1,M2->linset)) set_addelem(M->linset,m1+i+1);
     }
-    M->numbtype=(*M1)->numbtype;
     dd_FreeMatrix(*M1);
     *M1=M;
     success=1;
@@ -1654,7 +1635,6 @@ dd_matrixdata<T> *dd_MatrixSubmatrix(dd_matrixdata<T> *M, dd_rowset delset) /* 0
       }
     }
     dd_CopyArow(Msub->rowvec, M->rowvec, d);
-    Msub->numbtype=M->numbtype;
     Msub->representation=M->representation;
     Msub->objective=M->objective;
   }
@@ -1698,7 +1678,6 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2(dd_matrixdata<T> *M, dd_rowset delset,dd_r
     }
     *newpos=roworder;
     dd_CopyArow(Msub->rowvec, M->rowvec, d);
-    Msub->numbtype=M->numbtype;
     Msub->representation=M->representation;
     Msub->objective=M->objective;
   }
@@ -1747,7 +1726,6 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,dd_
     }
     *newpos=roworder;
     dd_CopyArow(Msub->rowvec, M->rowvec, d);
-    Msub->numbtype=M->numbtype;
     Msub->representation=M->representation;
     Msub->objective=M->objective;
   }
@@ -2407,7 +2385,6 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
   Mnew=dd_CreateMatrix<T>(mnew, dnew);
   dd_CopyArow(Mnew->rowvec, M->rowvec, dnew);
 /*  set_copy(Mnew->linset,M->linset);  */
-  Mnew->numbtype=M->numbtype;
   Mnew->representation=M->representation;
   Mnew->objective=M->objective;
 
@@ -2458,7 +2435,7 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = true;
   lp->eqnumber=linc;  /* this records the number of equations */
 
@@ -2553,7 +2530,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
         This is not the best way but makes the code simple. */
   d=M->colsize+1;
 
-  lp=dd_CreateLPData<T>(dd_LPmax, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(dd_LPmax, m, d);
   lp->Homogeneous = true;
   lp->eqnumber=linc;  /* this records the number of equations */
 
@@ -2676,26 +2653,6 @@ int dd_LPReplaceRow(dd_lpdata<T> *lp, dd_rowrange i, T* a)
     success=1;
   }
   return success;
-}
-
-void dd_SetNumberType(char *line,dd_NumberType *number,dd_ErrorType *Error)
-{
-  if (strncmp(line,"integer",7)==0) {
-    *number = dd_Integer;
-    return;
-  }
-  else if (strncmp(line,"rational",8)==0) {
-    *number = dd_Rational;
-    return;
-  }
-  else if (strncmp(line,"real",4)==0) {
-    *number = dd_Real;
-    return;
-  }
-  else {
-    *number=dd_Unknown;
-    *Error=dd_ImproperInputFormat;
-  }
 }
 
 
@@ -3970,7 +3927,6 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 {
   dd_rowrange m;
   dd_colrange d;
-  dd_NumberType numbtype;
   dd_LPObjectiveType obj;
   dd_lpdata<T> *lpnew;
   dd_rowrange i;
@@ -3979,12 +3935,11 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 
   bm=2;
   bmax=1;
-  numbtype=lp->numbtype;
   m=lp->m+1;
   d=lp->d+1;
   obj=dd_LPmax;
 
-  lpnew=dd_CreateLPData<T>(obj, numbtype, m, d);
+  lpnew=dd_CreateLPData<T>(obj, m, d);
 
   for (i=1; i<=lp->m; i++) {
     if (dd_Larger(lp->A[i-1][lp->rhscol-1],bmax))
@@ -4030,7 +3985,7 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
         This is not the best way but makes the code simple. */
   d=M->colsize+1;
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = true;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4085,7 +4040,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4137,7 +4092,7 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = true;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4184,7 +4139,7 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4250,7 +4205,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, M->numbtype, m, d);
+  lp=dd_CreateLPData<T>(M->objective, m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4364,9 +4319,9 @@ _L99:
 
 template<typename T>
 bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate,
-				 dd_rowset *redset,dd_ErrorType *error)
+                           dd_rowset *redset,dd_ErrorType *error)
 {
-  /* This uses the same LP construction as dd_Reduandant.  But, while it is checking
+  /* This uses the same LP construction as dd_Redundant.  But, while it is checking
      the redundancy of itest, it also tries to find some other variable that are
      redundant (i.e. forced to be nonnegative).  This is expensive as it used
      the complete tableau information at each DualSimplex pivot.  The redset must
@@ -7550,16 +7505,13 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   bool localdebug=false;
   T value;
 
-  dd_NumberType NT;
   m_input=TheEXT.rows();
   d_input=TheEXT.cols();
 
-  NT=dd_Rational;
   rep=dd_Generator; /* using dd_Inequality led to horrible bugs */
   /*  NT=dd_dd_Integer;*/
   M=dd_CreateMatrix<T>(m_input, d_input);
   M->representation=rep;
-  M->numbtype=NT;
 
   for (i = 1; i <= m_input; i++)
     for (j = 1; j <= d_input; j++)
