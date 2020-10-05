@@ -585,7 +585,7 @@ struct data_temp_simplex {
 template<typename T>
 data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
 {
-  std::cout << "allocate_data_simplex with d_size=" << d_size << "\n";
+  //  std::cout << "allocate_data_simplex with d_size=" << d_size << "\n";
   data_temp_simplex<T>* data = new data_temp_simplex<T>;
   data->rcost = new T[d_size];
   set_initialize(&data->tieset,d_size);
@@ -4274,7 +4274,6 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
 
   dd_colrange j;
   dd_lpdata<T> *lp;
-  dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4296,20 +4295,17 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
     *error=err;
     goto _L999;
   } else {
-    lps=dd_CopyLPSolution(lp);
-
-    for (j=0; j<lps->d; j++) {
-      dd_set(certificate[j], lps->sol[j]);
+    for (j=0; j<lp->d; j++) {
+      dd_set(certificate[j], lp->sol[j]);
     }
 
-    if (dd_Negative(lps->optvalue)){
+    if (dd_Negative(lp->optvalue)){
       answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
       answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
     }
-    dd_FreeLPSolution(lps);
   }
   _L999:
   dd_FreeLPData(lp);
@@ -4330,7 +4326,6 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
 
   dd_colrange j;
   dd_lpdata<T> *lp;
-  dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4358,20 +4353,17 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
     set_delelem(*redset, itest);
     /* itest row might be redundant in the lp but this has nothing to do with its redundancy
     in the original system M.   Thus we must delete it.  */
-    lps=dd_CopyLPSolution(lp);
-
-    for (j=0; j<lps->d; j++) {
-      dd_set(certificate[j], lps->sol[j]);
+    for (j=0; j<lp->d; j++) {
+      dd_set(certificate[j], lp->sol[j]);
     }
 
-    if (dd_Negative(lps->optvalue)){
+    if (dd_Negative(lp->optvalue)){
       answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
       answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
     }
-    dd_FreeLPSolution(lps);
   }
   _L999:
   dd_FreeLPData(lp);
@@ -4565,7 +4557,6 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
 
   dd_colrange j;
   dd_lpdata<T> *lp;
-  dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4587,14 +4578,13 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
     *error=err;
     goto _L999;
   } else {
-    lps=dd_CopyLPSolution(lp);
 
-    for (j=0; j<lps->d; j++) {
-      dd_set(certificate[j], lps->sol[j]);
+    for (j=0; j<lp->d; j++) {
+      dd_set(certificate[j], lp->sol[j]);
     }
 
     if (M->representation==dd_Inequality){
-      if (dd_Positive(lps->optvalue)){
+      if (dd_Positive(lp->optvalue)){
           answer=true;
           if (localdebug) fprintf(stderr,"==> %ld th inequality is strongly redundant.\n",itest);
         } else {
@@ -4602,18 +4592,16 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           if (localdebug) fprintf(stderr,"==> %ld th inequality is not strongly redundant.\n",itest);
         }
     } else {
-      if (dd_Negative(lps->optvalue)){
+      if (dd_Negative(lp->optvalue)){
           answer=false;
           if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
         } else {
           /* for V-representation, we have to solve another LP */
           dd_FreeLPData(lp);
-          dd_FreeLPSolution(lps);
           lp=dd_CreateLP_V_SRedundancy(M, itest);
           dd_LPSolve(lp,dd_DualSimplex,&err);
-          lps=dd_CopyLPSolution(lp);
           if (localdebug) dd_WriteLPResult(stdout,lp,err);
-          if (dd_Positive(lps->optvalue)){
+          if (dd_Positive(lp->optvalue)){
             answer=false;
             if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
           } else {
@@ -4622,7 +4610,6 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           }
        }
     }
-    dd_FreeLPSolution(lps);
   }
   _L999:
   dd_FreeLPData(lp);
@@ -4925,20 +4912,17 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
     *error=err;
     goto _L999;
   } else {
-    lps=dd_CopyLPSolution(lp);
-
-    for (j=0; j<lps->d; j++) {
-      dd_set(certificate[j], lps->sol[j]);
+    for (j=0; j<lp->d; j++) {
+      dd_set(certificate[j], lp->sol[j]);
     }
 
-    if (lps->LPS==dd_Optimal && dd_EqualToZero(lps->optvalue)){
+    if (lp->LPS==dd_Optimal && dd_EqualToZero(lp->optvalue)){
       answer=true;
       if (localdebug) fprintf(stderr,"==> %ld th data is an implicit linearity.\n",itest);
     } else {
       answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th data is not an implicit linearity.\n",itest);
     }
-    dd_FreeLPSolution(lps);
   }
   _L999:
   dd_FreeLPData(lp);
