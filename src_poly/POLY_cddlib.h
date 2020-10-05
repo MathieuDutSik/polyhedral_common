@@ -4154,8 +4154,8 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
   lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmax;
-  lp->eqnumber=linc;  /* this records the number of equations */
-  lp->redcheck_extensive=false;  /* this is default */
+  lp->eqnumber = linc;  /* this records the number of equations */
+  lp->redcheck_extensive = false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -4164,14 +4164,14 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
       irev=irev+1;
       set_addelem(lp->equalityset,i);    /* it is equality. */
             /* the reversed row irev is not in the equality set. */
-      for (j = 2; j <= (M->colsize)+1; j++) {
+      for (j = 2; j <= d-1; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-2]);
       }  /*of j*/
       if (localdebug) fprintf(stderr,"equality row %ld generates the reverse row %ld.\n",i,irev);
     } else {
       lp->A[i-1][d-1]=-1;
     }
-    for (j = 2; j <= (M->colsize)+1; j++) {
+    for (j = 2; j <= d-1; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-2]);
     }  /*of j*/
   }  /*of i*/
@@ -4203,7 +4203,7 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData<T>(m, d);
+  lp=dd_CreateLPData_from_M<T>(M);
   lp->Homogeneous = true;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4219,12 +4219,12 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-1]);
       }  /*of j*/
     }
-    for (j = 1; j <= M->colsize; j++) {
+    for (j = 1; j <= d; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
       if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
-  for (j = 1; j <= M->colsize; j++) {
+  for (j = 1; j <= d; j++) {
     dd_set(lp->A[m-1][j-1],M->matrix[itest-1][j-1]);
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
@@ -4250,7 +4250,7 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(m, d);
+  lp=dd_CreateLPData_from_M<T>(M);
   lp->Homogeneous = false;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4271,11 +4271,11 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-2]);
       }  /*of j*/
     }
-    for (j = 2; j <= (M->colsize)+1; j++) {
+    for (j = 2; j <= d; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-2]);
     }  /*of j*/
   }  /*of i*/
-  for (j = 2; j <= (M->colsize)+1; j++) {
+  for (j = 2; j <= d; j++) {
     dd_set(lp->A[m-1][j-1],M->matrix[itest-1][j-2]);
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
