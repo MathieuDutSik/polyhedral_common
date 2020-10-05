@@ -4191,11 +4191,10 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
+void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<T>* lp)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
@@ -4203,7 +4202,6 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData_from_M<T>(M);
   lp->Homogeneous = true;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4229,17 +4227,14 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
   dd_add<T>(lp->A[itest-1][0],lp->A[itest-1][0],1); /* relax the original inequality by one */
-
-  return lp;
 }
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
+void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<T>* lp)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
@@ -4250,7 +4245,6 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData_from_M<T>(M);
   lp->Homogeneous = false;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4280,8 +4274,6 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       /* objective is to violate the inequality in question.  */
   }  /*of j*/
   lp->A[m-1][0]=0;   /* the constant term for the objective is zero */
-
-  return lp;
 }
 
 
@@ -4395,10 +4387,11 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
   }
 
   /* Create an LP data for redundancy checking */
+  lp=dd_CreateLPData_from_M<T>(M);
   if (M->representation==dd_Generator){
-    lp=dd_CreateLP_V_Redundancy(M, itest);
+    dd_CreateLP_V_Redundancy(M, itest, lp);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
   dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
@@ -4447,10 +4440,11 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
   }
 
   /* Create an LP data for redundancy checking */
+  lp=dd_CreateLPData_from_M<T>(M);
   if (M->representation==dd_Generator){
-    lp=dd_CreateLP_V_Redundancy(M, itest);
+    dd_CreateLP_V_Redundancy(M, itest, lp);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
   lp->redcheck_extensive=true;
@@ -4678,10 +4672,11 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
   }
 
   /* Create an LP data for redundancy checking */
+  lp=dd_CreateLPData_from_M<T>(M);
   if (M->representation==dd_Generator){
-    lp=dd_CreateLP_V_Redundancy(M, itest);
+    dd_CreateLP_V_Redundancy(M, itest, lp);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
   dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
@@ -5008,10 +5003,11 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
   }
 
   /* Create an LP data for redundancy checking */
+  lp=dd_CreateLPData_from_M<T>(M);
   if (M->representation==dd_Generator){
-    lp=dd_CreateLP_V_Redundancy(M, itest);
+    dd_CreateLP_V_Redundancy(M, itest, lp);
   } else {
-    lp=dd_CreateLP_H_Redundancy(M, itest);
+    dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
   lp->objective = dd_LPmax;  /* the lp->objective is set by CreateLP* to LPmin */
