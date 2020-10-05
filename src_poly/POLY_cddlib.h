@@ -1164,6 +1164,8 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
   return lps;
 }
 
+
+
 template<typename T>
 dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
 {
@@ -1206,6 +1208,22 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
   return lp;
 }
 
+
+
+template<typename T>
+dd_lpdata<T> *dd_CreateLPData_from_M(dd_matrixdata<T> *M)
+{
+  dd_rowrange m, linc;
+  dd_colrange d;
+  linc=set_card(M->linset);
+  m=M->rowsize+1+linc;
+  if (M->representation==dd_Generator){
+    d=(M->colsize)+1;
+  } else {
+    d=M->colsize;
+  }
+  return dd_CreateLPData<T>(m, d);
+}
 
 
 
