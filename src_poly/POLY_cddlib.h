@@ -1165,8 +1165,7 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
-   dd_rowrange m,dd_colrange d)
+dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
 {
   dd_lpdata<T> *lp;
   lp=new dd_lpdata<T>;
@@ -1200,7 +1199,6 @@ dd_lpdata<T> *dd_CreateLPData(dd_LPObjectiveType obj,
 
   lp->m_alloc=lp->m+2;
   lp->d_alloc=lp->d+2;
-  lp->objective=obj;
   dd_InitializeBmatrix(lp->d_alloc,&(lp->B));
   dd_InitializeAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
   dd_InitializeArow(lp->d_alloc,&(lp->sol));
@@ -2555,8 +2553,9 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = true;
+  lp->objective = M->objective;
   lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -2650,8 +2649,9 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
         This is not the best way but makes the code simple. */
   d=M->colsize+1;
 
-  lp=dd_CreateLPData<T>(dd_LPmax, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = true;
+  lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -4021,7 +4021,6 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 {
   dd_rowrange m;
   dd_colrange d;
-  dd_LPObjectiveType obj;
   dd_lpdata<T> *lpnew;
   dd_rowrange i;
   dd_colrange j;
@@ -4031,9 +4030,9 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
   bmax=1;
   m=lp->m+1;
   d=lp->d+1;
-  obj=dd_LPmax;
 
-  lpnew=dd_CreateLPData<T>(obj, m, d);
+  lpnew=dd_CreateLPData<T>(m, d);
+  lpnew->objective = dd_LPmax;
 
   for (i=1; i<=lp->m; i++) {
     if (dd_Larger(lp->A[i-1][lp->rhscol-1],bmax))
@@ -4079,7 +4078,7 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
         This is not the best way but makes the code simple. */
   d=M->colsize+1;
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = true;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4134,7 +4133,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4186,7 +4185,7 @@ dd_lpdata<T> *dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = true;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4233,7 +4232,7 @@ dd_lpdata<T> *dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmin;
   lp->eqnumber=linc;  /* this records the number of equations */
@@ -4299,7 +4298,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
 /* The below must be modified for V-representation!!!  */
 
-  lp=dd_CreateLPData<T>(M->objective, m, d);
+  lp=dd_CreateLPData<T>(m, d);
   lp->Homogeneous = false;
   lp->objective = dd_LPmax;
   lp->eqnumber=linc;  /* this records the number of equations */
