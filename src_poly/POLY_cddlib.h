@@ -2805,7 +2805,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
         for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,*r,j);
           if (j!=rhscol && dd_Positive(val)) {
-            bool is_field=false;
+            bool is_field=true;
             if (is_field) {
                 rat = - data->rcost[j-1] / val;
                 if (*s==0 || dd_Smaller(rat, minrat)) {
@@ -2990,6 +2990,17 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
         }
       }
     }
+    dd_set(Xtemp0, Rtemp[s-1]);
+    for (j = 1; j <= d_size; j++)
+      dd_div(Ts[j-1][s - 1], Ts[j-1][s - 1], Xtemp0);
+    for (j=1; j<=d_size; j++) {
+      if (j != s) {
+        T alpha;
+        dd_TableauEntry(alpha, d_size, X, Ts, r, j);
+        if (alpha != 0)
+          std::cout << "j=" << j << " alpha=" << alpha << "\n";
+      }
+    }
   }
 }
 
@@ -3072,7 +3083,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
   while ((*lps==dd_LPSundecided) && (!rowselected) && (!colselected)) {
     for (i=1; i<=m_size; i++) {
       if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
-        dd_TableauEntry(val, d_size,A,Ts,i,rhscol);
+        dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
         if (dd_Negative(val)) {
           rowselected=true;
           *r=i;
@@ -3196,6 +3207,7 @@ void dd_FindLPBasis(dd_rowrange m_size,dd_colrange d_size,
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
+      //      std::cout << "dd_GaussianColumnPivot2 call 1\n";
       dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s, data->Rtemp);
       pivots_p0++;
       rank++;
@@ -3274,7 +3286,7 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
     if (chosen) {
       set_addelem(RowSelected,r);
       set_addelem(ColSelected,s);
-
+      //      std::cout << "dd_GaussianColumnPivot2 call 2\n";
       dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r,s, data->Rtemp);
       pivots_p0++;
       rank++;
@@ -3377,7 +3389,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
         // So now axvalue < 0
         dd_neg(axvalue,axvalue);
         // So now axvalue > 0
-        bool is_field=false;
+        bool is_field=true;
         if (is_field) {
             dd_div(axvalue,data->rcost[j-1],axvalue);  /* axvalue is the negative of ratio that is to be maximized. */
             if (dd_Larger(axvalue, maxratio)) {
@@ -3400,6 +3412,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     }
 
     /* Pivot on (local_m_size,ms) so that the dual basic solution becomes feasible */
+    //    std::cout << "dd_GaussianColumnPivot2 call 3\n";
     dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,local_m_size,ms, data->Rtemp);
     pivots_p1=pivots_p1+1;
     if (localdebug) {
@@ -3448,10 +3461,12 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
           goto _L99;
         }
 
+        //        std::cout << "dd_GaussianColumnPivot2 call 4\n";
         dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,ms, data->Rtemp);
         pivots_p1++;
         stop=true;
       } else {
+        //        std::cout << "dd_GaussianColumnPivot2 call 5\n";
         dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,s_val, data->Rtemp);
         pivots_p1=pivots_p1+1;
         if (bflag[local_m_size]<0) {
@@ -3584,6 +3599,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       if (chosen) pivots_pc=pivots_pc+1;
     }
     if (chosen) {
+      //      std::cout << "dd_GaussianColumnPivot2 call 6\n";
       dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s, data->Rtemp);
     } else {
       switch (lp->LPS){
@@ -3682,6 +3698,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
 			     lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
     if (chosen) {
+      //      std::cout << "dd_GaussianColumnPivot2 call 7\n";
       dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s, data->Rtemp);
       pivots1++;
     } else {
@@ -3866,14 +3883,14 @@ When LP is dual-inconsistent then *se returns the evidence column.
   switch (lp->solver) {
     case dd_CrissCross:
       ddf_CrissCrossSolve(lpf,&errf);    /* First, run with double float. */
-	  if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
+      if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
         dd_BasisStatus(lpf,lp, &LPScorrect);    /* Check the basis. */
-	  } else {LPScorrect=false;}
+      } else {LPScorrect=false;}
       if (!LPScorrect) {
-         if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
-         dd_CrissCrossSolve(lp,err);  /* Rerun with GMP if fails. */
+        if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
+        dd_CrissCrossSolve(lp,err);  /* Rerun with GMP if fails. */
       } else {
-         if (localdebug) printf("BasisStatus: the current basis is verified with GMP. The LP Solved.\n");
+        if (localdebug) printf("BasisStatus: the current basis is verified with GMP. The LP Solved.\n");
       }
       break;
     case dd_DualSimplex:
@@ -5382,7 +5399,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
     if (localdebug) std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
     if (dd_Positive(t1)) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
-      bool is_field=false;
+      bool is_field=true;
       if (is_field) {
           dd_div(alpha, t2, t1);
           if (!started){
@@ -6303,7 +6320,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   roworder[M->rowsize] = 0;
 
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(M->rowsize, M->colsize,M->matrix,B,roworder,
+      dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder,
 		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
       if (localdebug && chosen)
         fprintf(stderr,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
@@ -6313,6 +6330,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
         set_addelem(ColSelected, s);
         set_addelem(*colbasis, s);
         rank++;
+        //        std::cout << "dd_GaussianColumnPivot call 8\n";
         dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp);
       } else {
         stop=true;
@@ -6360,6 +6378,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
         set_addelem(ColSelected, s);
         cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
         (*rank)++;
+        //        std::cout << "dd_GaussianColumnPivot call 9\n";
         dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp);
       } else {
         stop=true;
@@ -7558,25 +7577,22 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const& nbCol)
 {
   dd_raydata<T>* RayPtr = poly->child->FirstRay;
   int nbRay=0;
-  while (RayPtr != nullptr)
-    {
-      if (RayPtr->feasible)
-	nbRay++;
-      RayPtr = RayPtr->Next;
-    }
+  while (RayPtr != nullptr) {
+    if (RayPtr->feasible)
+      nbRay++;
+    RayPtr = RayPtr->Next;
+  }
   MyMatrix<T> TheFAC=MyMatrix<T>(nbRay, nbCol);
   int iRay=0;
   RayPtr = poly->child->FirstRay;
-  while (RayPtr != nullptr)
-    {
-      if (RayPtr->feasible)
-	{
-	  for (int iCol=0; iCol<nbCol; iCol++)
-	    TheFAC(iRay, iCol)=RayPtr->Ray[iCol];
-	  iRay++;
-	}
-      RayPtr = RayPtr->Next;
+  while (RayPtr != nullptr) {
+    if (RayPtr->feasible) {
+      for (int iCol=0; iCol<nbCol; iCol++)
+        TheFAC(iRay, iCol)=RayPtr->Ray[iCol];
+      iRay++;
     }
+    RayPtr = RayPtr->Next;
+  }
   return TheFAC;
 }
 
