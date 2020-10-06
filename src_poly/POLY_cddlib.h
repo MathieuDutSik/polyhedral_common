@@ -223,6 +223,10 @@ inline void set_free(set_type set)
 
 #define LUTBLOCKS(set) (((set[0]-1)/SETBITS+1)*(sizeof(long)/sizeof(set_card_lut_t)))
 
+/* It is a vector of length 256. For each entry we give
+   the number of entries that are matching. This is very
+   useful for the computation of cardinality.
+ */
 static unsigned char set_card_lut[]={
 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
 1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
@@ -256,6 +260,22 @@ void set_initialize(set_type *setp, long length)
     forlim1=set_blocks(len);
     using ulong=unsigned long;
     *setp=new ulong[forlim1];
+    (*setp)[0]=ulong(len);  /* size of the ground set */
+    for (i=1; i<forlim1; i++)
+      (*setp)[i]=0U;
+}
+
+void reset_initialize(set_type *setp, long length)
+/* Make a set with a given bit lengths  */
+{
+    long i,forlim1,len;
+    if (length<=0)
+      len=1;
+    else
+      len=length;
+
+    forlim1=set_blocks(len);
+    using ulong=unsigned long;
     (*setp)[0]=ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
       (*setp)[i]=0U;
@@ -402,7 +422,7 @@ long set_card(set_type set)
 
   p=(set_card_lut_t *)&set[1];
   for (block=0; block< LUTBLOCKS(set);block++) {
-    car+=set_card_lut[p[block]];
+    car += set_card_lut[p[block]];
   }
   return car;
 }
@@ -417,8 +437,6 @@ typedef set_type colset;
 
 
 // More functionalities
-
-
 
 template<typename T>
 inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
@@ -882,7 +900,7 @@ bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
 // Basic Initialization procedures
 
 template<typename T>
-void dd_InitializeAmatrix(dd_rowrange m,dd_colrange d,T** *A)
+void dd_AllocateAmatrix(dd_rowrange m,dd_colrange d,T** *A)
 {
   dd_rowrange i;
 
@@ -898,14 +916,13 @@ void dd_InitializeArow(dd_colrange d, T* *a)
 }
 
 template<typename T>
-void dd_InitializeBmatrix(dd_colrange d,T** *B)
+void dd_AllocateBmatrix(dd_colrange d,T** *B)
 {
   dd_colrange j;
 
   (*B)=new T*[d];
-  for (j = 0; j < d; j++) {
+  for (j = 0; j < d; j++)
     (*B)[j]=new T[d];
-  }
 }
 
 // More sophisticated creation functionalities.
@@ -930,7 +947,7 @@ dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
     d0=d_size; d1=d_size;
   }
   M=new dd_matrixdata<T>;
-  dd_InitializeAmatrix(m1,d1,&(M->matrix));
+  dd_AllocateAmatrix(m1,d1,&(M->matrix));
   dd_InitializeArow(d1,&(M->rowvec));
   M->rowsize=m0;
   set_initialize(&(M->linset), m1);
@@ -993,7 +1010,7 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
   poly->m_alloc     =m+2; /* the allocated row size of matrix A */
   poly->d_alloc     =d;   /* the allocated col size of matrix A */
   poly->ldim		=0;   /* initialize the linearity dimension */
-  dd_InitializeAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
+  dd_AllocateAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
   dd_InitializeArow(d,&(poly->c));           /* cost vector */
   poly->representation       =dd_Inequality;
   poly->homogeneous =false;
@@ -1065,9 +1082,9 @@ bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
   (*cone)->count_int_bad=0;
   (*cone)->rseed=1;  /* random seed for random row permutation */
 
-  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->B));
-  dd_InitializeBmatrix((*cone)->d_alloc, &((*cone)->Bsave));
-  dd_InitializeAmatrix((*cone)->m_alloc,(*cone)->d_alloc,&((*cone)->A));
+  dd_AllocateBmatrix((*cone)->d_alloc, &((*cone)->B));
+  dd_AllocateBmatrix((*cone)->d_alloc, &((*cone)->Bsave));
+  dd_AllocateAmatrix((*cone)->m_alloc,(*cone)->d_alloc,&((*cone)->A));
 
   (*cone)->Edges=new dd_adjacencydata<T>*[(*cone)->m_alloc];
   for (j=0; j<(*cone)->m_alloc; j++)
@@ -1181,9 +1198,9 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
   lp->eqnumber=0;  /* the number of equalities */
 
   lp->nbindex = new long[d+1];
+  lp->given_nbindex = new long[d+1];
   for (int i=0; i<=d; i++)
     lp->nbindex[i] = 0;
-  lp->given_nbindex = new long[d+1];
   for (int i=0; i<=d; i++)
     lp->given_nbindex[i] = 0;
   set_initialize(&(lp->equalityset),m);
@@ -1201,26 +1218,47 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
 
   lp->m_alloc=lp->m+2;
   lp->d_alloc=lp->d+2;
-  dd_InitializeBmatrix(lp->d_alloc,&(lp->B));
-  dd_InitializeAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
+  dd_AllocateBmatrix(lp->d_alloc,&(lp->B));
+  dd_AllocateAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
   dd_InitializeArow(lp->d_alloc,&(lp->sol));
   dd_InitializeArow(lp->d_alloc,&(lp->dsol));
   return lp;
 }
 
+template<typename T>
+void dd_LPData_reset_m(dd_rowrange m, dd_lpdata<T>* lp)
+{
+  dd_colrange d = lp->d;
+  lp->m=m;
+  lp->objrow=m;
+  for (int i=0; i<=d; i++)
+    lp->nbindex[i] = 0;
+  for (int i=0; i<=d; i++)
+    lp->given_nbindex[i] = 0;
+  reset_initialize(&(lp->equalityset),m);
+  reset_initialize(&(lp->redset_extra),m);
+  reset_initialize(&(lp->redset_accum),m);
+  reset_initialize(&(lp->posset_extra),m);
+}
 
+
+
+template<typename T>
+inline dd_rowrange get_m_size(dd_matrixdata<T> *M)
+{
+  dd_rowrange linc=set_card(M->linset);
+  return M->rowsize+1+linc;
+}
 
 template<typename T>
 dd_lpdata<T> *dd_CreateLPData_from_M(dd_matrixdata<T> *M)
 {
-  dd_rowrange m, linc;
   dd_colrange d;
-  linc=set_card(M->linset);
-  m=M->rowsize+1+linc;
-  if (M->representation==dd_Generator){
-    d=(M->colsize)+1;
+  dd_rowrange m = get_m_size(M);
+  if (M->representation == dd_Generator){
+    d = M->colsize + 1;
   } else {
-    d=M->colsize;
+    d = M->colsize;
   }
   return dd_CreateLPData<T>(m, d);
 }
@@ -2567,8 +2605,8 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
   *err=dd_NoError;
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
-     /* We represent each equation by two inequalities.
-        This is not the best way but makes the code simple. */
+  /* We represent each equation by two inequalities.
+     This is not the best way but makes the code simple. */
   d=M->colsize;
 
   lp=dd_CreateLPData<T>(m, d);
@@ -2614,8 +2652,8 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
   *err=dd_NoError;
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
-     /* We represent each equation by two inequalities.
-        This is not the best way but makes the code simple. */
+  /* We represent each equation by two inequalities.
+     This is not the best way but makes the code simple. */
 
   lp=dd_Matrix2LP(M, err);
   lp->objective = dd_LPmax;   /* since the objective is zero, this is not important */
@@ -2663,8 +2701,8 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
   set_uni(L,M->linset,R);
   linc=set_card(L);
   m=M->rowsize+1+linc+1;
-     /* We represent each equation by two inequalities.
-        This is not the best way but makes the code simple. */
+  /* We represent each equation by two inequalities.
+     This is not the best way but makes the code simple. */
   d=M->colsize+1;
 
   lp=dd_CreateLPData<T>(m, d);
@@ -6323,7 +6361,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   set_initialize(&PriorityRow, M->rowsize);
   set_copy(NopivotRow,ignoredrows);
   set_copy(ColSelected,ignoredcols);
-  dd_InitializeBmatrix(M->colsize, &B);
+  dd_AllocateBmatrix(M->colsize, &B);
   dd_SetToIdentity(M->colsize, B);
   roworder = new long[M->rowsize+1];
   for (r=0; r<M->rowsize; r++)
