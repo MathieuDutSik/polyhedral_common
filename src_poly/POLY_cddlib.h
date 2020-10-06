@@ -508,6 +508,95 @@ typedef enum {
   dd_NoError
 } dd_ErrorType;
 
+void dd_WriteErrorMessages(std::ostream& os, dd_ErrorType Error)
+{
+  switch (Error) {
+
+  case dd_DimensionTooLarge:
+    os << "*Input Error: Input matrix is too large:\n";
+    os << "*Please increase MMAX and/or NMAX in the source code and recompile.\n";
+    break;
+
+  case dd_IFileNotFound:
+    os << "*Input Error: Specified input file does not exist.\n";
+    break;
+
+  case dd_OFileNotOpen:
+    os << "*Output Error: Specified output file cannot be opened.\n";
+    break;
+
+  case dd_NegativeMatrixSize:
+    os << "*Input Error: Input matrix has a negative size:\n";
+    os << "*Please check rowsize or colsize.\n";
+    break;
+
+  case dd_ImproperInputFormat:
+    os <<"*Input Error: Input format is not correct.\n";
+    os <<"*Format:\n";
+    os <<" begin\n";
+    os <<"   m   n  NumberType(real, rational or integer)\n";
+    os <<"   b  -A\n";
+    os <<" end\n";
+    break;
+
+  case dd_EmptyVrepresentation:
+    os << "*Input Error: V-representation is empty:\n";
+    os << "*cddlib does not accept this trivial case for which output can be any inconsistent system.\n";
+    break;
+
+  case dd_EmptyHrepresentation:
+    os << "*Input Error: H-representation is empty.\n";
+    break;
+
+  case dd_EmptyRepresentation:
+    os << "*Input Error: Representation is empty.\n";
+    break;
+
+  case dd_NoLPObjective:
+    os << "*LP Error: No LP objective (max or min) is set.\n";
+    break;
+
+  case dd_NoRealNumberSupport:
+    os << "*LP Error: The binary (with GMP Rational) does not support Real number input.\n";
+    os << "         : Use a binary compiled without -DGMPRATIONAL option.\n";
+    break;
+
+ case dd_NotAvailForH:
+    os << "*Error: A function is called with H-rep which does not support an H-representation.\n";
+    break;
+
+ case dd_NotAvailForV:
+    os << "*Error: A function is called with V-rep which does not support an V-representation.\n";
+    break;
+
+ case dd_CannotHandleLinearity:
+    os << "*Error: The function called cannot handle linearity.\n";
+    break;
+
+ case dd_RowIndexOutOfRange:
+    os << "*Error: Specified row index is out of range\n";
+    break;
+
+ case dd_ColIndexOutOfRange:
+    os << "*Error: Specified column index is out of range\n";
+    break;
+
+ case dd_LPCycling:
+    os << "*Error: Possibly an LP cycling occurs.  Use the Criss-Cross method.\n";
+    break;
+    
+ case dd_NumericallyInconsistent:
+    os << "*Error: Numerical inconsistency is found.  Use the GMP exact arithmetic.\n";
+    break;
+    
+  case dd_NoError:
+    os <<"*No Error found.\n";
+    break;
+  }
+}
+
+
+
 typedef enum {
   dd_InProgress, dd_AllFound, dd_RegionEmpty
 } dd_CompStatusType;
@@ -587,6 +676,149 @@ struct dd_lpdata {
   int use_given_basis;  /* switch to indicate the use of the given basis */
   dd_colindex given_nbindex;  /* given basis represented by nonbasic indices */
 };
+
+template<typename T>
+void dd_WriteAmatrix(std::ostream& os, T** A, long rowmax, long colmax)
+{
+  long i,j;
+  if (A==NULL) {
+    os << "WriteAmatrix: The requested matrix is empty\n";
+    return;
+  }
+  os << "begin\n";
+  os << " " << rowmax << " " << colmax << " rational\n";
+  for (i=1; i <= rowmax; i++) {
+    for (j=1; j <= colmax; j++) {
+      os << " " << A[i-1][j-1];
+    }
+    os << "\n";
+  }
+  os << "end\n";
+}
+
+
+template<typename T>
+void dd_WriteArow(std::ostream& os, T* a, dd_colrange d)
+{
+  dd_colrange j;
+  for (j = 0; j < d; j++) os << " " << a[j];
+  os << "\n";
+}
+
+
+
+template<typename T>
+void dd_WriteLP(std::ostream& os, dd_lpdata<T>* lp)
+{
+  if (lp == nullptr){
+    os << "WriteLP: The requested lp is empty\n";
+    return;
+  }
+  os << "H-representation\n";
+
+  dd_WriteAmatrix(os, lp->A, (lp->m)-1, lp->d);
+  if (lp->objective!=dd_LPnone){
+    if (lp->objective==dd_LPmax)
+      os << "maximize\n";
+    else
+      os << "minimize\n";
+    dd_WriteArow(os, lp->A[lp->objrow-1], lp->d);
+  }
+}
+
+
+template<typename T>
+void dd_WriteLPResult(std::ostream& os, dd_lpdata<T>* lp, dd_ErrorType err)
+{
+  long j;
+  os << "* cdd LP solver result\n";
+
+  if (err!=dd_NoError) {
+    dd_WriteErrorMessages(os,err);
+    return;
+  }
+
+  os << "* #constraints = " << (lp->m-1) << "\n";
+  os << "* #variables   = " << (lp->d-1) << "\n";
+
+  switch (lp->solver) {
+    case dd_DualSimplex:
+      os << "* Algorithm: dual simplex algorithm\n"; break;
+    case dd_CrissCross:
+      os << "* Algorithm: criss-cross method\n"; break;
+  }
+
+  switch (lp->objective) {
+    case dd_LPmax:
+      os << "* maximization is chosen\n"; break;
+    case dd_LPmin:
+      os << "* minimization is chosen\n"; break;
+    case dd_LPnone:
+      os << "* no objective type (max or min) is chosen\n"; break;
+  }
+
+  if (lp->objective==dd_LPmax || lp->objective==dd_LPmin) {
+    os << "* Objective function is\n";
+    for (j=0; j<lp->d; j++){
+      if (j>0 && dd_Nonnegative(lp->A[lp->objrow-1][j]) ) os << " +";
+      if (j>0 && (j % 5) == 0) os << "\n";
+      os << lp->A[lp->objrow-1][j];
+      if (j>0) os << " X[" << j << "]";
+    }
+    os << "\n";
+  }
+
+  switch (lp->LPS){
+  case dd_Optimal:
+    os << "* LP status: a dual pair (x,y) of optimal solutions found.\n";
+    os << "begin\n";
+    os << "  primal_solution\n";
+    for (j=1; j<lp->d; j++) {
+      os << "  " << j << " : " << lp->sol[j] << "\n";
+    }
+    os << "  dual_solution\n";
+    for (j=1; j<lp->d; j++)
+      if (lp->nbindex[j+1]>0)
+	os << "  " << lp->nbindex[j+1] << " : " << lp->dsol[j] << "\n";
+    os << "  optimal_value : " << lp->optvalue << "\n";
+    os << "end\n";
+    break;
+
+  case dd_Inconsistent:
+    os << "* LP status: LP is inconsistent.\n";
+    os << "* The positive combination of original inequalities with\n";
+    os << "* the following coefficients will prove the inconsistency.\n";
+    os << "begin\n";
+    os << "  dual_direction\n";
+    os << "  " << lp->re << " : 1\n";
+    for (j=1; j<lp->d; j++)
+      if (lp->nbindex[j+1]>0)
+        os << "  " << lp->nbindex[j+1] << " : " << lp->dsol[j] << "\n";
+    os << "end\n";
+    break;
+  case dd_DualInconsistent: case dd_StrucDualInconsistent:
+    os << "* LP status: LP is dual inconsistent.\n";
+    os << "* The linear combination of columns with\n";
+    os << "* the following coefficients will prove the dual inconsistency.\n";
+    os << "* (It is also an unbounded direction for the primal LP.)\n";
+    os << "begin\n";
+    os << "  primal_direction\n";
+    for (j=1; j<lp->d; j++)
+      os << "  " << j << " : " << lp->sol[j] << "\n";
+    os << "end\n";
+    break;
+
+  default:
+    break;
+  }
+  os << "* number of pivot operations = " << lp->total_pivots
+     << " (ph0 = " << lp->pivots[0]
+     << ", ph1 = " << lp->pivots[1]
+     << ", ph2 = " << lp->pivots[2]
+     << ", ph3 = " << lp->pivots[3]
+     << ", ph4 = " << lp->pivots[4] << ")\n";
+}
+
 
 
 /*----  end of LP Types ----- */
@@ -3234,9 +3466,8 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
 }
 
 template<typename T>
-void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
+void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   switch (lp->objective) {
     case dd_LPmax:
       dd_CrissCrossMaximize(lp, err, data);
@@ -3248,13 +3479,11 @@ void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
   }
-  free_data_simplex(data);
 }
 
 template<typename T>
-void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
+void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   switch (lp->objective) {
     case dd_LPmax:
       dd_DualSimplexMaximize(lp, err, data);
@@ -3266,7 +3495,6 @@ void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err)
 
     case dd_LPnone: *err=dd_NoLPObjective; break;
   }
-  free_data_simplex(data);
 }
 
 
@@ -3344,7 +3572,7 @@ void dd_FindLPBasis2(dd_rowrange m_size,dd_colrange d_size,
   the specified basis given by nbindex.  It will return *found=false if the specified
   basis is not a basis.
   */
-  int chosen,stop;
+  bool chosen,stop;
   long pivots_p0=0,rank;
   dd_colset ColSelected,DependentCols;
   dd_rowset RowSelected, NopivotRow;
@@ -3945,8 +4173,36 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
   case dd_MinCutoff: case dd_MaxCutoff: case dd_MixCutoff:
     for(i=1; i<=m_size; i++) OV[i]=i;
     break;
- }
+  }
 }
+
+template<typename T>
+dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
+{
+  dd_rowrange i;
+  dd_colrange j;
+  dd_lpdata<double> *lpf;
+  bool localdebug=false;
+
+  if (localdebug) fprintf(stderr,"Converting a GMP-LP to a float-LP.\n");
+
+  lpf=dd_CreateLPData<double>(lp->m, lp->d);
+  lpf->objective = lp->objective;
+  lpf->Homogeneous = lp->Homogeneous;
+  lpf->eqnumber=lp->eqnumber;  /* this records the number of equations */
+
+  for (i = 1; i <= lp->m; i++) {
+    if (set_member(i, lp->equalityset)) set_addelem(lpf->equalityset,i);
+    /* it is equality. Its reversed row will not be in this set */
+    for (j = 1; j <= lp->d; j++)
+      lpf->A[i-1][j-1] = UniversalTypeConversion<double,T>(lp->A[i-1][j-1]);
+  }
+  return lpf;
+}
+
+
+
+
 
 template<typename T>
 bool dd_LPSolve(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
@@ -3964,51 +4220,60 @@ When LP is dual-inconsistent then *se returns the evidence column.
   *err=dd_NoError;
   lp->solver=solver;
 
-#ifndef GMPRATIONAL
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
+  // There is a bug when using USE_DOUBLE_FIRST. 
+#undef USE_DOUBLE_FIRST
+#ifndef USE_DOUBLE_FIRST
   switch (lp->solver) {
     case dd_CrissCross:
-      dd_CrissCrossSolve(lp,err);
+      dd_CrissCrossSolve(lp, err, data);
       break;
     case dd_DualSimplex:
-      dd_DualSimplexSolve(lp,err);
+      dd_DualSimplexSolve(lp, err, data);
       break;
   }
 #else
-  lpf=dd_LPgmp2LPf(lp);
+  dd_lpdata<double>* lpf=dd_LPgmp2LPf(lp);
+  dd_ErrorType errf;
+  bool LPScorrect;
+  bool localdebug=false;
+  data_temp_simplex<double>* dataf = allocate_data_simplex<double>(lp->d);
   switch (lp->solver) {
     case dd_CrissCross:
-      ddf_CrissCrossSolve(lpf,&errf);    /* First, run with double float. */
-      if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
-        dd_BasisStatus(lpf,lp, &LPScorrect);    /* Check the basis. */
+      dd_CrissCrossSolve(lpf, &errf, dataf);    /* First, run with double float. */
+      if (errf==dd_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
+        dd_BasisStatus(lpf,lp, &LPScorrect, data);    /* Check the basis. */
       } else {LPScorrect=false;}
       if (!LPScorrect) {
         if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
-        dd_CrissCrossSolve(lp,err);  /* Rerun with GMP if fails. */
+        dd_CrissCrossSolve(lp, err, data);  /* Rerun with GMP if fails. */
       } else {
         if (localdebug) printf("BasisStatus: the current basis is verified with GMP. The LP Solved.\n");
       }
       break;
     case dd_DualSimplex:
-      ddf_DualSimplexSolve(lpf,&errf);    /* First, run with double float. */
-      if (errf==ddf_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
-        dd_BasisStatus(lpf,lp, &LPScorrect);    /* Check the basis. */
+      dd_DualSimplexSolve(lpf, &errf, dataf);    /* First, run with double float. */
+      if (errf==dd_NoError){   /* 094a:  fix for a bug reported by Dima Pasechnik */
+        dd_BasisStatus(lpf, lp, &LPScorrect, data);    /* Check the basis. */
       } else {LPScorrect=false;}
       if (!LPScorrect){
 	if (localdebug) printf("BasisStatus: the current basis is NOT verified with GMP. Rerun with GMP.\n");
-	dd_DualSimplexSolve(lp,err);  /* Rerun with GMP if fails. */
+	dd_DualSimplexSolve(lp,err, data);  /* Rerun with GMP if fails. */
 	if (localdebug){
 	  printf("*total number pivots = %ld (ph0 = %ld, ph1 = %ld, ph2 = %ld, ph3 = %ld, ph4 = %ld)\n",
 		 lp->total_pivots,lp->pivots[0],lp->pivots[1],lp->pivots[2],lp->pivots[3],lp->pivots[4]);
-	  ddf_WriteLPResult(stdout, lpf, errf);
-	  dd_WriteLP(stdout, lp);
+	  dd_WriteLPResult(std::cout, lpf, errf);
+	  dd_WriteLP(std::cout, lp);
 	}
       } else {
          if (localdebug) printf("BasisStatus: the current basis is verified with GMP. The LP Solved.\n");
       }
       break;
   }
-  ddf_FreeLPData(lpf);
+  dd_FreeLPData(lpf);
+  free_data_simplex(dataf);
 #endif
+  free_data_simplex(data);
 
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
@@ -4032,14 +4297,16 @@ When LP is dual-inconsistent then *se returns the evidence column.
   *err=dd_NoError;
   lp->solver=solver;
 
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   switch (lp->solver) {
     case dd_CrissCross:
-      dd_CrissCrossSolve(lp,err);
+      dd_CrissCrossSolve(lp, err, data);
       break;
     case dd_DualSimplex:
-      dd_DualSimplexSolve(lp,err);
+      dd_DualSimplexSolve(lp, err, data);
       break;
   }
+  free_data_simplex(data);
 
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
@@ -4734,7 +5001,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           dd_FreeLPData(lp);
           lp=dd_CreateLP_V_SRedundancy(M, itest);
           dd_LPSolve(lp,dd_DualSimplex,&err);
-          if (localdebug) dd_WriteLPResult(stdout,lp,err);
+          if (localdebug) dd_WriteLPResult(std::cout,lp,err);
           if (dd_Positive(lp->optvalue)){
             answer=false;
             if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
@@ -5119,7 +5386,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
       dd_set(certificate[j], lp->sol[j]);
     }
 
-    if (localdebug) dd_WriteLPResult(stderr,lp,err);
+    if (localdebug) dd_WriteLPResult(std::cerr,lp,err);
 
     /* *posset contains a set of row indices that are recognized as nonlinearity.  */
 
@@ -5369,12 +5636,6 @@ This function returns a certificate of the answer in terms of the associated LP 
   bool answer=false;
   dd_lpdata<T> *lp=nullptr;
 
-/*
-  printf("\n--- ERF ---\n");
-  printf("R = "); set_write(R);
-  printf("S = "); set_write(S);
-*/
-
   lp=dd_Matrix2Feasibility2(M, R, S, err);
 
   if (*err!=dd_NoError) goto _L99;
@@ -5532,12 +5793,12 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
 }
 
 template<typename T>
-void dd_BasisStatusMaximize(dd_rowrange m_size,dd_colrange d_size,
-			    T** A,T** Ts,dd_rowset equalityset,
-			    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
-			    T &optvalue,T* sol,T* dsol,dd_rowset posset, dd_colindex nbindex,
-			    dd_rowrange re,dd_colrange se, dd_colrange *nse, long *pivots,
-			    int *found, int *LPScorrect, data_temp_simplex<T>* data)
+void dd_BasisStatusMaximize(dd_rowrange m_size, dd_colrange d_size,
+			    T** A, T** Ts, dd_rowset equalityset,
+			    dd_rowrange objrow, dd_colrange rhscol, dd_LPStatusType LPS,
+			    T &optvalue, T* sol, T* dsol, dd_rowset posset, dd_colindex nbindex,
+			    dd_rowrange re, dd_colrange se, dd_colrange *nse, long *pivots,
+			    bool *found, bool *LPScorrect, data_temp_simplex<T>* data)
 /*  This is just to check whether the status LPS of the basis given by
 nbindex with extra certificates se or re is correct.  It is done
 by recomputing the basis inverse matrix T.  It does not solve the LP
@@ -5550,7 +5811,7 @@ of the result of floating point computation with the GMP rational
 arithmetics.
 */
 {
-  long pivots0,pivots1,fbasisrank;
+  long pivots0, fbasisrank;
   dd_rowrange i,is;
   dd_colrange s,senew,j;
   dd_rowindex bflag;
@@ -5558,8 +5819,6 @@ arithmetics.
   unsigned int rseed=1;
   T val;
   dd_colindex nbtemp;
-  //  dd_LPStatusType ddlps;
-  bool localdebug=false;
 
   nbtemp = new long[d_size+1];
   for (int i=0; i<=d_size; i++)
@@ -5575,8 +5834,6 @@ arithmetics.
 
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(m_size,d_size,A,OrderVector,dd_MinIndex,rseed);
-
-  pivots1=0;
 
   dd_ResetTableau(m_size,d_size,Ts,nbtemp,bflag,objrow,rhscol);
 
@@ -5681,25 +5938,65 @@ _L99:
 
 template<typename T>
 void dd_BasisStatusMinimize(dd_rowrange m_size,dd_colrange d_size,
-    T** A,T** Ts,dd_rowset equalityset,
-    dd_rowrange objrow,dd_colrange rhscol,dd_LPStatusType LPS,
-    T & optvalue,T* sol,T* dsol, dd_rowset posset, dd_colindex nbindex,
-    dd_rowrange re,dd_colrange se,dd_colrange *nse,long *pivots, int *found, int *LPScorrect)
+    T** A, T** Ts, dd_rowset equalityset,
+    dd_rowrange objrow, dd_colrange rhscol, dd_LPStatusType LPS,
+    T & optvalue, T* sol, T* dsol, dd_rowset posset, dd_colindex nbindex,
+    dd_rowrange re, dd_colrange se, dd_colrange *nse, long *pivots,
+    bool *found, bool *LPScorrect, data_temp_simplex<T>* data)
 {
    dd_colrange j;
 
    for (j=1; j<=d_size; j++) dd_neg(A[objrow-1][j-1],A[objrow-1][j-1]);
-   dd_BasisStatusMaximize(m_size,d_size,A,Ts,equalityset, objrow,rhscol,
-     LPS,optvalue,sol,dsol,posset,nbindex,re,se,nse,pivots,found,LPScorrect);
-   dd_neg(*optvalue,*optvalue);
+   dd_BasisStatusMaximize(m_size, d_size, A, Ts, equalityset, objrow, rhscol,
+       LPS, optvalue, sol, dsol, posset, nbindex, re, se, nse, pivots, found, LPScorrect, data);
+   dd_neg(optvalue,optvalue);
    for (j=1; j<=d_size; j++){
-	if (LPS!=dd_Inconsistent) {
-	   /* Inconsistent certificate stays valid for minimization, 0.94e */
+     if (LPS!=dd_Inconsistent) {
+       /* Inconsistent certificate stays valid for minimization, 0.94e */
        dd_neg(dsol[j-1],dsol[j-1]);
-	 }
+     }
      dd_neg(A[objrow-1][j-1],A[objrow-1][j-1]);
    }
 }
+
+template<typename T>
+void dd_BasisStatus(dd_lpdata<double>* lpf, dd_lpdata<T>* lp, bool *LPScorrect, data_temp_simplex<T>* data)
+{
+  int i;
+  dd_colrange se, j;
+  bool basisfound;
+
+  switch (lp->objective) {
+    case dd_LPmax:
+      dd_BasisStatusMaximize<T>(lp->m,lp->d,lp->A,lp->B,lp->equalityset,lp->objrow,lp->rhscol,
+           lpf->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lpf->nbindex,lpf->re,lpf->se,&se,lp->pivots,
+           &basisfound, LPScorrect, data);
+      if (*LPScorrect) {
+         /* printf("BasisStatus Check: the current basis is verified with GMP\n"); */
+         lp->LPS=lpf->LPS;
+         lp->re=lpf->re;
+         lp->se=se;
+         for (j=1; j<=lp->d; j++) lp->nbindex[j]=lpf->nbindex[j];
+      }
+      for (i=1; i<=5; i++) lp->pivots[i-1]+=lpf->pivots[i-1];
+      break;
+    case dd_LPmin:
+      dd_BasisStatusMinimize<T>(lp->m,lp->d,lp->A,lp->B,lp->equalityset,lp->objrow,lp->rhscol,
+           lpf->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra,lpf->nbindex,lpf->re,lpf->se,&se,lp->pivots,
+           &basisfound, LPScorrect, data);
+      if (*LPScorrect) {
+         /* printf("BasisStatus Check: the current basis is verified with GMP\n"); */
+         lp->LPS=lpf->LPS;
+         lp->re=lpf->re;
+         lp->se=se;
+         for (j=1; j<=lp->d; j++) lp->nbindex[j]=lpf->nbindex[j];
+      }
+      for (i=1; i<=5; i++) lp->pivots[i-1]+=lpf->pivots[i-1];
+      break;
+    case dd_LPnone:  break;
+   }
+}
+
 
 /* end of cddlp.c */
 
