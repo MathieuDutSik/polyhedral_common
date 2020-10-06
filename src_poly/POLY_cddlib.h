@@ -416,15 +416,14 @@ int set_member(long elem, set_type set)
    to optimize for speed.*/
 long set_card(set_type set)
 {
-  unsigned long block;
-  long car=0;
-  set_card_lut_t *p;
-
-  p=(set_card_lut_t *)&set[1];
-  for (block=0; block< LUTBLOCKS(set);block++) {
-    car += set_card_lut[p[block]];
-  }
-  return car;
+    unsigned long block;
+    long car=0;
+    set_card_lut_t* p;
+    p=(set_card_lut_t *)&set[1];
+    for (block=0; block<LUTBLOCKS(set); block++) {
+      car += set_card_lut[p[block]];
+    }
+    return car;
 }
 
 
@@ -637,22 +636,20 @@ void dd_FreeAmatrix(dd_rowrange m, T** A)
   dd_rowrange i;
 
   if (A!=nullptr) {
-    for (i = 0; i < m; i++) {
+    for (i = 0; i < m; i++)
       delete [] A[i];
-    }
     delete [] A;
   }
 }
 
 template<typename T>
-void dd_FreeBmatrix(dd_colrange d,T** B)
+void dd_FreeBmatrix(dd_colrange d, T** B)
 {
   dd_colrange j;
 
   if (B!=nullptr) {
-    for (j = 0; j < d; j++) {
+    for (j = 0; j < d; j++)
       delete [] B[j];
-    }
     delete [] B;
   }
 }
@@ -1102,13 +1099,6 @@ bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
   (*cone)->ColReduced   = false;
   (*cone)->d_orig = d;
-
-/* STATES: variables to represent current state. */
-/*(*cone)->Error;
-  (*cone)->CompStatus;
-  (*cone)->starttime;
-  (*cone)->endtime;
-*/
 
   return success;
 }
@@ -4234,8 +4224,9 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
-     /* We represent each equation by two inequalities.
-        This is not the best way but makes the code simple. */
+  dd_LPData_reset_m(m, lp);
+  /* We represent each equation by two inequalities.
+     This is not the best way but makes the code simple. */
   d=M->colsize;
 
   lp->Homogeneous = true;
@@ -4251,17 +4242,17 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
             /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-1]);
-      }  /*of j*/
+      }
     }
     for (j = 1; j <= d; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
       if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
-    }  /*of j*/
-  }  /*of i*/
+    }
+  }
   for (j = 1; j <= d; j++) {
     dd_set(lp->A[m-1][j-1],M->matrix[itest-1][j-1]);
       /* objective is to violate the inequality in question.  */
-  }  /*of j*/
+  }
   dd_add<T>(lp->A[itest-1][0],lp->A[itest-1][0],1); /* relax the original inequality by one */
 }
 
@@ -4274,12 +4265,13 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc;
-     /* We represent each equation by two inequalities.
-        This is not the best way but makes the code simple. */
+  dd_LPData_reset_m(m, lp);
+  /* We represent each equation by two inequalities.
+     This is not the best way but makes the code simple. */
   d=(M->colsize)+1;
-     /* One more column.  This is different from the H-reprentation case */
+  /* One more column.  This is different from the H-reprentation case */
 
-/* The below must be modified for V-representation!!!  */
+  /* The below must be modified for V-representation!!!  */
 
   lp->Homogeneous = false;
   lp->objective = dd_LPmin;
@@ -4291,24 +4283,24 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
     if (i==itest){
       lp->A[i-1][0]=1; /* this is to make the LP bounded, ie. the min >= -1 */
     } else {
-      lp->A[i-1][0]=0;  /* It is almost completely degerate LP */
+      lp->A[i-1][0]=0; /* It is almost completely degerate LP */
     }
     if (set_member(i, M->linset)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
-            /* the reversed row irev is not in the equality set. */
+      /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= (M->colsize)+1; j++) {
         dd_neg(lp->A[irev-1][j-1],M->matrix[i-1][j-2]);
-      }  /*of j*/
+      }
     }
     for (j = 2; j <= d; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-2]);
-    }  /*of j*/
-  }  /*of i*/
+    }
+  }
   for (j = 2; j <= d; j++) {
     dd_set(lp->A[m-1][j-1],M->matrix[itest-1][j-2]);
       /* objective is to violate the inequality in question.  */
-  }  /*of j*/
+  }
   lp->A[m-1][0]=0;   /* the constant term for the objective is zero */
 }
 
