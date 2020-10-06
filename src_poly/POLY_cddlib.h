@@ -566,7 +566,6 @@ struct dd_lpdata {
   dd_rowset equalityset;
 
   bool redcheck_extensive;  /* Apply the extensive redundancy check. */
-  dd_rowrange ired; /* the row index for the redundancy checking */
   dd_rowset redset_extra;  /* a set of rows that are newly recognized redundan by the extensive search. */
   dd_rowset redset_accum;  /* the accumulated set of rows that are recognized redundant */
   dd_rowset posset_extra;  /* a set of rows that are recognized non-linearity */
@@ -1207,7 +1206,6 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
     /* i must be in the set iff i-th row is equality . */
 
   lp->redcheck_extensive=false; /* this is on only for RedundantExtensive */
-  lp->ired=0;
   set_initialize(&(lp->redset_extra),m);
     /* i is in the set if i-th row is newly recognized redundant (during the checking the row ired). */
   set_initialize(&(lp->redset_accum),m);
