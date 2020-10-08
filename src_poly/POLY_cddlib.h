@@ -3593,7 +3593,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
     /* Pivot on (local_m_size,ms) so that the dual basic solution becomes feasible */
     //    std::cout << "dd_GaussianColumnPivot2 call 3\n";
     dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,local_m_size,ms, data->Rtemp);
-    pivots_p1=pivots_p1+1;
+    pivots_p1++;
     if (localdebug) {
       printf("\ndd_FindDualFeasibleBasis: Pivot on %ld %ld.\n",local_m_size,ms);
     }
@@ -3642,16 +3642,14 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
 
         //        std::cout << "dd_GaussianColumnPivot2 call 4\n";
         dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,ms, data->Rtemp);
-        pivots_p1++;
         stop=true;
       } else {
         //        std::cout << "dd_GaussianColumnPivot2 call 5\n";
         dd_GaussianColumnPivot2(d_size,A,Ts,nbindex,bflag,r_val,s_val, data->Rtemp);
-        pivots_p1=pivots_p1+1;
-        if (bflag[local_m_size]<0) {
+        if (bflag[local_m_size] < 0)
           stop=true;
-        }
       }
+      pivots_p1++;
     } while(!stop);
   }
 _L99:
@@ -3717,8 +3715,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
                            data);
   lp->pivots[1]=pivots_p1;
 
-  for (j=1; j<=lp->d; j++) data->nbindex_ref_ds[j]=lp->nbindex[j];
-     /* set the reference basis to be the current feasible basis. */
+  /* set the reference basis to be the current feasible basis. */
+  for (j=1; j<=lp->d; j++)
+    data->nbindex_ref_ds[j] = lp->nbindex[j];
 
   if (*err==dd_LPCycling || *err==dd_NumericallyInconsistent) {
     dd_CrissCrossMaximize(lp, err, data);
@@ -3742,9 +3741,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
                                 data);
     }
     if (chosen) {
-      pivots_ds=pivots_ds+1;
+      pivots_ds++;
       if (lp->redcheck_extensive) {
-        dd_GetRedundancyInformation(lp->m,lp->d,lp->A,lp->B, data->bflag, lp->redset_extra);
+        dd_GetRedundancyInformation(lp->m, lp->d, lp->A, lp->B, data->bflag, lp->redset_extra);
         set_uni(lp->redset_accum, lp->redset_accum,lp->redset_extra);
       }
     }
@@ -3760,7 +3759,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
       dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,data->bflag,
 			       lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
-      if (chosen) pivots_pc=pivots_pc+1;
+      if (chosen) pivots_pc++;
     }
     if (chosen) {
       //      std::cout << "dd_GaussianColumnPivot2 call 6\n";
@@ -4638,7 +4637,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
   if (localdebug) printf("\n");
 
   if ((*M)->representation==dd_Generator) {
-    d=((*M)->colsize)+1;
+    d=(*M)->colsize+1;
   } else {
     d=(*M)->colsize;
   }
@@ -4692,7 +4691,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
         printf("dd_MatrixRedundancyRemove: the row %ld is essential. The new matrix has %ld rows.\n", k, M1->rowsize);
         /* dd_WriteMatrix(stderr, M1);  */
       }
-      k=k+1;
+      k++;
     }
     if (*error!=dd_NoError) goto _L99;
   } while  (k<=M1->rowsize);
@@ -4835,7 +4834,7 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
 
   m=M->rowsize;
   if (M->representation==dd_Generator) {
-    d=(M->colsize)+1;
+    d=M->colsize+1;
   } else {
     d=M->colsize;
   }
@@ -5198,7 +5197,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     /* *posset contains a set of row indices that are recognized as nonlinearity.  */
 
     if (M->representation==dd_Generator) {
-      d1=(M->colsize)+1;
+      d1=M->colsize+1;
     } else {
       d1=M->colsize;
     }
@@ -5259,7 +5258,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M, dd_ErrorType *error)  /*
   bool localdebug=false;
 
   if (M->representation==dd_Generator) {
-    d=(M->colsize)+2;
+    d=M->colsize+2;
   } else {
     d=M->colsize+1;
   }
@@ -5897,7 +5896,7 @@ void dd_AValue(T *val, dd_colrange d_size, T** A, T *p, dd_rowrange i)
 template<typename T>
 void dd_StoreRay1(dd_conedata<T> *cone, T *p, bool *feasible)
 {  /* Original ray storing routine when RelaxedEnumeration is false */
-  dd_rowrange i,k,fii=cone->m+1;
+  dd_rowrange i, k, fii=cone->m+1;
   dd_colrange j;
   T temp;
   dd_raydata<T> *RR;
@@ -5938,7 +5937,7 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
        the strict_inequality conditions deleted. */
 {
   dd_raydata<T> *RR;
-  dd_rowrange i,k,fii=cone->m+1;
+  dd_rowrange i, k, fii=cone->m+1;
   dd_colrange j;
   T temp;
 
@@ -6396,7 +6395,7 @@ void dd_ColumnReduce(dd_conedata<T> *cone)
 
   for (j=1;j<=cone->d;j++) {
     if (cone->InitialRayIndex[j]>0) {
-      j1=j1+1;
+      j1++;
       if (j1<j) {
         for (i=1; i<=cone->m; i++) cone->A[i-1][j1-1] = cone->A[i-1][j-1];
         cone->newcol[j]=j1;
