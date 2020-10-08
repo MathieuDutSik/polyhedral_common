@@ -33,34 +33,10 @@ namespace cdd {
   typedef unsigned char set_card_lut_t;
 
   template<typename T>
-  inline void dd_set(T& a, T b)
-  {
-    a=b;
-  }
-
-  template<typename T>
   inline void dd_set_si(T& a, int b)
   {
     a=b;
   }
-
-template<typename T>
-inline void dd_add(T &a, T b, T c)
-{
-  a=b + c;
-}
-
-template<typename T>
-inline void dd_sub(T &a, T b, T c)
-{
-  a=b - c;
-}
-
-template<typename T>
-inline void dd_mul(T &a, T b, T c)
-{
-  a=b * c;
-}
 
 template<typename T>
 inline void dd_div(T &a, T b, T c)
@@ -70,25 +46,9 @@ inline void dd_div(T &a, T b, T c)
 }
 
 template<typename T>
-inline void dd_neg(T &a, T b)
-{
-  a=-b;
-}
-
-template<typename T>
 inline void dd_inv(T &a, T b)
 {
   a=1/b;
-}
-
-template<typename T>
-inline int dd_pos(T a, T b)
-{
-  if (a>b)
-    return 1;
-  if (a<b)
-    return -1;
-  return 0;
 }
 
 
@@ -99,30 +59,6 @@ void dd_WriteT(std::ostream & os, T* a, int d)
   for (int i=0; i<d; i++)
     os << " " << a[i];
   os << "\n";
-}
-
-template<typename T>
-inline bool dd_Nonnegative(T val)
-{
-  return val >= 0;
-}
-
-template<typename T>
-inline bool dd_Nonpositive(T val)
-{
-  return val <= 0;
-}
-
-template<typename T>
-inline bool dd_Positive(T val)
-{
-  return val > 0;
-}
-
-template<typename T>
-inline bool dd_Negative(T val)
-{
-  return val < 0;
 }
 
 template<typename T>
@@ -189,8 +125,8 @@ inline bool dd_EqualFrac(T val1,T q1, T val2, T q2)
 template<typename T>
 inline void dd_abs(T &absval, T val)
 {
-  if (val < 0) dd_neg(absval,val);
-  else dd_set(absval,val);
+  if (val < 0) absval = -val;
+  else absval = val;
 }
 
 
@@ -436,10 +372,8 @@ inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
   T temp;
   dd_colrange j;
   dd_set_si(prod, 0);
-  for (j = 0; j < d; j++){
-    dd_mul(temp,v1[j],v2[j]);
-    dd_add(prod,prod,temp);
-  }
+  for (j = 0; j < d; j++)
+    prod += v1[j] * v2[j];
 }
 
 
@@ -750,7 +684,7 @@ void dd_WriteLPResult(std::ostream& os, dd_lpdata<T>* lp, dd_ErrorType err)
   if (lp->objective==dd_LPmax || lp->objective==dd_LPmin) {
     os << "* Objective function is\n";
     for (j=0; j<lp->d; j++){
-      if (j>0 && dd_Nonnegative(lp->A[lp->objrow-1][j]) ) os << " +";
+      if (j>0 && lp->A[lp->objrow-1][j] >= 0) os << " +";
       if (j>0 && (j % 5) == 0) os << "\n";
       os << lp->A[lp->objrow-1][j];
       if (j>0) os << " X[" << j << "]";
@@ -2285,10 +2219,8 @@ void dd_ComputeAinc(dd_polyhedradata<T> *poly)
   for (k=1; k<=poly->n; k++){
     for (i=1; i<=poly->m; i++){
       sum=0;
-      for (j=1; j<=poly->d; j++){
-        dd_mul(temp,poly->A[i-1][j-1],M->matrix[k-1][j-1]);
-        dd_add(sum,sum,temp);
-      }
+      for (j=1; j<=poly->d; j++)
+        sum += poly->A[i-1][j-1] * M->matrix[k-1][j-1];
       if (dd_EqualToZero(sum)) {
         set_addelem(poly->Ainc[i-1], k);
       }
@@ -2661,10 +2593,8 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
       if (!set_member(j, delset)){
         k++;  /* new index of the variable x_j  */
         prod=0;
-        for (h = 1; h <= m; h++){
-          dd_mul(temp,M->matrix[h-1][j-1],Gdual->matrix[i-1][h]);
-          dd_add(prod,prod,temp);
-        }
+        for (h = 1; h <= m; h++)
+          prod += M->matrix[h-1][j-1] * Gdual->matrix[i-1][h];
         Mproj->matrix[i-1][k-1] = prod;
       }
     }
@@ -2684,9 +2614,7 @@ template<typename T>
 inline void dd_LinearComb(T &lc, T v1, T c1, T v2, T c2)
 {
   T temp;
-  dd_mul(lc,v1,c1);
-  dd_mul(temp,v2,c2);
-  dd_add(lc,lc,temp);
+  lc = v1 * c1 + v2 * c2;
 }
 
 template<typename T>
@@ -2741,10 +2669,10 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
     zerorowindex[i] = 0;
 
   for (i = 1; i <= m; i++) {
-    if (dd_Positive(M->matrix[i-1][d-1])){
+    if (M->matrix[i-1][d-1] > 0){
       mpos++;
       posrowindex[mpos]=i;
-    } else if (dd_Negative(M->matrix[i-1][d-1])) {
+    } else if (M->matrix[i-1][d-1] < 0) {
       mneg++;
       negrowindex[mneg]=i;
     } else {
@@ -3012,10 +2940,8 @@ void dd_TableauEntry(T & x, dd_colrange d_size, T** X, T** Ts,
   T temp;
 
   x=0;
-  for (j=0; j< d_size; j++) {
-    dd_mul(temp,X[r-1][j], Ts[j][s-1]);
-    x += temp;
-  }
+  for (j=0; j< d_size; j++)
+    x += X[r-1][j] * Ts[j][s-1];
 }
 
 template<typename T>
@@ -3034,7 +2960,7 @@ void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T**
     red=true;
     for (j=1; j<= d_size; j++) {
       dd_TableauEntry(x, d_size,A,Ts,i,j);
-      if (red && dd_Negative(x)) red=false;
+      if (red && x < 0) red=false;
     }
     if (bflag[i]<0 && red) {
       numbred+=1;
@@ -3079,7 +3005,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
   for (j=1; j<=d_size; j++){
     if (j!=rhscol){
       dd_TableauEntry(data->rcost[j-1], d_size,A,Ts,objrow,j);
-      if (dd_Positive(data->rcost[j-1])) {
+      if (data->rcost[j-1] > 0) {
         dualfeasible=false;
       }
     }
@@ -3100,7 +3026,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
           }
         }
       }
-      if (dd_Nonnegative(minval)) {
+      if (minval >= 0) {
         *lps=dd_Optimal;
       }
       else {
@@ -3108,7 +3034,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
         set_emptyset(data->tieset);
         for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,*r,j);
-          if (j!=rhscol && dd_Positive(val)) {
+          if (j!=rhscol && val > 0) {
             bool is_field=true;
             if (is_field) {
                 rat = - data->rcost[j-1] / val;
@@ -3158,7 +3084,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size,dd_colrange d_size,
                     if (set_member(j,data->tieset)) {
                       dd_TableauEntry(val, d_size,A,Ts,*r,j);
                       dd_TableauEntry(valn, d_size,A,Ts,iref,j);
-                      if (j!=rhscol && dd_Positive(val)) {
+                      if (j!=rhscol && val > 0) {
                         rat = valn / val;
                         if (*s==0 || dd_Smaller(rat,minrat)) {
                           minrat = rat;
@@ -3279,8 +3205,8 @@ void dd_GaussianColumnPivot(dd_colrange d_size,
           dd_div(Xtemp, Rtemp[j-1], Xtemp0);
           Xtemp1=0;
           for (j1 = 1; j1 <= d_size; j1++){
-            dd_mul(Xtemp1, Xtemp, Ts[j1-1][s-1]);
-            dd_sub(Ts[j1-1][j-1], Ts[j1-1][j-1], Xtemp1);
+            Xtemp1 = Xtemp * Ts[j1-1][s-1];
+            Ts[j1-1][j-1] -= Xtemp1;
           }
         }
       }
@@ -3388,7 +3314,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
     for (i=1; i<=m_size; i++) {
       if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
         dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
-        if (dd_Negative(val)) {
+        if (val < 0) {
           rowselected=true;
           *r=i;
           break;
@@ -3396,7 +3322,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
       }
       else if (bflag[i] >0) { /* i is nonbasic variable */
         dd_TableauEntry(val, d_size,A,Ts,objrow,bflag[i]);
-        if (dd_Positive(val)) {
+        if (val > 0) {
           colselected=true;
           *s=bflag[i];
           break;
@@ -3411,7 +3337,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
      for (i=1; i<=m_size; i++) {
        if (bflag[i] >0) { /* i is nonbasic variable */
           dd_TableauEntry(val, d_size,A,Ts,*r,bflag[i]);
-          if (dd_Positive(val)) {
+          if (val > 0) {
             colselected=true;
             *s=bflag[i];
             *selected=true;
@@ -3424,7 +3350,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
       for (i=1; i<=m_size; i++) {
         if (i!=objrow && bflag[i]==-1) {  /* i is a basic variable */
           dd_TableauEntry(val, d_size,A,Ts,i,*s);
-          if (dd_Negative(val)) {
+          if (val < 0) {
             rowselected=true;
             *r=i;
             *selected=true;
@@ -3658,7 +3584,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
       if (dd_Larger(data->rcost[j-1],maxcost)) {maxcost = data->rcost[j-1]; ms = j;}
     }
   }
-  if (dd_Positive(maxcost)) dualfeasible=false;
+  if (maxcost > 0) dualfeasible=false;
 
   if (!dualfeasible){
     for (j=1; j<=d_size; j++){
@@ -3666,8 +3592,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
       for (l=1; l<=d_size; l++){
         if (nbindex[l]>0) {
           dd_set_si(scaling,l+10);
-          dd_mul(svalue,A[nbindex[l]-1][j-1],scaling);
-          dd_sub(A[local_m_size-1][j-1],A[local_m_size-1][j-1],svalue);
+          A[local_m_size-1][j-1] -= A[nbindex[l]-1][j-1] * scaling;
           /* To make the auxiliary row (0,-11,-12,...,-d-10).
              It is likely to be better than  (0, -1, -1, ..., -1)
              to avoid a degenerate LP.  Version 093c. */
@@ -3679,9 +3604,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
      /* Ratio Test: ms will be now the index of column which has the largest reduced cost
         over the auxiliary row entry */
     for (j=1; j<=d_size; j++) {
-      if ((j!=rhscol) && dd_Positive(data->rcost[j-1])){
+      if ((j!=rhscol) && data->rcost[j-1] > 0){
         dd_TableauEntry(axvalue, d_size,A,Ts,local_m_size,j);
-        if (dd_Nonnegative(axvalue)) {
+        if (axvalue >= 0) {
           *err=dd_NumericallyInconsistent;
            /* This should not happen as they are set negative above.  Quit the phase I.*/
           goto _L99;
@@ -3740,7 +3665,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
            We must pivot in the auxiliary variable local_m_size.
         */
         dd_TableauEntry(x, d_size,A,Ts,objrow,ms);
-        if (dd_Negative(x)){
+        if (x < 0){
           *err=dd_NoError; *lps=dd_DualInconsistent;  *s=ms;
         }
 
@@ -4025,7 +3950,7 @@ the LP.
     for (i=1; i<=m_size; i++) {
       if (bflag[i]==-1) {  /* i is a basic variable */
         dd_TableauEntry(x, d_size,A,Ts,i,rhscol);
-        if (dd_Positive(x)) set_addelem(posset, i);
+        if (x > 0) set_addelem(posset, i);
       }
     }
 
@@ -4067,10 +3992,10 @@ the LP.
 
   case dd_StrucDualInconsistent:
     dd_TableauEntry(x, d_size,A,Ts,objrow,se);
-    if (dd_Positive(x)) sw=1;
+    if (x > 0) sw=1;
     else sw=-1;
     for (j=1;j<=d_size; j++) {
-      dd_mul(sol[j-1],sw,Ts[j-1][se-1]);
+      sol[j-1] = sw * Ts[j-1][se-1];
       dd_TableauEntry(x, d_size,A,Ts,objrow,j);
       dsol[j-1] = -x;
     }
@@ -4306,7 +4231,7 @@ dd_lpdata<T>* dd_MakeLPforInteriorFinding(dd_lpdata<T>* lp)
     if (dd_Larger(lp->A[i-1][lp->rhscol-1],bmax))
       bmax = lp->A[i-1][lp->rhscol-1];
   }
-  dd_mul(bceil,bm,bmax);
+  bceil = bm * bmax;
 
   for (i=1; i <= lp->m; i++) {
     for (j=1; j <= lp->d; j++) {
@@ -4633,7 +4558,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
       certificate[j] = lp->sol[j];
     }
 
-    if (dd_Negative(lp->optvalue)){
+    if (lp->optvalue < 0) {
       answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
@@ -4692,7 +4617,7 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
       certificate[j] = lp->sol[j];
     }
 
-    if (dd_Negative(lp->optvalue)){
+    if (lp->optvalue < 0){
       answer=false;
       if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
     } else {
@@ -4918,7 +4843,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
     }
 
     if (M->representation==dd_Inequality){
-      if (dd_Positive(lp->optvalue)){
+      if (lp->optvalue > 0){
           answer=true;
           if (localdebug) fprintf(stderr,"==> %ld th inequality is strongly redundant.\n",itest);
         } else {
@@ -4926,7 +4851,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           if (localdebug) fprintf(stderr,"==> %ld th inequality is not strongly redundant.\n",itest);
         }
     } else {
-      if (dd_Negative(lp->optvalue)){
+      if (lp->optvalue < 0){
           answer=false;
           if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
         } else {
@@ -4935,7 +4860,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           lp=dd_CreateLP_V_SRedundancy(M, itest);
           dd_LPSolve(lp, dd_DualSimplex, &err);
           if (localdebug) dd_WriteLPResult(std::cout,lp,err);
-          if (dd_Positive(lp->optvalue)){
+          if (lp->optvalue > 0){
             answer=false;
             if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
           } else {
@@ -5030,7 +4955,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err);  /* Solve the LP */
 
-  if (dd_Positive(lp->optvalue)){
+  if (lp->optvalue > 0) {
     if (localdebug) std::cout << "dd_Positive=T case\n";
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
@@ -5072,7 +4997,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[i-1][k-1];
         if (!dd_Redundant(M1, irow, cvec, &err, data)){
-          for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lp->sol[k-1]);
+          for (k=1; k<=d; k++) shootdir[k-1] = cvec[k-1] - lp->sol[k-1];
           ired=dd_RayShooting(M, lp->sol, shootdir);
           rowflag[ired]=irow;
           for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[ired-1][k-1];
@@ -5335,10 +5260,10 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     set_initialize(imp_linrows,m);
 
     if (lp->LPS==dd_Optimal){
-      if (dd_Positive(lp->optvalue)){
+      if (lp->optvalue > 0){
         answer=1;
         if (localdebug) fprintf(stderr,"==> The matrix has no implicit linearity.\n");
-      } else if (dd_Negative(lp->optvalue)) {
+      } else if (lp->optvalue < 0) {
           answer=-1;
           if (localdebug) fprintf(stderr,"==> The matrix defines the trivial system.\n");
         } else {
@@ -5541,7 +5466,7 @@ the set S will be considered as S\(R U M->linset).
 /* Solve the LP by cdd LP solver. */
   dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
   if (*err!=dd_NoError) goto _L99;
-  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue)) {
+  if (lp->LPS==dd_Optimal && lp->optvalue > 0) {
     answer=true;
   }
 
@@ -5572,7 +5497,7 @@ This function returns a certificate of the answer in terms of the associated LP 
 /* Solve the LP by cdd LP solver. */
   dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
   if (*err!=dd_NoError) goto _L99;
-  if (lp->LPS==dd_Optimal && dd_Positive(lp->optvalue)) {
+  if (lp->LPS==dd_Optimal && lp->optvalue > 0) {
     answer=true;
   }
 
@@ -5658,7 +5583,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
   for (i=1; i<=m; i++){
     dd_InnerProduct(t1, d, M->matrix[i-1], p);
     if (localdebug) std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
-    if (dd_Positive(t1)) {
+    if (t1 > 0) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
       bool is_field=true;
       if (is_field) {
@@ -5796,13 +5721,13 @@ arithmetics.
        for (i=1; i<=m_size; i++) {
          if (i!=objrow && data->bflag[i]==-1) {  /* i is a basic variable */
             dd_TableauEntry(val, d_size,A,Ts,i,rhscol);
-            if (dd_Negative(val)) {
+            if (val < 0) {
                *LPScorrect=false;
                break;
             }
           } else if (data->bflag[i] >0) { /* i is nonbasic variable */
             dd_TableauEntry(val, d_size,A,Ts,objrow,data->bflag[i]);
-            if (dd_Positive(val)) {
+            if (val > 0) {
                *LPScorrect=false;
                break;
             }
@@ -5813,11 +5738,11 @@ arithmetics.
        for (j=1; j<=d_size; j++){
           dd_TableauEntry(val, d_size,A,Ts,re,j);
           if (j==rhscol){
-	    if (dd_Nonnegative(val)){
+	    if (val >= 0){
                *LPScorrect=false;
                break;
              }
-	  } else if (dd_Positive(val)){
+	  } else if (val > 0){
                *LPScorrect=false;
                break;
            }
@@ -5833,11 +5758,11 @@ arithmetics.
         for (i=1; i<=m_size; i++){
           dd_TableauEntry(val, d_size,A,Ts,i,data->bflag[is]);
           if (i==objrow){
-	    if (dd_Nonpositive(val)){
+	    if (val <= 0){
                *LPScorrect=false;
                break;
              }
-	  } else if (dd_Negative(val)){
+	  } else if (val < 0){
                *LPScorrect=false;
                break;
            }
@@ -6018,12 +5943,8 @@ void dd_AValue(T *val, dd_colrange d_size, T** A, T *p, dd_rowrange i)
   *val=0;
  /* Changed by Marc Pfetsch 010219 */
 
-  for (j = 0; j < d_size; j++){
-    T aVal=A[i - 1][j];
-    T bVal=p[j];
-    dd_mul(x, aVal, bVal);
-    dd_add(*val, *val, x);
-  }
+  for (j = 0; j < d_size; j++)
+    *val += A[i - 1][j] * p[j];
 }
 
 template<typename T>
@@ -6050,7 +5971,7 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p, bool *feasible)
         fprintf(stderr,"recognized zero!\n");
       }
     }
-    if (dd_Negative(temp)){
+    if (temp < 0) {
       if (localdebug) {
         fprintf(stderr,"recognized negative!\n");
       }
@@ -6090,7 +6011,7 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
         *feasible=false;  /* strict inequality required */
     }
 /*    if (temp < -zero){ */
-    if (dd_Negative(temp)){
+    if (temp < 0){
       *feasible = false;
       if (fii>cone->m && cone->parent->EqualityIndex[k]>=0) {
         fii=i;  /* the first violating inequality index */
@@ -6751,13 +6672,11 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
   }
   while (Ptr != nullptr) {
     temp=0;
-    for (j = 0; j < cone->d; j++){
-      dd_mul(tnext,cone->A[i - 1][j],Ptr->Ray[j]);
-      dd_add(temp,temp,tnext);
-    }
+    for (j = 0; j < cone->d; j++)
+      temp += cone->A[i - 1][j] * Ptr->Ray[j];
     Ptr->ARay = temp;
 /*    if ( temp <= -zero && Ptr != cone->FirstRay) {*/
-    if ( dd_Negative(temp) && Ptr != cone->FirstRay) {
+    if (temp < 0 && Ptr != cone->FirstRay) {
       /* fprintf(stderr,"Moving an infeasible record w.r.t. %ld to FirstRay\n",i); */
       if (Ptr==cone->LastRay) cone->LastRay=PrevPtr;
       TempPtr=Ptr;
@@ -6797,15 +6716,11 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
     NextPtr=Ptr->Next;  /* remember the Next record */
     Ptr->Next=nullptr;     /* then clear the Next pointer */
     temp=0;
-    for (j = 0; j < cone->d; j++){
-      T aVal=cone->A[i - 1][j];
-      T bVal=Ptr->Ray[j];
-      dd_mul(tnext,aVal,bVal);
-      dd_add(temp,temp,tnext);
-    }
+    for (j = 0; j < cone->d; j++)
+      temp += cone->A[i - 1][j] * Ptr->Ray[j];
     Ptr->ARay = temp;
 /*    if ( temp < -zero) {*/
-    if ( dd_Negative(temp)) {
+    if (temp < 0) {
       if (!negfound){
         negfound=true;
         cone->NegHead=Ptr;
@@ -6817,7 +6732,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
       }
     }
 /*    else if (temp > zero){*/
-    else if (dd_Positive(temp)){
+    else if (temp > 0){
       if (!posfound){
         posfound=true;
         cone->PosHead=Ptr;
@@ -6911,7 +6826,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   completed=false;
   while (Ptr != nullptr && !completed){
 /*    if ( (Ptr->ARay) < -zero ){ */
-    if ( dd_Negative(Ptr->ARay)){
+    if (Ptr->ARay < 0){
       dd_Eliminate(cone, &PrevPtr);
       Ptr=PrevPtr->Next;
     }
@@ -6926,14 +6841,14 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   while (Ptr != nullptr) {
     NextPtr=Ptr->Next;  /* remember the Next record */
     temp = Ptr->ARay;
-    if ( dd_Negative(temp)) {
+    if (temp < 0) {
       if (!negfound){
         fprintf(stderr,"Error: An infeasible ray found after their removal\n");
         negfound=true;
       }
     }
 /*    else if (temp > zero){*/
-    else if (dd_Positive(temp)){
+    else if (temp > 0){
       if (!posfound){
         posfound=true;
         cone->PosHead=Ptr;
@@ -7021,11 +6936,9 @@ void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<
   Ptr = cone->FirstRay;
   while (Ptr != nullptr) {
     temp=0;
-    for (j = 0; j < cone->d; j++){
-      dd_mul(tnext, cone->A[i - 1][j],Ptr->Ray[j]);
-      dd_add(temp, temp, tnext);
-    }
-    if (dd_Nonnegative(temp))
+    for (j = 0; j < cone->d; j++)
+      temp += cone->A[i - 1][j] * Ptr->Ray[j];
+    if (temp >= 0)
       (*fnum)++;
     else
       (*infnum)++;
@@ -7082,14 +6995,14 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   RayPtr0 = cone->ArtificialRay;   /*Pointer pointing RayPrt1*/
   RayPtr1 = cone->FirstRay;        /*1st hnew-infeasible ray to scan and compare with feasible rays*/
   value1 = cone->FirstRay->ARay;
-  if (dd_Nonnegative(value1)) {
+  if (value1 >= 0) {
     if (cone->RayCount==cone->WeaklyFeasibleRayCount) cone->CompStatus=dd_AllFound;
     goto _L99;        /* Sicne there is no hnew-infeasible ray and nothing to do */
   }
   else {
     RayPtr2s = RayPtr1->Next;/* RayPtr2s must point the first feasible ray */
     pos2=1;
-    while (RayPtr2s!=nullptr && dd_Negative(RayPtr2s->ARay)) {
+    while (RayPtr2s!=nullptr && RayPtr2s->ARay < 0) {
       RayPtr2s = RayPtr2s->Next;
       pos2++;
     }
@@ -7110,7 +7023,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     value1 = RayPtr1->ARay;
     value2 = RayPtr2->ARay;
     dd_CheckEquality(cone->d, &RayPtr1, &RayPtr2, &equal);
-    if ((dd_Positive(value1) && dd_Negative(value2)) || (dd_Negative(value1) && dd_Positive(value2))){
+    if ((value1 > 0 && value2 < 0) || (value1 < 0 && value2 > 0)){
       dd_CheckAdjacency(cone, &RayPtr1, &RayPtr2, &adj);
       if (adj) dd_CreateNewRay(cone, RayPtr1, RayPtr2, hnew);
     }
@@ -7118,7 +7031,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
       RayPtr2 = RayPtr2->Next;
       continue;
     }
-    if (dd_Negative(value1) || equal) {
+    if (value1 < 0 || equal) {
       dd_Eliminate(cone, &RayPtr0);
       RayPtr1 = RayPtr0->Next;
       RayPtr2 = RayPtr2s;
