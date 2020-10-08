@@ -1495,7 +1495,6 @@ template<typename T>
 void dd_CopyArow(T *acopy, T *a, dd_colrange d)
 {
   dd_colrange j;
-
   for (j = 0; j < d; j++) {
     dd_set(acopy[j],a[j]);
   }
@@ -4196,7 +4195,7 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
 
 
 template<typename T>
-bool dd_LPSolve(dd_lpdata<T>* lp, dd_LPSolverType solver, dd_ErrorType *err)
+inline bool dd_LPSolve_data(dd_lpdata<T>* lp, dd_LPSolverType solver, dd_ErrorType *err, data_temp_simplex<T>* data)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics first
 and then with the specified arithimetics if it is GMP.
@@ -4211,7 +4210,6 @@ When LP is dual-inconsistent then *se returns the evidence column.
   *err=dd_NoError;
   lp->solver=solver;
 
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
   // There is a bug when using USE_DOUBLE_FIRST. 
 #undef USE_DOUBLE_FIRST
 #ifndef USE_DOUBLE_FIRST
@@ -4224,6 +4222,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
       break;
   }
 #else
+  // Solving the problem first on double precision.
   dd_lpdata<double>* lpf=dd_LPgmp2LPf(lp);
   dd_ErrorType errf;
   bool LPScorrect;
@@ -4264,13 +4263,23 @@ When LP is dual-inconsistent then *se returns the evidence column.
   dd_FreeLPData(lpf);
   free_data_simplex(dataf);
 #endif
-  free_data_simplex(data);
 
   lp->total_pivots=0;
   for (i=0; i<=4; i++) lp->total_pivots+=lp->pivots[i];
   if (*err==dd_NoError) found=true;
   return found;
 }
+
+
+template<typename T>
+bool dd_LPSolve(dd_lpdata<T>* lp, dd_LPSolverType solver, dd_ErrorType *err)
+{
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
+  bool test = dd_LPSolve_data(lp, solver, err, data);
+  free_data_simplex(data);
+  return test;
+}
+
 
 
 template<typename T>
@@ -4766,18 +4775,14 @@ template<typename T>
 dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
 {
   dd_rowrange i,m;
-  dd_colrange d;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
   T* cvec; /* certificate */
   bool localdebug=false;
 
   m=M->rowsize;
-  if (M->representation==dd_Generator){
-    d=(M->colsize)+1;
-  } else {
-    d=M->colsize;
-  }
+  dd_colrange d = get_d_size(M);
+
   Mcopy=dd_MatrixCopy(M);
   dd_InitializeArow(d,&cvec);
   set_initialize(&redset, m);
