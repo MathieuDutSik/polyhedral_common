@@ -14,12 +14,14 @@
  */
 
 /* The original author of the CDD code is Komei Fukuda.
-   This C++ version is adapted by Mathieu Dutour Sikiric
+   This C++ version was adapted by Mathieu Dutour Sikiric
+   from the original C version.
 */
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
 #include <cassert>
+#include <vector>
 
 #define DEBUG_CDD
 #define CDD_RAND_MAX 32767
@@ -2048,7 +2050,7 @@ void dd_SetLinearity(dd_matrixdata<T> *M, char *line)
      set_addelem(M->linset,var); i++;
   }
   if (i!=eqsize) {
-    fprintf(stderr,"* Warning: there are inconsistencies in linearity setting.\n");
+    std::cout << "* Warning: there are inconsistencies in linearity setting.\n";
   }
   return;
 }
@@ -3738,7 +3740,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     }
     if (!chosen && lp->LPS==dd_LPSundecided) {
       if (localdebug1) {
-         fprintf(stderr,"Warning: an emergency CC pivot in Phase II is performed\n");
+        std::cout << "Warning: an emergency CC pivot in Phase II is performed\n";
          /* In principle this should not be executed because we already have dual feasibility
             attained and dual simplex pivot should have been chosen.  This might occur
             under floating point computation, or the case of cycling.
@@ -3880,7 +3882,7 @@ the LP.
   T x,sw;
   int localdebug=false;
 
-  if (localdebug) fprintf(stderr,"SetSolutions:\n");
+  if (localdebug) std::cout << "SetSolutions:\n";
   switch (LPS) {
   case dd_Optimal:
     for (j=1;j<=d_size; j++) {
@@ -3898,7 +3900,7 @@ the LP.
 
     break;
   case dd_Inconsistent:
-    if (localdebug) fprintf(stderr,"SetSolutions: LP is inconsistent.\n");
+    if (localdebug) std::cout << "SetSolutions: LP is inconsistent.\n";
     for (j=1;j<=d_size; j++) {
       sol[j-1] = Ts[j-1][rhscol-1];
       dd_TableauEntry(x, d_size,A,Ts,re,j);
@@ -3941,7 +3943,7 @@ the LP.
       dd_TableauEntry(x, d_size,A,Ts,objrow,j);
       dsol[j-1] = -x;
     }
-    if (localdebug) fprintf(stderr,"SetSolutions: LP is dual inconsistent.\n");
+    if (localdebug) std::cout << "SetSolutions: LP is dual inconsistent.\n";
     break;
 
   }
@@ -4000,7 +4002,7 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
   dd_lpdata<double>* lpf;
   bool localdebug=false;
 
-  if (localdebug) fprintf(stderr,"Converting a GMP-LP to a float-LP.\n");
+  if (localdebug) std::cout << "Converting a GMP-LP to a float-LP.\n";
 
   lpf=dd_CreateLPData<double>(lp->m, lp->d);
   lpf->objective = lp->objective;
@@ -4234,8 +4236,8 @@ dd_lpdata<T>* dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
       /* objective is to maximize z.  */
 
   if (localdebug) {
-    fprintf(stderr,"dd_CreateLP_H_ImplicitLinearity: an new lp is\n");
-    dd_WriteLP(stderr,lp);
+    std::cout << "dd_CreateLP_H_ImplicitLinearity: an new lp is\n";
+    dd_WriteLP(std::cout,lp);
   }
 
   return lp;
@@ -4272,7 +4274,7 @@ dd_lpdata<T>* dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
       for (j = 2; j <= d-1; j++) {
         lp->A[irev-1][j-1] = -M->matrix[i-1][j-2];
       }  /*of j*/
-      if (localdebug) fprintf(stderr,"equality row %ld generates the reverse row %ld.\n",i,irev);
+      if (localdebug) fprintf(stdout,"equality row %ld generates the reverse row %ld.\n",i,irev);
     } else {
       lp->A[i-1][d-1]=-1;
     }
@@ -4287,8 +4289,8 @@ dd_lpdata<T>* dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
   /* objective is to maximize z.  */
 
   if (localdebug) {
-    fprintf(stderr,"dd_CreateLP_V_ImplicitLinearity: an new lp is\n");
-    dd_WriteLP(stderr,lp);
+    fprintf(stdout,"dd_CreateLP_V_ImplicitLinearity: an new lp is\n");
+    dd_WriteLP(std::cout,lp);
   }
 
   return lp;
@@ -4495,10 +4497,10 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
 
     if (lp->optvalue < 0) {
       answer=false;
-      if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th row is nonredundant.\n",itest);
     } else {
       answer=true;
-      if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th row is redundant.\n",itest);
     }
   }
   _L999:
@@ -4554,10 +4556,10 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
 
     if (lp->optvalue < 0) {
       answer=false;
-      if (localdebug) fprintf(stderr,"==> %ld th row is nonredundant.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th row is nonredundant.\n",itest);
     } else {
       answer=true;
-      if (localdebug) fprintf(stderr,"==> %ld th row is redundant.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th row is redundant.\n",itest);
     }
   }
   _L999:
@@ -4632,7 +4634,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
   }
   m1=M1->rowsize;
   if (localdebug) {
-    fprintf(stderr,"dd_MatrixRedundancyRemove: By sorting, %ld rows have been removed.  The remaining has %ld rows.\n",m-m1,m1);
+    fprintf(stdout,"dd_MatrixRedundancyRemove: By sorting, %ld rows have been removed.  The remaining has %ld rows.\n",m-m1,m1);
     /* dd_WriteMatrix(stdout,M1);  */
   }
   dd_InitializeArow(d,&cvec);
@@ -4656,7 +4658,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
       set_initialize(&redset1, M1->rowsize);
       if (localdebug) {
         printf("dd_MatrixRedundancyRemove: the row %ld is redundant. The new matrix has %ld rows.\n", k, M1->rowsize);
-        /* dd_WriteMatrix(stderr, M1);  */
+        /* dd_WriteMatrix(stdout, M1);  */
       }
       delete [] newpos1;
     } else {
@@ -4678,13 +4680,13 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
       }
       if (localdebug) {
         printf("dd_MatrixRedundancyRemove: the row %ld is essential. The new matrix has %ld rows.\n", k, M1->rowsize);
-        /* dd_WriteMatrix(stderr, M1);  */
+        /* dd_WriteMatrix(stdout, M1);  */
       }
       k++;
     }
     if (*error!=dd_NoError) goto _L99;
   } while  (k<=M1->rowsize);
-  if (localdebug) dd_WriteMatrix(stderr, M1);
+  if (localdebug) dd_WriteMatrix(stdout, M1);
   success=true;
 
 _L99:
@@ -4780,15 +4782,15 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
     if (M->representation==dd_Inequality) {
       if (lp->optvalue > 0) {
           answer=true;
-          if (localdebug) fprintf(stderr,"==> %ld th inequality is strongly redundant.\n",itest);
+          if (localdebug) fprintf(stdout,"==> %ld th inequality is strongly redundant.\n",itest);
         } else {
           answer=false;
-          if (localdebug) fprintf(stderr,"==> %ld th inequality is not strongly redundant.\n",itest);
+          if (localdebug) fprintf(stdout,"==> %ld th inequality is not strongly redundant.\n",itest);
         }
     } else {
       if (lp->optvalue < 0) {
           answer=false;
-          if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
+          if (localdebug) fprintf(stdout,"==> %ld th point is not strongly redundant.\n",itest);
         } else {
           /* for V-representation, we have to solve another LP */
           dd_FreeLPData(lp);
@@ -4797,10 +4799,10 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           if (localdebug) dd_WriteLPResult(std::cout,lp,err);
           if (lp->optvalue > 0) {
             answer=false;
-            if (localdebug) fprintf(stderr,"==> %ld th point is not strongly redundant.\n",itest);
+            if (localdebug) fprintf(stdout,"==> %ld th point is not strongly redundant.\n",itest);
           } else {
             answer=true;
-            if (localdebug) fprintf(stderr,"==> %ld th point is strongly redundant.\n",itest);
+            if (localdebug) fprintf(stdout,"==> %ld th point is strongly redundant.\n",itest);
           }
        }
     }
@@ -4858,11 +4860,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_rowrange i,m, ired, irow=0;
   dd_colrange j,k,d;
   dd_rowset redset;
-  dd_rowindex rowflag;
-    /* ith comp is negative if the ith inequality (i-1 st row) is redundant.
-                   zero     if it is not decided.
-                   k > 0    if it is nonredundant and assigned to the (k-1)th row of M1.
-    */
   dd_matrixdata<T> *M1;
   T* shootdir;
   T* cvec=nullptr;
@@ -4880,9 +4877,11 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_InitializeArow(d, &shootdir);
   dd_InitializeArow(d, &cvec);
 
-  rowflag = new long[m+1];
-  for (i=0; i<=m; i++)
-    rowflag[i] = 0;
+  /* ith comp is negative if the ith inequality (i-1 st row) is redundant.
+                 zero     if it is not decided.
+                 k > 0    if it is nonredundant and assigned to the (k-1)th row of M1.
+  */
+  std::vector<long> rowflag(m+1,0);
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find. */
   lp0=dd_Matrix2LP(M, &err);
@@ -4928,7 +4927,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
     while(i<=m) {
       if (localdebug) std::cout << "i=" << i << " rowflag=" << rowflag[i] << "\n";
       if (rowflag[i]==0) { /* the ith inequality is not yet checked */
-        if (localdebug) fprintf(stderr, "Checking redundancy of %ld th inequality\n", i);
+        if (localdebug) std::cout << "Checking redundancy of " << i << " th inequality\n";
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[i-1][k-1];
         if (!dd_Redundant(M1, irow, cvec, &err, data)) {
@@ -4937,11 +4936,11 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
           rowflag[ired]=irow;
           for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[ired-1][k-1];
           if (localdebug) {
-            fprintf(stderr, "The %ld th inequality is nonredundant for the subsystem\n", i);
-            fprintf(stderr, "The nonredundancy of %ld th inequality is found by shooting.\n", ired);
+            fprintf(stdout, "The %ld th inequality is nonredundant for the subsystem\n", i);
+            fprintf(stdout, "The nonredundancy of %ld th inequality is found by shooting.\n", ired);
           }
         } else {
-          if (localdebug) fprintf(stderr, "The %ld th inequality is redundant for the subsystem and thus for the whole.\n", i);
+          if (localdebug) fprintf(stdout, "The %ld th inequality is redundant for the subsystem and thus for the whole.\n", i);
           rowflag[i]=-1;
           set_addelem(redset, i);
           i++;
@@ -4965,7 +4964,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_FreeMatrix(M1);
   dd_FreeArow(shootdir);
   dd_FreeArow(cvec);
-  delete [] rowflag;
   return redset;
 }
 
@@ -5112,10 +5110,10 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
 
     if (lp->LPS==dd_Optimal && lp->optvalue == 0) {
       answer=true;
-      if (localdebug) fprintf(stderr,"==> %ld th data is an implicit linearity.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th data is an implicit linearity.\n",itest);
     } else {
       answer=false;
-      if (localdebug) fprintf(stderr,"==> %ld th data is not an implicit linearity.\n",itest);
+      if (localdebug) fprintf(stdout,"==> %ld th data is not an implicit linearity.\n",itest);
     }
   }
   _L999:
@@ -5197,17 +5195,17 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     if (lp->LPS==dd_Optimal) {
       if (lp->optvalue > 0) {
         answer=1;
-        if (localdebug) fprintf(stderr,"==> The matrix has no implicit linearity.\n");
+        if (localdebug) fprintf(stdout,"==> The matrix has no implicit linearity.\n");
       } else if (lp->optvalue < 0) {
           answer=-1;
-          if (localdebug) fprintf(stderr,"==> The matrix defines the trivial system.\n");
+          if (localdebug) fprintf(stdout,"==> The matrix defines the trivial system.\n");
         } else {
             answer=0;
-            if (localdebug) fprintf(stderr,"==> The matrix has some implicit linearity.\n");
+            if (localdebug) fprintf(stdout,"==> The matrix has some implicit linearity.\n");
           }
     } else {
           answer=-2;
-          if (localdebug) fprintf(stderr,"==> The LP fails.\n");
+          if (localdebug) fprintf(stdout,"==> The LP fails.\n");
     }
     if (answer==0) {
       /* List the implicit linearity rows */
@@ -5216,8 +5214,8 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
           if (dd_ImplicitLinearity(M, i, cvec, error)) {
             set_addelem(*imp_linrows, i);
             if (localdebug) {
-              fprintf(stderr," row %ld is implicit linearity\n",i);
-              fprintf(stderr,"\n");
+              fprintf(stdout," row %ld is implicit linearity\n",i);
+              fprintf(stdout,"\n");
             }
           }
           if (*error!=dd_NoError) goto _L999;
@@ -5504,11 +5502,11 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
   m=M->rowsize;
   d=M->colsize;
   if (dd_one != p[0]) {
-    fprintf(stderr, "Warning: RayShooting is called with a point with first coordinate not 1.\n");
+    fprintf(stdout, "Warning: RayShooting is called with a point with first coordinate not 1.\n");
     p[0] = dd_one;
   }
   if (r[0] != 0) {
-    fprintf(stderr, "Warning: RayShooting is called with a direction with first coordinate not 0.\n");
+    fprintf(stdout, "Warning: RayShooting is called with a direction with first coordinate not 0.\n");
     r[0]=0;
   }
 
@@ -5808,7 +5806,7 @@ void dd_CheckAdjacency(dd_conedata<T> *cone,
   if (set_card(Face)< cone->d - 2) {
     *adjacent = false;
     if (localdebug) {
-      fprintf(stderr,"non adjacent: set_card(face) %ld < %ld = cone->d.\n",
+      fprintf(stdout,"non adjacent: set_card(face) %ld < %ld = cone->d.\n",
         set_card(Face),cone->d);
     }
     set_free(Face);
@@ -5903,12 +5901,12 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p, bool *feasible)
     if (temp == 0) {
       set_addelem(RR->ZeroSet, k);
       if (localdebug) {
-        fprintf(stderr,"recognized zero!\n");
+        fprintf(stdout,"recognized zero!\n");
       }
     }
     if (temp < 0) {
       if (localdebug) {
-        fprintf(stderr,"recognized negative!\n");
+        fprintf(stdout,"recognized negative!\n");
       }
       *feasible = false;
       if (fii>cone->m) fii=i;  /* the first violating inequality index */
@@ -5969,13 +5967,13 @@ void dd_AddRay(dd_conedata<T> *cone, T *p)
     cone->FirstRay = new dd_raydata<T>;
     cone->FirstRay->Ray = new T[cone->d];
     if (localdebug)
-      fprintf(stderr,"Create the first ray pointer\n");
+      fprintf(stdout,"Create the first ray pointer\n");
     cone->LastRay = cone->FirstRay;
     cone->ArtificialRay->Next = cone->FirstRay;
   } else {
     cone->LastRay->Next = new dd_raydata<T>;
     cone->LastRay->Next->Ray = new T[cone->d];
-    if (localdebug) fprintf(stderr,"Create a new ray pointer\n");
+    if (localdebug) fprintf(stdout,"Create a new ray pointer\n");
     cone->LastRay = cone->LastRay->Next;
   }
   cone->LastRay->Next = nullptr;
@@ -5983,7 +5981,7 @@ void dd_AddRay(dd_conedata<T> *cone, T *p)
   cone->TotalRayCount++;
   if (localdebug) {
     if (cone->TotalRayCount % 100 == 0) {
-      fprintf(stderr,"*Rays (Total, Currently Active, Feasible) =%8ld%8ld%8ld\n",
+      fprintf(stdout,"*Rays (Total, Currently Active, Feasible) =%8ld%8ld%8ld\n",
 	 cone->TotalRayCount, cone->RayCount, cone->FeasibleRayCount);
     }
   }
@@ -6012,14 +6010,14 @@ void dd_AddArtificialRay(dd_conedata<T> *cone)
   if (cone->d<=0) d1=1; else d1=cone->d;
   dd_InitializeArow(d1, &zerovector);
   if (cone->ArtificialRay != nullptr) {
-    fprintf(stderr,"Warning !!!  FirstRay in not nil.  Illegal Call\n");
+    fprintf(stdout,"Warning !!!  FirstRay in not nil.  Illegal Call\n");
     delete [] zerovector; /* 086 */
     return;
   }
   cone->ArtificialRay = new dd_raydata<T>;
   cone->ArtificialRay->Ray = new T[d1];
 
-  if (localdebug) fprintf(stderr,"Create the artificial ray pointer\n");
+  if (localdebug) fprintf(stdout,"Create the artificial ray pointer\n");
 
   cone->LastRay=cone->ArtificialRay;
   dd_StoreRay1(cone, zerovector, &feasible);
@@ -6059,14 +6057,14 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
   ZSmin = Rmin->ZeroSet;
   ZSmax = Rmax->ZeroSet;
   if (localdebug) {
-    fprintf(stderr,"dd_ConditionalAddEdge: FMIN = %ld (row%ld)   FMAX=%ld\n",
+    fprintf(stdout,"dd_ConditionalAddEdge: FMIN = %ld (row%ld)   FMAX=%ld\n",
       fmin, cone->OrderVector[fmin], fmax);
   }
   if (fmin==fmax) {
-    if (localdebug) fprintf(stderr,"dd_ConditionalAddEdge: equal FII value-> No edge added\n");
+    if (localdebug) fprintf(stdout,"dd_ConditionalAddEdge: equal FII value-> No edge added\n");
   }
   else if (set_member(cone->OrderVector[fmin],ZSmax)) {
-    if (localdebug) fprintf(stderr,"dd_ConditionalAddEdge: No strong separation -> No edge added\n");
+    if (localdebug) fprintf(stdout,"dd_ConditionalAddEdge: No strong separation -> No edge added\n");
   }
   else {  /* the pair will be separated at the iteration fmin */
     lastchance=true;
@@ -6074,12 +6072,12 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
     set_int(Face1, ZSmax, ZSmin);
     (cone->count_int)++;
     if (localdebug) {
-      fprintf(stderr,"Face: ");
+      fprintf(stdout,"Face: ");
       for (it=1; it<=cone->m; it++) {
         it_row=cone->OrderVector[it];
-        if (set_member(it_row, Face1)) fprintf(stderr,"%ld ",it_row);
+        if (set_member(it_row, Face1)) fprintf(stdout,"%ld ",it_row);
       }
-      fprintf(stderr,"\n");
+      fprintf(stdout,"\n");
     }
     for (it=cone->Iteration+1; it < fmin && lastchance; it++) {
       it_row=cone->OrderVector[it];
@@ -6142,7 +6140,7 @@ void dd_CreateInitialEdges(dd_conedata<T> *cone)
 
   cone->Iteration=cone->d;  /* CHECK */
   if (cone->FirstRay ==nullptr || cone->LastRay==nullptr) {
-    /* fprintf(stderr,"Warning: dd_ CreateInitialEdges called with nullptr pointer(s)\n"); */
+    /* fprintf(stdout,"Warning: dd_ CreateInitialEdges called with nullptr pointer(s)\n"); */
     goto _L99;
   }
   Ptr1=cone->FirstRay;
@@ -6182,7 +6180,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
   totalpairs=(cone->ZeroRayCount-1.0)*(cone->ZeroRayCount-2.0)+1.0;
   Ptr2begin = nullptr;
   if (RRbegin ==nullptr || RRend==nullptr) {
-    if (1) fprintf(stderr,"Warning: dd_UpdateEdges called with nullptr pointer(s)\n");
+    if (1) fprintf(stdout,"Warning: dd_UpdateEdges called with nullptr pointer(s)\n");
     goto _L99;
   }
   Ptr1=RRbegin;
@@ -6212,7 +6210,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
     workleft = 100.0 * (cone->ZeroRayCount-pos1) * (cone->ZeroRayCount - pos1-1.0) / totalpairs;
     if (localdebug) {
       if (cone->ZeroRayCount>=500 && pos1%10 ==0 && prevworkleft-workleft>=10 ) {
-        fprintf(stderr,"*Work of iteration %5ld(/%ld): %4ld/%4ld => %4.1f%% left\n",
+        fprintf(stdout,"*Work of iteration %5ld(/%ld): %4ld/%4ld => %4.1f%% left\n",
                 cone->Iteration, cone->m, pos1, cone->ZeroRayCount, workleft);
         prevworkleft=workleft;
       }
@@ -6434,7 +6432,7 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
       dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder,
 		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
       if (localdebug && chosen)
-        fprintf(stderr,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
+        fprintf(stdout,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
         set_addelem(NopivotRow, r);
         set_addelem(*rowbasis, r);
@@ -6482,7 +6480,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
       dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
 		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
       if (localdebug && chosen)
-        fprintf(stderr,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
+        fprintf(stdout,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
       if (chosen) {
         set_addelem(cone->InitialHalfspaces, r);
         set_addelem(NopivotRow, r);
@@ -6524,14 +6522,14 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found)
     /*all rows not in NonequalitySet are candidates for initial cone*/
   dd_FindBasis(cone, &rank);
   cone->LinearityDim=cone->d - rank;
-  if (localdebug) fprintf(stderr,"Linearity Dimension = %ld\n", cone->LinearityDim);
+  if (localdebug) fprintf(stdout,"Linearity Dimension = %ld\n", cone->LinearityDim);
   if (cone->LinearityDim > 0) {
      dd_ColumnReduce(cone);
      dd_FindBasis(cone, &rank);
   }
   if (!set_subset(cone->EqualitySet,cone->InitialHalfspaces)) {
     if (localdebug) {
-      fprintf(stderr,"Equality set is dependent. Equality Set and an initial basis:\n");
+      fprintf(stdout,"Equality set is dependent. Equality Set and an initial basis:\n");
     };
   }
   *found = true;
@@ -6553,7 +6551,7 @@ void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **R
   bool localdebug=false;
 
   if (localdebug)
-    fprintf(stderr,"Check equality of two rays\n");
+    fprintf(stdout,"Check equality of two rays\n");
   *equal = true;
   j = 1;
   while (j <= d_size && *equal) {
@@ -6562,7 +6560,7 @@ void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1, dd_raydata<T> **R
     j++;
   }
   if (*equal)
-    fprintf(stderr,"Equal records found !!!!\n");
+    fprintf(stdout,"Equal records found !!!!\n");
 }
 
 template<typename T>
@@ -6602,7 +6600,7 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
   Ptr = cone->FirstRay;
   PrevPtr = cone->ArtificialRay;
   if (PrevPtr->Next != Ptr) {
-    fprintf(stderr,"Error.  Artificial Ray does not point to FirstRay!!!\n");
+    fprintf(stdout,"Error.  Artificial Ray does not point to FirstRay!!!\n");
   }
   while (Ptr != nullptr) {
     temp=0;
@@ -6611,7 +6609,7 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
     Ptr->ARay = temp;
 /*    if ( temp <= -zero && Ptr != cone->FirstRay) {*/
     if (temp < 0 && Ptr != cone->FirstRay) {
-      /* fprintf(stderr,"Moving an infeasible record w.r.t. %ld to FirstRay\n",i); */
+      /* fprintf(stdout,"Moving an infeasible record w.r.t. %ld to FirstRay\n",i); */
       if (Ptr==cone->LastRay) cone->LastRay=PrevPtr;
       TempPtr=Ptr;
       Ptr = Ptr->Next;
@@ -6756,7 +6754,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   PrevPtr= cone->ArtificialRay;
   Ptr = cone->FirstRay;
   if (PrevPtr->Next != Ptr)
-    fprintf(stderr,"Error at dd_DeleteNegativeRays: ArtificialRay does not point the FirstRay.\n");
+    fprintf(stdout,"Error at dd_DeleteNegativeRays: ArtificialRay does not point the FirstRay.\n");
   completed=false;
   while (Ptr != nullptr && !completed) {
 /*    if ( (Ptr->ARay) < -zero ) { */
@@ -6777,7 +6775,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
     temp = Ptr->ARay;
     if (temp < 0) {
       if (!negfound) {
-        fprintf(stderr,"Error: An infeasible ray found after their removal\n");
+        fprintf(stdout,"Error: An infeasible ray found after their removal\n");
         negfound=true;
       }
     }
@@ -6811,7 +6809,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
           }
           else ZeroPtr1=ZeroPtr0;
         }
-        /* fprintf(stderr,"insert position found \n %d  index %ld\n",found, fiitest); */
+        /* fprintf(stdout,"insert position found \n %d  index %ld\n",found, fiitest); */
         if (!found) {           /* the new record must be stored at the end of list */
           cone->ZeroLast->Next=Ptr;
           cone->ZeroLast=Ptr;
@@ -6819,12 +6817,12 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
         }
         else{
           if (ZeroPtr1==nullptr) { /* store the new one at the head, and update the head ptr */
-            /* fprintf(stderr,"Insert at the head\n"); */
+            /* fprintf(stdout,"Insert at the head\n"); */
             Ptr->Next=cone->ZeroHead;
             cone->ZeroHead=Ptr;
           }
           else{                /* store the new one inbetween ZeroPtr1 and 0 */
-            /* fprintf(stderr,"Insert inbetween\n");  */
+            /* fprintf(stdout,"Insert inbetween\n");  */
             Ptr->Next=ZeroPtr1->Next;
             ZeroPtr1->Next=Ptr;
           }
@@ -6975,7 +6973,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     pos1++;
     progress = 100.0 * ((double)pos1 / pos2) * (2.0 * pos2 - pos1) / pos2;
     if (progress-prevprogress>=10 && pos1%10==0 && localdebug) {
-      fprintf(stderr,"*Progress of iteration %5ld(/%ld):   %4ld/%4ld => %4.1f%% done\n",
+      fprintf(stdout,"*Progress of iteration %5ld(/%ld):   %4ld/%4ld => %4.1f%% done\n",
 	     cone->Iteration, cone->m, pos1, pos2, progress);
       prevprogress=progress;
     }
@@ -7031,7 +7029,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 
   if (cone->Iteration<cone->m) {
     if (cone->ZeroHead!=nullptr && cone->ZeroHead!=cone->LastRay) {
-      if (cone->ZeroRayCount>200 && localdebug) fprintf(stderr,"*New edges being scanned...\n");
+      if (cone->ZeroRayCount>200 && localdebug) fprintf(stdout,"*New edges being scanned...\n");
       dd_UpdateEdges(cone, cone->ZeroHead, cone->LastRay);
     }
   }
@@ -7141,9 +7139,9 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
   }
   if (localdebug) {
     if (max == fi) {
-      fprintf(stderr,"*infeasible rays (min) =%5ld, #feas rays =%5ld\n", infi, fi);
+      fprintf(stdout,"*infeasible rays (min) =%5ld, #feas rays =%5ld\n", infi, fi);
     } else {
-      fprintf(stderr,"*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi, fi);
+      fprintf(stdout,"*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi, fi);
     }
   }
 }
@@ -7310,7 +7308,7 @@ in highest order.
         cone->OrderVector[i]=oj;
       }
     } else {
-      fprintf(stderr,"UpdateRowOrder: Error.\n");
+      fprintf(stdout,"UpdateRowOrder: Error.\n");
       goto _L99;
     }
   }
@@ -7398,7 +7396,7 @@ void dd_DDMain(dd_conedata<T> *cone)
     dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces, &hh);
     if (set_member(hh,cone->NonequalitySet)) {  /* Skip the row hh */
       if (localdebug) {
-        fprintf(stderr,"*The row # %3ld should be inactive and thus skipped.\n", hh);
+        fprintf(stdout,"*The row # %3ld should be inactive and thus skipped.\n", hh);
       }
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
     } else {
@@ -7420,7 +7418,7 @@ void dd_DDMain(dd_conedata<T> *cone)
         /* store the dynamic ordering in ordervec */
     }
     if (localdebug) {
-      fprintf(stderr,"(Iter, Row, #Total, #Curr, #Feas)= %5ld %5ld %9ld %6ld %6ld\n",
+      fprintf(stdout,"(Iter, Row, #Total, #Curr, #Feas)= %5ld %5ld %9ld %6ld %6ld\n",
               cone->Iteration, hh, cone->TotalRayCount, cone->RayCount,
               cone->FeasibleRayCount);
     }
