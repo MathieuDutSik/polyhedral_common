@@ -3907,19 +3907,19 @@ the LP.
     break;
 
   case dd_LPSundecided:
-    std::cerr << "Case dd_LPSundecided has not been programmed in dd_SetSolutions\n";
+    std::cout << "Case dd_LPSundecided has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_StrucInconsistent:
-    std::cerr << "Case dd_StrucInconsistent has not been programmed in dd_SetSolutions\n";
+    std::cout << "Case dd_StrucInconsistent has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_Unbounded:
-    std::cerr << "Case dd_Unbounded has not been programmed in dd_SetSolutions\n";
+    std::cout << "Case dd_Unbounded has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_DualUnbounded:
-    std::cerr << "Case dd_DualUnbounded has not been programmed in dd_SetSolutions\n";
+    std::cout << "Case dd_DualUnbounded has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
 
@@ -4870,7 +4870,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_lpdata<T>* lp;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
-  bool localdebug=false;
+  bool localdebug=true;
 
   m=M->rowsize;
   d=M->colsize;
@@ -4897,7 +4897,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
     for (j=1; j<d; j++) {
       for (k=1; k<=d; k++) shootdir[k-1]=0;
       shootdir[j]=1;  /* j-th unit vector */
-      if (localdebug) dd_WriteT(std::cerr, shootdir, d);
+      if (localdebug) dd_WriteT(std::cout, shootdir, d);
       ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
@@ -5181,7 +5181,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
       certificate[j] = lp->sol[j];
     }
 
-    if (localdebug) dd_WriteLPResult(std::cerr,lp,err);
+    if (localdebug) dd_WriteLPResult(std::cout,lp,err);
 
     /* *posset contains a set of row indices that are recognized as nonlinearity.  */
 
@@ -5517,7 +5517,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
 
   for (i=1; i<=m; i++) {
     dd_InnerProduct(t1, d, M->matrix[i-1], p);
-    if (localdebug) std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
+    if (localdebug) std::cout << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
     if (t1 > 0) {
       dd_InnerProduct(t2, d, M->matrix[i-1], r);
       bool is_field=true;
@@ -5527,12 +5527,12 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
             imin=i; min = alpha;
             t1min = t1;  /* store the denominator. */
             started=true;
-            if (localdebug) std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
+            if (localdebug) std::cout << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
           } else {
             if (alpha < min) {
               imin=i;  min = alpha;
               t1min = t1;  /* store the denominator. */
-              if (localdebug) std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
+              if (localdebug) std::cout << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
             } else {
               if (alpha == min) { /* tie break */
                 for (j=1; j<= d; j++) {
@@ -5542,7 +5542,7 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
                 if (dd_LexSmaller(vec,vecmin, d)) {
                   imin=i;  min = alpha;
                   t1min = t1;  /* store the denominator. */
-                  if (localdebug) std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+                  if (localdebug) std::cout << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
                 }
               }
             }
@@ -5553,20 +5553,20 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
             min = t2;
             t1min = t1;  /* store the denominator. */
             started=true;
-            if (localdebug) std::cerr << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
+            if (localdebug) std::cout << "dd_RayShooting: Level 1: imin = "<< imin << " and min = " << min << "\n";
           } else {
             if (dd_SmallerFrac(t2, t1, min, t1min)) {
               imin=i;
               min = t2;
               t1min = t1;  /* store the denominator. */
-              if (localdebug) std::cerr << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
+              if (localdebug) std::cout << "dd_RayShootni: Level 2: imin = " << imin << " and min = " << min << "\n";
             } else {
               if (dd_EqualFrac(t2, t1, min, t1min)) { /* tie break */
                 if (dd_LexSmallerFrac(M->matrix[i-1], t1, M->matrix[imin-1], t1min, d)) {
                   imin=i;
                   min = t2;
                   t1min = t1;  /* store the denominator. */
-                  if (localdebug) std::cerr << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
+                  if (localdebug) std::cout << "dd_RayShooting: Level 3: imin = " << imin << " and min = " << min << "\n";
                 }
               }
             }
@@ -7621,7 +7621,7 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   for (i = 1; i <= m_input; i++)
     for (j = 1; j <= d_input; j++) {
       M->matrix[i-1][j - 1] = TheEXT(i-1, j-1);
-      if (localdebug) std::cerr << "i=" << i << " j=" << j << " value=" << TheEXT(i-1,j-1) << "\n";
+      if (localdebug) std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i-1,j-1) << "\n";
     }
   return M;
 }
@@ -7686,8 +7686,6 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
 {
   dd_ErrorType err;
   int nbRow=TheEXT.rows();
-  std::cerr << "TheEXT=\n";
-  WriteMatrix(std::cout, TheEXT);
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
   T smallVal = 0;
   dd_rowset rows = dd_RedundantRowsViaShooting(M, &err);
