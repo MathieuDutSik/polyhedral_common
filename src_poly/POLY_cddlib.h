@@ -22,7 +22,7 @@
 #include <cassert>
 
 #define DEBUG_CDD
-#define RAND_MAX 32767
+#define CDD_RAND_MAX 32767
 
 namespace cdd {
   typedef enum {
@@ -33,11 +33,6 @@ namespace cdd {
   const bool dd_choiceLexicoPivotQ=true;    /* whether to use the lexicographic pivot */
   typedef unsigned char set_card_lut_t;
 
-  template<typename T>
-  inline void dd_set_si(T& a, int b)
-  {
-    a=b;
-  }
 
 
 template<typename T>
@@ -136,7 +131,7 @@ unsigned long set_blocks(long len)
 void set_initialize(set_type *setp, long length)
 /* Make a set with a given bit lengths  */
 {
-    long i,forlim1,len;
+    long i, forlim1, len;
 
     if (length<=0)
       len=1;
@@ -226,28 +221,26 @@ inline void set_int(set_type set,set_type set1,set_type set2)
   long  i,forlim;
 
   forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
+  for (i=1; i<=forlim; i++)
     set[i]=(set1[i] & set2[i]);
 }
 
 inline void set_uni(set_type set,set_type set1,set_type set2)
 /* Set union,assuming set1 and set2 have the same length as set */
 {
-	long  i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]=set1[i] | set2[i];
+  long  i,forlim;
+  forlim=set_blocks(set[0])-1;
+  for (i=1;i<=forlim;i++)
+    set[i]=set1[i] | set2[i];
 }
 
 inline void set_diff(set_type set,set_type set1,set_type set2)
 /* Set difference se1/set2, assuming set1 and set2 have the same length as set */
 {
-	long  i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]=set1[i] & (~set2[i]);
+  long  i,forlim;
+  forlim=set_blocks(set[0])-1;
+  for (i=1;i<=forlim;i++)
+    set[i]=set1[i] & (~set2[i]);
 }
 
 inline void set_compl(set_type set,set_type set1)
@@ -267,36 +260,33 @@ inline void set_compl(set_type set,set_type set1)
     	}
 }
 
-inline int set_subset(set_type set1,set_type set2)
+inline bool set_subset(set_type set1,set_type set2)
 /* Set containment check, set1 <= set2 */
 {
-	int  yes=1;
-	long i,forlim;
-
-	forlim=set_blocks(set2[0])-1;
-	for (i=1;i<=forlim && yes;i++)
-		if ((set1[i] | set2[i])!=set2[i])
-			yes=0;
-	return yes;
+  bool reply=true;
+  long i,forlim;
+  forlim=set_blocks(set2[0])-1;
+  for (i=1;i<=forlim && reply; i++)
+    if ((set1[i] | set2[i])!=set2[i])
+      reply=false;
+  return reply;
 }
 
-inline int set_member(long elem, set_type set)
+inline bool set_member(long elem, set_type set)
 /* Set membership check, elem in set */
 {
-	int  yes=0;
-	long  i,j;
-	unsigned long testset;
-	unsigned long one=1U;
-
-	if (elem<=(long)set[0])
-	{
-		i=(elem-1)/SETBITS+1;
-		j=(elem-1)%SETBITS;
-		testset=set[i] | (one<<j);   /* add elem to set[i] */
-		if (testset==set[i])
-			yes=1;
-	}
-	return yes;
+  bool reply=false;
+  long  i,j;
+  unsigned long testset;
+  unsigned long one=1U;
+  if (elem<=(long)set[0]) {
+      i=(elem-1)/SETBITS+1;
+      j=(elem-1)%SETBITS;
+      testset=set[i] | (one<<j);   /* add elem to set[i] */
+      if (testset==set[i])
+        reply=true;
+  }
+  return reply;
 }
 
 /*set cardinality, modified by David Bremner bremner@cs.mcgill.ca
@@ -327,9 +317,8 @@ typedef set_type colset;
 template<typename T>
 inline void dd_InnerProduct(T& prod, dd_colrange d, T* v1, T* v2)
 {
-  T temp;
   dd_colrange j;
-  dd_set_si(prod, 0);
+  prod=0;
   for (j = 0; j < d; j++)
     prod += v1[j] * v2[j];
 }
@@ -1485,7 +1474,7 @@ dd_matrixdata<T> *dd_MatrixAppend(dd_matrixdata<T> *M1, dd_matrixdata<T> *M2)
 void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed)
 {
   long k,j,ovj;
-  double u,xk,r,rand_max=(double) RAND_MAX;
+  double u,xk,r,rand_max=(double) CDD_RAND_MAX;
 
   srand(seed);
   for (j=t; j>1 ; j--) {
@@ -1502,7 +1491,7 @@ void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed)
 void dd_RandomPermutation2(dd_rowindex OV,long t,unsigned int seed)
 {
   long k,j,ovj;
-  double u,xk,r,rand_max=(double) RAND_MAX;
+  double u,xk,r,rand_max=(double) CDD_RAND_MAX;
 
   srand(seed);
   for (j=t; j>1 ; j--) {
@@ -3545,7 +3534,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
       A[local_m_size-1][j-1]=0;
       for (l=1; l<=d_size; l++) {
         if (nbindex[l]>0) {
-          dd_set_si(scaling,l+10);
+          scaling = l+10;
           A[local_m_size-1][j-1] -= A[nbindex[l]-1][j-1] * scaling;
           /* To make the auxiliary row (0,-11,-12,...,-d-10).
              It is likely to be better than  (0, -1, -1, ..., -1)
@@ -4422,7 +4411,7 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
     else
       lp->A[i-1][0]=0;  /* It is almost completely degerate LP */
     if (set_member(i, M->linset) || i==itest) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
             /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= (M->colsize)+1; j++)
@@ -4655,7 +4644,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
       dd_MatrixRowsRemove2(&M1,redset1,&newpos1);
       for (i=1; i<=m; i++) {
         if ((*newpos)[i]>0) {
-          if  (set_member((*newpos)[i],redset1)) {
+          if (set_member((*newpos)[i],redset1)) {
             set_addelem(*redset,i);
             (*newpos)[i]=0;  /* now the original row i is recognized redundant and removed from M1 */
           } else {
@@ -4675,7 +4664,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
         dd_MatrixRowsRemove2(&M1,redset1,&newpos1);
         for (i=1; i<=m; i++) {
           if ((*newpos)[i]>0) {
-            if  (set_member((*newpos)[i],redset1)) {
+            if (set_member((*newpos)[i],redset1)) {
               set_addelem(*redset,i);
               (*newpos)[i]=0;  /* now the original row i is recognized redundant and removed from M1 */
             } else {
