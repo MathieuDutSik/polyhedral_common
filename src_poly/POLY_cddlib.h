@@ -846,6 +846,7 @@ void free_data_simplex(data_temp_simplex<T>* data)
   set_free(data->stieset);
   delete [] data->Rtemp;
   delete [] data->nbindex_ref;
+  delete data;
 }
 
 
