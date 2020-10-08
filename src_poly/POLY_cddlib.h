@@ -578,11 +578,11 @@ void dd_WriteErrorMessages(std::ostream& os, dd_ErrorType Error)
  case dd_LPCycling:
     os << "*Error: Possibly an LP cycling occurs.  Use the Criss-Cross method.\n";
     break;
-    
+
  case dd_NumericallyInconsistent:
     os << "*Error: Numerical inconsistency is found.  Use the GMP exact arithmetic.\n";
     break;
-    
+
   case dd_NoError:
     os <<"*No Error found.\n";
     break;
@@ -4204,9 +4204,9 @@ When LP is dual-inconsistent then *se returns the evidence column.
   *err=dd_NoError;
   lp->solver=solver;
 
-  // There is a bug when using USE_DOUBLE_FIRST. 
-#undef USE_DOUBLE_FIRST
-#ifndef USE_DOUBLE_FIRST
+  // There is a bug when using USE_DOUBLE_FIRST.
+#define DIRECT_LPSOLVE_CALL
+#ifdef DIRECT_LPSOLVE_CALL
   switch (lp->solver) {
     case dd_CrissCross:
       dd_CrissCrossSolve(lp, err, data);
