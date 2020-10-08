@@ -823,10 +823,13 @@ struct data_temp_simplex {
   dd_colset tieset, stieset;
   T* Rtemp;
   dd_colindex nbindex_ref;
+  dd_rowindex bflag;
+  dd_rowindex OrderVector;  /* the permutation vector to store a preordered row indeces */
+  dd_colindex nbindex_ref_ds; /* to be used to store the initial feasible basis for lexico rule */
 };
 
 template<typename T>
-data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
+data_temp_simplex<T>* allocate_data_simplex(dd_rowrange m_size, dd_colrange d_size)
 {
   //  std::cout << "allocate_data_simplex with d_size=" << d_size << "\n";
   data_temp_simplex<T>* data = new data_temp_simplex<T>;
@@ -834,7 +837,11 @@ data_temp_simplex<T>* allocate_data_simplex(dd_colrange d_size)
   set_initialize(&data->tieset,d_size);
   set_initialize(&data->stieset,d_size);
   data->Rtemp = new T[d_size];
-  data->nbindex_ref = new long[d_size+1];
+  data->nbindex_ref = new long[d_size + 1];
+  //
+  data->OrderVector = new long[m_size + 1];
+  data->bflag = new long[m_size + 2];
+  data->nbindex_ref_ds = new long[d_size + 1];
   return data;
 }
 
@@ -846,6 +853,9 @@ void free_data_simplex(data_temp_simplex<T>* data)
   set_free(data->stieset);
   delete [] data->Rtemp;
   delete [] data->nbindex_ref;
+  delete [] data->OrderVector;
+  delete [] data->bflag;
+  delete [] data->nbindex_ref_ds;
   delete data;
 }
 
@@ -3809,9 +3819,6 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   bool localdebug1=false;
   dd_rowrange i,r;
   dd_colrange j,s;
-  dd_rowindex bflag;
-  dd_rowindex OrderVector;  /* the permutation vector to store a preordered row indeces */
-  dd_colindex nbindex_ref; /* to be used to store the initial feasible basis for lexico rule */
 
   unsigned int rseed=1;
   r=-40000; // values designed to create segfault in case it is not set later
@@ -3820,23 +3827,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   set_emptyset(lp->redset_extra);
   for (i=0; i<= 4; i++) lp->pivots[i]=0;
   maxpivots=maxpivfactor*lp->d;  /* maximum pivots to be performed before cc pivot is applied. */
-  OrderVector = new long[lp->m+1];
-  for (int i=0; i<=lp->m; i++)
-    OrderVector[i] = 0;
-  bflag = new long[lp->m+2];
-  for (int i=0; i<=lp->m+1; i++)
-    bflag[i] = 0;
-  nbindex_ref = new long[lp->d+1];
-  for (int i=0; i<=lp->d; i++)
-    nbindex_ref[i] = 0;
   /* Initializing control variables. */
-  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,OrderVector,dd_MinIndex,rseed);
+  dd_ComputeRowOrderVector2(lp->m,lp->d,lp->A,data->OrderVector,dd_MinIndex,rseed);
 
   lp->re=0; lp->se=0;
 
-  dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,bflag,lp->objrow,lp->rhscol);
+  dd_ResetTableau(lp->m,lp->d,lp->B,lp->nbindex,data->bflag,lp->objrow,lp->rhscol);
 
-  dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,OrderVector,lp->equalityset,lp->nbindex,bflag,
+  dd_FindLPBasis(lp->m,lp->d,lp->A,lp->B,data->OrderVector,lp->equalityset,lp->nbindex,data->bflag,
 		 lp->objrow,lp->rhscol,&s,&found,&(lp->LPS),&pivots_p0, data);
   lp->pivots[0]=pivots_p0;
 
@@ -3847,19 +3845,16 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
      Output the evidence column. */
   }
 
-  dd_FindDualFeasibleBasis(lp->m,lp->d,lp->A,lp->B,lp->nbindex,bflag,
+  dd_FindDualFeasibleBasis(lp->m,lp->d,lp->A,lp->B,lp->nbindex,data->bflag,
 			   lp->objrow,lp->rhscol,lp->lexicopivot,&s, err,&(lp->LPS),&pivots_p1, maxpivots,
                            data);
   lp->pivots[1]=pivots_p1;
 
-  for (j=1; j<=lp->d; j++) nbindex_ref[j]=lp->nbindex[j];
+  for (j=1; j<=lp->d; j++) data->nbindex_ref_ds[j]=lp->nbindex[j];
      /* set the reference basis to be the current feasible basis. */
 
   if (*err==dd_LPCycling || *err==dd_NumericallyInconsistent) {
     dd_CrissCrossMaximize(lp, err, data);
-    delete [] OrderVector;
-    delete [] bflag;
-    delete [] nbindex_ref;
     return;
   }
 
@@ -3875,14 +3870,14 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   do {
     chosen=false; lp->LPS=dd_LPSundecided; phase1=false;
     if (pivots_ds<maxpivots) {
-      dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,nbindex_ref,bflag,
+      dd_SelectDualSimplexPivot(lp->m,lp->d,phase1,lp->A,lp->B,data->nbindex_ref_ds,data->bflag,
 				lp->objrow,lp->rhscol,lp->lexicopivot,&r,&s,&chosen,&(lp->LPS),
                                 data);
     }
     if (chosen) {
       pivots_ds=pivots_ds+1;
       if (lp->redcheck_extensive) {
-        dd_GetRedundancyInformation(lp->m,lp->d,lp->A,lp->B, bflag, lp->redset_extra);
+        dd_GetRedundancyInformation(lp->m,lp->d,lp->A,lp->B, data->bflag, lp->redset_extra);
         set_uni(lp->redset_accum, lp->redset_accum,lp->redset_extra);
       }
     }
@@ -3896,13 +3891,13 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       }
 
 
-      dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,bflag,
+      dd_SelectCrissCrossPivot(lp->m,lp->d,lp->A,lp->B,data->bflag,
 			       lp->objrow,lp->rhscol,&r,&s,&chosen,&(lp->LPS));
       if (chosen) pivots_pc=pivots_pc+1;
     }
     if (chosen) {
       //      std::cout << "dd_GaussianColumnPivot2 call 6\n";
-      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,bflag,r,s, data->Rtemp);
+      dd_GaussianColumnPivot2(lp->d,lp->A,lp->B,lp->nbindex,data->bflag,r,s, data->Rtemp);
     } else {
       switch (lp->LPS){
       case dd_Inconsistent: lp->re=r; break;
@@ -3920,10 +3915,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 _L99:
   lp->pivots[2]=pivots_ds;
   lp->pivots[3]=pivots_pc;
-  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra, lp->re,lp->se,bflag);
-  delete [] OrderVector;
-  delete [] bflag;
-  delete [] nbindex_ref;
+  dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra, lp->re,lp->se,data->bflag);
 }
 
 
@@ -4216,7 +4208,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
   dd_ErrorType errf;
   bool LPScorrect;
   bool localdebug=false;
-  data_temp_simplex<double>* dataf = allocate_data_simplex<double>(lp->d);
+  data_temp_simplex<double>* dataf = allocate_data_simplex<double>(lp->m, lp->d);
   switch (lp->solver) {
     case dd_CrissCross:
       dd_CrissCrossSolve(lpf, &errf, dataf);    /* First, run with double float. */
@@ -4263,7 +4255,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
 template<typename T>
 bool dd_LPSolve(dd_lpdata<T>* lp, dd_LPSolverType solver, dd_ErrorType *err)
 {
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->m, lp->d);
   bool test = dd_LPSolve_data(lp, solver, err, data);
   free_data_simplex(data);
   return test;
@@ -4286,7 +4278,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
   *err=dd_NoError;
   lp->solver=solver;
 
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->d);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(lp->m, lp->d);
   switch (lp->solver) {
     case dd_CrissCross:
       dd_CrissCrossSolve(lp, err, data);
@@ -4776,7 +4768,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
   Mcopy=dd_MatrixCopy(M);
   dd_InitializeArow(d,&cvec);
   set_initialize(&redset, m);
-  data_temp_simplex<T>* data = allocate_data_simplex<T>(d);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), d);
   for (i=m; i>=1; i--) {
     if (dd_Redundant(Mcopy, i, cvec, error, data)) {
       if (localdebug) printf("dd_RedundantRows: the row %ld is redundant.\n", i);
@@ -5119,7 +5111,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
     }
 
     i=1;
-    data_temp_simplex<T>* data = allocate_data_simplex<T>(get_d_size(M1));
+    data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), get_d_size(M1));
     while(i<=m){
       if (localdebug) std::cout << "i=" << i << " rowflag=" << rowflag[i] << "\n";
       if (rowflag[i]==0){ /* the ith inequality is not yet checked */
