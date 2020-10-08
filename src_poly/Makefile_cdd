@@ -1,4 +1,4 @@
-PROGRAM		= POLY_lcdd POLY_redundancyClarkson
+PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

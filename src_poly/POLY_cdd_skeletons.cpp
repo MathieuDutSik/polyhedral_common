@@ -1,19 +1,17 @@
-#include "POLY_cddlib.h"
+#include "POLY_cdd_graph.h"
 #include "NumberTheory.h"
-#include "POLY_PolytopeFct.h"
+#include "GRAPH_GraphicalFunctions.h"
 
 int main(int argc, char *argv[])
 {
   try {
-    std::vector<std::vector<int> > TheReturn;
-    VectVectInt TheOutput;
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Temp_lcdd [DATAEXT] [DATAFAC]\n";
+      std::cerr << "POLY_cdd_skeletons [DATAEXT] [prefix]\n";
       std::cerr << "\n";
       std::cerr << "DATAEXT (in) : The polytope vertices\n";
-      std::cerr << "DATAEXT (out): The polytope facets\n";
+      std::cerr << "prefix (out): where the skeletons are outputed\n";
       return -1;
     }
     //
@@ -29,15 +27,18 @@ int main(int argc, char *argv[])
       exit(1);
     }
     //
-    std::vector<Face> ListIncd=cdd::DualDescription_incd(EXT);
+    cdd::DDA<T> eDDA = cdd::DualDescriptionAdjacencies(EXT);
+    std::string prefix_out = argv[2];
     //
-    int nbFace=ListIncd.size();
-    std::ofstream os(argv[2]);
-    os << nbFace << " " << nbCol << "\n";
-    for (auto & eFace : ListIncd) {
-      MyVector<T> eV=FindFacetInequality(EXT, eFace);
-      WriteVector(os, eV);
-    }
+    std::ofstream os1(prefix_out + "facet");
+    WriteMatrix(os1, eDDA.EXT);
+    //
+    std::ofstream os2(prefix_out + "_skel_graph");
+    GRAPH_PrintOutputGAP(os2, eDDA.SkelGraph);
+    //
+    std::ofstream os3(prefix_out + "_ridge_graph");
+    GRAPH_PrintOutputGAP(os3, eDDA.RidgeGraph);
+    //
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
