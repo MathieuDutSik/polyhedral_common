@@ -636,15 +636,12 @@ struct dd_lpdata {
   //  dd_DataFileType filename;
   dd_LPObjectiveType objective;
   dd_LPSolverType solver;
-  bool Homogeneous;
-     /* The first column except for the obj row is all zeros. */
   dd_rowrange m;
   dd_colrange d;
   T** A;
   T** B;
   dd_rowrange objrow;
   dd_colrange rhscol;
-  dd_rowrange eqnumber;  /* the number of equalities */
   dd_rowset equalityset;
 
   bool redcheck_extensive;  /* Apply the extensive redundancy check. */
@@ -1421,7 +1418,6 @@ dd_lpdata<T>* dd_CreateLPData(dd_rowrange m,dd_colrange d)
   lp->rhscol=1L;
   lp->objective=dd_LPnone;
   lp->LPS=dd_LPSundecided;
-  lp->eqnumber=0;  /* the number of equalities */
 
   lp->nbindex = new long[d+1];
   lp->given_nbindex = new long[d+1];
@@ -2819,9 +2815,7 @@ dd_lpdata<T>* dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
   d=M->colsize;
 
   lp=dd_CreateLPData<T>(m, d);
-  lp->Homogeneous = true;
   lp->objective = M->objective;
-  lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -2835,7 +2829,6 @@ dd_lpdata<T>* dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   for (j = 1; j <= M->colsize; j++) {
@@ -2915,9 +2908,7 @@ dd_lpdata<T>* dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
   d=M->colsize+1;
 
   lp=dd_CreateLPData<T>(m, d);
-  lp->Homogeneous = true;
   lp->objective = dd_LPmax;
-  lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
@@ -2933,7 +2924,6 @@ dd_lpdata<T>* dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   for (j = 1; j <= d; j++) {
@@ -4159,8 +4149,6 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
 
   lpf=dd_CreateLPData<double>(lp->m, lp->d);
   lpf->objective = lp->objective;
-  lpf->Homogeneous = lp->Homogeneous;
-  lpf->eqnumber=lp->eqnumber;  /* this records the number of equations */
 
   for (i = 1; i <= lp->m; i++) {
     if (set_member(i, lp->equalityset)) set_addelem(lpf->equalityset,i);
@@ -4371,9 +4359,7 @@ dd_lpdata<T>* dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
   d=M->colsize+1;
 
   lp=dd_CreateLPData<T>(m, d);
-  lp->Homogeneous = true;
   lp->objective = dd_LPmax;
-  lp->eqnumber=linc;  /* this records the number of equations */
   lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -4390,7 +4376,6 @@ dd_lpdata<T>* dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
     }
     for (j = 1; j <= M->colsize; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }  /*of j*/
   }  /*of i*/
   lp->A[m-2][0]=1;
@@ -4426,9 +4411,7 @@ dd_lpdata<T>* dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 /* The below must be modified for V-representation!!!  */
 
   lp=dd_CreateLPData<T>(m, d);
-  lp->Homogeneous = false;
   lp->objective = dd_LPmax;
-  lp->eqnumber = linc;  /* this records the number of equations */
   lp->redcheck_extensive = false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -4477,9 +4460,7 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
      This is not the best way but makes the code simple. */
   d=M->colsize;
 
-  lp->Homogeneous = true;
   lp->objective = dd_LPmin;
-  lp->eqnumber=linc;  /* this records the number of equations */
   lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -4494,7 +4475,6 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
     }
     for (j = 1; j <= d; j++) {
       dd_set(lp->A[i-1][j-1],M->matrix[i-1][j-1]);
-      if (j==1 && i<M->rowsize && dd_Nonzero(M->matrix[i-1][j-1])) lp->Homogeneous = false;
     }
   }
   for (j = 1; j <= d; j++) {
@@ -4521,9 +4501,7 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
 
   /* The below must be modified for V-representation!!!  */
 
-  lp->Homogeneous = false;
   lp->objective = dd_LPmin;
-  lp->eqnumber=linc;  /* this records the number of equations */
   lp->redcheck_extensive=false;  /* this is default */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
@@ -4585,9 +4563,7 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 /* The below must be modified for V-representation!!!  */
 
   lp=dd_CreateLPData<T>(m, d);
-  lp->Homogeneous = false;
   lp->objective = dd_LPmax;
-  lp->eqnumber=linc;  /* this records the number of equations */
 
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
