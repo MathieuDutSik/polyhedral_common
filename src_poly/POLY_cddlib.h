@@ -2101,7 +2101,7 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,dd_
           roworder[i]=iI;
           iI+=1;
         }
-       }
+      }
     }
     *newpos=roworder;
     dd_CopyArow(Msub->rowvec, M->rowvec, d);
@@ -2112,29 +2112,23 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,dd_
 }
 
 template<typename T>
-int dd_MatrixRowsRemove(dd_matrixdata<T> **M, dd_rowset delset) /* 094 */
+void dd_MatrixRowsRemove(dd_matrixdata<T> **M, dd_rowset delset) /* 094 */
 {
   dd_matrixdata<T> *Msub=nullptr;
-  int success;
 
   Msub=dd_MatrixSubmatrix(*M, delset);
   dd_FreeMatrix(*M);
   *M=Msub;
-  success=1;
-  return success;
 }
 
 template<typename T>
-int dd_MatrixRowsRemove2(dd_matrixdata<T> **M, dd_rowset delset,dd_rowindex *newpos) /* 094 */
+void dd_MatrixRowsRemove2(dd_matrixdata<T> **M, dd_rowset delset,dd_rowindex *newpos) /* 094 */
 {
   dd_matrixdata<T> *Msub=nullptr;
-  int success;
 
   Msub=dd_MatrixSubmatrix2(*M, delset,newpos);
   dd_FreeMatrix(*M);
   *M=Msub;
-  success=1;
-  return success;
 }
 
 template<typename T>
@@ -5507,12 +5501,12 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_linset
      we need to compute the rank and a basis of the linearity part. */
   set_initialize(&ignoredrows,  (*M)->rowsize);
   set_initialize(&ignoredcols,  (*M)->colsize);
-  set_compl(ignoredrows,  (*M)->linset);
-  rank=dd_MatrixRank(*M,ignoredrows,ignoredcols,&basisrows,&basiscols);
-  set_diff(ignoredrows,  (*M)->linset, basisrows);
-  dd_MatrixRowsRemove2(M,ignoredrows,newpos);
+  set_compl(ignoredrows, (*M)->linset);
+  rank=dd_MatrixRank(*M, ignoredrows, ignoredcols, &basisrows, &basiscols);
+  set_diff(ignoredrows, (*M)->linset, basisrows);
+  dd_MatrixRowsRemove2(M, ignoredrows, newpos);
 
-  dd_MatrixShiftupLinearity(M,&newpos1);
+  dd_MatrixShiftupLinearity(M, &newpos1);
 
   for (i=1; i<=m; i++){
     k=(*newpos)[i];
@@ -5534,7 +5528,7 @@ _L99:
 
 template<typename T>
 bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset, dd_rowset *redset,
-				 dd_rowindex *newpos, dd_ErrorType *error) /* 094 */
+                           dd_rowindex *newpos, dd_ErrorType *error) /* 094 */
 {
 /* This is to find a canonical representation of a matrix *M by
    recognizing all implicit linearities and all redundancies.
