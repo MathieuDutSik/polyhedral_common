@@ -295,7 +295,7 @@ void set_copy(set_type setcopy,set_type set)
 		setcopy[i]=set[i];
 }
 
-void set_addelem(set_type set, long elem)
+inline void set_addelem(set_type set, long elem)
 /* add elem only if it is within the set[] range */
 {
   long i,j;
@@ -311,7 +311,7 @@ void set_addelem(set_type set, long elem)
     }
 }
 
-void set_delelem(set_type set, long elem)
+inline void set_delelem(set_type set, long elem)
 /* delete elem only if it is within the set[] range */
 {
 	long  i,j;
@@ -327,7 +327,7 @@ void set_delelem(set_type set, long elem)
 	}
 }
 
-void set_int(set_type set,set_type set1,set_type set2)
+inline void set_int(set_type set,set_type set1,set_type set2)
 /* Set intersection, assuming set1 and set2 have the same length as set */
 {
   long  i,forlim;
@@ -337,7 +337,7 @@ void set_int(set_type set,set_type set1,set_type set2)
     set[i]=(set1[i] & set2[i]);
 }
 
-void set_uni(set_type set,set_type set1,set_type set2)
+inline void set_uni(set_type set,set_type set1,set_type set2)
 /* Set union,assuming set1 and set2 have the same length as set */
 {
 	long  i,forlim;
@@ -347,7 +347,7 @@ void set_uni(set_type set,set_type set1,set_type set2)
 		set[i]=set1[i] | set2[i];
 }
 
-void set_diff(set_type set,set_type set1,set_type set2)
+inline void set_diff(set_type set,set_type set1,set_type set2)
 /* Set difference se1/set2, assuming set1 and set2 have the same length as set */
 {
 	long  i,forlim;
@@ -357,7 +357,7 @@ void set_diff(set_type set,set_type set1,set_type set2)
 		set[i]=set1[i] & (~set2[i]);
 }
 
-void set_compl(set_type set,set_type set1)
+inline void set_compl(set_type set,set_type set1)
 /* set[] will be set to the complement of set1[] */
 {
 	long  i,j,l,forlim;
@@ -374,7 +374,7 @@ void set_compl(set_type set,set_type set1)
     	}
 }
 
-int set_subset(set_type set1,set_type set2)
+inline int set_subset(set_type set1,set_type set2)
 /* Set containment check, set1 <= set2 */
 {
 	int  yes=1;
@@ -387,7 +387,7 @@ int set_subset(set_type set1,set_type set2)
 	return yes;
 }
 
-int set_member(long elem, set_type set)
+inline int set_member(long elem, set_type set)
 /* Set membership check, elem in set */
 {
 	int  yes=0;
@@ -408,7 +408,7 @@ int set_member(long elem, set_type set)
 
 /*set cardinality, modified by David Bremner bremner@cs.mcgill.ca
    to optimize for speed.*/
-long set_card(set_type set)
+inline long set_card(set_type set)
 {
     unsigned long block;
     long car=0;
