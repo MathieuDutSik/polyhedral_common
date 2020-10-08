@@ -1,4 +1,4 @@
-PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons
+PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

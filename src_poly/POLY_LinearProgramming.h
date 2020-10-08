@@ -140,8 +140,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
   //  std::cerr << "rank=" << RankMat(TheEXT) << "\n";
   int d_input;
   int nbRow, nbCol, idx;
-  T smallVal;
-  smallVal=0;
   std::vector<int> DualSolutionPos;
   std::vector<T> DualSolutionVal;
   std::vector<int> DirectSolutionPos;
@@ -151,11 +149,11 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
   d_input=TheEXT.cols();
   for (j = 1; j <= d_input; j++)
     M->rowvec[j - 1]=eVect(j-1);
-  lp=cdd::dd_Matrix2LP(M, &error, smallVal);
+  lp=cdd::dd_Matrix2LP(M, &error);
   lp->objective=cdd::dd_LPmin;
   nbRow=TheEXT.rows();
   nbCol=TheEXT.cols();
-  dd_LPSolve(lp, solver, &error, smallVal);
+  dd_LPSolve(lp, solver, &error);
   bool PrimalDefined=false;
   bool DualDefined=false;
   std::string eAnswer;
