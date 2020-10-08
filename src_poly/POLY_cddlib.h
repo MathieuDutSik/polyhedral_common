@@ -19,7 +19,7 @@
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
-#include<cassert>
+#include <cassert>
 
 #define DEBUG_CDD
 
@@ -1369,7 +1369,7 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly)
 }
 
 template<typename T>
-dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
+dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T>* lp)
 {
   dd_lpsolution<T> *lps;
   dd_colrange j;
@@ -1405,9 +1405,9 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp)
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLPData(dd_rowrange m,dd_colrange d)
+dd_lpdata<T>* dd_CreateLPData(dd_rowrange m,dd_colrange d)
 {
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   lp=new dd_lpdata<T>;
   lp->solver=dd_choiceLPSolverDefault;  /* set the default lp solver */
   lp->d=d;
@@ -1471,33 +1471,24 @@ inline dd_rowrange get_m_size(dd_matrixdata<T> *M)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLPData_from_M(dd_matrixdata<T> *M)
+inline dd_rowrange get_d_size(dd_matrixdata<T> *M)
 {
   dd_colrange d;
-  dd_rowrange m = get_m_size(M);
   if (M->representation == dd_Generator){
     d = M->colsize + 1;
   } else {
     d = M->colsize;
   }
-  return dd_CreateLPData<T>(m, d);
+  return d;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+template<typename T>
+dd_lpdata<T>* dd_CreateLPData_from_M(dd_matrixdata<T> *M)
+{
+  dd_colrange d = get_d_size(M);
+  dd_rowrange m = get_m_size(M);
+  return dd_CreateLPData<T>(m, d);
+}
 
 
 template<typename T>
@@ -2816,11 +2807,11 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
 
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
+dd_lpdata<T>* dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
 
   *err=dd_NoError;
   linc=set_card(M->linset);
@@ -2857,7 +2848,7 @@ dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
+dd_lpdata<T>* dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
 /* Load a matrix to create an LP object for feasibility.   It is
    essentially the dd_Matrix2LP except that the objject function
    is set to identically ZERO (maximization).
@@ -2867,7 +2858,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange m, linc;
   dd_colrange j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
 
   *err=dd_NoError;
   linc=set_card(M->linset);
@@ -2885,7 +2876,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err)
+dd_lpdata<T>* dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S, dd_ErrorType *err)
 /* Load a matrix to create an LP object for feasibility with additional equality and
    strict inequality constraints given by R and S.  There are three types of inequalities:
 
@@ -2913,7 +2904,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_rowset L;
 
   *err=dd_NoError;
@@ -2962,7 +2953,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
 }
 
 template<typename T>
-void dd_FreeLPData(dd_lpdata<T> *lp)
+void dd_FreeLPData(dd_lpdata<T>* lp)
 {
   if ((lp)!=nullptr){
     dd_FreeArow(lp->dsol);
@@ -2992,7 +2983,7 @@ void dd_FreeLPSolution(dd_lpsolution<T> *lps)
 }
 
 template<typename T>
-int dd_LPReverseRow(dd_lpdata<T> *lp, dd_rowrange i)
+int dd_LPReverseRow(dd_lpdata<T>* lp, dd_rowrange i)
 {
   dd_colrange j;
   int success=0;
@@ -3009,7 +3000,7 @@ int dd_LPReverseRow(dd_lpdata<T> *lp, dd_rowrange i)
 }
 
 template<typename T>
-int dd_LPReplaceRow(dd_lpdata<T> *lp, dd_rowrange i, T* a)
+int dd_LPReplaceRow(dd_lpdata<T>* lp, dd_rowrange i, T* a)
 {
   dd_colrange j;
   int success=0;
@@ -3466,7 +3457,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size,dd_colrange d_size,
 }
 
 template<typename T>
-void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_CrissCrossSolve(dd_lpdata<T>* lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
   switch (lp->objective) {
     case dd_LPmax:
@@ -3482,7 +3473,7 @@ void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T
 }
 
 template<typename T>
-void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_DualSimplexSolve(dd_lpdata<T>* lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
   switch (lp->objective) {
     case dd_LPmax:
@@ -3803,7 +3794,7 @@ _L99:
 }
 
 template<typename T>
-void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_DualSimplexMinimize(dd_lpdata<T>* lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
    dd_colrange j;
    *err=dd_NoError;
@@ -3819,7 +3810,7 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err, data_temp_simpl
 }
 
 template<typename T>
-void dd_DualSimplexMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_DualSimplexMaximize(dd_lpdata<T>* lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3950,7 +3941,7 @@ _L99:
 
 
 template<typename T>
-void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_CrissCrossMinimize(dd_lpdata<T>* lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 {
    dd_colrange j;
 
@@ -3969,7 +3960,7 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex
 }
 
 template<typename T>
-void dd_CrissCrossMaximize(dd_lpdata<T> *lp,dd_ErrorType *err, data_temp_simplex<T>* data)
+void dd_CrissCrossMaximize(dd_lpdata<T>* lp,dd_ErrorType *err, data_temp_simplex<T>* data)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -4181,7 +4172,7 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
 {
   dd_rowrange i;
   dd_colrange j;
-  dd_lpdata<double> *lpf;
+  dd_lpdata<double>* lpf;
   bool localdebug=false;
 
   if (localdebug) fprintf(stderr,"Converting a GMP-LP to a float-LP.\n");
@@ -4205,7 +4196,7 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
 
 
 template<typename T>
-bool dd_LPSolve(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
+bool dd_LPSolve(dd_lpdata<T>* lp, dd_LPSolverType solver, dd_ErrorType *err)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics first
 and then with the specified arithimetics if it is GMP.
@@ -4283,7 +4274,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
 
 template<typename T>
-bool dd_LPSolve0(dd_lpdata<T> *lp,dd_LPSolverType solver,dd_ErrorType *err)
+bool dd_LPSolve0(dd_lpdata<T>* lp,dd_LPSolverType solver,dd_ErrorType *err)
 /*
 The original version of dd_LPSolve that solves an LP with specified arithimetics.
 
@@ -4316,7 +4307,7 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
 
 template<typename T>
-dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
+dd_lpdata<T>* dd_MakeLPforInteriorFinding(dd_lpdata<T>* lp)
 /* Delete the objective row,
    add an extra column with -1's to the matrix A,
    add an extra row with (bceil, 0,...,0,-1),
@@ -4332,7 +4323,7 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 {
   dd_rowrange m;
   dd_colrange d;
-  dd_lpdata<T> *lpnew;
+  dd_lpdata<T>* lpnew;
   dd_rowrange i;
   dd_colrange j;
   T bm,bmax,bceil;
@@ -4376,11 +4367,11 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
+dd_lpdata<T>* dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   bool localdebug=false;
 
   linc=set_card(M->linset);
@@ -4428,11 +4419,11 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
 }
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
+dd_lpdata<T>* dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
 {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   bool localdebug=false;
 
   linc=set_card(M->linset);
@@ -4573,7 +4564,7 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
 
 
 template<typename T>
-dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
+dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 {
 /*
      V-representation (=boundary problem)
@@ -4590,7 +4581,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
 
   linc=set_card(M->linset);
   m=M->rowsize+1+linc+2;
@@ -4671,7 +4662,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
   */
 
   dd_colrange j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4683,13 +4674,13 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
 
   /* Create an LP data for redundancy checking */
   lp=dd_CreateLPData_from_M<T>(M);
-  if (M->representation==dd_Generator){
+  if (M->representation == dd_Generator){
     dd_CreateLP_V_Redundancy(M, itest, lp);
   } else {
     dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -4724,7 +4715,7 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest, T* certificat
   */
 
   dd_colrange j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4956,7 +4947,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
   */
 
   dd_colrange j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
 
@@ -4974,7 +4965,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
     dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -5000,7 +4991,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
           /* for V-representation, we have to solve another LP */
           dd_FreeLPData(lp);
           lp=dd_CreateLP_V_SRedundancy(M, itest);
-          dd_LPSolve(lp,dd_DualSimplex,&err);
+          dd_LPSolve(lp, dd_DualSimplex, &err);
           if (localdebug) dd_WriteLPResult(std::cout,lp,err);
           if (dd_Positive(lp->optvalue)){
             answer=false;
@@ -5286,7 +5277,7 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
   */
 
   dd_colrange j;
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_lpsolution<T> *lps;
   dd_ErrorType err=dd_NoError;
   bool answer=false,localdebug=false;
@@ -5306,7 +5297,7 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
   }
 
   lp->objective = dd_LPmax;  /* the lp->objective is set by CreateLP* to LPmin */
-  dd_LPSolve(lp,dd_choiceRedcheckAlgorithm,&err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -5360,7 +5351,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
     The certificate has dimension one more for V-representation case.
   */
 
-  dd_lpdata<T> *lp;
+  dd_lpdata<T>* lp;
   dd_rowrange i,m;
   dd_colrange j,d1;
   dd_ErrorType err=dd_NoError;
@@ -5597,7 +5588,7 @@ The set S is supposed to be disjoint from both R and M->linset.   When it is not
 the set S will be considered as S\(R U M->linset).
 */
   bool answer=false;
-  dd_lpdata<T> *lp=nullptr;
+  dd_lpdata<T>* lp=nullptr;
 
 /*
   printf("\n--- ERF ---\n");
@@ -5634,7 +5625,7 @@ the set S will be considered as S\(R U M->linset).
 This function returns a certificate of the answer in terms of the associated LP solutions.
 */
   bool answer=false;
-  dd_lpdata<T> *lp=nullptr;
+  dd_lpdata<T>* lp=nullptr;
 
   lp=dd_Matrix2Feasibility2(M, R, S, err);
 
