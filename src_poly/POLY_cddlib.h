@@ -45,12 +45,6 @@ namespace cdd {
   }
 
 template<typename T>
-inline void dd_set_si2(T& a, int b)
-{
-  a=b;
-}
-
-template<typename T>
 inline void dd_add(T &a, T b, T c)
 {
   a=b + c;
@@ -4638,7 +4632,8 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 }
 
 template<typename T>
-bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error)
+bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error,
+                  data_temp_simplex<T>* data)
   /* 092 */
 {
   /* Checks whether the row itest is redundant for the representation.
@@ -4689,7 +4684,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
     dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
-  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
+  dd_LPSolve_data(lp, dd_choiceRedcheckAlgorithm, &err, data);
   if (err!=dd_NoError){
     *error=err;
     goto _L999;
@@ -4786,8 +4781,9 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
   Mcopy=dd_MatrixCopy(M);
   dd_InitializeArow(d,&cvec);
   set_initialize(&redset, m);
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(d);
   for (i=m; i>=1; i--) {
-    if (dd_Redundant(Mcopy, i, cvec, error)) {
+    if (dd_Redundant(Mcopy, i, cvec, error, data)) {
       if (localdebug) printf("dd_RedundantRows: the row %ld is redundant.\n", i);
       set_addelem(redset, i);
       dd_MatrixRowRemove(&Mcopy, i);
@@ -4797,6 +4793,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
     if (*error!=dd_NoError) goto _L99;
   }
 _L99:
+  free_data_simplex(data);
   dd_FreeMatrix(Mcopy);
   dd_FreeArow(cvec);
   return redset;
@@ -5127,13 +5124,14 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
     }
 
     i=1;
+    data_temp_simplex<T>* data = allocate_data_simplex<T>(get_d_size(M1));
     while(i<=m){
       if (localdebug) std::cout << "i=" << i << " rowflag=" << rowflag[i] << "\n";
       if (rowflag[i]==0){ /* the ith inequality is not yet checked */
         if (localdebug) fprintf(stderr, "Checking redundancy of %ld th inequality\n", i);
         irow++;  M1->rowsize=irow;
         for (k=1; k<=d; k++) dd_set(M1->matrix[irow-1][k-1], M->matrix[i-1][k-1]);
-        if (!dd_Redundant(M1, irow, cvec, &err)){
+        if (!dd_Redundant(M1, irow, cvec, &err, data)){
           for (k=1; k<=d; k++) dd_sub(shootdir[k-1], cvec[k-1], lp->sol[k-1]);
           ired=dd_RayShooting(M, lp->sol, shootdir);
           rowflag[ired]=irow;
@@ -5153,6 +5151,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
         i++;
       }
     } /* endwhile */
+    free_data_simplex(data);
   } else {
     if (localdebug) std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
