@@ -1228,9 +1228,8 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly)
 
   m=poly->m;
   d=poly->d;
-  if (!(poly->homogeneous) && poly->representation==dd_Inequality) {
+  if (!(poly->homogeneous) && poly->representation==dd_Inequality)
     m=poly->m+1;
-  }
   poly->m1=m;
 
   dd_InitializeConeData(m, d, &cone);
@@ -1611,14 +1610,11 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
   dd_matrixdata<T> *Mcopy=nullptr,Mnorm=nullptr;
   dd_rowrange m,i;
   dd_colrange d;
-  dd_rowindex roworder;
 
   /* if (newpos!=nullptr) free(newpos); */
   m= M->rowsize;
   d= M->colsize;
-  roworder = new long[m+1];
-  for (i=0; i<=m; i++)
-    roworder[i] = 0;
+  std::vector<long> roworder(m+1,0);
   *newpos = new long[m+1];
   for (i=0; i<=m; i++)
     (*newpos)[i] = 0;
@@ -1627,7 +1623,7 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
     Mcopy=dd_CreateMatrix<T>(m, d);
     for(i=1; i<=m; i++) roworder[i]=i;
 
-    dd_RandomPermutation(roworder, m, 123);
+    dd_RandomPermutation(roworder.data(), m, 123);
     dd_QuickSort(roworder,1,m,Mnorm->matrix,d);
 
     dd_PermuteCopyAmatrix(Mcopy->matrix, Mnorm->matrix, m, d, roworder);
@@ -1640,7 +1636,6 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,dd_rowindex 
     Mcopy->objective=M->objective;
     dd_FreeMatrix(Mnorm);
   }
-  delete [] roworder;
   return Mcopy;
 }
 
@@ -2695,7 +2690,7 @@ dd_lpdata<T>* dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err)
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
     if (set_member(i, M->linset)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
                                          /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++) {
@@ -2788,7 +2783,7 @@ dd_lpdata<T>* dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
     if (set_member(i, L)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
                                          /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++)
@@ -3093,9 +3088,8 @@ void dd_SelectPivot2(dd_rowrange m_size,dd_colrange d_size,T** A,T** Ts,
   stop = false;
   set_initialize(&rowexcluded,m_size);
   set_copy(rowexcluded,NopivotRow);
-  for (i=rowmax+1;i<=m_size;i++) {
+  for (i=rowmax+1; i<=m_size; i++)
     set_addelem(rowexcluded,i);   /* cannot pivot on any row > rmax */
-  }
   *selected = false;
   do {
     rtemp=0; i=1;
@@ -4215,7 +4209,7 @@ dd_lpdata<T>* dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M)
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
     if (set_member(i, M->linset)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
             /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++) {
@@ -4268,7 +4262,7 @@ dd_lpdata<T>* dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M)
   for (i = 1; i <= M->rowsize; i++) {
     lp->A[i-1][0]=0;  /* It is almost completely degerate LP */
     if (set_member(i, M->linset)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
             /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= d-1; j++) {
@@ -4316,7 +4310,7 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
   irev=M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
     if (set_member(i, M->linset)) {
-      irev=irev+1;
+      irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
       for (j = 1; j <= d; j++)
         lp->A[irev-1][j-1] = -M->matrix[i-1][j-1];
@@ -4341,7 +4335,7 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest, dd_lpdata<
   dd_LPData_reset_m(m, lp);
   /* We represent each equation by two inequalities.
      This is not the best way but makes the code simple. */
-  d=(M->colsize)+1;
+  d=M->colsize + 1;
   /* One more column.  This is different from the H-reprentation case */
 
   /* The below must be modified for V-representation!!!  */
@@ -4398,7 +4392,7 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
         This is not the best way but makes the code simple.
         Two extra constraints are for the first equation and the bouding inequality.
         */
-  d=(M->colsize)+1;
+  d=M->colsize+1;
      /* One more column.  This is different from the H-reprentation case */
 
 /* The below must be modified for V-representation!!!  */
@@ -4416,15 +4410,15 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
       irev++;
       set_addelem(lp->equalityset,i);    /* it is equality. */
             /* the reversed row irev is not in the equality set. */
-      for (j = 2; j <= (M->colsize)+1; j++)
+      for (j = 2; j <= d; j++)
         lp->A[irev-1][j-1] = -M->matrix[i-1][j-2];
     }
-    for (j = 2; j <= (M->colsize)+1; j++) {
+    for (j = 2; j <= d; j++) {
       lp->A[i-1][j-1] = M->matrix[i-1][j-2];
       lp->A[m-1][j-1] += lp->A[i-1][j-1];  /* the objective is the sum of all ineqalities */
     }
   }
-  for (j = 2; j <= (M->colsize)+1; j++) {
+  for (j = 2; j <= d; j++) {
     lp->A[m-2][j-1] = -lp->A[m-1][j-1];
       /* to make an LP bounded.  */
   }
@@ -4436,7 +4430,6 @@ dd_lpdata<T>* dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M, dd_rowrange itest)
 template<typename T>
 bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_ErrorType *error,
                   data_temp_simplex<T>* data)
-  /* 092 */
 {
   /* Checks whether the row itest is redundant for the representation.
      All linearity rows are not checked and considered NONredundant.
@@ -4491,9 +4484,8 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Err
     *error=err;
     goto _L999;
   } else {
-    for (j=0; j<lp->d; j++) {
+    for (j=0; j<lp->d; j++)
       certificate[j] = lp->sol[j];
-    }
 
     if (lp->optvalue < 0) {
       answer=false;
@@ -4867,7 +4859,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_lpdata<T>* lp;
   dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
-  bool localdebug=true;
+  bool localdebug=false;
 
   m=M->rowsize;
   d=M->colsize;
@@ -7213,7 +7205,7 @@ void dd_UniqueRows(dd_rowindex OV, long p, long r, T** A, long dmax, dd_rowset p
   iuniq=p; j=1;  /* the first unique row candidate */
   x=A[p-1];
   OV[p]=j;  /* tentative row index of the candidate */
-  for (i=p+1;i<=r; i++) {
+  for (i=p+1; i<=r; i++) {
     if (!dd_LexEqual(x,A[i-1],dmax)) {
       /* a new row vector found. */
       iuniq=i;
