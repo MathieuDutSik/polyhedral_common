@@ -2554,7 +2554,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
    the standard Fourier Elimination.
  */
 {
-  dd_rowrange i,inew,ip,in,iz,m,mpos=0,mneg=0,mzero=0,mnew;
+  dd_rowrange i, inew, ip, in, iz, m, mpos=0, mneg=0, mzero=0, mnew;
   dd_colrange j,d,dnew;
   T temp1, temp2;
   bool localdebug=false;
@@ -2564,79 +2564,68 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
   d= M->colsize;
   if (d<=1) {
     *error=dd_ColIndexOutOfRange;
-    if (localdebug) {
-      printf("The number of column is too small: %ld for Fourier's Elimination.\n",d);
-    }
+    if (localdebug) printf("The number of column is too small: %ld for Fourier's Elimination.\n",d);
     return nullptr;
   }
 
   if (M->representation==dd_Generator) {
     *error=dd_NotAvailForV;
-    if (localdebug) {
-      printf("Fourier's Elimination cannot be applied to a V-polyhedron.\n");
-    }
+    if (localdebug) printf("Fourier's Elimination cannot be applied to a V-polyhedron.\n");
     return nullptr;
   }
 
   if (set_card(M->linset)>0) {
     *error=dd_CannotHandleLinearity;
-    if (localdebug) {
-      printf("The Fourier Elimination function does not handle equality in this version.\n");
-    }
+    if (localdebug) printf("The Fourier Elimination function does not handle equality in this version.\n");
     return nullptr;
   }
 
   /* Create temporary spaces to be removed at the end of this function */
-  std::vector<long> posrowindex(m+1, 0);
-  std::vector<long> negrowindex(m+1, 0);
-  std::vector<long> zerorowindex(m+1,0);
+  std::vector<long> posrowindex(m, 0);
+  std::vector<long> negrowindex(m, 0);
+  std::vector<long> zerorowindex(m,0);
 
-  for (i = 1; i <= m; i++) {
-    if (M->matrix[i-1][d-1] > 0) {
-      mpos++;
+  for (i = 0; i < m; i++) {
+    if (M->matrix[i][d-1] > 0) {
       posrowindex[mpos]=i;
-    } else if (M->matrix[i-1][d-1] < 0) {
-      mneg++;
+      mpos++;
+    } else if (M->matrix[i][d-1] < 0) {
       negrowindex[mneg]=i;
+      mneg++;
     } else {
-      mzero++;
       zerorowindex[mzero]=i;
+      mzero++;
     }
-  }  /*of i*/
+  }
 
 
   /* The present code generates so many redundant inequalities and thus
      is quite useless, except for very small examples
   */
-  mnew=mzero+mpos*mneg;  /* the total number of rows after elimination */
+  mnew=mzero + mpos * mneg;  /* the total number of rows after elimination */
   dnew=d-1;
 
   dd_matrixdata<T>* Mnew=dd_CreateMatrix<T>(mnew, dnew);
   dd_CopyArow(Mnew->rowvec, M->rowvec, dnew);
-/*  set_copy(Mnew->linset,M->linset);  */
   Mnew->representation=M->representation;
   Mnew->objective=M->objective;
 
 
   /* Copy the inequalities independent of x_d to the top of the new matrix. */
-  for (iz = 1; iz <= mzero; iz++) {
-    for (j=0; j<dnew; j++) {
-      Mnew->matrix[iz-1][j] = M->matrix[zerorowindex[iz]-1][j];
-    }
-  }
+  for (iz = 0; iz < mzero; iz++)
+    for (j=0; j<dnew; j++)
+      Mnew->matrix[iz][j] = M->matrix[zerorowindex[iz]][j];
 
   /* Create the new inequalities by combining x_d positive and negative ones. */
   inew=mzero;  /* the index of the last x_d zero inequality */
-  for (ip = 1; ip <= mpos; ip++) {
-    for (in = 1; in <= mneg; in++) {
+  for (ip = 0; ip < mpos; ip++) {
+    for (in = 0; in < mneg; in++) {
+      temp1 = -M->matrix[negrowindex[in]][d-1];
+      temp2 =  M->matrix[posrowindex[ip]][d-1];
+      for (j=0; j<dnew; j++)
+        Mnew->matrix[inew][j] = M->matrix[posrowindex[ip]][j] * temp1 +
+          M->matrix[negrowindex[in]][j] * temp2;
       inew++;
-      temp1 = -M->matrix[negrowindex[in]-1][d-1];
-      for (j=0; j<dnew; j++) {
-        dd_LinearComb(temp2,M->matrix[posrowindex[ip]-1][j],temp1,\
-          M->matrix[negrowindex[in]-1][j],\
-          M->matrix[posrowindex[ip]-1][d-1]);
-        Mnew->matrix[inew-1][j] = temp2;
-      }
     }
   }
 
@@ -6578,7 +6567,7 @@ void dd_CreateNewRay(dd_conedata<T> *cone,
   v1 = T_abs(a1);
   v2 = T_abs(a2);
   for (j = 0; j < cone->d; j++)
-    dd_LinearComb(NewRay[j], Ptr1->Ray[j],v2,Ptr2->Ray[j],v1);
+    NewRay[j] = Ptr1->Ray[j] * v2 + Ptr2->Ray[j] * v1;
   dd_AddRay(cone, NewRay);
   delete [] NewRay;
 }
