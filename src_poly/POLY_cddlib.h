@@ -40,9 +40,9 @@ namespace cdd {
 template<typename T>
 void dd_WriteT(std::ostream & os, T* a, int d)
 {
-  os << "dd_Write T a=";
+  os << "dd_WriteT a=";
   for (int i=0; i<d; i++)
-    os << " " << a[i];
+    os << "  " << a[i];
   os << "\n";
 }
 
@@ -380,13 +380,18 @@ typedef enum {
   dd_IFileNotFound, dd_OFileNotOpen, dd_NoLPObjective, dd_NoRealNumberSupport,
   dd_NotAvailForH, dd_NotAvailForV, dd_CannotHandleLinearity,
   dd_RowIndexOutOfRange, dd_ColIndexOutOfRange,
-  dd_LPCycling, dd_NumericallyInconsistent,
+  dd_LPCycling, dd_NumericallyInconsistent, dd_NonZeroLinearity,
   dd_NoError
 } dd_ErrorType;
 
 void dd_WriteErrorMessages(std::ostream& os, dd_ErrorType Error)
 {
   switch (Error) {
+
+  case dd_NonZeroLinearity:
+    os << "*Input Error: Input entry has a non-zero linearity:\n";
+    os << "*The function does not support this.\n";
+    break;
 
   case dd_DimensionTooLarge:
     os << "*Input Error: Input matrix is too large:\n";
@@ -1357,6 +1362,7 @@ inline dd_rowrange get_d_size(dd_matrixdata<T> *M)
 {
   dd_colrange d;
   if (M->representation == dd_Generator) {
+    std::cout << " Generator case\n";
     d = M->colsize + 1;
   } else {
     d = M->colsize;
@@ -1367,7 +1373,9 @@ inline dd_rowrange get_d_size(dd_matrixdata<T> *M)
 template<typename T>
 dd_lpdata<T>* dd_CreateLPData_from_M(dd_matrixdata<T> *M)
 {
+  bool localdebug=true;
   dd_colrange d = get_d_size(M);
+  if (localdebug) std::cout << "dd_CreateLPData_from_M d=" << d << "\n";
   dd_rowrange m = get_m_size(M);
   return dd_CreateLPData<T>(m, d);
 }
@@ -3326,6 +3334,8 @@ void dd_CrissCrossSolve(dd_lpdata<T>* lp, dd_ErrorType *err, data_temp_simplex<T
 template<typename T>
 void dd_DualSimplexSolve(dd_lpdata<T>* lp, dd_ErrorType *err, data_temp_simplex<T>* data)
 {
+  bool localdebug=false;
+  if (localdebug) std::cout << "Running dd_DualSimplexSolve\n";
   switch (lp->objective) {
     case dd_LPmax:
       dd_DualSimplexMaximize(lp, err, data);
@@ -4852,22 +4862,67 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_rowrange i,m, ired, irow=0;
   dd_colrange j,k,d;
   dd_rowset redset;
-  dd_matrixdata<T> *M1;
   T* shootdir;
-  T* cvec=nullptr;
   dd_lpdata<T>* lp0;
   dd_lpdata<T>* lp;
-  dd_ErrorType err;
   dd_LPSolverType solver=dd_DualSimplex;
   bool localdebug=false;
 
   m=M->rowsize;
   d=M->colsize;
-  M1=dd_CreateMatrix<T>(m,d);
-  M1->rowsize=0;  /* cheat the rowsize so that smaller matrix can be stored */
   set_initialize(&redset, m);
   dd_InitializeArow(d, &shootdir);
-  dd_InitializeArow(d, &cvec);
+  if (localdebug) {
+    std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
+  }
+
+  if (set_card(M->linset) != 0) {
+    std::cerr << "This code works only in the absence of linearity relations\n";
+    *error = dd_NonZeroLinearity;
+    return redset;
+  }
+
+  dd_lpdata<T>* lpw=dd_CreateLPData_from_M<T>(M);
+  lpw->objective = dd_LPmin;
+  lpw->redcheck_extensive=false;  /* this is default */
+  dd_LPData_reset_m(1, lpw);
+
+  dd_ErrorType err=dd_NoError;
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), get_d_size(M));
+  auto dd_Redundant_loc=[&]() -> bool {
+    dd_colrange j;
+    dd_rowrange mi = lpw->m;
+    for (j = 1; j <= d; j++)
+      lpw->A[mi-1][j-1] = lpw->A[mi-2][j-1];
+    lpw->A[mi-2][0] += 1;
+    if (localdebug) {
+      std::cout << "Hyperplane case\n";
+      std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
+      dd_WriteLP(std::cout, lpw);
+    }
+    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
+    lpw->A[mi-2][0] -= 1;
+    if (lpw->optvalue < 0)
+      return false;
+    else
+      return true;
+  };
+  auto set_entry_in_lpw=[&](dd_rowrange irow) -> void {
+    dd_rowrange mi = lpw->m;
+    for (k=1; k<=d; k++)
+      lpw->A[mi-2][k-1] = M->matrix[irow-1][k-1];
+  };
+  auto insert_entry_in_lpw=[&](dd_rowrange irow) -> void {
+    dd_rowrange mi = lpw->m;
+    for (k=1; k<=d; k++)
+      lpw->A[mi-1][k-1] = M->matrix[irow-1][k-1];
+    mi++;
+    dd_LPData_reset_m(mi, lpw);
+    /*
+    std::cout << "insert_entry_in_lpw : lpw=\n";
+    dd_WriteLP(std::cout, lpw);
+    */
+  };
 
   /* ith comp is negative if the ith inequality (i-1 st row) is redundant.
                  zero     if it is not decided.
@@ -4880,6 +4935,10 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   lp=dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err);  /* Solve the LP */
+  if (localdebug) {
+    std::cout << "lp->sol=";
+    dd_WriteT(std::cout, lp->sol, d);
+  }
 
   if (lp->optvalue > 0) {
     if (localdebug) std::cout << "dd_Positive=T case\n";
@@ -4894,20 +4953,18 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
         rowflag[ired]=irow;
-        for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[ired-1][k-1];
+        insert_entry_in_lpw(ired);
       }
-
       shootdir[j]=-1;  /* negative of the j-th unit vector */
       ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired>0 && rowflag[ired]<=0) {
         irow++;
         rowflag[ired]=irow;
-        for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[ired-1][k-1];
+        insert_entry_in_lpw(ired);
       }
     }
 
-    M1->rowsize=irow;
     if (localdebug) {
       printf("The initial nonredundant set is:");
       for (i=1; i<=m; i++) if (rowflag[i]>0) printf(" %ld", i);
@@ -4915,21 +4972,29 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
     }
 
     i=1;
-    data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), get_d_size(M1));
     while(i<=m) {
       if (localdebug) std::cout << "i=" << i << " rowflag=" << rowflag[i] << "\n";
       if (rowflag[i]==0) { /* the ith inequality is not yet checked */
         if (localdebug) std::cout << "Checking redundancy of " << i << " th inequality\n";
-        irow++;  M1->rowsize=irow;
-        for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[i-1][k-1];
-        if (!dd_Redundant(M1, irow, cvec, &err, data)) {
-          for (k=1; k<=d; k++) shootdir[k-1] = cvec[k-1] - lp->sol[k-1];
+        irow++;
+        insert_entry_in_lpw(i);
+        if (localdebug) {
+          std::cout << "M->matrix[i-1]=";
+          dd_WriteT(std::cout, M->matrix[i-1], d);
+        }
+        if (!dd_Redundant_loc()) {
+          for (k=1; k<=d; k++) shootdir[k-1] = lpw->sol[k-1] - lp->sol[k-1];
+          if (localdebug) {
+            std::cout << "shootdir=";
+            dd_WriteT(std::cout, shootdir, d);
+          }
           ired=dd_RayShooting(M, lp->sol, shootdir);
           rowflag[ired]=irow;
-          for (k=1; k<=d; k++) M1->matrix[irow-1][k-1] = M->matrix[ired-1][k-1];
+          set_entry_in_lpw(ired);
           if (localdebug) {
             fprintf(stdout, "The %ld th inequality is nonredundant for the subsystem\n", i);
             fprintf(stdout, "The nonredundancy of %ld th inequality is found by shooting.\n", ired);
+            dd_WriteT(std::cout, M->matrix[ired-1], d);
           }
         } else {
           if (localdebug) fprintf(stdout, "The %ld th inequality is redundant for the subsystem and thus for the whole.\n", i);
@@ -4942,20 +5007,18 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
         i++;
       }
     } /* endwhile */
-    free_data_simplex(data);
   } else {
     if (localdebug) std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
     redset=dd_RedundantRows(M, error);
   }
+  free_data_simplex(data);
 
   dd_FreeLPData(lp);
+  dd_FreeLPData(lpw);
 
-  M1->rowsize=m; M1->colsize=d;  /* recover the original sizes. Needed for the deallocation */
-  dd_FreeMatrix(M1);
   dd_FreeArow(shootdir);
-  dd_FreeArow(cvec);
   return redset;
 }
 
@@ -7677,6 +7740,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   dd_ErrorType err;
   int nbRow=TheEXT.rows();
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
+  M->representation = dd_Inequality;
   T smallVal = 0;
   dd_rowset rows = dd_RedundantRowsViaShooting(M, &err);
   std::vector<int> ListIdx;
