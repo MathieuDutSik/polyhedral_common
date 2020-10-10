@@ -1373,7 +1373,7 @@ inline dd_rowrange get_d_size(dd_matrixdata<T> *M)
 template<typename T>
 dd_lpdata<T>* dd_CreateLPData_from_M(dd_matrixdata<T> *M)
 {
-  bool localdebug=true;
+  bool localdebug=false;
   dd_colrange d = get_d_size(M);
   if (localdebug) std::cout << "dd_CreateLPData_from_M d=" << d << "\n";
   dd_rowrange m = get_m_size(M);
@@ -7712,17 +7712,15 @@ std::vector<Face> ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T
   std::vector<Face> ListIncd;
   size_t nbCol=EXT.cols();
   size_t nbRow=EXT.rows();
-  MyVector<T> eFac(nbCol);
   dd_raydata<T>* RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-	eFac(iCol)=RayPtr->Ray[iCol];
-      MyVector<T> ListScal=ListScalarProduct(eFac, EXT);
       Face V(nbRow);
       for (size_t iRow=0; iRow<nbRow; iRow++) {
-	T eVal=ListScal(iRow);
-	if (eVal == 0)
+        T eScal=0;
+        for (size_t iCol=0; iCol<nbCol; iCol++)
+          eScal += RayPtr->Ray[iCol] * EXT(iRow,iCol);
+	if (eScal == 0)
 	  V[iRow]=1;
       }
       ListIncd.push_back(V);
@@ -7741,15 +7739,14 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   int nbRow=TheEXT.rows();
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
-  T smallVal = 0;
-  dd_rowset rows = dd_RedundantRowsViaShooting(M, &err);
+  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {
-    bool isin = set_member(i_row+1, rows);
+    bool isin = set_member(i_row+1, redset);
     if (!isin) ListIdx.push_back(i_row);
   }
   dd_FreeMatrix(M);
-  set_free(rows);
+  set_free(redset);
   return ListIdx;
 }
 
