@@ -1736,16 +1736,14 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   dd_matrixdata<T> *M1=nullptr,M2=nullptr;
   dd_rowrange m,i,k,ii;
   dd_colrange d;
-  dd_rowindex newpos1=nullptr,newpos1r=nullptr,newpos2=nullptr;
+  dd_rowindex newpos1=nullptr,newpos2=nullptr;
 
   m= M->rowsize;
   d= M->colsize;
   *newpos = new long[m+1];
   for (i=0; i<=m; i++)
     (*newpos)[i] = 0;
-  newpos1r = new long[m+1];
-  for (i=0; i<=m; i++)
-    newpos1r[i] = 0;
+  std::vector<long> newpos1r(m+1,0);
   if (m>=0 && d>=0) {
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1776,8 +1774,6 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
     delete [] newpos1;
     delete [] newpos2;
   }
-  delete [] newpos1r;
-
   return M2;
 }
 
@@ -2017,10 +2013,9 @@ void dd_MatrixRowsRemove2(dd_matrixdata<T> **M, dd_rowset delset,dd_rowindex *ne
 }
 
 template<typename T>
-int dd_MatrixShiftupLinearity(dd_matrixdata<T> **M,dd_rowindex *newpos) /* 094 */
+void dd_MatrixShiftupLinearity(dd_matrixdata<T> **M,dd_rowindex *newpos) /* 094 */
 {
   dd_matrixdata<T> *Msub=nullptr;
-  int success;
   dd_rowset delset;
 
   set_initialize(&delset,(*M)->rowsize);  /* emptyset */
@@ -2029,8 +2024,6 @@ int dd_MatrixShiftupLinearity(dd_matrixdata<T> **M,dd_rowindex *newpos) /* 094 *
   *M=Msub;
 
   delete [] delset;
-  success=1;
-  return success;
 }
 
 template<typename T>
@@ -2561,11 +2554,9 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
    the standard Fourier Elimination.
  */
 {
-  dd_matrixdata<T> *Mnew=nullptr;
   dd_rowrange i,inew,ip,in,iz,m,mpos=0,mneg=0,mzero=0,mnew;
   dd_colrange j,d,dnew;
-  dd_rowindex posrowindex, negrowindex,zerorowindex;
-  T temp1,temp2;
+  T temp1, temp2;
   bool localdebug=false;
 
   *error=dd_NoError;
@@ -2576,7 +2567,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
     if (localdebug) {
       printf("The number of column is too small: %ld for Fourier's Elimination.\n",d);
     }
-    goto _L99;
+    return nullptr;
   }
 
   if (M->representation==dd_Generator) {
@@ -2584,7 +2575,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
     if (localdebug) {
       printf("Fourier's Elimination cannot be applied to a V-polyhedron.\n");
     }
-    goto _L99;
+    return nullptr;
   }
 
   if (set_card(M->linset)>0) {
@@ -2592,19 +2583,13 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
     if (localdebug) {
       printf("The Fourier Elimination function does not handle equality in this version.\n");
     }
-    goto _L99;
+    return nullptr;
   }
 
   /* Create temporary spaces to be removed at the end of this function */
-  posrowindex = new long[m+1];
-  for (i=0; i<=m; i++)
-    posrowindex[i] = 0;
-  negrowindex = new long[m+1];
-  for (i=0; i<=m; i++)
-    negrowindex[i] = 0;
-  zerorowindex = new long[m+1];
-  for (i=0; i<=m; i++)
-    zerorowindex[i] = 0;
+  std::vector<long> posrowindex(m+1, 0);
+  std::vector<long> negrowindex(m+1, 0);
+  std::vector<long> zerorowindex(m+1,0);
 
   for (i = 1; i <= m; i++) {
     if (M->matrix[i-1][d-1] > 0) {
@@ -2626,7 +2611,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
   mnew=mzero+mpos*mneg;  /* the total number of rows after elimination */
   dnew=d-1;
 
-  Mnew=dd_CreateMatrix<T>(mnew, dnew);
+  dd_matrixdata<T>* Mnew=dd_CreateMatrix<T>(mnew, dnew);
   dd_CopyArow(Mnew->rowvec, M->rowvec, dnew);
 /*  set_copy(Mnew->linset,M->linset);  */
   Mnew->representation=M->representation;
@@ -2635,8 +2620,8 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
 
   /* Copy the inequalities independent of x_d to the top of the new matrix. */
   for (iz = 1; iz <= mzero; iz++) {
-    for (j = 1; j <= dnew; j++) {
-      Mnew->matrix[iz-1][j-1] = M->matrix[zerorowindex[iz]-1][j-1];
+    for (j=0; j<dnew; j++) {
+      Mnew->matrix[iz-1][j] = M->matrix[zerorowindex[iz]-1][j];
     }
   }
 
@@ -2646,21 +2631,15 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,dd_ErrorType *error)
     for (in = 1; in <= mneg; in++) {
       inew++;
       temp1 = -M->matrix[negrowindex[in]-1][d-1];
-      for (j = 1; j <= dnew; j++) {
-        dd_LinearComb(temp2,M->matrix[posrowindex[ip]-1][j-1],temp1,\
-          M->matrix[negrowindex[in]-1][j-1],\
+      for (j=0; j<dnew; j++) {
+        dd_LinearComb(temp2,M->matrix[posrowindex[ip]-1][j],temp1,\
+          M->matrix[negrowindex[in]-1][j],\
           M->matrix[posrowindex[ip]-1][d-1]);
-        Mnew->matrix[inew-1][j-1] = temp2;
+        Mnew->matrix[inew-1][j] = temp2;
       }
     }
   }
 
-
-  delete [] posrowindex;
-  delete [] negrowindex;
-  delete [] zerorowindex;
-
- _L99:
   return Mnew;
 }
 
