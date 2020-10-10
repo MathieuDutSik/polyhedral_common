@@ -1,10 +1,10 @@
-PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
-#PROGRAM		= POLY_redundancyClarkson
+#PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
+PROGRAM		= POLY_redundancyClarkson
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
 #CC		= icpc -std=c++11 -Wall -g -O2
-#CC		= clang++ -Weverything -Ofast -std=c++14
+#CC		= clang++ -Weverything -Wno-c++98-compat -Ofast -std=c++14
 #CC		= clang++ -g -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++11
 #CC		= clang++ -O2 -Weverything -std=c++11 -DDEBUG
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++11 -O2

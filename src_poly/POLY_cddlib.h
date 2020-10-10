@@ -122,7 +122,7 @@ static unsigned char set_card_lut[]={
 3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
 /* End of Definitions for optimized set_card */
 
-unsigned long set_blocks(long len)
+inline unsigned long set_blocks(long len)
 {
 	long blocks=1L;
 
@@ -818,8 +818,6 @@ void dd_FreeMatrix(dd_matrixdata<T> *M)
 template<typename T>
 void dd_FreeShallowMatrix(dd_matrixdata<T> *M)
 {
-  dd_rowrange m1;
-
   if (M!=nullptr) {
     if (M!=nullptr) {
       delete [] M->matrix;
@@ -2120,7 +2118,7 @@ _L99:
 
 template<typename T>
 void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
-		dd_RepresentationType rep, dd_colindex reducedcol)
+		dd_colindex reducedcol)
 {
   long j,j1;
   T b;
@@ -2359,30 +2357,27 @@ template<typename T>
 dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly)
 {
   dd_raydata<T> *RayPtr;
-  dd_matrixdata<T> *M=nullptr;
   dd_rowrange i=0;
   dd_rowrange total;
   dd_colrange j, j1;
   T b;
-  dd_RepresentationType outputrep=dd_Inequality;
   bool outputorigin=false;
 
   total=poly->child->LinearityDim + poly->child->FeasibleRayCount;
 
   if (poly->child->d<=0 || poly->child->newcol[1]==0) total=total-1;
-  if (poly->representation==dd_Inequality) outputrep=dd_Generator;
   if (total==0 && poly->homogeneous && poly->representation==dd_Inequality) {
     total=1;
     outputorigin=true;
     // the origin (the unique vertex) should be output.
   }
-  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
+  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) return nullptr;
 
-  M=dd_CreateMatrix<T>(total, poly->d);
+  dd_matrixdata<T>* M=dd_CreateMatrix<T>(total, poly->d);
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      dd_CopyRay(M->matrix[i], poly->d, RayPtr, outputrep, poly->child->newcol);
+      dd_CopyRay(M->matrix[i], poly->d, RayPtr, poly->child->newcol);
       i++;
     }
     RayPtr = RayPtr->Next;
@@ -2398,16 +2393,14 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly)
   if (outputorigin) {
     // output the origin for homogeneous H-polyhedron with no rays.
     M->matrix[0][0]=1;
-    for (j=1; j<poly->d; j++) {
+    for (j=1; j<poly->d; j++)
       M->matrix[0][j]=0;
-    }
   }
   //  dd_MatrixIntegerFilter(M);
   if (poly->representation==dd_Inequality)
     M->representation=dd_Generator;
   else
     M->representation=dd_Inequality;
-_L99:;
   return M;
 }
 
@@ -4918,10 +4911,11 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       lpw->A[mi-1][k-1] = M->matrix[irow-1][k-1];
     mi++;
     dd_LPData_reset_m(mi, lpw);
-    /*
-    std::cout << "insert_entry_in_lpw : lpw=\n";
-    dd_WriteLP(std::cout, lpw);
-    */
+  };
+  auto decrement_entry_in_lpw=[&]() -> void {
+    dd_rowrange mi = lpw->m;
+    mi--;
+    dd_LPData_reset_m(mi, lpw);
   };
 
   /* ith comp is negative if the ith inequality (i-1 st row) is redundant.
@@ -4999,6 +4993,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
         } else {
           if (localdebug) fprintf(stdout, "The %ld th inequality is redundant for the subsystem and thus for the whole.\n", i);
           rowflag[i]=-1;
+          decrement_entry_in_lpw();
           set_addelem(redset, i);
           i++;
         }
