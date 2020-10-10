@@ -1025,7 +1025,7 @@ void dd_AllocateAmatrix(dd_rowrange m,dd_colrange d,T** *A)
 }
 
 template<typename T>
-void dd_InitializeArow(dd_colrange d, T* *a)
+void dd_AllocateArow(dd_colrange d, T* *a)
 {
   if (d>0) *a=new T[d];
 }
@@ -1063,7 +1063,7 @@ dd_matrixdata<T> *dd_CreateMatrix(dd_rowrange m_size,dd_colrange d_size)
   }
   M=new dd_matrixdata<T>;
   dd_AllocateAmatrix(m1,d1,&(M->matrix));
-  dd_InitializeArow(d1,&(M->rowvec));
+  dd_AllocateArow(d1,&(M->rowvec));
   M->rowsize=m0;
   set_initialize(&(M->linset), m1);
   M->colsize=d0;
@@ -1099,7 +1099,7 @@ dd_matrixdata<T> *dd_CreateShallowMatrix(dd_rowrange m_size,dd_colrange d_size)
   }
   M=new dd_matrixdata<T>;
   M->matrix = new T*[m1];
-  dd_InitializeArow(d1,&(M->rowvec));
+  dd_AllocateArow(d1,&(M->rowvec));
   M->rowsize=m0;
   set_initialize(&(M->linset), m1);
   M->colsize=d0;
@@ -1126,7 +1126,7 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
   poly->d_alloc     =d;   /* the allocated col size of matrix A */
   poly->ldim		=0;   /* initialize the linearity dimension */
   dd_AllocateAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
-  dd_InitializeArow(d,&(poly->c));           /* cost vector */
+  dd_AllocateArow(d,&(poly->c));           /* cost vector */
   poly->representation       =dd_Inequality;
   poly->homogeneous =false;
 
@@ -1270,8 +1270,8 @@ dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T>* lp)
   lps->LPS=lp->LPS;  /* the current solution status */
 
   lps->optvalue = lp->optvalue;  /* optimal value */
-  dd_InitializeArow(lp->d+1,&(lps->sol));
-  dd_InitializeArow(lp->d+1,&(lps->dsol));
+  dd_AllocateArow(lp->d+1,&(lps->sol));
+  dd_AllocateArow(lp->d+1,&(lps->dsol));
   lps->nbindex = new long[(lp->d)+1];
   for (j=0; j<=lp->d; j++) {
     lps->sol[j] = lp->sol[j];
@@ -1325,8 +1325,8 @@ dd_lpdata<T>* dd_CreateLPData(dd_rowrange m,dd_colrange d)
   lp->d_alloc=lp->d+2;
   dd_AllocateBmatrix(lp->d_alloc,&(lp->B));
   dd_AllocateAmatrix(lp->m_alloc,lp->d_alloc,&(lp->A));
-  dd_InitializeArow(lp->d_alloc,&(lp->sol));
-  dd_InitializeArow(lp->d_alloc,&(lp->dsol));
+  dd_AllocateArow(lp->d_alloc,&(lp->sol));
+  dd_AllocateArow(lp->d_alloc,&(lp->dsol));
   return lp;
 }
 
@@ -4576,7 +4576,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_colrange d = get_d_size(M);
 
   Mcopy=dd_MatrixCopy(M);
-  dd_InitializeArow(d,&cvec);
+  dd_AllocateArow(d,&cvec);
   set_initialize(&redset, m);
   data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), d);
   for (i=m; i>=1; i--) {
@@ -4632,7 +4632,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
     fprintf(stdout,"dd_MatrixRedundancyRemove: By sorting, %ld rows have been removed.  The remaining has %ld rows.\n",m-m1,m1);
     /* dd_WriteMatrix(stdout,M1);  */
   }
-  dd_InitializeArow(d,&cvec);
+  dd_AllocateArow(d,&cvec);
   set_initialize(&redset1, M1->rowsize);
   k=1;
   do {
@@ -4825,7 +4825,7 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error)
     d=M->colsize;
   }
   Mcopy=dd_MatrixCopy(M);
-  dd_InitializeArow(d,&cvec);
+  dd_AllocateArow(d,&cvec);
   set_initialize(&redset, m);
   for (i=m; i>=1; i--) {
     if (dd_SRedundant(Mcopy, i, cvec, error)) {
@@ -4864,7 +4864,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   m=M->rowsize;
   d=M->colsize;
   set_initialize(&redset, m);
-  dd_InitializeArow(d, &shootdir);
+  dd_AllocateArow(d, &shootdir);
   if (localdebug) {
     std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
   }
@@ -4902,13 +4902,13 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   };
   auto set_entry_in_lpw=[&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
-    for (k=1; k<=d; k++)
-      lpw->A[mi-2][k-1] = M->matrix[irow-1][k-1];
+    for (k=0; k<d; k++)
+      lpw->A[mi-2][k] = M->matrix[irow-1][k];
   };
   auto insert_entry_in_lpw=[&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
-    for (k=1; k<=d; k++)
-      lpw->A[mi-1][k-1] = M->matrix[irow-1][k-1];
+    for (k=0; k<d; k++)
+      lpw->A[mi-1][k] = M->matrix[irow-1][k];
     mi++;
     dd_LPData_reset_m(mi, lpw);
   };
@@ -4977,7 +4977,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
           dd_WriteT(std::cout, M->matrix[i-1], d);
         }
         if (!dd_Redundant_loc()) {
-          for (k=1; k<=d; k++) shootdir[k-1] = lpw->sol[k-1] - lp->sol[k-1];
+          for (k=0; k<d; k++) shootdir[k] = lpw->sol[k] - lp->sol[k];
           if (localdebug) {
             std::cout << "shootdir=";
             dd_WriteT(std::cout, shootdir, d);
@@ -5239,7 +5239,7 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T* certificate, dd_rowset *i
       d1=M->colsize;
     }
     m=M->rowsize;
-    dd_InitializeArow(d1,&cvec);
+    dd_AllocateArow(d1,&cvec);
     set_initialize(imp_linrows,m);
 
     if (lp->LPS==dd_Optimal) {
@@ -5300,7 +5300,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M, dd_ErrorType *error)  /*
     d=M->colsize+1;
   }
 
-  dd_InitializeArow(d,&cvec);
+  dd_AllocateArow(d,&cvec);
   if (localdebug) fprintf(stdout, "\ndd_ImplicitLinearityRows: Check whether the system contains any implicit linearity.\n");
   foi=dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error);
   if (localdebug) {
@@ -5560,8 +5560,8 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T* p, T* r)
     r[0]=0;
   }
 
-  dd_InitializeArow(d,&vecmin);
-  dd_InitializeArow(d,&vec);
+  dd_AllocateArow(d,&vecmin);
+  dd_AllocateArow(d,&vec);
 
   for (i=1; i<=m; i++) {
     dd_InnerProduct(t1, d, M->matrix[i-1], p);
@@ -6058,7 +6058,7 @@ void dd_AddArtificialRay(dd_conedata<T> *cone)
   bool localdebug=false;
 
   if (cone->d<=0) d1=1; else d1=cone->d;
-  dd_InitializeArow(d1, &zerovector);
+  dd_AllocateArow(d1, &zerovector);
   if (cone->ArtificialRay != nullptr) {
     fprintf(stdout,"Warning !!!  FirstRay in not nil.  Illegal Call\n");
     delete [] zerovector; /* 086 */
@@ -6120,7 +6120,7 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone,
     lastchance=true;
     /* flag to check it will be the last chance to store the edge candidate */
     set_int(Face1, ZSmax, ZSmin);
-    (cone->count_int)++;
+    cone->count_int++;
     if (localdebug) {
       fprintf(stdout,"Face: ");
       for (it=1; it<=cone->m; it++) {
