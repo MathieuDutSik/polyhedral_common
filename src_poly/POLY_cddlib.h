@@ -3779,12 +3779,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_rowrange i,r;
   dd_colrange s;
   unsigned int rseed=1;
-  dd_colindex nbtemp;
 
   *err=dd_NoError;
-  nbtemp = new long[lp->d+1];
-  for (i=0; i<=lp->d; i++)
-    nbtemp[i] = 0;
+  std::vector<long> nbtemp(lp->d+1, 0);
   for (i=0; i<= 4; i++)
     lp->pivots[i]=0;
   /* Initializing control variables. */
@@ -3833,7 +3830,6 @@ _L99:
   lp->pivots[1]+=pivots1;
   dd_SetSolutions(lp->m,lp->d,lp->A,lp->B,
 		  lp->objrow,lp->rhscol,lp->LPS,lp->optvalue,lp->sol,lp->dsol,lp->posset_extra, lp->re,lp->se,data->bflag);
-  delete [] nbtemp;
 }
 
 template<typename T>
@@ -5313,10 +5309,9 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_linset
   dd_colset ignoredcols,basiscols;
   dd_rowrange i,k,m;
   dd_rowindex newpos1;
-  bool success=false;
 
   linrows=dd_ImplicitLinearityRows(*M, error);
-  if (*error!=dd_NoError) goto _L99;
+  if (*error!=dd_NoError) return false;
 
   m=(*M)->rowsize;
 
@@ -5342,14 +5337,12 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M, dd_rowset *impl_linset
   }
 
   *impl_linset=linrows;
-  success=true;
   delete [] newpos1;
   set_free(basisrows);
   set_free(basiscols);
   set_free(ignoredrows);
   set_free(ignoredcols);
-_L99:
-  return success;
+  return true;
 }
 
 template<typename T>
@@ -5626,18 +5619,15 @@ arithmetics.
   dd_colrange s,senew,j;
   unsigned int rseed=1;
   T val;
-  dd_colindex nbtemp;
 
-  nbtemp = new long[d_size+1];
-  for (i=0; i<=d_size; i++)
-    nbtemp[i] = 0;
+  std::vector<long> nbtemp(d_size+1, 0);
   for (i=0; i<= 4; i++)
     pivots[i]=0;
 
   /* Initializing control variables. */
   dd_ComputeRowOrderVector2(m_size,d_size,A,data->OrderVector,dd_MinIndex,rseed);
 
-  dd_ResetTableau(m_size,d_size,Ts,nbtemp,data->bflag,objrow,rhscol);
+  dd_ResetTableau(m_size,d_size,Ts,nbtemp.data(),data->bflag,objrow,rhscol);
 
 
   is=nbindex[se];
@@ -5650,7 +5640,7 @@ arithmetics.
 
   if (fbasisrank<d_size-1) {
     *found=false;
-    goto _L99;
+    return;
     /* Suspicious case.  Rerun the LP solver with GMP. */
   }
 
@@ -5666,7 +5656,7 @@ arithmetics.
   pivots[4]=pivots0;  /*GMP postopt pivots */
 
   if (!(*found)) {
-    goto _L99;
+    return;
   }
 
 
@@ -5730,10 +5720,6 @@ arithmetics.
   dd_SetSolutions(m_size,d_size,A,Ts,
    objrow,rhscol,LPS,optvalue,sol,dsol,posset,re,senew,data->bflag);
   *nse=senew;
-
-
-_L99:
-  delete [] nbtemp;
 }
 
 template<typename T>
@@ -5981,7 +5967,7 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p,
 
 
 template<typename T>
-void dd_AddRay(dd_conedata<T> *cone, T *p)
+void dd_AddRay(dd_conedata<T> *cone, T* p)
 {
   bool feasible, weaklyfeasible;
   bool localdebug=false;
@@ -6010,39 +5996,36 @@ void dd_AddRay(dd_conedata<T> *cone, T *p)
   }
   if (cone->parent->RelaxedEnumeration) {
     dd_StoreRay2(cone, p, &feasible, &weaklyfeasible);
-    if (weaklyfeasible) (cone->WeaklyFeasibleRayCount)++;
+    if (weaklyfeasible) cone->WeaklyFeasibleRayCount++;
   } else {
     dd_StoreRay1(cone, p, &feasible);
-    if (feasible) (cone->WeaklyFeasibleRayCount)++;
+    if (feasible) cone->WeaklyFeasibleRayCount++;
     /* weaklyfeasible is equiv. to feasible in this case. */
   }
-  if (!feasible) return;
-  else {
-    (cone->FeasibleRayCount)++;
-  }
+  if (feasible) cone->FeasibleRayCount++;
 }
 
 template<typename T>
 void dd_AddArtificialRay(dd_conedata<T> *cone)
 {
-  T* zerovector;
-  dd_colrange d1;
-  bool feasible;
   bool localdebug=false;
 
-  if (cone->d<=0) d1=1; else d1=cone->d;
-  dd_AllocateArow(d1, &zerovector);
   if (cone->ArtificialRay != nullptr) {
     fprintf(stdout,"Warning !!!  FirstRay in not nil.  Illegal Call\n");
-    delete [] zerovector; /* 086 */
     return;
   }
+
+  T* zerovector;
+  dd_colrange d1;
+  if (cone->d <= 0) d1=1; else d1=cone->d;
+  dd_AllocateArow(d1, &zerovector);
   cone->ArtificialRay = new dd_raydata<T>;
   cone->ArtificialRay->Ray = new T[d1];
 
   if (localdebug) fprintf(stdout,"Create the artificial ray pointer\n");
 
   cone->LastRay=cone->ArtificialRay;
+  bool feasible;
   dd_StoreRay1(cone, zerovector, &feasible);
   cone->ArtificialRay->Next = nullptr;
   delete [] zerovector; /* 086 */
@@ -6309,7 +6292,7 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
   if ((poly)->child != nullptr) dd_FreeDDMemory(poly);
   dd_FreeAmatrix((poly)->m_alloc, poly->A);
   dd_FreeArow((poly)->c);
-  delete [] (poly)->EqualityIndex;
+  delete [] poly->EqualityIndex;
   if (poly->AincGenerated) {
     for (i=1; i<=poly->m1; i++) {
       set_free(poly->Ainc[i-1]);
@@ -6427,13 +6410,11 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   dd_rowset NopivotRow,PriorityRow;
   dd_colset ColSelected;
   T** B;
-  dd_rowindex roworder;
   dd_rowrange r;
   dd_colrange s;
   long rank;
   bool localdebug=false;
-  T* Rtemp;
-  Rtemp = new T[M->colsize];
+  std::vector<T> Rtemp(M->colsize);
 
   rank = 0;
   stop = false;
@@ -6446,13 +6427,13 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   set_copy(ColSelected,ignoredcols);
   dd_AllocateBmatrix(M->colsize, &B);
   dd_SetToIdentity(M->colsize, B);
-  roworder = new long[M->rowsize+1];
+  std::vector<long> roworder(M->rowsize+1);
   for (r=0; r<M->rowsize; r++)
     roworder[r+1]=r+1;
   roworder[M->rowsize] = 0;
 
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder,
+      dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder.data(),
 		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
       if (localdebug && chosen)
         fprintf(stdout,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
@@ -6463,18 +6444,16 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
         set_addelem(*colbasis, s);
         rank++;
         //        std::cout << "dd_GaussianColumnPivot call 8\n";
-        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp);
+        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp.data());
       } else {
         stop=true;
       }
       if (rank==M->colsize) stop = true;
   } while (!stop);
   dd_FreeBmatrix(M->colsize,B);
-  delete [] roworder;
   set_free(ColSelected);
   set_free(NopivotRow);
   set_free(PriorityRow);
-  delete [] Rtemp;
   return rank;
 }
 
@@ -6488,8 +6467,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   dd_rowrange r;
   dd_colrange j,s;
   bool localdebug=false;
-  T* Rtemp;
-  Rtemp = new T[cone->d];
+  std::vector<T> Rtemp(cone->d);
 
   *rank = 0;
   stop = false;
@@ -6511,7 +6489,7 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
         cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
         (*rank)++;
         //        std::cout << "dd_GaussianColumnPivot call 9\n";
-        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp);
+        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp.data());
       } else {
         stop=true;
       }
@@ -6519,7 +6497,6 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   } while (!stop);
   set_free(ColSelected);
   set_free(NopivotRow);
-  delete [] Rtemp;
 }
 
 
