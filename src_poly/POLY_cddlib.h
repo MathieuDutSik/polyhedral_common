@@ -993,9 +993,8 @@ dd_SetFamilyPtr dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize)
 }
 
 template<typename T>
-bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
+void dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
 {
-  bool success=false;
   dd_matrixdata<T> *Mpoly,Mnew=nullptr;
   dd_ErrorType err;
 
@@ -1007,9 +1006,7 @@ bool dd_AppendMatrix2Poly(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M)
     *poly=dd_DDMatrix2Poly(Mnew,&err);
     dd_FreeMatrix(Mpoly);
     dd_FreeMatrix(Mnew);
-    if (err==dd_NoError) success=true;
   }
-  return success;
 }
 
 // Basic Initialization procedures
@@ -1149,9 +1146,8 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
 }
 
 template<typename T>
-bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
+void dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
 {
-  bool success=true;
   dd_colrange j;
 
   (*cone)=new dd_conedata<T>;
@@ -1218,8 +1214,6 @@ bool dd_InitializeConeData(dd_rowrange m, dd_colrange d, dd_conedata<T> **cone)
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
   (*cone)->ColReduced   = false;
   (*cone)->d_orig = d;
-
-  return success;
 }
 
 template<typename T>
@@ -1784,12 +1778,12 @@ dd_matrixdata<T> *dd_AppendMatrix(dd_matrixdata<T> *M1, dd_matrixdata<T> *M2)
 }
 
 template<typename T>
-int dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
+bool dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
 {
   dd_matrixdata<T> *M=nullptr;
   dd_rowrange i, m,m1,m2;
   dd_colrange j, d,d1,d2;
-  bool success=0;
+  bool success=false;
 
   m1=(*M1)->rowsize;
   d1=(*M1)->colsize;
@@ -1814,7 +1808,7 @@ int dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2)
     }
     dd_FreeMatrix(*M1);
     *M1=M;
-    success=1;
+    success=true;
   }
   return success;
 }
@@ -2045,14 +2039,13 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange i;
   dd_colrange j;
-  dd_polyhedradata<T> *poly=nullptr;
 
   *err=dd_NoError;
   if (M->rowsize<0 || M->colsize<0) {
     *err=dd_NegativeMatrixSize;
-    goto _L99;
+    return nullptr;
   }
-  poly=dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
+  dd_polyhedradata<T>* poly = dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
   poly->representation=M->representation;
   poly->homogeneous=true;
 
@@ -2066,7 +2059,6 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err)
       }
     }
   dd_DoubleDescription(poly,err);
-_L99:
   return poly;
 }
 
@@ -2075,14 +2067,13 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType hord
 {
   dd_rowrange i;
   dd_colrange j;
-  dd_polyhedradata<T> *poly=nullptr;
 
   *err=dd_NoError;
   if (M->rowsize<0 || M->colsize<0) {
     *err=dd_NegativeMatrixSize;
-    goto _L99;
+    return nullptr;
   }
-  poly=dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
+  dd_polyhedradata<T>* poly = dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
   poly->representation=M->representation;
   poly->homogeneous=true;
 
@@ -2096,7 +2087,6 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType hord
     }
   }
   dd_DoubleDescription2(poly, horder, err);
-_L99:
   return poly;
 }
 
@@ -2203,7 +2193,6 @@ bool dd_InputAdjacentQ(set_type &common,
    active at every extreme points/rays.
 */
 {
-  bool adj=true;
   dd_rowrange i;
 
   if (poly->AincGenerated==false) dd_ComputeAinc<T>(poly);
@@ -2213,43 +2202,36 @@ bool dd_InputAdjacentQ(set_type &common,
     set_initialize(&common, poly->n);
     lastn=poly->n;
   }
-  if (set_member(i1, poly->Ared) || set_member(i2, poly->Ared)) {
-    adj=false;
-    goto _L99;
-  }
-  if (set_member(i1, poly->Adom) || set_member(i2, poly->Adom)) {
+  if (set_member(i1, poly->Ared) || set_member(i2, poly->Ared))
+    return false;
   // dominant inequality is considered adjacencent to all others.
-    adj=true;
-    goto _L99;
-  }
+  if (set_member(i1, poly->Adom) || set_member(i2, poly->Adom))
+    return true;
   set_int(common, poly->Ainc[i1-1], poly->Ainc[i2-1]);
   i=0;
-  while (i<poly->m1 && adj==true) {
+  while (i<poly->m1) {
     i++;
     if (i!=i1 && i!=i2 && !set_member(i, poly->Ared) &&
-        !set_member(i, poly->Adom) && set_subset(common,poly->Ainc[i-1])) {
-      adj=false;
-    }
+        !set_member(i, poly->Adom) && set_subset(common,poly->Ainc[i-1]))
+      return false;
   }
-_L99:;
-  return adj;
+  return true;
 }
 
 
 template<typename T>
 dd_SetFamilyPtr dd_CopyIncidence(dd_polyhedradata<T> *poly)
 {
-  dd_SetFamilyPtr F=nullptr;
   dd_bigrange k;
   dd_rowrange i;
 
-  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
+  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound)
+    return nullptr;
   if (poly->AincGenerated==false) dd_ComputeAinc(poly);
-  F=dd_CreateSetFamily(poly->n, poly->m1);
+  dd_SetFamilyPtr F = dd_CreateSetFamily(poly->n, poly->m1);
   for (i=1; i<=poly->m1; i++)
     for (k=1; k<=poly->n; k++)
       if (set_member(k,poly->Ainc[i-1])) set_addelem(F->set[k-1],i);
-_L99:;
   return F;
 }
 
@@ -2257,15 +2239,12 @@ template<typename T>
 dd_SetFamilyPtr dd_CopyInputIncidence(dd_polyhedradata<T> *poly)
 {
   dd_rowrange i;
-  dd_SetFamilyPtr F=nullptr;
 
-  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
+  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) return nullptr;
   if (poly->AincGenerated==false) dd_ComputeAinc(poly);
-  F=dd_CreateSetFamily(poly->m1, poly->n);
-  for(i=0; i< poly->m1; i++) {
+  dd_SetFamilyPtr F=dd_CreateSetFamily(poly->m1, poly->n);
+  for(i=0; i< poly->m1; i++)
     set_copy(F->set[i], poly->Ainc[i]);
-  }
-_L99:;
   return F;
 }
 
@@ -2322,17 +2301,15 @@ template<typename T>
 dd_SetFamilyPtr dd_CopyInputAdjacency(dd_polyhedradata<T> *poly)
 {
   dd_rowrange i,j;
-  dd_SetFamilyPtr F=nullptr;
   set_type common;
   long lastn=0;
-  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) goto _L99;
+  if (poly->child==nullptr || poly->child->CompStatus!=dd_AllFound) return nullptr;
   if (poly->AincGenerated==false) dd_ComputeAinc(poly);
-  F=dd_CreateSetFamily(poly->m1, poly->m1);
+  dd_SetFamilyPtr F=dd_CreateSetFamily(poly->m1, poly->m1);
   for (i=1; i<=poly->m1; i++)
     for (j=1; j<=poly->m1; j++)
       if (i!=j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j))
         set_addelem(F->set[i-1],j);
-_L99:;
   return F;
 }
 
@@ -2773,10 +2750,10 @@ void dd_FreeLPSolution(dd_lpsolution<T> *lps)
 }
 
 template<typename T>
-int dd_LPReverseRow(dd_lpdata<T>* lp, dd_rowrange i)
+bool dd_LPReverseRow(dd_lpdata<T>* lp, dd_rowrange i)
 {
   dd_colrange j;
-  int success=0;
+  bool success=false;
 
   if (i>=1 && i<=lp->m) {
     lp->LPS=dd_LPSundecided;
@@ -2784,16 +2761,16 @@ int dd_LPReverseRow(dd_lpdata<T>* lp, dd_rowrange i)
       lp->A[i-1][j-1] = -lp->A[i-1][j-1];
       /* negating the i-th constraint of A */
     }
-    success=1;
+    success=true;
   }
   return success;
 }
 
 template<typename T>
-int dd_LPReplaceRow(dd_lpdata<T>* lp, dd_rowrange i, T* a)
+bool dd_LPReplaceRow(dd_lpdata<T>* lp, dd_rowrange i, T* a)
 {
   dd_colrange j;
-  int success=0;
+  bool success=false;
 
   if (i>=1 && i<=lp->m) {
     lp->LPS=dd_LPSundecided;
@@ -2801,7 +2778,7 @@ int dd_LPReplaceRow(dd_lpdata<T>* lp, dd_rowrange i, T* a)
       lp->A[i-1][j-1] = a[j-1];
       /* replacing the i-th constraint by a */
     }
-    success=1;
+    success=true;
   }
   return success;
 }
@@ -4539,7 +4516,8 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,dd_rowind
   dd_rowindex newpos1;
   dd_matrixdata<T> *M1=nullptr;
   T* cvec; /* certificate */
-  bool success=false, localdebug=false;
+  bool success=false;
+  bool localdebug=false;
 
   m=(*M)->rowsize;
   set_initialize(redset, m);
@@ -4676,7 +4654,8 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate, dd_Er
   dd_colrange j;
   dd_lpdata<T>* lp;
   dd_ErrorType err=dd_NoError;
-  bool answer=false,localdebug=false;
+  bool answer=false;
+  bool localdebug=false;
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)) {
@@ -5063,8 +5042,8 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
 
   *error=dd_NoError;
   if (set_member(itest, M->linset)) {
-    if (localdebug) printf("The %ld th row is linearity and redundancy checking is skipped.\n",itest);
-    goto _L99;
+    if (localdebug) printf("The %ld th row is linearity and redundancy checking is skipped.\n", itest);
+    return answer;
   }
 
   /* Create an LP data for redundancy checking */
@@ -5095,7 +5074,6 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest, T* certificate
   }
   _L999:
   dd_FreeLPData(lp);
-_L99:
   return answer;
 }
 
@@ -5368,17 +5346,16 @@ the set S will be considered as S\(R U M->linset).
 
   lp=dd_Matrix2Feasibility2(M, R, S, err);
 
-  if (*err!=dd_NoError) goto _L99;
+  if (*err!=dd_NoError) return answer;
 
 /* Solve the LP by cdd LP solver. */
   dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
-  if (*err!=dd_NoError) goto _L99;
+  if (*err!=dd_NoError) return answer;
   if (lp->LPS==dd_Optimal && lp->optvalue > 0) {
     answer=true;
   }
 
   dd_FreeLPData(lp);
-_L99:
   return answer;
 }
 
@@ -5399,11 +5376,11 @@ This function returns a certificate of the answer in terms of the associated LP 
 
   lp=dd_Matrix2Feasibility2(M, R, S, err);
 
-  if (*err!=dd_NoError) goto _L99;
+  if (*err!=dd_NoError) return answer;
 
 /* Solve the LP by cdd LP solver. */
   dd_LPSolve(lp, dd_DualSimplex, err);  /* Solve the LP */
-  if (*err!=dd_NoError) goto _L99;
+  if (*err!=dd_NoError) return answer;
   if (lp->LPS==dd_Optimal && lp->optvalue > 0) {
     answer=true;
   }
@@ -5411,7 +5388,6 @@ This function returns a certificate of the answer in terms of the associated LP 
 
   (*lps)=dd_CopyLPSolution(lp);
   dd_FreeLPData(lp);
-_L99:
   return answer;
 }
 
@@ -5430,15 +5406,15 @@ that the dimension of the polyhedron is M->colsize - set_card(Lbasis) -1.
 
   dd_rowset S;
   dd_colset Tc, Lbasiscols;
-  bool success=false;
   dd_rowrange i;
   dd_colrange rank;
 
 
   *ImL=dd_ImplicitLinearityRows(M, err);
 
-  if (*err!=dd_NoError) goto _L99;
+  if (*err!=dd_NoError) return false;
 
+  bool success=false;
   set_initialize(&S, M->rowsize);   /* the empty set */
   for (i=1; i <=M->rowsize; i++) {
 	if (!set_member(i, M->linset) && !set_member(i, *ImL)) {
@@ -5457,7 +5433,6 @@ that the dimension of the polyhedron is M->colsize - set_card(Lbasis) -1.
   set_free(Tc);
   set_free(Lbasiscols);
 
-_L99:
   return success;
 }
 
@@ -6105,7 +6080,7 @@ void dd_CreateInitialEdges(dd_conedata<T> *cone)
   cone->Iteration=cone->d;  /* CHECK */
   if (cone->FirstRay ==nullptr || cone->LastRay==nullptr) {
     /* fprintf(stdout,"Warning: dd_ CreateInitialEdges called with nullptr pointer(s)\n"); */
-    goto _L99;
+    return;
   }
   Ptr1=cone->FirstRay;
   while(Ptr1!=cone->LastRay && Ptr1!=nullptr) {
@@ -6121,7 +6096,6 @@ void dd_CreateInitialEdges(dd_conedata<T> *cone)
     }
     Ptr1=Ptr1->Next;
   }
-_L99:;
 }
 
 
@@ -6145,7 +6119,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
   Ptr2begin = nullptr;
   if (RRbegin ==nullptr || RRend==nullptr) {
     if (1) fprintf(stdout,"Warning: dd_UpdateEdges called with nullptr pointer(s)\n");
-    goto _L99;
+    return;
   }
   Ptr1=RRbegin;
   pos1=1;
@@ -6180,7 +6154,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin, dd_raydata<T> 
       }
     }
   } while (Ptr1!=RRend && Ptr1!=nullptr);
-_L99:;
 }
 
 template<typename T>
@@ -6598,7 +6571,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
   dd_raydata<T> *NextPtr;
   bool zerofound=false,negfound=false,posfound=false;
 
-  if (cone==nullptr || cone->TotalRayCount<=0) goto _L99;
+  if (cone==nullptr || cone->TotalRayCount<=0) return;
   cone->PosHead=nullptr;cone->ZeroHead=nullptr;cone->NegHead=nullptr;
   cone->PosLast=nullptr;cone->ZeroLast=nullptr;cone->NegLast=nullptr;
   Ptr = cone->FirstRay;
@@ -6685,7 +6658,6 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
   }
   cone->ArtificialRay->Next=cone->FirstRay;
   cone->LastRay->Next=nullptr;
-  _L99:;
 }
 
 template<typename T>
@@ -6887,7 +6859,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   value1 = cone->FirstRay->ARay;
   if (value1 >= 0) {
     if (cone->RayCount==cone->WeaklyFeasibleRayCount) cone->CompStatus=dd_AllFound;
-    goto _L99;        /* Sicne there is no hnew-infeasible ray and nothing to do */
+    return;        /* Sicne there is no hnew-infeasible ray and nothing to do */
   }
   else {
     RayPtr2s = RayPtr1->Next;/* RayPtr2s must point the first feasible ray */
@@ -6902,7 +6874,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     cone->ArtificialRay->Next=cone->FirstRay;
     cone->RayCount=0;
     cone->CompStatus=dd_AllFound;
-    goto _L99;   /* All rays are infeasible, and the computation must stop */
+    return;   /* All rays are infeasible, and the computation must stop */
   }
   RayPtr2 = RayPtr2s;   /*2nd feasible ray to scan and compare with 1st*/
   RayPtr3 = cone->LastRay;    /*Last feasible for scanning*/
@@ -6937,7 +6909,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     }
   }
   if (cone->RayCount==cone->WeaklyFeasibleRayCount) cone->CompStatus=dd_AllFound;
-  _L99:;
 }
 
 template<typename T>
@@ -6961,7 +6932,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
     cone->ArtificialRay->Next=cone->FirstRay;
     cone->RayCount=0;
     cone->CompStatus=dd_AllFound;
-    goto _L99;   /* All rays are infeasible, and the computation must stop */
+    return;   /* All rays are infeasible, and the computation must stop */
   }
   if (cone->ZeroHead==nullptr) cone->ZeroHead=cone->LastRay;
 
@@ -6993,7 +6964,6 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
   }
 
   if (cone->RayCount==cone->WeaklyFeasibleRayCount) cone->CompStatus=dd_AllFound;
-_L99:;
 }
 
 
@@ -7167,7 +7137,7 @@ void dd_UniqueRows(dd_rowindex OV, long p, long r, T** A, long dmax, dd_rowset p
   long i,iuniq,j;
   T *x;
 
-  if (p<=0 || p > r) goto _L99;
+  if (p<=0 || p > r) return;
   iuniq=p; j=1;  /* the first unique row candidate */
   x=A[p-1];
   OV[p]=j;  /* tentative row index of the candidate */
@@ -7191,7 +7161,6 @@ void dd_UniqueRows(dd_rowindex OV, long p, long r, T** A, long dmax, dd_rowset p
     }
   }
   *uniqrows=j;
-  _L99:;
 }
 
 
@@ -7267,10 +7236,9 @@ in highest order.
       }
     } else {
       fprintf(stdout,"UpdateRowOrder: Error.\n");
-      goto _L99;
+      return;
     }
   }
-_L99:;
 }
 
 template<typename T>
@@ -7486,7 +7454,7 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err)
     if (poly->representation==dd_Generator && poly->m<=0) {
        *err=dd_EmptyVrepresentation;
        cone->Error=*err;
-       goto _L99;
+       return found;
     }
     /* Check emptiness of the polyhedron */
     dd_CheckEmptiness(poly,err);
@@ -7495,13 +7463,12 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err)
       dd_FindInitialRays(cone, &found);
       if (found) {
 	dd_InitialDataSetup(cone);
-	if (cone->CompStatus==dd_AllFound) goto _L99;
+	if (cone->CompStatus==dd_AllFound) return found;
 	dd_DDMain(cone);
 	if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent; /* cddlib-093d */
       }
     }
   }
-_L99: ;
   return found;
 }
 
@@ -7521,7 +7488,7 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd
     if (poly->representation==dd_Generator && poly->m<=0) {
       *err=dd_EmptyVrepresentation;
       cone->Error=*err;
-      goto _L99;
+      return found;
     }
     // Check emptiness of the polyhedron
     dd_CheckEmptiness(poly,err);
@@ -7530,13 +7497,12 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder, dd
       dd_FindInitialRays(cone, &found);
       if (found) {
         dd_InitialDataSetup(cone);
-        if (cone->CompStatus==dd_AllFound) goto _L99;
+        if (cone->CompStatus==dd_AllFound) return found;
         dd_DDMain(cone);
         if (cone->FeasibleRayCount!=cone->RayCount) *err=dd_NumericallyInconsistent;
       }
     }
   }
-_L99: ;
   return found;
 }
 
