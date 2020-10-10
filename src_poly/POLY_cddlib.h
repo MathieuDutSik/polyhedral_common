@@ -7701,10 +7701,9 @@ template<typename T>
 MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
 {
   dd_polyhedradata<T> *poly;
-  dd_matrixdata<T> *M;
   dd_ErrorType err;
   int nbCol=TheEXT.cols();
-  M=MyMatrix_PolyFile2Matrix(TheEXT);
+  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
   poly=dd_DDMatrix2Poly(M, &err);
   MyMatrix<T> TheFAC=FAC_from_poly(poly, nbCol);
   dd_FreePolyhedra(poly);
@@ -7717,9 +7716,8 @@ template<typename T>
 std::vector<Face> DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
   dd_polyhedradata<T> *poly;
-  dd_matrixdata<T> *M;
   dd_ErrorType err;
-  M=MyMatrix_PolyFile2Matrix(TheEXT);
+  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
   poly=dd_DDMatrix2Poly(M, &err);
   std::vector<Face> ListIncd=ListIncd_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
