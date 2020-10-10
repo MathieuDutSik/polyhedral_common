@@ -1248,7 +1248,7 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly)
 
   if (poly->representation==dd_Inequality && !poly->homogeneous) {
     cone->A[m-1][0]=1;
-    for (j=2; j<=d; j++) cone->A[m-1][j-1]=0;
+    for (j=1; j<d; j++) cone->A[m-1][j]=0;
   }
 
   return cone;
@@ -1698,16 +1698,14 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
   dd_matrixdata<T> *M1=nullptr,M2=nullptr;
   dd_rowrange m,i;
   dd_colrange d;
-  dd_rowindex newpos1=nullptr,newpos1r=nullptr,newpos2=nullptr;
+  dd_rowindex newpos1=nullptr, newpos2=nullptr;
 
   m= M->rowsize;
   d= M->colsize;
   *newpos = new long[m+1];
   for (i=0; i<=m; i++)
     (*newpos)[i] = 0;
-  newpos1r = new long[m+1];
-  for (i=0; i<=m; i++)
-    newpos1r[i] = 0;
+  std::vector<long> newpos1r(m+1,0);
   if (m>=0 && d>=0) {
     M1=dd_MatrixNormalizedSortedCopy(M,&newpos1);
     for (i=1; i<=m;i++) newpos1r[newpos1[i]]=i;  /* reverse of newpos1 */
@@ -1726,7 +1724,6 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,dd_row
     delete [] newpos1;
     delete [] newpos2;
   }
-  delete [] newpos1r;
   return M2;
 }
 
@@ -1851,11 +1848,11 @@ int dd_MatrixRowRemove(dd_matrixdata<T> **M, dd_rowrange r) /* 092 */
 }
 
 template<typename T>
-int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
+bool dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
 {
   dd_rowrange i,m;
   dd_colrange d;
-  bool success=0;
+  bool success=false;
 
   m=(*M)->rowsize;
   d=(*M)->colsize;
@@ -1872,7 +1869,7 @@ int dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
         set_addelem((*M)->linset,i);
       }
     }
-    success=1;
+    success=true;
   }
   return success;
 }
@@ -2476,7 +2473,6 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   dd_matrixdata<T> *Mdual=nullptr, Mproj=nullptr, Gdual=nullptr;
   dd_rowrange i,h,m,mproj,mdual,linsize;
   dd_colrange j,k,d,dproj,ddual,delsize;
-  dd_colindex delindex;
   T temp,prod;
   dd_polyhedradata<T> *dualpoly;
   dd_ErrorType err=dd_NoError;
@@ -2485,14 +2481,13 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   *error=dd_NoError;
   m= M->rowsize;
   d= M->colsize;
-  delindex = new long[d+1];
-  for (i=0; i<=d; i++)
-    delindex[i] = 0;
+  std::vector<long> delindex(d);
   k=0; delsize=0;
   for (j=1; j<=d; j++) {
     if (set_member(j, delset)) {
-      k++;  delsize++;
+      delsize++;
       delindex[k]=j;  /* stores the kth deletion column index */
+      k++;
     }
   }
 
@@ -2506,7 +2501,7 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   for (i = 1; i <= delsize; i++) {
     set_addelem(Mdual->linset,i);  /* equality */
     for (j = 1; j <= m; j++) {
-      Mdual->matrix[i-1][j] = M->matrix[j-1][delindex[i]-1];
+      Mdual->matrix[i-1][j] = M->matrix[j-1][delindex[i-1]-1];
     }
   }
 
@@ -2546,7 +2541,6 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset, dd_
   if (localdebug) printf("Size of the projection system: %ld x %ld\n", mproj, dproj);
 
   dd_FreePolyhedra(dualpoly);
-  delete [] delindex;
   dd_FreeMatrix(Mdual);
   dd_FreeMatrix(Gdual);
   return Mproj;
