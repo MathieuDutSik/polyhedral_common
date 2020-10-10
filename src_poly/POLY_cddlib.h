@@ -7370,11 +7370,9 @@ void dd_InitialDataSetup(dd_conedata<T> *cone)
 {
   long j, r;
   dd_rowset ZSet;
-  T* Vector1;
-  T* Vector2;
 
-  Vector1=new T[cone->d];
-  Vector2=new T[cone->d];
+  std::vector<T> Vector1(cone->d);
+  std::vector<T> Vector2(cone->d);
 
   cone->RecomputeRowOrder=false;
   cone->ArtificialRay = nullptr;
@@ -7390,32 +7388,29 @@ void dd_InitialDataSetup(dd_conedata<T> *cone)
       Vector1[j] = cone->B[j][r-1];
       Vector2[j] = -cone->B[j][r-1];
     }
-    dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1, ZSet);
+    dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1.data(), ZSet);
     if (set_subset(cone->EqualitySet, ZSet)) {
-      dd_AddRay(cone, Vector1);
-      if (cone->InitialRayIndex[r]==0)
-        dd_AddRay(cone, Vector2);
+      dd_AddRay(cone, Vector1.data());
+      if (cone->InitialRayIndex[r] == 0)
+        dd_AddRay(cone, Vector2.data());
     }
   }
   dd_CreateInitialEdges(cone);
   cone->Iteration = cone->d + 1;
   if (cone->Iteration > cone->m) cone->CompStatus=dd_AllFound; /* 0.94b  */
   set_free(ZSet);
-  delete [] Vector1;
-  delete [] Vector2;
 }
 
 template<typename T>
 bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err)
 {
-  dd_rowset R, S;
-  dd_matrixdata<T> *M=nullptr;
   bool answer=false;
 
   *err=dd_NoError;
 
   if (poly->representation==dd_Inequality) {
-    M=dd_CopyInequalities(poly);
+    dd_matrixdata<T>* M=dd_CopyInequalities(poly);
+    dd_rowset R, S;
     set_initialize(&R, M->rowsize);
     set_initialize(&S, M->rowsize);
     if (!dd_ExistsRestrictedFace(M, R, S, err)) {
@@ -7511,15 +7506,11 @@ bool dd_DDInputAppend(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
 			    dd_ErrorType *err)
 {
   /* This is imcomplete.  It simply solves the problem from scratch.  */
-  bool found;
-  dd_ErrorType error;
 
   if ((*poly)->child!=nullptr) dd_FreeDDMemory(*poly);
   dd_AppendMatrix2Poly(poly, M);
   (*poly)->representation=dd_Inequality;
-  found=dd_DoubleDescription(*poly, &error);
-  *err=error;
-  return found;
+  return dd_DoubleDescription(*poly, err);
 }
 
 
@@ -7540,10 +7531,10 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   M=dd_CreateMatrix<T>(m_input, d_input);
   M->representation=rep;
 
-  for (i = 1; i <= m_input; i++)
-    for (j = 1; j <= d_input; j++) {
-      M->matrix[i-1][j - 1] = TheEXT(i-1, j-1);
-      if (localdebug) std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i-1,j-1) << "\n";
+  for (i = 0; i < m_input; i++)
+    for (j = 0; j < d_input; j++) {
+      M->matrix[i][j] = TheEXT(i, j);
+      if (localdebug) std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i,j) << "\n";
     }
   return M;
 }
@@ -7559,7 +7550,7 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const& nbCol)
       nbRay++;
     RayPtr = RayPtr->Next;
   }
-  MyMatrix<T> TheFAC=MyMatrix<T>(nbRay, nbCol);
+  MyMatrix<T> TheFAC(nbRay, nbCol);
   int iRay=0;
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
