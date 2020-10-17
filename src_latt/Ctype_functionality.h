@@ -103,7 +103,7 @@ struct CtypeCombData {
 
 
 template<typename T>
-CtypeCombData<T> CTYP_GetInequalitiesOfCtype(MyMatrix<T> const& TheCtype)
+std::vector<MyMatrix<T>> CTYP_GetInequalitiesOfCtype(MyMatrix<T> const& TheCtype)
 {
   std::vector<triple> ListTriples = CTYP_GetListTriples(TheCtype);
   int8_t n = TheCtype.cols();
@@ -149,8 +149,18 @@ CtypeCombData<T> CTYP_GetInequalitiesOfCtype(MyMatrix<T> const& TheCtype)
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
   }
-  return {ListInequalities, ListInformations};
+  // Reducing by redundancy
+  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+  std::vector<MyMatrix<T>> ListCtype;
+  for (auto & e_int : ListIrred) {
+    ListCtype.push_back(CTYP_TheFlipping(TheCtype, ListInformations[e_int]));
+  }
+  return ListCtype;
 }
+
+
+
+
 
 
 
