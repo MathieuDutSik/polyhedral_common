@@ -72,9 +72,9 @@ RUN cd GIT/polyhedral_common/ExternalLib/LibShort && make -f Makefile_lib && mak
 
 # bliss
 ENV LIBBLISS_PATH /opt/libbliss
-ENV LIBBLISS_INCDIR "$LIBBLISS_PATH/include"
-ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
-RUN cd GIT/polyhedral_common/ExternalLib/bliss && make -f Makefile_lib && make -f Makefile_lib install
+RUN cd GIT/polyhedral_common/ExternalLib/bliss && mkdir build
+RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
+RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && make all install
 
 
 # GLPK
