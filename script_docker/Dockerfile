@@ -21,7 +21,7 @@ RUN apt-get update -y
 RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
 RUN apt-get install -y wget emacs joe
 RUN apt-get install -y g++ gcc gfortran
-RUN apt-get install -y git mercurial cmake
+RUN apt-get install -y git cmake
 
 
 # GMP
@@ -37,7 +37,7 @@ ENV BOOST_INCDIR "/usr/include"
 
 # downloading eigen (no compiling needed)
 RUN mkdir -p /opt
-RUN cd /opt && hg clone https://bitbucket.org/eigen/eigen/
+RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
 ENV EIGEN_PATH /opt/eigen
 
 
