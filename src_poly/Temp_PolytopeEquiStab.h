@@ -1458,12 +1458,8 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 }
 
 
-
-
-
-
-template<typename T1, typename T2, typename Tgr>
-inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
+template<typename T1, typename T2>
+size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
@@ -1471,21 +1467,30 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
   //  std::cerr << "nbMult=" << nbMult << " hS=" << hS << "\n";
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
-  unsigned int nof_vertices=hS*nbVert;
-  Tgr eGR(nof_vertices);
-  eGR.SetHasColor(true);
+  return hS*nbVert;
+}
+
+
+template<typename T1, typename T2, typename Fcolor, typename Fadj>
+void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolor f_color, Fadj f_adj)
+{
+  int nbWei=WMat.GetWeightSize();
+  int nbMult=nbWei+2;
+  int hS=GetNeededPower(nbMult);
+  int nbRow=WMat.rows();
+  int nbVert=nbRow + 2;
   for (int iVert=0; iVert<nbVert; iVert++)
     for (int iH=0; iH<hS; iH++) {
       int aVert=iVert + nbVert*iH;
-      eGR.SetColor(aVert,iH);
+      f_color(aVert,iH);
     }
   for (int iVert=0; iVert<nbVert; iVert++)
     for (int iH=0; iH<hS-1; iH++)
       for (int jH=iH+1; jH<hS; jH++) {
 	int aVert=iVert + nbVert*iH;
 	int bVert=iVert + nbVert*jH;
-	eGR.AddAdjacent(aVert, bVert);
-	eGR.AddAdjacent(bVert, aVert);
+	f_adj(aVert, bVert);
+	f_adj(bVert, aVert);
       }
   for (int iVert=0; iVert<nbVert-1; iVert++)
     for (int jVert=iVert+1; jVert<nbVert; jVert++) {
@@ -1507,10 +1512,107 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 	if (eVect[iH] == 1) {
 	  int aVert=iVert + nbVert*iH;
 	  int bVert=jVert + nbVert*iH;
-	  eGR.AddAdjacent(aVert, bVert);
-	  eGR.AddAdjacent(bVert, aVert);
+	  f_adj(aVert, bVert);
+	  f_adj(bVert, aVert);
 	}
     }
+}
+
+
+template<typename T1, typename T2>
+bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
+{
+  int nbVert = get_total_number_vertices(WMat);
+  bliss::Graph g(nbVert);
+  auto f_color=[&](int iVert, int eColor) -> void {
+    g.change_color(iVert, eColor);
+  };
+  auto f_adj=[&](int iVert, int jVert) -> void {
+    g.add_edge(iVert, jVert);
+  };
+  GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
+  return g;
+}
+
+
+
+template<typename T1, typename T2, typename Tgr>
+inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
+{
+  unsigned int nof_vertices=get_total_number_vertices(WMat);
+  Tgr eGR(nof_vertices);
+  eGR.SetHasColor(true);
+  auto f_color=[&](int iVert, int eColor) -> void {
+    eGR.SetColor(iVert, eColor);
+  };
+  auto f_adj=[&](int iVert, int jVert) -> void {
+    eGR.AddAdjacent(iVert, jVert);
+  };
+  GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
+  return eGR;
+}
+
+
+
+
+template<typename T1, typename T2, typename Tgr>
+inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
+{
+  unsigned int nof_vertices;
+  int nbMult=WMat.GetWeightSize()+2;
+  int hS=GetNeededPower(nbMult);
+  int nbRow=WMat.rows();
+  int nbVert=nbRow + 2;
+  nof_vertices=hS*nbVert;
+  std::function<bool(int,int)> fAdj=[=](int const& aVert, int const& bVert) -> bool {
+    int eVal;
+    int iVert=aVert % nbVert;
+    int iH=(aVert - iVert)/nbVert;
+    int jVert=bVert % nbVert;
+    int jH=(aVert - iVert)/nbVert;
+    if (iVert == jVert) {
+      if (iH != jH) {
+	return true;
+      }
+      else {
+	return false;
+      }
+    }
+    if (iH == jH) {
+      if (iVert > jVert) {
+	int swp=iVert;
+	iVert=swp;
+	jVert=swp;
+      }
+      if (jVert == nbRow+1) {
+	if (iVert == nbRow)
+	  eVal=nbMult;
+	else
+	  eVal=nbMult+1;
+      }
+      else {
+	if (jVert == nbRow)
+	  eVal=WMat.GetValue(iVert, iVert);
+	else
+	  eVal=WMat.GetValue(iVert, jVert);
+      }
+      std::vector<int> eVect=GetBinaryExpression(eVal, hS);
+      if (eVect[iH] == 1) {
+	return true;
+      }
+      else {
+	return false;
+      }
+    }
+    return false;
+  };
+  std::function<int(int)> fColor=[=](int const& aVert) -> int {
+    int iVert=aVert % nbVert;
+    int iH=(aVert - iVert)/nbVert;
+    return iH;
+  };
+  Tgr eGR(nof_vertices, fAdj);
+  eGR.SetFColor(fColor);
   return eGR;
 }
 
@@ -1519,7 +1621,7 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
-// 
+//
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
@@ -1619,70 +1721,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized
     }
   }
   return {MapVect, MapVectRev};
-}
-
-
-
-
-template<typename T1, typename T2, typename Tgr>
-inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
-{
-  unsigned int nof_vertices;
-  int nbMult=WMat.GetWeightSize()+2;
-  int hS=GetNeededPower(nbMult);
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
-  nof_vertices=hS*nbVert;
-  std::function<bool(int,int)> fAdj=[=](int const& aVert, int const& bVert) -> bool {
-    int eVal;
-    int iVert=aVert % nbVert;
-    int iH=(aVert - iVert)/nbVert;
-    int jVert=bVert % nbVert;
-    int jH=(aVert - iVert)/nbVert;
-    if (iVert == jVert) {
-      if (iH != jH) {
-	return true;
-      }
-      else {
-	return false;
-      }
-    }
-    if (iH == jH) {
-      if (iVert > jVert) {
-	int swp=iVert;
-	iVert=swp;
-	jVert=swp;
-      }
-      if (jVert == nbRow+1) {
-	if (iVert == nbRow)
-	  eVal=nbMult;
-	else
-	  eVal=nbMult+1;
-      }
-      else {
-	if (jVert == nbRow)
-	  eVal=WMat.GetValue(iVert, iVert);
-	else
-	  eVal=WMat.GetValue(iVert, jVert);
-      }
-      std::vector<int> eVect=GetBinaryExpression(eVal, hS);
-      if (eVect[iH] == 1) {
-	return true;
-      }
-      else {
-	return false;
-      }
-    }
-    return false;
-  };
-  std::function<int(int)> fColor=[=](int const& aVert) -> int {
-    int iVert=aVert % nbVert;
-    int iH=(aVert - iVert)/nbVert;
-    return iH;
-  };
-  Tgr eGR(nof_vertices, fAdj);
-  eGR.SetFColor(fColor);
-  return eGR;
 }
 
 
@@ -1909,7 +1947,6 @@ WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 }
 
 
-
 template<typename T1, typename T2>
 permlib::Permutation CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
@@ -1948,6 +1985,27 @@ TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
   return GetStabilizerWeightMatrix(WMat);
 }
+
+
+template<typename Tint>
+MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+{
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+  WeightMatrix<Tint,Tint> WMat=GetWeightMatrix(EXT);
+  ReorderingSetWeight(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    int j_row = PairCanonic.second[i_row];
+    for (int i_col=0; i_col<n_cols; i_col++)
+      EXTreord(i_row, i_col) = EXT(j_row, i_col);
+  }
+  return ComputeRowHermiteNormalForm(EXTreord).first;
+}
+
+
+
 
 
 
@@ -2267,7 +2325,7 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
 
 
 
-std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal, 
+std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 				    TheGroupFormat const& TheGRP)
 {
   std::vector<Face> TheReturn;
@@ -2329,7 +2387,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
     if (iter == ListTotal.end())
       break;
     Tobj eObj=*iter;
-    TheReturn.push_back(eObj);    
+    TheReturn.push_back(eObj);
     std::set<Tobj> Additional;
     Additional.insert(eObj);
     ListTotal.erase(eObj);
@@ -2368,7 +2426,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 
 std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
 					 TheGroupFormat const& SmaGRP,
-					 LocalInvInfo const& LocalInv, 
+					 LocalInvInfo const& LocalInv,
 					 Face const& eList, std::ostream & os)
 {
   os << "Beginning of DoubleCosetDescription\n";
@@ -2382,14 +2440,14 @@ std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
     int status;
     Face eFace;
     std::vector<int> eInv;
-  };  
+  };
   mpz_class SizeGen=0;
   std::vector<Local> ListLocal;
   auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
     std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
     for (auto const& fLocal : ListLocal) {
       bool testCL=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 0).TheReply;
-      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;      
+      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;
       bool test=TestEquivalence(SmaGRP, fLocal.eFace, testList);
       os << "fLocal.eFace=\n";
       WriteFace(os, fLocal.eFace);
@@ -2411,7 +2469,7 @@ std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
   while(true) {
     bool DoSomething=false;
     int nbLocal=ListLocal.size();
-    for (int iLocal=0; iLocal<nbLocal; iLocal++) 
+    for (int iLocal=0; iLocal<nbLocal; iLocal++)
       if (ListLocal[iLocal].status == 0) {
 	ListLocal[iLocal].status=1;
 	DoSomething=true;
