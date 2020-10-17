@@ -60,7 +60,7 @@ ENV GSL_C_LINK="-lgsl -lgslcblas"
 
 # cloning polyhedral code
 RUN mkdir -p GIT
-RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
+RUN cd GIT  &&  git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
 
 
 # libshort
@@ -72,6 +72,8 @@ RUN cd GIT/polyhedral_common/ExternalLib/LibShort && make -f Makefile_lib && mak
 
 # bliss
 ENV LIBBLISS_PATH /opt/libbliss
+ENV LIBBLISS_INCDIR /opt/libbliss/include
+ENV LIBBLISS_LINK "-L/opt/libbliss/lib -lbliss -Wl,-rpath,/opt/libbliss/lib"
 RUN cd GIT/polyhedral_common/ExternalLib/bliss && mkdir build
 RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
 RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && make all install
