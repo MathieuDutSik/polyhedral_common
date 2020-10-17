@@ -472,8 +472,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT,
   }
   os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << "\n";
   if (ansProg == "cdd") {
-    T smallVal=0;
-    ListIncd=cdd::DualDescription_incd(EXTred, smallVal);
+    ListIncd=cdd::DualDescription_incd(EXTred);
     WeAreDone=true;
   }
   if (ansProg == "lrs") {
@@ -537,8 +536,7 @@ std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT,
     if (prog == "lrs")
       ListIncd=lrs::DualDescription_temp_incd(EXT);
     if (prog == "cdd") {
-      T smallVal=0;
-      ListIncd=cdd::DualDescription_incd(EXT, smallVal);
+      ListIncd=cdd::DualDescription_incd(EXT);
     }
     for (auto & eFace : ListIncd)
       FuncInsert(eFace);
