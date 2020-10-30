@@ -19,7 +19,7 @@ struct TypeCtypeExch {
 
 template<typename T>
 struct PairExch {
-  TypeCtypeExch<T> ePerfect;
+  TypeCtypeExch<T> eCtype;
   TypeIndex eIndex;
 };
 
@@ -124,7 +124,7 @@ namespace boost { namespace serialization {
                             PairExch<T> & ePair,
                             const unsigned int version)
       {
-        ar & make_nvp("perfect", ePair.ePerfect);
+        ar & make_nvp("perfect", ePair.eCtype);
         ar & make_nvp("index"  , ePair.eIndex);
       }
 

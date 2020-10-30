@@ -31,11 +31,6 @@ namespace std {
 }
 
 
-/*struct TypeIndexRed {
-  int iProc;
-  int idxMatrix;
-  };*/
-
 template<typename T>
 struct InformationMatrix {
   TypePerfectExch<T> ePerfect;
@@ -116,9 +111,8 @@ int main(int argc, char* argv[])
           int idxMatrix=std::stoi(LStrParse[1]);
           TypeIndexRed eIndexRed{iProc, idxMatrix};
           auto iter=ListInfoMatrices.find(eIndexRed);
-          if (iter == ListInfoMatrices.end()) {
+          if (iter == ListInfoMatrices.end())
             ListInfoMatrices[eIndexRed] = {};
-          }
           ListInfoMatrices[eIndexRed].ePerfect = ePerfect;
         }
         //
@@ -127,9 +121,8 @@ int main(int argc, char* argv[])
           TypeIndex eIndex = ParseStringToTypeIndex(LStrParse[0]);
           TypeIndexRed eIndexRed{eIndex.iProc, eIndex.idxMatrix};
           auto iter=ListInfoMatrices.find(eIndexRed);
-          if (iter == ListInfoMatrices.end()) {
+          if (iter == ListInfoMatrices.end())
             ListInfoMatrices[eIndexRed] = {};
-          }
           ListInfoMatrices[eIndexRed].ListIAdj.push_back(eIndex.iAdj);
         }
       }
@@ -143,7 +136,6 @@ int main(int argc, char* argv[])
     int SumStatus=0;
     for (auto & ePair : ListInfoMatrices) {
       int eStatus=0;
-      //      std::cerr << "ePair.second.nbAdjacent=" << ePair.second.nbAdjacent << " |ListIAdj|=" << ePair.second.ListIAdj.size() << "\n";
       if ((ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size())) && ePair.second.nbAdjacent > 0)
         eStatus=1;
       SumStatus += eStatus;
