@@ -42,29 +42,35 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
 
 
 template<typename T, typename Tint>
-std::vector<MyMatrix<T>> GetAdjacentFormDirectMethod(MyMatrix<T> const& eMatIn)
+std::vector<TypePerfectExch<Tint>> GetAdjacentObjects(TypePerfectExch<Tint> const& eObjIn)
 {
-  Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMatIn);
+  MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eObjIn.eMat);
+  Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat_T);
   int n=eRec.SHV.cols();
   int nbShort=eRec.SHV.rows() / 2;
   int dimSymm=n*(n+1)/2;
   MyMatrix<Tint> SHVred(nbShort, n);
-  for (int iShort=0; iShort<nbShort; iShort++) {
+  for (int iShort=0; iShort<nbShort; iShort++)
     for (int i=0; i<n; i++)
       SHVred(iShort,i) = eRec.SHV(2*iShort,i);
-  }
   MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T,Tint>(SHVred);
   std::vector<Face> ListIncd = lrs::DualDescription_temp_incd(ConeClassical);
   MyVector<T> Wvect = GetSymmetricMatrixWeightVector<T>(n);
-  std::vector<MyMatrix<T>> ListAdjMat;
+  std::vector<TypePerfectExch<Tint>> ListAdjMat;
   for (auto & eIncd : ListIncd) {
     MyVector<T> eFacet=FindFacetInequality(ConeClassical, eIncd);
     MyVector<T> Vexpand(dimSymm);
     for (int i=0; i<dimSymm; i++)
       Vexpand(i) = eFacet(i) / Wvect(i);
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
-    MyMatrix<T> eMatAdj = Flipping_Perfect(eMatIn, eMatDir);
-    ListAdjMat.push_back(eMatAdj);
+    std::pair<MyMatrix<T>,Tshortest<T,Tint>> ePairAdj = Flipping_Perfect<T,Tint>(eMat_T, eMatDir);
+    int incd = ePairAdj.second.SHV.rows() / 2;
+    //
+    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(ePairAdj.first).Mat;
+    MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
+    MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
+    TypePerfectExch<Tint> RecMat{incd, eMat4};
+    ListAdjMat.emplace_back(RecMat);
   }
   return ListAdjMat;
 }
@@ -117,7 +123,6 @@ int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat, int const& size)
     int residue = UniversalTypeConversion<int,mpz_class>(e_res);
     return residue;
   }
-  
   return 0;
 }
 
@@ -314,20 +319,14 @@ int main()
           MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
           std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
-          std::vector<MyMatrix<T>> ListAdjacent = GetAdjacentFormDirectMethod<T,Tint>(eMat_T);
-          int nbAdjacent = ListAdjacent.size();
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << ListAdjacent.size() << " END" << std::endl;
+          std::vector<TypePerfectExch<Tint>> ListAdjacentObject = GetAdjacentObjects<T,Tint>(eReq->first);
+          int nbAdjacent = ListAdjacentObject.size();
+          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
           std::cerr << "irank=" << irank << " Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
           int iAdj=0;
-	  for (auto & eMat1 : ListAdjacent) {
-	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).Mat;
-	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
-	    int incd = (eRec.SHV.rows()) / 2;
-            MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
-            MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
-            TypePerfectExch<Tint> RecMat{incd, eMat4};
+	  for (auto & eObj1 : ListAdjacentObject) {
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
-            PairExch<Tint> ePair{RecMat, eIndex};
+            PairExch<Tint> ePair{eObj1, eIndex};
 	    fInsertUnsent(ePair);
             iAdj++;
 	  }

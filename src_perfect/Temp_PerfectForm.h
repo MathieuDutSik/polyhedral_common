@@ -304,40 +304,11 @@ private:
 
 
 
-
-
-
 template<typename T, typename Tint>
-void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId, 
-				    DataBank<PolyhedralEntry<T>> &TheBank,
-				    LinSpaceMatrix<T> const& LinSpa, 
-				    ListPerfectForm<T,Tint> &ListPerf, 
-				    PolyHeuristic<mpz_class> const& AllArr, 
-				    std::vector<int> const& ListOrbWork)
-{
-  std::vector<int> ListOrbitWorkEff=ListPerf.GetListOrbitWorkEff(ListOrbWork);
-  for (auto& eOrb : ListOrbitWorkEff) {
-    MyMatrix<T> eGram=ListPerf.GetGram(eOrb);
-    MyMatrix<T> PerfDomEXT=ListPerf.GetPerfDomEXT(eOrb);
-    TheGroupFormat PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
-    std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
-             TheId, TheBank,
-	     PerfDomEXT, PerfDomGRP,
-	     AllArr);
-    for (auto& eOrbB : TheOutput) {
-      MyVector<T> eVectOrb=FindFacetInequality(PerfDomEXT, eOrbB);
-      MyMatrix<T> DirMat=LINSPA_GetMatrixInTspace(LinSpa, eVectOrb);
-      MyMatrix<T> NewPerf=Flipping_Perfect(eGram, DirMat);
-      PerfEquivInfo eEquiv=ListPerf.InsertForm(LinSpa, NewPerf);
-      eEquiv.eInc=eOrbB;
-      ListPerf.InsertEquivInfo(eOrb, eEquiv);
-    }
-    ListPerf.SetStatus(eOrb, 1);
-  }
-}
-
-
-
+struct RecShort {
+  std::function<bool(MyMatrix<T> const&)> IsAdmissible;
+  std::function<Tshortest<T,Tint>(MyMatrix<T> const&)> ShortestFunction;
+};
 
 template<typename Tint>
 bool TestInclusionSHV(MyMatrix<Tint> const& TheSHVbig, MyMatrix<Tint> const& TheSHVsma)
@@ -365,33 +336,25 @@ bool TestInclusionSHV(MyMatrix<Tint> const& TheSHVbig, MyMatrix<Tint> const& The
   return true;
 }
 
-template<typename T, typename Tint>
-struct RecShort {
-  std::function<bool(MyMatrix<T> const&)> IsAdmissible;
-  std::function<Tshortest<T,Tint>(MyMatrix<T> const&)> ShortestFunction;
-};
-
-
 
 #undef DEBUG_FLIP
 //#define DEBUG_FLIP
 template<typename T, typename Tint>
-MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
+std::pair<MyMatrix<T>,Tshortest<T,Tint>> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
 {
   std::vector<MyMatrix<T>> ListMat;
   std::vector<Tshortest<T,Tint>> ListShort;
+  // Memoization procedure
   auto RetriveShortestDesc=[&](MyMatrix<T> const& eMat) -> Tshortest<T,Tint> {
     int len=ListMat.size();
-    for (int i=0; i<len; i++) {
+    for (int i=0; i<len; i++)
       if (ListMat[i] == eMat)
         return ListShort[i];
-    }
     Tshortest<T,Tint> RecSHV=eRecShort.ShortestFunction(eMat);
     ListMat.push_back(eMat);
     ListShort.push_back(RecSHV);
     return RecSHV;
   };
-  
   Tshortest<T,Tint> const RecSHVperf=RetriveShortestDesc(eMatIn);
 #ifdef DEBUG_FLIP
   std::cerr << "Kernel_Flipping_Perfect : SHVinformation=\n";
@@ -486,7 +449,7 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
 #ifdef DEBUG_FLIP
       std::cerr << "Return Qupp\n";
 #endif
-      return Qupp;
+      return {std::move(Qupp), std::move(RecSHVupp)};
     }
     if (!test2) {
 #ifdef DEBUG_FLIP
@@ -501,7 +464,7 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
       WriteMatrix(std::cerr, RecSHVlow.SHV);
       std::cerr << "Return Qlow\n";
 #endif
-      return Qlow;
+      return {std::move(Qlow),std::move(RecSHVlow)};
     }
     T TheGamma=(TheLowerBound + TheUpperBound)/2;
     MyMatrix<T> Qgamma = eMatIn + TheGamma*eMatDir;
@@ -549,18 +512,54 @@ MyMatrix<T> Kernel_Flipping_Perfect(RecShort<T, Tint> const& eRecShort, MyMatrix
 }
 
 
-template<typename T>
-MyMatrix<T> Flipping_Perfect(MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
+template<typename T, typename Tint>
+std::pair<MyMatrix<T>,Tshortest<T,Tint>> Flipping_Perfect(MyMatrix<T> const& eMatIn, MyMatrix<T> const& eMatDir)
 {
   std::function<bool(MyMatrix<T> const&)> IsAdmissible=[](MyMatrix<T> const& eMat) -> bool {
     return IsPositiveDefinite<T>(eMat);
   };
-  std::function<Tshortest<T,int>(MyMatrix<T> const&)> ShortestFunction=[](MyMatrix<T> const& eMat) -> Tshortest<T,int> {
-    return T_ShortestVector<T,int>(eMat);
+  std::function<Tshortest<T,Tint>(MyMatrix<T> const&)> ShortestFunction=[](MyMatrix<T> const& eMat) -> Tshortest<T,Tint> {
+    return T_ShortestVector<T,Tint>(eMat);
   };
-  RecShort<T,int> eRecShort{IsAdmissible, ShortestFunction};
+  RecShort<T,Tint> eRecShort{IsAdmissible, ShortestFunction};
   return Kernel_Flipping_Perfect(eRecShort, eMatIn, eMatDir);
 }
+
+
+
+template<typename T, typename Tint>
+void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId, 
+				    DataBank<PolyhedralEntry<T>> &TheBank,
+				    LinSpaceMatrix<T> const& LinSpa, 
+				    ListPerfectForm<T,Tint> &ListPerf, 
+				    PolyHeuristic<mpz_class> const& AllArr, 
+				    std::vector<int> const& ListOrbWork)
+{
+  std::vector<int> ListOrbitWorkEff=ListPerf.GetListOrbitWorkEff(ListOrbWork);
+  for (auto& eOrb : ListOrbitWorkEff) {
+    MyMatrix<T> eGram=ListPerf.GetGram(eOrb);
+    MyMatrix<T> PerfDomEXT=ListPerf.GetPerfDomEXT(eOrb);
+    TheGroupFormat PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
+    std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
+             TheId, TheBank,
+	     PerfDomEXT, PerfDomGRP,
+	     AllArr);
+    for (auto& eOrbB : TheOutput) {
+      MyVector<T> eVectOrb=FindFacetInequality(PerfDomEXT, eOrbB);
+      MyMatrix<T> DirMat=LINSPA_GetMatrixInTspace(LinSpa, eVectOrb);
+      MyMatrix<T> NewPerf=Flipping_Perfect<T,int>(eGram, DirMat).first;
+      PerfEquivInfo eEquiv=ListPerf.InsertForm(LinSpa, NewPerf);
+      eEquiv.eInc=eOrbB;
+      ListPerf.InsertEquivInfo(eOrb, eEquiv);
+    }
+    ListPerf.SetStatus(eOrb, 1);
+  }
+}
+
+
+
+
+
 
 
 
@@ -587,7 +586,7 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const& LinSpa)
       break;
     MyVector<T> eVect=eSelect.NSP.row(0);
     MyMatrix<T> DirMat=LINSPA_GetMatrixInTspace(LinSpa, eVect);
-    MyMatrix<T> eMatRet=Flipping_Perfect(ThePerfMat, DirMat);
+    MyMatrix<T> eMatRet=Flipping_Perfect<T,int>(ThePerfMat, DirMat).first;
     ThePerfMat=eMatRet;
   }
   return ThePerfMat;
@@ -956,7 +955,7 @@ template<typename T, typename Tint>
       for (auto& eOrbB : TheOutput) {
 	MyVector<T> eVectOrb=FindFacetInequality(eNaked.PerfDomEXT, eOrbB);
 	MyMatrix<T> DirMat=LINSPA_GetMatrixInTspace(eData.LinSpa, eVectOrb);
-	MyMatrix<T> NewPerf=Flipping_Perfect(ePERF.Gram, DirMat);
+	MyMatrix<T> NewPerf=Flipping_Perfect<T,int>(ePERF.Gram, DirMat).first;
 	int eVal=FuncInsert({NewPerf}, os);
 	if (eVal == -1)
 	  cv.notify_one();

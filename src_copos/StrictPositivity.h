@@ -117,7 +117,7 @@ TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& e
       WriteMatrix(std::cerr, TotalSum);
       return {true, RealizingFamily, eVectRet, {}};
     }
-// Now trying to do the flipping
+    // Now trying to do the flipping
     std::cerr << "Before FindViolatedFace nbIter=" << nbIter << "\n";
     MyVector<T> eMatVect=SymmetricMatrixToVector(eMat);
     Face eFace=FindViolatedFace(ConeClassical, eMatVect);
@@ -142,15 +142,13 @@ TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& e
     T ScalDir = MatrixScalarProduct(eMatDir, eMat);
     std::cerr << "ScalDir=" << ScalDir << "\n";
 
-
-    
     //    MyMatrix<T> eMatDir=LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::cerr << "Before KernelFlipping nbIter=" << nbIter << "\n";
-    MyMatrix<T> NewMat=Kernel_Flipping_Perfect<T,Tint>(eRecShort, SearchMatrix, eMatDir);
+    std::pair<MyMatrix<T>,Tshortest<T,Tint>> ePair=Kernel_Flipping_Perfect<T,Tint>(eRecShort, SearchMatrix, eMatDir);
     std::cerr << "NewMat=\n";
-    WriteMatrix(std::cerr, NewMat);
+    WriteMatrix(std::cerr, ePair.first);
     std::cerr << "Before SearchMatrix assignation nbIter=" << nbIter << "\n";
-    SearchMatrix=NewMat;
+    SearchMatrix=ePair.first;
   }
 }
 
