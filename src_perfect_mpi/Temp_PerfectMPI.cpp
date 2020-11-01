@@ -320,8 +320,7 @@ int main()
           std::cerr << "irank=" << irank << " Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
           int iAdj=0;
 	  for (auto & eMat1 : ListAdjacent) {
-            //            std::cerr << "Process, step 1 iAdj=" << iAdj << " / " << nbAdjacent << "\n";
-	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).second;
+	    MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(eMat1).Mat;
 	    Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat2);
 	    int incd = (eRec.SHV.rows()) / 2;
             MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
