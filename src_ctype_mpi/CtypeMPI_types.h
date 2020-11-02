@@ -2,7 +2,9 @@
 #define INCLUDE_CTYPE_FUNCTIONALITY
 
 #include "MAT_Matrix.h"
-
+#include "Boost_bitset.h"
+#include "POLY_cddlib.h"
+#include "Temp_PolytopeEquiStab.h"
 
 
 template<typename T>
@@ -51,8 +53,8 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
   MyMatrix<T> RetMat(n_rows, n_cols);
   size_t idx=0;
   for (auto & e_triple : TheInfo) {
-    int8_t j = triple.j;
-    int8_t k = triple.k;
+    int8_t j = e_triple.j;
+    int8_t k = e_triple.k;
     //
     for (size_t i_col=0; i_col<n_cols; i_col++)
       RetMat(idx, i_col) = -TheCtype(j, i_col) + TheCtype(k, i_col);
@@ -63,7 +65,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
     idx++;
   }
   for (size_t i_row=0; i_row<n_rows; i_row++) {
-    if (ListIchange(i_row) == 0) {
+    if (ListIchange[i_row] == 0) {
       for (size_t i_col=0; i_col<n_cols; i_col++)
         RetMat(idx, i_col) =  TheCtype(i_row, i_col);
       idx++;
@@ -87,7 +89,7 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
     };
     for (int8_t k=start_idx+1; k<n_edge; k++) {
       if (get_nature(k))
-        return k
+        return k;
     }
     return -1;
   };
@@ -104,14 +106,37 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 }
 
 
+namespace std {
+  template <typename T>
+  struct hash<MyVector<T>>
+  {
+    std::size_t operator()(const MyVector<T>& V) const
+    {
+      std::size_t h1 = 12756;
+      int len=V.size();
+      for (int i=0; i<len; i++) {
+        T eVal = V(i);
+        std::size_t h2 = std::hash<T>()(eVal);
+        h1 = h2 ^ ( h1 << 1);
+      }
+      return h1;
+    }
+  };
+}
+
+
+
+
+
 template<typename T>
 std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtype)
 {
-  std::vector<triple> ListTriples = CTYP_GetListTriples(TheCtype.eMat);
+  std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype.eMat);
   int8_t n = TheCtype.eMat.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
     MyVector<T> TheVector(tot_dim);
+    int idx=0;
     for (int8_t i=0; i<n; i++) {
       TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
       idx++;
@@ -133,7 +158,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     }
     MyVector<T> TheVector = ComputeInequality(V1, V2);
     triple TheInfo = {i,j,k};
-    std::vector<triple>& list_trip = Tot_map.find(TheVector);
+    std::vector<triple>& list_trip = Tot_map[TheVector];
     list_trip.push_back(TheInfo);
   };
   for (auto & e_triple : ListTriples) {
@@ -162,11 +187,6 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   }
   return ListCtype;
 }
-
-
-
-
-
 
 
 struct TypeIndex {

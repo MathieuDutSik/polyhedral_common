@@ -1,8 +1,6 @@
-#include "PerfectMPI_types.h"
+#include "CtypeMPI_types.h"
 #include "NumberTheory.h"
-#include "Namelist.h"
 #include "MatrixCanonicalForm.h"
-#include "Temp_PerfectForm.h"
 #include <unordered_map>
 
 using TypeIndexRed = std::pair<int,int>;

@@ -2790,8 +2790,6 @@ void dd_TableauEntry(T & x, dd_colrange d_size, T** X, T** Ts,
 /* Compute the (r,s) entry of X.T   */
 {
   dd_colrange j;
-  T temp;
-
   x=0;
   for (j=0; j< d_size; j++)
     x += X[r-1][j] * Ts[j][s-1];
@@ -3422,7 +3420,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size,dd_colrange d_size,
   dd_colrange j,l,ms=0,s_val,local_m_size;
   T x, val, maxcost=0, axvalue, maxratio=0, maxratio_q=1;
 
-  T scaling,svalue;  /* random scaling mytype value */
+  T scaling;  /* random scaling mytype value */
   T minval=0;
 
   *err=dd_NoError; *lps=dd_LPSundecided; *s=0;

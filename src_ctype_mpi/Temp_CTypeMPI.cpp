@@ -6,7 +6,7 @@
 
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
-#include "md5sum.h"
+#include "hash_functions.h"
 namespace mpi = boost::mpi;
 
 
@@ -53,25 +53,14 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 }
 
 
-template<typename T, typename Tint>
-std::vector<TypeCtypeExch<Tint>> GetAdjacentObjects(TypeCtypeExch<Tint> const& eObjIn)
-{
-}
-
-
-
-
-
 
 
 
 static int tag_new_form = 37;
-static int tag_written_form = 38;
 
 
 int main()
 {
-  using T=mpq_class;
   using Tint=long;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI();

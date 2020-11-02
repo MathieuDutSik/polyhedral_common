@@ -8,7 +8,7 @@
 #include "GRAPH_GraphicalFunctions.h"
 #include "GRP_GroupFct.h"
 #include "COMB_Combinatorics_elem.h"
-
+#include "MAT_MatrixInt.h"
 
 
 template<typename T>
