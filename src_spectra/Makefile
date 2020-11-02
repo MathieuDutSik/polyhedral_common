@@ -15,9 +15,9 @@ OUTPUTFLAG 	= -o
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix
 
 
-CFLAGS 		= -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
 
-LIBS		= -lm -pthread
+LIBS		= -lm -pthread $(GMP_CXX_LINK)
 
 %.o: %.cpp
 	@echo
