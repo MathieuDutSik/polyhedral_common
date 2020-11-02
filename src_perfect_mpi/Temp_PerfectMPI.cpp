@@ -7,7 +7,7 @@
 
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
-#include "md5sum.h"
+#include "hash_functions.h"
 namespace mpi = boost::mpi;
 
 

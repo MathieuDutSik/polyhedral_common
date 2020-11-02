@@ -47,30 +47,6 @@ std::vector<TypePerfectExch<Tint>> GetAdjacentObjects(TypePerfectExch<Tint> cons
 
 
 
-template<typename T>
-int IntegerDiscriminantInvariant(MyMatrix<T> const& NewMat, int const& size)
-{
-  int TheChoice=3;
-  if (TheChoice == 3) {
-    std::stringstream s;
-    int nbRow=NewMat.rows();
-    int nbCol=NewMat.cols();
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbCol; iCol++)
-        s << " " << NewMat(iRow, iCol);
-    std::string converted(s.str());
-    mpz_class e_hash_mpz = MD5_hash_mpz(converted);
-    mpz_class e_modulo = size;
-    mpz_class e_res = e_hash_mpz % e_modulo;
-    int residue = UniversalTypeConversion<int,mpz_class>(e_res);
-    return residue;
-  }
-  return 0;
-}
-
-
-
-
 
 
 
