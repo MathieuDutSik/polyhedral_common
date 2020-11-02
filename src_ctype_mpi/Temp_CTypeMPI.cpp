@@ -2,7 +2,6 @@
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include "MatrixCanonicalForm.h"
-#include "Temp_PerfectForm.h"
 #include <unordered_map>
 
 #include <boost/mpi/environment.hpp>
@@ -60,7 +59,7 @@ int main()
   using Tint=long;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI();
-  std::string eFileName = "perfectenum.nml";
+  std::string eFileName = "ctype_enum.nml";
   NAMELIST_ReadNamelistFile(eFileName, eFull);
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
   //  int n=BlDATA.ListIntValues.at("n");
@@ -114,21 +113,21 @@ int main()
   std::unordered_map<TypeCtypeExch<Tint>,KeyData> ListCasesDone;
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
-    TypeCtypeExch<Tint> ePerfect = ePair.ePerfect;
-    auto it1 = ListCasesDone.find(ePerfect);
+    TypeCtypeExch<Tint> eCtype = ePair.eCtype;
+    auto it1 = ListCasesDone.find(eCtype);
     if (it1 != ListCasesDone.end()) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
-    KeyData& eData = ListCasesNotDone[ePerfect];
+    KeyData& eData = ListCasesNotDone[eCtype];
     if (eData.idxMatrix != 0) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     eData.idxMatrix = idxMatrixCurrent + 1;
-    log << "Inserting New perfect form" << ePair.ePerfect << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
+    log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
     std::cerr << "Inserting new form, now we have |ListCasesNotDone[pos]|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
-    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " ePerfect = " << ePair.ePerfect << "\n";
+    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
     idxMatrixCurrent++;
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<TypeCtypeExch<Tint>,int>> {
@@ -148,7 +147,7 @@ int main()
   // The system for sending matrices
   //
   auto fSendMatrix=[&](PairExch<Tint> const& ePair, int const& u) -> void {
-    int res=IntegerDiscriminantInvariant(ePair.ePerfect.eMat, n_pes);
+    int res=IntegerDiscriminantInvariant(ePair.eCtype.eMat, n_pes);
     ListRequest[u] = world.isend(res, tag_new_form, ePair);
     RequestStatus[u] = 1;
   };
@@ -167,7 +166,7 @@ int main()
     }
   };
   auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    int res=IntegerDiscriminantInvariant(ePair.ePerfect.eMat, n_pes);
+    int res=IntegerDiscriminantInvariant(ePair.eCtype.eMat, n_pes);
     if (res == irank) {
       fInsert(ePair);
     }
@@ -219,10 +218,10 @@ int main()
 	if (eReq) {
           std::cerr << "irank=" << irank << " eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
-          std::cerr << "irank=" << irank << " ePerfect=" << eReq->first << "\n";
+          std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
           int idxMatrixF = eReq->second;
           std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
-          std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = GetAdjacentObjects<T,Tint>(eReq->first);
+          std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
           int nbAdjacent = ListAdjacentObject.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
           std::cerr << "irank=" << irank << " Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
