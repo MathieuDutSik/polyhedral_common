@@ -1,5 +1,5 @@
 #PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
-PROGRAM		= POLY_redundancyClarkson
+PROGRAM		= POLY_redundancyClarksonCddlib
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -19,9 +19,9 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I.
 
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -DEIGEN_NO_DEBUG
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -DEIGEN_NO_DEBUG $(CDDLIB_INCLUDE)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(CDDLIB_LINK)
 
 %.o: %.cpp
 	@echo

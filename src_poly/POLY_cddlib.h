@@ -26,6 +26,8 @@
 #define DEBUG_CDD
 #define CDD_RAND_MAX 32767
 
+// templatized code of the CDD library
+
 namespace cdd {
   typedef enum {
     dd_CrissCross, dd_DualSimplex
@@ -7639,5 +7641,6 @@ std::vector<Face> DualDescription_incd(MyMatrix<T> const&TheEXT)
 }
 
 }
+
 
 #endif
