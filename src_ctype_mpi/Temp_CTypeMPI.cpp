@@ -10,6 +10,22 @@
 namespace mpi = boost::mpi;
 
 
+/*
+  Possible parallel schemes:
+  ---We have a single file in input that is read at the beginning
+  and data is dispatched to all the processors.
+     PLUS: Simplicity. Only one exchange from one process to another.
+     Can switch from one number of processors to another easily
+     MINUS: Need for a merging function. At start, time spent on dispactching.
+  ---We have a fixed number of entries.
+     PLUS: No need for dispatching.
+     MINUS: More exchanges during operation. More unwieldly database.
+     When changing to another number of processor, great work needed.
+
+ */
+
+
+
 FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 {
   std::map<std::string, SingleBlock> ListBlock;
@@ -81,8 +97,6 @@ int main()
   is >> nbMatrixStart;
   struct KeyData {
     int idxMatrix;
-    int nbAdjacent;
-    int nbProcessed;
   };
   // int StatusTreatedForm; // 0: untreated, 1: treated but status not written on disk, 2: done and treated
   //

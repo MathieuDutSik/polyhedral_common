@@ -333,7 +333,7 @@ TypeCtypeExch<T> ParseStringToCtypeExch(std::string const& str)
   return {eMat};
 }
 
-TypeIndex ParseStringToTypeIndex(std::string const& str)
+TypeIndex ParseStringToCTypeIndex(std::string const& str)
 {
   std::vector<std::string> LStr = STRING_Split(str, " ");
   int iProc;
