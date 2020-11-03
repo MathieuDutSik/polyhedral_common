@@ -438,7 +438,17 @@ WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<T
 {
   int nbRow=SHV.rows();
   int n=qMat.rows();
-  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow, TheTol);
+  int INP_nbRow=nbRow;
+  std::vector<int> INP_TheMat(nbRow * nbRow);
+  std::vector<T> INP_ListWeight;
+  T INP_TheTol=0;
+  std::unordered_map<T, int> ValueMap;
+  int idxWeight = 0;
+  //
+  auto set_entry=[&](int iRow, int jRow, int val) -> void {
+    int idx = iRow + nbRow*jRow;
+    INP_TheMat[idx] = val;
+  };
   int nbPair=nbRow / 2;
   for (int iPair=0; iPair<nbPair; iPair++) {
     MyVector<T> V(n);
@@ -452,18 +462,33 @@ WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<T
       T eScal=0;
       for (int i=0; i<n; i++)
 	eScal += V(i)*SHV(2*jPair,i);
-      WMat.Update(2*iPair  , 2*jPair  , eScal);
-      WMat.Update(2*iPair+1, 2*jPair  , -eScal);
-      WMat.Update(2*iPair  , 2*jPair+1, -eScal);
-      WMat.Update(2*iPair+1, 2*jPair+1, eScal);
+      int& value1 = ValueMap[eScal];
+      if (value1 == 0) { // This is a missing value
+        idxWeight++;
+        value1 = idxWeight;
+        INP_ListWeight.push_back(eScal);
+      }
+      int& value2 = ValueMap[-eScal];
+      if (value2 == 0) { // This is a missing value
+        idxWeight++;
+        value2 = idxWeight;
+        INP_ListWeight.push_back(-eScal);
+      }
+      int pos1 = value1 - 1;
+      int pos2 = value2 - 1;
+      set_entry(2*iPair  , 2*jPair  , pos1);
+      set_entry(2*iPair+1, 2*jPair  , pos2);
+      set_entry(2*iPair  , 2*jPair+1, pos2);
+      set_entry(2*iPair+1, 2*jPair+1, pos1);
       if (iPair != jPair) {
-	WMat.Update(2*jPair  , 2*iPair  , eScal);
-	WMat.Update(2*jPair+1, 2*iPair  , -eScal);
-	WMat.Update(2*jPair  , 2*iPair+1, -eScal);
-	WMat.Update(2*jPair+1, 2*iPair+1, eScal);
+        set_entry(2*jPair  , 2*iPair  , pos1);
+        set_entry(2*jPair+1, 2*iPair  , pos2);
+        set_entry(2*jPair  , 2*iPair+1, pos2);
+        set_entry(2*jPair+1, 2*iPair+1, pos1);
       }
     }
   }
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
   return WMat;
 }
 
@@ -704,17 +729,21 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat, My
   int nbShort=ListShort.rows();
   int n=TheGramMat.rows();
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbShort, TheTol);
-  for (int iShort=0; iShort<nbShort; iShort++)
+  MyVector<T> V(n);
+  for (int iShort=0; iShort<nbShort; iShort++) {
+    for (int i=0; i<n; i++) {
+      T eSum = 0;
+      for (int j=0; j<n; j++)
+        eSum += TheGramMat(i,j) * ListShort(iShort, j);
+      V(i) = eSum;
+    }
     for (int jShort=0; jShort<nbShort; jShort++) {
-      T eScal=0;
+      T eScal = 0;
       for (int i=0; i<n; i++)
-	for (int j=0; j<n; j++) {
-	  int eVal12=ListShort(iShort, i) * ListShort(jShort, j);
-	  eScal += eVal12 * TheGramMat(i, j);
-	}
+        eScal += V(i) * ListShort(jShort, i);
       WMat.Update(iShort, jShort, eScal);
     }
-  std::cerr << "|ListWeight|=" << WMat.GetWeightSize() << "\n";
+  }
   return WMat;
 }
 
