@@ -595,8 +595,13 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
-  T TheTol=0;
-  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow, TheTol);
+  int INP_nbRow = nbRow;
+  std::vector<int> INP_TheMat(nbRow * nbRow);
+  std::vector<T> INP_ListWeight;
+  T INP_TheTol=0;
+  std::unordered_map<T, int> ValueMap;
+  int idxWeight = 0;
+  //
   MyVector<T> V(nbCol);
   for (int iRow=0; iRow<nbRow; iRow++) {
     for (int iCol=0; iCol<nbCol; iCol++) {
@@ -605,13 +610,23 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
         eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
       V(iCol) = eSum;
     }
-    for (int jRow=0; jRow<nbRow; jRow++) {
+    for (int jRow=0; jRow<=iRow; jRow++) {
       T eSum=0;
       for (int iCol=0; iCol<nbCol; iCol++)
         eSum += V(iCol) * TheEXT(jRow, iCol);
-      WMat.Update(iRow, jRow, eSum);
+      int& value = ValueMap[eSum];
+      if (value == 0) { // This is a missing value
+        idxWeight++;
+        value = idxWeight;
+        INP_ListWeight.push_back(eSum);
+      }
+      int idx1 = iRow + nbRow * jRow;
+      int idx2 = jRow + nbRow * iRow;
+      INP_TheMat[idx1] = value - 1;
+      INP_TheMat[idx2] = value - 1;
     }
   }
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   return WMat;
