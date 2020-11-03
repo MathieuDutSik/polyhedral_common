@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(short VERSION 0.73 DESCRIPTION "libshort library")
+project(short VERSION 1.0.0 DESCRIPTION "libshort library")
 
 add_library(short SHARED
     shvec.c

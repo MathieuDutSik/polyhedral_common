@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 {
   try {
     if (argc != 3) {
-      std::cerr << "MakeInitial_FileMatrix [FileIn] [FileOut]\n";
+      std::cerr << "CTYP_MakeInitialFile [FileIn] [FileOut]\n";
       throw TerminalException{1};
     }
     using Tmat=int;

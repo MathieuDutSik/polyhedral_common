@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
   //
   try {
     if (argc != 3) {
-      std::cerr << "MargePartialLogs [PrefixLog] [FileOut]\n";
+      std::cerr << "CTYP_MergeLogs [PrefixLog] [FileOut]\n";
       throw TerminalException{1};
     }
     std::string PrefixLog = argv[1];
