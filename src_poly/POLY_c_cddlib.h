@@ -13,7 +13,6 @@ dd_MatrixPtr MyMatrix_PolyFile2Matrix(MyMatrix<T> const&TheEXT)
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
   dd_RepresentationType rep;
-  bool localdebug=false;
   m_input=TheEXT.rows();
   d_input=TheEXT.cols();
   rep=dd_Generator; /* using dd_Inequality led to horrible bugs */

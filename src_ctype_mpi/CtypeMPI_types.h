@@ -4,6 +4,7 @@
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
 #include "POLY_cddlib.h"
+#include "POLY_c_cddlib.h"
 #include "Temp_PolytopeEquiStab.h"
 
 

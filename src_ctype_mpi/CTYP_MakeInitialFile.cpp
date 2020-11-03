@@ -12,7 +12,6 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     using Tmat=int;
-    using Tint=long;
     //
     std::string FileIn  = argv[1];
     std::string FileOut = argv[2];
