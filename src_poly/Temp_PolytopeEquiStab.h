@@ -540,8 +540,9 @@ bliss::Graph* ReadGraphFromFile(FILE *f, unsigned int &nof_vertices)
 
 
 template<typename T>
-MyMatrix<T> GetQmatrix(MyMatrix<T> const& TheEXT)
+MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
   MyMatrix<T> QMat(nbCol, nbCol);
@@ -555,6 +556,26 @@ MyMatrix<T> GetQmatrix(MyMatrix<T> const& TheEXT)
   return Inverse(QMat);
 }
 
+template<typename T>
+inline typename std::enable_if<is_ring_field<T>::value,MyMatrix<T>>::type GetQmatrix(MyMatrix<T> const& TheEXT)
+{
+  return Kernel_GetQmatrix(TheEXT);
+}
+
+
+template<typename T>
+inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type GetQmatrix(MyMatrix<T> const& TheEXT)
+{
+  using Tfield=typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> TheEXT_F = ConvertMatrixUniversal<Tfield,T>(TheEXT);
+  MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
+  MyMatrix<Tfield> Q_F_red = RemoveFractionMatrix(Q_F);
+  return ConvertMatrixUniversal<T,Tfield>(Q_F_red);
+}
+
+
+
+
 
 
 template<typename T>
@@ -564,14 +585,21 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
   int nbCol=TheEXT.cols();
   T TheTol=0;
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow, TheTol);
-  for (int iRow=0; iRow<nbRow; iRow++)
+  MyVector<T> V(nbCol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (int jCol=0; jCol<nbCol; jCol++)
+        eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
+      V(iCol) = eSum;
+    }
     for (int jRow=0; jRow<nbRow; jRow++) {
       T eSum=0;
       for (int iCol=0; iCol<nbCol; iCol++)
-	for (int jCol=0; jCol<nbCol; jCol++)
-	  eSum += Qmat(iCol, jCol) * TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
+        eSum += V(iCol) * TheEXT(jRow, iCol);
       WMat.Update(iRow, jRow, eSum);
     }
+  }
   return WMat;
 }
 
