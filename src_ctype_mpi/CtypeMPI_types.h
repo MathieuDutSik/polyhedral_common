@@ -177,7 +177,8 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     ListInformations.push_back(std::move(kv.second));
   }
   // Reducing by redundancy
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+  //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+  std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
   // Computing the adjacent ones and doing canonicalization
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
