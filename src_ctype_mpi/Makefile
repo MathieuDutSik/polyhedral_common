@@ -1,4 +1,5 @@
-PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile
+#PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile
+PROGRAM		= CTYP_MakeInitialFile
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

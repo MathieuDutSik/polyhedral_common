@@ -1,0 +1,43 @@
+#! /usr/bin/python3
+
+import os
+import sys
+
+
+if len(sys.argv) != 2:
+    print("The script is used as TIMINGS_ProcessLogFile\n")
+    os.sys.exit(1)
+
+input_file = sys.argv[1]
+
+list_entry = []
+list_nb_entry = []
+list_min_time = []
+list_max_time = []
+list_sum_time = []
+
+ifile = open(input_file, 'r') 
+Lines = ifile.readlines() 
+
+for e_line in Lines:
+    LStr = e_line.split("=")
+    if len(LStr) == 2:
+        e_entry = LStr[0]
+        e_val = int(LStr[1])
+        try:
+            pos = list_entry.index(e_entry)
+            list_nb_entry[pos] += 1
+            list_min_time[pos] = min(list_min_time[pos], e_val)
+            list_max_time[pos] = max(list_max_time[pos], e_val)
+            list_sum_time[pos] += e_val
+        except ValueError:
+            pos = len(list_entry)
+            list_entry.append(e_entry)
+            list_nb_entry.append(1)
+            list_min_time.append(e_val)
+            list_max_time.append(e_val)
+            list_sum_time.append(e_val)
+
+for i in range(len(list_entry)):
+    e_avg = list_sum_time[i] / list_nb_entry[i]
+    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg)

@@ -211,6 +211,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
     SetWeight.insert(eVal);
   int nbEnt=ListWeight.size();
   std::vector<int> g(nbEnt);
+  std::cerr << "nbEnt=" << nbEnt << "\n";
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
     T1 eVal = ListWeight[iEnt];
     typename std::set<T1>::iterator it = SetWeight.find(eVal);
@@ -567,10 +568,20 @@ template<typename T>
 inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type GetQmatrix(MyMatrix<T> const& TheEXT)
 {
   using Tfield=typename overlying_field<T>::field_type;
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   MyMatrix<Tfield> TheEXT_F = ConvertMatrixUniversal<Tfield,T>(TheEXT);
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   MyMatrix<Tfield> Q_F_red = RemoveFractionMatrix(Q_F);
-  return ConvertMatrixUniversal<T,Tfield>(Q_F_red);
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  MyMatrix<T> RetMat = ConvertMatrixUniversal<T,Tfield>(Q_F_red);
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|ConvertMatrixUniversal1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|Kernel_GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|RemoveFractionMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|ConvertMatrixUniversal2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  return RetMat;
 }
 
 
@@ -581,6 +592,7 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
 template<typename T>
 WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
 {
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
   T TheTol=0;
@@ -600,6 +612,8 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
       WMat.Update(iRow, jRow, eSum);
     }
   }
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   return WMat;
 }
 
@@ -2020,16 +2034,28 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 {
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   WeightMatrix<Tint,Tint> WMat=GetWeightMatrix(EXT);
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   ReorderingSetWeight(WMat);
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
   for (int i_row=0; i_row<n_rows; i_row++) {
     int j_row = PairCanonic.second[i_row];
     for (int i_col=0; i_col<n_cols; i_col++)
       EXTreord(i_row, i_col) = EXT(j_row, i_col);
   }
-  return ComputeRowHermiteNormalForm(EXTreord).first;
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).first;
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|ComputeRowHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  return RedMat;
 }
 
 

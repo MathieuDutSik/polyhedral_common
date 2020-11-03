@@ -21,8 +21,8 @@ int main(int argc, char* argv[])
     int nbType;
     is >> nbType;
     os << nbType << "\n";
-    std::cerr << "nbType=" << nbType << "\n";
     for (int iType=0; iType<nbType; iType++) {
+      std::cerr << "iType : " << iType << " / " << nbType << "\n";
       MyMatrix<Tmat> ePerfect_Tmat = ReadMatrix<Tmat>(is);
       //
       int eStatus=0;
@@ -30,8 +30,8 @@ int main(int argc, char* argv[])
       std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
       MyMatrix<Tmat> eMatCan_Tmat = LinPolytopeIntegral_CanonicForm<Tmat>(ePerfect_Tmat);
       std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
-      int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-      std::cerr << "iType=" << iType << " / " << nbType << " elapsed_seconds=" << elapsed_seconds << "\n";
+      int elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+      std::cerr << " elapsed_time=" << elapsed_time << "\n";
       //
       os << eStatus << "\n";
       WriteMatrix(os, eMatCan_Tmat);
