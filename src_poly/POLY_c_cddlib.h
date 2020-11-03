@@ -35,6 +35,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
 {
   dd_ErrorType err;
   int nbRow=TheEXT.rows();
+  dd_set_global_constants();
   dd_MatrixPtr M=MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
@@ -45,6 +46,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   }
   dd_FreeMatrix(M);
   set_free(redset);
+  dd_free_global_constants();
   return ListIdx;
 }
 
