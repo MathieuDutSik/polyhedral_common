@@ -206,18 +206,36 @@ template<typename T1, typename T2>
 void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
 {
   std::vector<T1> ListWeight=WMat.GetWeight();
+  std::map<T1, int> ValueMap;
+  size_t nbEnt=ListWeight.size();
+  for (size_t i_w=0; i_w<ListWeight.size(); i_w++)
+    ValueMap[ListWeight[i_w]] = i_w;
+  std::vector<int> g(nbEnt);
+  size_t idx=0;
+  for (auto& kv : ValueMap) {
+    int pos = kv.second;
+    g[pos] = idx;
+    idx++;
+  }
+#ifdef DEBUG
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
     SetWeight.insert(eVal);
-  int nbEnt=ListWeight.size();
-  std::vector<int> g(nbEnt);
+  std::vector<int> g_check(nbEnt);
   std::cerr << "nbEnt=" << nbEnt << "\n";
-  for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
     T1 eVal = ListWeight[iEnt];
     typename std::set<T1>::iterator it = SetWeight.find(eVal);
     int pos = std::distance(SetWeight.begin(), it);
-    g[iEnt] = pos;
+    g_check[iEnt] = pos;
   }
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    if (g[iEnt] != g_check[iEnt]) {
+      std::cerr << "ERROR at iEnt=" << iEnt << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   WMat.ReorderingOfWeights(g);
 #ifdef DEBUG
   std::vector<T1> ListWeightB=WMat.GetWeight();
