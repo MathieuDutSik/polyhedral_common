@@ -217,6 +217,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
     g[pos] = idx;
     idx++;
   }
+  std::cerr << "nbEnt=" << nbEnt << "\n";
 #ifdef DEBUG
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
@@ -597,7 +598,7 @@ MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
 	eSum += TheEXT(iRow, jCol) * TheEXT(iRow, iCol);
       QMat(iCol, jCol)=eSum;
     }
-  return Inverse(QMat);
+  return Inverse_destroy(QMat);
 }
 
 template<typename T>
@@ -985,13 +986,11 @@ int GetNeededPower(int nb)
 }
 
 
-
-std::vector<int> GetBinaryExpression(int eVal, int h)
+inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
 {
   int eWork, eExpo, eExpoB, i, res;
   eWork=eVal;
   eExpo=1;
-  std::vector<int> eVect(h);
   for (i=0; i<h; i++) {
     eExpoB=eExpo*2;
     res=eWork % eExpoB;
@@ -999,7 +998,6 @@ std::vector<int> GetBinaryExpression(int eVal, int h)
     eExpo=eExpoB;
     eWork=eWork - res;
   }
-  return eVect;
 }
 
 
@@ -1596,6 +1594,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
+  std::vector<int> eVect(hS);
   for (int iVert=0; iVert<nbVert-1; iVert++)
     for (int jVert=iVert+1; jVert<nbVert; jVert++) {
       int eVal;
@@ -1611,7 +1610,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	else
 	  eVal=WMat.GetValue(iVert, jVert);
       }
-      std::vector<int> eVect=GetBinaryExpression(eVal, hS);
+      GetBinaryExpression(eVal, hS, eVect);
       for (int iH=0; iH<hS; iH++)
 	if (eVect[iH] == 1) {
 	  int aVert=iVert + nbVert*iH;
@@ -1674,6 +1673,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
     int iH=(aVert - iVert)/nbVert;
     int jVert=bVert % nbVert;
     int jH=(aVert - iVert)/nbVert;
+    std::vector<int> eVect(hS);
     if (iVert == jVert) {
       if (iH != jH) {
 	return true;
@@ -1700,7 +1700,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 	else
 	  eVal=WMat.GetValue(iVert, jVert);
       }
-      std::vector<int> eVect=GetBinaryExpression(eVal, hS);
+      GetBinaryExpression(eVal, hS, eVect);
       if (eVect[iH] == 1) {
 	return true;
       }
@@ -1754,7 +1754,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   }
 #endif
   //  std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
-  std::vector<int> MapVect(nbVert, -1), MapVectRev(nbVert,-1);
+  std::vector<int> MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
   for (int iCan=0; iCan<nof_vertices; iCan++) {
@@ -1763,7 +1763,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
       int iVertNative=iNative % nbVert;
       //      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
       MapVectRev[posCanonic] = iVertNative;
-      MapVect[iVertNative] = posCanonic;
       for (int iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
 	int jCan=cl[uVertNative];
