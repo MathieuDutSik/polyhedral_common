@@ -36,26 +36,23 @@ int main(int argc, char* argv[])
           std::cerr << "Error in ePerm\n";
       }
       MyMatrix<Tmat> eUnimod = RandomUnimodularMatrix<Tmat>(n);
-      std::cerr << "eUnimod=\n";
-      WriteMatrix(std::cerr, eUnimod);
       MyMatrix<Tmat> eProd = eMat * eUnimod;
-      std::cerr << "eProd=\n";
-      WriteMatrix(std::cerr, eProd);
       MyMatrix<Tmat> RetMat(nbRow, n);
       for (int iRow=0; iRow<nbRow; iRow++) {
         int jRow = ePerm[iRow];
         for (int i=0; i<n; i++)
           RetMat(iRow, i) = eProd(jRow, i);
       }
+      SignRenormalizationMatrix(RetMat);
       return RetMat;
     };
     for (int iType=0; iType<nbType; iType++) {
       std::cerr << "iType : " << iType << " / " << nbType << "\n";
       MyMatrix<Tmat> eMat1 = ReadMatrix<Tmat>(is);
-      MyMatrix<Tmat> eMat1_Can = LinPolytopeIntegral_CanonicForm<Tmat>(eMat1);
+      MyMatrix<Tmat> eMat1_Can = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(eMat1);
       for (int i=0; i<10; i++) {
         MyMatrix<Tmat> eMat2 = get_random_equivalent(eMat1);
-        MyMatrix<Tmat> eMat2_Can = LinPolytopeIntegral_CanonicForm<Tmat>(eMat1);
+        MyMatrix<Tmat> eMat2_Can = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(eMat2);
         if (!TestEqualityMatrix(eMat1_Can, eMat2_Can)) {
           std::cerr << "Inconsistencw in the canonical code\n";
           throw TerminalException{1};

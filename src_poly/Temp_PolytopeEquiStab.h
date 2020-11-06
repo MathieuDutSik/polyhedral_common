@@ -679,10 +679,85 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 
 
 template<typename T>
+WeightMatrix<T, T> GetSimpleWeightMatrixAntipodal(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
+{
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  int nbPair=TheEXT.rows();
+  int nbCol=TheEXT.cols();
+  int INP_nbRow = 2*nbPair;
+  std::vector<int> INP_TheMat(INP_nbRow * INP_nbRow);
+  std::vector<T> INP_ListWeight;
+  T INP_TheTol=0;
+  std::unordered_map<T, int> ValueMap;
+  int idxWeight = 0;
+  //
+  auto set_entry=[&](int iRow, int jRow, int pos) -> void {
+    int idx = iRow + INP_nbRow*jRow;
+    INP_TheMat[idx] = pos;
+  };
+  MyVector<T> V(nbCol);
+  for (int iPair=0; iPair<nbPair; iPair++) {
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (int jCol=0; jCol<nbCol; jCol++)
+        eSum += Qmat(iCol,jCol) * TheEXT(iPair, jCol);
+      V(iCol) = eSum;
+    }
+    for (int jPair=0; jPair<=iPair; jPair++) {
+      T eSum1=0;
+      for (int iCol=0; iCol<nbCol; iCol++)
+        eSum1 += V(iCol) * TheEXT(jPair, iCol);
+      T eSum2 = -eSum1;
+      int& value1 = ValueMap[eSum1];
+      if (value1 == 0) { // This is a missing value
+        idxWeight++;
+        value1 = idxWeight;
+        INP_ListWeight.push_back(eSum1);
+      }
+      int& value2 = ValueMap[eSum2];
+      if (value2 == 0) { // This is a missing value
+        idxWeight++;
+        value2 = idxWeight;
+        INP_ListWeight.push_back(eSum2);
+      }
+      int pos1 = value1 - 1;
+      int pos2 = value2 - 1;
+      set_entry(2*iPair  , 2*jPair  , pos1);
+      set_entry(2*iPair+1, 2*jPair  , pos2);
+      set_entry(2*iPair  , 2*jPair+1, pos2);
+      set_entry(2*iPair+1, 2*jPair+1, pos1);
+      if (iPair != jPair) {
+        set_entry(2*jPair  , 2*iPair  , pos1);
+        set_entry(2*jPair+1, 2*iPair  , pos2);
+        set_entry(2*jPair  , 2*iPair+1, pos2);
+        set_entry(2*jPair+1, 2*iPair+1, pos1);
+      }
+    }
+  }
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  return WMat;
+}
+
+
+
+template<typename T>
 WeightMatrix<T, T> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 {
   MyMatrix<T> Qmat=GetQmatrix(TheEXT);
   return GetSimpleWeightMatrix(TheEXT, Qmat);
+}
+
+
+
+
+
+template<typename T>
+WeightMatrix<T, T> GetWeightMatrixAntipodal(MyMatrix<T> const& TheEXT)
+{
+  MyMatrix<T> Qmat=GetQmatrix(TheEXT);
+  return GetSimpleWeightMatrixAntipodal(TheEXT, Qmat);
 }
 
 
@@ -2116,6 +2191,67 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
   std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
   std::cerr << "|ComputeRowHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  return RedMat;
+}
+
+
+template<typename T>
+void SignRenormalizationMatrix(MyMatrix<T> & M)
+{
+  int nbRow = M.rows();
+  int n=M.cols();
+  auto get_need_chgsign=[&](int const& iRow) -> bool {
+    for (int i=0; i<n; i++) {
+      T eVal = M(iRow,i);
+      if (eVal != 0) {
+        return eVal < 0;
+      }
+    }
+    return false;
+  };
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (get_need_chgsign(iRow)) {
+      for (int i=0; i<n; i++)
+        M(iRow,i) = - M(iRow,i);
+    }
+  }
+}
+
+
+template<typename Tint>
+MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+{
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  WeightMatrix<Tint,Tint> WMat=GetWeightMatrixAntipodal(EXT);
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  ReorderingSetWeight(WMat);
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  int idx=0;
+  for (int i_row=0; i_row<2*n_rows; i_row++) {
+    int j_row = PairCanonic.second[i_row];
+    int res = j_row % 2;
+    if (res == 0) {
+      for (int i_col=0; i_col<n_cols; i_col++)
+        EXTreord(idx, i_col) = EXT(j_row / 2, i_col);
+      idx++;
+    }
+  }
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).first;
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  SignRenormalizationMatrix(RedMat);
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|ComputeRowHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
   return RedMat;
 }
 

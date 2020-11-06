@@ -8,6 +8,76 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
+
+template<typename T>
+void SignRenormalizationMatrix(MyMatrix<T> & M)
+{
+  int nbRow = M.rows();
+  int n=M.cols();
+  auto get_need_chgsign=[&](int const& iRow) -> bool {
+    for (int i=0; i<n; i++) {
+      T eVal = M(iRow,i);
+      if (eVal != 0) {
+        return eVal < 0;
+      }
+    }
+  };
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (get_need_chgsign(iRow)) {
+      for (int i=0; i<n; i++)
+        M(iRow,i) = - M(iRow,i);
+    }
+  }
+}
+
+
+
+template<typename T>
+MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
+{
+  int nbPair=M.rows();
+  int n=M.cols();
+  MyMatrix<T> Mret(2*nbPair, n);
+  for (int iPair=0; iPair<nbPair; iPair++) {
+    for (int i=0; i<n; i++) {
+      Mret(2*iPair  , i) =  M(iPair, i);
+      Mret(2*iPair+1, i) = -M(iPair, i);
+    }
+  }
+  return Mret;
+}
+
+template<typename T>
+MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const& M)
+{
+  int nbRow=M.rows();
+  int n=M.cols();
+  int nbPair=nbRow / 2;
+  MyMatrix<T> Mret(nbPair, n);
+  auto is_sign_ok=[&](int const& iRow) -> bool {
+    for (int i=0; i<n; i++) {
+      T eVal = M(iRow,i);
+      if (eVal != 0) {
+        return eVal > 0;
+      }
+    }
+  };
+  int iPair=0;
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (is_sign_ok(iRow)) {
+      for (int i=0; i<n; i++)
+        Mret(iPair,i) = M(iRow,i);
+      iPair++;
+    }
+  }
+  return Mret;
+}
+
+
+
+
+
+
 template<typename T>
 struct TypeCtypeExch {
   MyMatrix<T> eMat;
@@ -52,21 +122,35 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
   for (auto & e_triple : TheInfo)
     ListIchange[e_triple.i] = 1;
   MyMatrix<T> RetMat(n_rows, n_cols);
+  std::vector<T> V(n_cols);
   size_t idx=0;
+  auto insert_if_signok=[&]() -> void {
+    for (int i=0; i<n_cols; i++) {
+      T eVal=V[i];
+      if (eVal != 0) {
+        if (eVal > 0) {
+          for (size_t i_col=0; i_col<n_cols; i_col++)
+            RetMat(idx, i_col) = V[i_col];
+          idx++;
+        }
+        return;
+      }
+    }
+  };
   for (auto & e_triple : TheInfo) {
     int8_t j = e_triple.j;
     int8_t k = e_triple.k;
     //
     for (size_t i_col=0; i_col<n_cols; i_col++)
-      RetMat(idx, i_col) = -TheCtype(j, i_col) + TheCtype(k, i_col);
-    idx++;
+      V[i_col] = -TheCtype(j, i_col) + TheCtype(k, i_col);
+    insert_if_signok();
     //
     for (size_t i_col=0; i_col<n_cols; i_col++)
-      RetMat(idx, i_col) =  TheCtype(j, i_col) - TheCtype(k, i_col);
-    idx++;
+      V[i_col] =  TheCtype(j, i_col) - TheCtype(k, i_col);
+    insert_if_signok();
   }
   for (size_t i_row=0; i_row<n_rows; i_row++) {
-    if (ListIchange[i_row] == 0) {
+    if (ListIchange[i_row] == 0 && i_row % 2 == 0) {
       for (size_t i_col=0; i_col<n_cols; i_col++)
         RetMat(idx, i_col) =  TheCtype(i_row, i_col);
       idx++;
@@ -125,15 +209,12 @@ namespace std {
   };
 }
 
-
-
-
-
 template<typename T>
-std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtype)
+std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtypeArr)
 {
-  std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype.eMat);
-  int8_t n = TheCtype.eMat.cols();
+  MyMatrix<T> TheCtype = ExpandReducedMatrix(TheCtypeArr.eMat);
+  std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
+  int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
     MyVector<T> TheVector(tot_dim);
@@ -154,8 +235,8 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   auto FuncInsertInequality=[&](int8_t i, int8_t j, int8_t k) -> void {
     MyVector<T> V1(n), V2(n);
     for (int8_t i_col=0; i_col<n; i_col++) {
-      V1(i_col) = 2 * TheCtype.eMat(k, i_col) + TheCtype.eMat(i, i_col);
-      V2(i_col) = TheCtype.eMat(i, i_col);
+      V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
+      V2(i_col) = TheCtype(i, i_col);
     }
     MyVector<T> TheVector = ComputeInequality(V1, V2);
     triple TheInfo = {i,j,k};
@@ -183,7 +264,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   // Computing the adjacent ones and doing canonicalization
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
-    MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype.eMat, ListInformations[e_int]);
+    MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype, ListInformations[e_int]);
     MyMatrix<T> CanMat = LinPolytopeIntegral_CanonicForm(FlipMat);
     ListCtype.push_back({std::move(CanMat)});
   }
@@ -366,6 +447,9 @@ TypeIndex ParseStringToTypeIndex(std::string const& str)
   std::istringstream(LStr[1]) >> iAdj;
   return {iProc, idxMatrixF, iAdj};
 }
+
+
+
 
 
 #endif

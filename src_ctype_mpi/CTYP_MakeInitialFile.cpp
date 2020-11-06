@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
       int eStatus=0;
       //
       std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-      MyMatrix<Tmat> eMatCan_Tmat = LinPolytopeIntegral_CanonicForm<Tmat>(ePerfect_Tmat);
+      MyMatrix<Tmat> eMatCan_Tmat = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(ePerfect_Tmat);
       std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
       int elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
       std::cerr << " elapsed_time=" << elapsed_time << "\n";
