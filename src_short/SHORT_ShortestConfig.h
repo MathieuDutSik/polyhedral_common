@@ -486,7 +486,7 @@ ShortIso<T,Tint> SHORT_GetInformation(MyMatrix<Tint> const& M)
   //  std::cerr << "|Mcopy|=" << Mcopy.rows() << "\n";
   MyMatrix<Tint> SHVret=Concatenate(SHV, Mcopy);
   //  std::cerr << "|SHVret|=" << SHVret.rows() << "\n";
-  return {TheGramMat, SHVret};
+  return {std::move(TheGramMat), std::move(SHVret)};
 }
 
 
@@ -508,7 +508,7 @@ EquivTest<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMatr
     throw TerminalException{1};
   };
   MyMatrix<Tint> MatEquiv_i=ConvertMatrixUniversal<Tint,T>(MatEquiv_T);
-  return {true,MatEquiv_i};
+  return {true, std::move(MatEquiv_i)};
 }
 
 template<typename T, typename Tint>
@@ -546,7 +546,7 @@ FiniteMatrixGroup<Tint> SHORT_GetStabilizer(MyMatrix<Tint> const& M)
     ListPermGen.push_back(ePerm);
   }
   std::cerr << "Exiting SHORT_GetStabilizer\n";
-  return {n, Mtot, ListMatrGen, ListPermGen};
+  return {n, std::move(Mtot), std::move(ListMatrGen), std::move(ListPermGen)};
 }
 
 template<typename T>
@@ -606,9 +606,8 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const& eSHV)
     std::cerr << "Matrix error somewhere\n";
     throw TerminalException{1};
   }
-  return {eSHVred, Pmat};
+  return {std::move(eSHVred), std::move(Pmat)};
 }
-  
 
 
 
@@ -1255,7 +1254,7 @@ std::pair<std::vector<MyMatrix<Tint>>,std::vector<int>> SHORT_ReduceByIsomorphis
     ListIdx[pos] = idx;
     pos++;
   }
-  return {ListRet,ListIdx};
+  return {std::move(ListRet), std::move(ListIdx)};
 }
 
 

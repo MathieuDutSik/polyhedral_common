@@ -502,7 +502,7 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
       throw TerminalException{1};
     }
   }
-  return {TheBasis1, TheBasis2};
+  return {std::move(TheBasis1), std::move(TheBasis2)};
 }
 
 
@@ -529,7 +529,7 @@ SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat,
 	  MyVector<T> Vred = RemoveFractionVector(V);
 	  MyVector<Tint> Vint = ConvertVectorUniversal<Tint,T>(Vred);
 	  MyVector<Tint> eVect = Vint(0) * TheBasis.row(i) + Vint(1) * TheBasis.row(j);
-	  return {false, "zero vector detected", eVect};
+	  return {false, "zero vector detected", std::move(eVect)};
 	}
 	if (b*b > a*c) {
 	  int eSum=2;
@@ -539,7 +539,7 @@ SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat,
 	      T qVal = a * x*x + 2*b * x*y + c * y*y;
 	      if (qVal < 0) {
 		MyVector<Tint> eVect = x * TheBasis.row(i) + y * TheBasis.row(j);
-		return {false, "Off diagonal violation", eVect};
+		return {false, "Off diagonal violation", std::move(eVect)};
 	      }
 	    }
 	    eSum++;
@@ -547,7 +547,7 @@ SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat,
 	}
       }
     }
-  return {true, "on the surface ok", eVectZero};
+  return {true, "on the surface ok", std::move(eVectZero)};
 }
 
 
@@ -572,14 +572,14 @@ SingleTestResult<Tint> SingleTestCopositivity(MyMatrix<T> const& eSymmMat, MyMat
 	    T qVal = a * x*x + 2*b * x*y + c * y*y;
 	    if (qVal < 0) {
 	      MyVector<Tint> eVect = x * TheBasis.row(i) + y * TheBasis.row(j);
-	      return {false, "Off diagonal violation", eVect};
+	      return {false, "Off diagonal violation", std::move(eVect)};
 	    }
 	  }
 	  eSum++;
 	}
       }
     }
-  return {true, "on the surface ok", eVectZero};
+  return {true, "on the surface ok", std::move(eVectZero)};
 }
 
 
@@ -589,7 +589,7 @@ SingleTestResult<Tint> SingleTestCopositivity(MyMatrix<T> const& eSymmMat, MyMat
 template<typename T, typename Tint>
 SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const& eSymmMat)
 {
-  MyVector<Tint> eVectZero;  
+  MyVector<Tint> eVectZero;
   MyMatrix<T> NSP = NullspaceMat(eSymmMat);
   int nbCol=NSP.cols();
   int nbNSP=NSP.rows();
@@ -623,7 +623,7 @@ SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const& eSymmMat)
   }
   MyVector<T> eVect2=RemoveFractionVector(eVect1);
   MyVector<Tint> eVect3=ConvertVectorUniversal<Tint,T>(eVect2);
-  return {false, "Zero vector from kernel", eVect3};
+  return {false, "Zero vector from kernel", std::move(eVect3)};
 }
 
 
@@ -648,9 +648,9 @@ CopositivityEnumResult<Tint> KernelEnumerateShortVectorInCone(MyMatrix<T> const&
   if (test) {
     TotalList = EnumerateShortVectorInCone_UnderPositivityCond<T,Tint>(eSymmMat, TheBasis, CopoReq.MaxNorm);
     if (!CopoReq.DoListCone)
-      return {true, 1, {}, TotalList, {}};
+      return {true, 1, {},         std::move(TotalList), {}};
     else
-      return {true, 1, {TheBasis}, TotalList, {}};
+      return {true, 1, {TheBasis}, std::move(TotalList), {}};
   }
   //
   // Second see if the vectors allow to conclude directly.
@@ -673,7 +673,7 @@ CopositivityEnumResult<Tint> KernelEnumerateShortVectorInCone(MyMatrix<T> const&
       return {false, nbCone, {}, {}, fEnumResult.eResult};
     TotalList.insert(TotalList.end(), fEnumResult.TotalListVect.begin(), fEnumResult.TotalListVect.end());
   }
-  return {true, nbCone, ListBasisInt, TotalList, {}};
+  return {true, nbCone, ListBasisInt, std::move(TotalList), {}};
 }
 
 
@@ -830,7 +830,7 @@ Tshortest<T,Tint> T_CopositiveShortestVector(MyMatrix<T> const& eSymmMat)
     AssignMatrixRow(SHV, iVect, eVect);
     iVect++;
   }
-  return {MinNorm, SHV};
+  return {MinNorm, std::move(SHV)};
 }
 
 
@@ -868,7 +868,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(MyMatrix<T> const
   std::vector<MyVector<Tint>> TotalListVect;
   for (auto & eVect : TotalListVect_set)
     TotalListVect.push_back(eVect);
-  return {true, nbCone, ListBasis, TotalListVect, eResult};
+  return {true, nbCone, std::move(ListBasis), std::move(TotalListVect), eResult};
 }
 
 
@@ -920,7 +920,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(MyMatrix<T> const
       eVectB(i)=eVect[i];
     TotalListRed.push_back(eVectB);
   }
-  return {CopoRes.test, CopoRes.nbCone, {}, TotalListRed, CopoRes.eResult};
+  return {CopoRes.test, CopoRes.nbCone, {}, std::move(TotalListRed), CopoRes.eResult};
 }
 
 

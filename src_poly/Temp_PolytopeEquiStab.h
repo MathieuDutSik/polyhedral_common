@@ -1893,7 +1893,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   }
   //  std::cerr << "nbRow=" << nbRow << "\n";
   //  std::cerr << "GetCanonicalizationVector, step 6\n";
-  return {MapVect2,MapVectRev2};
+  return {std::move(MapVect2), std::move(MapVectRev2)};
 }
 
 
@@ -1927,7 +1927,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized
       jEntCan++;
     }
   }
-  return {MapVect, MapVectRev};
+  return {std::move(MapVect), std::move(MapVectRev)};
 }
 
 
