@@ -9,28 +9,6 @@
 
 
 
-template<typename T>
-void SignRenormalizationMatrix(MyMatrix<T> & M)
-{
-  int nbRow = M.rows();
-  int n=M.cols();
-  auto get_need_chgsign=[&](int const& iRow) -> bool {
-    for (int i=0; i<n; i++) {
-      T eVal = M(iRow,i);
-      if (eVal != 0) {
-        return eVal < 0;
-      }
-    }
-  };
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    if (get_need_chgsign(iRow)) {
-      for (int i=0; i<n; i++)
-        M(iRow,i) = - M(iRow,i);
-    }
-  }
-}
-
-
 
 template<typename T>
 MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)

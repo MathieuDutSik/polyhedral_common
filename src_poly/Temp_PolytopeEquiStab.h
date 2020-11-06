@@ -11,6 +11,9 @@
 #include "MAT_MatrixInt.h"
 
 
+//#define DEBUG
+
+
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
 {
@@ -222,6 +225,10 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
     SetWeight.insert(eVal);
+  std::cerr << "SetWeight =";
+  for (auto & eVal : SetWeight)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
   std::vector<int> g_check(nbEnt);
   std::cerr << "nbEnt=" << nbEnt << "\n";
   for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
@@ -2184,7 +2191,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
       EXTreord(i_row, i_col) = EXT(j_row, i_col);
   }
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).first;
+  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).second;
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
@@ -2242,7 +2249,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
     }
   }
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).first;
+  MyMatrix<Tint> RedMat = ComputeRowHermiteNormalForm(EXTreord).second;
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   SignRenormalizationMatrix(RedMat);
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
