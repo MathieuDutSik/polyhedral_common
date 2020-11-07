@@ -8,23 +8,6 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
-
-
-template<typename T>
-MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
-{
-  int nbPair=M.rows();
-  int n=M.cols();
-  MyMatrix<T> Mret(2*nbPair, n);
-  for (int iPair=0; iPair<nbPair; iPair++) {
-    for (int i=0; i<n; i++) {
-      Mret(2*iPair  , i) =  M(iPair, i);
-      Mret(2*iPair+1, i) = -M(iPair, i);
-    }
-  }
-  return Mret;
-}
-
 template<typename T>
 MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const& M)
 {

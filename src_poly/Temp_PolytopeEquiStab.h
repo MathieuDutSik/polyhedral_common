@@ -1600,7 +1600,7 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
 {
   int siz=WMat.GetWeightSize();
   int nbRow=WMat.rows();
-  os << "nbRow=" << WMat.rows() << "  nbWeight=" << siz << "\n";
+  os << "nbRow=" << WMat.rows() << "  Weights=[";
   std::vector<int> ListValues(siz,0);
   for (int iRow=0; iRow<nbRow; iRow++)
     for (int iCol=0; iCol<nbRow; iCol++) {
@@ -1608,9 +1608,12 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
       ListValues[eVal]++;
     }
   std::vector<T> ListWeight=WMat.GetWeight();
-  for (int i=0; i<siz; i++)
-    os << "  i=" << i << " nb=" << ListValues[i] << "  eWeight=" << ListWeight[i] << "\n";
-  os << "nbRow=" << nbRow << "\n";
+  for (int i=0; i<siz; i++) {
+    if (i>0)
+      os << ", ";
+    os << "(" << ListWeight[i] << "," << ListValues[i] << ")";
+  }
+  os << "]\n";
   for (int iRow=0; iRow<nbRow; iRow++) {
     for (int iCol=0; iCol<nbRow; iCol++) {
       int eVal=WMat.GetValue(iRow, iCol);
@@ -2263,6 +2266,22 @@ void SignRenormalizationMatrix(MyMatrix<T> & M)
   }
 }
 
+template<typename T>
+MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
+{
+  int nbPair=M.rows();
+  int n=M.cols();
+  MyMatrix<T> Mret(2*nbPair, n);
+  for (int iPair=0; iPair<nbPair; iPair++)
+    for (int i=0; i<n; i++) {
+      Mret(2*iPair  , i) =  M(iPair, i);
+      Mret(2*iPair+1, i) = -M(iPair, i);
+    }
+  return Mret;
+}
+
+
+
 
 template<typename Tint>
 MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
@@ -2277,26 +2296,77 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
+  //  std::cerr << "After direct construction WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMat);
 
   ReorderingSetWeight(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
+  /*
+  std::cerr << "After ReorderingSetWeight WMat=\n";
+  PrintWeightedMatrix(std::cerr, WMat);
+  MyMatrix<Tint> EXTexpand = ExpandReducedMatrix(EXT);
+  std::cerr << "EXTexpand=\n";
+  WriteMatrix(std::cerr, EXTexpand);
+  */
 
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
+  /*
+  std::cerr << "After canonicalization WMat=\n";
+  int tot_siz = 2 * n_rows;
+  for (int i1=0; i1<tot_siz; i1++) {
+    int j1 = PairCanonic.second[i1];
+    for (int i2=0; i2<tot_siz; i2++) {
+      int j2 = PairCanonic.second[i2];
+      int eVal=WMat.GetValue(j1, j2);
+      std::cerr << " " << eVal;
+    }
+    std::cerr << "\n";
+  }
+  */
 
-  MyMatrix<Tint> EXTreord(n_rows, n_cols);
-  int idx=0;
+  /*
+  MyMatrix<Tint> EXTreordExpand(2 * n_rows, n_cols);
   for (int i_row=0; i_row<2*n_rows; i_row++) {
     int j_row = PairCanonic.second[i_row];
     int res = j_row % 2;
     if (res == 0) {
       for (int i_col=0; i_col<n_cols; i_col++)
-        EXTreord(idx, i_col) = EXT(j_row / 2, i_col);
-      idx++;
+        EXTreordExpand(i_row, i_col) =   EXT(j_row     / 2, i_col);
+    } else {
+      for (int i_col=0; i_col<n_cols; i_col++)
+        EXTreordExpand(i_row, i_col) = - EXT((j_row-1) / 2, i_col);
+    }
+  }
+  std::cerr << "EXTreordExpand=\n";
+  WriteMatrix(std::cerr, EXTreordExpand);
+  */
+
+  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  int idx=0;
+  Face IsIncluded(n_rows);
+  for (int i_row=0; i_row<2*n_rows; i_row++) {
+    int j_row = PairCanonic.second[i_row];
+    int res = j_row % 2;
+    int pos = j_row / 2;
+    if (res == 0) {
+      if (IsIncluded[pos] == 0) {
+        IsIncluded[pos]=1;
+        for (int i_col=0; i_col<n_cols; i_col++)
+          EXTreord(idx, i_col) = EXT(pos, i_col);
+        idx++;
+      }
+    } else {
+      if (IsIncluded[pos] == 0) {
+        IsIncluded[pos]=1;
+        for (int i_col=0; i_col<n_cols; i_col++)
+          EXTreord(idx, i_col) = -EXT(pos, i_col);
+        idx++;
+      }
     }
   }
 #ifdef TIMINGS
