@@ -1764,7 +1764,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
-  int hS=GetNeededPower(nbMult);
+  int hS=GetNeededN(nbMult);
   std::vector<int> V = GetListPair(hS, nbMult);
   int e_pow = V.size() / 2;
   int nbRow=WMat.rows();
@@ -2016,6 +2016,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
+  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
 
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
 #ifdef TIMINGS

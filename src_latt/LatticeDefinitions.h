@@ -11,6 +11,7 @@ struct Tshortest {
   MyMatrix<Tint> SHV;
 };
 
+#undef DEBUG
 
 template<typename T, typename Tint>
 Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const& eMat, MyMatrix<Tint> const& SHV)
@@ -397,7 +398,6 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
   for (int i=1; i<n; i++)
     for (int j=0; j<i; j++)
       gram(j,i) = gram(i,j);
-#define DEBUG
 #ifdef DEBUG
   MyMatrix<Tmat> H_T = ConvertMatrixUniversal<Tmat,Tint>(H);
   MyMatrix<Tmat> eProd = H_T * GramMat * H_T.transpose();
