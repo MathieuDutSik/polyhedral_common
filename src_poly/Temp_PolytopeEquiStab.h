@@ -2077,8 +2077,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
-  TheGroupFormat GRP = GetStabilizerBlissGraph(g);
-  std::cerr << "|GRP|=" << GRP.size << "\n";
+  //  std::cerr << "|GRP|=" << GetStabilizerBlissGraph(g).size << "\n";
 
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
@@ -2809,10 +2808,8 @@ TheGroupFormat LinPolytopeGram_Automorphism_Nauty(std::vector<MyMatrix<T> > cons
   std::vector<permlib::Permutation> ListGen;
   for (auto & eGen : GRP.group->S) {
     std::vector<permlib::dom_int> v(nbVert);
-    for (int iVert=0; iVert<nbVert; iVert++) {
-      int jVert=eGen->at(iVert);
-      v[iVert]=jVert;
-    }
+    for (int iVert=0; iVert<nbVert; iVert++)
+      v[iVert]=eGen->at(iVert);
     ListGen.push_back(permlib::Permutation(v));
   }
   return GetPermutationGroup(nbVert, ListGen);
