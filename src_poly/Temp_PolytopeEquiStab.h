@@ -1076,36 +1076,6 @@ TheGroupFormat GetGraphAutomorphismGroup(bliss::Graph *g, unsigned int nof_verti
 }
 
 
-
-int GetNeededPower(int nb)
-{
-  int h=0;
-  int eExpo=1;
-  while(true) {
-    if (nb < eExpo)
-      return h;
-    h++;
-    eExpo=eExpo*2;
-  }
-}
-
-
-inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
-{
-  int eWork, eExpo, eExpoB, i, res;
-  eWork=eVal;
-  eExpo=1;
-  for (i=0; i<h; i++) {
-    eExpoB=eExpo*2;
-    res=eWork % eExpoB;
-    eVect[i]=res/eExpo;
-    eExpo=eExpoB;
-    eWork=eWork - res;
-  }
-}
-
-
-
 template<typename T1, typename T2, typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, Face const& eSet)
 {
@@ -1667,13 +1637,57 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 }
 
 
+
+
+
+/*
+  We are doing the coloring of the graph in following way.
+  Every vertex corresponds to N vertices.
+  Those N vertices are made so that they are all adjacent between those.
+  (v_1, ..., v_N)
+  We can encode much information between those vertices:
+  --- v_i adjacent to w_i or not.
+  --- v_i adjacent to w_j or not for i != j for some (i,j) \n S
+  It is needed that if an automorphism happens then they map
+  N-uple V to W completely.
+  The way to obtain that is to ensure that the set of pairs S
+  define a graph so that for each vertex i in {1, ...., N} there exist
+  a j such that j\notin S.
+ */
+int GetNeededPower(int nb_color)
+{
+  int h=0;
+  int eExpo=1;
+  while(true) {
+    if (nb < eExpo)
+      return h;
+    h++;
+    eExpo *= 2;
+  }
+}
+
+
+inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
+{
+  int eWork, eExpo, eExpoB, i, res;
+  eWork=eVal;
+  eExpo=1;
+  for (i=0; i<h; i++) {
+    eExpoB=eExpo*2;
+    res=eWork % eExpoB;
+    eVect[i]=res/eExpo;
+    eExpo=eExpoB;
+    eWork=eWork - res;
+  }
+}
+
+
 template<typename T1, typename T2>
 size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
   int hS=GetNeededPower(nbMult);
-  //  std::cerr << "nbMult=" << nbMult << " hS=" << hS << "\n";
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
   return hS*nbVert;
@@ -1727,6 +1741,101 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	}
     }
 }
+
+
+
+/*
+
+
+
+int GetNeededPower(int nb)
+{
+  int h=0;
+  int eExpo=1;
+  while(true) {
+    if (nb < eExpo)
+      return h;
+    h++;
+    eExpo *= 2;
+  }
+}
+
+
+inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
+{
+  int eWork, eExpo, eExpoB, i, res;
+  eWork=eVal;
+  eExpo=1;
+  for (i=0; i<h; i++) {
+    eExpoB=eExpo*2;
+    res=eWork % eExpoB;
+    eVect[i]=res/eExpo;
+    eExpo=eExpoB;
+    eWork=eWork - res;
+  }
+}
+
+
+template<typename T1, typename T2>
+size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
+{
+  int nbWei=WMat.GetWeightSize();
+  int nbMult=nbWei+2;
+  int hS=GetNeededPower(nbMult);
+  int nbRow=WMat.rows();
+  int nbVert=nbRow + 2;
+  return hS*nbVert;
+}
+
+
+template<typename T1, typename T2, typename Fcolor, typename Fadj>
+void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolor f_color, Fadj f_adj)
+{
+  int nbWei=WMat.GetWeightSize();
+  int nbMult=nbWei+2;
+  int hS=GetNeededPower(nbMult);
+  int nbRow=WMat.rows();
+  int nbVert=nbRow + 2;
+  for (int iVert=0; iVert<nbVert; iVert++)
+    for (int iH=0; iH<hS; iH++) {
+      int aVert=iVert + nbVert*iH;
+      f_color(aVert,iH);
+    }
+  for (int iVert=0; iVert<nbVert; iVert++)
+    for (int iH=0; iH<hS-1; iH++)
+      for (int jH=iH+1; jH<hS; jH++) {
+	int aVert=iVert + nbVert*iH;
+	int bVert=iVert + nbVert*jH;
+	f_adj(aVert, bVert);
+	f_adj(bVert, aVert);
+      }
+  std::vector<int> eVect(hS);
+  for (int iVert=0; iVert<nbVert-1; iVert++)
+    for (int jVert=iVert+1; jVert<nbVert; jVert++) {
+      int eVal;
+      if (jVert == nbRow+1) {
+	if (iVert == nbRow)
+	  eVal=nbWei;
+	else
+	  eVal=nbWei+1;
+      }
+      else {
+	if (jVert == nbRow)
+	  eVal=WMat.GetValue(iVert, iVert);
+	else
+	  eVal=WMat.GetValue(iVert, jVert);
+      }
+      GetBinaryExpression(eVal, hS, eVect);
+      for (int iH=0; iH<hS; iH++)
+	if (eVect[iH] == 1) {
+	  int aVert=iVert + nbVert*iH;
+	  int bVert=jVert + nbVert*iH;
+	  f_adj(aVert, bVert);
+	  f_adj(bVert, aVert);
+	}
+    }
+}
+*/
 
 
 template<typename T1, typename T2>
@@ -1836,17 +1945,29 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
-  //  std::cerr << "GetCanonicalizationVector, step 1\n";
   int nbRow=WMat.rows();
-  //  std::cerr << "GetCanonicalizationVector, step 2\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
   Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
-  //  std::cerr << "GetCanonicalizationVector, step 3\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  //  std::cerr << "GetCanonicalizationVector, step 4\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
   const unsigned int* cl;
   cl=g.canonical_form(stats, &report_aut_void, stderr);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+
   std::vector<int> clR(nof_vertices,-1);
   for (int i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
@@ -1860,7 +1981,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
     throw TerminalException{1};
   }
 #endif
-  //  std::cerr << "GetCanonicalizationVector, step 5 nof_vertices=" << nof_vertices << " hS=" << hS << "\n";
   std::vector<int> MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
@@ -1868,7 +1988,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
     if (ListStatus[iCan] == 1) {
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
-      //      std::cerr << "i=" << i << " nbVert=" << nbRow << " posCanonic=" << posCanonic << " iVertNative=" << iVertNative << "\n";
       MapVectRev[posCanonic] = iVertNative;
       for (int iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
@@ -1894,8 +2013,13 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
       posCanonicB++;
     }
   }
-  //  std::cerr << "nbRow=" << nbRow << "\n";
-  //  std::cerr << "GetCanonicalizationVector, step 6\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
   return {std::move(MapVect2), std::move(MapVectRev2)};
 }
 
