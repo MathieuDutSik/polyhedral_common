@@ -674,7 +674,8 @@ ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> 
       MyMatrix<Tint> SHVret = MatrixFromVectorFamily(ListVectComplete);
       MyMatrix<Tint> TheTrans = RecLLL.ReductionMatrix;
       MyMatrix<Tint> InvTrans = Inverse(TheTrans);
-      MyMatrix<T> RetMat = MatrixProduct_T1_T2_T3<T,Tint,T>(MatrixProduct_T1_T2_T3<Tint,T,T>(TheTrans, RecTest.eMat), TransposedMat(TheTrans));
+      MyMatrix<T> TheTrans_T = ConvertMatrixUniversal<T,Tint>(TheTrans);
+      MyMatrix<T> RetMat = TheTrans_T * RecTest.eMat * TheTrans_T.transpose();
       //
       RecTest.reply = replyRet;
       RecTest.replyCone = true;

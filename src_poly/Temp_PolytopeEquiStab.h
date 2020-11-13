@@ -247,7 +247,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
   WMat.ReorderingOfWeights(g);
 #ifdef DEBUG
   std::vector<T1> ListWeightB=WMat.GetWeight();
-  for (int iEnt=1; iEnt<nbEnt; iEnt++) {
+  for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
     if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
       std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
       throw TerminalException{1};
