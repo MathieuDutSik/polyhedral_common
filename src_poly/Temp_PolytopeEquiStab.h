@@ -1639,6 +1639,40 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 
 
 
+int GetNeededPower(int nb)
+{
+  int h=0;
+  int eExpo=1;
+  while(true) {
+    if (nb < eExpo)
+      return h;
+    h++;
+    eExpo *= 2;
+  }
+}
+
+
+inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
+{
+  int eWork, eExpo, eExpoB, i, res;
+  eWork=eVal;
+  eExpo=1;
+  for (i=0; i<h; i++) {
+    eExpoB=eExpo*2;
+    res=eWork % eExpoB;
+    eVect[i]=res/eExpo;
+    eExpo=eExpoB;
+    eWork=eWork - res;
+  }
+}
+
+
+//#define USE_PAIRS
+#ifdef USE_PAIRS
+/* Unfortunately, the use of pairs while allowing for a graph with
+   a smaller number of vertices gives a running time that is larger.
+   Thus this idea while good looking is actually not a good one.
+*/
 
 /*
   We are doing the coloring of the graph in following way.
@@ -1682,19 +1716,6 @@ int GetNeededN(int nb_color)
   }
 }
 
-
-int GetNeededPower(int nb)
-{
-  int h=0;
-  int eExpo=1;
-  while(true) {
-    if (nb < eExpo)
-      return h;
-    h++;
-    eExpo *= 2;
-  }
-}
-
 std::vector<int> GetListPair(int N, int nb_color)
 {
   if (N == 1)
@@ -1726,21 +1747,6 @@ std::vector<int> GetListPair(int N, int nb_color)
       return V;
   }
   return V;
-}
-
-
-inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
-{
-  int eWork, eExpo, eExpoB, i, res;
-  eWork=eVal;
-  eExpo=1;
-  for (i=0; i<h; i++) {
-    eExpoB=eExpo*2;
-    res=eWork % eExpoB;
-    eVect[i]=res/eExpo;
-    eExpo=eExpoB;
-    eWork=eWork - res;
-  }
 }
 
 
@@ -1818,24 +1824,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
     }
 }
 
-
-/*
-
-
-
-inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
-{
-  int eWork, eExpo, eExpoB, i, res;
-  eWork=eVal;
-  eExpo=1;
-  for (i=0; i<h; i++) {
-    eExpoB=eExpo*2;
-    res=eWork % eExpoB;
-    eVect[i]=res/eExpo;
-    eExpo=eExpoB;
-    eWork=eWork - res;
-  }
-}
+#else
 
 
 template<typename T1, typename T2>
@@ -1897,7 +1886,8 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	}
     }
 }
-*/
+
+#endif
 
 
 template<typename T1, typename T2>
@@ -1999,6 +1989,71 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
+TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
+{
+  bliss::Stats stats;
+  VectVectInt ListGen;
+  VectVectInt* h = &ListGen;
+  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
+  int nbVert = g.get_nof_vertices();
+  std::vector<permlib::Permutation> generatorList;
+  for (auto & eGen : ListGen) {
+    std::vector<permlib::dom_int> gList(nbVert);
+    for (int iVert=0; iVert<nbVert; iVert++)
+      gList[iVert]=eGen[iVert];
+    generatorList.push_back(permlib::Permutation(gList));
+  }
+  return GetPermutationGroup(nbVert, generatorList);
+}
+
+
+template<typename T1, typename T2>
+TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
+{
+  bliss::Stats stats;
+  VectVectInt ListGen;
+  int nbRow=WMat.rows();
+  GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
+  bliss::Graph g=GetBlissGraphFromGraph(eGR);
+  VectVectInt* h = &ListGen;
+  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
+  int nbGen=ListGen.size();
+  std::vector<permlib::Permutation> generatorList;
+  for (int iGen=0; iGen<nbGen; iGen++) {
+    std::vector<permlib::dom_int> gList(nbRow);
+    for (int iVert=0; iVert<nbRow; iVert++) {
+      int jVert=ListGen[iGen][iVert];
+#ifdef DEBUG
+      if (jVert >= nbRow) {
+	std::cerr << "jVert is too large\n";
+	std::cerr << "jVert=" << jVert << "\n";
+	std::cerr << "nbRow=" << nbRow << "\n";
+	throw TerminalException{1};
+      }
+#endif
+      gList[iVert]=jVert;
+    }
+#ifdef DEBUG
+    for (int iRow=0; iRow<nbRow; iRow++)
+      for (int jRow=0; jRow<nbRow; jRow++) {
+	int iRowI=gList[iRow];
+	int jRowI=gList[jRow];
+	int eVal1=WMat.GetValue(iRow, jRow);
+	int eVal2=WMat.GetValue(iRowI, jRowI);
+	if (eVal1 != eVal2) {
+	  std::cerr << "eVal1=" << eVal1 << " eVal2=" << eVal2 << "\n";
+	  std::cerr << "Clear error in automorphism computation\n";
+	  std::cerr << "AUT iRow=" << iRow << " jRow=" << jRow << "\n";
+	  throw TerminalException{1};
+	}
+      }
+#endif
+    generatorList.push_back(permlib::Permutation(gList));
+  }
+  return GetPermutationGroup(nbRow, generatorList);
+}
+
+
 
 // This function takes a matrix and returns the vector
 // that canonicalize it.
@@ -2022,6 +2077,8 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
+  TheGroupFormat GRP = GetStabilizerBlissGraph(g);
+  std::cerr << "|GRP|=" << GRP.size << "\n";
 
   int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
@@ -2121,60 +2178,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized
 }
 
 
-
-
-
-template<typename T1, typename T2>
-TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
-{
-  bliss::Stats stats;
-  VectVectInt ListGen;
-  VectVectInt *h;
-  int nbRow=WMat.rows();
-  GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
-  /*  std::cerr << "GetStabilizerWeightMatrix, nbRow=" << nbRow << "\n";
-  if (nbRow == 64) {
-    std::cerr << "We print\n";
-    GRAPH_PrintOutputGAP_vertex_colored("GraphExpend.gap", eGR);
-    }*/
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  h=&ListGen;
-  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
-  int nbGen=ListGen.size();
-  std::vector<permlib::Permutation> generatorList;
-  for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> gList(nbRow);
-    for (int iVert=0; iVert<nbRow; iVert++) {
-      int jVert=ListGen[iGen][iVert];
-#ifdef DEBUG
-      if (jVert >= nbRow) {
-	std::cerr << "jVert is too large\n";
-	std::cerr << "jVert=" << jVert << "\n";
-	std::cerr << "nbRow=" << nbRow << "\n";
-	throw TerminalException{1};
-      }
-#endif
-      gList[iVert]=jVert;
-    }
-#ifdef DEBUG
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int jRow=0; jRow<nbRow; jRow++) {
-	int iRowI=gList[iRow];
-	int jRowI=gList[jRow];
-	int eVal1=WMat.GetValue(iRow, jRow);
-	int eVal2=WMat.GetValue(iRowI, jRowI);
-	if (eVal1 != eVal2) {
-	  std::cerr << "eVal1=" << eVal1 << " eVal2=" << eVal2 << "\n";
-	  std::cerr << "Clear error in automorphism computation\n";
-	  std::cerr << "AUT iRow=" << iRow << " jRow=" << jRow << "\n";
-	  throw TerminalException{1};
-	}
-      }
-#endif
-    generatorList.push_back(permlib::Permutation(gList));
-  }
-  return GetPermutationGroup(nbRow, generatorList);
-}
 
 
 
