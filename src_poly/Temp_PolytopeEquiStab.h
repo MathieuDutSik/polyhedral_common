@@ -1653,8 +1653,37 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
   The way to obtain that is to ensure that the set of pairs S
   define a graph so that for each vertex i in {1, ...., N} there exist
   a j such that j\notin S.
+  ---
+  For N even we need to remove pairs {0,1}, {2,3}, ..., {N-2,N-1}
+    Write N = 2K then nb_pair = 2K + 2K(2K-1) / 2 - K = K + K(2K-1) = 2 K*K
+  For N odd we need to remove pairs {0,1}, {2,3}, ..., {N-3, N-2}, {N-2,N-1}
+    Write N = 2K + 1 then nb_pair = 2K + 1 + (2K+1) 2K / 2 - (K+1) = K + (2K+1) K = 2 (K+1) K
+
  */
-int GetNeededPower(int nb_color)
+int GetNeededN(int nb_color)
+{
+  int N=1;
+  while (true) {
+    int res = N % 2;
+    int nb_pair;
+    int K = N / 2;
+    if (res == 0) {
+      nb_pair = 2 * K * K;
+    } else {
+      if (N == 1)
+        nb_pair = 1;
+      else
+        nb_pair = 2 * (K + 1) * K;
+    }
+    int e_pow = 1 << nb_pair;
+    if (e_pow >= nb_color)
+      return N;
+    N++;
+  }
+}
+
+
+int GetNeededPower(int nb)
 {
   int h=0;
   int eExpo=1;
@@ -1664,6 +1693,39 @@ int GetNeededPower(int nb_color)
     h++;
     eExpo *= 2;
   }
+}
+
+std::vector<int> GetListPair(int N, int nb_color)
+{
+  if (N == 1)
+    return {0,0};
+  int K = N / 2;
+  int e_pow = GetNeededPower(nb_color);
+  std::vector<int> V;
+  int idx=0;
+  for (int i=0; i<N; i++) {
+    V.push_back(i);
+    V.push_back(i);
+    idx++;
+    if (idx == e_pow)
+      return V;
+  }
+  for (int i=0; i<N; i++)
+    for (int j=i+2; j<N; j++) {
+      V.push_back(i);
+      V.push_back(j);
+      idx++;
+      if (idx == e_pow)
+        return V;
+    }
+  for (int i=0; i<K-1; i++) {
+    V.push_back(2*i+1);
+    V.push_back(2*i+2);
+    idx++;
+    if (idx == e_pow)
+      return V;
+  }
+  return V;
 }
 
 
@@ -1682,15 +1744,18 @@ inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
 }
 
 
+
+
+
 template<typename T1, typename T2>
 size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
-  int hS=GetNeededPower(nbMult);
+  int hS=GetNeededN(nbMult);
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
-  return hS*nbVert;
+  return hS * nbVert;
 }
 
 
@@ -1700,6 +1765,8 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
   int hS=GetNeededPower(nbMult);
+  std::vector<int> V = GetListPair(hS, nbMult);
+  int e_pow = V.size() / 2;
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
   for (int iVert=0; iVert<nbVert; iVert++)
@@ -1715,7 +1782,8 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
-  std::vector<int> eVect(hS);
+  std::vector<int> eVect(e_pow);
+  int iH1, iH2, aVert, bVert;
   for (int iVert=0; iVert<nbVert-1; iVert++)
     for (int jVert=iVert+1; jVert<nbVert; jVert++) {
       int eVal;
@@ -1731,34 +1799,28 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	else
 	  eVal=WMat.GetValue(iVert, jVert);
       }
-      GetBinaryExpression(eVal, hS, eVect);
-      for (int iH=0; iH<hS; iH++)
-	if (eVect[iH] == 1) {
-	  int aVert=iVert + nbVert*iH;
-	  int bVert=jVert + nbVert*iH;
+      GetBinaryExpression(eVal, e_pow, eVect);
+      for (int i_pow=0; i_pow<e_pow; i_pow++)
+	if (eVect[i_pow] == 1) {
+          iH1 = V[2*i_pow];
+          iH2 = V[2*i_pow+1];
+	  aVert=iVert + nbVert*iH1;
+	  bVert=jVert + nbVert*iH2;
 	  f_adj(aVert, bVert);
 	  f_adj(bVert, aVert);
+          if (iH1 != iH2) {
+            aVert=iVert + nbVert*iH2;
+            bVert=jVert + nbVert*iH1;
+            f_adj(aVert, bVert);
+            f_adj(bVert, aVert);
+          }
 	}
     }
 }
 
 
-
 /*
 
-
-
-int GetNeededPower(int nb)
-{
-  int h=0;
-  int eExpo=1;
-  while(true) {
-    if (nb < eExpo)
-      return h;
-    h++;
-    eExpo *= 2;
-  }
-}
 
 
 inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
