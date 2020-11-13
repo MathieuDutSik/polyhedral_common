@@ -2349,21 +2349,21 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
   int idx=0;
   Face IsIncluded(n_rows);
-  for (int i_row=0; i_row<2*n_rows; i_row++) {
+  for (size_t i_row=0; i_row<2*n_rows; i_row++) {
     int j_row = PairCanonic.second[i_row];
     int res = j_row % 2;
     int pos = j_row / 2;
     if (res == 0) {
       if (IsIncluded[pos] == 0) {
         IsIncluded[pos]=1;
-        for (int i_col=0; i_col<n_cols; i_col++)
+        for (size_t i_col=0; i_col<n_cols; i_col++)
           EXTreord(idx, i_col) = EXT(pos, i_col);
         idx++;
       }
     } else {
       if (IsIncluded[pos] == 0) {
         IsIncluded[pos]=1;
-        for (int i_col=0; i_col<n_cols; i_col++)
+        for (size_t i_col=0; i_col<n_cols; i_col++)
           EXTreord(idx, i_col) = -EXT(pos, i_col);
         idx++;
       }

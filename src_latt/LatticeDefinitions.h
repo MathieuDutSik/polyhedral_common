@@ -397,12 +397,15 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
   for (int i=1; i<n; i++)
     for (int j=0; j<i; j++)
       gram(j,i) = gram(i,j);
-  MyMatrix<Tmat> prod1 = MatrixProduct_T1_T2_T3<Tint,Tmat,Tmat>(H, GramMat);
-  MyMatrix<Tmat> eProd = MatrixProduct_T1_T2_T3<Tmat,Tint,Tmat>(prod1, TransposedMat(H));
+#define DEBUG
+#ifdef DEBUG
+  MyMatrix<Tmat> H_T = ConvertMatrixUniversal<Tmat,Tint>(H);
+  MyMatrix<Tmat> eProd = H_T * GramMat * H_T.transpose();
   if (!TestEqualityMatrix(eProd, gram)) {
     std::cerr << "The needed equality is not satisfied in LLL. DEBUG!!!!\n";
     throw TerminalException{1};
   }
+#endif
   return {gram, H};
 }
 
