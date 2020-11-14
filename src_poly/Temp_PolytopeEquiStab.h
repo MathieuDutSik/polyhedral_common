@@ -2,6 +2,7 @@
 #define TEMP_POLYTOPE_EQUI_STAB
 
 #include "GRAPH_bliss.h"
+#include "GRAPH_nauty.h"
 #include "MAT_Matrix.h"
 #include "Basic_string.h"
 #include "Basic_file.h"
@@ -557,39 +558,6 @@ WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
 
 
 
-bliss::Graph* ReadGraphFromFile(FILE *f, unsigned int &nof_vertices)
-{
-  unsigned int nof_edges;
-  int ret;
-  bliss::Graph *g =0;
-  ret=fscanf(f, "%u %u\n", &nof_vertices, &nof_edges);
-  if (ret != 1) {
-    std::cerr << "fscanf error while reading graph 1\n";
-    throw TerminalException{1};
-  }
-  g = new bliss::Graph(nof_vertices);
-  for (int i=0; i<int(nof_vertices); i++) {
-    unsigned int color;
-    ret=fscanf(f, "%u\n", &color);
-    if (ret != 1) {
-      std::cerr << "fscanf error while reading graph 2\n";
-      throw TerminalException{1};
-    }
-    g->change_color(i, color);
-  }
-  for (int iEdge=0; iEdge<int(nof_edges); iEdge++) {
-    int a, b;
-    ret=fscanf(f, "%u %u\n", &a, &b);
-    if (ret != 1) {
-      std::cerr << "fscanf error while reading graph 3\n";
-      throw TerminalException{1};
-    }
-    g->add_edge(a-1, b-1);
-  }
-  return g;
-}
-
-
 
 template<typename T>
 MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
@@ -700,6 +668,153 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 #endif
   return WMat;
 }
+
+
+template<typename T>
+struct WeightMatrixAbs {
+  int positionZero;
+  Face ArrSigns;
+  WeightMatrix<T, T> WMat;
+};
+
+
+template<typename T>
+WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
+{
+  static_assert(is_totally_ordered<T>::value, "Requires T to be a totally ordered field");
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  int nbPair=TheEXT.rows();
+  int nbCol=TheEXT.cols();
+  int eProd = nbPair * nbPair;
+  std::vector<int> INP_TheMat(eProd);
+  Face ArrSigns(eProd);
+  std::vector<T> INP_ListWeight;
+  T INP_TheTol=0;
+  std::unordered_map<T, int> ValueMap;
+  int idxWeight = 0;
+  int positionZero = -1;
+  //
+  auto set_entry=[&](int iRow, int jRow, int pos, bool eChg) -> void {
+    int idx = iRow + nbPair*jRow;
+    INP_TheMat[idx] = pos;
+    ArrSigns[idx] = eChg;
+  };
+  MyVector<T> V(nbCol);
+  for (int iPair=0; iPair<nbPair; iPair++) {
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (int jCol=0; jCol<nbCol; jCol++)
+        eSum += Qmat(iCol,jCol) * TheEXT(iPair, jCol);
+      V(iCol) = eSum;
+    }
+    for (int jPair=0; jPair<=iPair; jPair++) {
+      T eScal=0;
+      for (int iCol=0; iCol<nbCol; iCol++)
+        eScal += V(iCol) * TheEXT(jPair, iCol);
+      bool ChgSign=false;
+      if (eScal < 0) {
+        eScal = -eScal;
+        ChgSign = true;
+      }
+      int& value = ValueMap[eScal];
+      if (value == 0) { // This is a missing value
+        if (positionZero == -1 && eScal == 0)
+          positionZero = idxWeight;
+        idxWeight++;
+        value1 = idxWeight;
+        INP_ListWeight.push_back(eScal);
+      }
+      int pos = value - 1;
+      set_entry(iPair  , jPair  , pos, ChgSign);
+      if (iPair != jPair)
+        set_entry(jPair  , iPair  , pos, ChgSign);
+    }
+  }
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  return {positionZero, ArrSigns, WMat};
+}
+
+
+template<typename Tint>
+EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& TheEXT, MyMatrix<Tint> const& Qmat)
+{
+  int nbRow= TheEXT.rows();
+  WeightMatrixAbs<T> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(TheEXT, Qmat);
+  GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMatAbs.WMat);
+  bliss::Graph g=GetBlissGraphFromGraph(eGR);
+  VectVectInt* h = &ListGen;
+  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
+  std::vector<permlib::Permutation> generatorList;
+  // We check if the Generating vector eGen can be mapped from the absolute
+  // graph to the original one.
+  auto TestExistSignVector=[&](std::vector<int> const& eGen) -> bool {
+    /* We map a vector v_i to another v_j with sign +-1
+       V[i] = 0 for unassigned
+              1 for positive sign
+              2 for negative sign
+              3 for positive sign and treated
+              4 for negative sign and treated
+     */
+    std::vector<uint8_t> V(nbRow, 0);
+    V[0] = 1;
+    while(true) {
+      bool IsFinished = true;
+      for (int i=0; i<nbRow; i++) {
+        int val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished=false;
+          V[i] = val + 2;
+          int iImg = eGen[i];
+          for (int j=0; j<nbRow; j++) {
+            int jImg = eGen[j];
+            int pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
+              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
+              bool ChgSign = ChgSign1 ^ ChgSign2;
+              int valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
+                valJ = 2;
+              else
+                valJ = 1;
+              if (V[j] == 0) {
+                V[j] = valJ;
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished)
+        break;
+    }
+    return true;
+  };
+  auto IsCorrectListGen=[&]() -> bool {
+    for (auto& eGen : ListGen)
+      if (!TestExistSignVector(eGen))
+        return false;
+    return true;
+  };
+  if (!IsCorrectListGen()) {
+    return {false, {}};
+  }
+  //
+  
+  
+}
+
+
+
 
 
 
@@ -929,7 +1044,6 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
       }
 #endif
       int idxret=iter->idx;
-      //      std::cerr << "idx=" << idx << "\n";
       int pos1=iShort + nbShort*jShort;
       int pos2=jShort + nbShort*iShort;
       INP_TheMat[pos1]=idxret;
@@ -2071,15 +2185,20 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
+  int nof_vertices=eGR.GetNbVert();
   std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
 
+
+#undef USE_BLISS
+#define USE_NAUTY
+  //
+#ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
   //  std::cerr << "|GRP|=" << GetStabilizerBlissGraph(g).size << "\n";
 
-  int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
   const unsigned int* cl;
   cl=g.canonical_form(stats, &report_aut_void, stderr);
@@ -2087,6 +2206,18 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
 
+#endif
+  //
+#ifdef USE_NAUTY
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+  std::vector<int> cl = NAUTY_GetCanonicalOrdering(eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+#endif
+  //
   std::vector<int> clR(nof_vertices,-1);
   for (int i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
@@ -2471,6 +2602,11 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 
 
 
+template<typename Tint>
+MyMatrix<Tint> KernelLinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+
+
+
 
 template<typename Tint>
 MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
@@ -2480,6 +2616,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
+  MyMatrix<Tint> Qmat=GetQmatrix(TheEXT);
 
   WeightMatrix<Tint,Tint> WMat=GetWeightMatrixAntipodal(EXT);
 #ifdef TIMINGS
@@ -2828,10 +2965,8 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1,
   MyMatrix<T> M1inv=Inverse(M1);
   int nbRow=ListRowSelect.size();
   std::vector<int> ListRowSelectImg(nbRow);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    int jRow=ePerm.at(iRow);
-    ListRowSelectImg[iRow]=jRow;
-  }
+  for (int iRow=0; iRow<nbRow; iRow++)
+    ListRowSelectImg[iRow]=ePerm.at(iRow);
   MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
   return M1inv*M2;
 }
@@ -2845,11 +2980,9 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
   int nbVect=EXT1.rows();
   std::vector<MyVector<T>> EXTrow1(nbVect), EXTrow2(nbVect);
   for (int iVect=0; iVect<nbVect; iVect++) {
-    MyVector<T> eRow1=GetMatrixRow(EXT1, iVect);
-    EXTrow1[iVect]=eRow1;
+    EXTrow1[iVect]=GetMatrixRow(EXT1, iVect);
     //
-    MyVector<T> eRow2=GetMatrixRow(EXT2, iVect);
-    EXTrow2[iVect]=eRow2;
+    EXTrow2[iVect]=GetMatrixRow(EXT2, iVect);
   }
   permlib::Permutation ePerm1=SortingPerm(EXTrow1);
   permlib::Permutation ePerm2=SortingPerm(EXTrow2);
@@ -3047,8 +3180,6 @@ std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
 	int iGen=0;
 	Face eFace=ListLocal[iLocal].eFace;
 	for (auto const& eGen : ListGen) {
-	  //	  permlib::Permutation eGenB=*eGen;
-	  //	  std::cerr << "iGen=" << iGen << " eGenB.size=" << eGenB.size() << " |eSet|s=" << eFace.size() << " |eSet|c=" << eFace.count() << "\n";
 	  Face eNewList=eEltImage(eFace, *eGen);
 	  DoubleCosetInsertEntry(eNewList);
 	  iGen++;
