@@ -2054,13 +2054,13 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
-  std::vector<int> cl = TRACES_GetCanonicalOrdering(eGR);
+  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
 #endif
   //
-  std::vector<int> clR(nof_vertices,-1);
+  std::vector<unsigned int> clR(nof_vertices,-1);
   for (int i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
