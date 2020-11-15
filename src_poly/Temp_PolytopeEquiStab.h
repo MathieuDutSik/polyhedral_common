@@ -1163,33 +1163,6 @@ static void report_aut_vectvectint(void* param, const unsigned int n, const unsi
 }
 
 
-
-
-
-TheGroupFormat GetGraphAutomorphismGroup(bliss::Graph *g, unsigned int nof_vertices)
-{
-  std::vector<permlib::Permutation::ptr> generatorList;
-  bliss::Stats stats;
-  VectVectInt ListGen;
-  VectVectInt *h;
-  h=&ListGen;
-  g->find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
-  delete g;
-  int nbGen=ListGen.size();
-  for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> gList(nof_vertices);
-    for (int i=0; i<(int)nof_vertices; i++)
-      gList[i]=ListGen[iGen][i];
-    generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(gList)));
-  }
-  TheGroupFormat GRP;
-  GRP.n=nof_vertices;
-  GRP.group=construct(nof_vertices, generatorList.begin(), generatorList.end());
-  GRP.size=GRP.group->order<mpz_class>();
-  return GRP;
-}
-
-
 template<typename T1, typename T2, typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, Face const& eSet)
 {
