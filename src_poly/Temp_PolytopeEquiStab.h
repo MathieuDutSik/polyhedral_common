@@ -61,7 +61,6 @@ int WeighMatrix_IsNear(std::vector<T> V1, std::vector<T> V2, T eVal3)
 template<typename T1, typename T2>
 struct WeightMatrix {
 public:
-  // no accidental construction, i.e. temporaries and the like
   WeightMatrix()
   {
     TheTol=-1;
@@ -154,15 +153,12 @@ public:
   int GetValue(int const& iRow, int const& iCol) const
   {
     int idx=iRow + nbRow*iCol;
-    //    std::cerr << "GetValue iRow=" << iRow << " iCol=" << iCol << " idx=" << idx << " value=" << TheMat[idx] << "\n";
     return TheMat[idx];
   }
   void intDirectAssign(int const& iRow, int const& iCol, int const& pos)
   {
     int idx=iRow + nbRow*iCol;
-    //    std::cerr << "intDirectAssign iRow=" << iRow << " iCol=" << iCol << " idx=" << idx << " pos=" << pos << "\n";
     TheMat[idx]=pos;
-    //    std::cerr << "intDirectAssign TheMat[idx]=" << TheMat[idx] << "\n";
   }
   void SetWeight(std::vector<T1> const & inpWeight)
   {
@@ -302,7 +298,6 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
 template<typename T1, typename T2>
 struct WeightMatrixFCT {
 public:
-  // no accidental construction, i.e. temporaries and the like
   WeightMatrixFCT() = delete;
   WeightMatrixFCT(int inpNbRow, T2 inpTheTol, std::function<T1(int,int)> const& eFCT)
   {
@@ -333,7 +328,7 @@ public:
     return *this;
   }
   ~WeightMatrixFCT() = default;
-  // Below is lighter stuff
+  // Functionality of the class
   bool IsSymmetric() const
   {
     for (int iRow=0; iRow<nbRow; iRow++)
@@ -991,7 +986,6 @@ template<typename T>
 WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMat, MyMatrix<int> const& ListShort)
 {
   int nbShort=ListShort.rows();
-  //  std::cerr << "nbShort=" << nbShort << "\n";
   int n=TheGramMat.rows();
   auto GetValue=[&](int const&iShort, int const&jShort) -> T {
     T eScal=0;
@@ -1011,7 +1005,6 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
       ScalMat(jShort,iShort)=eScal;
       setWeight.insert(eScal);
     }
-  //  std::cerr << "|setWeight|=" << setWeight.size() << "\n";
   struct PairData {
     T x;
     size_t idx;
@@ -1385,14 +1378,12 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
   os << "ComputeLocalInvariantStrategy, step 5.1\n";
   for (int i=0; i<nbRow; i++) {
     int iWeight=WMatInt.GetValue(i,i);
-    //    os << " i=" << i << " iWeight=" << iWeight << "\n";
     StatusDiag[iWeight]=1;
   }
   os << "ComputeLocalInvariantStrategy, step 5.2\n";
   for (int i=0; i<nbRow-1; i++)
     for (int j=i+1; j<nbRow; j++) {
       int iWeight=WMatInt.GetValue(i,j);
-      //      os << " i=" << i << " j=" << j << " iWeight=" << iWeight << "\n";
       StatusOff[iWeight]=1;
     }
   os << "ComputeLocalInvariantStrategy, step 6\n";
@@ -1594,7 +1585,6 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
       ListAtt[iWeight]++;
     }
   permlib::Permutation ePerm=SortingPerm(ListWeight);
-  //  std::cerr << "nbWeight=" << nbWeight << "\n";
 #ifdef DEBUG
   for (int jWeight=1; jWeight<nbWeight; jWeight++) {
     int iWeight=jWeight-1;
@@ -2251,16 +2241,13 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
 {
   int nbEnt=PairVectSymm.first.size() / 2;
-  //  std::cerr << "nbEnt=" << nbEnt << "\n";
   std::vector<int> MapVect(nbEnt, -1), MapVectRev(nbEnt, -1);
   std::vector<int> ListStatus(2*nbEnt,1);
   int jEntCan=0;
   for (int iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
-    //    std::cerr << "iEntCan=" << iEntCan << "\n";
     if (ListStatus[iEntCan] == 1) {
       int iEntNative = PairVectSymm.second[iEntCan];
       int jEntNative = iEntNative % nbEnt;
-      //      std::cerr << "iEntNative=" << iEntNative << " jEntNative=" << jEntNative << "\n";
       MapVectRev[jEntCan] = jEntNative;
       MapVect[jEntNative] = jEntCan;
       for (int iH=0; iH<2; iH++) {
@@ -2602,48 +2589,11 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
-  /*
-  std::cerr << "After ReorderingSetWeight WMat=\n";
-  PrintWeightedMatrix(std::cerr, WMat);
-  MyMatrix<Tint> EXTexpand = ExpandReducedMatrix(EXT);
-  std::cerr << "EXTexpand=\n";
-  WriteMatrix(std::cerr, EXTexpand);
-  */
 
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
-  /*
-  std::cerr << "After canonicalization WMat=\n";
-  int tot_siz = 2 * n_rows;
-  for (int i1=0; i1<tot_siz; i1++) {
-    int j1 = PairCanonic.second[i1];
-    for (int i2=0; i2<tot_siz; i2++) {
-      int j2 = PairCanonic.second[i2];
-      int eVal=WMat.GetValue(j1, j2);
-      std::cerr << " " << eVal;
-    }
-    std::cerr << "\n";
-  }
-  */
-
-  /*
-  MyMatrix<Tint> EXTreordExpand(2 * n_rows, n_cols);
-  for (int i_row=0; i_row<2*n_rows; i_row++) {
-    int j_row = PairCanonic.second[i_row];
-    int res = j_row % 2;
-    if (res == 0) {
-      for (int i_col=0; i_col<n_cols; i_col++)
-        EXTreordExpand(i_row, i_col) =   EXT(j_row     / 2, i_col);
-    } else {
-      for (int i_col=0; i_col<n_cols; i_col++)
-        EXTreordExpand(i_row, i_col) = - EXT((j_row-1) / 2, i_col);
-    }
-  }
-  std::cerr << "EXTreordExpand=\n";
-  WriteMatrix(std::cerr, EXTreordExpand);
-  */
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
   int idx=0;
@@ -2954,7 +2904,6 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
   std::vector<MyVector<T>> EXTrow1(nbVect), EXTrow2(nbVect);
   for (int iVect=0; iVect<nbVect; iVect++) {
     EXTrow1[iVect]=GetMatrixRow(EXT1, iVect);
-    //
     EXTrow2[iVect]=GetMatrixRow(EXT2, iVect);
   }
   permlib::Permutation ePerm1=SortingPerm(EXTrow1);
