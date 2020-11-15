@@ -5,8 +5,6 @@
 int main(int argc, char *argv[])
 {
   try {
-    std::vector<std::vector<int> > TheReturn;
-    VectVectInt TheOutput;
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
