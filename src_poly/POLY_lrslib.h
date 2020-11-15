@@ -32,15 +32,15 @@ namespace lrs {
   namespace globals {
     const long POS = 1L;
     const long NEG = -1L;
-    const long FALSE = 0L;
-    const long TRUE = 1L;
+    const long L_FALSE = 0L;
+    const long L_TRUE = 1L;
     const long MAXIMIZE = 1L;  /* maximize the lp  */
     const long MINIMIZE = 0L;  /* maximize the lp  */
     const long GE = 1L;        /* constraint is >= */
     const long EQ = 0L;        /* constraint is linearity */
     const unsigned long dict_limit = 10;
-  } // end NS lrs::globals
-  
+  }
+
 
 template<typename T>
 struct lrs_dic {
@@ -208,12 +208,12 @@ long lrs_getsolution (lrs_dic<T> * P, lrs_dat<T> * Q, T* &output, long col)
     {
       if (!positive(A[0][col])) {
 	//	std::cerr << "col=" << col << " : lrs_getsolution, exit case 2\n";
-	return globals::FALSE;
+	return globals::L_FALSE;
       }
     }
   else if (!negative(A[0][col])) {
     //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 3\n";
-    return globals::FALSE;
+    return globals::L_FALSE;
   }
 
   j = Q->lastdv + 1;
@@ -222,13 +222,13 @@ long lrs_getsolution (lrs_dic<T> * P, lrs_dat<T> * Q, T* &output, long col)
 
   if (j <= P->m) {
     //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 4\n";
-    return globals::FALSE;
+    return globals::L_FALSE;
   }
 
   if (Q->geometric || Q->allbases || lexmin (P, Q, col) || Q->lponly)
     return lrs_getray (P, Q, col, Q->n, output);
   //  std::cerr << "col=" << col << " : lrs_getsolution, exit case 5\n";
-  return globals::FALSE;			/* no more output in this dictionary */
+  return globals::L_FALSE;			/* no more output in this dictionary */
 }
 
 
@@ -259,26 +259,26 @@ lrs_dat<T> * lrs_alloc_dat ()
     }
   Q->count[2] = 1L;		/* basis counter */
 /* initialize flags */
-  Q->allbases = globals::FALSE;
-  Q->bound = globals::FALSE;            /* upper/lower bound on objective function given */
+  Q->allbases = globals::L_FALSE;
+  Q->bound = globals::L_FALSE;            /* upper/lower bound on objective function given */
   Q->frequency = 0L;
-  Q->geometric = globals::FALSE;
-  Q->homogeneous = globals::TRUE;
-  Q->hull = globals::FALSE;
-  Q->incidence = globals::FALSE;
-  Q->lponly = globals::FALSE;
+  Q->geometric = globals::L_FALSE;
+  Q->homogeneous = globals::L_TRUE;
+  Q->hull = globals::L_FALSE;
+  Q->incidence = globals::L_FALSE;
+  Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<long>::max();
   Q->mindepth = std::numeric_limits<long>::min();
   Q->maxoutput = 0L;
-  Q->nonnegative = globals::FALSE;
-  Q->printcobasis = globals::FALSE;
-  Q->printslack = globals::FALSE;
-  Q->truncate = globals::FALSE;          /* truncate tree when moving from opt vertex        */
-  Q->verbose=globals::FALSE;
-  Q->maximize = globals::FALSE;		/*flag for LP maximization                          */
-  Q->minimize = globals::FALSE;		/*flag for LP minimization                          */
-  Q->restart = globals::FALSE;		/* globals::TRUE if restarting from some cobasis             */
-  Q->givenstart = globals::FALSE;	/* globals::TRUE if a starting cobasis is given              */
+  Q->nonnegative = globals::L_FALSE;
+  Q->printcobasis = globals::L_FALSE;
+  Q->printslack = globals::L_FALSE;
+  Q->truncate = globals::L_FALSE;          /* truncate tree when moving from opt vertex        */
+  Q->verbose=globals::L_FALSE;
+  Q->maximize = globals::L_FALSE;		/*flag for LP maximization                          */
+  Q->minimize = globals::L_FALSE;		/*flag for LP minimization                          */
+  Q->restart = globals::L_FALSE;		/* globals::TRUE if restarting from some cobasis             */
+  Q->givenstart = globals::L_FALSE;	/* globals::TRUE if a starting cobasis is given              */
   Q->saved_flag = 0;		/* no cobasis saved initially, db */
   return Q;
 }
@@ -311,7 +311,7 @@ void reorder1 (long a[], long b[], long newone, long range)
 
 
 template<typename T>
-long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_output)
+long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin)
 /* gets first basis, globals::FALSE if none              */
 /* P may get changed if lin. space Lin found    */
 /* no_output is globals::TRUE supresses output headers   */
@@ -326,8 +326,6 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
   long *linearity;
   long hull = Q->hull;
   long m, d, lastdv, nlinearity, nredundcol;
-  if (Q->lponly)
-    no_output = globals::TRUE;
   m = (*D_p)->m;
   d = (*D_p)->d;
   lastdv = Q->lastdv;
@@ -388,7 +386,7 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
   else {
     if (!getabasis (*D_p, Q, inequality)) {
       //      std::cerr << "Exit case 1\n";
-      return globals::FALSE;
+      return globals::L_FALSE;
     }
   }
   nredundcol = Q->nredundcol;
@@ -423,13 +421,13 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
 
 	  if (!removecobasicindex (*D_p, Q, 0L)) {
 	    //	    std::cerr << "Exit case 2\n";
-	    return globals::FALSE;
+	    return globals::L_FALSE;
 	  }
 	}
     }
   if (!primalfeasible (*D_p, Q)) {
     //    std::cerr << "Exit case 3\n";
-    return globals::FALSE;
+    return globals::L_FALSE;
   }
 
 /* Now solve LP if objective function was given */
@@ -438,7 +436,7 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
       Q->unbounded = !lrs_solvelp (*D_p, Q, Q->maximize);
       if (Q->lponly) {
 	//	std::cerr << "Exit case 4\n";
-	return globals::TRUE;
+	return globals::L_TRUE;
       }
       else                         /* check to see if objective is dual degenerate */
        {
@@ -472,7 +470,7 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin, long no_out
     *D_p = resize (*D_p, Q);
 
   //  std::cerr << "Exit case 6\n";
-  return globals::TRUE;
+  return globals::L_TRUE;
 }
 
 
@@ -495,12 +493,12 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
 
   if (backtrack && (*D_p)->depth == 0) {
     //    std::cerr << "lrs_getnextbasis, exit case 1\n";
-    return globals::FALSE;                       /* cannot backtrack from root      */
+    return globals::L_FALSE;                       /* cannot backtrack from root      */
   }
 
   if (Q->maxoutput > 0 && Q->count[0]+Q->count[1]-Q->hull >= Q->maxoutput) {
     //    std::cerr << "lrs_getnextbasis, exit case 2\n";
-    return globals::FALSE;
+    return globals::L_FALSE;
   }
   //  std::cerr << "d=" << d << " m=" << m << "\n";
   //  PrintP(*D_p, "Before while loop");
@@ -509,20 +507,20 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
       //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
       if ((*D_p)->depth >= Q->maxdepth)
 	{
-	  backtrack = globals::TRUE;
+	  backtrack = globals::L_TRUE;
 	  if (Q->maxdepth == 0)	{ /* estimate only */
 	    //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
-	    return globals::FALSE;
+	    return globals::L_FALSE;
 	  }
 	}
 
       if ( Q->truncate && negative((*D_p)->A[0][0]))   /* truncate when moving from opt. vertex */
-          backtrack = globals::TRUE;
+          backtrack = globals::L_TRUE;
 
       //      PrintP(*D_p, "Before backtrack test");
       if (backtrack)		/* go back to prev. dictionary, restore i,j */
 	{
-	  backtrack = globals::FALSE;
+	  backtrack = globals::L_FALSE;
 
 	  if (!check_cache (D_p, Q, &i, &j))
 	    {
@@ -543,7 +541,7 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
 
       //      PrintP(*D_p, "Before exiting test");
       if (j == d)
-	backtrack = globals::TRUE;
+	backtrack = globals::L_TRUE;
       else
 	{
 	  cache_dict (D_p, Q, i, j, dict_count);
@@ -567,11 +565,11 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
 	  save_basis (*D_p, Q);
 	  //	  PrintP(*D_p, "After save_basis");
 	  //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
-	  return globals::TRUE;
+	  return globals::L_TRUE;
 	}
     }				/* end of main while loop for getnextbasis */
   //  std::cerr << "lrs_getnextbasis, exit case 5\n";
-  return globals::FALSE;
+  return globals::L_FALSE;
 }
 
 /*************************************/
@@ -599,10 +597,10 @@ long lrs_getvertex (lrs_dic<T> * P, lrs_dat<T> * Q, T* &output)
 
 
   if (hull)
-    return globals::FALSE;		/* skip printing the origin */
+    return globals::L_FALSE;		/* skip printing the origin */
 
   if (!lexflag && !Q->allbases && !Q->lponly)	/* not lexmin, and not printing forced */
-    return globals::FALSE;
+    return globals::L_FALSE;
 
 
   /* copy column 0 to output */
@@ -627,7 +625,7 @@ long lrs_getvertex (lrs_dic<T> * P, lrs_dat<T> * Q, T* &output)
       }
   if (lexflag && one(output[0]))
       ++Q->count[4];               /* integer vertex */
-  return globals::TRUE;
+  return globals::L_TRUE;
 }
 
 template<typename T>
@@ -673,7 +671,7 @@ long lrs_getray (lrs_dic<T> * P, lrs_dat<T> * Q, long col, long redcol, T* &outp
 	}
 
     }
-  return globals::TRUE;
+  return globals::L_TRUE;
 }
 
 template<typename T>
@@ -775,7 +773,7 @@ long lrs_ratio (lrs_dic<T> *P, lrs_dat<T> *Q, long col)	/*find lex min. ratio */
       else
 	/* perform ratio test on rhs or column of basis inverse */
 	{
-	  firstime = globals::TRUE;
+	  firstime = globals::L_TRUE;
 	  /*get next ratio column and increment cindex */
 	  if (basicindex != d)
 	    ratiocol = Col[cindex++];
@@ -784,7 +782,7 @@ long lrs_ratio (lrs_dic<T> *P, lrs_dat<T> *Q, long col)	/*find lex min. ratio */
 	      i = Row[minratio[j]];	/* i is the row location of the next basic variable */
 	      comp = 1;		/* 1:  lhs>rhs;  0:lhs=rhs; -1: lhs<rhs */
 	      if (firstime)
-		firstime = globals::FALSE;	/*force new min ratio on first time */
+		firstime = globals::L_FALSE;	/*force new min ratio on first time */
 	      else
 		{
 		  if (positive(Nmin) || negative(A[i][ratiocol]))
@@ -841,11 +839,11 @@ long reverse(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long s)
 
   col = Col[s];
   if (!negative(A[0][col]))
-    return globals::FALSE;
+    return globals::L_FALSE;
 
   *r = lrs_ratio<T>(P, Q, col);
   if (*r == 0)			/* we have a ray */
-    return (globals::FALSE);
+    return globals::L_FALSE;
 
   row = Row[*r];
 
@@ -860,9 +858,9 @@ long reverse(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long s)
 	if (positive(A[0][j]) || negative(A[row][j]))		/*or else sign test fails trivially */
 	  if ((!negative(A[0][j]) && !positive(A[row][j])) ||
 	      comprod (A[0][j], A[row][col], A[0][col], A[row][j]) == -1)
-	    return (globals::FALSE);
+	    return globals::L_FALSE;
       }
-  return (globals::TRUE);
+  return globals::L_TRUE;
 }
 
 template<typename T>
@@ -888,9 +886,9 @@ long selectpivot (lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long *s)
     col = Col[j];
     *r = lrs_ratio<T>(P, Q, col);
     if (*r != 0)
-      return (globals::TRUE);
+      return globals::L_TRUE;
   }
-  return (globals::FALSE);
+  return globals::L_FALSE;
 }
 
 template<typename T>
@@ -955,7 +953,7 @@ long primalfeasible (lrs_dic<T> * P, lrs_dat<T> * Q)
 /* Do dual pivots to get primal feasibility */
 /* Note that cost row is all zero, so no ratio test needed for Dual Bland's rule */
 {
-  long primalinfeasible = globals::TRUE;
+  long primalinfeasible = globals::L_TRUE;
   long i, j;
 /* assign local variables to structures */
   T** A = P->A;
@@ -980,14 +978,14 @@ long primalfeasible (lrs_dic<T> * P, lrs_dat<T> * Q)
 	    j++;
 	  }
 	  if (j >= d)
-	    return (globals::FALSE);	/* no positive entry */
+	    return globals::L_FALSE;	/* no positive entry */
 	  pivot (P, Q, i, j);
 	  update (P, Q, &i, &j);
         }
       else
-         primalinfeasible = globals::FALSE;
+         primalinfeasible = globals::L_FALSE;
     }				/* end of while primalinfeasibile */
-  return (globals::TRUE);
+  return globals::L_TRUE;
 }				/* end of primalfeasible */
 
 
@@ -1009,9 +1007,9 @@ long lrs_solvelp (lrs_dic<T> * P, lrs_dat<T> * Q, long maximize)
 
   if (j < d && i == 0)		/* selectpivot gives information on unbounded solution */
     {
-      return globals::FALSE;
+      return globals::L_FALSE;
     }
-  return globals::TRUE;
+  return globals::L_TRUE;
 }				/* end of lrs_solvelp  */
 
 template<typename T>
@@ -1046,7 +1044,7 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
       while (i <= m && B[i] != d + order[j])
 	i++; /* find leaving basis index i */
       if (j < nlinearity && i > m)	/* cannot pivot linearity to cobasis */
-	return globals::FALSE;
+	return globals::L_FALSE;
       if (i <= m)
 	{			/* try to do a pivot */
 	  k = 0;
@@ -1062,7 +1060,7 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
 	      if (zero(A[Row[i]][0]))
 		linearity[j] = 0;
 	      else
-		return globals::FALSE;
+		return globals::L_FALSE;
 	    }			/* end if j < nlinearity */
 	}			/* end of if i <= m .... */
     }				/* end of for   */
@@ -1100,10 +1098,10 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
       if (k >= d)
 	{
 	  //	  std::cerr << "Error removing linearity\n";
-	  return globals::FALSE;
+	  return globals::L_FALSE;
 	}
       if (!removecobasicindex (P, Q, k))
-	return globals::FALSE;
+	return globals::L_FALSE;
       d = P->d;
     }
 
@@ -1116,7 +1114,7 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
       if (i <= m)
 	fprintf (stderr, "\n*Infeasible startingcobasis - will be modified");
     }
-  return globals::TRUE;
+  return globals::L_TRUE;
 }				/*  end of getabasis */
 
 template<typename T>
@@ -1163,7 +1161,7 @@ long removecobasicindex (lrs_dic<T> * P, lrs_dat<T> * Q, long k)
   }
 
   P->d--;
-  return globals::TRUE;
+  return globals::L_TRUE;
 }				/* end of removecobasicindex */
 
 template<typename T>
@@ -1305,7 +1303,7 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
        update (P, Q, &ii, &k);
       } else {
 	delete [] Cobasic;
-       return globals::FALSE;
+       return globals::L_FALSE;
       }
     }
     i--;
@@ -1319,10 +1317,10 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
     if (negative(A[Row[i]][0]))
       {
         delete [] Cobasic;
-	return globals::FALSE;
+	return globals::L_FALSE;
       }
   delete [] Cobasic;
-  return globals::TRUE;
+  return globals::L_TRUE;
 }
 
 
@@ -1355,16 +1353,16 @@ long lexmin (lrs_dic<T> * P, lrs_dat<T> * Q, long col)
 		if (zero (A[r][0]))	/* no need for ratio test, any pivot feasible */
 		  {
 		    if (!zero (A[r][s]))
-		      return (globals::FALSE);
+		      return globals::L_FALSE;
 		  }
 		else if (negative(A[r][s]) && ismin (P, Q, r, s))
 		  {
-		    return (globals::FALSE);
+		    return globals::L_FALSE;
 		  }
 	      }			/* end of if B[i] ... */
 	  }
     }
-  return (globals::TRUE);
+  return globals::L_TRUE;
 }
 
 template<typename T>
@@ -1380,10 +1378,10 @@ long ismin (lrs_dic<T> * P, lrs_dat<T> * Q, long r, long s)
     if ((i != r) &&
 	negative(A[i][s]) && comprod (A[i][0], A[r][s], A[i][s], A[r][0]))
       {
-	return (globals::FALSE);
+	return globals::L_FALSE;
       }
 
-  return (globals::TRUE);
+  return globals::L_TRUE;
 }
 
 template<typename T>
@@ -1429,9 +1427,9 @@ long lrs_degenerate (lrs_dic<T> * P, lrs_dat<T> * Q)
 
   for (i = d + 1; i <= m; i++)
     if (zero (A[Row[i]][0]))
-      return globals::TRUE;
+      return globals::L_TRUE;
 
-  return globals::FALSE;
+  return globals::L_FALSE;
 }
 
 
@@ -1494,7 +1492,7 @@ long checkredund (lrs_dic<T> * P, lrs_dat<T> * Q)
       Ns=A[0][s] * A[r][0];
       Nt=A[0][0] * A[r][s];
       if (lrs_greater(Ns,Nt))
-	return globals::FALSE;		/* non-redundant */
+	return globals::L_FALSE;		/* non-redundant */
 
       pivot (P, Q, i, j);
       update (P, Q, &i, &j);	/*Update B,C,i,j */
@@ -1529,7 +1527,7 @@ long checkcobasic (lrs_dic<T> * P, lrs_dat<T> * Q, long index)
     j++;
 
   if (j == d)
-    return globals::FALSE;		/* not cobasic index */
+    return globals::L_FALSE;		/* not cobasic index */
 
 
 /* index is cobasic */
@@ -1537,20 +1535,16 @@ long checkcobasic (lrs_dic<T> * P, lrs_dat<T> * Q, long index)
   s = Col[j];
   i = Q->lastdv + 1;
 
-  while ((i <= m) &&
-	 (zero (A[Row[i]][s]) || !zero (A[Row[i]][0])))
+  while ((i <= m) && (zero (A[Row[i]][s]) || !zero (A[Row[i]][0])))
     i++;
 
   if (i > m)
-    {
-      return globals::TRUE;
-    }
+      return globals::L_TRUE;
 
   pivot (P, Q, i, j);
   update (P, Q, &i, &j);	/*Update B,C,i,j */
 
-  return globals::FALSE;			/*index is no longer cobasic */
-
+  return globals::L_FALSE;			/*index is no longer cobasic */
 }				/* end of checkcobasic */
 
 template<typename T>
@@ -1837,7 +1831,7 @@ lrs_dic<T> * lrs_alloc_dic (lrs_dat<T> * Q)
   p->m = m;
   p->m_A  = m_A;
   p->depth = 0L;
-  p->lexflag = globals::TRUE;
+  p->lexflag = globals::L_TRUE;
   p->det=1;
 
 /*m+d+1 is the number of variables, labelled 0,1,2,...,m+d  */
@@ -1951,7 +1945,7 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, long row, T* num, long ineq)
   if (hull)
     A[i][0]=0;
   if (!zero (A[i][hull]))   /* for H-rep, are zero in column 0     */
-    Q->homogeneous = globals::FALSE; /* for V-rep, all zero in column 1     */
+    Q->homogeneous = globals::L_FALSE; /* for V-rep, all zero in column 1     */
   if ( ineq == globals::EQ )        /* input is linearity */
     {
       Q->linearity[Q->nlinearity]=row;
@@ -1965,10 +1959,10 @@ void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T* num, long max)
   long i;
 
   if (max == globals::MAXIMIZE)
-    Q->maximize=globals::TRUE;
+    Q->maximize=globals::L_TRUE;
   else
     {
-      Q->minimize=globals::TRUE;
+      Q->minimize=globals::L_TRUE;
       for(i=0;i<=P->d;i++)
 	num[i]=-num[i];
     }
@@ -1981,11 +1975,11 @@ long lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
 {
   T** Lin;		/* holds input linearities if any are found             */
 
-  Q->lponly = globals::TRUE;
+  Q->lponly = globals::L_TRUE;
 
-  if (!lrs_getfirstbasis (&P, Q, Lin, globals::FALSE))
-    return globals::FALSE;
-  return globals::TRUE;
+  if (!lrs_getfirstbasis (&P, Q, Lin))
+    return globals::L_FALSE;
+  return globals::L_TRUE;
 } /* end of lrs_solve_lp */
 
 template<typename T>
@@ -1993,7 +1987,7 @@ long dan_selectpivot (lrs_dic<T> * P, lrs_dat<T> * Q, long *r, long *s)
 /* select pivot indices using dantzig simplex method             */
 /* largest coefficient with lexicographic rule to avoid cycling  */
 /* Bohdan Kaluzny's handiwork                                    */
-/* returns globals::TRUE if pivot found else globals::FALSE                        */
+/* returns globals::TRUE if pivot found else globals::L_FALSE    */
 /* pivot variables are B[*r] C[*s] in locations Row[*r] Col[*s]  */
 {
   long j,k,col;
@@ -2029,10 +2023,10 @@ long dan_selectpivot (lrs_dic<T> * P, lrs_dat<T> * Q, long *r, long *s)
       *r = lrs_ratio<T> (P, Q, col);
       if (*r != 0)
         {
-	return (globals::TRUE);		/* unbounded */
+	return globals::L_TRUE;		/* unbounded */
         }
     }
-  return (globals::FALSE);
+  return globals::L_FALSE;
 }
 
 template<typename T>
@@ -2070,12 +2064,12 @@ long phaseone (lrs_dic<T> * P, lrs_dat<T> * Q)
         j++;
       if (j >= d)
         {
-          return (globals::FALSE);       /* no positive entry */
+          return globals::L_FALSE;       /* no positive entry */
         }
       pivot (P, Q, i, j);
       update (P, Q, &i, &j);
     }
-  return (globals::TRUE);
+  return globals::L_TRUE;
 }
 
 
@@ -2158,7 +2152,7 @@ void initLRS(MyMatrix<T> const& EXT, lrs_dic<T>* & P, lrs_dat<T>* & Q)
   fillModelLRS(EXT, P, Q);
   //  PrintP(P, "Before lrs_getfirstbasis");
 
-  if (!lrs_getfirstbasis (&P, Q, Lin, globals::FALSE)) {
+  if (!lrs_getfirstbasis (&P, Q, Lin)) {
     std::cerr << "Error in call to lrs_getfirstbasis\n";
     throw TerminalException{1};
   }
@@ -2201,7 +2195,7 @@ void Kernel_DualDescription(MyMatrix<T> const& EXT, std::function<void(T*)> cons
       }
     }
   }
-  while (lrs_getnextbasis (&P, Q, globals::FALSE, dict_count));
+  while (lrs_getnextbasis (&P, Q, globals::L_FALSE, dict_count));
   delete [] output;
   lrs_free_dic (P,Q);
   lrs_free_dat (Q);
@@ -2229,7 +2223,7 @@ void Kernel_DualDescription_limited(MyMatrix<T> const& EXT, std::function<void(T
     if (nbDone > UpperLimit)
       break;
   }
-  while (lrs_getnextbasis (&P, Q, globals::FALSE, dict_count));
+  while (lrs_getnextbasis (&P, Q, globals::L_FALSE, dict_count));
   delete [] output;
   lrs_free_dic (P,Q);
   lrs_free_dat (Q);

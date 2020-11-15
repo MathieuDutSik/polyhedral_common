@@ -12,6 +12,10 @@
 #include "MAT_MatrixInt.h"
 
 
+
+#undef USE_BLISS
+#define USE_TRACES
+
 //#define DEBUG
 #define TIMINGS
 
@@ -2029,10 +2033,6 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 #endif
   int nof_vertices=eGR.GetNbVert();
   std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
-
-
-#undef USE_BLISS
-#define USE_TRACES
   //
 #ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
