@@ -295,114 +295,6 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
 
 
 
-template<typename T1, typename T2>
-struct WeightMatrixFCT {
-public:
-  WeightMatrixFCT() = delete;
-  WeightMatrixFCT(int inpNbRow, T2 inpTheTol, std::function<T1(int,int)> const& eFCT)
-  {
-    TheTol=inpTheTol;
-    nbRow=inpNbRow;
-    FCT=eFCT;
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
-	T1 eVal=FCT(iRow,iCol);
-	int pos=GetPositionWeight(eVal);
-	if (pos == -1)
-	  ListWeight.push_back(eVal);
-      }
-  }
-  WeightMatrixFCT(WeightMatrixFCT<T1, T2> const& eMat)
-  {
-    nbRow=eMat.rows();
-    TheTol=eMat.GetTol();
-    ListWeight=eMat.GetWeight();
-    FCT=eMat.GetFCT();
-  }
-  WeightMatrixFCT<T1, T2>& operator=(WeightMatrixFCT<T1, T2> const& eMat)
-  {
-    nbRow=eMat.rows();
-    TheTol=eMat.GetTol();
-    ListWeight=eMat.GetWeight();
-    FCT=eMat.GetFCT();
-    return *this;
-  }
-  ~WeightMatrixFCT() = default;
-  // Functionality of the class
-  bool IsSymmetric() const
-  {
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
-	int eVal1=GetValue(iRow, iCol);
-	int eVal2=GetValue(iCol, iRow);
-	if (eVal1 != eVal2)
-	  return false;
-      }
-    return true;
-  }
-  int rows(void) const
-  {
-    return nbRow;
-  }
-  T2 GetTol(void) const
-  {
-    return TheTol;
-  }
-  int GetWeightSize(void) const
-  {
-    int siz=ListWeight.size();
-    return siz;
-  }
-  int GetPositionWeight(T1 eVal) const
-  {
-    int nbEnt=ListWeight.size();
-    for (int i=0; i<nbEnt; i++)
-      if (WeighMatrix_IsNear(eVal, ListWeight[i], TheTol) == 1)
-	return i;
-    return -1;
-  }
-  int GetValue(int const& iRow, int const& iCol) const
-  {
-    T1 eVal=FCT(iRow,iCol);
-    int pos=GetPositionWeight(eVal);
-#ifdef DEBUG
-    if (pos == -1) {
-      std::cerr << "We should not reach that stage\n";
-      throw TerminalException{1};
-    }
-#endif
-    return pos;
-  }
-  void SetWeight(std::vector<T1> const & inpWeight)
-  {
-    ListWeight=inpWeight;
-  }
-  std::vector<T1> GetWeight() const
-  {
-    return ListWeight;
-  }
-  std::function<T1(int,int)> GetFCT() const
-  {
-    return FCT;
-  }
-  void ReorderingOfWeights(std::vector<int> const& gListRev)
-  {
-    int nbEnt=ListWeight.size();
-    std::vector<T1> NewListWeight(nbEnt);
-    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-      int nEnt=gListRev[iEnt];
-      NewListWeight[nEnt]=ListWeight[iEnt];
-    }
-    ListWeight=NewListWeight;
-  }
-private:
-  int nbRow;
-  std::function<T1(int,int)> FCT;
-  std::vector<T1> ListWeight;
-  T2 TheTol;
-};
-
-
 
 template<typename T>
 WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
@@ -902,14 +794,14 @@ WeightMatrix<T, T> GetWeightMatrixAntipodal(MyMatrix<T> const& TheEXT)
 
 
 template<typename T>
-WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListComm(MyMatrix<T> const& TheEXT, MyMatrix<T> const&GramMat, std::vector<MyMatrix<T> > const& ListComm)
+WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListComm(MyMatrix<T> const& TheEXT, MyMatrix<T> const&GramMat, std::vector<MyMatrix<T>> const& ListComm)
 {
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
   int nbComm=ListComm.size();
   T TheTol=0;
   WeightMatrix<std::vector<T>, T> WMat=WeightMatrix<std::vector<T>, T>(nbRow, TheTol);
-  std::vector<MyMatrix<T> > ListProd;
+  std::vector<MyMatrix<T>> ListProd;
   ListProd.push_back(GramMat);
   for (int iComm=0; iComm<nbComm; iComm++) {
     MyMatrix<T> eProd=ListComm[iComm]*GramMat;
@@ -933,7 +825,7 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListComm(MyMatrix<T> const& TheE
 
 
 template<typename T>
-WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T> > const& ListMatrix, MyMatrix<T> const& TheEXT)
+WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const& ListMatrix, MyMatrix<T> const& TheEXT)
 {
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
@@ -2702,7 +2594,7 @@ void NAUTY_PrintGraph(std::ostream & os, Tgr const& eGR)
 
 
 template<typename T, typename Tgr>
-void NAUTY_AUTO_WriteFile(std::ostream & os, std::vector<MyMatrix<T> > const& ListMatrix, MyMatrix<T> const& SHV)
+void NAUTY_AUTO_WriteFile(std::ostream & os, std::vector<MyMatrix<T>> const& ListMatrix, MyMatrix<T> const& SHV)
 {
   WeightMatrix<std::vector<T>, T> ScalMat = GetWeightMatrix_ListMatrix(ListMatrix, SHV);
   Tgr eGR=GetGraphFromWeightedMatrix<std::vector<T>, T, Tgr>(ScalMat);
@@ -2716,8 +2608,8 @@ void NAUTY_AUTO_WriteFile(std::ostream & os, std::vector<MyMatrix<T> > const& Li
 
 template<typename T, typename Tgr>
 bool NAUTY_ISOM_WriteFile(std::ostream & os,
-			 std::vector<MyMatrix<T> > const& ListMatrix1, MyMatrix<T> const& SHV1,
-			 std::vector<MyMatrix<T> > const& ListMatrix2, MyMatrix<T> const& SHV2)
+			 std::vector<MyMatrix<T>> const& ListMatrix1, MyMatrix<T> const& SHV1,
+			 std::vector<MyMatrix<T>> const& ListMatrix2, MyMatrix<T> const& SHV2)
 {
   WeightMatrix<std::vector<T>, T> ScalMat1 = GetWeightMatrix_ListMatrix(ListMatrix1, SHV1);
   WeightMatrix<std::vector<T>, T> ScalMat2 = GetWeightMatrix_ListMatrix(ListMatrix2, SHV2);
@@ -2833,7 +2725,7 @@ EquivTest<permlib::Permutation> GRAPH_Isomorphism_Nauty(Tgr const& eGR1, Tgr con
 
 
 template<typename T, typename Tgr>
-EquivTest<permlib::Permutation> LinPolytopeGram_Isomorphism_Nauty(std::vector<MyMatrix<T> > const& ListMatrix1, MyMatrix<int> const& SHV1, std::vector<MyMatrix<T> > const& ListMatrix2, MyMatrix<int> const& SHV2)
+EquivTest<permlib::Permutation> LinPolytopeGram_Isomorphism_Nauty(std::vector<MyMatrix<T>> const& ListMatrix1, MyMatrix<int> const& SHV1, std::vector<MyMatrix<T>> const& ListMatrix2, MyMatrix<int> const& SHV2)
 {
   MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,int>(SHV1);
   MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,int>(SHV2);
@@ -2857,7 +2749,7 @@ EquivTest<permlib::Permutation> LinPolytopeGram_Isomorphism_Nauty(std::vector<My
 
 
 template<typename T, typename Tgr>
-TheGroupFormat LinPolytopeGram_Automorphism_Nauty(std::vector<MyMatrix<T> > const& ListMatrix, MyMatrix<int> const& SHV)
+TheGroupFormat LinPolytopeGram_Automorphism_Nauty(std::vector<MyMatrix<T>> const& ListMatrix, MyMatrix<int> const& SHV)
 {
   int nbVert=SHV.rows();
   MyMatrix<T> T_SHV=ConvertMatrixUniversal<T,int>(SHV);
