@@ -610,7 +610,7 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
         if (positionZero == -1 && eScal == 0)
           positionZero = idxWeight;
         idxWeight++;
-        value1 = idxWeight;
+        value = idxWeight;
         INP_ListWeight.push_back(eScal);
       }
       int pos = value - 1;
@@ -619,87 +619,13 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
         set_entry(jPair  , iPair  , pos, ChgSign);
     }
   }
-  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
+  WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbPair, INP_TheMat, INP_ListWeight, INP_TheTol);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return {positionZero, ArrSigns, WMat};
 }
-
-
-template<typename Tint>
-EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& TheEXT, MyMatrix<Tint> const& Qmat)
-{
-  int nbRow= TheEXT.rows();
-  WeightMatrixAbs<T> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(TheEXT, Qmat);
-  GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMatAbs.WMat);
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  std::vector<std::vector<unsigned int>> ListGen;
-  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
-  std::vector<permlib::Permutation> generatorList;
-  // We check if the Generating vector eGen can be mapped from the absolute
-  // graph to the original one.
-  auto TestExistSignVector=[&](std::vector<int> const& eGen) -> bool {
-    /* We map a vector v_i to another v_j with sign +-1
-       V[i] = 0 for unassigned
-              1 for positive sign
-              2 for negative sign
-              3 for positive sign and treated
-              4 for negative sign and treated
-     */
-    std::vector<uint8_t> V(nbRow, 0);
-    V[0] = 1;
-    while(true) {
-      bool IsFinished = true;
-      for (int i=0; i<nbRow; i++) {
-        int val = V[i];
-        if (val < 3 && val != 0) {
-          IsFinished=false;
-          V[i] = val + 2;
-          int iImg = eGen[i];
-          for (int j=0; j<nbRow; j++) {
-            int jImg = eGen[j];
-            int pos = WMatAbs.WMat.GetValue(i, j);
-            if (pos != WMatAbs.positionZero) {
-              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
-              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
-              bool ChgSign = ChgSign1 ^ ChgSign2;
-              int valJ;
-              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
-                valJ = 2;
-              else
-                valJ = 1;
-              if (V[j] == 0) {
-                V[j] = valJ;
-              } else {
-                if ((valJ % 2) != (V[j] % 2)) {
-                  return false;
-                }
-              }
-            }
-          }
-        }
-      }
-      if (IsFinished)
-        break;
-    }
-    return true;
-  };
-  auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ListGen)
-      if (!TestExistSignVector(eGen))
-        return false;
-    return true;
-  };
-  if (!IsCorrectListGen()) {
-    return {false, {}};
-  }
-  //
-  
-  
-}
-
 
 
 
@@ -1949,6 +1875,77 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
+template<typename Tint>
+EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& TheEXT, MyMatrix<Tint> const& Qmat)
+{
+  int nbRow= TheEXT.rows();
+  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(TheEXT, Qmat);
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
+  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+  // We check if the Generating vector eGen can be mapped from the absolute
+  // graph to the original one.
+  auto TestExistSignVector=[&](std::vector<int> const& eGen) -> bool {
+    /* We map a vector v_i to another v_j with sign +-1
+       V[i] = 0 for unassigned
+              1 for positive sign
+              2 for negative sign
+              3 for positive sign and treated
+              4 for negative sign and treated
+     */
+    std::vector<uint8_t> V(nbRow, 0);
+    V[0] = 1;
+    while(true) {
+      bool IsFinished = true;
+      for (int i=0; i<nbRow; i++) {
+        int val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished=false;
+          V[i] = val + 2;
+          int iImg = eGen[i];
+          for (int j=0; j<nbRow; j++) {
+            int jImg = eGen[j];
+            int pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
+              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
+              bool ChgSign = ChgSign1 ^ ChgSign2;
+              int valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
+                valJ = 2;
+              else
+                valJ = 1;
+              if (V[j] == 0) {
+                V[j] = valJ;
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished)
+        break;
+    }
+    return true;
+  };
+  auto IsCorrectListGen=[&]() -> bool {
+    for (auto& eGen : ListGen)
+      if (!TestExistSignVector(eGen))
+        return false;
+    return true;
+  };
+  if (!IsCorrectListGen()) {
+    return {false, {}};
+  }
+  //
+  
+  
+}
+
+
+
 TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
 {
   bliss::Stats stats;
@@ -2444,11 +2441,6 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 
 
 
-template<typename Tint>
-MyMatrix<Tint> KernelLinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
-
-
-
 
 template<typename Tint>
 MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
@@ -2458,7 +2450,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  MyMatrix<Tint> Qmat=GetQmatrix(TheEXT);
+  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
 
   WeightMatrix<Tint,Tint> WMat=GetWeightMatrixAntipodal(EXT);
 #ifdef TIMINGS
