@@ -1879,16 +1879,189 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
-template<typename Tint>
-EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& TheEXT, MyMatrix<Tint> const& Qmat)
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+//
+template<typename Tgr>
+std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
 {
-  int nbRow= TheEXT.rows();
-  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(TheEXT, Qmat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  int nof_vertices=eGR.GetNbVert();
+  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
+  //
+#ifdef USE_BLISS
+  bliss::Graph g=GetBlissGraphFromGraph(eGR);
+# ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+# endif
+  //  std::cerr << "|GRP|=" << GetStabilizerBlissGraph(g).size << "\n";
+
+  bliss::Stats stats;
+  const unsigned int* cl;
+  cl=g.canonical_form(stats, &report_aut_void, stderr);
+# ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+# endif
+
+#endif
+  //
+#ifdef USE_TRACES
+# ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+# endif
+  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
+# ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+# endif
+#endif
+  //
+  std::vector<unsigned int> clR(nof_vertices,-1);
+  for (int i=0; i<nof_vertices; i++)
+    clR[cl[i]]=i;
+  //
+  int nbVert=nbRow+2;
+  int hS = nof_vertices / nbVert;
+#ifdef DEBUG
+  if (hS * nbVert != nof_vertices) {
+    std::cerr << "Error in the number of vertices\n";
+    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<int> MapVectRev(nbVert,-1);
+  std::vector<int> ListStatus(nof_vertices,1);
+  int posCanonic=0;
+  for (int iCan=0; iCan<nof_vertices; iCan++) {
+    if (ListStatus[iCan] == 1) {
+      int iNative=clR[iCan];
+      int iVertNative=iNative % nbVert;
+      MapVectRev[posCanonic] = iVertNative;
+      for (int iH=0; iH<hS; iH++) {
+	int uVertNative = iVertNative + nbVert * iH;
+	int jCan=cl[uVertNative];
+#ifdef DEBUG
+	if (ListStatus[jCan] == 0) {
+	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
+	  throw TerminalException{1};
+	}
+#endif
+	ListStatus[jCan] = 0;
+      }
+      posCanonic++;
+    }
+  }
+  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  int posCanonicB=0;
+  for (int iCan=0; iCan<nbVert; iCan++) {
+    int iNative=MapVectRev[iCan];
+    if (iNative < nbRow) {
+      MapVectRev2[posCanonicB] = iNative;
+      MapVect2[iNative] = posCanonicB;
+      posCanonicB++;
+    }
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return {std::move(MapVect2), std::move(MapVectRev2)};
+}
+
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+//
+template<typename T1, typename T2, typename Tgr>
+std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
+{
+  int nbRow=WMat.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  return GetCanonicalizationVector_Kernel(eGR, nbRow);
+}
+
+
+
+template<typename T>
+void SignRenormalizationMatrix(MyMatrix<T> & M)
+{
+  int nbRow = M.rows();
+  int n=M.cols();
+  auto get_need_chgsign=[&](int const& iRow) -> bool {
+    for (int i=0; i<n; i++) {
+      T eVal = M(iRow,i);
+      if (eVal != 0) {
+        return eVal < 0;
+      }
+    }
+    return false;
+  };
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (get_need_chgsign(iRow)) {
+      for (int i=0; i<n; i++)
+        M(iRow,i) = - M(iRow,i);
+    }
+  }
+}
+
+template<typename T>
+MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
+{
+  int nbPair=M.rows();
+  int n=M.cols();
+  MyMatrix<T> Mret(2*nbPair, n);
+  for (int iPair=0; iPair<nbPair; iPair++)
+    for (int i=0; i<n; i++) {
+      Mret(2*iPair  , i) =  M(iPair, i);
+      Mret(2*iPair+1, i) = -M(iPair, i);
+    }
+  return Mret;
+}
+
+
+template<typename Tint>
+EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+{
+  int nbRow= EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(EXT, Qmat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+
   GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
-  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|TRACES_GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
   // We check if the Generating vector eGen can be mapped from the absolute
   // graph to the original one.
-  auto TestExistSignVector=[&](std::vector<int> const& eGen) -> bool {
+  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
     /* We map a vector v_i to another v_j with sign +-1
        V[i] = 0 for unassigned
               1 for positive sign
@@ -1943,9 +2116,41 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   if (!IsCorrectListGen()) {
     return {false, {}};
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
   //
-  
-  
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_Kernel(eGR, nbRow);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
+#endif
+
+  int n_cols=EXT.cols();
+  MyMatrix<Tint> EXTreord(nbRow, n_cols);
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    int j_row = PairCanonic.second[i_row];
+    for (int i_col=0; i_col<n_cols; i_col++)
+      EXTreord(i_row, i_col) = EXT(j_row, i_col);
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+#endif
+
+  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
+#endif
+  SignRenormalizationMatrix(RedMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
+#endif
+
+  return {true, RedMat};
 }
 
 
@@ -2015,105 +2220,6 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 
 
 
-// This function takes a matrix and returns the vector
-// that canonicalize it.
-// This depends on the construction of the graph from GetGraphFromWeightedMatrix
-//
-template<typename T1, typename T2, typename Tgr>
-std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
-{
-  int nbRow=WMat.rows();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-
-  Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
-  int nof_vertices=eGR.GetNbVert();
-  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
-  //
-#ifdef USE_BLISS
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-#endif
-  //  std::cerr << "|GRP|=" << GetStabilizerBlissGraph(g).size << "\n";
-
-  bliss::Stats stats;
-  const unsigned int* cl;
-  cl=g.canonical_form(stats, &report_aut_void, stderr);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-#endif
-
-#endif
-  //
-#ifdef USE_TRACES
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-#endif
-  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-#endif
-#endif
-  //
-  std::vector<unsigned int> clR(nof_vertices,-1);
-  for (int i=0; i<nof_vertices; i++)
-    clR[cl[i]]=i;
-  //
-  int nbVert=nbRow+2;
-  int hS = nof_vertices / nbVert;
-#ifdef DEBUG
-  if (hS * nbVert != nof_vertices) {
-    std::cerr << "Error in the number of vertices\n";
-    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  std::vector<int> MapVectRev(nbVert,-1);
-  std::vector<int> ListStatus(nof_vertices,1);
-  int posCanonic=0;
-  for (int iCan=0; iCan<nof_vertices; iCan++) {
-    if (ListStatus[iCan] == 1) {
-      int iNative=clR[iCan];
-      int iVertNative=iNative % nbVert;
-      MapVectRev[posCanonic] = iVertNative;
-      for (int iH=0; iH<hS; iH++) {
-	int uVertNative = iVertNative + nbVert * iH;
-	int jCan=cl[uVertNative];
-#ifdef DEBUG
-	if (ListStatus[jCan] == 0) {
-	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
-	  throw TerminalException{1};
-	}
-#endif
-	ListStatus[jCan] = 0;
-      }
-      posCanonic++;
-    }
-  }
-  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
-  int posCanonicB=0;
-  for (int iCan=0; iCan<nbVert; iCan++) {
-    int iNative=MapVectRev[iCan];
-    if (iNative < nbRow) {
-      MapVectRev2[posCanonicB] = iNative;
-      MapVect2[iNative] = posCanonicB;
-      posCanonicB++;
-    }
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-  return {std::move(MapVect2), std::move(MapVectRev2)};
-}
 
 
 
@@ -2403,42 +2509,6 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 }
 
 
-template<typename T>
-void SignRenormalizationMatrix(MyMatrix<T> & M)
-{
-  int nbRow = M.rows();
-  int n=M.cols();
-  auto get_need_chgsign=[&](int const& iRow) -> bool {
-    for (int i=0; i<n; i++) {
-      T eVal = M(iRow,i);
-      if (eVal != 0) {
-        return eVal < 0;
-      }
-    }
-    return false;
-  };
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    if (get_need_chgsign(iRow)) {
-      for (int i=0; i<n; i++)
-        M(iRow,i) = - M(iRow,i);
-    }
-  }
-}
-
-template<typename T>
-MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
-{
-  int nbPair=M.rows();
-  int n=M.cols();
-  MyMatrix<T> Mret(2*nbPair, n);
-  for (int iPair=0; iPair<nbPair; iPair++)
-    for (int i=0; i<n; i++) {
-      Mret(2*iPair  , i) =  M(iPair, i);
-      Mret(2*iPair+1, i) = -M(iPair, i);
-    }
-  return Mret;
-}
-
 
 
 
@@ -2451,22 +2521,38 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   MyMatrix<Tint> Qmat=GetQmatrix(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+
+  EquivTest<MyMatrix<Tint>> EauivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
+  if (EauivTest.TheReply) {
+    return EauivTest.TheEquiv;
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
 
   WeightMatrix<Tint,Tint> WMat=GetWeightMatrixAntipodal(EXT);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   //  std::cerr << "After direct construction WMat=\n";
   //  PrintWeightedMatrix(std::cerr, WMat);
 
   ReorderingSetWeight(WMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
 
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
 #endif
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
@@ -2493,23 +2579,20 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
     }
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeColHermiteNormalForm 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
 #endif
 
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
 #endif
   return RedMat;
 }
