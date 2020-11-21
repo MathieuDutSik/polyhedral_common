@@ -2059,7 +2059,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
   std::cerr << "WMatAbs.WMat=\n";
   PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
-  
+
   GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -2145,10 +2145,39 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 
   int n_cols=EXT.cols();
   MyMatrix<Tint> EXTreord(nbRow, n_cols);
+  std::vector<int> ListSigns(nbRow,0);
+  ListSigns[0]=1;
+  auto SetSign=[&](int const& i_row) -> void {
+    int i_row_orig = PairCanonic.second[i_row];
+    for (int k_row=0; k_row<nbRow; k_row++) {
+      if (k_row != i_row && ListSigns[k_row] != 0) {
+        int k_row_orig = PairCanonic.second[k_row];
+        bool ChgSign = WMatAbs.ArrSigns[i_row_orig + nbRow * k_row_orig];
+        int ValSign = 1;
+        if (ChgSign)
+          ValSign = -1;
+        int RetSign = ValSign * ListSigns[k_row];
+        ListSigns[i_row] = RetSign;
+      }
+    }
+  };
+  while(true) {
+    int nbUndone=0;
+    for (int i_row=0; i_row<nbRow; i_row++)
+      if (ListSigns[i_row] == 0) {
+        nbUndone++;
+        SetSign(i_row);
+      }
+    if (nbUndone == 0)
+      break;
+  };
+
+
   for (int i_row=0; i_row<nbRow; i_row++) {
     int j_row = PairCanonic.second[i_row];
+    int eSign = ListSigns[i_row];
     for (int i_col=0; i_col<n_cols; i_col++)
-      EXTreord(i_row, i_col) = EXT(j_row, i_col);
+      EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
