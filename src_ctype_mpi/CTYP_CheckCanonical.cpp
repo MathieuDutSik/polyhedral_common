@@ -32,8 +32,10 @@ int main(int argc, char* argv[])
       }
       std::cerr << "]\n";
       for (int iRow=0; iRow<nbRow; iRow++) {
-        if (AttV[iRow] != 1)
+        if (AttV[iRow] != 1) {
           std::cerr << "Error in ePerm\n";
+          throw TerminalException{1};
+        }
       }
       MyMatrix<Tmat> eUnimod = RandomUnimodularMatrix<Tmat>(n);
       MyMatrix<Tmat> eProd = eMat * eUnimod;

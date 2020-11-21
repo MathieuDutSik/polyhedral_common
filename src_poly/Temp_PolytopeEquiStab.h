@@ -206,6 +206,81 @@ private:
 };
 
 
+template<typename T>
+void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
+{
+  int siz=WMat.GetWeightSize();
+  int nbRow=WMat.rows();
+  os << "nbRow=" << WMat.rows() << "  Weights=[";
+  std::vector<int> ListValues(siz,0);
+  for (int iRow=0; iRow<nbRow; iRow++)
+    for (int iCol=0; iCol<nbRow; iCol++) {
+      int eVal=WMat.GetValue(iRow, iCol);
+      ListValues[eVal]++;
+    }
+  std::vector<T> ListWeight=WMat.GetWeight();
+  for (int i=0; i<siz; i++) {
+    if (i>0)
+      os << ", ";
+    os << "(" << ListWeight[i] << "," << ListValues[i] << ")";
+  }
+  os << "]\n";
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iCol=0; iCol<nbRow; iCol++) {
+      int eVal=WMat.GetValue(iRow, iCol);
+      os << " " << eVal;
+    }
+    os << "\n";
+  }
+}
+
+
+
+template<typename T>
+void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
+{
+  std::vector<T> ListWeight=WMat.GetWeight();
+  int nbRow=WMat.rows();
+  os << "[";
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (iRow > 0)
+      os << ",\n";
+    os << "[";
+    for (int iCol=0; iCol<nbRow; iCol++) {
+      int eVal=WMat.GetValue(iRow, iCol);
+      T eWei=ListWeight[eVal];
+      if (iCol > 0)
+	os << ", ";
+      os << eWei;
+    }
+    os << "]";
+  }
+  os << "]";
+}
+
+
+
+template<typename T>
+void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
+{
+  int siz, nbRow, eVal;
+  siz=WMat.GetWeightSize();
+  os << "nbWeight=" << siz << "\n";
+  nbRow=WMat.rows();
+  os << "nbRow=" << WMat.rows() << "\n";
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iCol=0; iCol<nbRow; iCol++) {
+      eVal=WMat.GetValue(iRow, iCol);
+      os << " " << eVal;
+    }
+    os << "\n";
+  }
+}
+
+
+
+
+
 template<typename T1, typename T2>
 void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
 {
@@ -624,6 +699,7 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
     }
   }
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbPair, INP_TheMat, INP_ListWeight, INP_TheTol);
+  ReorderingSetWeight(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -1455,77 +1531,6 @@ WeightMatrix<T,T> ReadWeightedMatrix(std::istream &is)
 
 
 
-template<typename T>
-void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
-{
-  int siz=WMat.GetWeightSize();
-  int nbRow=WMat.rows();
-  os << "nbRow=" << WMat.rows() << "  Weights=[";
-  std::vector<int> ListValues(siz,0);
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int iCol=0; iCol<nbRow; iCol++) {
-      int eVal=WMat.GetValue(iRow, iCol);
-      ListValues[eVal]++;
-    }
-  std::vector<T> ListWeight=WMat.GetWeight();
-  for (int i=0; i<siz; i++) {
-    if (i>0)
-      os << ", ";
-    os << "(" << ListWeight[i] << "," << ListValues[i] << ")";
-  }
-  os << "]\n";
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbRow; iCol++) {
-      int eVal=WMat.GetValue(iRow, iCol);
-      os << " " << eVal;
-    }
-    os << "\n";
-  }
-}
-
-
-
-template<typename T>
-void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
-{
-  std::vector<T> ListWeight=WMat.GetWeight();
-  int nbRow=WMat.rows();
-  os << "[";
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    if (iRow > 0)
-      os << ",\n";
-    os << "[";
-    for (int iCol=0; iCol<nbRow; iCol++) {
-      int eVal=WMat.GetValue(iRow, iCol);
-      T eWei=ListWeight[eVal];
-      if (iCol > 0)
-	os << ", ";
-      os << eWei;
-    }
-    os << "]";
-  }
-  os << "]";
-}
-
-
-
-template<typename T>
-void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
-{
-  int siz, nbRow, eVal;
-  siz=WMat.GetWeightSize();
-  os << "nbWeight=" << siz << "\n";
-  nbRow=WMat.rows();
-  os << "nbRow=" << WMat.rows() << "\n";
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbRow; iCol++) {
-      eVal=WMat.GetValue(iRow, iCol);
-      os << " " << eVal;
-    }
-    os << "\n";
-  }
-}
-
 
 
 
@@ -2036,6 +2041,12 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
+  std::cerr << "EXT=\n";
+  WriteMatrix(std::cerr, EXT);
+  std::cerr << "Qmat=\n";
+  WriteMatrix(std::cerr, Qmat);
+
+  
   int nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -2046,7 +2057,9 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-
+  std::cerr << "WMatAbs.WMat=\n";
+  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
+  
   GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -2108,9 +2121,12 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     return true;
   };
   auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ListGen)
-      if (!TestExistSignVector(eGen))
+    for (auto& eGen : ListGen) {
+      bool test = TestExistSignVector(eGen);
+      std::cerr << "test=" << test << "\n";
+      if (!test)
         return false;
+    }
     return true;
   };
   if (!IsCorrectListGen()) {
