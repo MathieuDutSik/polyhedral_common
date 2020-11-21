@@ -2038,6 +2038,32 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 }
 
 
+/*
+  Consider the case of the A2 root system with vectors
+  \pm (1,0), \pm (0,1), \pm (1,1).
+  If we consider the automorphisms of this vector configuration what we get is:
+  ---Rotation by 2pi / 6 : Define subgroup of size 6
+  ---Symmetry by axis.
+  All together the group is of size 12.
+  ----
+  If we consider the absolute graph formed by the 3 vectors: (1,0), (0,1) and (1,1)
+  then we get that this system defined a complete graph on 3 elements. So the group
+  is of size 6. So, we indeed have the equality G = {\pm Id} x G_{abs}.
+  ---
+  The following holds:
+  ---The construction of the weight matrix and so on means that orthogonal
+  transformation on the vectors are not a problem.
+  ---Since the absolute graph is the complete graph, we obtain that any ordering
+  of the vector is possible by the canonicalization code.
+  ---Thus if we put the vectors (1,0), (0,1) and (1,1)
+  then the absolute canonicalization code may return us
+  {(1,0), (0,1), (1,1)} or {(1,0), (1,1), (0,1)}.
+  I think the hermite normal form of those are different.
+  So, the method does not work.
+  ---But we may be able to do something better. We still have the signs
+  
+
+*/
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
