@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
         MyMatrix<Tmat> eMat2 = get_random_equivalent(eMat1);
         MyMatrix<Tmat> eMat2_Can = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(eMat2);
         if (!TestEqualityMatrix(eMat1_Can, eMat2_Can)) {
-          std::cerr << "Inconsistencw in the canonical code\n";
+          std::cerr << "Inconsistency in the canonical code\n";
           std::cerr << "Mat1_Can=\n";
           WriteMatrix(std::cerr, eMat1_Can);
           std::cerr << "Mat2_Can=\n";
