@@ -52,7 +52,9 @@ int main(int argc, char* argv[])
       std::cerr << "iType : " << iType << " / " << nbType << "\n";
       MyMatrix<Tmat> eMat1 = ReadMatrix<Tmat>(is);
       MyMatrix<Tmat> eMat1_Can = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(eMat1);
-      for (int i=0; i<10; i++) {
+      int n_iter = 10;
+      for (int i_iter=0; i_iter<n_iter; i_iter++) {
+        std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
         MyMatrix<Tmat> eMat2 = get_random_equivalent(eMat1);
         MyMatrix<Tmat> eMat2_Can = LinPolytopeAntipodalIntegral_CanonicForm<Tmat>(eMat2);
         if (!TestEqualityMatrix(eMat1_Can, eMat2_Can)) {

@@ -335,6 +335,61 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
 
 
 template<typename T1, typename T2>
+int ReorderingSetWeight_specificPosition(WeightMatrix<T1,T2> & WMat, int specificPosition)
+{
+  std::vector<T1> ListWeight=WMat.GetWeight();
+  std::map<T1, int> ValueMap;
+  size_t nbEnt=ListWeight.size();
+  for (size_t i_w=0; i_w<ListWeight.size(); i_w++)
+    ValueMap[ListWeight[i_w]] = i_w;
+  std::vector<int> g(nbEnt);
+  size_t idx=0;
+  for (auto& kv : ValueMap) {
+    int pos = kv.second;
+    g[pos] = idx;
+    idx++;
+  }
+  std::cerr << "nbEnt=" << nbEnt << "\n";
+#ifdef DEBUG
+  std::set<T1> SetWeight;
+  for (auto & eVal : ListWeight)
+    SetWeight.insert(eVal);
+  std::cerr << "SetWeight =";
+  for (auto & eVal : SetWeight)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
+  std::vector<int> g_check(nbEnt);
+  std::cerr << "nbEnt=" << nbEnt << "\n";
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    T1 eVal = ListWeight[iEnt];
+    typename std::set<T1>::iterator it = SetWeight.find(eVal);
+    int pos = std::distance(SetWeight.begin(), it);
+    g_check[iEnt] = pos;
+  }
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    if (g[iEnt] != g_check[iEnt]) {
+      std::cerr << "ERROR at iEnt=" << iEnt << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  WMat.ReorderingOfWeights(g);
+#ifdef DEBUG
+  std::vector<T1> ListWeightB=WMat.GetWeight();
+  for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
+    if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
+      std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return g[specificPosition];
+}
+
+
+
+
+template<typename T1, typename T2>
 bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T1, T2> &WMat2)
 {
   int nbRow=WMatRef.rows();
@@ -699,7 +754,7 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
     }
   }
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbPair, INP_TheMat, INP_ListWeight, INP_TheTol);
-  ReorderingSetWeight(WMat);
+  positionZero = ReorderingSetWeight_specificPosition(WMat, positionZero);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -1885,6 +1940,78 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 
 
 
+TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
+{
+  bliss::Stats stats;
+  std::vector<std::vector<unsigned int>> ListGen;
+  std::vector<std::vector<unsigned int>>* h = &ListGen;
+  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
+  int nbVert = g.get_nof_vertices();
+  std::vector<permlib::Permutation> generatorList;
+  for (auto & eGen : ListGen) {
+    std::vector<permlib::dom_int> gList(nbVert);
+    for (int iVert=0; iVert<nbVert; iVert++)
+      gList[iVert]=eGen[iVert];
+    generatorList.push_back(permlib::Permutation(gList));
+  }
+  return GetPermutationGroup(nbVert, generatorList);
+}
+
+
+TheGroupFormat GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, int const& nbVert)
+{
+  std::vector<permlib::Permutation> generatorList;
+  for (auto & eGen : ListGen) {
+    std::vector<permlib::dom_int> gList(nbVert);
+    for (int iVert=0; iVert<nbVert; iVert++)
+      gList[iVert]=eGen[iVert];
+    generatorList.push_back(permlib::Permutation(gList));
+  }
+  return GetPermutationGroup(nbVert, generatorList);
+}
+
+
+template<typename Tgr>
+bool CheckListGenerators(std::vector<std::vector<unsigned int>> const& ListGen, Tgr const& eGR)
+{
+  int nbVert = eGR.GetNbVert();
+  for (auto & eGen : ListGen) {
+    for (int iVert=0; iVert<nbVert; iVert++) {
+      int eColor = eGR.GetColor(iVert);
+      int iVert_img = eGen[iVert];
+      int fColor = eGR.GetColor(iVert_img);
+      if (eColor != fColor) {
+        return false;
+      }
+      //
+      for (auto & jVert : eGR.Adjacency(iVert)) {
+        int jVert_img = eGen[jVert];
+        bool test = eGR.IsAdjacent(iVert_img, jVert_img);
+        if (!test)
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
+
+template<typename Tgr>
+void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
+{
+  bliss::Graph g=GetBlissGraphFromGraph(eGR);
+  int nbVert=eGR.GetNbVert();
+  std::vector<std::vector<unsigned int>> ListGen1 = BLISS_GetListGenerators(eGR);
+  std::vector<std::vector<unsigned int>> ListGen2 = TRACES_GetListGenerators(eGR);
+  auto siz1 = GetGroupListGen(ListGen1, nbVert).size;
+  auto siz2 = GetGroupListGen(ListGen2, nbVert).size;
+  bool test1 = CheckListGenerators(ListGen1, eGR);
+  bool test2 = CheckListGenerators(ListGen2, eGR);
+  os << "|GRP bliss|=" << siz1 << " |GRP traces|=" << siz2 << " test1=" << test1 << " test2=" << test2 << "\n";
+}
+
+
+
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
@@ -1896,7 +2023,8 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nof_vertices=eGR.GetNbVert();
-  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+  //  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
   //
 #ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
@@ -2061,18 +2189,16 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
   I think the hermite normal form of those are different.
   So, the method does not work.
   ---But we may be able to do something better. We still have the signs
-  
-
+  to be assigned.
 */
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  std::cerr << "EXT=\n";
-  WriteMatrix(std::cerr, EXT);
-  std::cerr << "Qmat=\n";
-  WriteMatrix(std::cerr, Qmat);
+  //  std::cerr << "EXT=\n";
+  //  WriteMatrix(std::cerr, EXT);
+  //  std::cerr << "Qmat=\n";
+  //  WriteMatrix(std::cerr, Qmat);
 
-  
   int nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -2083,19 +2209,29 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  std::cerr << "WMatAbs.WMat=\n";
-  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
+  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
+  //  std::cerr << "WMatAbs.WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
 
   GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
+  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
+
+  //  std::cerr << "WMatAbs.WMat : ";
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
+#ifdef USE_BLISS
+  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+#endif
+#ifdef USE_TRACES
   std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|TRACES_GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -2124,7 +2260,8 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
             if (pos != WMatAbs.positionZero) {
               bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
               bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
-              bool ChgSign = ChgSign1 ^ ChgSign2;
+              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              //              std::cerr << "ChgSign=" << ChgSign << " ChgSign1=" << ChgSign1 << " ChgSign2=" << ChgSign2 << "\n";
               int valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
                 valJ = 2;
@@ -2149,7 +2286,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   auto IsCorrectListGen=[&]() -> bool {
     for (auto& eGen : ListGen) {
       bool test = TestExistSignVector(eGen);
-      std::cerr << "test=" << test << "\n";
+      //      std::cerr << "test=" << test << "\n";
       if (!test)
         return false;
     }
@@ -2222,25 +2359,6 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
 
   return {true, RedMat};
-}
-
-
-
-TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
-{
-  bliss::Stats stats;
-  std::vector<std::vector<unsigned int>> ListGen;
-  std::vector<std::vector<unsigned int>>* h = &ListGen;
-  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
-  int nbVert = g.get_nof_vertices();
-  std::vector<permlib::Permutation> generatorList;
-  for (auto & eGen : ListGen) {
-    std::vector<permlib::dom_int> gList(nbVert);
-    for (int iVert=0; iVert<nbVert; iVert++)
-      gList[iVert]=eGen[iVert];
-    generatorList.push_back(permlib::Permutation(gList));
-  }
-  return GetPermutationGroup(nbVert, generatorList);
 }
 
 
