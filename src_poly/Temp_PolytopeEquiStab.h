@@ -16,6 +16,9 @@
 #undef USE_BLISS
 #define USE_TRACES
 
+#undef USE_PAIRS
+
+
 //#define DEBUG
 #define TIMINGS
 
@@ -1617,7 +1620,6 @@ inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
 }
 
 
-//#define USE_PAIRS
 #ifdef USE_PAIRS
 /* Unfortunately, the use of pairs while allowing for a graph with
    a smaller number of vertices gives a running time that is larger.
@@ -2011,6 +2013,59 @@ void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
 }
 
 
+std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
+{
+  int nof_vertices = cl.size();
+  std::vector<unsigned int> clR(nof_vertices,-1);
+  for (int i=0; i<nof_vertices; i++)
+    clR[cl[i]]=i;
+  //
+  int nbVert=nbRow+2;
+  int hS = nof_vertices / nbVert;
+#ifdef DEBUG
+  if (hS * nbVert != nof_vertices) {
+    std::cerr << "Error in the number of vertices\n";
+    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<int> MapVectRev(nbVert,-1);
+  std::vector<int> ListStatus(nof_vertices,1);
+  int posCanonic=0;
+  for (int iCan=0; iCan<nof_vertices; iCan++) {
+    if (ListStatus[iCan] == 1) {
+      int iNative=clR[iCan];
+      int iVertNative=iNative % nbVert;
+      MapVectRev[posCanonic] = iVertNative;
+      for (int iH=0; iH<hS; iH++) {
+	int uVertNative = iVertNative + nbVert * iH;
+	int jCan=cl[uVertNative];
+#ifdef DEBUG
+	if (ListStatus[jCan] == 0) {
+	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
+	  throw TerminalException{1};
+	}
+#endif
+	ListStatus[jCan] = 0;
+      }
+      posCanonic++;
+    }
+  }
+  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  int posCanonicB=0;
+  for (int iCan=0; iCan<nbVert; iCan++) {
+    int iNative=MapVectRev[iCan];
+    if (iNative < nbRow) {
+      MapVectRev2[posCanonicB] = iNative;
+      MapVect2[iNative] = posCanonicB;
+      posCanonicB++;
+    }
+  }
+  return {std::move(MapVect2), std::move(MapVectRev2)};
+}
+
+
+
 
 // This function takes a matrix and returns the vector
 // that canonicalize it.
@@ -2224,10 +2279,10 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
 
 #ifdef USE_BLISS
-  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators(eGR);
 #endif
 #ifdef USE_TRACES
-  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
 #endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
@@ -2284,7 +2339,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     return true;
   };
   auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ListGen) {
+    for (auto& eGen : ePair.second) {
       bool test = TestExistSignVector(eGen);
       //      std::cerr << "test=" << test << "\n";
       if (!test)
@@ -2300,7 +2355,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   //
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_Kernel(eGR, nbRow);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_KernelBis(nbRow, ePair.first);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
