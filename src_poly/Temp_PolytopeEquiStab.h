@@ -2315,12 +2315,15 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     for (int k_row=0; k_row<nbRow; k_row++) {
       if (k_row != i_row && ListSigns[k_row] != 0) {
         int k_row_orig = PairCanonic.second[k_row];
-        bool ChgSign = WMatAbs.ArrSigns[i_row_orig + nbRow * k_row_orig];
-        int ValSign = 1;
-        if (ChgSign)
-          ValSign = -1;
-        int RetSign = ValSign * ListSigns[k_row];
-        ListSigns[i_row] = RetSign;
+        if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
+          bool ChgSign = WMatAbs.ArrSigns[i_row_orig + nbRow * k_row_orig];
+          int ValSign = 1;
+          if (ChgSign)
+            ValSign = -1;
+          int RetSign = ValSign * ListSigns[k_row];
+          ListSigns[i_row] = RetSign;
+          return;
+        }
       }
     }
   };
