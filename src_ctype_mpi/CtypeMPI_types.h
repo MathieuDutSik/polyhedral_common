@@ -8,6 +8,25 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
+namespace std {
+  template <typename T>
+  struct hash<MyVector<T>>
+  {
+    std::size_t operator()(const MyVector<T>& V) const
+    {
+      std::size_t h1 = 12756;
+      int len=V.size();
+      for (int i=0; i<len; i++) {
+        T eVal = V(i);
+        std::size_t h2 = std::hash<T>()(eVal);
+        h1 = h2 ^ ( h1 << 1);
+      }
+      return h1;
+    }
+  };
+}
+
+
 template<typename T>
 MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const& M)
 {
@@ -64,12 +83,12 @@ std::vector<MyMatrix<T>> CTYP_GetBasis(int n)
   return ListSymmMat;
 }
 
-
+using Tidx = int8_t;
 
 struct triple {
-  int8_t i;
-  int8_t j;
-  int8_t k;
+  Tidx i;
+  Tidx j;
+  Tidx k;
 };
 
 
@@ -99,8 +118,8 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
     }
   };
   for (auto & e_triple : TheInfo) {
-    int8_t j = e_triple.j;
-    int8_t k = e_triple.k;
+    Tidx j = e_triple.j;
+    Tidx k = e_triple.k;
     //
     for (size_t i_col=0; i_col<n_cols; i_col++)
       V[i_col] = -TheCtype(j, i_col) + TheCtype(k, i_col);
@@ -120,23 +139,39 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
   return RetMat;
 }
 
+
 template<typename T>
 std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 {
-  int8_t n_edge = TheCtype.rows();
-  int8_t n_cols = TheCtype.cols();
+  int n_edge = TheCtype.rows();
+  int n_cols = TheCtype.cols();
   std::vector<triple> ListTriples;
-  auto get_position=[&](MyVector<T> const& eV, int8_t start_idx) -> int8_t {
+  auto get_position=[&](MyVector<T> const& eV, Tidx start_idx) -> Tidx {
     auto get_nature=[&](int8_t pos) -> bool {
-      for (int8_t i_col=0; i_col<n_cols; i_col++)
+      for (Tidx i_col=0; i_col<n_cols; i_col++)
         if (TheCtype(pos, i_col) != eV(i_col))
           return false;
       return true;
     };
-    for (int8_t k=start_idx+1; k<n_edge; k++) {
-      if (get_nature(k))
-        return k;
-    }
+    auto get_value=[&]() -> Tidx {
+      int pos = -1;
+      int e_pow = 1;
+      T eTwo = 2;
+      for (int i=0; i<n_cols; i++) {
+        T res_T = ResInt(eV(i), eTwo);
+        int res = UniversalTypeConversion<int,T>(res_T);
+        pos += res * e_pow;
+        e_pow *= 2;
+      }
+      if (get_nature(2*pos))
+        return 2*pos;
+      if (get_nature(2*pos+1))
+        return 2*pos+1;
+      return -1;
+    };
+    int pos = get_value();
+    if (pos > start_idx)
+      return pos;
     return -1;
   };
   for (int8_t i=0; i<n_edge; i++)
@@ -152,28 +187,37 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 }
 
 
-namespace std {
-  template <typename T>
-  struct hash<MyVector<T>>
-  {
-    std::size_t operator()(const MyVector<T>& V) const
-    {
-      std::size_t h1 = 12756;
-      int len=V.size();
-      for (int i=0; i<len; i++) {
-        T eVal = V(i);
-        std::size_t h2 = std::hash<T>()(eVal);
-        h1 = h2 ^ ( h1 << 1);
-      }
-      return h1;
+template<typename T>
+MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
+{
+  int n = M.cols();
+  int nbRow = M.rows();
+  MyMatrix<T> Mret(2*nbRow, n);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    int pos = -1;
+    int e_pow = 1;
+    T eTwo = 2;
+    for (int i=0; i<n; i++) {
+      T res_T = ResInt(M(iRow,i), eTwo);
+      int res = UniversalTypeConversion<int,T>(res_T);
+      pos += res * e_pow;
+      e_pow *= 2;
     }
-  };
+    for (int i=0; i<n; i++) {
+      Mret(2*pos  , i) =  M(iRow,i);
+      Mret(2*pos+1, i) = -M(iRow,i);
+    }
+  }
+  return Mret;
 }
+
+
+
 
 template<typename T>
 std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtypeArr)
 {
-  MyMatrix<T> TheCtype = ExpandReducedMatrix(TheCtypeArr.eMat);
+  MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
   std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
   int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
