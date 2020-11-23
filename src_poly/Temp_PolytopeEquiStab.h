@@ -16,10 +16,10 @@
 #undef USE_BLISS
 #define USE_TRACES
 
-#undef USE_PAIRS
+#define USE_PAIRS
 
 
-//#define DEBUG
+#define DEBUG
 #define TIMINGS
 
 template<typename T>
@@ -300,7 +300,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
     idx++;
   }
   std::cerr << "nbEnt=" << nbEnt << "\n";
-#ifdef DEBUG
+#ifdef DEBUG_REORDER
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
     SetWeight.insert(eVal);
@@ -353,7 +353,7 @@ int ReorderingSetWeight_specificPosition(WeightMatrix<T1,T2> & WMat, int specifi
     idx++;
   }
   std::cerr << "nbEnt=" << nbEnt << "\n";
-#ifdef DEBUG
+#ifdef DEBUG_REORDER
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
     SetWeight.insert(eVal);
@@ -386,6 +386,8 @@ int ReorderingSetWeight_specificPosition(WeightMatrix<T1,T2> & WMat, int specifi
     }
   }
 #endif
+  if (specificPosition == -1)
+    return -1;
   return g[specificPosition];
 }
 
@@ -757,7 +759,13 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
     }
   }
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbPair, INP_TheMat, INP_ListWeight, INP_TheTol);
+#ifdef DEBUG
+  std::cerr << "Before positionZero=" << positionZero << "\n";
+#endif
   positionZero = ReorderingSetWeight_specificPosition(WMat, positionZero);
+#ifdef DEBUG
+  std::cerr << "Afeter positionZero=" << positionZero << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -1725,6 +1733,10 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
   int hS=GetNeededN(nbMult);
   std::vector<int> V = GetListPair(hS, nbMult);
   int e_pow = V.size() / 2;
+  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " e_pow=" << e_pow << "\n";
+  for (int i_pow=0; i_pow<e_pow; i_pow++) {
+    std::cerr << "i_pow=" << i_pow << "  (" << V[2*i_pow] << " | " << V[2*i_pow+1] << ")\n";
+  }
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
   for (int iVert=0; iVert<nbVert; iVert++)
@@ -2284,6 +2296,57 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #ifdef USE_TRACES
   std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
 #endif
+#ifdef DEBUG
+  PrintStabilizerGroupSizes(std::cerr, eGR);
+  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
+  mpz_class eHash1 = MD5_hash_mpz(eExpr);
+  std::cerr << "eHash1=" << eHash1 << "\n";
+  //
+  int hS = eGR.GetNbVert() / (nbRow + 2);
+  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
+  for (auto & eGen : ePair.second) {
+    std::vector<unsigned int> eGenRed(nbRow+2);
+    for (int i=0; i<nbRow+2; i++) {
+      unsigned int val = eGen[i];
+      if (val >= nbRow+2) {
+        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
+        throw TerminalException{1};
+      }
+      eGenRed[i] = val;
+    }
+    for (int i=nbRow; i<nbRow+2; i++) {
+      if (eGenRed[i] != i) {
+        std::cerr << "Point is not preserved\n";
+        throw TerminalException{1};
+      }
+    }
+    for (int iH=0; iH<hS; iH++) {
+      for (int i=0; i<nbRow+2; i++) {
+        unsigned int val1 = eGen[i + iH * (nbRow+2)];
+        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
+        if (val1 != val2) {
+          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
+          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
+          throw TerminalException{1};
+        }
+      }
+      for (int i=0; i<nbRow; i++) {
+        for (int j=0; j<nbRow; j++) {
+          int iImg = eGenRed[i];
+          int jImg = eGenRed[j];
+          int pos1 = WMatAbs.WMat.GetValue(i, j);
+          int pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
+          if (pos1 != pos2) {
+            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
+            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
+            throw TerminalException{1};
+          }
+        }
+      }
+    }
+
+  }
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
@@ -2365,6 +2428,10 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   MyMatrix<Tint> EXTreord(nbRow, n_cols);
   std::vector<int> ListSigns(nbRow,0);
   ListSigns[0]=1;
+#ifdef DEBUG
+  std::string strAssign;
+  std::cerr << "positionZero=" << WMatAbs.positionZero << "\n";
+#endif
   auto SetSign=[&](int const& i_row) -> void {
     int i_row_orig = PairCanonic.second[i_row];
     for (int k_row=0; k_row<nbRow; k_row++) {
@@ -2377,6 +2444,9 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
             ValSign = -1;
           int RetSign = ValSign * ListSigns[k_row];
           ListSigns[i_row] = RetSign;
+#ifdef DEBUG
+          strAssign += " (" + std::to_string(i_row) + " / " + std::to_string(k_row) + ")";
+#endif
           return;
         }
       }
@@ -2392,7 +2462,27 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     if (nbUndone == 0)
       break;
   };
-
+#ifdef DEBUG
+  mpz_class eHash2 = MD5_hash_mpz(strAssign);
+  std::cerr << "strAssign=" << strAssign << "\n";
+  std::cerr << "eHash2=" << eHash2 << "\n";
+#endif
+#ifdef DEBUG
+  std::string strWMat;
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    int i_rowC = PairCanonic.second[i_row];
+    for (int j_row=0; j_row<nbRow; j_row++) {
+      int j_rowC = PairCanonic.second[j_row];
+      int pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
+      strWMat += " " + std::to_string(pos);
+    }
+  }
+  for (auto & eVal : WMatAbs.WMat.GetWeight()) {
+    strWMat += " " + std::to_string(eVal);
+  }
+  mpz_class eHash3 = MD5_hash_mpz(strWMat);
+  std::cerr << "eHash3=" << eHash3 << "\n";
+#endif
 
   for (int i_row=0; i_row<nbRow; i_row++) {
     int j_row = PairCanonic.second[i_row];
@@ -2400,6 +2490,12 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     for (int i_col=0; i_col<n_cols; i_col++)
       EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
   }
+#ifdef DEBUG
+  std::cerr << "EXTreord=\n";
+  WriteMatrix(std::cerr, EXTreord);
+  WriteMatrixGAP(std::cerr, EXTreord);
+  std::cerr << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
   std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
