@@ -19,7 +19,7 @@
 #define USE_PAIRS
 
 
-#define DEBUG
+//#define DEBUG
 #define TIMINGS
 
 template<typename T>
@@ -1733,10 +1733,12 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
   int hS=GetNeededN(nbMult);
   std::vector<int> V = GetListPair(hS, nbMult);
   int e_pow = V.size() / 2;
+#ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " e_pow=" << e_pow << "\n";
   for (int i_pow=0; i_pow<e_pow; i_pow++) {
     std::cerr << "i_pow=" << i_pow << "  (" << V[2*i_pow] << " | " << V[2*i_pow+1] << ")\n";
   }
+#endif
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
   for (int iVert=0; iVert<nbVert; iVert++)
