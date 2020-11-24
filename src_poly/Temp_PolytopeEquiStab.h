@@ -2832,9 +2832,9 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 #endif
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
-  for (int i_row=0; i_row<n_rows; i_row++) {
-    int j_row = PairCanonic.second[i_row];
-    for (int i_col=0; i_col<n_cols; i_col++)
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    size_t j_row = PairCanonic.second[i_row];
+    for (size_t i_col=0; i_col<n_cols; i_col++)
       EXTreord(i_row, i_col) = EXT(j_row, i_col);
   }
 #ifdef TIMINGS

@@ -105,7 +105,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
   std::vector<T> V(n_cols);
   size_t idx=0;
   auto insert_if_signok=[&]() -> void {
-    for (int i=0; i<n_cols; i++) {
+    for (size_t i=0; i<n_cols; i++) {
       T eVal=V[i];
       if (eVal != 0) {
         if (eVal > 0) {
