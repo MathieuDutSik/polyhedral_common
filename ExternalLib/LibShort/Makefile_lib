@@ -12,9 +12,7 @@
 SRCFILES	= shvec.c \
 	          la_support.c \
                   lll_basis.c \
-		  panic.c \
-		  lrsgmp.c \
-		  lrslib.c
+		  panic.c
 
 # the executables
 

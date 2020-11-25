@@ -5,8 +5,6 @@ project(short VERSION 1.0.0 DESCRIPTION "libshort library")
 add_library(short SHARED
     shvec.c
     panic.c
-    lrslib.c
-    lrsgmp.c
     lll_basis.c
     la_support.c
 )
