@@ -326,7 +326,6 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  double bound_doubl = UniversalTypeConversion<double,T>(bound);
 	  double eNorm_doubl = UniversalTypeConversion<double,T>(eNorm);
 	  double eDiff_doubl = UniversalTypeConversion<double,T>(eDiff);
-	  
 	  std::cerr << "bound_doubl=" << bound_doubl << "\n";
 	  std::cerr << "eNorm_doubl=" << eNorm_doubl << "\n";
 	  std::cerr << "eDiff_doubl=" << eDiff_doubl << "\n";
@@ -335,20 +334,19 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  throw TerminalException{1};
 	}
 #endif
-
-	if (eNorm < info.minimum || info.minimum == -1) {
-	  info.short_vectors.clear();
-	  info.minimum = eNorm;
-	  return TempShvec_globals::STOP_COMPUTATION;
-	}
-	/*
-	std::cerr << "x=";
-	for (int u=0; u<dim; u++)
-	  std::cerr << " " << x(u);
-	  std::cerr << "\n";*/
-	info.short_vectors.push_back(x);
-	if (central)
-	  info.short_vectors.push_back(-x);
+        if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
+          if (eNorm == info.minimum)
+            info.short_vectors.push_back(x);
+        } else {
+          if (eNorm < info.minimum) {
+            info.short_vectors.clear();
+            info.minimum = eNorm;
+            return TempShvec_globals::STOP_COMPUTATION;
+          }
+          info.short_vectors.push_back(x);
+          if (central)
+            info.short_vectors.push_back(-x);
+        }
       }
       else {
 	i--;
@@ -370,7 +368,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     }
     //    std::cerr << "Case 11 i=" << i << "\n";
   }
-  std::cerr << "Normal return of computeIt\n";
+  //  std::cerr << "Normal return of computeIt\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
@@ -447,7 +445,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
     if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
       break;
     }
-  }  
+  }
   //  std::cerr << "After while loop\n";
   //  std::cerr << "info.minimum=" << info.minimum << "\n";
   //  info.minimum = info.request.bound + step_size;
@@ -545,13 +543,7 @@ template<typename T,typename Tint>
 resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector<T> const& eV)
 {
   int dim=GramMat.rows();
-  MyVector<T> cosetVect(dim);
-  //  std::cerr << "coset=";
-  for (int i=0; i<dim; i++) {
-    cosetVect(i)=-eV(i);
-    //    std::cerr << " " << cosetVect(i);
-  }
-  //  std::cerr << "\n";
+  MyVector<T> cosetVect = - eV;
   if (IsIntegralVector(eV)) {
     T TheNorm=0;
     MyMatrix<Tint> ListVect(1,dim);
