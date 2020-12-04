@@ -29,7 +29,7 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat
 
 template<typename T, typename Tint>
 struct VinbergInput {
-  MyMatrix<T> M; // The (n,n)-matrix with n-1 positive eigenvalues , 1 negative eigenvalue.
+  MyMatrix<T> G; // The (n,n)-matrix with n-1 positive eigenvalues , 1 negative eigenvalue.
   MyVector<T> v0; // a vector with negative norm with the input
 };
 
@@ -37,11 +37,13 @@ struct VinbergInput {
 
 template<typename T, typename Tint>
 struct VinbergTot {
-  MyMatrix<T> M;
-  MyVector<T> v0;
+  MyMatrix<T> G;
+  MyVector<Tint> v0;
   //
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
-  MyVector<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
+  Tint eDet; // The determinant of the matrix.
+  MyMatrix<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
+  MyVector<T> aGM_iGorth; // The inverse of the coefficient for the computation.
 };
 
 
@@ -78,28 +80,70 @@ bool IsRoot(MyMatrix<T> const& M, MyVector<Tint> const& V)
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
 {
-  int n=Vinput.M.rows();
+  int n=Vinput.G.rows();
   // Computing the complement of the space.
-  MyVector<T> V = Vinput.M * Vinput.v0;
+  MyVector<T> V = Vinput.G * Vinput.v0;
   MyVector<T> Vred = RemoveFraction(V);
   MyVector<Tint> V_i = ConvertMatrixUniversal<Tint,T>(Vred);
   std::vector<Vint> vectV_i(n);
   for (int i=0; i<n; i++)
     vectV_i[i] = V_i(i);
   GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV_i);
-  MyMatrix<Tint> Morth(n, n-1);
+  std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
-    for (int i=0; i<n; i++)
-      Morth(i, j) = eGCDinfo.Pmat(i, j+1);
+    ListZer[j] = j + 1;
+  MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
+  MyMatrix<Tint> M = ConcatenateMatVec(Morth, V_i);
+  // The dterminant. The scalar tell us how much we need to the quotient.
+  // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
+  Tint eDet = T_abs(DeterminantMat(M));
+  // We want to find a vector v such that V_i = (det) v + Morth Z^{n-1}
+  auto GetVect = [&]() -> MyVector<Tint> {
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<2; j++) {
+        MyVector<Tint> V = V_i;
+        V(i) -= eps;
+        SolMatResult<T> Solu=SolutionMat(Morth, V);
+        if (Solu.result) {
+          MyVector<Tint> Vret = ZeroVector<Tint>(n);
+          Vret(i) = eps;
+          return Vret;
+        }
+      }
+    }
+    std::cerr << "Failed to find the right vector\n";
+    throw TerminalException{1};
+  };
+  MyVector<Tint> Vtrans = GetVect();
+  MyMatrix<Tint> Mbas = ConcatenateMatVec(Morth, Vtrans);
+  MyMatrix<Tint> MbasInv = Inverse(Mbas);
+
   // Gram matrix of the space.
-  MyMatrix<T> Gorth = Morth * Vinput.M * Morth.transpose();
-  return {Vinput.M, Vinput.v0, Morth, Gorth};
+  MyMatrix<T> Gorth = Morth * Vinput.G * Morth.transpose();
+  MyMatrix<T> GorthInv = Inverse(Gorth);
+  // Computing the side comput
+  MyMatrix<T> GM_iGorth = Vinput.G * Morth * GorthInv;
+  return {Vinput.G, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth};
 }
 
+
+/*
+  We look for the solutions of (a+v , a+v) = k
+  with v in the Morth space.
+  (a, a) + 2 (a, v) + (v,v) = n
+   v = M w  with  w in Z^{n-1}
+  2 a^t G Mw + w^t {M^t G M} w = n - (a,a)
+  2 w Gorth sV + w^t Gorth w = n -(a,a)
+  (w + sV)^t Gorth (w + sV) = n - (a,a) + sV^t Gorth sV
+
+ */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyVector<T> const& a, T const& k)
+std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyMatrix<Tint> const& a, T const& n)
 {
-  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions(Vtot.Gorth, eV, k);
+  MyMatrix<T> sV = a * Vtot.GM_iGorth;
+  T normi = n - a * Vtot.G * a + sV * Vtot.Gorth * sV;
+  MyMatrix<T> eV = -sV;
+  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions(Vtot.Gorth, eV, normi);
   std::vector<MyVector<Tint>> RetSol;
   for (auto& eV : ListSol) {
     MyVector<Tint> rX = a + eV * Vtot.Morth;
@@ -107,6 +151,9 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot
   }
   return RetSol;
 }
+
+
+
 
 
 
