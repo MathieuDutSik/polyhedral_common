@@ -2,6 +2,7 @@
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "vinberg_code.h"
 
 
 int main(int argc, char* argv[])
@@ -17,17 +18,17 @@ int main(int argc, char* argv[])
     std::string FileIn  = argv[1];
     std::ifstream is(FileIn);
     //
-    ReadVector<T> G = ReadMatrix<T>(is);
-    ReadVector<T> v0 = ReadVector<T>(is);
+    MyMatrix<T> G = ReadMatrix<T>(is);
+    MyMatrix<T> v0 = ReadVector<T>(is);
     VinbergInput<T,Tint> Vin{G, v0};
     VinbergTot<T,Tint> Vtot = GetVinbergAux(Vin);
     //
     MyVector<Tint> a = ReadVector<Tint>(is);
     T n;
-    is >> is;
+    is >> n;
     std::vector<MyVector<Tint>> ListVect = Roots_decomposed_into(Vtot, a, n);
     //
-    std::ostream os = std::cout;
+    std::ostream& os = std::cout;
     int nVect = ListVect.size();
     os << "|ListVect|=" << nVect << "\n";
     for (int i=0; i<nVect; i++) {

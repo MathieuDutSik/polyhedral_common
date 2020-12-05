@@ -2,19 +2,20 @@
 #define INCLUDE_VINBERG_ALGO
 
 #include "Shvec_exact.h"
+//#include "MAT_MatrixInt.h"
 
 
 
 // Compute the solutions of G [x - eV] = a
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat, MyVector<T> cont& eV; T const& a)
+std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat, MyVector<T> const& eV, T const& a)
 {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   int dim = GramMat.rows();
   MyVector<T> cosetVect	= - eV;
   T_shvec_info<T,Tint> info;
   initShvecReq<T>(dim, GramMat, info);
-  info.request.bound = bound;
+  info.request.bound = a;
   info.request.mode = mode;
   info.request.coset = cosetVect;
   info.minimum = a;
@@ -38,7 +39,10 @@ struct VinbergInput {
 template<typename T, typename Tint>
 struct VinbergTot {
   MyMatrix<T> G;
-  MyVector<Tint> v0;
+  MyVector<Tint> V_i;
+  MyVector<Tint> Vtrans;
+  MyMatrix<Tint> Mbas;
+  MyMatrix<Tint> MbasInv;
   //
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
   Tint eDet; // The determinant of the matrix.
@@ -62,13 +66,13 @@ T ScalProd(MyMatrix<T> const& M, MyVector<Tint> const& V1, MyVector<Tint> const&
 }
 
 
-template<typename T, typenqme Tint>
+template<typename T, typename Tint>
 bool IsRoot(MyMatrix<T> const& M, MyVector<Tint> const& V)
 {
   int n = M.rows();
   T eNorm = ScalProd(M, V, V);
   for (int i=0; i<n; i++) {
-    T eH = 2 * V(i) / eNorm;
+    T eFrac = 2 * V(i) / eNorm;
     if (!IsInteger(eFrac))
       return false;
   }
@@ -83,9 +87,9 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
   int n=Vinput.G.rows();
   // Computing the complement of the space.
   MyVector<T> V = Vinput.G * Vinput.v0;
-  MyVector<T> Vred = RemoveFraction(V);
+  MyVector<T> Vred = RemoveFractionVector(V);
   MyVector<Tint> V_i = ConvertMatrixUniversal<Tint,T>(Vred);
-  std::vector<Vint> vectV_i(n);
+  std::vector<Tint> vectV_i(n);
   for (int i=0; i<n; i++)
     vectV_i[i] = V_i(i);
   GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV_i);
@@ -101,6 +105,7 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
   auto GetVect = [&]() -> MyVector<Tint> {
     for (int i=0; i<n; i++) {
       for (int j=0; j<2; j++) {
+        int eps = -1 + 2 * j;
         MyVector<Tint> V = V_i;
         V(i) -= eps;
         SolMatResult<T> Solu=SolutionMat(Morth, V);
@@ -138,7 +143,7 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
 
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyMatrix<Tint> const& a, T const& n)
+std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyMatrix<T> const& a, T const& n)
 {
   MyMatrix<T> sV = a * Vtot.GM_iGorth;
   T normi = n - a * Vtot.G * a + sV * Vtot.Gorth * sV;
