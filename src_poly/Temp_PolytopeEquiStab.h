@@ -752,7 +752,7 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
       INP_TheMat[idx2] = value - 1;
     }
   }
-  WeightMatrix<std::vector<T>,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
+  WeightMatrix<std::vector<T>,T> WMat=WeightMatrix<std::vector<T>,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
