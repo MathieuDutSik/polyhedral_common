@@ -47,7 +47,7 @@ struct VinbergTot {
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
   Tint eDet; // The determinant of the matrix.
   MyMatrix<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
-  MyVector<T> aGM_iGorth; // The inverse of the coefficient for the computation.
+  MyMatrix<T> GM_iGorth; // The inverse of the coefficient for the computation.
 };
 
 
@@ -108,7 +108,7 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
         int eps = -1 + 2 * j;
         MyVector<Tint> V = V_i;
         V(i) -= eps;
-        SolMatResult<T> Solu=SolutionMat(Morth, V);
+        SolMatResult<Tint> Solu=SolutionMat(Morth, V);
         if (Solu.result) {
           MyVector<Tint> Vret = ZeroVector<Tint>(n);
           Vret(i) = eps;
@@ -143,12 +143,12 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
 
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyMatrix<T> const& a, T const& n)
+std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyVector<T> const& a, T const& n)
 {
-  MyMatrix<T> sV = a * Vtot.GM_iGorth;
-  T normi = n - a * Vtot.G * a + sV * Vtot.Gorth * sV;
-  MyMatrix<T> eV = -sV;
-  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions(Vtot.Gorth, eV, normi);
+  MyVector<T> sV = a * Vtot.GM_iGorth;
+  T normi = n - a.dot(Vtot.G * a) + sV.dot(Vtot.Gorth * sV);
+  MyVector<T> eV = -sV;
+  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth, eV, normi);
   std::vector<MyVector<Tint>> RetSol;
   for (auto& eV : ListSol) {
     MyVector<Tint> rX = a + eV * Vtot.Morth;
