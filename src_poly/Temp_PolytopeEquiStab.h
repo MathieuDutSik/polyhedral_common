@@ -10,6 +10,8 @@
 #include "GRP_GroupFct.h"
 #include "COMB_Combinatorics_elem.h"
 #include "MAT_MatrixInt.h"
+#include "Boost_bitset.h"
+
 
 
 
@@ -694,6 +696,76 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 #endif
   return WMat;
 }
+
+
+
+
+template<typename T>
+WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
+{
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  int nbRow=TheEXT.rows();
+  int nbCol=TheEXT.cols();
+  int nMat = ListMat.size();
+  int INP_nbRow = nbRow;
+  std::vector<int> INP_TheMat(nbRow * nbRow);
+  std::vector<std::vector<T>> INP_ListWeight;
+  T INP_TheTol=0;
+  std::unordered_map<std::vector<T>, int> ValueMap;
+  int idxWeight = 0;
+  //
+  MyVector<T> V(nbCol);
+  std::vector<MyVector<T>> ListV(nMat, V);
+  std::vector<T> LScal(nMat + 1);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iMat=0; iMat<nMat; iMat++) {
+      for (int iCol=0; iCol<nbCol; iCol++) {
+        T eSum=0;
+        for (int jCol=0; jCol<nbCol; jCol++)
+          eSum += ListMat[iMat](iCol,jCol) * TheEXT(iRow, jCol);
+        ListV[iMat](iCol) = eSum;
+      }
+    }
+    for (int jRow=0; jRow<=iRow; jRow++) {
+      for (int iMat=0; iMat<nMat; iMat++) {
+        T eSum=0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eSum += V(iCol) * TheEXT(jRow, iCol);
+        LScal[iMat] = eSum;
+      }
+      int eVal = 0;
+      if (iRow == jRow) {
+        eVal = eSubset[iRow];
+      }
+      LScal[nMat] = eVal;
+      int& value = ValueMap[LScal];
+      if (value == 0) { // This is a missing value
+        idxWeight++;
+        value = idxWeight;
+        INP_ListWeight.push_back(LScal);
+      }
+      int idx1 = iRow + nbRow * jRow;
+      int idx2 = jRow + nbRow * iRow;
+      INP_TheMat[idx1] = value - 1;
+      INP_TheMat[idx2] = value - 1;
+    }
+  }
+  WeightMatrix<std::vector<T>,T> WMat=WeightMatrix<T,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  return WMat;
+}
+
+
+
+
+
+
+
 
 
 template<typename T>
@@ -2805,6 +2877,70 @@ TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
   return GetStabilizerWeightMatrix(WMat);
 }
+
+
+template<typename T>
+std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+{
+  int nbRow = EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  WeightMatrix<std::vector<T>, T> WMat = GetWeightMatrix_ListMat_Subset(EXT, ListMat, eSubset);
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+  ReorderingSetWeight(WMat);
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+  GraphBitset eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,GraphBitset>(WMat);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+#ifdef USE_BLISS
+  std::vector<std::vector<unsigned int>> ListGenTot = BLISS_GetListGenerators(eGR);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<unsigned int>> ListGenTot = TRACES_GetListGenerators(eGR);
+#endif
+
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+#endif
+  std::vector<std::vector<unsigned int>> ListGen;
+  for (auto & eGen : ListGenTot) {
+    std::vector<unsigned int> eGenRed(nbRow);
+    for (int i=0; i<nbRow; i++) {
+      unsigned int val = eGen[i];
+#ifdef DEBUG
+      if (val >= nbRow) {
+        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
+        throw TerminalException{1};
+      }
+#endif
+      eGenRed[i] = val;
+    }
+    ListGen.push_back(eGenRed);
+  }
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|ListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
+  return ListGen;
+}
+
 
 
 template<typename Tint>
