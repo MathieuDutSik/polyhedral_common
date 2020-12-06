@@ -8,6 +8,8 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
+#define DEBUG
+
 namespace std {
   template <typename T>
   struct hash<MyVector<T>>
@@ -145,6 +147,7 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 {
   int n_edge = TheCtype.rows();
   int n_cols = TheCtype.cols();
+  std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
   std::vector<triple> ListTriples;
   auto get_position=[&](MyVector<T> const& eV, Tidx start_idx) -> Tidx {
     auto get_nature=[&](int8_t pos) -> bool {
@@ -163,6 +166,13 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
         pos += res * e_pow;
         e_pow *= 2;
       }
+      std::cerr << "eV =";
+      for (int i=0; i<n_cols; i++)
+        std::cerr << " " << eV(i);
+      std::cerr << "\n";
+      std::cerr << "Found pos=" << pos << "\n";
+      if (pos == -1)
+        return -1;
       if (get_nature(2*pos))
         return 2*pos;
       if (get_nature(2*pos+1))
@@ -176,10 +186,13 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
   };
   for (int8_t i=0; i<n_edge; i++)
     for (int8_t j=i+1; j<n_edge; j++) {
+      std::cerr << "i=" << (int)i << " j=" << (int)j << "\n";
       MyVector<T> eDiff(n_cols);
       for (int8_t i_col=0; i_col<n_cols; i_col++)
         eDiff(i_col) = - TheCtype(i, i_col) - TheCtype(j,i_col);
+      std::cerr << "We have eDiff\n";
       int8_t pos = get_position(eDiff, j);
+      std::cerr << "pos=" << (int)pos << "\n";
       if (pos != -1)
         ListTriples.push_back({i,j,pos});
     }
@@ -192,22 +205,39 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
 {
   int n = M.cols();
   int nbRow = M.rows();
+  std::cerr << "n=" << n << " nbRow=" << nbRow << "\n";
   MyMatrix<T> Mret(2*nbRow, n);
+#ifdef DEBUG
+  std::vector<int> ListStatus(nbRow,0);
+#endif
   for (int iRow=0; iRow<nbRow; iRow++) {
+    std::cerr << "iRow=" << iRow << "/" << nbRow << "\n";
     int pos = -1;
     int e_pow = 1;
     T eTwo = 2;
     for (int i=0; i<n; i++) {
       T res_T = ResInt(M(iRow,i), eTwo);
       int res = UniversalTypeConversion<int,T>(res_T);
+      std::cerr << "  i=" << i << " M(iRow,i)=" << M(iRow,i) << " res_T=" << res_T << " res=" << res << " e_pow=" << e_pow << "\n";
       pos += res * e_pow;
       e_pow *= 2;
     }
+    std::cerr << "  pos=" << pos << "\n";
+#ifdef DEBUG
+    ListStatus[pos] += 1;
+#endif
     for (int i=0; i<n; i++) {
       Mret(2*pos  , i) =  M(iRow,i);
       Mret(2*pos+1, i) = -M(iRow,i);
     }
   }
+#ifdef DEBUG
+  for (int i=0; i<nbRow; i++)
+    if (ListStatus[i] != 1) {
+      std::cerr << "Consistency error at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+#endif
   return Mret;
 }
 
@@ -217,8 +247,11 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
 template<typename T>
 std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtypeArr)
 {
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
   std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
   int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
@@ -253,6 +286,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     FuncInsertInequality(e_triple.j, e_triple.k, e_triple.i);
     FuncInsertInequality(e_triple.k, e_triple.i, e_triple.j);
   }
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
   size_t n_ineq = Tot_map.size();
   MyMatrix<T> ListInequalities(n_ineq, tot_dim);
   std::vector<std::vector<triple>> ListInformations;
@@ -263,9 +297,11 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
   }
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
   // Reducing by redundancy
   //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
   std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 6\n";
   // Computing the adjacent ones and doing canonicalization
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
@@ -273,6 +309,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     MyMatrix<T> CanMat = LinPolytopeIntegral_CanonicForm(FlipMat);
     ListCtype.push_back({std::move(CanMat)});
   }
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
   return ListCtype;
 }
 
