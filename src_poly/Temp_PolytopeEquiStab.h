@@ -2674,24 +2674,36 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized
 
 
 template<typename T1, typename T2>
-EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
+EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
 {
   GraphBitset eGR1=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat1);
   GraphBitset eGR2=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat2);
-  bliss::Graph g1=GetBlissGraphFromGraph(eGR1);
-  bliss::Graph g2=GetBlissGraphFromGraph(eGR2);
   int nof_vertices=eGR1.GetNbVert();
-  bliss::Stats stats;
-  const unsigned int* cl1;
-  const unsigned int* cl2;
-  cl1=g1.canonical_form(stats, &report_aut_void, stderr);
-  cl2=g2.canonical_form(stats, &report_aut_void, stderr);
+  int nbRow=WMat1.rows();
+#ifdef USE_BLISS
+  std::vector<unsigned int> cl1 = BLISS_GetCanonicalOrdering(eGR1);
+  std::vector<unsigned int> cl2 = BLISS_GetCanonicalOrdering(eGR2);
+#endif
+#ifdef USE_TRACES
+  std::vector<unsigned int> cl1 = TRACES_GetCanonicalOrdering(eGR1);
+  std::vector<unsigned int> cl2 = TRACES_GetCanonicalOrdering(eGR2);
+#endif
   std::vector<int> clR2(nof_vertices);
   for (int i=0; i<nof_vertices; i++)
     clR2[cl2[i]]=i;
   std::vector<int> TheEquivExp(nof_vertices, -1);
-  for (int iVert=0; iVert<nof_vertices; iVert++)
-    TheEquivExp[iVert]=clR2[cl1[iVert]];
+  for (int iVert=0; iVert<nof_vertices; iVert++) {
+    int jVert = clR2[cl1[iVert]];
+#ifdef DEBUG
+    int iBlock = iVert / (nbRow + 2);
+    int jBlock = jVert / (nbRow + 2);
+    if (iBlock != jBlock) {
+      std::cerr << "Not repecting block structure\n";
+      throw TerminalException{1};
+    }
+#endif
+    TheEquivExp[iVert] = jVert;
+  }
   for (int iVert=0; iVert<nof_vertices; iVert++) {
     int jVert=TheEquivExp[iVert];
     if (eGR1.GetColor(iVert) != eGR2.GetColor(jVert))
@@ -2705,8 +2717,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatri
 	return {false, {}};
     }
   }
-  int nbRow=WMat1.rows();
-  std::vector<permlib::dom_int> TheEquiv(nbRow);
+  std::vector<unsigned int> TheEquiv(nbRow);
   for (int i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
 #ifdef DEBUG
@@ -2729,11 +2740,20 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm(WeightMatri
     }
   }
 #endif
-  permlib::Permutation ePerm(TheEquiv);
-  return {true, ePerm};
+  return {true, TheEquiv};
 }
 
-
+template<typename T1, typename T2>
+EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
+{
+  EquivTest<std::vector<unsigned int>> ePair = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
+  int len = ePair.TheEquiv.size();
+  std::vector<permlib::dom_int> eList(len);
+  for (int i=0; i<len; i++)
+    eList[i] = ePair.TheEquiv[i];
+  permlib::Permutation ePerm(eList);
+  return {ePair.TheReply, ePerm};
+}
 
 template<typename T1, typename T2>
 EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> &WMat2)
@@ -2741,7 +2761,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2>
   bool test=RenormalizeWeightMatrix(WMat1, WMat2);
   if (!test)
     return {false, {}};
-  return TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
+  return TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
 }
 
 
@@ -2776,7 +2796,7 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
   WMat2.Update(n,n,siz+2);
   WMat1.SetWeight(ListWeight);
   WMat1.SetWeight(ListWeight);
-  EquivTest<permlib::Permutation> test=TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
+  EquivTest<permlib::Permutation> test=TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
   std::vector<permlib::dom_int> eList(n);
@@ -2888,10 +2908,12 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #endif
   WeightMatrix<std::vector<T>, T> WMat = GetWeightMatrix_ListMat_Subset(EXT, ListMat, eSubset);
 
+
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
   ReorderingSetWeight(WMat);
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -2908,7 +2930,6 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #ifdef USE_TRACES
   std::vector<std::vector<unsigned int>> ListGenTot = TRACES_GetListGenerators(eGR);
 #endif
-
 
 
 #ifdef TIMINGS
@@ -2930,6 +2951,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
     ListGen.push_back(eGenRed);
   }
 
+
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -2940,6 +2962,48 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #endif
   return ListGen;
 }
+
+
+
+
+
+
+template<typename T>
+EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
+                                                                    MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
+{
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  WeightMatrix<std::vector<T>, T> WMat1 = GetWeightMatrix_ListMat_Subset(EXT1, ListMat1, eSubset1);
+  WeightMatrix<std::vector<T>, T> WMat2 = GetWeightMatrix_ListMat_Subset(EXT2, ListMat2, eSubset2);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+  ReorderingSetWeight(WMat1);
+  ReorderingSetWeight(WMat2);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+  EquivTest<std::vector<unsigned int>> PairTest = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return PairTest;
+}
+
+
+
+
 
 
 
