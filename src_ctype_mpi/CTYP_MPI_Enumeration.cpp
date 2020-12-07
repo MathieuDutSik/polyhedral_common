@@ -28,15 +28,18 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
+  ListBoolValues1["StopWhenFinished"]=false;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues=ListIntValues1;
-  BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListIntValues = ListIntValues1;
+  BlockDATA.ListStringValues = ListStringValues1;
+  BlockDATA.ListBoolValues = ListBoolValues1;
   ListBlock["DATA"]=BlockDATA;
   // Merging all data
   return {ListBlock, "undefined"};
@@ -61,6 +64,7 @@ int main()
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
+  bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
   mpi::environment env;
@@ -237,11 +241,14 @@ int main()
     //
     std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
-    if (MaxRunTimeSecond  > 0) {
-      if (elapsed_seconds > MaxRunTimeSecond) {
-        std::cerr << "Exiting because the runtime is higher than the one expected\n";
-        break;
-      }
+    if (MaxRunTimeSecond > 0 && elapsed_seconds > MaxRunTimeSecond) {
+      std::cerr << "elapsed_seconds=" << elapsed_seconds << " MaxRunTimeSecond=" << MaxRunTimeSecond << "\n";
+      std::cerr << "Exiting because the runtime is higher than the one expected\n";
+      break;
+    }
+    if (StopWhenFinished && ListCasesNotDone.size() == 0) {
+      std::cerr << "Exiting because everything has been done\n";
+      break;
     }
   }
   std::cerr << "Normal termination of the program\n";

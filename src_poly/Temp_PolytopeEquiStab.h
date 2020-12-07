@@ -21,7 +21,7 @@
 #define USE_PAIRS
 
 
-#define DEBUG
+//#define DEBUG
 //#define TIMINGS
 
 template<typename T>
@@ -301,7 +301,7 @@ void ReorderingSetWeight(WeightMatrix<T1,T2> & WMat)
     g[pos] = idx;
     idx++;
   }
-  std::cerr << "nbEnt=" << nbEnt << "\n";
+  //  std::cerr << "nbEnt=" << nbEnt << "\n";
 #ifdef DEBUG_REORDER
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)
@@ -354,7 +354,7 @@ int ReorderingSetWeight_specificPosition(WeightMatrix<T1,T2> & WMat, int specifi
     g[pos] = idx;
     idx++;
   }
-  std::cerr << "nbEnt=" << nbEnt << "\n";
+  //  std::cerr << "nbEnt=" << nbEnt << "\n";
 #ifdef DEBUG_REORDER
   std::set<T1> SetWeight;
   for (auto & eVal : ListWeight)

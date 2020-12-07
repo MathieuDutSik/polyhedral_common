@@ -395,17 +395,17 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   // Reducing by redundancy
   //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
   std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
-  std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+  //  std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
   //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 6\n";
   // Computing the adjacent ones and doing canonicalization
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
     MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype, ListInformations[e_int]);
-    std::cerr << "FlipMat=\n";
-    WriteMatrix(std::cerr, FlipMat);
+    //    std::cerr << "FlipMat=\n";
+    //    WriteMatrix(std::cerr, FlipMat);
     MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
-    std::cerr << "CanMat=\n";
-    WriteMatrix(std::cerr, CanMat);
+    //    std::cerr << "CanMat=\n";
+    //    WriteMatrix(std::cerr, CanMat);
     ListCtype.push_back({std::move(CanMat)});
   }
   //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
