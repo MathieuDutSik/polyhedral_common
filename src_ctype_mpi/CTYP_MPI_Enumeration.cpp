@@ -10,6 +10,8 @@
 namespace mpi = boost::mpi;
 
 
+#define TIMINGS
+
 /*
   Possible parallel schemes:
   ---We have a single file in input that is read at the beginning
@@ -111,12 +113,26 @@ int main()
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
     TypeCtypeExch<Tint> eCtype = ePair.eCtype;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     auto it1 = ListCasesDone.find(eCtype);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
     if (it1 != ListCasesDone.end()) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
     KeyData& eData = ListCasesNotDone[eCtype];
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+    std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|HashMap2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
     if (eData.idxMatrix != 0) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;

@@ -12,7 +12,7 @@
 #define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
-#define PRINT_GET_ADJ
+//#define PRINT_GET_ADJ
 
 
 namespace std {
