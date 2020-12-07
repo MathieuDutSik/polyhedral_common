@@ -28,10 +28,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
@@ -39,10 +36,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues=ListIntValues1;
-  BlockDATA.ListBoolValues=ListBoolValues1;
-  BlockDATA.ListDoubleValues=ListDoubleValues1;
   BlockDATA.ListStringValues=ListStringValues1;
-  BlockDATA.ListListStringValues=ListListStringValues1;
   ListBlock["DATA"]=BlockDATA;
   // Merging all data
   return {ListBlock, "undefined"};
@@ -57,7 +51,7 @@ static int tag_new_form = 37;
 
 int main()
 {
-  using Tint=long;
+  using Tint=int;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI();
   std::string eFileName = "ctype_enum.nml";
@@ -69,8 +63,8 @@ int main()
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
-  boost::mpi::environment env;
-  boost::mpi::communicator world;
+  mpi::environment env;
+  mpi::communicator world;
   int irank=world.rank();
   int n_pes=world.size();
   std::string eFileO="LOG_" + IntToString(irank);
@@ -87,13 +81,13 @@ int main()
   //
   // The list of requests.
   //
-  std::vector<boost::mpi::request> ListRequest(MaxNumberFlyingMessage);
+  std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
   auto GetFreeIndex=[&]() -> int {
     for (int u=0; u<MaxNumberFlyingMessage; u++) {
       if (RequestStatus[u] == 0)
 	return u;
-      boost::optional<boost::mpi::status> stat = ListRequest[u].test();
+      boost::optional<mpi::status> stat = ListRequest[u].test();
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
 	  std::cerr << "something went wrong in the MPI" << std::endl;
@@ -201,7 +195,8 @@ int main()
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   while(true) {
-    boost::optional<boost::mpi::status> prob = world.iprobe();
+    std::cerr << "Begin while, we have |ListCasesNotDone[pos]|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    boost::optional<mpi::status> prob = world.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
