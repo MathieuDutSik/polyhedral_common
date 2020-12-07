@@ -101,11 +101,11 @@ bool CheckCoveringParityClasses(MyMatrix<T> const& M)
   size_t n_rows = M.rows();
   size_t n_cols = M.cols();
   std::vector<int> ListStatus(n_rows, 0);
-  for (int i_row=0; i_row<n_rows; i_row++) {
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
     int pos = -1;
     int e_pow = 1;
     T eTwo = 2;
-    for (int i=0; i<n_cols; i++) {
+    for (size_t i=0; i<n_cols; i++) {
       T res_T = ResInt(M(i_row, i), eTwo);
       int res = UniversalTypeConversion<int,T>(res_T);
       pos += res * e_pow;
@@ -115,7 +115,7 @@ bool CheckCoveringParityClasses(MyMatrix<T> const& M)
       return false;
     ListStatus[pos] += 1;
   }
-  for (int i_row=0; i_row<n_rows; i_row++)
+  for (size_t i_row=0; i_row<n_rows; i_row++)
     if (ListStatus[i_row] != 1)
       return false;
   return true;
@@ -166,7 +166,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
           int pos = -1;
           int e_pow = 1;
           T eTwo = 2;
-          for (int i=0; i<n_cols; i++) {
+          for (size_t i=0; i<n_cols; i++) {
             T res_T = ResInt(V[i], eTwo);
             int res = UniversalTypeConversion<int,T>(res_T);
             pos += res * e_pow;
