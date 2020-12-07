@@ -10,6 +10,10 @@
 
 #define DEBUG
 #define TIMINGS
+//#define PRINT_FLIP
+//#define PRINT_TRIPLE
+#define PRINT_GET_ADJ
+
 
 namespace std {
   template <typename T>
@@ -145,10 +149,10 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
   for (size_t i_row=0; i_row<n_rows; i_row++)
     std::cerr << " " << ListIchange[i_row];
   std::cerr << "\n";
-  for (int i_row=0; i_row<n_rows; i_row++) {
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
     if (ListIchange[i_row] == 1) {
       std::cerr << "Removed line =";
-      for (int i=0; i<n_cols; i++)
+      for (size_t i=0; i<n_cols; i++)
         std::cerr << " " << TheCtype(i_row,i);
       std::cerr << "\n";
     }
@@ -344,19 +348,27 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
+#endif
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
+#endif
   std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
+#endif
   int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
@@ -392,10 +404,13 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     FuncInsertInequality(e_triple.k, e_triple.i, e_triple.j);
   }
 
+
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
+#endif
   size_t n_ineq = Tot_map.size();
   MyMatrix<T> ListInequalities(n_ineq, tot_dim);
   //  std::cerr << " n_ineq=" << n_ineq << " tot_dim=" << (int)tot_dim << "\n";
@@ -407,17 +422,20 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
   }
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
-  // Reducing by redundancy
-  //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
+#endif
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
 #endif
   std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
-  //  std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 6\n";
-  // Computing the adjacent ones and doing canonicalization
+  //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef PRINT_GET_ADJ
+  std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+#endif
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
@@ -432,7 +450,10 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     //    WriteMatrix(std::cerr, CanMat);
     ListCtype.push_back({std::move(CanMat)});
   }
-  //  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
+#endif
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
