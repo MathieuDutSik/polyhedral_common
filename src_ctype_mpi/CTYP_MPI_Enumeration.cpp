@@ -97,6 +97,14 @@ int main()
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
 	  std::cerr << "something went wrong in the MPI" << std::endl;
+	  std::cerr << "stat->tag() = " << stat->tag() << "\n";
+	  std::cerr << "stat->source() = " << stat->source() << " irank=" << irank << "\n";
+	  std::cerr << "stat->error() = " << stat->error() << "\n";
+	  char error_string[10000];
+	  int length_of_error_string;
+	  //	  MPI_Error_string(stat->error(), error_string, &length_of_error_string);
+	  //	  std::cerr << "length_of_error_string=" << length_of_error_string << "\n";
+	  /*	  fprintf(stderr, "err: %s\n", error_string);*/
 	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
