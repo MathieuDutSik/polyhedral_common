@@ -10,7 +10,7 @@
 namespace mpi = boost::mpi;
 
 
-#define TIMINGS
+#undef TIMINGS_HASH
 
 /*
   Possible parallel schemes:
@@ -77,9 +77,6 @@ int main()
   std::ofstream log(eFileO);
   log << "Initial log entry" << std::endl;
   //
-  std::ifstream is(FileMatrix);
-  int nbMatrixStart;
-  is >> nbMatrixStart;
   struct KeyData {
     int idxMatrix;
   };
@@ -90,24 +87,29 @@ int main()
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
   auto GetFreeIndex=[&]() -> int {
+    std::cerr << "Beginning of GetFreeIndex\n";
     for (int u=0; u<MaxNumberFlyingMessage; u++) {
-      if (RequestStatus[u] == 0)
+      std::cerr << "GetFreeIndex u=" << u << "\n";
+      if (RequestStatus[u] == 0) {
+        std::cerr << "GetFreeIndex, returning u=" << u << "\n";
 	return u;
+      }
       boost::optional<mpi::status> stat = ListRequest[u].test();
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
-	  std::cerr << "something went wrong in the MPI" << std::endl;
+	  std::cerr << "something went wrong in the MPI\n";
 	  std::cerr << "stat->tag() = " << stat->tag() << "\n";
 	  std::cerr << "stat->source() = " << stat->source() << " irank=" << irank << "\n";
 	  std::cerr << "stat->error() = " << stat->error() << "\n";
-	  char error_string[10000];
-	  int length_of_error_string;
+          //	  char error_string[10000];
+          //	  int length_of_error_string;
 	  //	  MPI_Error_string(stat->error(), error_string, &length_of_error_string);
 	  //	  std::cerr << "length_of_error_string=" << length_of_error_string << "\n";
 	  /*	  fprintf(stderr, "err: %s\n", error_string);*/
 	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
+        std::cerr << "GetFreeIndex, clearing u=" << u << " returning it\n";
 	return u;
       }
     }
@@ -121,24 +123,24 @@ int main()
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
     TypeCtypeExch<Tint> eCtype = ePair.eCtype;
-#ifdef TIMINGS
+#ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
     auto it1 = ListCasesDone.find(eCtype);
-#ifdef TIMINGS
+#ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
     if (it1 != ListCasesDone.end()) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
     KeyData& eData = ListCasesNotDone[eCtype];
-#ifdef TIMINGS
+#ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-    std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
     std::cerr << "|HashMap2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
     if (eData.idxMatrix != 0) {
@@ -147,7 +149,7 @@ int main()
     }
     eData.idxMatrix = idxMatrixCurrent + 1;
     log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
-    std::cerr << "Inserting new form, now we have |ListCasesNotDone[pos]|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    std::cerr << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
     std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
     idxMatrixCurrent++;
   };
@@ -167,12 +169,7 @@ int main()
   //
   // The system for sending matrices
   //
-  auto fSendMatrix=[&](PairExch<Tint> const& ePair, int const& u) -> void {
-    int res=IntegerDiscriminantInvariant(ePair.eCtype.eMat, n_pes);
-    ListRequest[u] = world.isend(res, tag_new_form, ePair);
-    RequestStatus[u] = 1;
-  };
-  std::vector<PairExch<Tint>> ListMatrixUnsent;
+  std::vector<std::pair<PairExch<Tint>, int>> ListMatrixUnsent;
   auto ClearUnsentAsPossible=[&]() -> void {
     int pos=ListMatrixUnsent.size() - 1;
     while(true) {
@@ -181,7 +178,8 @@ int main()
       int idx = GetFreeIndex();
       if (idx == -1)
 	break;
-      fSendMatrix(ListMatrixUnsent[pos], idx);
+      ListRequest[idx] = world.isend(ListMatrixUnsent[pos].second, tag_new_form, ListMatrixUnsent[pos].first);
+      RequestStatus[idx] = 1;
       ListMatrixUnsent.pop_back();
       pos--;
     }
@@ -192,31 +190,37 @@ int main()
       fInsert(ePair);
     }
     else {
-      ListMatrixUnsent.push_back(ePair);
+      ListMatrixUnsent.push_back({ePair, res});
       ClearUnsentAsPossible();
     }
   };
-  int nbCaseNotDone=0;
-  for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
-    int eStatus;
-    is >> eStatus;
-    MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
-    TypeCtypeExch<Tint> eRecMat{TheMat};
-    int res=IntegerDiscriminantInvariant(TheMat, n_pes);
-    if (res == irank) {
-      KeyData eData{idxMatrixCurrent+1};
-      if (eStatus == 0) {
-        ListCasesNotDone[eRecMat] = eData;
-        nbCaseNotDone++;
+  //
+  // Reading the initial file
+  //
+  {
+    std::ifstream is(FileMatrix);
+    int nbMatrixStart;
+    is >> nbMatrixStart;
+    for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
+      int eStatus;
+      is >> eStatus;
+      MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
+      TypeCtypeExch<Tint> eRecMat{TheMat};
+      int res=IntegerDiscriminantInvariant(TheMat, n_pes);
+      if (res == irank) {
+        KeyData eData{idxMatrixCurrent+1};
+        if (eStatus == 0) {
+          ListCasesNotDone[eRecMat] = eData;
+        }
+        else {
+          ListCasesDone[eRecMat] = eData;
+        }
+        log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
+        idxMatrixCurrent++;
       }
-      else {
-        ListCasesDone[eRecMat] = eData;
-      }
-      log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
-      idxMatrixCurrent++;
     }
   }
-  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " nbCaseNotDone=" << nbCaseNotDone << "\n";
+  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
   std::cerr << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
   //
   // The main loop itself.
@@ -230,6 +234,7 @@ int main()
       if (prob->tag() == tag_new_form) {
 	PairExch<Tint> ePair;
 	world.recv(prob->source(), prob->tag(), ePair);
+        std::cerr << "Receiving a matrix\n";
         fInsert(ePair);
       }
     }
@@ -257,9 +262,7 @@ int main()
 	}
       }
     }
-    std::cerr << "irank=" << irank << " Before ClearUnsentAsPossible\n";
     ClearUnsentAsPossible();
-    std::cerr << "irank=" << irank << " After ClearUnsentAsPossible\n";
     //
     // Checking for termination of the program
     //
