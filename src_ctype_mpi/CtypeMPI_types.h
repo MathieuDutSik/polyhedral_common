@@ -8,6 +8,13 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
+#define DEBUG
+#define TIMINGS
+//#define PRINT_FLIP
+//#define PRINT_TRIPLE
+//#define PRINT_GET_ADJ
+
+
 namespace std {
   template <typename T>
   struct hash<MyVector<T>>
@@ -92,26 +99,89 @@ struct triple {
 };
 
 
+template<typename T>
+bool CheckCoveringParityClasses(MyMatrix<T> const& M)
+{
+  size_t n_rows = M.rows();
+  size_t n_cols = M.cols();
+  std::vector<int> ListStatus(n_rows, 0);
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    int pos = -1;
+    int e_pow = 1;
+    T eTwo = 2;
+    for (size_t i=0; i<n_cols; i++) {
+      T res_T = ResInt(M(i_row, i), eTwo);
+      int res = UniversalTypeConversion<int,T>(res_T);
+      pos += res * e_pow;
+      e_pow *= 2;
+    }
+    if (pos == -1)
+      return false;
+    ListStatus[pos] += 1;
+  }
+  for (size_t i_row=0; i_row<n_rows; i_row++)
+    if (ListStatus[i_row] != 1)
+      return false;
+  return true;
+}
+
+
+
 
 template<typename T>
 MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> const& TheInfo)
 {
   size_t n_rows = TheCtype.rows();
   size_t n_cols = TheCtype.cols();
+  size_t n_rows_ret = n_rows / 2;
+#ifdef PRINT_FLIP
+  std::cerr << "CTYP_TheFlipping n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+#endif
   Face ListIchange(n_rows);
-  for (auto & e_triple : TheInfo)
+  for (auto & e_triple : TheInfo) {
+#ifdef PRINT_FLIP
+    std::cerr << "e_triple=" << (int)e_triple.i << " , " << (int)e_triple.j << " , " << (int)e_triple.k << "\n";
+#endif
     ListIchange[e_triple.i] = 1;
-  MyMatrix<T> RetMat(n_rows, n_cols);
+  }
+#ifdef PRINT_FLIP
+  std::cerr << "ListIchange =";
+  for (size_t i_row=0; i_row<n_rows; i_row++)
+    std::cerr << " " << ListIchange[i_row];
+  std::cerr << "\n";
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    if (ListIchange[i_row] == 1) {
+      std::cerr << "Removed line =";
+      for (size_t i=0; i<n_cols; i++)
+        std::cerr << " " << TheCtype(i_row,i);
+      std::cerr << "\n";
+    }
+  }
+#endif
+  MyMatrix<T> RetMat(n_rows_ret, n_cols);
   std::vector<T> V(n_cols);
   size_t idx=0;
+  Face IsAssigned(n_rows_ret);
   auto insert_if_signok=[&]() -> void {
     for (size_t i=0; i<n_cols; i++) {
       T eVal=V[i];
       if (eVal != 0) {
         if (eVal > 0) {
-          for (size_t i_col=0; i_col<n_cols; i_col++)
-            RetMat(idx, i_col) = V[i_col];
-          idx++;
+          int pos = -1;
+          int e_pow = 1;
+          T eTwo = 2;
+          for (size_t i=0; i<n_cols; i++) {
+            T res_T = ResInt(V[i], eTwo);
+            int res = UniversalTypeConversion<int,T>(res_T);
+            pos += res * e_pow;
+            e_pow *= 2;
+          }
+          if (IsAssigned[pos] == 0) {
+            for (size_t i_col=0; i_col<n_cols; i_col++)
+              RetMat(idx, i_col) = V[i_col];
+            idx++;
+            IsAssigned[pos]=1;
+          }
         }
         return;
       }
@@ -136,6 +206,18 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
       idx++;
     }
   }
+#ifdef DEBUG
+  if (n_rows_ret != idx) {
+    std::cerr << "Incoherence in idx, n_rows_ret. idx=" << idx << " n_rows_ret=" << n_rows_ret << "\n";
+    throw TerminalException{1};
+  }
+  if (!CheckCoveringParityClasses(RetMat)) {
+    std::cerr << "RetMat parity classes is not correct\n";
+    std::cerr << "RetMat=\n";
+    WriteMatrix(std::cerr, RetMat);
+    throw TerminalException{1};
+  }
+#endif
   return RetMat;
 }
 
@@ -145,6 +227,9 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 {
   int n_edge = TheCtype.rows();
   int n_cols = TheCtype.cols();
+#ifdef PRINT_TRIPLE
+  std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
+#endif
   std::vector<triple> ListTriples;
   auto get_position=[&](MyVector<T> const& eV, Tidx start_idx) -> Tidx {
     auto get_nature=[&](int8_t pos) -> bool {
@@ -163,6 +248,15 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
         pos += res * e_pow;
         e_pow *= 2;
       }
+#ifdef PRINT_TRIPLE
+      std::cerr << "eV =";
+      for (int i=0; i<n_cols; i++)
+        std::cerr << " " << eV(i);
+      std::cerr << "\n";
+      std::cerr << "Found pos=" << pos << "\n";
+#endif
+      if (pos == -1)
+        return -1;
       if (get_nature(2*pos))
         return 2*pos;
       if (get_nature(2*pos+1))
@@ -176,10 +270,19 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
   };
   for (int8_t i=0; i<n_edge; i++)
     for (int8_t j=i+1; j<n_edge; j++) {
+#ifdef PRINT_TRIPLE
+      std::cerr << "i=" << (int)i << " j=" << (int)j << "\n";
+#endif
       MyVector<T> eDiff(n_cols);
       for (int8_t i_col=0; i_col<n_cols; i_col++)
         eDiff(i_col) = - TheCtype(i, i_col) - TheCtype(j,i_col);
+#ifdef PRINT_TRIPLE
+      std::cerr << "We have eDiff\n";
+#endif
       int8_t pos = get_position(eDiff, j);
+#ifdef PRINT_TRIPLE
+      std::cerr << "pos=" << (int)pos << "\n";
+#endif
       if (pos != -1)
         ListTriples.push_back({i,j,pos});
     }
@@ -192,22 +295,47 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
 {
   int n = M.cols();
   int nbRow = M.rows();
+#ifdef PRINT_EXPRESS
+  std::cerr << "n=" << n << " nbRow=" << nbRow << "\n";
+#endif
   MyMatrix<T> Mret(2*nbRow, n);
+#ifdef DEBUG
+  std::vector<int> ListStatus(nbRow,0);
+#endif
   for (int iRow=0; iRow<nbRow; iRow++) {
+#ifdef PRINT_EXPRESS
+    std::cerr << "iRow=" << iRow << "/" << nbRow << "\n";
+#endif
     int pos = -1;
     int e_pow = 1;
     T eTwo = 2;
     for (int i=0; i<n; i++) {
       T res_T = ResInt(M(iRow,i), eTwo);
       int res = UniversalTypeConversion<int,T>(res_T);
+#ifdef PRINT_EXPRESS
+      std::cerr << "  i=" << i << " M(iRow,i)=" << M(iRow,i) << " res_T=" << res_T << " res=" << res << " e_pow=" << e_pow << "\n";
+#endif
       pos += res * e_pow;
       e_pow *= 2;
     }
+#ifdef PRINT_EXPRESS
+    std::cerr << "  pos=" << pos << "\n";
+#endif
+#ifdef DEBUG
+    ListStatus[pos] += 1;
+#endif
     for (int i=0; i<n; i++) {
       Mret(2*pos  , i) =  M(iRow,i);
       Mret(2*pos+1, i) = -M(iRow,i);
     }
   }
+#ifdef DEBUG
+  for (int i=0; i<nbRow; i++)
+    if (ListStatus[i] != 1) {
+      std::cerr << "Consistency error at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+#endif
   return Mret;
 }
 
@@ -217,8 +345,30 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
 template<typename T>
 std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const& TheCtypeArr)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
+#endif
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
+#endif
   std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
+#endif
   int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
@@ -253,8 +403,17 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     FuncInsertInequality(e_triple.j, e_triple.k, e_triple.i);
     FuncInsertInequality(e_triple.k, e_triple.i, e_triple.j);
   }
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
+#endif
   size_t n_ineq = Tot_map.size();
   MyMatrix<T> ListInequalities(n_ineq, tot_dim);
+  //  std::cerr << " n_ineq=" << n_ineq << " tot_dim=" << (int)tot_dim << "\n";
   std::vector<std::vector<triple>> ListInformations;
   size_t i_ineq=0;
   for (auto & kv : Tot_map) {
@@ -263,16 +422,48 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
   }
-  // Reducing by redundancy
-  //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
+#endif
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+#endif
   std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
-  // Computing the adjacent ones and doing canonicalization
+  //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef PRINT_GET_ADJ
+  std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+#endif
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+#endif
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
     MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype, ListInformations[e_int]);
-    MyMatrix<T> CanMat = LinPolytopeIntegral_CanonicForm(FlipMat);
+    //    std::cerr << "FlipMat=\n";
+    //    WriteMatrix(std::cerr, FlipMat);
+    MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
+    //    std::cerr << "CanMat=\n";
+    //    WriteMatrix(std::cerr, CanMat);
     ListCtype.push_back({std::move(CanMat)});
   }
+#ifdef PRINT_GET_ADJ
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
+#endif
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|ExpressMatrixForCType|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|CTYP_GetListTriple|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|Insert inequalities|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|ListInformations|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|RedundancyReductionClarkson|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|Flip + Canonic|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+#endif
   return ListCtype;
 }
 

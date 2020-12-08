@@ -10,6 +10,8 @@
 namespace mpi = boost::mpi;
 
 
+#define TIMINGS
+
 /*
   Possible parallel schemes:
   ---We have a single file in input that is read at the beginning
@@ -23,30 +25,23 @@ namespace mpi = boost::mpi;
      When changing to another number of processor, great work needed.
 
  */
-
-
-
 FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListIntValues1["n"]=9;
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
+  ListBoolValues1["StopWhenFinished"]=false;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues=ListIntValues1;
-  BlockDATA.ListBoolValues=ListBoolValues1;
-  BlockDATA.ListDoubleValues=ListDoubleValues1;
-  BlockDATA.ListStringValues=ListStringValues1;
-  BlockDATA.ListListStringValues=ListListStringValues1;
+  BlockDATA.ListIntValues = ListIntValues1;
+  BlockDATA.ListStringValues = ListStringValues1;
+  BlockDATA.ListBoolValues = ListBoolValues1;
   ListBlock["DATA"]=BlockDATA;
   // Merging all data
   return {ListBlock, "undefined"};
@@ -61,7 +56,7 @@ static int tag_new_form = 37;
 
 int main()
 {
-  using Tint=long;
+  using Tint=int;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI();
   std::string eFileName = "ctype_enum.nml";
@@ -71,10 +66,11 @@ int main()
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
+  bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
-  boost::mpi::environment env;
-  boost::mpi::communicator world;
+  mpi::environment env;
+  mpi::communicator world;
   int irank=world.rank();
   int n_pes=world.size();
   std::string eFileO="LOG_" + IntToString(irank);
@@ -91,13 +87,13 @@ int main()
   //
   // The list of requests.
   //
-  std::vector<boost::mpi::request> ListRequest(MaxNumberFlyingMessage);
+  std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
   auto GetFreeIndex=[&]() -> int {
     for (int u=0; u<MaxNumberFlyingMessage; u++) {
       if (RequestStatus[u] == 0)
 	return u;
-      boost::optional<boost::mpi::status> stat = ListRequest[u].test();
+      boost::optional<mpi::status> stat = ListRequest[u].test();
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
 	  std::cerr << "something went wrong in the MPI" << std::endl;
@@ -117,12 +113,26 @@ int main()
   int idxMatrixCurrent=0;
   auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
     TypeCtypeExch<Tint> eCtype = ePair.eCtype;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     auto it1 = ListCasesDone.find(eCtype);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
     if (it1 != ListCasesDone.end()) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
     KeyData& eData = ListCasesNotDone[eCtype];
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+    std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|HashMap2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
     if (eData.idxMatrix != 0) {
       log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
@@ -205,7 +215,8 @@ int main()
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   while(true) {
-    boost::optional<boost::mpi::status> prob = world.iprobe();
+    std::cerr << "Begin while, we have |ListCasesNotDone[pos]|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    boost::optional<mpi::status> prob = world.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
@@ -246,11 +257,14 @@ int main()
     //
     std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
-    if (MaxRunTimeSecond  > 0) {
-      if (elapsed_seconds > MaxRunTimeSecond) {
-        std::cerr << "Exiting because the runtime is higher than the one expected\n";
-        break;
-      }
+    if (MaxRunTimeSecond > 0 && elapsed_seconds > MaxRunTimeSecond) {
+      std::cerr << "elapsed_seconds=" << elapsed_seconds << " MaxRunTimeSecond=" << MaxRunTimeSecond << "\n";
+      std::cerr << "Exiting because the runtime is higher than the one expected\n";
+      break;
+    }
+    if (StopWhenFinished && ListCasesNotDone.size() == 0) {
+      std::cerr << "Exiting because everything has been done\n";
+      break;
     }
   }
   std::cerr << "Normal termination of the program\n";
