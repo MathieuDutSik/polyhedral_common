@@ -10,7 +10,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++11 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++11 -Wall -O3
+CC		= g++ -std=c++11 -Wall -g
 #CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
@@ -19,10 +19,10 @@ OUTPUTFLAG 	= -o
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_perfect -I.
 
 
-CFLAGS 		= -I$(GMP_INCDIR) -I$(TBB_INCDIR)  -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) -I$(FLINT_INCDIR) $(MPREAL_INCLUDE) $(MPI_INCLUDE_CPP) $(GLPK_INCLUDE) $(NAUTY_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(TBB_INCDIR)  -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) -I$(FLINT_INCDIR) $(MPREAL_INCLUDE) $(MPI_INCLUDE_CPP) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) -I$(TBB_INCDIR)
 
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBSHORT_LINK) $(LIBBLISS_LINK) $(MPFR_LINK) $(FLINT_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(GLPK_LINK) $(NAUTY_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBSHORT_LINK) $(LIBBLISS_LINK) $(MPFR_LINK) $(FLINT_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(GLPK_LINK) $(NAUTY_LINK) $(TBB_LINK)
 
 
 %.o: %.cpp
