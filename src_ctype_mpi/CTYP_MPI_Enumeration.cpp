@@ -73,6 +73,7 @@ int main()
   mpi::communicator world;
   int irank=world.rank();
   int n_pes=world.size();
+  std::cerr << "irank=" << irank << "\n";
   std::string eFileO="LOG_" + IntToString(irank);
   std::ofstream log(eFileO);
   log << "Initial log entry" << std::endl;
@@ -80,6 +81,7 @@ int main()
   struct KeyData {
     int idxMatrix;
   };
+  uint32_t seed= 0x1b873540;
   // int StatusTreatedForm; // 0: untreated, 1: treated but status not written on disk, 2: done and treated
   //
   // The list of requests.
@@ -185,7 +187,8 @@ int main()
     }
   };
   auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    int res=IntegerDiscriminantInvariant(ePair.eCtype.eMat, n_pes);
+    int res = Matrix_Hash(ePair.eCtype.eMat, seed) % n_pes;
+    std::cerr << "fInsertUnsent res=" << res << "\n";
     if (res == irank) {
       fInsert(ePair);
     }
@@ -199,6 +202,7 @@ int main()
   //
   {
     std::ifstream is(FileMatrix);
+    std::cerr << "Beginning reading file=" << FileMatrix << "\n";
     int nbMatrixStart;
     is >> nbMatrixStart;
     for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
@@ -206,7 +210,10 @@ int main()
       is >> eStatus;
       MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
       TypeCtypeExch<Tint> eRecMat{TheMat};
-      int res=IntegerDiscriminantInvariant(TheMat, n_pes);
+      int e_hash = Matrix_Hash(TheMat, seed);
+      std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << "\n";
+      int res = Matrix_Hash(TheMat, seed) % n_pes;
+      std::cerr << "iMatStart=" << iMatStart << " res=" << res << "\n";
       if (res == irank) {
         KeyData eData{idxMatrixCurrent+1};
         if (eStatus == 0) {
@@ -227,7 +234,7 @@ int main()
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   while(true) {
-    std::cerr << "Begin while, we have |ListCasesNotDone[pos]|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
     boost::optional<mpi::status> prob = world.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";

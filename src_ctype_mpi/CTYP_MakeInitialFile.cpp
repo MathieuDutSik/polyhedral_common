@@ -16,11 +16,13 @@ int main(int argc, char* argv[])
     std::string FileIn  = argv[1];
     std::string FileOut = argv[2];
     //
+    uint32_t seed= 0x1b873540;
     std::ifstream is(FileIn);
     std::ofstream os(FileOut);
     int nbType;
     is >> nbType;
     os << nbType << "\n";
+    std::vector<size_t> ListHash(nbType);
     for (int iType=0; iType<nbType; iType++) {
       std::cerr << "iType : " << iType << " / " << nbType << "\n";
       MyMatrix<Tmat> ePerfect_Tmat = ReadMatrix<Tmat>(is);
@@ -34,7 +36,25 @@ int main(int argc, char* argv[])
       std::cerr << " elapsed_time=" << elapsed_time << "\n";
       //
       os << eStatus << "\n";
+      size_t e_hash = Matrix_Hash(eMatCan_Tmat, seed);
+      ListHash[iType] = e_hash;
       WriteMatrix(os, eMatCan_Tmat);
+    }
+    for (size_t n_pes=1; n_pes<10; n_pes++) {
+      //      std::cerr << "step 1\n";
+      std::vector<size_t> ListPart(n_pes, 0);
+      //      std::cerr << "step 2\n";
+      for (int iType=0; iType<nbType; iType++) {
+        //        std::cerr << "step 3\n";
+        size_t res = ListHash[iType] % n_pes;
+        //        std::cerr << "step 4\n";
+        ListPart[res]++;
+      }
+      //      std::cerr << "step 5\n";
+      std::cerr << "n_pes=" << n_pes << " LPart =";
+      for (auto & eV : ListPart)
+        std::cerr << " " << eV;
+      std::cerr << "\n";
     }
   }
   catch (TerminalException const& e) {
