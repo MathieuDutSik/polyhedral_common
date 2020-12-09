@@ -469,7 +469,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 
 
 struct TypeIndex {
-  int iProc;
+  size_t iProc;
   int idxMatrix;
   int iAdj;
 };
@@ -635,7 +635,7 @@ TypeCtypeExch<T> ParseStringToCtypeExch(std::string const& str)
 TypeIndex ParseStringToTypeIndex(std::string const& str)
 {
   std::vector<std::string> LStr = STRING_Split(str, " ");
-  int iProc;
+  size_t iProc;
   std::istringstream(LStr[0]) >> iProc;
   int idxMatrixF;
   std::istringstream(LStr[1]) >> idxMatrixF;

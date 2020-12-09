@@ -71,7 +71,7 @@ int main()
   //
   mpi::environment env;
   mpi::communicator world;
-  int irank=world.rank();
+  size_t irank=world.rank();
   size_t n_pes=world.size();
   std::cerr << "irank=" << irank << "\n";
   std::string eFileO="LOG_" + IntToString(irank);
