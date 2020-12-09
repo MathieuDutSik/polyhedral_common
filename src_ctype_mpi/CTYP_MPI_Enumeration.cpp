@@ -72,7 +72,7 @@ int main()
   mpi::environment env;
   mpi::communicator world;
   int irank=world.rank();
-  int n_pes=world.size();
+  size_t n_pes=world.size();
   std::cerr << "irank=" << irank << "\n";
   std::string eFileO="LOG_" + IntToString(irank);
   std::ofstream log(eFileO);
@@ -103,11 +103,11 @@ int main()
 	  std::cerr << "stat->tag() = " << stat->tag() << "\n";
 	  std::cerr << "stat->source() = " << stat->source() << " irank=" << irank << "\n";
 	  std::cerr << "stat->error() = " << stat->error() << "\n";
-          //	  char error_string[10000];
-          //	  int length_of_error_string;
-	  //	  MPI_Error_string(stat->error(), error_string, &length_of_error_string);
-	  //	  std::cerr << "length_of_error_string=" << length_of_error_string << "\n";
-	  /*	  fprintf(stderr, "err: %s\n", error_string);*/
+          char error_string[10000];
+          int length_of_error_string;
+          MPI_Error_string(stat->error(), error_string, &length_of_error_string);
+          std::cerr << "length_of_error_string=" << length_of_error_string << "\n";
+          fprintf(stderr, "err: %s\n", error_string);
 	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
@@ -171,7 +171,7 @@ int main()
   //
   // The system for sending matrices
   //
-  std::vector<std::pair<PairExch<Tint>, int>> ListMatrixUnsent;
+  std::vector<std::pair<PairExch<Tint>, size_t>> ListMatrixUnsent;
   auto ClearUnsentAsPossible=[&]() -> void {
     int pos=ListMatrixUnsent.size() - 1;
     while(true) {
@@ -187,8 +187,9 @@ int main()
     }
   };
   auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    int res = Matrix_Hash(ePair.eCtype.eMat, seed) % n_pes;
-    std::cerr << "fInsertUnsent res=" << res << "\n";
+    size_t e_hash = Matrix_Hash(ePair.eCtype.eMat, seed);
+    size_t res = e_hash % n_pes;
+    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
       fInsert(ePair);
     }
@@ -210,10 +211,9 @@ int main()
       is >> eStatus;
       MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
       TypeCtypeExch<Tint> eRecMat{TheMat};
-      int e_hash = Matrix_Hash(TheMat, seed);
-      std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << "\n";
-      int res = Matrix_Hash(TheMat, seed) % n_pes;
-      std::cerr << "iMatStart=" << iMatStart << " res=" << res << "\n";
+      size_t e_hash = Matrix_Hash(TheMat, seed);
+      size_t res = e_hash % n_pes;
+      std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << " res=" << res << "\n";
       if (res == irank) {
         KeyData eData{idxMatrixCurrent+1};
         if (eStatus == 0) {
