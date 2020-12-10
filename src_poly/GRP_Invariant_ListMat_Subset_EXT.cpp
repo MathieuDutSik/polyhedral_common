@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT [INfile] [OUTfile]\n";
+      std::cerr << "GRP_Invariant_ListMat_Subset_EXT [INfile] [OUTfile]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -31,24 +31,10 @@ int main(int argc, char *argv[])
     Face eSubset = ReadFace(is);
     std::cerr << "|eSubset|=" << eSubset.size() << " / " << eSubset.count() << "\n";
     //
-    std::vector<std::vector<unsigned int>> ListGen = GetListGenAutomorphism_ListMat_Subset(EXT, ListMat, eSubset);
+    size_t e_hash = GetInvariant_ListMat_Subset(EXT, ListMat, eSubset);
     //
     std::ofstream os(argv[2]);
-    os << "return [";
-    bool IsFirst=true;
-    for (auto & eList : ListGen) {
-      if (!IsFirst)
-        os << ",\n";
-      IsFirst=false;
-      os << "[";
-      for (int i=0; i<n_rows; i++) {
-        if (i > 0)
-          os << ",";
-        os << (eList[i] + 1);
-      }
-      os << "]";
-    }
-    os << "];\n";
+    os << "return " << e_hash << ";\n";
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

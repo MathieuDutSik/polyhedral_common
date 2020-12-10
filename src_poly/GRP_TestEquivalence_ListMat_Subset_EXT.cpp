@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT1 = ReadMatrix<T>(is);
     Face eSubset1 = ReadFace(is);
     //
+    is >> nbMat;
     std::vector<MyMatrix<T>> ListMat2;
     for (int iMat=0; iMat<nbMat; iMat++) {
       MyMatrix<T> eMat = ReadMatrix<T>(is);

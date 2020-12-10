@@ -21,8 +21,8 @@
 #define USE_PAIRS
 
 
-//#define DEBUG
-//#define TIMINGS
+#define DEBUG
+#define TIMINGS
 
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
@@ -209,6 +209,54 @@ private:
   std::vector<T1> ListWeight;
   T2 TheTol;
 };
+
+
+namespace std {
+  template <typename T1, typename T2>
+  struct hash<WeightMatrix<T1, T2>>
+  {
+    std::size_t operator()(WeightMatrix<T1, T2> const& WMat) const
+    {
+      auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
+                          seed ^= new_hash + 0x9e3779b9 + (seed<<6) + (seed>>2);
+                        };
+      std::vector<T1> ListWeight = WMat.GetWeight();
+      int nbWei = ListWeight.size();
+      int nbRow = WMat.rows();
+      std::vector<int> ListAttDiag(nbWei, 0);
+      std::vector<int> ListAttOff(nbWei, 0);
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        int pos = WMat.GetValue(iRow, iRow);
+        ListAttDiag[pos]++;
+      }
+      for (int iRow=0; iRow<nbRow; iRow++)
+        for (int jRow=0; jRow<nbRow; jRow++) {
+          if (iRow != jRow) {
+            int pos = WMat.GetValue(iRow, jRow);
+            ListAttOff[pos]++;
+          }
+        }
+      size_t seed = 0;
+      for (int iWei=0; iWei<nbWei; iWei++) {
+        if (ListAttDiag[iWei] > 0) {
+          size_t e_hash1 = std::hash<T1>()(ListWeight[iWei]);
+          size_t e_hash2 = std::hash<int>()(ListAttDiag[iWei]);
+          combine_hash(seed, e_hash1);
+          combine_hash(seed, e_hash2);
+        }
+        if (ListAttOff[iWei] > 0) {
+          size_t e_hash1 = std::hash<T1>()(ListWeight[iWei]);
+          size_t e_hash2 = std::hash<int>()(ListAttOff[iWei]);
+          combine_hash(seed, e_hash1);
+          combine_hash(seed, e_hash2);
+        }
+      }
+      return seed;
+    }
+  };
+}
+
+
 
 
 template<typename T>
@@ -732,7 +780,7 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
       for (int iMat=0; iMat<nMat; iMat++) {
         T eSum=0;
         for (int iCol=0; iCol<nbCol; iCol++)
-          eSum += V(iCol) * TheEXT(jRow, iCol);
+          eSum += ListV[iMat](iCol) * TheEXT(jRow, iCol);
         LScal[iMat] = eSum;
       }
       int eVal = 0;
@@ -755,7 +803,7 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
   WeightMatrix<std::vector<T>,T> WMat=WeightMatrix<std::vector<T>,T>(INP_nbRow, INP_TheMat, INP_ListWeight, INP_TheTol);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetSimpleWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|GetWeightMatrix_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return WMat;
 }
@@ -2636,10 +2684,6 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 }
 
 
-
-
-
-
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
 {
   int nbEnt=PairVectSymm.first.size() / 2;
@@ -2900,9 +2944,8 @@ TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 template<typename T>
-std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
-  int nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -2918,11 +2961,37 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
-  GraphBitset eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,GraphBitset>(WMat);
+  size_t e_hash = std::hash<WeightMatrix<std::vector<T>, T>>()(WMat);
 
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|hash|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return e_hash;
+}
+
+template<typename T>
+std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+{
+  int nbRow = EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  WeightMatrix<std::vector<T>, T> WMat = GetWeightMatrix_ListMat_Subset(EXT, ListMat, eSubset);
+  // No need to reorder in autom case
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+  GraphBitset eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,GraphBitset>(WMat);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
 #ifdef USE_BLISS
   std::vector<std::vector<unsigned int>> ListGenTot = BLISS_GetListGenerators(eGR);
@@ -2933,7 +3002,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 
 
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
   std::vector<std::vector<unsigned int>> ListGen;
   for (auto & eGen : ListGenTot) {
@@ -2941,7 +3010,8 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
     for (int i=0; i<nbRow; i++) {
       unsigned int val = eGen[i];
 #ifdef DEBUG
-      if (val >= nbRow) {
+      unsigned int nbRow_ui = nbRow;
+      if (val >= nbRow_ui) {
         std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
         throw TerminalException{1};
       }
@@ -2953,12 +3023,11 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 
 
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|ListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|ListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return ListGen;
 }
