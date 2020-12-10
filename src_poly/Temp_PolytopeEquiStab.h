@@ -747,7 +747,7 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 
 
 
-
+// ListMat is assumed to be symmetric
 template<typename T>
 WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
 {
@@ -765,22 +765,23 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
   int idxWeight = 0;
   //
   MyVector<T> V(nbCol);
-  std::vector<MyVector<T>> ListV(nMat, V);
+  MyMatrix<T> MatV(nMat, nbCol);
+  //  std::vector<MyVector<T>> ListV(nMat, V);
   std::vector<T> LScal(nMat + 1);
   for (int iRow=0; iRow<nbRow; iRow++) {
     for (int iMat=0; iMat<nMat; iMat++) {
       for (int iCol=0; iCol<nbCol; iCol++) {
         T eSum=0;
         for (int jCol=0; jCol<nbCol; jCol++)
-          eSum += ListMat[iMat](iCol,jCol) * TheEXT(iRow, jCol);
-        ListV[iMat](iCol) = eSum;
+          eSum += ListMat[iMat](jCol,iCol) * TheEXT(iRow, jCol);
+        MatV(iMat, iCol) = eSum;
       }
     }
     for (int jRow=0; jRow<=iRow; jRow++) {
       for (int iMat=0; iMat<nMat; iMat++) {
         T eSum=0;
         for (int iCol=0; iCol<nbCol; iCol++)
-          eSum += ListV[iMat](iCol) * TheEXT(jRow, iCol);
+          eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
         LScal[iMat] = eSum;
       }
       int eVal = 0;
@@ -2722,8 +2723,12 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
 {
   GraphBitset eGR1=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat1);
   GraphBitset eGR2=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat2);
-  int nof_vertices=eGR1.GetNbVert();
-  int nbRow=WMat1.rows();
+  unsigned int nof_vertices1=eGR1.GetNbVert();
+  unsigned int nof_vertices2=eGR2.GetNbVert();
+  if (nof_vertices1 != nof_vertices2)
+    return {false, {}};
+  unsigned int nof_vertices=nof_vertices1;
+  unsigned int nbRow=WMat1.rows();
 #ifdef USE_BLISS
   std::vector<unsigned int> cl1 = BLISS_GetCanonicalOrdering(eGR1);
   std::vector<unsigned int> cl2 = BLISS_GetCanonicalOrdering(eGR2);
@@ -2732,15 +2737,15 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
   std::vector<unsigned int> cl1 = TRACES_GetCanonicalOrdering(eGR1);
   std::vector<unsigned int> cl2 = TRACES_GetCanonicalOrdering(eGR2);
 #endif
-  std::vector<int> clR2(nof_vertices);
-  for (int i=0; i<nof_vertices; i++)
+  std::vector<unsigned int> clR2(nof_vertices);
+  for (unsigned int i=0; i<nof_vertices; i++)
     clR2[cl2[i]]=i;
-  std::vector<int> TheEquivExp(nof_vertices, -1);
-  for (int iVert=0; iVert<nof_vertices; iVert++) {
-    int jVert = clR2[cl1[iVert]];
+  std::vector<unsigned int> TheEquivExp(nof_vertices, -1);
+  for (unsigned int iVert=0; iVert<nof_vertices; iVert++) {
+    unsigned int jVert = clR2[cl1[iVert]];
 #ifdef DEBUG
-    int iBlock = iVert / (nbRow + 2);
-    int jBlock = jVert / (nbRow + 2);
+    unsigned int iBlock = iVert / (nbRow + 2);
+    unsigned int jBlock = jVert / (nbRow + 2);
     if (iBlock != jBlock) {
       std::cerr << "Not repecting block structure\n";
       throw TerminalException{1};
@@ -2748,26 +2753,26 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
 #endif
     TheEquivExp[iVert] = jVert;
   }
-  for (int iVert=0; iVert<nof_vertices; iVert++) {
-    int jVert=TheEquivExp[iVert];
+  for (unsigned int iVert=0; iVert<nof_vertices; iVert++) {
+    unsigned int jVert=TheEquivExp[iVert];
     if (eGR1.GetColor(iVert) != eGR2.GetColor(jVert))
       return {false, {}};
   }
-  for (int iVert1=0; iVert1<nof_vertices; iVert1++) {
+  for (unsigned int iVert1=0; iVert1<nof_vertices; iVert1++) {
     int iVert2=TheEquivExp[iVert1];
-    for (int jVert1=0; jVert1<nof_vertices; jVert1++) {
+    for (unsigned int jVert1=0; jVert1<nof_vertices; jVert1++) {
       int jVert2=TheEquivExp[jVert1];
       if (eGR1.IsAdjacent(iVert1,jVert1) != eGR2.IsAdjacent(iVert2,jVert2) )
 	return {false, {}};
     }
   }
   std::vector<unsigned int> TheEquiv(nbRow);
-  for (int i=0; i<nbRow; i++)
+  for (unsigned int i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
 #ifdef DEBUG
-  for (int iVert1=0; iVert1<nbRow; iVert1++) {
-    int iVert2=TheEquiv[iVert1];
-    for (int jVert1=0; jVert1<nbRow; jVert1++) {
+  for (unsigned int iVert1=0; iVert1<nbRow; iVert1++) {
+    unsigned int iVert2=TheEquiv[iVert1];
+    for (unsigned int jVert1=0; jVert1<nbRow; jVert1++) {
       int jVert2=TheEquiv[jVert1];
       int eVal1=WMat1.GetValue(iVert1, jVert1);
       int eVal2=WMat2.GetValue(iVert2, jVert2);
