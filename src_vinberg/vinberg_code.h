@@ -158,6 +158,86 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot
 }
 
 
+template<typename T, typename Tint>
+bool is_FundPoly(Vinberg<T,Tint> const& Vtot, std::vector<MyVector<Tint>> const& ListRoot)
+{
+  int n_root = ListRoot.size();
+  MyMatrix<T> M(n_root, n_root);
+  for (int i_root=0; i_root<n_root. i_root++) {
+    MyVector<T> eVG = ListRoot[i_root] * Vtot.G;
+    for (int j_root=0; j_root<n_root; j_root++) {
+      T eScal = eVG.dot(ListRoot[j_root]);
+      M(i_root, j_root) = eScal;
+    }
+  }
+  auto weight=[&](int i, int j) -> int {
+    T aII = M(i,i);
+    T aJJ = M(j,j);
+    T aIJ = M(i,j);
+    T cos2 = (aIJ * aIJ) / (aII * aJJ);
+    if (cos2 == 0)
+      return 2;
+    if (cos2 == 1/4)
+      return 3;
+    if (cos2 == 1/2)
+      return 4;
+    if (cos2 == 3/4)
+      return 6;
+    if (cos2 == 1)
+      return 0;
+    if (cos2 > 1)
+      return 1;
+    std::cerr << "coxiter.py ERROR: cosine " << cos2 << "\n";
+    throw TeminalException{1};
+  };
+  int d = Vtot.G.rows();
+  std::string rnd_str = random_string(20);
+  std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
+  std::string FileO = "/tmp/CoxIter_" + rnd_str + ".out";
+  {
+    std::ostream os(FileI);
+    os << n << " " << d << "\n";
+    for (int i=0; i<n_root; i++)
+      for (int j=0; j<i; j++)
+        if (M(i,j) != 0)
+          os << (j+1) << " " << (i+1) << " " << weight(i, j) << "\n";
+    os << "\n";
+  }
+  //
+  // Running the CoxIter program
+  //
+  std::string eCommand = "coxiter";
+  std::string opt = "-fv";
+  eCommand += " " + opt;
+  eCommand += " < " + FileI + " > " + FileO;
+  std::cerr << "eCommand=" << eCommand << "\n";
+  int iret=system(eCommand.c_str());
+  if (iret == -1) {
+    printf("Oh dear, something went wrong with glpsol! %s\n", strerror(errno));
+    throw TerminalException{1};
+  }
+  //
+  // Reading the output
+  //
+  std::vector<std::string> RESUL;
+  {
+    std::ifstream INfs(FileO);
+    std::string line;
+    while (getline(INfs, line))
+      RESUL.push_back(line);
+  }
+  bool IsFiniteCovolume=false;
+  std::string question = "Finite covolume";
+  std::string answer = "yes";
+  for (auto & eLine in RESUL) {
+    std::vector<std::string> LStr1 = STRING_Split(eLine, question);
+    std::vector<std::string> LStr2 = STRING_Split(eLine, answer);
+    if (LStr1.size() > 1 && LStr2.size() > 1)
+      IsFiniteCovolume = true;
+  }
+  return IsFiniteCovolume;
+}
+
 
 
 
