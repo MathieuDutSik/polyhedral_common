@@ -35,6 +35,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
+  ListIntValues1["TimeForDeclaringItOver"]=-1;
   ListBoolValues1["StopWhenFinished"]=false;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
@@ -52,6 +53,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 
 
 static int tag_new_form = 37;
+static int tag_termination = 157;
 
 
 int main()
@@ -66,6 +68,7 @@ int main()
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
+  int TimeForDeclaringItOver = BlDATA.ListIntValues.at("TimeForDeclaringItOver");
   bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
@@ -88,6 +91,7 @@ int main()
   //
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
+  int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
     for (int u=0; u<MaxNumberFlyingMessage; u++) {
@@ -111,6 +115,7 @@ int main()
 	  throw TerminalException{1};
 	}
 	RequestStatus[u] = 0;
+        nbRequest--;
         std::cerr << "GetFreeIndex, clearing u=" << u << " returning it\n";
 	return u;
       }
@@ -182,6 +187,7 @@ int main()
 	break;
       ListRequest[idx] = world.isend(ListMatrixUnsent[pos].second, tag_new_form, ListMatrixUnsent[pos].first);
       RequestStatus[idx] = 1;
+      nbRequest++;
       ListMatrixUnsent.pop_back();
       pos--;
     }
@@ -233,23 +239,48 @@ int main()
   // The main loop itself.
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> last_timeoper = start;
+  std::vector<int> StatusNeighbors(n_pes, 0);
   while(true) {
+    // The reference time used for the comparisons
+    std::chrono::time_point<std::chrono::system_clock> ref_time = std::chrono::system_clock::now();
+    // Now the operations themselves
     std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
     boost::optional<mpi::status> prob = world.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
+        StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
 	PairExch<Tint> ePair;
 	world.recv(prob->source(), prob->tag(), ePair);
         std::cerr << "Receiving a matrix\n";
         fInsert(ePair);
+        // Now the timings
+        last_timeoper = std::chrono::system_clock::now();
+      }
+      if (prob->tag() == tag_termination) {
+        StatusNeighbors[prob->source()] = 1; // This is the termination message
       }
     }
     else {
       std::cerr << "irank=" << irank << " |ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
+      bool DoSomething = false;
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
+        std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
+        int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
+        if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
+          // We pass the first test with respect to runtime
+          if (!StopWhenFinished || ListCasesNotDone.size() > 0) {
+            // We pass the test of being non-empty
+            DoSomething = true;
+          }
+        }
+      }
+      // Now finding the adjacent if we indeed do something.
+      if (DoSomething) {
 	boost::optional<std::pair<TypeCtypeExch<Tint>,int>> eReq=GetUndoneEntry();
 	if (eReq) {
+          StatusNeighbors[irank] = 0;
           std::cerr << "irank=" << irank << " eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
           std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
@@ -266,23 +297,48 @@ int main()
 	    fInsertUnsent(ePair);
             iAdj++;
 	  }
+          // Now the timings
+          last_timeoper = std::chrono::system_clock::now();
 	}
       }
     }
     ClearUnsentAsPossible();
     //
-    // Checking for termination of the program
+    // Sending messages 
     //
-    std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
-    int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
-    if (MaxRunTimeSecond > 0 && elapsed_seconds > MaxRunTimeSecond) {
-      std::cerr << "elapsed_seconds=" << elapsed_seconds << " MaxRunTimeSecond=" << MaxRunTimeSecond << "\n";
-      std::cerr << "Exiting because the runtime is higher than the one expected\n";
-      break;
+    int TimeClear = std::chrono::duration_cast<std::chrono::seconds>(ref_time - last_timeoper).count();
+    if (TimeClear > TimeForDeclaringItOver && ListMatrixUnsent.size() == 0) {
+      for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
+        if (i_pes == irank) {
+          StatusNeighbors[i_pes] = 1;
+        } else {
+          int idx = GetFreeIndex();
+          if (idx == -1) {
+            std::cerr << "We should be able to have an entry\n";
+            throw TerminalException{1};
+          }
+          int iVal = 72;
+          ListRequest[idx] = world.isend(i_pes, tag_termination, iVal);
+          RequestStatus[idx] = 1;
+          nbRequest++;
+        }
+      }
     }
-    if (StopWhenFinished && ListCasesNotDone.size() == 0) {
-      std::cerr << "Exiting because everything has been done\n";
-      break;
+    //
+    // We now clear with the messages
+    //
+    size_t nb_finished = 0;
+    for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
+      nb_finished += StatusNeighbors[i_pes];
+    }
+    if (nb_finished == n_pes) {
+      int val_i=1;
+      int val_r;
+      all_reduce(world, val_i, val_o, std::minimum<int>());
+      if (val_r == 1) {
+        std::cerr << "Receive he termination message. All Exiting\n";
+        break;
+      }
     }
   }
   std::cerr << "Normal termination of the program\n";
