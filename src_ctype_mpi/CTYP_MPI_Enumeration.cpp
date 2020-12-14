@@ -4,6 +4,7 @@
 #include "MatrixCanonicalForm.h"
 #include <unordered_map>
 
+#include <boost/mpi.hpp>
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include "hash_functions.h"
@@ -333,9 +334,9 @@ int main()
     }
     if (nb_finished == n_pes) {
       int val_i=1;
-      int val_r;
-      all_reduce(world, val_i, val_o, std::minimum<int>());
-      if (val_r == 1) {
+      int val_o;
+      all_reduce(world, val_i, val_o, mpi::minimum<int>());
+      if (val_o == 1) {
         std::cerr << "Receive he termination message. All Exiting\n";
         break;
       }
