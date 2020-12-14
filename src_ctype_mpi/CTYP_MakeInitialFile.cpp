@@ -1,6 +1,5 @@
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
-#include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
 
 

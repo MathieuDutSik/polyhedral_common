@@ -1,5 +1,6 @@
 #PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile CTYP_CheckCanonical
-PROGRAM		= CTYP_MPI_Enumeration
+PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile
+#PROGRAM		= CTYP_MPI_Enumeration
 #PROGRAM		= CTYP_MakeInitialFile
 #PROGRAM		= CTYP_CheckCanonical
 #PROGRAM		= CTYP_CheckCanonical CTYP_MakeInitialFile
@@ -23,10 +24,10 @@ OUTPUTFLAG 	= -o
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_perfect -I.
 
 
-CFLAGS 		= -I$(GMP_INCDIR) -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)  -I$(LIBSHORT_INCDIR) $(MPI_INCLUDE_CPP) $(CDDLIB_INCLUDE) $(NAUTY_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(MPI_INCLUDE_CPP) $(CDDLIB_INCLUDE) $(NAUTY_INCLUDE)
 
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(LIBSHORT_LINK) $(MPFR_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(CDDLIB_LINK) $(NAUTY_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(CDDLIB_LINK) $(NAUTY_LINK)
 
 
 %.o: %.cpp

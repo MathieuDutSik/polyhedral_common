@@ -1,6 +1,5 @@
 #include "CtypeMPI_types.h"
 #include "NumberTheory.h"
-#include "MatrixCanonicalForm.h"
 #include <unordered_map>
 
 using TypeIndexRed = std::pair<int,int>;

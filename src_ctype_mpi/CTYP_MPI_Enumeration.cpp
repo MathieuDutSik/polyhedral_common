@@ -1,7 +1,6 @@
 #include "CtypeMPI_types.h"
 #include "NumberTheory.h"
 #include "Namelist.h"
-#include "MatrixCanonicalForm.h"
 #include <unordered_map>
 
 #include <boost/mpi.hpp>
@@ -340,7 +339,7 @@ int main()
       all_reduce(world, val_i, val_o, mpi::minimum<int>());
       if (val_o == 1) {
         std::cerr << "Receive the termination message. All Exiting\n";
-        std::cerr << "|ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
+        std::cerr << "irank=" << irank << " |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
         break;
       }
     }
