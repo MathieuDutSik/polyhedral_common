@@ -289,7 +289,7 @@ int main()
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
           int nbAdjacent = ListAdjacentObject.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
-          std::cerr << "irank=" << irank << " Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
+          std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
           int iAdj=0;
 	  for (auto & eObj1 : ListAdjacentObject) {
             TypeIndex eIndex{irank, idxMatrixF, iAdj};

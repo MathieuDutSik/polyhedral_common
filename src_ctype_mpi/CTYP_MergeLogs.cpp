@@ -53,9 +53,7 @@ int main(int argc, char* argv[])
     std::unordered_map<TypeIndexRed,InformationMatrix<Tint>> ListInfoMatrices;
     int iProc=0;
     while(true) {
-      std::stringstream s;
-      s << PrefixLog << iProc;
-      std::string eFileLog(s.str());
+      std::string eFileLog = PrefixLog + std::to_string(iProc);
       std::cerr << "eFileLog=" << eFileLog << "\n";
       if (!(IsExistingFile(eFileLog))) {
         break;
@@ -78,7 +76,7 @@ int main(int argc, char* argv[])
           eData.nbAdjacent = nbAdjacent;
         }
         //
-        LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New perfect form", " idxMatrixCurrent=", " Obtained from ", "END"});
+        LStrParse = STRING_ParseSingleLine(eLine, {"Inserting New ctype", " idxMatrixCurrent=", " Obtained from ", "END"});
         if (LStrParse.size() > 0) {
           TypeCtypeExch<Tint> eCtype = ParseStringToCtypeExch<Tint>(LStrParse[0]);
           int idxMatrixCurrent=std::stoi(LStrParse[1]);
@@ -116,16 +114,24 @@ int main(int argc, char* argv[])
     //
     std::ofstream os(FileOut);
     os << ListInfoMatrices.size();
-    int SumStatus=0;
+    int iCtype=0;
+    int nbDone=0;
+    int nbNotDone=0;
     for (auto & ePair : ListInfoMatrices) {
       int eStatus=0;
       if ((ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size())) && ePair.second.nbAdjacent > 0)
         eStatus=1;
-      SumStatus += eStatus;
       os << eStatus << "\n";
       WriteMatrix(os, ePair.second.eCtype.eMat);
+      std::cerr << "iCtype=" << iCtype << " nbAdjacent=" << ePair.second.nbAdjacent << " status=" << eStatus << "\n";
+      if (eStatus == 1)
+        nbDone++;
+      else
+        nbNotDone++;
+      iCtype++;
     }
-    std::cerr << "SumStatus=" << SumStatus << " |ListInfoMatrices|=" << ListInfoMatrices.size() << "\n";
+    int TotalForm = nbDone + nbNotDone;
+    std::cerr << "nbDone=" << nbDone << " nbNotDone=" << nbNotDone << " TotalForm=" << TotalForm << "\n";
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
