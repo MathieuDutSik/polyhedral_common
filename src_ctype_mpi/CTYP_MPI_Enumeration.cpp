@@ -36,7 +36,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
-  ListIntValues1["TimeForDeclaringItOver"]=-1;
+  ListIntValues1["TimeForDeclaringItOver"]=120;
   ListBoolValues1["StopWhenFinished"]=false;
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
@@ -158,7 +158,7 @@ int main()
     eData.idxMatrix = idxMatrixCurrent + 1;
     log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
     std::cerr << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
-    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
+    //    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
     idxMatrixCurrent++;
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<TypeCtypeExch<Tint>,int>> {
@@ -196,7 +196,7 @@ int main()
   auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
     size_t e_hash = Matrix_Hash(ePair.eCtype.eMat, seed);
     size_t res = e_hash % n_pes;
-    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
+    //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
       fInsert(ePair);
     }
@@ -235,7 +235,6 @@ int main()
     }
   }
   std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
-  std::cerr << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
   //
   // The main loop itself.
   //
@@ -245,8 +244,9 @@ int main()
   while(true) {
     // The reference time used for the comparisons
     std::chrono::time_point<std::chrono::system_clock> ref_time = std::chrono::system_clock::now();
+    int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(ref_time - start).count();
     // Now the operations themselves
-    std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+    std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << " elapsed_time=" << elapsed_seconds << "\n";
     boost::optional<mpi::status> prob = world.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
@@ -267,8 +267,6 @@ int main()
       std::cerr << "irank=" << irank << " |ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
       bool DoSomething = false;
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
-        std::chrono::time_point<std::chrono::system_clock> curr = std::chrono::system_clock::now();
-        int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
           // We pass the first test with respect to runtime
           if (!StopWhenFinished || ListCasesNotDone.size() > 0) {
@@ -278,15 +276,16 @@ int main()
         }
       }
       // Now finding the adjacent if we indeed do something.
+      std::cerr << "DoSomething = " << DoSomething << "\n";
       if (DoSomething) {
 	boost::optional<std::pair<TypeCtypeExch<Tint>,int>> eReq=GetUndoneEntry();
 	if (eReq) {
           StatusNeighbors[irank] = 0;
-          std::cerr << "irank=" << irank << " eReq is non zero\n";
+          //          std::cerr << "eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
-          std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
+          //          std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
           int idxMatrixF = eReq->second;
-          std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
+          std::cerr << "Starting Adjacent Form Method\n";
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
           int nbAdjacent = ListAdjacentObject.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
@@ -305,11 +304,13 @@ int main()
     }
     ClearUnsentAsPossible();
     //
-    // Sending messages 
+    // Sending messages for the synchronization of ending the run
     //
     int TimeClear = std::chrono::duration_cast<std::chrono::seconds>(ref_time - last_timeoper).count();
+    std::cerr << "TimeClear=" << TimeClear << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
     if (TimeClear > TimeForDeclaringItOver && ListMatrixUnsent.size() == 0) {
       for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
+        std::cerr << "Before world.isend for termination i_pes=" << i_pes << "\n";
         if (i_pes == irank) {
           StatusNeighbors[i_pes] = 1;
         } else {
@@ -333,11 +334,13 @@ int main()
       nb_finished += StatusNeighbors[i_pes];
     }
     if (nb_finished == n_pes) {
+      std::cerr << "Before the all_reduce operation\n";
       int val_i=1;
       int val_o;
       all_reduce(world, val_i, val_o, mpi::minimum<int>());
       if (val_o == 1) {
-        std::cerr << "Receive he termination message. All Exiting\n";
+        std::cerr << "Receive the termination message. All Exiting\n";
+        std::cerr << "|ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
         break;
       }
     }

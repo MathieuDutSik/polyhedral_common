@@ -21,8 +21,8 @@
 #define USE_PAIRS
 
 
-#define DEBUG
-#define TIMINGS
+//#define DEBUG
+//#define TIMINGS
 
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
