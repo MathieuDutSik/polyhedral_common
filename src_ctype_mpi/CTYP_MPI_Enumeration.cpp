@@ -91,6 +91,7 @@ int main()
   //
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
+  std::vector<PairExch<Tint>> ListMesg(MaxNumberFlyingMessage);
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
@@ -189,7 +190,9 @@ int main()
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << "\n";
-      ListRequest[idx] = world.isend(ListMatrixUnsent[pos].second, tag_new_form, ListMatrixUnsent[pos].first);
+      size_t iProc = ListMatrixUnsent[pos].second;
+      ListMesg[idx] = std::move(ListMatrixUnsent[pos].first);
+      ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
       RequestStatus[idx] = 1;
       nbRequest++;
       ListMatrixUnsent.pop_back();
