@@ -103,9 +103,22 @@ int main()
       }
       std::cerr << "Testing and getting a request\n";
       boost::optional<mpi::status> stat = ListRequest[u].test();
+      
       if (stat) { // that request has ended. Let's read it.
+
 	if (stat->error() != 0) {
+	  /*
+	  mpi::status e_stat = *stat;
+	  MPI_Status& f_stat = e_stat.m_status;
 	  std::cerr << "something went wrong in the MPI\n";
+	  std::cerr << "f_stat.count_lo = " << f_stat.count_lo << "\n";
+	  std::cerr << "f_stat.count_hi_and_cancelled = " << f_stat.count_hi_and_cancelled << "\n";
+	  std::cerr << "f_stat.MPI_SOURCE = " << f_stat.MPI_SOURCE << "\n";
+	  std::cerr << "f_stat.MPI_TAG = " << f_stat.MPI_TAG << "\n";
+	  std::cerr << "f_stat.MPI_ERROR = " << f_stat.MPI_ERROR << "\n";
+	  */
+
+
 	  std::cerr << "stat->tag() = " << stat->tag() << "\n";
 	  std::cerr << "stat->source() = " << stat->source() << " irank=" << irank << "\n";
 	  std::cerr << "stat->error() = " << stat->error() << "\n";
