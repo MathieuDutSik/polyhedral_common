@@ -100,6 +100,7 @@ int main()
         std::cerr << "GetFreeIndex, returning u=" << u << "\n";
 	return u;
       }
+      std::cerr << "Testing and getting a request\n";
       boost::optional<mpi::status> stat = ListRequest[u].test();
       if (stat) { // that request has ended. Let's read it.
 	if (stat->error() != 0) {
@@ -185,6 +186,9 @@ int main()
       int idx = GetFreeIndex();
       if (idx == -1)
 	break;
+      std::cerr << "Assigning the request idx=" << idx << "\n";
+      std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
+      std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << "\n";
       ListRequest[idx] = world.isend(ListMatrixUnsent[pos].second, tag_new_form, ListMatrixUnsent[pos].first);
       RequestStatus[idx] = 1;
       nbRequest++;
@@ -253,7 +257,7 @@ int main()
         StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
 	PairExch<Tint> ePair;
 	world.recv(prob->source(), prob->tag(), ePair);
-        std::cerr << "Receiving a matrix\n";
+	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << "\n";
         fInsert(ePair);
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
