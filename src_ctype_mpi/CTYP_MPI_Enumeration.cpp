@@ -202,13 +202,13 @@ int main()
 	break;
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
-      std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
       ListMesg[idx] = std::move(ListMatrixUnsent[pos].first);
       ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
       RequestStatus[idx] = 1;
       nbRequest++;
       ListMatrixUnsent.pop_back();
+      std::cerr << "Ctype=" << ListMesg[idx].eCtype << " index=" << ListMesg[idx].eIndex << "\n";
       pos--;
     }
   };
@@ -273,7 +273,7 @@ int main()
         StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
 	PairExch<Tint> ePair;
 	world.recv(prob->source(), prob->tag(), ePair);
-	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << "\n";
+	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
         fInsert(ePair);
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
