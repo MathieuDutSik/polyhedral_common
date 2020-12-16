@@ -91,7 +91,7 @@ int main()
   //
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
-  std::vector<PairExch<Tint>> ListMesg(MaxNumberFlyingMessage);
+  std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage);
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
@@ -203,12 +203,12 @@ int main()
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
-      ListMesg[idx] = std::move(ListMatrixUnsent[pos].first);
+      ListMesg[idx] = PairExch_to_vectorchar(ListMatrixUnsent[pos].first);
       ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
       RequestStatus[idx] = 1;
       nbRequest++;
+      std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
       ListMatrixUnsent.pop_back();
-      std::cerr << "Ctype=" << ListMesg[idx].eCtype << " index=" << ListMesg[idx].eIndex << "\n";
       pos--;
     }
   };
@@ -271,8 +271,9 @@ int main()
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
         StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
-	PairExch<Tint> ePair;
-	world.recv(prob->source(), prob->tag(), ePair);
+        std::vector<char> eVect_c;
+	world.recv(prob->source(), prob->tag(), eVect_c);
+	PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(eVect_c);
 	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
         fInsert(ePair);
         // Now the timings
