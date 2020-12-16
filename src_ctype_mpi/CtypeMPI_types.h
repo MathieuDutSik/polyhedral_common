@@ -6,6 +6,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_c_cddlib.h"
 #include "Temp_PolytopeEquiStab.h"
+#include <cstring>
 
 
 #define DEBUG
@@ -480,6 +481,56 @@ struct PairExch {
   TypeCtypeExch<T> eCtype;
   TypeIndex eIndex;
 };
+
+template<typename T>
+std::vector<char> PairExch_to_vectorchar(PairExch<T> const& eP)
+{
+  int nbRow=eP.eCtype.eMat.rows();
+  int nbCol=eP.eCtype.eMat.cols();
+  int totalsiz = 2*sizeof(int) + nbRow * nbCol * sizeof(T) * sizeof(size_t) + 2*sizeof(int);
+  std::vector<char> eV(totalsiz);
+  char* ptr_o = eV.data();
+  //
+  std::memcpy(ptr_o, (char*)(&nbRow), sizeof(int)); ptr_o += sizeof(int);
+  std::memcpy(ptr_o, (char*)(&nbCol), sizeof(int)); ptr_o += sizeof(int);
+  //
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      std::memcpy(ptr_o, (char*)(&eP.eCtype.eMat(i,j)), sizeof(T)); ptr_o += sizeof(T);
+    }
+  //
+  std::memcpy(ptr_o, (char*)(&eP.eIndex.iProc), sizeof(size_t)); ptr_o += sizeof(size_t);
+  std::memcpy(ptr_o, (char*)(&eP.eIndex.idxMatrix), sizeof(int)); ptr_o += sizeof(int);
+  std::memcpy(ptr_o, (char*)(&eP.eIndex.iAdj), sizeof(int)); ptr_o += sizeof(int);
+  return eV;
+}
+
+template<typename T>
+PairExch<T> vectorchar_to_PairExch(std::vector<char> const& eV)
+{
+  const char* ptr_i=eV.data();
+  int nbRow, nbCol;
+  std::memcpy((char*)(&nbRow), ptr_i, sizeof(int)); ptr_i += sizeof(int);
+  std::memcpy((char*)(&nbCol), ptr_i, sizeof(int)); ptr_i += sizeof(int);
+  //
+  MyMatrix<T> eMat(nbRow, nbCol);
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      T eVal;
+      std::memcpy((char*)(&eVal), ptr_i, sizeof(T)); ptr_i += sizeof(T);
+      eMat(i, j) = eVal;
+    }
+  //
+  size_t iProc;
+  int idxMatrix;
+  int iAdj;
+  std::memcpy((char*)(&iProc), ptr_i, sizeof(size_t)); ptr_i += sizeof(size_t);
+  std::memcpy((char*)(&idxMatrix), ptr_i, sizeof(int)); ptr_i += sizeof(int);
+  std::memcpy((char*)(&iAdj), ptr_i, sizeof(int)); ptr_i += sizeof(int);
+  return {{eMat}, {iProc, idxMatrix, iAdj}};
+}
+
+
 
 
 template<typename T>

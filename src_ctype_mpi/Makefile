@@ -3,6 +3,7 @@
 #PROGRAM		= CTYP_MergeLogs
 #PROGRAM		= CTYP_MPI_Enumeration
 PROGRAM		= CTYP_debug
+#PROGRAM		= CTYP_MPI_Enumeration_debug
 #PROGRAM		= CTYP_MakeInitialFile
 #PROGRAM		= CTYP_CheckCanonical
 #PROGRAM		= CTYP_CheckCanonical CTYP_MakeInitialFile

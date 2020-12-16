@@ -91,7 +91,7 @@ int main()
   //
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
-  std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage);
+  std::vector<PairExch<Tint>> ListMesg(MaxNumberFlyingMessage);
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
@@ -203,12 +203,13 @@ int main()
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
-      ListMesg[idx] = PairExch_to_vectorchar(ListMatrixUnsent[pos].first);
-      ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
+      ListMesg[idx] = std::move(ListMatrixUnsent[pos].first);
+      int eSend = 42;
+      ListRequest[idx] = world.isend(iProc, tag_new_form, eSend);
       RequestStatus[idx] = 1;
       nbRequest++;
-      std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
       ListMatrixUnsent.pop_back();
+      std::cerr << "Ctype=" << ListMesg[idx].eCtype << " index=" << ListMesg[idx].eIndex << "\n";
       pos--;
     }
   };
@@ -227,6 +228,7 @@ int main()
   //
   // Reading the initial file
   //
+  std::vector<PairExch<Tint>> ListT;
   {
     std::ifstream is(FileMatrix);
     std::cerr << "Beginning reading file=" << FileMatrix << "\n";
@@ -237,6 +239,8 @@ int main()
       is >> eStatus;
       MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
       TypeCtypeExch<Tint> eRecMat{TheMat};
+      PairExch<Tint> eP{eRecMat, {0,0,0}};
+      ListT.push_back(eP);
       size_t e_hash = Matrix_Hash(TheMat, seed);
       size_t res = e_hash % n_pes;
       std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << " res=" << res << "\n";
@@ -271,9 +275,10 @@ int main()
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
         StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
-        std::vector<char> eVect_c;
-	world.recv(prob->source(), prob->tag(), eVect_c);
-	PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(eVect_c);
+	int ePair_i;
+	world.recv(prob->source(), prob->tag(), ePair_i);
+        std::cerr << "ePair_i=" << ePair_i << "\n";
+	PairExch<Tint> ePair = ListT[0];
 	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
         fInsert(ePair);
         // Now the timings
