@@ -224,7 +224,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
 
 
 template<typename T>
-std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
+std::pair<std::vector<triple>, std::vector<int8_t>> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 {
   int n_edge = TheCtype.rows();
   int n_cols = TheCtype.cols();
@@ -232,6 +232,7 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
   std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
 #endif
   std::vector<triple> ListTriples;
+  std::vector<int8_t> MappingVect(n_edge * n_edge, -1);
   auto get_position=[&](MyVector<T> const& eV, Tidx start_idx) -> Tidx {
     auto get_nature=[&](int8_t pos) -> bool {
       for (Tidx i_col=0; i_col<n_cols; i_col++)
@@ -280,14 +281,26 @@ std::vector<triple> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 #ifdef PRINT_TRIPLE
       std::cerr << "We have eDiff\n";
 #endif
-      int8_t pos = get_position(eDiff, j);
+      int8_t k = get_position(eDiff, j);
 #ifdef PRINT_TRIPLE
-      std::cerr << "pos=" << (int)pos << "\n";
+      std::cerr << "k=" << (int)k << "\n";
 #endif
-      if (pos != -1)
-        ListTriples.push_back({i,j,pos});
+      if (k != -1) {
+        ListTriples.push_back({i,j,k});
+        ListTriples.push_back({j,k,i});
+        ListTriples.push_back({k,i,j});
+        //
+        MappingVect[i * n_edge + j] = k;
+        MappingVect[j * n_edge + i] = k;
+        //
+        MappingVect[i * n_edge + k] = j;
+        MappingVect[k * n_edge + i] = j;
+        //
+        MappingVect[j * n_edge + k] = i;
+        MappingVect[k * n_edge + j] = i;
+      }
     }
-  return ListTriples;
+  return {std::move(ListTriples), std::move(MappingVect)};
 }
 
 
@@ -361,7 +374,8 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
 #endif
-  std::vector<triple> ListTriples = CTYP_GetListTriple(TheCtype);
+  std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple = CTYP_GetListTriple(TheCtype);
+
 
 
 #ifdef TIMINGS
@@ -399,12 +413,73 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     std::vector<triple>& list_trip = Tot_map[TheVector];
     list_trip.push_back(TheInfo);
   };
-  for (auto & e_triple : ListTriples) {
+  for (auto & e_triple : PairTriple.first)
     FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
-    FuncInsertInequality(e_triple.j, e_triple.k, e_triple.i);
-    FuncInsertInequality(e_triple.k, e_triple.i, e_triple.j);
-  }
 
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+  int n_edge = TheCtype.rows();
+  // We apply here the 3 dimensional criterion for feasibility of C-type switches
+  auto TestApplicabilityCriterion_with_e=[&](triple const& e_triple, int8_t const& e) -> bool {
+    int8_t i = e_triple.i;
+    int8_t j = e_triple.j;
+    int8_t k = e_triple.k;
+    //
+    // testing e
+    if (e == i || e == j || e == k)
+      return false;
+    //
+    // getting f and testing it
+    int8_t f = PairTriple.second[i * n_edge + e];
+    if (f == -1 || f == j || f == k)
+      return false;
+    //
+    // getting g and testing it
+    int8_t g = PairTriple.second[j * n_edge + e];
+    if (g == -1 || g == f || g == i || g == k)
+      return false;
+    //
+    // getting h and testing it
+    int8_t h = PairTriple.second[i * n_edge + g];
+    if (h == -1 || h == f || h == e || h == j || h == k)
+      return false;
+    //
+    // testing presence of {j,f,h}
+    int8_t h2 = PairTriple.second[j * n_edge + f];
+    if (h2 != h)
+      return false;
+    //
+    // We have the 7-uple.
+    return true;
+  };
+  auto TestApplicabilityCriterion=[&](triple const& e_triple) -> bool {
+    for (int8_t e=0; e<n_edge; e++)
+      if (TestApplicabilityCriterion_with_e(e_triple, e))
+        return true;
+    return false;
+  };
+  std::vector<int8_t> ListResultCriterion(n_edge * n_edge, 0);
+  for (auto & e_triple : PairTriple.first) {
+    if (TestApplicabilityCriterion(e_triple)) {
+      int8_t i = e_triple.i;
+      int8_t j = e_triple.j;
+      int8_t k = e_triple.k;
+      ListResultCriterion[i * n_edge + k] = 1;
+      ListResultCriterion[k * n_edge + j] = 1;
+    }
+  }
+  auto TestFeasibilityListTriple=[&](std::vector<triple> const& list_triple) -> bool {
+    for (auto & e_triple : list_triple)
+      if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
+        return false;
+    return true;
+  };
+  // erasing the inequalities that are sure to be redundant.
+  for (auto & kv : Tot_map) {
+    if (!TestFeasibilityListTriple(kv.second))
+      Tot_map.erase(kv.first);
+  }
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
