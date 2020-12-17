@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
   size_t irank=irank_i;
   size_t n_pes=n_pes_i;
-  std::cerr << "irank=" << irank << "\n";
+  std::cerr << "irank=" << irank << " n_pes=" << n_pes << "\n";
   //
   using Tint=int;
   //
@@ -116,9 +116,9 @@ int main(int argc, char* argv[])
       }
       if (flag) { // that request has ended. Let's read it.
 	if (status1.MPI_ERROR != MPI_SUCCESS) {
-	  std::cerr << "status1.tag() = " << status1.MPI_TAG << "\n";
-	  std::cerr << "status1.source() = " << status1.MPI_SOURCE << " irank=" << irank << "\n";
-	  std::cerr << "status1.error() = " << status1.MPI_ERROR << "\n";
+	  std::cerr << "status1.tag = " << status1.MPI_TAG << "\n";
+	  std::cerr << "status1.source = " << status1.MPI_SOURCE << " irank=" << irank << "\n";
+	  std::cerr << "status1.error = " << status1.MPI_ERROR << "\n";
           char error_string[10000];
           int length_of_error_string;
           MPI_Error_string(status1.MPI_ERROR, error_string, &length_of_error_string);
@@ -197,15 +197,19 @@ int main(int argc, char* argv[])
       if (idx == -1)
 	break;
       std::cerr << "Assigning the request idx=" << idx << "\n";
-      std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
+      std::cerr << "world.isend to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
       PairExch_to_vectorchar(ListMatrixUnsent[pos].first, ListMesg[idx]);
       char* ptr = ListMesg[idx].data();
       MPI_Request* ereq_ptr = &ListRequest[idx];
-      MPI_Isend(ptr, totalsiz_exch, MPI_SIGNED_CHAR, iProc, tag_new_form, MPI_COMM_WORLD, ereq_ptr);
+      int ierr1 = MPI_Isend(ptr, totalsiz_exch, MPI_SIGNED_CHAR, iProc, tag_new_form, MPI_COMM_WORLD, ereq_ptr);
+      if (ierr1 != MPI_SUCCESS) {
+        std::cerr << "ierr1 wrongly set\n";
+        throw TerminalException{1};
+      }
       RequestStatus[idx] = 1;
       nbRequest++;
-      std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
+      std::cerr << "Sending matrix Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
       ListMatrixUnsent.pop_back();
       pos--;
     }
@@ -369,7 +373,11 @@ int main(int argc, char* argv[])
           }
           int* ptr_i = &iVal_synchronization;
           MPI_Request* ereq_ptr = &ListRequest[idx];
-          MPI_Isend(ptr_i, 1, MPI_INT, i_pes, tag_termination, MPI_COMM_WORLD, ereq_ptr);
+          int ierr1 = MPI_Isend(ptr_i, 1, MPI_INT, i_pes, tag_termination, MPI_COMM_WORLD, ereq_ptr);
+          if (ierr1 != MPI_SUCCESS) {
+            std::cerr << "ierr1 wrongly set\n";
+            throw TerminalException{1};
+          }
           RequestStatus[idx] = 1;
           nbRequest++;
         }
@@ -386,7 +394,11 @@ int main(int argc, char* argv[])
       std::cerr << "Before the all_reduce operation\n";
       int val_i=1;
       int val_o;
-      MPI_Allreduce(&val_i, &val_o, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      int ierr1 = MPI_Allreduce(&val_i, &val_o, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      if (ierr1 != MPI_SUCCESS) {
+        std::cerr << "ierr1 wrongly set\n";
+        throw TerminalException{1};
+      }
       if (val_o == 1) {
         std::cerr << "Receive the termination message. All Exiting\n";
         std::cerr << "irank=" << irank << " |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
