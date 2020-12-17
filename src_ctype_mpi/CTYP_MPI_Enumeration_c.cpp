@@ -9,7 +9,7 @@ namespace mpi = boost::mpi;
 
 
 #undef TIMINGS_HASH
-#undef ERR_LOG
+#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -70,9 +70,22 @@ int main(int argc, char* argv[])
   //
   using Tint=int;
   //
+  // The input file
+  //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI();
-  std::string eFileName = "ctype_enum.nml";
+  if (argc != 2) {
+    std::cerr << "Number of argument is = " << argc << "\n";
+    std::cerr << "This program is used as\n";
+    std::cerr << "CTYP_MPI_Enumeration_c [file.nml]\n";
+    std::cerr << "With file.nml a namelist file\n";
+    NAMELIST_WriteNamelistFile(std::cerr, eFull);
+    return -1;
+  }
+  std::string eFileName=argv[1];
   NAMELIST_ReadNamelistFile(eFileName, eFull);
+  //
+  // Parsing the input file
+  //
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
   //  int n=BlDATA.ListIntValues.at("n");
   int n = BlDATA.ListIntValues.at("n");
@@ -93,7 +106,6 @@ int main(int argc, char* argv[])
     int idxMatrix;
   };
   uint32_t seed= 0x1b873540;
-  // int StatusTreatedForm; // 0: untreated, 1: treated but status not written on disk, 2: done and treated
   //
   // The list of requests.
   //

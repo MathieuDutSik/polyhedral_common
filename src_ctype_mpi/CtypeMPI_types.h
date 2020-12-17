@@ -10,10 +10,10 @@
 
 
 #define DEBUG
-#define TIMINGS
+//#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
-//#define PRINT_GET_ADJ
+#define PRINT_GET_ADJ
 
 
 namespace std {
@@ -414,6 +414,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   };
   for (auto & e_triple : PairTriple.first)
     FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
+#ifdef PRINT_GET_ADJ
+  std::cerr << "Input |Tot_map|=" << Tot_map.size() << "\n";
+#endif
 
 
 #ifdef TIMINGS
@@ -480,6 +483,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     if (!TestFeasibilityListTriple(kv.second))
       Tot_map.erase(kv.first);
   }
+#ifdef PRINT_GET_ADJ
+  std::cerr << "After parsing |Tot_map|=" << Tot_map.size() << "\n";
+#endif
 
 
 #ifdef TIMINGS
@@ -768,7 +774,6 @@ TypeIndex ParseStringToTypeIndex(std::string const& str)
   std::istringstream(LStr[1]) >> iAdj;
   return {iProc, idxMatrixF, iAdj};
 }
-
 
 
 
