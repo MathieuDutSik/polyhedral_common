@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
   //
   std::vector<MPI_Request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
-  std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage);
+  std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage, std::vector<char>(totalsiz_exch));
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
-      ListMesg[idx] = PairExch_to_vectorchar(ListMatrixUnsent[pos].first);
+      PairExch_to_vectorchar(ListMatrixUnsent[pos].first, ListMesg[idx]);
       char* ptr = ListMesg[idx].data();
       MPI_Request* ereq_ptr = &ListRequest[idx];
       MPI_Isend(ptr, totalsiz_exch, MPI_SIGNED_CHAR, iProc, tag_new_form, MPI_COMM_WORLD, ereq_ptr);
