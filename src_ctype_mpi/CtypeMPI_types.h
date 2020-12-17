@@ -10,7 +10,7 @@
 
 
 #define DEBUG
-//#define TIMINGS
+#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
 //#define PRINT_GET_ADJ
@@ -377,7 +377,6 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple = CTYP_GetListTriple(TheCtype);
 
 
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
@@ -415,6 +414,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   };
   for (auto & e_triple : PairTriple.first)
     FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
+
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
@@ -481,8 +481,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       Tot_map.erase(kv.first);
   }
 
+
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
 #endif
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
@@ -504,7 +505,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 
 
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
 #endif
   std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
   //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
@@ -514,7 +515,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 
 
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto & e_int : ListIrred) {
@@ -532,13 +533,14 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 
 
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
   std::cerr << "|ExpressMatrixForCType|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   std::cerr << "|CTYP_GetListTriple|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
   std::cerr << "|Insert inequalities|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|ListInformations|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|RedundancyReductionClarkson|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-  std::cerr << "|Flip + Canonic|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+  std::cerr << "|Criterion Ineq Drop|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|ListInformations|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|RedundancyReductionClarkson|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+  std::cerr << "|Flip + Canonic|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
 #endif
   return ListCtype;
 }
