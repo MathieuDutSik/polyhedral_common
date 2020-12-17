@@ -72,7 +72,6 @@ int main()
   NAMELIST_ReadNamelistFile(eFileName, eFull);
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
   //  int n=BlDATA.ListIntValues.at("n");
-  int n = BlDATA.ListIntValues.at("n");
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
@@ -80,8 +79,6 @@ int main()
   bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
   //
-  int n_vect = std::pow(2, n) - 1;
-  int totalsiz_exch = 2*sizeof(int) + n_vect * n * sizeof(Tint) + sizeof(size_t) + 2*sizeof(int);
   std::string eFileO="LOG_" + std::to_string(irank);
   std::ofstream log(eFileO);
   log << "Initial log entry" << std::endl;
@@ -96,7 +93,7 @@ int main()
   //
   std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
-  std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage);
+  std::vector<PairExch<Tint>> ListMesg(MaxNumberFlyingMessage);
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
     std::cerr << "Beginning of GetFreeIndex\n";
@@ -208,7 +205,7 @@ int main()
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
-      ListMesg[idx] = PairExch_to_vectorchar(ListMatrixUnsent[pos].first);
+      ListMesg[idx] = std::move(ListMatrixUnsent[pos].first);
       ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
       RequestStatus[idx] = 1;
       nbRequest++;
@@ -276,9 +273,8 @@ int main()
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
         StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
-        std::vector<char> eVect_c(10 * 60 * 6 + 1000);
-	world.recv(prob->source(), prob->tag(), eVect_c);
-	PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(eVect_c);
+	PairExch<Tint> ePair;
+	world.recv(prob->source(), prob->tag(), ePair);
 	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
         fInsert(ePair);
         // Now the timings
