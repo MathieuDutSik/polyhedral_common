@@ -4,8 +4,6 @@
 #include <unordered_map>
 
 #include <boost/mpi.hpp>
-#include <boost/mpi/environment.hpp>
-#include <boost/mpi/communicator.hpp>
 #include "hash_functions.h"
 namespace mpi = boost::mpi;
 
@@ -57,12 +55,14 @@ static int tag_new_form = 37;
 static int tag_termination = 157;
 
 
-int main()
+int main(int argc, char* argv[])
 {
-  mpi::environment env;
-  mpi::communicator world;
-  size_t irank=world.rank();
-  size_t n_pes=world.size();
+  MPI_Init(&argc, &argv);
+  int irank_i, n_pes_i;
+  MPI_Comm_size(MPI_COMM_WORLD, &n_pes_i);
+  MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
+  size_t irank=irank_i;
+  size_t n_pes=n_pes_i;
   std::cerr << "irank=" << irank << "\n";
   //
   using Tint=int;
@@ -94,7 +94,7 @@ int main()
   //
   // The list of requests.
   //
-  std::vector<mpi::request> ListRequest(MaxNumberFlyingMessage);
+  std::vector<MPI_Request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
   std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage);
   int nbRequest = 0;
@@ -107,30 +107,21 @@ int main()
 	return u;
       }
       std::cerr << "Testing and getting a request\n";
-      boost::optional<mpi::status> stat = ListRequest[u].test();
-      
-      if (stat) { // that request has ended. Let's read it.
-
-	if (stat->error() != 0) {
-	  /*
-	  mpi::status e_stat = *stat;
-	  MPI_Status& f_stat = e_stat.m_status;
-	  std::cerr << "something went wrong in the MPI\n";
-	  std::cerr << "f_stat.count_lo = " << f_stat.count_lo << "\n";
-	  std::cerr << "f_stat.count_hi_and_cancelled = " << f_stat.count_hi_and_cancelled << "\n";
-	  std::cerr << "f_stat.MPI_SOURCE = " << f_stat.MPI_SOURCE << "\n";
-	  std::cerr << "f_stat.MPI_TAG = " << f_stat.MPI_TAG << "\n";
-	  std::cerr << "f_stat.MPI_ERROR = " << f_stat.MPI_ERROR << "\n";
-	  */
-
-
-	  std::cerr << "stat->tag() = " << stat->tag() << "\n";
-	  std::cerr << "stat->source() = " << stat->source() << " irank=" << irank << "\n";
-	  std::cerr << "stat->error() = " << stat->error() << "\n";
+      int flag;
+      MPI_Status status1;
+      int ierr1 = MPI_Test(&ListRequest[u], &flag, &status1);
+      if (ierr1 != MPI_SUCCESS) {
+        std::cerr << "Failing at MPI_Test\n";
+        throw TerminalException{1};
+      }
+      if (flag) { // that request has ended. Let's read it.
+	if (status1.MPI_ERROR != MPI_SUCCESS) {
+	  std::cerr << "status1.tag() = " << status1.MPI_TAG << "\n";
+	  std::cerr << "status1.source() = " << status1.MPI_SOURCE << " irank=" << irank << "\n";
+	  std::cerr << "status1.error() = " << status1.MPI_ERROR << "\n";
           char error_string[10000];
           int length_of_error_string;
-          MPI_Error_string(stat->error(), error_string, &length_of_error_string);
-          std::cerr << "length_of_error_string=" << length_of_error_string << "\n";
+          MPI_Error_string(status1.MPI_ERROR, error_string, &length_of_error_string);
           fprintf(stderr, "err: %s\n", error_string);
 	  throw TerminalException{1};
 	}
@@ -209,7 +200,9 @@ int main()
       std::cerr << "world.isent to target =" << ListMatrixUnsent[pos].second << "\n";
       size_t iProc = ListMatrixUnsent[pos].second;
       ListMesg[idx] = PairExch_to_vectorchar(ListMatrixUnsent[pos].first);
-      ListRequest[idx] = world.isend(iProc, tag_new_form, ListMesg[idx]);
+      char* ptr = ListMesg[idx].data();
+      MPI_Request* ereq_ptr = &ListRequest[idx];
+      MPI_Isend(ptr, totalsiz_exch, MPI_SIGNED_CHAR, iProc, tag_new_form, MPI_COMM_WORLD, ereq_ptr);
       RequestStatus[idx] = 1;
       nbRequest++;
       std::cerr << "Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
@@ -262,6 +255,7 @@ int main()
   //
   // The main loop itself.
   //
+  int iVal_synchronization = 72;
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   std::chrono::time_point<std::chrono::system_clock> last_timeoper = start;
   std::vector<int> StatusNeighbors(n_pes, 0);
@@ -271,24 +265,53 @@ int main()
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(ref_time - start).count();
     // Now the operations themselves
     std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << " elapsed_time=" << elapsed_seconds << "\n";
-    boost::optional<mpi::status> prob = world.iprobe();
-    if (prob) {
-      std::cerr << "We are probing something\n";
-      if (prob->tag() == tag_new_form) {
-        StatusNeighbors[prob->source()] = 0; // Getting a message pretty much means it is alive
-        std::vector<char> eVect_c(10 * 60 * 6 + 1000);
-	world.recv(prob->source(), prob->tag(), eVect_c);
+    MPI_Status status1;
+    int flag;
+    int ierr1 = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag,&status1);
+    if (ierr1 != MPI_SUCCESS) {
+      std::cerr << "ierr1 wrongly set\n";
+      throw TerminalException{1};
+    }
+    if (flag) {
+      if (status1.MPI_ERROR != MPI_SUCCESS) {
+        std::cerr << "Having an MPI_Error. Immediate death\n";
+        throw TerminalException{1};
+      }
+      if (status1.MPI_TAG == tag_new_form) {
+        StatusNeighbors[status1.MPI_SOURCE] = 0; // Getting a message pretty much means it is alive
+        std::vector<char> eVect_c(totalsiz_exch);
+        char* ptr = eVect_c.data();
+        MPI_Status status2;
+        int ierr2 = MPI_Recv(ptr, totalsiz_exch, MPI_SIGNED_CHAR, status1.MPI_SOURCE, tag_new_form,
+                             MPI_COMM_WORLD, &status2);
+        if (status2.MPI_ERROR != MPI_SUCCESS || ierr2 != MPI_SUCCESS) {
+          std::cerr << "Failed status2 or ierr2\n";
+          throw TerminalException{1};
+        }
 	PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(eVect_c);
 	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
         fInsert(ePair);
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
       }
-      if (prob->tag() == tag_termination) {
-        StatusNeighbors[prob->source()] = 1; // This is the termination message
+      if (status1.MPI_TAG == tag_termination) {
+        StatusNeighbors[status1.MPI_SOURCE] = 1; // This is the termination message
+        // Below is just customary. We are not really interested in the received value.
+        int RecvInt;
+        int* ptr_i = &RecvInt;
+        MPI_Status status2;
+        int ierr2 = MPI_Recv(ptr_i, 1, MPI_INT, status1.MPI_SOURCE, tag_termination,
+                             MPI_COMM_WORLD, &status2);
+        if (status2.MPI_ERROR != MPI_SUCCESS || ierr2 != MPI_SUCCESS) {
+          std::cerr << "Failed status2 or ierr\n";
+          throw TerminalException{1};
+        }
+        if (RecvInt != iVal_synchronization) {
+          std::cerr << "The received integer is not what we expect\n";
+          throw TerminalException{1};
+        }
       }
-    }
-    else {
+    } else {
       std::cerr << "irank=" << irank << " |ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
       bool DoSomething = false;
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
@@ -344,8 +367,9 @@ int main()
             std::cerr << "We should be able to have an entry\n";
             throw TerminalException{1};
           }
-          int iVal = 72;
-          ListRequest[idx] = world.isend(i_pes, tag_termination, iVal);
+          int* ptr_i = &iVal_synchronization;
+          MPI_Request* ereq_ptr = &ListRequest[idx];
+          MPI_Isend(ptr_i, 1, MPI_INT, i_pes, tag_termination, MPI_COMM_WORLD, ereq_ptr);
           RequestStatus[idx] = 1;
           nbRequest++;
         }
@@ -362,7 +386,7 @@ int main()
       std::cerr << "Before the all_reduce operation\n";
       int val_i=1;
       int val_o;
-      all_reduce(world, val_i, val_o, mpi::minimum<int>());
+      MPI_Allreduce(&val_i, &val_o, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
       if (val_o == 1) {
         std::cerr << "Receive the termination message. All Exiting\n";
         std::cerr << "irank=" << irank << " |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
@@ -371,4 +395,5 @@ int main()
     }
   }
   std::cerr << "Normal termination of the program\n";
+  MPI_Finalize();
 }

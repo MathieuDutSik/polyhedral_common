@@ -487,7 +487,7 @@ std::vector<char> PairExch_to_vectorchar(PairExch<T> const& eP)
 {
   int nbRow=eP.eCtype.eMat.rows();
   int nbCol=eP.eCtype.eMat.cols();
-  int totalsiz = 2*sizeof(int) + nbRow * nbCol * sizeof(T) * sizeof(size_t) + 2*sizeof(int);
+  int totalsiz = 2*sizeof(int) + nbRow * nbCol * sizeof(T) + sizeof(size_t) + 2*sizeof(int);
   std::vector<char> eV(totalsiz);
   char* ptr_o = eV.data();
   //
