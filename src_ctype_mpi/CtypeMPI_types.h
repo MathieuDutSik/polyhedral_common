@@ -423,8 +423,15 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
   int n_edge = TheCtype.rows();
+#ifdef PRINT_GET_ADJ
+  int nb_match = 0;
+  int nb_pass = 0;
+#endif
   // We apply here the 3 dimensional criterion for feasibility of C-type switches
   auto TestApplicabilityCriterion_with_e=[&](triple const& e_triple, int8_t const& e) -> bool {
+#ifdef PRINT_GET_ADJ
+    nb_pass++;
+#endif
     int8_t i = e_triple.i;
     int8_t j = e_triple.j;
     int8_t k = e_triple.k;
@@ -435,25 +442,40 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     //
     // getting f and testing it
     int8_t f = PairTriple.second[i * n_edge + e];
+#ifdef PRINT_GET_ADJ_O
+    std::cerr << "f=" << (int)f << "\n";
+#endif
     if (f == -1 || f == j || f == k)
       return false;
     //
     // getting g and testing it
     int8_t g = PairTriple.second[j * n_edge + e];
+#ifdef PRINT_GET_ADJ_O
+    std::cerr << "g=" << (int)g << "\n";
+#endif
     if (g == -1 || g == f || g == i || g == k)
       return false;
     //
     // getting h and testing it
     int8_t h = PairTriple.second[i * n_edge + g];
+#ifdef PRINT_GET_ADJ_O
+    std::cerr << "h=" << (int)h << "\n";
+#endif
     if (h == -1 || h == f || h == e || h == j || h == k)
       return false;
     //
     // testing presence of {j,f,h}
     int8_t h2 = PairTriple.second[j * n_edge + f];
+#ifdef PRINT_GET_ADJ_O
+    std::cerr << "h2=" << (int)h2 << "\n";
+#endif
     if (h2 != h)
       return false;
     //
     // We have the 7-uple.
+#ifdef PRINT_GET_ADJ
+    nb_match++;
+#endif
     return true;
   };
   auto TestApplicabilityCriterion=[&](triple const& e_triple) -> bool {
@@ -484,6 +506,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       Tot_map.erase(kv.first);
   }
 #ifdef PRINT_GET_ADJ
+  std::cerr << "nb_match=" << nb_match << " nb_pass=" << nb_pass << "\n";
   std::cerr << "After parsing |Tot_map|=" << Tot_map.size() << "\n";
 #endif
 
