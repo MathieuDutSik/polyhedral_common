@@ -129,6 +129,10 @@ int main(int argc, char* argv[])
       std::cerr << "flag=" << flag << "\n";
 #endif
       if (flag) { // that request has ended. Let's read it.
+        // As it turns out the MPI_Test does not set up the status1.MPI_ERROR
+        // Thus the test should not be checked or it would led us to more strange error
+        // that actually do not occur.
+        // See https://www.mpich.org/static/docs/v3.2/www3/MPI_Test.html
         /*
 	if (status1.MPI_ERROR != MPI_SUCCESS) {
 	  std::cerr << "status1.tag = " << status1.MPI_TAG << "\n";
