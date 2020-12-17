@@ -294,6 +294,7 @@ int main(int argc, char* argv[])
   // The main loop itself.
   //
   int iVal_synchronization = 72;
+  bool TerminationNoticeSent = false;
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   std::chrono::time_point<std::chrono::system_clock> last_timeoper = start;
   std::vector<int> StatusNeighbors(n_pes, 0);
@@ -408,7 +409,8 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
     std::cerr << "TimeClear=" << TimeClear << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
 #endif
-    if (TimeClear > TimeForDeclaringItOver && ListMatrixUnsent.size() == 0) {
+    if (TimeClear > TimeForDeclaringItOver && ListMatrixUnsent.size() == 0 && !TerminationNoticeSent) {
+      TerminationNoticeSent = true;
       for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
 #ifdef ERR_LOG
         std::cerr << "Before world.isend for termination i_pes=" << i_pes << "\n";
