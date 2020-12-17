@@ -9,6 +9,7 @@ namespace mpi = boost::mpi;
 
 
 #undef TIMINGS_HASH
+#undef ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -63,7 +64,9 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
   size_t irank=irank_i;
   size_t n_pes=n_pes_i;
+#ifdef ERR_LOG
   std::cerr << "irank=" << irank << " n_pes=" << n_pes << "\n";
+#endif
   //
   using Tint=int;
   //
@@ -99,14 +102,22 @@ int main(int argc, char* argv[])
   std::vector<std::vector<char>> ListMesg(MaxNumberFlyingMessage, std::vector<char>(totalsiz_exch));
   int nbRequest = 0;
   auto GetFreeIndex=[&]() -> int {
+#ifdef ERR_LOG
     std::cerr << "Beginning of GetFreeIndex\n";
+#endif
     for (int u=0; u<MaxNumberFlyingMessage; u++) {
+#ifdef ERR_LOG
       std::cerr << "GetFreeIndex u=" << u << "\n";
+#endif
       if (RequestStatus[u] == 0) {
+#ifdef ERR_LOG
         std::cerr << "GetFreeIndex, returning u=" << u << "\n";
+#endif
 	return u;
       }
+#ifdef ERR_LOG
       std::cerr << "Testing and getting a request\n";
+#endif
       int flag;
       MPI_Status status1;
       int ierr1 = MPI_Test(&ListRequest[u], &flag, &status1);
@@ -114,7 +125,11 @@ int main(int argc, char* argv[])
         std::cerr << "Failing at MPI_Test\n";
         throw TerminalException{1};
       }
+#ifdef ERR_LOG
+      std::cerr << "flag=" << flag << "\n";
+#endif
       if (flag) { // that request has ended. Let's read it.
+        /*
 	if (status1.MPI_ERROR != MPI_SUCCESS) {
 	  std::cerr << "status1.tag = " << status1.MPI_TAG << "\n";
 	  std::cerr << "status1.source = " << status1.MPI_SOURCE << " irank=" << irank << "\n";
@@ -125,9 +140,12 @@ int main(int argc, char* argv[])
           fprintf(stderr, "err: %s\n", error_string);
 	  throw TerminalException{1};
 	}
+        */
 	RequestStatus[u] = 0;
         nbRequest--;
+#ifdef ERR_LOG
         std::cerr << "GetFreeIndex, clearing u=" << u << " returning it\n";
+#endif
 	return u;
       }
     }
@@ -167,7 +185,9 @@ int main(int argc, char* argv[])
     }
     eData.idxMatrix = idxMatrixCurrent + 1;
     log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
+#ifdef ERR_LOG
     std::cerr << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
+#endif
     //    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
     idxMatrixCurrent++;
   };
@@ -196,8 +216,10 @@ int main(int argc, char* argv[])
       int idx = GetFreeIndex();
       if (idx == -1)
 	break;
+#ifdef ERR_LOG
       std::cerr << "Assigning the request idx=" << idx << "\n";
       std::cerr << "world.isend to target =" << ListMatrixUnsent[pos].second << "\n";
+#endif
       size_t iProc = ListMatrixUnsent[pos].second;
       PairExch_to_vectorchar(ListMatrixUnsent[pos].first, ListMesg[idx]);
       char* ptr = ListMesg[idx].data();
@@ -209,7 +231,9 @@ int main(int argc, char* argv[])
       }
       RequestStatus[idx] = 1;
       nbRequest++;
+#ifdef ERR_LOG
       std::cerr << "Sending matrix Ctype=" << ListMatrixUnsent[pos].first.eCtype << " index=" << ListMatrixUnsent[pos].first.eIndex << "\n";
+#endif
       ListMatrixUnsent.pop_back();
       pos--;
     }
@@ -231,7 +255,9 @@ int main(int argc, char* argv[])
   //
   {
     std::ifstream is(FileMatrix);
+#ifdef ERR_LOG
     std::cerr << "Beginning reading file=" << FileMatrix << "\n";
+#endif
     int nbMatrixStart;
     is >> nbMatrixStart;
     for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
@@ -241,7 +267,9 @@ int main(int argc, char* argv[])
       TypeCtypeExch<Tint> eRecMat{TheMat};
       size_t e_hash = Matrix_Hash(TheMat, seed);
       size_t res = e_hash % n_pes;
+#ifdef ERR_LOG
       std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << " res=" << res << "\n";
+#endif
       if (res == irank) {
         KeyData eData{idxMatrixCurrent+1};
         if (eStatus == 0) {
@@ -255,7 +283,9 @@ int main(int argc, char* argv[])
       }
     }
   }
+#ifdef ERR_LOG
   std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
+#endif
   //
   // The main loop itself.
   //
@@ -268,7 +298,9 @@ int main(int argc, char* argv[])
     std::chrono::time_point<std::chrono::system_clock> ref_time = std::chrono::system_clock::now();
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(ref_time - start).count();
     // Now the operations themselves
+#ifdef ERR_LOG
     std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << " elapsed_time=" << elapsed_seconds << "\n";
+#endif
     MPI_Status status1;
     int flag;
     int ierr1 = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag,&status1);
@@ -293,7 +325,9 @@ int main(int argc, char* argv[])
           throw TerminalException{1};
         }
 	PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(eVect_c);
+#ifdef ERR_LOG
 	std::cerr << "Receiving a matrix ePair=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
+#endif
         fInsert(ePair);
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
@@ -316,7 +350,9 @@ int main(int argc, char* argv[])
         }
       }
     } else {
+#ifdef ERR_LOG
       std::cerr << "irank=" << irank << " |ListMatrixUnsent|=" << ListMatrixUnsent.size() << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
+#endif
       bool DoSomething = false;
       if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
@@ -328,7 +364,9 @@ int main(int argc, char* argv[])
         }
       }
       // Now finding the adjacent if we indeed do something.
+#ifdef ERR_LOG
       std::cerr << "DoSomething = " << DoSomething << "\n";
+#endif
       if (DoSomething) {
 	boost::optional<std::pair<TypeCtypeExch<Tint>,int>> eReq=GetUndoneEntry();
 	if (eReq) {
@@ -337,11 +375,15 @@ int main(int argc, char* argv[])
 	  SetMatrixAsDone(eReq->first);
           //          std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
           int idxMatrixF = eReq->second;
+#ifdef ERR_LOG
           std::cerr << "Starting Adjacent Form Method\n";
+#endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
           int nbAdjacent = ListAdjacentObject.size();
           log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
+#ifdef ERR_LOG
           std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
+#endif
           int iAdj=0;
 	  for (auto & eObj1 : ListAdjacentObject) {
             TypeIndex eIndex{irank, idxMatrixF, iAdj};
@@ -359,10 +401,14 @@ int main(int argc, char* argv[])
     // Sending messages for the synchronization of ending the run
     //
     int TimeClear = std::chrono::duration_cast<std::chrono::seconds>(ref_time - last_timeoper).count();
+#ifdef ERR_LOG
     std::cerr << "TimeClear=" << TimeClear << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
+#endif
     if (TimeClear > TimeForDeclaringItOver && ListMatrixUnsent.size() == 0) {
       for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
+#ifdef ERR_LOG
         std::cerr << "Before world.isend for termination i_pes=" << i_pes << "\n";
+#endif
         if (i_pes == irank) {
           StatusNeighbors[i_pes] = 1;
         } else {
@@ -391,7 +437,9 @@ int main(int argc, char* argv[])
       nb_finished += StatusNeighbors[i_pes];
     }
     if (nb_finished == n_pes) {
+#ifdef ERR_LOG
       std::cerr << "Before the all_reduce operation\n";
+#endif
       int val_i=1;
       int val_o;
       int ierr1 = MPI_Allreduce(&val_i, &val_o, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
