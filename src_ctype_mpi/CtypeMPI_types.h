@@ -487,7 +487,6 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     triple et = PairTriple.first[3 * i_triple];
     std::cerr << "et=" << (int)et.i << " " << (int)et.j << " " << (int)et.k << "\n";
   }
-  
   auto find_triple=[&](int8_t const& a, int8_t const& b, int8_t const& c) -> int {
     std::vector<int8_t> eV{a, b, c};
     std::sort(eV.begin(), eV.end());
