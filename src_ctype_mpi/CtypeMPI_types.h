@@ -14,6 +14,7 @@
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
 #define PRINT_GET_ADJ
+#define DEBUG_CRITERION_ELIMINATION
 
 
 namespace std {
@@ -98,6 +99,27 @@ struct triple {
   Tidx j;
   Tidx k;
 };
+
+namespace std {
+  template <>
+  struct hash<triple>
+  {
+    std::size_t operator()(const triple& et) const
+    {
+      std::vector<int8_t> eV{et.i, et.j, et.k};
+      return std::hash<std::vector<int8_t>>()(eV);
+    }
+  };
+}
+
+bool operator==(triple const& obj1, triple const& obj2)
+{
+  return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.j;
+}
+
+
+
+
 
 
 template<typename T>
@@ -366,6 +388,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
 #endif
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
+  int n_edge = TheCtype.rows();
 
 
 #ifdef TIMINGS
@@ -419,10 +442,106 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 #endif
 
 
+#ifdef DEBUG_CRITERION_ELIMINATION
+  std::cerr << "|Tot_map|=" << Tot_map.size() << "\n";
+  std::vector<int> ListNbMatch(n_edge, 0);
+  for (auto & et : PairTriple.first) {
+    ListNbMatch[et.i]++;
+    ListNbMatch[et.j]++;
+    ListNbMatch[et.k]++;
+  }
+  std::cerr << "ListNbMatch =";
+  for (auto & eV : ListNbMatch)
+    std::cerr << " " << eV;
+  std::cerr << "\n";
+  for (auto & kv : Tot_map) {
+    std::cerr << "ineq =";
+    int e_dim = kv.first.size();
+    for (int i=0; i<e_dim; i++)
+      std::cerr << " " << kv.first(i);
+    std::cerr << " LSet =";
+    for (auto& et : kv.second)
+      std::cerr << " {" << (int)et.i << "," << (int)et.j << "," << (int)et.k << "}";
+    std::cerr << "\n";
+  }
+  std::cerr << "n_edge=" << n_edge << "\n";
+  std::cerr << "TheCtype=\n";
+  for (int i_edge=0; i_edge<n_edge; i_edge++) {
+    int n = TheCtype.cols();
+    for (int i=0; i<n; i++)
+      std::cerr << " " << TheCtype(i_edge, i);
+    std::cerr << "\n";
+  }
+  for (int i_edge=0; i_edge<n_edge; i_edge++) {
+    for (int j_edge=0; j_edge<n_edge; j_edge++)
+      std::cerr << " " << (int)PairTriple.second[i_edge * n_edge + j_edge];
+    std::cerr << "\n";
+  }
+  int nb_triple = PairTriple.first.size() / 3;;
+  std::unordered_map<triple,int> MapTriple;
+  for (int i_triple=0; i_triple<nb_triple; i_triple++) {
+    MapTriple[PairTriple.first[3 * i_triple]] = i_triple;
+  }
+  std::cerr << "nb_triple=" << nb_triple << "\n";
+  for (int i_triple=0; i_triple<nb_triple; i_triple++) {
+    triple et = PairTriple.first[3 * i_triple];
+    std::cerr << "et=" << (int)et.i << " " << (int)et.j << " " << (int)et.k << "\n";
+  }
+  
+  auto find_triple=[&](int8_t const& a, int8_t const& b, int8_t const& c) -> int {
+    std::vector<int8_t> eV{a, b, c};
+    std::sort(eV.begin(), eV.end());
+    triple et{eV[0], eV[1], eV[2]};
+    return MapTriple[et];
+  };
+  int nb_quad1 = 0;
+  std::vector<std::vector<int>> LV;
+  for (int i_triple1=0; i_triple1<nb_triple; i_triple1++) {
+    triple et = PairTriple.first[3 * i_triple1];
+    int8_t i = et.i;
+    int8_t j = et.j;
+    int8_t k = et.k;
+    for (int8_t e=0; e<n_edge; e++) {
+      if (e != i && e != j && e != k) {
+        int8_t i_adj = PairTriple.second[i * n_edge + e];
+        int8_t j_adj = PairTriple.second[j * n_edge + e];
+        int8_t k_adj = PairTriple.second[k * n_edge + e];
+        int nb_match =0;
+        nb_match += (i_adj > 0);
+        nb_match += (j_adj > 0);
+        nb_match += (k_adj > 0);
+        if (nb_match >= 2) {
+          std::cerr << "et=" << (int)i << "," << (int)j << "," << (int)k << " e=" << (int)e << " adj=" << (int)i_adj << " " << (int)j_adj << " " << (int)k_adj << "\n";
+          nb_quad1++;
+          auto f_ins=[&](int8_t i1, int8_t j1, int8_t k1, int8_t i2, int8_t j2) -> void {
+            int8_t k1_B = PairTriple.second[i2 * n_edge + j2];
+            std::cerr << "k1_B=" << (int)k1_B << " k1=" << (int)k1 << "\n";
+            if (k1_B == k1) {
+              int i_triple2 = find_triple(e, i1, i2);
+              int i_triple3 = find_triple(e, j1, j2);
+              int i_triple4 = find_triple(j1, j2, k1);
+              std::vector<int> eV{i_triple1, i_triple2, i_triple3, i_triple4};
+              LV.push_back(eV);
+            }
+          };
+          if (i_adj >= 0 && j_adj >=0)
+            f_ins(i, j, k, i_adj, j_adj);
+          if (j_adj >= 0 && k_adj >=0)
+            f_ins(j, k, i, j_adj, k_adj);
+          if (k_adj >= 0 && i_adj >=0)
+            f_ins(k, i, j, k_adj, i_adj);
+        }
+      }
+    }
+  }
+  std::cerr << " |LV|=" << LV.size() << "\n";
+  std::cerr << "nb_quad1=" << nb_quad1 << "\n";
+#endif
+
+
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
-  int n_edge = TheCtype.rows();
 #ifdef PRINT_GET_ADJ
   int nb_match = 0;
   int nb_pass = 0;
@@ -540,6 +659,10 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   //  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
 #ifdef PRINT_GET_ADJ
   std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+  std::cerr << "ListIrred =";
+  for (auto &idx : ListIrred)
+    std::cerr << " " << idx;
+  std::cerr << "\n";
 #endif
 
 
