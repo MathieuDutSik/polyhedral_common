@@ -249,12 +249,13 @@ template<typename T>
 std::pair<std::vector<triple>, std::vector<int8_t>> CTYP_GetListTriple(MyMatrix<T> const& TheCtype)
 {
   int n_edge = TheCtype.rows();
+  int n_edgered = n_edge / 2;
   int n_cols = TheCtype.cols();
 #ifdef PRINT_TRIPLE
   std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
 #endif
   std::vector<triple> ListTriples;
-  std::vector<int8_t> MappingVect(n_edge * n_edge, -1);
+  std::vector<int8_t> MappingVect(n_edgered * n_edgered, -1);
   auto get_position=[&](MyVector<T> const& eV, Tidx start_idx) -> Tidx {
     auto get_nature=[&](int8_t pos) -> bool {
       for (Tidx i_col=0; i_col<n_cols; i_col++)
@@ -312,14 +313,17 @@ std::pair<std::vector<triple>, std::vector<int8_t>> CTYP_GetListTriple(MyMatrix<
         ListTriples.push_back({j,k,i});
         ListTriples.push_back({k,i,j});
         //
-        MappingVect[i * n_edge + j] = k;
-        MappingVect[j * n_edge + i] = k;
+        int8_t ired = i / 2;
+        int8_t jred = j / 2;
+        int8_t kred = k / 2;
+        MappingVect[ired * n_edgered + jred] = kred;
+        MappingVect[jred * n_edgered + ired] = kred;
         //
-        MappingVect[i * n_edge + k] = j;
-        MappingVect[k * n_edge + i] = j;
+        MappingVect[ired * n_edgered + kred] = jred;
+        MappingVect[kred * n_edgered + ired] = jred;
         //
-        MappingVect[j * n_edge + k] = i;
-        MappingVect[k * n_edge + j] = i;
+        MappingVect[jred * n_edgered + kred] = ired;
+        MappingVect[kred * n_edgered + jred] = ired;
       }
     }
   return {std::move(ListTriples), std::move(MappingVect)};
@@ -454,8 +458,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   for (auto & eV : ListNbMatch)
     std::cerr << " " << eV;
   std::cerr << "\n";
+  int j_ineq = 0;
   for (auto & kv : Tot_map) {
-    std::cerr << "ineq =";
+    std::cerr << "j_ineq=" << j_ineq << " ineq =";
     int e_dim = kv.first.size();
     for (int i=0; i<e_dim; i++)
       std::cerr << " " << kv.first(i);
@@ -463,6 +468,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     for (auto& et : kv.second)
       std::cerr << " {" << (int)et.i << "," << (int)et.j << "," << (int)et.k << "}";
     std::cerr << "\n";
+    j_ineq++;
   }
   std::cerr << "n_edge=" << n_edge << "\n";
   std::cerr << "TheCtype=\n";
@@ -487,79 +493,41 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     triple et = PairTriple.first[3 * i_triple];
     std::cerr << "et=" << (int)et.i << " " << (int)et.j << " " << (int)et.k << "\n";
   }
-  auto find_triple=[&](int8_t const& a, int8_t const& b, int8_t const& c) -> int {
-    std::vector<int8_t> eV{a, b, c};
-    std::sort(eV.begin(), eV.end());
-    triple et{eV[0], eV[1], eV[2]};
-    return MapTriple[et];
-  };
-  int nb_quad1 = 0;
-  std::vector<std::vector<int>> LV;
-  for (int i_triple1=0; i_triple1<nb_triple; i_triple1++) {
-    triple et = PairTriple.first[3 * i_triple1];
-    int8_t i = et.i;
-    int8_t j = et.j;
-    int8_t k = et.k;
-    for (int8_t e=0; e<n_edge; e++) {
-      if (e != i && e != j && e != k) {
-        int8_t i_adj = PairTriple.second[i * n_edge + e];
-        int8_t j_adj = PairTriple.second[j * n_edge + e];
-        int8_t k_adj = PairTriple.second[k * n_edge + e];
-        int nb_match =0;
-        nb_match += (i_adj > 0);
-        nb_match += (j_adj > 0);
-        nb_match += (k_adj > 0);
-        if (nb_match >= 2) {
-          std::cerr << "et=" << (int)i << "," << (int)j << "," << (int)k << " e=" << (int)e << " adj=" << (int)i_adj << " " << (int)j_adj << " " << (int)k_adj << "\n";
-          nb_quad1++;
-          auto f_ins=[&](int8_t i1, int8_t j1, int8_t k1, int8_t i2, int8_t j2) -> void {
-            int8_t k1_B = PairTriple.second[i2 * n_edge + j2];
-            std::cerr << "k1_B=" << (int)k1_B << " k1=" << (int)k1 << "\n";
-            if (k1_B == k1) {
-              int i_triple2 = find_triple(e, i1, i2);
-              int i_triple3 = find_triple(e, j1, j2);
-              int i_triple4 = find_triple(j1, j2, k1);
-              std::vector<int> eV{i_triple1, i_triple2, i_triple3, i_triple4};
-              LV.push_back(eV);
-            }
-          };
-          if (i_adj >= 0 && j_adj >=0)
-            f_ins(i, j, k, i_adj, j_adj);
-          if (j_adj >= 0 && k_adj >=0)
-            f_ins(j, k, i, j_adj, k_adj);
-          if (k_adj >= 0 && i_adj >=0)
-            f_ins(k, i, j, k_adj, i_adj);
-        }
-      }
-    }
-  }
-  std::cerr << " |LV|=" << LV.size() << "\n";
-  std::cerr << "nb_quad1=" << nb_quad1 << "\n";
 #endif
 
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
+  int n_edgered = n_edge / 2;
 #ifdef PRINT_GET_ADJ
   int nb_match = 0;
   int nb_pass = 0;
 #endif
+  for (int i_edge=0; i_edge<n_edgered; i_edge++) {
+    for (int j_edge=0; j_edge<n_edgered; j_edge++)
+      std::cerr << " " << (int)PairTriple.second[i_edge * n_edgered + j_edge];
+    std::cerr << "\n";
+  }
+  //#define PRINT_GET_ADJ_O
   // We apply here the 3 dimensional criterion for feasibility of C-type switches
   auto TestApplicabilityCriterion_with_e=[&](triple const& e_triple, int8_t const& e) -> bool {
 #ifdef PRINT_GET_ADJ
     nb_pass++;
 #endif
-    int8_t i = e_triple.i;
-    int8_t j = e_triple.j;
-    int8_t k = e_triple.k;
+    int8_t i = e_triple.i / 2;
+    int8_t j = e_triple.j / 2;
+    int8_t k = e_triple.k / 2;
+#ifdef PRINT_GET_ADJ_O
+    std::cerr << "i=" << (int)i << " j=" << (int)j << " k=" << (int)k << " e=" << (int)e << "\n";
+#endif
     //
     // testing e
     if (e == i || e == j || e == k)
       return false;
     //
     // getting f and testing it
-    int8_t f = PairTriple.second[i * n_edge + e];
+    int8_t f = PairTriple.second[i * n_edgered + e];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "f=" << (int)f << "\n";
 #endif
@@ -567,7 +535,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       return false;
     //
     // getting g and testing it
-    int8_t g = PairTriple.second[j * n_edge + e];
+    int8_t g = PairTriple.second[j * n_edgered + e];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "g=" << (int)g << "\n";
 #endif
@@ -575,7 +543,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       return false;
     //
     // getting h and testing it
-    int8_t h = PairTriple.second[i * n_edge + g];
+    int8_t h = PairTriple.second[i * n_edgered + g];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "h=" << (int)h << "\n";
 #endif
@@ -583,7 +551,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       return false;
     //
     // testing presence of {j,f,h}
-    int8_t h2 = PairTriple.second[j * n_edge + f];
+    int8_t h2 = PairTriple.second[j * n_edgered + f];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "h2=" << (int)h2 << "\n";
 #endif
@@ -597,7 +565,7 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
     return true;
   };
   auto TestApplicabilityCriterion=[&](triple const& e_triple) -> bool {
-    for (int8_t e=0; e<n_edge; e++)
+    for (int8_t e=0; e<n_edgered; e++)
       if (TestApplicabilityCriterion_with_e(e_triple, e))
         return true;
     return false;
@@ -608,24 +576,43 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
       int8_t i = e_triple.i;
       int8_t j = e_triple.j;
       int8_t k = e_triple.k;
-      ListResultCriterion[i * n_edge + k] = 1;
-      ListResultCriterion[k * n_edge + j] = 1;
+#ifdef PRINT_GET_ADJ
+      std::cerr << "FOUND i=" << (int)i << " j=" << (int)j << " k=" << (int)k << "\n";
+      std::cerr << "ENT1 = " << (int)j << " " << (int) k << "\n";
+      std::cerr << "ENT2 = " << (int)i << " " << (int) j << "\n";
+#endif
+      ListResultCriterion[j * n_edge + k] = 1;
+      ListResultCriterion[i * n_edge + j] = 1;
     }
   }
   auto TestFeasibilityListTriple=[&](std::vector<triple> const& list_triple) -> bool {
-    for (auto & e_triple : list_triple)
+    for (auto & e_triple : list_triple) {
+      std::cerr << "e_triple i=" << (int)e_triple.i << " " << (int)e_triple.j << "\n";
       if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
         return false;
+    }
     return true;
   };
   // erasing the inequalities that are sure to be redundant.
+#ifdef PRINT_GET_ADJ
+  int nb_redund = 0;
+#endif
+  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
   for (auto & kv : Tot_map) {
-    if (!TestFeasibilityListTriple(kv.second))
-      Tot_map.erase(kv.first);
+    if (!TestFeasibilityListTriple(kv.second)) {
+      std::cerr << "Doing some erasure\n";
+      //      Tot_map.erase(kv.first);
+#ifdef PRINT_GET_ADJ
+      nb_redund++;
+#endif
+    } else {
+      Tot_mapB[kv.first] = kv.second;
+    }
   }
 #ifdef PRINT_GET_ADJ
   std::cerr << "nb_match=" << nb_match << " nb_pass=" << nb_pass << "\n";
-  std::cerr << "After parsing |Tot_map|=" << Tot_map.size() << "\n";
+  std::cerr << "nb_redund = " << nb_redund << "\n";
+  std::cerr << "After criterion |Tot_mapB|=" << Tot_mapB.size() << "\n";
 #endif
 
 
@@ -635,12 +622,12 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
 #endif
-  size_t n_ineq = Tot_map.size();
+  size_t n_ineq = Tot_mapB.size();
   MyMatrix<T> ListInequalities(n_ineq, tot_dim);
   //  std::cerr << " n_ineq=" << n_ineq << " tot_dim=" << (int)tot_dim << "\n";
   std::vector<std::vector<triple>> ListInformations;
   size_t i_ineq=0;
-  for (auto & kv : Tot_map) {
+  for (auto & kv : Tot_mapB) {
     for (int8_t i_col=0; i_col<tot_dim; i_col++)
       ListInequalities(i_ineq, i_col) = kv.first(i_col);
     i_ineq++;
@@ -648,6 +635,8 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   }
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
+  std::cerr << "ListInequalities=\n";
+  WriteMatrix(std::cerr, ListInequalities);
 #endif
 
 
@@ -662,6 +651,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   for (auto &idx : ListIrred)
     std::cerr << " " << idx;
   std::cerr << "\n";
+  MyMatrix<T> ListInequalitiesIrred = SelectRow(ListInequalities, ListIrred);
+  std::cerr << "ListInequalitiesIrred=\n";
+  WriteMatrix(std::cerr, ListInequalitiesIrred);
 #endif
 
 
