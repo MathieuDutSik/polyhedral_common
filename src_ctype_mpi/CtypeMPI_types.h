@@ -9,12 +9,12 @@
 #include <cstring>
 
 
-#define DEBUG
+//#define DEBUG
 //#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
-#define PRINT_GET_ADJ
-#define DEBUG_CRITERION_ELIMINATION
+//#define PRINT_GET_ADJ
+//#define DEBUG_CRITERION_ELIMINATION
 
 
 namespace std {
@@ -504,11 +504,13 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   int nb_match = 0;
   int nb_pass = 0;
 #endif
+#ifdef PRINT_GET_ADJ
   for (int i_edge=0; i_edge<n_edgered; i_edge++) {
     for (int j_edge=0; j_edge<n_edgered; j_edge++)
       std::cerr << " " << (int)PairTriple.second[i_edge * n_edgered + j_edge];
     std::cerr << "\n";
   }
+#endif
   //#define PRINT_GET_ADJ_O
   // We apply here the 3 dimensional criterion for feasibility of C-type switches
   auto TestApplicabilityCriterion_with_e=[&](triple const& e_triple, int8_t const& e) -> bool {
@@ -587,7 +589,9 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   }
   auto TestFeasibilityListTriple=[&](std::vector<triple> const& list_triple) -> bool {
     for (auto & e_triple : list_triple) {
+#ifdef PRINT_GET_ADJ
       std::cerr << "e_triple i=" << (int)e_triple.i << " " << (int)e_triple.j << "\n";
+#endif
       if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
         return false;
     }
@@ -600,8 +604,6 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
   std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
   for (auto & kv : Tot_map) {
     if (!TestFeasibilityListTriple(kv.second)) {
-      std::cerr << "Doing some erasure\n";
-      //      Tot_map.erase(kv.first);
 #ifdef PRINT_GET_ADJ
       nb_redund++;
 #endif
