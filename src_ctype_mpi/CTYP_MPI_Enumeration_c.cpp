@@ -8,8 +8,8 @@
 namespace mpi = boost::mpi;
 
 
-#undef TIMINGS_HASH
-#define ERR_LOG
+//#define TIMINGS_HASH
+//#define ERR_LOG
 
 /*
   Possible parallel schemes:
