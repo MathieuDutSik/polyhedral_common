@@ -22,6 +22,40 @@ namespace mpi = boost::mpi;
      PLUS: No need for dispatching.
      MINUS: More exchanges during operation. More unwieldly database.
      When changing to another number of processor, great work needed.
+  It turns out that the runing of the system requires the second system.
+  This is because the time for merging can be similar to the runtime which is
+  unacceptable.
+
+  ---
+
+  The plus point of the system is that by exiting cleanly when the computation
+  finifhsed, we do not need to keep track of just everything. The TypeIndex
+  is actually not really needed anymore.
+
+  ---
+
+  The optimization of the hash table by using TSL. This could save some memory.
+  The maximum of the coefficients.
+
+  ---
+
+  With the estimate of N = 10^8 It gives us
+  We have sizeof(size_t) = 8 in the platform used for this computation.
+  or more precisely 4 because we use murmurhash32.
+  So, this gets us 2^32 possibilities.
+  Looking at the birthday problem https://en.wikipedia.org/wiki/Birthday_problem
+  this gets us:
+  n = 10^8 = 2^26 ...
+  d = 2^32
+  So the probability of no collision is going to be
+  exp(-n^2 / 2d) = exp(-2^(2*26 - 1 - 32)) = exp(-2^19)
+  So collision WILL definitely happen (if we use 32 bit hash).
+  If we use a 64 bit hash then the probability is going to be zero.
+  Therefore, we will need a 64 bit hash.
+
+  ---
+
+  If we have 
 
  */
 FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()

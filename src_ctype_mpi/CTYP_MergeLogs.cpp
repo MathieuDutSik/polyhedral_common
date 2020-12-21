@@ -116,12 +116,21 @@ int main(int argc, char* argv[])
     int iCtype=0;
     int nbDone=0;
     int nbNotDone=0;
+    Tint MaxCoeff = 0;
     for (auto & ePair : ListInfoMatrices) {
       int eStatus=0;
       if ((ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size())) && ePair.second.nbAdjacent > 0)
         eStatus=1;
       os << eStatus << "\n";
       WriteMatrix(os, ePair.second.eCtype.eMat);
+      int nbRow=ePair.second.eCtype.eMat.rows();
+      int nbCol=ePair.second.eCtype.eMat.cols();
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        for (int iCol=0; iCol<nbCol; iCol++) {
+          Tint val = T_abs(ePair.second.eCtype.eMat(iRow, iCol));
+          MaxCoeff = std::max(MaxCoeff, val);
+        }
+      }
       std::cerr << "iCtype=" << iCtype << " nbAdjacent=" << ePair.second.nbAdjacent << " status=" << eStatus << "\n";
       if (eStatus == 1)
         nbDone++;
@@ -130,6 +139,7 @@ int main(int argc, char* argv[])
       iCtype++;
     }
     int TotalForm = nbDone + nbNotDone;
+    std::cerr << "MaxCoeff = " << MaxCoeff << "\n";
     std::cerr << "nbDone=" << nbDone << " nbNotDone=" << nbNotDone << " TotalForm=" << TotalForm << "\n";
     std::cerr << "Normal termination of the program\n";
   }
