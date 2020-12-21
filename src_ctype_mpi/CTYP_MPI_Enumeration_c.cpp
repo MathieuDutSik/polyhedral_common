@@ -9,7 +9,7 @@ namespace mpi = boost::mpi;
 
 
 //#define TIMINGS_HASH
-#define ERR_LOG
+//#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -146,9 +146,9 @@ int main(int argc, char* argv[])
   //  int n=BlDATA.ListIntValues.at("n");
   int n = BlDATA.ListIntValues.at("n");
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
-  int MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
+  size_t MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
-  int MpiBufferSize = BlDATA.ListIntValues.at("MpiBufferSize");
+  size_t MpiBufferSize = BlDATA.ListIntValues.at("MpiBufferSize");
   int TimeForDeclaringItOver = BlDATA.ListIntValues.at("TimeForDeclaringItOver");
   bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
   std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
       std::memcpy(ptr_o, (char*)(&CurrentBufferSize), sizeof(int));
       ptr_o += sizeof(int);
       int pos = eList.size();
-      for (int i_mat=0; i_mat<CurrentBufferSize; i_mat++) {
+      for (size_t i_mat=0; i_mat<CurrentBufferSize; i_mat++) {
         pos--;
         PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
         ptr_o += siz_pairexch;
@@ -425,9 +425,7 @@ int main(int argc, char* argv[])
 	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
-          std::cerr << "Before ptr_recv=" << (size_t)ptr_recv << "\n";
           PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
-          std::cerr << " After ptr_recv=" << (size_t)ptr_recv << "\n";
 #ifdef ERR_LOG
           std::cerr << "iRecv=" << iRecv << " ctype=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
 #endif
