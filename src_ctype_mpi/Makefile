@@ -1,9 +1,9 @@
 #PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile CTYP_CheckCanonical
 #PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile
-PROGRAM		= CTYP_MergeLogs
+#PROGRAM		= CTYP_MergeLogs
 #PROGRAM		= CTYP_MPI_Enumeration
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_MPI_Enumeration
-#PROGRAM		= CTYP_MPI_Enumeration_c
+PROGRAM		= CTYP_MPI_Enumeration_c
 #PROGRAM		= CTYP_debug
 #PROGRAM		= CTYP_MPI_Enumeration_debug
 #PROGRAM		= CTYP_MakeInitialFile

@@ -705,38 +705,37 @@ struct PairExch {
 };
 
 template<typename T>
-void PairExch_to_vectorchar(PairExch<T> const& eP, std::vector<char> & eV)
+void PairExch_to_vectorchar(PairExch<T> const& eP, int const& nbRow, int const& nbCol, char* ptr_o)
 {
-  int nbRow=eP.eCtype.eMat.rows();
-  int nbCol=eP.eCtype.eMat.cols();
-  char* ptr_o = eV.data();
-  //
-  std::memcpy(ptr_o, (char*)(&nbRow), sizeof(int)); ptr_o += sizeof(int);
-  std::memcpy(ptr_o, (char*)(&nbCol), sizeof(int)); ptr_o += sizeof(int);
-  //
+#ifdef ERR_LOG
+  std::cerr << "PairExch_to_vectorchar, Begin\n";
+#endif
   for (int i=0; i<nbRow; i++)
     for (int j=0; j<nbCol; j++) {
-      std::memcpy(ptr_o, (char*)(&eP.eCtype.eMat(i,j)), sizeof(T)); ptr_o += sizeof(T);
+      std::memcpy(ptr_o, (char*)(&eP.eCtype.eMat(i,j)), sizeof(T));
+      ptr_o += sizeof(T);
     }
   //
   std::memcpy(ptr_o, (char*)(&eP.eIndex.iProc), sizeof(size_t)); ptr_o += sizeof(size_t);
   std::memcpy(ptr_o, (char*)(&eP.eIndex.idxMatrix), sizeof(int)); ptr_o += sizeof(int);
   std::memcpy(ptr_o, (char*)(&eP.eIndex.iAdj), sizeof(int)); ptr_o += sizeof(int);
+#ifdef ERR_LOG
+  std::cerr << "PairExch_to_vectorchar, End\n";
+#endif
 }
 
 template<typename T>
-PairExch<T> vectorchar_to_PairExch(std::vector<char> const& eV)
+PairExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbCol)
 {
-  const char* ptr_i=eV.data();
-  int nbRow, nbCol;
-  std::memcpy((char*)(&nbRow), ptr_i, sizeof(int)); ptr_i += sizeof(int);
-  std::memcpy((char*)(&nbCol), ptr_i, sizeof(int)); ptr_i += sizeof(int);
-  //
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairExch, Begin\n";
+#endif
   MyMatrix<T> eMat(nbRow, nbCol);
   for (int i=0; i<nbRow; i++)
     for (int j=0; j<nbCol; j++) {
       T eVal;
-      std::memcpy((char*)(&eVal), ptr_i, sizeof(T)); ptr_i += sizeof(T);
+      std::memcpy((char*)(&eVal), ptr_i, sizeof(T));
+      ptr_i += sizeof(T);
       eMat(i, j) = eVal;
     }
   //
@@ -746,6 +745,9 @@ PairExch<T> vectorchar_to_PairExch(std::vector<char> const& eV)
   std::memcpy((char*)(&iProc), ptr_i, sizeof(size_t)); ptr_i += sizeof(size_t);
   std::memcpy((char*)(&idxMatrix), ptr_i, sizeof(int)); ptr_i += sizeof(int);
   std::memcpy((char*)(&iAdj), ptr_i, sizeof(int)); ptr_i += sizeof(int);
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairExch, End\n";
+#endif
   return {{eMat}, {iProc, idxMatrix, iAdj}};
 }
 
