@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
   // The basic sizes
   //
   int n_vect = std::pow(2, n) - 1;
-  int siz_pairexch = n_vect * n * sizeof(Tint) + sizeof(size_t) + 2 * sizeof(int);
+  int siz_pairexch = n_vect * n * sizeof(Tint);
   int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairexch;
   //
   // The netcdf interface
