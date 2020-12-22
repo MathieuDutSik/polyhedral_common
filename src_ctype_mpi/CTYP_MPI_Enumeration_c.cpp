@@ -564,11 +564,24 @@ int main(int argc, char* argv[])
         std::cerr << "ierr1 wrongly set\n";
         throw TerminalException{1};
       }
-      if (val_o == 1) {
-        std::cerr << "Receive the termination message. All Exiting\n";
-        std::cerr << "FINAL irank=" << irank << " |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
-        break;
+      if (val_o != 1) {
+        std::cerr << "Incoherent reception of data\n";
+        throw TerminalException{1};
       }
+      int64_t nbDone = ListCasesDone.size();
+      int64_t nbNotDone = ListCasesNotDone.size();
+      int64_t nbDone_tot, nbNotDone_tot;
+      int ierr2 = MPI_Allreduce(&nbDone, &nbDone_tot, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+      int ierr3 = MPI_Allreduce(&nbNotDone, &nbNotDone_tot, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+      if (ierr2 != MPI_SUCCESS || ierr3 != MPI_SUCCESS) {
+        std::cerr << "ierr2 or ierr3 wrongly set\n";
+        throw TerminalException{1};
+      }
+      std::cerr << "Receive the termination message. All Exiting\n";
+      std::cerr << "FINAL irank=" << irank << " local |ListCasesDone|=" << nbDone << " |ListCasesNotDone|=" << nbNotDone << "\n";
+      std::cerr << "FINAL irank=" << irank << " total |ListCasesDone|=" << nbDone_tot << " |ListCasesNotDone|=" << nbNotDone_tot << "\n";
+      break;
+
     }
   }
   std::cerr << "Normal termination of the program\n";
