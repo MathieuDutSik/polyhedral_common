@@ -14,7 +14,7 @@ FullNamelist NAMELIST_InitialPreparation()
   ListIntValues1["NprocInput"]=100;
   ListIntValues1["NprocOutput"]=100;
   ListBoolValues1["ApplyCanonicalization"]=true;
-  ListStringValues1["OutputType"] = "int16_t";
+  ListStringValues1["OutputType"] = "int16";
   ListStringValues1["NatureInput"] = "text";
   ListStringValues1["InputFile"] = "InputFile";
   ListStringValues1["PrefixInput"] = "LOGinput_";
@@ -32,6 +32,7 @@ FullNamelist NAMELIST_InitialPreparation()
 template<typename Tinput, typename Toutput>
 void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t const& pos, netCDF::NcVar & var_Ctype, netCDF::NcVar & var_NbAdj)
 {
+  std::cerr << "AppendSingleCtype_T, begin\n";
   size_t n_vect = M.rows();
   size_t n = M.cols();
   std::vector<size_t> start1{pos};
@@ -39,7 +40,10 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t con
   std::vector<size_t> start2{pos, 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   //
-  var_NbAdj.putVar(start1, count1, &NbAdj);
+  std::cerr << "AppendSingleCtype_T, step 1\n";
+  int val = NbAdj;
+  var_NbAdj.putVar(start1, count1, &val);
+  std::cerr << "AppendSingleCtype_T, step 2\n";
   //
   std::vector<Toutput> A(n_vect * n);
   int idx=0;
@@ -48,7 +52,9 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t con
       A[idx] = M(i_vect, i);
       idx++;
     }
+  std::cerr << "AppendSingleCtype_T, step 3\n";
   var_Ctype.putVar(start2, count2, A.data());
+  std::cerr << "AppendSingleCtype_T, end\n";
 }
 
 
@@ -89,9 +95,9 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     std::string OutputType = BlDATA.ListStringValues.at("OutputType");
-    int posType = PositionVect({std::string("int8"), std::string("int16"), std::string("int32"), std::string("int64")}, OutputType);
+    int posType = PositionVect({std::string("byte"), std::string("short"), std::string("int"), std::string("int64")}, OutputType);
     if (posType == -1) {
-      std::cerr << "The OutputType should be int8, int16, int32 or int64\n";
+      std::cerr << "The OutputType should be byte (8 bits), short (16 bits), int (32 bits) or int64 (64-bits)\n";
       std::cerr << "OutputType=" << OutputType << "\n";
       throw TerminalException{1};
     }
@@ -111,17 +117,21 @@ int main(int argc, char* argv[])
       netCDF::NcDim eDimN=dataFile.addDim("n", n);
       netCDF::NcDim eDimNvect=dataFile.addDim("n_vect", n_vect);
       //
+      std::cerr << "netcdf, step 1\n";
       std::vector<std::string> LDim3{"number_ctype", "n_vect", "n"};
       std::vector<std::string> LDim1{"number_ctype"};
       //
+      std::cerr << "netcdf, step 2 OutputType=" << OutputType << "\n";
       netCDF::NcVar varCtype = dataFile.addVar("Ctype", OutputType, LDim3);
       varCtype.putAtt("long_name", "Ctype canonicalized coordinates");
       varCtype.putAtt("units", "nondimensional");
       //
+      std::cerr << "netcdf, step 3\n";
       netCDF::NcVar varNbAdj = dataFile.addVar("nb_adjacent", "int", LDim1);
       varNbAdj.putAtt("long_name", "number of adjacent Ctypes");
       varNbAdj.putAtt("units", "nondimensional");
       //
+      std::cerr << "netcdf, step 4\n";
       //      ListNC.emplace_back(dataFile);
       ListVar_Ctype.emplace_back(varCtype);
       ListVar_NbAdj.emplace_back(varNbAdj);
@@ -141,15 +151,24 @@ int main(int argc, char* argv[])
     };
     //
     auto InsertMatrix=[&](MyMatrix<Tint> const& M, int const& NbAdj) -> void {
+      std::cerr << "Beginning of InsertMatrix\n";
       uint32_t seed= 0x1b873540;
       size_t e_hash = Matrix_Hash(M, seed);
       size_t iProc = e_hash % NprocOutput;
+      std::cerr << "iProc=" << iProc << "\n";
       AppendSingleCtype(M, NbAdj, iProc);
     };
     //
     auto InsertMatrixCan=[&](MyMatrix<Tint> const& M, int const& NbAdj) -> void {
+      if (M.rows() != n_vect || M.cols() != n) {
+        std::cerr << "We have |M|=" << M.rows() << " / " << M.cols() << "\n";
+        std::cerr << "But n_vect=" << n_vect << " and n=" << n << "\n";
+        throw TerminalException{1};
+      }
       if (ApplyCanonicalization) {
+        std::cerr << "Before canonicalization\n";
         MyMatrix<Tint> Mcan = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M);
+        std::cerr << "After canonicalization\n";
         InsertMatrix(Mcan, NbAdj);
       } else {
         InsertMatrix(M, NbAdj);
@@ -170,6 +189,7 @@ int main(int argc, char* argv[])
       for (int iType=0; iType<nbType; iType++) {
         std::cerr << "iType : " << iType << " / " << nbType << "\n";
         MyMatrix<Tint> eMat = ReadMatrix<Tint>(is);
+        std::cerr << "We have eMat\n";
         InsertMatrixCan(eMat, 0);
       }
     }
