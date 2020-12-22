@@ -32,7 +32,6 @@ FullNamelist NAMELIST_InitialPreparation()
 template<typename Tinput, typename Toutput>
 void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t const& pos, netCDF::NcVar & var_Ctype, netCDF::NcVar & var_NbAdj)
 {
-  std::cerr << "AppendSingleCtype_T, begin\n";
   size_t n_vect = M.rows();
   size_t n = M.cols();
   std::vector<size_t> start1{pos};
@@ -40,10 +39,8 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t con
   std::vector<size_t> start2{pos, 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   //
-  std::cerr << "AppendSingleCtype_T, step 1\n";
   int val = NbAdj;
   var_NbAdj.putVar(start1, count1, &val);
-  std::cerr << "AppendSingleCtype_T, step 2\n";
   //
   std::vector<Toutput> A(n_vect * n);
   int idx=0;
@@ -52,9 +49,7 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const& M, int const& NbAdj, size_t con
       A[idx] = M(i_vect, i);
       idx++;
     }
-  std::cerr << "AppendSingleCtype_T, step 3\n";
   var_Ctype.putVar(start2, count2, A.data());
-  std::cerr << "AppendSingleCtype_T, end\n";
 }
 
 
@@ -106,35 +101,35 @@ int main(int argc, char* argv[])
     // Creating the netcdf output files.
     //
     std::vector<size_t> NbWrite(NprocOutput,0);
-    //    std::vector<netCDF::NcFile> ListNC;
+    std::vector<netCDF::NcFile> ListNC(NprocOutput);;
     std::vector<netCDF::NcVar> ListVar_Ctype;
     std::vector<netCDF::NcVar> ListVar_NbAdj;
     for (int iProcO=0; iProcO<NprocOutput; iProcO++) {
       std::string FileO = PrefixOutput + std::to_string(iProcO) + ".nc";
-      netCDF::NcFile dataFile(FileO, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+      ListNC[iProcO].open(FileO, netCDF::NcFile::replace, netCDF::NcFile::nc4);
       //
-      netCDF::NcDim eDimNbCtype=dataFile.addDim("number_ctype");
-      netCDF::NcDim eDimN=dataFile.addDim("n", n);
-      netCDF::NcDim eDimNvect=dataFile.addDim("n_vect", n_vect);
+      netCDF::NcDim eDimNbCtype=ListNC[iProcO].addDim("number_ctype");
+      netCDF::NcDim eDimN=ListNC[iProcO].addDim("n", n);
+      netCDF::NcDim eDimNvect=ListNC[iProcO].addDim("n_vect", n_vect);
       //
       std::cerr << "netcdf, step 1\n";
       std::vector<std::string> LDim3{"number_ctype", "n_vect", "n"};
       std::vector<std::string> LDim1{"number_ctype"};
       //
       std::cerr << "netcdf, step 2 OutputType=" << OutputType << "\n";
-      netCDF::NcVar varCtype = dataFile.addVar("Ctype", OutputType, LDim3);
+      netCDF::NcVar varCtype = ListNC[iProcO].addVar("Ctype", OutputType, LDim3);
       varCtype.putAtt("long_name", "Ctype canonicalized coordinates");
       varCtype.putAtt("units", "nondimensional");
       //
       std::cerr << "netcdf, step 3\n";
-      netCDF::NcVar varNbAdj = dataFile.addVar("nb_adjacent", "int", LDim1);
+      netCDF::NcVar varNbAdj = ListNC[iProcO].addVar("nb_adjacent", "int", LDim1);
       varNbAdj.putAtt("long_name", "number of adjacent Ctypes");
       varNbAdj.putAtt("units", "nondimensional");
       //
       std::cerr << "netcdf, step 4\n";
       //      ListNC.emplace_back(dataFile);
-      ListVar_Ctype.emplace_back(varCtype);
-      ListVar_NbAdj.emplace_back(varNbAdj);
+      ListVar_Ctype.push_back(varCtype);
+      ListVar_NbAdj.push_back(varNbAdj);
     }
     //
     auto AppendSingleCtype=[&](MyMatrix<Tint> const& M, int const& NbAdj, size_t const& iProc) -> void {
@@ -151,11 +146,9 @@ int main(int argc, char* argv[])
     };
     //
     auto InsertMatrix=[&](MyMatrix<Tint> const& M, int const& NbAdj) -> void {
-      std::cerr << "Beginning of InsertMatrix\n";
       uint32_t seed= 0x1b873540;
       size_t e_hash = Matrix_Hash(M, seed);
       size_t iProc = e_hash % NprocOutput;
-      std::cerr << "iProc=" << iProc << "\n";
       AppendSingleCtype(M, NbAdj, iProc);
     };
     //
@@ -166,9 +159,7 @@ int main(int argc, char* argv[])
         throw TerminalException{1};
       }
       if (ApplyCanonicalization) {
-        std::cerr << "Before canonicalization\n";
         MyMatrix<Tint> Mcan = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M);
-        std::cerr << "After canonicalization\n";
         InsertMatrix(Mcan, NbAdj);
       } else {
         InsertMatrix(M, NbAdj);
@@ -189,7 +180,6 @@ int main(int argc, char* argv[])
       for (int iType=0; iType<nbType; iType++) {
         std::cerr << "iType : " << iType << " / " << nbType << "\n";
         MyMatrix<Tint> eMat = ReadMatrix<Tint>(is);
-        std::cerr << "We have eMat\n";
         InsertMatrixCan(eMat, 0);
       }
     }

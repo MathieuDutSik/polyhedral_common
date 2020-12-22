@@ -5,6 +5,7 @@
 
 #include <boost/mpi.hpp>
 #include "hash_functions.h"
+#include <netcdf>
 namespace mpi = boost::mpi;
 
 
@@ -93,8 +94,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   ListIntValues1["TimeForDeclaringItOver"]=120;
   ListIntValues1["MpiBufferSize"]=20;
   ListBoolValues1["StopWhenFinished"]=false;
-  ListStringValues1["ListMatrixInput"] = "ListMatrix";
-  //  ListStringValues1["PrefixDataSave"]="Output_";
+  ListStringValues1["WorkingPrefix"] = "LOG_";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListStringValues = ListStringValues1;
@@ -110,6 +110,42 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 
 static int tag_new_form = 37;
 static int tag_termination = 157;
+
+
+template<typename T, typename Tint>
+void NC_ReadMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> & M, size_t const& n_vect, size_t const& n, int const& pos)
+{
+  std::vector<size_t> start2{size_t(pos), 0, 0};
+  std::vector<size_t> count2{1, n_vect, n};
+  std::vector<T> V(n_vect * n);
+  varCtype.getVar(start2, count2, V.data());
+  int idx=0;
+  for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+    for (size_t i=0; i<n; i++) {
+      M(i_vect, i) = V[idx];
+      idx++;
+    }
+}
+
+
+template<typename T, typename Tint>
+void NC_WriteMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> const& M, size_t const& n_vect, size_t const& n, int const& pos)
+{
+  std::vector<size_t> start2{size_t(pos), 0, 0};
+  std::vector<size_t> count2{1, n_vect, n};
+  std::vector<T> V(n_vect * n);
+  int idx=0;
+  for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+    for (size_t i=0; i<n; i++) {
+      V[idx] = M(i_vect, i);
+      idx++;
+    }
+  varCtype.putVar(start2, count2, V.data());
+}
+
+
+
+
 
 
 int main(int argc, char* argv[])
@@ -151,14 +187,57 @@ int main(int argc, char* argv[])
   size_t MpiBufferSize = BlDATA.ListIntValues.at("MpiBufferSize");
   int TimeForDeclaringItOver = BlDATA.ListIntValues.at("TimeForDeclaringItOver");
   bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
-  std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
+  std::string WorkingPrefix = BlDATA.ListStringValues.at("WorkingPrefix");
+  //
+  // The basic sizes
   //
   int n_vect = std::pow(2, n) - 1;
   int siz_pairexch = n_vect * n * sizeof(Tint) + sizeof(size_t) + 2 * sizeof(int);
   int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairexch;
-  std::string eFileO="LOG_" + std::to_string(irank);
-  std::ofstream log(eFileO);
-  log << "Initial log entry" << std::endl;
+  //
+  // The netcdf interface
+  //
+  std::string WorkFile=WorkingPrefix + std::to_string(irank) + ".nc";
+  netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::write);
+  netCDF::NcVar varCtype=dataFile.getVar("Ctype");
+  netCDF::NcType eType=varCtype.getType();
+  netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
+  int curr_nb_matrix = varNbAdj.getDim(0).getSize();
+  auto NC_ReadMatrix=[&](int const& pos) -> MyMatrix<Tint> {
+    MyMatrix<Tint> M(n_vect, n);
+    if (eType == netCDF::NcType::nc_BYTE)
+      NC_ReadMatrix_T<int8_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_SHORT)
+      NC_ReadMatrix_T<int16_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_INT)
+      NC_ReadMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_INT64)
+      NC_ReadMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, pos);
+    return M;
+  };
+  auto NC_AppendMatrix=[&](MyMatrix<Tint> const& M) -> void {
+    if (eType == netCDF::NcType::nc_BYTE)
+      NC_WriteMatrix_T<int8_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_SHORT)
+      NC_WriteMatrix_T<int16_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_INT)
+      NC_WriteMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_INT64)
+      NC_WriteMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    curr_nb_matrix++;
+  };
+  auto NC_GetNbAdjacent=[&](int const& pos) -> int {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    int nbAdjacent;
+    varNbAdj.getVar(start, count, &nbAdjacent);
+    return nbAdjacent;
+  };
+  auto NC_WriteNbAdjacent=[&](int const& pos, int const& nbAdjacent) -> void {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    varNbAdj.putVar(start, count, &nbAdjacent);
+  };
   //
   struct KeyData {
     int idxMatrix;
@@ -219,8 +298,7 @@ int main(int argc, char* argv[])
   std::unordered_map<TypeCtypeExch<Tint>,KeyData> ListCasesNotDone;
   std::unordered_map<TypeCtypeExch<Tint>,KeyData> ListCasesDone;
   int idxMatrixCurrent=0;
-  auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
-    TypeCtypeExch<Tint> eCtype = ePair.eCtype;
+  auto fInsert=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
 #ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -230,7 +308,6 @@ int main(int argc, char* argv[])
     std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
     if (it1 != ListCasesDone.end()) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
 #ifdef TIMINGS_HASH
@@ -242,11 +319,10 @@ int main(int argc, char* argv[])
     std::cerr << "|HashMap2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
     if (eData.idxMatrix != 0) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     eData.idxMatrix = idxMatrixCurrent + 1;
-    log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
+    NC_AppendMatrix(eCtype.eMat);
 #ifdef ERR_LOG
     std::cerr << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
 #endif
@@ -269,7 +345,7 @@ int main(int argc, char* argv[])
   //
   // The system for sending matrices
   //
-  std::vector<std::vector<PairExch<Tint>>> ListListMatrixUnsent(n_pes);
+  std::vector<std::vector<TypeCtypeExch<Tint>>> ListListMatrixUnsent(n_pes);
   size_t CurrentBufferSize = 1;
   auto GetSendableIndex=[&]() -> int {
     for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
@@ -306,7 +382,7 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Assigning the request idx=" << idx << " to processor " << i_pes << "\n";
 #endif
-      std::vector<PairExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
+      std::vector<TypeCtypeExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
       char* ptr_o = ListMesg[idx].data();
       std::memcpy(ptr_o, (char*)(&CurrentBufferSize), sizeof(int));
       ptr_o += sizeof(int);
@@ -316,7 +392,7 @@ int main(int argc, char* argv[])
         PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
         ptr_o += siz_pairexch;
 #ifdef ERR_LOG
-      std::cerr << "Appending matrix Ctype=" << eList[pos].eCtype << " index=" << eList[pos].eIndex << "\n";
+        std::cerr << "Appending matrix Ctype=" << eList[pos] << "\n";
 #endif
         eList.pop_back();
       }
@@ -331,48 +407,37 @@ int main(int argc, char* argv[])
       nbRequest++;
     }
   };
-  auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    size_t e_hash = Matrix_Hash(ePair.eCtype.eMat, seed);
+  auto fInsertUnsent=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
+    size_t e_hash = Matrix_Hash(eCtype.eMat, seed);
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
-      fInsert(ePair);
+      fInsert(eCtype);
     }
     else {
-      ListListMatrixUnsent[res].push_back(ePair);
+      ListListMatrixUnsent[res].push_back(eCtype);
       ClearUnsentAsPossible();
     }
   };
   //
-  // Reading the initial file
+  // Reading the initial file in memory
   //
-  {
-    std::ifstream is(FileMatrix);
 #ifdef ERR_LOG
-    std::cerr << "Beginning reading file=" << FileMatrix << "\n";
+  std::cerr << "Beginning reading file=" << FileMatrix << "\n";
 #endif
-    int nbMatrixStart;
-    is >> nbMatrixStart;
-    for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
-      int eStatus;
-      is >> eStatus;
-      MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
-      TypeCtypeExch<Tint> eRecMat{TheMat};
-      size_t e_hash = Matrix_Hash(TheMat, seed);
-      size_t res = e_hash % n_pes;
+  for (int iCurr=0; iCurr<curr_nb_matrix; iCurr++) {
+    MyMatrix<Tint> TheMat = NC_ReadMatrix(iCurr);
+    int nbAdjacent = NC_GetNbAdjacent(iCurr);
+    TypeCtypeExch<Tint> eRecMat{TheMat};
 #ifdef ERR_LOG
-      std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << " res=" << res << "\n";
+    std::cerr << "iCurr=" << iCurr << "\n';
 #endif
-      if (res == irank) {
-        KeyData eData{idxMatrixCurrent+1};
-        if (eStatus == 0)
-          ListCasesNotDone[eRecMat] = eData;
-        else
-          ListCasesDone[eRecMat] = eData;
-        log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
-        idxMatrixCurrent++;
-      }
-    }
+    KeyData eData{idxMatrixCurrent+1};
+    if (nbAdjacent == 0)
+      ListCasesNotDone[eRecMat] = eData;
+    else
+      ListCasesDone[eRecMat] = eData;
+    idxMatrixCurrent++;
   }
 #ifdef ERR_LOG
   std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
@@ -425,12 +490,12 @@ int main(int argc, char* argv[])
 	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
-          PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
+          TypeCtypeExch<Tint> eCtype = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
 #ifdef ERR_LOG
           std::cerr << "iRecv=" << iRecv << " ctype=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
 #endif
           ptr_recv += siz_pairexch;
-          fInsert(ePair);
+          fInsert(eCtype);
         }
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
@@ -485,15 +550,13 @@ int main(int argc, char* argv[])
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
           int nbAdjacent = ListAdjacentObject.size();
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
+          NC_WriteNbAdjacent(idxMatrixF, nbAdjacent);
 #ifdef ERR_LOG
           std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
 #endif
           int iAdj=0;
 	  for (auto & eObj1 : ListAdjacentObject) {
-            TypeIndex eIndex{irank, idxMatrixF, iAdj};
-            PairExch<Tint> ePair{eObj1, eIndex};
-	    fInsertUnsent(ePair);
+	    fInsertUnsent(eObj1);
             iAdj++;
 	  }
           // Now the timings

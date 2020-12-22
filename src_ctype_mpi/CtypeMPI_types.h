@@ -705,27 +705,23 @@ struct PairExch {
 };
 
 template<typename T>
-void PairExch_to_vectorchar(PairExch<T> const& eP, int const& nbRow, int const& nbCol, char* ptr_o)
+void PairExch_to_vectorchar(TypeCtypeExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
 {
 #ifdef ERR_LOG
   std::cerr << "PairExch_to_vectorchar, Begin\n";
 #endif
   for (int i=0; i<nbRow; i++)
     for (int j=0; j<nbCol; j++) {
-      std::memcpy(ptr_o, (char*)(&eP.eCtype.eMat(i,j)), sizeof(T));
+      std::memcpy(ptr_o, (char*)(&eCtype.eMat(i,j)), sizeof(T));
       ptr_o += sizeof(T);
     }
-  //
-  std::memcpy(ptr_o, (char*)(&eP.eIndex.iProc), sizeof(size_t)); ptr_o += sizeof(size_t);
-  std::memcpy(ptr_o, (char*)(&eP.eIndex.idxMatrix), sizeof(int)); ptr_o += sizeof(int);
-  std::memcpy(ptr_o, (char*)(&eP.eIndex.iAdj), sizeof(int)); ptr_o += sizeof(int);
 #ifdef ERR_LOG
   std::cerr << "PairExch_to_vectorchar, End\n";
 #endif
 }
 
 template<typename T>
-PairExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbCol)
+TypeCtypeExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbCol)
 {
 #ifdef ERR_LOG
   std::cerr << "vectorchar_to_PairExch, Begin\n";
@@ -738,17 +734,10 @@ PairExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbC
       ptr_i += sizeof(T);
       eMat(i, j) = eVal;
     }
-  //
-  size_t iProc;
-  int idxMatrix;
-  int iAdj;
-  std::memcpy((char*)(&iProc), ptr_i, sizeof(size_t)); ptr_i += sizeof(size_t);
-  std::memcpy((char*)(&idxMatrix), ptr_i, sizeof(int)); ptr_i += sizeof(int);
-  std::memcpy((char*)(&iAdj), ptr_i, sizeof(int)); ptr_i += sizeof(int);
 #ifdef ERR_LOG
   std::cerr << "vectorchar_to_PairExch, End\n";
 #endif
-  return {{eMat}, {iProc, idxMatrix, iAdj}};
+  return {eMat};
 }
 
 
