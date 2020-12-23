@@ -106,28 +106,24 @@ int main(int argc, char* argv[])
     std::vector<netCDF::NcVar> ListVar_NbAdj;
     for (int iProcO=0; iProcO<NprocOutput; iProcO++) {
       std::string FileO = PrefixOutput + std::to_string(iProcO) + ".nc";
+      std::cerr << "Creating netcdf file FileO=" << FileO << "\n";
       ListNC[iProcO].open(FileO, netCDF::NcFile::replace, netCDF::NcFile::nc4);
       //
       netCDF::NcDim eDimNbCtype=ListNC[iProcO].addDim("number_ctype");
       netCDF::NcDim eDimN=ListNC[iProcO].addDim("n", n);
       netCDF::NcDim eDimNvect=ListNC[iProcO].addDim("n_vect", n_vect);
       //
-      std::cerr << "netcdf, step 1\n";
       std::vector<std::string> LDim3{"number_ctype", "n_vect", "n"};
       std::vector<std::string> LDim1{"number_ctype"};
       //
-      std::cerr << "netcdf, step 2 OutputType=" << OutputType << "\n";
       netCDF::NcVar varCtype = ListNC[iProcO].addVar("Ctype", OutputType, LDim3);
       varCtype.putAtt("long_name", "Ctype canonicalized coordinates");
       varCtype.putAtt("units", "nondimensional");
       //
-      std::cerr << "netcdf, step 3\n";
       netCDF::NcVar varNbAdj = ListNC[iProcO].addVar("nb_adjacent", "int", LDim1);
       varNbAdj.putAtt("long_name", "number of adjacent Ctypes");
       varNbAdj.putAtt("units", "nondimensional");
       //
-      std::cerr << "netcdf, step 4\n";
-      //      ListNC.emplace_back(dataFile);
       ListVar_Ctype.push_back(varCtype);
       ListVar_NbAdj.push_back(varNbAdj);
     }

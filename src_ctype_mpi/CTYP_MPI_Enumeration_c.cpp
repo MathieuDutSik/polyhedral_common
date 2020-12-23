@@ -200,6 +200,11 @@ int main(int argc, char* argv[])
   std::string WorkFile=WorkingPrefix + std::to_string(irank) + ".nc";
   netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::write);
   netCDF::NcVar varCtype=dataFile.getVar("Ctype");
+  int n_read = varCtype.getDim(2).getSize();
+  if (n_read != n) {
+    std::cerr << "n_read=" << n_read << " n=" << n << "\n";
+    return 0;
+  }
   netCDF::NcType eType=varCtype.getType();
   netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
   int curr_nb_matrix = varNbAdj.getDim(0).getSize();
@@ -547,8 +552,12 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
           std::cerr << "Starting Adjacent Form Method\n";
           std::cerr << "eReq->first=" << eReq->first << "\n";
+          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
+#ifdef ERR_LOG
+          std::cerr << "We have ListAdjacentObject\n";
+#endif
           int nbAdjacent = ListAdjacentObject.size();
           NC_WriteNbAdjacent(idxMatrixF, nbAdjacent);
 #ifdef ERR_LOG

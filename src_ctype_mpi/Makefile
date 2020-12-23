@@ -3,8 +3,8 @@
 #PROGRAM		= CTYP_MergeLogs
 #PROGRAM		= CTYP_MPI_Enumeration
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_MPI_Enumeration
-PROGRAM		= CTYP_MPI_Enumeration_c
-#PROGRAM		= CTYP_PrepareInitialFile
+#PROGRAM		= CTYP_MPI_Enumeration_c
+PROGRAM		= CTYP_PrepareInitialFile
 #PROGRAM		= CTYP_debug
 #PROGRAM		= CTYP_MPI_Enumeration_debug
 #PROGRAM		= CTYP_MakeInitialFile
