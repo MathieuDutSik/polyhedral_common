@@ -9,8 +9,8 @@
 namespace mpi = boost::mpi;
 
 
-#define TIMINGS_HASH
-#define ERR_LOG
+//#define TIMINGS_HASH
+//#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -208,6 +208,18 @@ int main(int argc, char* argv[])
   netCDF::NcType eType=varCtype.getType();
   netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
   int curr_nb_matrix = varNbAdj.getDim(0).getSize();
+  auto NC_GetNbAdjacent=[&](int const& pos) -> int {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    int nbAdjacent;
+    varNbAdj.getVar(start, count, &nbAdjacent);
+    return nbAdjacent;
+  };
+  auto NC_WriteNbAdjacent=[&](int const& pos, int const& nbAdjacent) -> void {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    varNbAdj.putVar(start, count, &nbAdjacent);
+  };
   auto NC_ReadMatrix=[&](int const& pos) -> MyMatrix<Tint> {
     MyMatrix<Tint> M(n_vect, n);
     if (eType == netCDF::NcType::nc_BYTE)
@@ -229,19 +241,8 @@ int main(int argc, char* argv[])
       NC_WriteMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
     if (eType == netCDF::NcType::nc_INT64)
       NC_WriteMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    NC_WriteNbAdjacent(curr_nb_matrix, 0);
     curr_nb_matrix++;
-  };
-  auto NC_GetNbAdjacent=[&](int const& pos) -> int {
-    std::vector<size_t> start{size_t(pos)};
-    std::vector<size_t> count{1};
-    int nbAdjacent;
-    varNbAdj.getVar(start, count, &nbAdjacent);
-    return nbAdjacent;
-  };
-  auto NC_WriteNbAdjacent=[&](int const& pos, int const& nbAdjacent) -> void {
-    std::vector<size_t> start{size_t(pos)};
-    std::vector<size_t> count{1};
-    varNbAdj.putVar(start, count, &nbAdjacent);
   };
   //
   struct KeyData {
