@@ -9,8 +9,8 @@
 namespace mpi = boost::mpi;
 
 
-//#define TIMINGS_HASH
-//#define ERR_LOG
+#define TIMINGS_HASH
+#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -88,13 +88,13 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListIntValues1["n"]=6;
+  ListStringValues1["WorkingPrefix"] = "LOG_";
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
   ListIntValues1["TimeForDeclaringItOver"]=120;
   ListIntValues1["MpiBufferSize"]=20;
   ListBoolValues1["StopWhenFinished"]=false;
-  ListStringValues1["WorkingPrefix"] = "LOG_";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListStringValues = ListStringValues1;
@@ -423,14 +423,14 @@ int main(int argc, char* argv[])
   // Reading the initial file in memory
   //
 #ifdef ERR_LOG
-  std::cerr << "Beginning reading file=" << FileMatrix << "\n";
+  std::cerr << "Beginning reading WorkFile=" << WorkFile << "\n";
 #endif
   for (int iCurr=0; iCurr<curr_nb_matrix; iCurr++) {
     MyMatrix<Tint> TheMat = NC_ReadMatrix(iCurr);
     int nbAdjacent = NC_GetNbAdjacent(iCurr);
     TypeCtypeExch<Tint> eRecMat{TheMat};
 #ifdef ERR_LOG
-    std::cerr << "iCurr=" << iCurr << "\n';
+    std::cerr << "iCurr=" << iCurr << "\n";
 #endif
     KeyData eData{idxMatrixCurrent+1};
     if (nbAdjacent == 0)
@@ -492,7 +492,7 @@ int main(int argc, char* argv[])
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
           TypeCtypeExch<Tint> eCtype = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
 #ifdef ERR_LOG
-          std::cerr << "iRecv=" << iRecv << " ctype=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
+          std::cerr << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
 #endif
           ptr_recv += siz_pairexch;
           fInsert(eCtype);
