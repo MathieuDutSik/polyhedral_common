@@ -554,11 +554,8 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
           std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
 #endif
-          int iAdj=0;
-	  for (auto & eObj1 : ListAdjacentObject) {
+	  for (auto & eObj1 : ListAdjacentObject)
 	    fInsertUnsent(eObj1);
-            iAdj++;
-	  }
           // Now the timings
           last_timeoper = std::chrono::system_clock::now();
 	}
