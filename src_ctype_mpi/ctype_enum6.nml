@@ -5,6 +5,6 @@
  MaxStoredUnsentMatrices = 10000,
  StopWhenFinished = F,
  TimeForDeclaringItOver = 10
- MaxRunTimeSecond = 10,
+ MaxRunTimeSecond = 120,
 ! MaxRunTimeSecond = 21600,
 /
