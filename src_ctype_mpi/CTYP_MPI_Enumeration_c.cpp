@@ -312,6 +312,9 @@ int main(int argc, char* argv[])
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
     size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
+#ifdef ERR_LOG
+    std::cerr << "e_hash=" << e_hash << "\n";
+#endif
     std::vector<int> & eList = MapIndexByHash[e_hash];
 #ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -323,6 +326,7 @@ int main(int argc, char* argv[])
         return;
     }
     eList.push_back(idxMatrixCurrent);
+    ListUndoneIndex.push_back(idxMatrixCurrent);
     NC_AppendMatrix(eCtype.eMat);
     idxMatrixCurrent++;
 #ifdef ERR_LOG
@@ -546,7 +550,7 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
           std::cerr << "Starting Adjacent Form Method\n";
           std::cerr << "eReq->first=" << eReq->first << "\n";
-          WriteMatrix(std::cerr, eReq->first.eMat);
+          //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
 #ifdef ERR_LOG
