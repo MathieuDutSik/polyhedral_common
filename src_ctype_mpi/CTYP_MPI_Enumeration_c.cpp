@@ -10,7 +10,7 @@ namespace mpi = boost::mpi;
 
 
 //#define TIMINGS_HASH
-#define ERR_LOG
+//#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -305,6 +305,12 @@ int main(int argc, char* argv[])
     return val1 == val2;
   };
   std::unordered_map<size_t,std::vector<int>,decltype(fctHash), decltype(fctEqual)> MapIndexByHash({}, fctHash, fctEqual);
+  auto GetNbCollision=[&]() -> size_t {
+    size_t nb_collision=0;
+    for (auto & kv : MapIndexByHash)
+      nb_collision += (kv.second.size() - 1);
+    return nb_collision;
+  };
   std::vector<int> ListUndoneIndex;
   int idxMatrixCurrent=0;
   auto fInsert=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
@@ -330,12 +336,7 @@ int main(int argc, char* argv[])
     NC_AppendMatrix(eCtype.eMat);
     idxMatrixCurrent++;
 #ifdef ERR_LOG
-    int nb_collision=0;
-    for (auto & kv : MapIndexByHash) {
-      if (kv.second.size() > 1)
-        nb_collision++;
-    }
-    std::cerr << "nb_collision=" << nb_collision << "\n";
+    std::cerr << "nb_collision=" << GetNbCollision() << "\n";
 #endif
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<TypeCtypeExch<Tint>,int>> {
@@ -445,9 +446,7 @@ int main(int argc, char* argv[])
       ListUndoneIndex.push_back(idxMatrixCurrent);
     idxMatrixCurrent++;
   }
-#ifdef ERR_LOG
-  std::cerr << "Reading finished, we have |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << "\n";
-#endif
+  std::cerr << "Reading finished : |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << " nb_collision=" << GetNbCollision() << "\n";
   //
   // The main loop itself.
   //
