@@ -2,7 +2,8 @@
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include <unordered_map>
-
+#include "sparse-map/include/tsl/sparse_map.h"
+//#include "sparse_map.h"
 #include <boost/mpi.hpp>
 #include "hash_functions.h"
 #include <netcdf>
@@ -298,13 +299,14 @@ int main(int argc, char* argv[])
   //
   // The list of matrices being treated
   //
-  auto fctHash=[](size_t const& val) -> size_t {
+  std::function<size_t(size_t)> fctHash=[](size_t const& val) -> size_t {
     return val;
   };
-  auto fctEqual=[](size_t const& val1, size_t const& val2) -> bool {
+  std::function<bool(size_t,size_t)> fctEqual=[](size_t const& val1, size_t const& val2) -> bool {
     return val1 == val2;
   };
-  std::unordered_map<size_t,std::vector<int>,decltype(fctHash), decltype(fctEqual)> MapIndexByHash({}, fctHash, fctEqual);
+  tsl::sparse_map<size_t,std::vector<int>,std::function<size_t(size_t)>, std::function<bool(size_t,size_t)>> MapIndexByHash({}, fctHash, fctEqual);
+  //  std::unordered_map<size_t,std::vector<int>,decltype(fctHash), decltype(fctEqual)> MapIndexByHash({}, fctHash, fctEqual);
   auto GetNbCollision=[&]() -> size_t {
     size_t nb_collision=0;
     for (auto & kv : MapIndexByHash)
