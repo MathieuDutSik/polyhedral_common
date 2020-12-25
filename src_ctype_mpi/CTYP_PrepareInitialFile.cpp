@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
     std::vector<netCDF::NcFile> ListNC(NprocOutput);;
     std::vector<netCDF::NcVar> ListVar_Ctype;
     std::vector<netCDF::NcVar> ListVar_NbAdj;
-    for (int iProcO=0; iProcO<NprocOutput; iProcO++) {
+    for (size_t iProcO=0; iProcO<NprocOutput; iProcO++) {
       std::string FileO = PrefixOutput + std::to_string(iProcO) + ".nc";
       std::cerr << "Creating netcdf file FileO=" << FileO << "\n";
       ListNC[iProcO].open(FileO, netCDF::NcFile::replace, netCDF::NcFile::nc4);
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     };
     //
     auto InsertMatrixCan=[&](MyMatrix<Tint> const& M, int const& NbAdj) -> void {
-      if (M.rows() != n_vect || M.cols() != n) {
+      if (M.rows() != (int)n_vect || M.cols() != (int)n) {
         std::cerr << "We have |M|=" << M.rows() << " / " << M.cols() << "\n";
         std::cerr << "But n_vect=" << n_vect << " and n=" << n << "\n";
         throw TerminalException{1};
@@ -239,12 +239,12 @@ int main(int argc, char* argv[])
           var_NbAdj.getVar(start1, count1, &NbAdj);
           //
           MyMatrix<Tint> M(n_vect, n);
-          if (eType == netCDF::NcType::nc_INT) {
-            std::vector<int> V(n_vect * n);
+          if (eType == netCDF::NcType::nc_BYTE) {
+            std::vector<int8_t> V(n_vect * n);
             var_Ctype.getVar(start2, count2, V.data());
             int idx=0;
             for (size_t i_vect=0; i_vect<n_vect; i_vect++)
-              for (int i=0; i<n; i++) {
+              for (size_t i=0; i<n; i++) {
                 M(i_vect, i) = V[idx];
                 idx++;
               }
@@ -254,7 +254,17 @@ int main(int argc, char* argv[])
             var_Ctype.getVar(start2, count2, V.data());
             int idx=0;
             for (size_t i_vect=0; i_vect<n_vect; i_vect++)
-              for (int i=0; i<n; i++) {
+              for (size_t i=0; i<n; i++) {
+                M(i_vect, i) = V[idx];
+                idx++;
+              }
+          }
+          if (eType == netCDF::NcType::nc_INT) {
+            std::vector<int> V(n_vect * n);
+            var_Ctype.getVar(start2, count2, V.data());
+            int idx=0;
+            for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+              for (size_t i=0; i<n; i++) {
                 M(i_vect, i) = V[idx];
                 idx++;
               }
@@ -264,7 +274,7 @@ int main(int argc, char* argv[])
             var_Ctype.getVar(start2, count2, V.data());
             int idx=0;
             for (size_t i_vect=0; i_vect<n_vect; i_vect++)
-              for (int i=0; i<n; i++) {
+              for (size_t i=0; i<n; i++) {
                 M(i_vect, i) = V[idx];
                 idx++;
               }
