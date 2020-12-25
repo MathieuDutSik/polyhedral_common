@@ -3,7 +3,6 @@
 #include "Namelist.h"
 #include <unordered_map>
 #include "sparse-map/include/tsl/sparse_map.h"
-//#include "sparse_map.h"
 #include <boost/mpi.hpp>
 #include "hash_functions.h"
 #include <netcdf>
