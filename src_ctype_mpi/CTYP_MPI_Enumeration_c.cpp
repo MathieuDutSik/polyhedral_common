@@ -637,8 +637,10 @@ int main(int argc, char* argv[])
         throw TerminalException{1};
       }
       std::cerr << "Receive the termination message. All Exiting\n";
-      std::cerr << "FINAL irank=" << irank << " local |ListCases|=" << nbAll << " |ListCasesNotDone|=" << nbNotDone << "\n";
-      std::cerr << "FINAL irank=" << irank << " total |ListCases|=" << nbAll_tot << " |ListCasesNotDone|=" << nbNotDone_tot << "\n";
+      int64_t nbDone=nbAll - nbNotDone;
+      int64_t nbDone_tot=nbAll_tot - nbNotDone_tot;
+      std::cerr << "FINAL irank=" << irank << " local |ListCases|=" << nbAll << " |ListCasesNotDone|=" << nbNotDone << " |ListCasesDone|=" << nbDone << "\n";
+      std::cerr << "FINAL irank=" << irank << " total |ListCases|=" << nbAll_tot << " |ListCasesNotDone|=" << nbNotDone_tot << " |ListCasesDone|=" << nbDone_tot << "\n";
       break;
     }
   }
