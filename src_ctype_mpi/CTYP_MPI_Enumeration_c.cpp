@@ -154,6 +154,8 @@ int main(int argc, char* argv[])
   int irank_i, n_pes_i;
   MPI_Comm_size(MPI_COMM_WORLD, &n_pes_i);
   MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
+  // We need to put the starting time as early as possible so that e are as synchronized as possible.
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   size_t irank=irank_i;
   size_t n_pes=n_pes_i;
 #ifdef ERR_LOG
@@ -453,7 +455,6 @@ int main(int argc, char* argv[])
   //
   int iVal_synchronization = 72;
   bool TerminationNoticeSent = false;
-  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   std::chrono::time_point<std::chrono::system_clock> last_timeoper = start;
   std::vector<int> StatusNeighbors(n_pes, 0);
   while(true) {
