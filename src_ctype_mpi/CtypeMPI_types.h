@@ -6,6 +6,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_c_cddlib.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "COMB_Combinatorics.h"
 #include <cstring>
 
 
@@ -689,6 +690,261 @@ std::vector<TypeCtypeExch<T>> CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> con
 #endif
   return ListCtype;
 }
+
+
+
+struct StructuralInfo {
+  int nb_triple;
+  int nb_ineq;
+  int nb_ineq_after_crit;
+  int nb_free;
+  int nb_autom;
+};
+
+
+template<typename T>
+int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const& TheCtypeArr)
+{
+  int n=TheCtypeArr.eMat.cols();
+  BlockIteration blk(n, 2);
+  int n_vect=TheCtypeArr.eMat.rows();
+  blk.IncrementSilent();
+  int nb_free=0;
+  while(true) {
+    std::vector<int> eVect = blk.GetVect();
+    std::vector<MyVector<T>> ListVect;
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      MyVector<T> eV = GetMatrixRow(TheCtypeArr.eMat, i_vect);
+      T eSum = 0;
+      for (int i=0; i<n; i++)
+        eSum += eV(i) * eVect(i);
+      T res = ResInt(eSum, 2);
+      if (res == 0) {
+        ListVect.push_back(eV);
+      }
+    }
+    MyMatrix<T> eMat = MatrixFromVectorFamily(ListVect);
+    int rnk = RankMat(eMat);
+    if (rnk == n-1)
+      nb_free++;
+  }
+  return nb_free;
+}
+
+
+
+
+template<typename T>
+StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
+{
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_STRUCTINFO
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
+#endif
+  MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
+  int n_edge = TheCtype.rows();
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_STRUCTINFO
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
+#endif
+  std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple = CTYP_GetListTriple(TheCtype);
+  int nb_triple = PairTriple.first.size();
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+#ifdef PRINT_GET_STRUCTINFO
+  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
+#endif
+  int8_t n = TheCtype.cols();
+  int8_t tot_dim = n*(n+1) / 2;
+  auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
+    MyVector<T> TheVector(tot_dim);
+    int idx=0;
+    for (int8_t i=0; i<n; i++) {
+      TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
+      idx++;
+    }
+    for (int8_t i=0; i<n; i++)
+      for (int8_t j=i+1; j<n; j++) {
+        // Factor 2 removed for simplification and faster code.
+        TheVector(idx) = V1(i) * V1(j) - V2(i) * V2(j);
+        idx++;
+      }
+    return TheVector;
+  };
+  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_map;
+  auto FuncInsertInequality=[&](int8_t i, int8_t j, int8_t k) -> void {
+    MyVector<T> V1(n), V2(n);
+    for (int8_t i_col=0; i_col<n; i_col++) {
+      V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
+      V2(i_col) = TheCtype(i, i_col);
+    }
+    MyVector<T> TheVector = ComputeInequality(V1, V2);
+    triple TheInfo = {i,j,k};
+    std::vector<triple>& list_trip = Tot_map[TheVector];
+    list_trip.push_back(TheInfo);
+  };
+  for (auto & e_triple : PairTriple.first)
+    FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
+#ifdef PRINT_GET_STRUCTINFO
+  std::cerr << "Input |Tot_map|=" << Tot_map.size() << "\n";
+#endif
+  int nb_ineq=Tot_map.size();
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+  int n_edgered = n_edge / 2;
+#ifdef PRINT_GET_STRUCTINFO
+  int nb_match = 0;
+  int nb_pass = 0;
+#endif
+#ifdef PRINT_GET_STRUCTINFO
+  for (int i_edge=0; i_edge<n_edgered; i_edge++) {
+    for (int j_edge=0; j_edge<n_edgered; j_edge++)
+      std::cerr << " " << (int)PairTriple.second[i_edge * n_edgered + j_edge];
+    std::cerr << "\n";
+  }
+#endif
+  auto TestApplicabilityCriterion_with_e=[&](triple const& e_triple, int8_t const& e) -> bool {
+#ifdef PRINT_GET_STRUCTINFO
+    nb_pass++;
+#endif
+    int8_t i = e_triple.i / 2;
+    int8_t j = e_triple.j / 2;
+    int8_t k = e_triple.k / 2;
+    //
+    // testing e
+    if (e == i || e == j || e == k)
+      return false;
+    //
+    // getting f and testing it
+    int8_t f = PairTriple.second[i * n_edgered + e];
+    if (f == -1 || f == j || f == k)
+      return false;
+    //
+    // getting g and testing it
+    int8_t g = PairTriple.second[j * n_edgered + e];
+    if (g == -1 || g == f || g == i || g == k)
+      return false;
+    //
+    // getting h and testing it
+    int8_t h = PairTriple.second[i * n_edgered + g];
+    if (h == -1 || h == f || h == e || h == j || h == k)
+      return false;
+    //
+    // testing presence of {j,f,h}
+    int8_t h2 = PairTriple.second[j * n_edgered + f];
+    if (h2 != h)
+      return false;
+    //
+    // We have the 7-uple.
+#ifdef PRINT_GET_STRUCTINFO
+    nb_match++;
+#endif
+    return true;
+  };
+  auto TestApplicabilityCriterion=[&](triple const& e_triple) -> bool {
+    for (int8_t e=0; e<n_edgered; e++)
+      if (TestApplicabilityCriterion_with_e(e_triple, e))
+        return true;
+    return false;
+  };
+  std::vector<int8_t> ListResultCriterion(n_edge * n_edge, 0);
+  for (auto & e_triple : PairTriple.first) {
+    if (TestApplicabilityCriterion(e_triple)) {
+      int8_t i = e_triple.i;
+      int8_t j = e_triple.j;
+      int8_t k = e_triple.k;
+#ifdef PRINT_GET_STRUCTINFO
+      std::cerr << "FOUND i=" << (int)i << " j=" << (int)j << " k=" << (int)k << "\n";
+      std::cerr << "ENT1 = " << (int)j << " " << (int) k << "\n";
+      std::cerr << "ENT2 = " << (int)i << " " << (int) j << "\n";
+#endif
+      ListResultCriterion[j * n_edge + k] = 1;
+      ListResultCriterion[i * n_edge + j] = 1;
+    }
+  }
+  auto TestFeasibilityListTriple=[&](std::vector<triple> const& list_triple) -> bool {
+    for (auto & e_triple : list_triple) {
+#ifdef PRINT_GET_STRUCTINFO
+      std::cerr << "e_triple i=" << (int)e_triple.i << " " << (int)e_triple.j << "\n";
+#endif
+      if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
+        return false;
+    }
+    return true;
+  };
+  // erasing the inequalities that are sure to be redundant.
+  int nb_redund = 0;
+  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
+  for (auto & kv : Tot_map) {
+    if (!TestFeasibilityListTriple(kv.second)) {
+      nb_redund++;
+    } else {
+      Tot_mapB[kv.first] = kv.second;
+    }
+  }
+  int nb_ineq_aftercrit = Tot_mapB.size();
+#ifdef DEBUG
+  if (nb_ineq_aftercrit + nb_redund != nb_ineq) {
+    std::cerr << "inconsistency in the computation\n";
+    throw TerminalException{1};
+  }
+#endif
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+#endif
+  int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+#endif
+  std::vector<std::vector<unsigned int>> ListGen = LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+#endif
+  std::vector<permlib::dom_int> v(n_edge);
+  std::vector<permlib::Permutation> ListGen;
+  for (auto & eGen : ListGen) {
+    for (int i_edge=0; i_edge<n_edge; i_edge++)
+      v[i_edge]=eGen[i_edge];
+    ListGen.push_back(permlib::Permutation(v));
+  }
+  TheGroupFormat GRP = GetPermutationGroup(n_edge, ListGen);
+  mpz_class size = GRP.size;
+  int nb_autom = UniversalTypeConversion<int,mpz_class>(GRP.size);
+
+
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
+  std::cerr << "|ExpressMatrixForCType|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|CTYP_GetListTriple|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|Insert inequalities|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|Criterion Ineq Drop|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|GetNumberFreeVectors|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+  std::cerr << "|NumberAutomorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
+#endif
+  return ListCtype;
+}
+
+
+
 
 
 struct TypeIndex {

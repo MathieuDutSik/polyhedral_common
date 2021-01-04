@@ -2384,11 +2384,6 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  //  std::cerr << "EXT=\n";
-  //  WriteMatrix(std::cerr, EXT);
-  //  std::cerr << "Qmat=\n";
-  //  WriteMatrix(std::cerr, Qmat);
-
   int nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -2637,6 +2632,195 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 
   return {true, RedMat};
 }
+
+
+
+
+
+template<typename Tint>
+EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+{
+  int nbRow= EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(EXT, Qmat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
+  //  std::cerr << "WMatAbs.WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
+
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
+  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
+
+  //  std::cerr << "WMatAbs.WMat : ";
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+#ifdef USE_BLISS
+  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+#endif
+#ifdef DEBUG
+  PrintStabilizerGroupSizes(std::cerr, eGR);
+  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
+  mpz_class eHash1 = MD5_hash_mpz(eExpr);
+  std::cerr << "eHash1=" << eHash1 << "\n";
+  //
+  int hS = eGR.GetNbVert() / (nbRow + 2);
+  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
+  for (auto & eGen : ePair.second) {
+    std::vector<unsigned int> eGenRed(nbRow+2);
+    for (int i=0; i<nbRow+2; i++) {
+      unsigned int val = eGen[i];
+      if (val >= nbRow+2) {
+        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
+        throw TerminalException{1};
+      }
+      eGenRed[i] = val;
+    }
+    for (int i=nbRow; i<nbRow+2; i++) {
+      if (eGenRed[i] != i) {
+        std::cerr << "Point is not preserved\n";
+        throw TerminalException{1};
+      }
+    }
+    for (int iH=0; iH<hS; iH++) {
+      for (int i=0; i<nbRow+2; i++) {
+        unsigned int val1 = eGen[i + iH * (nbRow+2)];
+        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
+        if (val1 != val2) {
+          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
+          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
+          throw TerminalException{1};
+        }
+      }
+      for (int i=0; i<nbRow; i++) {
+        for (int j=0; j<nbRow; j++) {
+          int iImg = eGenRed[i];
+          int jImg = eGenRed[j];
+          int pos1 = WMatAbs.WMat.GetValue(i, j);
+          int pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
+          if (pos1 != pos2) {
+            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
+            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
+            throw TerminalException{1};
+          }
+        }
+      }
+    }
+  }
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
+  // We check if the Generating vector eGen can be mapped from the absolute
+  // graph to the original one.
+  std::vector<std::vector<unsigned int>> ListGenRet;
+  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
+    /* We map a vector v_i to another v_j with sign +-1
+       V[i] = 0 for unassigned
+              1 for positive sign
+              2 for negative sign
+              3 for positive sign and treated
+              4 for negative sign and treated
+     */
+    std::vector<uint8_t> V(nbRow, 0);
+    std::vector<unsigned int> ListGenRet(2*nbRow,0);
+    auto setSign=[&](int const& idx, uint8_t const& val) -> void {
+      if (val == 1) {
+        eGenRet[idx        ] = eGen[idx];
+        eGenRet[idx + nbRow] = eGen[idx] + nbRow;
+      } else {
+        eGenRet[idx        ] = eGen[idx] + nbRow
+        eGenRet[idx + nbRow] = eGen[idx];
+      }
+      V[idx] = val;
+    };
+    setSign(0, 1);
+    while(true) {
+      bool IsFinished = true;
+      for (int i=0; i<nbRow; i++) {
+        int val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished=false;
+          V[i] = val + 2;
+          int iImg = eGen[i];
+          for (int j=0; j<nbRow; j++) {
+            int jImg = eGen[j];
+            int pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
+              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
+              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              int valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
+                valJ = 2;
+              else
+                valJ = 1;
+              if (V[j] == 0) {
+                setSign(j, valJ);
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished)
+        break;
+    }
+    ListGenRet.push_back(eGenRet);
+    return true;
+  };
+  auto IsCorrectListGen=[&]() -> bool {
+    for (auto& eGen : ePair.second) {
+      bool test = TestExistSignVector(eGen);
+      //      std::cerr << "test=" << test << "\n";
+      if (!test)
+        return false;
+    }
+    return true;
+  };
+  if (!IsCorrectListGen()) {
+    return {false, {}};
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+  //
+  std::vector<unsigned int> AntipodalGen(2*nbRow,0);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    AntipodalGen[iRow] = iRow + nbRow;
+    AntipodalGen[nbRow + iRow] = iRow;
+  }
+  ListGenRet.push_back(AntipodalGen);
+  //
+  return {true, ListGenRet};
+}
+
+
+
+
+
+
+
+
+
 
 
 template<typename T1, typename T2>
@@ -3215,6 +3399,62 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 #endif
   return RedMat;
 }
+
+
+
+
+template<typename Tint>
+std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
+{
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+
+  EquivTest<std::vector<std::vector<unsigned int>>> EquivTest = LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(EXT, Qmat);
+  if (EquivTest.TheReply) {
+    return EquivTest.TheEquiv;
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeAntipodalIntegral_Automorphism_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  WeightMatrix<Tint,Tint> WMat=GetWeightMatrixAntipodal(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+
+#ifdef USE_BLISS
+  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|*_GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
+  return ListGen;
+}
+
+
+
+
+
+
+
 
 
 
