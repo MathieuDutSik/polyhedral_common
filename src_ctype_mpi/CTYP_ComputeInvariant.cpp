@@ -5,6 +5,8 @@
 
 #include <netcdf>
 
+//#define DEBUG_INFO
+
 
 template<typename T, typename Tint>
 void NC_ReadMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> & M, size_t const& n_vect, size_t const& n, int const& pos)
@@ -127,14 +129,22 @@ int main(int argc, char* argv[])
   // Processing the data
   //
   for (size_t i_ctype=0; i_ctype<n_ctype; i_ctype++) {
+#ifdef DEBUG_INFO
     std::cerr << "i_ctype=" << i_ctype << "\n";
+#endif
     TypeCtypeExch<Tint> eType = NC_ReadMatrix(i_ctype);
+#ifdef DEBUG_INFO
     std::cerr << "We have eType\n";
+#endif
     int nb_adjacent = NC_GetNbAdjacent(i_ctype);
+#ifdef DEBUG_INFO
     std::cerr << "We have nb_adjacent\n";
+#endif
     //
     StructuralInfo info = CTYP_GetStructuralInfo(eType);
+#ifdef DEBUG_INFO
     std::cerr << "We have info\n";
+#endif
     //
     NC_WriteMatrix(i_ctype, eType.eMat);
     NC_WriteEntry(varNbAdjO, i_ctype, nb_adjacent);
@@ -143,11 +153,13 @@ int main(int argc, char* argv[])
     NC_WriteEntry(varNbIneqAfterCritO, i_ctype, info.nb_ineq_after_crit);
     NC_WriteEntry(varNbFreeO, i_ctype, info.nb_free);
     NC_WriteEntry(varNbAutomO, i_ctype, info.nb_autom);
+#ifdef DEBUG_INFO
     std::cerr << "Writes done\n";
     //
     size_t res = i_ctype % 1000;
     if (res == 0)
       std::cerr << "i_ctype=" << i_ctype << "/" << n_ctype << "\n";
+#endif
   }
   std::cerr << "Normal termination of the program\n";
 }

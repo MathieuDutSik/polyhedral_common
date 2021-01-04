@@ -11,7 +11,7 @@
 
 
 //#define DEBUG
-#define TIMINGS
+//#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
 //#define PRINT_GET_ADJ
