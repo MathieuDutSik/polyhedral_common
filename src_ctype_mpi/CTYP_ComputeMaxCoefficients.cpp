@@ -42,6 +42,7 @@ int main(int argc, char* argv[])
       int n = varCtype.getDim(2).getSize();
       int n_vect = varCtype.getDim(1).getSize();
       size_t n_ctype = varCtype.getDim(0).getSize();
+      netCDF::NcType eType=varCtype.getType();
       MyMatrix<Tint> M(n_vect, n);
       auto NC_ReadMatrix=[&](int const& pos) -> void {
         if (eType == netCDF::NcType::nc_BYTE)
