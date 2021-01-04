@@ -1,0 +1,11 @@
+&DATA
+ n = 5,
+ WorkingPrefix = "WORK_5_",
+ MaxNumberFlyingMessage = 1000,
+ MaxStoredUnsentMatrices = 10000,
+ MaxRunTimeSecond = 10,
+ TimeForDeclaringItOver = 10,
+ MpiBufferSize = 5,
+ StopWhenFinished = F,
+! MaxRunTimeSecond = 21600,
+/

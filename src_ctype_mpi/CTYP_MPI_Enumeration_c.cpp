@@ -2,9 +2,10 @@
 #include "NumberTheory.h"
 #include "Namelist.h"
 #include <unordered_map>
-
+#include "sparse-map/include/tsl/sparse_map.h"
 #include <boost/mpi.hpp>
 #include "hash_functions.h"
+#include <netcdf>
 namespace mpi = boost::mpi;
 
 
@@ -87,14 +88,13 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListIntValues1["n"]=6;
+  ListStringValues1["WorkingPrefix"] = "LOG_";
   ListIntValues1["MaxNumberFlyingMessage"]=100;
   ListIntValues1["MaxStoredUnsentMatrices"]=1000;
   ListIntValues1["MaxRunTimeSecond"]=-1;
   ListIntValues1["TimeForDeclaringItOver"]=120;
   ListIntValues1["MpiBufferSize"]=20;
   ListBoolValues1["StopWhenFinished"]=false;
-  ListStringValues1["ListMatrixInput"] = "ListMatrix";
-  //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListStringValues = ListStringValues1;
@@ -112,12 +112,50 @@ static int tag_new_form = 37;
 static int tag_termination = 157;
 
 
+template<typename T, typename Tint>
+void NC_ReadMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> & M, size_t const& n_vect, size_t const& n, int const& pos)
+{
+  std::vector<size_t> start2{size_t(pos), 0, 0};
+  std::vector<size_t> count2{1, n_vect, n};
+  std::vector<T> V(n_vect * n);
+  varCtype.getVar(start2, count2, V.data());
+  int idx=0;
+  for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+    for (size_t i=0; i<n; i++) {
+      M(i_vect, i) = V[idx];
+      idx++;
+    }
+}
+
+
+template<typename T, typename Tint>
+void NC_WriteMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> const& M, size_t const& n_vect, size_t const& n, int const& pos)
+{
+  std::vector<size_t> start2{size_t(pos), 0, 0};
+  std::vector<size_t> count2{1, n_vect, n};
+  std::vector<T> V(n_vect * n);
+  int idx=0;
+  for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+    for (size_t i=0; i<n; i++) {
+      V[idx] = M(i_vect, i);
+      idx++;
+    }
+  varCtype.putVar(start2, count2, V.data());
+}
+
+
+
+
+
+
 int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
   int irank_i, n_pes_i;
   MPI_Comm_size(MPI_COMM_WORLD, &n_pes_i);
   MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
+  // We need to put the starting time as early as possible so that e are as synchronized as possible.
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   size_t irank=irank_i;
   size_t n_pes=n_pes_i;
 #ifdef ERR_LOG
@@ -151,18 +189,64 @@ int main(int argc, char* argv[])
   size_t MpiBufferSize = BlDATA.ListIntValues.at("MpiBufferSize");
   int TimeForDeclaringItOver = BlDATA.ListIntValues.at("TimeForDeclaringItOver");
   bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
-  std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
+  std::string WorkingPrefix = BlDATA.ListStringValues.at("WorkingPrefix");
+  //
+  // The basic sizes
   //
   int n_vect = std::pow(2, n) - 1;
-  int siz_pairexch = n_vect * n * sizeof(Tint) + sizeof(size_t) + 2 * sizeof(int);
+  int siz_pairexch = n_vect * n * sizeof(Tint);
   int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairexch;
-  std::string eFileO="LOG_" + std::to_string(irank);
-  std::ofstream log(eFileO);
-  log << "Initial log entry" << std::endl;
   //
-  struct KeyData {
-    int idxMatrix;
+  // The netcdf interface
+  //
+  std::string WorkFile=WorkingPrefix + std::to_string(irank) + ".nc";
+  netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::write);
+  netCDF::NcVar varCtype=dataFile.getVar("Ctype");
+  int n_read = varCtype.getDim(2).getSize();
+  if (n_read != n) {
+    std::cerr << "n_read=" << n_read << " n=" << n << "\n";
+    return 0;
+  }
+  netCDF::NcType eType=varCtype.getType();
+  netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
+  int curr_nb_matrix = varNbAdj.getDim(0).getSize();
+  auto NC_GetNbAdjacent=[&](int const& pos) -> int {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    int nbAdjacent;
+    varNbAdj.getVar(start, count, &nbAdjacent);
+    return nbAdjacent;
   };
+  auto NC_WriteNbAdjacent=[&](int const& pos, int const& nbAdjacent) -> void {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    varNbAdj.putVar(start, count, &nbAdjacent);
+  };
+  auto NC_ReadMatrix=[&](int const& pos) -> TypeCtypeExch<Tint> {
+    MyMatrix<Tint> M(n_vect, n);
+    if (eType == netCDF::NcType::nc_BYTE)
+      NC_ReadMatrix_T<int8_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_SHORT)
+      NC_ReadMatrix_T<int16_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_INT)
+      NC_ReadMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, pos);
+    if (eType == netCDF::NcType::nc_INT64)
+      NC_ReadMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, pos);
+    return {M};
+  };
+  auto NC_AppendMatrix=[&](MyMatrix<Tint> const& M) -> void {
+    if (eType == netCDF::NcType::nc_BYTE)
+      NC_WriteMatrix_T<int8_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_SHORT)
+      NC_WriteMatrix_T<int16_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_INT)
+      NC_WriteMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    if (eType == netCDF::NcType::nc_INT64)
+      NC_WriteMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+    NC_WriteNbAdjacent(curr_nb_matrix, 0);
+    curr_nb_matrix++;
+  };
+  //
   uint32_t seed= 0x1b873540;
   //
   // The list of requests.
@@ -216,60 +300,63 @@ int main(int argc, char* argv[])
   //
   // The list of matrices being treated
   //
-  std::unordered_map<TypeCtypeExch<Tint>,KeyData> ListCasesNotDone;
-  std::unordered_map<TypeCtypeExch<Tint>,KeyData> ListCasesDone;
+  std::function<size_t(size_t)> fctHash=[](size_t const& val) -> size_t {
+    return val;
+  };
+  std::function<bool(size_t,size_t)> fctEqual=[](size_t const& val1, size_t const& val2) -> bool {
+    return val1 == val2;
+  };
+  tsl::sparse_map<size_t,std::vector<int>,std::function<size_t(size_t)>, std::function<bool(size_t,size_t)>> MapIndexByHash({}, fctHash, fctEqual);
+  //  std::unordered_map<size_t,std::vector<int>,decltype(fctHash), decltype(fctEqual)> MapIndexByHash({}, fctHash, fctEqual);
+  auto GetNbCollision=[&]() -> size_t {
+    size_t nb_collision=0;
+    for (auto & kv : MapIndexByHash)
+      nb_collision += (kv.second.size() - 1);
+    return nb_collision;
+  };
+  std::vector<int> ListUndoneIndex;
   int idxMatrixCurrent=0;
-  auto fInsert=[&](PairExch<Tint> const& ePair) -> void {
-    TypeCtypeExch<Tint> eCtype = ePair.eCtype;
+  auto fInsert=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
 #ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-    auto it1 = ListCasesDone.find(eCtype);
+    size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
+#ifdef ERR_LOG
+    std::cerr << "e_hash=" << e_hash << "\n";
+#endif
+    std::vector<int> & eList = MapIndexByHash[e_hash];
 #ifdef TIMINGS_HASH
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|HashMap1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|HashMap|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-    if (it1 != ListCasesDone.end()) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
-      return;
+    for (auto iIdx : eList) {
+      TypeCtypeExch<Tint> fCtype = NC_ReadMatrix(iIdx);
+      if (eCtype == fCtype)
+        return;
     }
-#ifdef TIMINGS_HASH
-    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-#endif
-    KeyData& eData = ListCasesNotDone[eCtype];
-#ifdef TIMINGS_HASH
-    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-    std::cerr << "|HashMap2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-    if (eData.idxMatrix != 0) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
-      return;
-    }
-    eData.idxMatrix = idxMatrixCurrent + 1;
-    log << "Inserting New ctype" << ePair.eCtype << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from " << ePair.eIndex << "END" << std::endl;
-#ifdef ERR_LOG
-    std::cerr << "Inserting new form, now we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
-#endif
-    //    std::cerr << "idxMatrixCurrent=" << idxMatrixCurrent << " eCtype = " << ePair.eCtype << "\n";
+    eList.push_back(idxMatrixCurrent);
+    ListUndoneIndex.push_back(idxMatrixCurrent);
+    NC_AppendMatrix(eCtype.eMat);
     idxMatrixCurrent++;
+#ifdef ERR_LOG
+    std::cerr << "nb_collision=" << GetNbCollision() << "\n";
+#endif
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<TypeCtypeExch<Tint>,int>> {
-    auto it1 = ListCasesNotDone.begin();
-    if (it1 != ListCasesNotDone.end()) {
-      std::pair<TypeCtypeExch<Tint>,int> ePair = {it1->first, it1->second.idxMatrix-1};
+    size_t len = ListUndoneIndex.size();
+    if (len > 0) {
+      int idx = ListUndoneIndex[len - 1];
+      ListUndoneIndex.pop_back();
+      TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(idx);
+      std::pair<TypeCtypeExch<Tint>,int> ePair = {eCtype, idx};
       return boost::optional<std::pair<TypeCtypeExch<Tint>,int>>(ePair);
     }
     return {};
   };
-  auto SetMatrixAsDone=[&](TypeCtypeExch<Tint> const& TheMat) -> void {
-    KeyData eKey = ListCasesNotDone.at(TheMat);
-    ListCasesNotDone.erase(TheMat);
-    ListCasesDone[TheMat] = eKey;
-  };
   //
   // The system for sending matrices
   //
-  std::vector<std::vector<PairExch<Tint>>> ListListMatrixUnsent(n_pes);
+  std::vector<std::vector<TypeCtypeExch<Tint>>> ListListMatrixUnsent(n_pes);
   size_t CurrentBufferSize = 1;
   auto GetSendableIndex=[&]() -> int {
     for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
@@ -306,7 +393,7 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Assigning the request idx=" << idx << " to processor " << i_pes << "\n";
 #endif
-      std::vector<PairExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
+      std::vector<TypeCtypeExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
       char* ptr_o = ListMesg[idx].data();
       std::memcpy(ptr_o, (char*)(&CurrentBufferSize), sizeof(int));
       ptr_o += sizeof(int);
@@ -316,7 +403,7 @@ int main(int argc, char* argv[])
         PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
         ptr_o += siz_pairexch;
 #ifdef ERR_LOG
-      std::cerr << "Appending matrix Ctype=" << eList[pos].eCtype << " index=" << eList[pos].eIndex << "\n";
+        std::cerr << "Appending matrix Ctype=" << eList[pos] << "\n";
 #endif
         eList.pop_back();
       }
@@ -331,58 +418,43 @@ int main(int argc, char* argv[])
       nbRequest++;
     }
   };
-  auto fInsertUnsent=[&](PairExch<Tint> const& ePair) -> void {
-    size_t e_hash = Matrix_Hash(ePair.eCtype.eMat, seed);
+  auto fInsertUnsent=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
+    size_t e_hash = Matrix_Hash(eCtype.eMat, seed);
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
-      fInsert(ePair);
+      fInsert(eCtype);
     }
     else {
-      ListListMatrixUnsent[res].push_back(ePair);
+      ListListMatrixUnsent[res].push_back(eCtype);
       ClearUnsentAsPossible();
     }
   };
   //
-  // Reading the initial file
+  // Reading the initial file in memory
   //
-  {
-    std::ifstream is(FileMatrix);
 #ifdef ERR_LOG
-    std::cerr << "Beginning reading file=" << FileMatrix << "\n";
+  std::cerr << "Beginning reading WorkFile=" << WorkFile << "\n";
 #endif
-    int nbMatrixStart;
-    is >> nbMatrixStart;
-    for (int iMatStart=0; iMatStart<nbMatrixStart; iMatStart++) {
-      int eStatus;
-      is >> eStatus;
-      MyMatrix<Tint> TheMat = ReadMatrix<Tint>(is);
-      TypeCtypeExch<Tint> eRecMat{TheMat};
-      size_t e_hash = Matrix_Hash(TheMat, seed);
-      size_t res = e_hash % n_pes;
+  for (int iCurr=0; iCurr<curr_nb_matrix; iCurr++) {
+    TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(iCurr);
+    size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
+    int nbAdjacent = NC_GetNbAdjacent(iCurr);
 #ifdef ERR_LOG
-      std::cerr << "iMatStart=" << iMatStart << " e_hash=" << e_hash << " res=" << res << "\n";
+    std::cerr << "iCurr=" << iCurr << "\n";
 #endif
-      if (res == irank) {
-        KeyData eData{idxMatrixCurrent+1};
-        if (eStatus == 0)
-          ListCasesNotDone[eRecMat] = eData;
-        else
-          ListCasesDone[eRecMat] = eData;
-        log << "Reading existing matrix=" << eRecMat << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
-        idxMatrixCurrent++;
-      }
-    }
+    std::vector<int>& eList= MapIndexByHash[e_hash];
+    eList.push_back(idxMatrixCurrent);
+    if (nbAdjacent == 0)
+      ListUndoneIndex.push_back(idxMatrixCurrent);
+    idxMatrixCurrent++;
   }
-#ifdef ERR_LOG
-  std::cerr << "Reading finished, we have |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
-#endif
+  std::cerr << "Reading finished : |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << " nb_collision=" << GetNbCollision() << "\n";
   //
   // The main loop itself.
   //
   int iVal_synchronization = 72;
   bool TerminationNoticeSent = false;
-  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   std::chrono::time_point<std::chrono::system_clock> last_timeoper = start;
   std::vector<int> StatusNeighbors(n_pes, 0);
   while(true) {
@@ -392,7 +464,7 @@ int main(int argc, char* argv[])
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(ref_time - start).count();
     // Now the operations themselves
 #ifdef ERR_LOG
-    std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListCasesNotDone.size() << " |ListCasesDone|=" << ListCasesDone.size() << " elapsed_time=" << elapsed_seconds << "\n";
+    std::cerr << "Begin while, we have |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << " elapsed_time=" << elapsed_seconds << "\n";
 #endif
     MPI_Status status1;
     int flag;
@@ -425,12 +497,12 @@ int main(int argc, char* argv[])
 	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
-          PairExch<Tint> ePair = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
+          TypeCtypeExch<Tint> eCtype = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
 #ifdef ERR_LOG
-          std::cerr << "iRecv=" << iRecv << " ctype=" << ePair.eCtype << " index=" << ePair.eIndex << "\n";
+          std::cerr << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
 #endif
           ptr_recv += siz_pairexch;
-          fInsert(ePair);
+          fInsert(eCtype);
         }
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();
@@ -460,7 +532,7 @@ int main(int argc, char* argv[])
       if (!AreBufferFullEnough()) {
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
           // We pass the first test with respect to runtime
-          if (!StopWhenFinished || ListCasesNotDone.size() > 0) {
+          if (!StopWhenFinished || ListUndoneIndex.size() > 0) {
             // We pass the test of being non-empty
             DoSomething = true;
           }
@@ -475,27 +547,23 @@ int main(int argc, char* argv[])
 	if (eReq) {
           DidSomething = true;
           StatusNeighbors[irank] = 0;
-          //          std::cerr << "eReq is non zero\n";
-	  SetMatrixAsDone(eReq->first);
-          //          std::cerr << "irank=" << irank << " eCtype=" << eReq->first << "\n";
           int idxMatrixF = eReq->second;
 #ifdef ERR_LOG
           std::cerr << "Starting Adjacent Form Method\n";
           std::cerr << "eReq->first=" << eReq->first << "\n";
+          //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
+#ifdef ERR_LOG
+          std::cerr << "We have ListAdjacentObject\n";
+#endif
           int nbAdjacent = ListAdjacentObject.size();
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
+          NC_WriteNbAdjacent(idxMatrixF, nbAdjacent);
 #ifdef ERR_LOG
           std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
 #endif
-          int iAdj=0;
-	  for (auto & eObj1 : ListAdjacentObject) {
-            TypeIndex eIndex{irank, idxMatrixF, iAdj};
-            PairExch<Tint> ePair{eObj1, eIndex};
-	    fInsertUnsent(ePair);
-            iAdj++;
-	  }
+	  for (auto & eObj1 : ListAdjacentObject)
+	    fInsertUnsent(eObj1);
           // Now the timings
           last_timeoper = std::chrono::system_clock::now();
 	}
@@ -557,18 +625,25 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Before the all_reduce operation\n";
 #endif
-      int val_i=1;
-      int val_o;
-      int ierr1 = MPI_Allreduce(&val_i, &val_o, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      int64_t nbAll = idxMatrixCurrent;
+      int64_t nbNotDone = ListUndoneIndex.size();
+      int64_t nbAll_tot, nbNotDone_tot;
+      int ierr1 = MPI_Allreduce(&nbAll, &nbAll_tot, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
       if (ierr1 != MPI_SUCCESS) {
         std::cerr << "ierr1 wrongly set\n";
         throw TerminalException{1};
       }
-      if (val_o == 1) {
-        std::cerr << "Receive the termination message. All Exiting\n";
-        std::cerr << "FINAL irank=" << irank << " |ListCasesDone|=" << ListCasesDone.size() << " |ListCasesNotDone|=" << ListCasesNotDone.size() << "\n";
-        break;
+      int ierr2 = MPI_Allreduce(&nbNotDone, &nbNotDone_tot, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+      if (ierr2 != MPI_SUCCESS) {
+        std::cerr << "ierr2 wrongly set\n";
+        throw TerminalException{1};
       }
+      std::cerr << "Receive the termination message. All Exiting\n";
+      int64_t nbDone=nbAll - nbNotDone;
+      int64_t nbDone_tot=nbAll_tot - nbNotDone_tot;
+      std::cerr << "FINAL irank=" << irank << " local |ListCases|=" << nbAll << " |ListCasesNotDone|=" << nbNotDone << " |ListCasesDone|=" << nbDone << "\n";
+      std::cerr << "FINAL irank=" << irank << " total |ListCases|=" << nbAll_tot << " |ListCasesNotDone|=" << nbNotDone_tot << " |ListCasesDone|=" << nbDone_tot << "\n";
+      break;
     }
   }
   std::cerr << "Normal termination of the program\n";
