@@ -6,7 +6,7 @@
 #PROGRAM		= CTYP_MPI_Enumeration_c
 #PROGRAM		= CTYP_debug
 #PROGRAM		= CTYP_MPI_Enumeration_debug
-#PROGRAM		= CTYP_MPI_Enumeration_c CTYP_PrepareInitialFile CTYP_ComputeMaxCoefficients
+#PROGRAM		= CTYP_MPI_Enumeration_c CTYP_PrepareInitialFile CTYP_ComputeMaxCoefficients CTYP_ComputeInvariant
 PROGRAM		= CTYP_ComputeInvariant
 #PROGRAM		= CTYP_TimingRandomAccess
 #PROGRAM		= CTYP_PrepareInitialFile

@@ -127,10 +127,14 @@ int main(int argc, char* argv[])
   // Processing the data
   //
   for (size_t i_ctype=0; i_ctype<n_ctype; i_ctype++) {
+    std::cerr << "i_ctype=" << i_ctype << "\n";
     TypeCtypeExch<Tint> eType = NC_ReadMatrix(i_ctype);
+    std::cerr << "We have eType\n";
     int nb_adjacent = NC_GetNbAdjacent(i_ctype);
+    std::cerr << "We have nb_adjacent\n";
     //
     StructuralInfo info = CTYP_GetStructuralInfo(eType);
+    std::cerr << "We have info\n";
     //
     NC_WriteMatrix(i_ctype, eType.eMat);
     NC_WriteEntry(varNbAdjO, i_ctype, nb_adjacent);
@@ -139,10 +143,11 @@ int main(int argc, char* argv[])
     NC_WriteEntry(varNbIneqAfterCritO, i_ctype, info.nb_ineq_after_crit);
     NC_WriteEntry(varNbFreeO, i_ctype, info.nb_free);
     NC_WriteEntry(varNbAutomO, i_ctype, info.nb_autom);
+    std::cerr << "Writes done\n";
     //
     size_t res = i_ctype % 1000;
     if (res == 0)
       std::cerr << "i_ctype=" << i_ctype << "/" << n_ctype << "\n";
   }
-  
+  std::cerr << "Normal termination of the program\n";
 }

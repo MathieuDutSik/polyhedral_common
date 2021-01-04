@@ -11,7 +11,7 @@
 
 
 //#define DEBUG
-//#define TIMINGS
+#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE
 //#define PRINT_GET_ADJ
@@ -727,6 +727,9 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const& TheCtypeArr)
     int rnk = RankMat(eMat);
     if (rnk == n-1)
       nb_free++;
+    int test = blk.IncrementShow();
+    if (test == -1)
+      break;
   }
   return nb_free;
 }
@@ -740,29 +743,24 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-#ifdef PRINT_GET_STRUCTINFO
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
-#endif
+
+
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
   int n_edge = TheCtype.rows();
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|ExpressMatrixForCType|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-#ifdef PRINT_GET_STRUCTINFO
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
-#endif
+
+
   std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple = CTYP_GetListTriple(TheCtype);
   int nb_triple = PairTriple.first.size();
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|CTYP_GetListTriple|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
-#ifdef PRINT_GET_STRUCTINFO
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
-#endif
+
+
   int8_t n = TheCtype.cols();
   int8_t tot_dim = n*(n+1) / 2;
   auto ComputeInequality=[&](MyVector<T> const& V1, MyVector<T> const& V2) -> MyVector<T> {
@@ -798,11 +796,13 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
   std::cerr << "Input |Tot_map|=" << Tot_map.size() << "\n";
 #endif
   int nb_ineq=Tot_map.size();
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|Insert inequalities|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
+
+
+
   int n_edgered = n_edge / 2;
 #ifdef PRINT_GET_STRUCTINFO
   int nb_match = 0;
@@ -901,23 +901,26 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
     throw TerminalException{1};
   }
 #endif
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|Criterion Ineq Drop|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
+
+
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetNumberFreeVectors|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
 #endif
+
+
   std::vector<std::vector<unsigned int>> ListGen = LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
 #endif
+
+
   std::vector<permlib::dom_int> v(n_edge);
   std::vector<permlib::Permutation> ListGenPerm;
   for (auto & eGen : ListGen) {
@@ -932,12 +935,6 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "|ExpressMatrixForCType|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|CTYP_GetListTriple|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|Insert inequalities|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|Criterion Ineq Drop|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|GetNumberFreeVectors|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
   std::cerr << "|NumberAutomorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
 #endif
   return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
