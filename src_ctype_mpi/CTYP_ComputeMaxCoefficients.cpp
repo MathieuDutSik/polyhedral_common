@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     //
     // Parsing the input
     //
-    int iProc;
+    size_t iProc = 0;
     Tint MaxCoeff=0;
     while(true) {
       std::string eFile = Prefix + std::to_string(iProc) + ".nc";
@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
         std::cerr << "File=" << eFile << " is missing\n";
         throw TerminalException{1};
       }
+      std::cerr << "Reading eFile=" << eFile << "\n";
       netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
       netCDF::NcVar varCtype=dataFile.getVar("Ctype");
       int n = varCtype.getDim(2).getSize();
@@ -62,7 +63,7 @@ int main(int argc, char* argv[])
             Tint eVal = T_abs(M(i_vect,i));
             MaxCoeff = std::max(MaxCoeff, eVal);
           }
-        size_t res = i_ctype / 1000;
+        size_t res = i_ctype % 1000;
         if (res == 0)
           std::cerr << "iProc=" << iProc << " i_ctype=" << i_ctype << "/" << n_ctype << " MaxCoeff=" << MaxCoeff << "\n";
       }
