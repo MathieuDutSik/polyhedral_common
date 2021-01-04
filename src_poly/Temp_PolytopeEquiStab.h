@@ -2737,13 +2737,13 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
               4 for negative sign and treated
      */
     std::vector<uint8_t> V(nbRow, 0);
-    std::vector<unsigned int> ListGenRet(2*nbRow,0);
+    std::vector<unsigned int> eGenRet(2*nbRow,0);
     auto setSign=[&](int const& idx, uint8_t const& val) -> void {
       if (val == 1) {
         eGenRet[idx        ] = eGen[idx];
         eGenRet[idx + nbRow] = eGen[idx] + nbRow;
       } else {
-        eGenRet[idx        ] = eGen[idx] + nbRow
+        eGenRet[idx        ] = eGen[idx] + nbRow;
         eGenRet[idx + nbRow] = eGen[idx];
       }
       V[idx] = val;
@@ -2787,7 +2787,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
     return true;
   };
   auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ePair.second) {
+    for (auto& eGen : ListGen) {
       bool test = TestExistSignVector(eGen);
       //      std::cerr << "test=" << test << "\n";
       if (!test)

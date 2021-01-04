@@ -717,7 +717,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const& TheCtypeArr)
       MyVector<T> eV = GetMatrixRow(TheCtypeArr.eMat, i_vect);
       T eSum = 0;
       for (int i=0; i<n; i++)
-        eSum += eV(i) * eVect(i);
+        eSum += eV(i) * eVect[i];
       T res = ResInt(eSum, 2);
       if (res == 0) {
         ListVect.push_back(eV);
@@ -894,7 +894,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
       Tot_mapB[kv.first] = kv.second;
     }
   }
-  int nb_ineq_aftercrit = Tot_mapB.size();
+  int nb_ineq_after_crit = Tot_mapB.size();
 #ifdef DEBUG
   if (nb_ineq_aftercrit + nb_redund != nb_ineq) {
     std::cerr << "inconsistency in the computation\n";
@@ -919,13 +919,13 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
 #endif
   std::vector<permlib::dom_int> v(n_edge);
-  std::vector<permlib::Permutation> ListGen;
+  std::vector<permlib::Permutation> ListGenPerm;
   for (auto & eGen : ListGen) {
     for (int i_edge=0; i_edge<n_edge; i_edge++)
       v[i_edge]=eGen[i_edge];
-    ListGen.push_back(permlib::Permutation(v));
+    ListGenPerm.push_back(permlib::Permutation(v));
   }
-  TheGroupFormat GRP = GetPermutationGroup(n_edge, ListGen);
+  TheGroupFormat GRP = GetPermutationGroup(n_edge, ListGenPerm);
   mpz_class size = GRP.size;
   int nb_autom = UniversalTypeConversion<int,mpz_class>(GRP.size);
 
@@ -940,7 +940,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
   std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
   std::cerr << "|NumberAutomorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
 #endif
-  return ListCtype;
+  return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
 }
 
 
