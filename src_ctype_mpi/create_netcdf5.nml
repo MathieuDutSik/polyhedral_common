@@ -1,7 +1,7 @@
 &DATA
  n = 5,
  NprocInput = 1,
- NprocOutput = 1,
+ NprocOutput = 2,
  ApplyCanonicalization = T,
  OutputType = "short",
  NatureInput = "text",

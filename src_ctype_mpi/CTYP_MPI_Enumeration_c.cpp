@@ -9,8 +9,8 @@
 namespace mpi = boost::mpi;
 
 
-//#define TIMINGS_HASH
-//#define ERR_LOG
+#define TIMINGS_HASH
+#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -118,7 +118,13 @@ void NC_ReadMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> & M, size_t const& 
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
+#ifdef ERR_LOG
+  std::cerr << "Before NC_ReadMatrix_T, getvar\n";
+#endif
   varCtype.getVar(start2, count2, V.data());
+#ifdef ERR_LOG
+  std::cerr << "After NC_ReadMatrix_T, getvar\n";
+#endif
   int idx=0;
   for (size_t i_vect=0; i_vect<n_vect; i_vect++)
     for (size_t i=0; i<n; i++) {
@@ -140,7 +146,13 @@ void NC_WriteMatrix_T(netCDF::NcVar & varCtype, MyMatrix<int> const& M, size_t c
       V[idx] = M(i_vect, i);
       idx++;
     }
+#ifdef ERR_LOG
+  std::cerr << "Before NC_WriteMatrix_T, putvar\n";
+#endif
   varCtype.putVar(start2, count2, V.data());
+#ifdef ERR_LOG
+  std::cerr << "After NC_WriteMatrix_T, putvar\n";
+#endif
 }
 
 
@@ -200,15 +212,33 @@ int main(int argc, char* argv[])
   // The netcdf interface
   //
   std::string WorkFile=WorkingPrefix + std::to_string(irank) + ".nc";
+#ifdef ERR_LOG
+  std::cerr << "WorkFile=" << WorkFile << "\n";
+#endif
   netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::write);
+#ifdef ERR_LOG
+  std::cerr << "netcdf step 1\n";
+#endif
   netCDF::NcVar varCtype=dataFile.getVar("Ctype");
+#ifdef ERR_LOG
+  std::cerr << "netcdf step 2\n";
+#endif
   int n_read = varCtype.getDim(2).getSize();
+#ifdef ERR_LOG
+  std::cerr << "n_read=" << n_read << "\n";
+#endif
   if (n_read != n) {
     std::cerr << "n_read=" << n_read << " n=" << n << "\n";
     return 0;
   }
   netCDF::NcType eType=varCtype.getType();
+#ifdef ERR_LOG
+  std::cerr << "netcdf step 3\n";
+#endif
   netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
+#ifdef ERR_LOG
+  std::cerr << "netcdf step 4\n";
+#endif
   int curr_nb_matrix = varNbAdj.getDim(0).getSize();
   auto NC_GetNbAdjacent=[&](int const& pos) -> int {
     std::vector<size_t> start{size_t(pos)};
