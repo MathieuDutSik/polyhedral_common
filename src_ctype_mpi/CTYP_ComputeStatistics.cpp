@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     std::string eFile = Prefix + std::to_string(irank) + ".nc";
     if (!IsExistingFile(eFile)) {
       std::cerr << "eFile=" << eFile << " is missing\n";
-      throw TerminalException{1};
+      break;
     }
     netCDF::NcFile dataFileI(eFile, netCDF::NcFile::read);
     for (auto & eKey : LKey) {
@@ -43,6 +43,7 @@ int main(int argc, char* argv[])
         eMap[value]++;
       }
     }
+    irank++;
   }
   //
   // Printing the data
