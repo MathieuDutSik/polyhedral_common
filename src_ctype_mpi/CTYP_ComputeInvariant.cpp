@@ -128,6 +128,9 @@ int main(int argc, char* argv[])
   //
   // Processing the data
   //
+  std::string LogFileO="LOG_" + std::to_string(irank);
+  std::ofstream log(LogFileO);
+  log << "Beginning\n";
   for (size_t i_ctype=0; i_ctype<n_ctype; i_ctype++) {
 #ifdef DEBUG_INFO
     std::cerr << "i_ctype=" << i_ctype << "\n";
@@ -160,6 +163,8 @@ int main(int argc, char* argv[])
     if (res == 0)
       std::cerr << "i_ctype=" << i_ctype << "/" << n_ctype << "\n";
 #endif
+    log << "i_ctype=" << i_ctype << "\n";
   }
   std::cerr << "Normal termination of the program\n";
+  MPI_Finalize();
 }
