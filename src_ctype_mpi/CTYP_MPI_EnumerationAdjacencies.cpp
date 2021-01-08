@@ -109,7 +109,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI()
 
 
 
-static int tag_new_form = 37;
+static int tag_form_adj = 37;
 static int tag_termination = 157;
 
 
@@ -170,6 +170,7 @@ int main(int argc, char* argv[])
   // We need to put the starting time as early as possible so that e are as synchronized as possible.
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   size_t irank=irank_i;
+  int8_t irank_i8=irank;
   size_t n_pes=n_pes_i;
 #ifdef ERR_LOG
   std::cerr << "irank=" << irank << " n_pes=" << n_pes << "\n";
@@ -208,8 +209,8 @@ int main(int argc, char* argv[])
   // The basic sizes
   //
   int n_vect = std::pow(2, n) - 1;
-  int siz_pairexch = n_vect * n * sizeof(Tint);
-  int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairexch;
+  int siz_pairadjexch = n_vect * n * sizeof(Tint) + sizeof(int8_t) + sizeof(int);
+  int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairadjexch;
   //
   // The netcdf interface
   //
@@ -225,7 +226,7 @@ int main(int argc, char* argv[])
   netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
   int total_nb_matrix = varNbAdj.getDim(0).getSize();
   std::vector<size_t> start_nbadj{0};
-  std::vector<size_t> count_nbadj{total_nb_matrix};
+  std::vector<size_t> count_nbadj{size_t(total_nb_matrix)};
   std::vector<int> ListNbAdjacent(total_nb_matrix);
   std::vector<int> ListShift(total_nb_matrix);
   ListShift[0] = 0;
@@ -233,7 +234,7 @@ int main(int argc, char* argv[])
     ListShift[i_matrix] = ListShift[i_matrix-1] + ListNbAdjacent[i_matrix-1];
   std::vector<int> AdjacencyDone(total_nb_matrix,0);
   varNbAdj.getVar(start_nbadj, count_nbadj, ListNbAdjacent.data());
-  auto NC_ReadMatrix=[&](int const& pos) -> TypeCtypeExch<Tint> {
+  auto NC_ReadMatrix=[&](int const& pos) -> TypeCtypeAdjExch<Tint> {
     MyMatrix<Tint> M(n_vect, n);
     if (eType == netCDF::NcType::nc_BYTE)
       NC_ReadMatrix_T<int8_t,Tint>(varCtype, M, n_vect, n, pos);
@@ -243,7 +244,7 @@ int main(int argc, char* argv[])
       NC_ReadMatrix_T<int32_t,Tint>(varCtype, M, n_vect, n, pos);
     if (eType == netCDF::NcType::nc_INT64)
       NC_ReadMatrix_T<int64_t,Tint>(varCtype, M, n_vect, n, pos);
-    return {M};
+    return {M, irank_i8, pos};
   };
   //
   // The adjacency file
@@ -253,6 +254,13 @@ int main(int argc, char* argv[])
   netCDF::NcVar varStatus = dataAdjFile.getVar("status");
   netCDF::NcVar varIdxProc = dataAdjFile.getVar("idx_proc");
   netCDF::NcVar varIdxAdjacent = dataAdjFile.getVar("idx_adjacent");
+  auto NC_GetStatus=[&](int const& pos) -> int8_t {
+    std::vector<size_t> start{size_t(pos)};
+    std::vector<size_t> count{1};
+    int8_t eStatus;
+    varStatus.putVar(start, count, &eStatus);
+    return eStatus;
+  };
   auto NC_WriteStatus=[&](int const& pos, int8_t const& eStatus) -> void {
     std::vector<size_t> start{size_t(pos)};
     std::vector<size_t> count{1};
@@ -339,48 +347,37 @@ int main(int argc, char* argv[])
     return nb_collision;
   };
   std::vector<int> ListUndoneIndex;
-  int idxMatrixCurrent=0;
-  auto fInsert=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
-#ifdef TIMINGS_HASH
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
+  auto fInsert=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
+    size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
 #ifdef ERR_LOG
     std::cerr << "e_hash=" << e_hash << "\n";
 #endif
     std::vector<int> & eList = MapIndexByHash[e_hash];
-#ifdef TIMINGS_HASH
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|HashMap|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
     for (auto iIdx : eList) {
-      TypeCtypeExch<Tint> fCtype = NC_ReadMatrix(iIdx);
-      if (eCtype == fCtype)
+      TypeCtypeAdjExch<Tint> fCtype = NC_ReadMatrix(iIdx);
+      if (eCtype == fCtype) {
+        NC_WriteAdjacency(iIdx, eCtype.iProc, eCtype.pos);
         return;
+      }
     }
-    eList.push_back(idxMatrixCurrent);
-    ListUndoneIndex.push_back(idxMatrixCurrent);
-    NC_AppendMatrix(eCtype.eMat);
-    idxMatrixCurrent++;
-#ifdef ERR_LOG
-    std::cerr << "nb_collision=" << GetNbCollision() << "\n";
-#endif
+    std::cerr << "We should not reach that stage as the matrix should already be in the list\n";
+    throw TerminalException{1};
   };
-  auto GetUndoneEntry=[&]() -> boost::optional<std::pair<TypeCtypeExch<Tint>,int>> {
+  auto GetUndoneEntry=[&]() -> boost::optional<std::pair<MyMatrix<Tint>,int>> {
     size_t len = ListUndoneIndex.size();
     if (len > 0) {
       int idx = ListUndoneIndex[len - 1];
       ListUndoneIndex.pop_back();
-      TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(idx);
-      std::pair<TypeCtypeExch<Tint>,int> ePair = {eCtype, idx};
-      return boost::optional<std::pair<TypeCtypeExch<Tint>,int>>(ePair);
+      MyMatrix<Tint> eCtype = NC_ReadMatrix(idx).eMat;
+      std::pair<MyMatrix<Tint>,int> ePair = {eCtype, idx};
+      return boost::optional<std::pair<MyMatrix<Tint>,int>>(ePair);
     }
     return {};
   };
   //
   // The system for sending matrices
   //
-  std::vector<std::vector<TypeCtypeExch<Tint>>> ListListMatrixUnsent(n_pes);
+  std::vector<std::vector<TypeCtypeAdjExch<Tint>>> ListListMatrixUnsent(n_pes);
   size_t CurrentBufferSize = 1;
   auto GetSendableIndex=[&]() -> int {
     for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
@@ -391,19 +388,10 @@ int main(int argc, char* argv[])
   };
   auto AreBufferFullEnough=[&]() -> bool {
     size_t nb_unsend = 0;
-#ifdef ERR_LOG
-    std::cerr << "List|ListMatrixUnsent| =";
-#endif
     for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
       size_t the_siz = ListListMatrixUnsent[i_pes].size();
-#ifdef ERR_LOG
-      std::cerr << " " << the_siz;
-#endif
       nb_unsend += the_siz;
     }
-#ifdef ERR_LOG
-    std::cerr << " nb_unsend=" << nb_unsend << "\n";
-#endif
     return nb_unsend > MaxStoredUnsentMatrices;
   };
   auto ClearUnsentAsPossible=[&]() -> void {
@@ -417,23 +405,20 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Assigning the request idx=" << idx << " to processor " << i_pes << "\n";
 #endif
-      std::vector<TypeCtypeExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
+      std::vector<TypeCtypeAdjExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
       char* ptr_o = ListMesg[idx].data();
       std::memcpy(ptr_o, (char*)(&CurrentBufferSize), sizeof(int));
       ptr_o += sizeof(int);
       int pos = eList.size();
       for (size_t i_mat=0; i_mat<CurrentBufferSize; i_mat++) {
         pos--;
-        PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
-        ptr_o += siz_pairexch;
-#ifdef ERR_LOG
-        std::cerr << "Appending matrix Ctype=" << eList[pos] << "\n";
-#endif
+        PairAdjExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
+        ptr_o += siz_pairadjexch;
         eList.pop_back();
       }
       char* ptr_send = ListMesg[idx].data();
       MPI_Request* ereq_ptr = &ListRequest[idx];
-      int ierr1 = MPI_Isend(ptr_send, totalsiz_exch, MPI_SIGNED_CHAR, i_pes, tag_new_form, MPI_COMM_WORLD, ereq_ptr);
+      int ierr1 = MPI_Isend(ptr_send, totalsiz_exch, MPI_SIGNED_CHAR, i_pes, tag_form_adj, MPI_COMM_WORLD, ereq_ptr);
       if (ierr1 != MPI_SUCCESS) {
         std::cerr << "ierr1 wrongly set\n";
         throw TerminalException{1};
@@ -442,7 +427,7 @@ int main(int argc, char* argv[])
       nbRequest++;
     }
   };
-  auto fInsertUnsent=[&](TypeCtypeExch<Tint> const& eCtype) -> void {
+  auto fInsertUnsent=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
     size_t e_hash = Matrix_Hash(eCtype.eMat, seed);
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
@@ -460,20 +445,16 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
   std::cerr << "Beginning reading WorkFile=" << WorkFile << "\n";
 #endif
-  for (int iCurr=0; iCurr<curr_nb_matrix; iCurr++) {
-    TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(iCurr);
-    size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
-    int nbAdjacent = NC_GetNbAdjacent(iCurr);
-#ifdef ERR_LOG
-    std::cerr << "iCurr=" << iCurr << "\n";
-#endif
+  for (int iCurr=0; iCurr<total_nb_matrix; iCurr++) {
+    TypeCtypeAdjExch<Tint> eCtype = NC_ReadMatrix(iCurr);
+    size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
+    int8_t eStatus = NC_GetStatus(iCurr);
     std::vector<int>& eList= MapIndexByHash[e_hash];
-    eList.push_back(idxMatrixCurrent);
-    if (nbAdjacent == 0)
-      ListUndoneIndex.push_back(idxMatrixCurrent);
-    idxMatrixCurrent++;
+    eList.push_back(iCurr);
+    if (eStatus == 0)
+      ListUndoneIndex.push_back(iCurr);
   }
-  std::cerr << "Reading finished : |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << " nb_collision=" << GetNbCollision() << "\n";
+  std::cerr << "Reading finished : |ListCasesNotDone|=" << ListUndoneIndex.size() << " nb_collision=" << GetNbCollision() << "\n";
   //
   // The main loop itself.
   //
@@ -488,7 +469,7 @@ int main(int argc, char* argv[])
     int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(ref_time - start).count();
     // Now the operations themselves
 #ifdef ERR_LOG
-    std::cerr << "Begin while, we have |ListCases|=" << idxMatrixCurrent << " |ListCasesNotDone|=" << ListUndoneIndex.size() << " elapsed_time=" << elapsed_seconds << "\n";
+    std::cerr << "Begin while, we have |ListCasesNotDone|=" << ListUndoneIndex.size() << " elapsed_time=" << elapsed_seconds << "\n";
 #endif
     MPI_Status status1;
     int flag;
@@ -503,12 +484,12 @@ int main(int argc, char* argv[])
         std::cerr << "Having an MPI_Error. Immediate death\n";
         throw TerminalException{1};
       }
-      if (status1.MPI_TAG == tag_new_form) {
+      if (status1.MPI_TAG == tag_form_adj) {
         StatusNeighbors[status1.MPI_SOURCE] = 0; // Getting a message pretty much means it is alive
         std::vector<char> eVect_c(totalsiz_exch);
         char* ptr_recv = eVect_c.data();
         MPI_Status status2;
-        int ierr2 = MPI_Recv(ptr_recv, totalsiz_exch, MPI_SIGNED_CHAR, status1.MPI_SOURCE, tag_new_form,
+        int ierr2 = MPI_Recv(ptr_recv, totalsiz_exch, MPI_SIGNED_CHAR, status1.MPI_SOURCE, tag_form_adj,
                              MPI_COMM_WORLD, &status2);
         if (status2.MPI_ERROR != MPI_SUCCESS || ierr2 != MPI_SUCCESS) {
           std::cerr << "Failed status2 or ierr2\n";
@@ -521,11 +502,8 @@ int main(int argc, char* argv[])
 	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
-          TypeCtypeExch<Tint> eCtype = vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
-#ifdef ERR_LOG
-          std::cerr << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
-#endif
-          ptr_recv += siz_pairexch;
+          TypeCtypeAdjExch<Tint> eCtype = vectorchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
+          ptr_recv += siz_pairadjexch;
           fInsert(eCtype);
         }
         // Now the timings
@@ -567,7 +545,7 @@ int main(int argc, char* argv[])
       std::cerr << "DoSomething = " << DoSomething << "\n";
 #endif
       if (DoSomething) {
-	boost::optional<std::pair<TypeCtypeExch<Tint>,int>> eReq=GetUndoneEntry();
+	boost::optional<std::pair<MyMatrix<Tint>,int>> eReq=GetUndoneEntry();
 	if (eReq) {
           DidSomething = true;
           StatusNeighbors[irank] = 0;
@@ -577,17 +555,15 @@ int main(int argc, char* argv[])
           std::cerr << "eReq->first=" << eReq->first << "\n";
           //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
-          std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
+          std::vector<TypeCtypeExch<Tint>> ListAdjacentObject = CTYP_GetAdjacentCanonicCtypes<Tint>({eReq->first});
 #ifdef ERR_LOG
           std::cerr << "We have ListAdjacentObject\n";
 #endif
-          int nbAdjacent = ListAdjacentObject.size();
-          NC_WriteNbAdjacent(idxMatrixF, nbAdjacent);
-#ifdef ERR_LOG
-          std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF << " nbAdjacent=" << nbAdjacent << " END\n";
-#endif
-	  for (auto & eObj1 : ListAdjacentObject)
-	    fInsertUnsent(eObj1);
+          NC_WriteStatus(idxMatrixF, 1);
+	  for (auto & eObj1 : ListAdjacentObject) {
+            TypeCtypeAdjExch<Tint> obj2{eObj1.eMat, irank_i8, idxMatrixF};
+	    fInsertUnsent(obj2);
+          }
           // Now the timings
           last_timeoper = std::chrono::system_clock::now();
 	}
@@ -649,7 +625,7 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Before the all_reduce operation\n";
 #endif
-      int64_t nbAll = idxMatrixCurrent;
+      int64_t nbAll = total_nb_matrix;
       int64_t nbNotDone = ListUndoneIndex.size();
       int64_t nbAll_tot, nbNotDone_tot;
       int ierr1 = MPI_Allreduce(&nbAll, &nbAll_tot, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);

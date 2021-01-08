@@ -73,6 +73,100 @@ struct TypeCtypeExch {
   MyMatrix<T> eMat;
 };
 
+template<typename T>
+void PairExch_to_vectorchar(TypeCtypeExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
+{
+#ifdef ERR_LOG
+  std::cerr << "PairExch_to_vectorchar, Begin\n";
+#endif
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      std::memcpy(ptr_o, (char*)(&eCtype.eMat(i,j)), sizeof(T));
+      ptr_o += sizeof(T);
+    }
+#ifdef ERR_LOG
+  std::cerr << "PairExch_to_vectorchar, End\n";
+#endif
+}
+
+template<typename T>
+TypeCtypeExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbCol)
+{
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairExch, Begin\n";
+#endif
+  MyMatrix<T> eMat(nbRow, nbCol);
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      T eVal;
+      std::memcpy((char*)(&eVal), ptr_i, sizeof(T));
+      ptr_i += sizeof(T);
+      eMat(i, j) = eVal;
+    }
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairExch, End\n";
+#endif
+  return {eMat};
+}
+
+
+
+template<typename T>
+struct TypeCtypeAdjExch {
+  MyMatrix<T> eMat;
+  int8_t iProc;
+  int pos;
+};
+
+template<typename T>
+void PairAdjExch_to_vectorchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
+{
+#ifdef ERR_LOG
+  std::cerr << "PairAdjExch_to_vectorchar, Begin\n";
+#endif
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      std::memcpy(ptr_o, (char*)(&eCtype.eMat(i,j)), sizeof(T));
+      ptr_o += sizeof(T);
+    }
+  std::memcpy(ptr_o, (char*)(&eCtype.iProc), sizeof(int8_t));
+  ptr_o += sizeof(int8_t);
+  std::memcpy(ptr_o, (char*)(&eCtype.pos), sizeof(int));
+  ptr_o += sizeof(int);
+#ifdef ERR_LOG
+  std::cerr << "PairAdjExch_to_vectorchar, End\n";
+#endif
+}
+
+template<typename T>
+TypeCtypeAdjExch<T> vectorchar_to_PairAdjExch(char* ptr_i, int const& nbRow, int const& nbCol)
+{
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairAdjExch, Begin\n";
+#endif
+  MyMatrix<T> eMat(nbRow, nbCol);
+  for (int i=0; i<nbRow; i++)
+    for (int j=0; j<nbCol; j++) {
+      T eVal;
+      std::memcpy((char*)(&eVal), ptr_i, sizeof(T));
+      ptr_i += sizeof(T);
+      eMat(i, j) = eVal;
+    }
+  int8_t iProc;
+  std::memcpy((char*)(&iProc), ptr_i, sizeof(int8_t));
+  ptr_i += sizeof(int8_t);
+  //
+  int pos;
+  std::memcpy((char*)(&pos), ptr_i, sizeof(int));
+  ptr_i += sizeof(int);
+#ifdef ERR_LOG
+  std::cerr << "vectorchar_to_PairAdjExch, End\n";
+#endif
+  return {eMat, iProc, pos};
+}
+
+
+
 
 template<typename T>
 std::vector<MyMatrix<T>> CTYP_GetBasis(int n)
@@ -957,43 +1051,6 @@ struct PairExch {
   TypeIndex eIndex;
 };
 
-template<typename T>
-void PairExch_to_vectorchar(TypeCtypeExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
-{
-#ifdef ERR_LOG
-  std::cerr << "PairExch_to_vectorchar, Begin\n";
-#endif
-  for (int i=0; i<nbRow; i++)
-    for (int j=0; j<nbCol; j++) {
-      std::memcpy(ptr_o, (char*)(&eCtype.eMat(i,j)), sizeof(T));
-      ptr_o += sizeof(T);
-    }
-#ifdef ERR_LOG
-  std::cerr << "PairExch_to_vectorchar, End\n";
-#endif
-}
-
-template<typename T>
-TypeCtypeExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const& nbCol)
-{
-#ifdef ERR_LOG
-  std::cerr << "vectorchar_to_PairExch, Begin\n";
-#endif
-  MyMatrix<T> eMat(nbRow, nbCol);
-  for (int i=0; i<nbRow; i++)
-    for (int j=0; j<nbCol; j++) {
-      T eVal;
-      std::memcpy((char*)(&eVal), ptr_i, sizeof(T));
-      ptr_i += sizeof(T);
-      eMat(i, j) = eVal;
-    }
-#ifdef ERR_LOG
-  std::cerr << "vectorchar_to_PairExch, End\n";
-#endif
-  return {eMat};
-}
-
-
 
 
 template<typename T>
@@ -1011,6 +1068,25 @@ std::ostream& operator<<(std::ostream& os, TypeCtypeExch<T> const& obj)
 
 template<typename T>
 bool operator==(TypeCtypeExch<T> const& obj1, TypeCtypeExch<T> const& obj2)
+{
+  int nbRow1=obj1.eMat.rows();
+  int nbRow2=obj2.eMat.rows();
+  if (nbRow1 != nbRow2)
+    return false;
+  int nbCol1=obj1.eMat.cols();
+  int nbCol2=obj2.eMat.cols();
+  if (nbCol1 != nbCol2)
+    return false;
+  for (int iRow=0; iRow<nbRow1; iRow++)
+    for (int iCol=0; iCol<nbCol1; iCol++)
+      if (obj1.eMat(iRow, iCol) != obj2.eMat(iRow, iCol))
+        return false;
+  return true;
+}
+
+
+template<typename T>
+bool operator==(TypeCtypeAdjExch<T> const& obj1, TypeCtypeAdjExch<T> const& obj2)
 {
   int nbRow1=obj1.eMat.rows();
   int nbRow2=obj2.eMat.rows();
@@ -1120,7 +1196,27 @@ namespace std {
       return h1;
     }
   };
+  template <typename Tint>
+  struct hash<TypeCtypeAdjExch<Tint>>
+  {
+    std::size_t operator()(const TypeCtypeAdjExch<Tint>& k) const
+    {
+      std::size_t h1 = 0;
+      int nbRow=k.eMat.rows();
+      int nbCol=k.eMat.cols();
+      for (int iRow=0; iRow<nbRow; iRow++)
+        for (int iCol=0; iCol<nbCol; iCol++) {
+          Tint eVal = k.eMat(iRow,iCol);
+          std::size_t h2 = std::hash<Tint>()(eVal);
+          h1 = h2 ^ ( h1 << 1);
+        }
+      return h1;
+    }
+  };
 }
+
+
+
 
 
 
