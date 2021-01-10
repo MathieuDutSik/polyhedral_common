@@ -210,7 +210,8 @@ int main(int argc, char* argv[])
   //
   int n_vect = std::pow(2, n) - 1;
   int siz_pairadjexch = n_vect * n * sizeof(Tint) + sizeof(int8_t) + sizeof(int);
-  int totalsiz_exch = sizeof(int) + MpiBufferSize * siz_pairadjexch;
+  int siz_typeadjexch = 2 * (sizeof(int8_t) + sizeof(int));
+  int totalsiz_exch = sizeof(int) + MpiBufferSize * (sizeof(int8_t) + std::max(siz_pairadjexch, siz_typeadjexch));
   //
   // The netcdf interface
   //
@@ -258,7 +259,7 @@ int main(int argc, char* argv[])
     std::vector<size_t> start{size_t(pos)};
     std::vector<size_t> count{1};
     int8_t eStatus;
-    varStatus.putVar(start, count, &eStatus);
+    varStatus.getVar(start, count, &eStatus);
     return eStatus;
   };
   auto NC_WriteStatus=[&](int const& pos, int8_t const& eStatus) -> void {
@@ -339,7 +340,8 @@ int main(int argc, char* argv[])
     return val1 == val2;
   };
   tsl::sparse_map<size_t,std::vector<int>,std::function<size_t(size_t)>, std::function<bool(size_t,size_t)>> MapIndexByHash({}, fctHash, fctEqual);
-  //  std::unordered_map<size_t,std::vector<int>,decltype(fctHash), decltype(fctEqual)> MapIndexByHash({}, fctHash, fctEqual);
+  std::vector<std::vector<std::vector<char>>> ListListMatrixUnsent(n_pes);
+  size_t CurrentBufferSize = 1;
   auto GetNbCollision=[&]() -> size_t {
     size_t nb_collision=0;
     for (auto & kv : MapIndexByHash)
@@ -347,7 +349,7 @@ int main(int argc, char* argv[])
     return nb_collision;
   };
   std::vector<int> ListUndoneIndex;
-  auto fInsert=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
+  auto fInsert_Ctype=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
     size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
 #ifdef ERR_LOG
     std::cerr << "e_hash=" << e_hash << "\n";
@@ -356,7 +358,9 @@ int main(int argc, char* argv[])
     for (auto iIdx : eList) {
       TypeCtypeAdjExch<Tint> fCtype = NC_ReadMatrix(iIdx);
       if (eCtype == fCtype) {
-        NC_WriteAdjacency(iIdx, eCtype.iProc, eCtype.pos);
+        TypeAdjExch equad{eCtype.iProc, eCtype.pos, irank_i8, iIdx};
+        std::vector<char> eV = TypeAdjExch_to_stdvectorchar(equad);
+        ListListMatrixUnsent[eCtype.iProc].push_back(eV);
         return;
       }
     }
@@ -377,8 +381,6 @@ int main(int argc, char* argv[])
   //
   // The system for sending matrices
   //
-  std::vector<std::vector<TypeCtypeAdjExch<Tint>>> ListListMatrixUnsent(n_pes);
-  size_t CurrentBufferSize = 1;
   auto GetSendableIndex=[&]() -> int {
     for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
       if (ListListMatrixUnsent[i_pes].size() >= CurrentBufferSize)
@@ -405,15 +407,17 @@ int main(int argc, char* argv[])
 #ifdef ERR_LOG
       std::cerr << "Assigning the request idx=" << idx << " to processor " << i_pes << "\n";
 #endif
-      std::vector<TypeCtypeAdjExch<Tint>>& eList = ListListMatrixUnsent[i_pes];
+      std::vector<std::vector<char>> & eList = ListListMatrixUnsent[i_pes];
       char* ptr_o = ListMesg[idx].data();
       std::memcpy(ptr_o, (char*)(&CurrentBufferSize), sizeof(int));
       ptr_o += sizeof(int);
+      //
       int pos = eList.size();
       for (size_t i_mat=0; i_mat<CurrentBufferSize; i_mat++) {
         pos--;
-        PairAdjExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
-        ptr_o += siz_pairadjexch;
+        int len = eList[pos].size();
+        std::memcpy(ptr_o, eList[pos].data(), len);
+        ptr_o += len;
         eList.pop_back();
       }
       char* ptr_send = ListMesg[idx].data();
@@ -432,10 +436,11 @@ int main(int argc, char* argv[])
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
-      fInsert(eCtype);
+      fInsert_Ctype(eCtype);
     }
     else {
-      ListListMatrixUnsent[res].push_back(eCtype);
+      std::vector<char> eV = PairAdjExch_to_stdvectorchar(eCtype, n_vect, n);
+      ListListMatrixUnsent[res].push_back(eV);
       ClearUnsentAsPossible();
     }
   };
@@ -502,9 +507,27 @@ int main(int argc, char* argv[])
 	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
-          TypeCtypeAdjExch<Tint> eCtype = vectorchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
-          ptr_recv += siz_pairadjexch;
-          fInsert(eCtype);
+          int8_t iChoice;
+          std::memcpy((char*)(&iChoice), ptr_recv, sizeof(int8_t));
+          ptr_recv += sizeof(int8_t);
+          //
+          if (iChoice == 0) {
+            TypeCtypeAdjExch<Tint> eCtype = ptrchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
+            ptr_recv += siz_pairadjexch;
+            fInsert_Ctype(eCtype);
+          } else {
+            if (iChoice == 1) {
+              TypeAdjExch equad = ptrchar_to_TypeAdjExch(ptr_recv);
+              if (equad.iProc1 != irank_i8) {
+                std::cerr << "incoherent value on the input\n";
+                throw TerminalException{1};
+              }
+              NC_WriteAdjacency(equad.pos1, equad.iProc2, equad.pos2);
+            } else {
+              std::cerr << "iChoice=" << iChoice << "\n";
+              throw TerminalException{1};
+            }
+          }
         }
         // Now the timings
         last_timeoper = std::chrono::system_clock::now();

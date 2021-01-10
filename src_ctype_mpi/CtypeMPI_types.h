@@ -110,6 +110,69 @@ TypeCtypeExch<T> vectorchar_to_PairExch(char* ptr_i, int const& nbRow, int const
 }
 
 
+struct TypeAdjExch {
+  int8_t iProc1;
+  int pos1;
+  int8_t iProc2;
+  int pos2;
+};
+
+
+void TypeAdjExch_to_ptrchar(TypeAdjExch const& eR, char* ptr_o)
+{
+  std::memcpy(ptr_o, (char*)(&eR.iProc1), sizeof(int8_t));
+  ptr_o += sizeof(int8_t);
+  std::memcpy(ptr_o, (char*)(&eR.pos1), sizeof(int));
+  ptr_o += sizeof(int);
+  //
+  std::memcpy(ptr_o, (char*)(&eR.iProc2), sizeof(int8_t));
+  ptr_o += sizeof(int8_t);
+  std::memcpy(ptr_o, (char*)(&eR.pos2), sizeof(int));
+  ptr_o += sizeof(int);
+}
+
+TypeAdjExch ptrchar_to_TypeAdjExch(char* ptr_i)
+{
+  int8_t iProc1;
+  std::memcpy((char*)(&iProc1), ptr_i, sizeof(int8_t));
+  ptr_i += sizeof(int8_t);
+  //
+  int pos1;
+  std::memcpy((char*)(&pos1), ptr_i, sizeof(int));
+  ptr_i += sizeof(int);
+  //
+  int8_t iProc2;
+  std::memcpy((char*)(&iProc2), ptr_i, sizeof(int8_t));
+  ptr_i += sizeof(int8_t);
+  //
+  int pos2;
+  std::memcpy((char*)(&pos2), ptr_i, sizeof(int));
+  ptr_i += sizeof(int);
+  //
+  return {iProc1, pos1, iProc2, pos2};
+}
+
+
+std::vector<char> TypeAdjExch_to_stdvectorchar(TypeAdjExch const& eR)
+{
+  int len = sizeof(int8_t) + 2 * (sizeof(int) + sizeof(int8_t) );
+  std::vector<char> eV(len);
+  char* ptr_o = eV.data();
+  //
+  int8_t val=1;
+  std::memcpy(ptr_o, (char*)(&val), sizeof(int8_t));
+  ptr_o += sizeof(int8_t);
+  //
+  TypeAdjExch_to_ptrchar(eR, ptr_o);
+  //
+  return eV;
+}
+
+
+
+
+
+
 
 template<typename T>
 struct TypeCtypeAdjExch {
@@ -119,7 +182,7 @@ struct TypeCtypeAdjExch {
 };
 
 template<typename T>
-void PairAdjExch_to_vectorchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
+void PairAdjExch_to_ptrchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbRow, int const& nbCol, char* ptr_o)
 {
 #ifdef ERR_LOG
   std::cerr << "PairAdjExch_to_vectorchar, Begin\n";
@@ -139,7 +202,7 @@ void PairAdjExch_to_vectorchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbR
 }
 
 template<typename T>
-TypeCtypeAdjExch<T> vectorchar_to_PairAdjExch(char* ptr_i, int const& nbRow, int const& nbCol)
+TypeCtypeAdjExch<T> ptrchar_to_PairAdjExch(char* ptr_i, int const& nbRow, int const& nbCol)
 {
 #ifdef ERR_LOG
   std::cerr << "vectorchar_to_PairAdjExch, Begin\n";
@@ -164,6 +227,25 @@ TypeCtypeAdjExch<T> vectorchar_to_PairAdjExch(char* ptr_i, int const& nbRow, int
 #endif
   return {eMat, iProc, pos};
 }
+
+
+template<typename T>
+std::vector<char> PairAdjExch_to_stdvectorchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbRow, int const& nbCol)
+{
+  int len = sizeof(int8_t) + 2 * (sizeof(int) + sizeof(int8_t) );
+  std::vector<char> eV(len);
+  char* ptr_o = eV.data();
+  //
+  int8_t val=0;
+  std::memcpy(ptr_o, (char*)(&val), sizeof(int8_t));
+  ptr_o += sizeof(int8_t);
+  //
+  PairAdjExch_to_ptrchar(eCtype, nbRow, nbCol, ptr_o);
+  //
+  return eV;
+}
+
+
 
 
 
