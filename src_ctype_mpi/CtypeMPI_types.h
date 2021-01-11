@@ -118,6 +118,13 @@ struct TypeAdjExch {
 };
 
 
+std::ostream& operator<<(std::ostream& os, TypeAdjExch const& obj)
+{
+  os << "(" << int(obj.iProc1) << "-" << obj.pos1 << "|" << int(obj.iProc2) << "-" << obj.pos2 << ")";
+  return os;
+}
+
+
 void TypeAdjExch_to_ptrchar(TypeAdjExch const& eR, char* ptr_o)
 {
   std::memcpy(ptr_o, (char*)(&eR.iProc1), sizeof(int8_t));

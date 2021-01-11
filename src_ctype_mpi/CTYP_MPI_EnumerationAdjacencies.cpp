@@ -352,7 +352,8 @@ int main(int argc, char* argv[])
   auto fInsert_Ctype=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
     size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
 #ifdef ERR_LOG
-    std::cerr << "e_hash=" << e_hash << "\n";
+    std::cerr << "e_hash=" << e_hash << " |eCtype|=" << eCtype.eMat.rows() << " / " << eCtype.eMat.cols() << "\n";
+    WriteMatrix(std::cerr, eCtype.eMat);
 #endif
     std::vector<int> & eList = MapIndexByHash[e_hash];
     for (auto iIdx : eList) {
@@ -436,6 +437,7 @@ int main(int argc, char* argv[])
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
+      std::cerr << "fInsert_Ctype in fInsertUnsent\n";
       fInsert_Ctype(eCtype);
     }
     else {
@@ -456,6 +458,7 @@ int main(int argc, char* argv[])
     int8_t eStatus = NC_GetStatus(iCurr);
     std::vector<int>& eList= MapIndexByHash[e_hash];
     eList.push_back(iCurr);
+    std::cerr << "iCurr=" << iCurr << " eStatus=" << int(eStatus) << "\n";
     if (eStatus == 0)
       ListUndoneIndex.push_back(iCurr);
   }
@@ -504,20 +507,27 @@ int main(int argc, char* argv[])
         std::memcpy((char*)(&nbRecv), ptr_recv, sizeof(int));
         ptr_recv += sizeof(int);
 #ifdef ERR_LOG
-	std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
+	std::cerr << "Receiving nbRecv=" << nbRecv << " entries\n";
 #endif
         for (int iRecv=0; iRecv<nbRecv; iRecv++) {
           int8_t iChoice;
           std::memcpy((char*)(&iChoice), ptr_recv, sizeof(int8_t));
           ptr_recv += sizeof(int8_t);
+#ifdef ERR_LOG
+          std::cerr << "iRecv=" << iRecv << " iChoice=" << int(iChoice) << "\n";
+#endif
           //
           if (iChoice == 0) {
             TypeCtypeAdjExch<Tint> eCtype = ptrchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
             ptr_recv += siz_pairadjexch;
+            std::cerr << "fInsert_Ctype in data reception iRecv=" << iRecv << "\n";
             fInsert_Ctype(eCtype);
           } else {
             if (iChoice == 1) {
               TypeAdjExch equad = ptrchar_to_TypeAdjExch(ptr_recv);
+#ifdef ERR_LOG
+              std::cerr << "equad=" << equad << "\n";
+#endif
               if (equad.iProc1 != irank_i8) {
                 std::cerr << "incoherent value on the input\n";
                 throw TerminalException{1};
