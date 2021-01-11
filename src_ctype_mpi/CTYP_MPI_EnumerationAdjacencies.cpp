@@ -276,8 +276,10 @@ int main(int argc, char* argv[])
       std::cerr << "Error. Trying to write some adjacency that is not present\n";
       throw TerminalException{1};
     }
+#ifdef ERR_LOG
     std::cerr << "NCWA : pos=" << pos << " idx_proc=" << idx_proc << " idx_adj=" << idx_adj << "\n";
     std::cerr << "NCWA : shift=" << ListShift[pos] << " adja=" << AdjacencyDone[pos] << "\n";
+#endif
     size_t write_idx = ListShift[pos] + AdjacencyDone[pos];
     std::vector<size_t> start{write_idx};
     std::vector<size_t> count{1};
