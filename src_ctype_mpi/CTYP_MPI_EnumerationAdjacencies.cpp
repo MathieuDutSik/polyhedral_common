@@ -229,12 +229,16 @@ int main(int argc, char* argv[])
   std::vector<size_t> start_nbadj{0};
   std::vector<size_t> count_nbadj{size_t(total_nb_matrix)};
   std::vector<int> ListNbAdjacent(total_nb_matrix);
+  varNbAdj.getVar(start_nbadj, count_nbadj, ListNbAdjacent.data());
   std::vector<int> ListShift(total_nb_matrix);
   ListShift[0] = 0;
   for (int i_matrix=1; i_matrix<total_nb_matrix; i_matrix++)
     ListShift[i_matrix] = ListShift[i_matrix-1] + ListNbAdjacent[i_matrix-1];
+#ifdef ERR_LOG
+  for (int i_matrix=0; i_matrix<total_nb_matrix; i_matrix++)
+    std::cerr << "i_matrix=" << i_matrix << " shift=" << ListShift[i_matrix] << " nbadj=" << ListNbAdjacent[i_matrix] << "\n";
+#endif
   std::vector<int> AdjacencyDone(total_nb_matrix,0);
-  varNbAdj.getVar(start_nbadj, count_nbadj, ListNbAdjacent.data());
   auto NC_ReadMatrix=[&](int const& pos) -> TypeCtypeAdjExch<Tint> {
     MyMatrix<Tint> M(n_vect, n);
     if (eType == netCDF::NcType::nc_BYTE)
@@ -272,6 +276,8 @@ int main(int argc, char* argv[])
       std::cerr << "Error. Trying to write some adjacency that is not present\n";
       throw TerminalException{1};
     }
+    std::cerr << "NCWA : pos=" << pos << " idx_proc=" << idx_proc << " idx_adj=" << idx_adj << "\n";
+    std::cerr << "NCWA : shift=" << ListShift[pos] << " adja=" << AdjacencyDone[pos] << "\n";
     size_t write_idx = ListShift[pos] + AdjacencyDone[pos];
     std::vector<size_t> start{write_idx};
     std::vector<size_t> count{1};
