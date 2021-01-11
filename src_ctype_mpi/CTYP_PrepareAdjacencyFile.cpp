@@ -4,87 +4,54 @@
 #include <netcdf>
 #include <numeric>
 
-FullNamelist NAMELIST_InitialPreparation()
-{
-  std::map<std::string, SingleBlock> ListBlock;
-  // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListIntValues1["Nproc"]=100;
-  ListStringValues1["PrefixFile"] = "WORK_6_";
-  ListStringValues1["PrefixAdjFile"] = "WORK_ADJ_6_";
-  SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  ListBlock["DATA"]=BlockDATA;
-  // Merging all data
-  return {ListBlock, "undefined"};
-}
-
-
 int main(int argc, char* argv[])
 {
+  MPI_Init(&argc, &argv);
+  int irank_i;
+  MPI_Comm_rank(MPI_COMM_WORLD,&irank_i);
+  size_t irank=irank_i;
   //
-  try {
-    FullNamelist eFull = NAMELIST_InitialPreparation();
-    if (argc != 2) {
-      std::cerr << "Number of argument is = " << argc << "\n";
-      std::cerr << "This program is used as\n";
-      std::cerr << "CTYP_MPI_Enumeration_c [file.nml]\n";
-      std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull);
-      return -1;
-    }
-    std::string eFileName=argv[1];
-    NAMELIST_ReadNamelistFile(eFileName, eFull);
-    //
-    // Parsing the input
-    //
-    SingleBlock BlDATA = eFull.ListBlock["DATA"];
-    size_t Nproc = BlDATA.ListIntValues.at("Nproc");
-    std::string PrefixFile = BlDATA.ListStringValues.at("PrefixFile");
-    std::string PrefixAdjFile = BlDATA.ListStringValues.at("PrefixAdjFile");
-    //
-    // Creating the netcdf output files.
-    //
-    for (size_t iProc=0; iProc<Nproc; iProc++) {
-      std::cerr << "iProc=" << iProc << " / " << Nproc << "\n";
-      std::string eFile=PrefixFile + std::to_string(iProc) + ".nc";
-      netCDF::NcFile dataFile(eFile, netCDF::NcFile::read, netCDF::NcFile::nc4);
-      netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
-      size_t n_ctype = varNbAdj.getDim(0).getSize();
-      std::vector<int> ListNbAdjacent(n_ctype);
-      std::vector<size_t> start{0};
-      std::vector<size_t> count{n_ctype};
-      varNbAdj.getVar(start, count, ListNbAdjacent.data());
-      //
-      int TotalNbAdjacencies = std::accumulate(ListNbAdjacent.begin(), ListNbAdjacent.end(), 0);
-      //
-      std::string eFileAdj=PrefixAdjFile + std::to_string(iProc) + ".nc";
-      netCDF::NcFile dataFileAdj(eFileAdj, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-      //
-      netCDF::NcDim eDimNbCtype=dataFileAdj.addDim("number_ctype", n_ctype);
-      netCDF::NcDim eDimNbAdjacencies=dataFileAdj.addDim("number_adjacencies", TotalNbAdjacencies);
-      //
-      std::vector<std::string> LDimA{"number_ctype"};
-      std::vector<std::string> LDimB{"number_adjacencies"};
-      //
-      netCDF::NcVar varStatus = dataFileAdj.addVar("status", "byte", LDimA);
-      varNbAdj.putAtt("long_name", "status of the C-types");
-      std::vector<int8_t> ListStatusAdj(n_ctype, 0);
-      varStatus.putVar(start, count, ListStatusAdj.data());
-      //
-      netCDF::NcVar varIdxProc = dataFileAdj.addVar("idx_proc", "byte", LDimB);
-      varNbAdj.putAtt("long_name", "status of the C-types");
-      //
-      netCDF::NcVar varIdxAdj = dataFileAdj.addVar("idx_adjacent", "int", LDimB);
-      varNbAdj.putAtt("long_name", "status of the C-types");
-      //
-    }
+  if (argc != 3) {
+    std::cerr << "Number of argument is = " << argc << "\n";
+    std::cerr << "This program is used as\n";
+    std::cerr << "CTYP_PrepareAdjacencyFile [WORK_] [WORK_ADJ_]\n";
+    return -1;
   }
-  catch (TerminalException const& e) {
-    exit(e.eVal);
-  }
+  std::string PrefixFile=argv[1];
+  std::string PrefixAdjFile=argv[2];
+  //
+  // Creating the netcdf output files.
+  //
+  std::string eFile=PrefixFile + std::to_string(irank) + ".nc";
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read, netCDF::NcFile::nc4);
+  netCDF::NcVar varNbAdj=dataFile.getVar("nb_adjacent");
+  size_t n_ctype = varNbAdj.getDim(0).getSize();
+  std::vector<int> ListNbAdjacent(n_ctype);
+  std::vector<size_t> start{0};
+  std::vector<size_t> count{n_ctype};
+  varNbAdj.getVar(start, count, ListNbAdjacent.data());
+  //
+  int TotalNbAdjacencies = std::accumulate(ListNbAdjacent.begin(), ListNbAdjacent.end(), 0);
+  //
+  std::string eFileAdj=PrefixAdjFile + std::to_string(irank) + ".nc";
+  netCDF::NcFile dataFileAdj(eFileAdj, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  //
+  netCDF::NcDim eDimNbCtype=dataFileAdj.addDim("number_ctype", n_ctype);
+  netCDF::NcDim eDimNbAdjacencies=dataFileAdj.addDim("number_adjacencies", TotalNbAdjacencies);
+  //
+  std::vector<std::string> LDimA{"number_ctype"};
+  std::vector<std::string> LDimB{"number_adjacencies"};
+  //
+  netCDF::NcVar varStatus = dataFileAdj.addVar("status", "byte", LDimA);
+  varNbAdj.putAtt("long_name", "status of the C-types");
+  std::vector<int8_t> ListStatusAdj(n_ctype, 0);
+  varStatus.putVar(start, count, ListStatusAdj.data());
+  //
+  netCDF::NcVar varIdxProc = dataFileAdj.addVar("idx_proc", "byte", LDimB);
+  varNbAdj.putAtt("long_name", "status of the C-types");
+  //
+  netCDF::NcVar varIdxAdj = dataFileAdj.addVar("idx_adjacent", "int", LDimB);
+  varNbAdj.putAtt("long_name", "status of the C-types");
+  //
+  MPI_Finalize();
 }

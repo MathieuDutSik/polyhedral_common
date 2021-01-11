@@ -1,12 +1,14 @@
-#PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile CTYP_CheckCanonical
-#PROGRAM		= CTYP_MPI_Enumeration CTYP_MergeLogs CTYP_MakeInitialFile
+#PROGRAM		= CTYP_MPI_Enumeration_c CTYP_MergeLogs CTYP_MakeInitialFile CTYP_CheckCanonical
+#PROGRAM		= CTYP_MPI_Enumeration_c CTYP_MergeLogs  CTYP_MakeInitialFile
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_MPI_Enumeration
 #PROGRAM		= CTYP_MPI_Enumeration_c
 #PROGRAM		= CTYP_MPI_Enumeration_debug
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_PrepareInitialFile CTYP_ComputeMaxCoefficients CTYP_ComputeInvariant
 #PROGRAM		= CTYP_ComputeInvariant
 #PROGRAM		= CTYP_PrepareAdjacencyFile
-PROGRAM		= CTYP_MPI_EnumerationAdjacencies
+PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies
+#PROGRAM		= CTYP_PrepareInitialFile
+#PROGRAM		= CTYP_MPI_EnumerationAdjacencies
 #PROGRAM		= CTYP_TimingRandomAccess
 #PROGRAM		= CTYP_PrepareInitialFile
 #PROGRAM		= CTYP_MakeInitialFile
