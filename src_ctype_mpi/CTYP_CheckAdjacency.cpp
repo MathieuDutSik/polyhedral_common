@@ -24,6 +24,7 @@ int main(int argc, char* argv[])
   std::vector<int> ListAdj_Glob;
   std::vector<int> ListNbCtype(n_pes);
   std::vector<int> ListNbAdj_Glob;
+  std::vector<int> ListNbFree_Glob;
   // Reading number of adjacencies
   for (size_t i_pes=0; i_pes<n_pes; i_pes++) {
     std::string eFile = Prefix + std::to_string(i_pes) + ".nc";
@@ -33,12 +34,17 @@ int main(int argc, char* argv[])
     size_t n_ctype = varNbAdj.getDim(0).getSize();
     std::cerr << "n_ctype=" << n_ctype << "\n";
     ListNbCtype[i_pes] = n_ctype;
-    std::vector<int> ListNbAdj_Loc(n_ctype);
+    std::vector<int> ListV_Loc(n_ctype);
     std::vector<size_t> start{0};
     std::vector<size_t> count{n_ctype};
-    varNbAdj.getVar(start, count, ListNbAdj_Loc.data());
-    for (auto & eVal : ListNbAdj_Loc)
+    varNbAdj.getVar(start, count, ListV_Loc.data());
+    for (auto & eVal : ListV_Loc)
       ListNbAdj_Glob.push_back(eVal);
+    //
+    netCDF::NcVar varNbFree=dataFile.getVar("nb_free");
+    varNbFree.getVar(start, count, ListV_Loc.data());
+    for (auto & eVal : ListV_Loc)
+      ListNbFree_Glob.push_back(eVal);
   }
   std::cerr << "We have ListNbAdj_Glob\n";
   int n_ctype_glob = std::accumulate(ListNbCtype.begin(), ListNbCtype.end(), 0);
@@ -81,21 +87,26 @@ int main(int argc, char* argv[])
     }
     return false;
   };
-  int nb_error=0;
+  int nb_error = 0;
+  int max_diff_nb_free = 0;
   for (size_t i_loc=0; i_loc<ListNbCtype[irank]; i_loc++) {
     int i_glob = ListShiftNbCtype[irank] + i_loc;
     int nbadj = ListNbAdj_Glob[i_glob];
     int shift = ListNbAdjShift_Glob[i_glob];
     std::cerr << "i_loc=" << i_loc << " i_glob=" << i_glob << " nbadj=" << nbadj << " shift=" << shift << "\n";
+    int eFree = ListNbFree_Glob[i_glob];
     for (int iadj=0; iadj<nbadj; iadj++) {
       int eAdj = ListAdj_Glob[shift + iadj];
+      int fFree = ListNbFree_Glob[eAdj];
       if (!IsVerticesAdjacent(eAdj, i_glob)) {
         std::cerr << "  eAdj=" << eAdj << " i_glob=" << i_glob << "\n";
         nb_error++;
       }
+      int delta_nb_free = T_abs(eFree - fFree);
+      max_diff_nb_free = T_max(max_diff_nb_free, delta_nb_free);
     }
   }
-  std::cerr << "nb_error=" << nb_error << "\n";
+  std::cerr << "nb_error=" << nb_error << " max_diff_nb_free=" << max_diff_nb_free << "\n";
 
   MPI_Finalize();
 }
