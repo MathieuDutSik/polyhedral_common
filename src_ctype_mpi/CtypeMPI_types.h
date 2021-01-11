@@ -239,7 +239,7 @@ TypeCtypeAdjExch<T> ptrchar_to_PairAdjExch(char* ptr_i, int const& nbRow, int co
 template<typename T>
 std::vector<char> PairAdjExch_to_stdvectorchar(TypeCtypeAdjExch<T> const& eCtype, int const& nbRow, int const& nbCol)
 {
-  int len = sizeof(int8_t) + 2 * (sizeof(int) + sizeof(int8_t) );
+  int len = sizeof(int8_t) + nbRow * nbCol * sizeof(T) + sizeof(int8_t) + sizeof(int);
   std::vector<char> eV(len);
   char* ptr_o = eV.data();
   //
