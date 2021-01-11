@@ -514,7 +514,7 @@ int main(int argc, char* argv[])
           std::memcpy((char*)(&iChoice), ptr_recv, sizeof(int8_t));
           ptr_recv += sizeof(int8_t);
 #ifdef ERR_LOG
-          std::cerr << "iRecv=" << iRecv << " iChoice=" << int(iChoice) << "\n";
+          std::cerr << "iRecv=" << iRecv << "/" << nbRecv << " iChoice=" << int(iChoice) << "\n";
 #endif
           //
           if (iChoice == 0) {
@@ -533,6 +533,7 @@ int main(int argc, char* argv[])
                 throw TerminalException{1};
               }
               NC_WriteAdjacency(equad.pos1, equad.iProc2, equad.pos2);
+              ptr_recv += siz_typeadjexch;
             } else {
               std::cerr << "iChoice=" << iChoice << "\n";
               throw TerminalException{1};
