@@ -6,7 +6,7 @@
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_PrepareInitialFile CTYP_ComputeMaxCoefficients CTYP_ComputeInvariant
 #PROGRAM		= CTYP_ComputeInvariant
 #PROGRAM		= CTYP_PrepareAdjacencyFile
-PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies
+PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies CTYP_CheckAdjacency
 #PROGRAM		= CTYP_PrepareInitialFile
 #PROGRAM		= CTYP_MPI_EnumerationAdjacencies
 #PROGRAM		= CTYP_CheckAdjacency

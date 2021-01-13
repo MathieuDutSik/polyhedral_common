@@ -238,7 +238,11 @@ bool is_FundPoly(VinbergTot<T,Tint> const& Vtot, std::vector<MyVector<Tint>> con
   return IsFiniteCovolume;
 }
 
-
+template<typename T, typename Tint>
+MyMatrix<Tint> FindRoots(VinbergTot<T,Tint> const& Vtot)
+{
+  
+}
 
 
 

@@ -18,6 +18,11 @@ int main(int argc, char* argv[])
   size_t irank=irank_i;
   size_t n_pes=n_pes_i;
   //
+  if (argc != 3) {
+    std::cerr << "Usage:\n";
+    std::cerr << "CTYP_CheckAdjacency [WORK_OUT_] [WORK_ADJ]\n";
+    return 0;
+  }
   std::string Prefix = argv[1];
   std::string PrefixAdj = argv[2];
   std::cerr << "Prefix=" << Prefix << " PrefixAdj=" << PrefixAdj << "\n";
