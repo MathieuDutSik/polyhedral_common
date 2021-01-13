@@ -33,6 +33,10 @@ int main(int argc, char* argv[])
   //
   // Now reading the 
   //
+  if (argc != 3) {
+    std::cerr << "CTYP_ComputeInvriant [WORKIN_] [WORKOUT_]\n";
+    exit(0);
+  }
   using Tint=int;
   std::string PrefixI=argv[1];
   std::string PrefixO=argv[2];
