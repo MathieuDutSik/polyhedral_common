@@ -9,8 +9,8 @@
 namespace mpi = boost::mpi;
 
 
-#define TIMINGS_HASH
-#define ERR_LOG
+//#define TIMINGS_HASH
+//#define ERR_LOG
 
 /*
   Possible parallel schemes:
@@ -445,7 +445,6 @@ int main(int argc, char* argv[])
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
-      std::cerr << "fInsert_Ctype in fInsertUnsent\n";
       fInsert_Ctype(eCtype);
     }
     else {
@@ -466,7 +465,9 @@ int main(int argc, char* argv[])
     int8_t eStatus = NC_GetStatus(iCurr);
     std::vector<int>& eList= MapIndexByHash[e_hash];
     eList.push_back(iCurr);
+#ifdef ERR_LOG
     std::cerr << "iCurr=" << iCurr << " eStatus=" << int(eStatus) << "\n";
+#endif
     if (eStatus == 0)
       ListUndoneIndex.push_back(iCurr);
   }
@@ -528,7 +529,6 @@ int main(int argc, char* argv[])
           if (iChoice == 0) {
             TypeCtypeAdjExch<Tint> eCtype = ptrchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
             ptr_recv += siz_pairadjexch;
-            std::cerr << "fInsert_Ctype in data reception iRecv=" << iRecv << "\n";
             fInsert_Ctype(eCtype);
           } else {
             if (iChoice == 1) {
