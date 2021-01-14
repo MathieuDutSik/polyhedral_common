@@ -3138,25 +3138,25 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
+
+
   WeightMatrix<std::vector<T>, T> WMat = GetWeightMatrix_ListMat_Subset(EXT, ListMat, eSubset);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+
+
   ReorderingSetWeight(WMat);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
+
+
   size_t e_hash = std::hash<WeightMatrix<std::vector<T>, T>>()(WMat);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
   std::cerr << "|hash|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   return e_hash;
@@ -3169,30 +3169,35 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
+
+
   WeightMatrix<std::vector<T>, T> WMat = GetWeightMatrix_ListMat_Subset(EXT, ListMat, eSubset);
   // No need to reorder in autom case
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+
+
   GraphBitset eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,GraphBitset>(WMat);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
+
+
 #ifdef USE_BLISS
   std::vector<std::vector<unsigned int>> ListGenTot = BLISS_GetListGenerators(eGR);
 #endif
 #ifdef USE_TRACES
   std::vector<std::vector<unsigned int>> ListGenTot = TRACES_GetListGenerators(eGR);
 #endif
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
+
+
   std::vector<std::vector<unsigned int>> ListGen;
   for (auto & eGen : ListGenTot) {
     std::vector<unsigned int> eGenRed(nbRow);
@@ -3209,13 +3214,8 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
     }
     ListGen.push_back(eGenRed);
   }
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
   std::cerr << "|ListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return ListGen;
@@ -3233,27 +3233,27 @@ EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(MyMatrix<T> 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
+
+
   WeightMatrix<std::vector<T>, T> WMat1 = GetWeightMatrix_ListMat_Subset(EXT1, ListMat1, eSubset1);
   WeightMatrix<std::vector<T>, T> WMat2 = GetWeightMatrix_ListMat_Subset(EXT2, ListMat2, eSubset2);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+
+
   ReorderingSetWeight(WMat1);
   ReorderingSetWeight(WMat2);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
+
+
   EquivTest<std::vector<unsigned int>> PairTest = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
-
-
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
   std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   return PairTest;
