@@ -21,8 +21,8 @@
 #define USE_PAIRS
 
 
-//#define DEBUG
-//#define TIMINGS
+#define DEBUG
+#define TIMINGS
 
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
@@ -1919,9 +1919,18 @@ size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
+#ifdef DEBUG
+  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
+#endif
   int hS=GetNeededPower(nbMult);
+#ifdef DEBUG
+  std::cerr << "hS=" << hS << "\n";
+#endif
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
+#ifdef DEBUG
+  std::cerr << "nbVert=" << nbVert << "\n";
+#endif
   return hS*nbVert;
 }
 
@@ -1931,6 +1940,9 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 {
   int nbWei=WMat.GetWeightSize();
   int nbMult=nbWei+2;
+#ifdef DEBUG
+  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
+#endif
   int hS=GetNeededPower(nbMult);
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
@@ -1998,6 +2010,9 @@ template<typename T1, typename T2, typename Tgr>
 inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
   unsigned int nof_vertices=get_total_number_vertices(WMat);
+#ifdef DEBUG
+  std::cerr << "nof_vertices=" << nof_vertices << "\n";
+#endif
   Tgr eGR(nof_vertices);
   eGR.SetHasColor(true);
   auto f_color=[&](int iVert, int eColor) -> void {
@@ -2669,56 +2684,6 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 #endif
 #ifdef USE_TRACES
   std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
-#endif
-#ifdef DEBUG
-  PrintStabilizerGroupSizes(std::cerr, eGR);
-  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
-  mpz_class eHash1 = MD5_hash_mpz(eExpr);
-  std::cerr << "eHash1=" << eHash1 << "\n";
-  //
-  int hS = eGR.GetNbVert() / (nbRow + 2);
-  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
-  for (auto & eGen : ePair.second) {
-    std::vector<unsigned int> eGenRed(nbRow+2);
-    for (int i=0; i<nbRow+2; i++) {
-      unsigned int val = eGen[i];
-      if (val >= nbRow+2) {
-        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
-        throw TerminalException{1};
-      }
-      eGenRed[i] = val;
-    }
-    for (int i=nbRow; i<nbRow+2; i++) {
-      if (eGenRed[i] != i) {
-        std::cerr << "Point is not preserved\n";
-        throw TerminalException{1};
-      }
-    }
-    for (int iH=0; iH<hS; iH++) {
-      for (int i=0; i<nbRow+2; i++) {
-        unsigned int val1 = eGen[i + iH * (nbRow+2)];
-        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
-        if (val1 != val2) {
-          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
-          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
-          throw TerminalException{1};
-        }
-      }
-      for (int i=0; i<nbRow; i++) {
-        for (int j=0; j<nbRow; j++) {
-          int iImg = eGenRed[i];
-          int jImg = eGenRed[j];
-          int pos1 = WMatAbs.WMat.GetValue(i, j);
-          int pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
-          if (pos1 != pos2) {
-            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
-            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
-            throw TerminalException{1};
-          }
-        }
-      }
-    }
-  }
 #endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
