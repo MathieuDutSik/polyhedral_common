@@ -1842,7 +1842,11 @@ size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
   int hS=GetNeededN(nbMult);
   int nbRow=WMat.rows();
   int nbVert=nbRow + 2;
-  return hS * nbVert;
+  int nbVertTot=nbVert * hS;
+#ifdef DEBUG
+  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
+#endif
+  return nbVertTot;
 }
 
 
@@ -2014,6 +2018,9 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
   std::cerr << "nof_vertices=" << nof_vertices << "\n";
 #endif
   Tgr eGR(nof_vertices);
+#ifdef DEBUG
+  std::cerr << "eGR built\n";
+#endif
   eGR.SetHasColor(true);
   auto f_color=[&](int iVert, int eColor) -> void {
     eGR.SetColor(iVert, eColor);
