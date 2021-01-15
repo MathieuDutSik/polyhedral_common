@@ -2867,8 +2867,10 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized
 template<typename T1, typename T2>
 EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
 {
-  GraphBitset eGR1=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat1);
-  GraphBitset eGR2=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat2);
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
+  Tgr eGR1=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat1);
+  Tgr eGR2=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat2);
   unsigned int nof_vertices1=eGR1.GetNbVert();
   unsigned int nof_vertices2=eGR2.GetNbVert();
   if (nof_vertices1 != nof_vertices2)
@@ -3134,8 +3136,9 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-
-  GraphBitset eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,GraphBitset>(WMat);
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
+  Tgr eGR=GetGraphFromWeightedMatrix<std::vector<T>,T,Tgr>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
