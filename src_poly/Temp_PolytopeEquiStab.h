@@ -459,7 +459,7 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
   T2 TheTol=WMatRef.GetTol();
   for (size_t i=0; i<nbEnt; i++) {
     int jFound=-1;
-    for (int j=0; j<nbEnt; j++)
+    for (size_t j=0; j<nbEnt; j++)
       if (WeighMatrix_IsNear(ListWeightRef[i], ListWeight[j], TheTol))
 	jFound=j;
     if (jFound == -1)
@@ -1236,7 +1236,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, 
   size_t nbVert=eSet.count();
   std::vector<int> eList(nbVert);
   int aRow=eSet.find_first();
-  for (int i=0; i<nbVert; i++) {
+  for (size_t i=0; i<nbVert; i++) {
     eList[i]=aRow;
     aRow=eSet.find_next(aRow);
   }
@@ -1673,8 +1673,8 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
   for (size_t iInv=0; iInv<nbInv; iInv++) {
     T eInv=0;
     T ePow=ListM[iInv];
-    for (int iWeight=0; iWeight<nbWeight; iWeight++) {
-      int jWeight=ePerm.at(iWeight);
+    for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
+      size_t jWeight=ePerm.at(iWeight);
       T prov2=ListAtt[jWeight]*ListWeight[jWeight];
       eInv *= ePow;
       eInv += prov2;
@@ -2801,7 +2801,7 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
   for (size_t iGen=0; iGen<nbGen; iGen++) {
     std::vector<permlib::dom_int> gList(nbRow);
     for (size_t iVert=0; iVert<nbRow; iVert++) {
-      int jVert=ListGen[iGen][iVert];
+      size_t jVert=ListGen[iGen][iVert];
 #ifdef DEBUG
       if (jVert >= nbRow) {
 	std::cerr << "jVert is too large\n";

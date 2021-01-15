@@ -6968,7 +6968,7 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 
 
 template<typename T>
-void dd_SelectNextHalfspace0(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace0(dd_conedata<T> *cone, dd_rowset excluded)
 {
   /*A natural way to choose the next hyperplane.  Simply the largest index*/
   long i;
@@ -6983,13 +6983,13 @@ void dd_SelectNextHalfspace0(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       determined = true;
   } while (!determined && i>=1);
   if (determined)
-    *hnext = i;
+    return i;
   else
-    *hnext = 0;
+    return 0;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded)
 {
   /*Natural way to choose the next hyperplane.  Simply the least index*/
   long i;
@@ -7004,52 +7004,57 @@ void dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       determined = true;
   } while (!determined && i<=cone->m);
   if (determined)
-    *hnext = i;
+    return i;
   else
-    *hnext=0;
+    return 0;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded)
 {
   long i, fea, inf, infmin;   /*feasibility and infeasibility numbers*/
 
   infmin = cone->RayCount + 1;
+  dd_rowrange retidx=0;
   for (i = 1; i <= cone->m; i++) {
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf < infmin) {
 	infmin = inf;
-	*hnext = i;
+	retidx = i;
       }
     }
   }
+  return retidx;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded)
 {
   /*Choose the next hyperplane with maximum infeasibility*/
   long i, fea, inf, infmax;   /*feasibility and infeasibility numbers*/
 
   infmax = -1;
+  dd_rowrange retidx=0;
   for (i = 1; i <= cone->m; i++)
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf > infmax) {
 	infmax = inf;
-	*hnext = i;
+	retidx = i;
       }
     }
+  return retidx;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded)
 {
   long i, fea, inf, max, tmax, fi=0, infi=0;
   bool localdebug=false;
 
   max = -1;
+  dd_rowrange retidx=0;
   for (i = 1; i <= cone->m; i++) {
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
@@ -7061,7 +7066,7 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
         max = tmax;
         fi = fea;
         infi = inf;
-        *hnext = i;
+        retidx = i;
       }
     }
   }
@@ -7072,10 +7077,11 @@ void dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       fprintf(stdout,"*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi, fi);
     }
   }
+  return retidx;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded)
 {
   /*Choose the next hyperplane which is lexico-min*/
   long i, minindex;
@@ -7095,12 +7101,12 @@ void dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
       }
     }
   }
-  *hnext = minindex;
+  return minindex;
 }
 
 
 template<typename T>
-void dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hnext)
+dd_rowrange dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded)
 {
   /*Choose the next hyperplane which is lexico-max*/
   long i, maxindex;
@@ -7120,7 +7126,7 @@ void dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded, dd_rowran
      }
     }
   }
-  *hnext = maxindex;
+  return maxindex;
 }
 
 template<typename T>
@@ -7242,52 +7248,49 @@ in highest order.
 }
 
 template<typename T>
-void dd_SelectPreorderedNext(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hh)
+dd_rowrange dd_SelectPreorderedNext(dd_conedata<T> *cone, dd_rowset excluded)
 {
   dd_rowrange i,k;
 
-  *hh=0;
-  for (i=1; i<=cone->m && *hh==0; i++) {
+  dd_rowrange retidx=0;
+  for (i=1; i<=cone->m && retidx==0; i++) {
     k=cone->OrderVector[i];
-    if (!set_member(k, excluded)) *hh=k ;
+    if (!set_member(k, excluded)) retidx = k;
   }
+  return retidx;
 }
 
 template<typename T>
-void dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded, dd_rowrange *hh)
+dd_rowrange dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded)
 {
   if (cone->PreOrderedRun) {
-    dd_SelectPreorderedNext(cone, excluded, hh);
-  }
-  else {
-
+    return dd_SelectPreorderedNext(cone, excluded);
+  } else {
     switch (cone->HalfspaceOrder) {
 
     case dd_MaxIndex:
-      dd_SelectNextHalfspace0(cone, excluded, hh);
-      break;
+      return dd_SelectNextHalfspace0(cone, excluded);
 
     case dd_MinIndex:
-      dd_SelectNextHalfspace1(cone, excluded, hh);
-      break;
+      return dd_SelectNextHalfspace1(cone, excluded);
 
     case dd_MinCutoff:
-      dd_SelectNextHalfspace2(cone, excluded, hh);
-      break;
+      return dd_SelectNextHalfspace2(cone, excluded);
 
     case dd_MaxCutoff:
-      dd_SelectNextHalfspace3(cone, excluded, hh);
-      break;
+      return dd_SelectNextHalfspace3(cone, excluded);
 
     case dd_MixCutoff:
-      dd_SelectNextHalfspace4(cone, excluded, hh);
-      break;
+      return dd_SelectNextHalfspace4(cone, excluded);
 
-    case dd_LexMin: case dd_LexMax: case dd_RandomRow:
-      dd_SelectNextHalfspace0(cone, excluded, hh);
-      break;
+    case dd_LexMin:
+    case dd_LexMax:
+    case dd_RandomRow:
+      return dd_SelectNextHalfspace0(cone, excluded);
+
     }
   }
+  return -1; // That case should never happen
 }
 
 template<typename T>
@@ -7309,7 +7312,7 @@ void dd_DDInit(dd_conedata<T> *cone)
 template<typename T>
 void dd_DDMain(dd_conedata<T> *cone)
 {
-  dd_rowrange hh, itemp, otemp;
+  dd_rowrange itemp, otemp;
   bool localdebug=false;
 
   if (cone->d<=0) {
@@ -7319,7 +7322,7 @@ void dd_DDMain(dd_conedata<T> *cone)
     goto _L99;
   }
   while (cone->Iteration <= cone->m) {
-    dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces, &hh);
+    dd_rowrange hh = dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces);
     if (set_member(hh,cone->NonequalitySet)) {  /* Skip the row hh */
       if (localdebug) {
         fprintf(stdout,"*The row # %3ld should be inactive and thus skipped.\n", hh);
