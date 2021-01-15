@@ -1280,7 +1280,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
   };
   VectorListPair VLP0, VLP1;
   auto FuncInsert=[&](VectorListPair & VLP, std::pair<int,int> const& ePair) -> void {
-    if (VLP.nbWorkingPair < int(VLP.ListWorkingPair.size())) {
+    if (VLP.nbWorkingPair < VLP.ListWorkingPair.size()) {
       VLP.ListWorkingPair[VLP.nbWorkingPair]=ePair;
     }
     else {
@@ -1877,8 +1877,8 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	f_adj(bVert, aVert);
       }
   std::vector<int> eVect(e_pow);
-  for (int iVert=0; iVert<nbVert-1; iVert++)
-    for (int jVert=iVert+1; jVert<nbVert; jVert++) {
+  for (size_t iVert=0; iVert<nbVert-1; iVert++)
+    for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
       int eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
