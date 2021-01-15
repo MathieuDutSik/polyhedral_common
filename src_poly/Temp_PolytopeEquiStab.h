@@ -14,6 +14,8 @@
 
 
 
+using Tidx = int16_t;
+
 
 #undef USE_BLISS
 #define USE_TRACES
@@ -27,9 +29,9 @@
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
 {
-  int siz=V1.size();
+  size_t siz=V1.size();
   T MaxNorm=0;
-  for (int i=0; i<siz; i++) {
+  for (size_t i=0; i<siz; i++) {
     T eDiff=V1[i] - V2[i];
     T eNorm=T_abs(eDiff);
     if (eNorm > MaxNorm)
@@ -41,28 +43,28 @@ T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
 
 
 template<typename T>
-int WeighMatrix_IsNear(T eVal1, T eVal2, T eVal3)
+bool WeighMatrix_IsNear(T eVal1, T eVal2, T eVal3)
 {
   T eDiff=eVal1 - eVal2;
   T eAbsDiff=T_abs(eDiff);
   if (eAbsDiff <= eVal3)
-    return 1;
-  return 0;
+    return true;
+  return false;
 }
 
 
 
 template<typename T>
-int WeighMatrix_IsNear(std::vector<T> V1, std::vector<T> V2, T eVal3)
+bool WeighMatrix_IsNear(std::vector<T> V1, std::vector<T> V2, T eVal3)
 {
-  int siz1=V1.size();
-  int siz2=V2.size();
+  size_t siz1=V1.size();
+  size_t siz2=V2.size();
   if (siz1 != siz2)
     return 0;
   T MaxNorm=VectorDistance(V1, V2);
   if (MaxNorm <= eVal3)
-    return 1;
-  return 0;
+    return true;
+  return false;
 }
 
 
@@ -75,14 +77,12 @@ public:
     TheTol=-1;
     nbRow=-1;
   }
-  WeightMatrix(int const& inpNbRow, T2 const& inpTheTol)
+  WeightMatrix(size_t const& inpNbRow, T2 const& inpTheTol) : nbRow(inpNbRow), TheTol(inpTheTol)
   {
-    TheTol=inpTheTol;
-    nbRow=inpNbRow;
-    int nb=nbRow*nbRow;
+    size_t nb=nbRow*nbRow;
     TheMat.resize(nb);
   }
-  WeightMatrix(int const& INP_nbRow, std::vector<int> const& INP_TheMat, std::vector<T1> const& INP_ListWeight, T2 const& INP_TheTol) : nbRow(INP_nbRow), TheMat(INP_TheMat), ListWeight(INP_ListWeight), TheTol(INP_TheTol)
+  WeightMatrix(size_t const& INP_nbRow, std::vector<int> const& INP_TheMat, std::vector<T1> const& INP_ListWeight, T2 const& INP_TheTol) : nbRow(INP_nbRow), TheMat(INP_TheMat), ListWeight(INP_ListWeight), TheTol(INP_TheTol)
   {
   }
   WeightMatrix(WeightMatrix<T1, T2> const& eMat)
@@ -90,12 +90,12 @@ public:
     nbRow=eMat.rows();
     TheTol=eMat.GetTol();
     ListWeight=eMat.GetWeight();
-    int nb=nbRow*nbRow;
+    size_t nb=nbRow*nbRow;
     TheMat.resize(nb);
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
 	int eValue=eMat.GetValue(iRow, iCol);
-	int idx=iRow + nbRow*iCol;
+	size_t idx=iRow + nbRow*iCol;
 	TheMat[idx]=eValue;
       }
   }
@@ -104,12 +104,12 @@ public:
     nbRow=eMat.rows();
     TheTol=eMat.GetTol();
     ListWeight=eMat.GetWeight();
-    int nb=nbRow*nbRow;
+    size_t nb=nbRow*nbRow;
     TheMat.resize(nb);
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
 	int eValue=eMat.GetValue(iRow, iCol);
-	int idx=iRow + nbRow*iCol;
+	size_t idx=iRow + nbRow*iCol;
 	TheMat[idx]=eValue;
       }
     return *this;
@@ -120,8 +120,8 @@ public:
   // Below is lighter stuff
   bool IsSymmetric() const
   {
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
 	int eVal1=GetValue(iRow, iCol);
 	int eVal2=GetValue(iCol, iRow);
 	if (eVal1 != eVal2)
@@ -129,7 +129,7 @@ public:
       }
     return true;
   }
-  int rows(void) const
+  size_t rows(void) const
   {
     return nbRow;
   }
@@ -137,41 +137,40 @@ public:
   {
     return TheTol;
   }
-  int GetWeightSize(void) const
+  size_t GetWeightSize(void) const
   {
-    int siz=ListWeight.size();
+    size_t siz=ListWeight.size();
     return siz;
   }
   void Update(int const& iRow, int const& iCol, T1 const& eVal)
   {
-    int ThePos, idxMat;
-    int WeFound=0;
-    int nbEnt=ListWeight.size();
-    ThePos=nbEnt;
-    for (int i=0; i<nbEnt; i++)
-      if (WeFound == 0)
-	if (WeighMatrix_IsNear(eVal, ListWeight[i], TheTol) == 1) {
-	  WeFound=1;
+    bool WeFound=false;
+    size_t nbEnt=ListWeight.size();
+    size_t ThePos = nbEnt;
+    for (size_t i=0; i<nbEnt; i++)
+      if (!WeFound)
+	if (WeighMatrix_IsNear(eVal, ListWeight[i], TheTol)) {
+	  WeFound=true;
 	  ThePos=i;
 	}
-    if (WeFound == 0)
+    if (!WeFound)
       ListWeight.push_back(eVal);
-    idxMat=iRow + nbRow*iCol;
+    size_t idxMat=iRow + nbRow*iCol;
     TheMat[idxMat]=ThePos;
   }
-  int GetValue(int const& iRow, int const& iCol) const
+  int GetValue(size_t const& iRow, size_t const& iCol) const
   {
-    int idx=iRow + nbRow*iCol;
+    size_t idx=iRow + nbRow*iCol;
     return TheMat[idx];
   }
-  void intDirectAssign(int const& iRow, int const& iCol, int const& pos)
+  void intDirectAssign(size_t const& iRow, size_t const& iCol, int const& pos)
   {
-    int idx=iRow + nbRow*iCol;
+    size_t idx=iRow + nbRow*iCol;
     TheMat[idx]=pos;
   }
   void SetWeight(std::vector<T1> const & inpWeight)
   {
-    ListWeight=inpWeight;
+    ListWeight = inpWeight;
   }
   std::vector<T1> GetWeight() const
   {
@@ -179,9 +178,9 @@ public:
   }
   void ReorderingOfWeights(std::vector<int> const& gListRev)
   {
-    int nbEnt=ListWeight.size();
+    size_t nbEnt=ListWeight.size();
 #ifdef DEBUG
-    int siz=gListRev.size();
+    size_t siz=gListRev.size();
     if (nbEnt != siz) {
       std::cerr << "We should have nbEnt = siz\n";
       std::cerr << "nbEnt=" << nbEnt << "\n";
@@ -189,22 +188,22 @@ public:
       throw TerminalException{1};
     }
 #endif
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int iCol=0; iCol<nbRow; iCol++) {
-	int idx=iRow + nbRow*iCol;
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
+	size_t idx=iRow + nbRow*iCol;
 	int eValue=TheMat[idx];
 	int nValue=gListRev[eValue];
 	TheMat[idx]=nValue;
       }
     std::vector<T1> NewListWeight(nbEnt);
-    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+    for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
       int nEnt=gListRev[iEnt];
       NewListWeight[nEnt]=ListWeight[iEnt];
     }
     ListWeight=NewListWeight;
   }
 private:
-  int nbRow;
+  size_t nbRow;
   std::vector<int> TheMat;
   std::vector<T1> ListWeight;
   T2 TheTol;
@@ -221,23 +220,23 @@ namespace std {
                           seed ^= new_hash + 0x9e3779b9 + (seed<<6) + (seed>>2);
                         };
       std::vector<T1> ListWeight = WMat.GetWeight();
-      int nbWei = ListWeight.size();
-      int nbRow = WMat.rows();
+      size_t nbWei = ListWeight.size();
+      size_t nbRow = WMat.rows();
       std::vector<int> ListAttDiag(nbWei, 0);
       std::vector<int> ListAttOff(nbWei, 0);
-      for (int iRow=0; iRow<nbRow; iRow++) {
+      for (size_t iRow=0; iRow<nbRow; iRow++) {
         int pos = WMat.GetValue(iRow, iRow);
         ListAttDiag[pos]++;
       }
-      for (int iRow=0; iRow<nbRow; iRow++)
-        for (int jRow=0; jRow<nbRow; jRow++) {
+      for (size_t iRow=0; iRow<nbRow; iRow++)
+        for (size_t jRow=0; jRow<nbRow; jRow++) {
           if (iRow != jRow) {
             int pos = WMat.GetValue(iRow, jRow);
             ListAttOff[pos]++;
           }
         }
       size_t seed = 0;
-      for (int iWei=0; iWei<nbWei; iWei++) {
+      for (size_t iWei=0; iWei<nbWei; iWei++) {
         if (ListAttDiag[iWei] > 0) {
           size_t e_hash1 = std::hash<T1>()(ListWeight[iWei]);
           size_t e_hash2 = std::hash<int>()(ListAttDiag[iWei]);
@@ -262,12 +261,12 @@ namespace std {
 template<typename T>
 void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
 {
-  int siz=WMat.GetWeightSize();
-  int nbRow=WMat.rows();
-  os << "nbRow=" << WMat.rows() << "  Weights=[";
+  size_t siz=WMat.GetWeightSize();
+  size_t nbRow=WMat.rows();
+  os << "nbRow=" << nbRow << "  Weights=[";
   std::vector<int> ListValues(siz,0);
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int iCol=0; iCol<nbRow; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
       int eVal=WMat.GetValue(iRow, iCol);
       ListValues[eVal]++;
     }
@@ -278,8 +277,8 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<T,T> const&WMat)
     os << "(" << ListWeight[i] << "," << ListValues[i] << ")";
   }
   os << "]\n";
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbRow; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
       int eVal=WMat.GetValue(iRow, iCol);
       os << " " << eVal;
     }
@@ -293,13 +292,13 @@ template<typename T>
 void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
 {
   std::vector<T> ListWeight=WMat.GetWeight();
-  int nbRow=WMat.rows();
+  size_t nbRow=WMat.rows();
   os << "[";
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     if (iRow > 0)
       os << ",\n";
     os << "[";
-    for (int iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
       int eVal=WMat.GetValue(iRow, iCol);
       T eWei=ListWeight[eVal];
       if (iCol > 0)
@@ -316,14 +315,13 @@ void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<T,T> const&WMat)
 template<typename T>
 void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T,T> &WMat)
 {
-  int siz, nbRow, eVal;
-  siz=WMat.GetWeightSize();
+  size_t siz=WMat.GetWeightSize();
   os << "nbWeight=" << siz << "\n";
-  nbRow=WMat.rows();
+  size_t nbRow=WMat.rows();
   os << "nbRow=" << WMat.rows() << "\n";
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbRow; iCol++) {
-      eVal=WMat.GetValue(iRow, iCol);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
+      int eVal=WMat.GetValue(iRow, iCol);
       os << " " << eVal;
     }
     os << "\n";
@@ -445,24 +443,24 @@ int ReorderingSetWeight_specificPosition(WeightMatrix<T1,T2> & WMat, int specifi
 
 
 template<typename T1, typename T2>
-bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T1, T2> &WMat2)
+bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T1, T2> & WMat2)
 {
-  int nbRow=WMatRef.rows();
-  int nbRow2=WMat2.rows();
+  size_t nbRow=WMatRef.rows();
+  size_t nbRow2=WMat2.rows();
   if (nbRow != nbRow2)
     return false;
-  int nbEnt=WMatRef.GetWeightSize();
-  int nbEnt2=WMat2.GetWeightSize();
+  size_t nbEnt=WMatRef.GetWeightSize();
+  size_t nbEnt2=WMat2.GetWeightSize();
   if (nbEnt != nbEnt2)
     return false;
   std::vector<T1> ListWeightRef=WMatRef.GetWeight();
   std::vector<T1> ListWeight=WMat2.GetWeight();
   std::vector<int> gListRev(nbEnt);
   T2 TheTol=WMatRef.GetTol();
-  for (int i=0; i<nbEnt; i++) {
+  for (size_t i=0; i<nbEnt; i++) {
     int jFound=-1;
     for (int j=0; j<nbEnt; j++)
-      if (WeighMatrix_IsNear(ListWeightRef[i], ListWeight[j], TheTol) == 1)
+      if (WeighMatrix_IsNear(ListWeightRef[i], ListWeight[j], TheTol))
 	jFound=j;
     if (jFound == -1)
       return false;
@@ -472,8 +470,8 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
 #ifdef DEBUG
   std::vector<T1> ListWeight1=WMatRef.GetWeight();
   std::vector<T1> ListWeight2=WMat2.GetWeight();
-  for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-    if (WeighMatrix_IsNear(ListWeight1[iEnt], ListWeight2[iEnt], TheTol) == 1) {
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    if (WeighMatrix_IsNear(ListWeight1[iEnt], ListWeight2[iEnt], TheTol)) {
       std::cerr << "ERROR: The reordering failed\n";
       throw TerminalException{1};
     }
@@ -486,12 +484,12 @@ bool RenormalizeWeightMatrix(WeightMatrix<T1, T2> const& WMatRef, WeightMatrix<T
 
 
 template<typename T>
-WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
+WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const& TheTol)
 {
-  int nbRow=eMat.rows();
+  size_t nbRow=eMat.rows();
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow, TheTol);
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int iCol=0; iCol<nbRow; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
       T eVal=eMat(iRow, iCol);
       WMat.Update(iCol, iRow, eVal);
     }
@@ -502,29 +500,29 @@ WeightMatrix<T,T> T_TranslateToMatrix(MyMatrix<T> const& eMat, T const & TheTol)
 
 // The matrices in ListMat do not have to be symmetric.
 template<typename T, typename Tint>
-WeightMatrix<std::vector<T>,T> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, T const & TheTol)
+WeightMatrix<std::vector<T>,T> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, T const& TheTol)
 {
-  int nbRow=SHV.rows();
-  int n = SHV.cols();
-  int nbMat=ListMat.size();
+  size_t nbRow=SHV.rows();
+  size_t n = SHV.cols();
+  size_t nbMat=ListMat.size();
   WeightMatrix<std::vector<T>,T> WMat(nbRow, TheTol);
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     std::vector<MyVector<T>> ListV(nbMat);
-    for (int iMat=0; iMat<nbMat; iMat++) {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
       MyVector<T> V(n);
-      for (int i=0; i<n; i++) {
+      for (size_t i=0; i<n; i++) {
         T eVal=0;
-        for (int j=0; j<n; j++)
+        for (size_t j=0; j<n; j++)
           eVal += ListMat[iMat](j,i) * SHV(iRow, j);
         V(i) = eVal;
       }
       ListV[iMat] = V;
     }
-    for (int jRow=0; jRow<nbRow; jRow++) {
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       std::vector<T> ListScal(nbMat);
-      for (int iMat=0; iMat<nbMat; iMat++) {
+      for (size_t iMat=0; iMat<nbMat; iMat++) {
         T eScal=0;
-        for (int i=0; i<n; i++)
+        for (size_t i=0; i<n; i++)
           eScal += ListV[iMat](i)*SHV(jRow,i);
         ListScal[iMat] = eScal;
       }
@@ -539,31 +537,31 @@ WeightMatrix<std::vector<T>,T> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMat
 template<typename T, typename Tint>
 WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV, T const & TheTol)
 {
-  int nbRow=SHV.rows();
-  int n=qMat.rows();
-  int INP_nbRow=nbRow;
+  size_t nbRow=SHV.rows();
+  size_t n=qMat.rows();
+  size_t INP_nbRow=nbRow;
   std::vector<int> INP_TheMat(nbRow * nbRow);
   std::vector<T> INP_ListWeight;
   T INP_TheTol=0;
   std::unordered_map<T, int> ValueMap;
   int idxWeight = 0;
   //
-  auto set_entry=[&](int iRow, int jRow, int val) -> void {
-    int idx = iRow + nbRow*jRow;
+  auto set_entry=[&](size_t iRow, size_t jRow, int val) -> void {
+    size_t idx = iRow + nbRow*jRow;
     INP_TheMat[idx] = val;
   };
-  int nbPair=nbRow / 2;
-  for (int iPair=0; iPair<nbPair; iPair++) {
+  size_t nbPair=nbRow / 2;
+  for (size_t iPair=0; iPair<nbPair; iPair++) {
     MyVector<T> V(n);
-    for (int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
       T eVal=0;
-      for (int j=0; j<n; j++)
+      for (size_t j=0; j<n; j++)
 	eVal += qMat(j,i) * SHV(2*iPair, j);
       V(i) = eVal;
     }
-    for (int jPair=iPair; jPair<nbPair; jPair++) {
+    for (size_t jPair=iPair; jPair<nbPair; jPair++) {
       T eScal=0;
-      for (int i=0; i<n; i++)
+      for (size_t i=0; i<n; i++)
 	eScal += V(i)*SHV(2*jPair,i);
       int& value1 = ValueMap[eScal];
       if (value1 == 0) { // This is a missing value
@@ -604,10 +602,10 @@ WeightMatrix<T,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<T
 template<typename T>
 WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
 {
-  int nbRow=eMat.rows();
+  size_t nbRow=eMat.rows();
   std::set<T> SetScal;
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int iCol=0; iCol<nbRow; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
       T eVal=eMat(iRow, iCol);
       SetScal.insert(eVal);
     }
@@ -615,9 +613,9 @@ WeightMatrix<T,T> T_TranslateToMatrixOrder(MyMatrix<T> const& eMat)
   for (auto & eVal : SetScal)
     VectScal.push_back(eVal);
   std::vector<int> TheMat(nbRow*nbRow);
-  int idx=0;
-  for (int iCol=0; iCol<nbRow; iCol++) {
-    for (int iRow=0; iRow<nbRow; iRow++) {
+  size_t idx=0;
+  for (size_t iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
       T eVal=eMat(iRow,iCol);
       typename std::set<T>::iterator it = SetScal.find(eVal);
       int pos = std::distance(SetScal.begin(), it);
@@ -639,13 +637,13 @@ template<typename T>
 MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  int nbRow=TheEXT.rows();
-  int nbCol=TheEXT.cols();
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
   MyMatrix<T> QMat(nbCol, nbCol);
-  for (int iCol=0; iCol<nbCol; iCol++)
-    for (int jCol=0; jCol<nbCol; jCol++) {
+  for (size_t iCol=0; iCol<nbCol; iCol++)
+    for (size_t jCol=0; jCol<nbCol; jCol++) {
       T eSum=0;
-      for (int iRow=0; iRow<nbRow; iRow++)
+      for (size_t iRow=0; iRow<nbRow; iRow++)
 	eSum += TheEXT(iRow, jCol) * TheEXT(iRow, iCol);
       QMat(iCol, jCol)=eSum;
     }
@@ -670,24 +668,24 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
   MyMatrix<Tfield> TheEXT_F = ConvertMatrixUniversal<Tfield,T>(TheEXT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|ConvertMatrixUniversal1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
   MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|Kernel_GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
   MyMatrix<Tfield> Q_F_red = RemoveFractionMatrix(Q_F);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|RemoveFractionMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
   MyMatrix<T> RetMat = ConvertMatrixUniversal<T,Tfield>(Q_F_red);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ConvertMatrixUniversal1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|Kernel_GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|RemoveFractionMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
   std::cerr << "|ConvertMatrixUniversal2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return RetMat;
@@ -704,9 +702,9 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbRow=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int INP_nbRow = nbRow;
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t INP_nbRow = nbRow;
   std::vector<int> INP_TheMat(nbRow * nbRow);
   std::vector<T> INP_ListWeight;
   T INP_TheTol=0;
@@ -714,16 +712,16 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
   int idxWeight = 0;
   //
   MyVector<T> V(nbCol);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iCol=0; iCol<nbCol; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
       T eSum=0;
-      for (int jCol=0; jCol<nbCol; jCol++)
+      for (size_t jCol=0; jCol<nbCol; jCol++)
         eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
       V(iCol) = eSum;
     }
-    for (int jRow=0; jRow<=iRow; jRow++) {
+    for (size_t jRow=0; jRow<=iRow; jRow++) {
       T eSum=0;
-      for (int iCol=0; iCol<nbCol; iCol++)
+      for (size_t iCol=0; iCol<nbCol; iCol++)
         eSum += V(iCol) * TheEXT(jRow, iCol);
       int& value = ValueMap[eSum];
       if (value == 0) { // This is a missing value
@@ -731,8 +729,8 @@ WeightMatrix<T, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> 
         value = idxWeight;
         INP_ListWeight.push_back(eSum);
       }
-      int idx1 = iRow + nbRow * jRow;
-      int idx2 = jRow + nbRow * iRow;
+      size_t idx1 = iRow + nbRow * jRow;
+      size_t idx2 = jRow + nbRow * iRow;
       INP_TheMat[idx1] = value - 1;
       INP_TheMat[idx2] = value - 1;
     }
@@ -754,10 +752,10 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbRow=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int nMat = ListMat.size();
-  int INP_nbRow = nbRow;
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t nMat = ListMat.size();
+  size_t INP_nbRow = nbRow;
   std::vector<int> INP_TheMat(nbRow * nbRow);
   std::vector<std::vector<T>> INP_ListWeight;
   T INP_TheTol=0;
@@ -768,19 +766,19 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
   MyMatrix<T> MatV(nMat, nbCol);
   //  std::vector<MyVector<T>> ListV(nMat, V);
   std::vector<T> LScal(nMat + 1);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int iMat=0; iMat<nMat; iMat++) {
-      for (int iCol=0; iCol<nbCol; iCol++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    for (size_t iMat=0; iMat<nMat; iMat++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
         T eSum=0;
-        for (int jCol=0; jCol<nbCol; jCol++)
+        for (size_t jCol=0; jCol<nbCol; jCol++)
           eSum += ListMat[iMat](jCol,iCol) * TheEXT(iRow, jCol);
         MatV(iMat, iCol) = eSum;
       }
     }
-    for (int jRow=0; jRow<=iRow; jRow++) {
-      for (int iMat=0; iMat<nMat; iMat++) {
+    for (size_t jRow=0; jRow<=iRow; jRow++) {
+      for (size_t iMat=0; iMat<nMat; iMat++) {
         T eSum=0;
-        for (int iCol=0; iCol<nbCol; iCol++)
+        for (size_t iCol=0; iCol<nbCol; iCol++)
           eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
         LScal[iMat] = eSum;
       }
@@ -795,8 +793,8 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const
         value = idxWeight;
         INP_ListWeight.push_back(LScal);
       }
-      int idx1 = iRow + nbRow * jRow;
-      int idx2 = jRow + nbRow * iRow;
+      size_t idx1 = iRow + nbRow * jRow;
+      size_t idx2 = jRow + nbRow * iRow;
       INP_TheMat[idx1] = value - 1;
       INP_TheMat[idx2] = value - 1;
     }
@@ -832,9 +830,9 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbPair=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int eProd = nbPair * nbPair;
+  size_t nbPair=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t eProd = nbPair * nbPair;
   std::vector<int> INP_TheMat(eProd);
   Face ArrSigns(eProd);
   std::vector<T> INP_ListWeight;
@@ -843,22 +841,22 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
   int idxWeight = 0;
   int positionZero = -1;
   //
-  auto set_entry=[&](int iRow, int jRow, int pos, bool eChg) -> void {
-    int idx = iRow + nbPair*jRow;
+  auto set_entry=[&](size_t iRow, size_t jRow, int pos, bool eChg) -> void {
+    size_t idx = iRow + nbPair*jRow;
     INP_TheMat[idx] = pos;
     ArrSigns[idx] = eChg;
   };
   MyVector<T> V(nbCol);
-  for (int iPair=0; iPair<nbPair; iPair++) {
-    for (int iCol=0; iCol<nbCol; iCol++) {
+  for (size_t iPair=0; iPair<nbPair; iPair++) {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
       T eSum=0;
-      for (int jCol=0; jCol<nbCol; jCol++)
+      for (size_t jCol=0; jCol<nbCol; jCol++)
         eSum += Qmat(iCol,jCol) * TheEXT(iPair, jCol);
       V(iCol) = eSum;
     }
-    for (int jPair=0; jPair<=iPair; jPair++) {
+    for (size_t jPair=0; jPair<=iPair; jPair++) {
       T eScal=0;
-      for (int iCol=0; iCol<nbCol; iCol++)
+      for (size_t iCol=0; iCol<nbCol; iCol++)
         eScal += V(iCol) * TheEXT(jPair, iCol);
       bool ChgSign=false;
       if (eScal < 0) {
@@ -904,30 +902,30 @@ WeightMatrix<T, T> GetSimpleWeightMatrixAntipodal(MyMatrix<T> const& TheEXT, MyM
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbPair=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int INP_nbRow = 2*nbPair;
+  size_t nbPair=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t INP_nbRow = 2*nbPair;
   std::vector<int> INP_TheMat(INP_nbRow * INP_nbRow);
   std::vector<T> INP_ListWeight;
   T INP_TheTol=0;
   std::unordered_map<T, int> ValueMap;
   int idxWeight = 0;
   //
-  auto set_entry=[&](int iRow, int jRow, int pos) -> void {
-    int idx = iRow + INP_nbRow*jRow;
+  auto set_entry=[&](size_t iRow, size_t jRow, int pos) -> void {
+    size_t idx = iRow + INP_nbRow*jRow;
     INP_TheMat[idx] = pos;
   };
   MyVector<T> V(nbCol);
-  for (int iPair=0; iPair<nbPair; iPair++) {
-    for (int iCol=0; iCol<nbCol; iCol++) {
+  for (size_t iPair=0; iPair<nbPair; iPair++) {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
       T eSum=0;
-      for (int jCol=0; jCol<nbCol; jCol++)
+      for (size_t jCol=0; jCol<nbCol; jCol++)
         eSum += Qmat(iCol,jCol) * TheEXT(iPair, jCol);
       V(iCol) = eSum;
     }
-    for (int jPair=0; jPair<=iPair; jPair++) {
+    for (size_t jPair=0; jPair<=iPair; jPair++) {
       T eSum1=0;
-      for (int iCol=0; iCol<nbCol; iCol++)
+      for (size_t iCol=0; iCol<nbCol; iCol++)
         eSum1 += V(iCol) * TheEXT(jPair, iCol);
       T eSum2 = -eSum1;
       int& value1 = ValueMap[eSum1];
@@ -989,23 +987,23 @@ WeightMatrix<T, T> GetWeightMatrixAntipodal(MyMatrix<T> const& TheEXT)
 template<typename T>
 WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListComm(MyMatrix<T> const& TheEXT, MyMatrix<T> const&GramMat, std::vector<MyMatrix<T>> const& ListComm)
 {
-  int nbRow=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int nbComm=ListComm.size();
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t nbComm=ListComm.size();
   T TheTol=0;
   WeightMatrix<std::vector<T>, T> WMat=WeightMatrix<std::vector<T>, T>(nbRow, TheTol);
   std::vector<MyMatrix<T>> ListProd;
   ListProd.push_back(GramMat);
-  for (int iComm=0; iComm<nbComm; iComm++) {
+  for (size_t iComm=0; iComm<nbComm; iComm++) {
     MyMatrix<T> eProd=ListComm[iComm]*GramMat;
     ListProd.push_back(eProd);
   }
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int jRow=0; jRow<nbRow; jRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       T eZer=0;
       std::vector<T> eVectSum(nbComm+1,eZer);
-      for (int iCol=0; iCol<nbCol; iCol++)
-	for (int jCol=0; jCol<nbCol; jCol++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+	for (size_t jCol=0; jCol<nbCol; jCol++) {
 	  T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
 	  for (int iMat=0; iMat<=nbComm; iMat++)
 	    eVectSum[iMat] += eProd * ListProd[iMat](iCol, jCol);
@@ -1020,18 +1018,18 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListComm(MyMatrix<T> const& TheE
 template<typename T>
 WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const& ListMatrix, MyMatrix<T> const& TheEXT)
 {
-  int nbRow=TheEXT.rows();
-  int nbCol=TheEXT.cols();
-  int nbMat=ListMatrix.size();
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  size_t nbMat=ListMatrix.size();
   T TheTol=0;
   WeightMatrix<std::vector<T>, T> WMat(nbRow, TheTol);
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int jRow=0; jRow<nbRow; jRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       std::vector<T> eVectScal(nbMat,0);
-      for (int iCol=0; iCol<nbCol; iCol++)
-	for (int jCol=0; jCol<nbCol; jCol++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+	for (size_t jCol=0; jCol<nbCol; jCol++) {
 	  T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
-	  for (int iMat=0; iMat<nbMat; iMat++)
+	  for (size_t iMat=0; iMat<nbMat; iMat++)
 	    eVectScal[iMat] += eProd * ListMatrix[iMat](iCol, jCol);
 	}
       WMat.Update(iRow, jRow, eVectScal);
@@ -1044,20 +1042,20 @@ WeightMatrix<std::vector<T>, T> GetWeightMatrix_ListMatrix(std::vector<MyMatrix<
 template<typename T>
 WeightMatrix<T, T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat, MyMatrix<int> const& ListShort, T const& TheTol)
 {
-  int nbShort=ListShort.rows();
-  int n=TheGramMat.rows();
+  size_t nbShort=ListShort.rows();
+  size_t n=TheGramMat.rows();
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbShort, TheTol);
   MyVector<T> V(n);
-  for (int iShort=0; iShort<nbShort; iShort++) {
-    for (int i=0; i<n; i++) {
+  for (size_t iShort=0; iShort<nbShort; iShort++) {
+    for (size_t i=0; i<n; i++) {
       T eSum = 0;
-      for (int j=0; j<n; j++)
+      for (size_t j=0; j<n; j++)
         eSum += TheGramMat(i,j) * ListShort(iShort, j);
       V(i) = eSum;
     }
-    for (int jShort=0; jShort<nbShort; jShort++) {
+    for (size_t jShort=0; jShort<nbShort; jShort++) {
       T eScal = 0;
-      for (int i=0; i<n; i++)
+      for (size_t i=0; i<n; i++)
         eScal += V(i) * ListShort(jShort, i);
       WMat.Update(iShort, jShort, eScal);
     }
@@ -1070,12 +1068,12 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat, My
 template<typename T>
 WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMat, MyMatrix<int> const& ListShort)
 {
-  int nbShort=ListShort.rows();
-  int n=TheGramMat.rows();
+  size_t nbShort=ListShort.rows();
+  size_t n=TheGramMat.rows();
   auto GetValue=[&](int const&iShort, int const&jShort) -> T {
     T eScal=0;
-    for (int i=0; i<n; i++)
-      for (int j=0; j<n; j++) {
+    for (size_t i=0; i<n; i++)
+      for (size_t j=0; j<n; j++) {
 	int eVal12=ListShort(iShort, i) * ListShort(jShort, j);
 	eScal += eVal12 * TheGramMat(i,j);
       }
@@ -1083,8 +1081,8 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
   };
   MyMatrix<T> ScalMat(nbShort,nbShort);
   std::set<T> setWeight;
-  for (int iShort=0; iShort<nbShort; iShort++)
-    for (int jShort=0; jShort<=iShort; jShort++) {
+  for (size_t iShort=0; iShort<nbShort; iShort++)
+    for (size_t jShort=0; jShort<=iShort; jShort++) {
       T eScal=GetValue(iShort,jShort);
       ScalMat(iShort,jShort)=eScal;
       ScalMat(jShort,iShort)=eScal;
@@ -1110,8 +1108,8 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
     idx++;
   }
   std::vector<int> INP_TheMat(nbShort*nbShort);
-  for (int iShort=0; iShort<nbShort; iShort++)
-    for (int jShort=0; jShort<=iShort; jShort++) {
+  for (size_t iShort=0; iShort<nbShort; iShort++)
+    for (size_t jShort=0; jShort<=iShort; jShort++) {
       T eScal=GetValue(iShort,jShort);
       PairData test{eScal,0};
       auto iter=setWeightIdx.find(test);
@@ -1122,8 +1120,8 @@ WeightMatrix<T, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMa
       }
 #endif
       int idxret=iter->idx;
-      int pos1=iShort + nbShort*jShort;
-      int pos2=jShort + nbShort*iShort;
+      size_t pos1=iShort + nbShort*jShort;
+      size_t pos2=jShort + nbShort*iShort;
       INP_TheMat[pos1]=idxret;
       INP_TheMat[pos2]=idxret;
     }
@@ -1155,18 +1153,18 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
   std::set<T1> setWeight;
   std::vector<T1> ListWeight;
-  int nbRow=WMatI.rows();
+  size_t nbRow=WMatI.rows();
   T2 TheTol=WMatI.GetTol();
   WeightMatrix<T1,T2> WMatO=WeightMatrix<T1,T2>(2*nbRow, TheTol);
-  int siz=WMatI.GetWeightSize();
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int jRow=0; jRow<nbRow; jRow++) {
+  size_t siz=WMatI.GetWeightSize();
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       int pos=WMatI.GetValue(iRow, jRow);
       WMatO.intDirectAssign(iRow, jRow+nbRow, pos);
       WMatO.intDirectAssign(jRow+nbRow, iRow, pos);
     }
-  for (int iRow=0; iRow<nbRow; iRow++)
-    for (int jRow=0; jRow<nbRow; jRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       WMatO.intDirectAssign(iRow      , jRow      , siz);
       WMatO.intDirectAssign(iRow+nbRow, jRow+nbRow, siz+1);
     }
@@ -1199,13 +1197,13 @@ template<typename T1, typename T2>
 TheGroupFormat GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
   WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
-  int nbSHV=WMatI.rows();
+  size_t nbSHV=WMatI.rows();
   TheGroupFormat GRP=GetStabilizerWeightMatrix(WMatO);
   std::vector<permlib::dom_int> v(nbSHV);
   std::vector<permlib::Permutation> ListGen;
   for (auto & eGen : GRP.group->S) {
-    for (int iSHV=0; iSHV<nbSHV; iSHV++) {
-      int jSHV=eGen->at(iSHV);
+    for (size_t iSHV=0; iSHV<nbSHV; iSHV++) {
+      size_t jSHV=eGen->at(iSHV);
       v[iSHV]=jSHV;
     }
     ListGen.push_back(permlib::Permutation(v));
@@ -1235,18 +1233,18 @@ EquivTest<permlib::Permutation> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T
 template<typename T1, typename T2, typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, Face const& eSet)
 {
-  int nbVert=eSet.count();
+  size_t nbVert=eSet.count();
   std::vector<int> eList(nbVert);
   int aRow=eSet.find_first();
   for (int i=0; i<nbVert; i++) {
     eList[i]=aRow;
     aRow=eSet.find_next(aRow);
   }
-  int nbWeight=WMat.GetWeightSize();
+  size_t nbWeight=WMat.GetWeightSize();
   std::vector<Tout> eInv(nbWeight,0);
-  for (int iVert=0; iVert<nbVert; iVert++) {
+  for (size_t iVert=0; iVert<nbVert; iVert++) {
     int aVert=eList[iVert];
-    for (int jVert=0; jVert<nbVert; jVert++) {
+    for (size_t jVert=0; jVert<nbVert; jVert++) {
       int bVert=eList[jVert];
       int iWeight=WMat.GetValue(aVert, bVert);
       eInv[iWeight]++;
@@ -1261,14 +1259,14 @@ template<typename T1, typename T2>
 WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::ostream & os)
 {
   bool IsDiag;
-  int n=GRP.n;
+  size_t n=GRP.n;
   WeightMatrix<T1,T2> WMat(n,0);
-  for (int i=0; i<n; i++)
-    for (int j=0; j<n; j++)
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++)
       WMat.intDirectAssign(i,j,-1);
   auto GetUnset=[&]() -> std::pair<int,int> {
-    for (int i=0; i<n; i++)
-      for (int j=0; j<n; j++) {
+    for (size_t i=0; i<n; i++)
+      for (size_t j=0; j<n; j++) {
 	int eVal=WMat.GetValue(i,j);
 	if (eVal == -1) {
 	  return {i,j};
@@ -1278,7 +1276,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
   };
   struct VectorListPair {
     std::vector<std::pair<int,int>> ListWorkingPair;
-    int nbWorkingPair=0;
+    size_t nbWorkingPair=0;
   };
   VectorListPair VLP0, VLP1;
   auto FuncInsert=[&](VectorListPair & VLP, std::pair<int,int> const& ePair) -> void {
@@ -1305,7 +1303,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
     else
       VLP1.nbWorkingPair=0;
   };
-  auto GetNbWorkingPair=[&](int const& iChoice) -> int {
+  auto GetNbWorkingPair=[&](int const& iChoice) ->size_t {
     if (iChoice == 0)
       return VLP0.nbWorkingPair;
     else
@@ -1320,8 +1318,6 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
   int iChoice=0;
   int iOrbit=0;
   std::vector<T1> ListWeight;
-  //  bool DoDebug=true;
-  bool DoDebug=false;
   while(true) {
     std::pair<int,int> eStart=GetUnset();
     if (eStart.first == -1)
@@ -1329,15 +1325,15 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
     IsDiag=false;
     if (eStart.first == eStart.second)
       IsDiag=true;
-    if (DoDebug) {
-      os << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
-      std::cerr << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
-      std::cerr << "  IsDiag=" << IsDiag << "\n";
-    }
+#ifdef DEBUG
+    os << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
+    std::cerr << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
+    std::cerr << "  IsDiag=" << IsDiag << "\n";
+#endif
     T1 insVal=iOrbit;
     ListWeight.push_back(insVal);
     FuncInsertIChoice(iChoice, eStart);
-    int orbSize=0;
+    size_t orbSize=0;
     while(true) {
       int iChoiceB=1-iChoice;
       int nbPair=GetNbWorkingPair(iChoice);
@@ -1384,15 +1380,16 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
       SetZero(iChoice);
       iChoice=iChoiceB;
     }
-    if (DoDebug)
+#ifdef DEBUG
       os << "     size=" << GRP.size << " orbSize=" << orbSize << "\n";
+#endif
     iOrbit++;
   }
   WMat.SetWeight(ListWeight);
-  if (DoDebug) {
-    for (int i=0; i<n; i++)
-      os << "i=" << i << "/" << n << " val=" << WMat.GetValue(i,i) << "\n";
-  }
+#ifdef DEBUG
+  for (size_t i=0; i<n; i++)
+    os << "i=" << i << "/" << n << " val=" << WMat.GetValue(i,i) << "\n";
+#endif
   return WMat;
 }
 
@@ -1446,19 +1443,19 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
   }
   os << "ComputeLocalInvariantStrategy, step 5\n";
   //
-  int nbRow=WMatInt.rows();
-  int nbWeight=WMatInt.GetWeightSize();
+  size_t nbRow=WMatInt.rows();
+  size_t nbWeight=WMatInt.GetWeightSize();
   os << "nbRow=" << nbRow << " nbWeight=" << nbWeight << "\n";
   std::vector<int> StatusDiag(nbWeight,0);
   std::vector<int> StatusOff(nbWeight,0);
   os << "ComputeLocalInvariantStrategy, step 5.1\n";
-  for (int i=0; i<nbRow; i++) {
+  for (size_t i=0; i<nbRow; i++) {
     int iWeight=WMatInt.GetValue(i,i);
     StatusDiag[iWeight]=1;
   }
   os << "ComputeLocalInvariantStrategy, step 5.2\n";
-  for (int i=0; i<nbRow-1; i++)
-    for (int j=i+1; j<nbRow; j++) {
+  for (size_t i=0; i<nbRow-1; i++)
+    for (size_t j=i+1; j<nbRow; j++) {
       int iWeight=WMatInt.GetValue(i,j);
       StatusOff[iWeight]=1;
     }
@@ -1468,14 +1465,14 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
   std::vector<int> MapDiagCoeff(nbWeight,-1);
   std::vector<int> MapOffCoeff(nbWeight,-1);
   int idxA=0;
-  for (int i=0; i<nbWeight; i++)
+  for (size_t i=0; i<nbWeight; i++)
     if (StatusDiag[i] == 1) {
       MapDiagCoeff[i]=idxA;
       idxA++;
     }
   os << "ComputeLocalInvariantStrategy, step 7\n";
   int idxB=0;
-  for (int i=0; i<nbWeight; i++)
+  for (size_t i=0; i<nbWeight; i++)
     if (StatusOff[i] == 1) {
       MapOffCoeff[i]=idxB;
       idxB++;
@@ -1553,14 +1550,14 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
 template<typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& LocalInv, Face const& eSet)
 {
-  int nbVert=eSet.count();
-  int nbRow=LocalInv.WMatInt.rows();
-  int nbVertCompl=nbRow - nbVert;
+  size_t nbVert=eSet.count();
+  size_t nbRow=LocalInv.WMatInt.rows();
+  size_t nbVertCompl=nbRow - nbVert;
   std::vector<int> eList(nbVert);
   std::vector<int> eListCompl(nbVertCompl);
   int idx1=0;
   int idx2=0;
-  for (int i=0; i<nbRow; i++) {
+  for (size_t i=0; i<nbRow; i++) {
     if (eSet[i] == 1) {
       eList[idx1]=i;
       idx1++;
@@ -1572,19 +1569,19 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
   }
   int nbDiagCoeff=LocalInv.nbDiagCoeff;
   int nbOffCoeff=LocalInv.nbOffCoeff;
-  int nbTriple=LocalInv.ListChosenTriple.rows();
+  size_t nbTriple=LocalInv.ListChosenTriple.rows();
   std::vector<Tout> eInv(nbDiagCoeff + 2*nbOffCoeff + nbTriple,0);
   int posShift=0;
-  for (int iVert=0; iVert<nbVert; iVert++) {
+  for (size_t iVert=0; iVert<nbVert; iVert++) {
     int aVert=eList[iVert];
     int iWeight=LocalInv.WMatInt.GetValue(aVert, aVert);
     int iMap=LocalInv.MapDiagCoeff[iWeight];
     eInv[posShift + iMap]++;
   }
   posShift += nbDiagCoeff;
-  for (int iVert=0; iVert<nbVert-1; iVert++) {
+  for (size_t iVert=0; iVert<nbVert-1; iVert++) {
     int aVert=eList[iVert];
-    for (int jVert=iVert+1; jVert<nbVert; jVert++) {
+    for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
       int bVert=eList[jVert];
       int iWeight=LocalInv.WMatInt.GetValue(aVert, bVert);
       int iMap=LocalInv.MapOffCoeff[iWeight];
@@ -1592,9 +1589,9 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
     }
   }
   posShift += nbOffCoeff;
-  for (int iVert=0; iVert<nbVert; iVert++) {
+  for (size_t iVert=0; iVert<nbVert; iVert++) {
     int aVert=eList[iVert];
-    for (int jVert=0; jVert<nbVertCompl; jVert++) {
+    for (size_t jVert=0; jVert<nbVertCompl; jVert++) {
       int bVert=eListCompl[jVert];
       int iWeight=LocalInv.WMatInt.GetValue(aVert,bVert);
       int iMap=LocalInv.MapOffCoeff[iWeight];
@@ -1606,7 +1603,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
     return eInv;
   std::vector<int> colorVect(3);
   auto FindITriple=[&]() -> int {
-    for (int iTriple=0; iTriple<nbTriple; iTriple++) {
+    for (size_t iTriple=0; iTriple<nbTriple; iTriple++) {
       bool IsMatch=true;
       for (int i=0; i<3; i++)
 	if (colorVect[i] != LocalInv.ListChosenTriple(iTriple,i))
@@ -1641,29 +1638,29 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
 }
 
 
-
+// The matrix should be square and the output does not depends on the ordering of the coefficients.
 template<typename T>
 inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvariantWeightMatrix(WeightMatrix<T,T> const& WMat)
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
-  int nbInv=3;
-  int nbVert=WMat.rows();
+  size_t nbInv=3;
+  size_t nbVert=WMat.rows();
   std::vector<int> ListM(nbInv);
   ListM[0]=2;
   ListM[1]=5;
   ListM[2]=23;
-  int nbWeight=WMat.GetWeightSize();
+  size_t nbWeight=WMat.GetWeightSize();
   std::vector<T> ListWeight=WMat.GetWeight();
   std::vector<int> ListAtt(nbWeight,0);
-  for (int iVert=0; iVert<nbVert; iVert++)
-    for (int jVert=0; jVert<nbVert; jVert++) {
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t jVert=0; jVert<nbVert; jVert++) {
       int iWeight=WMat.GetValue(iVert, jVert);
       ListAtt[iWeight]++;
     }
   permlib::Permutation ePerm=SortingPerm(ListWeight);
 #ifdef DEBUG
-  for (int jWeight=1; jWeight<nbWeight; jWeight++) {
-    int iWeight=jWeight-1;
+  for (size_t jWeight=1; jWeight<nbWeight; jWeight++) {
+    size_t iWeight=jWeight-1;
     int i=ePerm.at(iWeight);
     int j=ePerm.at(jWeight);
     if (ListWeight[i] > ListWeight[j]) {
@@ -1673,7 +1670,7 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
   }
 #endif
   T eMainInv=0;
-  for (int iInv=0; iInv<nbInv; iInv++) {
+  for (size_t iInv=0; iInv<nbInv; iInv++) {
     T eInv=0;
     T ePow=ListM[iInv];
     for (int iWeight=0; iWeight<nbWeight; iWeight++) {
@@ -1692,15 +1689,14 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
 template<typename T>
 WeightMatrix<T,T> ReadWeightedMatrix(std::istream &is)
 {
-  int nbRow, iRow, jRow, eVal;
-  int iEnt, nbEnt;
-  T eVal_T;
+  size_t nbRow;
   is >> nbRow;
   T TheTol=0;
   WeightMatrix<T,T> WMat=WeightMatrix<T,T>(nbRow,TheTol);
-  nbEnt=0;
-  for (iRow=0; iRow<nbRow; iRow++)
-    for (jRow=0; jRow<nbRow; jRow++) {
+  size_t nbEnt=0;
+  int eVal;
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
       is >> eVal;
       WMat.intDirectAssign(iRow, jRow, eVal);
       if (eVal> nbEnt)
@@ -1708,7 +1704,8 @@ WeightMatrix<T,T> ReadWeightedMatrix(std::istream &is)
     }
   nbEnt++;
   std::vector<T> ListWeight;
-  for (iEnt=0; iEnt<nbEnt; iEnt++) {
+  T eVal_T;
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
     is >> eVal_T;
     ListWeight.push_back(eVal_T);
   }
@@ -1734,12 +1731,12 @@ int GetNeededPower(int nb)
 }
 
 
-inline void GetBinaryExpression(int eVal, int h, std::vector<int> & eVect)
+inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
 {
-  int eWork, eExpo, eExpoB, i, res;
+  int eWork, eExpo, eExpoB, res;
   eWork=eVal;
   eExpo=1;
-  for (i=0; i<h; i++) {
+  for (size_t i=0; i<h; i++) {
     eExpoB=eExpo*2;
     res=eWork % eExpoB;
     eVect[i]=res/eExpo;
@@ -1790,7 +1787,7 @@ int GetNeededN(int nb_color)
       else
         nb_pair = 2 * (K + 1) * K;
     }
-    int e_pow = 1 << nb_pair;
+    int e_pow = 1 << nb_pair; // Computes 2^nb_pair
     if (e_pow >= nb_color)
       return N;
     N++;
@@ -1837,12 +1834,12 @@ std::vector<int> GetListPair(int N, int nb_color)
 template<typename T1, typename T2>
 size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
-  int nbWei=WMat.GetWeightSize();
-  int nbMult=nbWei+2;
-  int hS=GetNeededN(nbMult);
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
-  int nbVertTot=nbVert * hS;
+  size_t nbWei=WMat.GetWeightSize();
+  size_t nbMult=nbWei+2;
+  size_t hS=GetNeededN(nbMult);
+  size_t nbRow=WMat.rows();
+  size_t nbVert=nbRow + 2;
+  size_t nbVertTot=nbVert * hS;
 #ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
@@ -1853,34 +1850,33 @@ size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 template<typename T1, typename T2, typename Fcolor, typename Fadj>
 void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolor f_color, Fadj f_adj)
 {
-  int nbWei=WMat.GetWeightSize();
-  int nbMult=nbWei+2;
-  int hS=GetNeededN(nbMult);
+  size_t nbWei=WMat.GetWeightSize();
+  size_t nbMult=nbWei+2;
+  size_t hS=GetNeededN(nbMult);
   std::vector<int> V = GetListPair(hS, nbMult);
-  int e_pow = V.size() / 2;
+  size_t e_pow = V.size() / 2;
 #ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " e_pow=" << e_pow << "\n";
-  for (int i_pow=0; i_pow<e_pow; i_pow++) {
+  for (size_t i_pow=0; i_pow<e_pow; i_pow++) {
     std::cerr << "i_pow=" << i_pow << "  (" << V[2*i_pow] << " | " << V[2*i_pow+1] << ")\n";
   }
 #endif
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
-  for (int iVert=0; iVert<nbVert; iVert++)
-    for (int iH=0; iH<hS; iH++) {
-      int aVert=iVert + nbVert*iH;
+  size_t nbRow=WMat.rows();
+  size_t nbVert=nbRow + 2;
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t iH=0; iH<hS; iH++) {
+      size_t aVert=iVert + nbVert*iH;
       f_color(aVert,iH);
     }
-  for (int iVert=0; iVert<nbVert; iVert++)
-    for (int iH=0; iH<hS-1; iH++)
-      for (int jH=iH+1; jH<hS; jH++) {
-	int aVert=iVert + nbVert*iH;
-	int bVert=iVert + nbVert*jH;
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t iH=0; iH<hS-1; iH++)
+      for (size_t jH=iH+1; jH<hS; jH++) {
+	size_t aVert=iVert + nbVert*iH;
+	size_t bVert=iVert + nbVert*jH;
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
   std::vector<int> eVect(e_pow);
-  int iH1, iH2, aVert, bVert;
   for (int iVert=0; iVert<nbVert-1; iVert++)
     for (int jVert=iVert+1; jVert<nbVert; jVert++) {
       int eVal;
@@ -1897,12 +1893,12 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	  eVal=WMat.GetValue(iVert, jVert);
       }
       GetBinaryExpression(eVal, e_pow, eVect);
-      for (int i_pow=0; i_pow<e_pow; i_pow++)
+      for (size_t i_pow=0; i_pow<e_pow; i_pow++)
 	if (eVect[i_pow] == 1) {
-          iH1 = V[2*i_pow];
-          iH2 = V[2*i_pow+1];
-	  aVert=iVert + nbVert*iH1;
-	  bVert=jVert + nbVert*iH2;
+          int iH1 = V[2*i_pow];
+          int iH2 = V[2*i_pow+1];
+	  size_t aVert=iVert + nbVert*iH1;
+	  size_t bVert=jVert + nbVert*iH2;
 	  f_adj(aVert, bVert);
 	  f_adj(bVert, aVert);
           if (iH1 != iH2) {
@@ -1921,17 +1917,17 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 template<typename T1, typename T2>
 size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 {
-  int nbWei=WMat.GetWeightSize();
-  int nbMult=nbWei+2;
+  size_t nbWei=WMat.GetWeightSize();
+  size_t nbMult=nbWei+2;
 #ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
-  int hS=GetNeededPower(nbMult);
+  size_t hS=GetNeededPower(nbMult);
 #ifdef DEBUG
   std::cerr << "hS=" << hS << "\n";
 #endif
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
+  size_t nbRow=WMat.rows();
+  size_t nbVert=nbRow + 2;
 #ifdef DEBUG
   std::cerr << "nbVert=" << nbVert << "\n";
 #endif
@@ -1942,30 +1938,30 @@ size_t get_total_number_vertices(WeightMatrix<T1,T2> const& WMat)
 template<typename T1, typename T2, typename Fcolor, typename Fadj>
 void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolor f_color, Fadj f_adj)
 {
-  int nbWei=WMat.GetWeightSize();
-  int nbMult=nbWei+2;
+  size_t nbWei=WMat.GetWeightSize();
+  size_t nbMult=nbWei+2;
 #ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
-  int hS=GetNeededPower(nbMult);
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
-  for (int iVert=0; iVert<nbVert; iVert++)
-    for (int iH=0; iH<hS; iH++) {
-      int aVert=iVert + nbVert*iH;
+  size_t hS=GetNeededPower(nbMult);
+  size_t nbRow=WMat.rows();
+  size_t nbVert=nbRow + 2;
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t iH=0; iH<hS; iH++) {
+      size_t aVert=iVert + nbVert*iH;
       f_color(aVert,iH);
     }
-  for (int iVert=0; iVert<nbVert; iVert++)
-    for (int iH=0; iH<hS-1; iH++)
-      for (int jH=iH+1; jH<hS; jH++) {
-	int aVert=iVert + nbVert*iH;
-	int bVert=iVert + nbVert*jH;
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t iH=0; iH<hS-1; iH++)
+      for (size_t jH=iH+1; jH<hS; jH++) {
+	size_t aVert=iVert + nbVert*iH;
+	size_t bVert=iVert + nbVert*jH;
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
   std::vector<int> eVect(hS);
-  for (int iVert=0; iVert<nbVert-1; iVert++)
-    for (int jVert=iVert+1; jVert<nbVert; jVert++) {
+  for (size_t iVert=0; iVert<nbVert-1; iVert++)
+    for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
       int eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
@@ -1980,10 +1976,10 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 	  eVal=WMat.GetValue(iVert, jVert);
       }
       GetBinaryExpression(eVal, hS, eVect);
-      for (int iH=0; iH<hS; iH++)
+      for (size_t iH=0; iH<hS; iH++)
 	if (eVect[iH] == 1) {
-	  int aVert=iVert + nbVert*iH;
-	  int bVert=jVert + nbVert*iH;
+	  size_t aVert=iVert + nbVert*iH;
+	  size_t bVert=jVert + nbVert*iH;
 	  f_adj(aVert, bVert);
 	  f_adj(bVert, aVert);
 	}
@@ -1996,12 +1992,12 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<T1,T2> const& WMat, Fcolo
 template<typename T1, typename T2>
 bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
-  int nbVert = get_total_number_vertices(WMat);
+  size_t nbVert = get_total_number_vertices(WMat);
   bliss::Graph g(nbVert);
-  auto f_color=[&](int iVert, int eColor) -> void {
+  auto f_color=[&](size_t iVert, size_t eColor) -> void {
     g.change_color(iVert, eColor);
   };
-  auto f_adj=[&](int iVert, int jVert) -> void {
+  auto f_adj=[&](size_t iVert, size_t jVert) -> void {
     g.add_edge(iVert, jVert);
   };
   GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
@@ -2013,7 +2009,7 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 template<typename T1, typename T2, typename Tgr>
 inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
-  unsigned int nof_vertices=get_total_number_vertices(WMat);
+  size_t nof_vertices=get_total_number_vertices(WMat);
 #ifdef DEBUG
   std::cerr << "nof_vertices=" << nof_vertices << "\n";
 #endif
@@ -2022,10 +2018,10 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
   std::cerr << "eGR built\n";
 #endif
   eGR.SetHasColor(true);
-  auto f_color=[&](int iVert, int eColor) -> void {
+  auto f_color=[&](size_t iVert, size_t eColor) -> void {
     eGR.SetColor(iVert, eColor);
   };
-  auto f_adj=[&](int iVert, int jVert) -> void {
+  auto f_adj=[&](size_t iVert, size_t jVert) -> void {
     eGR.AddAdjacent(iVert, jVert);
   };
   GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
@@ -2038,18 +2034,17 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename T1, typename T2, typename Tgr>
 inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
-  unsigned int nof_vertices;
-  int nbMult=WMat.GetWeightSize()+2;
-  int hS=GetNeededPower(nbMult);
-  int nbRow=WMat.rows();
-  int nbVert=nbRow + 2;
-  nof_vertices=hS*nbVert;
-  std::function<bool(int,int)> fAdj=[=](int const& aVert, int const& bVert) -> bool {
+  size_t nbMult=WMat.GetWeightSize()+2;
+  size_t hS=GetNeededPower(nbMult);
+  size_t nbRow=WMat.rows();
+  size_t nbVert=nbRow + 2;
+  size_t nof_vertices=hS*nbVert;
+  std::function<bool(int,int)> fAdj=[=](size_t const& aVert, size_t const& bVert) -> bool {
     int eVal;
-    int iVert=aVert % nbVert;
-    int iH=(aVert - iVert)/nbVert;
-    int jVert=bVert % nbVert;
-    int jH=(aVert - iVert)/nbVert;
+    size_t iVert=aVert % nbVert;
+    size_t iH=(aVert - iVert)/nbVert;
+    size_t jVert=bVert % nbVert;
+    size_t jH=(aVert - iVert)/nbVert;
     std::vector<int> eVect(hS);
     if (iVert == jVert) {
       if (iH != jH) {
@@ -2061,9 +2056,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
     }
     if (iH == jH) {
       if (iVert > jVert) {
-	int swp=iVert;
-	iVert=swp;
-	jVert=swp;
+        std::swap(iVert, jVert);
       }
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
@@ -2088,8 +2081,8 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
     return false;
   };
   std::function<int(int)> fColor=[=](int const& aVert) -> int {
-    int iVert=aVert % nbVert;
-    int iH=(aVert - iVert)/nbVert;
+    size_t iVert=aVert % nbVert;
+    size_t iH=(aVert - iVert)/nbVert;
     return iH;
   };
   Tgr eGR(nof_vertices, fAdj);
@@ -2105,11 +2098,11 @@ TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
   std::vector<std::vector<unsigned int>> ListGen;
   std::vector<std::vector<unsigned int>>* h = &ListGen;
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
-  int nbVert = g.get_nof_vertices();
+  size_t nbVert = g.get_nof_vertices();
   std::vector<permlib::Permutation> generatorList;
   for (auto & eGen : ListGen) {
     std::vector<permlib::dom_int> gList(nbVert);
-    for (int iVert=0; iVert<nbVert; iVert++)
+    for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
     generatorList.push_back(permlib::Permutation(gList));
   }
@@ -2117,12 +2110,12 @@ TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
 }
 
 
-TheGroupFormat GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, int const& nbVert)
+TheGroupFormat GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
 {
   std::vector<permlib::Permutation> generatorList;
   for (auto & eGen : ListGen) {
     std::vector<permlib::dom_int> gList(nbVert);
-    for (int iVert=0; iVert<nbVert; iVert++)
+    for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
     generatorList.push_back(permlib::Permutation(gList));
   }
@@ -2135,7 +2128,7 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const& ListGen, 
 {
   int nbVert = eGR.GetNbVert();
   for (auto & eGen : ListGen) {
-    for (int iVert=0; iVert<nbVert; iVert++) {
+    for (size_t iVert=0; iVert<nbVert; iVert++) {
       int eColor = eGR.GetColor(iVert);
       int iVert_img = eGen[iVert];
       int fColor = eGR.GetColor(iVert_img);
@@ -2159,7 +2152,7 @@ template<typename Tgr>
 void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
 {
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  int nbVert=eGR.GetNbVert();
+  size_t nbVert=eGR.GetNbVert();
   std::vector<std::vector<unsigned int>> ListGen1 = BLISS_GetListGenerators(eGR);
   std::vector<std::vector<unsigned int>> ListGen2 = TRACES_GetListGenerators(eGR);
   auto siz1 = GetGroupListGen(ListGen1, nbVert).size;
@@ -2172,13 +2165,13 @@ void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
 
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
 {
-  int nof_vertices = cl.size();
+  size_t nof_vertices = cl.size();
   std::vector<unsigned int> clR(nof_vertices,-1);
-  for (int i=0; i<nof_vertices; i++)
+  for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
-  int nbVert=nbRow+2;
-  int hS = nof_vertices / nbVert;
+  size_t nbVert=nbRow+2;
+  size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
@@ -2189,12 +2182,12 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBi
   std::vector<int> MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
-  for (int iCan=0; iCan<nof_vertices; iCan++) {
+  for (size_t iCan=0; iCan<nof_vertices; iCan++) {
     if (ListStatus[iCan] == 1) {
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
       MapVectRev[posCanonic] = iVertNative;
-      for (int iH=0; iH<hS; iH++) {
+      for (size_t iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
 	int jCan=cl[uVertNative];
 #ifdef DEBUG
@@ -2210,7 +2203,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBi
   }
   std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
   int posCanonicB=0;
-  for (int iCan=0; iCan<nbVert; iCan++) {
+  for (size_t iCan=0; iCan<nbVert; iCan++) {
     int iNative=MapVectRev[iCan];
     if (iNative < nbRow) {
       MapVectRev2[posCanonicB] = iNative;
@@ -2236,8 +2229,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
 #endif
   int nof_vertices=eGR.GetNbVert();
   //  PrintStabilizerGroupSizes(std::cerr, eGR);
-  //  std::cerr << "eGR.GetNbVert=" << eGR.GetNbVert() << "\n";
-  //
+
 #ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
 # ifdef TIMINGS
@@ -2265,11 +2257,11 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
 #endif
   //
   std::vector<unsigned int> clR(nof_vertices,-1);
-  for (int i=0; i<nof_vertices; i++)
+  for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
-  int nbVert=nbRow+2;
-  int hS = nof_vertices / nbVert;
+  size_t nbVert=nbRow+2;
+  size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
@@ -2280,7 +2272,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
   std::vector<int> MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
-  for (int iCan=0; iCan<nof_vertices; iCan++) {
+  for (size_t iCan=0; iCan<nof_vertices; iCan++) {
     if (ListStatus[iCan] == 1) {
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
@@ -2301,7 +2293,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
   }
   std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
   int posCanonicB=0;
-  for (int iCan=0; iCan<nbVert; iCan++) {
+  for (size_t iCan=0; iCan<nbVert; iCan++) {
     int iNative=MapVectRev[iCan];
     if (iNative < nbRow) {
       MapVectRev2[posCanonicB] = iNative;
@@ -2326,7 +2318,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
 template<typename T1, typename T2, typename Tgr>
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
-  int nbRow=WMat.rows();
+  size_t nbRow=WMat.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -2344,10 +2336,10 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
 template<typename T>
 void SignRenormalizationMatrix(MyMatrix<T> & M)
 {
-  int nbRow = M.rows();
-  int n=M.cols();
+  size_t nbRow = M.rows();
+  size_t n=M.cols();
   auto get_need_chgsign=[&](int const& iRow) -> bool {
-    for (int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
       T eVal = M(iRow,i);
       if (eVal != 0) {
         return eVal < 0;
@@ -2355,9 +2347,9 @@ void SignRenormalizationMatrix(MyMatrix<T> & M)
     }
     return false;
   };
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     if (get_need_chgsign(iRow)) {
-      for (int i=0; i<n; i++)
+      for (size_t i=0; i<n; i++)
         M(iRow,i) = - M(iRow,i);
     }
   }
@@ -2366,11 +2358,11 @@ void SignRenormalizationMatrix(MyMatrix<T> & M)
 template<typename T>
 MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 {
-  int nbPair=M.rows();
-  int n=M.cols();
+  size_t nbPair=M.rows();
+  size_t n=M.cols();
   MyMatrix<T> Mret(2*nbPair, n);
-  for (int iPair=0; iPair<nbPair; iPair++)
-    for (int i=0; i<n; i++) {
+  for (size_t iPair=0; iPair<nbPair; iPair++)
+    for (size_t i=0; i<n; i++) {
       Mret(2*iPair  , i) =  M(iPair, i);
       Mret(2*iPair+1, i) = -M(iPair, i);
     }
@@ -2406,7 +2398,7 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  int nbRow= EXT.rows();
+  size_t nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -2442,11 +2434,11 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   mpz_class eHash1 = MD5_hash_mpz(eExpr);
   std::cerr << "eHash1=" << eHash1 << "\n";
   //
-  int hS = eGR.GetNbVert() / (nbRow + 2);
+  size_t hS = eGR.GetNbVert() / (nbRow + 2);
   std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
   for (auto & eGen : ePair.second) {
     std::vector<unsigned int> eGenRed(nbRow+2);
-    for (int i=0; i<nbRow+2; i++) {
+    for (size_t i=0; i<nbRow+2; i++) {
       unsigned int val = eGen[i];
       if (val >= nbRow+2) {
         std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
@@ -2454,14 +2446,14 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
       }
       eGenRed[i] = val;
     }
-    for (int i=nbRow; i<nbRow+2; i++) {
+    for (size_t i=nbRow; i<nbRow+2; i++) {
       if (eGenRed[i] != i) {
         std::cerr << "Point is not preserved\n";
         throw TerminalException{1};
       }
     }
-    for (int iH=0; iH<hS; iH++) {
-      for (int i=0; i<nbRow+2; i++) {
+    for (size_t iH=0; iH<hS; iH++) {
+      for (size_t i=0; i<nbRow+2; i++) {
         unsigned int val1 = eGen[i + iH * (nbRow+2)];
         unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
         if (val1 != val2) {
@@ -2470,8 +2462,8 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
           throw TerminalException{1};
         }
       }
-      for (int i=0; i<nbRow; i++) {
-        for (int j=0; j<nbRow; j++) {
+      for (size_t i=0; i<nbRow; i++) {
+        for (size_t j=0; j<nbRow; j++) {
           int iImg = eGenRed[i];
           int jImg = eGenRed[j];
           int pos1 = WMatAbs.WMat.GetValue(i, j);
@@ -2506,14 +2498,14 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
     V[0] = 1;
     while(true) {
       bool IsFinished = true;
-      for (int i=0; i<nbRow; i++) {
+      for (size_t i=0; i<nbRow; i++) {
         int val = V[i];
         if (val < 3 && val != 0) {
           IsFinished=false;
           V[i] = val + 2;
-          int iImg = eGen[i];
-          for (int j=0; j<nbRow; j++) {
-            int jImg = eGen[j];
+          size_t iImg = eGen[i];
+          for (size_t j=0; j<nbRow; j++) {
+            size_t jImg = eGen[j];
             int pos = WMatAbs.WMat.GetValue(i, j);
             if (pos != WMatAbs.positionZero) {
               bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
@@ -2564,7 +2556,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
 #endif
 
-  int n_cols=EXT.cols();
+  size_t n_cols=EXT.cols();
   MyMatrix<Tint> EXTreord(nbRow, n_cols);
   std::vector<int> ListSigns(nbRow,0);
   ListSigns[0]=1;
@@ -2574,7 +2566,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
   auto SetSign=[&](int const& i_row) -> void {
     int i_row_orig = PairCanonic.second[i_row];
-    for (int k_row=0; k_row<nbRow; k_row++) {
+    for (size_t k_row=0; k_row<nbRow; k_row++) {
       if (k_row != i_row && ListSigns[k_row] != 0) {
         int k_row_orig = PairCanonic.second[k_row];
         if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
@@ -2594,7 +2586,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   };
   while(true) {
     int nbUndone=0;
-    for (int i_row=0; i_row<nbRow; i_row++)
+    for (size_t i_row=0; i_row<nbRow; i_row++)
       if (ListSigns[i_row] == 0) {
         nbUndone++;
         SetSign(i_row);
@@ -2609,9 +2601,9 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
 #ifdef DEBUG
   std::string strWMat;
-  for (int i_row=0; i_row<nbRow; i_row++) {
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
     int i_rowC = PairCanonic.second[i_row];
-    for (int j_row=0; j_row<nbRow; j_row++) {
+    for (size_t j_row=0; j_row<nbRow; j_row++) {
       int j_rowC = PairCanonic.second[j_row];
       int pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
       strWMat += " " + std::to_string(pos);
@@ -2624,7 +2616,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "eHash3=" << eHash3 << "\n";
 #endif
 
-  for (int i_row=0; i_row<nbRow; i_row++) {
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
     int j_row = PairCanonic.second[i_row];
     int eSign = ListSigns[i_row];
     for (int i_col=0; i_col<n_cols; i_col++)
@@ -2662,7 +2654,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 template<typename Tint>
 EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  int nbRow= EXT.rows();
+  size_t nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -2723,14 +2715,14 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
     setSign(0, 1);
     while(true) {
       bool IsFinished = true;
-      for (int i=0; i<nbRow; i++) {
+      for (size_t i=0; i<nbRow; i++) {
         int val = V[i];
         if (val < 3 && val != 0) {
           IsFinished=false;
           V[i] = val + 2;
-          int iImg = eGen[i];
-          for (int j=0; j<nbRow; j++) {
-            int jImg = eGen[j];
+          size_t iImg = eGen[i];
+          for (size_t j=0; j<nbRow; j++) {
+            size_t jImg = eGen[j];
             int pos = WMatAbs.WMat.GetValue(i, j);
             if (pos != WMatAbs.positionZero) {
               bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
@@ -2776,7 +2768,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 #endif
   //
   std::vector<unsigned int> AntipodalGen(2*nbRow,0);
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     AntipodalGen[iRow] = iRow + nbRow;
     AntipodalGen[nbRow + iRow] = iRow;
   }
@@ -2800,15 +2792,15 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
-  int nbRow=WMat.rows();
+  size_t nbRow=WMat.rows();
   GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
-  int nbGen=ListGen.size();
+  size_t nbGen=ListGen.size();
   std::vector<permlib::Permutation> generatorList;
-  for (int iGen=0; iGen<nbGen; iGen++) {
+  for (size_t iGen=0; iGen<nbGen; iGen++) {
     std::vector<permlib::dom_int> gList(nbRow);
-    for (int iVert=0; iVert<nbRow; iVert++) {
+    for (size_t iVert=0; iVert<nbRow; iVert++) {
       int jVert=ListGen[iGen][iVert];
 #ifdef DEBUG
       if (jVert >= nbRow) {
@@ -2821,8 +2813,8 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
       gList[iVert]=jVert;
     }
 #ifdef DEBUG
-    for (int iRow=0; iRow<nbRow; iRow++)
-      for (int jRow=0; jRow<nbRow; jRow++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t jRow=0; jRow<nbRow; jRow++) {
 	int iRowI=gList[iRow];
 	int jRowI=gList[jRow];
 	int eVal1=WMat.GetValue(iRow, jRow);
@@ -2843,11 +2835,11 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
 {
-  int nbEnt=PairVectSymm.first.size() / 2;
+  size_t nbEnt=PairVectSymm.first.size() / 2;
   std::vector<int> MapVect(nbEnt, -1), MapVectRev(nbEnt, -1);
   std::vector<int> ListStatus(2*nbEnt,1);
-  int jEntCan=0;
-  for (int iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
+  size_t jEntCan=0;
+  for (size_t iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
     if (ListStatus[iEntCan] == 1) {
       int iEntNative = PairVectSymm.second[iEntCan];
       int jEntNative = iEntNative % nbEnt;
@@ -2884,7 +2876,7 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
   if (nof_vertices1 != nof_vertices2)
     return {false, {}};
   unsigned int nof_vertices=nof_vertices1;
-  unsigned int nbRow=WMat1.rows();
+  size_t nbRow=WMat1.rows();
 #ifdef USE_BLISS
   std::vector<unsigned int> cl1 = BLISS_GetCanonicalOrdering(eGR1);
   std::vector<unsigned int> cl2 = BLISS_GetCanonicalOrdering(eGR2);
@@ -2952,9 +2944,9 @@ template<typename T1, typename T2>
 EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
 {
   EquivTest<std::vector<unsigned int>> ePair = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
-  int len = ePair.TheEquiv.size();
+  size_t len = ePair.TheEquiv.size();
   std::vector<permlib::dom_int> eList(len);
-  for (int i=0; i<len; i++)
+  for (size_t i=0; i<len; i++)
     eList[i] = ePair.TheEquiv[i];
   permlib::Permutation ePerm(eList);
   return {ePair.TheReply, ePerm};
@@ -2974,17 +2966,17 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2>
 template<typename T1, typename T2>
 EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face const& f1, Face const& f2)
 {
-  int siz=WMat.GetWeightSize();
-  int n=WMat.rows();
+  size_t siz=WMat.GetWeightSize();
+  size_t n=WMat.rows();
   WeightMatrix<int,int> WMat1(n+1,0);
   WeightMatrix<int,int> WMat2(n+1,0);
-  for (int i=0; i<n; i++)
-    for (int j=0; j<n; j++) {
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++) {
       int eVal=WMat.GetValue(i,j);
       WMat1.Update(i,j,eVal);
       WMat2.Update(i,j,eVal);
     }
-  for (int i=0; i<n; i++) {
+  for (size_t i=0; i<n; i++) {
     if (f1[i] == 0)
       WMat1.Update(n,i,siz);
     else
@@ -2995,7 +2987,7 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
       WMat2.Update(n,i,siz+1);
   }
   std::vector<int> ListWeight(siz+3);
-  for (int i=0; i<siz+3; i++)
+  for (size_t i=0; i<siz+3; i++)
     ListWeight[i]=i;
   WMat1.Update(n,n,siz+2);
   WMat2.Update(n,n,siz+2);
@@ -3005,7 +2997,7 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
   if (!test.TheReply)
     return {false, {}};
   std::vector<permlib::dom_int> eList(n);
-  for (int i=0; i<n; i++) {
+  for (size_t i=0; i<n; i++) {
     int eVal=test.TheEquiv.at(i);
     eList[i]=eVal;
   }
@@ -3017,15 +3009,15 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
 template<typename T1, typename T2>
 TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 {
-  int siz=WMat.GetWeightSize();
-  int n=WMat.rows();
+  size_t siz=WMat.GetWeightSize();
+  size_t n=WMat.rows();
   WeightMatrix<int,int> WMatW(n+1,0);
-  for (int i=0; i<n; i++)
-    for (int j=0; j<n; j++) {
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++) {
       int eVal=WMat.GetValue(i,j);
       WMatW.Update(i,j,eVal);
     }
-  for (int i=0; i<n; i++) {
+  for (size_t i=0; i<n; i++) {
     if (f[i] == 0)
       WMatW.Update(n,i,siz);
     else
@@ -3036,7 +3028,7 @@ TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
   std::vector<permlib::Permutation> ListPerm;
   for (auto & ePerm : GRP.group->S) {
     std::vector<permlib::dom_int> eList(n);
-    for (int i=0; i<n; i++)
+    for (size_t i=0; i<n; i++)
       eList[i]=ePerm->at(i);
     ListPerm.push_back(permlib::Permutation(eList));
   }
@@ -3048,16 +3040,16 @@ TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 template<typename T1, typename T2>
 WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 {
-  int n=WMat.rows();
+  size_t n=WMat.rows();
   WeightMatrix<int,int> WMatNaked(n,0);
-  for (int i=0; i<n; i++)
-    for (int j=0; j<n; j++) {
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++) {
       int eVal=WMat.GetValue(i,j);
       WMatNaked.intDirectAssign(i,j,eVal);
     }
-  int nbWeight=WMat.GetWeightSize();
+  size_t nbWeight=WMat.GetWeightSize();
   std::vector<int> ListWeight(nbWeight);
-  for (int i=0; i<nbWeight; i++)
+  for (size_t i=0; i<nbWeight; i++)
     ListWeight[i]=i;
   WMatNaked.SetWeight(ListWeight);
   return WMatNaked;
@@ -3069,27 +3061,21 @@ permlib::Permutation CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
   GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  int nof_vertices=eGR.GetNbVert();
+  unsigned int nof_vertices=eGR.GetNbVert();
   bliss::Stats stats;
   const unsigned int* cl=g.canonical_form(stats, &report_aut_void, stderr);
   std::vector<int> clR(nof_vertices);
-  for (int i=0; i<nof_vertices; i++)
+  for (unsigned int i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
-  int nbVert=WMat.GetNbVert();
-  std::vector<int> eVect_R(nof_vertices,-1);
-  for (int iVert=0; iVert<nbVert; iVert++) {
-    int i=cl[iVert]; // or clR? this needs to be debugged
-    eVect_R[i]=iVert;
-  }
+  unsigned int nbVert=WMat.GetNbVert();
+  std::vector<unsigned int> eVect_R(nof_vertices);
   std::vector<permlib::dom_int> eVect(nbVert);
-  int idx=0;
-  for (int i=0; i<nof_vertices; i++) {
-    int eVal=eVect_R[i];
-    if (eVal != -1) {
-      eVect[i]=eVal; // Again or reverse? This had to be checked.
-      idx++;
-    }
+  for (unsigned int iVert=0; iVert<nbVert; iVert++) {
+    unsigned int i=cl[iVert]; // or clR? this needs to be debugged
+    eVect_R[i]=iVert;
+    eVect[iVert] = i;
   }
+  // Need to check that code.
   return permlib::Permutation(eVect);
 }
 
@@ -3137,7 +3123,7 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 template<typename T>
 std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
-  int nbRow = EXT.rows();
+  size_t nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -3173,7 +3159,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::vector<std::vector<unsigned int>> ListGen;
   for (auto & eGen : ListGenTot) {
     std::vector<unsigned int> eGenRed(nbRow);
-    for (int i=0; i<nbRow; i++) {
+    for (size_t i=0; i<nbRow; i++) {
       unsigned int val = eGen[i];
 #ifdef DEBUG
       unsigned int nbRow_ui = nbRow;
