@@ -1079,7 +1079,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
   }
   int nb_ineq_after_crit = Tot_mapB.size();
 #ifdef DEBUG
-  if (nb_ineq_aftercrit + nb_redund != nb_ineq) {
+  if (nb_ineq_after_crit + nb_redund != nb_ineq) {
     std::cerr << "inconsistency in the computation\n";
     throw TerminalException{1};
   }
