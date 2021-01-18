@@ -374,6 +374,8 @@ int main(int argc, char* argv[])
       }
     }
     std::cerr << "We should not reach that stage as the matrix should already be in the list\n";
+    TypeCtypeExch<Tint> eCtypeRed = {eCtype.eMat};
+    std::cerr << "Missin Ctzpe=" << eCtypeRed << "\n";
     throw TerminalException{1};
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<MyMatrix<Tint>,int>> {

@@ -2227,7 +2227,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nof_vertices=eGR.GetNbVert();
+  unsigned int nof_vertices=eGR.GetNbVert();
   //  PrintStabilizerGroupSizes(std::cerr, eGR);
 
 #ifdef USE_BLISS
@@ -2277,7 +2277,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
       MapVectRev[posCanonic] = iVertNative;
-      for (int iH=0; iH<hS; iH++) {
+      for (size_t iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
 	int jCan=cl[uVertNative];
 #ifdef DEBUG
@@ -2564,7 +2564,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::string strAssign;
   std::cerr << "positionZero=" << WMatAbs.positionZero << "\n";
 #endif
-  auto SetSign=[&](int const& i_row) -> void {
+  auto SetSign=[&](size_t const& i_row) -> void {
     int i_row_orig = PairCanonic.second[i_row];
     for (size_t k_row=0; k_row<nbRow; k_row++) {
       if (k_row != i_row && ListSigns[k_row] != 0) {
