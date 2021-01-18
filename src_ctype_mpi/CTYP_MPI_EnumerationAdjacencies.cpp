@@ -357,12 +357,14 @@ int main(int argc, char* argv[])
     return nb_collision;
   };
   std::vector<int> ListUndoneIndex;
+  size_t nb_oper = 0;
   auto fInsert_Ctype=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
     size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
 #ifdef ERR_LOG
     std::cerr << "e_hash=" << e_hash << " |eCtype|=" << eCtype.eMat.rows() << " / " << eCtype.eMat.cols() << "\n";
     WriteMatrix(std::cerr, eCtype.eMat);
 #endif
+    nb_oper++;
     std::vector<int> & eList = MapIndexByHash[e_hash];
     for (auto iIdx : eList) {
       TypeCtypeAdjExch<Tint> fCtype = NC_ReadMatrix(iIdx);
@@ -375,7 +377,7 @@ int main(int argc, char* argv[])
     }
     std::cerr << "We should not reach that stage as the matrix should already be in the list\n";
     TypeCtypeExch<Tint> eCtypeRed = {eCtype.eMat};
-    std::cerr << "Missin Ctzpe=" << eCtypeRed << "\n";
+    std::cerr << "nb_oper=" << nb_oper << " Missing Ctype=" << eCtypeRed << "\n";
     throw TerminalException{1};
   };
   auto GetUndoneEntry=[&]() -> boost::optional<std::pair<MyMatrix<Tint>,int>> {
