@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
   std::string PrefixAdj = argv[2];
   std::cerr << "Prefix=" << Prefix << " PrefixAdj=" << PrefixAdj << "\n";
   std::vector<int> ListAdj_Glob;
-  std::vector<int> ListNbCtype(n_pes);
+  std::vector<size_t> ListNbCtype(n_pes);
   std::vector<int> ListNbAdj_Glob;
   std::vector<int> ListNbFree_Glob;
   // Reading number of adjacencies
