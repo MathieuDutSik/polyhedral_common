@@ -2,6 +2,7 @@
 #define INCLUDE_POLY_HYPERPLANE
 
 #include "POLY_cddlib.h"
+#include "POLY_c_cddlib.h"
 #include <unordered_set>
 
 
@@ -12,6 +13,19 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
 {
   int n=ListV.cols();
   int n_vect=ListV.rows();
+  auto StringFace=[&](Face const& f) -> std::string {
+    std::string strO = "[";
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      if (i_vect > 0)
+        strO += ",";
+      if (f[i_vect])
+        strO += "+";
+      else
+        strO += "-";
+    }
+    strO += "]";
+    return strO;
+  };
   auto GetSingleEntry=[&]() -> Face {
     auto try_vect=[&](MyVector<T> const& V) -> std::pair<bool,Face> {
       Face f(n_vect);
@@ -41,11 +55,12 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
   std::unordered_set<Face> ListUndone;
   ListUndone.insert(GetSingleEntry());
   auto fInsert=[&](Face const& f) -> void {
-    if (ListDone.count(f) == 0)
+    if (ListDone.count(f) != 0)
       return;
     ListUndone.insert(f);
   };
   auto ProcessAdjacent=[&](Face const& eF) -> void {
+    std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
     MyMatrix<T> ListInequalities(n_vect,n);
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       int eSign=-1;
@@ -54,10 +69,15 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
       for (int i=0; i<n; i++)
         ListInequalities(i_vect,i) = eSign * ListV(i_vect,i);
     }
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+    std::cerr << "ListInequalities=\n";
+    WriteMatrix(std::cerr, ListInequalities);
+    std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
+    //    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+    std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
     for (auto & idx : ListIrred) {
       Face newF = eF;
       newF[idx] = 1 - eF[idx];
+      std::cerr << "idx=" << idx << " newF=" << StringFace(newF) << "\n";
       fInsert(newF);
     }
   };
@@ -68,6 +88,7 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
     ProcessAdjacent(f);
     ListUndone.erase(f);
     ListDone.insert(f);
+    std::cerr << " len(ListDone)=" << ListDone.size() << " len(ListUndone)=" << ListUndone.size() << "\n";
   }
   std::vector<Face> ListFace;
   for (auto & eF : ListDone)
