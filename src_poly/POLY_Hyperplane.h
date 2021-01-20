@@ -5,6 +5,9 @@
 #include "POLY_c_cddlib.h"
 #include <unordered_set>
 
+//#define DEBUG_HYPERPLANE
+#define CHECK_HYPERPLANE
+
 
 // The list of region is described by a vector of + and -.
 // If it is + then the encoding is by a 1. Otherwise it is by a 0.
@@ -13,6 +16,7 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
 {
   int n=ListV.cols();
   int n_vect=ListV.rows();
+#ifdef DEBUG_HYPERPLANE
   auto StringFace=[&](Face const& f) -> std::string {
     std::string strO = "[";
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
@@ -26,6 +30,7 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
     strO += "]";
     return strO;
   };
+#endif
   auto GetSingleEntry=[&]() -> Face {
     auto try_vect=[&](MyVector<T> const& V) -> std::pair<bool,Face> {
       Face f(n_vect);
@@ -60,7 +65,9 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
     ListUndone.insert(f);
   };
   auto ProcessAdjacent=[&](Face const& eF) -> void {
+#ifdef DEBUG_HYPERPLANE
     std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
+#endif
     MyMatrix<T> ListInequalities(n_vect,n);
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       int eSign=-1;
@@ -69,15 +76,25 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
       for (int i=0; i<n; i++)
         ListInequalities(i_vect,i) = eSign * ListV(i_vect,i);
     }
+#ifdef DEBUG_HYPERPLANE
     std::cerr << "ListInequalities=\n";
     WriteMatrix(std::cerr, ListInequalities);
+#endif
     std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(ListInequalities);
     //    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
+#endif
+    if (ListIrred.size() < n) {
+      std::cerr << "ListIrred is too small. It is a bug\n";
+      throw TerminalException{1};
+    }
     for (auto & idx : ListIrred) {
       Face newF = eF;
       newF[idx] = 1 - eF[idx];
+#ifdef DEBUG_HYPERPLANE
       std::cerr << "idx=" << idx << " newF=" << StringFace(newF) << "\n";
+#endif
       fInsert(newF);
     }
   };
@@ -88,7 +105,9 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
     ProcessAdjacent(f);
     ListUndone.erase(f);
     ListDone.insert(f);
+#ifdef DEBUG_HYPERPLANE
     std::cerr << " len(ListDone)=" << ListDone.size() << " len(ListUndone)=" << ListUndone.size() << "\n";
+#endif
   }
   std::vector<Face> ListFace;
   for (auto & eF : ListDone)
