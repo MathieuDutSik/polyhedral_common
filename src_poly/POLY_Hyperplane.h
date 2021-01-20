@@ -68,13 +68,14 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
 #endif
-    MyMatrix<T> ListInequalities(n_vect,n);
+    MyMatrix<T> ListInequalities(n_vect,n+1);
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       int eSign=-1;
       if (eF[i_vect])
         eSign=1;
+      ListInequalities(i_vect,0)=0;
       for (int i=0; i<n; i++)
-        ListInequalities(i_vect,i) = eSign * ListV(i_vect,i);
+        ListInequalities(i_vect,i+1) = eSign * ListV(i_vect,i);
     }
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ListInequalities=\n";
@@ -85,10 +86,16 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 #endif
-    if (ListIrred.size() < n) {
+#ifdef CHECK_HYPERPLANE
+    if (int(ListIrred.size()) < n) {
+      std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
+      std::cerr << "ListInequalities=\n";
+      WriteMatrix(std::cerr, ListInequalities);
+      std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
       std::cerr << "ListIrred is too small. It is a bug\n";
       throw TerminalException{1};
     }
+#endif
     for (auto & idx : ListIrred) {
       Face newF = eF;
       newF[idx] = 1 - eF[idx];
