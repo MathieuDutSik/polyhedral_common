@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
   //
   SingleBlock BlDATA = eFull.ListBlock["DATA"];
   //  int n=BlDATA.ListIntValues.at("n");
-  int n = BlDATA.ListIntValues.at("n");
+  size_t n = BlDATA.ListIntValues.at("n");
   int MaxNumberFlyingMessage = BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
   size_t MaxStoredUnsentMatrices = BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
@@ -208,17 +208,17 @@ int main(int argc, char* argv[])
   //
   // The basic sizes
   //
-  int n_vect = std::pow(2, n) - 1;
-  int siz_pairadjexch = n_vect * n * sizeof(Tint) + sizeof(int8_t) + sizeof(int);
-  int siz_typeadjexch = 2 * (sizeof(int8_t) + sizeof(int));
-  int totalsiz_exch = sizeof(int) + MpiBufferSize * (sizeof(int8_t) + std::max(siz_pairadjexch, siz_typeadjexch));
+  size_t n_vect = std::pow(2, n) - 1;
+  size_t siz_pairadjexch = n_vect * n * sizeof(Tint) + sizeof(int8_t) + sizeof(int);
+  size_t siz_typeadjexch = 2 * (sizeof(int8_t) + sizeof(int));
+  size_t totalsiz_exch = sizeof(int) + MpiBufferSize * (sizeof(int8_t) + std::max(siz_pairadjexch, siz_typeadjexch));
   //
   // The netcdf interface
   //
   std::string WorkFile=WorkingPrefix + std::to_string(irank) + ".nc";
   netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::read);
   netCDF::NcVar varCtype=dataFile.getVar("Ctype");
-  int n_read = varCtype.getDim(2).getSize();
+  size_t n_read = varCtype.getDim(2).getSize();
   if (n_read != n) {
     std::cerr << "n_read=" << n_read << " n=" << n << "\n";
     return 0;
@@ -265,6 +265,17 @@ int main(int argc, char* argv[])
     int8_t eStatus;
     varStatus.getVar(start, count, &eStatus);
     return eStatus;
+  };
+  auto CheckStopMatrix=[&](MyMatrix<Tint> const& M, std::string const& ErrStep) -> void {
+    for (size_t i_vect=0; i_vect<n_vect; i_vect++)
+      for (size_t i=0; i<n; i++) {
+        Tint eVal = M(i_vect, i);
+        double eVal_d = eVal;
+        if (T_abs(eVal_d) > 10000) {
+          std::cerr << "Matrix incoherent at step=" << ErrStep << "\n";
+          throw TerminalException{1};
+        }
+      }
   };
   auto NC_WriteStatus=[&](int const& pos, int8_t const& eStatus) -> void {
     std::vector<size_t> start{size_t(pos)};
@@ -350,12 +361,6 @@ int main(int argc, char* argv[])
   tsl::sparse_map<size_t,std::vector<int>,std::function<size_t(size_t)>, std::function<bool(size_t,size_t)>> MapIndexByHash({}, fctHash, fctEqual);
   std::vector<std::vector<std::vector<char>>> ListListMatrixUnsent(n_pes);
   size_t CurrentBufferSize = 1;
-  auto GetNbCollision=[&]() -> size_t {
-    size_t nb_collision=0;
-    for (auto & kv : MapIndexByHash)
-      nb_collision += (kv.second.size() - 1);
-    return nb_collision;
-  };
   std::vector<int> ListUndoneIndex;
   size_t nb_oper = 0;
   auto fInsert_Ctype=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
@@ -385,8 +390,9 @@ int main(int argc, char* argv[])
     if (len > 0) {
       int idx = ListUndoneIndex[len - 1];
       ListUndoneIndex.pop_back();
-      MyMatrix<Tint> eCtype = NC_ReadMatrix(idx).eMat;
-      std::pair<MyMatrix<Tint>,int> ePair = {eCtype, idx};
+      MyMatrix<Tint> eMat = NC_ReadMatrix(idx).eMat;
+      CheckStopMatrix(eMat, "Error at step NC_ReadMatrix");
+      std::pair<MyMatrix<Tint>,int> ePair = {eMat, idx};
       return boost::optional<std::pair<MyMatrix<Tint>,int>>(ePair);
     }
     return {};
@@ -446,6 +452,7 @@ int main(int argc, char* argv[])
   };
   auto fInsertUnsent=[&](TypeCtypeAdjExch<Tint> const& eCtype) -> void {
     size_t e_hash = Matrix_Hash(eCtype.eMat, seed);
+    CheckStopMatrix(eCtype.eMat, "Error at step fInsertUnsend");
     size_t res = e_hash % n_pes;
     //    std::cerr << "fInsertUnsent e_hash=" << e_hash << " res=" << res << "\n";
     if (res == irank) {
@@ -475,7 +482,7 @@ int main(int argc, char* argv[])
     if (eStatus == 0)
       ListUndoneIndex.push_back(iCurr);
   }
-  std::cerr << "Reading finished : |ListCasesNotDone|=" << ListUndoneIndex.size() << " nb_collision=" << GetNbCollision() << "\n";
+  std::cerr << "Reading finished : |ListCasesNotDone|=" << ListUndoneIndex.size() << "\n";
   //
   // The main loop itself.
   //
@@ -532,6 +539,7 @@ int main(int argc, char* argv[])
           //
           if (iChoice == 0) {
             TypeCtypeAdjExch<Tint> eCtype = ptrchar_to_PairAdjExch<Tint>(ptr_recv, n_vect, n);
+            CheckStopMatrix(eCtype.eMat, "Error at step ptrchar_to_PairAdjExch");
             ptr_recv += siz_pairadjexch;
             fInsert_Ctype(eCtype);
           } else {
@@ -607,6 +615,7 @@ int main(int argc, char* argv[])
 #endif
           NC_WriteStatus(idxMatrixF, 1);
 	  for (auto & eObj1 : ListAdjacentObject) {
+            CheckStopMatrix(eObj1.eMat, "Error at step ListAdjacentObject");
             TypeCtypeAdjExch<Tint> obj2{eObj1.eMat, irank_i8, idxMatrixF};
 	    fInsertUnsent(obj2);
           }
