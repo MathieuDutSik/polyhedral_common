@@ -406,7 +406,7 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
     throw TerminalException{1};
   }
 #endif
-  return {gram, H};
+  return {std::move(gram), std::move(H)};
 }
 
 
