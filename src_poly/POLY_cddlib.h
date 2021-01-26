@@ -7602,6 +7602,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   int nbRow=TheEXT.rows();
   dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
+  //  M->representation = dd_Generator;
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {

@@ -36,7 +36,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   int nbRow=TheEXT.rows();
   dd_set_global_constants();
   dd_MatrixPtr M=MyMatrix_PolyFile2Matrix(TheEXT);
-  M->representation = dd_Generator; // The choice between dd_Inequality and dd_Generator is not clear.
+  M->representation = dd_Inequality; // The choice between dd_Inequality and dd_Generator is not clear.
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {

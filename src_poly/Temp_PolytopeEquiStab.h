@@ -23,8 +23,8 @@ using Tidx_value = int16_t;
 #define USE_PAIRS
 
 
-#define DEBUG
-#define TIMINGS
+//#define DEBUG
+//#define TIMINGS
 
 template<typename T>
 T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
@@ -1258,7 +1258,9 @@ std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, 
 template<typename T1, typename T2>
 WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::ostream & os)
 {
+#ifdef DEBUG
   bool IsDiag;
+#endif
   size_t n=GRP.n;
   WeightMatrix<T1,T2> WMat(n,0);
   for (size_t i=0; i<n; i++)
@@ -1322,10 +1324,10 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
     std::pair<int,int> eStart=GetUnset();
     if (eStart.first == -1)
       break;
+#ifdef DEBUG
     IsDiag=false;
     if (eStart.first == eStart.second)
       IsDiag=true;
-#ifdef DEBUG
     os << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
     std::cerr << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
     std::cerr << "  IsDiag=" << IsDiag << "\n";
