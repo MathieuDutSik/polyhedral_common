@@ -13,7 +13,8 @@ int main(int argc, char *argv[])
       std::cerr << "epsilon : The epsilon value on input\n";
       return -1;
     }
-    using T = mpq_class;
+    //    using T = mpq_class;
+    using T = double;
     using Tint = mpz_class;
     //
     std::ifstream is(argv[1]);

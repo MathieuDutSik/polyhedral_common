@@ -250,25 +250,26 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
     //    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
     if (1 < mue(k,l) * 2 || mue(k,l) * 2 < -1) {
       Tint q=UniversalNearestInteger<Tint,Tfield>(mue(k,l));
+      Tmat q_T = UniversalTypeConversion<Tmat,Tint>(q);
       //      std::cerr << "RED, before oper q=" << q << "\n";
       //      WriteMatrix(std::cerr, gram);
-      gram(k,k) -= q * gram(k,l);
+      gram(k,k) -= q_T * gram(k,l);
       //      std::cerr << "RED step 1\n";
       for (int i=r+1; i<=l; i++)
-        gram(k,i) -= q * gram(l,i);
+        gram(k,i) -= q_T * gram(l,i);
       //      std::cerr << "RED step 2\n";
       for (int i=l+1; i<=k; i++)
-        gram(k,i) -= q * gram(i,l);
+        gram(k,i) -= q_T * gram(i,l);
       //      std::cerr << "RED step 3 n=" << n << "\n";
       for (int i=k+1; i<n; i++)
-        gram(i,k) -= q * gram(i,l);
+        gram(i,k) -= q_T * gram(i,l);
       //      std::cerr << "After gram Oper\n";
       //      WriteMatrix(std::cerr, gram);
       //      std::cerr << "RED step 4\n";
-      mue(k,l) = mue(k,l) - q;
+      mue(k,l) = mue(k,l) - q_T;
       //      std::cerr << "RED step 5\n";
       for (int i=r+1; i<=l-1; i++)
-        mue(k,i) -= q * mue(l,i);
+        mue(k,i) -= q_T * mue(l,i);
       //      std::cerr << "RED step 6\n";
       H.row(k) -= q * H.row(l);
       //      std::cerr << "RED step 7\n";
