@@ -1,14 +1,47 @@
 #ifndef INCLUDE_SIMULTANEOUS_DIOPHANTINE_APPROX
 #define INCLUDE_SIMULTANEOUS_DIOPHANTINE_APPROX
 
-#include "LatticeDefinition.h"
+#include "LatticeDefinitions.h"
 
 
 template<typename Tint>
-struct DiopantResult {
+struct DiophantResult {
   MyVector<Tint> Numerators;
   Tint Denominator;
 };
+
+
+template<typename T, typename Tint>
+T ComputeDiophantinePenalty(MyVector<T> const& V, DiophantResult<Tint> const& Res)
+{
+  int n = V.size();
+  T maxErr = 0;
+  T Denom_T = UniversalTypeConversion<T,Tint>(Res.Denominator);
+  for (int i=0; i<n; i++) {
+    T eNum_T = UniversalTypeConversion<T,Tint>(Res.Numerators(i));
+    T eFrac = eNum_T / Denom_T;
+    T diff = eFrac - V(i);
+    T err = T_abs(diff);
+    maxErr = T_max(maxErr, err);
+  }
+  return maxErr;
+}
+
+template<typename Tint>
+std::string GapStringDiophantineApprox(DiophantResult<Tint> const& Res)
+{
+  std::string strO = "[ ";
+  int n = Res.Numerators.size();
+  for (int i=0; i<n; i++) {
+    if (i > 0)
+      strO += ", ";
+    strO += std::to_string(Res.Numerators(i)) + "/" + std::to_string(Res.Denominator);
+  }
+  strO += " ]";
+  return strO;
+}
+
+
 
 
 
@@ -42,15 +75,19 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const& V, 
   //
   // Computing the LLL reduction
   //
-  LLLreduction<Tmat,Tint> LLLinfo = LLLreducedBasis<T, Tint>(GramMat);
+  LLLreduction<T,Tint> LLLinfo = LLLreducedBasis<T, Tint>(GramMat);
   //
   // Extrqcting the approimation
   //
-  MyVector<Tint> V(n);
+  MyVector<Tint> Vapprox(n);
   for (int i=0; i<n; i++)
-    V(i) = LLLinfo.Pmat(0, i);
+    Vapprox(i) = LLLinfo.Pmat(0, i);
   Tint q = LLLinfo.Pmat(0, n);
-  return {std::move(V), q};
+  if (q>0) {
+    return {std::move(Vapprox), q};
+  } else {
+    return {std::move(-Vapprox), -q};
+  }
 }
 
 
