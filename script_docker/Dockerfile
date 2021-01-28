@@ -16,8 +16,11 @@ FROM ubuntu
 MAINTAINER Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 
+# install non-interactive because of specific reason:
+
 # Install Ubuntu packages
 RUN apt-get update -y
+RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
 RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
 RUN apt-get install -y wget emacs joe
 RUN apt-get install -y g++ gcc gfortran
@@ -71,12 +74,21 @@ RUN cd GIT/polyhedral_common/ExternalLib/LibShort && make -f Makefile_lib && mak
 
 
 # bliss
-ENV LIBBLISS_PATH /opt/libbliss
-ENV LIBBLISS_INCDIR /opt/libbliss/include
-ENV LIBBLISS_LINK "-L/opt/libbliss/lib -lbliss -Wl,-rpath,/opt/libbliss/lib"
-RUN cd GIT/polyhedral_common/ExternalLib/bliss && mkdir build
-RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
-RUN cd GIT/polyhedral_common/ExternalLib/bliss/build && make all install
+ENV BLISS_PATH /opt/bliss
+ENV BLISS_INCDIR $LIBBLISS_PAT/include
+ENV BLISS_LINK "-L$BLISS_PATH/lib -lbliss -Wl,-rpath,$BLISS_PATH/lib"
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss && mkdir build
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$BLISS_PATH ..
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && make all install
+
+
+# nauty/traces
+ENV NAUTY_PATH /opt/nauty
+ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
+ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
 
 
 # GLPK
@@ -102,5 +114,6 @@ RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
 RUN cd GIT/polyhedral_common/src_perfect && make
+RUN cd GIT/polyhedral_common/src_ctype_mpi && make
 
 
