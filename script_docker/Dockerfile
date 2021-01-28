@@ -16,11 +16,15 @@ FROM ubuntu
 MAINTAINER Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 
-# install non-interactive because of specific reason:
-
-# Install Ubuntu packages
+# For unclear reason, all ubuntu installs must start by the following
 RUN apt-get update -y
+
+
+# This specific package requires to be made non-interactive.
 RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
+
+
+# Install classic Ubuntu packages
 RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
 RUN apt-get install -y wget emacs joe
 RUN apt-get install -y g++ gcc gfortran
@@ -114,9 +118,9 @@ ENV FLINT_INCDIR /include
 ENV FLINT_LINK -lflint
 
 
-# CDDLIB (this has to be debugged. That one is needed for the hyperplane stuff)
+# CDDLIB
 RUN apt-get install -y autoconf autotools-dev libtool
-RUN apt-get install -y texlive-latex-base # needdd for the manual to be compiled
+RUN apt-get install -y texlive-latex-base # needed for the manual to be compiled
 RUN git clone https://github.com/cddlib/cddlib
 RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
 ENV CDDLIB_PATH /opt/cddlib
@@ -130,6 +134,6 @@ RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
 RUN cd GIT/polyhedral_common/src_perfect && make
-RUN cd GIT/polyhedral_common/src_ctype_mpi && make
+# RUN cd GIT/polyhedral_common/src_ctype_mpi && make
 
 
