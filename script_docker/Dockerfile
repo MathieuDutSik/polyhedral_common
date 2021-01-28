@@ -63,7 +63,7 @@ ENV GSL_C_LINK="-lgsl -lgslcblas"
 
 # cloning polyhedral code
 RUN mkdir -p GIT
-RUN cd GIT  &&  git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
+RUN cd GIT &&  git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
 
 
 # libshort
@@ -121,7 +121,7 @@ RUN git clone https://github.com/cddlib/cddlib
 RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
 ENV CDDLIB_PATH /opt/cddlib
 ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
-ENV CDDLIB_LINK "-L$CDDLIB_PATH/lib -lcdd -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV CDDLIB_LINK "-L$CDDLIB_PATH/lib  -lcdd -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
 # Compiling polyhedral functionality
