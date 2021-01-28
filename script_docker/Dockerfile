@@ -114,8 +114,18 @@ ENV FLINT_INCDIR /include
 ENV FLINT_LINK -lflint
 
 
+# CDDLIB (this has to be debugged. That one is needed for the hyperplane stuff)
+RUN apt-get install -y autoconf autotools-dev libtool
+RUN apt-get install -y texlive-latex-base # needdd for the manual to be compiled
+RUN git clone https://github.com/cddlib/cddlib
+RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
+ENV CDDLIB_PATH /opt/cddlib
+ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
+ENV CDDLIB_LINK "-L$CDDLIB_PATH/lib -lcdd -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+
+
 # Compiling polyhedral functionality
-# RUN cd GIT/polyhedral_common/src_latt && make
+RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
