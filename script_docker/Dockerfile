@@ -74,11 +74,11 @@ RUN cd GIT/polyhedral_common/ExternalLib/LibShort && make -f Makefile_lib && mak
 
 
 # bliss
-ENV BLISS_PATH /opt/bliss
-ENV BLISS_INCDIR $LIBBLISS_PAT/include
-ENV BLISS_LINK "-L$BLISS_PATH/lib -lbliss -Wl,-rpath,$BLISS_PATH/lib"
+ENV LIBBLISS_PATH /opt/bliss
+ENV LIBBLISS_INCDIR $LIBBLISS_PATH/include
+ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss && mkdir build
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$BLISS_PATH ..
+RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && make all install
 
 
@@ -108,8 +108,14 @@ ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.2"
 RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.2 /opt/mpfrc++-3.6.2
 
 
+# flint
+RUN apt-get install -y libflint-dev
+ENV FLINT_INCDIR /include
+ENV FLINT_LINK -lflint
+
+
 # Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common/src_latt && make
+# RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
