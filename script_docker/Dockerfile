@@ -128,7 +128,22 @@ ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
 ENV CDDLIB_LINK "-L$CDDLIB_PATH/lib  -lcdd -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
+# LINBOX
+RUN apt-get install -y wget libflint-dev libntl-dev libmpfr-dev
+RUN wget https://raw.githubusercontent.com/linbox-team/linbox/master/linbox-auto-install.sh
+RUN chmod +x linbox-auto-install.sh
+RUN ./linbox-auto-install.sh --enable-openblas=yes
+RUN mkdir /opt/linbox
+RUN mv /tmp/lib /opt/linbox
+RUN mv /tmp/include /opt/linbox
+RUN mv /tmp/bin /opt/linbox
+ENV LINBOX_PATH /opt/linbox
+ENV LINBOX_INCLUDE "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
+ENV LINBOX_LINK "-fopenmp -lntl -lmpfr -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+
+
 # Compiling polyhedral functionality
+RUN cd GIT/polyhedral_common/src_linbox && make
 RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
