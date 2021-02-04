@@ -96,12 +96,10 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make al
 
 
 # GLPK
-RUN wget https://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
-RUN tar -vxzf glpk-4.65.tar.gz && cd glpk-4.65 && ./configure --prefix=/opt/glpk-4.65 && make && make install
-ENV GLPK_PATH /opt/glpk-4.65
+RUN apt-get install -y libglpk-dev
+ENV GLPK_PATH /usr
 ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
 ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
-RUN ls -la /opt/glpk-4.65/lib
 
 
 # mpfrc++
