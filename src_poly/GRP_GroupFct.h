@@ -544,18 +544,18 @@ MyFormTransversal GetListPermutation(PermutationGroupPtr TheGRP,
 {
   permlib::dom_int n=TheGRP->n;
   permlib::dom_int eElt=eTrans.element();
-  std::set<permlib::Permutation> ListPermWork;
+  std::unordered_set<permlib::Permutation> ListPermWork;
   for (std::shared_ptr<permlib::Permutation> & p : eTrans.GetMtransversal() ) {
     if (p) {
       permlib::Permutation ePerm=*p;
       ListPermWork.insert(ePerm);
     }
   }
-  std::set<permlib::dom_int> SetOrbit;
+  std::unordered_set<permlib::dom_int> SetOrbit;
   std::vector<PairEltPerm> ListPair;
   std::vector<bool> StatusDone;
   std::function<void(permlib::dom_int,permlib::Permutation)> fInsert=[&](permlib::dom_int const& eVal, permlib::Permutation const& ePerm) -> void {
-    std::set<permlib::dom_int>::iterator iter=SetOrbit.find(eVal);
+    std::unordered_set<permlib::dom_int>::iterator iter=SetOrbit.find(eVal);
     if (iter == SetOrbit.end()) {
       SetOrbit.insert(eVal);
       PairEltPerm ePair{eVal, ePerm};

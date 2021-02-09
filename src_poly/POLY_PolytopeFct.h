@@ -382,7 +382,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     int TheRank=n-2-eDim;
     std::cerr << "eDim=" << eDim << " TheRank=" << TheRank << "\n";
     std::vector<int> ListSizes;
-    std::set<Face> NewListFace_set;
+    std::unordered_set<Face> NewListFace_set;
     std::cerr << "  siz=" << ListListFace[eDim].size() << "\n";
     for (auto & eFace : ListListFace[eDim]) {
       int nb=eFace.count();
@@ -392,7 +392,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
 	eList[i]=aRow;
 	aRow=eFace.find_next(aRow);
       }
-      std::set<Face> ListSubFace;
+      std::unordered_set<Face> ListSubFace;
       for (auto & fFace : FACset) {
 	Face gFace(nbExt);
 	std::vector<int> gList;

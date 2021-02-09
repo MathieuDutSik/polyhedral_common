@@ -20,7 +20,7 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const& M)
 {
   int nbRow=M.rows();
   int nbCol=M.cols();
-  std::set<MyVector<Tint>> setVect;
+  std::unordered_set<MyVector<Tint>> setVect;
   for (int i=0; i<nbRow; i++) {
     MyVector<Tint> eRow=GetMatrixRow(M, i);
     int iColFound=-1;
@@ -153,11 +153,11 @@ ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(std:
   //
   // Forming the vector family
   //
-  std::set<MyVector<Tint>> ListForbiddenVector;
+  std::unordered_set<MyVector<Tint>> ListForbiddenVector;
   for (auto & eVect : ListVectTot)
     ListForbiddenVector.insert(eVect);
   ListForbiddenVector.insert(ZeroVector<Tint>(n));
-  std::set<MyVector<Tint>> TheFamilyVect;
+  std::unordered_set<MyVector<Tint>> TheFamilyVect;
   for (auto & eVect : ListVect) {
     for (int i=0; i<n; i++)
       for (int j=0; j<2; j++) {

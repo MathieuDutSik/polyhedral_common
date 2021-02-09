@@ -782,7 +782,7 @@ Tshortest<T,Tint> T_CopositiveShortestVector(MyMatrix<T> const& eSymmMat)
   int n=eSymmMat.rows();
   T MinNorm=MinimumDiagonal(eSymmMat);
   int nbCone=0;
-  std::set<MyVector<Tint>> TotalListVect_set;
+  std::unordered_set<MyVector<Tint>> TotalListVect_set;
   std::function<bool(MyMatrix<Tint> const&, MyMatrix<T> const&)> fInsert=[&](MyMatrix<Tint> const& TheBasis, MyMatrix<T> const& eSymmMatB) -> bool {
     bool test=TestCopositivityByPositivityCoeff(eSymmMatB);
     if (!test)
@@ -845,7 +845,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(MyMatrix<T> const
   }
   int nbCone=0;
   std::vector<MyMatrix<Tint>> ListBasis;
-  std::set<MyVector<Tint>> TotalListVect_set;
+  std::unordered_set<MyVector<Tint>> TotalListVect_set;
   std::function<bool(MyMatrix<Tint> const&, MyMatrix<T> const&)> fInsert=[&](MyMatrix<Tint> const& TheBasis, MyMatrix<T> const& eSymmMatB) -> bool {
     bool test=TestCopositivityByPositivityCoeff(eSymmMatB);
     if (!test)
@@ -905,7 +905,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(MyMatrix<T> const
   int n=eSymmMat.rows();
   MyMatrix<int> TheBasis=IdentityMat<int>(n);
   CopositivityEnumResult<Tint> CopoRes=KernelEnumerateShortVectorInCone(eSymmMat, TheBasis, CopoReq);
-  std::set<std::vector<int>> TheSet;
+  std::unordered_set<std::vector<int>> TheSet;
   // We have to do something non-clever to remove duplicates
   for (auto & eVect : CopoRes.TotalListVect) {
     std::vector<int> eVectB(n);

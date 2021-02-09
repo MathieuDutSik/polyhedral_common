@@ -3498,20 +3498,20 @@ std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 				    TheGroupFormat const& TheGRP)
 {
   std::vector<Face> TheReturn;
-  std::set<Face> ListTotal;
+  std::unordered_set<Face> ListTotal;
   for (auto eFace : PreListTotal)
     ListTotal.insert(eFace);
   while(true) {
-    std::set<Face>::iterator iter=ListTotal.begin();
+    std::unordered_set<Face>::iterator iter=ListTotal.begin();
     if (iter == ListTotal.end())
       break;
     Face eSet=*iter;
     TheReturn.push_back(eSet);
-    std::set<Face> Additional{eSet};
+    std::unordered_set<Face> Additional{eSet};
     ListTotal.erase(eSet);
-    std::set<Face> SingleOrbit;
+    std::unordered_set<Face> SingleOrbit;
     while(true) {
-      std::set<Face> NewElts;
+      std::unordered_set<Face> NewElts;
       for (auto const& gSet : Additional)
 	for (auto const& eGen : TheGRP.group->S) {
 	  Face fSet=eEltImage(gSet, *eGen);
@@ -3548,7 +3548,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 					    std::function<Tobj(Tobj const&,Tgen const&)> const& TheAct)
 {
   std::vector<Tobj> TheReturn;
-  std::set<Tobj> ListTotal;
+  std::unordered_set<Tobj> ListTotal;
   for (auto eObj : PreListTotal)
     ListTotal.insert(eObj);
   while(true) {
@@ -3557,12 +3557,12 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
       break;
     Tobj eObj=*iter;
     TheReturn.push_back(eObj);
-    std::set<Tobj> Additional;
+    std::unordered_set<Tobj> Additional;
     Additional.insert(eObj);
     ListTotal.erase(eObj);
-    std::set<Tobj> SingleOrbit;
+    std::unordered_set<Tobj> SingleOrbit;
     while(true) {
-      std::set<Tobj> NewElts;
+      std::unordered_set<Tobj> NewElts;
       for (auto const& gObj : Additional)
 	for (auto const& eGen : ListGen) {
 	  Tobj fObj=TheAct(gObj, eGen);
