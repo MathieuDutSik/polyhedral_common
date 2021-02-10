@@ -18,6 +18,23 @@ struct TheGroupFormat {
   PermutationGroupPtr group;
 };
 
+
+namespace std {
+  template<>
+  struct hash<permlib::Permutation>
+  {
+    std::size_t operator()(permlib::Permutation const& eElt) const
+    {
+      size_t len=eElt.size();
+      std::vector<permlib::dom_int> V(len);
+      for (size_t i=0; i<len; i++)
+        V[i] = eElt.at(i);
+      return std::hash<std::vector<permlib::dom_int>>()(V);
+    }
+  };
+}
+
+
 Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
 {
   int nbExt=eSet.size();
@@ -544,7 +561,7 @@ MyFormTransversal GetListPermutation(PermutationGroupPtr TheGRP,
 {
   permlib::dom_int n=TheGRP->n;
   permlib::dom_int eElt=eTrans.element();
-  std::unordered_set<permlib::Permutation> ListPermWork;
+  std::unordered_set<permlib::Permutation, std::hash<permlib::Permutation>> ListPermWork;
   for (std::shared_ptr<permlib::Permutation> & p : eTrans.GetMtransversal() ) {
     if (p) {
       permlib::Permutation ePerm=*p;
