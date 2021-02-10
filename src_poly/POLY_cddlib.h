@@ -1477,14 +1477,11 @@ dd_matrixdata<T> *dd_MatrixAppend(dd_matrixdata<T> *M1, dd_matrixdata<T> *M2)
 void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed)
 {
   long k,j,ovj;
-  double u,xk,r,rand_max=(double) CDD_RAND_MAX;
-
   srand(seed);
   for (j=t; j>1 ; j--) {
-    r=rand();
-    u=r/rand_max;
-    xk=(double)(j*u +1);
-    k=(long)xk;
+    k=1 + rand() % t;
+    //    std::cerr << "j=" << j << " r=" << r << " u=" << u << " xk=" << xk << " k=" << k << "\n";
+    //    std::cerr << "j=" << j << " k=" << k << "\n";
     ovj=OV[j];
     OV[j]=OV[k];
     OV[k]=ovj;
