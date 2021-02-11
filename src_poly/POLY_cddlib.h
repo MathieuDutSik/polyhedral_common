@@ -146,9 +146,9 @@ void set_initialize(set_type *setp, long length)
     forlim1=set_blocks(len);
     using ulong=unsigned long;
     *setp=new ulong[forlim1];
-    (*setp)[0]=ulong(len);  /* size of the ground set */
+    (*setp)[0] = ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
-      (*setp)[i]=0U;
+      (*setp)[i] = 0;
 }
 
 void reset_initialize(set_type *setp, long length)
@@ -162,29 +162,25 @@ void reset_initialize(set_type *setp, long length)
 
     forlim1=set_blocks(len);
     using ulong=unsigned long;
-    (*setp)[0]=ulong(len);  /* size of the ground set */
+    (*setp)[0] = ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
-      (*setp)[i]=0U;
+      (*setp)[i] = 0;
 }
 
 void set_emptyset(set_type set)
 /* Set set to be the emptyset  */
 {
-	long i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1; i<=forlim; i++)
-		set[i]=0U;
+  long forlim = set_blocks(set[0]) - 1;
+  for (long i=1; i<=forlim; i++)
+    set[i] = 0;
 }
 
 void set_copy(set_type setcopy,set_type set)
 /* Copy the set set[] to setcopy[] with setcopy[] length */
 {
-	long i,forlim;
-
-	forlim=set_blocks(setcopy[0])-1;
-	for (i=1; i<=forlim; i++)
-		setcopy[i]=set[i];
+  long forlim = set_blocks(setcopy[0]) - 1;
+  for (long i=1; i<=forlim; i++)
+    setcopy[i] = set[i];
 }
 
 inline void set_addelem(set_type set, long elem)
@@ -193,57 +189,49 @@ inline void set_addelem(set_type set, long elem)
   long i,j;
   unsigned long change;
   unsigned long one=1U;
-
-  if (elem<=(long)set[0])
-    {
-      i=(elem-1)/SETBITS+1;
-      j=(elem-1)%SETBITS;
-      change= one << j;  /* put 1 in jth position */
-      set[i]=set[i] | change;
-    }
+  if (elem<=(long)set[0]) {
+    i=(elem-1)/SETBITS+1;
+    j=(elem-1)%SETBITS;
+    change = one << j;  /* put 1 in jth position */
+    set[i]=set[i] | change;
+  }
 }
 
 inline void set_delelem(set_type set, long elem)
 /* delete elem only if it is within the set[] range */
 {
-	long  i,j;
-	unsigned long change;
-	unsigned long one=1U;
-
-	if (elem<=(long)set[0])
-	{
-		i=(elem-1)/SETBITS+1;
-		j=(elem-1)%SETBITS;
-		change=one << j;  /* put 1 in jth position */
-		set[i]=(set[i] | change) ^ change;
-	}
+  long  i,j;
+  unsigned long change;
+  unsigned long one=1U;
+  if (elem<=(long)set[0]) {
+    i=(elem-1)/SETBITS+1;
+    j=(elem-1)%SETBITS;
+    change=one << j;  /* put 1 in jth position */
+    set[i]=(set[i] | change) ^ change;
+  }
 }
 
 inline void set_int(set_type set,set_type set1,set_type set2)
 /* Set intersection, assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-
-  forlim=set_blocks(set[0])-1;
-  for (i=1; i<=forlim; i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1; i<=forlim; i++)
     set[i]=(set1[i] & set2[i]);
 }
 
 inline void set_uni(set_type set,set_type set1,set_type set2)
 /* Set union,assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-  forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1;i<=forlim;i++)
     set[i]=set1[i] | set2[i];
 }
 
 inline void set_diff(set_type set,set_type set1,set_type set2)
 /* Set difference se1/set2, assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-  forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1;i<=forlim;i++)
     set[i]=set1[i] & (~set2[i]);
 }
 
@@ -1482,23 +1470,6 @@ void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed)
     k=1 + rand() % t;
     //    std::cerr << "j=" << j << " r=" << r << " u=" << u << " xk=" << xk << " k=" << k << "\n";
     //    std::cerr << "j=" << j << " k=" << k << "\n";
-    ovj=OV[j];
-    OV[j]=OV[k];
-    OV[k]=ovj;
-  }
-}
-
-void dd_RandomPermutation2(dd_rowindex OV,long t,unsigned int seed)
-{
-  long k,j,ovj;
-  double u,xk,r,rand_max=(double) CDD_RAND_MAX;
-
-  srand(seed);
-  for (j=t; j>1 ; j--) {
-    r=rand();
-    u=r/rand_max;
-    xk=(double)(j*u +1);
-    k=(long)xk;
     ovj=OV[j];
     OV[j]=OV[k];
     OV[k]=ovj;
@@ -3880,7 +3851,7 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
   case dd_RandomRow:
     for(i=1; i<=m_size; i++) OV[i]=i;
     if (rseed<=0) rseed=1;
-    dd_RandomPermutation2(OV,m_size,rseed);
+    dd_RandomPermutation(OV,m_size,rseed);
     break;
 
   case dd_MinIndex:
