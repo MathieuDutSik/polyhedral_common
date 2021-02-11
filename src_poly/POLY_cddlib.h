@@ -24,7 +24,6 @@
 #include <vector>
 
 #define DEBUG_CDD
-#define CDD_RAND_MAX 32767
 
 // templatized code of the CDD library
 
@@ -99,11 +98,6 @@ typedef long *dd_colindex;
 // API for the set systems.
 typedef unsigned long *set_type;   /* set type definition */
 
-inline void set_free(set_type set)
-{
-    delete [] set;
-}
-
 
 #define SETBITS (sizeof(long) * 8)
 
@@ -123,6 +117,11 @@ static unsigned char set_card_lut[]={
 2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
 3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
 /* End of Definitions for optimized set_card */
+
+inline void set_free(set_type set)
+{
+    delete [] set;
+}
 
 inline unsigned long set_blocks(long len)
 {
@@ -794,12 +793,10 @@ void dd_FreeMatrix(dd_matrixdata<T> *M)
 
   if (M!=nullptr) {
     if (M->rowsize<=0) m1=1; else m1=M->rowsize;
-    if (M!=nullptr) {
-      dd_FreeAmatrix(m1, M->matrix);
-      dd_FreeArow(M->rowvec);
-      set_free(M->linset);
-      delete M;
-    }
+    dd_FreeAmatrix(m1, M->matrix);
+    dd_FreeArow(M->rowvec);
+    set_free(M->linset);
+    delete M;
   }
 }
 
@@ -809,12 +806,10 @@ template<typename T>
 void dd_FreeShallowMatrix(dd_matrixdata<T> *M)
 {
   if (M!=nullptr) {
-    if (M!=nullptr) {
-      delete [] M->matrix;
-      dd_FreeArow(M->rowvec);
-      set_free(M->linset);
-      delete M;
-    }
+    delete [] M->matrix;
+    dd_FreeArow(M->rowvec);
+    set_free(M->linset);
+    delete M;
   }
 }
 
@@ -834,9 +829,8 @@ void dd_FreeSetFamily(dd_SetFamilyPtr F)
   if (F!=nullptr) {
     if (F->famsize<=0) f1=1; else f1=F->famsize;
       /* the smallest created size is one */
-    for (i=0; i<f1; i++) {
+    for (i=0; i<f1; i++)
       set_free(F->set[i]);
-    }
     delete [] F->set;
     delete [] F;
   }
@@ -1697,10 +1691,10 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   /* Same as dd_MatrixNormalizedSortedUniqueCopy except that it returns a unnormalized origial data
      with original ordering.
   */
-  dd_matrixdata<T> *M1=nullptr,M2=nullptr;
+  dd_matrixdata<T> *M1=nullptr, M2=nullptr;
   dd_rowrange m,i,k,ii;
   dd_colrange d;
-  dd_rowindex newpos1=nullptr,newpos2=nullptr;
+  dd_rowindex newpos1=nullptr, newpos2=nullptr;
 
   m= M->rowsize;
   d= M->colsize;
