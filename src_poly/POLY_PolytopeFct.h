@@ -8,16 +8,14 @@ template<typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const& eMat, Face const& eList)
 {
   int nbCol=eMat.cols();
-  MyVector<T> eVec(nbCol);
+  MyVector<T> eVec=ZeroVector<T>(nbCol)
   int eSize=eList.count();
-  for (int iCol=0; iCol<nbCol; iCol++) {
-    T eSum=0;
-    int aRow=eList.find_first();
-    for (int i=0; i<eSize; i++) {
-      eSum += eMat(aRow, iCol);
-      aRow=eList.find_next(aRow);
-    }
-    eVec(iCol)=eSum;
+  //
+  int aRow=eList.find_first();
+  for (int i=0; i<eSize; i++) {
+    for (int iCol=0; iCol<nbCol; iCol++)
+      eVec(iCol) += eMat(aRow, iCol);
+    aRow=eList.find_next(aRow);
   }
   return eVec;
 }

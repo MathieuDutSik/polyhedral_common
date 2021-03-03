@@ -4756,7 +4756,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
      Use the ordinary (slower) method dd_RedundantRows.
   */
 
-  dd_rowrange i,m, ired, irow=0;
+  dd_rowrange i,m, ired;
   dd_colrange j,k,d;
   T* shootdir;
   dd_LPSolverType solver=dd_DualSimplex;
@@ -4845,7 +4845,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired > 0 && !set_member(ired, is_decided)) {
-        irow++;
         set_addelem(is_decided, ired);
         insert_entry_in_lpw(ired);
       }
@@ -4853,7 +4852,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       ired=dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired > 0 && !set_member(ired, is_decided)) {
-        irow++;
         set_addelem(is_decided, ired);
         insert_entry_in_lpw(ired);
       }
@@ -4873,7 +4871,6 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
       if (localdebug) std::cout << "i=" << i << " is_decided=" << set_member(i, is_decided) << "\n";
       if (!set_member(i, is_decided)) { /* the ith inequality is not yet checked */
         if (localdebug) std::cout << "Checking redundancy of " << i << " th inequality\n";
-        irow++;
         insert_entry_in_lpw(i);
         if (localdebug) {
           std::cout << "M->matrix[i-1]=";
@@ -4919,6 +4916,200 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_FreeArow(shootdir);
   return redset;
 }
+
+
+
+template<typename T>
+dd_rowset dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error, std::vector<int> const& BlockBelong)
+{
+  /*
+     For H-representation only and not quite reliable,
+     especially when floating-point arithmetic is used.
+     Use the ordinary (slower) method dd_RedundantRows.
+  */
+
+  dd_rowrange i,m, ired;
+  dd_colrange j,k,d;
+  T* shootdir;
+  dd_LPSolverType solver=dd_DualSimplex;
+  bool localdebug=false;
+
+  m=M->rowsize;
+  d=M->colsize;
+  dd_rowset redset;
+  set_initialize(&redset, m);
+  dd_AllocateArow(d, &shootdir);
+  if (localdebug) {
+    std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
+  }
+
+  if (set_card(M->linset) != 0) {
+    std::cerr << "This code works only in the absence of linearity relations\n";
+    *error = dd_NonZeroLinearity;
+    return redset;
+  }
+
+  dd_lpdata<T>* lpw=dd_CreateLPData_from_M<T>(M);
+  lpw->objective = dd_LPmin;
+  lpw->redcheck_extensive=false;  /* this is default */
+  dd_LPData_reset_m(1, lpw);
+
+  dd_ErrorType err=dd_NoError;
+  data_temp_simplex<T>* data = allocate_data_simplex<T>(get_m_size(M), get_d_size(M));
+  auto dd_Redundant_loc=[&]() -> bool {
+    dd_colrange j;
+    dd_rowrange mi = lpw->m;
+    for (j = 0; j < d; j++)
+      lpw->A[mi-1][j] = lpw->A[mi-2][j];
+    lpw->A[mi-2][0] += 1;
+    if (localdebug) {
+      std::cout << "Hyperplane case\n";
+      std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
+      dd_WriteLP(std::cout, lpw);
+    }
+    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
+    lpw->A[mi-2][0] -= 1;
+    if (lpw->optvalue < 0)
+      return false;
+    else
+      return true;
+  };
+  auto set_entry_in_lpw=[&](dd_rowrange irow) -> void {
+    dd_rowrange mi = lpw->m;
+    for (k=0; k<d; k++)
+      lpw->A[mi-2][k] = M->matrix[irow-1][k];
+  };
+  auto insert_entry_in_lpw=[&](dd_rowrange irow) -> void {
+    dd_rowrange mi = lpw->m;
+    for (k=0; k<d; k++)
+      lpw->A[mi-1][k] = M->matrix[irow-1][k];
+    mi++;
+    dd_LPData_reset_m(mi, lpw);
+  };
+  auto decrement_entry_in_lpw=[&]() -> void {
+    dd_rowrange mi = lpw->m;
+    mi--;
+    dd_LPData_reset_m(mi, lpw);
+  };
+
+  /* Whether we have reached a conclusion in any way on the code */
+  dd_rowset is_decided;
+  set_initialize(&is_decided, m);
+  auto get_block=[&](dd_rowrange const& pos) -> std::vector<dd_rowrange> {
+    int iBlock = BlockBelong[pos-1];
+    std::vector<dd_rowrange> eBlock;
+    for (size_t i=0; i<BlockBelong.size(); i++) {
+      if (BlockBelong[i] == iBlock) {
+        dd_rowrange iredw = i+1;
+        eBlock.push_back(iredw);
+      }
+    }
+    return eBlock;
+  };
+
+  /* First find some (likely) nonredundant inequalities by Interior Point Find. */
+  dd_lpdata<T>* lp0 = dd_Matrix2LP(M, &err);
+  dd_lpdata<T>* lp = dd_MakeLPforInteriorFinding(lp0);
+  dd_FreeLPData(lp0);
+  dd_LPSolve(lp, solver, &err);  /* Solve the LP */
+  if (localdebug) {
+    std::cout << "lp->sol=";
+    dd_WriteT(std::cout, lp->sol, d);
+  }
+
+  if (lp->optvalue > 0) {
+    if (localdebug) std::cout << "dd_Positive=T case\n";
+    /* An interior point is found.  Use rayshooting to find some nonredundant
+       inequalities. */
+    for (k=0; k<d; k++) shootdir[k]=0;
+    for (j=1; j<d; j++) {
+      shootdir[j]=1;  /* j-th unit vector */
+      if (localdebug) dd_WriteT(std::cout, shootdir, d);
+      ired=dd_RayShooting(M, lp->sol, shootdir);
+      if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
+      if (ired > 0 && !set_member(ired, is_decided)) {
+        for (auto & jred : get_block(ired)) {
+          set_addelem(is_decided, jred);
+          insert_entry_in_lpw(jred);
+        }
+      }
+      shootdir[j]=-1;  /* negative of the j-th unit vector */
+      ired=dd_RayShooting(M, lp->sol, shootdir);
+      if (localdebug) printf("nonredundant row %3ld found by shooting.\n", ired);
+      if (ired > 0 && !set_member(ired, is_decided)) {
+        for (auto & jred : get_block(ired)) {
+          set_addelem(is_decided, jred);
+          insert_entry_in_lpw(jred);
+        }
+      }
+      shootdir[j]=0;  /* restore to 0 */
+    }
+
+    if (localdebug) {
+      printf("The initial nonredundant set is:");
+      for (i=1; i<=m; i++)
+        if (set_member(i, is_decided))
+          printf(" %ld", i);
+      printf("\n");
+    }
+
+    i=1;
+    while(i<=m) {
+      if (localdebug) std::cout << "i=" << i << " is_decided=" << set_member(i, is_decided) << "\n";
+      if (!set_member(i, is_decided)) { /* the ith inequality is not yet checked */
+        if (localdebug) std::cout << "Checking redundancy of " << i << " th inequality\n";
+        insert_entry_in_lpw(i);
+        if (localdebug) {
+          std::cout << "M->matrix[i-1]=";
+          dd_WriteT(std::cout, M->matrix[i-1], d);
+        }
+        if (!dd_Redundant_loc()) {
+          for (k=0; k<d; k++) shootdir[k] = lpw->sol[k] - lp->sol[k];
+          if (localdebug) {
+            std::cout << "shootdir=";
+            dd_WriteT(std::cout, shootdir, d);
+          }
+          ired=dd_RayShooting(M, lp->sol, shootdir);
+          for (auto & jred : get_block(ired)) {
+            set_addelem(is_decided, jred);
+            set_entry_in_lpw(jred);
+          }
+          if (localdebug) {
+            fprintf(stdout, "The %ld th inequality is nonredundant for the subsystem\n", i);
+            fprintf(stdout, "The nonredundancy of %ld th inequality is found by shooting.\n", ired);
+            dd_WriteT(std::cout, M->matrix[ired-1], d);
+          }
+        } else {
+          if (localdebug) fprintf(stdout, "The %ld th inequality is redundant for the subsystem and thus for the whole.\n", i);
+          decrement_entry_in_lpw();
+          for (auto & jred : get_block(i)) {
+            set_addelem(is_decided, jred);
+            set_addelem(redset, jred);
+          }
+          i++;
+        }
+      } else {
+        if (localdebug) std::cout << "Case already decided\n";
+        i++;
+      }
+    } /* endwhile */
+  } else {
+    if (localdebug) std::cout << "dd_Positive=F case\n";
+    /* No interior point is found.  Apply the standard LP technique.  */
+    set_free(redset);
+    redset=dd_RedundantRows(M, error);
+  }
+  free_data_simplex(data);
+
+  dd_FreeLPData(lp);
+  dd_FreeLPData(lpw);
+
+  dd_FreeArow(shootdir);
+  return redset;
+}
+
+
+
 
 template<typename T>
 dd_SetFamilyPtr dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error)
@@ -7601,6 +7792,27 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const&TheEXT)
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
+  std::vector<int> ListIdx;
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    bool isin = set_member(i_row+1, redset);
+    if (!isin) ListIdx.push_back(i_row);
+  }
+  dd_FreeMatrix(M);
+  set_free(redset);
+  return ListIdx;
+}
+
+
+
+template<typename T>
+std::vector<int> RedundancyReductionClarksonBlocks(MyMatrix<T> const&TheEXT, std::vector<int> const& BlockBelong)
+{
+  dd_ErrorType err;
+  int nbRow=TheEXT.rows();
+  dd_matrixdata<T>* M=MyMatrix_PolyFile2Matrix(TheEXT);
+  M->representation = dd_Inequality;
+  //  M->representation = dd_Generator;
+  dd_rowset redset = dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong);
   std::vector<int> ListIdx;
   for (int i_row=0; i_row<nbRow; i_row++) {
     bool isin = set_member(i_row+1, redset);
