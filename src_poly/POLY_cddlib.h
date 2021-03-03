@@ -24,7 +24,6 @@
 #include <vector>
 
 #define DEBUG_CDD
-#define CDD_RAND_MAX 32767
 
 // templatized code of the CDD library
 
@@ -99,11 +98,6 @@ typedef long *dd_colindex;
 // API for the set systems.
 typedef unsigned long *set_type;   /* set type definition */
 
-inline void set_free(set_type set)
-{
-    delete [] set;
-}
-
 
 #define SETBITS (sizeof(long) * 8)
 
@@ -123,6 +117,11 @@ static unsigned char set_card_lut[]={
 2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
 3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
 /* End of Definitions for optimized set_card */
+
+inline void set_free(set_type set)
+{
+    delete [] set;
+}
 
 inline unsigned long set_blocks(long len)
 {
@@ -146,9 +145,9 @@ void set_initialize(set_type *setp, long length)
     forlim1=set_blocks(len);
     using ulong=unsigned long;
     *setp=new ulong[forlim1];
-    (*setp)[0]=ulong(len);  /* size of the ground set */
+    (*setp)[0] = ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
-      (*setp)[i]=0U;
+      (*setp)[i] = 0;
 }
 
 void reset_initialize(set_type *setp, long length)
@@ -162,29 +161,25 @@ void reset_initialize(set_type *setp, long length)
 
     forlim1=set_blocks(len);
     using ulong=unsigned long;
-    (*setp)[0]=ulong(len);  /* size of the ground set */
+    (*setp)[0] = ulong(len);  /* size of the ground set */
     for (i=1; i<forlim1; i++)
-      (*setp)[i]=0U;
+      (*setp)[i] = 0;
 }
 
 void set_emptyset(set_type set)
 /* Set set to be the emptyset  */
 {
-	long i,forlim;
-
-	forlim=set_blocks(set[0])-1;
-	for (i=1; i<=forlim; i++)
-		set[i]=0U;
+  long forlim = set_blocks(set[0]) - 1;
+  for (long i=1; i<=forlim; i++)
+    set[i] = 0;
 }
 
 void set_copy(set_type setcopy,set_type set)
 /* Copy the set set[] to setcopy[] with setcopy[] length */
 {
-	long i,forlim;
-
-	forlim=set_blocks(setcopy[0])-1;
-	for (i=1; i<=forlim; i++)
-		setcopy[i]=set[i];
+  long forlim = set_blocks(setcopy[0]) - 1;
+  for (long i=1; i<=forlim; i++)
+    setcopy[i] = set[i];
 }
 
 inline void set_addelem(set_type set, long elem)
@@ -193,57 +188,49 @@ inline void set_addelem(set_type set, long elem)
   long i,j;
   unsigned long change;
   unsigned long one=1U;
-
-  if (elem<=(long)set[0])
-    {
-      i=(elem-1)/SETBITS+1;
-      j=(elem-1)%SETBITS;
-      change= one << j;  /* put 1 in jth position */
-      set[i]=set[i] | change;
-    }
+  if (elem<=(long)set[0]) {
+    i=(elem-1)/SETBITS+1;
+    j=(elem-1)%SETBITS;
+    change = one << j;  /* put 1 in jth position */
+    set[i]=set[i] | change;
+  }
 }
 
 inline void set_delelem(set_type set, long elem)
 /* delete elem only if it is within the set[] range */
 {
-	long  i,j;
-	unsigned long change;
-	unsigned long one=1U;
-
-	if (elem<=(long)set[0])
-	{
-		i=(elem-1)/SETBITS+1;
-		j=(elem-1)%SETBITS;
-		change=one << j;  /* put 1 in jth position */
-		set[i]=(set[i] | change) ^ change;
-	}
+  long  i,j;
+  unsigned long change;
+  unsigned long one=1U;
+  if (elem<=(long)set[0]) {
+    i=(elem-1)/SETBITS+1;
+    j=(elem-1)%SETBITS;
+    change=one << j;  /* put 1 in jth position */
+    set[i]=(set[i] | change) ^ change;
+  }
 }
 
 inline void set_int(set_type set,set_type set1,set_type set2)
 /* Set intersection, assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-
-  forlim=set_blocks(set[0])-1;
-  for (i=1; i<=forlim; i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1; i<=forlim; i++)
     set[i]=(set1[i] & set2[i]);
 }
 
 inline void set_uni(set_type set,set_type set1,set_type set2)
 /* Set union,assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-  forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1;i<=forlim;i++)
     set[i]=set1[i] | set2[i];
 }
 
 inline void set_diff(set_type set,set_type set1,set_type set2)
 /* Set difference se1/set2, assuming set1 and set2 have the same length as set */
 {
-  long  i,forlim;
-  forlim=set_blocks(set[0])-1;
-  for (i=1;i<=forlim;i++)
+  long forlim=set_blocks(set[0])-1;
+  for (long i=1;i<=forlim;i++)
     set[i]=set1[i] & (~set2[i]);
 }
 
@@ -806,12 +793,10 @@ void dd_FreeMatrix(dd_matrixdata<T> *M)
 
   if (M!=nullptr) {
     if (M->rowsize<=0) m1=1; else m1=M->rowsize;
-    if (M!=nullptr) {
-      dd_FreeAmatrix(m1, M->matrix);
-      dd_FreeArow(M->rowvec);
-      set_free(M->linset);
-      delete M;
-    }
+    dd_FreeAmatrix(m1, M->matrix);
+    dd_FreeArow(M->rowvec);
+    set_free(M->linset);
+    delete M;
   }
 }
 
@@ -821,12 +806,10 @@ template<typename T>
 void dd_FreeShallowMatrix(dd_matrixdata<T> *M)
 {
   if (M!=nullptr) {
-    if (M!=nullptr) {
-      delete [] M->matrix;
-      dd_FreeArow(M->rowvec);
-      set_free(M->linset);
-      delete M;
-    }
+    delete [] M->matrix;
+    dd_FreeArow(M->rowvec);
+    set_free(M->linset);
+    delete M;
   }
 }
 
@@ -846,9 +829,8 @@ void dd_FreeSetFamily(dd_SetFamilyPtr F)
   if (F!=nullptr) {
     if (F->famsize<=0) f1=1; else f1=F->famsize;
       /* the smallest created size is one */
-    for (i=0; i<f1; i++) {
+    for (i=0; i<f1; i++)
       set_free(F->set[i]);
-    }
     delete [] F->set;
     delete [] F;
   }
@@ -1488,23 +1470,6 @@ void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed)
   }
 }
 
-void dd_RandomPermutation2(dd_rowindex OV,long t,unsigned int seed)
-{
-  long k,j,ovj;
-  double u,xk,r,rand_max=(double) CDD_RAND_MAX;
-
-  srand(seed);
-  for (j=t; j>1 ; j--) {
-    r=rand();
-    u=r/rand_max;
-    xk=(double)(j*u +1);
-    k=(long)xk;
-    ovj=OV[j];
-    OV[j]=OV[k];
-    OV[k]=ovj;
-  }
-}
-
 template<typename T>
 bool dd_LexSmaller(T *v1, T *v2, long dmax)
 { /* dmax is the size of vectors v1,v2 */
@@ -1726,10 +1691,10 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,dd_rowindex *new
   /* Same as dd_MatrixNormalizedSortedUniqueCopy except that it returns a unnormalized origial data
      with original ordering.
   */
-  dd_matrixdata<T> *M1=nullptr,M2=nullptr;
+  dd_matrixdata<T> *M1=nullptr, M2=nullptr;
   dd_rowrange m,i,k,ii;
   dd_colrange d;
-  dd_rowindex newpos1=nullptr,newpos2=nullptr;
+  dd_rowindex newpos1=nullptr, newpos2=nullptr;
 
   m= M->rowsize;
   d= M->colsize;
@@ -3880,7 +3845,7 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size,dd_colrange d_size,T** A,
   case dd_RandomRow:
     for(i=1; i<=m_size; i++) OV[i]=i;
     if (rseed<=0) rseed=1;
-    dd_RandomPermutation2(OV,m_size,rseed);
+    dd_RandomPermutation(OV,m_size,rseed);
     break;
 
   case dd_MinIndex:
