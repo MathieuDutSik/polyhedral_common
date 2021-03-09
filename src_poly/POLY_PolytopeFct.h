@@ -8,7 +8,7 @@ template<typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const& eMat, Face const& eList)
 {
   int nbCol=eMat.cols();
-  MyVector<T> eVec=ZeroVector<T>(nbCol)
+  MyVector<T> eVec=ZeroVector<T>(nbCol);
   int eSize=eList.count();
   //
   int aRow=eList.find_first();
