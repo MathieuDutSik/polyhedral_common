@@ -1,4 +1,4 @@
-PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic
+PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox
 #PROGRAM		= CheckPositiveSemiDefinite
 #PROGRAM		= LATT_canonicalizeMultiple
 #PROGRAM		= LATT_canonicalizeSymplectic
