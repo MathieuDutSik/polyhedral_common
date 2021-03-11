@@ -10,7 +10,7 @@
 #
 # Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
 
-FROM ubuntu
+FROM ubuntu:20.04
 
 # Dockerfile maintainer (original author: Mathieu Dutour Sikiric)
 MAINTAINER Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
