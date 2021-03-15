@@ -257,24 +257,22 @@ void reorder1 (long a[], long b[], long newone, long range)
 /*elements of array b are updated to stay aligned with a */
 {
   long temp;
-  while (newone > 0 && a[newone] < a[newone - 1])
-    {
-      temp = a[newone];
-      a[newone] = a[newone - 1];
-      a[newone - 1] = temp;
-      temp = b[newone];
-      b[newone] = b[newone - 1];
-      b[--newone] = temp;
-    }
-  while (newone < range - 1 && a[newone] > a[newone + 1])
-    {
-      temp = a[newone];
-      a[newone] = a[newone + 1];
-      a[newone + 1] = temp;
-      temp = b[newone];
-      b[newone] = b[newone + 1];
-      b[++newone] = temp;
-    }
+  while (newone > 0 && a[newone] < a[newone - 1]) {
+    temp = a[newone];
+    a[newone] = a[newone - 1];
+    a[newone - 1] = temp;
+    temp = b[newone];
+    b[newone] = b[newone - 1];
+    b[--newone] = temp;
+  }
+  while (newone < range - 1 && a[newone] > a[newone + 1]) {
+    temp = a[newone];
+    a[newone] = a[newone + 1];
+    a[newone + 1] = temp;
+    temp = b[newone];
+    b[newone] = b[newone + 1];
+    b[++newone] = temp;
+  }
 }
 
 
@@ -322,14 +320,13 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin)
     k = d;
   else
     k = nlinearity;
-  for (i = m; i >= 1; i--)
-    {
-      j = 0;
-      while (j < k && inequality[j] != i)
-	j++;			/* see if i is in inequality  */
-      if (j == k)
-	inequality[k++] = i;
-    }
+  for (i = m; i >= 1; i--) {
+    j = 0;
+    while (j < k && inequality[j] != i)
+      j++;			/* see if i is in inequality  */
+    if (j == k)
+      inequality[k++] = i;
+  }
   //  std::cerr << "Q->maximize/minimize = " << Q->maximize << " / " << Q->minimize << "\n";
 
 /* for voronoi convert to h-description using the transform                  */
@@ -366,18 +363,16 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin)
 
   for (i = 1; i <= m; i++)
     inequality[i] = i;
-  if (nlinearity > 0)		/* some cobasic indices will be removed */
-    {
-      for (i = 0; i < nlinearity; i++)	/* remove input linearity indices */
-	inequality[linearity[i]] = 0;
-      k = 1;			/* counter for linearities         */
-      for (i = 1; i <= m - nlinearity; i++)
-	{
-	  while (k <= m && inequality[k] == 0)
-	    k++;		/* skip zeroes in corr. to linearity */
-	  inequality[i] = inequality[k++];
-	}
-    }				/* end if linearity */
+  if (nlinearity > 0) {	/* some cobasic indices will be removed */
+    for (i = 0; i < nlinearity; i++)	/* remove input linearity indices */
+      inequality[linearity[i]] = 0;
+    k = 1;			/* counter for linearities         */
+    for (i = 1; i <= m - nlinearity; i++) {
+      while (k <= m && inequality[k] == 0)
+        k++;		/* skip zeroes in corr. to linearity */
+      inequality[i] = inequality[k++];
+    }
+  }				/* end if linearity */
   if (nredundcol > 0) {
     Lin = new T*[nredundcol+1];
     for (i = 0; i < nredundcol; i++) {
@@ -460,72 +455,66 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
   }
   //  std::cerr << "d=" << d << " m=" << m << "\n";
   //  PrintP(*D_p, "Before while loop");
-  while ((j < d) || ((*D_p)->B[m] != m))
-    {
-      //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
-      if ((*D_p)->depth >= Q->maxdepth)
-	{
-	  backtrack = globals::L_TRUE;
-	  if (Q->maxdepth == 0)	{ /* estimate only */
-	    //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
-	    return globals::L_FALSE;
-	  }
-	}
+  while ((j < d) || ((*D_p)->B[m] != m)) {
+    //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
+    if ((*D_p)->depth >= Q->maxdepth) {
+      backtrack = globals::L_TRUE;
+      if (Q->maxdepth == 0)	{ /* estimate only */
+        //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
+        return globals::L_FALSE;
+      }
+    }
+    if ( Q->truncate && (*D_p)->A[0][0] < 0)   /* truncate when moving from opt. vertex */
+      backtrack = globals::L_TRUE;
 
-      if ( Q->truncate && (*D_p)->A[0][0] < 0)   /* truncate when moving from opt. vertex */
-          backtrack = globals::L_TRUE;
+    //      PrintP(*D_p, "Before backtrack test");
+    if (backtrack) { /* go back to prev. dictionary, restore i,j */
+      backtrack = globals::L_FALSE;
 
-      //      PrintP(*D_p, "Before backtrack test");
-      if (backtrack)		/* go back to prev. dictionary, restore i,j */
-	{
-	  backtrack = globals::L_FALSE;
+      if (!check_cache (D_p, Q, &i, &j)) {
+        (*D_p)->depth--;
+        selectpivot (*D_p, Q, &i, &j);
+        pivot (*D_p, Q, i, j);
+        update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
+      }
 
-	  if (!check_cache (D_p, Q, &i, &j))
-	    {
-	      (*D_p)->depth--;
-	      selectpivot (*D_p, Q, &i, &j);
-	      pivot (*D_p, Q, i, j);
-	      update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
-	    }
+      j++;			/* go to next column */
+    }
+    //      PrintP(*D_p, "After backtrack test");
 
-	  j++;			/* go to next column */
-	}			/* end of if backtrack  */
-      //      PrintP(*D_p, "After backtrack test");
+    if ((*D_p)->depth < Q->mindepth)
+      break;
+    while ((j < d) && !reverse (*D_p, Q, &i, j))
+      j++;
 
-      if ((*D_p)->depth < Q->mindepth)
-	break;
-      while ((j < d) && !reverse (*D_p, Q, &i, j))
-	j++;
+    //      PrintP(*D_p, "Before exiting test");
+    if (j == d)
+      backtrack = globals::L_TRUE;
+    else {
+      cache_dict (D_p, Q, i, j, dict_count);
+      //	  PrintP(*D_p, "After cache_dict");
+      /* Note that the next two lines must come _after_ the
+         call to cache_dict */
+      
+      (*D_p)->depth++;
+      if ((*D_p)->depth > Q->deepest)
+        Q->deepest++;
 
-      //      PrintP(*D_p, "Before exiting test");
-      if (j == d)
-	backtrack = globals::L_TRUE;
-      else
-	{
-	  cache_dict (D_p, Q, i, j, dict_count);
-	  //	  PrintP(*D_p, "After cache_dict");
-	  /* Note that the next two lines must come _after_ the
-	     call to cache_dict */
+      pivot (*D_p, Q, i, j);
+      //	  PrintP(*D_p, "After pivot");
+      update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
+      //	  PrintP(*D_p, "After update");
 
-	  (*D_p)->depth++;
-	  if ((*D_p)->depth > Q->deepest)
-	    Q->deepest++;
+      (*D_p)->lexflag = lexmin (*D_p, Q, 0);	/* see if lexmin basis */
+      Q->count[2]++;
+      Q->totalnodes++;
 
-	  pivot (*D_p, Q, i, j);
-	  //	  PrintP(*D_p, "After pivot");
-	  update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
-	  //	  PrintP(*D_p, "After update");
-
-	  (*D_p)->lexflag = lexmin (*D_p, Q, 0);	/* see if lexmin basis */
-	  Q->count[2]++;
-	  Q->totalnodes++;
-
-	  save_basis (*D_p, Q);
-	  //	  PrintP(*D_p, "After save_basis");
-	  //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
-	  return globals::L_TRUE;
-	}
-    }				/* end of main while loop for getnextbasis */
+      save_basis (*D_p, Q);
+      //	  PrintP(*D_p, "After save_basis");
+      //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
+      return globals::L_TRUE;
+    }
+  }				/* end of main while loop for getnextbasis */
   //  std::cerr << "lrs_getnextbasis, exit case 5\n";
   return globals::L_FALSE;
 }
@@ -567,20 +556,15 @@ long lrs_getvertex (lrs_dic<T> * P, lrs_dat<T> * Q, T* &output)
   ired = 0;
   output[0] = P->det;
 
-  for (ind = 1; ind < Q->n; ind++)	/* extract solution */
-
-    if ((ired < Q->nredundcol) && (redundcol[ired] == ind))
-      /* column was deleted as redundant */
-      {
-	output[ind]=0;
-	ired++;
-      }
-    else
-      /* column not deleted as redundant */
-      {
-	getnextoutput (P, Q, i, 0, output[ind]);
-	i++;
-      }
+  for (ind = 1; ind < Q->n; ind++) {	/* extract solution */
+    if ((ired < Q->nredundcol) && (redundcol[ired] == ind)) { /* column was deleted as redundant */
+      output[ind]=0;
+      ired++;
+    } else { /* column not deleted as redundant */
+      getnextoutput (P, Q, i, 0, output[ind]);
+      i++;
+    }
+  }
   if (lexflag && output[0] == 1)
       ++Q->count[4];               /* integer vertex */
   return globals::L_TRUE;
@@ -606,29 +590,21 @@ long lrs_getray (lrs_dic<T> * P, lrs_dat<T> * Q, long col, long redcol, T* &outp
   i = 1;
   ired = 0;
 
-  for (ind = 0; ind < n; ind++)	/* print solution */
-    {
-      if (ind == 0 && !hull)	/* must have a ray, set first column to zero */
-	output[0]=0;
-
-      else if ((ired < Q->nredundcol) && (redundcol[ired] == ind))
-	/* column was deleted as redundant */
-	{
-	  if (redcol == ind)	/* true for linearity on this cobasic index */
-	    /* we print reduced determinant instead of zero */
-	    output[ind] = P->det;
-	  else
-	    output[ind]=0;
-	  ired++;
-	}
+  for (ind = 0; ind < n; ind++)	{ /* print solution */
+    if (ind == 0 && !hull)	/* must have a ray, set first column to zero */
+      output[0]=0;
+    else if ((ired < Q->nredundcol) && (redundcol[ired] == ind)) { /* column was deleted as redundant */
+      if (redcol == ind)	/* true for linearity on this cobasic index */
+        /* we print reduced determinant instead of zero */
+        output[ind] = P->det;
       else
-	/* column not deleted as redundant */
-	{
-	  getnextoutput (P, Q, i, col, output[ind]);
-	  i++;
-	}
-
+        output[ind]=0;
+      ired++;
+    } else { /* column not deleted as redundant */
+      getnextoutput (P, Q, i, col, output[ind]);
+      i++;
     }
+  }
   return globals::L_TRUE;
 }
 
@@ -656,9 +632,9 @@ void getnextoutput(lrs_dic<T> * P, lrs_dat<T> * Q, long i, long col, T &out)
       out=P->det;
     else
       out=0;
-  }
-  else
+  } else {
     out=A[row][col];
+  }
 }
 
 
@@ -702,54 +678,49 @@ long lrs_ratio (lrs_dic<T> *P, lrs_dat<T> *Q, long col)	/*find lex min. ratio */
   bindex = d + 1;		/* index of next basic variable to consider */
   cindex = 0;			/* index of next cobasic variable to consider */
   basicindex = d;		/* index of basis inverse for current ratio test, except d=rhs test */
-  while (degencount > 1)	/*keep going until unique min ratio found */
-    {
-      if (B[bindex] == basicindex)	/* identity col in basis inverse */
-	{
-	  if (minratio[start] == bindex)
-	    /* remove this index, all others stay */
-	    {
-	      start++;
-	      degencount--;
-	    }
-	  bindex++;
-	}
-      else { /* perform ratio test on rhs or column of basis inverse */
-        firstime = globals::L_TRUE;
-        /*get next ratio column and increment cindex */
-        if (basicindex != d)
-          ratiocol = Col[cindex++];
-        for (j = start; j < start + degencount; j++) {
-          i = Row[minratio[j]];	/* i is the row location of the next basic variable */
-          comp = 1;		/* 1:  lhs>rhs;  0:lhs=rhs; -1: lhs<rhs */
-          if (firstime)
-            firstime = globals::L_FALSE;	/*force new min ratio on first time */
-          else {
-            if (Nmin > 0 || A[i][ratiocol] < 0) {
-              if (Nmin < 0 || A[i][ratiocol] > 0)
-                comp = comprod (Nmin, A[i][col], A[i][ratiocol], Dmin);
-              else
-                comp = -1;
-            }
-            else if (Nmin == 0 && A[i][ratiocol] == 0)
-              comp = 0;
-            if (ratiocol == 0)
-              comp = -comp;	/* all signs reversed for rhs */
+  while (degencount > 1) {	/*keep going until unique min ratio found */
+    if (B[bindex] == basicindex) {	/* identity col in basis inverse */
+      if (minratio[start] == bindex) { /* remove this index, all others stay */
+        start++;
+        degencount--;
+      }
+      bindex++;
+    } else { /* perform ratio test on rhs or column of basis inverse */
+      firstime = globals::L_TRUE;
+      /*get next ratio column and increment cindex */
+      if (basicindex != d)
+        ratiocol = Col[cindex++];
+      for (j = start; j < start + degencount; j++) {
+        i = Row[minratio[j]];	/* i is the row location of the next basic variable */
+        comp = 1;		/* 1:  lhs>rhs;  0:lhs=rhs; -1: lhs<rhs */
+        if (firstime)
+          firstime = globals::L_FALSE;	/*force new min ratio on first time */
+        else {
+          if (Nmin > 0 || A[i][ratiocol] < 0) {
+            if (Nmin < 0 || A[i][ratiocol] > 0)
+              comp = comprod (Nmin, A[i][col], A[i][ratiocol], Dmin);
+            else
+              comp = -1;
           }
-          if (comp == 1) {		/*new minimum ratio */
-            nstart = j;
-            Nmin = A[i][ratiocol];
-            Dmin = A[i][col];
-            ndegencount = 1;
-          }
-          else if (comp == 0)	/* repeated minimum */
-            minratio[nstart + ndegencount++] = minratio[j];
-        }			/* end of  for (j=start.... */
-        degencount = ndegencount;
-        start = nstart;
-      }			/* end of else perform ratio test statement */
-      basicindex++;		/* increment column of basis inverse to check next */
-    }				/*end of while loop */
+          else if (Nmin == 0 && A[i][ratiocol] == 0)
+            comp = 0;
+          if (ratiocol == 0)
+            comp = -comp;	/* all signs reversed for rhs */
+        }
+        if (comp == 1) {		/*new minimum ratio */
+          nstart = j;
+          Nmin = A[i][ratiocol];
+          Dmin = A[i][col];
+          ndegencount = 1;
+        }
+        else if (comp == 0)	/* repeated minimum */
+          minratio[nstart + ndegencount++] = minratio[j];
+      }			/* end of  for (j=start.... */
+      degencount = ndegencount;
+      start = nstart;
+    }			/* end of else perform ratio test statement */
+    basicindex++;		/* increment column of basis inverse to check next */
+  }				/*end of while loop */
   return (minratio[start]);
 }				/* end of ratio */
 
@@ -786,15 +757,15 @@ long reverse(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long s)
 /* ie. j s.t.  A[0][j]*A[row][col] < A[0][col]*A[row][j]     */
 /* note both A[row][col] and A[0][col] are negative          */
 
-  for (i = 0; i < d && C[i] < B[*r]; i++)
-    if (i != s)
-      {
-	j = Col[i];
-	if (A[0][j] > 0 || A[row][j] < 0)		/*or else sign test fails trivially */
-	  if ((A[0][j] >= 0 && A[row][j] <= 0) ||
-	      comprod (A[0][j], A[row][col], A[0][col], A[row][j]) == -1)
-	    return globals::L_FALSE;
-      }
+  for (i = 0; i < d && C[i] < B[*r]; i++) {
+    if (i != s) {
+      j = Col[i];
+      if (A[0][j] > 0 || A[row][j] < 0)		/*or else sign test fails trivially */
+        if ((A[0][j] >= 0 && A[row][j] <= 0) ||
+            comprod (A[0][j], A[row][col], A[0][col], A[row][j]) == -1)
+          return globals::L_FALSE;
+    }
+  }
   return globals::L_TRUE;
 }
 
@@ -2030,16 +2001,15 @@ void freeLRS(lrs_dic<T>* & P, lrs_dat<T>* & Q)
   lrs_free_dat(Q);
 }
 
-template<typename T>
-void Kernel_DualDescription(MyMatrix<T> const& EXT, std::function<void(T*)> const& f)
+template<typename T, typename F>
+void Kernel_DualDescription(MyMatrix<T> const& EXT, F const& f)
 {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
-  T* output;
   int col;
   //  std::cerr << "Before call to initLRS in DualDescription_temp_incd\n";
   initLRS(EXT, P, Q);
-  output=new T[Q->n+1];
+  T* output = new T[Q->n+1];
   unsigned long dict_count = 1;
   /*
   int nbCol=EXT.cols();
@@ -2067,15 +2037,14 @@ void Kernel_DualDescription(MyMatrix<T> const& EXT, std::function<void(T*)> cons
 
 
 
-template<typename T>
-void Kernel_DualDescription_limited(MyMatrix<T> const& EXT, std::function<void(T*)> const& f, int const& UpperLimit)
+template<typename T, typename F>
+void Kernel_DualDescription_limited(MyMatrix<T> const& EXT, F const& f, int const& UpperLimit)
 {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
-  T* output;
   int col;
   initLRS(EXT, P, Q);
-  output=new T[Q->n+1];
+  T* output = new T[Q->n+1];
   unsigned long dict_count = 1;
   int nbDone=0;
   do {
@@ -2124,7 +2093,7 @@ std::vector<Face> DualDescription_temp_incd(MyMatrix<T> const& EXT)
   int nbRow=EXTwork.rows();
   std::vector<Face> ListIncd;
   bool IsFirst=true;
-  std::function<void(T*)> f=[&](T* out) -> void {
+  auto f=[&](T* out) -> void {
     if (!IsFirst) {
       Face V(nbRow);
       for (int iRow=0; iRow<nbRow; iRow++) {
@@ -2152,7 +2121,7 @@ std::vector<Face> DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int 
   int nbRow=EXTwork.rows();
   std::vector<Face> ListIncd;
   bool IsFirst=true;
-  std::function<void(T*)> f=[&](T* out) -> void {
+  auto f=[&](T* out) -> void {
     if (!IsFirst) {
       Face V(nbRow);
       for (int iRow=0; iRow<nbRow; iRow++) {
@@ -2190,7 +2159,7 @@ std::vector<Face> DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
   }
   std::vector<Face> ListIncd;
   bool IsFirst=true;
-  std::function<void(Tring*)> f=[&](Tring* out) -> void {
+  auto f=[&](Tring* out) -> void {
     if (!IsFirst) {
       Face V(nbRow);
       for (int iRow=0; iRow<nbRow; iRow++) {
