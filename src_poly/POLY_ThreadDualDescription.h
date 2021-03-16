@@ -332,7 +332,7 @@ std::istream& operator>>(std::istream& is, SimpleOrbitFacetInv<T>& obj)
   return is;
 }
 
-  
+
 template<typename T>
 std::ostream& operator<<(std::ostream& os, SimpleOrbitFacetInv<T> const& obj)
 {
@@ -402,7 +402,7 @@ std::ostream& operator<<(std::ostream& os, PolyhedralBalinski const& obj)
 //
 // template type mappings
 //
-  
+
 template <typename T>
 struct invariant_info<PolyhedralEntry<T> > {
   typedef PolyhedralInv<T> invariant_type;
@@ -456,7 +456,7 @@ FctsDataBank<PolyhedralEntry<T>> GetRec_FctsDataBank()
 
 
 template<typename T>
-std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, 
+std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT,
 					      TheGroupFormat const& GRP,
 					      std::string const& ansProg, std::ostream& os)
 {
@@ -678,10 +678,10 @@ std::vector<Face> DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::
 
 template<typename T>
 std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
-         MainProcessor &MProc, int const& TheId, 
+         MainProcessor &MProc, int const& TheId,
 	 DataBank<PolyhedralEntry<T>> &TheBank,
-	 MyMatrix<T> const& EXT, 
-	 TheGroupFormat const& GRP, 
+	 MyMatrix<T> const& EXT,
+	 TheGroupFormat const& GRP,
 	 PolyHeuristic<mpz_class> const& AllArr,
 	 std::string const& ePrefix,
 	 int const& TheLevel)
@@ -1052,8 +1052,6 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 }
 
 
-
-
 FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
 {
   std::map<std::string, SingleBlock> ListBlock;
@@ -1179,10 +1177,10 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   AllArr.eMemory=DD_Memory;
   //
   int TheLevel=0;
-  std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, 
+  std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
 								  TheId,
-								  TheBank, EXT, 
-								  GRP, 
+								  TheBank, EXT,
+								  GRP,
 								  AllArr,
 								  DD_Prefix, TheLevel);
   std::cerr << "We now have TheOutput\n";
