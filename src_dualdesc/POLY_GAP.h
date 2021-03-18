@@ -236,6 +236,76 @@ MyMatrix<T> ConvertGAPread_MyMatrixT(DataGAP<T,Telt> const& data)
 
 
 
+template<typename T, typename Telt>
+Telt ConvertGAPread_Permutation(DataGAP<T,Telt> const& data)
+{
+  if (data.Nature != int_permutation) {
+    std::cerr << "It should be a permutation for effective conversion to permutation\n";
+    throw TerminalException{1};
+  }
+  return data.permutation;
+}
+
+
+
+
+template<typename T, typename Tgroup>
+Tgroup ConvertGAPread_PermutationGroup(DataGAP<T,Tgroup::Telt> const& data, int const& n)
+{
+  if (data.Nature != int_group) {
+    std::cerr << "It should be a group for effective conversion to MyMatrix\n";
+    throw TerminalException{1};
+  }
+  std::vector<Telt> ListGen;
+  for (auto & eEnt : data.ListEnt) {
+    Telt g1 = ConvertGAPread_Permutation(eEnt);
+    Telt g2 = ExtendPermutation(g1, n);
+    ListGen.push_back(g2);
+  }
+  return Tgroup(ListGen, n);
+}
+
+
+
+template<typename T, typename Telt>
+Face ConvertGAPread_Face(DataGAP<T,Telt> const& data, int const& n)
+{
+  if (data.Nature != int_list) {
+    std::cerr << "It should be a list for effective conversion to face\n";
+    throw TerminalException{1};
+  }
+  Face f(n);
+  for (auto & eEnt : data.ListEnt) {
+    T val_T = ConvertGAPread_ScalarT(eEnt);
+    int val_i = UniversalTypeConversion<int,T>(val_T);
+    f[val_i - 1] = 1;
+  }
+  return f;
+}
+
+
+
+template<typename T, typename Telt>
+std::vector<Face> ConvertGAPread_ListFace(DataGAP<T,Telt> const& data, int const& n)
+{
+  if (data.Nature != int_list) {
+    std::cerr << "It should be a list for effective conversion to face\n";
+    throw TerminalException{1};
+  }
+  std::vector<Face> ListFace;
+  for (auto & eEnt : data.ListEnt)
+    ListFace.push_back(ConvertGAPread_Face(eEnt, n));
+  return ListFace;
+}
+
+
+
+
+
+
+
+
+
 
 }
 #endif

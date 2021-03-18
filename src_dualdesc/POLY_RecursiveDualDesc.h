@@ -13,12 +13,27 @@ struct EquivariantDualDescription {
 
 
 template<typename T, typename Tgroup>
-EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,Tgroup::Telt> const& data)
+EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,Tgroup::Telt> const& dataFAC)
 {
-  if (data.Nature != datagap::int_record) {
+  if (dataEXT.Nature != datagap::int_record) {
     std::cerr << "For EquivDualDesc, we need to have a record as entry\n";
+    throw TerminalException{1};
   }
-  
+  int pos_EXT = -1;
+  int pos_GRP = -1;
+  for (int pos=0; pos<dataEXT.ListRec.size(); pos++) {
+    if (dataEXT.ListRec[pos].first == "EXT")
+      pos_EXT = pos;
+    if (dataEXT.ListRec[pos].first == "Group")
+      pos_GRP = pos;
+  }
+  MyMatrix<T> EXT = ConvertGAPread_MyMatrixT(dataEXT.ListRec[pos_EXT].second);
+  int n_rows = EXT.rows();
+  Tgroup GRP = ConvertGAPread_PermutationGroup(dataEXT.ListRec[pos_GRP].second, n_rows);
+  //
+  std::vector<Face> ListFace = ConvertGAPread_ListFace(dataFAC);
+  //
+  return {EXT, GRP, ListFace};
 }
 
 
