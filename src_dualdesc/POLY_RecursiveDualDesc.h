@@ -66,7 +66,7 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
-  using Telt = Tgroup::element_type;
+  using Telt = typename Tgroup::Telt;
   Tgroup GRP;
   Tint groupOrder;
   MyMatrix<T> EXT;
@@ -79,7 +79,7 @@ private:
   };
   std::unordered_map<Face, SingEnt> DictOrbit;
   std::map<size_t, std::unordered_set<Face>> CompleteList_SetUndone;
-  std::vector<int> ListOrbit;
+  std::vector<Face> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -103,7 +103,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbit(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _eFile, bool const& _SavingTrigger) : EXT(_EXT), GRP(_GRP), eFile(_eFile), SavingTrigger(_SavingTrigger)
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _eFile, bool const& _SavingTrigger) : EXT(_EXT), GRP(_GRP), eFile(_eFile), SavingTrigger(_SavingTrigger)
   {
     TotalNumber = 0;
     nbOrbitDone = 0;
@@ -111,8 +111,7 @@ public:
     nbOrbit = 0;
     int n_act = EXT.rows();
     std::vector<Telt> LGen = GeneratorsOfGroup(GRP);
-    groupOrder = Size<Tint>(GRP);
-    GRPinfo eGRP{n_act, LGen, groupOrder};
+    groupOrder = GRP.size();
     if (SavingTrigger) {
       if (IsExisingFile(eFile)) {
         dataFile.open(eFile, netCDF::NcFile::write);
@@ -121,7 +120,7 @@ public:
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = true;
         bool orbit_status = true;
-        POLY_NC_WriteGroup(dataFile, eGRP, orbit_setup, orbit_status);
+        POLY_NC_WriteGroup(dataFile, GRP, orbit_setup, orbit_status);
       }
       netCDF::NcDim eDim = dataFile.getDim("n_orbit");
       size_t n_orbit = eDim.getSize();
@@ -129,24 +128,24 @@ public:
       size_t n_grpsize = fDim.getSize();
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-        SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus(dataFile, i_orbit);
+        SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
         InsertEntryDatavase(eEnt.face, eEnt.status, eEnt.orbSize, i_orbit);
       }
     }
-  };
+  }
   ~DatabaseOrbit()
   {
     if (SavingTrigger) {
       RemoveFile(eFile);
     }
   }
-  void FuncInsert(face)
+  void FuncInsert(Face const& face)
   {
-    Face face_can = CanonicalImage_OnSets(GRP, face);
+    Face face_can = GRP.CanonicalImage(face);
     if (DictOrbit.count(face_can) == 1)
       return;
     //
-    Tint ordStab = Size<Tint>(Stabilizer_OnSets(GRP, face));
+    Tint ordStab = GRP.Stabilizer_OnSets(face).size();
     Tint orbSize = groupOrder / ordStab;
     InsertEntryDatabase(face_can, false, orbSize, nbOrbit+1);
     //
@@ -216,7 +215,7 @@ public:
       }
     }
   }
-}
+};
 
 
 

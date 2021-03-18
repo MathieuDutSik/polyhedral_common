@@ -2,3 +2,6 @@
 	path = basic_common_cpp
 	url = https://github.com/MathieuDutSik/basic_common_cpp.git
 	branch = master
+[submodule "src_dualdesc/permutalib"]
+	path = src_dualdesc/permutalib
+	url = https://github.com/MathieuDutSik/permutalib

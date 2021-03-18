@@ -2,6 +2,8 @@
 #define INCLUDE_POLY_NETCDF_H
 
 #include <netcdf>
+#include "Group.h"
+#include "MAT_Matrix.h"
 
 //
 // Reading and writing polytope
@@ -176,14 +178,6 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
 // The group with respect to netcdf.
 //
 
-
-template<typename Telt, typename Tint>
-struct GRPinfo {
-  int n_act;
-  std::vector<Telt> LGen;
-  Tint grpSize;
-};
-
 template<typename Tint>
 std::vector<unsigned char> GetVectorUnsignedChar(Tint const& eVal)
 {
@@ -220,10 +214,12 @@ Tint GetTint_from_VectorUnsignedChar(std::vector<unsigned char> const& V)
 
 
 
-template<typename Telt, typename Tint>
-void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, GRPinfo const& eGRP, bool const& orbit_setup, bool const& orbit_status)
+template<typename Tgroup, typename Tint>
+void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const& orbit_setup, bool const& orbit_status)
 {
-  int n_act = eGRP.n_act;
+  using Telt = typename Tgroup::Telt;
+  int n_act = GRP.n_act();
+  std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
   int n_gen = LGen.size();
   netCDF::NcDim eDimAct = dataFile.addDim("n_act", n_act);
   netCDF::NcDim eDimGen = dataFile.addDim("n_gen", n_gen);
@@ -239,7 +235,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, GRPinfo const& eGRP, bool con
   }
   varGEN.putVar(A.data());
   //
-  std::vector<unsigned char> V_grpsize = GetVectorUnsignedChar(eGRP.grpSize);
+  std::vector<unsigned char> V_grpsize = GetVectorUnsignedChar(GRP.size());
   int n_grpsize = V_grpsize.size();
   netCDF::NcDim eDimGRP = dataFile.addDim("n_grpsize", n_grpsize);
   std::vector<std::string> LDim2{"n_grpsize"};
@@ -264,9 +260,10 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, GRPinfo const& eGRP, bool con
 
 
 
-template<typename Telt>
-GRPinfo<Telt,Tint> POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
+template<typename Tgroup>
+Tgroup POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
 {
+  using Telt = typename Tgroup::Telt;
   netCDF::NcVar varGEN = dataFile.getVar("ListGenerator");
   if (varGEN.isNull()) {
     std::cerr << "The variable ListGenerator is missing\n";
@@ -298,14 +295,7 @@ GRPinfo<Telt,Tint> POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
     LGen[i_gen] = eGen;
   }
   //
-  netCDF::NcVar varGRPSIZE = dataFile.getVar("grpsize");
-  netCDF::NcDim fDim0 = varGRPSIZE.getDim(0);
-  int n_grpsize = fDim0.getSize();
-  std::vector<unsigned char> V2(n_grpsize);
-  varGRPSIZE.getVar(V2.data());
-  Tint grpSize = GetTint_from_VectorUnsignedChar<Tint>(V2);
-  //
-  return {n_act, LGen, grpSize};
+  return Tgroup(LGen, n_act);
 }
 
 
@@ -325,7 +315,6 @@ struct SingleEntryStatus {
 
 
 
-template<typename Tint>
 void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, std::vector<unsigned char> const& Vface, std::vector<unsigned char> const& Vsize, bool const& orbit_status)
 {
   std::string name = "orbit_incidence";
@@ -334,13 +323,13 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
   netCDF::NcVar varORB_INCD = dataFile.getVar(name);
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,Vface.size()};
-  varORB_INCD.putVar(Vface.data(), start_incd, count_incd);
+  varORB_INCD.putVar(start_incd, count_incd, Vface.data());
   //
   if (orbit_status) {
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,Vsize.size()};
-    varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
+    varORB_SIZE.putVar(start_size, count_size, Vsize.data());
   }
 }
 
@@ -362,12 +351,12 @@ void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face con
       val = 0;
     }
   };
-  for (int i=0; i<face.size(); i++) {
+  for (size_t i=0; i<face.size(); i++) {
     bool bit = face[i];
     insertBit(bit);
   }
   if (siz > 0)
-    Vface.insert(val);
+    Vface.push_back(val);
   //
   std::vector<unsigned char> Vsize;
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, false);
@@ -398,7 +387,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
     insertBit(bit);
   }
   if (siz > 0)
-    Vface.insert(val);
+    Vface.push_back(val);
   //
   std::vector<unsigned char> Vsize = GetVectorUnsignedChar(eEnt.OrbSize);
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
@@ -413,11 +402,11 @@ void POLY_NC_SetBit(netCDF::NcFile & dataFile, size_t const& iOrbit, bool const&
   netCDF::NcVar varORB_INCD = dataFile.getVar("orbit_status_incidence");
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,1};
-  varORB_INCD.getVar(&val, start_incd, count_incd);
+  varORB_INCD.getVar(start_incd, count_incd, &val);
   uint8_t res = val / 2;
   //
   uint8_t val_ret = int(status) + 2 * res;
-  varORB_INCD.putVar(&val_ret, start_incd, count_incd);
+  varORB_INCD.putVar(start_incd, count_incd, &val_ret);
 }
 
 
@@ -431,10 +420,8 @@ struct PairVface_OrbSize {
 
 
 template<typename Tint>
-PairVface_Orbsize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, size_t const& iOrbit, size_t const& n_act_div8, bool const& orbit_status)
+PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, size_t const& iOrbit, size_t const& n_act_div8, bool const& orbit_status)
 {
-  netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act_div8");
-  size_t n_act_div8 = dimGRP_INCD.getSize();
   netCDF::NcDim dimGRP_SIZE = dataFile.getDim("n_grpsize");
   size_t n_grpsize = dimGRP_SIZE.getSize();
   //
@@ -445,16 +432,16 @@ PairVface_Orbsize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,n_act_div8};
   std::vector<unsigned char> Vface(n_act_div8);
-  varORB_INCD.putVar(Vface.data(), start_incd, count_incd);
+  varORB_INCD.putVar(start_incd, count_incd, Vface.data());
   //
   if (orbit_status) {
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,n_grpsize};
     std::vector<unsigned char> Vsize(n_grpsize);
-    varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
+    varORB_SIZE.putVar(start_size, count_size, Vsize.data());
     //
-    return {Vface, GetTint_from_VectorUnsignedChar(Vsize)};
+    return {Vface, GetTint_from_VectorUnsignedChar<Tint>(Vsize)};
   } else {
     return {Vface,{}};
   }
@@ -469,19 +456,20 @@ Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
   bool orbit_status = false;
   int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional
   //
-  PairVface_Orbsize<Tint> ePair = POLY_NC_ReadVface_OrbSize(dataFile, iOrbit, n_act_div8, orbit_status);
+  using Tint = int; // This is actually not relevant here
+  PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(dataFile, iOrbit, n_act_div8, orbit_status);
   Face face(n_act);
   int idx=0;
   int n_actremain = n_act;
-  for (int iFace=0; iFace<ePair.Vface.size(); iFace++) {
+  for (size_t iFace=0; iFace<ePair.Vface.size(); iFace++) {
     size_t sizw = 8;
     if (n_actremain < 8)
       sizw = n_actremain;
-    uint8_t val = Vface[iFace];
+    uint8_t val = ePair.Vface[iFace];
     for (size_t i=0; i<sizw; i++) {
       face[idx] = val % 2;
       idx++;
-      val = val / 2
+      val = val / 2;
     }
     n_actremain -= 8;
   }
@@ -499,7 +487,7 @@ SingleEntryStatus<Tint> POLY_NC_ReadSingleEntryStatus(netCDF::NcFile & dataFile,
   bool orbit_status = true;
   int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional 
   //
-  PairVface_Orbsize<Tint> ePair = POLY_NC_ReadVface_OrbSize(dataFile, iOrbit, n_act_div8, orbit_status);
+  PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(dataFile, iOrbit, n_act_div8, orbit_status);
   bool status = ePair.Vface[0] % 2;
   Face face(n_act);
   int idx=0;
@@ -508,12 +496,12 @@ SingleEntryStatus<Tint> POLY_NC_ReadSingleEntryStatus(netCDF::NcFile & dataFile,
     size_t sizw = 8;
     if (n_actremain < 8)
       sizw = n_actremain;
-    uint8_t val = Vface[iFace];
+    uint8_t val = ePair.Vface[iFace];
     for (size_t i=0; i<sizw; i++) {
       if (idx > 0)
         face[idx-1] = val % 2;
       idx++;
-      val = val / 2
+      val = val / 2;
     }
     n_actremain -= 8;
   }
