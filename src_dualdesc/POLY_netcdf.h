@@ -255,7 +255,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, GRPinfo const& eGRP, bool con
   varGRPSIZE.putVar(V_grpsize.data());
   //
   if (orbit_setup) {
-    int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional 
+    int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional
     netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
     netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
     std::vector<std::string> LDim3{"n_act_div8", "n_orbit"};
@@ -263,8 +263,10 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, GRPinfo const& eGRP, bool con
     if (orbit_status)
       name = "orbit_status_incidence";
     netCDF::NcVar varORB_INCD = dataFile.addVar(name, "ubyte", LDim3);
-    std::vector<std::string> LDim4{"n_grpsize", "n_orbit"};
-    netCDF::NcVar varORB_SIZE = dataFile.addVar("orbit_size", "ubyte", LDim4);
+    if (orbit_status) {
+      std::vector<std::string> LDim4{"n_grpsize", "n_orbit"};
+      netCDF::NcVar varORB_SIZE = dataFile.addVar("orbit_size", "ubyte", LDim4);
+    }
   }
 }
 
@@ -322,12 +324,6 @@ GRPinfo<Telt,Tint> POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
 //
 
 template<typename Tint>
-struct SingleEntry {
-  Face face;
-  Tint OrbSize;
-};
-
-template<typename Tint>
 struct SingleEntryStatus {
   bool status;
   Face face;
@@ -348,15 +344,16 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
   std::vector<size_t> count_incd={1,Vface.size()};
   varORB_INCD.putVar(Vface.data(), start_incd, count_incd);
   //
-  netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
-  std::vector<size_t> start_size={iOrbit, 0};
-  std::vector<size_t> count_size={1,Vsize.size()};
-  varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
+  if (orbit_status) {
+    netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
+    std::vector<size_t> start_size={iOrbit, 0};
+    std::vector<size_t> count_size={1,Vsize.size()};
+    varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
+  }
 }
 
 
-template<typename Tint>
-void POLY_NC_WriteSingleEntry(netCDF::NcFile & dataFile, size_t const& iOrbit, SingleEntry<Tint> const& eEnt, size_t const& n_grpsize)
+void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face const& face)
 {
   std::vector<unsigned char> Vface;
   uint8_t expo = 1;
@@ -373,16 +370,14 @@ void POLY_NC_WriteSingleEntry(netCDF::NcFile & dataFile, size_t const& iOrbit, S
       val = 0;
     }
   };
-  for (int i=0; i<eEnt.face.size(); i++) {
-    bool bit = eEnt.face[i];
+  for (int i=0; i<face.size(); i++) {
+    bool bit = face[i];
     insertBit(bit);
   }
   if (siz > 0)
     Vface.insert(val);
   //
-  std::vector<unsigned char> Vsize = GetVectorUnsignedChar(eEnt.OrbSize);
-  for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
-    Vsize.push_back(0);
+  std::vector<unsigned char> Vsize;
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, false);
 }
 
@@ -460,24 +455,27 @@ PairVface_Orbsize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
   std::vector<unsigned char> Vface(n_act_div8);
   varORB_INCD.putVar(Vface.data(), start_incd, count_incd);
   //
-  netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
-  std::vector<size_t> start_size={iOrbit, 0};
-  std::vector<size_t> count_size={1,n_grpsize};
-  std::vector<unsigned char> Vsize(n_grpsize);
-  varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
-  //
-  return {Vface, GetTint_from_VectorUnsignedChar(Vsize)};
+  if (orbit_status) {
+    netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
+    std::vector<size_t> start_size={iOrbit, 0};
+    std::vector<size_t> count_size={1,n_grpsize};
+    std::vector<unsigned char> Vsize(n_grpsize);
+    varORB_SIZE.putVar(Vsize.data(), start_size, count_size);
+    //
+    return {Vface, GetTint_from_VectorUnsignedChar(Vsize)};
+  } else {
+    return {Vface,{}};
+  }
 }
 
 
 
-template<typename Tint>
-SingleEntry<Tint> POLY_NC_ReadSingleEntry(netCDF::NcFile & dataFile, size_t const& iOrbit)
+Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
 {
   netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act");
   size_t n_act = dimGRP_INCD.getSize();
   bool orbit_status = false;
-  int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional 
+  int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional
   //
   PairVface_Orbsize<Tint> ePair = POLY_NC_ReadVface_OrbSize(dataFile, iOrbit, n_act_div8, orbit_status);
   Face face(n_act);
@@ -495,7 +493,7 @@ SingleEntry<Tint> POLY_NC_ReadSingleEntry(netCDF::NcFile & dataFile, size_t cons
     }
     n_actremain -= 8;
   }
-  return {face, ePair.OrbSize};
+  return face;
 }
 
 

@@ -289,7 +289,7 @@ template<typename T, typename Telt>
 std::vector<Face> ConvertGAPread_ListFace(DataGAP<T,Telt> const& data, int const& n)
 {
   if (data.Nature != int_list) {
-    std::cerr << "It should be a list for effective conversion to face\n";
+    std::cerr << "It should be a list for effective conversion to list(face)\n";
     throw TerminalException{1};
   }
   std::vector<Face> ListFace;

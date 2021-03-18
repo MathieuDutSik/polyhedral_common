@@ -39,6 +39,21 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
 
 
 
+template<typename T, typename Tgroup>
+void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::string const& eFile)
+{
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  POLY_NC_WritePolytope(dataFile, eRec.EXT);
+  bool orbit_setup = true;
+  bool orbit_status = false;
+  POLY_NC_WriteGroup(dataFile, eRec.GRP, orbit_setup, orbit_status);
+  //
+  int n_orbit = eRec.ListFace.size();
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
+}
+
+
 
 
 
