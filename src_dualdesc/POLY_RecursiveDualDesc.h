@@ -2,6 +2,10 @@
 #define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 
 
+
+
+
+
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
