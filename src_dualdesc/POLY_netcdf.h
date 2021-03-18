@@ -122,7 +122,7 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
   bool IsMatch = false;
   if (eType == netCDF::NcType::nc_BYTE) {
     std::vector<signed char> V(eProd);
-    data.getVar(V.data());
+    varVAL.getVar(V.data());
     int idx=0;
     for (int i_row=0; i_row<n_row; i_row++)
       for (int i_col=0; i_col<n_col; i_col++) {
@@ -133,7 +133,7 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
   }
   if (eType == netCDF::NcType::nc_SHORT) {
     std::vector<signed short int> V(eProd);
-    data.getVar(V.data());
+    varVAL.getVar(V.data());
     int idx=0;
     for (int i_row=0; i_row<n_row; i_row++)
       for (int i_col=0; i_col<n_col; i_col++) {
@@ -144,7 +144,7 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
   }
   if (eType == netCDF::NcType::nc_INT) {
     std::vector<int> V(eProd);
-    data.getVar(V.data());
+    varVAL.getVar(V.data());
     int idx=0;
     for (int i_row=0; i_row<n_row; i_row++)
       for (int i_col=0; i_col<n_col; i_col++) {
@@ -155,7 +155,7 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
   }
   if (eType == netCDF::NcType::nc_INT64) {
     std::vector<int64_t> V(eProd);
-    data.getVar(V.data());
+    varVAL.getVar(V.data());
     int idx=0;
     for (int i_row=0; i_row<n_row; i_row++)
       for (int i_col=0; i_col<n_col; i_col++) {
