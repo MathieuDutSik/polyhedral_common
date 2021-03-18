@@ -2,6 +2,16 @@
 #define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 
 
+namespace datagap {
+
+static const int int_scalar = 1;
+static const int int_string = 2;
+static const int int_permutation = 3;
+static const int int_group = 4;
+static const int int_list  = 5;
+static const int int_record = 6;
+
+
 
 template<typename T, typename Telt>
 struct DataGAP {
@@ -41,22 +51,16 @@ std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
   };
   for (size_t i_char=0; i_char<n_char; i_char++) {
     std::string echar = estr.substr(i_char, 1);
-    if (echar == "(") {
+    if (echar == "(")
       LevelParenthesis++;
-    }
-    if (echar == ")") {
+    if (echar == ")")
       LevelParenthesis--;
-    }
-    if (echar == "[") {
+    if (echar == "[")
       LevelBracket++;
-    }
-    if (echar == "]") {
+    if (echar == "]")
       LevelBracket--;
-    }
-    if (LevelParenthesis == 0 && LevelBracket == 0 && echar == ",") {
-      size_t pos_end = i_char;
-      insert(pos_start, pos_end);
-    }
+    if (LevelParenthesis == 0 && LevelBracket == 0 && echar == ",")
+      insert(pos_start, i_char);
   }
   insert(pos_start, n_char);
   return LStr;
@@ -77,7 +81,7 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       throw TerminalException{1};
     }
     std::string str = full_str.substr(1, n_char-2);
-    return {2, {}, str, {}, {}, {}};
+    return {int_string, {}, str, {}, {}, {}};
   }
   // Case 5: a list
   if (full_str.substr(0,1) == "[") {
@@ -91,7 +95,7 @@ DataGAP ParseGAPString(std::string_view const& full_str)
     for (auto & estr : LStr) {
       LVal.push_back(ParseGAPString(estr));
     }
-    return {5, {}, {}, {}, LVal, {}};
+    return {int_list, {}, {}, {}, LVal, {}};
   }
   // Case 4: a group
   if (full_str.substr(0,1) == "G") {
@@ -109,7 +113,7 @@ DataGAP ParseGAPString(std::string_view const& full_str)
     for (auto & estr : LStr) {
       LVal.push_back(ParseGAPString(estr));
     }
-    return {4, {}, {}, {}, LVal, {}};
+    return {int_group, {}, {}, {}, LVal, {}};
   }
   // Case 6: the record
   if (full_str.substr(0,1) == "r") {
@@ -131,20 +135,107 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       DataGAP eEnt = ParseGAPString(sstr);
       LVal.push_back({name, eEnt});
     }
-    return {6, {}, {}, {}, {}, LVal};
+    return {int_record, {}, {}, {}, {}, LVal};
   }
   // Case 3: the permutation case
   if (full_str.substr(0,1) == "(") {
     Telt g = ParsePermutation(full_str);
-    return {3, {}, {}, g, {}, {}};
+    return {int_permutation, {}, {}, g, {}, {}};
   }
   // Case 1: the element
+  T scalar = ParseScalar<T>(full_str);
+  return {int_scalar, scalar, {}, {}, {}, {}};
+}
+
+
+
+template<typename T, typename Telt>
+DataGAP ParseGAPString(std::string const& eFile)
+{
+  std::ifstream is(eFile);
+  std::string line;
+  std::string full_str;
+  auto append_content=[&](std::string const& ustr) {
+    size_t n_char = ustr.size();
+    for (size_t i_char=0; i_char<n_char; i_char++) {
+      std::string echar = ustr.substr(i_char, 1);
+      if (echar != " ")
+        full_str += echar;
+    }
+  };
+  size_t iLine=0;
+  while (std::getline(is, line)) {
+    if (iLine == 0) {
+      if (line.size() < 8) {
+        std::cerr << "The first line should begin by \"return ....\"";
+        throw TerminalException{1};
+      }
+      if (line.substr(0, 7) != "return") {
+        std::cerr << "The first line should begin by \"return ....\"";
+        throw TerminalException{1};
+      }
+      append_content(line.substr(7, line.size() - 7));
+    } else {
+      append_content(line);
+    }
+    iLine++;
+  }
+  size_t n_char = full_str.size();
+  if (full_str.substr(n_char-1, 1) != ";") {
+    std::cerr << "The lčast character is not a semicolon ;. Wrong input\n";
+    throw TerminalException{1};
+  }
+  std::string_view full_view = full_str.substr(0, n_char-1);
+  return ParseGAPString(full_view);
+}
+
+
+
+template<typename T, typename Telt>
+T ConvertGAPread_ScalarT(DataGAP<T,Telt> const& data)
+{
+  if (data.Nature != int_scalar) {
+    std::cerr << "It should be a scalar for effective conversion to scalar\n";
+    throw TerminalException{1};
+  }
+  return data.scalar;
+}
+
+
+template<typename T, typename Telt>
+MyMatrix<T> ConvertGAPread_MyVectorT(DataGAP<T,Telt> const& data)
+{
+  if (data.Nature != int_list) {
+    std::cerr << "It should be a list for effective conversion to MyVector\n";
+    throw TerminalException{1};
+  }
+  std::vector<T> ListVal;
+  for (auto & eScal : data.ListEnt)
+    ListVal.push_back(ConvertGAPread_ScalarT(eScal));
+  size_t len = ListVal.size();
+  MyVector<T> V(len);
+  for (size_t i=0; i<len; i++)
+    V(i) = ListVal[i];
+  return V;
+}
+
+
+
+template<typename T, typename Telt>
+MyMatrix<T> ConvertGAPread_MyMatrixT(DataGAP<T,Telt> const& data)
+{
+  if (data.Nature != int_list) {
+    std::cerr << "It should be a list for effective conversion to MyMatrix\n";
+    throw TerminalException{1};
+  }
+  std::vector<MyVector<T>> ListV;
+  for (auto & eVect : data.ListEnt)
+    ListV.push_back(ConvertGAPread_MyVectorT(eVect));
+  return MatrixFromVectorFamily(ListV);
 }
 
 
 
 
-
-
-
+}
 #endif

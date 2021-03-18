@@ -2,6 +2,29 @@
 #define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 
 
+template<typename T, typename Tgroup>
+struct EquivariantDualDescription {
+  MyMatrix<T> EXT;
+  Tgroup GRP;
+  std::vector<Face> ListFace;
+};
+
+
+
+
+template<typename T, typename Tgroup>
+EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,Tgroup::Telt> const& data)
+{
+  if (data.Nature != datagap::int_record) {
+    std::cerr << "For EquivDualDesc, we need to have a record as entry\n";
+  }
+  
+}
+
+
+
+
+
 
 
 
