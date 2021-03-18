@@ -1,5 +1,5 @@
 #include "POLY_RecursiveDualDesc.h"
-
+#include "Permutation.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,9 +18,13 @@ int main(int argc, char *argv[])
     std::string File_FAC = argv[2];
     std::string File_NC  = argv[3];
     //
-    datagap::DataGAP dataEXT = ParseGAPFile(File_EXT);
-    datagap::DataGAP dataFAC = ParseGAPFile(File_FAC);
-    using Tgroup=permutalib::Group;
+    using T = mpq_class;
+    using Tint = mpz_class;
+    using Telt = permutalib::DoubleSidedPerm;
+    using Tgroup=permutalib::Group<Telt,Tint>;
+    using Telt = typename Tgroup::Telt;
+    datagap::DataGAP<T,Telt> dataEXT = ParseGAPFile(File_EXT);
+    datagap::DataGAP<T,Telt> dataFAC = ParseGAPFile(File_FAC);
     EquivariantDualDescription<T,Tgroup> RecEXT_GRP_LOrb = ConvertGAPread_EquivDualDesc(dataEXT, dataFAC);
     Write_EquivDualDesc(RecEXT_GRP_LOrb, File_NC);
   }

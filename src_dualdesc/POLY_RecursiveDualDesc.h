@@ -50,9 +50,10 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
   POLY_NC_WritePolytope(dataFile, eRec.EXT);
   bool orbit_setup = true;
   bool orbit_status = false;
+  using Tint = typename Tgroup::Tint;
   POLY_NC_WriteGroup(dataFile, eRec.GRP, orbit_setup, orbit_status);
   //
-  int n_orbit = eRec.ListFace.size();
+  size_t n_orbit = eRec.ListFace.size();
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
 }
@@ -113,7 +114,7 @@ public:
     std::vector<Telt> LGen = GeneratorsOfGroup(GRP);
     groupOrder = GRP.size();
     if (SavingTrigger) {
-      if (IsExisingFile(eFile)) {
+      if (IsExistingFile(eFile)) {
         dataFile.open(eFile, netCDF::NcFile::write);
       } else {
         dataFile.open(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
@@ -133,7 +134,7 @@ public:
       }
     }
   }
-  ~DatabaseOrbit()
+  ~DatabaseOrbits()
   {
     if (SavingTrigger) {
       RemoveFile(eFile);
@@ -172,8 +173,9 @@ public:
     Face eSetReturn(n_row);
     for (size_t i=0; i<n_row; i++)
       eSetReturn[i] = 1;
+    
     for (auto & eEnt : CompleteList_SetUndone) {
-      for (auto & eFace : eEnt) {
+      for (auto & eFace : eEnt.second) {
         eSetReturn = Intersection(eSetReturn, GetOrbitIntersection(eFace));
         if (eSetReturn.size() == 0)
           return eSetReturn;
@@ -208,8 +210,8 @@ public:
   size_t FuncGetMinimalUndoneOrbit()
   {
     for (auto & eEnt : CompleteList_SetUndone) {
-      if (eEnt.size() > 0) {
-        auto iter = eEnt.begin();
+      if (eEnt.second.size() > 0) {
+        auto iter = eEnt.second.begin();
         Face face = *iter;
         return DictOrbit[face].pos;
       }

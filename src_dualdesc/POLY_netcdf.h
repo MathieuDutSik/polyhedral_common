@@ -214,7 +214,7 @@ Tint GetTint_from_VectorUnsignedChar(std::vector<unsigned char> const& V)
 
 
 
-template<typename Tgroup, typename Tint>
+template<typename Tgroup>
 void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const& orbit_setup, bool const& orbit_status)
 {
   using Telt = typename Tgroup::Telt;
