@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
-#define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
+#ifndef INCLUDE_POLY_GAP_H
+#define INCLUDE_POLY_GAP_H
 
 
 namespace datagap {
@@ -29,9 +29,9 @@ struct DataGAP {
   // 3: permutation
   Telt permutation;
   // 4, 5: List of entries, which applies for group as well.
-  std::vector<DataGAP> ListEnt:
+  std::vector<DataGAP<T,Telt>> ListEnt;
   // 5: The entries of record
-  std::vector<std::pair<std::string, DataGAP>> ListRec;
+  std::vector<std::pair<std::string, DataGAP<T,Telt>>> ListRec;
 };
 
 
@@ -50,7 +50,7 @@ std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
     pos_start = pos2 + 1;
   };
   for (size_t i_char=0; i_char<n_char; i_char++) {
-    std::string echar = estr.substr(i_char, 1);
+    std::string echar = std::string(estr.substr(i_char, 1));
     if (echar == "(")
       LevelParenthesis++;
     if (echar == ")")
@@ -71,7 +71,7 @@ std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
 // It should not have any space in it
 
 template<typename T, typename Telt>
-DataGAP ParseGAPString(std::string_view const& full_str)
+DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
 {
   // Case 2: a string
   if (full_str.substr(0,1) == "\"") {
@@ -80,7 +80,7 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       std::cerr << "Parsing error for the string\n";
       throw TerminalException{1};
     }
-    std::string str = full_str.substr(1, n_char-2);
+    std::string str = std::string(full_str.substr(1, n_char-2));
     return {int_string, {}, str, {}, {}, {}};
   }
   // Case 5: a list
@@ -91,9 +91,9 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       throw TerminalException{1};
     }
     std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
-    std::vector<DataGAP> LVal;
+    std::vector<DataGAP<T,Telt>> LVal;
     for (auto & estr : LStr) {
-      LVal.push_back(ParseGAPString(estr));
+      LVal.push_back(ParseGAPString<T,Telt>(estr));
     }
     return {int_list, {}, {}, {}, LVal, {}};
   }
@@ -109,9 +109,9 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       throw TerminalException{1};
     }
     std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
-    std::vector<DataGAP> LVal;
+    std::vector<DataGAP<T,Telt>> LVal;
     for (auto & estr : LStr) {
-      LVal.push_back(ParseGAPString(estr));
+      LVal.push_back(ParseGAPString<T,Telt>(estr));
     }
     return {int_group, {}, {}, {}, LVal, {}};
   }
@@ -127,19 +127,19 @@ DataGAP ParseGAPString(std::string_view const& full_str)
       throw TerminalException{1};
     }
     std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
-    std::vector<std::pair<std::string, DataGAP>> LVal;
+    std::vector<std::pair<std::string, DataGAP<T,Telt>>> LVal;
     for (auto & estr : LStr) {
       size_t pos = estr.find(":=");
-      std::string name = estr.substr(0, pos);
+      std::string name = std::string(estr.substr(0, pos));
       std::string_view sstr = estr.substr(pos+2, estr.size() - 2 - pos);
-      DataGAP eEnt = ParseGAPString(sstr);
+      DataGAP<T,Telt> eEnt = ParseGAPString<T,Telt>(sstr);
       LVal.push_back({name, eEnt});
     }
     return {int_record, {}, {}, {}, {}, LVal};
   }
   // Case 3: the permutation case
   if (full_str.substr(0,1) == "(") {
-    Telt g = ParsePermutation(full_str);
+    Telt g = ParsePermutation<Telt>(full_str);
     return {int_permutation, {}, {}, g, {}, {}};
   }
   // Case 1: the element
@@ -150,7 +150,7 @@ DataGAP ParseGAPString(std::string_view const& full_str)
 
 
 template<typename T, typename Telt>
-DataGAP ParseGAPString(std::string const& eFile)
+DataGAP<T,Telt> ParseGAPFile(std::string const& eFile)
 {
   std::ifstream is(eFile);
   std::string line;
@@ -186,7 +186,7 @@ DataGAP ParseGAPString(std::string const& eFile)
     throw TerminalException{1};
   }
   std::string_view full_view = full_str.substr(0, n_char-1);
-  return ParseGAPString(full_view);
+  return ParseGAPString<T,Telt>(full_view);
 }
 
 
@@ -250,8 +250,9 @@ Telt ConvertGAPread_Permutation(DataGAP<T,Telt> const& data)
 
 
 template<typename T, typename Tgroup>
-Tgroup ConvertGAPread_PermutationGroup(DataGAP<T,Tgroup::Telt> const& data, int const& n)
+Tgroup ConvertGAPread_PermutationGroup(DataGAP<T,typename Tgroup::Telt> const& data, int const& n)
 {
+  using Telt = typename Tgroup::Telt;
   if (data.Nature != int_group) {
     std::cerr << "It should be a group for effective conversion to MyMatrix\n";
     throw TerminalException{1};

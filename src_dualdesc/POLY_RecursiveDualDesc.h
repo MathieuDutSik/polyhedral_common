@@ -17,7 +17,7 @@ struct EquivariantDualDescription {
 
 
 template<typename T, typename Tgroup>
-EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,Tgroup::Telt> const& dataFAC)
+EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,typename Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,Tgroup::Telt> const& dataFAC)
 {
   if (dataEXT.Nature != datagap::int_record) {
     std::cerr << "For EquivDualDesc, we need to have a record as entry\n";
@@ -98,7 +98,7 @@ public:
     ListOrbit.push_back(face);
     TotalNumber += orbSize;
     if (!status) {
-      nbOrbitdone++;
+      nbOrbitDone++;
     } else {
       nbUndone += orbSize;
     }
