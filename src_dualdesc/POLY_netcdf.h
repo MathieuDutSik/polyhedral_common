@@ -1,6 +1,8 @@
 #ifndef INCLUDE_POLY_NETCDF_H
 #define INCLUDE_POLY_NETCDF_H
 
+#include <netcdf>
+
 //
 // Reading and writing polytope
 //
@@ -10,8 +12,8 @@
 template<typename T>
 constexpr long GetMaximumPossibleCoefficient()
 {
-  long val1 = numeric_limits<T>::max();
-  long val2 = numeric_limits<T>::min();
+  long val1 = std::numeric_limits<T>::max();
+  long val2 = std::numeric_limits<T>::min();
   return std::min(-val2, val1);
 }
 
@@ -29,7 +31,7 @@ void POLY_NC_WritePolytope_SpecType(netCDF::NcFile & dataFile, MyMatrix<T> const
   int idx = 0;
   for (int i_row=0; i_row<n_row; i_row++)
     for (int i_col=0; i_col<n_col; i_col++) {
-      Twrite eVal_write = UniversalTypeConversion<Twrite,T>(M(i_row,i_col));
+      Twrite eVal_write = UniversalTypeConversion<Twrite,T>(EXT(i_row,i_col));
       A[idx] = eVal_write;
       idx++;
     }
@@ -91,16 +93,6 @@ void POLY_NC_WritePolytope(netCDF::NcFile & dataFile, MyMatrix<T> const& EXT)
 }
 
 
-template<typename T>
-void POLY_NC_CreateFilePolytope(std::string const& eFileNC, MyMatrix<T> const& EXT)
-{
-  netCDF::NcFile dataFile(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-  POLY_NC_WritePolytope(dataFile, EXT);
-}
-
-
-
-
 
 
 // Reading of polytope
@@ -115,14 +107,14 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
     std::cerr << "The variable EXT is missing\n";
     throw TerminalException{1};
   }
-  int nbDim=data.getDimCount();
+  int nbDim=varVAL.getDimCount();
   if (nbDim != 2) {
     std::cerr << "We have nbDim=" << nbDim << " but it should be 2\n";
     throw TerminalException{1};
   }
-  netCDF::NcDim eDim0=data.getDim(0);
+  netCDF::NcDim eDim0=varVAL.getDim(0);
   int n_col=eDim0.getSize();
-  netCDF::NcDim eDim1=data.getDim(1);
+  netCDF::NcDim eDim1=varVAL.getDim(1);
   int n_row=eDim1.getSize();
   int eProd = n_col * n_row;
   MyMatrix<T> EXT(n_row, n_col);
@@ -212,7 +204,7 @@ std::vector<unsigned char> GetVectorUnsignedChar(Tint const& eVal)
 template<typename Tint>
 Tint GetTint_from_VectorUnsignedChar(std::vector<unsigned char> const& V)
 {
-  Tint cstVal = 256;
+  Tint cst256 = 256;
   Tint retVal = 0;
   for (size_t i=0; i<V.size(); i++) {
     size_t j = V.size() - 1 - i;
@@ -290,7 +282,7 @@ GRPinfo<Telt,Tint> POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
   int n_act=eDim0.getSize();
   netCDF::NcDim eDim1 = varGEN.getDim(1);
   int n_gen=eDim1.getSize();
-  int eProd = n_col * n_row;
+  int eProd = n_act * n_gen;
   //
   std::vector<Telt> LGen(n_gen);
   std::vector<int> V1(eProd);

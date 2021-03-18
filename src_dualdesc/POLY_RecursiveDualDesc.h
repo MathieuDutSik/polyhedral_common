@@ -1,6 +1,10 @@
 #ifndef INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 #define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 
+#include "POLY_ThreadDualDescription.h"
+#include "POLY_GAP.h"
+#include "POLY_netcdf.h"
+
 
 template<typename T, typename Tgroup>
 struct EquivariantDualDescription {
