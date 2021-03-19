@@ -68,6 +68,45 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 
 
 
+template<typename Tgroup>
+Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
+{
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = GRP.GeneratorsAsGroup();
+  int n = GRP.n_act();
+  Face rList = gList;
+  while(true) {
+    size_t eSumPrev = rList.count();
+    for (auto & eGen : LGen) {
+      for (int i=0; i<n; i++) {
+        std::size_t j = OnPoints(i, eGen);
+        if (rList[i] == 0)
+          rList[j]=0;
+      }
+    }
+    size_t eSum = rList.count();
+    if (eSum == eSumPrev)
+      break;
+  }
+  return rList;
+}
+
+
+template<typename Tgroup>
+Face OrbitUnion(Tgroup const& GRP, Face const& gList)
+{
+  int n = GRP.n_act();
+  Face gListB(n);
+  for (int i=0; i<n; i++)
+    gListB[i] = 1 - gList[i];
+  Face rListB=OrbitIntersection(GRP, gListB);
+  for (int i=0; i<n; i++)
+    rListB[i] = 1 - rListB[i];
+  return rListB;
+}
+
+
+
 
 
 
@@ -181,10 +220,9 @@ public:
     Face eSetReturn(n_row);
     for (size_t i=0; i<n_row; i++)
       eSetReturn[i] = 1;
-    
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & eFace : eEnt.second) {
-        eSetReturn = Intersection(eSetReturn, GetOrbitIntersection(eFace));
+        eSetReturn = Intersection(eSetReturn, OrbitIntersection(GRP, eFace));
         if (eSetReturn.size() == 0)
           return eSetReturn;
       }
