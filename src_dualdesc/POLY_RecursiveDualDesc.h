@@ -17,7 +17,7 @@ struct EquivariantDualDescription {
 
 
 template<typename T, typename Tgroup>
-EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,typename Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,Tgroup::Telt> const& dataFAC)
+EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,typename Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,typename Tgroup::Telt> const& dataFAC)
 {
   if (dataEXT.Nature != datagap::int_record) {
     std::cerr << "For EquivDualDesc, we need to have a record as entry\n";
@@ -25,17 +25,26 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
   }
   int pos_EXT = -1;
   int pos_GRP = -1;
-  for (int pos=0; pos<dataEXT.ListRec.size(); pos++) {
+  int n_pos = dataEXT.ListRec.size();
+  for (int pos=0; pos<n_pos; pos++) {
     if (dataEXT.ListRec[pos].first == "EXT")
       pos_EXT = pos;
     if (dataEXT.ListRec[pos].first == "Group")
       pos_GRP = pos;
   }
-  MyMatrix<T> EXT = ConvertGAPread_MyMatrixT(dataEXT.ListRec[pos_EXT].second);
+  if (pos_EXT == -1) {
+    std::cerr << "Failed to find entry EXT in the record\n";
+    throw TerminalException{1};
+  }
+  if (pos_GRP == -1) {
+    std::cerr << "Failed to find entry Group in the record\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> EXT = datagap::ConvertGAPread_MyMatrixT(dataEXT.ListRec[pos_EXT].second);
   int n_rows = EXT.rows();
-  Tgroup GRP = ConvertGAPread_PermutationGroup(dataEXT.ListRec[pos_GRP].second, n_rows);
+  Tgroup GRP = datagap::ConvertGAPread_PermutationGroup<T, Tgroup>(dataEXT.ListRec[pos_GRP].second, n_rows);
   //
-  std::vector<Face> ListFace = ConvertGAPread_ListFace(dataFAC);
+  std::vector<Face> ListFace = ConvertGAPread_ListFace(dataFAC, n_rows);
   //
   return {EXT, GRP, ListFace};
 }
@@ -50,7 +59,6 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
   POLY_NC_WritePolytope(dataFile, eRec.EXT);
   bool orbit_setup = true;
   bool orbit_status = false;
-  using Tint = typename Tgroup::Tint;
   POLY_NC_WriteGroup(dataFile, eRec.GRP, orbit_setup, orbit_status);
   //
   size_t n_orbit = eRec.ListFace.size();

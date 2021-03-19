@@ -139,11 +139,11 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
   }
   // Case 3: the permutation case
   if (full_str.substr(0,1) == "(") {
-    Telt g = ParsePermutation<Telt>(full_str);
+    Telt g = ParsePermutation(full_str);
     return {int_permutation, {}, {}, g, {}, {}};
   }
   // Case 1: the element
-  T scalar = ParseScalar<T>(full_str);
+  T scalar = ParseScalar<T>(std::string(full_str));
   return {int_scalar, scalar, {}, {}, {}, {}};
 }
 
