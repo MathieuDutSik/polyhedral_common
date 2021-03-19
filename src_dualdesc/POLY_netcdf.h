@@ -179,14 +179,14 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
 //
 
 template<typename Tint>
-std::vector<unsigned char> GetVectorUnsignedChar(Tint const& eVal)
+std::vector<uint8_t> GetVectorUnsignedChar(Tint const& eVal)
 {
-  std::vector<unsigned char> V;
+  std::vector<uint8_t> V;
   Tint workVal = eVal;
   Tint cst256 = 256;
   while(true) {
     Tint res = ResInt(workVal, cst256);
-    unsigned char res_i = UniversalTypeConversion<uint8_t,Tint>(res);
+    uint8_t res_i = UniversalTypeConversion<uint8_t,Tint>(res);
     V.push_back(res_i);
     workVal = QuoInt(workVal, cst256);
     if (workVal != 0)
@@ -196,7 +196,7 @@ std::vector<unsigned char> GetVectorUnsignedChar(Tint const& eVal)
 }
 
 template<typename Tint>
-Tint GetTint_from_VectorUnsignedChar(std::vector<unsigned char> const& V)
+Tint GetTint_from_VectorUnsignedChar(std::vector<uint8_t> const& V)
 {
   Tint cst256 = 256;
   Tint retVal = 0;
@@ -235,7 +235,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const
   }
   varGEN.putVar(A.data());
   //
-  std::vector<unsigned char> V_grpsize = GetVectorUnsignedChar(GRP.size());
+  std::vector<uint8_t> V_grpsize = GetVectorUnsignedChar(GRP.size());
   int n_grpsize = V_grpsize.size();
   netCDF::NcDim eDimGRP = dataFile.addDim("n_grpsize", n_grpsize);
   std::vector<std::string> LDim2{"n_grpsize"};
@@ -315,7 +315,7 @@ struct SingleEntryStatus {
 
 
 
-void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, std::vector<unsigned char> const& Vface, std::vector<unsigned char> const& Vsize, bool const& orbit_status)
+void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, std::vector<uint8_t> const& Vface, std::vector<uint8_t> const& Vsize, bool const& orbit_status)
 {
   std::string name = "orbit_incidence";
   if (orbit_status)
@@ -336,7 +336,7 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
 
 void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face const& face)
 {
-  std::vector<unsigned char> Vface;
+  std::vector<uint8_t> Vface;
   uint8_t expo = 1;
   uint8_t val = 0;
   uint8_t siz = 0;
@@ -358,7 +358,7 @@ void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face con
   if (siz > 0)
     Vface.push_back(val);
   //
-  std::vector<unsigned char> Vsize;
+  std::vector<uint8_t> Vsize;
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, false);
 }
 
@@ -366,7 +366,7 @@ void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face con
 template<typename Tint>
 void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOrbit, SingleEntryStatus<Tint> const& eEnt, size_t const& n_grpsize)
 {
-  std::vector<unsigned char> Vface;
+  std::vector<uint8_t> Vface;
   uint8_t expo = 1;
   uint8_t val = 0;
   uint8_t siz = 0;
@@ -389,7 +389,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
   if (siz > 0)
     Vface.push_back(val);
   //
-  std::vector<unsigned char> Vsize = GetVectorUnsignedChar(eEnt.OrbSize);
+  std::vector<uint8_t> Vsize = GetVectorUnsignedChar(eEnt.OrbSize);
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
@@ -414,7 +414,7 @@ void POLY_NC_SetBit(netCDF::NcFile & dataFile, size_t const& iOrbit, bool const&
 
 template<typename Tint>
 struct PairVface_OrbSize {
-  std::vector<unsigned char> Vface;
+  std::vector<uint8_t> Vface;
   Tint OrbSize;
 };
 
@@ -431,14 +431,14 @@ PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
   netCDF::NcVar varORB_INCD = dataFile.getVar(name);
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,n_act_div8};
-  std::vector<unsigned char> Vface(n_act_div8);
+  std::vector<uint8_t> Vface(n_act_div8);
   varORB_INCD.putVar(start_incd, count_incd, Vface.data());
   //
   if (orbit_status) {
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,n_grpsize};
-    std::vector<unsigned char> Vsize(n_grpsize);
+    std::vector<uint8_t> Vsize(n_grpsize);
     varORB_SIZE.putVar(start_size, count_size, Vsize.data());
     //
     return {Vface, GetTint_from_VectorUnsignedChar<Tint>(Vsize)};
