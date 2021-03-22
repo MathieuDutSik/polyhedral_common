@@ -16,6 +16,11 @@ struct EquivariantDualDescription {
 
 
 
+
+
+
+
+
 template<typename T, typename Tgroup>
 EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataGAP<T,typename Tgroup::Telt> const& dataEXT, datagap::DataGAP<T,typename Tgroup::Telt> const& dataFAC)
 {
@@ -264,6 +269,15 @@ public:
     }
   }
 };
+
+
+
+
+
+
+
+
+
 
 
 
