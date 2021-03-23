@@ -69,10 +69,8 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
 
 
 
-template<typename T>
-std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT,
-					      TheGroupFormat const& GRP,
-					      std::string const& ansProg, std::ostream& os)
+template<typename T, typename Tgroup>
+std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
 {
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbVert=EXTred.rows();
@@ -113,7 +111,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT,
     throw TerminalException{1};
   }
   std::vector<Face> TheOutput=OrbitSplittingSet(ListIncd, GRP);
-  os << "DFOC |GRP|=" << GRP.size << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
+  os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
 }
 

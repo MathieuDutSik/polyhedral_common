@@ -13,10 +13,45 @@
 typedef std::shared_ptr<permlib::PermutationGroup> PermutationGroupPtr;
 typedef boost::dynamic_bitset<> DsetList;
 
+
+template<typename Tint_inp>
 struct TheGroupFormat {
+public:
+  using Tint = Tint_inp;
+  using Telt = permlib::Permutation;
   permlib::dom_int n;
-  mpz_class size;
+  Tint_inp size;
   PermutationGroupPtr group;
+  TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp)
+  {
+    std::vector<permlib::Permutation::ptr> generatorList;
+    for (auto & eGen : ListPerm) {
+      std::vector<permlib::dom_int> v(n);
+      for (std::size_t i=0; i<n; i++)
+        v[i]=eGen.at(i);
+      generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
+    }
+    n = n_inp;
+    group = construct(n, generatorList.begin(), generatorList.end());
+    size = TheGroupRet.group->order<mpz_class>();
+  }
+  std::vector<Telt> GeneratorsOfGroup() const
+  {
+    // copy operation, but that is what it is.
+    std::vector<Telt> LGen;
+    for (auto & eval : group->S) {
+      LGen.push_back(*eval);
+    }
+    return LGen;
+  }
+  Tint size() const
+  {
+    return size;
+  }
+  int n_act() const
+  {
+    return n;
+  }
 };
 
 
@@ -51,37 +86,21 @@ Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
 }
 
 
-TheGroupFormat GetPermutationGroup(permlib::dom_int const& n, std::vector<permlib::Permutation> const& ListPerm)
+
+template<typename Tgroup>
+Tgroup ReadGroup(std::istream &is)
 {
-  std::list<permlib::Permutation::ptr> generatorList;
-  for (auto & eGen : ListPerm) {
-    std::vector<permlib::dom_int> v(n);
-    for (std::size_t i=0; i<n; i++)
-      v[i]=eGen.at(i);
-    generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
-  }
-  TheGroupFormat TheGroupRet;
-  TheGroupRet.n=n;
-  TheGroupRet.group=construct(n, generatorList.begin(), generatorList.end());
-  TheGroupRet.size=TheGroupRet.group->order<mpz_class>();
-  return TheGroupRet;
-}
-
-
-
-TheGroupFormat ReadGroup(std::istream &is)
-{
+  using Telt = Tgroup::Telt;
   if (!is.good()) {
     std::cerr << "ReadGroup operation failed because stream is not valid\n";
     throw TerminalException{1};
   }
-
   int nbGen;
   permlib::dom_int n;
   is >> n;
   is >> nbGen;
   std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
-  std::vector<permlib::Permutation> ListGen;
+  std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
     std::vector<permlib::dom_int> v(n);
     for (std::size_t i=0; i<n; i++) {
@@ -97,45 +116,53 @@ TheGroupFormat ReadGroup(std::istream &is)
     }
     ListGen.push_back(permlib::Permutation(v));
   }
-  return GetPermutationGroup(n, ListGen);
+  return Tgroup(ListGen, n);
 }
 
 
 
-void WriteGroup(std::ostream &os, TheGroupFormat const& TheGRP)
+template<typename Tgroup>
+void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
 {
-  std::list<permlib::Permutation::ptr> ListGen=TheGRP.group->S;
+  using Telt = Tgroup::Telt;
+  using Tint = Tgroup::Tint;
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen=ListGen.size();
   os << TheGRP.n << " " << nbGen << "\n";
   for (auto & eGen : ListGen) {
     for (std::size_t i=0; i<TheGRP.n; i++) {
-      permlib::dom_int eVal=eGen->at(i);
+      int eVal=OnPoints(i, eGen);
       os << " " << eVal;
     }
     os << "\n";
   }
 }
 
-void WriteGroupMakeUp(std::ostream &os, TheGroupFormat const& TheGRP)
+
+template<typename Tgroup>
+void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
 {
-  os << "nb acting element=" << TheGRP.n << "\n";
-  std::list<permlib::Permutation::ptr> ListGen=TheGRP.group->S;
+  using Telt = Tgroup::Telt;
+  os << "nb acting element=" << TheGRP.n_act() << "\n";
+  std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   int nbGen=0;
   for (auto & eGen : ListGen) {
     for (std::size_t i=0; i<TheGRP.n; i++) {
-      permlib::dom_int eVal=eGen->at(i);
+      int eVal = OnPoints(i, eGen);
       os << " " << eVal;
     }
     os << "\n";
     nbGen++;
   }
   os << "nbGen=" << nbGen << "\n";
-  os << "size=" << TheGRP.group->order<mpz_class>() << "\n";
+  os << "size=" << TheGRP.size() << "\n";
 }
 
-void WriteGroupGAP(std::ostream &os, TheGroupFormat const& TheGRP)
+template<typename Tgroup>
+void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 {
-  std::list<permlib::Permutation::ptr> ListGen=TheGRP.group->S;
+  using Telt = Tgroup::Telt;
+  std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   os << "local eListList, ListGen, GRP;\n";
   os << "eListList:=[\n";
   bool IsFirst=true;
@@ -145,7 +172,7 @@ void WriteGroupGAP(std::ostream &os, TheGroupFormat const& TheGRP)
     IsFirst=false;
     os << "[";
     for (std::size_t i=0; i<TheGRP.n; i++) {
-      permlib::dom_int eVal=1+eGen->at(i);
+      int eVal = 1 + OnPoints(i, eGen);
       if (i>0)
 	os << ",";
       os << eVal;
@@ -155,7 +182,7 @@ void WriteGroupGAP(std::ostream &os, TheGroupFormat const& TheGRP)
   os << "];\n";
   os << "ListGen:=List(eListList, PermList);\n";
   os << "GRP:=Group(ListGen);\n";
-  os << "SetSize(GRP, " << TheGRP.size << ");\n";
+  os << "SetSize(GRP, " << TheGRP.size() << ");\n";
   os << "return GRP;\n";
 }
 
@@ -837,7 +864,6 @@ std::vector<int> PermutationOrbit(permlib::Permutation const& ePerm)
 
 void WritePermutationGAP(std::ostream&os, permlib::Permutation const& ePerm)
 {
-  //  std::cerr << "Beginning of WritePermutationGAP\n";
   if (ePerm.isIdentity() ) {
     os << "()";
     return;
@@ -868,7 +894,6 @@ void WritePermutationGAP(std::ostream&os, permlib::Permutation const& ePerm)
     }
     os << ")";
   }
-  //  std::cerr << "End of WritePermutationGAP\n";
 }
 
 
