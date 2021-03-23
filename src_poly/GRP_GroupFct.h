@@ -12,6 +12,104 @@
 
 
 //
+// permutation functions
+//
+
+template<typename Telt>
+std::vector<int> PermutationOrbit(Telt const& ePerm)
+{
+  int siz=ePerm.size();
+  std::vector<int> StatusOrbit(siz,-1);
+  int idxOrbit=0;
+  auto GetUnsetPoint=[&](void) -> int {
+    for (int i=0; i<siz; i++)
+      if (StatusOrbit[i] == -1)
+	return i;
+    return -1;
+  };
+  while(true) {
+    int iPoint=GetUnsetPoint();
+    if (iPoint == -1)
+      break;
+    int iPointWork=iPoint;
+    while(true) {
+      StatusOrbit[iPointWork] = idxOrbit;
+      iPointWork = OnPoints(iPointWork, ePerm);
+      if (iPointWork == iPoint)
+	break;
+    }
+    idxOrbit++;
+  }
+  return StatusOrbit;
+}
+
+
+template<typename Telt>
+void WritePermutationGAP(std::ostream&os, Telt const& ePerm)
+{
+  if (ePerm.isIdentity() ) {
+    os << "()";
+    return;
+  }
+  std::vector<int> eVectOrbit=PermutationOrbit(ePerm);
+  int nbOrbit=VectorMax(eVectOrbit) + 1;
+  int siz=eVectOrbit.size();
+  for (int iOrbit=0; iOrbit<nbOrbit; iOrbit++) {
+    int nbMatch=0;
+    int eFirst=-1;
+    for (int i=0; i<siz; i++)
+      if (eVectOrbit[i] == iOrbit) {
+	if (nbMatch == 0) {
+	  eFirst=i;
+	}
+	nbMatch++;
+      }
+    std::vector<int> TheList(nbMatch);
+    TheList[0]=eFirst;
+    for (int i=1; i<nbMatch; i++)
+      TheList[i] = OnPoints(eTheList[i-1], ePerm);
+    os << "(";
+    for (int i=0; i<nbMatch; i++) {
+      if (i>0)
+	os << ",";
+      int val=TheList[i]+1;
+      os << val;
+    }
+    os << ")";
+  }
+}
+
+
+template<typename T, typename Telt>
+Telt SortingPerm(std::vector<T> const & ListV)
+{
+  struct PairData {
+    std::size_t i;
+    T x;
+  };
+  std::size_t len=ListV.size();
+  //  std::cerr << "len=" << len << "\n";
+  std::vector<PairData> ListPair(len);
+  for (std::size_t i=0; i<len; i++) {
+    PairData ePair{i, ListV[i]};
+    ListPair[i]=ePair;
+  }
+  sort(ListPair.begin(), ListPair.end(),
+       [](PairData const & x1, PairData const& x2) -> bool {
+	 if (x1.x < x2.x)
+	   return true;
+	 if (x2.x < x1.x)
+	   return false;
+	 return x1.i< x2.i;
+       });
+  std::vector<int> v(len);
+  for (std::size_t i=0; i<len; i++)
+    v[i]=ListPair[i].i;
+  return Telt(v);
+}
+
+
+//
 // Template general code for input output of groups
 //
 
@@ -743,7 +841,7 @@ ResultMinimum GetMinimumRecord(OrbitMinimumArr const& ArrMin, Face const& eFace)
       FaceMin=ListFace[0];
       nbAtt=0;
     }
-    if (ListFace[0] == FaceMin) 
+    if (ListFace[0] == FaceMin)
       nbAtt++;
     int test=Increment();
     if (test == -1)
@@ -835,106 +933,7 @@ bool IsSubgroup(TheGroupFormat const& g1, TheGroupFormat const& g2)
 
 
 
-template<typename T>
-permlib::Permutation SortingPerm(std::vector<T> const & ListV)
-{
-  struct PairData {
-    std::size_t i;
-    T x;
-  };
-  std::size_t len=ListV.size();
-  //  std::cerr << "len=" << len << "\n";
-  std::vector<PairData> ListPair(len);
-  for (std::size_t i=0; i<len; i++) {
-    PairData ePair{i, ListV[i]};
-    ListPair[i]=ePair;
-  }
-  sort(ListPair.begin(), ListPair.end(),
-       [](PairData const & x1, PairData const& x2) -> bool {
-	 if (x1.x < x2.x)
-	   return true;
-	 if (x2.x < x1.x)
-	   return false;
-	 return x1.i< x2.i;
-       });
-  std::vector<permlib::dom_int> v(len);
-  for (std::size_t i=0; i<len; i++)
-    v[i]=ListPair[i].i;
-  return permlib::Permutation(v);
-}
 
-
-
-
-
-std::vector<int> PermutationOrbit(permlib::Permutation const& ePerm)
-{
-  //  std::cerr << "  Beginning of PermutationOrbit\n";
-  int siz=ePerm.size();
-  //  for (int i=0; i<siz; i++) {
-  //    std::cerr << "i=" << i << " img=" << ePerm.at(i) << "\n";
-  //  }
-  std::vector<int> StatusOrbit(siz,-1);
-  int idxOrbit=0;
-  auto GetUnsetPoint=[&](void) -> int {
-    for (int i=0; i<siz; i++)
-      if (StatusOrbit[i] == -1)
-	return i;
-    return -1;
-  };
-  while(true) {
-    int iPoint=GetUnsetPoint();
-    //    std::cerr << "iPoint=" << iPoint << " idxOrbit=" << idxOrbit << "\n";
-    if (iPoint == -1)
-      break;
-    int iPointWork=iPoint;
-    while(true) {
-      StatusOrbit[iPointWork]=idxOrbit;
-      iPointWork=ePerm.at(iPointWork);
-      //      std::cerr << "  iPointWork=" << iPointWork << "\n";
-      if (iPointWork == iPoint)
-	break;
-    }
-    idxOrbit++;
-  }
-  //  std::cerr << "  End of PermutationOrbit\n";
-  return StatusOrbit;
-}
-
-
-void WritePermutationGAP(std::ostream&os, permlib::Permutation const& ePerm)
-{
-  if (ePerm.isIdentity() ) {
-    os << "()";
-    return;
-  }
-  std::vector<int> eVectOrbit=PermutationOrbit(ePerm);
-  int nbOrbit=VectorMax(eVectOrbit) + 1;
-  int siz=eVectOrbit.size();
-  for (int iOrbit=0; iOrbit<nbOrbit; iOrbit++) {
-    int nbMatch=0;
-    int eFirst=-1;
-    for (int i=0; i<siz; i++)
-      if (eVectOrbit[i] == iOrbit) {
-	if (nbMatch == 0) {
-	  eFirst=i;
-	}
-	nbMatch++;
-      }
-    std::vector<int> TheList(nbMatch);
-    TheList[0]=eFirst;
-    for (int i=1; i<nbMatch; i++)
-      TheList[i]=ePerm.at(TheList[i-1]);
-    os << "(";
-    for (int i=0; i<nbMatch; i++) {
-      if (i>0)
-	os << ",";
-      int val=TheList[i]+1;
-      os << val;
-    }
-    os << ")";
-  }
-}
 
 
 
