@@ -12,8 +12,40 @@
 
 
 //
-// Template general code for groups
+// Template general code for input output of groups
 //
+
+template<typename Tgroup>
+Tgroup ReadGroup(std::istream &is)
+{
+  using Telt = Tgroup::Telt;
+  if (!is.good()) {
+    std::cerr << "ReadGroup operation failed because stream is not valid\n";
+    throw TerminalException{1};
+  }
+  int nbGen;
+  permlib::dom_int n;
+  is >> n;
+  is >> nbGen;
+  std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
+  std::vector<Telt> ListGen;
+  for (int iGen=0; iGen<nbGen; iGen++) {
+    std::vector<permlib::dom_int> v(n);
+    for (std::size_t i=0; i<n; i++) {
+      permlib::dom_int eVal;
+      is >> eVal;
+      if (eVal > n-1) {
+	std::cerr << "Error in ReadGroup function\n";
+	std::cerr << "Number of elements acted on n=" << n << "\n";
+	std::cerr << "But eVal=" << eVal << "\n";
+	throw TerminalException{1};
+      }
+      v[i]=eVal;
+    }
+    ListGen.push_back(permlib::Permutation(v));
+  }
+  return Tgroup(ListGen, n);
+}
 
 template<typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
@@ -127,6 +159,64 @@ std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
 }
 
 
+//
+// Several building of new groups.
+//
+
+template<typename Tgroup>
+Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
+{
+  using Telt = Tgroup::Telt;
+  int nb=eList.count();
+  if (nb == 0) {
+    std::cerr << "Call of ReducedGroupAction with 0 points\n";
+    throw TerminalException{1};
+  }
+  std::vector<int> ListPositionRev(TheGRP.n, -1);
+  int aRow=eList.find_first();
+  std::vector<int> ListPosition(nb,-1);
+  for (int iRow=0; iRow<nb; iRow++) {
+    ListPositionRev[aRow]=iRow;
+    ListPosition[iRow]=aRow;
+    aRow=eList.find_next(aRow);
+  }
+  std::vector<Telt> ListGen;
+  for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
+    std::vector<permlib::dom_int> v(nb);
+    for (int i=0; i<nb; i++) {
+      int eVal1=ListPosition[i];
+      int eVal2=OnPoints(eVal1, eGen);
+      int eVal3=ListPositionRev[eVal2];
+      v[i]=eVal3;
+    }
+    ListGen.push_back(Telt(v));
+  }
+  return Tgroup(ListGen, nb);
+}
+
+
+template<typename Tgroup>
+Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
+{
+  using Telt = Tgroup::Telt;
+  int n=TheGRP.n;
+  Telt ePermR=~ePerm;
+  std::vector<Telt> ListGen;
+  for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
+    std::vector<permlib::dom_int> v(n);
+    for (int i=0; i<n; i++) {
+      int eVal1=OnPoints(i, ePermR);
+      int eVal2=OnPoints(eVal1, eGen);
+      int eVal3=OnPoints(eVal2, ePerm);
+      v[i]=eVal3;
+    }
+    ListGen.push_back(Telt(v));
+  }
+  return Tgroup(ListGen, n);
+}
+
+
+
 
 //
 // Specific implementation with permlib
@@ -186,7 +276,7 @@ Face Face_EquivSimplification(Face const& eFace)
 
 
 
-EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n, PermutationGroupPtr Tconst& group, Face const& eList1, Face const& eList2, int const& eMethod)
+std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n, PermutationGroupPtr Tconst& group, Face const& eList1, Face const& eList2, int const& eMethod)
 {
   permlib::Permutation::ptr mappingElement;
   int nb1=eList1.count();
@@ -208,7 +298,7 @@ EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n
   return {false, {}};
 }
 
-EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
+std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
 {
   mpz_class MaxSize=10000;
   int eMethod = 1;
@@ -221,8 +311,8 @@ EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, Per
 
 bool PERMLIB_TestEquivalence(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
 {
-  EquivTest<permlib::Permutation> eRes=PERMLIB_TestEquivalenceGeneral(n, group, eList1, eList2);
-  return eRes.TheReply;
+  std::pair<bool,permlib::Permutation> eRes=PERMLIB_TestEquivalenceGeneral(n, group, eList1, eList2);
+  return eRes.first;
 }
 
 
@@ -240,13 +330,13 @@ Face PERMLIB_Canonicalization(int const& n, PermutationGroupPtr const& group, Fa
     eListI[aRow]=1;
     aRow=eList.find_next(aRow);
   }
-  eListO=smallestSetImage(*TheGRP.group, eListI);
+  eListO=smallestSetImage(n, *group, eListI);
   Face TheRet;
   for (int i=0; i<n; i++)
     if (eListO[i] == 1)
       TheRet[i]=1;
 #ifdef DEBUG_GROUP
-  bool test=PERMLIB_TestEquivalence(TheGRP, eList, TheRet);
+  bool test=PERMLIB_TestEquivalence(n, *group, eList, TheRet);
   if (!test) {
     std::cerr << "We have major debugging to do\n";
     throw TerminalException{1};
@@ -257,15 +347,47 @@ Face PERMLIB_Canonicalization(int const& n, PermutationGroupPtr const& group, Fa
 
 
 
+PermutationGroupPtr PERMLIB_GetStabilizer_general(PermutationGroupPtr const& group, Face const& eList, int const& opt)
+{
+  Face NewList=Face_EquivSimplification(eList);
+  std::set<int> eSet=GetSetFrom_DB(NewList);
+  if (opt == 0)
+    return setStabilizer_classic(*TheGRP.group, eSet.begin(), eSet.end());
+  if (opt == 1)
+    return setStabilizer_partition(*TheGRP.group, eSet.begin(), eSet.end());
+}
+
+
+
+
+
+PermutationGroupPtr PERMLIB_GetStabilizer(PermutationGroupPtr const& group, Face const& eList)
+{
+  mpz_class MaxSize=10000;
+  if (TheGRP.size < MaxSize) {
+    return PERMLIB_GetStabilizer_general(group, eList, 0);
+  }
+  else {
+    return PERMLIB_GetStabilizer_general(group, eList, 1);
+  }
+}
+
+
+
+
 
 template<typename Tint_inp>
 struct TheGroupFormat {
+private:
+  int n;
+  Tint_inp size;
+  PermutationGroupPtr group;
+  TheGroupFormat(int const& _n, Tint_inp const& _size, PermutationGroupPtr const& _group) : n(_n), size(_size), group(_group)
+  {
+  }
 public:
   using Tint = Tint_inp;
   using Telt = permlib::Permutation;
-  permlib::dom_int n;
-  Tint_inp size;
-  PermutationGroupPtr group;
   TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp)
   {
     std::vector<permlib::Permutation::ptr> generatorList;
@@ -282,6 +404,16 @@ public:
   Face CanonicalImage(Face const& eFace) const
   {
     return PERMLIB_Canonicalization(n, group, eFace);
+  }
+  TheGroupFormat Stabilizer_OnSets(Face const& f) const
+  {
+    PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, f);
+    Tint_inp size_stab = group_stab->order<Tint_inp>();
+    return TheGroupFormat(n, size_stab, group_stab);
+  }
+  std::pair<bool,permlib::Permutation> RepresentativeAction_OnSets(Face const& f1, Face const& f2) const
+  {
+    return PERMLIB_TestEquivalenceGeneral(n, group, f1, f2);
   }
   std::vector<Telt> GeneratorsOfGroup() const
   {
@@ -333,37 +465,6 @@ Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
 
 
 
-template<typename Tgroup>
-Tgroup ReadGroup(std::istream &is)
-{
-  using Telt = Tgroup::Telt;
-  if (!is.good()) {
-    std::cerr << "ReadGroup operation failed because stream is not valid\n";
-    throw TerminalException{1};
-  }
-  int nbGen;
-  permlib::dom_int n;
-  is >> n;
-  is >> nbGen;
-  std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
-  std::vector<Telt> ListGen;
-  for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> v(n);
-    for (std::size_t i=0; i<n; i++) {
-      permlib::dom_int eVal;
-      is >> eVal;
-      if (eVal > n-1) {
-	std::cerr << "Error in ReadGroup function\n";
-	std::cerr << "Number of elements acted on n=" << n << "\n";
-	std::cerr << "But eVal=" << eVal << "\n";
-	throw TerminalException{1};
-      }
-      v[i]=eVal;
-    }
-    ListGen.push_back(permlib::Permutation(v));
-  }
-  return Tgroup(ListGen, n);
-}
 
 
 void WriteVectorInt(std::ostream &os, std::vector<int> const& OneInc)
@@ -418,34 +519,6 @@ void GROUP_FuncInsertInSet(TheGroupFormat const& TheGRP, Face const& eList, std:
 
 
 
-TheGroupFormat PERMLIB_GetStabilizer_general(TheGroupFormat const& TheGRP, Face const& eList, int const& opt)
-{
-  Face NewList=Face_EquivSimplification(eList);
-  std::set<int> eSet=GetSetFrom_DB(NewList);
-  TheGroupFormat TheStab;
-  TheStab.n=TheGRP.n;
-  if (opt == 0)
-    TheStab.group=setStabilizer_classic(*TheGRP.group, eSet.begin(), eSet.end());
-  if (opt == 1)
-    TheStab.group=setStabilizer_partition(*TheGRP.group, eSet.begin(), eSet.end());
-  TheStab.size=TheStab.group->order<mpz_class>();
-  return TheStab;
-}
-
-
-
-
-
-TheGroupFormat GetStabilizer(TheGroupFormat const& TheGRP, Face const& eList)
-{
-  mpz_class MaxSize=10000;
-  if (TheGRP.size < MaxSize) {
-    return PERMLIB_GetStabilizer_general(TheGRP, eList,0);
-  }
-  else {
-    return PERMLIB_GetStabilizer_general(TheGRP, eList,1);
-  }
-}
 
 
 
@@ -457,55 +530,6 @@ TheGroupFormat GetStabilizer(TheGroupFormat const& TheGRP, Face const& eList)
 
 
 
-
-
-
-TheGroupFormat ReducedGroupAction(TheGroupFormat const& TheGRP, Face const& eList)
-{
-  int nb=eList.count();
-  if (nb == 0) {
-    std::cerr << "Call of ReducedGroupAction with 0 points\n";
-    throw TerminalException{1};
-  }
-  std::vector<int> ListPositionRev(TheGRP.n, -1);
-  int aRow=eList.find_first();
-  std::vector<int> ListPosition(nb,-1);
-  for (int iRow=0; iRow<nb; iRow++) {
-    ListPositionRev[aRow]=iRow;
-    ListPosition[iRow]=aRow;
-    aRow=eList.find_next(aRow);
-  }
-  std::vector<permlib::Permutation> ListGen;
-  for (auto & eGen : TheGRP.group->S) {
-    std::vector<permlib::dom_int> v(nb);
-    for (int i=0; i<nb; i++) {
-      int eVal1=ListPosition[i];
-      int eVal2=eGen->at(eVal1);
-      int eVal3=ListPositionRev[eVal2];
-      v[i]=eVal3;
-    }
-    ListGen.push_back(permlib::Permutation(v));
-  }
-  return GetPermutationGroup(nb, ListGen);
-}
-
-TheGroupFormat ConjugateGroup(TheGroupFormat const& TheGRP, permlib::Permutation const& ePerm)
-{
-  int n=TheGRP.n;
-  permlib::Permutation ePermR=~ePerm;
-  std::vector<permlib::Permutation> ListGen;
-  for (auto & eGen : TheGRP.group->S) {
-    std::vector<permlib::dom_int> v(n);
-    for (int i=0; i<n; i++) {
-      int eVal1=ePermR.at(i);
-      int eVal2=eGen->at(eVal1);
-      int eVal3=ePerm.at(eVal2);
-      v[i]=eVal3;
-    }
-    ListGen.push_back(permlib::Permutation(v));
-  }
-  return GetPermutationGroup(n, ListGen);
-}
 
 
 

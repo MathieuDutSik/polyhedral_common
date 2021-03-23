@@ -5,7 +5,7 @@
 #include "MAT_MatrixInt.h"
 #include "GRP_GroupFct.h"
 
-template<typename T> 
+template<typename T>
 struct resultFT {
   bool test;
   MyMatrix<T> eMat;
@@ -210,7 +210,7 @@ struct FiniteMatrixGroup {
 
 
 // The space must be defining a finite index subgroup of T^n
-template<typename T>
+template<typename T, typename Tgroup>
 FiniteMatrixGroup<T> LinearSpace_ModStabilizer(FiniteMatrixGroup<T> const& GRPmatr, MyMatrix<T> const& TheSpace, T const& TheMod)
 {
   std::cerr << "TheMod=" << TheMod << "\n";
@@ -263,7 +263,7 @@ FiniteMatrixGroup<T> LinearSpace_ModStabilizer(FiniteMatrixGroup<T> const& GRPma
   FiniteMatrixGroup<T> GRPret=GRPmatr;
   std::vector<MyVector<T> > ListVect;
   int nbRow=GRPmatr.EXTfaithAct.rows();
-  std::cerr << "|G(EXT)|=" << GetPermutationGroup(nbRow, GRPmatr.ListPermGen).size << "\n";
+  std::cerr << "|G(EXT)|=" << Tgroup(GRPmatr.ListPermGen, nbRow).size() << "\n";
 
   /*  for (int i=0; i<nbRow; i++) {
     MyVector<T> eLine=GetMatrixRow(GRPmatr.EXTfaithAct, i);
@@ -333,7 +333,7 @@ FiniteMatrixGroup<T> LinearSpace_ModStabilizer(FiniteMatrixGroup<T> const& GRPma
       std::cerr << "We have eNewPerm\n";
       ListPermGenProv.push_back(eNewPerm);
     }
-    TheGroupFormat GRPwork=GetPermutationGroup(siz, ListPermGenProv);
+    Tgroup GRPwork(ListPermGenProv, siz);
     std::cerr << "|GRPwork|=" << GRPwork.size << "\n";
     Face eFace(siz);
     for (int iO=0; iO<Osiz; iO++) {
@@ -522,7 +522,7 @@ ResultTestModEquivalence<T> LinearSpace_ModEquivalence(FiniteMatrixGroup<T> cons
       permlib::Permutation eNewPerm(v);
       ListPermGenProv.push_back(eNewPerm);
     }
-    TheGroupFormat GRPperm=GetPermutationGroup(siz, ListPermGenProv);
+    Tgroup GRPperm(ListPermGenProv, siz);
     MyMatrix<T> TheSpace1work=TheSpace1*eElt;
     Face eFace1(siz);
     Face eFace2(siz);
@@ -684,16 +684,15 @@ EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const
   return {false, {}};
 }
 
-template<typename T>
-TheGroupFormat LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const& EXT_T, TheGroupFormat const& GRPisom, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
+template<typename T, typename Tgroup>
+TheGroupFormat LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const& EXT_T, Tgroup const& GRPisom, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
 {
   int nbVert=EXT_T.rows();
   std::vector<permlib::Permutation> generatorList;
-  TheGroupFormat GRPret;
-  GRPret.n=nbVert;
+  Tgroup GRPret(n);
   IteratorGrp eIterRet;
   auto fConstruct=[&]() -> void {
-    GRPret=GetPermutationGroup(nbVert, generatorList);
+    GRPret = Tgroup(generatorList, nbVert);
     eIterRet=GetInitialIterator(GRPret);
   };
   fConstruct();
@@ -717,8 +716,8 @@ TheGroupFormat LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const& EXT_T, 
   return GRPret;
 }
 
-template<typename T>
-TheGroupFormat LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, TheGroupFormat const& GRPisom)
+template<typename T, typename Tgroup>
+Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, TheGroupFormat const& GRPisom)
 {
   int nbVert=EXT_T.rows();
   int dim=EXT_T.cols();
@@ -732,7 +731,7 @@ TheGroupFormat LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, 
   }
   FiniteMatrixGroup<T> GRPfin{dim, EXT_T, ListMatrGen, ListPermGen};
   FiniteMatrixGroup<T> GRPfinal=LinPolytopeIntegral_Automorphism_Subspaces(GRPfin);
-  return GetPermutationGroup(nbVert, GRPfinal.ListPermGen);
+  return Tgroup(GRPfinal.ListPermGen, nbVert);
 }
 
 

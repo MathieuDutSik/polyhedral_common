@@ -1193,22 +1193,20 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 
 
 
-template<typename T1, typename T2>
-TheGroupFormat GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
+template<typename T1, typename T2, typename Tgroup>
+Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
   WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
   size_t nbSHV=WMatI.rows();
   TheGroupFormat GRP=GetStabilizerWeightMatrix(WMatO);
-  std::vector<permlib::dom_int> v(nbSHV);
-  std::vector<permlib::Permutation> ListGen;
+  std::vector<int> v(nbSHV);
+  std::vector<Telt> ListGen;
   for (auto & eGen : GRP.group->S) {
-    for (size_t iSHV=0; iSHV<nbSHV; iSHV++) {
-      size_t jSHV=eGen->at(iSHV);
-      v[iSHV]=jSHV;
-    }
-    ListGen.push_back(permlib::Permutation(v));
+    for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
+      v[iSHV]=OnPoints(iSHV, eGen);
+    ListGen.push_back(Telt(v));
   }
-  return GetPermutationGroup(nbSHV, ListGen);
+  return Tgroup(ListGen, nbSHV);
 }
 
 
@@ -2093,35 +2091,38 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
-
+template<typename Telt>
 TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
 {
+  using Telt = Tgroup::Telt;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   std::vector<std::vector<unsigned int>>* h = &ListGen;
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
   size_t nbVert = g.get_nof_vertices();
-  std::vector<permlib::Permutation> generatorList;
+  std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
-    std::vector<permlib::dom_int> gList(nbVert);
+    std::vector<int> gList(nbVert);
     for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
-    generatorList.push_back(permlib::Permutation(gList));
+    generatorList.push_back(Telt(gList));
   }
-  return GetPermutationGroup(nbVert, generatorList);
+  return Tgroup(generatorList, nbVert);
 }
 
 
-TheGroupFormat GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
+template<typename Telt>
+Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
 {
-  std::vector<permlib::Permutation> generatorList;
+  using Telt = Tgroup::Telt;
+  std::vector<Telt> generatorList;
+  std::vector<int> gList(nbVert);
   for (auto & eGen : ListGen) {
-    std::vector<permlib::dom_int> gList(nbVert);
     for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
-    generatorList.push_back(permlib::Permutation(gList));
+    generatorList.push_back(Telt(gList));
   }
-  return GetPermutationGroup(nbVert, generatorList);
+  return Tgroup(generatorList, nbVert);
 }
 
 
@@ -2787,9 +2788,10 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 
 
 
-template<typename T1, typename T2>
-TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
+template<typename T1, typename T2, typename Tgroup>
+Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
+  using Telt = Tgroup::Telt;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   size_t nbRow=WMat.rows();
@@ -2797,11 +2799,11 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
   size_t nbGen=ListGen.size();
-  std::vector<permlib::Permutation> generatorList;
-  for (size_t iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> gList(nbRow);
+  std::vector<Telt> generatorList;
+  for (auto & eGen : ListGen) {
+    std::vector<int> gList(nbRow);
     for (size_t iVert=0; iVert<nbRow; iVert++) {
-      size_t jVert=ListGen[iGen][iVert];
+      size_t jVert=eGen[iVert];
 #ifdef DEBUG
       if (jVert >= nbRow) {
 	std::cerr << "jVert is too large\n";
@@ -2827,9 +2829,9 @@ TheGroupFormat GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 	}
       }
 #endif
-    generatorList.push_back(permlib::Permutation(gList));
+    generatorList.push_back(Telt(gList));
   }
-  return GetPermutationGroup(nbRow, generatorList);
+  return Tgroup(generatorList, nbRow);
 }
 
 
@@ -3008,9 +3010,10 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
 
 
 
-template<typename T1, typename T2>
+template<typename T1, typename T2, typename Tgroup>
 TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 {
+  using Telt = Tgroup::Telt;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
   WeightMatrix<int,int> WMatW(n+1,0);
@@ -3026,15 +3029,15 @@ TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
       WMatW.Update(n,i,siz+1);
   }
   WMatW.Update(n,n,siz+2);
-  TheGroupFormat GRP=GetStabilizerWeightMatrix(WMatW);
+  Tgroup GRP=GetStabilizerWeightMatrix(WMatW);
   std::vector<permlib::Permutation> ListPerm;
-  for (auto & ePerm : GRP.group->S) {
-    std::vector<permlib::dom_int> eList(n);
+  for (auto & ePerm : GRP.GeneratorsOfGroup()) {
+    std::vector<int> eList(n);
     for (size_t i=0; i<n; i++)
-      eList[i]=ePerm->at(i);
-    ListPerm.push_back(permlib::Permutation(eList));
+      eList[i]=OnPoints(i, ePerm);
+    ListPerm.push_back(Telt(eList));
   }
-  return GetPermutationGroup(n, ListPerm);
+  return Tgroup(ListPerm, n);
 }
 
 
