@@ -1072,6 +1072,4 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   //
 }
 
-
-
 #endif
