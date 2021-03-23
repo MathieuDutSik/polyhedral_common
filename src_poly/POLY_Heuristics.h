@@ -1,5 +1,5 @@
-#ifndef INCLUDE_HEURISTICS_H
-#define INCLUDE_HEURISTICS_H
+#ifndef INCLUDE_POLY_HEURISTICS_H
+#define INCLUDE_POLY_HEURISTICS_H
 
 #include "Heuristic_fct.h"
 

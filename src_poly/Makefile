@@ -4,6 +4,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  ComputeDelaunay \
 		  POLY_redundancy \
 		  POLY_redundancyClarkson \
+		  POLY_redundancyClarksonBlocks \
 		  POLY_IntegralPoints \
 		  POLY_lcdd \
 		  POLY_lrs \

@@ -1,5 +1,5 @@
-#ifndef TEMP_THREAD_DUAL_DESCRIPTION_INCLUDE
-#define TEMP_THREAD_DUAL_DESCRIPTION_INCLUDE
+#ifndef TEMP_DIRECT_DUAL_DESC_H
+#define TEMP_DIRECT_DUAL_DESC_H
 
 #include "POLY_lrslib.h"
 #include "POLY_cddlib.h"
@@ -15,13 +15,12 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   size_t DimEXT = n_col + 1;
   std::string rndStr = random_string(20);
   std::string prefix = "/tmp/";
-  std::string FileI = prefix + "EXT_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
-  std::string FileO = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
-  std::string FileItot = "/tmp/" + FileSave;
-  std::ofstream os(FileItot);
+  std::string FileO = prefix + "EXT_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
+  std::string FileI = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
+  std::ofstream os(FileO);
   os << "V-representation\n";
   os << "begin\n";
-  os << n_rows << " " << DimEXT << " integer\n";
+  os << n_row << " " << DimEXT << " integer\n";
   for (size_t i_row=0; i_row<n_row; i_row++) {
     os << "0";
     for (size_t i_col=0; i_col<n_col; i_col++)
@@ -36,6 +35,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   std::string order = eCommand + " " + FileI + " " + FileO;
   std::vector<Face> ListFace;
   //
+  std::ifstream is(FileI);
   std::string line;
   size_t iLine;
   size_t iLineLimit = 0;
@@ -47,7 +47,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
     }
     if (iLine >= 2 && (iLineLimit == 0 || iLine < iLineLimit)) {
       std::vector<std::string> LStr = STRING_Split(line, " ");
-      for (size_t i=0; i<DinEXT; i++)
+      for (size_t i=0; i<DimEXT; i++)
         LVal[i] = ParseScalar<T>(LStr[i]);
       Face face(n_row);
       for (int i_row=0; i_row<n_row; i_row++) {
