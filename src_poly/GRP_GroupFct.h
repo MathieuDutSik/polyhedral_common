@@ -1,5 +1,5 @@
-#ifndef TEMP_GROUP_FUNCTIONS
-#define TEMP_GROUP_FUNCTIONS
+#ifndef INCLUDE_TEMP_GROUP_FCT_H
+#define INCLUDE_TEMP_GROUP_FCT_H
 
 #include "Temp_common.h"
 #include "Basic_file.h"
@@ -10,116 +10,10 @@
 #include "Boost_bitset.h"
 #include <permlib/permlib_api.h>
 
-typedef std::shared_ptr<permlib::PermutationGroup> PermutationGroupPtr;
-typedef boost::dynamic_bitset<> DsetList;
 
-
-template<typename Tint_inp>
-struct TheGroupFormat {
-public:
-  using Tint = Tint_inp;
-  using Telt = permlib::Permutation;
-  permlib::dom_int n;
-  Tint_inp size;
-  PermutationGroupPtr group;
-  TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp)
-  {
-    std::vector<permlib::Permutation::ptr> generatorList;
-    for (auto & eGen : ListPerm) {
-      std::vector<permlib::dom_int> v(n);
-      for (std::size_t i=0; i<n; i++)
-        v[i]=eGen.at(i);
-      generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
-    }
-    n = n_inp;
-    group = construct(n, generatorList.begin(), generatorList.end());
-    size = TheGroupRet.group->order<mpz_class>();
-  }
-  std::vector<Telt> GeneratorsOfGroup() const
-  {
-    // copy operation, but that is what it is.
-    std::vector<Telt> LGen;
-    for (auto & eval : group->S) {
-      LGen.push_back(*eval);
-    }
-    return LGen;
-  }
-  Tint size() const
-  {
-    return size;
-  }
-  int n_act() const
-  {
-    return n;
-  }
-};
-
-
-namespace std {
-  template<>
-  struct hash<permlib::Permutation>
-  {
-    std::size_t operator()(permlib::Permutation const& eElt) const
-    {
-      size_t len=eElt.size();
-      std::vector<permlib::dom_int> V(len);
-      for (size_t i=0; i<len; i++)
-        V[i] = eElt.at(i);
-      return std::hash<std::vector<permlib::dom_int>>()(V);
-    }
-  };
-}
-
-
-Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
-{
-  int nbExt=eSet.size();
-  Face fSet(nbExt);
-  //  std::cerr << "eEltImage nbExt=" << nbExt << "\n";
-  for (int iExt=0; iExt<nbExt; iExt++)
-    if (eSet[iExt] == 1) {
-      int jExt=eElt.at(iExt);
-      //      std::cerr << "  iExt=" << iExt << " jExt=" << jExt << "\n";
-      fSet[jExt]=1;
-    }
-  return fSet;
-}
-
-
-
-template<typename Tgroup>
-Tgroup ReadGroup(std::istream &is)
-{
-  using Telt = Tgroup::Telt;
-  if (!is.good()) {
-    std::cerr << "ReadGroup operation failed because stream is not valid\n";
-    throw TerminalException{1};
-  }
-  int nbGen;
-  permlib::dom_int n;
-  is >> n;
-  is >> nbGen;
-  std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
-  std::vector<Telt> ListGen;
-  for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> v(n);
-    for (std::size_t i=0; i<n; i++) {
-      permlib::dom_int eVal;
-      is >> eVal;
-      if (eVal > n-1) {
-	std::cerr << "Error in ReadGroup function\n";
-	std::cerr << "Number of elements acted on n=" << n << "\n";
-	std::cerr << "But eVal=" << eVal << "\n";
-	throw TerminalException{1};
-      }
-      v[i]=eVal;
-    }
-    ListGen.push_back(permlib::Permutation(v));
-  }
-  return Tgroup(ListGen, n);
-}
-
-
+//
+// Template general code for groups
+//
 
 template<typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
@@ -186,6 +80,79 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
   os << "return GRP;\n";
 }
 
+//
+// group combinatorial algorithms
+//
+
+
+template<typename Tgroup>
+std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const& gList)
+{
+  std::vector<int> eListReturn;
+  int n=TheGRP.n_act();
+  std::vector<int> rList = gList;
+  auto LGen = TheGRP.GeneratorsOfGroup();
+  while(true) {
+    std::size_t eSumPrev=0;
+    for (std::size_t i=0; i<n; i++)
+      eSumPrev += rList[i];
+    for (auto & eGen : LGen) {
+      for (std::size_t i=0; i<n; i++) {
+	int j = OnPoints(i, eGen);
+	if (rList[i] == 0)
+	  rList[j]=0;
+      }
+    }
+    std::size_t eSum=0;
+    for (std::size_t i=0; i<n; i++)
+      eSum += rList[i];
+    if (eSum == eSumPrev)
+      break;
+  }
+  return rList;
+}
+
+
+template<typename Tgroup>
+std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
+{
+  int n=TheGRP.n;
+  std::vector<int> gListB(n);
+  for (int i=0; i<n; i++)
+    gListB[i] = 1 - gList[i];
+  std::vector<int> rListB=OrbitIntersection(TheGRP, gListB);
+  for (int i=0; i<n; i++)
+    rListB[i] = 1 - rListB[i];
+  return rListB;
+}
+
+
+
+//
+// Specific implementation with permlib
+//
+
+
+
+
+typedef std::shared_ptr<permlib::PermutationGroup> PermutationGroupPtr;
+typedef boost::dynamic_bitset<> DsetList;
+
+
+/*
+std::vector<permlib::dom_int> GetBaseGroup(TheGroupFormat const& eGRP)
+{
+  std::vector<permlib::dom_int> eList;
+  for (auto & eTrans : eGRP.group->U) {
+    permlib::dom_int eElt=eTrans.element();
+    eList.push_back(eElt);
+  }
+  return eList;
+}
+*/
+
+
+
 
 
 std::set<int> GetSetFrom_DB(Face const& eList)
@@ -200,30 +167,14 @@ std::set<int> GetSetFrom_DB(Face const& eList)
   return eSet;
 }
 
-std::vector<permlib::dom_int> GetBaseGroup(TheGroupFormat const& eGRP)
-{
-  std::vector<permlib::dom_int> eList;
-  for (auto & eTrans : eGRP.group->U) {
-    permlib::dom_int eElt=eTrans.element();
-    eList.push_back(eElt);
-  }
-  return eList;
-}
-
 Face Face_EquivSimplification(Face const& eFace)
 {
   int siz=eFace.size();
   int cnt=eFace.count();
   if (2*cnt > siz) {
     Face retFace(siz);
-    for (int i=0; i<siz; i++) {
-      int eVal;
-      if (eFace[i] == 1)
-	eVal=0;
-      else
-	eVal=1;
-      retFace[i]=eVal;
-    }
+    for (int i=0; i<siz; i++)
+      retFace[i]=1 - eFace[i];
     return retFace;
   }
   else {
@@ -235,72 +186,54 @@ Face Face_EquivSimplification(Face const& eFace)
 
 
 
-EquivTest<permlib::Permutation> TestEquivalenceGeneralNaked(TheGroupFormat const& TheGRP, Face const& eList1, Face const& eList2, int const& eMethod)
+EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n, PermutationGroupPtr Tconst& group, Face const& eList1, Face const& eList2, int const& eMethod)
 {
-  //  std::cerr << "Begin of TestEquivalenceGeneral\n";
   permlib::Permutation::ptr mappingElement;
   int nb1=eList1.count();
   int nb2=eList2.count();
   if (nb1 != nb2)
     return {false, {}};
   //
-  //  std::ofstream os(eFileRES);
   Face NewList1=Face_EquivSimplification(eList1);
   Face NewList2=Face_EquivSimplification(eList2);
   std::set<int> eSet1=GetSetFrom_DB(NewList1);
   std::set<int> eSet2=GetSetFrom_DB(NewList2);
-  //  std::cerr << "Before call to setImage\n";
   if (eMethod == 0)
-    mappingElement = permlib::setImage_classic(*TheGRP.group, eSet1.begin(), eSet1.end(), eSet2.begin(), eSet2.end());
+    mappingElement = permlib::setImage_classic(*group, eSet1.begin(), eSet1.end(), eSet2.begin(), eSet2.end());
   if (eMethod == 1)
-    mappingElement = permlib::setImage_partition(*TheGRP.group, eSet1.begin(), eSet1.end(), eSet2.begin(), eSet2.end());
-  //  std::cerr << "After call to setImage\n";
+    mappingElement = permlib::setImage_partition(*group, eSet1.begin(), eSet1.end(), eSet2.begin(), eSet2.end());
   if (mappingElement) {
-    //    os << "IsEquivalence\n";
-    //    os << "mappingElement=" << *mappingElement << "\n";
     return {true, *mappingElement};
   }
-  //  os << "NOT equivalent\n";
   return {false, {}};
 }
 
-EquivTest<permlib::Permutation> TestEquivalenceGeneral(TheGroupFormat const& TheGRP, Face const& eList1, Face const& eList2)
+EquivTest<permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
 {
   mpz_class MaxSize=10000;
-  int eMethod;
-  if (TheGRP.size < MaxSize) {
+  int eMethod = 1;
+  if (TheGRP.size < MaxSize)
     eMethod=0;
-  }
-  else {
-    eMethod=1;
-  }
-  return TestEquivalenceGeneralNaked(TheGRP, eList1, eList2, eMethod);
+  return PERMLIB_TestEquivalenceGeneralNaked(n, group, eList1, eList2, eMethod);
 }
 
 
 
-bool TestEquivalence(TheGroupFormat const& TheGRP, Face const& eList1, Face const& eList2)
+bool PERMLIB_TestEquivalence(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
 {
-  EquivTest<permlib::Permutation> eRes=TestEquivalenceGeneral(TheGRP, eList1, eList2);
+  EquivTest<permlib::Permutation> eRes=PERMLIB_TestEquivalenceGeneral(n, group, eList1, eList2);
   return eRes.TheReply;
 }
 
 
 
-void WriteVectorInt(std::ostream &os, std::vector<int> const& OneInc)
-{
-  int i, siz;
-  siz=OneInc.size();
-  for (i=0; i<siz; i++)
-    os << " " << OneInc[i];
-  os << "\n";
-}
 
 
-Face GROUP_Canonicalization(TheGroupFormat const& TheGRP, Face const& eList)
+
+
+Face PERMLIB_Canonicalization(int const& n, PermutationGroupPtr const& group, Face const& eList)
 {
-  DsetList eListI(TheGRP.n), eListO(TheGRP.n);
-  int n=TheGRP.n;
+  DsetList eListI(n), eListO(n);
   int siz=eList.count();
   int aRow=eList.find_first();
   for (int i=0; i<siz; i++) {
@@ -312,14 +245,135 @@ Face GROUP_Canonicalization(TheGroupFormat const& TheGRP, Face const& eList)
   for (int i=0; i<n; i++)
     if (eListO[i] == 1)
       TheRet[i]=1;
-  bool test=TestEquivalence(TheGRP, eList, TheRet);
+#ifdef DEBUG_GROUP
+  bool test=PERMLIB_TestEquivalence(TheGRP, eList, TheRet);
   if (!test) {
     std::cerr << "We have major debugging to do\n";
     throw TerminalException{1};
   }
+#endif
   return TheRet;
 }
 
+
+
+
+template<typename Tint_inp>
+struct TheGroupFormat {
+public:
+  using Tint = Tint_inp;
+  using Telt = permlib::Permutation;
+  permlib::dom_int n;
+  Tint_inp size;
+  PermutationGroupPtr group;
+  TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp)
+  {
+    std::vector<permlib::Permutation::ptr> generatorList;
+    for (auto & eGen : ListPerm) {
+      std::vector<permlib::dom_int> v(n);
+      for (std::size_t i=0; i<n; i++)
+        v[i]=eGen.at(i);
+      generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
+    }
+    n = n_inp;
+    group = construct(n, generatorList.begin(), generatorList.end());
+    size = TheGroupRet.group->order<mpz_class>();
+  }
+  Face CanonicalImage(Face const& eFace) const
+  {
+    return PERMLIB_Canonicalization(n, group, eFace);
+  }
+  std::vector<Telt> GeneratorsOfGroup() const
+  {
+    // copy operation, but that is what it is.
+    std::vector<Telt> LGen;
+    for (auto & eval : group->S) {
+      LGen.push_back(*eval);
+    }
+    return LGen;
+  }
+  Tint size() const
+  {
+    return size;
+  }
+  int n_act() const
+  {
+    return n;
+  }
+};
+
+
+namespace std {
+  template<>
+  struct hash<permlib::Permutation>
+  {
+    std::size_t operator()(permlib::Permutation const& eElt) const
+    {
+      size_t len=eElt.size();
+      std::vector<permlib::dom_int> V(len);
+      for (size_t i=0; i<len; i++)
+        V[i] = eElt.at(i);
+      return std::hash<std::vector<permlib::dom_int>>()(V);
+    }
+  };
+}
+
+
+Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
+{
+  int nbExt=eSet.size();
+  Face fSet(nbExt);
+  for (int iExt=0; iExt<nbExt; iExt++)
+    if (eSet[iExt] == 1) {
+      int jExt=eElt.at(iExt);
+      fSet[jExt]=1;
+    }
+  return fSet;
+}
+
+
+
+template<typename Tgroup>
+Tgroup ReadGroup(std::istream &is)
+{
+  using Telt = Tgroup::Telt;
+  if (!is.good()) {
+    std::cerr << "ReadGroup operation failed because stream is not valid\n";
+    throw TerminalException{1};
+  }
+  int nbGen;
+  permlib::dom_int n;
+  is >> n;
+  is >> nbGen;
+  std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
+  std::vector<Telt> ListGen;
+  for (int iGen=0; iGen<nbGen; iGen++) {
+    std::vector<permlib::dom_int> v(n);
+    for (std::size_t i=0; i<n; i++) {
+      permlib::dom_int eVal;
+      is >> eVal;
+      if (eVal > n-1) {
+	std::cerr << "Error in ReadGroup function\n";
+	std::cerr << "Number of elements acted on n=" << n << "\n";
+	std::cerr << "But eVal=" << eVal << "\n";
+	throw TerminalException{1};
+      }
+      v[i]=eVal;
+    }
+    ListGen.push_back(permlib::Permutation(v));
+  }
+  return Tgroup(ListGen, n);
+}
+
+
+void WriteVectorInt(std::ostream &os, std::vector<int> const& OneInc)
+{
+  int i, siz;
+  siz=OneInc.size();
+  for (i=0; i<siz; i++)
+    os << " " << OneInc[i];
+  os << "\n";
+}
 
 
 void GROUP_FuncInsertInSet_UseInv(TheGroupFormat const& TheGRP,
@@ -403,44 +457,6 @@ TheGroupFormat GetStabilizer(TheGroupFormat const& TheGRP, Face const& eList)
 
 
 
-
-std::vector<int> OrbitIntersection(TheGroupFormat const& TheGRP, std::vector<int> const& gList)
-{
-  std::vector<int> eListReturn;
-  permlib::dom_int n=TheGRP.n;
-  std::vector<int> rList = gList;
-  while(true) {
-    std::size_t eSumPrev=0;
-    for (std::size_t i=0; i<n; i++)
-      eSumPrev += rList[i];
-    for (auto & eGen : TheGRP.group->S) {
-      for (std::size_t i=0; i<n; i++) {
-	std::size_t j=eGen->at(i);
-	if (rList[i] == 0)
-	  rList[j]=0;
-      }
-    }
-    std::size_t eSum=0;
-    for (std::size_t i=0; i<n; i++)
-      eSum += rList[i];
-    if (eSum == eSumPrev)
-      break;
-  }
-  return rList;
-}
-
-
-std::vector<int> OrbitUnion(TheGroupFormat const& TheGRP, std::vector<int> const& gList)
-{
-  int n=TheGRP.n;
-  std::vector<int> gListB(n);
-  for (int i=0; i<n; i++)
-    gListB[i]=1-gList[i];
-  std::vector<int> rListB=OrbitIntersection(TheGRP, gListB);
-  for (int i=0; i<n; i++)
-    rListB[i]=1-rListB[i];
-  return rListB;
-}
 
 
 
@@ -897,6 +913,240 @@ void WritePermutationGAP(std::ostream&os, permlib::Permutation const& ePerm)
 }
 
 
+
+
+
+
+
+std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
+				    TheGroupFormat const& TheGRP)
+{
+  std::vector<Face> TheReturn;
+  std::unordered_set<Face> ListTotal;
+  for (auto eFace : PreListTotal)
+    ListTotal.insert(eFace);
+  while(true) {
+    std::unordered_set<Face>::iterator iter=ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    Face eSet=*iter;
+    TheReturn.push_back(eSet);
+    std::unordered_set<Face> Additional{eSet};
+    ListTotal.erase(eSet);
+    std::unordered_set<Face> SingleOrbit;
+    while(true) {
+      std::unordered_set<Face> NewElts;
+      for (auto const& gSet : Additional)
+	for (auto const& eGen : TheGRP.group->S) {
+	  Face fSet=eEltImage(gSet, *eGen);
+	  if (SingleOrbit.find(fSet) == SingleOrbit.end() && Additional.find(fSet) == Additional.end()) {
+	    if (NewElts.find(fSet) == NewElts.end()) {
+	      if (ListTotal.find(fSet) != ListTotal.end()) {
+		NewElts.insert(fSet);
+		ListTotal.erase(fSet);
+	      }
+#ifdef DEBUG
+	      else {
+		std::cerr << "Orbit do not matched, PANIC!!!\n";
+		throw TerminalException{1};
+	      }
+#endif
+	    }
+	  }
+	}
+      for (auto & uSet : Additional)
+	SingleOrbit.insert(uSet);
+      if (NewElts.size() == 0)
+	break;
+      Additional=NewElts;
+    }
+  }
+  return TheReturn;
+}
+
+
+
+template<typename Tobj, typename Tgen>
+std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTotal,
+					    std::vector<Tgen> const& ListGen,
+					    std::function<Tobj(Tobj const&,Tgen const&)> const& TheAct)
+{
+  std::vector<Tobj> TheReturn;
+  std::unordered_set<Tobj> ListTotal;
+  for (auto eObj : PreListTotal)
+    ListTotal.insert(eObj);
+  while(true) {
+    auto iter=ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    Tobj eObj=*iter;
+    TheReturn.push_back(eObj);
+    std::unordered_set<Tobj> Additional;
+    Additional.insert(eObj);
+    ListTotal.erase(eObj);
+    std::unordered_set<Tobj> SingleOrbit;
+    while(true) {
+      std::unordered_set<Tobj> NewElts;
+      for (auto const& gObj : Additional)
+	for (auto const& eGen : ListGen) {
+	  Tobj fObj=TheAct(gObj, eGen);
+	  if (SingleOrbit.find(fObj) == SingleOrbit.end() && Additional.find(fObj) == Additional.end()) {
+	    if (NewElts.find(fObj) == NewElts.end()) {
+	      if (ListTotal.find(fObj) != ListTotal.end()) {
+		NewElts.insert(fObj);
+		ListTotal.erase(fObj);
+	      }
+#ifdef DEBUG
+	      else {
+		std::cerr << "Orbit do not match, PANIC!!!\n";
+		throw TerminalException{1};
+	      }
+#endif
+	    }
+	  }
+	}
+      for (auto & uSet : Additional)
+	SingleOrbit.insert(uSet);
+      if (NewElts.size() == 0)
+	break;
+      Additional=NewElts;
+    }
+  }
+  return TheReturn;
+}
+
+
+
+std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
+					 TheGroupFormat const& SmaGRP,
+					 LocalInvInfo const& LocalInv,
+					 Face const& eList, std::ostream & os)
+{
+  os << "Beginning of DoubleCosetDescription\n";
+  std::list<permlib::Permutation::ptr> ListGen=BigGRP.group->S;
+  TheGroupFormat TheStab=GetStabilizer(BigGRP, eList);
+  os << "BigGRP.size=" << BigGRP.size << " TheStab.size=" << TheStab.size << "\n";
+  mpz_class TotalSize=BigGRP.size / TheStab.size;
+  os << "TotalSize=" << TotalSize << "\n";
+  //
+  struct Local {
+    int status;
+    Face eFace;
+    std::vector<int> eInv;
+  };
+  mpz_class SizeGen=0;
+  std::vector<Local> ListLocal;
+  auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
+    std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
+    for (auto const& fLocal : ListLocal) {
+      bool testCL=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 0).TheReply;
+      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;
+      bool test=TestEquivalence(SmaGRP, fLocal.eFace, testList);
+      os << "fLocal.eFace=\n";
+      WriteFace(os, fLocal.eFace);
+      os << "    testList=\n";
+      WriteFace(os, testList);
+      os << "fLocal.eFace=" << fLocal.eFace << "\n";
+      os << "    testList=" << testList << "  testCL=" << testCL << " testPA=" << testPA << "\n";
+      if (test)
+	return;
+    }
+    ListLocal.push_back({0,testList,eInv});
+    TheGroupFormat fStab=GetStabilizer(SmaGRP, testList);
+    os << "SmaGRP.size=" << SmaGRP.size << " fStab.size=" << fStab.size << "\n";
+    mpz_class OrbSizeSma=SmaGRP.size / fStab.size;
+    SizeGen += OrbSizeSma;
+    os << "Now SizeGen=" << SizeGen << " OrbSizeSma=" << OrbSizeSma << " |ListLocal|=" << ListLocal.size() << "\n";
+  };
+  DoubleCosetInsertEntry(eList);
+  while(true) {
+    bool DoSomething=false;
+    size_t nbLocal=ListLocal.size();
+    for (size_t iLocal=0; iLocal<nbLocal; iLocal++)
+      if (ListLocal[iLocal].status == 0) {
+	ListLocal[iLocal].status=1;
+	DoSomething=true;
+	Face eFace=ListLocal[iLocal].eFace;
+	for (auto const& eGen : ListGen) {
+	  Face eNewList=eEltImage(eFace, *eGen);
+	  DoubleCosetInsertEntry(eNewList);
+	}
+      }
+    if (!DoSomething)
+      break;
+  }
+  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  std::vector<Face> ListListSet;
+  for (auto & eRec : ListLocal)
+    ListListSet.push_back(eRec.eFace);
+  if (SizeGen == TotalSize)
+    return ListListSet;
+  std::vector<Face> PartialOrbit=ListListSet;
+  auto IsPresent=[&](Face const& testList) -> bool {
+    for (auto & fList : PartialOrbit)
+      if (fList == testList)
+	return true;
+    return false;
+  };
+  while(true) {
+    for (auto & eGen : ListGen) {
+      size_t len=PartialOrbit.size();
+      for (size_t i=0; i<len; i++) {
+	Face eNewList=eEltImage(PartialOrbit[i], *eGen);
+	if (!IsPresent(eNewList)) {
+	  PartialOrbit.push_back(eNewList);
+	  DoubleCosetInsertEntry(eNewList);
+	  if (SizeGen == TotalSize) {
+	    std::vector<Face> ListListFin;
+	    for (auto & eRec : ListLocal)
+	      ListListFin.push_back(eRec.eFace);
+	    return ListListFin;
+	  }
+	}
+      }
+    }
+  }
+  os << "Likely not reachable stage\n";
+  throw TerminalException{1};
+}
+
+
+
+std::vector<Face> OrbitSplittingListOrbit(TheGroupFormat const& BigGRP, TheGroupFormat const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
+{
+  os << "|BigGRP|=" << BigGRP.size << " |SmaGRP|=" << SmaGRP.size << "\n";
+  if (BigGRP.size == SmaGRP.size)
+    return eListBig;
+  {
+    std::ofstream os1("ORBSPLIT_BigGRP");
+    std::ofstream os2("ORBSPLIT_BigGRP.gap");
+    std::ofstream os3("ORBSPLIT_SmaGRP");
+    std::ofstream os4("ORBSPLIT_SmaGRP.gap");
+    std::ofstream os5("ORBSPLIT_ListBig");
+    std::ofstream os6("ORBSPLIT_ListBig.gap");
+    WriteGroup      (os1, BigGRP);
+    WriteGroupGAP   (os2, BigGRP);
+    WriteGroup      (os3, SmaGRP);
+    WriteGroupGAP   (os4, SmaGRP);
+    WriteListFace   (os5, eListBig);
+    WriteListFaceGAP(os6, eListBig);
+  }
+  WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int>(SmaGRP, os);
+  LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
+  os << "We do the algorithm\n";
+  std::vector<Face> eListSma;
+  size_t iter=0;
+  for (auto & eSet : eListBig) {
+    os << "iter=" << iter << " Before DoubleCosetDescription\n";
+    std::vector<Face> ListListSet=DoubleCosetDescription(BigGRP, SmaGRP, LocalInv, eSet, os);
+    os << "      |ListListSet|=" << ListListSet.size() << "\n";
+    for (auto & eCos : ListListSet)
+      eListSma.push_back(eCos);
+    os << "      |eListSma|=" << eListSma.size() << "\n";
+    iter++;
+  }
+  return eListSma;
+}
 
 
 
