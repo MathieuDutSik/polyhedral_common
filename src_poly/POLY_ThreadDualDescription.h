@@ -1,7 +1,7 @@
 #ifndef TEMP_THREAD_DUAL_DESCRIPTION_INCLUDE
 #define TEMP_THREAD_DUAL_DESCRIPTION_INCLUDE
 
-#include "POLY_lrslib.h"
+#include "POLY_DirectDualDesc.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Basic_string.h"
 #include "Basic_file.h"
@@ -332,47 +332,6 @@ FctsDataBank<PolyhedralEntry<T>> GetRec_FctsDataBank()
     return siz;
   };
   return {fEquiv, fSize};
-}
-
-
-
-
-template<typename T>
-std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT,
-					      TheGroupFormat const& GRP,
-					      std::string const& ansProg, std::ostream& os)
-{
-  MyMatrix<T> EXTred=ColumnReduction(EXT);
-  int nbVert=EXTred.rows();
-  int nbCol=EXTred.cols();
-  bool WeAreDone=false;
-  std::vector<Face> ListIncd;
-  if (nbVert >= 56) {
-    std::string FileSave="EXT_" + IntToString(nbVert);
-    std::ofstream os_save(FileSave);
-    WriteMatrix(os_save, EXT);
-  }
-  os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << "\n";
-  if (ansProg == "cdd") {
-    ListIncd=cdd::DualDescription_incd(EXTred);
-    WeAreDone=true;
-  }
-  if (ansProg == "lrs") {
-    ListIncd=lrs::DualDescription_temp_incd(EXTred);
-    WeAreDone=true;
-  }
-  if (ansProg == "lrs_ring") {
-    ListIncd=lrs::DualDescription_temp_incd_reduction(EXTred);
-    WeAreDone=true;
-  }
-  if (!WeAreDone) {
-    std::cerr << "No right program found\n";
-    std::cerr << "Let us die\n";
-    throw TerminalException{1};
-  }
-  std::vector<Face> TheOutput=OrbitSplittingSet(ListIncd, GRP);
-  os << "DFOC |GRP|=" << GRP.size << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
-  return TheOutput;
 }
 
 struct recSamplingOption {
