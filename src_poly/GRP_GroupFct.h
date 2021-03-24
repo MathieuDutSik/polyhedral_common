@@ -9,6 +9,7 @@
 #include "NumberTheory.h"
 #include "Boost_bitset.h"
 #include <permlib/permlib_api.h>
+#include "Temp_PolytopeEquiStab.h"
 
 
 //
@@ -350,7 +351,7 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 
 
 //
-// Some combinatorial algorithms
+// Some combinatorial algorithms using only the generators of the group.
 //
 
 
@@ -383,13 +384,11 @@ std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
 template<typename Tgroup>
 std::vector<Face> DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
 {
-  using Telt = typename Tgroup::Telt;
   int nbPoint=TheGRP.n_act();
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   std::vector<Face> ListOrb;
   int i, TheFirst;
   int len=eList.count();
-  VSLT_InitializeStorage(Vlist, nbPoint);
   int aRow=eList.find_first();
   for (i=0; i<len; i++) {
     VSLT_StoreValue(Vlist, aRow);
@@ -409,6 +408,255 @@ std::vector<Face> DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
   }
   return ListOrb;
 }
+
+template<typename Tobj, typename Tgen>
+std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTotal,
+					    std::vector<Tgen> const& ListGen,
+					    std::function<Tobj(Tobj const&,Tgen const&)> const& TheAct)
+{
+  std::vector<Tobj> TheReturn;
+  std::unordered_set<Tobj> ListTotal;
+  for (auto eObj : PreListTotal)
+    ListTotal.insert(eObj);
+  while(true) {
+    auto iter=ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    Tobj eObj=*iter;
+    TheReturn.push_back(eObj);
+    std::unordered_set<Tobj> Additional;
+    Additional.insert(eObj);
+    ListTotal.erase(eObj);
+    std::unordered_set<Tobj> SingleOrbit;
+    while(true) {
+      std::unordered_set<Tobj> NewElts;
+      for (auto const& gObj : Additional)
+	for (auto const& eGen : ListGen) {
+	  Tobj fObj=TheAct(gObj, eGen);
+	  if (SingleOrbit.find(fObj) == SingleOrbit.end() && Additional.find(fObj) == Additional.end()) {
+	    if (NewElts.find(fObj) == NewElts.end()) {
+	      if (ListTotal.find(fObj) != ListTotal.end()) {
+		NewElts.insert(fObj);
+		ListTotal.erase(fObj);
+	      }
+#ifdef DEBUG
+	      else {
+		std::cerr << "Orbit do not match, PANIC!!!\n";
+		throw TerminalException{1};
+	      }
+#endif
+	    }
+	  }
+	}
+      for (auto & uSet : Additional)
+	SingleOrbit.insert(uSet);
+      if (NewElts.size() == 0)
+	break;
+      Additional=NewElts;
+    }
+  }
+  return TheReturn;
+}
+
+
+
+
+Face OnFace(Face const& eSet, permlib::Permutation const& eElt)
+{
+  int nbExt=eSet.size();
+  Face fSet(nbExt);
+  for (int iExt=0; iExt<nbExt; iExt++)
+    if (eSet[iExt] == 1) {
+      int jExt=eElt.at(iExt);
+      fSet[jExt]=1;
+    }
+  return fSet;
+}
+
+
+
+template<typename Tgroup>
+std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
+				    Tgroup const& TheGRP)
+{
+  using Telt = typename Tgroup::Telt;
+  std::vector<Face> TheReturn;
+  std::unordered_set<Face> ListTotal;
+  for (auto eFace : PreListTotal)
+    ListTotal.insert(eFace);
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  while(true) {
+    std::unordered_set<Face>::iterator iter=ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    Face eSet=*iter;
+    TheReturn.push_back(eSet);
+    std::unordered_set<Face> Additional{eSet};
+    ListTotal.erase(eSet);
+    std::unordered_set<Face> SingleOrbit;
+    while(true) {
+      std::unordered_set<Face> NewElts;
+      for (auto const& gSet : Additional)
+	for (auto const& eGen : ListGen) {
+	  Face fSet=OnFace(gSet, eGen);
+	  if (SingleOrbit.find(fSet) == SingleOrbit.end() && Additional.find(fSet) == Additional.end()) {
+	    if (NewElts.find(fSet) == NewElts.end()) {
+	      if (ListTotal.find(fSet) != ListTotal.end()) {
+		NewElts.insert(fSet);
+		ListTotal.erase(fSet);
+	      }
+#ifdef DEBUG
+	      else {
+		std::cerr << "Orbit do not matched, PANIC!!!\n";
+		throw TerminalException{1};
+	      }
+#endif
+	    }
+	  }
+	}
+      for (auto & uSet : Additional)
+	SingleOrbit.insert(uSet);
+      if (NewElts.size() == 0)
+	break;
+      Additional=NewElts;
+    }
+  }
+  return TheReturn;
+}
+
+
+//
+// Double Coset Computation
+//
+
+
+template<typename Tgroup>
+std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
+					 Tgroup const& SmaGRP,
+					 LocalInvInfo const& LocalInv,
+					 Face const& eList, std::ostream & os)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  os << "Beginning of DoubleCosetDescription\n";
+  std::vector<Telt> ListGen=BigGRP.GeneratorsOfGroup();
+  Tgroup TheStab=BigGRP.Stabilizer_OnSets(eList);
+  os << "BigGRP.size=" << BigGRP.size() << " TheStab.size=" << TheStab.size() << "\n";
+  Tint TotalSize=BigGRP.size() / TheStab.size();
+  os << "TotalSize=" << TotalSize << "\n";
+  //
+  struct Local {
+    int status;
+    Face eFace;
+    std::vector<int> eInv;
+  };
+  Tint SizeGen=0;
+  std::vector<Local> ListLocal;
+  auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
+    std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
+    for (auto const& fLocal : ListLocal) {
+      bool test = SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList).first;
+      if (test)
+	return;
+    }
+    ListLocal.push_back({0,testList,eInv});
+    Tgroup fStab=SmaGRP.Stabilizer_OnSets(testList);
+    os << "SmaGRP.size=" << SmaGRP.size() << " fStab.size=" << fStab.size() << "\n";
+    Tint OrbSizeSma=SmaGRP.size() / fStab.size();
+    SizeGen += OrbSizeSma;
+  };
+  DoubleCosetInsertEntry(eList);
+  while(true) {
+    bool DoSomething=false;
+    size_t nbLocal=ListLocal.size();
+    for (size_t iLocal=0; iLocal<nbLocal; iLocal++)
+      if (ListLocal[iLocal].status == 0) {
+	ListLocal[iLocal].status=1;
+	DoSomething=true;
+	Face eFace=ListLocal[iLocal].eFace;
+	for (auto const& eGen : ListGen) {
+	  Face eNewList=OnFace(eFace, eGen);
+	  DoubleCosetInsertEntry(eNewList);
+	}
+      }
+    if (!DoSomething)
+      break;
+  }
+  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  std::vector<Face> ListListSet;
+  for (auto & eRec : ListLocal)
+    ListListSet.push_back(eRec.eFace);
+  if (SizeGen == TotalSize)
+    return ListListSet;
+  std::vector<Face> PartialOrbit=ListListSet;
+  auto IsPresent=[&](Face const& testList) -> bool {
+    for (auto & fList : PartialOrbit)
+      if (fList == testList)
+	return true;
+    return false;
+  };
+  while(true) {
+    for (auto & eGen : ListGen) {
+      size_t len=PartialOrbit.size();
+      for (size_t i=0; i<len; i++) {
+	Face eNewList=OnFace(PartialOrbit[i], eGen);
+	if (!IsPresent(eNewList)) {
+	  PartialOrbit.push_back(eNewList);
+	  DoubleCosetInsertEntry(eNewList);
+	  if (SizeGen == TotalSize) {
+	    std::vector<Face> ListListFin;
+	    for (auto & eRec : ListLocal)
+	      ListListFin.push_back(eRec.eFace);
+	    return ListListFin;
+	  }
+	}
+      }
+    }
+  }
+  os << "Likely not reachable stage\n";
+  throw TerminalException{1};
+}
+
+
+
+template<typename Tgroup>
+std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
+{
+  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
+  if (BigGRP.size() == SmaGRP.size())
+    return eListBig;
+  {
+    std::ofstream os1("ORBSPLIT_BigGRP");
+    std::ofstream os2("ORBSPLIT_BigGRP.gap");
+    std::ofstream os3("ORBSPLIT_SmaGRP");
+    std::ofstream os4("ORBSPLIT_SmaGRP.gap");
+    std::ofstream os5("ORBSPLIT_ListBig");
+    std::ofstream os6("ORBSPLIT_ListBig.gap");
+    WriteGroup      (os1, BigGRP);
+    WriteGroupGAP   (os2, BigGRP);
+    WriteGroup      (os3, SmaGRP);
+    WriteGroupGAP   (os4, SmaGRP);
+    WriteListFace   (os5, eListBig);
+    WriteListFaceGAP(os6, eListBig);
+  }
+  WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int>(SmaGRP, os);
+  LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
+  os << "We do the algorithm\n";
+  std::vector<Face> eListSma;
+  size_t iter=0;
+  for (auto & eSet : eListBig) {
+    os << "iter=" << iter << " Before DoubleCosetDescription\n";
+    std::vector<Face> ListListSet=DoubleCosetDescription(BigGRP, SmaGRP, LocalInv, eSet, os);
+    os << "      |ListListSet|=" << ListListSet.size() << "\n";
+    for (auto & eCos : ListListSet)
+      eListSma.push_back(eCos);
+    os << "      |eListSma|=" << eListSma.size() << "\n";
+    iter++;
+  }
+  return eListSma;
+}
+
+
 
 
 
@@ -646,19 +894,6 @@ namespace std {
       return std::hash<std::vector<permlib::dom_int>>()(V);
     }
   };
-}
-
-
-Face eEltImage(Face const& eSet, permlib::Permutation const& eElt)
-{
-  int nbExt=eSet.size();
-  Face fSet(nbExt);
-  for (int iExt=0; iExt<nbExt; iExt++)
-    if (eSet[iExt] == 1) {
-      int jExt=eElt.at(iExt);
-      fSet[jExt]=1;
-    }
-  return fSet;
 }
 
 
@@ -940,236 +1175,6 @@ bool IsSubgroup(TheGroupFormat const& g1, TheGroupFormat const& g2)
 
 
 
-
-std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
-				    TheGroupFormat const& TheGRP)
-{
-  std::vector<Face> TheReturn;
-  std::unordered_set<Face> ListTotal;
-  for (auto eFace : PreListTotal)
-    ListTotal.insert(eFace);
-  while(true) {
-    std::unordered_set<Face>::iterator iter=ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Face eSet=*iter;
-    TheReturn.push_back(eSet);
-    std::unordered_set<Face> Additional{eSet};
-    ListTotal.erase(eSet);
-    std::unordered_set<Face> SingleOrbit;
-    while(true) {
-      std::unordered_set<Face> NewElts;
-      for (auto const& gSet : Additional)
-	for (auto const& eGen : TheGRP.group->S) {
-	  Face fSet=eEltImage(gSet, *eGen);
-	  if (SingleOrbit.find(fSet) == SingleOrbit.end() && Additional.find(fSet) == Additional.end()) {
-	    if (NewElts.find(fSet) == NewElts.end()) {
-	      if (ListTotal.find(fSet) != ListTotal.end()) {
-		NewElts.insert(fSet);
-		ListTotal.erase(fSet);
-	      }
-#ifdef DEBUG
-	      else {
-		std::cerr << "Orbit do not matched, PANIC!!!\n";
-		throw TerminalException{1};
-	      }
-#endif
-	    }
-	  }
-	}
-      for (auto & uSet : Additional)
-	SingleOrbit.insert(uSet);
-      if (NewElts.size() == 0)
-	break;
-      Additional=NewElts;
-    }
-  }
-  return TheReturn;
-}
-
-
-
-template<typename Tobj, typename Tgen>
-std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTotal,
-					    std::vector<Tgen> const& ListGen,
-					    std::function<Tobj(Tobj const&,Tgen const&)> const& TheAct)
-{
-  std::vector<Tobj> TheReturn;
-  std::unordered_set<Tobj> ListTotal;
-  for (auto eObj : PreListTotal)
-    ListTotal.insert(eObj);
-  while(true) {
-    auto iter=ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Tobj eObj=*iter;
-    TheReturn.push_back(eObj);
-    std::unordered_set<Tobj> Additional;
-    Additional.insert(eObj);
-    ListTotal.erase(eObj);
-    std::unordered_set<Tobj> SingleOrbit;
-    while(true) {
-      std::unordered_set<Tobj> NewElts;
-      for (auto const& gObj : Additional)
-	for (auto const& eGen : ListGen) {
-	  Tobj fObj=TheAct(gObj, eGen);
-	  if (SingleOrbit.find(fObj) == SingleOrbit.end() && Additional.find(fObj) == Additional.end()) {
-	    if (NewElts.find(fObj) == NewElts.end()) {
-	      if (ListTotal.find(fObj) != ListTotal.end()) {
-		NewElts.insert(fObj);
-		ListTotal.erase(fObj);
-	      }
-#ifdef DEBUG
-	      else {
-		std::cerr << "Orbit do not match, PANIC!!!\n";
-		throw TerminalException{1};
-	      }
-#endif
-	    }
-	  }
-	}
-      for (auto & uSet : Additional)
-	SingleOrbit.insert(uSet);
-      if (NewElts.size() == 0)
-	break;
-      Additional=NewElts;
-    }
-  }
-  return TheReturn;
-}
-
-
-
-std::vector<Face> DoubleCosetDescription(TheGroupFormat const& BigGRP,
-					 TheGroupFormat const& SmaGRP,
-					 LocalInvInfo const& LocalInv,
-					 Face const& eList, std::ostream & os)
-{
-  os << "Beginning of DoubleCosetDescription\n";
-  std::list<permlib::Permutation::ptr> ListGen=BigGRP.group->S;
-  TheGroupFormat TheStab=GetStabilizer(BigGRP, eList);
-  os << "BigGRP.size=" << BigGRP.size << " TheStab.size=" << TheStab.size << "\n";
-  mpz_class TotalSize=BigGRP.size / TheStab.size;
-  os << "TotalSize=" << TotalSize << "\n";
-  //
-  struct Local {
-    int status;
-    Face eFace;
-    std::vector<int> eInv;
-  };
-  mpz_class SizeGen=0;
-  std::vector<Local> ListLocal;
-  auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
-    std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
-    for (auto const& fLocal : ListLocal) {
-      bool testCL=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 0).TheReply;
-      bool testPA=TestEquivalenceGeneralNaked(SmaGRP, fLocal.eFace, testList, 1).TheReply;
-      bool test=TestEquivalence(SmaGRP, fLocal.eFace, testList);
-      os << "fLocal.eFace=\n";
-      WriteFace(os, fLocal.eFace);
-      os << "    testList=\n";
-      WriteFace(os, testList);
-      os << "fLocal.eFace=" << fLocal.eFace << "\n";
-      os << "    testList=" << testList << "  testCL=" << testCL << " testPA=" << testPA << "\n";
-      if (test)
-	return;
-    }
-    ListLocal.push_back({0,testList,eInv});
-    TheGroupFormat fStab=GetStabilizer(SmaGRP, testList);
-    os << "SmaGRP.size=" << SmaGRP.size << " fStab.size=" << fStab.size << "\n";
-    mpz_class OrbSizeSma=SmaGRP.size / fStab.size;
-    SizeGen += OrbSizeSma;
-    os << "Now SizeGen=" << SizeGen << " OrbSizeSma=" << OrbSizeSma << " |ListLocal|=" << ListLocal.size() << "\n";
-  };
-  DoubleCosetInsertEntry(eList);
-  while(true) {
-    bool DoSomething=false;
-    size_t nbLocal=ListLocal.size();
-    for (size_t iLocal=0; iLocal<nbLocal; iLocal++)
-      if (ListLocal[iLocal].status == 0) {
-	ListLocal[iLocal].status=1;
-	DoSomething=true;
-	Face eFace=ListLocal[iLocal].eFace;
-	for (auto const& eGen : ListGen) {
-	  Face eNewList=eEltImage(eFace, *eGen);
-	  DoubleCosetInsertEntry(eNewList);
-	}
-      }
-    if (!DoSomething)
-      break;
-  }
-  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
-  std::vector<Face> ListListSet;
-  for (auto & eRec : ListLocal)
-    ListListSet.push_back(eRec.eFace);
-  if (SizeGen == TotalSize)
-    return ListListSet;
-  std::vector<Face> PartialOrbit=ListListSet;
-  auto IsPresent=[&](Face const& testList) -> bool {
-    for (auto & fList : PartialOrbit)
-      if (fList == testList)
-	return true;
-    return false;
-  };
-  while(true) {
-    for (auto & eGen : ListGen) {
-      size_t len=PartialOrbit.size();
-      for (size_t i=0; i<len; i++) {
-	Face eNewList=eEltImage(PartialOrbit[i], *eGen);
-	if (!IsPresent(eNewList)) {
-	  PartialOrbit.push_back(eNewList);
-	  DoubleCosetInsertEntry(eNewList);
-	  if (SizeGen == TotalSize) {
-	    std::vector<Face> ListListFin;
-	    for (auto & eRec : ListLocal)
-	      ListListFin.push_back(eRec.eFace);
-	    return ListListFin;
-	  }
-	}
-      }
-    }
-  }
-  os << "Likely not reachable stage\n";
-  throw TerminalException{1};
-}
-
-
-
-std::vector<Face> OrbitSplittingListOrbit(TheGroupFormat const& BigGRP, TheGroupFormat const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
-{
-  os << "|BigGRP|=" << BigGRP.size << " |SmaGRP|=" << SmaGRP.size << "\n";
-  if (BigGRP.size == SmaGRP.size)
-    return eListBig;
-  {
-    std::ofstream os1("ORBSPLIT_BigGRP");
-    std::ofstream os2("ORBSPLIT_BigGRP.gap");
-    std::ofstream os3("ORBSPLIT_SmaGRP");
-    std::ofstream os4("ORBSPLIT_SmaGRP.gap");
-    std::ofstream os5("ORBSPLIT_ListBig");
-    std::ofstream os6("ORBSPLIT_ListBig.gap");
-    WriteGroup      (os1, BigGRP);
-    WriteGroupGAP   (os2, BigGRP);
-    WriteGroup      (os3, SmaGRP);
-    WriteGroupGAP   (os4, SmaGRP);
-    WriteListFace   (os5, eListBig);
-    WriteListFaceGAP(os6, eListBig);
-  }
-  WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int>(SmaGRP, os);
-  LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
-  os << "We do the algorithm\n";
-  std::vector<Face> eListSma;
-  size_t iter=0;
-  for (auto & eSet : eListBig) {
-    os << "iter=" << iter << " Before DoubleCosetDescription\n";
-    std::vector<Face> ListListSet=DoubleCosetDescription(BigGRP, SmaGRP, LocalInv, eSet, os);
-    os << "      |ListListSet|=" << ListListSet.size() << "\n";
-    for (auto & eCos : ListListSet)
-      eListSma.push_back(eCos);
-    os << "      |eListSma|=" << eListSma.size() << "\n";
-    iter++;
-  }
-  return eListSma;
-}
 
 
 

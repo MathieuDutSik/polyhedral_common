@@ -373,7 +373,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       MProc.GetO(TheId) << "Begin the use of bank data\n";
       std::vector<Face> ListReprTrans;
       for (auto const& eOrbit : eResBank.eEnt.ListFace) {
-	Face eListJ=eEltImage(eOrbit, eResBank.TheEquiv);
+	Face eListJ=OnFace(eOrbit, eResBank.TheEquiv);
 	ListReprTrans.push_back(eListJ);
       }
       MProc.GetO(TheId) << "Before the orbit splitting |ListReprTrans|=" << ListReprTrans.size() << "\n";

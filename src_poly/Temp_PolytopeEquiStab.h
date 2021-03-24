@@ -7,7 +7,6 @@
 #include "Basic_string.h"
 #include "Basic_file.h"
 #include "GRAPH_GraphicalFunctions.h"
-#include "GRP_GroupFct.h"
 #include "COMB_Combinatorics_elem.h"
 #include "MAT_MatrixInt.h"
 #include "Boost_bitset.h"
@@ -1196,12 +1195,14 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 template<typename T1, typename T2, typename Tgroup>
 Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
+  using Telt=typename Tgroup::Telt;
   WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
   size_t nbSHV=WMatI.rows();
-  TheGroupFormat GRP=GetStabilizerWeightMatrix(WMatO);
+  Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatO);
+  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
   std::vector<int> v(nbSHV);
   std::vector<Telt> ListGen;
-  for (auto & eGen : GRP.group->S) {
+  for (auto & eGen : ListGenInput) {
     for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
       v[iSHV]=OnPoints(iSHV, eGen);
     ListGen.push_back(Telt(v));
@@ -1211,19 +1212,19 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 
 
 
-template<typename T1, typename T2>
-EquivTest<permlib::Permutation> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
+template<typename T1, typename T2, typename Telt>
+EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
 {
   WeightMatrix<T1, T2> WMatO1=GetSymmetricWeightMatrix<T1, T2>(WMat1);
   WeightMatrix<T1, T2> WMatO2=GetSymmetricWeightMatrix<T1, T2>(WMat2);
-  EquivTest<permlib::Permutation> eResEquiv=TestEquivalenceWeightMatrix(WMatO1, WMatO2);
+  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix(WMatO1, WMatO2);
   if (!eResEquiv.TheReply)
     return eResEquiv;
   size_t nbSHV=WMat1.rows();
   std::vector<permlib::dom_int> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
     v[i]=eResEquiv.TheEquiv.at(i);
-  return {true, permlib::Permutation(v)};
+  return {true, Telt(v)};
 }
 
 
@@ -1639,7 +1640,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
 
 
 // The matrix should be square and the output does not depends on the ordering of the coefficients.
-template<typename T>
+template<typename T, typename Telt>
 inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvariantWeightMatrix(WeightMatrix<T,T> const& WMat)
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
@@ -1657,7 +1658,7 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
       Tidx_value iWeight=WMat.GetValue(iVert, jVert);
       ListAtt[iWeight]++;
     }
-  permlib::Permutation ePerm=SortingPerm(ListWeight);
+  Telt ePerm=SortingPerm(ListWeight);
 #ifdef DEBUG
   for (size_t jWeight=1; jWeight<nbWeight; jWeight++) {
     size_t iWeight=jWeight-1;
@@ -2091,8 +2092,8 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 }
 
 
-template<typename Telt>
-TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
+template<typename Tgroup>
+Tgroup GetStabilizerBlissGraph(bliss::Graph g)
 {
   using Telt = Tgroup::Telt;
   bliss::Stats stats;
@@ -2111,7 +2112,7 @@ TheGroupFormat GetStabilizerBlissGraph(bliss::Graph g)
 }
 
 
-template<typename Telt>
+template<typename Tgroup>
 Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
 {
   using Telt = Tgroup::Telt;
@@ -2944,20 +2945,20 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
   return {true, TheEquiv};
 }
 
-template<typename T1, typename T2>
-EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
+template<typename T1, typename T2, typename Telt>
+EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> const& WMat2)
 {
   EquivTest<std::vector<unsigned int>> ePair = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
   size_t len = ePair.TheEquiv.size();
-  std::vector<permlib::dom_int> eList(len);
+  std::vector<int> eList(len);
   for (size_t i=0; i<len; i++)
     eList[i] = ePair.TheEquiv[i];
-  permlib::Permutation ePerm(eList);
+  Telt ePerm(eList);
   return {ePair.TheReply, ePerm};
 }
 
 template<typename T1, typename T2>
-EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> &WMat2)
+EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> &WMat2)
 {
   bool test=RenormalizeWeightMatrix(WMat1, WMat2);
   if (!test)
@@ -2968,7 +2969,7 @@ EquivTest<permlib::Permutation> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2>
 
 
 template<typename T1, typename T2>
-EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face const& f1, Face const& f2)
+EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face const& f1, Face const& f2)
 {
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
@@ -2997,7 +2998,7 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
   WMat2.Update(n,n,siz+2);
   WMat1.SetWeight(ListWeight);
   WMat1.SetWeight(ListWeight);
-  EquivTest<permlib::Permutation> test=TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
+  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
   std::vector<permlib::dom_int> eList(n);
@@ -3005,7 +3006,7 @@ EquivTest<permlib::Permutation> TestEquivalenceSubset(WeightMatrix<T1, T2> const
     int eVal=test.TheEquiv.at(i);
     eList[i]=eVal;
   }
-  return {true, permlib::Permutation(eList)};
+  return {true, Telt(eList)};
 }
 
 
@@ -3030,7 +3031,7 @@ TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
   }
   WMatW.Update(n,n,siz+2);
   Tgroup GRP=GetStabilizerWeightMatrix(WMatW);
-  std::vector<permlib::Permutation> ListPerm;
+  std::vector<Telt> ListPerm;
   for (auto & ePerm : GRP.GeneratorsOfGroup()) {
     std::vector<int> eList(n);
     for (size_t i=0; i<n; i++)
@@ -3061,8 +3062,8 @@ WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 }
 
 
-template<typename T1, typename T2>
-permlib::Permutation CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
+template<typename T1, typename T2, typename Telt>
+Telt CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
   GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
@@ -3081,7 +3082,7 @@ permlib::Permutation CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
     eVect[iVert] = i;
   }
   // Need to check that code.
-  return permlib::Permutation(eVect);
+  return Telt(eVect);
 }
 
 
@@ -3423,10 +3424,8 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
 
 
 
-template<typename T>
-MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1,
-				       MyMatrix<T> const& EXT2,
-				       permlib::Permutation const& ePerm)
+template<typename T, typename Telt>
+MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
   SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1);
   std::vector<int> ListRowSelect=eSelect.ListRowSelect;
@@ -3442,9 +3441,8 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1,
 
 
 
-template<typename T>
-permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
-					     MyMatrix<T> const& EXT2)
+template<typename T, typename Telt>
+Telt GetPermutationOnVectors(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2)
 {
   size_t nbVect=EXT1.rows();
   std::vector<MyVector<T>> EXTrow1(nbVect), EXTrow2(nbVect);
@@ -3452,9 +3450,9 @@ permlib::Permutation GetPermutationOnVectors(MyMatrix<T> const& EXT1,
     EXTrow1[iVect]=GetMatrixRow(EXT1, iVect);
     EXTrow2[iVect]=GetMatrixRow(EXT2, iVect);
   }
-  permlib::Permutation ePerm1=SortingPerm(EXTrow1);
-  permlib::Permutation ePerm2=SortingPerm(EXTrow2);
-  permlib::Permutation ePermRet=(~ePerm1) * ePerm2;
+  Telt ePerm1=SortingPerm(EXTrow1);
+  Telt ePerm2=SortingPerm(EXTrow2);
+  Telt ePermRet=(~ePerm1) * ePerm2;
 #ifdef DEBUG
   for (size_t iVect=0; iVect<nbVect; iVect++) {
     size_t jVect=ePermRet.at(iVect);
