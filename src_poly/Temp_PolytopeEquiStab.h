@@ -2801,7 +2801,6 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
   GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
-  size_t nbGen=ListGen.size();
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
     std::vector<int> gList(nbRow);
@@ -3032,7 +3031,7 @@ Tgroup StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
       WMatW.Update(n,i,siz+1);
   }
   WMatW.Update(n,n,siz+2);
-  Tgroup GRP=GetStabilizerWeightMatrix(WMatW);
+  Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatW);
   std::vector<Telt> ListPerm;
   for (auto & ePerm : GRP.GeneratorsOfGroup()) {
     std::vector<int> eList(n);

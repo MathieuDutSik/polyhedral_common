@@ -387,10 +387,9 @@ std::vector<Face> DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
   int nbPoint=TheGRP.n_act();
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   std::vector<Face> ListOrb;
-  int i, TheFirst;
   int len=eList.count();
   int aRow=eList.find_first();
-  for (i=0; i<len; i++) {
+  for (int i=0; i<len; i++) {
     VSLT_StoreValue(Vlist, aRow);
     aRow=eList.find_next(aRow);
   }
@@ -845,7 +844,7 @@ public:
     }
     n = n_inp;
     group = construct(n, generatorList.begin(), generatorList.end());
-    size = group->order<Tint>();
+    e_size = group->order<Tint>();
   }
   Face CanonicalImage(Face const& eFace) const
   {
@@ -853,13 +852,13 @@ public:
   }
   TheGroupFormat Stabilizer_OnSets(Face const& f) const
   {
-    PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, size, f);
+    PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, e_size, f);
     Tint_inp size_stab = group_stab->order<Tint_inp>();
     return TheGroupFormat(n, size_stab, group_stab);
   }
   std::pair<bool,permlib::Permutation> RepresentativeAction_OnSets(Face const& f1, Face const& f2) const
   {
-    return PERMLIB_TestEquivalenceGeneral(n, group, size, f1, f2);
+    return PERMLIB_TestEquivalenceGeneral(n, group, e_size, f1, f2);
   }
   std::vector<Telt> GeneratorsOfGroup() const
   {
