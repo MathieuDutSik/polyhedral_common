@@ -1221,7 +1221,7 @@ EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1,
   if (!eResEquiv.TheReply)
     return eResEquiv;
   size_t nbSHV=WMat1.rows();
-  std::vector<permlib::dom_int> v(nbSHV);
+  std::vector<int> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
     v[i]=eResEquiv.TheEquiv.at(i);
   return {true, Telt(v)};
@@ -1409,8 +1409,8 @@ struct LocalInvInfo {
 
 
 
-template<typename T1, typename T2>
-LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGroupFormat const& GRP, std::string const& strat, std::ostream & os)
+template<typename T1, typename T2, typename Tgroup>
+LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgroup const& GRP, std::string const& strat, std::ostream & os)
 {
   os << "ComputeLocalInvariantStrategy, step 1\n";
   int nbNeed=0;
@@ -1439,7 +1439,7 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, TheGr
   //
   WeightMatrix<int,int> WMatInt;
   if (UsePairOrbit) {
-    WMatInt=WeightMatrixFromPairOrbits<int,int>(GRP, os);
+    WMatInt=WeightMatrixFromPairOrbits<int,int,Tgroup>(GRP, os);
   }
   else {
     WMatInt=NakedWeightedMatrix(WMat);
@@ -2097,7 +2097,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
 template<typename Tgroup>
 Tgroup GetStabilizerBlissGraph(bliss::Graph g)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   std::vector<std::vector<unsigned int>>* h = &ListGen;
@@ -2117,7 +2117,7 @@ Tgroup GetStabilizerBlissGraph(bliss::Graph g)
 template<typename Tgroup>
 Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   std::vector<Telt> generatorList;
   std::vector<int> gList(nbVert);
   for (auto & eGen : ListGen) {
@@ -2154,15 +2154,15 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const& ListGen, 
 }
 
 
-template<typename Tgr>
+template<typename Tgr, typename Tgroup>
 void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
 {
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   size_t nbVert=eGR.GetNbVert();
   std::vector<std::vector<unsigned int>> ListGen1 = BLISS_GetListGenerators(eGR);
   std::vector<std::vector<unsigned int>> ListGen2 = TRACES_GetListGenerators(eGR);
-  auto siz1 = GetGroupListGen(ListGen1, nbVert).size;
-  auto siz2 = GetGroupListGen(ListGen2, nbVert).size;
+  auto siz1 = GetGroupListGen<Tgroup>(ListGen1, nbVert).size();
+  auto siz2 = GetGroupListGen<Tgroup>(ListGen2, nbVert).size();
   bool test1 = CheckListGenerators(ListGen1, eGR);
   bool test2 = CheckListGenerators(ListGen2, eGR);
   os << "|GRP bliss|=" << siz1 << " |GRP traces|=" << siz2 << " test1=" << test1 << " test2=" << test2 << "\n";
@@ -2794,7 +2794,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 template<typename T1, typename T2, typename Tgroup>
 Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   size_t nbRow=WMat.rows();
@@ -2959,18 +2959,18 @@ EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<T1, T2> c
   return {ePair.TheReply, ePerm};
 }
 
-template<typename T1, typename T2>
+template<typename T1, typename T2, typename Telt>
 EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, WeightMatrix<T1, T2> &WMat2)
 {
   bool test=RenormalizeWeightMatrix(WMat1, WMat2);
   if (!test)
     return {false, {}};
-  return TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
+  return TestEquivalenceWeightMatrix_norenorm_perm<T1,T2,Telt>(WMat1, WMat2);
 }
 
 
 
-template<typename T1, typename T2>
+template<typename T1, typename T2, typename Telt>
 EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face const& f1, Face const& f2)
 {
   size_t siz=WMat.GetWeightSize();
@@ -3000,10 +3000,10 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face con
   WMat2.Update(n,n,siz+2);
   WMat1.SetWeight(ListWeight);
   WMat1.SetWeight(ListWeight);
-  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm(WMat1, WMat2);
+  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<T1,T2,Telt>(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
-  std::vector<permlib::dom_int> eList(n);
+  std::vector<int> eList(n);
   for (size_t i=0; i<n; i++) {
     int eVal=test.TheEquiv.at(i);
     eList[i]=eVal;
@@ -3014,9 +3014,9 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face con
 
 
 template<typename T1, typename T2, typename Tgroup>
-TheGroupFormat StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
+Tgroup StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
   WeightMatrix<int,int> WMatW(n+1,0);
@@ -3077,7 +3077,7 @@ Telt CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
     clR[cl[i]]=i;
   unsigned int nbVert=WMat.GetNbVert();
   std::vector<unsigned int> eVect_R(nof_vertices);
-  std::vector<permlib::dom_int> eVect(nbVert);
+  std::vector<int> eVect(nbVert);
   for (unsigned int iVert=0; iVert<nbVert; iVert++) {
     unsigned int i=cl[iVert]; // or clR? this needs to be debugged
     eVect_R[i]=iVert;
@@ -3089,8 +3089,8 @@ Telt CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 
 
 
-template<typename T>
-TheGroupFormat LinPolytope_Automorphism(MyMatrix<T> const & EXT)
+template<typename T, typename Tgroup>
+Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 {
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
@@ -3201,9 +3201,10 @@ EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(MyMatrix<T> 
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
-
-  WeightMatrix<std::vector<T>, T> WMat1 = GetWeightMatrix_ListMat_Subset(EXT1, ListMat1, eSubset1);
-  WeightMatrix<std::vector<T>, T> WMat2 = GetWeightMatrix_ListMat_Subset(EXT2, ListMat2, eSubset2);
+  using T1 = std::vector<T>;
+  using T2 = T;
+  WeightMatrix<T1, T2> WMat1 = GetWeightMatrix_ListMat_Subset(EXT1, ListMat1, eSubset1);
+  WeightMatrix<T1, T2> WMat2 = GetWeightMatrix_ListMat_Subset(EXT2, ListMat2, eSubset2);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";

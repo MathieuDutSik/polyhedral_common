@@ -639,7 +639,7 @@ std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& Sm
     WriteListFace   (os5, eListBig);
     WriteListFaceGAP(os6, eListBig);
   }
-  WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int>(SmaGRP, os);
+  WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int,Tgroup>(SmaGRP, os);
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
   os << "We do the algorithm\n";
   std::vector<Face> eListSma;
