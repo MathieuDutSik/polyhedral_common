@@ -24,13 +24,14 @@ int main(int argc, char *argv[])
     MyMatrix<T> TheEXT=ReadMatrix<T>(EXTfs);
 
     std::ifstream GRPfs(argv[2]);
-    TheGroupFormat TheGRP=ReadGroup(GRPfs);
+    using Tgroup=TheGroupFormat<mpz_class>;
+    Tgroup TheGRP=ReadGroup<Tgroup>(GRPfs);
 
     LevSearch=atoi(argv[3]);
     std::cerr << "LevSearch=" << LevSearch << "\n";
 
     std::cerr << "Step main 5\n";
-    std::vector<std::vector<Face> > ListListOrb=EnumerationFaces<T>(TheGRP, TheEXT, LevSearch);
+    std::vector<std::vector<Face>> ListListOrb=EnumerationFaces<T,Tgroup>(TheGRP, TheEXT, LevSearch);
     std::cerr << "Completion of the program\n";
 
     std::ofstream OUTfs(argv[4]);

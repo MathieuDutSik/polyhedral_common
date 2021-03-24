@@ -154,7 +154,7 @@ void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
   int nbGen=ListGen.size();
   os << TheGRP.n << " " << nbGen << "\n";
   for (auto & eGen : ListGen) {
-    for (std::size_t i=0; i<TheGRP.n; i++) {
+    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
       int eVal=OnPoints(i, eGen);
       os << " " << eVal;
     }
@@ -171,7 +171,7 @@ void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
   std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   int nbGen=0;
   for (auto & eGen : ListGen) {
-    for (std::size_t i=0; i<TheGRP.n; i++) {
+    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
       int eVal = OnPoints(i, eGen);
       os << " " << eVal;
     }
@@ -195,7 +195,7 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
       os << ",\n";
     IsFirst=false;
     os << "[";
-    for (std::size_t i=0; i<TheGRP.n; i++) {
+    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
       int eVal = 1 + OnPoints(i, eGen);
       if (i>0)
 	os << ",";
@@ -246,7 +246,7 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
 template<typename Tgroup>
 std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
 {
-  int n=TheGRP.n;
+  int n=TheGRP.n_act();
   std::vector<int> gListB(n);
   for (int i=0; i<n; i++)
     gListB[i] = 1 - gList[i];
@@ -297,7 +297,7 @@ template<typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 {
   using Telt = typename Tgroup::Telt;
-  int n=TheGRP.n;
+  int n=TheGRP.n_act();
   Telt ePermR=~ePerm;
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
@@ -341,7 +341,7 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
   int nb=ListSet.size();
   for (int iList=0; iList<nb; iList++)
     if (eInv == ListInv[iList]) {
-      bool test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]);
+      bool test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]).first;
       if (test)
 	return;
     }
@@ -850,7 +850,7 @@ public:
   {
     return PERMLIB_Canonicalization(n, group, eFace);
   }
-  TheGroupFormat Stabilizer_OnSets(Face const& f) const
+  TheGroupFormat<Tint> Stabilizer_OnSets(Face const& f) const
   {
     PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, e_size, f);
     Tint_inp size_stab = group_stab->order<Tint_inp>();
@@ -1013,9 +1013,10 @@ struct IteratorGrp {
 };
 
 
-IteratorGrp GetInitialIterator(TheGroupFormat const& eGRP)
+template<typename Tint>
+IteratorGrp GetInitialIterator(TheGroupFormat<Tint> const& eGRP)
 {
-  int n=eGRP.n;
+  int n=eGRP.n_act();
   std::vector<MyFormTransversal> ListTrans;
   for (auto & eTrans : eGRP.group->U) {
     MyFormTransversal TheTrans=GetListPermutation(eGRP.group, eTrans);
@@ -1026,32 +1027,36 @@ IteratorGrp GetInitialIterator(TheGroupFormat const& eGRP)
   return {n, ListPos, ListTrans};
 }
 
+template<typename Tint>
 struct OrbitMinimumArr {
   int n;
-  mpz_class GRPsize;
+  Tint GRPsize;
   std::vector<MyFormTransversal> ListTrans;
 };
 
-OrbitMinimumArr GetInitialMinimumArray(TheGroupFormat const& eGRP)
+template<typename Tint>
+OrbitMinimumArr<Tint> GetInitialMinimumArray(TheGroupFormat<Tint> const& eGRP)
 {
   //  std::cerr << "GetInitialMinimumArray |GRP|=" << eGRP.size << "\n";
   IteratorGrp eIter=GetInitialIterator(eGRP);
   return {eIter.n, eGRP.size, eIter.ListTrans};
 }
 
+template<typename Tint>
 struct ResultMinimum {
   Face eMin;
-  mpz_class OrbitSize;
+  Tint OrbitSize;
 };
 
-ResultMinimum GetMinimumRecord(OrbitMinimumArr const& ArrMin, Face const& eFace)
+template<typename Tint>
+ResultMinimum<Tint> GetMinimumRecord(OrbitMinimumArr<Tint> const& ArrMin, Face const& eFace)
 {
   int nbTrans=ArrMin.ListTrans.size();
   int n=ArrMin.n;
   std::vector<Face> ListFace(nbTrans+1,eFace);
   std::vector<size_t> ListPos(nbTrans,0);
   Face FaceMin=eFace;
-  mpz_class nbAtt=0;
+  Tint nbAtt=0;
   //  std::cerr << "|GRP|=" << ArrMin.GRPsize << "\n";
   auto Increment=[&]() -> int {
     for (int i=0; i<nbTrans; i++)
@@ -1082,7 +1087,7 @@ ResultMinimum GetMinimumRecord(OrbitMinimumArr const& ArrMin, Face const& eFace)
       break;
   }
   //  std::cerr << "nbAtt=" << nbAtt << "\n";
-  mpz_class eOrbitSize=ArrMin.GRPsize / nbAtt;
+  Tint eOrbitSize=ArrMin.GRPsize / nbAtt;
   return {FaceMin, eOrbitSize};
 }
 
@@ -1154,7 +1159,9 @@ bool TestBelongingInGroup(IteratorGrp const& eIter, permlib::Permutation const& 
 
 
 
-bool IsSubgroup(TheGroupFormat const& g1, TheGroupFormat const& g2)
+
+template<typename Tint>
+bool IsSubgroup(TheGroupFormat<Tint> const& g1, TheGroupFormat<Tint> const& g2)
 {
   IteratorGrp eIter=GetInitialIterator(g1);
   for (auto & eGen : g2.group->S) {
