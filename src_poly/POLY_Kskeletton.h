@@ -10,9 +10,9 @@
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
 template<typename T, typename Tgroup>
-std::list<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
+std::vector<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
 {
-  std::list<Face> TheReturn;
+  std::vector<Face> TheReturn;
   MyMatrix<T> FACred=ColumnReduction(FAC);
   int nbRow=FACred.rows();
   int nbCol=FACred.cols();
@@ -229,8 +229,6 @@ std::vector<std::vector<Face>> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T
 {
   std::vector<std::vector<Face>> RetList;
   std::vector<Face> ListOrb;
-  std::list<Face> TheSpann;
-
   int n=TheGRP.n_act();
   Face eList(n);
   MyMatrix<T> FACred=ColumnReduction(FAC);
@@ -250,8 +248,7 @@ std::vector<std::vector<Face>> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T
     std::vector<std::vector<int>> ListInv;
     for (auto &eOrb : RetList[iLevel-1]) {
       Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
-      TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace,
-					   FACred, TheGRP);
+      std::vector<Face> TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
       for (Face fOrb : TheSpann) {
 	std::vector<int> eInv=GetLocalInvariantWeightMatrix<T,T,int>(WMat, fOrb);
 	GROUP_FuncInsertInSet_UseInv(TheGRP, fOrb, eInv,

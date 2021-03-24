@@ -12,6 +12,13 @@
 #include "Temp_PolytopeEquiStab.h"
 
 
+
+int OnPoints(int const& i, permlib::Permutation const& elt)
+{
+  return elt.at(i);
+}
+
+
 //
 // permutation functions
 //
@@ -123,15 +130,15 @@ Tgroup ReadGroup(std::istream &is)
     throw TerminalException{1};
   }
   int nbGen;
-  permlib::dom_int n;
+  int n;
   is >> n;
   is >> nbGen;
   std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
   std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<permlib::dom_int> v(n);
+    std::vector<int> v(n);
     for (std::size_t i=0; i<n; i++) {
-      permlib::dom_int eVal;
+      int eVal;
       is >> eVal;
       if (eVal > n-1) {
 	std::cerr << "Error in ReadGroup function\n";
@@ -141,7 +148,7 @@ Tgroup ReadGroup(std::istream &is)
       }
       v[i]=eVal;
     }
-    ListGen.push_back(permlib::Permutation(v));
+    ListGen.push_back(Telt(v));
   }
   return Tgroup(ListGen, n);
 }
@@ -280,7 +287,7 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
   }
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<permlib::dom_int> v(nb);
+    std::vector<int> v(nb);
     for (int i=0; i<nb; i++) {
       int eVal1=ListPosition[i];
       int eVal2=OnPoints(eVal1, eGen);
@@ -301,7 +308,7 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
   Telt ePermR=~ePerm;
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<permlib::dom_int> v(n);
+    std::vector<int> v(n);
     for (int i=0; i<n; i++) {
       int eVal1=OnPoints(i, ePermR);
       int eVal2=OnPoints(eVal1, eGen);
@@ -459,8 +466,8 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 
 
 
-
-Face OnFace(Face const& eSet, permlib::Permutation const& eElt)
+template<typename Telt>
+Face OnFace(Face const& eSet, Telt const& eElt)
 {
   int nbExt=eSet.size();
   Face fSet(nbExt);

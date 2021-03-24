@@ -15,8 +15,8 @@ struct resultFT {
 
 
 
-template<typename T>
-resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, permlib::Permutation const& ePerm)
+template<typename T, typename Telt>
+resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
   if (EXT1.cols() != EXT2.cols() )
     return {false, {}};
@@ -32,7 +32,7 @@ resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const
   MyMatrix<T> eMat2(nbCol, nbCol);
   for (int iRow=0; iRow<nbCol; iRow++) {
     int iRow1=eSelect.ListRowSelect[iRow];
-    int iRow2=ePerm.at(iRow1);
+    int iRow2=OnPoints(iRow1, ePerm);
     eMat1.row(iRow)=EXT1.row(iRow1);
     eMat2.row(iRow)=EXT2.row(iRow2);
   }
@@ -49,8 +49,8 @@ resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const
 }
 
 
-template<typename T>
-MyMatrix<T> FindTransformation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, permlib::Permutation const& ePerm)
+template<typename T, typename Telt>
+MyMatrix<T> FindTransformation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
   resultFT<T> eRes=FindTransformationGeneral(EXT1, EXT2, ePerm);
   assert(eRes.test);
@@ -58,12 +58,13 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
 }
 
 
-template<typename T>
-bool IsSymmetryGroupOfPolytope(MyMatrix<T> const& EXT, TheGroupFormat const& GRP)
+template<typename T, typename Tgroup>
+bool IsSymmetryGroupOfPolytope(MyMatrix<T> const& EXT, TheGroup const& GRP)
 {
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  for (auto const& eGen : GRP.group->S) {
-    resultFT<T> resFT=FindTransformationGeneral(EXTred, EXTred, *eGen);
+  std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
+  for (auto const& eGen : ListGen) {
+    resultFT<T> resFT=FindTransformationGeneral(EXTred, EXTred, eGen);
     if (!resFT.test)
       return false;
   }
@@ -83,14 +84,14 @@ struct MatrixGroup {
 // of matrix groups.
 // We hope that the right structures have already been implemented in permlib
 // and that it is only a matter of template substritutions
-template<typename T>
+template<typename T, typename Telt>
 struct PairPermMat {
 public:
   PairPermMat(PairPermMat const& p) = default;
 
-  PairPermMat(permlib::Permutation const& ePerm, MyMatrix<T> const& eMat) : perm(ePerm), mat(eMat) {}
-  
-  permlib::Permutation GetPerm() const
+  PairPermMat(Telt const& ePerm, MyMatrix<T> const& eMat) : perm(ePerm), mat(eMat) {}
+
+  Telt GetPerm() const
   {
     return perm;
   }
@@ -100,13 +101,13 @@ public:
   }
   PairPermMat operator*(PairPermMat const& p) const
   {
-    permlib::Permutation ePerm=perm*p.perm;
+    Telt ePerm=perm*p.perm;
     MyMatrix<T> eMat=mat*p.mat;
     return PairPermMat(ePerm, eMat);
   }
   PairPermMat& operator*=(PairPermMat const& p)
   {
-    permlib::Permutation ePerm=perm*p.perm;
+    Telt ePerm=perm*p.perm;
     MyMatrix<T> eMat=mat*p.mat;
     perm=ePerm;
     mat=eMat;
@@ -114,7 +115,7 @@ public:
   }
   PairPermMat& operator^=(PairPermMat const& p)
   {
-    permlib::Permutation ePerm=p.perm*perm;
+    Telt ePerm=p.perm*perm;
     MyMatrix<T> eMat=p.mat*mat;
     perm=ePerm;
     mat=eMat;
@@ -122,7 +123,7 @@ public:
   }
   PairPermMat operator~() const
   {
-    permlib::Permutation ePerm=~perm;
+    Telt ePerm=~perm;
     MyMatrix<T> eMat=Inverse(mat);
     return PairPermMat(ePerm, eMat);
   }
@@ -151,7 +152,7 @@ public:
 	  return false;
     return true;
   }
-  permlib::dom_int at(permlib::dom_int const& val) const
+  int at(int const& val) const
   {
     return perm.at(val);
   }
@@ -160,7 +161,7 @@ public:
     return perm.size();
   }
 private:
-  permlib::Permutation perm;
+  Telt perm;
   MyMatrix<T> mat;
 };
 
