@@ -1254,13 +1254,13 @@ std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, 
 
 
 
-template<typename T1, typename T2>
-WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::ostream & os)
+template<typename T1, typename T2, typename Tgroup>
+WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream & os)
 {
 #ifdef DEBUG
   bool IsDiag;
 #endif
-  size_t n=GRP.n;
+  size_t n=GRP.n_act();
   WeightMatrix<T1,T2> WMat(n,0);
   for (size_t i=0; i<n; i++)
     for (size_t j=0; j<n; j++)
@@ -1319,6 +1319,8 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
   int iChoice=0;
   int iOrbit=0;
   std::vector<T1> ListWeight;
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
   while(true) {
     std::pair<int,int> eStart=GetUnset();
     if (eStart.first == -1)
@@ -1346,9 +1348,9 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
 	int i=ePair.first;
 	int j=ePair.second;
 	WMat.intDirectAssign(i,j,iOrbit);
-	for (auto & eGen : GRP.group->S) {
-	  int iImg=eGen->at(i);
-	  int jImg=eGen->at(j);
+	for (auto & eGen : ListGen) {
+	  int iImg = OnPoints(i, eGen);
+	  int jImg = OnPoints(j, eGen);
 	  auto aInsert=[&](int const& u, int const& v) -> void {
 	    int eVal1=WMat.GetValue(u,v);
 #ifdef DEBUG
@@ -1382,7 +1384,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(TheGroupFormat const& GRP, std::o
       iChoice=iChoiceB;
     }
 #ifdef DEBUG
-      os << "     size=" << GRP.size << " orbSize=" << orbSize << "\n";
+    os << "     size=" << GRP.size() << " orbSize=" << orbSize << "\n";
 #endif
     iOrbit++;
   }
