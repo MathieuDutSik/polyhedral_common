@@ -105,7 +105,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
     ListIncd = CDD_PPL_ExternalProgram(EXTred, "lcdd_gmp");
     WeAreDone=true;
   }
-  if (!WeAreDone || ) {
+  if (!WeAreDone || ListIncd.size() == 0) {
     std::cerr << "No right program found with ansProg=" << ansProg << "\n";
     std::cerr << "Let us die\n";
     throw TerminalException{1};

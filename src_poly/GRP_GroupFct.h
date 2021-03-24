@@ -67,7 +67,7 @@ void WritePermutationGAP(std::ostream&os, Telt const& ePerm)
     std::vector<int> TheList(nbMatch);
     TheList[0]=eFirst;
     for (int i=1; i<nbMatch; i++)
-      TheList[i] = OnPoints(eTheList[i-1], ePerm);
+      TheList[i] = OnPoints(TheList[i-1], ePerm);
     os << "(";
     for (int i=0; i<nbMatch; i++) {
       if (i>0)
@@ -116,7 +116,7 @@ Telt SortingPerm(std::vector<T> const & ListV)
 template<typename Tgroup>
 Tgroup ReadGroup(std::istream &is)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   if (!is.good()) {
     std::cerr << "ReadGroup operation failed because stream is not valid\n";
     throw TerminalException{1};
@@ -148,8 +148,7 @@ Tgroup ReadGroup(std::istream &is)
 template<typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
 {
-  using Telt = Tgroup::Telt;
-  using Tint = Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen=ListGen.size();
   os << TheGRP.n << " " << nbGen << "\n";
@@ -166,7 +165,7 @@ void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
 template<typename Tgroup>
 void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   os << "nb acting element=" << TheGRP.n_act() << "\n";
   std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   int nbGen=0;
@@ -185,7 +184,7 @@ void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
 template<typename Tgroup>
 void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   os << "local eListList, ListGen, GRP;\n";
   os << "eListList:=[\n";
@@ -264,7 +263,7 @@ std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
 template<typename Tgroup>
 Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   int nb=eList.count();
   if (nb == 0) {
     std::cerr << "Call of ReducedGroupAction with 0 points\n";
@@ -296,7 +295,7 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 template<typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 {
-  using Telt = Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
   int n=TheGRP.n;
   Telt ePermR=~ePerm;
   std::vector<Telt> ListGen;
@@ -312,6 +311,105 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
   }
   return Tgroup(ListGen, n);
 }
+
+
+//
+// Some enumeration code
+//
+
+template<typename Tgroup>
+void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, std::vector<Face> &ListListSet)
+{
+  int nb=ListListSet.size();
+  for (int iList=0; iList<nb; iList++) {
+    bool test=TheGRP.RepresentativeAction_OnSets(eList, ListListSet[iList]).first;
+    if (test)
+      return;
+  }
+  ListListSet.push_back(eList);
+}
+
+
+template<typename Tgroup>
+void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
+				  Face const& eList,
+				  std::vector<int> const& eInv, 
+				  std::vector<Face> &ListSet,
+				  std::vector<std::vector<int> > &ListInv)
+{
+  int nb=ListSet.size();
+  for (int iList=0; iList<nb; iList++)
+    if (eInv == ListInv[iList]) {
+      bool test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]);
+      if (test)
+	return;
+    }
+  ListSet.push_back(eList);
+  ListInv.push_back(eInv);
+}
+
+
+//
+// Some combinatorial algorithms
+//
+
+
+template<typename Tgroup>
+std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
+{
+  using Telt = typename Tgroup::Telt;
+  int n = TheGRP.n_act();
+  IntegerSubsetStorage Vorb = VSLT_InitializeStorage(n);
+  IntegerSubsetStorage Vactive = VSLT_InitializeStorage(n);
+  std::vector<int> eList;
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  VSLT_StoreValue(Vactive, ePoint);
+  while(true) {
+    if (VSLT_IsEmpty(Vactive))
+      break;
+    int TheFirst=VSLT_TheFirstPosition(Vactive);
+    VSLT_RemoveValue(Vactive, TheFirst);
+    VSLT_StoreValue(Vorb, TheFirst);
+    eList.push_back(TheFirst);
+    for (auto & eGen : ListGen) {
+      int NewPt = OnPoints(TheFirst, eGen);
+      if (!VSLT_IsItInSubset(Vorb, NewPt) && !VSLT_IsItInSubset(Vactive, NewPt))
+	VSLT_StoreValue(Vactive, NewPt);
+    }
+  }
+  return eList;
+}
+
+template<typename Tgroup>
+std::vector<Face> DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
+{
+  using Telt = typename Tgroup::Telt;
+  int nbPoint=TheGRP.n_act();
+  IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
+  std::vector<Face> ListOrb;
+  int i, TheFirst;
+  int len=eList.count();
+  VSLT_InitializeStorage(Vlist, nbPoint);
+  int aRow=eList.find_first();
+  for (i=0; i<len; i++) {
+    VSLT_StoreValue(Vlist, aRow);
+    aRow=eList.find_next(aRow);
+  }
+  while(true) {
+    if (VSLT_IsEmpty(Vlist))
+      break;
+    int TheFirst=VSLT_TheFirstPosition(Vlist);
+    std::vector<int> eOrb=ComputeFullOrbitPoint(TheGRP, TheFirst);
+    Face vectOrb(nbPoint);
+    for (auto & ePt : eOrb) {
+      vectOrb[ePt]=1;
+      VSLT_RemoveValue(Vlist, ePt);
+    }
+    ListOrb.push_back(vectOrb);
+  }
+  return ListOrb;
+}
+
 
 
 
@@ -374,7 +472,7 @@ Face Face_EquivSimplification(Face const& eFace)
 
 
 
-std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n, PermutationGroupPtr Tconst& group, Face const& eList1, Face const& eList2, int const& eMethod)
+std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2, int const& eMethod)
 {
   permlib::Permutation::ptr mappingElement;
   int nb1=eList1.count();
@@ -396,21 +494,22 @@ std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneralNaked(int con
   return {false, {}};
 }
 
-std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
+template<typename Tint>
+std::pair<bool,permlib::Permutation> PERMLIB_TestEquivalenceGeneral(int const& n, PermutationGroupPtr const& group, Tint const& grp_size, Face const& eList1, Face const& eList2)
 {
-  mpz_class MaxSize=10000;
+  Tint MaxSize=10000;
   int eMethod = 1;
-  if (TheGRP.size < MaxSize)
+  if (grp_size < MaxSize)
     eMethod=0;
   return PERMLIB_TestEquivalenceGeneralNaked(n, group, eList1, eList2, eMethod);
 }
 
 
 
-bool PERMLIB_TestEquivalence(int const& n, PermutationGroupPtr const& group, Face const& eList1, Face const& eList2)
+template<typename Tint>
+bool PERMLIB_TestEquivalence(int const& n, PermutationGroupPtr const& group, Tint const& grp_size, Face const& eList1, Face const& eList2)
 {
-  std::pair<bool,permlib::Permutation> eRes=PERMLIB_TestEquivalenceGeneral(n, group, eList1, eList2);
-  return eRes.first;
+  return PERMLIB_TestEquivalenceGeneral(n, group, grp_size, eList1, eList2).first;
 }
 
 
@@ -428,7 +527,7 @@ Face PERMLIB_Canonicalization(int const& n, PermutationGroupPtr const& group, Fa
     eListI[aRow]=1;
     aRow=eList.find_next(aRow);
   }
-  eListO=smallestSetImage(n, *group, eListI);
+  eListO=smallestSetImage(*group, eListI);
   Face TheRet;
   for (int i=0; i<n; i++)
     if (eListO[i] == 1)
@@ -450,19 +549,20 @@ PermutationGroupPtr PERMLIB_GetStabilizer_general(PermutationGroupPtr const& gro
   Face NewList=Face_EquivSimplification(eList);
   std::set<int> eSet=GetSetFrom_DB(NewList);
   if (opt == 0)
-    return setStabilizer_classic(*TheGRP.group, eSet.begin(), eSet.end());
+    return permlib::setStabilizer_classic(*group, eSet.begin(), eSet.end());
   if (opt == 1)
-    return setStabilizer_partition(*TheGRP.group, eSet.begin(), eSet.end());
+    return permlib::setStabilizer_partition(*group, eSet.begin(), eSet.end());
 }
 
 
 
 
 
-PermutationGroupPtr PERMLIB_GetStabilizer(PermutationGroupPtr const& group, Face const& eList)
+template<typename Tint>
+PermutationGroupPtr PERMLIB_GetStabilizer(PermutationGroupPtr const& group, Tint const& grp_size, Face const& eList)
 {
-  mpz_class MaxSize=10000;
-  if (TheGRP.size < MaxSize) {
+  Tint MaxSize=10000;
+  if (grp_size < MaxSize) {
     return PERMLIB_GetStabilizer_general(group, eList, 0);
   }
   else {
@@ -478,9 +578,9 @@ template<typename Tint_inp>
 struct TheGroupFormat {
 private:
   int n;
-  Tint_inp size;
+  Tint_inp e_size;
   PermutationGroupPtr group;
-  TheGroupFormat(int const& _n, Tint_inp const& _size, PermutationGroupPtr const& _group) : n(_n), size(_size), group(_group)
+  TheGroupFormat(int const& _n, Tint_inp const& _size, PermutationGroupPtr const& _group) : n(_n), e_size(_size), group(_group)
   {
   }
 public:
@@ -490,14 +590,14 @@ public:
   {
     std::vector<permlib::Permutation::ptr> generatorList;
     for (auto & eGen : ListPerm) {
-      std::vector<permlib::dom_int> v(n);
+      std::vector<int> v(n);
       for (std::size_t i=0; i<n; i++)
         v[i]=eGen.at(i);
       generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
     }
     n = n_inp;
     group = construct(n, generatorList.begin(), generatorList.end());
-    size = TheGroupRet.group->order<mpz_class>();
+    size = group->order<Tint>();
   }
   Face CanonicalImage(Face const& eFace) const
   {
@@ -505,13 +605,13 @@ public:
   }
   TheGroupFormat Stabilizer_OnSets(Face const& f) const
   {
-    PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, f);
+    PermutationGroupPtr group_stab = PERMLIB_GetStabilizer(group, size, f);
     Tint_inp size_stab = group_stab->order<Tint_inp>();
     return TheGroupFormat(n, size_stab, group_stab);
   }
   std::pair<bool,permlib::Permutation> RepresentativeAction_OnSets(Face const& f1, Face const& f2) const
   {
-    return PERMLIB_TestEquivalenceGeneral(n, group, f1, f2);
+    return PERMLIB_TestEquivalenceGeneral(n, group, size, f1, f2);
   }
   std::vector<Telt> GeneratorsOfGroup() const
   {
@@ -575,38 +675,6 @@ void WriteVectorInt(std::ostream &os, std::vector<int> const& OneInc)
 }
 
 
-void GROUP_FuncInsertInSet_UseInv(TheGroupFormat const& TheGRP,
-				  Face const& eList,
-				  std::vector<int> const& eInv, 
-				  std::vector<Face> &ListSet,
-				  std::vector<std::vector<int> > &ListInv)
-{
-  int nb=ListSet.size();
-  for (int iList=0; iList<nb; iList++)
-    if (eInv == ListInv[iList]) {
-      bool test=TestEquivalence(TheGRP, eList, ListSet[iList]);
-      if (test)
-	return;
-    }
-  ListSet.push_back(eList);
-  ListInv.push_back(eInv);
-}
-
-
-
-
-
-void GROUP_FuncInsertInSet(TheGroupFormat const& TheGRP, Face const& eList, std::vector<Face> &ListListSet)
-{
-  int iList, nb;
-  nb=ListListSet.size();
-  for (iList=0; iList<nb; iList++) {
-    bool test=TestEquivalence(TheGRP, eList, ListListSet[iList]);
-    if (test)
-      return;
-  }
-  ListListSet.push_back(eList);
-}
 
 
 
@@ -632,74 +700,6 @@ void GROUP_FuncInsertInSet(TheGroupFormat const& TheGRP, Face const& eList, std:
 
 
 
-
-
-
-
-std::list<int> ComputeFullOrbitPoint(TheGroupFormat const& TheGRP, int const& ePoint)
-{
-  IntegerSubsetStorage *Vorb;
-  IntegerSubsetStorage *Vactive;
-  Vorb = new IntegerSubsetStorage;
-  Vactive = new IntegerSubsetStorage;
-  std::list<int> eList;
-  std::list<permlib::Permutation::ptr> ListGen;
-  int TheFirst;
-  permlib::dom_int n=TheGRP.n;
-  ListGen=TheGRP.group->S;
-  VSLT_InitializeStorage(Vorb, n);
-  VSLT_InitializeStorage(Vactive, n);
-  VSLT_StoreValue(Vactive, ePoint);
-  while(true) {
-    if (VSLT_IsEmpty(Vactive) == 1)
-      break;
-    TheFirst=VSLT_TheFirstPosition(Vactive);
-    VSLT_RemoveValue(Vactive, TheFirst);
-    VSLT_StoreValue(Vorb, TheFirst);
-    eList.push_back(TheFirst);
-    for (auto & eGen : ListGen) {
-      permlib::dom_int NewPt=eGen->at(TheFirst);
-      if (!VSLT_IsItInSubset(Vorb, NewPt) && !VSLT_IsItInSubset(Vactive, NewPt))
-	VSLT_StoreValue(Vactive, NewPt);
-    }
-  }
-  VSLT_FreeStorage(Vorb);
-  VSLT_FreeStorage(Vactive);
-  delete Vorb;
-  delete Vactive;
-  return eList;
-}
-
-std::vector<Face> DecomposeOrbitPoint(TheGroupFormat const& TheGRP, Face const& eList)
-{
-  IntegerSubsetStorage *Vlist;
-  Vlist = new IntegerSubsetStorage;
-  std::vector<Face> ListOrb;
-  int len, i, TheFirst;
-  len=eList.count();
-  int nbPoint=TheGRP.n;
-  VSLT_InitializeStorage(Vlist, nbPoint);
-  int aRow=eList.find_first();
-  for (i=0; i<len; i++) {
-    VSLT_StoreValue(Vlist, aRow);
-    aRow=eList.find_next(aRow);
-  }
-  while(true) {
-    if (VSLT_IsEmpty(Vlist) == 1)
-      break;
-    TheFirst=VSLT_TheFirstPosition(Vlist);
-    std::list<int> eOrb=ComputeFullOrbitPoint(TheGRP, TheFirst);
-    Face vectOrb(nbPoint);
-    for (auto & ePt : eOrb) {
-      vectOrb[ePt]=1;
-      VSLT_RemoveValue(Vlist, ePt);
-    }
-    ListOrb.push_back(vectOrb);
-  }
-  VSLT_FreeStorage(Vlist);
-  delete Vlist;
-  return ListOrb;
-}
 
 struct PairEltPerm {
   permlib::dom_int eElt;
