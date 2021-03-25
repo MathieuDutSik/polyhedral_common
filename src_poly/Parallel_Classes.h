@@ -76,8 +76,7 @@ public:
     std::cerr << "We should never init the DataBank with default constructor\n";
     throw TerminalException{1};
   }
-
-DataBank(bool const& eSave, bool const& eMemory, std::string const& ePrefix, FctsDataBank<T> const& recFct) : FctEquiv(recFct.FctEquiv), FctSize(recFct.FctSize)
+  DataBank(bool const& eSave, bool const& eMemory, std::string const& ePrefix, FctsDataBank<T> const& recFct) : FctEquiv(recFct.FctEquiv), FctSize(recFct.FctSize)
   {
     MinSize=-1;
     IsSaving=eSave;

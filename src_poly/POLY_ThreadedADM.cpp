@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "POLY_ThreadDualDescription.h"
 int main(int argc, char *argv[])
 {

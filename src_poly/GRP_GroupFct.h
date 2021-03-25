@@ -80,36 +80,6 @@ void WritePermutationGAP(std::ostream&os, Telt const& ePerm)
   }
 }
 
-
-template<typename T, typename Telt>
-Telt SortingPerm(std::vector<T> const & ListV)
-{
-  struct PairData {
-    std::size_t i;
-    T x;
-  };
-  std::size_t len=ListV.size();
-  //  std::cerr << "len=" << len << "\n";
-  std::vector<PairData> ListPair(len);
-  for (std::size_t i=0; i<len; i++) {
-    PairData ePair{i, ListV[i]};
-    ListPair[i]=ePair;
-  }
-  sort(ListPair.begin(), ListPair.end(),
-       [](PairData const & x1, PairData const& x2) -> bool {
-	 if (x1.x < x2.x)
-	   return true;
-	 if (x2.x < x1.x)
-	   return false;
-	 return x1.i< x2.i;
-       });
-  std::vector<int> v(len);
-  for (std::size_t i=0; i<len; i++)
-    v[i]=ListPair[i].i;
-  return Telt(v);
-}
-
-
 //
 // Template general code for input output of groups
 //
@@ -152,9 +122,9 @@ void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen=ListGen.size();
-  os << TheGRP.n << " " << nbGen << "\n";
+  os << TheGRP.n_act() << " " << nbGen << "\n";
   for (auto & eGen : ListGen) {
-    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
+    for (int i=0; i<TheGRP.n_act(); i++) {
       int eVal=OnPoints(i, eGen);
       os << " " << eVal;
     }
@@ -195,7 +165,7 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
       os << ",\n";
     IsFirst=false;
     os << "[";
-    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
+    for (int i=0; i<TheGRP.n_act(); i++) {
       int eVal = 1 + OnPoints(i, eGen);
       if (i>0)
 	os << ",";
@@ -270,7 +240,7 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
     std::cerr << "Call of ReducedGroupAction with 0 points\n";
     throw TerminalException{1};
   }
-  std::vector<int> ListPositionRev(TheGRP.n, -1);
+  std::vector<int> ListPositionRev(TheGRP.n_act(), -1);
   int aRow=eList.find_first();
   std::vector<int> ListPosition(nb,-1);
   for (int iRow=0; iRow<nb; iRow++) {

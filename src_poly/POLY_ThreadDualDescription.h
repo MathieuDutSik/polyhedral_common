@@ -112,7 +112,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
 	  WriteListFace(os1, {eFace, eRec.eFace});
 	  WriteListFaceGAP(os2, {eFace, eRec.eFace});
 	}
-	bool test=TestEquivalence(GRPlin, eFace, eRec.eFace);
+	bool test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace).first;
 	if (test)
 	  return;
       }
@@ -368,7 +368,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
   int TheMinSize=TheBank.GetMinSize();
   if (TheMinSize != -1 && nbRow >= TheMinSize) {
     ComputeWMat();
-    T eValInv=GetInvariantWeightMatrix(WMat);
+    T eValInv=GetInvariantWeightMatrix<T,Telt>(WMat);
     PolyhedralInv<T> eInv{nbRow, eValInv};
     PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, {}};
     DataBank_ResultQuery<PolyhedralEntry<T,Tgroup>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
@@ -419,7 +419,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
     if (ansSymm == "yes")
-      TheGRPrelevant=GetStabilizerWeightMatrix(WMat);
+      TheGRPrelevant=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
     else
       TheGRPrelevant=GRP;
     if (TheGRPrelevant.size() == GRP.size())
@@ -476,7 +476,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	endLoc = std::chrono::system_clock::now();
 	int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endLoc-startLoc).count();
 	MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
-	return eReply;
+	return {eReply.first, eReply.second};
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
         Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
@@ -492,15 +492,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
 	startloc = std::chrono::system_clock::now();
-	{
-	  std::ofstream os1("DEBUG_PairFace");
-	  std::ofstream os2("DEBUG_PairFace.gap");
-	  WriteListFace(os1, {x.eRepr, y.eRepr});
-	  WriteListFaceGAP(os2, {x.eRepr, y.eRepr});
-	}
-	//	MProc.GetO(TheId) << "TheGRPrelevant.n=" << TheGRPrelevant.n << "\n";
-	//	MProc.GetO(TheId) << "|x.eRepr|=" << x.eRepr.size() << " |y.eRepr|=" << y.eRepr.size() << "\n";
-	auto eReply=TestEquivalenceGeneralNaked(TheGRPrelevant, x.eRepr, y.eRepr, 1);
+	auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
 	endloc = std::chrono::system_clock::now();
 	int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endloc-startloc).count();
 	MProc.GetO(TheId) << "PARTITION: After the test time = " << elapsed_seconds << "\n";
@@ -508,16 +500,12 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	  //
 	  std::chrono::time_point<std::chrono::system_clock> start_C, end_C;
 	  start_C = std::chrono::system_clock::now();
-	  auto eReplyB=TestEquivalenceSubset(WMat, x.eRepr, y.eRepr);
+	  auto eReplyB=TestEquivalenceSubset<T,T,Telt>(WMat, x.eRepr, y.eRepr);
 	  end_C = std::chrono::system_clock::now();
 	  int elapsed_seconds_C = std::chrono::duration_cast<std::chrono::seconds>(end_C-start_C).count();
 	  MProc.GetO(TheId) << "Second method (bliss) runtime = " << elapsed_seconds_C << "\n";
-	  if (eReply.TheReply != eReplyB.TheReply) {
-	    std::cerr << "We have a major bug to solve\n";
-	    throw TerminalException{1};
-	  }
 	}
-	return eReply;
+	return {eReply.first, eReply.second};
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
         Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
@@ -689,7 +677,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 2\n";
     PolyhedralEntry<T,Tgroup> eEntryCan=CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
     MProc.GetO(TheId) << "BANK work, step 3\n";
-    T eValInv=GetInvariantWeightMatrix(WMat);
+    T eValInv=GetInvariantWeightMatrix<T,Telt>(WMat);
     MProc.GetO(TheId) << "BANK work, step 4\n";
     PolyhedralInv<T> eInv{nbRow, eValInv};
     MProc.GetO(TheId) << "BANK work, step 5\n";

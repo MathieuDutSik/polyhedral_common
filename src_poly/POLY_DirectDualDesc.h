@@ -50,7 +50,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
       for (size_t i=0; i<DimEXT; i++)
         LVal[i] = ParseScalar<T>(LStr[i]);
       Face face(n_row);
-      for (int i_row=0; i_row<n_row; i_row++) {
+      for (size_t i_row=0; i_row<n_row; i_row++) {
         T eScal=0;
         for (size_t i=1; i<DimEXT; i++)
           eScal += LVal[i] * EXT(i_row,i-1);

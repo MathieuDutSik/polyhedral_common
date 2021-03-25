@@ -2,6 +2,8 @@
 #define INCLUDE_PERMLIB_SPECIFIC_H
 
 
+#include "Boost_bitset.h"
+#include "hash_functions.h"
 #include <permlib/permlib_api.h>
 
 
@@ -196,6 +198,12 @@ public:
     group = construct(n, generatorList.begin(), generatorList.end());
     e_size = group->order<Tint>();
   }
+  TheGroupFormat(int const& n_inp) : TheGroupFormat({}, n) 
+  {
+  }
+  TheGroupFormat() : TheGroupFormat(0)
+  {
+  }
   Face CanonicalImage(Face const& eFace) const
   {
     return PERMLIB_Canonicalization(n, group, eFace);
@@ -221,11 +229,15 @@ public:
   }
   Tint size() const
   {
-    return size;
+    return e_size;
   }
   int n_act() const
   {
     return n;
+  }
+  PermutationGroupPtr get_group() const // USe only by some function specific to permlib.
+  {
+    return group;
   }
 };
 
@@ -368,8 +380,8 @@ IteratorGrp GetInitialIterator(TheGroupFormat<Tint> const& eGRP)
 {
   int n=eGRP.n_act();
   std::vector<MyFormTransversal> ListTrans;
-  for (auto & eTrans : eGRP.group->U) {
-    MyFormTransversal TheTrans=GetListPermutation(eGRP.group, eTrans);
+  for (auto & eTrans : eGRP.get_group()->U) {
+    MyFormTransversal TheTrans=GetListPermutation(eGRP.get_group(), eTrans);
     ListTrans.push_back(TheTrans);
   }
   int nbClass=ListTrans.size();

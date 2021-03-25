@@ -4,6 +4,7 @@
 #include "factorizations.h"
 #include "MAT_MatrixInt.h"
 #include "GRP_GroupFct.h"
+#include "PERM_Fct.h"
 
 template<typename T>
 struct resultFT {
@@ -204,7 +205,7 @@ template<typename T, typename Telt>
 struct FiniteMatrixGroup {
   int n;
   MyMatrix<T> EXTfaithAct;
-  std::vector<MyMatrix<T> > ListMatrGen;
+  std::vector<MyMatrix<T>> ListMatrGen;
   std::vector<Telt> ListPermGen;
 };
 
@@ -264,7 +265,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     return true;
   };
   FiniteMatrixGroup<T,Telt> GRPret=GRPmatr;
-  std::vector<MyVector<T> > ListVect;
+  std::vector<MyVector<T>> ListVect;
   int nbRow=GRPmatr.EXTfaithAct.rows();
   std::cerr << "|G(EXT)|=" << Tgroup(GRPmatr.ListPermGen, nbRow).size() << "\n";
 
@@ -282,15 +283,15 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       break;
     std::cerr << "V=\n";
     WriteVector(std::cerr, V);
-    std::vector<MyVector<T> > O=OrbitComputation(GRPret.ListMatrGen, V, TheAction);
+    std::vector<MyVector<T>> O=OrbitComputation(GRPret.ListMatrGen, V, TheAction);
     int Osiz=O.size();
     std::cerr << "Osiz=" << Osiz << "\n";
     int siz=nbRow + Osiz;
     //    std::vector<MyVector<T>> ListWork=ConcatenateVect(ListVect, O);
     //    int siz=ListWork.size();
     //    std::cerr << "siz=" << siz << "\n";
-    permlib::Permutation ePermS=SortingPerm(O);
-    permlib::Permutation ePermSinv=~ePermS;
+    Telt ePermS=SortingPerm<MyVector<T>,Telt>(O);
+    Telt ePermSinv=~ePermS;
     /*    std::cerr << "We have ePermS\n";
     for (int i=0; i<Osiz; i++) {
       std::cerr << "i=" << i << "/" << siz << "\n";
@@ -325,8 +326,8 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	//	std::cerr << "We have assigned ListImage\n";
       }
       std::cerr << "We have ListImage\n";
-      permlib::Permutation ePermB=SortingPerm(ListImage);
-      permlib::Permutation ePermGenSelect=ePermB*ePermSinv;
+      Telt ePermB=SortingPerm<MyVector<T>,Telt>(ListImage);
+      Telt ePermGenSelect=ePermB*ePermSinv;
       std::cerr << "We have ePermGenSelect\n";
       for (int iO=0; iO<Osiz; iO++) {
 	int jO=ePermGenSelect.at(iO);
@@ -517,8 +518,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       std::vector<MyVector<T>> ListImage;
       for (auto & eV : O)
 	ListImage.push_back(TheAction(eV, eMatrGen));
-      permlib::Permutation ePermB=SortingPerm(ListImage);
-      permlib::Permutation ePermGenSelect=ePermB*ePermSinv;
+      Telt ePermB=SortingPerm<MyVector<T>,Telt>(ListImage);
+      Telt ePermGenSelect=ePermB*ePermSinv;
       for (int iO=0; iO<Osiz; iO++) {
 	int jO=ePermGenSelect.at(iO);
 	v[nbRow+iO]=nbRow+jO;
