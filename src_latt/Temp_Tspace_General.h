@@ -14,8 +14,8 @@ template<typename T>
 struct LinSpaceMatrix {
   int n;
   MyMatrix<T> SuperMat;
-  std::vector<MyMatrix<T> > ListMat;
-  std::vector<MyMatrix<T> > ListComm;
+  std::vector<MyMatrix<T>> ListMat;
+  std::vector<MyMatrix<T>> ListComm;
 };
 
 
@@ -67,7 +67,7 @@ std::ostream& operator<<(std::ostream& os, LinSpaceMatrix<T> const& obj)
 template<typename T>
 LinSpaceMatrix<T> ComputeCanonicalSpace(int const& n)
 {
-  std::vector<MyMatrix<T> > ListMat;
+  std::vector<MyMatrix<T>> ListMat;
   int i, j;
   T eAss;
   eAss=1;
@@ -114,7 +114,7 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const& eMatB, MyMatrix<T> const& eMat
 template<typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const& eSum, T const& eProd)
 {
-  std::vector<MyMatrix<T> > ListMat;
+  std::vector<MyMatrix<T>> ListMat;
   int nbMat, i, j;
   T eOne;
   MyMatrix<T> eMatB(n,n);
@@ -158,7 +158,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const& eSum, T const& eProd
 template<typename T>
 LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const& eSum, T const& eProd)
 {
-  std::vector<MyMatrix<T> > ListMat;
+  std::vector<MyMatrix<T>> ListMat;
   int i, j;
   T eOne, eVal;
   T Discriminant;
@@ -326,8 +326,8 @@ MyMatrix<T> T_GRAM_GetScalProdMat(MyMatrix<T> const& eMat, MyMatrix<int> const& 
 }
 
 
-template<typename T, typename Tint>
-void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, TheGroupFormat &GRPperm, std::vector<MyMatrix<Tint> > &ListMatrGens)
+template<typename T, typename Tint, typename Tgroup>
+void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, Tgroup & GRPperm, std::vector<MyMatrix<Tint>> &ListMatrGens)
 {
   T MaxDet=T_GRAM_GetUpperBound(eMat);
   MyMatrix<Tint> ListShort=T_ShortVector(eMat, MaxDet);
@@ -599,8 +599,8 @@ GramInvVect<T> GetInvariantGram(MyMatrix<T> const& eGram, MyMatrix<Tint> const& 
       return false;
     return x.nb < y.nb;
   };
-  std::set<PairV<T>,std::function<bool(PairV<T> const&,PairV<T> const&)> > ListValOff_B(Comp);
-  std::set<PairV<T>,std::function<bool(PairV<T> const&,PairV<T> const&)> > ListValDiag_B(Comp);
+  std::set<PairV<T>,std::function<bool(PairV<T> const&,PairV<T> const&)>> ListValOff_B(Comp);
+  std::set<PairV<T>,std::function<bool(PairV<T> const&,PairV<T> const&)>> ListValDiag_B(Comp);
   int nbOff=ListValOff.size();
   int nbDiag=ListValDiag.size();
   for (int i=0; i<nbOff; i++)
@@ -619,9 +619,9 @@ GramInvVect<T> GetInvariantGram(MyMatrix<T> const& eGram, MyMatrix<Tint> const& 
 
 
 template<typename T>
-std::vector<MyMatrix<T> > StandardSymmetricBasis(int n)
+std::vector<MyMatrix<T>> StandardSymmetricBasis(int n)
 {
-  std::vector<MyMatrix<T> > ListMat;
+  std::vector<MyMatrix<T>> ListMat;
   T eOne=1;
   for (int i=0; i<n; i++)
     for (int j=0; j<=i; j++) {

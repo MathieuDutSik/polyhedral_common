@@ -102,12 +102,12 @@ struct PerfEquivInfo {
 };
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 struct SinglePerfect {
   MyMatrix<T> eGram;
   MyMatrix<Tint> SHV;
   MyMatrix<T> PerfDomEXT;
-  TheGroupFormat PerfDomGRP;
+  Tgroup PerfDomGRP;
   std::vector<std::vector<int>> ListBlock;
   std::vector<PerfEquivInfo> ListEquivInfo;
   int eStatus;
@@ -116,47 +116,50 @@ struct SinglePerfect {
 
 
 
-template<typename T, typename Tint>
-TheGroupFormat MapLatticeGroupToConeGroup(NakedPerfect<T,Tint> const& eNaked, TheGroupFormat const& GRPshv)
+template<typename T, typename Tint, typename Tgroup>
+Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T,Tint> const& eNaked, Tgroup const& GRPshv)
 {
+  using Telt=typename Tgroup::Telt;
   int nbBlock=eNaked.ListBlock.size();
-  std::vector<permlib::Permutation> ListGen;
-  for (auto & eGen : GRPshv.group->S) {
-    std::vector<permlib::dom_int> v(nbBlock);
+  std::vector<Telt> ListGen;
+  std::vector<Telt> LGen = GRPshv.GeneratorsOfGroup();
+  for (auto & eGen : LGen) {
+    std::vector<int> v(nbBlock);
     for (int iBlock=0; iBlock<nbBlock; iBlock++) {
       int iSHV=eNaked.ListBlock[iBlock][0];
-      int jSHV=eGen->at(iSHV);
+      int jSHV=OnPoints(iSHV, eGen);
       int jBlock=eNaked.ListPos[jSHV];
       v[iBlock]=jBlock;
     }
-    ListGen.push_back(permlib::Permutation(v));
+    ListGen.push_back(Telt(v));
   }
-  return GetPermutationGroup(nbBlock, ListGen);
+  return Tgroup(ListGen, nbBlock);
 }
 
 
 
 
-template<typename T,typename Tint>
-SinglePerfect<T,Tint> GetPerfectCone(LinSpaceMatrix<T> const&LinSpa, MyMatrix<T> const& eGram, Tshortest<T,int> const& RecSHV)
+template<typename T,typename Tint, typename Tgroup>
+SinglePerfect<T,Tint,Tgroup> GetPerfectCone(LinSpaceMatrix<T> const&LinSpa, MyMatrix<T> const& eGram, Tshortest<T,int> const& RecSHV)
 {
   NakedPerfect<T,Tint> eNaked=GetNakedPerfectCone(LinSpa, eGram, RecSHV);
-  TheGroupFormat TheGRPshv=PERF_Automorphism(LinSpa, eGram, RecSHV.SHV);
-  TheGroupFormat PerfDomGRP=MapLatticeGroupToConeGroup(eNaked, TheGRPshv);
+  Tgroup TheGRPshv=PERF_Automorphism(LinSpa, eGram, RecSHV.SHV);
+  Tgroup PerfDomGRP=MapLatticeGroupToConeGroup(eNaked, TheGRPshv);
   return {eGram, RecSHV.SHV, eNaked.PerfDomEXT, PerfDomGRP, eNaked.ListBlock, {}, 0, 0};
 }
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
 				       MyMatrix<T> const&ePerf1, MyMatrix<T> const&ePerf2,
 				       MyMatrix<Tint> const& SHV1, MyMatrix<Tint> const& SHV2)
 {
+  using Telt=typename Tgroup::Telt;
   MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(SHV1);
   MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(SHV2);
   WeightMatrix<std::vector<T>, T> WMat1=GetWeightMatrix_ListComm(T_SHV1, ePerf1, LinSpa.ListComm);
   WeightMatrix<std::vector<T>, T> WMat2=GetWeightMatrix_ListComm(T_SHV2, ePerf2, LinSpa.ListComm);
-  EquivTest<permlib::Permutation> eResEquiv=GetEquivalenceAsymmetricMatrix(WMat1, WMat2);
+  EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>,T,Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply) {
     return {false, {}};
   }
@@ -183,12 +186,12 @@ struct QueryEquivInfo {
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 struct ListPerfectForm {
 public:
-  QueryEquivInfo IsPresentNoLock(int const& iOrbitStart, 
-				 LinSpaceMatrix<T> const&LinSpa, 
-				 MyMatrix<T> const&eGram, 
+  QueryEquivInfo IsPresentNoLock(int const& iOrbitStart,
+				 LinSpaceMatrix<T> const&LinSpa,
+				 MyMatrix<T> const&eGram,
 				 MyMatrix<int> const& SHV)
   {
     int nbOrbit=ListPerfect.size();
@@ -196,8 +199,7 @@ public:
     for (int iOrbit=iOrbitStart; iOrbit<nbOrbit; iOrbit++) {
       MyMatrix<T> oldGram=GetGram(iOrbit);
       MyMatrix<int> oldSHV=GetSHV(iOrbit);
-      EquivTest<MyMatrix<int>> eLinSpaRes=PERF_TestEquivalence(LinSpa, eGram, oldGram, 
-							       SHV, oldSHV);
+      EquivTest<MyMatrix<int>> eLinSpaRes=PERF_TestEquivalence<T,Tint,Tgroup>(LinSpa, eGram, oldGram, SHV, oldSHV);
       if (eLinSpaRes.TheReply) {
 	PerfEquivInfo eEquiv{iOrbit, eLinSpaRes.TheEquiv, eTrivFace};
 	return {true, nbOrbit, eEquiv};
@@ -205,7 +207,7 @@ public:
     }
     return {false, nbOrbit, {-1, {}, eTrivFace}};
   }
-  PerfEquivInfo InsertForm(LinSpaceMatrix<T> const&LinSpa, 
+  PerfEquivInfo InsertForm(LinSpaceMatrix<T> const&LinSpa,
 			   MyMatrix<T> const&eGram)
   {
     std::vector<PerfEquivInfo> eListEquivInfo;
@@ -219,7 +221,7 @@ public:
     QueryEquivInfo fQuery=IsPresentNoLock(eQuery.nbOrbit, LinSpa, eGram, RecSHV.SHV);
     if (fQuery.result)
       return fQuery.eEquiv;
-    SinglePerfect<T,Tint> eSing=GetPerfectCone(LinSpa, eGram, RecSHV);
+    SinglePerfect<T,Tint,Tgroup> eSing=GetPerfectCone(LinSpa, eGram, RecSHV);
     ListPerfect.push_back(eSing);
     int len=ListPerfect.size();
     MyMatrix<int> eMatEquiv=IdentityMat<int>(n);
@@ -249,7 +251,7 @@ public:
   {
     return ListPerfect[eOrb].PerfDomEXT;
   }
-  TheGroupFormat GetPerfDomGRP(int const& eOrb) const
+  Tgroup GetPerfDomGRP(int const& eOrb) const
   {
     return ListPerfect[eOrb].PerfDomGRP;
   }
@@ -267,7 +269,7 @@ public:
     return len;
   }
   std::vector<std::vector<int>> VoronoiAlgo_THR_GetPartition(
-           int NbThr, int & nbConsTodo, 
+           int NbThr, int & nbConsTodo,
 	   int & IsFinished)
   {
     int iOrbit, iThr;
@@ -299,7 +301,7 @@ public:
   }
 private:
   std::mutex mul;
-  std::vector<SinglePerfect<T,Tint>> ListPerfect;
+  std::vector<SinglePerfect<T,Tint,Tgroup>> ListPerfect;
 };
 
 
@@ -527,19 +529,19 @@ std::pair<MyMatrix<T>,Tshortest<T,Tint>> Flipping_Perfect(MyMatrix<T> const& eMa
 
 
 
-template<typename T, typename Tint>
-void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId, 
-				    DataBank<PolyhedralEntry<T>> &TheBank,
-				    LinSpaceMatrix<T> const& LinSpa, 
-				    ListPerfectForm<T,Tint> &ListPerf, 
-				    PolyHeuristic<mpz_class> const& AllArr, 
+template<typename T, typename Tint, typename Tgroup>
+void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId,
+				    DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
+				    LinSpaceMatrix<T> const& LinSpa,
+				    ListPerfectForm<T,Tint,Tgroup> &ListPerf,
+				    PolyHeuristic<mpz_class> const& AllArr,
 				    std::vector<int> const& ListOrbWork)
 {
   std::vector<int> ListOrbitWorkEff=ListPerf.GetListOrbitWorkEff(ListOrbWork);
   for (auto& eOrb : ListOrbitWorkEff) {
     MyMatrix<T> eGram=ListPerf.GetGram(eOrb);
     MyMatrix<T> PerfDomEXT=ListPerf.GetPerfDomEXT(eOrb);
-    TheGroupFormat PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
+    Tgroup PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
     std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
              TheId, TheBank,
 	     PerfDomEXT, PerfDomGRP,
@@ -599,14 +601,14 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const& LinSpa)
 
 
 
-template<typename T, typename Tint>
-TheGroupFormat PERF_Automorphism(LinSpaceMatrix<T> const& LinSpa, 
+template<typename T, typename Tint, typename Tgroup>
+Tgroup PERF_Automorphism(LinSpaceMatrix<T> const& LinSpa,
 				 MyMatrix<T> const& ePerf,
 				 MyMatrix<Tint> const& SHV)
 {
   MyMatrix<T> T_SHV=ConvertMatrixUniversal<T,Tint>(SHV);
   WeightMatrix<std::vector<T>, T> WMat=GetWeightMatrix_ListComm(T_SHV, ePerf, LinSpa.ListComm);
-  return GetStabilizerAsymmetricMatrix<std::vector<T>, T>(WMat);
+  return GetStabilizerAsymmetricMatrix<std::vector<T>, T, Tgroup>(WMat);
 }
 
 
@@ -616,12 +618,12 @@ TheGroupFormat PERF_Automorphism(LinSpaceMatrix<T> const& LinSpa,
 
 
 
-template<typename T, typename Tint>
-void VoronoiAlgo_THR_EnumeratePerfectForm(MainProcessor &MProc, int TheId, 
-					  DataBank<PolyhedralEntry<T>> &TheBank,
-					  LinSpaceMatrix<T> const& LinSpa, 
-					  PolyHeuristic<mpz_class> const& AllArr, 
-					  ListPerfectForm<T,Tint> &ListPerf)
+template<typename T, typename Tint, typename Tgroup>
+void VoronoiAlgo_THR_EnumeratePerfectForm(MainProcessor &MProc, int TheId,
+					  DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
+					  LinSpaceMatrix<T> const& LinSpa,
+					  PolyHeuristic<mpz_class> const& AllArr,
+					  ListPerfectForm<T,Tint,Tgroup> &ListPerf)
 {
   int IsFinished, NewId;
   int nbConsTodo, iThr, NbThr;
@@ -646,10 +648,10 @@ void VoronoiAlgo_THR_EnumeratePerfectForm(MainProcessor &MProc, int TheId,
   }
 }
 
-template<typename T, typename Tint>
-void VoronoiAlgo_PrintListMatrix(std::ostream &os, 
-				 LinSpaceMatrix<T> const& LinSpa, 
-				 ListPerfectForm<T,Tint> const& ListPerf)
+template<typename T, typename Tint, typename Tgroup>
+void VoronoiAlgo_PrintListMatrix(std::ostream &os,
+				 LinSpaceMatrix<T> const& LinSpa,
+				 ListPerfectForm<T,Tint,Tgroup> const& ListPerf)
 {
   int nbGram=ListPerf.GetNbPerf();
   os << nbGram << "\n";
@@ -766,19 +768,20 @@ struct DataLinSpa {
 };
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
 		      DataLinSpa<T> const&eData,
 		      MyMatrix<T> const& Gram1,
 		      MyMatrix<T> const& Gram2)
 {
+  using Telt=typename Tgroup::Telt;
   Tshortest<T,Tint> RecSHV1=T_ShortestVector<T,Tint>(Gram1);
   Tshortest<T,Tint> RecSHV2=T_ShortestVector<T,Tint>(Gram2);
   MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(RecSHV1.SHV);
   MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(RecSHV2.SHV);
   WeightMatrix<std::vector<T>, T> WMat1=GetWeightMatrix_ListComm(T_SHV1, Gram1, eData.LinSpa.ListComm);
   WeightMatrix<std::vector<T>, T> WMat2=GetWeightMatrix_ListComm(T_SHV2, Gram2, eData.LinSpa.ListComm);
-  EquivTest<permlib::Permutation> eResEquiv=GetEquivalenceAsymmetricMatrix(WMat1, WMat2);
+  EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>, T, Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply) {
     return {false, {}};
   }
@@ -813,8 +816,8 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
     MyMatrix<Tint> eMat_I=ConvertMatrixUniversal<Tint,T>(eEq.TheEquiv);
     return {true, eMat_I};
   };
-  TheGroupFormat GRP1=GetStabilizerAsymmetricMatrix(WMat1);
-  if (GRP1.size < eData.UpperLimitMethod4) {
+  Tgroup GRP1=GetStabilizerAsymmetricMatrix<std::vector<T>, T, Tgroup>(WMat1);
+  if (GRP1.size() < eData.UpperLimitMethod4) {
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv, IsMatrixCorrect));
   }
   else {
@@ -829,12 +832,13 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
 
 
 
-template<typename T, typename Tint>
-TheGroupFormat SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& Gram, Tshortest<T,Tint> const& RecSHV)
+template<typename T, typename Tint, typename Tgroup>
+Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& Gram, Tshortest<T,Tint> const& RecSHV)
 {
-  // 
+  using Telt=typename Tgroup::Telt;
+  //
   // Functionality for checking quality of equivalences
-  // 
+  //
   std::vector<MyVector<T>> ListMatVect;
   for (auto & eMat : eData.LinSpa.ListMat) {
     MyVector<T> eVect=SymmetricMatrixToVector(eMat);
@@ -856,9 +860,10 @@ TheGroupFormat SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> 
     }
     return true;
   };
-  auto IsCorrectGroup=[&](TheGroupFormat const& g) -> bool {
-    for (auto & eGen : g.group->S) {
-      MyMatrix<T> M=RepresentVertexPermutation(T_SHV, T_SHV, *eGen);
+  auto IsCorrectGroup=[&](Tgroup const& g) -> bool {
+    std::vector<Telt> LGen = g.GeneratorsOfGroup();
+    for (auto & eGen : LGen) {
+      MyMatrix<T> M=RepresentVertexPermutation(T_SHV, T_SHV, eGen);
       if (!IsMatrixCorrect(M))
 	return false;
     }
@@ -868,30 +873,30 @@ TheGroupFormat SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> 
   // Now the computation itself
   //
   WeightMatrix<std::vector<T>, T> WMat=GetWeightMatrix_ListComm(T_SHV, Gram, eData.LinSpa.ListComm);
-  TheGroupFormat GRPshv1=GetStabilizerAsymmetricMatrix(WMat);
+  Tgroup GRPshv1=GetStabilizerAsymmetricMatrix<std::vector<T>, T, Tgroup>(WMat);
   if (IsCorrectGroup(GRPshv1))
     return GRPshv1;
-  if (GRPshv1.size < eData.UpperLimitMethod4) {
+  if (GRPshv1.size() < eData.UpperLimitMethod4) {
     return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv1, IsMatrixCorrect);
   }
   else {
-    TheGroupFormat GRPshv2=LinPolytopeIntegral_Stabilizer_Method8(T_SHV, GRPshv1);
+    Tgroup GRPshv2=LinPolytopeIntegral_Stabilizer_Method8(T_SHV, GRPshv1);
     if (IsCorrectGroup(GRPshv2))
       return GRPshv2;
     return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv2, IsMatrixCorrect);
   }
 }
-					
 
 
 
 
 
-template<typename T, typename Tint>
+
+template<typename T, typename Tint, typename Tgroup>
   std::vector<SimplePerfect<T,Tint>> EnumerationPerfectMatrices(
 	   MainProcessor &MProc, int const& TheId,
-	   DataBank<PolyhedralEntry<T>> &TheBank,
-	   DataLinSpa<T> const& eData, 
+	   DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
+	   DataLinSpa<T> const& eData,
 	   PolyHeuristic<mpz_class> const& AllArr)
 {
   std::function<bool(SimplePerfectInv<T> const&,SimplePerfectInv<T> const&)> CompFCT=[](SimplePerfectInv<T> const& x, SimplePerfectInv<T> const& y) -> bool {
@@ -900,7 +905,7 @@ template<typename T, typename Tint>
   std::function<void(TrivialBalinski &,SimplePerfect<T,Tint> const&,SimplePerfectInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[](TrivialBalinski const& eStat, SimplePerfect<T,Tint> const& eEnt, SimplePerfectInv<T> const& eInv, std::ostream&os) -> void {
   };
   std::function<EquivTest<MyMatrix<Tint>>(SimplePerfect<T,Tint> const&, SimplePerfect<T,Tint> const&)> fEquiv=[&](SimplePerfect<T,Tint> const& x, SimplePerfect<T,Tint> const& y) -> EquivTest<MyMatrix<Tint>> {
-    return SimplePerfect_TestEquivalence<T,Tint>(eData, x.Gram, y.Gram);
+    return SimplePerfect_TestEquivalence<T,Tint,Tgroup>(eData, x.Gram, y.Gram);
   };
   NewEnumerationWork<SimplePerfect<T,Tint>> ListOrbit(AllArr.Saving, AllArr.eMemory, eData.PrefixPerfect, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
   auto FuncInsert=[&](SimplePerfect<T,Tint> const& x, std::ostream&os) -> int {
@@ -948,8 +953,8 @@ template<typename T, typename Tint>
       SimplePerfectInv<T> eInv=ListOrbit.GetInvariant(eEntry);
       Tshortest<T,Tint> RecSHV=T_ShortestVector<T,Tint>(ePERF.Gram);
       NakedPerfect<T,Tint> eNaked=GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV);
-      TheGroupFormat GRPshv=SimplePerfect_Stabilizer(eData, ePERF.Gram, RecSHV);
-      TheGroupFormat PerfDomGRP=MapLatticeGroupToConeGroup(eNaked, GRPshv);
+      Tgroup GRPshv=SimplePerfect_Stabilizer<T,Tint,Tgroup>(eData, ePERF.Gram, RecSHV);
+      Tgroup PerfDomGRP=MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" + IntToString(eEntry) + "/");
       std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, eNaked.PerfDomEXT, PerfDomGRP, AllArr, eDir.str(), 0);
       for (auto& eOrbB : TheOutput) {
@@ -1084,7 +1089,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT()
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint,typename Tgroup>
 void TreatPerfectLatticesEntry(FullNamelist const& eFull)
 {
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
@@ -1095,8 +1100,8 @@ void TreatPerfectLatticesEntry(FullNamelist const& eFull)
   bool BANK_Memory=BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
   CreateDirectory(BANK_Prefix);
-  FctsDataBank<PolyhedralEntry<T>> recFct=GetRec_FctsDataBank<T>();
-  DataBank<PolyhedralEntry<T>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
+  FctsDataBank<PolyhedralEntry<T,Tgroup>> recFct=GetRec_FctsDataBank<T,Tgroup>();
+  DataBank<PolyhedralEntry<T,Tgroup>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
   std::string LINSPAfile=BlockDATA.ListStringValues.at("LinSpaFile");

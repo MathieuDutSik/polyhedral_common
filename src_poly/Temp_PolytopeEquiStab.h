@@ -1194,25 +1194,6 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 
 
 
-
-
-template<typename T1, typename T2, typename Telt>
-EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
-{
-  WeightMatrix<T1, T2> WMatO1=GetSymmetricWeightMatrix<T1, T2>(WMat1);
-  WeightMatrix<T1, T2> WMatO2=GetSymmetricWeightMatrix<T1, T2>(WMat2);
-  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix(WMatO1, WMatO2);
-  if (!eResEquiv.TheReply)
-    return eResEquiv;
-  size_t nbSHV=WMat1.rows();
-  std::vector<int> v(nbSHV);
-  for (size_t i=0; i<nbSHV; i++)
-    v[i]=eResEquiv.TheEquiv.at(i);
-  return {true, Telt(v)};
-}
-
-
-
 template<typename T1, typename T2, typename Tout>
 std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<T1,T2> const&WMat, Face const& eSet)
 {
@@ -2970,6 +2951,27 @@ EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, W
     return {false, {}};
   return TestEquivalenceWeightMatrix_norenorm_perm<T1,T2,Telt>(WMat1, WMat2);
 }
+
+
+
+
+
+template<typename T1, typename T2, typename Telt>
+EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
+{
+  WeightMatrix<T1, T2> WMatO1=GetSymmetricWeightMatrix<T1, T2>(WMat1);
+  WeightMatrix<T1, T2> WMatO2=GetSymmetricWeightMatrix<T1, T2>(WMat2);
+  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T1,T2,Telt>(WMatO1, WMatO2);
+  if (!eResEquiv.TheReply)
+    return eResEquiv;
+  size_t nbSHV=WMat1.rows();
+  std::vector<int> v(nbSHV);
+  for (size_t i=0; i<nbSHV; i++)
+    v[i]=eResEquiv.TheEquiv.at(i);
+  return {true, Telt(v)};
+}
+
+
 
 
 

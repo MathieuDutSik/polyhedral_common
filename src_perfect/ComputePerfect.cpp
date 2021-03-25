@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "Temp_PerfectForm.h"
 int main(int argc, char *argv[])
 {
@@ -14,10 +15,11 @@ int main(int argc, char *argv[])
     }
     using T=mpq_class;
     using Tint=mpz_class;
+    using Tgroup=TheGroupFormat<mpz_class>;
     //
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    TreatPerfectLatticesEntry<T,Tint>(eFull);
+    TreatPerfectLatticesEntry<T,Tint,Tgroup>(eFull);
     std::cerr << "Completion of the program\n";
   }
   catch (TerminalException const& e) {
