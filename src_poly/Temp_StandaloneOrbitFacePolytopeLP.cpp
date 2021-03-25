@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
 
