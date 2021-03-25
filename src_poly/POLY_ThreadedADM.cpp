@@ -14,9 +14,10 @@ int main(int argc, char *argv[])
     }
     std::string eFileName=argv[1];
     using T=mpq_class;
+    using Tgroup=TheGroupFormat<mpz_class>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionComputeDualDesc<T>(eFull);
+    MainFunctionComputeDualDesc<T,Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {

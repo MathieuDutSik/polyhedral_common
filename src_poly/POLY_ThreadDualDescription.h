@@ -63,24 +63,24 @@ bool operator==(PolyhedralInv<T> const& x, PolyhedralInv<T> const& y)
 // PolyhedralEntry
 //
 
-template<typename T>
+template<typename T, typename Tgroup>
 struct PolyhedralEntry {
   MyMatrix<T> EXT;
-  TheGroupFormat GRP;
+  Tgroup GRP;
   std::vector<Face> ListFace;
 };
 
 // We only want the full symmetry in the entry.
 // so as to avoid any ambiguity in the process
-template<typename T>
-PolyhedralEntry<T> CanonicalizationPolyEntry(PolyhedralEntry<T> const& eEnt, std::ostream & os)
+template<typename T, typename Tgroup>
+PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> const& eEnt, std::ostream & os)
 {
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
   os << "Canonicalization, we have WMat\n";
-  TheGroupFormat GRPlin=GetStabilizerWeightMatrix(WMat);
-  os << "Canonicalization, GRPlin.size=" << GRPlin.size << " eEnt.GRP.size=" << eEnt.GRP.size << "\n";
-  if (GRPlin.size == eEnt.GRP.size)
+  Tgroup GRPlin=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+  os << "Canonicalization, GRPlin.size=" << GRPlin.size() << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
+  if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
   os << "|eEnt.ListFace|=" << eEnt.ListFace.size() << "\n";
   {
@@ -129,15 +129,15 @@ PolyhedralEntry<T> CanonicalizationPolyEntry(PolyhedralEntry<T> const& eEnt, std
   std::vector<Face> RetListRepr;
   for (auto & eRec : ListLocal)
     RetListRepr.push_back(eRec.eFace);
-  PolyhedralEntry<T> fEnt{eEnt.EXT, GRPlin, RetListRepr};
+  PolyhedralEntry<T,Tgroup> fEnt{eEnt.EXT, GRPlin, RetListRepr};
   return fEnt;
 }
 
-template<typename T>
-std::istream& operator>>(std::istream& is, PolyhedralEntry<T>& obj)
+template<typename T,typename Tgroup>
+std::istream& operator>>(std::istream& is, PolyhedralEntry<T,Tgroup>& obj)
 {
   MyMatrix<T> EXT=ReadMatrix<T>(is);
-  TheGroupFormat GRP=ReadGroup(is);
+  Tgroup GRP=ReadGroup<Tgroup>(is);
   std::vector<Face> ListFace=ReadListFace(is);
   PolyhedralInv<T> eInv;
   //
@@ -145,8 +145,8 @@ std::istream& operator>>(std::istream& is, PolyhedralEntry<T>& obj)
   return is;
 }
 
-template<typename T>
-std::ostream& operator<<(std::ostream& os, PolyhedralEntry<T> const& eEnt)
+template<typename T,typename Tgroup>
+std::ostream& operator<<(std::ostream& os, PolyhedralEntry<T,Tgroup> const& eEnt)
 {
   WriteMatrix<T>(os, eEnt.EXT);
   WriteGroup(os, eEnt.GRP);
@@ -290,8 +290,8 @@ std::ostream& operator<<(std::ostream& os, PolyhedralBalinski const& obj)
 // template type mappings
 //
 
-template <typename T>
-struct invariant_info<PolyhedralEntry<T> > {
+template <typename T,typename Tgroup>
+struct invariant_info<PolyhedralEntry<T,Tgroup> > {
   typedef PolyhedralInv<T> invariant_type;
 };
 
@@ -300,8 +300,8 @@ struct invariant_info<SimpleOrbitFacet<T>> {
   typedef SimpleOrbitFacetInv<T> invariant_type;
 };
 
-template <typename T>
-struct equiv_info<PolyhedralEntry<T>> {
+template <typename T,typename Tgroup>
+struct equiv_info<PolyhedralEntry<T,Tgroup>> {
   typedef permlib::Permutation equiv_type;
 };
 
@@ -319,20 +319,21 @@ struct balinski_info<SimpleOrbitFacet<T>> {
 // the proper functionality now
 //
 
-template<typename T>
-FctsDataBank<PolyhedralEntry<T>> GetRec_FctsDataBank()
+template<typename T,typename Tgroup>
+FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
 {
-  std::function<EquivTest<permlib::Permutation>(PolyhedralEntry<T> const&,PolyhedralEntry<T> const&)> fEquiv=[](PolyhedralEntry<T> const& eRec1, PolyhedralEntry<T> const& eRec2) -> EquivTest<permlib::Permutation> {
+  using Telt=typename Tgroup::Telt;
+  std::function<EquivTest<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> EquivTest<Telt> {
     MyMatrix<T> EXTred1=ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
     WeightMatrix<T,T> WMat1=GetWeightMatrix(EXTred1);
     WeightMatrix<T,T> WMat2=GetWeightMatrix(EXTred2);
-    EquivTest<permlib::Permutation> eResEquiv=TestEquivalenceWeightMatrix(WMat1, WMat2);
+    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix(WMat1, WMat2);
     if (!eResEquiv.TheReply)
       return {false, {}};
     return {true, eResEquiv.TheEquiv};
   };
-  std::function<int(PolyhedralEntry<T> const&)> fSize=[](PolyhedralEntry<T> const& eRec) -> int {
+  std::function<int(PolyhedralEntry<T,Tgroup> const&)> fSize=[](PolyhedralEntry<T,Tgroup> const& eRec) -> int {
     int siz=eRec.EXT.rows();
     return siz;
   };
@@ -340,16 +341,17 @@ FctsDataBank<PolyhedralEntry<T>> GetRec_FctsDataBank()
 }
 
 
-template<typename T>
+template<typename T,typename Tgroup>
 std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
          MainProcessor &MProc, int const& TheId,
-	 DataBank<PolyhedralEntry<T>> &TheBank,
+	 DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
 	 MyMatrix<T> const& EXT,
-	 TheGroupFormat const& GRP,
+	 Tgroup const& GRP,
 	 PolyHeuristic<mpz_class> const& AllArr,
 	 std::string const& ePrefix,
 	 int const& TheLevel)
 {
+  using Tint=typename Tgroup::Tint;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
@@ -367,8 +369,8 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     ComputeWMat();
     T eValInv=GetInvariantWeightMatrix(WMat);
     PolyhedralInv<T> eInv{nbRow, eValInv};
-    PolyhedralEntry<T> eEnt{EXT, GRP, {}};
-    DataBank_ResultQuery<PolyhedralEntry<T>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
+    PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, {}};
+    DataBank_ResultQuery<PolyhedralEntry<T,Tgroup>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
     if (eResBank.test) {
       MProc.GetO(TheId) << "Begin the use of bank data\n";
       std::vector<Face> ListReprTrans;
@@ -377,7 +379,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	ListReprTrans.push_back(eListJ);
       }
       MProc.GetO(TheId) << "Before the orbit splitting |ListReprTrans|=" << ListReprTrans.size() << "\n";
-      TheGroupFormat GRPconj=ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);
+      Tgroup GRPconj=ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);
       std::vector<Face> ListFaceRet=OrbitSplittingListOrbit(GRPconj, GRP, ListReprTrans, MProc.GetO(TheId));
       MProc.GetO(TheId) << "After the OrbitSplitting\n";
       for (auto & eFace : ListFaceRet) {
@@ -387,11 +389,11 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       return ListFaceRet;
     }
   }
-  TheGroupFormat TheGRPrelevant;
+  Tgroup TheGRPrelevant;
   std::map<std::string, mpz_class> TheMap;
   int nbVert=EXT.rows();
   int delta=nbVert - eRank;
-  TheMap["groupsize"]=GRP.size;
+  TheMap["groupsize"]=GRP.size();
   TheMap["incidence"]=nbVert;
   TheMap["level"]=TheLevel;
   TheMap["rank"]=eRank;
@@ -419,15 +421,15 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       TheGRPrelevant=GetStabilizerWeightMatrix(WMat);
     else
       TheGRPrelevant=GRP;
-    if (TheGRPrelevant.size == GRP.size)
+    if (TheGRPrelevant.size() == GRP.size())
       ansSymm="no";
-    TheMap["groupsizerelevant"]=TheGRPrelevant.size;
+    TheMap["groupsizerelevant"]=TheGRPrelevant.size();
     std::string ansGRP=HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
     std::string ansStratLocInv=HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
     LocalInvInfo eLocalInv=ComputeLocalInvariantStrategy(WMat, TheGRPrelevant, ansStratLocInv, MProc.GetO(TheId));
     MProc.GetO(TheId) << "nbDiagCoeff=" << eLocalInv.nbDiagCoeff << " nbOffCoeff=" << eLocalInv.nbOffCoeff << "\n";
-    mpz_class QuotSize=TheGRPrelevant.size / GRP.size;
-    MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP << " |TheGRPrelevant|=" << TheGRPrelevant.size << " |GRP|=" << GRP.size << " QuotSize=" << QuotSize << "\n";
+    Tint QuotSize=TheGRPrelevant.size() / GRP.size();
+    MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP << " |TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize << "\n";
     mpz_class MaxAllowedUndone=eRank-2;
     std::function<bool(SimpleOrbitFacetInv<T> const&,SimpleOrbitFacetInv<T> const&)> CompFCT=[](SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y) -> bool {
       return x < y;
@@ -457,7 +459,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       }
     };
     int NewLevel=TheLevel+1;
-    std::function<EquivTest<permlib::Permutation>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
+    std::function<EquivTest<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
     std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
     {
       std::ofstream os1("DEBUG_GRPrelevant");
@@ -466,7 +468,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       WriteGroupGAP(os2, TheGRPrelevant);
     }
     if (ansGRP == "classic") {
-      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<permlib::Permutation> {
+      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
 	startLoc = std::chrono::system_clock::now();
 	auto eReply=TestEquivalenceGeneralNaked(TheGRPrelevant, x.eRepr, y.eRepr, 0);
@@ -476,9 +478,9 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	return eReply;
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-	TheGroupFormat TheStab=PERMLIB_GetStabilizer_general(TheGRPrelevant, eOrb, 0);
+        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
 	int siz=eOrb.count();
-	mpz_class eOrbitSize=TheGRPrelevant.size / TheStab.size;
+	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
 	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
 	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
@@ -486,7 +488,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       };
     }
     if (ansGRP == "partition") {
-      fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<permlib::Permutation> {
+      fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
 	startloc = std::chrono::system_clock::now();
 	{
@@ -517,9 +519,9 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	return eReply;
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-	TheGroupFormat TheStab=PERMLIB_GetStabilizer_general(TheGRPrelevant, eOrb, 1);
+        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
 	int siz=eOrb.count();
-	mpz_class eOrbitSize=TheGRPrelevant.size / TheStab.size;
+	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
 	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
 	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
@@ -528,13 +530,13 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     }
     if (ansGRP == "exhaustive") {
       // we choose here to discard the element realizing the equivalence
-      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<permlib::Permutation> {
+      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	bool test=x.eRepr==y.eRepr;
 	return {test, {}};
       };
-      OrbitMinimumArr ArrMin=GetInitialMinimumArray(TheGRPrelevant);
+      OrbitMinimumArr<Tint> ArrMin=GetInitialMinimumArray(TheGRPrelevant);
       GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-	ResultMinimum ResMin=GetMinimumRecord(ArrMin, eOrb);
+        ResultMinimum<Tint> ResMin=GetMinimumRecord(ArrMin, eOrb);
 	int siz=eOrb.count();
 	SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
 	SimpleOrbitFacetInv<T> eInv{siz, ResMin.OrbitSize, {}};
@@ -598,13 +600,13 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	  break;
 	Face eListI=ListOrbit.GetRepresentative(eEntry).eRepr;
 	MyMatrix<T> EXTredFace=SelectRow(EXT, eListI);
-	TheGroupFormat TheStab=GetStabilizer(TheGRPrelevant, eListI);
-	mpz_class OrbSize=TheGRPrelevant.size / TheStab.size;
-	os << "eEntry=" << eEntry << " |TheGRPrelevant|=" << TheGRPrelevant.size << "  |TheStab|=" << TheStab.size << " |O|=" << OrbSize << "\n";
-	TheGroupFormat GRPred=ReducedGroupAction(TheStab, eListI);
+	Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eListI);
+	Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
+	os << "eEntry=" << eEntry << " |TheGRPrelevant|=" << TheGRPrelevant.size() << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
+	Tgroup GRPred=ReducedGroupAction(TheStab, eListI);
 	CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(eEntry) + "/");
 	std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
-	os << "TreatDatabase, NewLevel=" << NewLevel << "  |EXT|=" << EXTredFace.rows() << "  eRank=" << eRank << "  |TheOutput|=" << TheOutput.size() << " |GRPred|=" << GRPred.size << "\n";
+	os << "TreatDatabase, NewLevel=" << NewLevel << "  |EXT|=" << EXTredFace.rows() << "  eRank=" << eRank << "  |TheOutput|=" << TheOutput.size() << " |GRPred|=" << GRPred.size() << "\n";
 	int iter=0;
 	for (auto& eOrbB : TheOutput) {
 	  Face eFlip=ComputeFlipping(EXTred, eListI, eOrbB);
@@ -682,9 +684,9 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
   MProc.GetO(TheId) << "elapsed_seconds = " << elapsed_seconds << " ansBank = " << ansBank << "\n";
   if (ansBank == "yes") {
     MProc.GetO(TheId) << "BANK work, step 1\n";
-    PolyhedralEntry<T> eEntry{EXT, TheGRPrelevant, ListOrbitFaces};
+    PolyhedralEntry<T,Tgroup> eEntry{EXT, TheGRPrelevant, ListOrbitFaces};
     MProc.GetO(TheId) << "BANK work, step 2\n";
-    PolyhedralEntry<T> eEntryCan=CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
+    PolyhedralEntry<T,Tgroup> eEntryCan=CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
     MProc.GetO(TheId) << "BANK work, step 3\n";
     T eValInv=GetInvariantWeightMatrix(WMat);
     MProc.GetO(TheId) << "BANK work, step 4\n";
@@ -696,9 +698,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
   MProc.GetO(TheId) << "Bank entry processed\n";
   std::vector<Face> ListOrbitReturn;
   if (ansSymm == "yes") {
-    MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size << " |GRP|=" << GRP.size << "\n";
-    MProc.GetO(TheId) << "|TheGRPrelevant->S|=" << TheGRPrelevant.group->S.size() << "\n";
-    MProc.GetO(TheId) << "|GRP->S|=" << GRP.group->S.size() << "\n";
+    MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
     {
       std::ofstream os1("SPLIT_GRPrelevant");
       std::ofstream os2("SPLIT_GRP");
@@ -784,15 +784,15 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
   return {ListBlock, "undefined"};
 }
 
-template<typename T>
+template<typename T, typename Tgroup>
 void MainFunctionComputeDualDesc(FullNamelist const& eFull)
 {
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
   bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
   bool BANK_Memory=BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
-  FctsDataBank<PolyhedralEntry<T>> recFct=GetRec_FctsDataBank<T>();
-  DataBank<PolyhedralEntry<T>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
+  FctsDataBank<PolyhedralEntry<T,Tgroup>> recFct=GetRec_FctsDataBank<T,Tgroup>();
+  DataBank<PolyhedralEntry<T,Tgroup>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
   SingleBlock BlockDATA=eFull.ListBlock.at("DATA");
@@ -807,7 +807,7 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT=ReadMatrix<T>(EXTfs);
   std::ifstream GRPfs(GRPfile);
-  TheGroupFormat GRP=ReadGroup(GRPfs);
+  Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
   //
   std::cerr << "Creating MPROC\n";
   SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
