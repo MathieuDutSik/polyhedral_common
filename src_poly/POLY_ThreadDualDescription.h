@@ -368,7 +368,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
   int TheMinSize=TheBank.GetMinSize();
   if (TheMinSize != -1 && nbRow >= TheMinSize) {
     ComputeWMat();
-    T eValInv=GetInvariantWeightMatrix<T,Telt>(WMat);
+    T eValInv=GetInvariantWeightMatrix(WMat);
     PolyhedralInv<T> eInv{nbRow, eValInv};
     PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, {}};
     DataBank_ResultQuery<PolyhedralEntry<T,Tgroup>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
@@ -677,7 +677,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 2\n";
     PolyhedralEntry<T,Tgroup> eEntryCan=CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
     MProc.GetO(TheId) << "BANK work, step 3\n";
-    T eValInv=GetInvariantWeightMatrix<T,Telt>(WMat);
+    T eValInv=GetInvariantWeightMatrix(WMat);
     MProc.GetO(TheId) << "BANK work, step 4\n";
     PolyhedralInv<T> eInv{nbRow, eValInv};
     MProc.GetO(TheId) << "BANK work, step 5\n";

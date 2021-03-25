@@ -1626,7 +1626,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
 
 
 // The matrix should be square and the output does not depends on the ordering of the coefficients.
-template<typename T, typename Telt>
+template<typename T>
 inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvariantWeightMatrix(WeightMatrix<T,T> const& WMat)
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
@@ -1644,12 +1644,12 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
       Tidx_value iWeight=WMat.GetValue(iVert, jVert);
       ListAtt[iWeight]++;
     }
-  Telt ePerm=SortingPerm<T,Telt>(ListWeight);
+  std::vector<int> eList = SortingPerm(ListWeight);
 #ifdef DEBUG
   for (size_t jWeight=1; jWeight<nbWeight; jWeight++) {
     size_t iWeight=jWeight-1;
-    int i=ePerm.at(iWeight);
-    int j=ePerm.at(jWeight);
+    int i=eList[iWeight];
+    int j=eList[jWeight];
     if (ListWeight[i] > ListWeight[j]) {
       std::cerr << "Logical error in the comparison\n";
       throw TerminalException{1};
@@ -1661,7 +1661,7 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
     T eInv=0;
     T ePow=ListM[iInv];
     for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
-      size_t jWeight=ePerm.at(iWeight);
+      size_t jWeight=eList[iWeight];
       T prov2=ListAtt[jWeight]*ListWeight[jWeight];
       eInv *= ePow;
       eInv += prov2;
@@ -3456,8 +3456,8 @@ Telt GetPermutationOnVectors(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2)
     EXTrow1[iVect]=GetMatrixRow(EXT1, iVect);
     EXTrow2[iVect]=GetMatrixRow(EXT2, iVect);
   }
-  Telt ePerm1=SortingPerm<MyVector<T>,Telt>(EXTrow1);
-  Telt ePerm2=SortingPerm<MyVector<T>,Telt>(EXTrow2);
+  Telt ePerm1=Telt(SortingPerm(EXTrow1));
+  Telt ePerm2=Telt(SortingPerm(EXTrow2));
   Telt ePermRet=(~ePerm1) * ePerm2;
 #ifdef DEBUG
   for (size_t iVect=0; iVect<nbVect; iVect++) {

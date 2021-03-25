@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "LatticeDelaunay.h"
 int main(int argc, char *argv[])
 {
@@ -14,10 +15,11 @@ int main(int argc, char *argv[])
     }
     using T=mpq_class;
     using Tint=mpz_class;
+    using Tgroup=TheGroupFormat<mpz_class>;
     //
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    TreatDelaunayEntry<T,Tint>(eFull);
+    TreatDelaunayEntry<T,Tint,Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {

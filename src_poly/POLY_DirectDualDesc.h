@@ -37,7 +37,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   //
   std::ifstream is(FileI);
   std::string line;
-  size_t iLine;
+  size_t iLine = 0;
   size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
   while (std::getline(is, line)) {

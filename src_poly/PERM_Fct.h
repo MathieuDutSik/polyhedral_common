@@ -3,22 +3,14 @@
 
 
 
-
-
-
-
-
-
-
-template<typename T, typename Telt>
-Telt SortingPerm(std::vector<T> const & ListV)
+template<typename T>
+std::vector<int> SortingPerm(std::vector<T> const & ListV)
 {
   struct PairData {
     std::size_t i;
     T x;
   };
   std::size_t len=ListV.size();
-  //  std::cerr << "len=" << len << "\n";
   std::vector<PairData> ListPair(len);
   for (std::size_t i=0; i<len; i++) {
     PairData ePair{i, ListV[i]};
@@ -35,11 +27,8 @@ Telt SortingPerm(std::vector<T> const & ListV)
   std::vector<int> v(len);
   for (std::size_t i=0; i<len; i++)
     v[i]=ListPair[i].i;
-  return Telt(v);
+  return v;
 }
-
-
-
 
 
 

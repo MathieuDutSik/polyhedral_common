@@ -145,11 +145,13 @@ WeightMatrix<T, T> GetWeightMatrixFromGramEXT(MyMatrix<T> const& EXT, MyMatrix<T
   return GetSimpleWeightMatrix(EXText, Qmat);
 }
 
-template<typename T>
-bool IsGroupCorrect(MyMatrix<T> const& EXT_T, TheGroupFormat const& eGRP)
+template<typename T, typename Tgroup>
+bool IsGroupCorrect(MyMatrix<T> const& EXT_T, Tgroup const& eGRP)
 {
-  for (auto & eGen : eGRP.group->S) {
-    MyMatrix<T> eMat=FindTransformation(EXT_T, EXT_T, *eGen);
+  using Telt=typename Tgroup::Telt;
+  std::vector<Telt> LGen = eGRP.GeneratorsOfGroup();
+  for (auto & eGen : LGen) {
+    MyMatrix<T> eMat=FindTransformation(EXT_T, EXT_T, eGen);
     if (!IsIntegralMatrix(eMat))
       return false;
   }
@@ -159,13 +161,12 @@ bool IsGroupCorrect(MyMatrix<T> const& EXT_T, TheGroupFormat const& eGRP)
 
 
 
-template<typename T, typename Tint>
-  TheGroupFormat Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> const & EXT, Tint const& eIndex)
+template<typename T, typename Tint, typename Tgroup>
+Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> const & EXT, Tint const& eIndex)
 {
   MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(EXT);
   WeightMatrix<T,T> WMatRed=GetWeightMatrixFromGramEXT(EXT_T, eData.GramMat, {});
-  TheGroupFormat GRPisomRed=GetStabilizerWeightMatrix(WMatRed);
-  //  std::cerr << "|GRPisomRed|=" << GRPisomRed.size << "\n";
+  Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,T,Tgroup>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
     return GRPisomRed;
   if (eIndex == 1) {
@@ -185,17 +186,15 @@ template<typename T, typename Tint>
     eFace[iVert]=1;
   for (int iSHV=0; iSHV<nbSHV; iSHV++)
     eFace[nbVert+iSHV]=0;
-  TheGroupFormat PreGRPisom=GetStabilizerWeightMatrix(WMat);
-  TheGroupFormat GRPisom=ReducedGroupAction(PreGRPisom, eFace);
-  //  std::cerr << "|GRPisom|=" << GRPisom.size << "\n";
+  Tgroup PreGRPisom=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+  Tgroup GRPisom=ReducedGroupAction(PreGRPisom, eFace);
   if (IsGroupCorrect(EXT_T, GRPisom)) {
-    //    std::cerr << "IsIntegral method\n";
     return GRPisom;
   }
   std::function<bool(MyMatrix<T>)> IsMatrixCorrect=[](MyMatrix<T> const& M) -> bool {
     return IsIntegralMatrix(M);
   };
-  if (GRPisom.size < eData.UpperLimitMethod4) {
+  if (GRPisom.size() < eData.UpperLimitMethod4) {
     return LinPolytopeIntegral_Stabilizer_Method4(EXT_T, GRPisom, IsMatrixCorrect);
   }
   else {
@@ -205,9 +204,10 @@ template<typename T, typename Tint>
 
 
 
-template<typename T,typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eData, Delaunay<T,Tint> const& RecEXT1, Delaunay<T,Tint> const& RecEXT2, Tint const& eIndex)
 {
+  using Telt=typename Tgroup::Telt;
   std::cerr << "Begin Delaunay_TestEquivalence\n";
   auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
     if (!eEq.TheReply)
@@ -219,7 +219,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   MyMatrix<T> EXT2_T=ConvertMatrixUniversal<T,Tint>(RecEXT2.EXT);
   WeightMatrix<T, T> WMatRed1=GetWeightMatrixFromGramEXT(EXT1_T, eData.GramMat, {});
   WeightMatrix<T, T> WMatRed2=GetWeightMatrixFromGramEXT(EXT2_T, eData.GramMat, {});
-  EquivTest<permlib::Permutation> eResRed=TestEquivalenceWeightMatrix(WMatRed1, WMatRed2);
+  EquivTest<Telt> eResRed=TestEquivalenceWeightMatrix<T,T,Telt>(WMatRed1, WMatRed2);
   if (!eResRed.TheReply) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
     return {false, {}};
@@ -241,7 +241,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eData.SHV);
   WeightMatrix<T, T> WMat1=GetWeightMatrixFromGramEXT(EXT1_T, eData.GramMat, SHV_T);
   WeightMatrix<T, T> WMat2=GetWeightMatrixFromGramEXT(EXT2_T, eData.GramMat, SHV_T);
-  EquivTest<permlib::Permutation> eRes=TestEquivalenceWeightMatrix(WMat1, WMat2);
+  EquivTest<Telt> eRes=TestEquivalenceWeightMatrix<T,T,Telt>(WMat1, WMat2);
   if (!eRes.TheReply) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
     return {false, {}};
@@ -253,8 +253,8 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
     return {true, MatEquiv_I};
   };
   std::cerr << "Trying other strategies\n";
-  TheGroupFormat GRP1=GetStabilizerWeightMatrix(WMat1);
-  if (GRP1.size < eData.UpperLimitMethod4) {
+  Tgroup GRP1=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat1);
+  if (GRP1.size() < eData.UpperLimitMethod4) {
     std::function<bool(MyMatrix<T>)> IsMatrixCorrect=[](MyMatrix<T> const& M) -> bool {
       return IsIntegralMatrix(M);
     };
@@ -294,10 +294,10 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
 
 
 
-template<typename T,typename Tint>
+template<typename T,typename Tint, typename Tgroup>
 std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
 	    MainProcessor &MProc, int const& TheId,
-	    DataBank<PolyhedralEntry<T>> &TheBank,
+	    DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
 	    DataLattice<T,Tint> const& eData, 
 	    PolyHeuristic<mpz_class> const& AllArr)
 {
@@ -309,7 +309,7 @@ std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
   std::function<EquivTest<MyMatrix<Tint>>(Delaunay<T,Tint> const&,Delaunay<T,Tint> const&)> fEquiv=[&](Delaunay<T,Tint> const& x, Delaunay<T,Tint> const& y) -> EquivTest<MyMatrix<Tint>> {
     Tint PreIndex=Int_IndexLattice(x.EXT);
     Tint eIndex=T_abs(PreIndex);
-    return Delaunay_TestEquivalence<T,Tint>(eData, x, y, eIndex);
+    return Delaunay_TestEquivalence<T,Tint,Tgroup>(eData, x, y, eIndex);
   };
   NewEnumerationWork<Delaunay<T,Tint>> ListOrbit(AllArr.Saving, AllArr.eMemory, eData.PrefixDelaunay, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
   auto FuncInsert=[&](Delaunay<T,Tint> const& x, std::ostream&os) -> int {
@@ -355,7 +355,7 @@ std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
 	break;
       Delaunay<T,Tint> eDEL=ListOrbit.GetRepresentative(eEntry);
       DelaunayInv<T,Tint> eInv=ListOrbit.GetInvariant(eEntry);
-      TheGroupFormat GRPlatt=Delaunay_Stabilizer<T,Tint>(eData, eDEL.EXT, eInv.eIndex);
+      Tgroup GRPlatt=Delaunay_Stabilizer<T,Tint,Tgroup>(eData, eDEL.EXT, eInv.eIndex);
       MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(eDEL.EXT);
       CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" + IntToString(eEntry) + "/");
       std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXT_T, GRPlatt, AllArr, eDir.str(), 0);
@@ -489,7 +489,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY()
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 void TreatDelaunayEntry(FullNamelist const& eFull)
 {
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
@@ -500,8 +500,8 @@ void TreatDelaunayEntry(FullNamelist const& eFull)
   bool BANK_Memory=BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
   CreateDirectory(BANK_Prefix);
-  FctsDataBank<PolyhedralEntry<T>> recFct=GetRec_FctsDataBank<T>();
-  DataBank<PolyhedralEntry<T>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
+  FctsDataBank<PolyhedralEntry<T,Tgroup>> recFct=GetRec_FctsDataBank<T,Tgroup>();
+  DataBank<PolyhedralEntry<T,Tgroup>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
   std::string GRAMfile=BlockDATA.ListStringValues.at("GRAMfile");
