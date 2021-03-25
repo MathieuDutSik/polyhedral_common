@@ -3003,7 +3003,7 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face con
   WMat2.Update(n,n,siz+2);
   WMat1.SetWeight(ListWeight);
   WMat1.SetWeight(ListWeight);
-  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<T1,T2,Telt>(WMat1, WMat2);
+  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,int,Telt>(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
   std::vector<int> eList(n);

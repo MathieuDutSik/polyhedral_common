@@ -401,7 +401,7 @@ OrbitMinimumArr<Tint> GetInitialMinimumArray(TheGroupFormat<Tint> const& eGRP)
 {
   //  std::cerr << "GetInitialMinimumArray |GRP|=" << eGRP.size << "\n";
   IteratorGrp eIter=GetInitialIterator(eGRP);
-  return {eIter.n, eGRP.size, eIter.ListTrans};
+  return {eIter.n, eGRP.size(), eIter.ListTrans};
 }
 
 template<typename Tint>

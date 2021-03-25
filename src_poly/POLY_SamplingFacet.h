@@ -3,6 +3,7 @@
 
 
 #include "POLY_PolytopeFct.h"
+#include "POLY_LinearProgramming.h"
 
 
 struct recSamplingOption {
