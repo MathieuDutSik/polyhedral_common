@@ -137,7 +137,7 @@ Tgroup ReadGroup(std::istream &is)
   std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
     std::vector<int> v(n);
-    for (std::size_t i=0; i<n; i++) {
+    for (int i=0; i<n; i++) {
       int eVal;
       is >> eVal;
       if (eVal > n-1) {
@@ -231,17 +231,17 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
   auto LGen = TheGRP.GeneratorsOfGroup();
   while(true) {
     std::size_t eSumPrev=0;
-    for (std::size_t i=0; i<n; i++)
+    for (int i=0; i<n; i++)
       eSumPrev += rList[i];
     for (auto & eGen : LGen) {
-      for (std::size_t i=0; i<n; i++) {
+      for (int i=0; i<n; i++) {
 	int j = OnPoints(i, eGen);
 	if (rList[i] == 0)
 	  rList[j]=0;
       }
     }
     std::size_t eSum=0;
-    for (std::size_t i=0; i<n; i++)
+    for (int i=0; i<n; i++)
       eSum += rList[i];
     if (eSum == eSumPrev)
       break;
@@ -804,7 +804,7 @@ PermutationGroupPtr PERMLIB_GetStabilizer_general(PermutationGroupPtr const& gro
   std::set<int> eSet=GetSetFrom_DB(NewList);
   if (opt == 0)
     return permlib::setStabilizer_classic(*group, eSet.begin(), eSet.end());
-  if (opt == 1)
+  else
     return permlib::setStabilizer_partition(*group, eSet.begin(), eSet.end());
 }
 
@@ -845,7 +845,7 @@ public:
     std::vector<permlib::Permutation::ptr> generatorList;
     for (auto & eGen : ListPerm) {
       std::vector<int> v(n);
-      for (std::size_t i=0; i<n; i++)
+      for (int i=0; i<n; i++)
         v[i]=eGen.at(i);
       generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
     }

@@ -1192,23 +1192,6 @@ WeightMatrix<T1, T2> GetSymmetricWeightMatrix(WeightMatrix<T1,T2> const& WMatI)
 
 
 
-template<typename T1, typename T2, typename Tgroup>
-Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
-{
-  using Telt=typename Tgroup::Telt;
-  WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
-  size_t nbSHV=WMatI.rows();
-  Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatO);
-  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
-  std::vector<int> v(nbSHV);
-  std::vector<Telt> ListGen;
-  for (auto & eGen : ListGenInput) {
-    for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
-      v[iSHV]=OnPoints(iSHV, eGen);
-    ListGen.push_back(Telt(v));
-  }
-  return Tgroup(ListGen, nbSHV);
-}
 
 
 
@@ -2835,6 +2818,26 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
   }
   return Tgroup(generatorList, nbRow);
 }
+
+
+template<typename T1, typename T2, typename Tgroup>
+Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
+{
+  using Telt=typename Tgroup::Telt;
+  WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
+  size_t nbSHV=WMatI.rows();
+  Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatO);
+  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
+  std::vector<int> v(nbSHV);
+  std::vector<Telt> ListGen;
+  for (auto & eGen : ListGenInput) {
+    for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
+      v[iSHV]=OnPoints(iSHV, eGen);
+    ListGen.push_back(Telt(v));
+  }
+  return Tgroup(ListGen, nbSHV);
+}
+
 
 
 std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
