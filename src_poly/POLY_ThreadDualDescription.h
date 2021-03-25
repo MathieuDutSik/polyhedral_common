@@ -328,7 +328,7 @@ FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
     WeightMatrix<T,T> WMat1=GetWeightMatrix(EXTred1);
     WeightMatrix<T,T> WMat2=GetWeightMatrix(EXTred2);
-    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix(WMat1, WMat2);
+    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,T,Telt>(WMat1, WMat2);
     if (!eResEquiv.TheReply)
       return {false, {}};
     return {true, eResEquiv.TheEquiv};
@@ -352,6 +352,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	 int const& TheLevel)
 {
   using Tint=typename Tgroup::Tint;
+  using Telt=typename Tgroup::Telt;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
@@ -471,7 +472,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
 	startLoc = std::chrono::system_clock::now();
-	auto eReply=TestEquivalenceGeneralNaked(TheGRPrelevant, x.eRepr, y.eRepr, 0);
+	auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
 	endLoc = std::chrono::system_clock::now();
 	int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endLoc-startLoc).count();
 	MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
