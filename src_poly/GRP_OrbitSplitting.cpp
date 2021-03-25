@@ -1,4 +1,5 @@
-#include "Temp_PolytopeEquiStab.h"
+#include "Permlib_specific.h"
+#include "GRP_GroupFct.h"
 int main(int argc, char *argv[])
 {
   try {
@@ -13,13 +14,14 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
+    using Tgroup=TheGroupFormat<mpz_class>;
     std::cerr << "Reading input\n";
     //
     std::ifstream is1(argv[1]);
-    TheGroupFormat BigGRP=ReadGroup(is1);
+    Tgroup BigGRP=ReadGroup<Tgroup>(is1);
     //
     std::ifstream is2(argv[2]);
-    TheGroupFormat SmaGRP=ReadGroup(is2);
+    Tgroup SmaGRP=ReadGroup<Tgroup>(is2);
     //
     std::ifstream is3(argv[3]);
     std::vector<Face> ListFaceBig=ReadListFace(is3);

@@ -3097,7 +3097,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 {
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
-  return GetStabilizerWeightMatrix(WMat);
+  return GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
 }
 
 

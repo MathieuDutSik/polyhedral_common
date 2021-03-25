@@ -1,4 +1,6 @@
 #include "NumberTheory.h"
+#include "Permlib_specific.h"
+#include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[])
@@ -15,13 +17,14 @@ int main(int argc, char *argv[])
     }
     //
     using T=mpq_class;
+    using Tgroup=TheGroupFormat<mpz_class>;
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT=ReadMatrix<T>(is);
     int nbCol=EXT.cols();
     int nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    TheGroupFormat GRP = LinPolytope_Automorphism(EXT);
+    Tgroup GRP = LinPolytope_Automorphism<T,Tgroup>(EXT);
     //
     std::ofstream os(argv[2]);
     WriteGroup(os, GRP);
