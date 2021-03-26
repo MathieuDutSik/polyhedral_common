@@ -1,5 +1,6 @@
+#include "Permutation.h"
 #include "Group.h"
-#include "POLY_ThreadDualDescription.h"
+#include "POLY_RecursiveDualDesc.h"
 int main(int argc, char *argv[])
 {
   try {
@@ -14,7 +15,9 @@ int main(int argc, char *argv[])
     }
     std::string eFileName=argv[1];
     using T=mpq_class;
-    using Tgroup=permutalib::Group<mpz_class>;
+    using Telt=permutalib::DoubleSidedPerm;
+    using Tint=mpz_class;
+    using Tgroup=permutalib::Group<Telt,Tint>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionSerialDualDesc<T,Tgroup>(eFull);

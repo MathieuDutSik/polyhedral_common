@@ -1,7 +1,9 @@
 #ifndef INCLUDE_POLY_HEURISTICS_H
 #define INCLUDE_POLY_HEURISTICS_H
 
+#include "Namelist.h"
 #include "Heuristic_fct.h"
+#include "Basic_file.h"
 
 //
 // Heuristic business
@@ -92,7 +94,7 @@ TheHeuristic<T> MethodInvariantQuality()
 
 
 template<typename T>
-void SetHeuristic(std::string const& NamelistEnt, TheHeuristic<T> & eHeu)
+void SetHeuristic(FullNamelist const& eFull, std::string const& NamelistEnt, TheHeuristic<T> & eHeu)
 {
   SingleBlock BlockHEU=eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile=BlockHEU.ListStringValues.at(NamelistEnt);
@@ -153,7 +155,7 @@ struct PolyHeuristicSerial {
 template<typename T>
 PolyHeuristicSerial<T> AllStandardHeuristicSerial()
 {
-  PolyHeuristic<T> AllArr;
+  PolyHeuristicSerial<T> AllArr;
   AllArr.Splitting=StandardHeuristicADM<T>();
   AllArr.BankSave=StandardHeuristicBankSave<T>();
   AllArr.AdditionalSymmetry=StandardHeuristicAdditionalSymmetry<T>();

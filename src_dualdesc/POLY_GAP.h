@@ -139,7 +139,7 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
   }
   // Case 3: the permutation case
   if (full_str.substr(0,1) == "(") {
-    Telt g = ParsePermutation(full_str);
+    Telt g(full_str);
     return {int_permutation, {}, {}, g, {}, {}};
   }
   // Case 1: the element
@@ -260,7 +260,7 @@ Tgroup ConvertGAPread_PermutationGroup(DataGAP<T,typename Tgroup::Telt> const& d
   std::vector<Telt> ListGen;
   for (auto & eEnt : data.ListEnt) {
     Telt g1 = ConvertGAPread_Permutation(eEnt);
-    Telt g2 = ExtendPermutation(g1, n);
+    Telt g2(g1, n);
     ListGen.push_back(g2);
   }
   return Tgroup(ListGen, n);

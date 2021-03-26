@@ -230,7 +230,7 @@ template<typename Tgroup>
 Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
 {
   using Telt = typename Tgroup::Telt;
-  std::vector<Telt> LGen = GRP.GeneratorsAsGroup();
+  std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
   int n = GRP.n_act();
   Face rList = gList;
   while(true) {

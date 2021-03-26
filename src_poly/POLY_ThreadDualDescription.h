@@ -806,13 +806,13 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   //
   PolyHeuristic<mpz_class> AllArr=AllStandardHeuristic<mpz_class>();
   //
-  SetHeuristic("SplittingHeuristicFile", AllArr.Splitting);
-  SetHeuristic("AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
-  SetHeuristic("DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
-  SetHeuristic("StabEquivFacetHeuristicFile", AllArr.StabEquivFacet);
-  SetHeuristic("MethodInitialFacetSetFile", AllArr.InitialFacetSet);
-  SetHeuristic("MethodInvariantQualityFile", AllArr.InvariantQuality);
-  SetHeuristic("BankSaveHeuristicFile", AllArr.BankSave);
+  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting);
+  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
+  SetHeuristic(eFull, "DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
+  SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet);
+  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
+  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality);
+  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
   //
   bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
   bool DD_Memory=BlockMETHOD.ListBoolValues.at("FullDataInMemory");
