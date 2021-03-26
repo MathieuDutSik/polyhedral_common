@@ -1,4 +1,5 @@
-PROGRAM		= DD_ConvertGAP_to_NC
+#PROGRAM		= DD_ConvertGAP_to_NC
+PROGRAM		= POLY_SerialDualDesc
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

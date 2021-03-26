@@ -264,6 +264,26 @@ public:
 };
 
 
+
+template<typename T, typename Telt>
+std::pair<MyMatrix<EXT>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
+{
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  int n_row=EXT.rows();
+  int n_col=EXT.cols();
+  MyMatrix<T> EXTcan(n_row, n_col);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int j_row=PairCaoninic.second[i_row];
+    for (int i_col=0; i_col<n_col; i_col++)
+      EXTcan(i_row,i_col) = EXT(j_row,i_col);
+  }
+  //
+  Telt ePerm = Telt(PairCanonic.second);
+  return {EXTcan, ePerm};
+}
+
+
+
 template<typename T>
 struct DataBank {
 private:
@@ -451,7 +471,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
 }
 
 
-FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
+FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
