@@ -18,25 +18,6 @@
 //#define DEBUG_CRITERION_ELIMINATION
 
 
-namespace std {
-  template <typename T>
-  struct hash<MyVector<T>>
-  {
-    std::size_t operator()(const MyVector<T>& V) const
-    {
-      std::size_t h1 = 12756;
-      int len=V.size();
-      for (int i=0; i<len; i++) {
-        T eVal = V(i);
-        std::size_t h2 = std::hash<T>()(eVal);
-        h1 = h2 ^ ( h1 << 1);
-      }
-      return h1;
-    }
-  };
-}
-
-
 template<typename T>
 MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const& M)
 {
@@ -920,9 +901,11 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const& TheCtypeArr)
 
 
 
-template<typename T>
+template<typename T, typename Tgroup>
 StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
 {
+  using Telt=typename Tgroup::Telt;
+  using Tint=typename Tgroup::Tint;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -1104,16 +1087,16 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
 #endif
 
 
-  std::vector<permlib::dom_int> v(n_edge);
-  std::vector<permlib::Permutation> ListGenPerm;
+  std::vector<int> v(n_edge);
+  std::vector<Telt> ListGenPerm;
   for (auto & eGen : ListGen) {
     for (int i_edge=0; i_edge<n_edge; i_edge++)
       v[i_edge]=eGen[i_edge];
-    ListGenPerm.push_back(permlib::Permutation(v));
+    ListGenPerm.push_back(Telt(v));
   }
-  TheGroupFormat GRP = GetPermutationGroup(n_edge, ListGenPerm);
-  mpz_class size = GRP.size;
-  int nb_autom = UniversalTypeConversion<int,mpz_class>(GRP.size);
+  Tgroup GRP(ListGenPerm, n_edge);
+  Tint e_size = GRP.size();
+  int nb_autom = UniversalTypeConversion<int,Tint>(e_size);
 
 
 #ifdef TIMINGS

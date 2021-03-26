@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "CtypeMPI_types.h"
 #include "NumberTheory.h"
 #include "Namelist.h"
@@ -148,7 +149,8 @@ int main(int argc, char* argv[])
     std::cerr << "We have nb_adjacent\n";
 #endif
     //
-    StructuralInfo info = CTYP_GetStructuralInfo(eType);
+    using Tgroup=TheGroupFormat<mpz_class>;
+    StructuralInfo info = CTYP_GetStructuralInfo<Tint,Tgroup>(eType);
 #ifdef DEBUG_INFO
     std::cerr << "We have info\n";
 #endif

@@ -305,7 +305,7 @@ struct equiv_info<PolyhedralEntry<T,Tgroup>> {
   typedef typename Tgroup::Telt equiv_type;
 };
 
-template <typename T, typename Tgroup>
+template <typename T>
 struct equiv_info<SimpleOrbitFacet<T>> {
   typedef permlib::Permutation equiv_type;
 };
