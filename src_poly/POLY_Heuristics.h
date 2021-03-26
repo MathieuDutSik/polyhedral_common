@@ -91,6 +91,21 @@ TheHeuristic<T> MethodInvariantQuality()
 }
 
 
+template<typename T>
+void SetHeuristic(std::string const& NamelistEnt, TheHeuristic<T> & eHeu)
+{
+  SingleBlock BlockHEU=eFull.ListBlock.at("HEURISTIC");
+  std::string NamelistEntFile=BlockHEU.ListStringValues.at(NamelistEnt);
+  if (NamelistEntFile != "unset.heu") {
+    IsExistingFileDie(NamelistEntFile);
+    std::ifstream is(NamelistEntFile);
+    eHeu=ReadHeuristic<T>(is);
+  }
+}
+
+
+
+
 
 template<typename T>
 struct PolyHeuristic {
@@ -118,6 +133,32 @@ PolyHeuristic<T> AllStandardHeuristic()
   AllArr.StabEquivFacet=StandardHeuristicStabEquiv<T>();
   AllArr.InitialFacetSet=MethodInitialFacetSet<T>();
   AllArr.InvariantQuality=MethodInvariantQuality<T>();
+  return AllArr;
+}
+
+
+
+template<typename T>
+struct PolyHeuristicSerial {
+  TheHeuristic<T> Splitting;
+  TheHeuristic<T> BankSave;
+  TheHeuristic<T> AdditionalSymmetry;
+  TheHeuristic<T> DualDescriptionProgram;
+  TheHeuristic<T> InitialFacetSet;
+  bool Saving;
+};
+
+
+
+template<typename T>
+PolyHeuristicSerial<T> AllStandardHeuristicSerial()
+{
+  PolyHeuristic<T> AllArr;
+  AllArr.Splitting=StandardHeuristicADM<T>();
+  AllArr.BankSave=StandardHeuristicBankSave<T>();
+  AllArr.AdditionalSymmetry=StandardHeuristicAdditionalSymmetry<T>();
+  AllArr.DualDescriptionProgram=StandardHeuristicDualDescriptionProgram<T>();
+  AllArr.InitialFacetSet=MethodInitialFacetSet<T>();
   return AllArr;
 }
 

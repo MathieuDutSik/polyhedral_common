@@ -1,7 +1,10 @@
 #ifndef INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 #define INCLUDE_POLY_RECURSIVE_DUAL_DESC_H
 
-#include "POLY_ThreadDualDescription.h"
+#include "POLY_Heuristics.h"
+#include "POLY_DirectDualDesc.h"
+#include "POLY_SamplingFacet.h"
+
 #include "POLY_GAP.h"
 #include "POLY_netcdf.h"
 
@@ -12,6 +15,10 @@ struct EquivariantDualDescription {
   Tgroup GRP;
   std::vector<Face> ListFace;
 };
+
+
+
+
 
 
 
@@ -71,43 +78,14 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
     POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
 }
 
-
-
-template<typename Tgroup>
-Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
+template<typename T>
+std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFile)
 {
-  using Telt = typename Tgroup::Telt;
-  std::vector<Telt> LGen = GRP.GeneratorsAsGroup();
-  int n = GRP.n_act();
-  Face rList = gList;
-  while(true) {
-    size_t eSumPrev = rList.count();
-    for (auto & eGen : LGen) {
-      for (int i=0; i<n; i++) {
-        std::size_t j = OnPoints(i, eGen);
-        if (rList[i] == 0)
-          rList[j]=0;
-      }
-    }
-    size_t eSum = rList.count();
-    if (eSum == eSumPrev)
-      break;
-  }
-  return rList;
-}
-
-
-template<typename Tgroup>
-Face OrbitUnion(Tgroup const& GRP, Face const& gList)
-{
-  int n = GRP.n_act();
-  Face gListB(n);
-  for (int i=0; i<n; i++)
-    gListB[i] = 1 - gList[i];
-  Face rListB=OrbitIntersection(GRP, gListB);
-  for (int i=0; i<n; i++)
-    rListB[i] = 1 - rListB[i];
-  return rListB;
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
+  MyMatrix<T> EXT = POLY_NC_ReadPolytope(dataFile);
+  //
+  std::vector<Face> ListFace;
+  
 }
 
 
@@ -182,7 +160,7 @@ public:
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
-        InsertEntryDatavase(eEnt.face, eEnt.status, eEnt.orbSize, i_orbit);
+        InsertEntryDatabase(eEnt.face, eEnt.status, eEnt.orbSize, i_orbit);
       }
     }
   }
@@ -269,6 +247,301 @@ public:
     }
   }
 };
+
+
+template<typename T>
+struct DataBank {
+private:
+  int MinSize;
+  std::unordered_map<MyMatrix<T>, std::vector<Face>> ListEnt;
+  bool Saving;
+  std::string SavingPrefix;
+public:
+  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
+  {
+    MinSize = std::numeric_limits<int>::max();
+    if (Saving) {
+      size_t iOrbit=0;
+      while(true) {
+        std::string eFile = SavnigPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
+        if (!IsExistingFile(eFile))
+          break;
+        
+        iOrbit++;
+      }
+    }
+  }
+  void InsertEntry(MyMatrix<T> const& EXT, std::vector<Face> const& ListFace)
+  {
+    
+  }
+};
+
+
+//
+// A number of appoximations are done in this code:
+// ---In the bank we assume that the full symmetry is used.
+//    This means less things to store
+// ---We use the canonicalization approach which allows to treat smaller cases.
+// ---Serial mode. Should be faster indeed.
+// ---
+//
+
+template<typename T,typename Tgroup>
+std::vector<Face> DUALDESC_AdjacencyDecomposition(
+         std::unordered_map<MyMatrix<T>, std::vector<Face>> & TheBank,
+	 MyMatrix<T> const& EXT,
+	 Tgroup const& GRP,
+	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
+	 std::string const& ePrefix,
+	 int const& TheLevel)
+{
+  using Tint=typename Tgroup::Tint;
+  using Telt=typename Tgroup::Telt;
+  MyMatrix<T> EXTred=ColumnReduction(EXT);
+  int nbRow=EXTred.rows();
+  int eRank=EXTred.cols();
+  WeightMatrix<T, T> WMat;
+  bool HaveWMat=false;
+  auto ComputeWMat=[&]() -> void {
+    if (HaveWMat)
+      return;
+    WMat=GetWeightMatrix(EXTred);
+  };
+  //
+  // Checking if the entry is present in the map.
+  //
+  if (nbRow >= TheBank.MinSize) {
+    ComputeWMat();
+    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope(EXT, WMat);
+    auto iter = TheBank.find(ePair.first);
+    if (iter != TheBank.ListEnt.end()) {
+      std::vector<Face> ListReprTrans;
+      for (auto const& eOrbit : iter->second) {
+	Face eListJ=OnFace(eOrbit, ePair.second);
+	ListReprTrans.push_back(eListJ);
+      }
+      return ListReprTrans;
+    }
+  }
+  //
+  // Now computing the groups
+  //
+  Tgroup TheGRPrelevant;
+  std::map<std::string, Tint> TheMap;
+  int nbVert=EXT.rows();
+  int delta=nbVert - eRank;
+  TheMap["groupsize"]=GRP.size();
+  TheMap["incidence"]=nbVert;
+  TheMap["level"]=TheLevel;
+  TheMap["rank"]=eRank;
+  TheMap["delta"]=delta;
+  std::string ansSplit=HeuristicEvaluation(TheMap, AllArr.Splitting);
+  //
+  // The computations themselves
+  //
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+  std::vector<Face> ListOrbitFaces;
+  std::string ansSymm;
+  if (ansSplit != "split") {
+    TheGRPrelevant=GRP;
+    std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
+    ListOrbitFaces=DirectFacetOrbitComputation(EXTred, GRP, ansProg, std::cerr);
+    ansSymm="no";
+  } else {
+    ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    if (ansSymm == "yes") {
+      ComputeWMat();
+      TheGRPrelevant=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+    } else {
+      TheGRPrelevant=GRP;
+    }
+    if (TheGRPrelevant.size() == GRP.size())
+      ansSymm="no";
+    TheMap["groupsizerelevant"]=TheGRPrelevant.size();
+    std::string ansGRP=HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
+    std::string ansStratLocInv=HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
+    std::string eFile = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank) + ".nc";
+    bool SavingTrigger=AllArr.Saving;
+    DatabaseOrbits RPL(EXT, GRP, eFile, SavingTrigger);
+    int NewLevel=TheLevel+1;
+
+    int nbPresentOrbit=ListOrbit.GetNbEntry();
+    if (RPL.FuncNumberOrbit() == 0) {
+      std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+      std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
+      for (auto & eInc : ListFace)
+	FuncInsert(eInc);
+    }
+    while(true) {
+      Face eSetUndone=RPL.ComputeIntersectionUndone();
+      Tint nbUndone=RPL.FuncNumberUndone();
+      if (RPL.FuncNumberOrbitDone() > 0) {
+        if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
+          std::cerr "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=", eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
+          break;
+        }
+      }
+      size_t SelectedOrbit=RPL.FuncGetMinimalUndoneOrbit();
+      Face eInc=RPL.FuncRecord(SelectedOrbit);
+      MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
+      Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
+      Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
+      Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
+      CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(eEntry) + "/");
+      std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
+      for (auto& eOrbB : TheOutput) {
+        Face eFlip=ComputeFlipping(EXTred, eListI, eOrbB);
+        RPL.FuncInsert(eFlip);
+      }
+      RPL.FuncPutOrbitAsDone(SelectedOrbit);
+      nbUndone=RPL.FuncNumberUndone();
+      std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << nbUndone << "\n";
+    };
+    ListOrbitFace = RPL.FuncListOrbitIncidence();
+  }
+  end = std::chrono::system_clock::now();
+  int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  TheMap["time"]=elapsed_seconds;
+  std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
+  if (ansBank == "yes") {
+    TheBank.InsertEntry(EXT, ListOrbitFace);
+  }
+  std::vector<Face> ListOrbitReturn;
+  if (ansSymm == "yes") {
+    ListOrbitReturn=OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
+  } else
+    ListOrbitReturn=ListOrbitFaces;
+  return ListOrbitReturn;
+}
+
+
+FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string> > ListListStringValues1;
+  ListStringValues1["EXTfile"]="unset.ext";
+  ListStringValues1["GRPfile"]="unset.grp";
+  ListStringValues1["OUTfile"]="unset.out";
+  SingleBlock BlockDATA;
+  BlockDATA.ListIntValues=ListIntValues1;
+  BlockDATA.ListBoolValues=ListBoolValues1;
+  BlockDATA.ListDoubleValues=ListDoubleValues1;
+  BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListListStringValues=ListListStringValues1;
+  ListBlock["DATA"]=BlockDATA;
+  // HEURISTIC
+  std::map<std::string, std::string> ListStringValuesH;
+  ListStringValuesH["SplittingHeuristicFile"]="unset.heu";
+  ListStringValuesH["AdditionalSymmetryHeuristicFile"]="unset.heu";
+  ListStringValuesH["DualDescriptionHeuristicFile"]="unset.heu";
+  ListStringValuesH["StabEquivFacetHeuristicFile"]="unset.heu";
+  ListStringValuesH["MethodInitialFacetSetFile"]="unset.heu";
+  ListStringValuesH["BankSaveHeuristicFile"]="unset.heu";
+  ListStringValuesH["MethodInvariantQualityFile"]="unset.heu";
+  SingleBlock BlockHEURIS;
+  BlockHEURIS.ListStringValues=ListStringValuesH;
+  ListBlock["HEURISTIC"]=BlockHEURIS;
+  // METHOD
+  std::map<std::string, int> ListIntValues2;
+  std::map<std::string, bool> ListBoolValues2;
+  std::map<std::string, double> ListDoubleValues2;
+  std::map<std::string, std::string> ListStringValues2;
+  std::map<std::string, std::vector<std::string> > ListListStringValues2;
+  ListBoolValues2["Saving"]=false;
+  ListStringValues2["Prefix"]="/irrelevant/";
+  SingleBlock BlockMETHOD;
+  BlockMETHOD.ListIntValues=ListIntValues2;
+  BlockMETHOD.ListBoolValues=ListBoolValues2;
+  BlockMETHOD.ListDoubleValues=ListDoubleValues2;
+  BlockMETHOD.ListStringValues=ListStringValues2;
+  BlockMETHOD.ListListStringValues=ListListStringValues2;
+  ListBlock["METHOD"]=BlockMETHOD;
+  // BANK
+  std::map<std::string, int> ListIntValues3;
+  std::map<std::string, bool> ListBoolValues3;
+  std::map<std::string, double> ListDoubleValues3;
+  std::map<std::string, std::string> ListStringValues3;
+  std::map<std::string, std::vector<std::string> > ListListStringValues3;
+  ListStringValues3["Prefix"]="./unset/";
+  ListBoolValues3["Saving"]=false;
+  SingleBlock BlockBANK;
+  BlockBANK.ListIntValues=ListIntValues3;
+  BlockBANK.ListBoolValues=ListBoolValues3;
+  BlockBANK.ListDoubleValues=ListDoubleValues3;
+  BlockBANK.ListStringValues=ListStringValues3;
+  BlockBANK.ListListStringValues=ListListStringValues3;
+  ListBlock["BANK"]=BlockBANK;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
+
+
+
+
+
+
+
+
+template<typename T, typename Tgroup>
+void MainFunctionSerialDualDesc(FullNamelist const& eFull)
+{
+  SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
+  bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
+  bool BANK_Memory=BlockBANK.ListBoolValues.at("FullDataInMemory");
+  std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
+  FctsDataBank<PolyhedralEntry<T,Tgroup>> recFct=GetRec_FctsDataBank<T,Tgroup>();
+  DataBank<PolyhedralEntry<T,Tgroup>> TheBank(BANK_IsSaving, BANK_Memory, BANK_Prefix, recFct);
+  //
+  std::cerr << "Reading DATA\n";
+  SingleBlock BlockDATA=eFull.ListBlock.at("DATA");
+  std::string EXTfile=BlockDATA.ListStringValues.at("EXTfile");
+  IsExistingFileDie(EXTfile);
+  std::cerr << "EXTfile=" << EXTfile << "\n";
+  std::string GRPfile=BlockDATA.ListStringValues.at("GRPfile");
+  IsExistingFileDie(GRPfile);
+  std::cerr << "GRPfile=" << GRPfile << "\n";
+  std::string OUTfile=BlockDATA.ListStringValues.at("OUTfile");
+  std::cerr << "OUTfile=" << OUTfile << "\n";
+  std::ifstream EXTfs(EXTfile);
+  MyMatrix<T> EXT=ReadMatrix<T>(EXTfs);
+  std::ifstream GRPfs(GRPfile);
+  Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
+  //
+  std::cerr << "Creating MPROC\n";
+  SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
+  int NbThr=BlockMETHOD.ListIntValues.at("NPROC");
+  MainProcessor MProc(NbThr);
+  int TheId=MProc.MPU_GetId();
+  //
+  PolyHeuristicSerial<Tint> AllArr=AllStandardHeuristicSerial<Tint>();
+  //
+  SetHeuristic("SplittingHeuristicFile", AllArr.Splitting);
+  SetHeuristic("AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
+  SetHeuristic("DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
+  SetHeuristic("MethodInitialFacetSetFile", AllArr.InitialFacetSet);
+  SetHeuristic("BankSaveHeuristicFile", AllArr.BankSave);
+  //
+  bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
+  bool DD_Memory=BlockMETHOD.ListBoolValues.at("FullDataInMemory");
+  std::string DD_Prefix=BlockMETHOD.ListStringValues.at("Prefix");
+  AllArr.Saving=DD_Saving;
+  AllArr.eMemory=DD_Memory;
+  //
+  int TheLevel=0;
+  std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXT, GRP, AllArr, DD_Prefix, TheLevel);
+  std::cerr << "We now have TheOutput\n";
+  //
+  std::ofstream OUTfs(OUTfile);
+  VectVectInt_Magma_Print(OUTfs, TheOutput);
+  //
+}
 
 
 

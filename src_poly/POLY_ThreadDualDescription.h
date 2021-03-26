@@ -806,15 +806,6 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   //
   PolyHeuristic<mpz_class> AllArr=AllStandardHeuristic<mpz_class>();
   //
-  auto SetHeuristic=[&](std::string const& NamelistEnt, TheHeuristic<mpz_class> & eHeu) {
-    SingleBlock BlockHEU=eFull.ListBlock.at("HEURISTIC");
-    std::string NamelistEntFile=BlockHEU.ListStringValues.at(NamelistEnt);
-    if (NamelistEntFile != "unset.heu") {
-      IsExistingFileDie(NamelistEntFile);
-      std::ifstream is(NamelistEntFile);
-      eHeu=ReadHeuristic<mpz_class>(is);
-    }
-  };
   SetHeuristic("SplittingHeuristicFile", AllArr.Splitting);
   SetHeuristic("AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
   SetHeuristic("DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
