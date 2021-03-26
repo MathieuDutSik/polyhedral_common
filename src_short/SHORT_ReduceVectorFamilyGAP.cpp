@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -12,10 +13,13 @@ int main(int argc, char *argv[])
       std::cerr << "[FileOut]  : The output file of the program (GAP readable)\n";
       return -1;
     }
+    using T=mpq_class;
+    using Tint=int;
+    using Tgroup=TheGroupFormat<mpz_class>;
     //
     std::string FileIn=argv[1];
-    std::vector<MyMatrix<int>> ListSHV = ReadListConfigurationShortestVector<int>(FileIn);
-    std::pair<std::vector<MyMatrix<int>>,std::vector<int>> RecRet = SHORT_ReduceByIsomorphism<mpq_class,int>(ListSHV);
+    std::vector<MyMatrix<Tint>> ListSHV = ReadListConfigurationShortestVector<Tint>(FileIn);
+    std::pair<std::vector<MyMatrix<Tint>>,std::vector<Tint>> RecRet = SHORT_ReduceByIsomorphism<T,Tint,Tgroup>(ListSHV);
     //
     std::string FileOut=argv[2];
     std::ofstream os(FileOut);

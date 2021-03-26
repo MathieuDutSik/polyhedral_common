@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -14,9 +15,10 @@ int main(int argc, char *argv[])
       std::cerr << "[FileOut]  : The output file of the program\n";
       return -1;
     }
+    using Tint=int;
     //
     std::string FileIn=argv[1];
-    std::vector<MyMatrix<int>> ListSHV=ReadListConfigurationShortestVector<int>(FileIn);
+    std::vector<MyMatrix<Tint>> ListSHV=ReadListConfigurationShortestVector<Tint>(FileIn);
     int nbShort=ListSHV.size();
     //
     int N;

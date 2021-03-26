@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -16,6 +17,7 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     //    using Tint=mpz_class;
     using Tint=int;
+    //    using Tgroup=TheGroupFormat<mpz_class>;
     std::ifstream is(argv[1]);
     MyMatrix<T> M = ReadMatrix<T>(is);
     //

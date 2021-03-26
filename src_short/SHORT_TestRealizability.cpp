@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -13,15 +14,18 @@ int main(int argc, char *argv[])
       std::cerr << "[FileOut]   : The output file of the program (GAP readable)\n";
       return -1;
     }
+    using T=mpq_class;
+    using Tint=int;
+    using Tgroup=TheGroupFormat<mpz_class>;
     //
     std::string FileMat=argv[1];
     std::string TheMethod=argv[2];
     std::string FileOut=argv[3];
     //
     std::ifstream is(FileMat);
-    MyMatrix<int> SHV=ReadMatrix<int>(is);
+    MyMatrix<Tint> SHV=ReadMatrix<Tint>(is);
     //
-    ReplyRealizability<mpq_class,int> eRes=SHORT_TestRealizabilityShortestFamily<mpq_class,int>(SHV, TheMethod);
+    ReplyRealizability<T,Tint> eRes=SHORT_TestRealizabilityShortestFamily<T,Tint,Tgroup>(SHV, TheMethod);
     //
     std::ofstream os(FileOut);
     if (eRes.reply) {

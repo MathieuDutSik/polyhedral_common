@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -5,6 +6,7 @@ int main(int argc, char *argv[])
   try {
     using Tfield = mpq_class;
     using Tint = int;
+    using Tgroup=TheGroupFormat<mpz_class>;
     if (argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -89,7 +91,7 @@ int main(int argc, char *argv[])
 	std::cerr << "SHV : \n";
 	WriteMatrix(std::cerr, SHV);
 	//	std::cerr << "Treating the case, step 6\n";
-	ReplyRealizability<Tfield,Tint> eRes=SHORT_TestRealizabilityShortestFamily<Tfield,Tint>(SHV, TheMethod);
+	ReplyRealizability<Tfield,Tint> eRes=SHORT_TestRealizabilityShortestFamily<Tfield,Tint,Tgroup>(SHV, TheMethod);
 	//	std::cerr << "Treating the case, step 7\n";
 	if (eRes.reply) {
 	  if (IsFirst == false)
