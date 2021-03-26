@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -15,14 +16,17 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
+    using T=mpq_class;
+    using Tint=int;
+    using Tgroup=TheGroupFormat<mpz_class>;
     int NPROC;
     sscanf(argv[1], "%d", &NPROC);
     //
     std::string eFileIN(argv[2]);
     std::string TheMethod(argv[3]);
-    std::vector<MyMatrix<int>> ListConfIn=ReadListConfigurationShortestVector<int>(eFileIN);
+    std::vector<MyMatrix<Tint>> ListConfIn=ReadListConfigurationShortestVector<Tint>(eFileIN);
     //
-    std::vector<MyMatrix<int>> ListConfOut=SHORT_SimplicialEnumeration<mpq_class,int>(ListConfIn, NPROC, TheMethod);
+    std::vector<MyMatrix<Tint>> ListConfOut=SHORT_SimplicialEnumeration<T,Tint,Tgroup>(ListConfIn, NPROC, TheMethod);
     //
     std::string eFileOUT(argv[4]);
     WriteListConfigurationShortestVector(eFileOUT, ListConfOut);

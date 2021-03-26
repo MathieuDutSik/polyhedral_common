@@ -302,10 +302,10 @@ struct invariant_info<SimpleOrbitFacet<T>> {
 
 template <typename T,typename Tgroup>
 struct equiv_info<PolyhedralEntry<T,Tgroup>> {
-  typedef permlib::Permutation equiv_type;
+  typedef typename Tgroup::Telt equiv_type;
 };
 
-template <typename T>
+template <typename T, typename Tgroup>
 struct equiv_info<SimpleOrbitFacet<T>> {
   typedef permlib::Permutation equiv_type;
 };

@@ -342,7 +342,7 @@ void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, 
   }
 }
 
-template<typename T>
+template<typename T, typename Telt>
 bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eMat2, T const &TheTol)
 {
   T MaxDet1=T_GRAM_GetUpperBound(eMat1);
@@ -354,7 +354,7 @@ bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eM
   MyMatrix<int> ListShort2=T_ShortVector(eMat2, MaxDet);
   WeightMatrix<T, T> WMat1=GetWeightMatrixGramMatShort(eMat1, ListShort1, TheTol);
   WeightMatrix<T, T> WMat2=GetWeightMatrixGramMatShort(eMat2, ListShort2, TheTol);
-  EquivTest<permlib::Permutation> eResEquiv=TestEquivalenceWeightMatrix(WMat1, WMat2);
+  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,T,Telt>(WMat1, WMat2);
   return eResEquiv.TheReply;
 }
 
