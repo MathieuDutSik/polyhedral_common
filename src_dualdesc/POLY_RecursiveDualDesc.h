@@ -84,9 +84,24 @@ std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFil
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
   MyMatrix<T> EXT = POLY_NC_ReadPolytope(dataFile);
   //
-  std::vector<Face> ListFace;
-  
+  std::vector<Face> ListFace = POLY_NC_ReadAllFaces(dataFile);
+  return {EXT, ListFace};
 }
+
+template<typename T>
+void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, std::vector<Face> const& ListFace)
+{
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  POLY_NC_WritePolytope(dataFile, EXT);
+  int n_act = EXT.rows();
+  POLY_NC_WriteOrbitDimVars(dataFile, n_act);
+  //
+  size_t n_orbit = ListFace.size();
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
+}
+
+
 
 
 
@@ -266,14 +281,39 @@ public:
         std::string eFile = SavnigPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
         if (!IsExistingFile(eFile))
           break;
-        
+        std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFile);
+        ListEnt[ePair.first] = ePair.second;
+        int e_size = ePair.first.rows();
+        MinSize = std::min(MinSize, e_size);
         iOrbit++;
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, std::vector<Face> const& ListFace)
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
   {
-    
+    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope(EXT, WMat);
+    std::vector<Face> ListFaceO;
+    for (auto & eFace : ListFace) {
+      Face eInc = OnFace(eFace, ePair.second);
+      ListFaceO.push_back(eInc);
+    }
+    size_t n_orbit = ListEnt.size();
+    std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
+    Write_BankEntry(eFile, EXT, WMat);
+  }
+  std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
+  {
+    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope(EXT, WMat);
+    auto iter = ListEnt.find(ePair.first);
+    if (iter != ListEnt.end()) {
+      std::vector<Face> ListReprTrans;
+      for (auto const& eOrbit : iter->second) {
+	Face eListJ=OnFace(eOrbit, ePair.second);
+	ListReprTrans.push_back(eListJ);
+      }
+      return ListReprTrans;
+    }
+    return {};
   }
 };
 
@@ -313,16 +353,9 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   //
   if (nbRow >= TheBank.MinSize) {
     ComputeWMat();
-    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope(EXT, WMat);
-    auto iter = TheBank.find(ePair.first);
-    if (iter != TheBank.ListEnt.end()) {
-      std::vector<Face> ListReprTrans;
-      for (auto const& eOrbit : iter->second) {
-	Face eListJ=OnFace(eOrbit, ePair.second);
-	ListReprTrans.push_back(eListJ);
-      }
-      return ListReprTrans;
-    }
+    std::vector<Face> ListFace = TheBank.GetDualDesc(EXT, WMat);
+    if (ListFace.size() > 0)
+      return ListFace;
   }
   //
   // Now computing the groups
@@ -406,7 +439,8 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
   if (ansBank == "yes") {
-    TheBank.InsertEntry(EXT, ListOrbitFace);
+    ComputeWMat();
+    TheBank.InsertEntry(EXT, WMat, ListOrbitFace);
   }
   std::vector<Face> ListOrbitReturn;
   if (ansSymm == "yes") {

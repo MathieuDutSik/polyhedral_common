@@ -259,6 +259,25 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const
 }
 
 
+void POLY_NC_WriteOrbitDimVars(netCDF::NcFile & dataFile, int const& n_act)
+{
+  netCDF::NcDim eDimAct = dataFile.addDim("n_act", n_act);
+  //
+  bool orbit_status=false;
+  int n_act_div8 = (n_act + int(orbit_status) + 1) / 8; // We put an additional
+  netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
+  netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
+  std::vector<std::string> LDim3{"n_act_div8", "n_orbit"};
+  std::string name = "orbit_incidence";
+  netCDF::NcVar varORB_INCD = dataFile.addVar(name, "ubyte", LDim3);
+}
+
+
+
+
+
+
+
 
 template<typename Tgroup>
 Tgroup POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
@@ -475,6 +494,20 @@ Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
   }
   return face;
 }
+
+
+std::vector<Face> POLY_NC_ReadAllFaces(netCDF::NcFile & dataFile)
+{
+  netCDF::NcDim eDimOrbit = dataFile.getDim("n_orbit");
+  size_t n_orbit = eDimOrbit.getSize();
+  std::vector<Face> ListFace(n_orbit);
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    Face eFace = POLY_NC_ReadFace(dataFile, i_orbit);
+    ListFace[i_orbit] = eFace;
+  }
+  return ListFace;
+}
+
 
 
 
