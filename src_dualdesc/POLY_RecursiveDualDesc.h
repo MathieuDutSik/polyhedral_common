@@ -364,7 +364,6 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
 	 int const& TheLevel)
 {
   using Tint=typename Tgroup::Tint;
-  using Telt=typename Tgroup::Telt;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
