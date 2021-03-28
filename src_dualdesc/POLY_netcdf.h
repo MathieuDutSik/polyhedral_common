@@ -266,7 +266,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const
       name = "orbit_status_incidence";
     netCDF::NcVar varORB_INCD = dataFile.addVar(name, "ubyte", LDim3);
     if (orbit_status) {
-      std::vector<std::string> LDim4{"n_grpsize", "n_orbit"};
+      std::vector<std::string> LDim4{"n_orbit", "n_grpsize"};
       netCDF::NcVar varORB_SIZE = dataFile.addVar("orbit_size", "ubyte", LDim4);
     }
   }
