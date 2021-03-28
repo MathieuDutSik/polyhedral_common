@@ -70,6 +70,10 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
 template<typename T, typename Tgroup>
 void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::string const& eFile)
 {
+  if (!FILE_IsFileMakeable(eFile)) {
+    std::cerr << "Error in Write_EquivDualDesc: File eFile=" << eFile << " is not makeable\n";
+    throw TerminalException{1};
+  }
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
   POLY_NC_WritePolytope(dataFile, eRec.EXT);
   bool orbit_setup = true;
@@ -94,6 +98,10 @@ std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFil
 template<typename T>
 void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, std::vector<Face> const& ListFace)
 {
+  if (!FILE_IsFileMakeable(eFile)) {
+    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
+    throw TerminalException{1};
+  }
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
   POLY_NC_WritePolytope(dataFile, EXT);
   int n_act = EXT.rows();
@@ -164,6 +172,10 @@ public:
       if (IsExistingFile(eFile)) {
         dataFile.open(eFile, netCDF::NcFile::write);
       } else {
+        if (!FILE_IsFileMakeable(eFile)) {
+          std::cerr << "Error in DatabaseOrbits: File eFile=" << eFile << " is not makeable\n";
+          throw TerminalException{1};
+        }
         dataFile.open(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = true;
@@ -501,7 +513,6 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   std::map<std::string, bool> ListBoolValues2;
   std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string> > ListListStringValues2;
   ListBoolValues2["Saving"]=false;
   ListStringValues2["Prefix"]="/irrelevant/";
   SingleBlock BlockMETHOD;
@@ -509,20 +520,17 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   BlockMETHOD.ListBoolValues=ListBoolValues2;
   BlockMETHOD.ListDoubleValues=ListDoubleValues2;
   BlockMETHOD.ListStringValues=ListStringValues2;
-  BlockMETHOD.ListListStringValues=ListListStringValues2;
   ListBlock["METHOD"]=BlockMETHOD;
   // BANK
   std::map<std::string, int> ListIntValues3;
   std::map<std::string, bool> ListBoolValues3;
   std::map<std::string, double> ListDoubleValues3;
   std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string> > ListListStringValues3;
   ListStringValues3["Prefix"]="./unset/";
   ListBoolValues3["Saving"]=false;
   SingleBlock BlockBANK;
   BlockBANK.ListBoolValues=ListBoolValues3;
   BlockBANK.ListStringValues=ListStringValues3;
-  BlockBANK.ListListStringValues=ListListStringValues3;
   ListBlock["BANK"]=BlockBANK;
   // Merging all data
   return {ListBlock, "undefined"};

@@ -453,13 +453,10 @@ template<typename T>
 MyMatrix<T> Polytopization(MyMatrix<T> const& EXT)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  /*  std::cerr << "EXT=\n";
-      WriteMatrix(std::cerr, EXT);*/
-  
   T eVal, prov;
   int nbRow=EXT.rows();
   int nbCol=EXT.cols();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+  std::cerr << "Polytopization nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   MyMatrix<T> nMat(nbRow, nbCol+1);
   MyMatrix<T> eBasis(nbCol, nbCol);
   MyVector<T> eVect(nbCol+1);
