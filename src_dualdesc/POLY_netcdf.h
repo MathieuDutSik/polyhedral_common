@@ -260,7 +260,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const
     int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
     netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
     netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
-    std::vector<std::string> LDim3{"n_act_div8", "n_orbit"};
+    std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
     std::string name = "orbit_incidence";
     if (orbit_status)
       name = "orbit_status_incidence";
@@ -354,6 +354,11 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
   if (orbit_status)
     name = "orbit_status_incidence";
   std::cerr << "POLY_NC_WriteVface_Vsize iOrbit=" << iOrbit << " |Vface|=" << Vface.size() << " |Vsize|=" << Vsize.size() << "\n";
+  //  netCDF::NcDim dim1 = dataFile.getDim("n_act_div8");
+  //  size_t n_act_div8 = dim1.getSize();
+  //  netCDF::NcDim dim1 = dataFile.getDim("n_act_div8");
+  //  size_t n_act_div8 = dim1.getSize();
+
   netCDF::NcVar varORB_INCD = dataFile.getVar(name);
   std::cerr << "Step 1\n";
   std::vector<size_t> start_incd={iOrbit, 0};
