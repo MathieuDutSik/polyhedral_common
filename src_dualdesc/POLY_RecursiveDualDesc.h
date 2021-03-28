@@ -249,6 +249,7 @@ public:
   }
   Face FuncRecord(size_t const& iOrb) const
   {
+    std::cerr << "FuncRecord: iOrb=" << iOrb << " |ListOrbit|=" << ListOrbit.size() << "\n";
     return ListOrbit[iOrb];
   }
   Tint FuncNumber() const
@@ -441,13 +442,20 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
       std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
-      for (auto & eInc : ListFace)
+      int iFace=0;
+      for (auto & eInc : ListFace) {
+        std::cerr << "FuncInsert 1 at iFace=" << iFace << "/" << ListFace.size() << "\n";
 	RPL.FuncInsert(eInc);
+        iFace++;
+      }
     }
     Tint TheDim = eRank-1;
+    std::cerr << "Before the while loop\n";
     while(true) {
       Face eSetUndone=RPL.ComputeIntersectionUndone();
+      std::cerr << "We have eSetUndone\n";
       Tint nbUndone=RPL.FuncNumberUndone();
+      std::cerr << "nbUndone=" << nbUndone << "\n";
       if (RPL.FuncNumberOrbitDone() > 0) {
         if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
           std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
@@ -455,15 +463,23 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
         }
       }
       size_t SelectedOrbit=RPL.FuncGetMinimalUndoneOrbit();
+      std::cerr << "We have SelectedOrbit\n";
       Face eInc=RPL.FuncRecord(SelectedOrbit);
+      std::cerr << "We have eInc\n";
       MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
+      std::cerr << "We have EXTredFace\n";
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
+      std::cerr << "We have TheStab\n";
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
+      std::cerr << "We have OrbSize\n";
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
-      CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(SelectedOrbit) + "/");
-      std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
+      std::string eDir = ePrefix + "ADM" + IntToString(SelectedOrbit) + "_";
+      std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir, NewLevel);
+      int iFace=0;
       for (auto& eOrbB : TheOutput) {
+        std::cerr << "FuncInsert 2 at iFace=" << iFace << "/" << TheOutput.size() << "\n";
+        iFace++;
         Face eFlip=ComputeFlipping(EXTred, eInc, eOrbB);
         RPL.FuncInsert(eFlip);
       }

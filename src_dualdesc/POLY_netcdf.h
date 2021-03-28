@@ -14,8 +14,8 @@
 template<typename T>
 constexpr long GetMaximumPossibleCoefficient()
 {
-  long val1 = std::numeric_limits<T>::max();
-  long val2 = std::numeric_limits<T>::min();
+  long val1 = std::numeric_limits<T>::max() - 1;
+  long val2 = std::numeric_limits<T>::min() + 1;
   return std::min(-val2, val1);
 }
 
@@ -369,6 +369,7 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
     varORB_SIZE.putVar(start_size, count_size, Vsize.data());
     std::cerr << "Step 4\n";
   }
+  std::cerr << "Exit POLY_NC_WriteVface\n";
 }
 
 
@@ -433,9 +434,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
   std::cerr << "Vsize = " << StringVectorUint8_t(Vsize) << "\n";
-  std::cerr << "Before POLY_NC_WriteVface_Vsize\n";
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
-  std::cerr << "Leaving POLY_NC_WriteSingleEntryStatus\n";
 }
 
 
