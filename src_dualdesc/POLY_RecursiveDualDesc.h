@@ -146,6 +146,7 @@ private:
 public:
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
+    std::cerr << "status=" << status << " orbSize=" << orbSize << " pos=" << pos << "\n";
     DictOrbit[face] = {pos, orbSize};
     if (!status) {
       size_t len = face.count();
@@ -153,7 +154,7 @@ public:
     }
     ListOrbit.push_back(face);
     TotalNumber += orbSize;
-    if (!status) {
+    if (status) {
       nbOrbitDone++;
     } else {
       nbUndone += orbSize;
@@ -169,6 +170,7 @@ public:
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     groupOrder = GRP.size();
     if (SavingTrigger) {
+      std::cerr << "eFile=" << eFile << "\n";
       if (IsExistingFile(eFile)) {
         dataFile.open(eFile, netCDF::NcFile::write);
       } else {
@@ -590,7 +592,7 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   //
   int TheLevel=0;
   std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXT, GRP, AllArr, DD_Prefix, TheLevel);
-  std::cerr << "We now have TheOutput\n";
+  std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
   std::ofstream OUTfs(OUTfile);
   VectVectInt_Magma_Print(OUTfs, TheOutput);

@@ -181,17 +181,17 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
 template<typename Tint>
 std::vector<uint8_t> GetVectorUint8_t(Tint const& eVal)
 {
-  std::cerr << "GetVectorUint8_t eVal=" << eVal << "\n";
+  //  std::cerr << "GetVectorUint8_t eVal=" << eVal << "\n";
   std::vector<uint8_t> V;
   Tint workVal = eVal;
   Tint cst256 = 256;
   while(true) {
     Tint res = ResInt(workVal, cst256);
     uint8_t res_i = UniversalTypeConversion<uint8_t,Tint>(res);
-    std::cerr << "  res=" << res << " res_i=" << (int)res_i << "\n";
+    //    std::cerr << "  res=" << res << " res_i=" << (int)res_i << "\n";
     V.push_back(res_i);
     workVal = QuoInt(workVal, cst256);
-    std::cerr << "workVal=" << workVal << "\n";
+    //    std::cerr << "workVal=" << workVal << "\n";
     if (workVal == 0)
       break;
   }
@@ -213,7 +213,17 @@ Tint GetTint_from_VectorUint8_t(std::vector<uint8_t> const& V)
 }
 
 
-
+std::string StringVectorUint8_t(std::vector<uint8_t> const& V)
+{
+  std::string estr = "[";
+  for (size_t i=0; i<V.size(); i++) {
+    if (i>0)
+      estr += ",";
+    estr += std::to_string((int)V[i]);
+  }
+  estr += "]";
+  return estr;
+}
 
 
 
@@ -343,16 +353,21 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
   std::string name = "orbit_incidence";
   if (orbit_status)
     name = "orbit_status_incidence";
+  std::cerr << "POLY_NC_WriteVface_Vsize iOrbit=" << iOrbit << " |Vface|=" << Vface.size() << " |Vsize|=" << Vsize.size() << "\n";
   netCDF::NcVar varORB_INCD = dataFile.getVar(name);
+  std::cerr << "Step 1\n";
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,Vface.size()};
   varORB_INCD.putVar(start_incd, count_incd, Vface.data());
+  std::cerr << "Step 2\n";
   //
   if (orbit_status) {
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
+    std::cerr << "Step 3\n";
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,Vsize.size()};
     varORB_SIZE.putVar(start_size, count_size, Vsize.data());
+    std::cerr << "Step 4\n";
   }
 }
 
@@ -389,7 +404,7 @@ void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face con
 template<typename Tint>
 void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOrbit, SingleEntryStatus<Tint> const& eEnt, size_t const& n_grpsize)
 {
-  std::cerr << "POLY_NC_WriteSingleEntryStatus iOrbit=" << iOrbit << "\n";
+  std::cerr << "POLY_NC_WriteSingleEntryStatus iOrbit=" << iOrbit << " |O|=" << eEnt.OrbSize << "\n";
   std::vector<uint8_t> Vface;
   uint8_t expo = 1;
   uint8_t val = 0;
@@ -417,6 +432,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
   std::cerr << "|Vsize|=" << Vsize.size() << " n_grpsize=" << n_grpsize << "\n";
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
+  std::cerr << "Vsize = " << StringVectorUint8_t(Vsize) << "\n";
   std::cerr << "Before POLY_NC_WriteVface_Vsize\n";
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
   std::cerr << "Leaving POLY_NC_WriteSingleEntryStatus\n";

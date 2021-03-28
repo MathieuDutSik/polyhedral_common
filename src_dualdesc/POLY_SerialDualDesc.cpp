@@ -23,6 +23,10 @@ int main(int argc, char *argv[])
     MainFunctionSerialDualDesc<T,Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   }
+  catch (netCDF::exceptions::NcInvalidCoords & e) {
+    std::cerr << "e complaint=" << e.what() << "\n";
+    exit(1);
+  }
   catch (TerminalException const& e) {
     exit(e.eVal);
   }
