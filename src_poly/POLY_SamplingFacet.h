@@ -136,6 +136,7 @@ std::vector<Face> DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::v
 template<typename T>
 std::vector<Face> DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string const& ansSamp)
 {
+  std::cerr << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   bool WeAreDone=false;
   std::vector<Face> ListIncd;
   std::vector<std::string> ListStr=STRING_Split(ansSamp, ":");
@@ -148,10 +149,7 @@ std::vector<Face> DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::
       if (ListStrB.size() == 2 && ListStrB[0] == "iter")
 	std::istringstream(ListStrB[1]) >> iter;
     }
-    for (int i=0; i<iter; i++) {
-      Face eFace=FindOneInitialVertex(EXT);
-      ListIncd.push_back(eFace);
-    }
+    ListIncd = FindVertices(EXT, iter);
     WeAreDone=true;
   }
   if (ansOpt == "sampling") {

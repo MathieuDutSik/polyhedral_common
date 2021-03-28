@@ -438,7 +438,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
-      std::cerr << "After DirectComputationInitialFacetSetk |ListFace|=" << ListFace.size() << "\n";
+      std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
     }
@@ -578,6 +578,11 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   SetHeuristic(eFull, "DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
+  std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  std::cerr << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
+  std::cerr << "DualDescriptionHeuristicFile\n" << AllArr.DualDescriptionProgram << "\n";
+  std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
   //
   bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
   std::string DD_Prefix=BlockMETHOD.ListStringValues.at("Prefix");

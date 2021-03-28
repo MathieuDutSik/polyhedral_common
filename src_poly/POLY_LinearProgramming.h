@@ -532,7 +532,7 @@ struct SolVertex {
 
 
 template<typename T>
-SolVertex<T> Kernel_FindOneInitialVertex(MyMatrix<T> const& EXT)
+std::vector<Face> Kernel_FindVertices(MyMatrix<T> const& EXT, size_t const& nb)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow=EXT.rows();
@@ -552,6 +552,7 @@ SolVertex<T> Kernel_FindOneInitialVertex(MyMatrix<T> const& EXT)
     for (int iCol=1; iCol<nbCol; iCol++)
       nMat(iRow, iCol)=EXT(iRow, iCol) - eVect(iCol);
   }
+  std::vector<Face> ListFace;
   while(true) {
     for (int iCol=0; iCol<nbCol; iCol++) {
       int a=rand();
@@ -579,24 +580,28 @@ SolVertex<T> Kernel_FindOneInitialVertex(MyMatrix<T> const& EXT)
     int TheRank=RankMat(RnkMat);
     //    std::cerr << "TheRank=" << TheRank << "\n";
     if (TheRank == nbCol-1) {
-      //      std::cerr << "Found one correct. Let's leave\n";
-      return {eInc, TheVert};
+      ListFace.push_back(eInc);
+      if (ListFace.size() == nb)
+        return ListFace;
     }
   }
 }
 
 
 template<typename T>
-Face FindOneInitialVertex(MyMatrix<T> const& TheEXT)
+std::vector<Face> FindVertices(MyMatrix<T> const& TheEXT, int const& nb)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   MyMatrix<T> EXT=ColumnReduction(TheEXT);
   MyMatrix<T> EXTret=Polytopization<T>(EXT);
-  SolVertex<T> eSol=Kernel_FindOneInitialVertex(EXTret);
-  return eSol.eInc;
+  return Kernel_FindVertices(EXTret, nb);
 }
 
-
+template<typename T>
+Face FindOneInitialVertex(MyMatrix<T> const& TheEXT)
+{
+  return FindVertices(TheEXT, 1)[0];
+}
 
 
 
