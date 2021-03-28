@@ -438,6 +438,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
+      std::cerr << "After DirectComputationInitialFacetSetk |ListFace|=" << ListFace.size() << "\n";
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
     }

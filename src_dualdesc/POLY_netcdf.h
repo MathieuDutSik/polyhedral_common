@@ -179,17 +179,20 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
 //
 
 template<typename Tint>
-std::vector<uint8_t> GetVectorUnsignedChar(Tint const& eVal)
+std::vector<uint8_t> GetVectorUint8_t(Tint const& eVal)
 {
+  std::cerr << "GetVectorUint8_t eVal=" << eVal << "\n";
   std::vector<uint8_t> V;
   Tint workVal = eVal;
   Tint cst256 = 256;
   while(true) {
     Tint res = ResInt(workVal, cst256);
     uint8_t res_i = UniversalTypeConversion<uint8_t,Tint>(res);
+    std::cerr << "  res=" << res << " res_i=" << (int)res_i << "\n";
     V.push_back(res_i);
     workVal = QuoInt(workVal, cst256);
-    if (workVal != 0)
+    std::cerr << "workVal=" << workVal << "\n";
+    if (workVal == 0)
       break;
   }
   return V;
@@ -235,7 +238,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile & dataFile, Tgroup const& GRP, bool const
   }
   varGEN.putVar(A.data());
   //
-  std::vector<uint8_t> V_grpsize = GetVectorUnsignedChar(GRP.size());
+  std::vector<uint8_t> V_grpsize = GetVectorUint8_t(GRP.size());
   int n_grpsize = V_grpsize.size();
   netCDF::NcDim eDimGRP = dataFile.addDim("n_grpsize", n_grpsize);
   std::vector<std::string> LDim2{"n_grpsize"};
@@ -408,7 +411,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
   if (siz > 0)
     Vface.push_back(val);
   //
-  std::vector<uint8_t> Vsize = GetVectorUnsignedChar(eEnt.OrbSize);
+  std::vector<uint8_t> Vsize = GetVectorUint8_t(eEnt.OrbSize);
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
