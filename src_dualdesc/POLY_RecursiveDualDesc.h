@@ -209,7 +209,7 @@ public:
     //
     Tint ordStab = GRP.Stabilizer_OnSets(face).size();
     Tint orbSize = groupOrder / ordStab;
-    InsertEntryDatabase(face_can, false, orbSize, nbOrbit+1);
+    InsertEntryDatabase(face_can, false, orbSize, nbOrbit);
     //
     if (SavingTrigger) {
       SingleEntryStatus<Tint> eEnt{false, face_can, orbSize};
@@ -250,6 +250,10 @@ public:
   Face FuncRecord(size_t const& iOrb) const
   {
     std::cerr << "FuncRecord: iOrb=" << iOrb << " |ListOrbit|=" << ListOrbit.size() << "\n";
+    if (iOrb >= ListOrbit.size()) {
+      std::cerr << "We should have iOrb < ListOrbit.size()\n";
+      throw TerminalException{1};
+    }
     return ListOrbit[iOrb];
   }
   Tint FuncNumber() const
@@ -463,7 +467,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
         }
       }
       size_t SelectedOrbit=RPL.FuncGetMinimalUndoneOrbit();
-      std::cerr << "We have SelectedOrbit\n";
+      std::cerr << "We have SelectedOrbit SelectedOrbit=" << SelectedOrbit << "\n";
       Face eInc=RPL.FuncRecord(SelectedOrbit);
       std::cerr << "We have eInc\n";
       MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
