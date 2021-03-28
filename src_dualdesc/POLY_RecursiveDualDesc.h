@@ -480,20 +480,12 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string> > ListListStringValues1;
   ListStringValues1["EXTfile"]="unset.ext";
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues=ListIntValues1;
-  BlockDATA.ListBoolValues=ListBoolValues1;
-  BlockDATA.ListDoubleValues=ListDoubleValues1;
   BlockDATA.ListStringValues=ListStringValues1;
-  BlockDATA.ListListStringValues=ListListStringValues1;
   ListBlock["DATA"]=BlockDATA;
   // HEURISTIC
   std::map<std::string, std::string> ListStringValuesH;
@@ -529,9 +521,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   ListStringValues3["Prefix"]="./unset/";
   ListBoolValues3["Saving"]=false;
   SingleBlock BlockBANK;
-  BlockBANK.ListIntValues=ListIntValues3;
   BlockBANK.ListBoolValues=ListBoolValues3;
-  BlockBANK.ListDoubleValues=ListDoubleValues3;
   BlockBANK.ListStringValues=ListStringValues3;
   BlockBANK.ListListStringValues=ListListStringValues3;
   ListBlock["BANK"]=BlockBANK;
