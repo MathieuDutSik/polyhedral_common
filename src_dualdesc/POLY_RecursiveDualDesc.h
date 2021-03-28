@@ -184,8 +184,8 @@ public:
       }
       netCDF::NcDim eDim = dataFile.getDim("n_orbit");
       size_t n_orbit = eDim.getSize();
-      //      netCDF::NcDim fDim = dataFile.getDim("n_grpsize");
-      //      size_t n_grpsize = fDim.getSize();
+      netCDF::NcDim fDim = dataFile.getDim("n_grpsize");
+      n_grpsize = fDim.getSize();
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);

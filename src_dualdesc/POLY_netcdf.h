@@ -199,7 +199,7 @@ std::vector<uint8_t> GetVectorUint8_t(Tint const& eVal)
 }
 
 template<typename Tint>
-Tint GetTint_from_VectorUnsignedChar(std::vector<uint8_t> const& V)
+Tint GetTint_from_VectorUint8_t(std::vector<uint8_t> const& V)
 {
   Tint cst256 = 256;
   Tint retVal = 0;
@@ -208,6 +208,7 @@ Tint GetTint_from_VectorUnsignedChar(std::vector<uint8_t> const& V)
     Tint eVal = V[j];
     retVal = eVal + cst256 * retVal;
   }
+  std::cerr << "retVal=" << retVal << "\n";
   return retVal;
 }
 
@@ -388,6 +389,7 @@ void POLY_NC_WriteFace(netCDF::NcFile & dataFile, size_t const& iOrbit, Face con
 template<typename Tint>
 void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOrbit, SingleEntryStatus<Tint> const& eEnt, size_t const& n_grpsize)
 {
+  std::cerr << "POLY_NC_WriteSingleEntryStatus iOrbit=" << iOrbit << "\n";
   std::vector<uint8_t> Vface;
   uint8_t expo = 1;
   uint8_t val = 0;
@@ -412,9 +414,12 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
     Vface.push_back(val);
   //
   std::vector<uint8_t> Vsize = GetVectorUint8_t(eEnt.OrbSize);
+  std::cerr << "|Vsize|=" << Vsize.size() << " n_grpsize=" << n_grpsize << "\n";
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
+  std::cerr << "Before POLY_NC_WriteVface_Vsize\n";
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
+  std::cerr << "Leaving POLY_NC_WriteSingleEntryStatus\n";
 }
 
 
@@ -463,7 +468,7 @@ PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
     std::vector<uint8_t> Vsize(n_grpsize);
     varORB_SIZE.putVar(start_size, count_size, Vsize.data());
     //
-    return {Vface, GetTint_from_VectorUnsignedChar<Tint>(Vsize)};
+    return {Vface, GetTint_from_VectorUint8_t<Tint>(Vsize)};
   } else {
     return {Vface,{}};
   }
