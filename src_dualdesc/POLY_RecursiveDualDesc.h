@@ -146,7 +146,7 @@ private:
 public:
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
-    std::cerr << "status=" << status << " orbSize=" << orbSize << " pos=" << pos << "\n";
+    //    std::cerr << "status=" << status << " orbSize=" << orbSize << " pos=" << pos << "\n";
     DictOrbit[face] = {pos, orbSize};
     if (!status) {
       size_t len = face.count();
@@ -249,11 +249,6 @@ public:
   }
   Face FuncRecord(size_t const& iOrb) const
   {
-    std::cerr << "FuncRecord: iOrb=" << iOrb << " |ListOrbit|=" << ListOrbit.size() << "\n";
-    if (iOrb >= ListOrbit.size()) {
-      std::cerr << "We should have iOrb < ListOrbit.size()\n";
-      throw TerminalException{1};
-    }
     return ListOrbit[iOrb];
   }
   Tint FuncNumber() const
@@ -446,20 +441,20 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
       std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
-      int iFace=0;
+      //      int iFace=0;
       for (auto & eInc : ListFace) {
-        std::cerr << "FuncInsert 1 at iFace=" << iFace << "/" << ListFace.size() << "\n";
+        //        std::cerr << "FuncInsert 1 at iFace=" << iFace << "/" << ListFace.size() << "\n";
+        //        iFace++;
 	RPL.FuncInsert(eInc);
-        iFace++;
       }
     }
     Tint TheDim = eRank-1;
     std::cerr << "Before the while loop\n";
     while(true) {
       Face eSetUndone=RPL.ComputeIntersectionUndone();
-      std::cerr << "We have eSetUndone\n";
+      //      std::cerr << "We have eSetUndone\n";
       Tint nbUndone=RPL.FuncNumberUndone();
-      std::cerr << "nbUndone=" << nbUndone << "\n";
+      //      std::cerr << "nbUndone=" << nbUndone << "\n";
       if (RPL.FuncNumberOrbitDone() > 0) {
         if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
           std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
@@ -467,29 +462,26 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
         }
       }
       size_t SelectedOrbit=RPL.FuncGetMinimalUndoneOrbit();
-      std::cerr << "We have SelectedOrbit SelectedOrbit=" << SelectedOrbit << "\n";
       Face eInc=RPL.FuncRecord(SelectedOrbit);
-      std::cerr << "We have eInc\n";
       MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
-      std::cerr << "We have EXTredFace\n";
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
-      std::cerr << "We have TheStab\n";
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
-      std::cerr << "We have OrbSize\n";
+      //      std::cerr << "Treating SelectedOrbit=" << SelectedOrbit << " |EXTW=" << eInc.size() << " |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string eDir = ePrefix + "ADM" + IntToString(SelectedOrbit) + "_";
       std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir, NewLevel);
-      int iFace=0;
+      //      int iFace=0;
       for (auto& eOrbB : TheOutput) {
-        std::cerr << "FuncInsert 2 at iFace=" << iFace << "/" << TheOutput.size() << "\n";
-        iFace++;
+        //        std::cerr << "FuncInsert 2 at iFace=" << iFace << "/" << TheOutput.size() << "\n";
+        //        iFace++;
         Face eFlip=ComputeFlipping(EXTred, eInc, eOrbB);
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
       nbUndone=RPL.FuncNumberUndone();
       std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << nbUndone << "\n";
+      std::cerr << "\n";
     };
     ListOrbitFaces = RPL.FuncListOrbitIncidence();
   }
