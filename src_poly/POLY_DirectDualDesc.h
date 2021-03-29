@@ -17,6 +17,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   std::string prefix = "/tmp/";
   std::string FileO = prefix + "EXT_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
   std::string FileI = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
+  std::string FileE = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".err";
   std::ofstream os(FileO);
   os << "V-representation\n";
   os << "begin\n";
@@ -29,10 +30,18 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   }
   os << "end\n";
   os.close();
+  //  std::cerr << "FileO=" << FileO << " created\n";
   //
   // Now calling the external program
   //
-  std::string order = eCommand + " " + FileI + " " + FileO;
+  std::string order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
+  int iret1=system(order.c_str());
+  if (iret1 != 0) {
+    std::cerr << "The program has not terminated correctly\n";
+    std::cerr << "FileO=" << FileO << "\n";
+    throw TerminalException{1};
+  }
+  //  std::cerr << "iret1=" << iret1 << "\n";
   std::vector<Face> ListFace;
   //
   std::ifstream is(FileI);
@@ -40,12 +49,19 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
   size_t iLine = 0;
   size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
+  size_t headersize;
+  if (eCommand == "ppl_lcdd")
+    headersize = 3;
+  else
+    headersize = 4;
   while (std::getline(is, line)) {
-    if (iLine == 1) {
+    //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
+    if (iLine == headersize - 1) {
       std::vector<std::string> LStr = STRING_Split(line, " ");
-      iLineLimit = 2 + ParseScalar<size_t>(LStr[0]);
+      iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
+      //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
     }
-    if (iLine >= 2 && (iLineLimit == 0 || iLine < iLineLimit)) {
+    if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
       std::vector<std::string> LStr = STRING_Split(line, " ");
       for (size_t i=0; i<DimEXT; i++)
         LVal[i] = ParseScalar<T>(LStr[i]);
@@ -61,6 +77,10 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
     }
     iLine++;
   }
+  //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+  RemoveFileIfExist(FileI);
+  RemoveFileIfExist(FileO);
+  RemoveFileIfExist(FileE);
   return ListFace;
 }
 
@@ -84,30 +104,53 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
     WriteMatrix(os_save, EXT);
   }
 #endif
-  os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << "\n";
-  if (ansProg == "cdd") {
+  os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << " |GRP|=" << GRP.size() << "\n";
+  std::vector<std::string> ListProg;
+  std::string eProg;
+  //
+  eProg = "cdd"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
     ListIncd=cdd::DualDescription_incd(EXTred);
     WeAreDone=true;
   }
-  if (ansProg == "lrs") {
+  //
+  eProg = "lrs"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
     ListIncd=lrs::DualDescription_temp_incd(EXTred);
     WeAreDone=true;
   }
-  if (ansProg == "lrs_ring") {
+  //
+  eProg = "lrs_ring"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
     ListIncd=lrs::DualDescription_temp_incd_reduction(EXTred);
     WeAreDone=true;
   }
-  if (ansProg == "ppl_ext") {
+  //
+  eProg = "ppl_ext"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
+    std::cerr << "Before CDD_PPL_ExternalProgram\n";
     ListIncd = CDD_PPL_ExternalProgram(EXTred, "ppl_lcdd");
+    std::cerr << "After CDD_PPL_ExternalProgram\n";
     WeAreDone=true;
   }
-  if (ansProg == "cdd_ext") {
+  //
+  eProg = "cdd_ext"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
     ListIncd = CDD_PPL_ExternalProgram(EXTred, "lcdd_gmp");
     WeAreDone=true;
   }
   if (!WeAreDone || ListIncd.size() == 0) {
-    std::cerr << "No right program found with ansProg=" << ansProg << "\n";
-    std::cerr << "Let us die\n";
+    std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
+    std::cerr << "WeAreDone=" << WeAreDone << " |ListIncd|=" << ListIncd.size() << "\n";
+    std::cerr << "List of authorized programs :";
+    bool IsFirst=true;
+    for (auto & eP : ListProg) {
+      if (!IsFirst)
+        std::cerr << " ,";
+      IsFirst=false;
+      std::cerr << " " << eP;
+    }
+    std::cerr << "\n";
     throw TerminalException{1};
   }
   std::vector<Face> TheOutput=OrbitSplittingSet(ListIncd, GRP);
