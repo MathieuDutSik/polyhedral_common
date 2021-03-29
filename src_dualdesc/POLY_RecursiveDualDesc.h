@@ -88,14 +88,10 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 template<typename T>
 std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFile)
 {
-  std::cerr << "Read_BankEntry, step 1 eFile=" << eFile << "\n";
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
-  std::cerr << "Read_BankEntry, step 2\n";
   MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
-  std::cerr << "Read_BankEntry, step 3\n";
   //
   std::vector<Face> ListFace = POLY_NC_ReadAllFaces(dataFile);
-  std::cerr << "Read_BankEntry, step 4\n";
   return {EXT, ListFace};
 }
 
@@ -106,19 +102,14 @@ void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, std::vect
     std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
     throw TerminalException{1};
   }
-  std::cerr << "Write_BankEntry, step 1\n";
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-  std::cerr << "Write_BankEntry, step 2\n";
   POLY_NC_WritePolytope(dataFile, EXT);
-  std::cerr << "Write_BankEntry, step 3\n";
   int n_act = EXT.rows();
   POLY_NC_WriteOrbitDimVars(dataFile, n_act);
-  std::cerr << "Write_BankEntry, step 4\n";
   //
   size_t n_orbit = ListFace.size();
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     POLY_NC_WriteFace(dataFile, i_orbit, ListFace[i_orbit]);
-  std::cerr << "Write_BankEntry, step 5\n";
 }
 
 
@@ -156,12 +147,13 @@ public:
     if (Saving) {
       size_t iOrbit=0;
       while(true) {
-        std::string eFile = SavingPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
-        if (!IsExistingFile(eFile))
+        std::string eFileBank = SavingPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
+        if (!IsExistingFile(eFileBank))
           break;
-        std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFile);
-        ListEnt[ePair.first] = ePair.second;
+        std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFileBank);
         int e_size = ePair.first.rows();
+        std::cerr << "Read FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << ePair.second.size() << "\n";
+        ListEnt[ePair.first] = ePair.second;
         MinSize = std::min(MinSize, e_size);
         iOrbit++;
       }
@@ -500,7 +492,6 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
-  std::cerr << "ansBank=" << ansBank << "\n";
   if (ansBank == "yes") {
     ComputeWMat();
     TheBank.InsertEntry(EXT, WMat, ListOrbitFaces);

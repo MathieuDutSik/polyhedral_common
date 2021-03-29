@@ -504,9 +504,7 @@ Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
   int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
   //
   using Tint = int; // This is actually not relevant here
-  std::cerr << "Before POLY_NC_ReadVface_OrbSize\n";
   PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(dataFile, iOrbit, n_act_div8, orbit_status);
-  std::cerr << "After  POLY_NC_ReadVface_OrbSize\n";
   Face face(n_act);
   int idx=0;
   int n_actremain = n_act;
@@ -530,10 +528,8 @@ std::vector<Face> POLY_NC_ReadAllFaces(netCDF::NcFile & dataFile)
 {
   netCDF::NcDim eDimOrbit = dataFile.getDim("n_orbit");
   size_t n_orbit = eDimOrbit.getSize();
-  std::cerr << "POLY_NC_ReadAllFaces n_orbit=" << n_orbit << "\n";
   std::vector<Face> ListFace(n_orbit);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-    std::cerr << "POLY_NC_ReadAllFaces i_orbit=" << i_orbit << "\n";
     Face eFace = POLY_NC_ReadFace(dataFile, i_orbit);
     ListFace[i_orbit] = eFace;
   }
