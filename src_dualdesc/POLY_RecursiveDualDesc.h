@@ -127,14 +127,16 @@ std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, We
     for (int i_col=0; i_col<n_col; i_col++)
       EXTcan(i_row,i_col) = EXTred(j_row,i_col);
   }
-  std::cerr << "We have EXTcan |EXTcan|=" << EXTcan.rows() << " / " << EXTcan.cols() << "\n";
+  //  std::cerr << "We have EXTcan |EXTcan|=" << EXTcan.rows() << " / " << EXTcan.cols() << "\n";
   MyMatrix<T> RowRed = RowReduction(EXTcan);
-  std::cerr << "We have RowRed |RowRed|=" << RowRed.rows() << " / " << RowRed.cols() << "\n";
+  //  std::cerr << "We have RowRed |RowRed|=" << RowRed.rows() << " / " << RowRed.cols() << "\n";
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  std::cerr << "We have EXTret\n";
+  //  std::cerr << "We have EXTret\n";
+  MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
+  //  std::cerr << "We have EXTretB\n";
   //
   Telt ePerm = Telt(PairCanonic.second);
-  return {std::move(EXTret), std::move(ePerm)};
+  return {std::move(EXTretB), std::move(ePerm)};
 }
 
 
@@ -167,43 +169,46 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
   {
+    /*
     for (auto & eFace : ListFace) {
       std::cerr << "Test facetness 1\n";
       TestFacetness(EXT, eFace);
-    }
+      }*/
     std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
     std::vector<Face> ListFaceO;
     Telt ePerm = ~ePair.second;
     for (auto & eFace : ListFace) {
       Face eInc = OnFace(eFace, ePerm);
       ListFaceO.push_back(eInc);
-      std::cerr << "Test facetness 2\n";
-      TestFacetness(ePair.first, eInc);
+      //      std::cerr << "Test facetness 2\n";
+      //      TestFacetness(ePair.first, eInc);
     }
     size_t n_orbit = ListEnt.size();
     std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
+    std::cerr << "Insert entry to file eFile=" << eFile << "\n";
     Write_BankEntry(eFile, ePair.first, ListFaceO);
+    ListEnt[ePair.first] = ListFaceO;
   }
   std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
   {
+    std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
+    std::vector<Face> ListReprTrans;
     if (iter != ListEnt.end()) {
       std::cerr << "Finding a matching entry\n";
       for (auto & eFace : iter->second) {
         std::cerr << "Test facetness 3\n";
         TestFacetness(ePair.first, eFace);
       }
-      std::vector<Face> ListReprTrans;
       for (auto const& eOrbit : iter->second) {
 	Face eListJ=OnFace(eOrbit, ePair.second);
 	ListReprTrans.push_back(eListJ);
         std::cerr << "Test facetness 4\n";
         TestFacetness(EXT, eListJ);
       }
-      return ListReprTrans;
     }
-    return {};
+    return ListReprTrans; // If returning empty then it means nothing has been found.
   }
   int get_minsize() const
   {
@@ -491,7 +496,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
       //      std::cerr << "Treating SelectedOrbit=" << SelectedOrbit << " |EXTW=" << eInc.size() << " |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
-      std::cerr << "Considering orbit " << SelectedOrbit << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
+      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string eDir = ePrefix + "ADM" + IntToString(SelectedOrbit) + "_";
       std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir, NewLevel);
       //      int iFace=0;

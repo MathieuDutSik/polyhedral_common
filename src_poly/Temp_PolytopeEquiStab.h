@@ -1356,16 +1356,16 @@ struct LocalInvInfo {
 template<typename T1, typename T2, typename Tgroup>
 LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgroup const& GRP, std::string const& strat, std::ostream & os)
 {
-  os << "ComputeLocalInvariantStrategy, step 1\n";
+  //  os << "ComputeLocalInvariantStrategy, step 1\n";
   int nbNeed=0;
   bool UsePairOrbit=false;
   std::vector<std::string> LStr=STRING_Split(strat, ":");
-  os << "ComputeLocalInvariantStrategy, step 2\n";
+  //  os << "ComputeLocalInvariantStrategy, step 2\n";
   if (LStr[0] != "pairinv") {
     std::cerr << "Now we have only pairinv as simple invariant\n";
     throw TerminalException{1};
   }
-  os << "ComputeLocalInvariantStrategy, step 3\n";
+  //  os << "ComputeLocalInvariantStrategy, step 3\n";
   for (size_t iStr=1; iStr<LStr.size(); iStr++) {
     std::string eStr=LStr[iStr];
     std::vector<std::string> LStrB=STRING_Split(eStr, "_");
@@ -1377,9 +1377,9 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgrou
       UsePairOrbit=true;
     }
   }
-  os << "ComputeLocalInvariantStrategy, step 4\n";
-  os << "nbNeed=" << nbNeed << "\n";
-  os << "UsePairOrbit=" << UsePairOrbit << "\n";
+  //  os << "ComputeLocalInvariantStrategy, step 4\n";
+  //  os << "nbNeed=" << nbNeed << "\n";
+  //  os << "UsePairOrbit=" << UsePairOrbit << "\n";
   //
   WeightMatrix<int,int> WMatInt;
   if (UsePairOrbit) {
@@ -1388,25 +1388,25 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgrou
   else {
     WMatInt=NakedWeightedMatrix(WMat);
   }
-  os << "ComputeLocalInvariantStrategy, step 5\n";
+  //  os << "ComputeLocalInvariantStrategy, step 5\n";
   //
   size_t nbRow=WMatInt.rows();
   size_t nbWeight=WMatInt.GetWeightSize();
-  os << "nbRow=" << nbRow << " nbWeight=" << nbWeight << "\n";
+  //  os << "nbRow=" << nbRow << " nbWeight=" << nbWeight << "\n";
   std::vector<int> StatusDiag(nbWeight,0);
   std::vector<int> StatusOff(nbWeight,0);
-  os << "ComputeLocalInvariantStrategy, step 5.1\n";
+  //  os << "ComputeLocalInvariantStrategy, step 5.1\n";
   for (size_t i=0; i<nbRow; i++) {
     size_t iWeight=WMatInt.GetValue(i,i);
     StatusDiag[iWeight]=1;
   }
-  os << "ComputeLocalInvariantStrategy, step 5.2\n";
+  //  os << "ComputeLocalInvariantStrategy, step 5.2\n";
   for (size_t i=0; i<nbRow-1; i++)
     for (size_t j=i+1; j<nbRow; j++) {
       size_t iWeight=WMatInt.GetValue(i,j);
       StatusOff[iWeight]=1;
     }
-  os << "ComputeLocalInvariantStrategy, step 6\n";
+  //  os << "ComputeLocalInvariantStrategy, step 6\n";
   int nbDiagCoeff=VectorSum(StatusDiag);
   int nbOffCoeff=VectorSum(StatusOff);
   std::vector<int> MapDiagCoeff(nbWeight,-1);
@@ -1417,14 +1417,14 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgrou
       MapDiagCoeff[i]=idxA;
       idxA++;
     }
-  os << "ComputeLocalInvariantStrategy, step 7\n";
+  //  os << "ComputeLocalInvariantStrategy, step 7\n";
   int idxB=0;
   for (size_t i=0; i<nbWeight; i++)
     if (StatusOff[i] == 1) {
       MapOffCoeff[i]=idxB;
       idxB++;
     }
-  os << "ComputeLocalInvariantStrategy, step 8\n";
+  //  os << "ComputeLocalInvariantStrategy, step 8\n";
   LocalInvInfo eInv;
   eInv.nbDiagCoeff=nbDiagCoeff;
   eInv.nbOffCoeff=nbOffCoeff;
@@ -1442,8 +1442,7 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<T1,T2> const&WMat, Tgrou
     if (iter == ListEnt.end()) {
       ListEnt.insert(rVect);
       MapMult[rVect]=1;
-    }
-    else {
+    } else {
       MapMult[rVect]++;
     }
   };

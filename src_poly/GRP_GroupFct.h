@@ -652,18 +652,18 @@ std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& Sm
     }*/
   WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int,Tgroup>(SmaGRP, os);
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
-  os << "We do the algorithm\n";
+  //  os << "We do the algorithm\n";
   std::vector<Face> eListSma;
-  size_t iter=0;
+  //  size_t iter=0;
   for (auto & eSet : eListBig) {
-    os << "iter=" << iter << " Before DoubleCosetDescription\n";
+    //    os << "iter=" << iter << " Before DoubleCosetDescription\n";
     std::vector<Face> ListListSet=DoubleCosetDescription(BigGRP, SmaGRP, LocalInv, eSet, os);
-    os << "      |ListListSet|=" << ListListSet.size() << "\n";
-    for (auto & eCos : ListListSet)
-      eListSma.push_back(eCos);
-    os << "      |eListSma|=" << eListSma.size() << "\n";
-    iter++;
+    eListSma.insert(eListSma.end(), ListListSet.begin(), ListListSet.end());
+    //    os << "      |ListListSet|=" << ListListSet.size() << "\n";
+    //    os << "      |eListSma|=" << eListSma.size() << "\n";
+    //    iter++;
   }
+  os << "OrbitSplitting |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
   return eListSma;
 }
 
