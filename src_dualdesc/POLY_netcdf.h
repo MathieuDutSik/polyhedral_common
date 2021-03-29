@@ -281,7 +281,7 @@ void POLY_NC_WriteOrbitDimVars(netCDF::NcFile & dataFile, int const& n_act)
   int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
   netCDF::NcDim eDimActDiv8 = dataFile.addDim("n_act_div8", n_act_div8);
   netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
-  std::vector<std::string> LDim3{"n_act_div8", "n_orbit"};
+  std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
   std::string name = "orbit_incidence";
   netCDF::NcVar varORB_INCD = dataFile.addVar(name, "ubyte", LDim3);
 }
@@ -469,9 +469,6 @@ struct PairVface_OrbSize {
 template<typename Tint>
 PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, size_t const& iOrbit, size_t const& n_act_div8, bool const& orbit_status)
 {
-  netCDF::NcDim dimGRP_SIZE = dataFile.getDim("n_grpsize");
-  size_t n_grpsize = dimGRP_SIZE.getSize();
-  //
   std::string name = "orbit_incidence";
   if (orbit_status)
     name = "orbit_status_incidence";
@@ -479,9 +476,12 @@ PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,n_act_div8};
   std::vector<uint8_t> Vface(n_act_div8);
-  varORB_INCD.putVar(start_incd, count_incd, Vface.data());
+  varORB_INCD.getVar(start_incd, count_incd, Vface.data());
   //
   if (orbit_status) {
+    netCDF::NcDim dimGRP_SIZE = dataFile.getDim("n_grpsize");
+    size_t n_grpsize = dimGRP_SIZE.getSize();
+    //
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,n_grpsize};
@@ -504,7 +504,9 @@ Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
   int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
   //
   using Tint = int; // This is actually not relevant here
+  std::cerr << "Before POLY_NC_ReadVface_OrbSize\n";
   PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(dataFile, iOrbit, n_act_div8, orbit_status);
+  std::cerr << "After  POLY_NC_ReadVface_OrbSize\n";
   Face face(n_act);
   int idx=0;
   int n_actremain = n_act;
@@ -528,8 +530,10 @@ std::vector<Face> POLY_NC_ReadAllFaces(netCDF::NcFile & dataFile)
 {
   netCDF::NcDim eDimOrbit = dataFile.getDim("n_orbit");
   size_t n_orbit = eDimOrbit.getSize();
+  std::cerr << "POLY_NC_ReadAllFaces n_orbit=" << n_orbit << "\n";
   std::vector<Face> ListFace(n_orbit);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    std::cerr << "POLY_NC_ReadAllFaces i_orbit=" << i_orbit << "\n";
     Face eFace = POLY_NC_ReadFace(dataFile, i_orbit);
     ListFace[i_orbit] = eFace;
   }

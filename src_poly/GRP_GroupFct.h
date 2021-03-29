@@ -548,12 +548,12 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
-  os << "Beginning of DoubleCosetDescription\n";
+  //  os << "Beginning of DoubleCosetDescription\n";
   std::vector<Telt> ListGen=BigGRP.GeneratorsOfGroup();
   Tgroup TheStab=BigGRP.Stabilizer_OnSets(eList);
-  os << "BigGRP.size=" << BigGRP.size() << " TheStab.size=" << TheStab.size() << "\n";
+  //  os << "BigGRP.size=" << BigGRP.size() << " TheStab.size=" << TheStab.size() << "\n";
   Tint TotalSize=BigGRP.size() / TheStab.size();
-  os << "TotalSize=" << TotalSize << "\n";
+  //  os << "TotalSize=" << TotalSize << "\n";
   //
   struct Local {
     int status;
@@ -571,7 +571,7 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
     }
     ListLocal.push_back({0,testList,eInv});
     Tgroup fStab=SmaGRP.Stabilizer_OnSets(testList);
-    os << "SmaGRP.size=" << SmaGRP.size() << " fStab.size=" << fStab.size() << "\n";
+    //    os << "SmaGRP.size=" << SmaGRP.size() << " fStab.size=" << fStab.size() << "\n";
     Tint OrbSizeSma=SmaGRP.size() / fStab.size();
     SizeGen += OrbSizeSma;
   };
@@ -592,12 +592,12 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
     if (!DoSomething)
       break;
   }
-  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   std::vector<Face> ListListSet;
   for (auto & eRec : ListLocal)
     ListListSet.push_back(eRec.eFace);
   if (SizeGen == TotalSize)
     return ListListSet;
+  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   std::vector<Face> PartialOrbit=ListListSet;
   auto IsPresent=[&](Face const& testList) -> bool {
     for (auto & fList : PartialOrbit)
@@ -635,6 +635,7 @@ std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& Sm
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   if (BigGRP.size() == SmaGRP.size())
     return eListBig;
+  /*
   {
     std::ofstream os1("ORBSPLIT_BigGRP");
     std::ofstream os2("ORBSPLIT_BigGRP.gap");
@@ -648,7 +649,7 @@ std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& Sm
     WriteGroupGAP   (os4, SmaGRP);
     WriteListFace   (os5, eListBig);
     WriteListFaceGAP(os6, eListBig);
-  }
+    }*/
   WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int,Tgroup>(SmaGRP, os);
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
   os << "We do the algorithm\n";

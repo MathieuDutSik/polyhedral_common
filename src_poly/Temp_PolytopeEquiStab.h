@@ -1248,8 +1248,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream &
   auto FuncInsert=[&](VectorListPair & VLP, std::pair<int,int> const& ePair) -> void {
     if (VLP.nbWorkingPair < VLP.ListWorkingPair.size()) {
       VLP.ListWorkingPair[VLP.nbWorkingPair]=ePair;
-    }
-    else {
+    } else {
       VLP.ListWorkingPair.push_back(ePair);
     }
     VLP.nbWorkingPair++;
@@ -1265,9 +1264,9 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream &
   };
   auto SetZero=[&](int const& iChoice) -> void {
     if (iChoice == 0)
-      VLP0.nbWorkingPair=0;
+      VLP0.nbWorkingPair = 0;
     else
-      VLP1.nbWorkingPair=0;
+      VLP1.nbWorkingPair = 0;
   };
   auto GetNbWorkingPair=[&](int const& iChoice) ->size_t {
     if (iChoice == 0)
@@ -1303,7 +1302,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream &
     FuncInsertIChoice(iChoice, eStart);
     size_t orbSize=0;
     while(true) {
-      int iChoiceB=1-iChoice;
+      int iChoiceB = 1 - iChoice;
       int nbPair=GetNbWorkingPair(iChoice);
       orbSize += nbPair;
       if (nbPair == 0)
@@ -1317,27 +1316,7 @@ WeightMatrix<T1,T2> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream &
 	  int iImg = OnPoints(i, eGen);
 	  int jImg = OnPoints(j, eGen);
 	  auto aInsert=[&](int const& u, int const& v) -> void {
-	    int eVal1=WMat.GetValue(u,v);
-#ifdef DEBUG
-	    if (IsDiag) {
-	      if (u != v) {
-		std::cerr << "IsDiag=" << IsDiag << "\n";
-		std::cerr << "  i=" << i << " j=" << j << "\n";
-		std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
-		std::cerr << "  Error u=" << u << " v=" << v << "\n";
-		throw TerminalException{1};
-	      }
-	    }
-	    else {
-	      if (u == v) {
-		std::cerr << "IsDiag=" << IsDiag << "\n";
-		std::cerr << "  i=" << i << " j=" << j << "\n";
-		std::cerr << "  iImg=" << iImg << " jImg=" << jImg << "\n";
-		std::cerr << "  Error u=" << u << " v=" << v << "\n";
-		throw TerminalException{1};
-	      }
-	    }
-#endif
+	    int eVal1 = WMat.GetValue(u,v);
 	    if (eVal1 == -1)
 	      FuncInsertIChoice(iChoiceB, {u, v});
 	  };

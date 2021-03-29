@@ -88,10 +88,14 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 template<typename T>
 std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFile)
 {
+  std::cerr << "Read_BankEntry, step 1 eFile=" << eFile << "\n";
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
+  std::cerr << "Read_BankEntry, step 2\n";
   MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
+  std::cerr << "Read_BankEntry, step 3\n";
   //
   std::vector<Face> ListFace = POLY_NC_ReadAllFaces(dataFile);
+  std::cerr << "Read_BankEntry, step 4\n";
   return {EXT, ListFace};
 }
 
@@ -102,15 +106,98 @@ void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, std::vect
     std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
     throw TerminalException{1};
   }
+  std::cerr << "Write_BankEntry, step 1\n";
   netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  std::cerr << "Write_BankEntry, step 2\n";
   POLY_NC_WritePolytope(dataFile, EXT);
+  std::cerr << "Write_BankEntry, step 3\n";
   int n_act = EXT.rows();
   POLY_NC_WriteOrbitDimVars(dataFile, n_act);
+  std::cerr << "Write_BankEntry, step 4\n";
   //
   size_t n_orbit = ListFace.size();
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     POLY_NC_WriteFace(dataFile, i_orbit, ListFace[i_orbit]);
+  std::cerr << "Write_BankEntry, step 5\n";
 }
+
+
+
+template<typename T, typename Telt>
+std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
+{
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset>(WMat);
+  int n_row=EXT.rows();
+  int n_col=EXT.cols();
+  MyMatrix<T> EXTcan(n_row, n_col);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int j_row=PairCanonic.second[i_row];
+    for (int i_col=0; i_col<n_col; i_col++)
+      EXTcan(i_row,i_col) = EXT(j_row,i_col);
+  }
+  //
+  Telt ePerm = Telt(PairCanonic.second);
+  return {EXTcan, ePerm};
+}
+
+
+
+template<typename T, typename Telt>
+struct DataBank {
+private:
+  int MinSize;
+  std::unordered_map<MyMatrix<T>, std::vector<Face>> ListEnt;
+  bool Saving;
+  std::string SavingPrefix;
+public:
+  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
+  {
+    MinSize = std::numeric_limits<int>::max();
+    if (Saving) {
+      size_t iOrbit=0;
+      while(true) {
+        std::string eFile = SavingPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
+        if (!IsExistingFile(eFile))
+          break;
+        std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFile);
+        ListEnt[ePair.first] = ePair.second;
+        int e_size = ePair.first.rows();
+        MinSize = std::min(MinSize, e_size);
+        iOrbit++;
+      }
+    }
+  }
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
+  {
+    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
+    std::vector<Face> ListFaceO;
+    for (auto & eFace : ListFace) {
+      Face eInc = OnFace(eFace, ePair.second);
+      ListFaceO.push_back(eInc);
+    }
+    size_t n_orbit = ListEnt.size();
+    std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
+    Write_BankEntry(eFile, ePair.first, ListFaceO);
+  }
+  std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
+  {
+    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
+    auto iter = ListEnt.find(ePair.first);
+    if (iter != ListEnt.end()) {
+      std::vector<Face> ListReprTrans;
+      for (auto const& eOrbit : iter->second) {
+	Face eListJ=OnFace(eOrbit, ePair.second);
+	ListReprTrans.push_back(eListJ);
+      }
+      return ListReprTrans;
+    }
+    return {};
+  }
+  int get_minsize() const
+  {
+    return MinSize;
+  }
+};
 
 
 
@@ -282,81 +369,6 @@ public:
 
 
 
-template<typename T, typename Telt>
-std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
-{
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset>(WMat);
-  int n_row=EXT.rows();
-  int n_col=EXT.cols();
-  MyMatrix<T> EXTcan(n_row, n_col);
-  for (int i_row=0; i_row<n_row; i_row++) {
-    int j_row=PairCanonic.second[i_row];
-    for (int i_col=0; i_col<n_col; i_col++)
-      EXTcan(i_row,i_col) = EXT(j_row,i_col);
-  }
-  //
-  Telt ePerm = Telt(PairCanonic.second);
-  return {EXTcan, ePerm};
-}
-
-
-
-template<typename T, typename Telt>
-struct DataBank {
-private:
-  int MinSize;
-  std::unordered_map<MyMatrix<T>, std::vector<Face>> ListEnt;
-  bool Saving;
-  std::string SavingPrefix;
-public:
-  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
-  {
-    MinSize = std::numeric_limits<int>::max();
-    if (Saving) {
-      size_t iOrbit=0;
-      while(true) {
-        std::string eFile = SavingPrefix + "DualDesc" + std::to_string(iOrbit) + ".nc";
-        if (!IsExistingFile(eFile))
-          break;
-        std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFile);
-        ListEnt[ePair.first] = ePair.second;
-        int e_size = ePair.first.rows();
-        MinSize = std::min(MinSize, e_size);
-        iOrbit++;
-      }
-    }
-  }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
-  {
-    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
-    std::vector<Face> ListFaceO;
-    for (auto & eFace : ListFace) {
-      Face eInc = OnFace(eFace, ePair.second);
-      ListFaceO.push_back(eInc);
-    }
-    size_t n_orbit = ListEnt.size();
-    std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-    Write_BankEntry(eFile, ePair.first, ListFaceO);
-  }
-  std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
-  {
-    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
-    auto iter = ListEnt.find(ePair.first);
-    if (iter != ListEnt.end()) {
-      std::vector<Face> ListReprTrans;
-      for (auto const& eOrbit : iter->second) {
-	Face eListJ=OnFace(eOrbit, ePair.second);
-	ListReprTrans.push_back(eListJ);
-      }
-      return ListReprTrans;
-    }
-    return {};
-  }
-  int get_minsize() const
-  {
-    return MinSize;
-  }
-};
 
 
 //
@@ -367,7 +379,6 @@ public:
 // ---Serial mode. Should be faster indeed.
 // ---
 //
-
 template<typename T,typename Tgroup>
 std::vector<Face> DUALDESC_AdjacencyDecomposition(
          DataBank<T,typename Tgroup::Telt> & TheBank,
@@ -489,6 +500,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
+  std::cerr << "ansBank=" << ansBank << "\n";
   if (ansBank == "yes") {
     ComputeWMat();
     TheBank.InsertEntry(EXT, WMat, ListOrbitFaces);
@@ -496,8 +508,9 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   std::vector<Face> ListOrbitReturn;
   if (ansSymm == "yes") {
     ListOrbitReturn=OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
-  } else
+  } else {
     ListOrbitReturn=ListOrbitFaces;
+  }
   return ListOrbitReturn;
 }
 
