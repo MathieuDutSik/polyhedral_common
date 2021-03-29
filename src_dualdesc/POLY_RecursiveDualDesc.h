@@ -194,15 +194,9 @@ public:
     std::vector<Face> ListReprTrans;
     if (iter != ListEnt.end()) {
       std::cerr << "Finding a matching entry\n";
-      for (auto & eFace : iter->second) {
-        std::cerr << "Test facetness 3\n";
-        TestFacetness(ePair.first, eFace);
-      }
       for (auto const& eOrbit : iter->second) {
 	Face eListJ=OnFace(eOrbit, ePair.second);
 	ListReprTrans.push_back(eListJ);
-        std::cerr << "Test facetness 4\n";
-        TestFacetness(EXT, eListJ);
       }
     }
     return ListReprTrans; // If returning empty then it means nothing has been found.
