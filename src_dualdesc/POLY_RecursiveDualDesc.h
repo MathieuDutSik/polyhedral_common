@@ -61,7 +61,7 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
   //
   std::vector<Face> ListFace = ConvertGAPread_ListFace(dataFAC, n_rows);
   //
-  return {EXT, GRP, ListFace};
+  return {std::move(EXT), std::move(GRP), std::move(ListFace)};
 }
 
 
@@ -92,7 +92,7 @@ std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFil
   MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
   //
   std::vector<Face> ListFace = POLY_NC_ReadAllFaces(dataFile);
-  return {EXT, ListFace};
+  return {std::move(EXT), std::move(ListFace)};
 }
 
 template<typename T>
@@ -118,17 +118,23 @@ template<typename T, typename Telt>
 std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
 {
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset>(WMat);
-  int n_row=EXT.rows();
-  int n_col=EXT.cols();
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  int n_row=EXTred.rows();
+  int n_col=EXTred.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
   for (int i_row=0; i_row<n_row; i_row++) {
     int j_row=PairCanonic.second[i_row];
     for (int i_col=0; i_col<n_col; i_col++)
-      EXTcan(i_row,i_col) = EXT(j_row,i_col);
+      EXTcan(i_row,i_col) = EXTred(j_row,i_col);
   }
+  std::cerr << "We have EXTcan |EXTcan|=" << EXTcan.rows() << " / " << EXTcan.cols() << "\n";
+  MyMatrix<T> RowRed = RowReduction(EXTcan);
+  std::cerr << "We have RowRed |RowRed|=" << RowRed.rows() << " / " << RowRed.cols() << "\n";
+  MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
+  std::cerr << "We have EXTret\n";
   //
   Telt ePerm = Telt(PairCanonic.second);
-  return {EXTcan, ePerm};
+  return {std::move(EXTret), std::move(ePerm)};
 }
 
 
@@ -152,7 +158,7 @@ public:
           break;
         std::pair<MyMatrix<T>, std::vector<Face>> ePair = Read_BankEntry<T>(eFileBank);
         int e_size = ePair.first.rows();
-        std::cerr << "Read FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << ePair.second.size() << "\n";
+        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << ePair.second.size() << "\n";
         ListEnt[ePair.first] = ePair.second;
         MinSize = std::min(MinSize, e_size);
         iOrbit++;
@@ -161,11 +167,18 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
   {
+    for (auto & eFace : ListFace) {
+      std::cerr << "Test facetness 1\n";
+      TestFacetness(EXT, eFace);
+    }
     std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
     std::vector<Face> ListFaceO;
+    Telt ePerm = ~ePair.second;
     for (auto & eFace : ListFace) {
-      Face eInc = OnFace(eFace, ePair.second);
+      Face eInc = OnFace(eFace, ePerm);
       ListFaceO.push_back(eInc);
+      std::cerr << "Test facetness 2\n";
+      TestFacetness(ePair.first, eInc);
     }
     size_t n_orbit = ListEnt.size();
     std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
@@ -176,10 +189,17 @@ public:
     std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
     if (iter != ListEnt.end()) {
+      std::cerr << "Finding a matching entry\n";
+      for (auto & eFace : iter->second) {
+        std::cerr << "Test facetness 3\n";
+        TestFacetness(ePair.first, eFace);
+      }
       std::vector<Face> ListReprTrans;
       for (auto const& eOrbit : iter->second) {
 	Face eListJ=OnFace(eOrbit, ePair.second);
 	ListReprTrans.push_back(eListJ);
+        std::cerr << "Test facetness 4\n";
+        TestFacetness(EXT, eListJ);
       }
       return ListReprTrans;
     }
@@ -552,7 +572,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   BlockBANK.ListStringValues=ListStringValues3;
   ListBlock["BANK"]=BlockBANK;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return {std::move(ListBlock), "undefined"};
 }
 
 
