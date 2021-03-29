@@ -169,25 +169,22 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
   {
-    /*
-    for (auto & eFace : ListFace) {
-      std::cerr << "Test facetness 1\n";
-      TestFacetness(EXT, eFace);
-      }*/
     std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
     std::vector<Face> ListFaceO;
     Telt ePerm = ~ePair.second;
     for (auto & eFace : ListFace) {
       Face eInc = OnFace(eFace, ePerm);
       ListFaceO.push_back(eInc);
-      //      std::cerr << "Test facetness 2\n";
-      //      TestFacetness(ePair.first, eInc);
     }
-    size_t n_orbit = ListEnt.size();
-    std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-    std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-    Write_BankEntry(eFile, ePair.first, ListFaceO);
+    if (Saving) {
+      size_t n_orbit = ListEnt.size();
+      std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
+      std::cerr << "Insert entry to file eFile=" << eFile << "\n";
+      Write_BankEntry(eFile, ePair.first, ListFaceO);
+    }
     ListEnt[ePair.first] = ListFaceO;
+    int e_size = ePair.first.rows();
+    MinSize = std::min(MinSize, e_size);
   }
   std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
   {
