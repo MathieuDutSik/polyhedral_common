@@ -128,9 +128,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
   //
   eProg = "ppl_ext"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    std::cerr << "Before CDD_PPL_ExternalProgram\n";
     ListIncd = CDD_PPL_ExternalProgram(EXTred, "ppl_lcdd");
-    std::cerr << "After CDD_PPL_ExternalProgram\n";
     WeAreDone=true;
   }
   //
