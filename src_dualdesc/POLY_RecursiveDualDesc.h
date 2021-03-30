@@ -292,9 +292,6 @@ public:
   }
   ~DatabaseOrbits()
   {
-    if (SavingTrigger) {
-      RemoveFile(eFile);
-    }
   }
   void FuncInsert(Face const& face)
   {
@@ -326,13 +323,12 @@ public:
   Face ComputeIntersectionUndone() const
   {
     size_t n_row = EXT.rows();
-    Face eSetReturn(n_row);
-    for (size_t i=0; i<n_row; i++)
-      eSetReturn[i] = 1;
+    Face eSetReturn(n_row, true);
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & eFace : eEnt.second) {
         eSetReturn &= OrbitIntersection(GRP, eFace);
-        if (eSetReturn.size() == 0)
+        std::cerr << "|eSetReturn|=" << eSetReturn.count() << "\n";
+        if (eSetReturn.count() == 0)
           return eSetReturn;
       }
     }
@@ -340,11 +336,10 @@ public:
   }
   std::vector<Face> FuncListOrbitIncidence()
   {
+    if (SavingTrigger) {
+      RemoveFile(eFile);
+    }
     return ListOrbit;
-  }
-  Face FuncRecord(size_t const& iOrb) const
-  {
-    return ListOrbit[iOrb];
   }
   Tint FuncNumber() const
   {
@@ -362,16 +357,16 @@ public:
   {
     return nbOrbitDone;
   }
-  size_t FuncGetMinimalUndoneOrbit()
+  std::pair<size_t,Face> FuncGetMinimalUndoneOrbit()
   {
     for (auto & eEnt : CompleteList_SetUndone) {
       if (eEnt.second.size() > 0) {
         auto iter = eEnt.second.begin();
         Face face = *iter;
-        return DictOrbit[face].pos;
+        return {DictOrbit[face].pos, face};
       }
     }
-    return -1;
+    return {-1,{}};
   }
 };
 
@@ -443,11 +438,12 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     ansSymm="no";
   } else {
     ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    std::cerr << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
       ComputeWMat();
-      TheGRPrelevant=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
     } else {
-      TheGRPrelevant=GRP;
+      TheGRPrelevant = GRP;
     }
     if (TheGRPrelevant.size() == GRP.size())
       ansSymm="no";
@@ -455,45 +451,37 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     std::string eFile = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank) + ".nc";
     bool SavingTrigger=AllArr.Saving;
     DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, GRP, eFile, SavingTrigger);
-    int NewLevel=TheLevel+1;
+    int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
       std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
-      //      int iFace=0;
-      for (auto & eInc : ListFace) {
-        //        std::cerr << "FuncInsert 1 at iFace=" << iFace << "/" << ListFace.size() << "\n";
-        //        iFace++;
+      for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
-      }
     }
     Tint TheDim = eRank-1;
     std::cerr << "Before the while loop\n";
     while(true) {
       Face eSetUndone=RPL.ComputeIntersectionUndone();
-      //      std::cerr << "We have eSetUndone\n";
       Tint nbUndone=RPL.FuncNumberUndone();
-      //      std::cerr << "nbUndone=" << nbUndone << "\n";
       if (RPL.FuncNumberOrbitDone() > 0) {
         if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
           std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
           break;
         }
       }
-      size_t SelectedOrbit=RPL.FuncGetMinimalUndoneOrbit();
-      Face eInc=RPL.FuncRecord(SelectedOrbit);
+      std::pair<size_t,Face> ePair = RPL.FuncGetMinimalUndoneOrbit();
+      size_t SelectedOrbit = ePair.first;
+      Face eInc = ePair.second;
       MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
       //      std::cerr << "Treating SelectedOrbit=" << SelectedOrbit << " |EXTW=" << eInc.size() << " |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
-      std::string eDir = ePrefix + "ADM" + IntToString(SelectedOrbit) + "_";
+      std::string eDir = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
       std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir, NewLevel);
-      //      int iFace=0;
       for (auto& eOrbB : TheOutput) {
-        //        std::cerr << "FuncInsert 2 at iFace=" << iFace << "/" << TheOutput.size() << "\n";
-        //        iFace++;
         Face eFlip=ComputeFlipping(EXTred, eInc, eOrbB);
         RPL.FuncInsert(eFlip);
       }
@@ -512,13 +500,11 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     ComputeWMat();
     TheBank.InsertEntry(EXT, WMat, ListOrbitFaces);
   }
-  std::vector<Face> ListOrbitReturn;
   if (ansSymm == "yes") {
-    ListOrbitReturn=OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
+    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
   } else {
-    ListOrbitReturn=ListOrbitFaces;
+    return ListOrbitFaces;
   }
-  return ListOrbitReturn;
 }
 
 
