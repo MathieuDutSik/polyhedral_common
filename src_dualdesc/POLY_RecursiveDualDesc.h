@@ -323,7 +323,9 @@ public:
   Face ComputeIntersectionUndone() const
   {
     size_t n_row = EXT.rows();
-    Face eSetReturn(n_row, true);
+    Face eSetReturn(n_row);
+    for (size_t i_row=0; i_row<n_row; i_row++)
+      eSetReturn[i_row] = 1;
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & eFace : eEnt.second) {
         eSetReturn &= OrbitIntersection(GRP, eFace);
