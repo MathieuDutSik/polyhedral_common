@@ -127,13 +127,9 @@ std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, We
     for (int i_col=0; i_col<n_col; i_col++)
       EXTcan(i_row,i_col) = EXTred(j_row,i_col);
   }
-  //  std::cerr << "We have EXTcan |EXTcan|=" << EXTcan.rows() << " / " << EXTcan.cols() << "\n";
   MyMatrix<T> RowRed = RowReduction(EXTcan);
-  //  std::cerr << "We have RowRed |RowRed|=" << RowRed.rows() << " / " << RowRed.cols() << "\n";
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  //  std::cerr << "We have EXTret\n";
   MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
-  //  std::cerr << "We have EXTretB\n";
   //
   Telt ePerm = Telt(PairCanonic.second);
   return {std::move(EXTretB), std::move(ePerm)};
@@ -329,7 +325,7 @@ public:
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & eFace : eEnt.second) {
         eSetReturn &= OrbitIntersection(GRP, eFace);
-        std::cerr << "|eSetReturn|=" << eSetReturn.count() << "\n";
+        //        std::cerr << "|eSetReturn|=" << eSetReturn.count() << "\n";
         if (eSetReturn.count() == 0)
           return eSetReturn;
       }
@@ -462,7 +458,6 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
 	RPL.FuncInsert(eInc);
     }
     Tint TheDim = eRank-1;
-    std::cerr << "Before the while loop\n";
     while(true) {
       Face eSetUndone=RPL.ComputeIntersectionUndone();
       Tint nbUndone=RPL.FuncNumberUndone();
@@ -478,7 +473,6 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
-      //      std::cerr << "Treating SelectedOrbit=" << SelectedOrbit << " |EXTW=" << eInc.size() << " |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string eDir = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
@@ -498,6 +492,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
+  std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " ansSymm=" << ansSymm << "\n";
   if (ansBank == "yes") {
     ComputeWMat();
     TheBank.InsertEntry(EXT, WMat, ListOrbitFaces);
