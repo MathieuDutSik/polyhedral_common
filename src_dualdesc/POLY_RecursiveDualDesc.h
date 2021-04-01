@@ -399,6 +399,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     if (HaveWMat)
       return;
     WMat=GetWeightMatrix(EXTred);
+    ReorderingSetWeight(WMat);
   };
   //
   // Checking if the entry is present in the map.
