@@ -37,16 +37,18 @@ struct DataGAP {
 
 
 
-std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
+std::vector<std::string> ParseStringByComma(std::string const& estr)
 {
   int LevelParenthesis=0;
   int LevelBracket=0;
+  int LevelQuotationMark=0;
   size_t n_char=estr.size();
   size_t pos_start = 0;
-  std::vector<std::string_view> LStr;
+  std::vector<std::string> LStr;
   auto insert=[&](size_t const& pos1, size_t const& pos2) -> void {
     size_t len = pos2 - pos1;
-    LStr.push_back(estr.substr(pos_start, len));
+    std::string str_red = estr.substr(pos_start, len);
+    LStr.push_back(str_red);
     pos_start = pos2 + 1;
   };
   for (size_t i_char=0; i_char<n_char; i_char++) {
@@ -59,7 +61,9 @@ std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
       LevelBracket++;
     if (echar == "]")
       LevelBracket--;
-    if (LevelParenthesis == 0 && LevelBracket == 0 && echar == ",")
+    if (echar == "\"")
+      LevelQuotationMark = 1 - LevelQuotationMark;
+    if (LevelParenthesis == 0 && LevelBracket == 0 && LevelQuotationMark == 0 && echar == ",")
       insert(pos_start, i_char);
   }
   insert(pos_start, n_char);
@@ -71,11 +75,11 @@ std::vector<std::string_view> ParseStringByComma(std::string_view const& estr)
 // It should not have any space in it
 
 template<typename T, typename Telt>
-DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
+DataGAP<T,Telt> ParseGAPString(std::string const& full_str)
 {
   // Case 2: a string
+  size_t n_char = full_str.size();
   if (full_str.substr(0,1) == "\"") {
-    size_t n_char = full_str.size();
     if (full_str.substr(n_char-1 , 1) != "\"") {
       std::cerr << "Parsing error for the string\n";
       throw TerminalException{1};
@@ -85,12 +89,11 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
   }
   // Case 5: a list
   if (full_str.substr(0,1) == "[") {
-    size_t n_char = full_str.size();
     if (full_str.substr(n_char-1 , 1) != "]") {
-      std::cerr << "Parsing error for the string\n";
+      std::cerr << "Parsing error for the list\n";
       throw TerminalException{1};
     }
-    std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
+    std::vector<std::string> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
     std::vector<DataGAP<T,Telt>> LVal;
     for (auto & estr : LStr) {
       LVal.push_back(ParseGAPString<T,Telt>(estr));
@@ -99,7 +102,6 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
   }
   // Case 4: a group
   if (full_str.substr(0,1) == "G") {
-    size_t n_char = full_str.size();
     if (full_str.substr(0 , 7) != "Group([") {
       std::cerr << "Parsing error for the group 1\n";
       throw TerminalException{1};
@@ -108,7 +110,7 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
       std::cerr << "Parsing error for the group 2\n";
       throw TerminalException{1};
     }
-    std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
+    std::vector<std::string> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
     std::vector<DataGAP<T,Telt>> LVal;
     for (auto & estr : LStr) {
       LVal.push_back(ParseGAPString<T,Telt>(estr));
@@ -117,7 +119,6 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
   }
   // Case 6: the record
   if (full_str.substr(0,1) == "r") {
-    size_t n_char = full_str.size();
     if (full_str.substr(0 , 4) != "rec(") {
       std::cerr << "Parsing error for the record 1\n";
       throw TerminalException{1};
@@ -126,12 +127,12 @@ DataGAP<T,Telt> ParseGAPString(std::string_view const& full_str)
       std::cerr << "Parsing error for the record 2\n";
       throw TerminalException{1};
     }
-    std::vector<std::string_view> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
+    std::vector<std::string> LStr = ParseStringByComma(full_str.substr(1,n_char-2));
     std::vector<std::pair<std::string, DataGAP<T,Telt>>> LVal;
     for (auto & estr : LStr) {
       size_t pos = estr.find(":=");
       std::string name = std::string(estr.substr(0, pos));
-      std::string_view sstr = estr.substr(pos+2, estr.size() - 2 - pos);
+      std::string sstr = estr.substr(pos+2, estr.size() - 2 - pos);
       DataGAP<T,Telt> eEnt = ParseGAPString<T,Telt>(sstr);
       LVal.push_back({name, eEnt});
     }
@@ -167,11 +168,11 @@ DataGAP<T,Telt> ParseGAPFile(std::string const& eFile)
   while (std::getline(is, line)) {
     if (iLine == 0) {
       if (line.size() < 8) {
-        std::cerr << "The first line should begin by \"return ....\"";
+        std::cerr << "1: The first line should begin by \"return ....\"";
         throw TerminalException{1};
       }
-      if (line.substr(0, 7) != "return") {
-        std::cerr << "The first line should begin by \"return ....\"";
+      if (line.substr(0, 7) != "return ") {
+        std::cerr << "2: The first line should begin by \"return ....\"";
         throw TerminalException{1};
       }
       append_content(line.substr(7, line.size() - 7));
@@ -185,7 +186,7 @@ DataGAP<T,Telt> ParseGAPFile(std::string const& eFile)
     std::cerr << "The lčast character is not a semicolon ;. Wrong input\n";
     throw TerminalException{1};
   }
-  std::string_view full_view = full_str.substr(0, n_char-1);
+  std::string full_view = full_str.substr(0, n_char-1);
   return ParseGAPString<T,Telt>(full_view);
 }
 
