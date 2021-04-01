@@ -114,8 +114,8 @@ void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, std::vect
 
 
 
-template<typename T, typename Telt>
-std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
+template<typename T>
+std::pair<MyMatrix<T>, std::vector<int>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
 {
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset>(WMat);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
@@ -131,9 +131,17 @@ std::pair<MyMatrix<T>, Telt> CanonicalizationPolytope(MyMatrix<T> const& EXT, We
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
   MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
   //
-  Telt ePerm = Telt(PairCanonic.second);
-  return {std::move(EXTretB), std::move(ePerm)};
+  return {std::move(EXTretB), std::move(PairCanonic.second)};
 }
+
+template<typename T>
+MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
+{
+  WeightMatrix<T, T> WMat=GetWeightMatrix(EXT);
+  ReorderingSetWeight(WMat);
+  return CanonicalizationPolytopePair(EXT, WMat).first;
+}
+
 
 
 
@@ -165,9 +173,10 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, std::vector<Face> const& ListFace)
   {
-    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
+    std::pair<MyMatrix<T>, std::vector<int>> ePair = CanonicalizationPolytopePair<T,Telt>(EXT, WMat);
     std::vector<Face> ListFaceO;
-    Telt ePerm = ~ePair.second;
+    Telt perm1 = Telt(ePair.second);
+    Telt ePerm = ~perm1;
     for (auto & eFace : ListFace) {
       Face eInc = OnFace(eFace, ePerm);
       ListFaceO.push_back(eInc);
@@ -185,11 +194,12 @@ public:
   std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
-    std::pair<MyMatrix<T>, Telt> ePair = CanonicalizationPolytope<T,Telt>(EXT, WMat);
+    std::pair<MyMatrix<T>, std::vector<int>> ePair = CanonicalizationPolytopePair<T,Telt>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
     std::vector<Face> ListReprTrans;
     if (iter != ListEnt.end()) {
       std::cerr << "Finding a matching entry\n";
+      Telt ePerm = Telt(ePair.second);
       for (auto const& eOrbit : iter->second) {
 	Face eListJ=OnFace(eOrbit, ePair.second);
 	ListReprTrans.push_back(eListJ);
