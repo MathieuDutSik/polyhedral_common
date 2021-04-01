@@ -63,7 +63,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset>(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset,int>(WMat);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
   std::cerr << "GetCanonicalizationVector : time5 - time4=" << std::chrono::duration_cast<std::chrono::milliseconds>(time5 - time4).count() << "\n";
@@ -158,7 +158,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   // Computing the canonicalization of the scalar product matrix
   //
   WeightMatrix<std::vector<T>, T> WMatSymm = GetSymmetricWeightMatrix(WMat);
-  std::pair<std::vector<int>, std::vector<int>> PairCanonicSymm = GetCanonicalizationVector<std::vector<T>,T,GraphBitset>(WMatSymm);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonicSymm = GetCanonicalizationVector<std::vector<T>,T,GraphBitset,int>(WMatSymm);
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationFromSymmetrized(PairCanonicSymm);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
