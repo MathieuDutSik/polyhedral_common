@@ -3,11 +3,11 @@
 
 
 
-template<typename T>
-std::vector<int> SortingPerm(std::vector<T> const & ListV)
+template<typename T, typename Tidx>
+std::vector<Tidx> SortingPerm(std::vector<T> const & ListV)
 {
   struct PairData {
-    std::size_t i;
+    Tidx i;
     T x;
   };
   std::size_t len=ListV.size();
@@ -24,7 +24,7 @@ std::vector<int> SortingPerm(std::vector<T> const & ListV)
 	   return false;
 	 return x1.i< x2.i;
        });
-  std::vector<int> v(len);
+  std::vector<Tidx> v(len);
   for (std::size_t i=0; i<len; i++)
     v[i]=ListPair[i].i;
   return v;

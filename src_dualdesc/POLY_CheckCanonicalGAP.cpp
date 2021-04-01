@@ -15,7 +15,8 @@ int main(int argc, char* argv[])
     std::string FileIn  = argv[1];
     //
     using T = mpq_class;
-    using Telt = permutalib::DoubleSidedPerm;
+    using Tidx = int16_t;
+    using Telt = permutalib::DoubleSidedPerm<Tidx>;
     datagap::DataGAP<T,Telt> dataEXT = datagap::ParseGAPFile<T,Telt>(FileIn);
     //
     MyMatrix<T> EXT1 = datagap::ConvertGAPread_MyMatrixT(dataEXT);

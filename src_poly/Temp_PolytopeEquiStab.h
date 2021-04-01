@@ -2041,6 +2041,7 @@ template<typename Tgroup>
 Tgroup GetStabilizerBlissGraph(bliss::Graph g)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   std::vector<std::vector<unsigned int>>* h = &ListGen;
@@ -2048,7 +2049,7 @@ Tgroup GetStabilizerBlissGraph(bliss::Graph g)
   size_t nbVert = g.get_nof_vertices();
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
-    std::vector<int> gList(nbVert);
+    std::vector<Tidx> gList(nbVert);
     for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
     generatorList.push_back(Telt(gList));
@@ -2061,8 +2062,9 @@ template<typename Tgroup>
 Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<Telt> generatorList;
-  std::vector<int> gList(nbVert);
+  std::vector<Tidx> gList(nbVert);
   for (auto & eGen : ListGen) {
     for (size_t iVert=0; iVert<nbVert; iVert++)
       gList[iVert]=eGen[iVert];
@@ -2112,7 +2114,8 @@ void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
 }
 
 
-std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
+template<typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
 {
   size_t nof_vertices = cl.size();
   std::vector<unsigned int> clR(nof_vertices,-1);
@@ -2150,7 +2153,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBi
       posCanonic++;
     }
   }
-  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  std::vector<Tidx> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
   int posCanonicB=0;
   for (size_t iCan=0; iCan<nbVert; iCan++) {
     int iNative=MapVectRev[iCan];
@@ -2170,8 +2173,8 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_KernelBi
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
-template<typename Tgr>
-std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
+template<typename Tgr, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -2240,7 +2243,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
       posCanonic++;
     }
   }
-  std::vector<int> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  std::vector<Tidx> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
   int posCanonicB=0;
   for (size_t iCan=0; iCan<nbVert; iCan++) {
     int iNative=MapVectRev[iCan];
@@ -2264,8 +2267,8 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector_Kernel(T
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
-template<typename T1, typename T2, typename Tgr>
-std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
+template<typename T1, typename T2, typename Tgr, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
 {
   size_t nbRow=WMat.rows();
 #ifdef TIMINGS
@@ -2277,7 +2280,7 @@ std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationVector(WeightMa
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return GetCanonicalizationVector_Kernel(eGR, nbRow);
+  return GetCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
 
@@ -2499,7 +2502,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   //
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_KernelBis(nbRow, ePair.first);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_KernelBis<int>(nbRow, ePair.first);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
@@ -2738,6 +2741,7 @@ template<typename T1, typename T2, typename Tgroup>
 Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   bliss::Stats stats;
   std::vector<std::vector<unsigned int>> ListGen;
   size_t nbRow=WMat.rows();
@@ -2746,7 +2750,7 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
   g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
-    std::vector<int> gList(nbRow);
+    std::vector<Tidx> gList(nbRow);
     for (size_t iVert=0; iVert<nbRow; iVert++) {
       size_t jVert=eGen[iVert];
 #ifdef DEBUG
@@ -2783,12 +2787,13 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 template<typename T1, typename T2, typename Tgroup>
 Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<T1,T2> const& WMatI)
 {
-  using Telt=typename Tgroup::Telt;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   WeightMatrix<T1, T2> WMatO=GetSymmetricWeightMatrix(WMatI);
   size_t nbSHV=WMatI.rows();
   Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatO);
   std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
-  std::vector<int> v(nbSHV);
+  std::vector<Tidx> v(nbSHV);
   std::vector<Telt> ListGen;
   for (auto & eGen : ListGenInput) {
     for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
@@ -2937,13 +2942,14 @@ EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<T1, T2> const& WMat1, W
 template<typename T1, typename T2, typename Telt>
 EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1, WeightMatrix<T1,T2> const& WMat2)
 {
+  using Tidx = typename Telt::Tidx;
   WeightMatrix<T1, T2> WMatO1=GetSymmetricWeightMatrix<T1, T2>(WMat1);
   WeightMatrix<T1, T2> WMatO2=GetSymmetricWeightMatrix<T1, T2>(WMat2);
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T1,T2,Telt>(WMatO1, WMatO2);
   if (!eResEquiv.TheReply)
     return eResEquiv;
   size_t nbSHV=WMat1.rows();
-  std::vector<int> v(nbSHV);
+  std::vector<Tidx> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
     v[i]=eResEquiv.TheEquiv.at(i);
   return {true, Telt(v)};
@@ -2956,6 +2962,7 @@ EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<T1,T2> const& WMat1,
 template<typename T1, typename T2, typename Telt>
 EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face const& f1, Face const& f2)
 {
+  using Tidx = typename Telt::Tidx;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
   WeightMatrix<int,int> WMat1(n+1,0);
@@ -2986,10 +2993,10 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1, T2> const& WMat, Face con
   EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,int,Telt>(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
-  std::vector<int> eList(n);
+  std::vector<Tidx> eList(n);
   for (size_t i=0; i<n; i++) {
     int eVal=test.TheEquiv.at(i);
-    eList[i]=eVal;
+    eList[i] = eVal;
   }
   return {true, Telt(eList)};
 }
@@ -3000,6 +3007,7 @@ template<typename T1, typename T2, typename Tgroup>
 Tgroup StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
   WeightMatrix<int,int> WMatW(n+1,0);
@@ -3018,7 +3026,7 @@ Tgroup StabilizerSubset(WeightMatrix<T1, T2> const& WMat, Face const& f)
   Tgroup GRP=GetStabilizerWeightMatrix<T1,T2,Tgroup>(WMatW);
   std::vector<Telt> ListPerm;
   for (auto & ePerm : GRP.GeneratorsOfGroup()) {
-    std::vector<int> eList(n);
+    std::vector<Tidx> eList(n);
     for (size_t i=0; i<n; i++)
       eList[i]=OnPoints(i, ePerm);
     ListPerm.push_back(Telt(eList));
@@ -3050,6 +3058,7 @@ WeightMatrix<int,int> NakedWeightedMatrix(WeightMatrix<T1,T2> const& WMat)
 template<typename T1, typename T2, typename Telt>
 Telt CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
 {
+  using Tidx = typename Telt::Tidx;
   GraphBitset eGR=GetGraphFromWeightedMatrix<T1,T2,GraphBitset>(WMat);
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
   unsigned int nof_vertices=eGR.GetNbVert();
@@ -3060,7 +3069,7 @@ Telt CanonicalizeWeightMatrix(WeightMatrix<T1, T2> const& WMat)
     clR[cl[i]]=i;
   unsigned int nbVert=WMat.GetNbVert();
   std::vector<unsigned int> eVect_R(nof_vertices);
-  std::vector<int> eVect(nbVert);
+  std::vector<Tidx> eVect(nbVert);
   for (unsigned int iVert=0; iVert<nbVert; iVert++) {
     unsigned int i=cl[iVert]; // or clR? this needs to be debugged
     eVect_R[i]=iVert;
@@ -3235,7 +3244,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
@@ -3303,7 +3312,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset>(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
@@ -3430,14 +3439,15 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 template<typename T, typename Telt>
 Telt GetPermutationOnVectors(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2)
 {
+  using Tidx = typename Telt::Tidx;
   size_t nbVect=EXT1.rows();
   std::vector<MyVector<T>> EXTrow1(nbVect), EXTrow2(nbVect);
   for (size_t iVect=0; iVect<nbVect; iVect++) {
     EXTrow1[iVect]=GetMatrixRow(EXT1, iVect);
     EXTrow2[iVect]=GetMatrixRow(EXT2, iVect);
   }
-  Telt ePerm1=Telt(SortingPerm(EXTrow1));
-  Telt ePerm2=Telt(SortingPerm(EXTrow2));
+  Telt ePerm1=Telt(SortingPerm<MyVector<T>,Tidx>(EXTrow1));
+  Telt ePerm2=Telt(SortingPerm<MyVector<T>,Tidx>(EXTrow2));
   Telt ePermRet=(~ePerm1) * ePerm2;
 #ifdef DEBUG
   for (size_t iVect=0; iVect<nbVect; iVect++) {

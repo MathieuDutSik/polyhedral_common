@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
     //
     using T = mpq_class;
     using Tint = mpz_class;
-    using Telt = permutalib::DoubleSidedPerm;
+    using Tidx = int16_t;
+    using Telt = permutalib::DoubleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt,Tint>;
     datagap::DataGAP<T,Telt> dataEXT = datagap::ParseGAPFile<T,Telt>(File_EXT);
     datagap::DataGAP<T,Telt> dataFAC = datagap::ParseGAPFile<T,Telt>(File_FAC);

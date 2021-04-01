@@ -88,6 +88,7 @@ template<typename Tgroup>
 Tgroup ReadGroup(std::istream &is)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   if (!is.good()) {
     std::cerr << "ReadGroup operation failed because stream is not valid\n";
     throw TerminalException{1};
@@ -99,7 +100,7 @@ Tgroup ReadGroup(std::istream &is)
   std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
   std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
-    std::vector<int> v(n);
+    std::vector<Tidx> v(n);
     for (int i=0; i<n; i++) {
       int eVal;
       is >> eVal;
@@ -276,6 +277,7 @@ template<typename Tgroup>
 Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   int nb=eList.count();
   if (nb == 0) {
     std::cerr << "Call of ReducedGroupAction with 0 points\n";
@@ -291,7 +293,7 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
   }
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<int> v(nb);
+    std::vector<Tidx> v(nb);
     for (int i=0; i<nb; i++) {
       int eVal1=ListPosition[i];
       int eVal2=OnPoints(eVal1, eGen);

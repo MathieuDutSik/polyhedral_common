@@ -14,10 +14,11 @@ int main(int argc, char *argv[])
       return -1;
     }
     std::string eFileName=argv[1];
-    using T=mpq_class;
-    using Telt=permutalib::DoubleSidedPerm;
-    using Tint=mpz_class;
-    using Tgroup=permutalib::Group<Telt,Tint>;
+    using T = mpq_class;
+    using Tidx = int16_t;
+    using Telt = permutalib::DoubleSidedPerm<Tidx>;
+    using Tint = mpz_class;
+    using Tgroup = permutalib::Group<Telt,Tint>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionSerialDualDesc<T,Tgroup>(eFull);
