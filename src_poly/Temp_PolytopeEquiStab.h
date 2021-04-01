@@ -1603,7 +1603,7 @@ inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvarian
       Tidx_value iWeight=WMat.GetValue(iVert, jVert);
       ListAtt[iWeight]++;
     }
-  std::vector<int> eList = SortingPerm(ListWeight);
+  std::vector<int> eList = SortingPerm<T,int>(ListWeight);
 #ifdef DEBUG
   for (size_t jWeight=1; jWeight<nbWeight; jWeight++) {
     size_t iWeight=jWeight-1;

@@ -10,9 +10,9 @@ std::vector<Tidx> SortingPerm(std::vector<T> const & ListV)
     Tidx i;
     T x;
   };
-  std::size_t len=ListV.size();
+  Tidx len=ListV.size();
   std::vector<PairData> ListPair(len);
-  for (std::size_t i=0; i<len; i++) {
+  for (Tidx i=0; i<len; i++) {
     PairData ePair{i, ListV[i]};
     ListPair[i]=ePair;
   }
@@ -25,7 +25,7 @@ std::vector<Tidx> SortingPerm(std::vector<T> const & ListV)
 	 return x1.i< x2.i;
        });
   std::vector<Tidx> v(len);
-  for (std::size_t i=0; i<len; i++)
+  for (Tidx i=0; i<len; i++)
     v[i]=ListPair[i].i;
   return v;
 }
