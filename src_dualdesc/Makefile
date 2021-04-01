@@ -1,5 +1,6 @@
 #PROGRAM		= DD_ConvertGAP_to_NC
-PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_SerialDualDesc
+PROGRAM		= POLY_NetcdfToGAP
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
