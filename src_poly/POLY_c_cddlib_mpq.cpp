@@ -1,12 +1,21 @@
 #define GMPRATIONAL
 
 #include "gmpxx.h"
-#include <type_traits>
 #include "setoper.h"
 #include "cdd.h"
-#include "Boost_bitset.h"
-#include "MAT_Matrix.h"
 #include <vector>
+
+
+
+#include <boost/dynamic_bitset.hpp>
+typedef boost::dynamic_bitset<> Face;
+
+
+
+#include <Eigen/Dense>
+template <typename T>
+using MyMatrix = Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>;
+
 
 
 
