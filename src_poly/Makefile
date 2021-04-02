@@ -24,7 +24,11 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_ComputeEngelSymbol \
 		  POLY_FaceLatticeDirect
 
-OBJECTS		= $(PROGRAM:%=%.o)
+SRCFILES	= POLY_c_cddlib_mpq.cpp
+
+OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
+
+LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= icpc -std=c++11 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++11
@@ -33,7 +37,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++11 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++11 -Wall -O3
+CC		= g++ -std=c++17 -Wall -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
@@ -56,7 +60,7 @@ all:	$(PROGRAM)
 $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
-		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+		$(CC) $(LINKOBJECTS) $(DEBUGFLAG) $@.o $(LIBS) -o $@
 
 clean:;
 	rm -f *.o

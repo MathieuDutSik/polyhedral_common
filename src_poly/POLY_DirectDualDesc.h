@@ -3,6 +3,7 @@
 
 #include "POLY_lrslib.h"
 #include "POLY_cddlib.h"
+#include "POLY_c_cddlib.h"
 #include "Basic_string.h"
 
 
@@ -110,19 +111,19 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
   //
   eProg = "cdd"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd=cdd::DualDescription_incd(EXTred);
+    ListIncd = cdd::DualDescription_incd(EXTred);
     WeAreDone=true;
   }
   //
   eProg = "lrs"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd=lrs::DualDescription_temp_incd(EXTred);
+    ListIncd = lrs::DualDescription_temp_incd(EXTred);
     WeAreDone=true;
   }
   //
   eProg = "lrs_ring"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd=lrs::DualDescription_temp_incd_reduction(EXTred);
+    ListIncd = lrs::DualDescription_temp_incd_reduction(EXTred);
     WeAreDone=true;
   }
   //
@@ -137,6 +138,13 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
     ListIncd = CDD_PPL_ExternalProgram(EXTred, "lcdd_gmp");
     WeAreDone=true;
   }
+  //
+  eProg = "cdd_cbased"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
+    ListIncd = cbased_cdd::DualDescription_incd(EXTred);
+    WeAreDone=true;
+  }
+  //
   if (!WeAreDone || ListIncd.size() == 0) {
     std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
     std::cerr << "WeAreDone=" << WeAreDone << " |ListIncd|=" << ListIncd.size() << "\n";
