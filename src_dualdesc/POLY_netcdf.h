@@ -208,7 +208,6 @@ Tint GetTint_from_VectorUint8_t(std::vector<uint8_t> const& V)
     Tint eVal = V[j];
     retVal = eVal + cst256 * retVal;
   }
-  std::cerr << "retVal=" << retVal << "\n";
   return retVal;
 }
 
