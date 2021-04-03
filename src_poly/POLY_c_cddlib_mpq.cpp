@@ -56,10 +56,9 @@ std::vector<Face> DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
   size_t nbRow=TheEXT.rows();
   dd_set_global_constants();
   dd_MatrixPtr M=MyMatrix_PolyFile2Matrix_mpq(TheEXT);
-  M->representation = dd_Inequality; // The choice between dd_Inequality and dd_Generator is not clear.
+  M->representation = dd_Generator;
   //
-  dd_polyhedradata *poly;
-  poly=dd_DDMatrix2Poly(M, &err);
+  dd_polyhedradata* poly = dd_DDMatrix2Poly(M, &err);
   //
   std::vector<Face> ListIncd;
   dd_raydata* RayPtr = poly->child->FirstRay;
