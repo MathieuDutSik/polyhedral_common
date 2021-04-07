@@ -254,13 +254,27 @@ public:
       std::cerr << "Error in Flip 2\n";
       throw TerminalException{1};
     }
+    // We need to compute a vertex in the facet, but not the ridge
+    size_t pos_outside = 0;
+    while(true) {
+      if (sInc[pos_outside] == 0)
+        break;
+      pos_outside++;
+    }
+    int outRow = OneInc_V[pos_outside];
+    T eSum = 0;
+    for (int iCol=0; iCol<nbCol-1; iCol++)
+      eSum += EXT_red(outRow,iCol) * NSP(0,iCol);
+    int eSign = 1;
+    if (eSum < 0)
+      eSign = -1;
     // F0 should be zero on the ridge
     MyVector<T> F0(nbCol);
     F0(idx_drop) = 0;
     size_t pos=0;
     for (int iCol=0; iCol<nbCol; iCol++) {
       if (iCol != idx_drop) {
-        F0(iCol) = NSP(0,pos);
+        F0(iCol) = eSum * NSP(0,pos);
         pos++;
       }
     }
