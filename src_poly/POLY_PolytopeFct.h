@@ -185,6 +185,123 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const& eList)
   return retList;
 }
 
+template<typename T>
+struct FlippingFramework {
+private:
+  MyMatrix<T> EXT;
+  MyMatrix<T> EXT_red;
+  Face OneInc;
+  std::vector<int> OneInc_V;
+  MyVector<T> FacetIneq;
+  size_t idx_drop;
+  std::vector<T> ListInvScal;
+public:
+  FlippingFramework(MyMatrix<T> const& _EXT, Face const& _OneInc) : EXT(_EXT), OneInc(_OneInc)
+  {
+    OneInc_V=Dynamic_bitset_to_vectorint(OneInc);
+    FacetIneq = FindFacetInequality(_EXT, _OneInc);
+    //
+    // Idx dropping for the projection
+    //
+    idx_drop = 0;
+    while(true) {
+      if (FacetIneq(idx_drop) != 0)
+        break;
+      idx_drop++;
+    }
+    int nbRow = EXT.rows();
+    int nbCol = EXT.cols();
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      size_t pos=0;
+      for (int iCol=0; iCol<nbCol; iCol++) {
+        if (iCol != idx_drop) {
+          EXT_red(iRow, pos) = EXT(iRow,iCol);
+          pos++;
+        }
+      }
+    }
+    //
+    // Inverse scalar products
+    //
+    ListInvScal = std::vector<T>(nbRow, 0);
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (OneInc[iRow] == 0) {
+        T eSum=0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eSum += FacetIneq(iCol) * EXT(iRow, iCol);
+        ListInvScal[iRow] = 1 / eSum;
+      }
+    }
+  }
+  Face Flip(Face const& sInc)
+  {
+    if (OneInc.count() != sInc.size()) {
+      std::cerr << "Error in Flip 1\n";
+      throw TerminalException{1};
+    }
+    int nb=sInc.count();
+    int nbRow=EXT.rows();
+    int nbCol=EXT.cols();
+    MyMatrix<T> TheProv(nb, nbCol - 1);
+    int jRow=sInc.find_first();
+    for (int iRow=0; iRow<nb; iRow++) {
+      int aRow=OneInc_V[jRow];
+      TheProv.row(iRow)=EXT_red.row(aRow);
+      jRow=sInc.find_next(jRow);
+    }
+    MyMatrix<T> NSP = NullspaceTrMat(TheProv);
+    if (NSP.rows() != 1) {
+      std::cerr << "Error in Flip 2\n";
+      throw TerminalException{1};
+    }
+    // F0 should be zero on the ridge
+    MyVector<T> F0(nbCol);
+    F0(idx_drop) = 0;
+    size_t pos=0;
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      if (iCol != idx_drop) {
+        F0(iCol) = NSP(0,pos);
+        pos++;
+      }
+    }
+    // The sought inequality is expressed as F0 + beta FacetIneq
+    // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
+    // beta >= -F0(v) ListInvScal(v) = beta(v)
+    // beta >= max beta(v)
+    Face fret(nbRow);
+    T beta_max = 0;
+    bool isAssigned = false;
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (OneInc[iRow] == 0) {
+        T eSum = 0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eSum += EXT(iRow,iCol) * F0(iCol);
+        T beta = - eSum * ListInvScal[iRow];
+        if (!isAssigned || beta > beta_max) {
+          for (int jRow=0; jRow<iRow; jRow++)
+            fret[jRow] = 0;
+          beta_max = beta;
+        }
+        if (beta_max == beta) {
+          fret[iRow] = 1;
+        }
+        isAssigned = true;
+      }
+    }
+    // Now adding the points from the ridge
+    jRow=sInc.find_first();
+    for (int iRow=0; iRow<nb; iRow++) {
+      int aRow=OneInc_V[jRow];
+      fret[aRow] = 1;
+      jRow=sInc.find_next(jRow);
+    }
+    // returning the found facet
+    return fret;
+  }
+};
+
+
+
 
 template<typename T>
 Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sInc)
