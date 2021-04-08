@@ -417,7 +417,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   //
   if (nbRow >= TheBank.get_minsize()) {
     ComputeWMat();
-    std::vector<Face> ListFace = TheBank.GetDualDesc(EXT, WMat);
+    std::vector<Face> ListFace = TheBank.GetDualDesc(EXTred, WMat);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -426,7 +426,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   //
   Tgroup TheGRPrelevant;
   std::map<std::string, Tint> TheMap;
-  int nbVert=EXT.rows();
+  int nbVert=EXTred.rows();
   int delta=nbVert - eRank;
   TheMap["groupsize"]=GRP.size();
   TheMap["incidence"]=nbVert;
@@ -460,7 +460,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     TheMap["groupsizerelevant"]=TheGRPrelevant.size();
     std::string eFile = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank) + ".nc";
     bool SavingTrigger=AllArr.Saving;
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, GRP, eFile, SavingTrigger);
+    DatabaseOrbits<T,Tint,Tgroup> RPL(EXTred, GRP, eFile, SavingTrigger);
     int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
@@ -482,7 +482,8 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       std::pair<size_t,Face> ePair = RPL.FuncGetMinimalUndoneOrbit();
       size_t SelectedOrbit = ePair.first;
       Face eInc = ePair.second;
-      MyMatrix<T> EXTredFace=SelectRow(EXT, eInc);
+      MyMatrix<T> EXTredFace=SelectRow(EXTred, eInc);
+      FlippingFramework<T> FF(EXTred, eInc);
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
       Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
@@ -490,7 +491,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       std::string eDir = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
       std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTredFace, GRPred, AllArr, eDir, NewLevel);
       for (auto& eOrbB : TheOutput) {
-        Face eFlip=ComputeFlipping(EXTred, eInc, eOrbB);
+        Face eFlip=FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
@@ -507,7 +508,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " ansSymm=" << ansSymm << "\n";
   if (ansBank == "yes") {
     ComputeWMat();
-    TheBank.InsertEntry(EXT, WMat, ListOrbitFaces);
+    TheBank.InsertEntry(EXTred, WMat, ListOrbitFaces);
   }
   if (ansSymm == "yes") {
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);

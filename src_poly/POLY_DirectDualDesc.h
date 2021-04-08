@@ -93,9 +93,8 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
 template<typename T, typename Tgroup>
 std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
 {
-  MyMatrix<T> EXTred=ColumnReduction(EXT);
-  int nbVert=EXTred.rows();
-  int nbCol=EXTred.cols();
+  int nbVert=EXT.rows();
+  int nbCol=EXT.cols();
   bool WeAreDone=false;
   std::vector<Face> ListIncd;
 #ifdef DEBUG_DIRECT_DUAL_DESC
@@ -111,37 +110,37 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
   //
   eProg = "cdd"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = cdd::DualDescription_incd(EXTred);
+    ListIncd = cdd::DualDescription_incd(EXT);
     WeAreDone=true;
   }
   //
   eProg = "lrs"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = lrs::DualDescription_temp_incd(EXTred);
+    ListIncd = lrs::DualDescription_temp_incd(EXT);
     WeAreDone=true;
   }
   //
   eProg = "lrs_ring"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = lrs::DualDescription_temp_incd_reduction(EXTred);
+    ListIncd = lrs::DualDescription_temp_incd_reduction(EXT);
     WeAreDone=true;
   }
   //
   eProg = "ppl_ext"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = CDD_PPL_ExternalProgram(EXTred, "ppl_lcdd");
+    ListIncd = CDD_PPL_ExternalProgram(EXT, "ppl_lcdd");
     WeAreDone=true;
   }
   //
   eProg = "cdd_ext"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = CDD_PPL_ExternalProgram(EXTred, "lcdd_gmp");
+    ListIncd = CDD_PPL_ExternalProgram(EXT, "lcdd_gmp");
     WeAreDone=true;
   }
   //
   eProg = "cdd_cbased"; ListProg.push_back(eProg);
   if (ansProg == eProg) {
-    ListIncd = cbased_cdd::DualDescription_incd(EXTred);
+    ListIncd = cbased_cdd::DualDescription_incd(EXT);
     WeAreDone=true;
   }
   //
