@@ -150,6 +150,7 @@ template<typename T>
 struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
+  MyMatrix<T> EXT_face;
   Face OneInc;
   std::vector<int> OneInc_V;
   std::vector<T> ListInvScal;
@@ -190,6 +191,22 @@ public:
           eSum += FacetIneq(iCol) * EXT(iRow, iCol);
         ListInvScal[iRow] = - 1 / eSum;
       }
+    }
+    //
+    // Now the EXT face that is used by other procedure
+    //
+    size_t e_incd = OneInc.count();
+    EXT_face = MyMatrix<T>(e_incd, nbCol-1);
+    int j_row=OneInc.find_first();
+    for (size_t i_row=0; i_row<e_incd; i_row++) {
+      size_t pos=0;
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
+        if (iCol != idx_drop) {
+          EXT_face(i_row, pos) = EXT(j_row, iCol);
+          pos++;
+        }
+      }
+      j_row = OneInc.find_next(j_row);
     }
   }
   Face Flip(Face const& sInc)
@@ -264,6 +281,10 @@ public:
     }
     // returning the found facet
     return fret;
+  }
+  MyMatrix<T> Get_EXT_face() const
+  {
+    return EXT_face;
   }
 };
 
