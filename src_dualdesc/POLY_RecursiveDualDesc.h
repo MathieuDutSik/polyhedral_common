@@ -439,12 +439,12 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   std::vector<Face> ListOrbitFaces;
   std::string ansSymm;
   if (ansSplit != "split") {
-    TheGRPrelevant=GRP;
+    TheGRPrelevant = GRP;
     std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
-    ListOrbitFaces=DirectFacetOrbitComputation(EXTred, GRP, ansProg, std::cerr);
+    ListOrbitFaces = DirectFacetOrbitComputation(EXTred, GRP, ansProg, std::cerr);
     ansSymm="no";
   } else {
-    ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     std::cerr << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
       ComputeWMat();
@@ -468,9 +468,9 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     }
     Tint TheDim = eRank-1;
     while(true) {
-      Face eSetUndone=RPL.ComputeIntersectionUndone();
       Tint nbUndone=RPL.FuncNumberUndone();
       if (RPL.FuncNumberOrbitDone() > 0) {
+        Face eSetUndone=RPL.ComputeIntersectionUndone();
         if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
           std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
           break;
@@ -492,7 +492,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
-      nbUndone=RPL.FuncNumberUndone();
+      nbUndone = RPL.FuncNumberUndone();
       std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << nbUndone << "\n";
       std::cerr << "\n";
     };
