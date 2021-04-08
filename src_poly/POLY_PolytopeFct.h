@@ -117,8 +117,6 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
     aRow=OneInc.find_next(aRow);
   }
   MyMatrix<T> NSP=NullspaceTrMat(TheProv);
-  int nbPlus=0;
-  int nbMinus=0;
   MyVector<T> eVect(nbCol);
   for (size_t iCol=0; iCol<nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
@@ -127,14 +125,12 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
     for (size_t iCol=0; iCol<nbCol; iCol++)
       eScal += eVect(iCol) * TheEXT(iRow, iCol);
     if (eScal > 0)
-      nbPlus++;
+      return eVect;
     if (eScal < 0)
-      nbMinus++;
+      return -eVect;
   }
-  if (nbPlus > 0) {
-    return eVect;
-  }
-  return -eVect;
+  // This part should never be reached.
+  return eVect;
 }
 
 
