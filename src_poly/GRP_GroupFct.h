@@ -613,10 +613,12 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
 	return true;
     return false;
   };
+  size_t pos_start=0;
   while(true) {
-    for (auto & eGen : ListGen) {
-      for (auto & eOrb : PartialOrbit) {
-	Face eNewList=OnFace(eOrb, eGen);
+    size_t n_orb = PartialOrbit.size();
+    for (size_t i_orb=pos_start; i_orb<n_orb; i_orb++) {
+      for (auto & eGen : ListGen) {
+	Face eNewList=OnFace(PartialOrbit[i_orb], eGen);
 	if (!IsPresent(eNewList)) {
 	  PartialOrbit.push_back(eNewList);
 	  DoubleCosetInsertEntry(eNewList);
@@ -629,6 +631,7 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
 	}
       }
     }
+    pos_start = n_orb;
   }
   os << "Likely not reachable stage\n";
   throw TerminalException{1};
