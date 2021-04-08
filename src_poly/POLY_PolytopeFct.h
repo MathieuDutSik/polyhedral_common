@@ -152,18 +152,16 @@ private:
   MyMatrix<T> EXT_red;
   Face OneInc;
   std::vector<int> OneInc_V;
-  MyVector<T> FacetIneq;
-  size_t idx_drop;
   std::vector<T> ListInvScal;
 public:
   FlippingFramework(MyMatrix<T> const& EXT, Face const& _OneInc) : OneInc(_OneInc)
   {
     OneInc_V=Dynamic_bitset_to_vectorint(OneInc);
-    FacetIneq = FindFacetInequality(EXT, OneInc);
+    MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
     // Idx dropping for the projection
     //
-    idx_drop = 0;
+    size_t idx_drop = 0;
     while(true) {
       if (FacetIneq(idx_drop) != 0)
         break;
