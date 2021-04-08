@@ -118,14 +118,12 @@ template<typename T, typename Tidx>
 std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
 {
   std::pair<std::vector<Tidx>, std::vector<Tidx>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset,Tidx>(WMat);
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
-  int n_row=EXTred.rows();
-  int n_col=EXTred.cols();
+  int n_row=EXT.rows();
+  int n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
   for (int i_row=0; i_row<n_row; i_row++) {
     int j_row=PairCanonic.second[i_row];
-    for (int i_col=0; i_col<n_col; i_col++)
-      EXTcan(i_row,i_col) = EXTred(j_row,i_col);
+    EXTcan.row(i_row) = EXT.row(j_row);
   }
   MyMatrix<T> RowRed = RowReduction(EXTcan);
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
@@ -336,7 +334,6 @@ public:
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & eFace : eEnt.second) {
         eSetReturn &= OrbitIntersection(GRP, eFace);
-        //        std::cerr << "|eSetReturn|=" << eSetReturn.count() << "\n";
         if (eSetReturn.count() == 0)
           return eSetReturn;
       }

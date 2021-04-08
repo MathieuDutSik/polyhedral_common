@@ -158,7 +158,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
     std::cerr << "\n";
     throw TerminalException{1};
   }
-  std::vector<Face> TheOutput=OrbitSplittingSet(ListIncd, GRP);
+  std::vector<Face> TheOutput = OrbitSplittingSet(ListIncd, GRP);
   os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
 }
