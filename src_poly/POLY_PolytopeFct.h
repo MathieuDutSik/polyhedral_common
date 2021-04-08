@@ -230,8 +230,8 @@ public:
     if (eSum < 0)
       eSign = -1;
     // F0 should be zero on the ridge
-    MyVector<T> F0(nbCol);
-    for (size_t iCol=0; iCol<nbCol; iCol++)
+    MyVector<T> F0(nbCol-1);
+    for (size_t iCol=0; iCol<nbCol-1; iCol++)
       F0(iCol) = eSign * NSP(0,iCol);
     // The sought inequality is expressed as F0 + beta FacetIneq
     // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0

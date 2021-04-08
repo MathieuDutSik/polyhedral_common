@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
     }
     std::string eFileName=argv[1];
     using T = mpq_class;
-    using Tidx = int16_t;
-    using Telt = permutalib::DoubleSidedPerm<Tidx>;
+    using Tidx = uint8_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt,Tint>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
