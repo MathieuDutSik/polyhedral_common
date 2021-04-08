@@ -149,7 +149,6 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const& eList)
 template<typename T>
 struct FlippingFramework {
 private:
-  MyMatrix<T> EXT;
   MyMatrix<T> EXT_red;
   Face OneInc;
   std::vector<int> OneInc_V;
@@ -157,10 +156,10 @@ private:
   size_t idx_drop;
   std::vector<T> ListInvScal;
 public:
-  FlippingFramework(MyMatrix<T> const& _EXT, Face const& _OneInc) : EXT(_EXT), OneInc(_OneInc)
+  FlippingFramework(MyMatrix<T> const& EXT, Face const& _OneInc) : OneInc(_OneInc)
   {
     OneInc_V=Dynamic_bitset_to_vectorint(OneInc);
-    FacetIneq = FindFacetInequality(_EXT, _OneInc);
+    FacetIneq = FindFacetInequality(EXT, OneInc);
     //
     // Idx dropping for the projection
     //
@@ -202,8 +201,8 @@ public:
       throw TerminalException{1};
     }
     size_t nb=sInc.count();
-    size_t nbRow=EXT.rows();
-    size_t nbCol=EXT.cols();
+    size_t nbRow=EXT_red.rows();
+    size_t nbCol=EXT_red.cols() + 1;
     MyMatrix<T> TheProv(nb, nbCol - 1);
     int jRow=sInc.find_first();
     for (size_t iRow=0; iRow<nb; iRow++) {
