@@ -107,79 +107,44 @@ void TestFacetness(MyMatrix<T> const& EXT, Face const& eList)
 template<typename T>
 MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
 {
-  int nb, nbRow, nbCol;
-  int nbPlus, nbMinus;
-  int iRow, iCol;
-  T eScal, eVal, prov;
-  nb=OneInc.count();
-  //  std::cerr << "nb=" << nb << "\n";
-  nbRow=TheEXT.rows();
-  nbCol=TheEXT.cols();
+  size_t nb=OneInc.count();
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
   MyMatrix<T> TheProv(nb, nbCol);
-  MyVector<T> eVect(nbCol);
   int aRow=OneInc.find_first();
-  for (iRow=0; iRow<nb; iRow++) {
-    //    std::cerr << "iRow=" << iRow << " aRow=" << aRow << "\n";
+  for (size_t iRow=0; iRow<nb; iRow++) {
     TheProv.row(iRow)=TheEXT.row(aRow);
     aRow=OneInc.find_next(aRow);
   }
-  SelectionRowCol<T> eSelect=TMat_SelectRowCol(TheProv);
-  MyMatrix<T> NSP=eSelect.NSP;
-  if (NSP.rows() != 1) {
-    std::cerr << " -------------- BUG TO SOLVE ----------\n";
-    std::cerr << "NSP.rows=" << NSP.rows() << "\n";
-    std::cerr << "TheProv=\n";
-    WriteMatrixGAP(std::cerr, TheProv);
-    std::cerr << "\n";
-    std::cerr << "NSP=\n";
-    WriteMatrixGAP(std::cerr, NSP);
-    std::cerr << "\n";
-    std::cerr << "Error in rank in FindFacetInequality\n";
-    throw TerminalException{1};
-  }
-  nbPlus=0;
-  nbMinus=0;
-  for (iRow=0; iRow<nbRow; iRow++) {
-    eScal=0;
-    for (iCol=0; iCol<nbCol; iCol++) {
-      eVal=TheEXT(iRow, iCol);
-      prov=NSP(0, iCol);
-      eScal=eScal + prov*eVal;
-    }
+  MyMatrix<T> NSP=NullspaceTrMat(TheProv);
+  int nbPlus=0;
+  int nbMinus=0;
+  MyVector<T> eVect(nbCol);
+  for (size_t iCol=0; iCol<nbCol; iCol++)
+    eVect(iCol) = NSP(0, iCol);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    T eScal=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eScal += eVect(iCol) * TheEXT(iRow, iCol);
     if (eScal > 0)
       nbPlus++;
     if (eScal < 0)
       nbMinus++;
   }
   if (nbPlus > 0) {
-    for (iCol=0; iCol<nbCol; iCol++) {
-      prov=NSP(0, iCol);
-      eVect(iCol)=prov;
-    }
+    return eVect;
   }
-  else {
-    for (iCol=0; iCol<nbCol; iCol++) {
-      prov=NSP(0, iCol);
-      eVal=-prov;
-      eVect(iCol)=eVal;
-    }
-  }
-  return eVect;
+  return -eVect;
 }
 
 
 std::vector<int> Dynamic_bitset_to_vectorint(Face const& eList)
 {
-  //  std::cerr << "Begin of Dynamic_bitset_to_vertorint\n";
-  //  int siz=eList.size();
-  //  for (int i=0; i<siz; i++)
-  //    std::cerr << " i=" << i << " v=" << eList[i] << "\n";
   int nb=eList.count();
   int aRow=eList.find_first();
-  std::vector<int> retList;
+  std::vector<int> retList(nb);
   for (int i=0; i<nb; i++) {
-    retList.push_back(aRow);
-    //    std::cerr << "i=" << i << " aRow=" << aRow << "\n";
+    retList[i] = aRow;
     aRow=eList.find_next(aRow);
   }
   return retList;
@@ -323,7 +288,6 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 {
   MyMatrix<T> TheEXT=ColumnReduction(EXT);
   int nbCol, nbRow;
-  std::vector<int> hSub;
   std::vector<Face> TwoPlanes;
   T eVal, prov1, prov2, prov3, prov4;
   T EXT1_1, EXT1_2, EXT2_1, EXT2_2;
@@ -347,7 +311,6 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
   int jRow=sInc.find_first();
   for (int iRow=0; iRow<nb; iRow++) {
     int aRow=OneInc_V[jRow];
-    hSub.push_back(aRow);
     TheProv.row(iRow)=TheEXT.row(aRow);
     jRow=sInc.find_next(jRow);
   }
@@ -419,9 +382,9 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
   }
   else {
     LV(0, 0)=EXT1_2;
-    eVal=-EXT1_1; 
+    eVal=-EXT1_1;
     LV(1, 0)=eVal;
-    eVal=-EXT2_2; 
+    eVal=-EXT2_2;
     LV(0, 1)=eVal;
     LV(1, 1)=EXT2_1;
   }
