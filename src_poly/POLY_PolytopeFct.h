@@ -211,6 +211,7 @@ public:
     }
     size_t nbRow = EXT.rows();
     size_t nbCol = EXT.cols();
+    EXT_red = MyMatrix<T>(nbRow, nbCol-1);
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       size_t pos=0;
       for (size_t iCol=0; iCol<nbCol; iCol++) {
