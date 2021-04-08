@@ -505,9 +505,9 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     }
     FACset.push_back(eFace);
   }
-  std::vector<std::vector<Face> > ListListFace;
+  std::vector<std::vector<Face>> ListListFace;
   ListListFace.push_back(FACset);
-  std::vector<CollectedResult<int> > TheSub;
+  std::vector<CollectedResult<int>> TheSub;
   for (int eDim=0; eDim<n-1; eDim++) {
     int TheRank=n-2-eDim;
     std::cerr << "eDim=" << eDim << " TheRank=" << TheRank << "\n";

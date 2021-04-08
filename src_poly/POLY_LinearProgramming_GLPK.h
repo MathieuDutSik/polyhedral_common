@@ -172,7 +172,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
       ListPair[i].eVal=eVectNew(i+1);
   };
   int iConst=0;
-  std::vector<std::vector<PairCV> > LLPair(nbIneq);
+  std::vector<std::vector<PairCV>> LLPair(nbIneq);
   for (int k=0; k<Aspmat.outerSize(); ++k)
     for (typename MySparseMatrix<T>::InnerIterator it(Aspmat,k); it; ++it) {
       T eVal=it.value();
@@ -210,7 +210,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
       }
     }
   }
-  std::vector<std::vector<PairCV> > LLPairEqua(nbEqua);
+  std::vector<std::vector<PairCV>> LLPairEqua(nbEqua);
   for (int k=0; k<Bspmat.outerSize(); ++k)
     for (typename MySparseMatrix<T>::InnerIterator it(Bspmat,k); it; ++it) {
       T eVal=it.value();

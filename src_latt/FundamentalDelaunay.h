@@ -72,7 +72,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string cons
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim=GramMat.rows();
-  std::vector<MyVector<T> > ListRelevantPoint;
+  std::vector<MyVector<T>> ListRelevantPoint;
   for (int i=0; i<dim; i++) {
     MyVector<T> V1=ZeroVector<T>(dim);
     V1(i)=1;
@@ -242,7 +242,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix
     return CenterRadiusDelaunayPolytopeGeneral(GramMat, VSet);
   };
   T MinRadius=GetCenterRadius(SelectedVertex).SquareRadius;
-  std::vector<MyVector<T> > ListGraverOptions;
+  std::vector<MyVector<T>> ListGraverOptions;
   //  std::cerr << "FindAdjacentDelaunayPolytope, step 4\n";
   for (int i=0; i<dim; i++) {
     MyVector<T> V1=ZeroVector<T>(dim+1);
@@ -305,7 +305,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(MyMatrix<T> const& GramMat, MyMatrix
 
 
 template<typename T>
-std::vector<MyMatrix<T> > CharacterizingPair(MyMatrix<T> const& GramMat, MyVector<T> const& TheCenter)
+std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const& GramMat, MyVector<T> const& TheCenter)
 {
   int n=GramMat.rows();
   MyVector<T> TheCenterRed(n);

@@ -291,7 +291,7 @@ std::ostream& operator<<(std::ostream& os, PolyhedralBalinski const& obj)
 //
 
 template <typename T,typename Tgroup>
-struct invariant_info<PolyhedralEntry<T,Tgroup> > {
+struct invariant_info<PolyhedralEntry<T,Tgroup>> {
   typedef PolyhedralInv<T> invariant_type;
 };
 
@@ -713,7 +713,7 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string> > ListListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["EXTfile"]="unset.ext";
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
@@ -741,7 +741,7 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
   std::map<std::string, bool> ListBoolValues2;
   std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string> > ListListStringValues2;
+  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListIntValues2["NPROC"]=1;
   ListBoolValues2["Saving"]=false;
   ListStringValues2["Prefix"]="/irrelevant/";
@@ -758,7 +758,7 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM()
   std::map<std::string, bool> ListBoolValues3;
   std::map<std::string, double> ListDoubleValues3;
   std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string> > ListListStringValues3;
+  std::map<std::string, std::vector<std::string>> ListListStringValues3;
   ListStringValues3["Prefix"]="./unset/";
   ListBoolValues3["Saving"]=false;
   ListBoolValues3["FullDataInMemory"]=true;

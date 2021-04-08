@@ -119,7 +119,7 @@ MyVector<T> SHORT_GetIneq_Tspace(std::vector<MyMatrix<T>> const& ListMat, MyVect
 
 
 template<typename T, typename Tint>
-ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(std::vector<MyVector<Tint> > const& ListVect, std::vector<MyMatrix<T> > const& ListMat, bool const& NoExtension, std::string const& TheMethod)
+ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(std::vector<MyVector<Tint>> const& ListVect, std::vector<MyMatrix<T>> const& ListMat, bool const& NoExtension, std::string const& TheMethod)
 {
   ReplyRealizability<T,Tint> eRes;
   int n=ListVect[0].size();

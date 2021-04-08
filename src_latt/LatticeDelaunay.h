@@ -130,7 +130,7 @@ WeightMatrix<T, T> GetWeightMatrixFromGramEXT(MyMatrix<T> const& EXT, MyMatrix<T
   int n=GramMat.rows();
   CP<T> eCP=CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
   MyVector<T> TheCenter=eCP.eCent;
-  std::vector<MyMatrix<T> > CharPair=CharacterizingPair(GramMat, TheCenter);
+  std::vector<MyMatrix<T>> CharPair=CharacterizingPair(GramMat, TheCenter);
   MyMatrix<T> Qmat=CharPair[0];
   int nbVect=SHV.rows();
   int nbVert=EXT.rows();
@@ -426,7 +426,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY()
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string> > ListListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["GRAMfile"]="unset.gram";
   ListStringValues1["SVRfile"]="unset.svr";
   ListStringValues1["OUTfile"]="unset.out";
@@ -446,7 +446,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY()
   std::map<std::string, bool> ListBoolValues2;
   std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string> > ListListStringValues2;
+  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListIntValues2["NPROC"]=1;
   ListIntValues2["UpperLimitMethod4"]=10000;
   ListBoolValues2["Saving"]=false;
@@ -470,7 +470,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY()
   std::map<std::string, bool> ListBoolValues3;
   std::map<std::string, double> ListDoubleValues3;
   std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string> > ListListStringValues3;
+  std::map<std::string, std::vector<std::string>> ListListStringValues3;
   ListStringValues3["BankSaveHeuristicFile"]="unset.heu";
   ListStringValues3["Prefix"]="./unset/";
   ListBoolValues3["Saving"]=false;

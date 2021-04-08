@@ -298,7 +298,7 @@ public:
 		     std::function<void(Tbalinski &,T const&,Tinv const&,std::ostream&)> const& eUP,
 		     std::function<EquivTest<Tequiv>(T const&,T const&)> const& fEquiv,
 		     std::ostream& os) :
-  ListPendingCases(std::set<int,std::function<bool(int const&,int const&)> >([&](int const& i, int const&j) -> bool {if (eCompFCT(ListInv[i],ListInv[j]))
+  ListPendingCases(std::set<int,std::function<bool(int const&,int const&)>>([&](int const& i, int const&j) -> bool {if (eCompFCT(ListInv[i],ListInv[j]))
 	return true;
       if (eCompFCT(ListInv[j],ListInv[i]))
 	return false;
@@ -615,7 +615,7 @@ private:
   std::vector<int> ListSta;
   int nbEntry;
   int nbEntryTreated;
-  std::set<int,std::function<bool(int const&,int const&)> > ListPendingCases;
+  std::set<int,std::function<bool(int const&,int const&)>> ListPendingCases;
   std::set<int> ListUnderConsideration;
   bool IsComplete;
   std::function<void(Tbalinski &,T const&,Tinv const&,std::ostream&)> UpgradeBalinskiStat;

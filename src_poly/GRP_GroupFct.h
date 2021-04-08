@@ -348,8 +348,8 @@ template<typename Tgroup>
 void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 				  Face const& eList,
 				  std::vector<int> const& eInv, 
-				  std::vector<Face> &ListSet,
-				  std::vector<std::vector<int> > &ListInv)
+				  std::vector<Face> & ListSet,
+				  std::vector<std::vector<int>> & ListInv)
 {
   int nb=ListSet.size();
   for (int iList=0; iList<nb; iList++)
@@ -580,7 +580,6 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
     }
     ListLocal.push_back({0,testList,eInv});
     Tgroup fStab=SmaGRP.Stabilizer_OnSets(testList);
-    //    os << "SmaGRP.size=" << SmaGRP.size() << " fStab.size=" << fStab.size() << "\n";
     Tint OrbSizeSma=SmaGRP.size() / fStab.size();
     SizeGen += OrbSizeSma;
   };
@@ -607,7 +606,7 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
   if (SizeGen == TotalSize)
     return ListListSet;
   os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
-  std::vector<Face> PartialOrbit=ListListSet;
+  std::vector<Face> PartialOrbit = std::move(ListListSet);
   auto IsPresent=[&](Face const& testList) -> bool {
     for (auto & fList : PartialOrbit)
       if (fList == testList)
@@ -616,9 +615,8 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
   };
   while(true) {
     for (auto & eGen : ListGen) {
-      size_t len=PartialOrbit.size();
-      for (size_t i=0; i<len; i++) {
-	Face eNewList=OnFace(PartialOrbit[i], eGen);
+      for (auto & eOrb : PartialOrbit) {
+	Face eNewList=OnFace(eOrb, eGen);
 	if (!IsPresent(eNewList)) {
 	  PartialOrbit.push_back(eNewList);
 	  DoubleCosetInsertEntry(eNewList);
