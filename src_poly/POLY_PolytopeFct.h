@@ -191,7 +191,7 @@ public:
         T eSum=0;
         for (size_t iCol=0; iCol<nbCol; iCol++)
           eSum += FacetIneq(iCol) * EXT(iRow, iCol);
-        ListInvScal[iRow] = 1 / eSum;
+        ListInvScal[iRow] = - 1 / eSum;
       }
     }
   }
@@ -232,14 +232,8 @@ public:
       eSign = -1;
     // F0 should be zero on the ridge
     MyVector<T> F0(nbCol);
-    F0(idx_drop) = 0;
-    size_t pos=0;
-    for (size_t iCol=0; iCol<nbCol; iCol++) {
-      if (iCol != idx_drop) {
-        F0(iCol) = eSign * NSP(0,pos);
-        pos++;
-      }
-    }
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      F0(iCol) = eSign * NSP(0,iCol);
     // The sought inequality is expressed as F0 + beta FacetIneq
     // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
@@ -250,9 +244,9 @@ public:
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
         T eSum = 0;
-        for (size_t iCol=0; iCol<nbCol; iCol++)
-          eSum += EXT(iRow,iCol) * F0(iCol);
-        T beta = - eSum * ListInvScal[iRow];
+        for (size_t iCol=0; iCol<nbCol-1; iCol++)
+          eSum += EXT_red(iRow,iCol) * F0(iCol);
+        T beta = eSum * ListInvScal[iRow];
         if (!isAssigned || beta > beta_max) {
           for (size_t jRow=0; jRow<iRow; jRow++)
             fret[jRow] = 0;
@@ -269,7 +263,7 @@ public:
     for (size_t iRow=0; iRow<nb; iRow++) {
       int aRow=OneInc_V[jRow];
       fret[aRow] = 1;
-      jRow=sInc.find_next(jRow);
+      jRow = sInc.find_next(jRow);
     }
     // returning the found facet
     return fret;
