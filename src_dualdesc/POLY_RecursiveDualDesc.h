@@ -12,22 +12,13 @@
 #include "POLY_netcdf.h"
 
 
+
 template<typename T, typename Tgroup>
 struct EquivariantDualDescription {
   MyMatrix<T> EXT;
   Tgroup GRP;
   std::vector<Face> ListFace;
 };
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -85,6 +76,8 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
     POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
 }
 
+
+
 template<typename T>
 std::pair<MyMatrix<T>, std::vector<Face>> Read_BankEntry(std::string const& eFile)
 {
@@ -132,6 +125,8 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
   return {std::move(EXTretB), std::move(PairCanonic.second)};
 }
 
+
+
 template<typename T>
 MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 {
@@ -139,7 +134,6 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
   ReorderingSetWeight(WMat);
   return CanonicalizationPolytopePair<T,int>(EXT, WMat).first;
 }
-
 
 
 
@@ -211,12 +205,6 @@ public:
     return MinSize;
   }
 };
-
-
-
-
-
-
 
 
 
@@ -515,6 +503,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
 }
 
 
+
 FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 {
   std::map<std::string, SingleBlock> ListBlock;
@@ -563,11 +552,6 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   // Merging all data
   return {std::move(ListBlock), "undefined"};
 }
-
-
-
-
-
 
 
 
