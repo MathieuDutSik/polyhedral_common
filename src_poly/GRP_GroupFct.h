@@ -663,8 +663,8 @@ public:
   T pop()
   {
     return V[pos-1];
+    pos--;
   }
-  
 };
 
 
