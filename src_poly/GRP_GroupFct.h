@@ -550,10 +550,10 @@ std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 
 
 template<typename Tgroup>
-std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
-					 Tgroup const& SmaGRP,
-					 LocalInvInfo const& LocalInv,
-					 Face const& eList, std::ostream & os)
+std::vector<Face> DoubleCosetDescription_Representation(Tgroup const& BigGRP,
+                                                        Tgroup const& SmaGRP,
+                                                        LocalInvInfo const& LocalInv,
+                                                        Face const& eList, std::ostream & os)
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
@@ -638,6 +638,114 @@ std::vector<Face> DoubleCosetDescription(Tgroup const& BigGRP,
 }
 
 
+template<typename T>
+struct popable_vector {
+private:
+  std::vector<T> V;
+  size_t pos;
+public:
+  popable_vector() : pos(0) {}
+  popable_vector(std::vector<T> const& _V) : V(_V), pos(_V.size()) {}
+  size_t size() const
+  {
+    return pos;
+  }
+  void push_back(T const& val)
+  {
+    if (V.size() == pos) {
+      V.push_back(val);
+      pos++;
+      return;
+    }
+    V[pos] = val;
+    pos++;
+  }
+  T pop()
+  {
+    return V[pos-1];
+  }
+  
+};
+
+
+template<typename Tgroup>
+std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
+                                                 Tgroup const& SmaGRP,
+                                                 Face const& eList, std::ostream & os)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  std::vector<Telt> ListGen=BigGRP.GeneratorsOfGroup();
+  Tgroup TheStab=BigGRP.Stabilizer_OnSets(eList);
+  Tint TotalSize=BigGRP.size() / TheStab.size();
+  //
+  Tint SizeGen=0;
+  auto IncreaseSize=[&](Face const& eList) -> void {
+    Tgroup fStab=SmaGRP.Stabilizer_OnSets(eList);
+    Tint OrbSizeSma=SmaGRP.size() / fStab.size();
+    SizeGen += OrbSizeSma;
+  };
+  std::unordered_set<Face> SetFace;
+  popable_vector<Face> CurrList;
+  auto DoubleCosetInsertEntry_first=[&](Face const& testList) -> void {
+    Face faceCan = SmaGRP.CanonicalImage(testList);
+    if (SetFace.count(faceCan) > 0)
+      return;
+    CurrList.push_back(faceCan);
+    SetFace.insert(faceCan);
+    IncreaseSize(faceCan);
+  };
+  auto DoubleCosetInsertEntry_second=[&](Face const& testList) -> void {
+    Face faceCan = SmaGRP.CanonicalImage(testList);
+    if (SetFace.count(faceCan) > 0)
+      return;
+    SetFace.insert(faceCan);
+    IncreaseSize(faceCan);
+  };
+  DoubleCosetInsertEntry_first(eList);
+  while(true) {
+    if (CurrList.size() == 0)
+      break;
+    Face eFace = CurrList.pop();
+    for (auto const& eGen : ListGen) {
+      Face eNewList=OnFace(eFace, eGen);
+      DoubleCosetInsertEntry_first(eNewList);
+    }
+  }
+  std::vector<Face> ListListSet;
+  for (auto & eFace : SetFace)
+    ListListSet.push_back(eFace);
+  if (SizeGen == TotalSize)
+    return ListListSet;
+  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  std::unordered_set<Face> PartialOrbit = SetFace;
+  popable_vector<Face> ListListSet_pop(ListListSet);
+  while(true) {
+    Face eFace = ListListSet_pop.pop();
+    for (auto & eGen : ListGen) {
+      Face eNewList=OnFace(eFace, eGen);
+      if (PartialOrbit.count(eNewList) == 0) {
+        PartialOrbit.insert(eNewList);
+        ListListSet_pop.push_back(eNewList);
+        DoubleCosetInsertEntry_second(eNewList);
+        if (SizeGen == TotalSize) {
+          std::vector<Face> ListListFin;
+          for (auto & eFace : SetFace)
+            ListListFin.push_back(eFace);
+          return ListListFin;
+        }
+      }
+    }
+  }
+  os << "Likely not reachable stage\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+
 
 template<typename Tgroup>
 std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
@@ -649,7 +757,8 @@ std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& Sm
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
   std::vector<Face> eListSma;
   for (auto & eSet : eListBig) {
-    std::vector<Face> ListListSet=DoubleCosetDescription(BigGRP, SmaGRP, LocalInv, eSet, os);
+    //    std::vector<Face> ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, LocalInv, eSet, os);
+    std::vector<Face> ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
     eListSma.insert(eListSma.end(), ListListSet.begin(), ListListSet.end());
   }
   os << "OrbitSplitting |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
