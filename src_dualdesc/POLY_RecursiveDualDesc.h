@@ -226,7 +226,6 @@ public:
         if (!IsExistingFile(eFileBank))
           break;
         EquivariantDualDescription<T,Tgroup> eTriple = Read_BankEntry<T,Tgroup>(eFileBank);
-        CheckGroupPolytope(eTriple.EXT, eTriple.GRP, "test 1");
         int e_size = eTriple.EXT.rows();
         std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << eTriple.ListFace.size() << "\n";
         ListEnt[eTriple.EXT] = {eTriple.GRP, eTriple.ListFace};
@@ -237,7 +236,6 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, std::vector<Face> const& ListFace)
   {
-    CheckGroupPolytope(EXT, TheGRPrelevant, "test 2");
     if (!BankSymmCheck) {
       std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
       std::vector<Face> ListFaceO;
@@ -245,12 +243,9 @@ public:
       Telt ePerm = ~perm1;
       for (auto & eFace : ListFace) {
         Face eInc = OnFace(eFace, ePerm);
-        std::cerr << "TestFacetness 1\n";
-        TestFacetness(ePair.first, eInc);
         ListFaceO.push_back(eInc);
       }
       Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
-      CheckGroupPolytope(ePair.first, GrpConj, "test 3");
       if (Saving) {
         size_t n_orbit = ListEnt.size();
         std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
@@ -262,7 +257,6 @@ public:
       MinSize = std::min(MinSize, e_size);
     } else {
       TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
-      CheckGroupPolytope(eTriple.EXT, eTriple.GRP, "test 4");
       bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
       std::vector<Face> ListFaceO;
       Telt perm1 = Telt(eTriple.ListIdx);
@@ -270,8 +264,6 @@ public:
       if (!NeedRemapOrbit) {
         for (auto & eFace : ListFace) {
           Face eInc = OnFace(eFace, ePerm);
-          std::cerr << "TestFacetness 2\n";
-          TestFacetness(eTriple.EXT, eInc);
           ListFaceO.push_back(eInc);
         }
       } else {
@@ -282,8 +274,6 @@ public:
           SetFace.insert(eIncCan);
         }
         for (auto & eInc : SetFace) {
-          std::cerr << "TestFacetness 3\n";
-          TestFacetness(eTriple.EXT, eInc);
           ListFaceO.push_back(eInc);
         }
       }
@@ -300,7 +290,6 @@ public:
   }
   std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& GRP) const
   {
-    CheckGroupPolytope(EXT, GRP, "test 5");
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
@@ -316,7 +305,6 @@ public:
     if (GRP.size() == iter->second.GRP.size())
       return ListReprTrans;
     Tgroup GrpConj = iter->second.GRP.GroupConjugate(ePerm);
-    CheckGroupPolytope(EXT, GrpConj, "test 6");
     return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, std::cerr);
   }
   int get_minsize() const
