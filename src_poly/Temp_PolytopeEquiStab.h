@@ -23,7 +23,7 @@ using Tidx_value = int16_t;
 #define USE_PAIRS
 
 
-//#define DEBUG
+#define DEBUG
 //#define TIMINGS
 
 template<typename T>
@@ -2383,6 +2383,24 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+#ifdef DEBUG
+  std::vector<std::vector<Tidx>> LGen = GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow).second;
+  for (auto & eGen : LGen) {
+    for (size_t i=0; i<nbRow; i++) {
+      for (size_t j=0; j<nbRow; j++) {
+        int iImg = eGen[i];
+        int jImg = eGen[j];
+        Tidx pos1 = WMat.GetValue(i, j);
+        Tidx pos2 = WMat.GetValue(iImg, jImg);
+        if (pos1 != pos2) {
+          std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
+          std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+#endif
   return GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
@@ -2484,7 +2502,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
 #endif
 #ifdef DEBUG
-  PrintStabilizerGroupSizes(std::cerr, eGR);
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
   std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
   mpz_class eHash1 = MD5_hash_mpz(eExpr);
   std::cerr << "eHash1=" << eHash1 << "\n";

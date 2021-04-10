@@ -10,7 +10,7 @@
 
 #include "POLY_GAP.h"
 #include "POLY_netcdf.h"
-
+#include "MatrixGroupBasic.h"
 
 
 template<typename T, typename Tgroup>
@@ -108,6 +108,23 @@ void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, Tgroup co
 }
 
 
+
+
+
+template<typename T, typename Tgroup>
+void CheckGroupPolytope(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& step)
+{
+  for (auto & eGen : GRP.GeneratorsOfGroup()) {
+    resultFT<T> eRes = FindTransformationGeneral(EXT, EXT, eGen);
+    if (!eRes.test) {
+      std::cerr << "Error in CheckGroupPolytope at step " << step << "\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+
+
 template<typename T, typename Tgroup>
 struct TripleCanonic {
   MyMatrix<T> EXT;
@@ -147,8 +164,10 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
-  for (int i_row=0; i_row<n_row; i_row++) {
+  std::vector<Tidx> RevMap(n_row);
+  for (Tidx i_row=0; i_row<n_row; i_row++) {
     Tidx j_row=PairCanGrp.first[i_row];
+    RevMap[j_row] = i_row;
     EXTcan.row(i_row) = EXT.row(j_row);
   }
   MyMatrix<T> RowRed = RowReduction(EXTcan);
@@ -156,22 +175,30 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
   MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
   //
   std::vector<Telt> LGen;
+  std::vector<Telt> LGenB;
   for (auto & eGen : PairCanGrp.second) {
     std::vector<Tidx> eList(n_row);
+    std::vector<Tidx> eList_B(n_row);
     for (Tidx i_row=0; i_row<n_row; i_row++) {
-      Tidx j_row = eGen[i_row];
-      Tidx i_row_map = PairCanGrp.first[i_row];
-      Tidx j_row_map = PairCanGrp.first[j_row];
-      eList[i_row_map] = j_row_map;
+      Tidx i_row2 = PairCanGrp.first[i_row];
+      Tidx i_row3 = eGen[i_row2];
+      Tidx i_row4 = RevMap[i_row3];
+      eList[i_row] = i_row4;
+      eList_B[i_row] = eGen[i_row];
     }
     Telt nGen(eList);
+    Telt nGen_B(eList_B);
     LGen.push_back(nGen);
+    LGenB.push_back(nGen_B);
   }
   Tgroup GRP(LGen, n_row);
+  Tgroup GRP_B(LGenB, n_row);
+  CheckGroupPolytope(EXT, GRP_B, "In CanonicalizationPolytopeTriple 1");
+  CheckGroupPolytope(EXTcan, GRP, "In CanonicalizationPolytopeTriple 2");
+  CheckGroupPolytope(EXTretB, GRP, "In CanonicalizationPolytopeTriple 3");
   //
   return {std::move(EXTretB), std::move(GRP), std::move(PairCanGrp.first)};
 }
-
 
 
 template<typename T>
@@ -208,6 +235,7 @@ public:
         if (!IsExistingFile(eFileBank))
           break;
         EquivariantDualDescription<T,Tgroup> eTriple = Read_BankEntry<T,Tgroup>(eFileBank);
+        CheckGroupPolytope(eTriple.EXT, eTriple.GRP, "test 1");
         int e_size = eTriple.EXT.rows();
         std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << eTriple.ListFace.size() << "\n";
         ListEnt[eTriple.EXT] = {eTriple.GRP, eTriple.ListFace};
@@ -218,6 +246,7 @@ public:
   }
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, std::vector<Face> const& ListFace)
   {
+    CheckGroupPolytope(EXT, TheGRPrelevant, "test 2");
     if (!BankSymmCheck) {
       std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
       std::vector<Face> ListFaceO;
@@ -225,9 +254,12 @@ public:
       Telt ePerm = ~perm1;
       for (auto & eFace : ListFace) {
         Face eInc = OnFace(eFace, ePerm);
+        std::cerr << "TestFacetness 1\n";
+        TestFacetness(ePair.first, eInc);
         ListFaceO.push_back(eInc);
       }
       Tgroup GrpConj = TheGRPrelevant.GroupConjugate(perm1);
+      CheckGroupPolytope(ePair.first, GrpConj, "test 3");
       if (Saving) {
         size_t n_orbit = ListEnt.size();
         std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
@@ -239,6 +271,7 @@ public:
       MinSize = std::min(MinSize, e_size);
     } else {
       TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
+      CheckGroupPolytope(eTriple.EXT, eTriple.GRP, "test 4");
       bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
       std::vector<Face> ListFaceO;
       Telt perm1 = Telt(eTriple.ListIdx);
@@ -246,6 +279,8 @@ public:
       if (!NeedRemapOrbit) {
         for (auto & eFace : ListFace) {
           Face eInc = OnFace(eFace, ePerm);
+          std::cerr << "TestFacetness 2\n";
+          TestFacetness(eTriple.EXT, eInc);
           ListFaceO.push_back(eInc);
         }
       } else {
@@ -255,8 +290,11 @@ public:
           Face eIncCan = eTriple.GRP.CanonicalImage(eInc);
           SetFace.insert(eIncCan);
         }
-        for (auto & eInc : SetFace)
+        for (auto & eInc : SetFace) {
+          std::cerr << "TestFacetness 3\n";
+          TestFacetness(eTriple.EXT, eInc);
           ListFaceO.push_back(eInc);
+        }
       }
       if (Saving) {
         size_t n_orbit = ListEnt.size();
@@ -271,6 +309,7 @@ public:
   }
   std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& GRP) const
   {
+    CheckGroupPolytope(EXT, GRP, "test 5");
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
@@ -286,6 +325,7 @@ public:
     if (GRP.size() == iter->second.GRP.size())
       return ListReprTrans;
     Tgroup GrpConj = iter->second.GRP.GroupConjugate(ePerm);
+    CheckGroupPolytope(EXT, GrpConj, "test 6");
     return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, std::cerr);
   }
   int get_minsize() const
