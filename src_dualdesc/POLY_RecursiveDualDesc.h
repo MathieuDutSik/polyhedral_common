@@ -175,27 +175,18 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
   MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
   //
   std::vector<Telt> LGen;
-  std::vector<Telt> LGenB;
   for (auto & eGen : PairCanGrp.second) {
     std::vector<Tidx> eList(n_row);
-    std::vector<Tidx> eList_B(n_row);
     for (Tidx i_row=0; i_row<n_row; i_row++) {
       Tidx i_row2 = PairCanGrp.first[i_row];
       Tidx i_row3 = eGen[i_row2];
       Tidx i_row4 = RevMap[i_row3];
       eList[i_row] = i_row4;
-      eList_B[i_row] = eGen[i_row];
     }
     Telt nGen(eList);
-    Telt nGen_B(eList_B);
     LGen.push_back(nGen);
-    LGenB.push_back(nGen_B);
   }
   Tgroup GRP(LGen, n_row);
-  Tgroup GRP_B(LGenB, n_row);
-  CheckGroupPolytope(EXT, GRP_B, "In CanonicalizationPolytopeTriple 1");
-  CheckGroupPolytope(EXTcan, GRP, "In CanonicalizationPolytopeTriple 2");
-  CheckGroupPolytope(EXTretB, GRP, "In CanonicalizationPolytopeTriple 3");
   //
   return {std::move(EXTretB), std::move(GRP), std::move(PairCanGrp.first)};
 }
@@ -258,7 +249,7 @@ public:
         TestFacetness(ePair.first, eInc);
         ListFaceO.push_back(eInc);
       }
-      Tgroup GrpConj = TheGRPrelevant.GroupConjugate(perm1);
+      Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
       CheckGroupPolytope(ePair.first, GrpConj, "test 3");
       if (Saving) {
         size_t n_orbit = ListEnt.size();

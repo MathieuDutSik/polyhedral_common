@@ -23,7 +23,7 @@ using Tidx_value = int16_t;
 #define USE_PAIRS
 
 
-#define DEBUG
+//#define DEBUG
 //#define TIMINGS
 
 template<typename T>
