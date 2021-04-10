@@ -704,15 +704,12 @@ std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
   };
   DoubleCosetInsertEntry_first(eList);
   while(true) {
-    //    std::cerr << "|CurrList|=" << CurrList.size() << "\n";
     if (CurrList.size() == 0)
       break;
     Face eFace = CurrList.pop();
-    //    std::cerr << "   After pop() : |CurrList|=" << CurrList.size() << "\n";
     for (auto const& eGen : ListGen) {
       Face eNewList=OnFace(eFace, eGen);
       DoubleCosetInsertEntry_first(eNewList);
-      //      std::cerr << "   After DCIE : |CurrList|=" << CurrList.size() << "\n";
     }
   }
   std::vector<Face> ListListSet;

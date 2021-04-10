@@ -2263,6 +2263,8 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 }
 
 
+
+
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
@@ -2281,6 +2283,107 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector(Weight
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return GetCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
+}
+
+
+template<typename Tgr, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
+{
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  unsigned int nof_vertices=eGR.GetNbVert();
+
+#ifdef USE_BLISS
+  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators(eGR);
+#endif
+  //
+#ifdef USE_TRACES
+  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
+#endif
+  //
+  std::vector<std::vector<Tidx>> LGen;
+  for (auto& eListI : ePair.second) {
+    std::vector<Tidx> eListO(nbRow);
+    for (Tidx i=0; i<Tidx(nbRow); i++)
+      eListO[i] = eListI[i];
+    LGen.push_back(eListO);
+  }
+  //
+  std::vector<unsigned int> clR(nof_vertices,-1);
+  for (size_t i=0; i<nof_vertices; i++)
+    clR[ePair.first[i]]=i;
+  //
+  size_t nbVert=nbRow+2;
+  size_t hS = nof_vertices / nbVert;
+#ifdef DEBUG
+  if (hS * nbVert != nof_vertices) {
+    std::cerr << "Error in the number of vertices\n";
+    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<int> MapVectRev(nbVert,-1);
+  std::vector<int> ListStatus(nof_vertices,1);
+  int posCanonic=0;
+  for (size_t iCan=0; iCan<nof_vertices; iCan++) {
+    if (ListStatus[iCan] == 1) {
+      int iNative=clR[iCan];
+      int iVertNative=iNative % nbVert;
+      MapVectRev[posCanonic] = iVertNative;
+      for (size_t iH=0; iH<hS; iH++) {
+	int uVertNative = iVertNative + nbVert * iH;
+	int jCan=ePair.first[uVertNative];
+#ifdef DEBUG
+	if (ListStatus[jCan] == 0) {
+	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
+	  throw TerminalException{1};
+	}
+#endif
+	ListStatus[jCan] = 0;
+      }
+      posCanonic++;
+    }
+  }
+  std::vector<Tidx> MapVectRev2(nbRow,-1);
+  int posCanonicB=0;
+  for (size_t iCan=0; iCan<nbVert; iCan++) {
+    int iNative=MapVectRev[iCan];
+    if (iNative < nbRow) {
+      MapVectRev2[posCanonicB] = iNative;
+      posCanonicB++;
+    }
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return {std::move(MapVectRev2), std::move(LGen)};
+}
+
+
+
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+//
+template<typename T1, typename T2, typename Tgr, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector(WeightMatrix<T1,T2> const& WMat)
+{
+  size_t nbRow=WMat.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  Tgr eGR=GetGraphFromWeightedMatrix<T1,T2,Tgr>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  return GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
 
@@ -2463,7 +2566,6 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
               bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
               bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
               bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
-              //              std::cerr << "ChgSign=" << ChgSign << " ChgSign1=" << ChgSign1 << " ChgSign2=" << ChgSign2 << "\n";
               uint8_t valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
                 valJ = 2;

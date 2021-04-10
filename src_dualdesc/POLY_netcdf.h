@@ -296,6 +296,7 @@ template<typename Tgroup>
 Tgroup POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   netCDF::NcVar varGEN = dataFile.getVar("ListGenerator");
   if (varGEN.isNull()) {
     std::cerr << "The variable ListGenerator is missing\n";
@@ -318,7 +319,7 @@ Tgroup POLY_NC_ReadGroup(netCDF::NcFile & dataFile)
   varGEN.getVar(V1.data());
   int idx=0;
   for (int i_gen=0; i_gen<n_gen; i_gen++) {
-    std::vector<int> eList(n_act);
+    std::vector<Tidx> eList(n_act);
     for (int i_act=0; i_act<n_act; i_act++) {
       eList[i_act] = V1[idx];
       idx++;
