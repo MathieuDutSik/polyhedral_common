@@ -237,6 +237,7 @@ public:
   void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, std::vector<Face> const& ListFace)
   {
     if (!BankSymmCheck) {
+      // The computation was already done for the full symmetry group. Only canonic form is needed.
       std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
       std::vector<Face> ListFaceO;
       Telt perm1 = Telt(ePair.second);
@@ -262,11 +263,13 @@ public:
       Telt perm1 = Telt(eTriple.ListIdx);
       Telt ePerm = ~perm1;
       if (!NeedRemapOrbit) {
+        // We needed to compute the full group, but it turned out to be the same as the input group.
         for (auto & eFace : ListFace) {
           Face eInc = OnFace(eFace, ePerm);
           ListFaceO.push_back(eInc);
         }
       } else {
+        // The full group is bigger than the input group. So we need to reduce.
         std::unordered_set<Face> SetFace;
         for (auto & eFace : ListFace) {
           Face eInc = OnFace(eFace, ePerm);
@@ -542,6 +545,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
     ListOrbitFaces = DirectFacetOrbitComputation(EXT, GRP, ansProg, std::cerr);
     BankSymmCheck = true;
+    ansSymm = "no";
   } else {
     ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     std::cerr << "ansSymm=" << ansSymm << "\n";
