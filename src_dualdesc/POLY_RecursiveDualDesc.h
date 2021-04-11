@@ -554,10 +554,11 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       BankSymmCheck = true;
     }
     Tint GroupSizeComp = TheGRPrelevant.size();
+    std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << (eRank-1) << " |EXT|=" << nbRow << "\n";
     TheMap["groupsizerelevant"] = GroupSizeComp;
     std::string eFile = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank) + ".nc";
     bool SavingTrigger=AllArr.Saving;
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, GRP, eFile, SavingTrigger);
+    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, eFile, SavingTrigger);
     int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
