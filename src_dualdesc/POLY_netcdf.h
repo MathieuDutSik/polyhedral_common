@@ -486,7 +486,7 @@ PairVface_OrbSize<Tint> POLY_NC_ReadVface_OrbSize(netCDF::NcFile & dataFile, siz
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,n_grpsize};
     std::vector<uint8_t> Vsize(n_grpsize);
-    varORB_SIZE.putVar(start_size, count_size, Vsize.data());
+    varORB_SIZE.getVar(start_size, count_size, Vsize.data());
     //
     return {Vface, GetTint_from_VectorUint8_t<Tint>(Vsize)};
   } else {

@@ -11,6 +11,19 @@
 #include "POLY_GAP.h"
 #include "POLY_netcdf.h"
 #include "MatrixGroupBasic.h"
+#include <signal.h>
+
+
+std::atomic<bool> ExitEvent;
+
+void signal_callback_handler(int signum) {
+  std::cout << "Caught signal " << signum << "\n";
+  std::cout << "We are going to exit hopefully\n";
+  ExitEvent = true;
+}
+
+
+
 
 
 template<typename T, typename Tgroup>
@@ -370,12 +383,14 @@ public:
     if (SavingTrigger) {
       std::cerr << "eFile=" << eFile << "\n";
       if (IsExistingFile(eFile)) {
+        std::cerr << "Opening existing file\n";
         dataFile.open(eFile, netCDF::NcFile::write);
       } else {
         if (!FILE_IsFileMakeable(eFile)) {
           std::cerr << "Error in DatabaseOrbits: File eFile=" << eFile << " is not makeable\n";
           throw TerminalException{1};
         }
+        std::cerr << "Creating the file\n";
         dataFile.open(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = true;
@@ -391,6 +406,7 @@ public:
         SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
         InsertEntryDatabase(eEnt.face, eEnt.status, eEnt.OrbSize, i_orbit);
       }
+      std::cerr << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
     }
   }
   ~DatabaseOrbits()
@@ -495,6 +511,10 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
 	 std::string const& ePrefix,
 	 int const& TheLevel)
 {
+  if (ExitEvent) {
+    std::cerr << "Terminating the program by Ctrl-C\n";
+    throw TerminalException{1};
+  }
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int eRank=EXT.cols();
@@ -674,6 +694,10 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 template<typename T, typename Tgroup>
 void MainFunctionSerialDualDesc(FullNamelist const& eFull)
 {
+  // Setting up the Control C event.
+  ExitEvent = false;
+  signal(SIGINT, signal_callback_handler);
+  //
   using Tint=typename Tgroup::Tint;
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
   bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
