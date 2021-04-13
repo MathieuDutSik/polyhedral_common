@@ -1036,7 +1036,7 @@ MyVector<int> CyclicCanonicalization_SymN(MyVector<int> const& fCand, int const&
     RetCand.push_back(cVal);
   }
   int len=fCand.size();
-  std::vector<int> eList = SortingPerm(RetCand);
+  std::vector<int> eList = SortingPerm<int,int>(RetCand);
   MyVector<int> nCand(len);
   for (int i=0; i<len; i++) {
     int j=eList[i];
@@ -1080,7 +1080,7 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const& n, i
       RetCand.push_back(nVal);
     }
     int len=fCand.size();
-    std::vector<int> eList = SortingPerm(RetCand);
+    std::vector<int> eList = SortingPerm<int,int>(RetCand);
     std::vector<int> nCand(len);
     for (int i=0; i<len; i++) {
       int j=eList[i];
