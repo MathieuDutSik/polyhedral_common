@@ -174,9 +174,10 @@ RUN cd GIT/polyhedral_common/src_linbox && make
 RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_poly && make -f Makefile_double_cddlib
-RUN cd GIT/polyhedral_common/src_copos && make
-RUN cd GIT/polyhedral_common/src_short && make
-RUN cd GIT/polyhedral_common/src_perfect && make
+#RUN cd GIT/polyhedral_common/src_copos && make
+#RUN cd GIT/polyhedral_common/src_short && make
+#RUN cd GIT/polyhedral_common/src_perfect && make
+RUN apt-get install -y openmpi-bin
 RUN cd GIT/polyhedral_common/src_ctype_mpi && make
 RUN cd GIT/polyhedral_common/src_dualdesc && make
 
