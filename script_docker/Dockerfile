@@ -5,6 +5,8 @@
 #    Do NOT rename the file.
 # ---Compile the dockerfile with the command
 #    docker build -t standard_working_environment:build-env .
+# ---For building with no-cache option, use
+#    docker build --no-cache -t standard_working_environment:build-env .
 # ---Run the docker and access a bash by doing
 #    docker run -i -t standard_working_environment:build-env /bin/bash
 #
@@ -53,6 +55,11 @@ RUN cd /opt && git clone https://github.com/MathieuDutSik/permlib_mod
 ENV PERMLIB_INCDIR /opt/permlib_mod/include
 
 
+# downloading permutalib
+RUN cd /opt && git clone https://github.com/MathieuDutSik/permutalib
+ENV PERMUTALIB_INCLUDE "-I/opt/permutalib/src_gap"
+
+
 # Threading Building Blocks
 RUN apt-get install -y libtbb-dev
 ENV TBB_INCDIR=/usr/include
@@ -85,7 +92,29 @@ RUN git clone https://github.com/cddlib/cddlib
 RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
 ENV CDDLIB_PATH /opt/cddlib
 ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
-ENV CDDLIB_LINK "-L$CDDLIB_PATH/lib  -lcdd -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+
+
+# Downloading hdf5 and compiling it
+RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
+RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
+
+
+# downloading netcdf functionality and compiling it
+RUN apt-get install -y libcurl4-gnutls-dev
+RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-c-4.8.0.tar.gz
+RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.5.3.tar.gz
+RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx4-4.3.1.tar.gz
+RUN tar -vxzf netcdf-c-4.8.0.tar.gz && cd netcdf-c-4.8.0 && export LDFLAGS="-L/opt/hdf5-1.12.0/lib -lhdf5_hl -lhdf5 -Wl,-rpath,/opt/hdf5-1.12.0/lib" && export CPPFLAGS="-I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-4.8.0 && make && make install
+RUN tar -vxzf netcdf-fortran-4.5.3.tar.gz && cd netcdf-fortran-4.5.3 && export LDFLAGS="-L/opt/netcdf-4.8.0/lib -lnetcdf -Wl,-rpath,/opt/netcdf-4.8.0/lib" && export CPPFLAGS="-I/opt/netcdf-4.8.0/include -I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-fortran-4.5.3 && make && make install
+RUN tar -vxzf netcdf-cxx4-4.3.1.tar.gz && cd netcdf-cxx4-4.3.1 && export LDFLAGS="-L/opt/netcdf-4.8.0/lib -lnetcdf -Wl,-rpath,/opt/netcdf-4.8.0/lib" && export CPPFLAGS="-I/opt/netcdf-4.8.0/include -I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-cxx4-4.3.1 && make && make install
+ENV NETCDF_CXX_PATH /opt/netcdf-cxx4-4.3.1
+ENV NETCDF_C_PATH /opt/netcdf-4.8.0
+ENV NETCDF_CXX_ALLINC "-I$NETCDF_CXX_PATH/include -I$NETCDF_C_PATH/include"
+ENV NETCDF_CXX_LINK "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX_PATH/lib"
+
+
 
 
 # LINBOX
@@ -147,6 +176,7 @@ RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
 RUN cd GIT/polyhedral_common/src_perfect && make
-# RUN cd GIT/polyhedral_common/src_ctype_mpi && make
+RUN cd GIT/polyhedral_common/src_ctype_mpi && make
+RUN cd GIT/polyhedral_common/src_dualdesc && make
 
 
