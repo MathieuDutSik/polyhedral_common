@@ -13,7 +13,6 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_LinearProgram \
-		  POLY_GapFindHyperplaneRegions \
                   GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting \
                   GRP_VectorSplitting \

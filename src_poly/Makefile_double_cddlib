@@ -1,5 +1,5 @@
 #PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
-PROGRAM		= POLY_redundancyClarksonCddlib
+PROGRAM		= POLY_redundancyClarksonCddlib POLY_GapFindHyperplaneRegions
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -21,7 +21,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -DEIGEN_NO_DEBUG $(CDDLIB_INCLUDE)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(CDDLIB_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(CDDLIB_DOUBLE_LINK)
 
 %.o: %.cpp
 	@echo
