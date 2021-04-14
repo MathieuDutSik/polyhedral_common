@@ -1,7 +1,10 @@
 PROGRAM		= ComputePerfect \
 		  InitialQuadPerfectMatrix
 
-OBJECTS		= $(PROGRAM:%=%.o)
+
+SRCFILES	= POLY_c_cddlib_mpq.cpp
+OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
+LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= icpc -std=c++11 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++11
@@ -33,7 +36,7 @@ all:	$(PROGRAM)
 $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
-		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+		$(CC) $(LINKOBJECTS) $(DEBUGFLAG) $@.o $(LIBS) -o $@
 
 clean:;
 	rm -f *.o
