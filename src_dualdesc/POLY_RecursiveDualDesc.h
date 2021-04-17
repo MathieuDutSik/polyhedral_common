@@ -14,6 +14,42 @@
 #include <signal.h>
 
 
+//#define UNORDERED_MAP
+#define TSL_SPARSE_MAP
+//#define TSL_ROBIN_MAP
+//#define TSL_HOPSCOTCH_MAP
+
+#ifdef UNORDERED_MAP
+# include <unordered_map>
+# include <unordered_set>
+# define UNORD_MAP std::unordered_map
+# define UNORD_SET std::unordered_set
+#endif
+
+#ifdef TSL_SPARSE_MAP
+# include "sparse_map.h"
+# include "sparse_set.h"
+# define UNORD_MAP tsl::sparse_map
+# define UNORD_SET tsl::sparse_set
+#endif
+
+#ifdef TSL_ROBIN_MAP
+# include "robin_map.h"
+# include "robin_set.h"
+# define UNORD_MAP tsl::robin_map
+# define UNORD_SET tsl::robin_set
+#endif
+
+#ifdef TSL_HOPSCOTCH_MAP
+# include "hopscotch_map.h"
+# include "hopscotch_set.h"
+# define UNORD_MAP tsl::hopscotch_map
+# define UNORD_SET tsl::hopscotch_set
+#endif
+
+
+
+
 std::atomic<bool> ExitEvent;
 
 void signal_callback_handler(int signum) {
@@ -225,7 +261,7 @@ private:
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int MinSize;
-  std::unordered_map<MyMatrix<T>, PairStore> ListEnt;
+  UNORD_MAP<MyMatrix<T>, PairStore> ListEnt;
   bool Saving;
   std::string SavingPrefix;
 public:
@@ -283,7 +319,7 @@ public:
         }
       } else {
         // The full group is bigger than the input group. So we need to reduce.
-        std::unordered_set<Face> SetFace;
+        UNORD_SET<Face> SetFace;
         for (auto & eFace : ListFace) {
           Face eInc = OnFace(eFace, ePerm);
           Face eIncCan = eTriple.GRP.CanonicalImage(eInc);
@@ -345,8 +381,8 @@ private:
     size_t pos;
     Tint orbSize;
   };
-  std::unordered_map<Face, SingEnt> DictOrbit;
-  std::map<size_t, std::unordered_set<Face>> CompleteList_SetUndone;
+  UNORD_MAP<Face, SingEnt> DictOrbit;
+  std::map<size_t, UNORD_SET<Face>> CompleteList_SetUndone;
   std::vector<Face> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
