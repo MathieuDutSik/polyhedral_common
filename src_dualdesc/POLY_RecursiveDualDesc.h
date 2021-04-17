@@ -367,6 +367,7 @@ public:
 
 
 
+
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
@@ -378,12 +379,12 @@ private:
   netCDF::NcFile dataFile;
   bool SavingTrigger;
   struct SingEnt {
-    size_t pos;
+    Face face;
     Tint orbSize;
   };
-  UNORD_MAP<Face, SingEnt> DictOrbit;
+  UNORD_SET<Face> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
-  std::vector<Face> ListOrbit;
+  std::vector<SingEnt> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -393,13 +394,12 @@ private:
 public:
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
-    //    std::cerr << "status=" << status << " orbSize=" << orbSize << " pos=" << pos << "\n";
-    DictOrbit[face] = {pos, orbSize};
+    DictOrbit.insert(face);
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
     }
-    ListOrbit.push_back(face);
+    ListOrbit.push_back({face,orbSize});
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -465,16 +465,15 @@ public:
   }
   void FuncPutOrbitAsDone(size_t const& iOrb)
   {
-    Face face = ListOrbit[iOrb];
-    Tint orbSize = DictOrbit[face].orbSize;
+    const SingEnt & eEnt = ListOrbit[iOrb];
     if (SavingTrigger) {
       POLY_NC_SetBit(dataFile, iOrb, true);
     }
-    size_t len = face.count();
+    size_t len = eEnt.face.count();
     std::vector<size_t> & V = CompleteList_SetUndone[len];
-    auto it = std::remove(V.begin(), V.end(), iOrb);
-    V.erase(it);
-    nbUndone -= orbSize;
+    V[0] = V[V.size()-1];
+    V.pop_back();
+    nbUndone -= eEnt.orbSize;
     nbOrbitDone++;
   }
   Face ComputeIntersectionUndone() const
@@ -485,7 +484,7 @@ public:
       eSetReturn[i_row] = 1;
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & pos : eEnt.second) {
-        Face eFace = ListOrbit[pos];
+        const Face & eFace = ListOrbit[pos].face;
         eSetReturn &= OrbitIntersection(GRP, eFace);
         if (eSetReturn.count() == 0)
           return eSetReturn;
@@ -498,7 +497,12 @@ public:
     if (SavingTrigger) {
       RemoveFile(eFile);
     }
-    return ListOrbit;
+    DictOrbit.clear();
+    CompleteList_SetUndone.clear();
+    std::vector<Face> retListOrbit;
+    for (auto & eEnt : ListOrbit)
+      retListOrbit.push_back(eEnt.face);
+    return retListOrbit;
   }
   Tint FuncNumber() const
   {
@@ -521,8 +525,8 @@ public:
     for (auto & eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
-        size_t pos = eEnt.second[len-1];
-        Face face = ListOrbit[pos];
+        size_t pos = eEnt.second[0];
+        Face face = ListOrbit[pos].face;
         return {pos, face};
       }
     }
