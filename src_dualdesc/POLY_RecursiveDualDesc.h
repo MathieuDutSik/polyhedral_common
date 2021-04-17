@@ -382,7 +382,7 @@ private:
     Tint orbSize;
   };
   UNORD_MAP<Face, SingEnt> DictOrbit;
-  std::map<size_t, UNORD_SET<Face>> CompleteList_SetUndone;
+  std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
   std::vector<Face> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
@@ -397,7 +397,7 @@ public:
     DictOrbit[face] = {pos, orbSize};
     if (!status) {
       size_t len = face.count();
-      CompleteList_SetUndone[len].insert(face);
+      CompleteList_SetUndone[len].push_back(pos);
     }
     ListOrbit.push_back(face);
     TotalNumber += orbSize;
@@ -471,7 +471,9 @@ public:
       POLY_NC_SetBit(dataFile, iOrb, true);
     }
     size_t len = face.count();
-    CompleteList_SetUndone[len].erase(face);
+    std::vector<size_t> & V = CompleteList_SetUndone[len];
+    auto it = std::remove(V.begin(), V.end(), iOrb);
+    V.erase(it);
     nbUndone -= orbSize;
     nbOrbitDone++;
   }
@@ -482,7 +484,8 @@ public:
     for (size_t i_row=0; i_row<n_row; i_row++)
       eSetReturn[i_row] = 1;
     for (auto & eEnt : CompleteList_SetUndone) {
-      for (auto & eFace : eEnt.second) {
+      for (auto & pos : eEnt.second) {
+        Face eFace = ListOrbit[pos];
         eSetReturn &= OrbitIntersection(GRP, eFace);
         if (eSetReturn.count() == 0)
           return eSetReturn;
@@ -516,10 +519,11 @@ public:
   std::pair<size_t,Face> FuncGetMinimalUndoneOrbit()
   {
     for (auto & eEnt : CompleteList_SetUndone) {
-      if (eEnt.second.size() > 0) {
-        auto iter = eEnt.second.begin();
-        Face face = *iter;
-        return {DictOrbit[face].pos, face};
+      size_t len = eEnt.second.size();
+      if (len > 0) {
+        size_t pos = eEnt.second[len-1];
+        Face face = ListOrbit[pos];
+        return {pos, face};
       }
     }
     return {-1,{}};
