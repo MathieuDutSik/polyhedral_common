@@ -165,8 +165,8 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make al
 RUN apt-get install -y libmpfr-dev
 ENV MPFR_INCDIR /usr/include
 ENV MPFR_LINK "-lmpfr"
-ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.2"
-RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.2 /opt/mpfrc++-3.6.2
+ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.8"
+RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.8 /opt/mpfrc++-3.6.8
 
 
 # Compiling polyhedral functionality
