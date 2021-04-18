@@ -371,16 +371,18 @@ public:
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
-  using Telt = typename Tgroup::Telt;
+  using Torbsize=uint16_t;
   MyMatrix<T> EXT;
   Tgroup GRP;
   Tint groupOrder;
   std::string eFile;
   netCDF::NcFile dataFile;
   bool SavingTrigger;
+  UNORD_MAP<Tint,Torbsize> OrbSize_Map;
+  std::vector<Tint> OrbSize_List;
   struct SingEnt {
     Face face;
-    Tint orbSize;
+    Torbsize idx_orb;
   };
   UNORD_SET<Face> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
@@ -392,6 +394,15 @@ private:
   size_t n_grpsize;
 
 public:
+  uint16_t GetOrbSizeIndex(Tint const& orbSize)
+  {
+    Torbsize & idx = OrbSize_Map[orbSize];
+    if (idx == 0) {
+      OrbSize_List.push_back(orbSize);
+      idx = OrbSize_List.size();
+    }
+    return idx-1;
+  }
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
     DictOrbit.insert(face);
@@ -399,7 +410,8 @@ public:
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
     }
-    ListOrbit.push_back({face,orbSize});
+    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
+    ListOrbit.push_back({face,idx_orb});
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -414,7 +426,6 @@ public:
     nbOrbitDone = 0;
     nbUndone = 0;
     nbOrbit = 0;
-    std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     groupOrder = GRP.size();
     if (SavingTrigger) {
       std::cerr << "eFile=" << eFile << "\n";
@@ -473,7 +484,7 @@ public:
     std::vector<size_t> & V = CompleteList_SetUndone[len];
     V[0] = V[V.size()-1];
     V.pop_back();
-    nbUndone -= eEnt.orbSize;
+    nbUndone -= OrbSize_List[eEnt.idx_orb];
     nbOrbitDone++;
   }
   Face ComputeIntersectionUndone() const
