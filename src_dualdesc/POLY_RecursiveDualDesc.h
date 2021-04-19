@@ -365,19 +365,23 @@ public:
   }
 };
 
-
+static constexpr uint8_t kBitmask[] = {1, 2, 4, 8, 16, 32, 64, 128};
 
 
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
   using Torbsize=uint16_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
   MyMatrix<T> EXT;
   Tgroup GRP;
   Tint groupOrder;
   std::string eFile;
   netCDF::NcFile dataFile;
   bool SavingTrigger;
+  /* TRICK2: We keep the list of orbit and the map. We could in principle have built the map
+     from the start since we know the occurring orders. However, since some orbitsize never occur
+     this would have populated it with entries that never occur and so slow it down. */
   UNORD_MAP<Tint,Torbsize> OrbSize_Map;
   std::vector<Tint> OrbSize_List;
   struct SingEnt {
@@ -386,22 +390,90 @@ private:
   };
   UNORD_SET<Face> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
-  std::vector<SingEnt> ListOrbit;
+  /* TRICK3: Encoding the pair of face and idx_orb as bits allow us to save memory */
+  std::vector<uint8_t> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
   size_t nbOrbit;
   size_t n_grpsize;
-
+  /* TRICK3: Knowing the factorization of the order of the group allow us to know exactly
+     what are the possible orbitsize occurring and so the number of bits needed to encode them */
+  size_t n_bit_orbsize;
 public:
+  size_t get_matching_power(size_t const& val)
+  {
+    size_t pow = 1;
+    size_t pos = 0;
+    while(true) {
+      if (pow >= val) {
+        return pos;
+      }
+      pow *= 2;
+      pos++;
+    }
+  }
+  SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
+  {
+    //    std::cerr << "Begin of RetrieveListOrbitEntry\n";
+    size_t n_act = GRP.n_act();
+    size_t delta = n_bit_orbsize + n_act;
+    size_t i_acc = delta * i_orb;
+    Face f(n_act);
+    for (size_t i=0; i<n_act; i++) {
+      bool val = (ListOrbit[i_acc / 8] >> (i_acc & 0x07)) & 1;
+      f[i] = val;
+      i_acc++;
+    }
+    Torbsize idx_orb=0;
+    Torbsize pow = 1;
+    for (size_t i=0; i<n_bit_orbsize; i++) {
+      bool val = (ListOrbit[i_acc / 8] >> (i_acc & 0x07)) & 1;
+      idx_orb += Torbsize(val) * pow;
+      i_acc++;
+      pow *= 2;
+    }
+    //    std::cerr << "End of RetrieveListOrbitEntry |f|=" << f.size() << " sum(f)=" << f.count() << "\n";
+    return {f,idx_orb};
+  }
+  void InsertListOrbitEntry(SingEnt const& eEnt)
+  {
+    //    std::cerr << "Begin of InsertListOrbitEntry |f|=" << eEnt.face.size() << " sum(f)=" << eEnt.face.count() << "\n";
+    size_t n_act = GRP.n_act();
+    size_t curr_len = ListOrbit.size();
+    size_t delta = n_bit_orbsize + n_act;
+    //    std::cerr << "  delta=" << delta << "\n";
+    size_t needed_bits = (nbOrbit + 1) * delta;
+    size_t needed_len = (needed_bits + 7) / 8;
+    //    std::cerr << "  curr_len=" << curr_len << " needed_len=" << needed_len << "\n";
+    for (size_t i=curr_len; i<needed_len; i++)
+      ListOrbit.push_back(0);
+    // Now setting up the bits,
+    size_t i_acc = nbOrbit * delta;
+    for (size_t i=0; i<n_act; i++) {
+      bool val = eEnt.face[i];
+      ListOrbit[i_acc / 8] ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ ListOrbit[i_acc / 8]) & kBitmask[i_acc % 8];
+      i_acc++;
+    }
+    size_t work_idx = eEnt.idx_orb;
+    for (size_t i=0; i<n_bit_orbsize; i++) {
+      bool val = work_idx % 2;
+      ListOrbit[i_acc / 8] ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ ListOrbit[i_acc / 8]) & kBitmask[i_acc % 8];
+      i_acc++;
+      work_idx = work_idx / 2;
+    }
+    //    std::cerr << "End of InsertListOrbitEntry\n";
+  }
   uint16_t GetOrbSizeIndex(Tint const& orbSize)
   {
+    /* TRICK4: value 0 is the default constructed one and so using it we can find if the entry is new or not
+       in only one call */
     Torbsize & idx = OrbSize_Map[orbSize];
     if (idx == 0) {
       OrbSize_List.push_back(orbSize);
       idx = OrbSize_List.size();
     }
-    return idx-1;
+    return idx - 1;
   }
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
@@ -411,7 +483,7 @@ public:
       CompleteList_SetUndone[len].push_back(pos);
     }
     Torbsize idx_orb = GetOrbSizeIndex(orbSize);
-    ListOrbit.push_back({face,idx_orb});
+    InsertListOrbitEntry({face,idx_orb});
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -427,6 +499,17 @@ public:
     nbUndone = 0;
     nbOrbit = 0;
     groupOrder = GRP.size();
+    //    std::cerr << "groupOrder=" << groupOrder << "\n";
+    std::unordered_map<Tidx, int> LFact = GRP.factor_size();
+    size_t n_factor = 1;
+    for (auto & kv : LFact) {
+      //      std::cerr << "fact=" << int(kv.first) << " mult=" << kv.second << "\n";
+      n_factor *= (1 + kv.second);
+    }
+    //    std::cerr << "n_factor=" << n_factor << "\n";
+    /* TRICK4: We need to add 1 because of shift by 1 in the OrbSize_Map */
+    n_bit_orbsize = get_matching_power(n_factor + 1);
+    //    std::cerr << "n_bit_orbsize=" << n_bit_orbsize << "\n";
     if (SavingTrigger) {
       std::cerr << "eFile=" << eFile << "\n";
       if (IsExistingFile(eFile)) {
@@ -458,6 +541,7 @@ public:
   }
   ~DatabaseOrbits()
   {
+    // TRICK5: The destructor does NOT destroy the database! This is because it can be used in another call.
   }
   void FuncInsert(Face const& face)
   {
@@ -476,11 +560,12 @@ public:
   }
   void FuncPutOrbitAsDone(size_t const& iOrb)
   {
-    const SingEnt & eEnt = ListOrbit[iOrb];
+    const SingEnt & eEnt = RetrieveListOrbitEntry(iOrb);
     if (SavingTrigger) {
       POLY_NC_SetBit(dataFile, iOrb, true);
     }
     size_t len = eEnt.face.count();
+    /* TRICK1: We copy the last element in first position to erase it and then pop_back the vector */
     std::vector<size_t> & V = CompleteList_SetUndone[len];
     V[0] = V[V.size()-1];
     V.pop_back();
@@ -495,7 +580,7 @@ public:
       eSetReturn[i_row] = 1;
     for (auto & eEnt : CompleteList_SetUndone) {
       for (auto & pos : eEnt.second) {
-        const Face & eFace = ListOrbit[pos].face;
+        const Face & eFace = RetrieveListOrbitEntry(pos).face;
         eSetReturn &= OrbitIntersection(GRP, eFace);
         if (eSetReturn.count() == 0)
           return eSetReturn;
@@ -511,8 +596,10 @@ public:
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
     std::vector<Face> retListOrbit;
-    for (auto & eEnt : ListOrbit)
-      retListOrbit.push_back(eEnt.face);
+    for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+      Face f = RetrieveListOrbitEntry(i_orbit).face;
+      retListOrbit.push_back(f);
+    }
     return retListOrbit;
   }
   Tint FuncNumber() const
@@ -536,9 +623,12 @@ public:
     for (auto & eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
+        /* TRICK1: Take the first element in the vector. This first element will remain
+           in place but the vector will be extended. */
         size_t pos = eEnt.second[0];
-        Face face = ListOrbit[pos].face;
-        return {pos, face};
+        Face f = RetrieveListOrbitEntry(pos).face;
+        //        std::cerr << "Returning FuncGetMinimalUndoneOrbit pos=" << pos << " len=" << len << " eEnt.first=" << eEnt.first << "\n";
+        return {pos, f};
       }
     }
     return {-1,{}};
