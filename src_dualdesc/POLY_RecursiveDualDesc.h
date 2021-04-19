@@ -415,7 +415,6 @@ public:
   }
   SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
   {
-    //    std::cerr << "Begin of RetrieveListOrbitEntry\n";
     size_t n_act = GRP.n_act();
     size_t delta = n_bit_orbsize + n_act;
     size_t i_acc = delta * i_orb;
@@ -433,19 +432,15 @@ public:
       i_acc++;
       pow *= 2;
     }
-    //    std::cerr << "End of RetrieveListOrbitEntry |f|=" << f.size() << " sum(f)=" << f.count() << "\n";
     return {f,idx_orb};
   }
   void InsertListOrbitEntry(SingEnt const& eEnt)
   {
-    //    std::cerr << "Begin of InsertListOrbitEntry |f|=" << eEnt.face.size() << " sum(f)=" << eEnt.face.count() << "\n";
     size_t n_act = GRP.n_act();
     size_t curr_len = ListOrbit.size();
     size_t delta = n_bit_orbsize + n_act;
-    //    std::cerr << "  delta=" << delta << "\n";
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
-    //    std::cerr << "  curr_len=" << curr_len << " needed_len=" << needed_len << "\n";
     for (size_t i=curr_len; i<needed_len; i++)
       ListOrbit.push_back(0);
     // Now setting up the bits,
@@ -462,7 +457,6 @@ public:
       i_acc++;
       work_idx = work_idx / 2;
     }
-    //    std::cerr << "End of InsertListOrbitEntry\n";
   }
   uint16_t GetOrbSizeIndex(Tint const& orbSize)
   {
@@ -499,17 +493,13 @@ public:
     nbUndone = 0;
     nbOrbit = 0;
     groupOrder = GRP.size();
-    //    std::cerr << "groupOrder=" << groupOrder << "\n";
     std::unordered_map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
     for (auto & kv : LFact) {
-      //      std::cerr << "fact=" << int(kv.first) << " mult=" << kv.second << "\n";
       n_factor *= (1 + kv.second);
     }
-    //    std::cerr << "n_factor=" << n_factor << "\n";
     /* TRICK4: We need to add 1 because of shift by 1 in the OrbSize_Map */
     n_bit_orbsize = get_matching_power(n_factor + 1);
-    //    std::cerr << "n_bit_orbsize=" << n_bit_orbsize << "\n";
     if (SavingTrigger) {
       std::cerr << "eFile=" << eFile << "\n";
       if (IsExistingFile(eFile)) {
@@ -627,7 +617,6 @@ public:
            in place but the vector will be extended. */
         size_t pos = eEnt.second[0];
         Face f = RetrieveListOrbitEntry(pos).face;
-        //        std::cerr << "Returning FuncGetMinimalUndoneOrbit pos=" << pos << " len=" << len << " eEnt.first=" << eEnt.first << "\n";
         return {pos, f};
       }
     }
