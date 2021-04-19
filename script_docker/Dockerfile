@@ -133,7 +133,7 @@ ENV LINBOX_LINK "-fopenmp -lntl -lmpfr -lflint -L$LINBOX_PATH/lib -lopenblas -lp
 
 # cloning polyhedral code
 RUN mkdir -p GIT
-RUN cd GIT &&  git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
+RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
 
 
 # libshort
@@ -171,7 +171,6 @@ RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.8 /opt/mpfrc++-3.6.8
 
 # Compiling polyhedral functionality
 RUN apt-get install -y openmpi-bin
-RUN cd GIT/polyhedral_common/src_linbox && make
 RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_poly && make -f Makefile_double_cddlib
