@@ -546,6 +546,8 @@ public:
         bool val2 = getbit(ListOrbit, pos2);
         if (val1 != val2)
           return false;
+        pos1++;
+        pos2++;
       }
       return true;
     };
@@ -592,9 +594,9 @@ public:
   {
     Face face_can = GRP.CanonicalImage(face);
     InsertListOrbitFace(face_can);
-    if (DictOrbit.count(nbOrbit) == 1)
-      return;
     DictOrbit.insert(nbOrbit);
+    if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
+      return;
     // Setting up the orbSize
     Tint ordStab = GRP.Stabilizer_OnSets(face).size();
     Tint orbSize = groupOrder / ordStab;
