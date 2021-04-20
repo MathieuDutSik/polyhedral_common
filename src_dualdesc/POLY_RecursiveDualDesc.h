@@ -365,8 +365,6 @@ public:
   }
 };
 
-static constexpr uint8_t kBitmask[] = {1, 2, 4, 8, 16, 32, 64, 128};
-
 
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
@@ -388,7 +386,7 @@ private:
     Face face;
     Torbsize idx_orb;
   };
-  UNORD_SET<Face> DictOrbit;
+  UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
   /* TRICK3: Encoding the pair of face and idx_orb as bits allow us to save memory */
   std::vector<uint8_t> ListOrbit;
@@ -400,6 +398,10 @@ private:
   /* TRICK3: Knowing the factorization of the order of the group allow us to know exactly
      what are the possible orbitsize occurring and so the number of bits needed to encode them */
   size_t n_bit_orbsize;
+  size_t n_act;
+  size_t delta;
+  size_t n_act_div8;
+  std::vector<uint8_t> V_hash;
 public:
   size_t get_matching_power(size_t const& val)
   {
@@ -415,20 +417,16 @@ public:
   }
   SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
   {
-    size_t n_act = GRP.n_act();
-    size_t delta = n_bit_orbsize + n_act;
     size_t i_acc = delta * i_orb;
     Face f(n_act);
     for (size_t i=0; i<n_act; i++) {
-      bool val = (ListOrbit[i_acc / 8] >> (i_acc & 0x07)) & 1;
-      f[i] = val;
+      f[i] = getbit(ListOrbit, i_acc);
       i_acc++;
     }
     Torbsize idx_orb=0;
     Torbsize pow = 1;
     for (size_t i=0; i<n_bit_orbsize; i++) {
-      bool val = (ListOrbit[i_acc / 8] >> (i_acc & 0x07)) & 1;
-      idx_orb += Torbsize(val) * pow;
+      idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
       i_acc++;
       pow *= 2;
     }
@@ -436,9 +434,7 @@ public:
   }
   void InsertListOrbitEntry(SingEnt const& eEnt)
   {
-    size_t n_act = GRP.n_act();
     size_t curr_len = ListOrbit.size();
-    size_t delta = n_bit_orbsize + n_act;
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
     for (size_t i=curr_len; i<needed_len; i++)
@@ -447,13 +443,40 @@ public:
     size_t i_acc = nbOrbit * delta;
     for (size_t i=0; i<n_act; i++) {
       bool val = eEnt.face[i];
-      ListOrbit[i_acc / 8] ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ ListOrbit[i_acc / 8]) & kBitmask[i_acc % 8];
+      setbit(ListOrbit, i_acc, val);
       i_acc++;
     }
     size_t work_idx = eEnt.idx_orb;
     for (size_t i=0; i<n_bit_orbsize; i++) {
       bool val = work_idx % 2;
-      ListOrbit[i_acc / 8] ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ ListOrbit[i_acc / 8]) & kBitmask[i_acc % 8];
+      setbit(ListOrbit, i_acc, val);
+      i_acc++;
+      work_idx = work_idx / 2;
+    }
+  }
+  void InsertListOrbitFace(Face const& face)
+  {
+    size_t curr_len = ListOrbit.size();
+    size_t needed_bits = (nbOrbit + 1) * delta;
+    size_t needed_len = (needed_bits + 7) / 8;
+    for (size_t i=curr_len; i<needed_len; i++)
+      ListOrbit.push_back(0);
+    // Now setting up the bits,
+    size_t i_acc = nbOrbit * delta;
+    for (size_t i=0; i<n_act; i++) {
+      bool val = face[i];
+      setbit(ListOrbit, i_acc, val);
+      i_acc++;
+    }
+  }
+  void InsertListOrbitIdxOrb(Torbsize const& idx_orb)
+  {
+    // The position have been 
+    size_t i_acc = nbOrbit * delta + n_act;
+    Torbsize work_idx = idx_orb;
+    for (size_t i=0; i<n_bit_orbsize; i++) {
+      bool val = work_idx % 2;
+      setbit(ListOrbit, i_acc, val);
       i_acc++;
       work_idx = work_idx / 2;
     }
@@ -471,13 +494,10 @@ public:
   }
   void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
   {
-    DictOrbit.insert(face);
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
     }
-    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
-    InsertListOrbitEntry({face,idx_orb});
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -500,6 +520,36 @@ public:
     }
     /* TRICK4: We need to add 1 because of shift by 1 in the OrbSize_Map */
     n_bit_orbsize = get_matching_power(n_factor + 1);
+
+    /* TRICK6: The UNORD_SET only the index and this saves in memory usage. */
+    n_act = GRP.n_act();
+    delta = n_bit_orbsize + n_act;
+    n_act_div8 = (n_act + 7) / 8;
+    V_hash = std::vector<uint8_t>(n_act_div8);
+    std::function<size_t(size_t)> fctHash=[&](size_t idx) -> size_t {
+      for (size_t i=0; i<n_act_div8; i++)
+        V_hash[i] = 0;
+      size_t pos = delta * idx;
+      for (size_t i=0; i<n_act; i++) {
+        bool val = getbit(ListOrbit, pos);
+        setbit(V_hash, i, val);
+        pos++;
+      }
+      uint32_t seed= 0x1b873560;
+      return murmur3_32(V_hash.data(), n_act_div8, seed);
+    };
+    std::function<bool(size_t,size_t)> fctEqual=[&](size_t idx1, size_t idx2) -> bool {
+      size_t pos1 = delta * idx1;
+      size_t pos2 = delta * idx2;
+      for (size_t i=0; i<n_act; i++) {
+        bool val1 = getbit(ListOrbit, pos1);
+        bool val2 = getbit(ListOrbit, pos2);
+        if (val1 != val2)
+          return false;
+      }
+      return true;
+    };
+    DictOrbit = UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>>({}, fctHash, fctEqual);
     if (SavingTrigger) {
       std::cerr << "eFile=" << eFile << "\n";
       if (IsExistingFile(eFile)) {
@@ -524,6 +574,11 @@ public:
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
+        // The DictOrbit
+        Torbsize idx_orb = GetOrbSizeIndex(eEnt.OrbSize);
+        InsertListOrbitEntry({eEnt.face,idx_orb});
+        DictOrbit.insert(i_orbit);
+        // The other fields
         InsertEntryDatabase(eEnt.face, eEnt.status, eEnt.OrbSize, i_orbit);
       }
       std::cerr << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
@@ -536,11 +591,15 @@ public:
   void FuncInsert(Face const& face)
   {
     Face face_can = GRP.CanonicalImage(face);
-    if (DictOrbit.count(face_can) == 1)
+    InsertListOrbitFace(face_can);
+    if (DictOrbit.count(nbOrbit) == 1)
       return;
-    //
+    DictOrbit.insert(nbOrbit);
+    // Setting up the orbSize
     Tint ordStab = GRP.Stabilizer_OnSets(face).size();
     Tint orbSize = groupOrder / ordStab;
+    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
+    InsertListOrbitIdxOrb(idx_orb);
     InsertEntryDatabase(face_can, false, orbSize, nbOrbit);
     //
     if (SavingTrigger) {
