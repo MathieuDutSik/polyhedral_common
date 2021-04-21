@@ -68,10 +68,6 @@ struct PolyhedralEntry {
   MyMatrix<T> EXT;
   Tgroup GRP;
   vectface ListFace;
-  PolyhedralEntry() : EXT(), GRP(), ListFace(0)
-  {}
-  PolyhedralEntry(MyMatrix<T> _EXT, Tgroup _GRP, vectface _ListFace) : EXT(_EXT), GRP(_GRP), ListFace(_ListFace)
-  {}
 };
 
 // We only want the full symmetry in the entry.

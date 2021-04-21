@@ -66,7 +66,7 @@ template<typename T, typename Tgroup>
 struct EquivariantDualDescription {
   MyMatrix<T> EXT;
   Tgroup GRP;
-  std::vector<Face> ListFace;
+  vectface ListFace;
 };
 
 
@@ -99,7 +99,7 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
   int n_rows = EXT.rows();
   Tgroup GRP = datagap::ConvertGAPread_PermutationGroup<T, Tgroup>(dataEXT.ListRec[pos_GRP].second, n_rows);
   //
-  std::vector<Face> ListFace = ConvertGAPread_ListFace(dataFAC, n_rows);
+  vectface ListFace = ConvertGAPread_ListFace(dataFAC, n_rows);
   //
   return {std::move(EXT), std::move(GRP), std::move(ListFace)};
 }
@@ -134,12 +134,12 @@ EquivariantDualDescription<T,Tgroup> Read_BankEntry(std::string const& eFile)
   MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
   Tgroup GRP = POLY_NC_ReadGroup<Tgroup>(dataFile);
   //
-  std::vector<Face> ListFace = POLY_NC_ReadAllFaces(dataFile);
+  vectface ListFace = POLY_NC_ReadAllFaces(dataFile);
   return {std::move(EXT), std::move(GRP), std::move(ListFace)};
 }
 
 template<typename T, typename Tgroup>
-void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, Tgroup const& GRP, std::vector<Face> const& ListFace)
+void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, Tgroup const& GRP, vectface const& ListFace)
 {
   if (!FILE_IsFileMakeable(eFile)) {
     std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
@@ -256,7 +256,7 @@ struct DataBank {
 private:
   struct PairStore {
     Tgroup GRP;
-    std::vector<Face> ListFace;
+    vectface ListFace;
   };
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -283,12 +283,12 @@ public:
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, std::vector<Face> const& ListFace)
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
   {
     if (!BankSymmCheck) {
       // The computation was already done for the full symmetry group. Only canonic form is needed.
       std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
-      std::vector<Face> ListFaceO;
+      vectface ListFaceO(EXT.rows());
       Telt perm1 = Telt(ePair.second);
       Telt ePerm = ~perm1;
       for (auto & eFace : ListFace) {
@@ -308,7 +308,7 @@ public:
     } else {
       TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
       bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
-      std::vector<Face> ListFaceO;
+      vectface ListFaceO(EXT.rows());
       Telt perm1 = Telt(eTriple.ListIdx);
       Telt ePerm = ~perm1;
       if (!NeedRemapOrbit) {
@@ -340,15 +340,15 @@ public:
       MinSize = std::min(MinSize, e_size);
     }
   }
-  std::vector<Face> GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& GRP) const
+  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& GRP) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
     if (iter == ListEnt.end())
-      return {}; // If returning empty then it means nothing has been found.
+      return vectface(0); // If returning empty then it means nothing has been found.
     std::cerr << "Finding a matching entry\n";
-    std::vector<Face> ListReprTrans;
+    vectface ListReprTrans(EXT.rows());
     Telt ePerm = Telt(ePair.second);
     for (auto const& eOrbit : iter->second.ListFace) {
       Face eListJ=OnFace(eOrbit, ePerm);
@@ -639,14 +639,14 @@ public:
     }
     return eSetReturn;
   }
-  std::vector<Face> FuncListOrbitIncidence()
+  vectface FuncListOrbitIncidence()
   {
     if (SavingTrigger) {
       RemoveFile(eFile);
     }
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
-    std::vector<Face> retListOrbit;
+    vectface retListOrbit(n_act);
     for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
       Face f = RetrieveListOrbitEntry(i_orbit).face;
       retListOrbit.push_back(f);
@@ -698,7 +698,7 @@ public:
 // ---
 //
 template<typename T,typename Tgroup>
-std::vector<Face> DUALDESC_AdjacencyDecomposition(
+vectface DUALDESC_AdjacencyDecomposition(
          DataBank<T,Tgroup> & TheBank,
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
@@ -726,7 +726,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   //
   if (nbRow >= TheBank.get_minsize()) {
     ComputeWMat();
-    std::vector<Face> ListFace = TheBank.GetDualDesc(EXT, WMat, GRP);
+    vectface ListFace = TheBank.GetDualDesc(EXT, WMat, GRP);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -748,7 +748,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
   //
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
-  std::vector<Face> ListOrbitFaces;
+  vectface ListOrbitFaces(nbRow);
   std::string ansSymm;
   // 3 scenario
   // --- 1 : We have the full symmetry group and the computation was done with respect to it.
@@ -781,7 +781,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
     int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-      std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);
+      vectface ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);
       std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
@@ -805,7 +805,7 @@ std::vector<Face> DUALDESC_AdjacencyDecomposition(
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string eDir = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.Get_EXT_face(), GRPred, AllArr, eDir, NewLevel);
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.Get_EXT_face(), GRPred, AllArr, eDir, NewLevel);
       for (auto& eOrbB : TheOutput) {
         Face eFlip=FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);
@@ -935,7 +935,7 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   //
   int TheLevel=0;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  std::vector<Face> TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix, TheLevel);
+  vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix, TheLevel);
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
   std::ofstream OUTfs(OUTfile);

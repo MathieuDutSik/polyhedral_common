@@ -288,13 +288,13 @@ Face ConvertGAPread_Face(DataGAP<T,Telt> const& data, int const& n)
 
 
 template<typename T, typename Telt>
-std::vector<Face> ConvertGAPread_ListFace(DataGAP<T,Telt> const& data, int const& n)
+vectface ConvertGAPread_ListFace(DataGAP<T,Telt> const& data, int const& n)
 {
   if (data.Nature != int_list) {
     std::cerr << "It should be a list for effective conversion to list(face)\n";
     throw TerminalException{1};
   }
-  std::vector<Face> ListFace;
+  vectface ListFace(n);
   for (auto & eEnt : data.ListEnt)
     ListFace.push_back(ConvertGAPread_Face(eEnt, n));
   return ListFace;

@@ -524,14 +524,16 @@ Face POLY_NC_ReadFace(netCDF::NcFile & dataFile, size_t const& iOrbit)
 }
 
 
-std::vector<Face> POLY_NC_ReadAllFaces(netCDF::NcFile & dataFile)
+vectface POLY_NC_ReadAllFaces(netCDF::NcFile & dataFile)
 {
+  netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act");
+  size_t n_act = dimGRP_INCD.getSize();
   netCDF::NcDim eDimOrbit = dataFile.getDim("n_orbit");
   size_t n_orbit = eDimOrbit.getSize();
-  std::vector<Face> ListFace(n_orbit);
+  vectface ListFace(n_act);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face eFace = POLY_NC_ReadFace(dataFile, i_orbit);
-    ListFace[i_orbit] = eFace;
+    ListFace.push_back(eFace);
   }
   return ListFace;
 }
