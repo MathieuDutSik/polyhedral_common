@@ -3,6 +3,7 @@
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
+#include "COMB_Stor.h"
 
 template<typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const& eMat, Face const& eList)
@@ -295,8 +296,9 @@ template<typename T>
 Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sInc)
 {
   MyMatrix<T> TheEXT=ColumnReduction(EXT);
-  int nbCol, nbRow;
-  std::vector<Face> TwoPlanes;
+  int nbRow=TheEXT.rows();
+  int nbCol=TheEXT.cols();
+  vectface TwoPlanes(nbRow);
   T eVal, prov1, prov2, prov3, prov4;
   T EXT1_1, EXT1_2, EXT2_1, EXT2_2;
   T TheDet, det12, det1N, det2N, prodDet, h;
@@ -310,8 +312,6 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
     throw TerminalException{1};
   }
   int nb=sInc.count();
-  nbRow=TheEXT.rows();
-  nbCol=TheEXT.cols();
   MyMatrix<T> TheProv(nb, nbCol);
   MyMatrix<T> LV(2,2);
   TestFacetness(TheEXT, OneInc);
@@ -424,7 +424,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 
 
 
-void PrintListOrbit(std::ostream &os, std::vector<Face> const& ListOrbit)
+void PrintListOrbit(std::ostream &os, vectface const& ListOrbit)
 {
   int iOrbit, nbOrbit, siz, i, eVal;
   nbOrbit=ListOrbit.size();
@@ -446,15 +446,15 @@ void PrintListOrbit(std::ostream &os, std::vector<Face> const& ListOrbit)
 struct EngelPolyhedralSubordination {
   int n;
   std::vector<CollectedResult<int>> TheSub;
-  std::vector<std::vector<Face>> ListListFace;
+  std::vector<vectface> ListListFace;
 };
 
 template<typename T>
 EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> const& EXT, MyMatrix<T> const& FAC)
 {
-  std::vector<Face> FACset;
   int nbFac=FAC.rows();
   int nbExt=EXT.rows();
+  vectface FACset(nbExt);
   int n=FAC.cols();
   std::cerr << "nbFac=" << nbFac << " nbExt=" << nbExt << " n=" << n << "\n";
   MyVector<T> eFac;
@@ -476,7 +476,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     }
     FACset.push_back(eFace);
   }
-  std::vector<std::vector<Face>> ListListFace;
+  std::vector<vectface> ListListFace;
   ListListFace.push_back(FACset);
   std::vector<CollectedResult<int>> TheSub;
   for (int eDim=0; eDim<n-1; eDim++) {
@@ -514,10 +514,8 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
 	  int rank=RankMat(EXTmat);
 	  IsFace=rank == TheRank;
 	}
-	if (IsFace) {
-	  //	  std::cerr << "eIncd=" << eIncd << "\n";
+	if (IsFace)
 	  ListSubFace.insert(gFace);
-	}
       }
       int eSize=ListSubFace.size();
       for (auto & rgFace : ListSubFace)
@@ -525,7 +523,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
       ListSizes.push_back(eSize);
     }
     TheSub.push_back(Collected(ListSizes));
-    std::vector<Face> NewListFace_vect;
+    vectface NewListFace_vect(nbExt);
     for (auto & rFace : NewListFace_set)
       NewListFace_vect.push_back(rFace);
     ListListFace.push_back(NewListFace_vect);

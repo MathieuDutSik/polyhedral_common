@@ -10,11 +10,11 @@
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
 template<typename T, typename Tgroup>
-std::vector<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
+vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
 {
-  std::vector<Face> TheReturn;
   MyMatrix<T> FACred=ColumnReduction(FAC);
   int nbRow=FACred.rows();
+  vectface TheReturn(nbRow);
   int nbCol=FACred.cols();
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
   std::vector<int> Treated(nbRow,0);
@@ -34,8 +34,8 @@ std::vector<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& St
       SelectionRowCol<T> eSelect=TMat_SelectRowCol(TestMat);
       MyMatrix<T> NSP=eSelect.NSP;
       int nbEqua=NSP.rows();
-      Face eCand;
-      Face eCandCompl;
+      Face eCand(nbRow);
+      Face eCandCompl(nbRow);
       std::vector<int> gList(nbRow);
       for (int jRow=0; jRow<nbRow; jRow++) {
 	int test=1;
@@ -58,7 +58,7 @@ std::vector<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& St
 	if (rList[jRow] == 1)
 	  Treated[jRow]=1;
       Tgroup TheStab=FullGRP.Stabilizer_OnSets(eCand);
-      std::vector<Face> ListOrb=DecomposeOrbitPoint(TheStab, eCand);
+      vectface ListOrb=DecomposeOrbitPoint(TheStab, eCand);
       int nbOrb=ListOrb.size();
       MyMatrix<T> ListVectSpann(nbOrb, nbCol);
       for (int iOrb=0; iOrb<nbOrb; iOrb++) {
@@ -72,7 +72,7 @@ std::vector<Face> SPAN_face_LinearProgramming(Face const& face, Tgroup const& St
       MyMatrix<T> PreTheTot=Concatenate(BasisSpann, eMatId);
       MyMatrix<T> TheTot=RowReduction(PreTheTot);
       // the complement
-      std::vector<Face> ListOrbCompl=DecomposeOrbitPoint(TheStab, eCandCompl);
+      vectface ListOrbCompl=DecomposeOrbitPoint(TheStab, eCandCompl);
       int nbOrbCompl=ListOrbCompl.size();
       MyMatrix<T> PreListVectors(nbOrbCompl, nbCol);
       for (int iOrb=0; iOrb<nbOrbCompl; iOrb++) {
@@ -213,7 +213,7 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const& TheGRP)
   int n=TheGRP.n_act();
   for (int i=0; i<n; i++)
     eList[i]=1;
-  std::vector<Face> vvO=DecomposeOrbitPoint(TheGRP, eList);
+  vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
   std::vector<std::vector<int>> RetList;
   for (auto eOrb : vvO) {
     int MinVal=eOrb.find_first();
@@ -225,17 +225,17 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const& TheGRP)
 
 
 template<typename T, typename Tgroup>
-std::vector<std::vector<Face>> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch)
+std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch)
 {
-  std::vector<std::vector<Face>> RetList;
-  std::vector<Face> ListOrb;
+  std::vector<vectface> RetList;
   int n=TheGRP.n_act();
+  vectface ListOrb(n);
   Face eList(n);
   MyMatrix<T> FACred=ColumnReduction(FAC);
   WeightMatrix<T,T> WMat=GetWeightMatrix(FACred);
   for (int i=0; i<n; i++)
     eList[i]=1;
-  std::vector<Face> vvO=DecomposeOrbitPoint(TheGRP, eList);
+  vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
   for (auto &eOrb : vvO) {
     int MinVal=eOrb.find_first();
     Face nList(n);
@@ -244,15 +244,14 @@ std::vector<std::vector<Face>> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T
   }
   RetList.push_back(ListOrb);
   for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
-    std::vector<Face> NListOrb;
+    vectface NListOrb(n);
     std::vector<std::vector<int>> ListInv;
     for (auto &eOrb : RetList[iLevel-1]) {
       Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
-      std::vector<Face> TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
+      vectface TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
       for (Face fOrb : TheSpann) {
 	std::vector<int> eInv=GetLocalInvariantWeightMatrix<T,T,int>(WMat, fOrb);
-	GROUP_FuncInsertInSet_UseInv(TheGRP, fOrb, eInv,
-                                     NListOrb, ListInv);
+	GROUP_FuncInsertInSet_UseInv(TheGRP, fOrb, eInv, NListOrb, ListInv);
       }
     }
     RetList.push_back(NListOrb);
@@ -286,7 +285,7 @@ void PrintListOrb_GAP(std::ostream &os, std::vector<std::vector<int>> const& Lis
 
 
 
-void PrintListListOrb_IntGAP(std::ostream &os, std::vector<std::vector<Face>> const& ListListOrb)
+void PrintListListOrb_IntGAP(std::ostream &os, std::vector<vectface> const& ListListOrb)
 {
   int nbLev=ListListOrb.size();
   os << "return [";

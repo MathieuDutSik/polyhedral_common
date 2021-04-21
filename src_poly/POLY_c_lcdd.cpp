@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
     //
-    std::vector<Face> ListIncd=cbased_cdd::DualDescription_incd(EXT);
+    vectface ListIncd=cbased_cdd::DualDescription_incd(EXT);
     //
     int nbFace=ListIncd.size();
     std::ofstream os(argv[2]);

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     Tgroup GRP=ReadGroup<Tgroup>(is1);
     //
     std::ifstream is2(argv[2]);
-    std::vector<Face> ListFace=ReadListFace(is2);
+    vectface ListFace=ReadListFace(is2);
     //
     std::pair<bool,Telt> eReply=GRP.RepresentativeAction_OnSets(ListFace[0], ListFace[1]);
     //

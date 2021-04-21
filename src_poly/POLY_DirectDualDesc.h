@@ -9,7 +9,7 @@
 
 
 template<typename T>
-std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCommand)
+vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCommand)
 {
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
@@ -43,7 +43,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
     throw TerminalException{1};
   }
   //  std::cerr << "iret1=" << iret1 << "\n";
-  std::vector<Face> ListFace;
+  vectface ListFace(n_row);
   //
   std::ifstream is(FileI);
   std::string line;
@@ -55,6 +55,7 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
     headersize = 3;
   else
     headersize = 4;
+  T eScal;
   while (std::getline(is, line)) {
     //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
     if (iLine == headersize - 1) {
@@ -66,15 +67,13 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
       std::vector<std::string> LStr = STRING_Split(line, " ");
       for (size_t i=0; i<DimEXT; i++)
         LVal[i] = ParseScalar<T>(LStr[i]);
-      Face face(n_row);
-      for (size_t i_row=0; i_row<n_row; i_row++) {
-        T eScal=0;
+      auto isincd=[&](size_t i_row) -> bool {
+        eScal=0;
         for (size_t i=1; i<DimEXT; i++)
           eScal += LVal[i] * EXT(i_row,i-1);
-        if (eScal == 0)
-          face[i_row] = 1;
-      }
-      ListFace.push_back(face);
+        return eScal == 0;
+      };
+      ListFace.InsertFace(isincd);
     }
     iLine++;
   }
@@ -91,12 +90,12 @@ std::vector<Face> CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string co
 
 
 template<typename T, typename Tgroup>
-std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
+vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
 {
   int nbVert=EXT.rows();
   int nbCol=EXT.cols();
   bool WeAreDone=false;
-  std::vector<Face> ListIncd;
+  vectface ListIncd(nbVert);
 #ifdef DEBUG_DIRECT_DUAL_DESC
   if (nbVert >= 56) {
     std::string FileSave="EXT_" + IntToString(nbVert);
@@ -158,7 +157,7 @@ std::vector<Face> DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup con
     std::cerr << "\n";
     throw TerminalException{1};
   }
-  std::vector<Face> TheOutput = OrbitSplittingSet(ListIncd, GRP);
+  vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
   os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
 }

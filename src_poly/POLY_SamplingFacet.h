@@ -16,7 +16,7 @@ struct recSamplingOption {
 
 
 template<typename T>
-std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSamplingOption const& eOption, int & nbCall)
+vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSamplingOption const& eOption, int & nbCall)
 {
   int dim=RankMat(EXT);
   int len=EXT.rows();
@@ -33,7 +33,7 @@ std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT,
     return true;
   };
   bool DoRecur=IsRecursive();
-  std::vector<Face> ListFace;
+  vectface ListFace(EXT.rows());
   std::vector<int> ListStatus;
   auto FuncInsert=[&](Face const& eFace) -> void {
     for (auto & fFace : ListFace) {
@@ -45,7 +45,7 @@ std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT,
   };
   std::cerr << "dim=" << dim << "  len=" << len << "\n";
   if (!DoRecur) {
-    std::vector<Face> ListIncd;
+    vectface ListIncd(EXT.rows());
     if (prog == "lrs")
       ListIncd=lrs::DualDescription_temp_incd(EXT);
     if (prog == "cdd") {
@@ -69,7 +69,7 @@ std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT,
 	ListStatus[iC]=1;
 	Face eFace=ListFace[iC];
 	MyMatrix<T> EXTred=SelectRow(EXT, eFace);
-	std::vector<Face> ListRidge=Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall);
+	vectface ListRidge=Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall);
 	for (auto & eRidge : ListRidge) {
 	  Face eFlip=ComputeFlipping(EXT, eFace, eRidge);
 	  FuncInsert(eFlip);
@@ -98,7 +98,7 @@ std::vector<Face> Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT,
 
 
 template<typename T>
-std::vector<Face> DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::vector<std::string> const& ListOpt)
+vectface DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::vector<std::string> const& ListOpt)
 {
   std::string prog="lrs";
   int critlevel=50;
@@ -134,11 +134,11 @@ std::vector<Face> DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::v
 
 
 template<typename T>
-std::vector<Face> DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string const& ansSamp)
+vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string const& ansSamp)
 {
   std::cerr << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   bool WeAreDone=false;
-  std::vector<Face> ListIncd;
+  vectface ListIncd(EXT.rows());
   std::vector<std::string> ListStr=STRING_Split(ansSamp, ":");
   std::string ansOpt=ListStr[0];
   if (ansOpt == "lp_cdd") {

@@ -67,7 +67,11 @@ template<typename T, typename Tgroup>
 struct PolyhedralEntry {
   MyMatrix<T> EXT;
   Tgroup GRP;
-  std::vector<Face> ListFace;
+  vectface ListFace;
+  PolyhedralEntry() : EXT(), GRP(), ListFace(0)
+  {}
+  PolyhedralEntry(MyMatrix<T> _EXT, Tgroup _GRP, vectface _ListFace) : EXT(_EXT), GRP(_GRP), ListFace(_ListFace)
+  {}
 };
 
 // We only want the full symmetry in the entry.
@@ -106,12 +110,6 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
     std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, eFace);
     for (auto & eRec : ListLocal)
       if (eRec.eInv == eInv) {
-	{
-	  std::ofstream os1("CANONIC_PairFace");
-	  std::ofstream os2("CANONIC_PairFace.gap");
-	  WriteListFace(os1, {eFace, eRec.eFace});
-	  WriteListFaceGAP(os2, {eFace, eRec.eFace});
-	}
 	bool test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace).first;
 	if (test)
 	  return;
@@ -126,7 +124,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
     iter++;
   }
   os << "After FuncInsert\n";
-  std::vector<Face> RetListRepr;
+  vectface RetListRepr(eEnt.EXT.rows());
   for (auto & eRec : ListLocal)
     RetListRepr.push_back(eRec.eFace);
   PolyhedralEntry<T,Tgroup> fEnt{eEnt.EXT, GRPlin, RetListRepr};
@@ -138,7 +136,7 @@ std::istream& operator>>(std::istream& is, PolyhedralEntry<T,Tgroup>& obj)
 {
   MyMatrix<T> EXT=ReadMatrix<T>(is);
   Tgroup GRP=ReadGroup<Tgroup>(is);
-  std::vector<Face> ListFace=ReadListFace(is);
+  vectface ListFace=ReadListFace(is);
   PolyhedralInv<T> eInv;
   //
   obj={EXT, GRP, ListFace};
@@ -342,7 +340,7 @@ FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
 
 
 template<typename T,typename Tgroup>
-std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
+vectface DUALDESC_THR_AdjacencyDecomposition(
          MainProcessor &MProc, int const& TheId,
 	 DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
 	 MyMatrix<T> const& EXT,
@@ -370,18 +368,18 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     ComputeWMat();
     T eValInv=GetInvariantWeightMatrix(WMat);
     PolyhedralInv<T> eInv{nbRow, eValInv};
-    PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, {}};
+    PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, vectface(EXT.rows())};
     DataBank_ResultQuery<PolyhedralEntry<T,Tgroup>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
     if (eResBank.test) {
       MProc.GetO(TheId) << "Begin the use of bank data\n";
-      std::vector<Face> ListReprTrans;
+      vectface ListReprTrans(EXT.rows());
       for (auto const& eOrbit : eResBank.eEnt.ListFace) {
 	Face eListJ=OnFace(eOrbit, eResBank.TheEquiv);
 	ListReprTrans.push_back(eListJ);
       }
       MProc.GetO(TheId) << "Before the orbit splitting |ListReprTrans|=" << ListReprTrans.size() << "\n";
       Tgroup GRPconj=ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);
-      std::vector<Face> ListFaceRet=OrbitSplittingListOrbit(GRPconj, GRP, ListReprTrans, MProc.GetO(TheId));
+      vectface ListFaceRet=OrbitSplittingListOrbit(GRPconj, GRP, ListReprTrans, MProc.GetO(TheId));
       MProc.GetO(TheId) << "After the OrbitSplitting\n";
       for (auto & eFace : ListFaceRet) {
 	TestFacetness(EXT, eFace);
@@ -406,7 +404,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
   //
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
-  std::vector<Face> ListOrbitFaces;
+  vectface ListOrbitFaces(EXT.rows());
   std::string ansSymm;
   if (ansSplit != "split") {
     TheGRPrelevant=GRP;
@@ -547,7 +545,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     if (nbPresentOrbit == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       MProc.GetO(TheId) << "Before InitialFacetComputation ansSamp=" << ansSamp << "\n";
-      std::vector<Face> ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
+      vectface ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
       MProc.GetO(TheId) << " After InitialFacetComputation\n";
       for (auto & eInc : ListFace) {
 	int RetVal=FuncInsert(eInc, MProc.GetO(TheId));
@@ -594,7 +592,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
 	os << "eEntry=" << eEntry << " |TheGRPrelevant|=" << TheGRPrelevant.size() << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
 	Tgroup GRPred=ReducedGroupAction(TheStab, eListI);
 	CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(eEntry) + "/");
-	std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
+	vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
 	os << "TreatDatabase, NewLevel=" << NewLevel << "  |EXT|=" << EXTredFace.rows() << "  eRank=" << eRank << "  |TheOutput|=" << TheOutput.size() << " |GRPred|=" << GRPred.size() << "\n";
 	int iter=0;
 	for (auto& eOrbB : TheOutput) {
@@ -659,7 +657,6 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
       std::cerr << "Major error in the code. We should be complete now\n";
       throw TerminalException{1};
     }
-    ListOrbitFaces.reserve(nbOrbitFacet);
     for (int iOF=0; iOF<nbOrbitFacet; iOF++) {
       SimpleOrbitFacet<T> x=ListOrbit.GetRepresentative(iOF);
       ListOrbitFaces.push_back(x.eRepr);
@@ -685,7 +682,7 @@ std::vector<Face> DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 6\n";
   }
   MProc.GetO(TheId) << "Bank entry processed\n";
-  std::vector<Face> ListOrbitReturn;
+  vectface ListOrbitReturn(EXT.rows());
   if (ansSymm == "yes") {
     MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
     {
@@ -821,12 +818,12 @@ void MainFunctionComputeDualDesc(FullNamelist const& eFull)
   AllArr.eMemory=DD_Memory;
   //
   int TheLevel=0;
-  std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
-								  TheId,
-								  TheBank, EXT,
-								  GRP,
-								  AllArr,
-								  DD_Prefix, TheLevel);
+  vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
+                                                         TheId,
+                                                         TheBank, EXT,
+                                                         GRP,
+                                                         AllArr,
+                                                         DD_Prefix, TheLevel);
   std::cerr << "We now have TheOutput\n";
   //
   std::ofstream OUTfs(OUTfile);

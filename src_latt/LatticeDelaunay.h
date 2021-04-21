@@ -358,7 +358,7 @@ std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
       Tgroup GRPlatt=Delaunay_Stabilizer<T,Tint,Tgroup>(eData, eDEL.EXT, eInv.eIndex);
       MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(eDEL.EXT);
       CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" + IntToString(eEntry) + "/");
-      std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXT_T, GRPlatt, AllArr, eDir.str(), 0);
+      vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXT_T, GRPlatt, AllArr, eDir.str(), 0);
       for (auto& eOrbB : TheOutput) {
 	MyMatrix<Tint> EXTadj=FindAdjacentDelaunayPolytope<T,Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
 	int eVal=FuncInsert({EXTadj}, os);

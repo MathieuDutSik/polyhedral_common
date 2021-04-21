@@ -25,6 +25,7 @@
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"
+#include "COMB_Stor.h"
 #include "MAT_MatrixInt.h"
 
 namespace lrs {
@@ -2086,24 +2087,23 @@ MyMatrix<T> FirstColumnZero(MyMatrix<T> const& M)
 
 
 template<typename T>
-std::vector<Face> DualDescription_temp_incd(MyMatrix<T> const& EXT)
+vectface DualDescription_temp_incd(MyMatrix<T> const& EXT)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
   int nbCol=EXTwork.cols();
   int nbRow=EXTwork.rows();
-  std::vector<Face> ListIncd;
+  vectface ListIncd(nbRow);
   bool IsFirst=true;
+  T eScal;
   auto f=[&](T* out) -> void {
     if (!IsFirst) {
-      Face V(nbRow);
-      for (int iRow=0; iRow<nbRow; iRow++) {
-	T eScal=0;
+      auto isincd=[&](size_t iRow) -> bool {
+	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
 	  eScal += out[iCol]*EXTwork(iRow,iCol);
-	if (eScal == 0)
-	  V[iRow]=1;
-      }
-      ListIncd.push_back(V);
+	return eScal == 0;
+      };
+      ListIncd.InsertFace(isincd);
     }
     IsFirst=false;
   };
@@ -2114,24 +2114,23 @@ std::vector<Face> DualDescription_temp_incd(MyMatrix<T> const& EXT)
 
 
 template<typename T>
-std::vector<Face> DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& UpperLimit)
+vectface DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& UpperLimit)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
   int nbCol=EXTwork.cols();
   int nbRow=EXTwork.rows();
-  std::vector<Face> ListIncd;
+  vectface ListIncd(nbRow);
   bool IsFirst=true;
+  T eScal;
   auto f=[&](T* out) -> void {
     if (!IsFirst) {
-      Face V(nbRow);
-      for (int iRow=0; iRow<nbRow; iRow++) {
-	T eScal=0;
+      auto isincd=[&](size_t iRow) -> bool {
+	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
 	  eScal += out[iCol]*EXTwork(iRow,iCol);
-	if (eScal == 0)
-	  V[iRow]=1;
-      }
-      ListIncd.push_back(V);
+        return eScal == 0;
+      };
+      ListIncd.InsertFace(isincd);
     }
     IsFirst=false;
   };
@@ -2143,7 +2142,7 @@ std::vector<Face> DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int 
 
 
 template<typename T>
-std::vector<Face> DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
+vectface DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
   using Tring = typename underlying_ring<T>::ring_type;
@@ -2157,19 +2156,18 @@ std::vector<Face> DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
     MyVector<Tring> eRow3=ConvertVectorUniversal<Tring,T>(eRow2);
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
-  std::vector<Face> ListIncd;
+  vectface ListIncd(nbRow);
   bool IsFirst=true;
+  T eScal;
   auto f=[&](Tring* out) -> void {
     if (!IsFirst) {
-      Face V(nbRow);
-      for (int iRow=0; iRow<nbRow; iRow++) {
-	T eScal=0;
+      auto isincd=[&](size_t iRow) -> bool {
+	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
 	  eScal += out[iCol]*EXTring(iRow,iCol);
-	if (eScal == 0)
-	  V[iRow]=1;
-      }
-      ListIncd.push_back(V);
+        return eScal == 0;
+      };
+      ListIncd.InsertFace(isincd);
     }
     IsFirst=false;
   };

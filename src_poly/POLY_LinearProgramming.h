@@ -532,7 +532,7 @@ struct SolVertex {
 
 
 template<typename T>
-std::vector<Face> Kernel_FindVertices(MyMatrix<T> const& EXT, size_t const& nb)
+vectface Kernel_FindVertices(MyMatrix<T> const& EXT, size_t const& nb)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow=EXT.rows();
@@ -552,7 +552,7 @@ std::vector<Face> Kernel_FindVertices(MyMatrix<T> const& EXT, size_t const& nb)
     for (int iCol=1; iCol<nbCol; iCol++)
       nMat(iRow, iCol)=EXT(iRow, iCol) - eVect(iCol);
   }
-  std::vector<Face> ListFace;
+  vectface ListFace(EXT.rows());
   while(true) {
     for (int iCol=0; iCol<nbCol; iCol++) {
       int a=rand();
@@ -589,7 +589,7 @@ std::vector<Face> Kernel_FindVertices(MyMatrix<T> const& EXT, size_t const& nb)
 
 
 template<typename T>
-std::vector<Face> FindVertices(MyMatrix<T> const& TheEXT, int const& nb)
+vectface FindVertices(MyMatrix<T> const& TheEXT, int const& nb)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   MyMatrix<T> EXT=ColumnReduction(TheEXT);

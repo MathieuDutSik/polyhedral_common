@@ -4,8 +4,7 @@
 #include "setoper.h"
 #include "cdd.h"
 #include <vector>
-
-
+#include "Boost_bitset_kernel.h"
 
 #include <boost/dynamic_bitset.hpp>
 typedef boost::dynamic_bitset<> Face;
@@ -48,33 +47,38 @@ dd_MatrixPtr MyMatrix_PolyFile2Matrix_mpq(MyMatrix<mpq_class> const& TheEXT)
 }
 
 
-std::vector<Face> DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
+
+vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
 {
-  using T = mpq_class;
   dd_ErrorType err;
   size_t nbCol=TheEXT.cols();
   size_t nbRow=TheEXT.rows();
+  vectface ListIncd(nbRow);
   dd_set_global_constants();
   dd_MatrixPtr M=MyMatrix_PolyFile2Matrix_mpq(TheEXT);
   M->representation = dd_Generator;
   //
   dd_polyhedradata* poly = dd_DDMatrix2Poly(M, &err);
   //
-  std::vector<Face> ListIncd;
   dd_raydata* RayPtr = poly->child->FirstRay;
+  std::vector<mpq_class> V(nbCol);
+  mpq_class eScal;
+  auto process=[&](std::vector<mpq_class> const& V) {
+    auto isincd=[&](size_t iRow) -> bool {
+      eScal=0;
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        eScal += V[iCol] * TheEXT(iRow,iCol);
+      return eScal == 0;
+    };
+    ListIncd.InsertFace(isincd);
+  };
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      Face V(nbRow);
-      for (size_t iRow=0; iRow<nbRow; iRow++) {
-        T eScal=0;
-        for (size_t iCol=0; iCol<nbCol; iCol++) {
-          mpq_class eVal(RayPtr->Ray[iCol]);
-          eScal += eVal * TheEXT(iRow,iCol);
-        }
-        if (eScal == 0)
-          V[iRow]=1;
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
+        mpq_class eVal(RayPtr->Ray[iCol]);
+        V[iCol] = eVal;
       }
-      ListIncd.push_back(V);
+      process(V);
     }
     RayPtr = RayPtr->Next;
   }

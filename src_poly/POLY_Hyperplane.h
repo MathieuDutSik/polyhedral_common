@@ -12,7 +12,7 @@
 // The list of region is described by a vector of + and -.
 // If it is + then the encoding is by a 1. Otherwise it is by a 0.
 template<typename T>
-std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
+vectface EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
 {
   int n=ListV.cols();
   int n_vect=ListV.rows();
@@ -116,7 +116,7 @@ std::vector<Face> EnumerateHyperplaneRegions(MyMatrix<T> const& ListV)
     std::cerr << " len(ListDone)=" << ListDone.size() << " len(ListUndone)=" << ListUndone.size() << "\n";
 #endif
   }
-  std::vector<Face> ListFace;
+  vectface ListFace;
   for (auto & eF : ListDone)
     ListFace.push_back(eF);
   return ListFace;

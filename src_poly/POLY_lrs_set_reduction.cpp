@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
     //
-    std::vector<Face> ListFace=lrs::DualDescription_temp_incd_reduction(EXT);
+    vectface ListFace=lrs::DualDescription_temp_incd_reduction(EXT);
     std::cerr << "nbVert = " << ListFace.size() << "\n";
     std::cerr << "Normal termination of the program\n";
   }

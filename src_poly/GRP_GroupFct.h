@@ -332,7 +332,7 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 //
 
 template<typename Tgroup>
-void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, std::vector<Face> &ListListSet)
+void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, vectface &ListListSet)
 {
   int nb=ListListSet.size();
   for (int iList=0; iList<nb; iList++) {
@@ -348,7 +348,7 @@ template<typename Tgroup>
 void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 				  Face const& eList,
 				  std::vector<int> const& eInv, 
-				  std::vector<Face> & ListSet,
+				  vectface & ListSet,
 				  std::vector<std::vector<int>> & ListInv)
 {
   int nb=ListSet.size();
@@ -395,11 +395,11 @@ std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
 }
 
 template<typename Tgroup>
-std::vector<Face> DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
+vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
 {
   int nbPoint=TheGRP.n_act();
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
-  std::vector<Face> ListOrb;
+  vectface ListOrb(nbPoint);
   int len=eList.count();
   int aRow=eList.find_first();
   for (int i=0; i<len; i++) {
@@ -492,11 +492,10 @@ Face OnFace(Face const& eSet, Telt const& eElt)
 
 
 template<typename Tgroup>
-std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
-				    Tgroup const& TheGRP)
+vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
 {
   using Telt = typename Tgroup::Telt;
-  std::vector<Face> TheReturn;
+  vectface TheReturn(TheGRP.n_act());
   std::unordered_set<Face> ListTotal;
   for (auto eFace : PreListTotal)
     ListTotal.insert(eFace);
@@ -550,10 +549,7 @@ std::vector<Face> OrbitSplittingSet(std::vector<Face> const& PreListTotal,
 
 
 template<typename Tgroup>
-std::vector<Face> DoubleCosetDescription_Representation(Tgroup const& BigGRP,
-                                                        Tgroup const& SmaGRP,
-                                                        LocalInvInfo const& LocalInv,
-                                                        Face const& eList, std::ostream & os)
+vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup const& SmaGRP, LocalInvInfo const& LocalInv, Face const& eList, std::ostream & os)
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
@@ -600,13 +596,13 @@ std::vector<Face> DoubleCosetDescription_Representation(Tgroup const& BigGRP,
     if (!DoSomething)
       break;
   }
-  std::vector<Face> ListListSet;
+  vectface ListListSet;
   for (auto & eRec : ListLocal)
     ListListSet.push_back(eRec.eFace);
   if (SizeGen == TotalSize)
     return ListListSet;
   os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
-  std::vector<Face> PartialOrbit = std::move(ListListSet);
+  vectface PartialOrbit = std::move(ListListSet);
   auto IsPresent=[&](Face const& testList) -> bool {
     for (auto & fList : PartialOrbit)
       if (fList == testList)
@@ -623,7 +619,7 @@ std::vector<Face> DoubleCosetDescription_Representation(Tgroup const& BigGRP,
 	  PartialOrbit.push_back(eNewList);
 	  DoubleCosetInsertEntry(eNewList);
 	  if (SizeGen == TotalSize) {
-	    std::vector<Face> ListListFin;
+	    vectface ListListFin;
 	    for (auto & eRec : ListLocal)
 	      ListListFin.push_back(eRec.eFace);
 	    return ListListFin;
@@ -669,9 +665,7 @@ public:
 
 
 template<typename Tgroup>
-std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
-                                                 Tgroup const& SmaGRP,
-                                                 Face const& eList, std::ostream & os)
+vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaGRP, Face const& eList, std::ostream & os)
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
@@ -686,7 +680,7 @@ std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
     SizeGen += OrbSizeSma;
   };
   std::unordered_set<Face> SetFace;
-  popable_vector<Face> CurrList;
+  vectface CurrList(BigGRP.n_act());
   auto DoubleCosetInsertEntry_first=[&](Face const& testList) -> void {
     Face faceCan = SmaGRP.CanonicalImage(testList);
     if (SetFace.count(faceCan) > 0)
@@ -712,14 +706,14 @@ std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
       DoubleCosetInsertEntry_first(eNewList);
     }
   }
-  std::vector<Face> ListListSet;
+  vectface ListListSet(BigGRP.n_act());
   for (auto & eFace : SetFace)
     ListListSet.push_back(eFace);
   if (SizeGen == TotalSize)
     return ListListSet;
   os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
-  popable_vector<Face> ListListSet_pop(ListListSet);
+  vectface ListListSet_pop(ListListSet);
   while(true) {
     Face eFace = ListListSet_pop.pop();
     for (auto & eGen : ListGen) {
@@ -729,7 +723,7 @@ std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
         ListListSet_pop.push_back(eNewList);
         DoubleCosetInsertEntry_second(eNewList);
         if (SizeGen == TotalSize) {
-          std::vector<Face> ListListFin;
+          vectface ListListFin(BigGRP.n_act());
           for (auto & eFace : SetFace)
             ListListFin.push_back(eFace);
           return ListListFin;
@@ -748,18 +742,18 @@ std::vector<Face> DoubleCosetDescription_Canonic(Tgroup const& BigGRP,
 
 
 template<typename Tgroup>
-std::vector<Face> OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, std::vector<Face> eListBig, std::ostream & os)
+vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, vectface eListBig, std::ostream & os)
 {
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   if (BigGRP.size() == SmaGRP.size())
     return eListBig;
   WeightMatrix<int,int> WMat=WeightMatrixFromPairOrbits<int,int,Tgroup>(SmaGRP, os);
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
-  std::vector<Face> eListSma;
+  vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {
-    //    std::vector<Face> ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, LocalInv, eSet, os);
-    std::vector<Face> ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
-    eListSma.insert(eListSma.end(), ListListSet.begin(), ListListSet.end());
+    //    vectface ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, LocalInv, eSet, os);
+    vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
+    eListSma.append(ListListSet);
   }
   os << "OrbitSplitting |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
   return eListSma;

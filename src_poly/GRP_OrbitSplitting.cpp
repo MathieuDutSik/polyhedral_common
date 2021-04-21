@@ -24,10 +24,10 @@ int main(int argc, char *argv[])
     Tgroup SmaGRP=ReadGroup<Tgroup>(is2);
     //
     std::ifstream is3(argv[3]);
-    std::vector<Face> ListFaceBig=ReadListFace(is3);
+    vectface ListFaceBig=ReadListFace(is3);
     std::cerr << "|ListFaceBig|=" << ListFaceBig.size() << "\n";
     //
-    std::vector<Face> ListFaceSma=OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
+    vectface ListFaceSma=OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
     std::cerr << "|ListFaceSma|=" << ListFaceSma.size() << "\n";
     //
     std::cerr << "Normal termination of the program\n";

@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     MyMatrix<T> ListV=ReadMatrix<T>(is);
     //
-    std::vector<Face> ListFace = EnumerateHyperplaneRegions(ListV);
+    vectface ListFace = EnumerateHyperplaneRegions(ListV);
     int n_vect = ListV.rows();
     std::cerr << "len(ListFace)=" << ListFace.size() << "\n";
     //

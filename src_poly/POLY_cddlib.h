@@ -7723,23 +7723,22 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const& nbCol)
 
 
 template<typename T>
-std::vector<Face> ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T> const& EXT)
+vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T> const& EXT)
 {
-  std::vector<Face> ListIncd;
   size_t nbCol=EXT.cols();
   size_t nbRow=EXT.rows();
+  vectface ListIncd(nbRow);
   dd_raydata<T>* RayPtr = poly->child->FirstRay;
+  T eScal;
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
-      Face V(nbRow);
-      for (size_t iRow=0; iRow<nbRow; iRow++) {
-        T eScal=0;
+      auto isincd=[&](size_t iRow) -> bool {
+        eScal=0;
         for (size_t iCol=0; iCol<nbCol; iCol++)
           eScal += RayPtr->Ray[iCol] * EXT(iRow,iCol);
-	if (eScal == 0)
-	  V[iRow]=1;
-      }
-      ListIncd.push_back(V);
+        return eScal == 0;
+      };
+      ListIncd.InsertFace(isincd);
     }
     RayPtr = RayPtr->Next;
   }
@@ -7806,13 +7805,13 @@ MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
 
 
 template<typename T>
-std::vector<Face> DualDescription_incd(MyMatrix<T> const&TheEXT)
+vectface DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
   dd_polyhedradata<T> *poly;
   dd_ErrorType err;
   dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
   poly=dd_DDMatrix2Poly(M, &err);
-  std::vector<Face> ListIncd=ListIncd_from_poly(poly, TheEXT);
+  vectface ListIncd=ListIncd_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
   return ListIncd;
