@@ -5,6 +5,50 @@
 #include "Group.h"
 #include "MAT_Matrix.h"
 
+
+struct FileBool {
+private:
+  std::FILE* fp;
+  size_t n_ent;
+public:
+  FileBool(std::string const& file)
+  {
+    fp =  std::fopen(file.data(), "rb");
+  }
+
+  bool getbit(size_t const& pos)
+  {
+    size_t i_bit = pos / 8;
+    size_t j_bit = pos % 8;
+    std::fseek(fp, 0, i_bit);
+    uint8_t val;
+    std::fread(&val, sizeof(uint8_t), 1, fp);
+    return val >> (j_bit & 0x07) & 1;
+  }
+
+
+  void setbit(size_t const& pos, bool const& val)
+  {
+    size_t curr_n_bit = (n_ent + 7) / 8;
+    size_t needed_n_bit = (pos + 1 + 7) / 8;
+    std::fseek(fp, 0, curr_n_bit);
+    uint8_t val_u8 = 0;
+    for (size_t u=curr_n_bit; u<needed_n_bit; u++)
+      std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+    // Now doing the assignment.
+    size_t i_bit = pos / 8;
+    size_t j_bit = pos % 8;
+    std::fseek(fp, 0, i_bit);
+    std::fread(&val_u8, sizeof(uint8_t), 1, fp);
+    val_u8 ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ val_u8) & kBitmask[j_bit];
+    std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+  }
+
+};
+
+
+
+
 //
 // Reading and writing polytope
 //
