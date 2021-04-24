@@ -13,7 +13,22 @@ private:
 public:
   FileBool(std::string const& file)
   {
+    if (IsExistingFile(file)) {
+      std::cerr << "The file " << file << " should be missing\n";
+      throw TerminalException{1};
+    }
     fp =  std::fopen(file.data(), "rb");
+    n_ent = 0;
+  }
+
+  FileBool(std::string const& file, size_t const& _n_ent)
+  {
+    if (!IsExistingFile(file)) {
+      std::cerr << "The file " << file << " should not be missing\n";
+      throw TerminalException{1};
+    }
+    fp =  std::fopen(file.data(), "rb");
+    n_ent = _n_ent;
   }
 
   bool getbit(size_t const& pos)
