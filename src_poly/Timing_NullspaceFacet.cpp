@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
       std::cerr << "method=" << method << " time=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << " sumrank=" << sumrank << "\n";
     };
     f(1);
-    //    f(2);
+    f(2);
     f(3);
   }
   catch (TerminalException const& e) {

@@ -513,7 +513,7 @@ public:
     nbUndone = 0;
     nbOrbit = 0;
     groupOrder = GRP.size();
-    std::unordered_map<Tidx, int> LFact = GRP.factor_size();
+    std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
     for (auto & kv : LFact) {
       n_factor *= (1 + kv.second);
