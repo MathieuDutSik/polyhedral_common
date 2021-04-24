@@ -31,6 +31,12 @@ public:
     n_ent = _n_ent;
   }
 
+  ~FileBool()
+  {
+    std::fclose(fp);
+  }
+
+  // bool setting
   bool getbit(size_t const& pos)
   {
     size_t i_bit = pos / 8;
