@@ -364,17 +364,13 @@ void POLY_NC_WriteVface_Vsize(netCDF::NcFile & dataFile, size_t const& iOrbit, s
   std::vector<size_t> start_incd={iOrbit, 0};
   std::vector<size_t> count_incd={1,Vface.size()};
   varORB_INCD.putVar(start_incd, count_incd, Vface.data());
-  //  std::cerr << "Step 2\n";
   //
   if (orbit_status) {
     netCDF::NcVar varORB_SIZE = dataFile.getVar("orbit_size");
-    //    std::cerr << "Step 3\n";
     std::vector<size_t> start_size={iOrbit, 0};
     std::vector<size_t> count_size={1,Vsize.size()};
     varORB_SIZE.putVar(start_size, count_size, Vsize.data());
-    //    std::cerr << "Step 4\n";
   }
-  //  std::cerr << "Exit POLY_NC_WriteVface\n";
 }
 
 
@@ -435,10 +431,8 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile & dataFile, size_t const& iOr
     Vface.push_back(val);
   //
   std::vector<uint8_t> Vsize = GetVectorUint8_t(eEnt.OrbSize);
-  //  std::cerr << "|Vsize|=" << Vsize.size() << " n_grpsize=" << n_grpsize << "\n";
   for (size_t pos=Vsize.size();  pos<n_grpsize; pos++)
     Vsize.push_back(0);
-  //  std::cerr << "Vsize = " << StringVectorUint8_t(Vsize) << "\n";
   POLY_NC_WriteVface_Vsize(dataFile, iOrbit, Vface, Vsize, true);
 }
 

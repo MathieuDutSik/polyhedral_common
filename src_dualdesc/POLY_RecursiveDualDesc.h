@@ -9,7 +9,7 @@
 #include "GRP_GroupFct.h"
 
 #include "POLY_GAP.h"
-#include "POLY_netcdf.h"
+#include "POLY_netcdf_file.h"
 #include "MatrixGroupBasic.h"
 #include <signal.h>
 
