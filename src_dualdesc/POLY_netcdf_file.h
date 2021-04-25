@@ -4,6 +4,8 @@
 #include <netcdf>
 #include "Group.h"
 #include "MAT_Matrix.h"
+#include "Basic_file.h"
+#include "Boost_bitset.h"
 
 
 struct FileBool {
@@ -17,7 +19,7 @@ public:
       std::cerr << "The file " << file << " should be missing\n";
       throw TerminalException{1};
     }
-    fp =  std::fopen(file.data(), "rb");
+    fp =  std::fopen(file.data(), "w+");
     n_ent = 0;
   }
 
@@ -27,7 +29,7 @@ public:
       std::cerr << "The file " << file << " should not be missing\n";
       throw TerminalException{1};
     }
-    fp =  std::fopen(file.data(), "rb");
+    fp =  std::fopen(file.data(), "w+");
     n_ent = _n_ent;
   }
 
@@ -43,7 +45,8 @@ public:
     size_t j_bit = pos % 8;
     std::fseek(fp, 0, i_bit);
     uint8_t val;
-    std::fread(&val, sizeof(uint8_t), 1, fp);
+    size_t ret = std::fread(&val, sizeof(uint8_t), 1, fp);
+    std::cerr << "getbit pos=" << pos << " ret=" << ret << "\n";
     return val >> (j_bit & 0x07) & 1;
   }
 
@@ -60,7 +63,8 @@ public:
     size_t i_bit = pos / 8;
     size_t j_bit = pos % 8;
     std::fseek(fp, 0, i_bit);
-    std::fread(&val_u8, sizeof(uint8_t), 1, fp);
+    size_t ret = std::fread(&val_u8, sizeof(uint8_t), 1, fp);
+    std::cerr << "setbit pos=" << pos << " ret=" << ret << "\n";
     val_u8 ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ val_u8) & kBitmask[j_bit];
     std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
   }
