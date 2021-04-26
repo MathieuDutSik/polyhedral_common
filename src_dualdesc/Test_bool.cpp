@@ -32,7 +32,7 @@ int main()
   std::string TestFile = "/tmp/testbool_" + random_string(20);
   std::cerr << "TestFile = " << TestFile << "\n";
   //
-  int m = 24;
+  int m = 100;
   Face f(m);
   for (int i=0; i<m; i++) {
     bool rnd = rand() % 2;
