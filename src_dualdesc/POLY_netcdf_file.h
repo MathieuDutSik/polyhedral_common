@@ -19,8 +19,11 @@ public:
       std::cerr << "The file " << file << " should be missing\n";
       throw TerminalException{1};
     }
+    std::cerr << "Before fopen 1\n";
     fp =  std::fopen(file.data(), "w+");
     n_ent = 0;
+    long tell = std::ftell(fp);
+    std::cerr << "After fopen 1 pos=" << tell << "\n";
   }
 
   FileBool(std::string const& file, size_t const& _n_ent)
@@ -29,8 +32,10 @@ public:
       std::cerr << "The file " << file << " should not be missing\n";
       throw TerminalException{1};
     }
-    fp =  std::fopen(file.data(), "w+");
+    std::cerr << "Before fopen 2\n";
+    fp =  std::fopen(file.data(), "r+b");
     n_ent = _n_ent;
+    std::cerr << "After fopen 2\n";
   }
 
   ~FileBool()
@@ -43,10 +48,11 @@ public:
   {
     size_t i_bit = pos / 8;
     size_t j_bit = pos % 8;
-    std::fseek(fp, 0, i_bit);
+    std::fseek(fp, i_bit, SEEK_SET);
+    long tell = std::ftell(fp);
     uint8_t val;
     size_t ret = std::fread(&val, sizeof(uint8_t), 1, fp);
-    std::cerr << "getbit pos=" << pos << " ret=" << ret << "\n";
+    std::cerr << "getbit pos=" << pos << " i_bit=" << i_bit << " tell=" << tell << " ret=" << ret << "\n";
     return val >> (j_bit & 0x07) & 1;
   }
 
@@ -55,18 +61,27 @@ public:
   {
     size_t curr_n_bit = (n_ent + 7) / 8;
     size_t needed_n_bit = (pos + 1 + 7) / 8;
-    std::fseek(fp, 0, curr_n_bit);
+    std::fseek(fp, curr_n_bit, SEEK_SET);
+    long tell = std::ftell(fp);
+    std::cerr << "setbit curr_n_bit=" << curr_n_bit << " tell=" << tell << "\n";
     uint8_t val_u8 = 0;
-    for (size_t u=curr_n_bit; u<needed_n_bit; u++)
+    for (size_t u=curr_n_bit; u<needed_n_bit; u++) {
+      std::cerr << "  Setting to zero for u=" << u << "\n";
       std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+    }
     // Now doing the assignment.
     size_t i_bit = pos / 8;
     size_t j_bit = pos % 8;
-    std::fseek(fp, 0, i_bit);
+    std::fseek(fp, i_bit, SEEK_SET);
+    tell = std::ftell(fp);
+    std::cerr << "  setbit i_bit=" << i_bit << " tell=" << tell << "\n";
     size_t ret = std::fread(&val_u8, sizeof(uint8_t), 1, fp);
-    std::cerr << "setbit pos=" << pos << " ret=" << ret << "\n";
+    std::fseek(fp, i_bit, SEEK_SET);
+    std::cerr << "  setbit pos=" << pos << " ret=" << ret << " read val_u8=" << int(val_u8) << " tell=" << std::ftell(fp) << "\n";
     val_u8 ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ val_u8) & kBitmask[j_bit];
     std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+    std::cerr << "  setbit pos=" << pos << " write val_u8=" << int(val_u8) << " tell=" << std::ftell(fp) << "\n";
+    n_ent = pos + 1;
   }
 
 };

@@ -32,14 +32,17 @@ int main()
   std::string TestFile = "/tmp/testbool_" + random_string(20);
   std::cerr << "TestFile = " << TestFile << "\n";
   //
-  int m = 100;
+  int m = 24;
   Face f(m);
   for (int i=0; i<m; i++) {
     bool rnd = rand() % 2;
+    rnd = true;
+    std::cerr << "i=" << i << " rnd=" << rnd << "\n";
     f[i] = rnd;
   }
   //
   CreateFile(TestFile, f);
+  return 0;
   Face f_read = ReadFile(TestFile, m);
   if (f != f_read) {
     std::cerr << "Reading OR writing failed\n";
