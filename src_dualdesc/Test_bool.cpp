@@ -36,13 +36,11 @@ int main()
   Face f(m);
   for (int i=0; i<m; i++) {
     bool rnd = rand() % 2;
-    rnd = true;
     std::cerr << "i=" << i << " rnd=" << rnd << "\n";
     f[i] = rnd;
   }
   //
   CreateFile(TestFile, f);
-  return 0;
   Face f_read = ReadFile(TestFile, m);
   if (f != f_read) {
     std::cerr << "Reading OR writing failed\n";
