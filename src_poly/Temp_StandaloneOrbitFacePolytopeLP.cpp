@@ -1,4 +1,5 @@
 #include "Permlib_specific.h"
+#include "Group.h"
 #include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
 
@@ -25,7 +26,11 @@ int main(int argc, char *argv[])
     MyMatrix<T> TheEXT=ReadMatrix<T>(EXTfs);
 
     std::ifstream GRPfs(argv[2]);
-    using Tgroup=TheGroupFormat<mpz_class>;
+    using Tidx = uint16_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tint = mpz_class;
+    using Tgroup = permutalib::Group<Telt,Tint>;
+    //    using Tgroup=TheGroupFormat<mpz_class>;
     Tgroup TheGRP=ReadGroup<Tgroup>(GRPfs);
 
     LevSearch=atoi(argv[3]);

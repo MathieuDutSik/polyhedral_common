@@ -14,8 +14,8 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
 {
   MyMatrix<T> FACred=ColumnReduction(FAC);
   int nbRow=FACred.rows();
-  vectface TheReturn(nbRow);
   int nbCol=FACred.cols();
+  vectface TheReturn(nbRow);
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
   std::vector<int> Treated(nbRow,0);
   int sizFace=face.count();
@@ -23,14 +23,12 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
   int ePt=face.find_first();
   for (int iRow=0; iRow<sizFace; iRow++) {
     Treated[ePt]=1;
-    MyVector<T> eVect=FACred.row(ePt);
-    AssignMatrixRow(TestMat, iRow, eVect);
+    TestMat.row(iRow) = FACred.row(ePt);
     ePt=face.find_next(ePt);
   }
   for (int iRow=0; iRow<nbRow; iRow++)
     if (Treated[iRow] == 0) {
-      MyVector<T> eVect=FACred.row(iRow);
-      AssignMatrixRow(TestMat, sizFace, eVect);
+      TestMat.row(sizFace) = FACred.row(iRow);
       SelectionRowCol<T> eSelect=TMat_SelectRowCol(TestMat);
       MyMatrix<T> NSP=eSelect.NSP;
       int nbEqua=NSP.rows();
@@ -86,8 +84,7 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
       for (int jRow=0; jRow<nbOrbCompl; jRow++)
 	for (int iCol=0; iCol<LPdim; iCol++) {
 	  int jCol=iCol + nbRowSpann;
-	  T eVal=PreListVectorsB(jRow, jCol);
-	  ListVectors(jRow, iCol)=eVal;
+	  ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
 	}
       bool eTestExist=TestPositiveRelationSimple(ListVectors);
       if (eTestExist == 0)
@@ -105,10 +102,6 @@ bool TestInclusionProperFace(std::vector<int> const& eSet, MyMatrix<T> const& FA
 {
   int nbCol=FAC.cols();
   int nbRow=FAC.rows();
-  //  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
-  //  std::cerr << "eSet=";
-  //  PrintVectorInt_GAP(std::cerr, eSet);
-  //  std::cerr << "\n";
   std::vector<int> eVectCand(nbRow, 0);
   for (auto eVal : eSet)
     eVectCand[eVal]=1;
@@ -232,7 +225,6 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
   vectface ListOrb(n);
   Face eList(n);
   MyMatrix<T> FACred=ColumnReduction(FAC);
-  WeightMatrix<T,T> WMat=GetWeightMatrix(FACred);
   for (int i=0; i<n; i++)
     eList[i]=1;
   vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
@@ -245,13 +237,12 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
   RetList.push_back(ListOrb);
   for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
     vectface NListOrb(n);
-    std::vector<std::vector<int>> ListInv;
     for (auto &eOrb : RetList[iLevel-1]) {
       Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
       vectface TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
       for (Face fOrb : TheSpann) {
-	std::vector<int> eInv=GetLocalInvariantWeightMatrix<T,T,int>(WMat, fOrb);
-	GROUP_FuncInsertInSet_UseInv(TheGRP, fOrb, eInv, NListOrb, ListInv);
+        Face fOrbCan = TheGRP.CanonicalImage(fOrb);
+        NListOrbit.push_back(fOrbCan);
       }
     }
     RetList.push_back(NListOrb);
