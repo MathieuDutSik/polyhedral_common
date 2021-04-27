@@ -165,7 +165,9 @@ public:
     // Adding the zero entries.
     size_t len = needed_n_byte - curr_n_byte;
     if (len <= ZeroSize) { // We are in the standard case of appending some entries.
-      std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+      if (len > 0) {
+        std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+      }
     } else {
       uint8_t val_u8 = 0;
       for (size_t u=curr_n_byte; u<needed_n_byte; u++)
