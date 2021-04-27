@@ -134,8 +134,8 @@ public:
     size_t start_byte = (pos * siz) / 8;
     size_t start_pos = (pos * siz) % 8;
     std::fseek(fp, start_byte, SEEK_SET);
-    size_t end_byte = ( pos * siz + siz-1 ) / 8;
-    size_t len = 1 + end_byte - start_byte;
+    size_t end_byte = ( (pos + 1) * siz + 7 ) / 8;
+    size_t len = end_byte - start_byte;
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len, fp);
     if (ret != len) {
       std::cerr << "Number of read elementr different from count. Please correct. ret=" << ret << " len=" << len << "\n";
@@ -157,7 +157,6 @@ public:
     return f;
   }
 
-
   void setface(size_t const& pos, Face const& f)
   {
     size_t curr_n_byte = (n_face * siz + 7) / 8;
@@ -165,7 +164,7 @@ public:
     std::fseek(fp, curr_n_byte, SEEK_SET);
     // Adding the zero entries.
     size_t len = needed_n_byte - curr_n_byte;
-    if (len > ZeroSize) { // We are in the standard case of appending some entries.
+    if (len <= ZeroSize) { // We are in the standard case of appending some entries.
       std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
     } else {
       uint8_t val_u8 = 0;
@@ -175,8 +174,8 @@ public:
     // Now doing the assignment.
     size_t start_byte = (pos * siz) / 8;
     size_t start_pos  = (pos * siz) % 8;
-    size_t end_byte = (pos * siz + siz - 1) / 8;
-    size_t len_rw = 1 + end_byte - start_byte;
+    size_t end_byte = ( (pos + 1) * siz + 7) / 8;
+    size_t len_rw = end_byte - start_byte;
     std::fseek(fp, start_byte, SEEK_SET);
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
     if (ret != len_rw) {
@@ -200,7 +199,6 @@ public:
     std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
     n_face = pos + 1;
   }
-
 };
 
 
