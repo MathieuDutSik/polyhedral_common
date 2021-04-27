@@ -76,14 +76,6 @@ void test_specific_size(int const& m, int const& n)
 
 int main()
 {
-  for (int i=0; i<1000; i++) {
-    std::timespec ts;
-    std::timespec_get(&ts, TIME_UTC);
-    unsigned val = ts.tv_nsec;
-    std::cerr << "i=" << i << " val=" << val << "\n";
-  }
-
-  
   for (size_t i=0; i<100; i++) {
     int n = 10 + rand()% 20;
     int m = 20 + rand()% 20;
