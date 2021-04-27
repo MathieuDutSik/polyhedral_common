@@ -53,7 +53,6 @@ public:
     return val >> (i_pos & 0x07) & 1;
   }
 
-
   void setbit(size_t const& pos, bool const& val)
   {
     size_t curr_n_byte = (n_ent + 7) / 8;
