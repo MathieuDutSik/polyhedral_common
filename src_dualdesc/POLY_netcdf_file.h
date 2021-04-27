@@ -163,7 +163,9 @@ public:
     size_t needed_n_byte = ( (n_face + 1) * siz + 7) / 8;
     std::fseek(fp, curr_n_byte, SEEK_SET);
     // Adding the zero entries.
-    size_t len = needed_n_byte - curr_n_byte;
+    size_t len = 0;
+    if (needed_n_byte > curr_n_byte)
+      len = needed_n_byte - curr_n_byte;
     if (len <= ZeroSize) { // We are in the standard case of appending some entries.
       if (len > 0) {
         std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
