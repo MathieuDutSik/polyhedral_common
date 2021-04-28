@@ -2,7 +2,7 @@
 #PROGRAM		= DD_ConvertGAP_to_NC
 #PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= Test_bool
-PROGRAM		= Test_face
+PROGRAM		= Test_face Test_bool
 #PROGRAM		= POLY_NetcdfToGAP
 #PROGRAM		= POLY_CheckCanonicalGAP
 

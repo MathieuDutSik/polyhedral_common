@@ -77,7 +77,7 @@ std::string get_string(Face f)
 void test_specific_size_randaccess(int const& m, int const& n)
 {
   std::vector<Face> ListFace(n);
-  std::vector<int> Status(n);
+  std::vector<int> Status(n, 0);
   //
   std::string TestFile = "/tmp/testbool_n" + std::to_string(n) + "_m" + std::to_string(m) + "_" + random_string(20);
   RemoveFileIfExist(TestFile);

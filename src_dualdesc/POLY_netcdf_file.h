@@ -74,7 +74,7 @@ public:
     std::fseek(fp, i_byte, SEEK_SET);
     val_u8 ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ val_u8) & kBitmask[i_pos];
     std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
-    n_ent = pos + 1;
+    n_ent = std::max(n_ent, pos + 1);
   }
 
 };

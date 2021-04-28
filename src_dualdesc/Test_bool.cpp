@@ -25,26 +25,70 @@ Face ReadFile(std::string const& eFile, int m)
 }
 
 
-
-
-int main()
+void test_specific_size(int const& m)
 {
-  std::string TestFile = "/tmp/testbool_" + random_string(20);
+  std::string TestFile = "/tmp/testbool_m" + std::to_string(m) + "_" + random_string(20);
   std::cerr << "TestFile = " << TestFile << "\n";
   //
-  int m = 100;
   Face f(m);
-  for (int i=0; i<m; i++) {
-    bool rnd = rand() % 2;
-    std::cerr << "i=" << i << " rnd=" << rnd << "\n";
-    f[i] = rnd;
-  }
+  for (int i=0; i<m; i++)
+    f[i] = rand() % 2;
   //
   CreateFile(TestFile, f);
   Face f_read = ReadFile(TestFile, m);
   if (f != f_read) {
-    std::cerr << "Reading OR writing failed\n";
-  } else {
-    std::cerr << "Correct reading/writing\n";
+    std::cerr << "Inconsistency in f != f_read\n";
+    throw TerminalException{1};
   }
+}
+
+
+
+
+void test_specific_size_randaccess(int const& m)
+{
+  std::string TestFile = "/tmp/testbool_m" + std::to_string(m) + "_" + random_string(20);
+  std::cerr << "TestFile = " << TestFile << "\n";
+  FileBool fb(TestFile);
+  //
+  Face f(m);
+  std::vector<int> Status(m, 0);
+  for (size_t iter=0; iter<1000; iter++) {
+    size_t pos = rand() % m;
+    bool val = rand() % 2;
+    f[pos] = val;
+    Status[pos] = 1;
+    fb.setbit(pos, val);
+    //
+    for (int i=0; i<m; i++) {
+      if (Status[i] == 1) {
+        bool val1 = fb.getbit(i);
+        bool val2 = f[i];
+        if (val1 != val2) {
+          std::cerr << "Inconsistency in val1 and val2\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+int main()
+{
+  //
+  for (size_t iter=0; iter<100; iter++) {
+    int m = 100 + rand() % 200;
+    test_specific_size(m);
+    test_specific_size_randaccess(m);
+  }
+  std::cerr << "Normal termination of the program\n";
 }
