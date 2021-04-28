@@ -242,7 +242,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
       vectface TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
       for (Face fOrb : TheSpann) {
         Face fOrbCan = TheGRP.CanonicalImage(fOrb);
-        NListOrbit.push_back(fOrbCan);
+        NListOrb.push_back(fOrbCan);
       }
     }
     RetList.push_back(NListOrb);
