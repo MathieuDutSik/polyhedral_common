@@ -162,9 +162,9 @@ public:
   {
     // It is for the first empty byte that we may need to write.
     size_t curr_n_byte = (n_face * siz + 7) / 8;
+    // It is the number of the byte just after the last one we need.
     size_t needed_n_byte = ( (pos + 1) * siz + 7) / 8;
     std::fseek(fp, curr_n_byte, SEEK_SET);
-    std::cerr << "curr_n_byte=" << curr_n_byte << " needed_n_byte=" << needed_n_byte << "\n";
     // Adding the zero entries.
     size_t len = 0;
     if (needed_n_byte > curr_n_byte)
