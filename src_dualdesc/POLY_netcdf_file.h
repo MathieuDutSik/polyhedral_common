@@ -493,10 +493,13 @@ void POLY_NC_WriteOrbitDimVars(netCDF::NcFile & dataFile, int const& n_act)
 }
 
 
-
-
-
-
+void POLY_NC_WriteNbOrbit(netCDF::NcFile & dataFile)
+{
+  netCDF::NcDim eDimOne = dataFile.addDim("one", 1);
+  std::vector<std::string> LDim{"one"};
+  std::string name = "number_orbit";
+  netCDF::NcVar varNB_ORBIT = dataFile.addVar(name, "int", LDim);
+}
 
 
 template<typename Tgroup>
