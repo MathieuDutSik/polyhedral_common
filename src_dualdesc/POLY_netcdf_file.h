@@ -493,13 +493,32 @@ void POLY_NC_WriteOrbitDimVars(netCDF::NcFile & dataFile, int const& n_act)
 }
 
 
-void POLY_NC_WriteNbOrbit(netCDF::NcFile & dataFile)
+void POLY_NC_SetNbOrbit(netCDF::NcFile & dataFile)
 {
   netCDF::NcDim eDimOne = dataFile.addDim("one", 1);
   std::vector<std::string> LDim{"one"};
   std::string name = "number_orbit";
-  netCDF::NcVar varNB_ORBIT = dataFile.addVar(name, "int", LDim);
+  netCDF::NcVar varNB_ORBIT = dataFile.addVar(name, "uint64", LDim);
 }
+
+size_t POLY_NC_ReadNbOrbit(netCDF::NcFile & dataFile)
+{
+  std::string name = "number_orbit";
+  netCDF::NcVar data = dataFile.getVar(name);
+  uint64_t val;
+  data.getVar(&val);
+  return val;
+}
+
+void POLY_NC_WriteNbOrbit(netCDF::NcFile & dataFile, size_t const& val)
+{
+  uint64_t val_u64 = val;
+  std::string name = "number_orbit";
+  netCDF::NcVar data = dataFile.getVar(name);
+  data.putVar(&val_u64);
+}
+
+
 
 
 template<typename Tgroup>

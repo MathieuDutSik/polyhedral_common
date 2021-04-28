@@ -366,14 +366,39 @@ public:
 };
 
 
-template<typename Tidx, template Tint>
-struct MappingOrbitSize {
-private:
-  std::vector<Tint> ListPossibilities;
-  
+size_t get_matching_power(size_t const& val)
+{
+  size_t pow = 1;
+  size_t pos = 0;
+  while(true) {
+    if (pow >= val) {
+      return pos;
+    }
+    pow *= 2;
+    pos++;
+  }
+}
 
-  
-};
+
+
+template<typename Tidx, typename Tint>
+std::vector<Tint> GetAllPossibilities(std::map<Tidx,int> const& eMap)
+{
+  std::vector<Tint> LVal = {1};
+  for (auto & kv : eMap) {
+    std::vector<Tint> NewVal;
+    Tint ePow = 1;
+    for (int i=0; i<=kv.second; i++) {
+      for (auto & eVal : LVal)
+        NewVal.push_back(ePow * eVal);
+      ePow *= kv.first;
+    }
+    LVal = NewVal;
+  }
+  return LVal;
+}
+
+
 
 
 
@@ -387,12 +412,14 @@ private:
   Tint groupOrder;
   std::string eFile;
   netCDF::NcFile dataFile;
+  FileBool* fb;
+  FileFace* ff;
   bool SavingTrigger;
   /* TRICK2: We keep the list of orbit and the map. We could in principle have built the map
      from the start since we know the occurring orders. However, since some orbitsize never occur
      this would have populated it with entries that never occur and so slow it down. */
   UNORD_MAP<Tint,Torbsize> OrbSize_Map;
-  std::vector<Tint> OrbSize_List;
+  std::vector<Tint> ListPossOrbsize;
   struct SingEnt {
     Face face;
     Torbsize idx_orb;
@@ -400,7 +427,8 @@ private:
   UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
   /* TRICK3: Encoding the pair of face and idx_orb as bits allow us to save memory */
-  vectface ListOrbit;
+  std::vector<uint8_t> ListOrbit; // This CANNOT be replaced by vectface as we hack our way and so
+                                  // making a vectface will not allow
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -414,18 +442,7 @@ private:
   size_t n_act_div8;
   std::vector<uint8_t> V_hash;
 public:
-  size_t get_matching_power(size_t const& val)
-  {
-    size_t pow = 1;
-    size_t pos = 0;
-    while(true) {
-      if (pow >= val) {
-        return pos;
-      }
-      pow *= 2;
-      pos++;
-    }
-  }
+  // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const& f_in) const
   {
     Face f(n_act);
@@ -435,7 +452,7 @@ public:
     Torbsize idx_orb=0;
     Torbsize pow = 1;
     for (size_t i=0; i<n_bit_orbsize; i++) {
-      idx_orb += Torbsize(f[i_acc]) * pow;
+      idx_orb += Torbsize(f_in[i_acc]) * pow;
       i_acc++;
       pow *= 2;
     }
@@ -455,14 +472,24 @@ public:
       work_idx = work_idx / 2;
     }
     return f;
-
   }
-
-
-  
+  // Database code that uses ListOrbit;
   SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
   {
-    return FaceToSingEnt(ListOrbit[i_orb]);
+    size_t i_acc = delta * i_orb;
+    Face f(n_act);
+    for (size_t i=0; i<n_act; i++) {
+      f[i] = getbit(ListOrbit, i_acc);
+      i_acc++;
+    }
+    Torbsize idx_orb=0;
+    Torbsize pow = 1;
+    for (size_t i=0; i<n_bit_orbsize; i++) {
+      idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
+      i_acc++;
+      pow *= 2;
+    }
+    return {f,idx_orb};
   }
   void InsertListOrbitEntry(SingEnt const& eEnt)
   {
@@ -513,23 +540,31 @@ public:
       work_idx = work_idx / 2;
     }
   }
+  // Group functionqlities.
   uint16_t GetOrbSizeIndex(Tint const& orbSize)
   {
     /* TRICK4: value 0 is the default constructed one and so using it we can find if the entry is new or not
        in only one call */
     Torbsize & idx = OrbSize_Map[orbSize];
-    if (idx == 0) {
-      OrbSize_List.push_back(orbSize);
-      idx = OrbSize_List.size();
+    if (idx == 0) { // A rare case. The linear loop should be totally ok
+      auto set=[&]() -> int {
+        for (int u=0; u<ListPossOrbsize.size(); u++)
+          if (ListPossOrbsize[u] == orbSize) {
+            return u + 1;
+          }
+        return 0;
+      };
+      idx = set();
     }
     return idx - 1;
   }
-  void InsertEntryDatabase(Face const& face, bool const& status, Tint const& orbSize, size_t const& pos)
+  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos)
   {
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
     }
+    Tint orbSize = ListPossOrbsize[idx_orb];
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -547,10 +582,12 @@ public:
     groupOrder = GRP.size();
     std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
-    for (auto & kv : LFact)
+    for (auto & kv : LFact) {
       n_factor *= (1 + kv.second);
+    }
     /* TRICK4: We need to add 1 because of shift by 1 in the OrbSize_Map */
     n_bit_orbsize = get_matching_power(n_factor + 1);
+    ListPossOrbsize = GetAllPossibilities<Tidx,Tint>(LFact);
 
     /* TRICK6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -584,10 +621,17 @@ public:
     };
     DictOrbit = UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>>({}, fctHash, fctEqual);
     if (SavingTrigger) {
+      std::string eFileNC = eFile + ".nc";
+      std::string eFileFB = eFile + ".fb";
+      std::string eFileFF = eFile + ".ff";
       std::cerr << "eFile=" << eFile << "\n";
-      if (IsExistingFile(eFile)) {
+      size_t n_orbit;
+      if (IsExistingFile(eFileNC)) {
         std::cerr << "Opening existing file\n";
-        dataFile.open(eFile, netCDF::NcFile::write);
+        dataFile.open(eFileNC, netCDF::NcFile::write);
+        n_orbit = POLY_NC_ReadNbOrbit(dataFile);
+        fb = new FileBool(eFileFB, n_orbit);
+        ff = new FileFace(eFileFF, n_act + n_bit_orbsize, n_orbit);
       } else {
         if (!FILE_IsFileMakeable(eFile)) {
           std::cerr << "Error in DatabaseOrbits: File eFile=" << eFile << " is not makeable\n";
@@ -596,23 +640,26 @@ public:
         std::cerr << "Creating the file\n";
         dataFile.open(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
-        bool orbit_setup = true;
-        bool orbit_status = true;
+        bool orbit_setup = false;
+        bool orbit_status = false;
         POLY_NC_WriteGroup(dataFile, GRP, orbit_setup, orbit_status);
+        POLY_NC_SetNbOrbit(dataFile);
+        POLY_NC_WriteNbOrbit(dataFile, 0);
+        fb = new FileBool(eFileFB);
+        ff = new FileFace(eFileFF, n_act + n_bit_orbsize);
       }
-      netCDF::NcDim eDim = dataFile.getDim("n_orbit");
-      size_t n_orbit = eDim.getSize();
       netCDF::NcDim fDim = dataFile.getDim("n_grpsize");
       n_grpsize = fDim.getSize();
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-        SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
+        Face f = ff->getface(i_orbit);
+        SingEnt eEnt = FaceToSingEnt(f);
+        bool status = fb->getbit(i_orbit);
         // The DictOrbit
-        Torbsize idx_orb = GetOrbSizeIndex(eEnt.OrbSize);
-        InsertListOrbitEntry({eEnt.face,idx_orb});
+        InsertListOrbitEntry(eEnt);
         DictOrbit.insert(i_orbit);
         // The other fields
-        InsertEntryDatabase(eEnt.face, eEnt.status, eEnt.OrbSize, i_orbit);
+        InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
       }
       std::cerr << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
     }
@@ -620,6 +667,10 @@ public:
   ~DatabaseOrbits()
   {
     // TRICK5: The destructor does NOT destroy the database! This is because it can be used in another call.
+    POLY_NC_WriteNbOrbit(dataFile, nbOrbit);
+    delete fb;
+    delete ff;
+    std::cerr << "Clean closing of the DatabaseOrbits\n";
   }
   void FuncInsert(Face const& face)
   {
@@ -633,25 +684,26 @@ public:
     Tint orbSize = groupOrder / ordStab;
     Torbsize idx_orb = GetOrbSizeIndex(orbSize);
     InsertListOrbitIdxOrb(idx_orb);
-    InsertEntryDatabase(face_can, false, orbSize, nbOrbit);
+    InsertEntryDatabase(face_can, false, idx_orb, nbOrbit);
     //
     if (SavingTrigger) {
-      SingleEntryStatus<Tint> eEnt{false, face_can, orbSize};
-      POLY_NC_WriteSingleEntryStatus(dataFile, nbOrbit - 1, eEnt, n_grpsize);
+      Face f = SingEntToFace({face_can, idx_orb});
+      fb->setbit(nbOrbit - 1, false);
+      ff->setface(nbOrbit - 1, f);
     }
   }
   void FuncPutOrbitAsDone(size_t const& iOrb)
   {
     const SingEnt & eEnt = RetrieveListOrbitEntry(iOrb);
     if (SavingTrigger) {
-      POLY_NC_SetBit(dataFile, iOrb, true);
+      fb->setbit(iOrb, true);
     }
     size_t len = eEnt.face.count();
     /* TRICK1: We copy the last element in first position to erase it and then pop_back the vector */
     std::vector<size_t> & V = CompleteList_SetUndone[len];
     V[0] = V[V.size()-1];
     V.pop_back();
-    nbUndone -= OrbSize_List[eEnt.idx_orb];
+    nbUndone -= ListPossOrbsize[eEnt.idx_orb];
     nbOrbitDone++;
   }
   Face ComputeIntersectionUndone() const
