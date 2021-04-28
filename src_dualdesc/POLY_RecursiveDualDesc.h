@@ -366,6 +366,17 @@ public:
 };
 
 
+template<typename Tidx, template Tint>
+struct MappingOrbitSize {
+private:
+  std::vector<Tint> ListPossibilities;
+  
+
+  
+};
+
+
+
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 private:
@@ -389,7 +400,7 @@ private:
   UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
   /* TRICK3: Encoding the pair of face and idx_orb as bits allow us to save memory */
-  std::vector<uint8_t> ListOrbit;
+  vectface ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -415,22 +426,43 @@ public:
       pos++;
     }
   }
-  SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
+  SingEnt FaceToSingEnt(Face const& f_in) const
   {
-    size_t i_acc = delta * i_orb;
     Face f(n_act);
-    for (size_t i=0; i<n_act; i++) {
-      f[i] = getbit(ListOrbit, i_acc);
-      i_acc++;
-    }
+    for (size_t i=0; i<n_act; i++)
+      f[i] = f_in[i];
+    size_t i_acc = n_act;
     Torbsize idx_orb=0;
     Torbsize pow = 1;
     for (size_t i=0; i<n_bit_orbsize; i++) {
-      idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
+      idx_orb += Torbsize(f[i_acc]) * pow;
       i_acc++;
       pow *= 2;
     }
     return {f,idx_orb};
+  }
+  Face SingEntToFace(SingEnt const& eEnt) const
+  {
+    Face f(n_act + n_bit_orbsize);
+    for (size_t i=0; i<n_act; i++)
+      f[i] = eEnt.face[i];
+    size_t work_idx = eEnt.idx_orb;
+    size_t i_acc = n_act;
+    for (size_t i=0; i<n_bit_orbsize; i++) {
+      bool val = work_idx % 2;
+      f[i_acc] = val;
+      i_acc++;
+      work_idx = work_idx / 2;
+    }
+    return f;
+
+  }
+
+
+  
+  SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
+  {
+    return FaceToSingEnt(ListOrbit[i_orb]);
   }
   void InsertListOrbitEntry(SingEnt const& eEnt)
   {
@@ -471,7 +503,7 @@ public:
   }
   void InsertListOrbitIdxOrb(Torbsize const& idx_orb)
   {
-    // The position have been 
+    // The position have been
     size_t i_acc = nbOrbit * delta + n_act;
     Torbsize work_idx = idx_orb;
     for (size_t i=0; i<n_bit_orbsize; i++) {
@@ -515,9 +547,8 @@ public:
     groupOrder = GRP.size();
     std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
-    for (auto & kv : LFact) {
+    for (auto & kv : LFact)
       n_factor *= (1 + kv.second);
-    }
     /* TRICK4: We need to add 1 because of shift by 1 in the OrbSize_Map */
     n_bit_orbsize = get_matching_power(n_factor + 1);
 
