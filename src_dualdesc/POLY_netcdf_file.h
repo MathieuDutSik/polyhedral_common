@@ -138,7 +138,8 @@ public:
     size_t len = end_byte - start_byte;
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len, fp);
     if (ret != len) {
-      std::cerr << "Number of read elementr different from count. Please correct. ret=" << ret << " len=" << len << "\n";
+      std::cerr << "getface: Number of read element different from count. pos=" << pos << "\n";
+      std::cerr << "Please correct. ret=" << ret << " len=" << len << "\n";
       throw TerminalException{1};
     }
     //
@@ -159,9 +160,11 @@ public:
 
   void setface(size_t const& pos, Face const& f)
   {
+    // It is for the first empty byte that we may need to write.
     size_t curr_n_byte = (n_face * siz + 7) / 8;
-    size_t needed_n_byte = ( (n_face + 1) * siz + 7) / 8;
+    size_t needed_n_byte = ( (pos + 1) * siz + 7) / 8;
     std::fseek(fp, curr_n_byte, SEEK_SET);
+    std::cerr << "curr_n_byte=" << curr_n_byte << " needed_n_byte=" << needed_n_byte << "\n";
     // Adding the zero entries.
     size_t len = 0;
     if (needed_n_byte > curr_n_byte)
@@ -170,7 +173,7 @@ public:
       if (len > 0) {
         std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
       }
-    } else {
+    } else { // This case is rarer. It is for big jumps.
       uint8_t val_u8 = 0;
       for (size_t u=curr_n_byte; u<needed_n_byte; u++)
         std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
@@ -183,7 +186,8 @@ public:
     std::fseek(fp, start_byte, SEEK_SET);
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
     if (ret != len_rw) {
-      std::cerr << "Number of read elementr different from count. Please correct. ret=" << ret << " len_rw=" << len_rw << "\n";
+      std::cerr << "setface: Number of read element different from count. pos=" << pos << "\n";
+      std::cerr << "Please correct. ret=" << ret << " len_rw=" << len_rw << "\n";
       throw TerminalException{1};
     }
     // Assigning the new values
@@ -201,7 +205,7 @@ public:
     // Writing it out
     std::fseek(fp, start_byte, SEEK_SET);
     std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
-    n_face = pos + 1;
+    n_face = std::max(n_face, pos + 1);
   }
 };
 

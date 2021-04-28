@@ -66,6 +66,47 @@ void test_specific_size(int const& m, int const& n)
 
 
 
+std::string get_string(Face f)
+{
+  std::string estr;
+  for (size_t i=0; i<f.size(); i++)
+    estr += std::to_string(f[i]);
+  return estr;
+}
+
+void test_specific_size_randaccess(int const& m, int const& n)
+{
+  std::vector<Face> ListFace(n);
+  std::vector<int> Status(n);
+  //
+  std::string TestFile = "/tmp/testbool_n" + std::to_string(n) + "_m" + std::to_string(m) + "_" + random_string(20);
+  RemoveFileIfExist(TestFile);
+  FileFace ff(TestFile, m);
+  for (size_t iter=0; iter<1000; iter++) {
+    size_t pos = rand() % n;
+    Face f(m);
+    for (int i=0; i<m; i++)
+      f[i] = rand() % 2;
+    ListFace[pos] = f;
+    Status[pos] = 1;
+    std::cerr << "iter=" << iter << " pos=" << pos << " f=" << get_string(f) << "\n";
+    ff.setface(pos, f);
+    //
+    for (int i=0; i<n; i++) {
+      if (Status[i] == 1) {
+        Face f = ff.getface(i);
+        if (f != ListFace[i]) {
+          std::cerr << "Inconsistency at i=" << i << " iter=" << iter << "\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+}
+
+
+
+
 
 
 
@@ -80,7 +121,8 @@ int main()
     int n = 10 + rand()% 20;
     int m = 20 + rand()% 20;
     std::cerr << "n=" << n << " m=" << m << "\n";
-    test_specific_size(m, n);
+    //    test_specific_size(m, n);
+    test_specific_size_randaccess(m, n);
   }
   std::cerr << "Normal end of the program\n";
 }
