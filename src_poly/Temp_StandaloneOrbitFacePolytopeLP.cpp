@@ -1,5 +1,6 @@
 #include "Permlib_specific.h"
 #include "Group.h"
+#include "Permutation.h"
 #include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
 
