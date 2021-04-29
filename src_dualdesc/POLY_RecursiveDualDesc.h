@@ -441,6 +441,7 @@ private:
   size_t delta;
   size_t n_act_div8;
   std::vector<uint8_t> V_hash;
+  bool is_opened;
 public:
   // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const& f_in) const
@@ -622,6 +623,7 @@ public:
     DictOrbit = UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>>({}, fctHash, fctEqual);
     fb = nullptr;
     ff = nullptr;
+    is_opened = false;
     if (SavingTrigger) {
       std::string eFileNC = MainPrefix + ".nc";
       std::string eFileFB = MainPrefix + ".fb";
@@ -653,6 +655,7 @@ public:
       }
       netCDF::NcDim fDim = dataFile.getDim("n_grpsize");
       n_grpsize = fDim.getSize();
+      is_opened = true;
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         Face f = ff->getface(i_orbit);
@@ -670,7 +673,8 @@ public:
   ~DatabaseOrbits()
   {
     // TRICK5: The destructor does NOT destroy the database! This is because it can be used in another call.
-    POLY_NC_WriteNbOrbit(dataFile, nbOrbit);
+    if (is_opened)
+      POLY_NC_WriteNbOrbit(dataFile, nbOrbit);
     if (fb != nullptr)
       delete fb;
     if (ff != nullptr)
@@ -743,6 +747,8 @@ public:
       delete ff;
       ff = nullptr;
       RemoveFile(eFileFF);
+      //
+      is_opened = false;
     }
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
