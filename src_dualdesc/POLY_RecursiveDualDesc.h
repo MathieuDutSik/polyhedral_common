@@ -410,7 +410,7 @@ private:
   MyMatrix<T> EXT;
   Tgroup GRP;
   Tint groupOrder;
-  std::string eFile;
+  std::string MainPrefix;
   netCDF::NcFile dataFile;
   FileBool* fb;
   FileFace* ff;
@@ -573,7 +573,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _eFile, bool const& _SavingTrigger) : EXT(_EXT), GRP(_GRP), eFile(_eFile), SavingTrigger(_SavingTrigger)
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger) : EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger)
   {
     TotalNumber = 0;
     nbOrbitDone = 0;
@@ -620,11 +620,13 @@ public:
       return true;
     };
     DictOrbit = UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>>({}, fctHash, fctEqual);
+    fb = nullptr;
+    ff = nullptr;
     if (SavingTrigger) {
-      std::string eFileNC = eFile + ".nc";
-      std::string eFileFB = eFile + ".fb";
-      std::string eFileFF = eFile + ".ff";
-      std::cerr << "eFile=" << eFile << "\n";
+      std::string eFileNC = MainPrefix + ".nc";
+      std::string eFileFB = MainPrefix + ".fb";
+      std::string eFileFF = MainPrefix + ".ff";
+      std::cerr << "MainPrefix=" << MainPrefix << "\n";
       size_t n_orbit;
       if (IsExistingFile(eFileNC)) {
         std::cerr << "Opening existing file\n";
@@ -633,12 +635,12 @@ public:
         fb = new FileBool(eFileFB, n_orbit);
         ff = new FileFace(eFileFF, n_act + n_bit_orbsize, n_orbit);
       } else {
-        if (!FILE_IsFileMakeable(eFile)) {
-          std::cerr << "Error in DatabaseOrbits: File eFile=" << eFile << " is not makeable\n";
+        if (!FILE_IsFileMakeable(eFileNC)) {
+          std::cerr << "Error in DatabaseOrbits: File eFileNC=" << eFileNC << " is not makeable\n";
           throw TerminalException{1};
         }
         std::cerr << "Creating the file\n";
-        dataFile.open(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+        dataFile.open(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = false;
         bool orbit_status = false;
@@ -668,8 +670,10 @@ public:
   {
     // TRICK5: The destructor does NOT destroy the database! This is because it can be used in another call.
     POLY_NC_WriteNbOrbit(dataFile, nbOrbit);
-    delete fb;
-    delete ff;
+    if (fb != nullptr)
+      delete fb;
+    if (ff != nullptr)
+      delete ff;
     std::cerr << "Clean closing of the DatabaseOrbits\n";
   }
   void FuncInsert(Face const& face)
@@ -725,7 +729,19 @@ public:
   vectface FuncListOrbitIncidence()
   {
     if (SavingTrigger) {
-      RemoveFile(eFile);
+      std::string eFileNC = MainPrefix + ".nc";
+      dataFile.close();
+      RemoveFile(eFileNC);
+      //
+      std::string eFileFB = MainPrefix + ".fb";
+      delete fb;
+      fb = nullptr;
+      RemoveFile(eFileFB);
+      //
+      std::string eFileFF = MainPrefix + ".ff";
+      delete ff;
+      ff = nullptr;
+      RemoveFile(eFileFF);
     }
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -858,9 +874,9 @@ vectface DUALDESC_AdjacencyDecomposition(
     Tint GroupSizeComp = TheGRPrelevant.size();
     std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << (eRank-1) << " |EXT|=" << nbRow << "\n";
     TheMap["groupsizerelevant"] = GroupSizeComp;
-    std::string eFile = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank) + ".nc";
+    std::string MainPrefix = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank);
     bool SavingTrigger=AllArr.Saving;
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, eFile, SavingTrigger);
+    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, SavingTrigger);
     int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
