@@ -548,7 +548,7 @@ public:
     Torbsize & idx = OrbSize_Map[orbSize];
     if (idx == 0) { // A rare case. The linear loop should be totally ok
       auto set=[&]() -> int {
-        for (int u=0; u<ListPossOrbsize.size(); u++)
+        for (size_t u=0; u<ListPossOrbsize.size(); u++)
           if (ListPossOrbsize[u] == orbSize) {
             return u + 1;
           }
