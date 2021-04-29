@@ -882,7 +882,6 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << (eRank-1) << " |EXT|=" << nbRow << "\n";
     TheMap["groupsizerelevant"] = GroupSizeComp;
     std::string MainPrefix = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank);
-    std::cerr << "MainPrefix=" << MainPrefix << "\n";
     bool SavingTrigger=AllArr.Saving;
     DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, SavingTrigger);
     int NewLevel = TheLevel + 1;
