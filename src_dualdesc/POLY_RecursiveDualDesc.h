@@ -542,7 +542,7 @@ public:
     }
   }
   // Group functionqlities.
-  uint16_t GetOrbSizeIndex(Tint const& orbSize)
+  Torbsize GetOrbSizeIndex(Tint const& orbSize)
   {
     /* TRICK4: value 0 is the default constructed one and so using it we can find if the entry is new or not
        in only one call */
