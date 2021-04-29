@@ -91,8 +91,8 @@ int main(int argc, char *argv[])
       return f;
     };
     //
-    FileBool fb(eFileFB, n_orbit);
-    FileFace ff(eFileFF, n_act + n_bit_orbsize, n_orbit);
+    FileBool fb(eFileFB);
+    FileFace ff(eFileFF, n_act + n_bit_orbsize);
     dataFile.open(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
     POLY_NC_WritePolytope(dataFile, EXT);
     bool orbit_setup = false;
