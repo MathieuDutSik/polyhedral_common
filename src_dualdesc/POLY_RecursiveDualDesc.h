@@ -629,7 +629,7 @@ public:
       std::cerr << "MainPrefix=" << MainPrefix << "\n";
       size_t n_orbit;
       if (IsExistingFile(eFileNC)) {
-        std::cerr << "Opening existing file\n";
+        std::cerr << "Opening existing files (NC, FB, FF)\n";
         dataFile.open(eFileNC, netCDF::NcFile::write);
         n_orbit = POLY_NC_ReadNbOrbit(dataFile);
         fb = new FileBool(eFileFB, n_orbit);
@@ -639,7 +639,7 @@ public:
           std::cerr << "Error in DatabaseOrbits: File eFileNC=" << eFileNC << " is not makeable\n";
           throw TerminalException{1};
         }
-        std::cerr << "Creating the file\n";
+        std::cerr << "Creating the files (NC, FB, FF)\n";
         dataFile.open(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = false;
@@ -647,6 +647,7 @@ public:
         POLY_NC_WriteGroup(dataFile, GRP, orbit_setup, orbit_status);
         POLY_NC_SetNbOrbit(dataFile);
         POLY_NC_WriteNbOrbit(dataFile, 0);
+        n_orbit = 0;
         fb = new FileBool(eFileFB);
         ff = new FileFace(eFileFF, n_act + n_bit_orbsize);
       }
@@ -875,6 +876,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << (eRank-1) << " |EXT|=" << nbRow << "\n";
     TheMap["groupsizerelevant"] = GroupSizeComp;
     std::string MainPrefix = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank);
+    std::cerr << "MainPrefix=" << MainPrefix << "\n";
     bool SavingTrigger=AllArr.Saving;
     DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, SavingTrigger);
     int NewLevel = TheLevel + 1;
@@ -903,8 +905,9 @@ vectface DUALDESC_AdjacencyDecomposition(
       Tint OrbSize=GroupSizeComp / TheStab.size();
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
-      std::string eDir = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.Get_EXT_face(), GRPred, AllArr, eDir, NewLevel);
+      std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+      std::cerr << "NewPrefix=" << NewPrefix << "\n";
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.Get_EXT_face(), GRPred, AllArr, NewPrefix, NewLevel);
       for (auto& eOrbB : TheOutput) {
         Face eFlip=FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);
