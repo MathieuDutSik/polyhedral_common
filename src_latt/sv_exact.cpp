@@ -76,6 +76,13 @@ int main(int argc, char *argv[])
 	gram_matrix(i,j)=eT;
 	gram_matrix(j,i)=eT;
       }
+    for (i = 0; i < dim; i++) {
+      for (j = 0; j < dim; j++) {
+	std::cerr << " " << gram_matrix(i,j);
+      }
+      std::cerr << "\n";
+    }
+    
     MyVector<T> cosetVect(dim);
     if (coset) {
       for (i = 0; i < dim; i++)
@@ -84,10 +91,16 @@ int main(int argc, char *argv[])
 	  cosetVect(i) = eT;
 	}
     }
+    std::cerr << "coset=" << coset << " eV =";
+    for (i = 0; i < dim; i++)
+      std::cerr << " " << cosetVect(i);
+    std::cerr << "\n";
     if (NeedBound) {
       std::cin >> eT;
       bound=eT;
     }
+    std::cerr << "NeedBound=" << NeedBound << " bound=" << bound << "\n";
+
     //
     // Defining info and computing with it
     //

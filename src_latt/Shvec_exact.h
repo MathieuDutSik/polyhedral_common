@@ -7,7 +7,7 @@
 #include "MAT_Matrix.h"
 
 #define CHECK_BASIC_CONSISTENCY
-
+#define PRINT_DEBUG_INFO
 
 
 namespace TempShvec_globals {
@@ -220,13 +220,14 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
   MyVector<T> C(dim);
   MyVector<Tint> x(dim);
   MyMatrix<T> g = info.request.gram_matrix;
-  /*
+#ifdef PRINT_DEBUG_INFO
   std::cerr << "g=\n";
   for (i=0; i<dim; i++) {
     for (j=0; j<dim; j++)
       std::cerr << " " << g(i,j);
     std::cerr << "\n";
-    }*/
+    }
+#endif
   MyMatrix<T> q = info.request.gram_matrix;
   for (i=0; i<dim; i++) {
     for (j=i+1; j<dim; j++) {
@@ -236,10 +237,11 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     for (int i2=i+1; i2<dim; i2++)
       for (int j2=i+1; j2<dim; j2++)
 	q(i2,j2)=q(i2,j2) - q(i,i)*q(i,i2)*q(i,j2);
-    //    std::cerr << "diag q=" << q(i,i) << "\n";
-    /*for (int j=i+1; j<dim; j++)
+#ifdef PRINT_DEBUG_INFO
+    std::cerr << "diag q=" << q(i,i) << "\n";
+    for (int j=i+1; j<dim; j++)
       std::cerr << "   j=" << j << " q=" << q(i,j) << "\n";
-    */
+#endif
   }
   for (int ik=0; ik<dim; ik++) {
     x(ik)=0;
@@ -333,6 +335,12 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  std::cerr << "eNorm=" << eNorm << "\n";
 	  throw TerminalException{1};
 	}
+#endif
+#ifdef PRINT_DEBUG_INFO
+	std::cerr << "x=";
+	for (int i=0; i<dim; i++)
+	  std::cerr << " " << x(i);
+	std::cerr << "\n";
 #endif
         if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           if (eNorm == info.minimum)
