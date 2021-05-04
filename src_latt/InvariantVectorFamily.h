@@ -1,6 +1,7 @@
 #ifndef DEFINE_INVARIANT_VECTOR_FAMILY_H
 #define DEFINE_INVARIANT_VECTOR_FAMILY_H
 
+#include "Temp_Positivity.h"
 #include "ShortestUniversal.h"
 
 
