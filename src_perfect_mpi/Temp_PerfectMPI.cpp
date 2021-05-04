@@ -55,7 +55,7 @@ std::vector<TypePerfectExch<Tint>> GetAdjacentObjects(TypePerfectExch<Tint> cons
     for (int i=0; i<n; i++)
       SHVred(iShort,i) = eRec.SHV(2*iShort,i);
   MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T,Tint>(SHVred);
-  std::vector<Face> ListIncd = lrs::DualDescription_temp_incd(ConeClassical);
+  vectface ListIncd = lrs::DualDescription_temp_incd(ConeClassical);
   MyVector<T> Wvect = GetSymmetricMatrixWeightVector<T>(n);
   std::vector<TypePerfectExch<Tint>> ListAdjMat;
   for (auto & eIncd : ListIncd) {
