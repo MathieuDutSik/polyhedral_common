@@ -6,8 +6,8 @@
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
 
-#define CHECK_BASIC_CONSISTENCY
-#define PRINT_DEBUG_INFO
+#undef CHECK_BASIC_CONSISTENCY
+#undef PRINT_DEBUG_INFO
 
 
 namespace TempShvec_globals {
@@ -341,7 +341,6 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	for (int i=0; i<dim; i++)
 	  std::cerr << " " << x(i);
 	std::cerr << "\n";
-	std::cerr << "mode=" << info.request.mode << " VINBERG=" << TempShvec_globals::TEMP_SHVEC_MODE_VINBERG << " eNorm=" << eNorm << " minimum=" << info.minimum << "\n";
 #endif
         if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           if (eNorm == info.minimum)
@@ -514,6 +513,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_VINBERG:
+      info.minimum = info.request.bound;
       break;
     default:
       {
@@ -540,6 +540,7 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
     result = computeMinimum<T,Tint>(info);
   }
   else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
+    info.minimum = info.request.bound;
     //    std::cerr << "Before computeIt, case 5\n";
     result = computeIt<T,Tint>(info);
   }
