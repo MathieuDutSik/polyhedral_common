@@ -2,6 +2,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_ThreadedADM \
 		  POLY_CreateAffineBasis \
 		  ComputeDelaunay \
+		  POLY_cdd_skeletons \
 		  POLY_redundancy \
 		  POLY_redundancyClarkson \
 		  POLY_redundancyClarksonBlocks \
@@ -21,7 +22,8 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
                   GRP_Invariant_ListMat_Subset_EXT \
                   POLY_LinPolytope_Automorphism \
 		  POLY_ComputeEngelSymbol \
-		  POLY_FaceLatticeDirect
+		  POLY_FaceLatticeDirect \
+		  Timing_NullspaceFacet
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
@@ -45,9 +47,9 @@ OUTPUTFLAG 	= -o
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I.
 
 
-CFLAGS 		= -I$(GMP_INCDIR)  -I$(PERMLIB_INCDIR) $(PERMUTALIB_INCLUDE) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) -I$(FLINT_INCDIR) -I$(TBB_INCDIR) -I$(GSL_INCDIR) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR)  -I$(PERMLIB_INCDIR) $(PERMUTALIB_INCLUDE) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) -I$(FLINT_INCDIR) -I$(TBB_INCDIR) -I$(GSL_INCDIR) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE) $(LINBOX_INCLUDE)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBSHORT_LINK) $(LIBBLISS_LINK) $(MPFR_LINK) $(FLINT_LINK) $(BOOST_LINK) $(TBB_LINK) $(GSL_C_LINK) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBSHORT_LINK) $(LIBBLISS_LINK) $(MPFR_LINK) $(FLINT_LINK) $(BOOST_LINK) $(TBB_LINK) $(GSL_C_LINK) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK) $(LINBOX_LINK)
 
 %.o: %.cpp
 	@echo
