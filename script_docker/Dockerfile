@@ -169,15 +169,21 @@ ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.8"
 RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.8 /opt/mpfrc++-3.6.8
 
 
+# openmpi
+RUN apt-get install -y openmpi-bin libopenmpi-dev
+ENV MPI_CXX_INCLUDE "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
+ENV MPI_CXX_LINK "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
+
+
 # Compiling polyhedral functionality
-RUN apt-get install -y openmpi-bin
+RUN cd GIT/polyhedral_common/src_ctype_mpi && make
+RUN cd GIT/polyhedral_common/src_perfect_mpi && make
 RUN cd GIT/polyhedral_common/src_latt && make
 RUN cd GIT/polyhedral_common/src_poly && make
 RUN cd GIT/polyhedral_common/src_poly && make -f Makefile_double_cddlib
 RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
 RUN cd GIT/polyhedral_common/src_perfect && make
-#RUN cd GIT/polyhedral_common/src_ctype_mpi && make
 RUN cd GIT/polyhedral_common/src_dualdesc && make
 
 
