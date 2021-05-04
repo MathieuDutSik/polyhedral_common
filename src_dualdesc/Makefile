@@ -1,11 +1,10 @@
-#PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc
+PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc ConvertNC_to_NC_FB_FF Test_face Test_bool
 #PROGRAM		= DD_ConvertGAP_to_NC
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= ConvertNC_to_NC_FB_FF
-#PROGRAM		= Test_bool
-#PROGRAM		= Test_face Test_bool
-#PROGRAM		= POLY_NetcdfToGAP
 #PROGRAM		= POLY_CheckCanonicalGAP
+#PROGRAM		= POLY_NetcdfToGAP
+#PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= ConvertNC_to_NC_FB_FF
+#PROGRAM		= Test_face Test_bool
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
