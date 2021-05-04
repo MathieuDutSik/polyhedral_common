@@ -542,7 +542,7 @@ void VoronoiAlgo_THR_BlockTreatment(MainProcessor &MProc, int TheId,
     MyMatrix<T> eGram=ListPerf.GetGram(eOrb);
     MyMatrix<T> PerfDomEXT=ListPerf.GetPerfDomEXT(eOrb);
     Tgroup PerfDomGRP=ListPerf.GetPerfDomGRP(eOrb);
-    std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
+    vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc,
              TheId, TheBank,
 	     PerfDomEXT, PerfDomGRP,
 	     AllArr);
@@ -956,7 +956,7 @@ template<typename T, typename Tint, typename Tgroup>
       Tgroup GRPshv=SimplePerfect_Stabilizer<T,Tint,Tgroup>(eData, ePERF.Gram, RecSHV);
       Tgroup PerfDomGRP=MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" + IntToString(eEntry) + "/");
-      std::vector<Face> TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, eNaked.PerfDomEXT, PerfDomGRP, AllArr, eDir.str(), 0);
+      vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, eNaked.PerfDomEXT, PerfDomGRP, AllArr, eDir.str(), 0);
       for (auto& eOrbB : TheOutput) {
 	MyVector<T> eVectOrb=FindFacetInequality(eNaked.PerfDomEXT, eOrbB);
 	MyMatrix<T> DirMat=LINSPA_GetMatrixInTspace(eData.LinSpa, eVectOrb);
