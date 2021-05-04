@@ -341,6 +341,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	for (int i=0; i<dim; i++)
 	  std::cerr << " " << x(i);
 	std::cerr << "\n";
+	std::cerr << "mode=" << info.request.mode << " VINBERG=" << TempShvec_globals::TEMP_SHVEC_MODE_VINBERG << " eNorm=" << eNorm << " minimum=" << info.minimum << "\n";
 #endif
         if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           if (eNorm == info.minimum)
