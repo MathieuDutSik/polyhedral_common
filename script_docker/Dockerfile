@@ -40,7 +40,7 @@ ENV GMP_CXX_LINK "-lm -lgmp -lgmpxx"
 
 
 # BOOST
-RUN apt-get install -y libboost-dev
+RUN apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
 ENV BOOST_INCDIR "/usr/include"
 
 
