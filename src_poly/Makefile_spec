@@ -9,7 +9,8 @@
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= Timing_NullspaceFacet
-PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
+#PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
+PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks

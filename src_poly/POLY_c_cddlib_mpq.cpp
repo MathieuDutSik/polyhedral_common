@@ -10,12 +10,7 @@
 typedef boost::dynamic_bitset<> Face;
 
 
-
-#include <Eigen/Dense>
-template <typename T>
-using MyMatrix = Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>;
-
-
+#include "MatrixTypes.h"
 
 
 namespace cbased_cdd {
