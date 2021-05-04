@@ -186,6 +186,7 @@ using IntInv=short;
 template<typename T>
 struct SimpleOrbitFacetInv {
   int incd;
+  mpz_class eOrbitSize;
   std::vector<IntInv> ListNb;
 };
 
@@ -194,6 +195,8 @@ bool operator==(SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y
 {
   if (x.incd != y.incd)
     return false;
+  if (x.eOrbitSize != y.eOrbitSize)
+    return false;
   return x.ListNb == y.ListNb;
 }
 
@@ -201,6 +204,7 @@ template<typename T>
 std::istream& operator>>(std::istream& is, SimpleOrbitFacetInv<T>& obj)
 {
   int incd;
+  mpz_class eOrbitSize;
   std::vector<IntInv> ListNb;
   is >> incd;
   is >> eOrbitSize;
@@ -214,6 +218,7 @@ template<typename T>
 std::ostream& operator<<(std::ostream& os, SimpleOrbitFacetInv<T> const& obj)
 {
   os << obj.incd << " ";
+  os << obj.eOrbitSize;
   os << obj.ListNb;
   return os;
 }
@@ -227,6 +232,10 @@ bool operator<(SimpleOrbitFacetInv<T> const& eOrb, SimpleOrbitFacetInv<T> const&
   if (eOrb.incd > fOrb.incd)
     return false;
   // At equal incidence, it is best to treat first the large orbits
+  if (eOrb.eOrbitSize > fOrb.eOrbitSize)
+    return true;
+  if (eOrb.eOrbitSize < fOrb.eOrbitSize)
+    return false;
   int eLen=eOrb.ListNb.size();
   int fLen=fOrb.ListNb.size();
   if (eLen < fLen)
@@ -464,10 +473,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	return {eReply.first, eReply.second};
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
 	int siz=eOrb.count();
+	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
 	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, ListSingleInv};
+	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
 	return {eOrbF, eInv};
       };
     }
@@ -491,10 +502,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	return {eReply.first, eReply.second};
       };
       GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
 	int siz=eOrb.count();
+	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
 	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, ListSingleInv};
+	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
 	return {eOrbF, eInv};
       };
     }
@@ -509,7 +522,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         ResultMinimum<Tint> ResMin=GetMinimumRecord(ArrMin, eOrb);
 	int siz=eOrb.count();
 	SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
-	SimpleOrbitFacetInv<T> eInv{siz, {}};
+	SimpleOrbitFacetInv<T> eInv{siz, ResMin.OrbitSize, {}};
 	return {eOrbF, eInv};
       };
     }
