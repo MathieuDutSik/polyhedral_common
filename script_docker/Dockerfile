@@ -185,5 +185,7 @@ RUN cd GIT/polyhedral_common/src_copos && make
 RUN cd GIT/polyhedral_common/src_short && make
 RUN cd GIT/polyhedral_common/src_perfect && make
 RUN cd GIT/polyhedral_common/src_dualdesc && make
+RUN cd GIT/polyhedral_common/src_sparse_solver && make
+RUN cd GIT/polyhedral_common/src_spectra && make
 
 
