@@ -184,9 +184,9 @@ struct TripleCanonic {
 
 
 template<typename T, typename Tidx>
-std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
+std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat)
 {
-  std::pair<std::vector<Tidx>, std::vector<Tidx>> PairCanonic = GetCanonicalizationVector<T,T,GraphBitset,Tidx>(WMat);
+  std::pair<std::vector<Tidx>, std::vector<Tidx>> PairCanonic = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
@@ -205,11 +205,11 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
 
 
 template<typename T, typename Tgroup>
-TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat)
+TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp = GetGroupCanonicalizationVector<T,T,GraphBitset,Tidx>(WMat);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp = GetGroupCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
@@ -244,7 +244,7 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
 template<typename T>
 MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 {
-  WeightMatrix<T, T> WMat=GetWeightMatrix(EXT);
+  WeightMatrix<T> WMat=GetWeightMatrix(EXT);
   ReorderingSetWeight(WMat);
   return CanonicalizationPolytopePair<T,int>(EXT, WMat).first;
 }
@@ -283,7 +283,7 @@ public:
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
   {
     if (!BankSymmCheck) {
       // The computation was already done for the full symmetry group. Only canonic form is needed.
@@ -340,7 +340,7 @@ public:
       MinSize = std::min(MinSize, e_size);
     }
   }
-  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T,T> const& WMat, Tgroup const& GRP) const
+  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat, Tgroup const& GRP) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
@@ -828,7 +828,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int eRank=EXT.cols();
-  WeightMatrix<T, T> WMat;
+  WeightMatrix<T> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
@@ -881,7 +881,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::cerr << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
       ComputeWMat();
-      TheGRPrelevant = GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgroup>(WMat);
       BankSymmCheck = false;
     } else {
       TheGRPrelevant = GRP;
