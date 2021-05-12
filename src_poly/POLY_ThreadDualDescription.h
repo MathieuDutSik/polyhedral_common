@@ -76,9 +76,9 @@ template<typename T, typename Tgroup>
 PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> const& eEnt, std::ostream & os)
 {
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
-  WeightMatrix<T,T> WMat=GetWeightMatrix(EXTred);
+  WeightMatrix<T> WMat=GetWeightMatrix(EXTred);
   os << "Canonicalization, we have WMat\n";
-  Tgroup GRPlin=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+  Tgroup GRPlin=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size() << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
   if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
@@ -93,7 +93,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
     WriteListFace(os3, eEnt.ListFace);
     WriteMatrix(os4, EXTred);
   }
-  WeightMatrix<int,int> WMatInt=WeightMatrixFromPairOrbits<int,int>(GRPlin, os);
+  WeightMatrix<int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin, os);
   os << "We have WMatInt\n";
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMatInt, GRPlin, "pairinv", os);
   os << "We have LocalInv\n";
@@ -320,9 +320,9 @@ FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
   std::function<EquivTest<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> EquivTest<Telt> {
     MyMatrix<T> EXTred1=ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
-    WeightMatrix<T,T> WMat1=GetWeightMatrix(EXTred1);
-    WeightMatrix<T,T> WMat2=GetWeightMatrix(EXTred2);
-    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,T,Telt>(WMat1, WMat2);
+    WeightMatrix<T> WMat1=GetWeightMatrix(EXTred1);
+    WeightMatrix<T> WMat2=GetWeightMatrix(EXTred2);
+    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
     if (!eResEquiv.TheReply)
       return {false, {}};
     return {true, eResEquiv.TheEquiv};
@@ -350,7 +350,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
-  WeightMatrix<T, T> WMat;
+  WeightMatrix<T> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
@@ -413,7 +413,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
     if (ansSymm == "yes")
-      TheGRPrelevant=GetStabilizerWeightMatrix<T,T,Tgroup>(WMat);
+      TheGRPrelevant=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
     else
       TheGRPrelevant=GRP;
     if (TheGRPrelevant.size() == GRP.size())
@@ -494,7 +494,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	  //
 	  std::chrono::time_point<std::chrono::system_clock> start_C, end_C;
 	  start_C = std::chrono::system_clock::now();
-	  auto eReplyB=TestEquivalenceSubset<T,T,Telt>(WMat, x.eRepr, y.eRepr);
+	  auto eReplyB=TestEquivalenceSubset<T,Telt>(WMat, x.eRepr, y.eRepr);
 	  end_C = std::chrono::system_clock::now();
 	  int elapsed_seconds_C = std::chrono::duration_cast<std::chrono::seconds>(end_C-start_C).count();
 	  MProc.GetO(TheId) << "Second method (bliss) runtime = " << elapsed_seconds_C << "\n";
