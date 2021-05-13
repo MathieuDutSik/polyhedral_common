@@ -271,15 +271,13 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
   int n=eDel.EXT.cols() - 1;
   Tint PreIndex=Int_IndexLattice(eDel.EXT);
   Tint eIndex=T_abs(PreIndex);
-  WeightMatrix<T> WMat(nbVert);
-  for (int i=0; i<nbVert; i++)
-    for (int j=0; j<nbVert; j++) {
-      MyVector<T> eDiff(n);
-      for (int iCol=0; iCol<n; iCol++)
-	eDiff(iCol)=eDel.EXT(i,iCol+1) - eDel.EXT(j,iCol+1);
-      T eNorm=EvaluationQuadForm<T,T>(GramMat, eDiff);
-      WMat.Update(i,j,eNorm);
-    }
+  MyVector<T> eDiff(n);
+  auto f=[&](size_t i, size_t j) -> T {
+    for (int iCol=0; iCol<n; iCol++)
+      eDiff(iCol)=eDel.EXT(i,iCol+1) - eDel.EXT(j,iCol+1);
+    return EvaluationQuadForm<T,T>(GramMat, eDiff);
+  };
+  WeightMatrix<T> WMat(nbVert, f);
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);
   DelaunayInv<T,Tint> eInv{nbVert, eIndex, ePolyInv_T};
   return eInv;

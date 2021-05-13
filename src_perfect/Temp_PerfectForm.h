@@ -738,18 +738,15 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const& eGram)
   T eDet=DeterminantMat(eG);
   Tint PreIndex=Int_IndexLattice(RecSHV.SHV);
   Tint eIndex=T_abs(PreIndex);
-  WeightMatrix<T> WMat(nbSHV);
-  for (int i=0; i<nbSHV-1; i++)
-    for (int j=i+1; j<nbSHV; j++) {
-      MyVector<Tint> V1(n);
-      MyVector<Tint> V2(n);
-      for (int iCol=0; iCol<n; iCol++) {
-	V1(i)=RecSHV.SHV(i,iCol);
-	V2(i)=RecSHV.SHV(j,iCol);
-      }
-      T eScal=ScalarProductQuadForm<T,Tint>(eGram, V1, V2);
-      WMat.Update(i,j,eScal);
+  MyVector<Tint> V1(n), V2(n);
+  auto f=[&](size_t i, size_t j) -> T {
+    for (int iCol=0; iCol<n; iCol++) {
+      V1(i)=RecSHV.SHV(i,iCol);
+      V2(i)=RecSHV.SHV(j,iCol);
     }
+    return ScalarProductQuadForm<T,Tint>(eGram, V1, V2);
+  };
+  WeightMatrix<T> WMat(nbSHV, f);
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);
   std::vector<T> ListSingleInv{nbSHV, eDet, eIndex, ePolyInv_T};
   return {ListSingleInv};

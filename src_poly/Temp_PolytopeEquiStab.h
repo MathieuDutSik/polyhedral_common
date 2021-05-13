@@ -74,7 +74,7 @@ public:
         }
         Tidx_value pos_val = idx - 1;
         size_t pos = iRow + nbRow * iCol;
-        TheMat[pos] = pos;
+        TheMat[pos] = pos_val;
       }
   }
   WeightMatrix(WeightMatrix<T1> const& eMat)
@@ -471,13 +471,10 @@ template<typename T>
 WeightMatrix<T> T_TranslateToMatrix(MyMatrix<T> const& eMat)
 {
   size_t nbRow=eMat.rows();
-  WeightMatrix<T> WMat(nbRow);
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t iCol=0; iCol<nbRow; iCol++) {
-      T eVal=eMat(iRow, iCol);
-      WMat.Update(iCol, iRow, eVal);
-    }
-  return WMat;
+  auto f=[&](size_t iRow, size_t iCol) -> T {
+    return eMat(iRow,iCol);
+  };
+  return WeightMatrix<T>(nbRow, f);
 }
 
 
@@ -971,19 +968,19 @@ WeightMatrix<std::vector<T>> GetWeightMatrix_ListComm(MyMatrix<T> const& TheEXT,
     MyMatrix<T> eProd=ListComm[iComm]*GramMat;
     ListProd.push_back(eProd);
   }
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      T eZer=0;
-      std::vector<T> eVectSum(nbComm+1,eZer);
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-	for (size_t jCol=0; jCol<nbCol; jCol++) {
-	  T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
-	  for (size_t iMat=0; iMat<=nbComm; iMat++)
-	    eVectSum[iMat] += eProd * ListProd[iMat](iCol, jCol);
-	}
-      WMat.Update(iRow, jRow, eVectSum);
-    }
-  return WMat;
+  std::vector<T> eVectSum(nbComm+1);
+  auto f=[&](size_t iRow, size_t jRow) -> std::vector<T> {
+    for (size_t iMat=0; iMat<=nbComm; iMat++)
+      eVectSum[iMat] = 0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      for (size_t jCol=0; jCol<nbCol; jCol++) {
+        T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
+        for (size_t iMat=0; iMat<=nbComm; iMat++)
+          eVectSum[iMat] += eProd * ListProd[iMat](iCol, jCol);
+      }
+    return eVectSum;
+  };
+  return WeightMatrix<std::vector<T>>(nbRow, f);
 }
 
 
@@ -994,19 +991,19 @@ WeightMatrix<std::vector<T>> GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>>
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   size_t nbMat=ListMatrix.size();
-  WeightMatrix<std::vector<T>> WMat(nbRow);
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      std::vector<T> eVectScal(nbMat,0);
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-	for (size_t jCol=0; jCol<nbCol; jCol++) {
-	  T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
-	  for (size_t iMat=0; iMat<nbMat; iMat++)
-	    eVectScal[iMat] += eProd * ListMatrix[iMat](iCol, jCol);
-	}
-      WMat.Update(iRow, jRow, eVectScal);
-    }
-  return WMat;
+  std::vector<T> eVectScal(nbMat);
+  auto f=[&](size_t iRow, size_t jRow) -> std::vector<T> {
+    for (size_t iMat=0; iMat<nbMat; iMat++)
+      eVectScal[iMat] = 0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      for (size_t jCol=0; jCol<nbCol; jCol++) {
+	T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
+        for (size_t iMat=0; iMat<nbMat; iMat++)
+          eVectScal[iMat] += eProd * ListMatrix[iMat](iCol, jCol);
+      }
+    return eVectScal;
+  };
+  return WeightMatrix<T>(nbRow, f);
 }
 
 
@@ -3074,31 +3071,29 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<T1> const& WMat, Face const& 
   using Tidx = typename Telt::Tidx;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
-  WeightMatrix<int> WMat1(n+1);
-  WeightMatrix<int> WMat2(n+1);
-  for (size_t i=0; i<n; i++)
-    for (size_t j=0; j<n; j++) {
-      Tidx_value eVal=WMat.GetValue(i,j);
-      WMat1.Update(i,j,eVal);
-      WMat2.Update(i,j,eVal);
-    }
-  for (size_t i=0; i<n; i++) {
-    if (f1[i] == 0)
-      WMat1.Update(n,i,siz);
-    else
-      WMat1.Update(n,i,siz+1);
-    if (f2[i] == 0)
-      WMat2.Update(n,i,siz);
-    else
-      WMat2.Update(n,i,siz+1);
-  }
-  std::vector<int> ListWeight(siz+3);
-  for (size_t i=0; i<siz+3; i++)
-    ListWeight[i]=i;
-  WMat1.Update(n,n,siz+2);
-  WMat2.Update(n,n,siz+2);
-  WMat1.SetWeight(ListWeight);
-  WMat1.SetWeight(ListWeight);
+  auto g=[&](Face const& f, size_t iRow, size_t iCol) -> int {
+     if (iRow < n && iCol < n)
+       return WMat.GetValue(iRow,iCol);
+     if (iRow == n && iCol == n)
+       return siz + 2;
+     if (iRow == n) {
+       if (f[iCol] == 0)
+         return siz;
+       else
+         return siz + 1;
+     }
+     // Last case: Necessarily we have iCol == n && iRow < n
+     if (f[iRow] == 0)
+       return siz;
+     else
+       return siz + 1;
+  };
+  WeightMatrix<int> WMat1(n+1,[&](size_t iRow, size_t iCol) -> int {
+    return g(f1, iRow, iCol);
+  });
+  WeightMatrix<int> WMat2(n+1,[&](size_t iRow, size_t iCol) -> int {
+    return g(f2, iRow, iCol);
+  });
   EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,Telt>(WMat1, WMat2);
   if (!test.TheReply)
     return {false, {}};
@@ -3119,19 +3114,24 @@ Tgroup StabilizerSubset(WeightMatrix<T1> const& WMat, Face const& f)
   using Tidx = typename Telt::Tidx;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
-  WeightMatrix<int> WMatW(n+1);
-  for (size_t i=0; i<n; i++)
-    for (size_t j=0; j<n; j++) {
-      Tidx_value eVal=WMat.GetValue(i,j);
-      WMatW.Update(i,j,eVal);
-    }
-  for (size_t i=0; i<n; i++) {
-    if (f[i] == 0)
-      WMatW.Update(n,i,siz);
-    else
-      WMatW.Update(n,i,siz+1);
-  }
-  WMatW.Update(n,n,siz+2);
+  auto g=[&](size_t iRow, size_t iCol) -> int {
+     if (iRow < n && iCol < n)
+       return WMat.GetValue(iRow,iCol);
+     if (iRow == n && iCol == n)
+       return siz + 2;
+     if (iRow == n) {
+       if (f[iCol] == 0)
+         return siz;
+       else
+         return siz + 1;
+     }
+     // Last case: Necessarily we have iCol == n && iRow < n
+     if (f[iRow] == 0)
+       return siz;
+     else
+       return siz + 1;
+  };
+  WeightMatrix<int> WMatW(n+1, g);
   Tgroup GRP=GetStabilizerWeightMatrix<T1,Tgroup>(WMatW);
   std::vector<Telt> ListPerm;
   for (auto & ePerm : GRP.GeneratorsOfGroup()) {
