@@ -57,6 +57,26 @@ public:
   WeightMatrix(size_t const& INP_nbRow, std::vector<Tidx_value> const& INP_TheMat, std::vector<T1> const& INP_ListWeight) : nbRow(INP_nbRow), TheMat(INP_TheMat), ListWeight(INP_ListWeight)
   {
   }
+  template<typename F>
+  WeightMatrix(size_t const& _nbRow, F f) : nbRow(_nbRow)
+  {
+    TheMat.resize(nbRow * nbRow);
+    std::unordered_map<T1, Tidx_value> ValueMap;
+    int idxWeight=0;
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
+        T1 val = f(iRow,iCol);
+        Tidx_value & idx = ValueMap[val];
+        if (idx == 0) {
+          idxWeight++;
+          idx = idxWeight;
+          ListWeight.push_back(val);
+        }
+        Tidx_value pos_val = idx - 1;
+        size_t pos = iRow + nbRow * iCol;
+        TheMat[pos] = pos;
+      }
+  }
   WeightMatrix(WeightMatrix<T1> const& eMat)
   {
     nbRow=eMat.rows();
