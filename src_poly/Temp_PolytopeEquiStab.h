@@ -2454,7 +2454,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   //  std::cerr << "WMatAbs.WMat=\n";
   //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
 
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMatAbs.WMat);
   //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
 
   //  std::cerr << "WMatAbs.WMat : ";
@@ -2707,7 +2707,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
   //  std::cerr << "WMatAbs.WMat=\n";
   //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
 
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMatAbs.WMat);
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMatAbs.WMat);
   //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
 
   //  std::cerr << "WMatAbs.WMat : ";
@@ -3332,7 +3332,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset,int>(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
@@ -3400,7 +3400,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,Tint,GraphBitset,int>(WMat);
+  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
@@ -3478,7 +3478,7 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
   std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,Tint,GraphBitset>(WMat);
+  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
