@@ -184,7 +184,7 @@ struct TripleCanonic {
 
 
 template<typename T, typename Tidx>
-std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat)
+std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat)
 {
   std::pair<std::vector<Tidx>, std::vector<Tidx>> PairCanonic = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
@@ -205,7 +205,7 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
 
 
 template<typename T, typename Tgroup>
-TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat)
+TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -244,8 +244,8 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
 template<typename T>
 MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 {
-  WeightMatrix<T> WMat=GetWeightMatrix(EXT);
-  ReorderingSetWeight(WMat);
+  WeightMatrix<true,T> WMat=GetWeightMatrix(EXT);
+  WMat.ReorderingSetWeight();
   return CanonicalizationPolytopePair<T,int>(EXT, WMat).first;
 }
 
@@ -283,7 +283,7 @@ public:
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
   {
     if (!BankSymmCheck) {
       // The computation was already done for the full symmetry group. Only canonic form is needed.
@@ -340,7 +340,7 @@ public:
       MinSize = std::min(MinSize, e_size);
     }
   }
-  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<T> const& WMat, Tgroup const& GRP) const
+  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat, Tgroup const& GRP) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
@@ -828,13 +828,13 @@ vectface DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int eRank=EXT.cols();
-  WeightMatrix<T> WMat;
+  WeightMatrix<true,T> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
       return;
     WMat=GetWeightMatrix(EXT);
-    ReorderingSetWeight(WMat);
+    WMat.ReorderingSetWeight();
   };
   //
   // Checking if the entry is present in the map.

@@ -332,7 +332,7 @@ void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, 
   T MaxDet=T_GRAM_GetUpperBound(eMat);
   MyMatrix<Tint> ListShort=T_ShortVector(eMat, MaxDet);
   MyMatrix<T> ListShort_T=ConvertMatrixUniversal<T,Tint>(ListShort);
-  WeightMatrix<T> WMat=GetWeightMatrixGramMatShort(eMat, ListShort, TheTol);
+  WeightMatrix<true,T> WMat=GetWeightMatrixGramMatShort(eMat, ListShort, TheTol);
   GRPperm=GetStabilizerWeightMatrix(WMat);
   ListMatrGens.clear();
   for (auto & eGen : GRPperm.group->S) {
@@ -352,8 +352,8 @@ bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eM
     MaxDet=MaxDet2;
   MyMatrix<int> ListShort1=T_ShortVector(eMat1, MaxDet);
   MyMatrix<int> ListShort2=T_ShortVector(eMat2, MaxDet);
-  WeightMatrix<T> WMat1=GetWeightMatrixGramMatShort(eMat1, ListShort1, TheTol);
-  WeightMatrix<T> WMat2=GetWeightMatrixGramMatShort(eMat2, ListShort2, TheTol);
+  WeightMatrix<true,T> WMat1=GetWeightMatrixGramMatShort(eMat1, ListShort1, TheTol);
+  WeightMatrix<true,T> WMat2=GetWeightMatrixGramMatShort(eMat2, ListShort2, TheTol);
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   return eResEquiv.TheReply;
 }

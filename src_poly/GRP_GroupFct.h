@@ -747,7 +747,7 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, vec
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   if (BigGRP.size() == SmaGRP.size())
     return eListBig;
-  WeightMatrix<int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP, os);
+  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP, os);
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {

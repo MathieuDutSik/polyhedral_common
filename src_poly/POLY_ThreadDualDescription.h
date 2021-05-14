@@ -76,7 +76,7 @@ template<typename T, typename Tgroup>
 PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> const& eEnt, std::ostream & os)
 {
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
-  WeightMatrix<T> WMat=GetWeightMatrix(EXTred);
+  WeightMatrix<true,T> WMat=GetWeightMatrix(EXTred);
   os << "Canonicalization, we have WMat\n";
   Tgroup GRPlin=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size() << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
@@ -93,7 +93,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
     WriteListFace(os3, eEnt.ListFace);
     WriteMatrix(os4, EXTred);
   }
-  WeightMatrix<int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin, os);
+  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin, os);
   os << "We have WMatInt\n";
   LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMatInt, GRPlin, "pairinv", os);
   os << "We have LocalInv\n";
@@ -320,8 +320,8 @@ FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
   std::function<EquivTest<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> EquivTest<Telt> {
     MyMatrix<T> EXTred1=ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
-    WeightMatrix<T> WMat1=GetWeightMatrix(EXTred1);
-    WeightMatrix<T> WMat2=GetWeightMatrix(EXTred2);
+    WeightMatrix<true,T> WMat1=GetWeightMatrix(EXTred1);
+    WeightMatrix<true,T> WMat2=GetWeightMatrix(EXTred2);
     EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
     if (!eResEquiv.TheReply)
       return {false, {}};
@@ -350,7 +350,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
-  WeightMatrix<T> WMat;
+  WeightMatrix<true,T> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
