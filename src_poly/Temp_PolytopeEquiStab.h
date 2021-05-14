@@ -26,21 +26,6 @@ using Tidx_value = int16_t;
 //#define DEBUG
 //#define TIMINGS
 
-template<typename T>
-T VectorDistance(std::vector<T> const& V1, std::vector<T> const& V2)
-{
-  size_t siz=V1.size();
-  T MaxNorm=0;
-  for (size_t i=0; i<siz; i++) {
-    T eDiff=V1[i] - V2[i];
-    T eNorm=T_abs(eDiff);
-    if (eNorm > MaxNorm)
-      MaxNorm=eNorm;
-  }
-  return MaxNorm;
-}
-
-
 
 template<typename T>
 struct WeightMatrix {
@@ -77,6 +62,28 @@ public:
         TheMat[pos] = pos_val;
       }
   }
+  template<typename F1, typename F2>
+  WeightMatrix(size_t const& _nbRow, F1 f1, F2 f2) : nbRow(_nbRow)
+  {
+    TheMat.resize(nbRow * nbRow);
+    std::unordered_map<T, Tidx_value> ValueMap;
+    int idxWeight=0;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      f1(iRow);
+      for (size_t iCol=0; iCol<nbRow; iCol++) {
+        T val = f2(iCol);
+        Tidx_value & idx = ValueMap[val];
+        if (idx == 0) {
+          idxWeight++;
+          idx = idxWeight;
+          ListWeight.push_back(val);
+        }
+        Tidx_value pos_val = idx - 1;
+        size_t pos = iRow + nbRow * iCol;
+        TheMat[pos] = pos_val;
+      }
+    }
+  }
   WeightMatrix(WeightMatrix<T> const& eMat)
   {
     nbRow=eMat.rows();
@@ -108,41 +115,13 @@ public:
   {
   }
   // Below is lighter stuff
-  bool IsSymmetric() const
-  {
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
-	Tidx_value eVal1=GetValue(iRow, iCol);
-	Tidx_value eVal2=GetValue(iCol, iRow);
-	if (eVal1 != eVal2)
-	  return false;
-      }
-    return true;
-  }
   size_t rows(void) const
   {
     return nbRow;
   }
   size_t GetWeightSize(void) const
   {
-    size_t siz=ListWeight.size();
-    return siz;
-  }
-  void Update(size_t const& iRow, size_t const& iCol, T const& eVal)
-  {
-    bool WeFound=false;
-    size_t nbEnt=ListWeight.size();
-    size_t ThePos = nbEnt;
-    for (size_t i=0; i<nbEnt; i++)
-      if (!WeFound)
-	if (eVal == ListWeight[i]) {
-	  WeFound=true;
-	  ThePos=i;
-	}
-    if (!WeFound)
-      ListWeight.push_back(eVal);
-    size_t idxMat=iRow + nbRow*iCol;
-    TheMat[idxMat]=ThePos;
+    return ListWeight.size();
   }
   Tidx_value GetValue(size_t const& iRow, size_t const& iCol) const
   {
@@ -188,6 +167,7 @@ public:
     }
     ListWeight=NewListWeight;
   }
+  // Some sophisticated functionalities
   void ReorderingSetWeight()
   {
     std::map<T, int> ValueMap;
@@ -477,8 +457,8 @@ WeightMatrix<std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatri
   size_t nbRow=SHV.rows();
   size_t n = SHV.cols();
   size_t nbMat=ListMat.size();
-  WeightMatrix<std::vector<T>> WMat(nbRow);
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
+  std::vector<MyVector<T>> ListV(nbMat);
+  auto f1=[&](size_t iRow) -> void {
     std::vector<MyVector<T>> ListV(nbMat);
     for (size_t iMat=0; iMat<nbMat; iMat++) {
       MyVector<T> V(n);
@@ -490,18 +470,18 @@ WeightMatrix<std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatri
       }
       ListV[iMat] = V;
     }
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      std::vector<T> ListScal(nbMat);
-      for (size_t iMat=0; iMat<nbMat; iMat++) {
-        T eScal=0;
-        for (size_t i=0; i<n; i++)
-          eScal += ListV[iMat](i)*SHV(jRow,i);
-        ListScal[iMat] = eScal;
-      }
-      WMat.Update(iRow, jRow, ListScal);
+  };
+  std::vector<T> ListScal(nbMat);
+  auto f2=[&](size_t iCol) -> std::vector<T> {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
+      T eScal=0;
+      for (size_t i=0; i<n; i++)
+        eScal += ListV[iMat](i)*SHV(iCol,i);
+      ListScal[iMat] = eScal;
     }
-  }
-  return WMat;
+    return ListScal;
+  };
+  return WeightMatrix<std::vector<T>>(nbRow, f1, f2);
 }
 
 
@@ -1004,23 +984,22 @@ WeightMatrix<T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat, MyMat
 {
   size_t nbShort=ListShort.rows();
   size_t n=TheGramMat.rows();
-  WeightMatrix<T> WMat(nbShort);
   MyVector<T> V(n);
-  for (size_t iShort=0; iShort<nbShort; iShort++) {
+  auto f1=[&](size_t iShort) -> void {
     for (size_t i=0; i<n; i++) {
       T eSum = 0;
       for (size_t j=0; j<n; j++)
         eSum += TheGramMat(i,j) * ListShort(iShort, j);
       V(i) = eSum;
     }
-    for (size_t jShort=0; jShort<nbShort; jShort++) {
-      T eScal = 0;
-      for (size_t i=0; i<n; i++)
-        eScal += V(i) * ListShort(jShort, i);
-      WMat.Update(iShort, jShort, eScal);
-    }
-  }
-  return WMat;
+  };
+  auto f2=[&](size_t jShort) -> T {
+    T eScal = 0;
+    for (size_t i=0; i<n; i++)
+      eScal += V(i) * ListShort(jShort, i);
+    return eScal;
+  };
+  return WeightMatrix<T>(nbShort, f1, f2);
 }
 
 
