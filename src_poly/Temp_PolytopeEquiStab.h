@@ -27,6 +27,38 @@ using Tidx_value = int16_t;
 //#define TIMINGS
 
 
+template<bool is_symmetric>
+inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_get_nb(size_t nbRow)
+{
+  return (nbRow * (nbRow+1)) / 2;
+}
+
+template<bool is_symmetric>
+inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_get_nb(size_t nbRow)
+{
+  return nbRow * nbRow;
+}
+
+template<bool is_symmetric>
+inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t iCol)
+{
+  if (iCol <= iRow) {
+    return (iRow * (iRow + 1)) / 2 + iCol;
+  } else {
+    return (iCol * (iCol + 1)) / 2 + iRow;
+  }
+}
+
+template<bool is_symmetric>
+inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t jRow)
+{
+  return iRow + nbRow * jRow;
+}
+
+
+
+
+
 template<bool is_symmetric, typename T>
 struct WeightMatrix {
 public:
@@ -36,7 +68,7 @@ public:
   }
   WeightMatrix(size_t const& inpNbRow) : nbRow(inpNbRow)
   {
-    size_t nb=nbRow*nbRow;
+    size_t nb = weightmatrix_get_nb<is_symmetric>(nbRow);
     TheMat.resize(nb);
   }
   WeightMatrix(size_t const& INP_nbRow, std::vector<Tidx_value> const& INP_TheMat, std::vector<T> const& INP_ListWeight) : nbRow(INP_nbRow), TheMat(INP_TheMat), ListWeight(INP_ListWeight)
@@ -51,8 +83,11 @@ public:
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
     int idxWeight=0;
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      size_t last_idx = nbRow;
+      if (is_symmetric)
+        last_idx = iRow + 1;
+      for (size_t iCol=0; iCol<last_idx; iCol++) {
         T val = f(iRow,iCol);
         Tidx_value & idx = ValueMap[val];
         if (idx == 0) {
@@ -61,9 +96,10 @@ public:
           ListWeight.push_back(val);
         }
         Tidx_value pos_val = idx - 1;
-        size_t pos = iRow + nbRow * iCol;
+        size_t pos = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
         TheMat[pos] = pos_val;
       }
+    }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "|WeightMatrix(nbRow,f)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -79,8 +115,11 @@ public:
     std::unordered_map<T, Tidx_value> ValueMap;
     int idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
+      size_t last_idx = nbRow;
+      if (is_symmetric)
+        last_idx = iRow + 1;
       f1(iRow);
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
+      for (size_t iCol=0; iCol<last_idx; iCol++) {
         T val = f2(iCol);
         Tidx_value & idx = ValueMap[val];
         if (idx == 0) {
@@ -89,7 +128,7 @@ public:
           ListWeight.push_back(val);
         }
         Tidx_value pos_val = idx - 1;
-        size_t pos = iRow + nbRow * iCol;
+        size_t pos = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
         TheMat[pos] = pos_val;
       }
     }
@@ -100,29 +139,15 @@ public:
   }
   WeightMatrix(WeightMatrix<is_symmetric,T> const& eMat)
   {
-    nbRow=eMat.rows();
-    ListWeight=eMat.GetWeight();
-    size_t nb=nbRow*nbRow;
-    TheMat.resize(nb);
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
-	Tidx_value eValue=eMat.GetValue(iRow, iCol);
-	size_t idx=iRow + nbRow*iCol;
-	TheMat[idx]=eValue;
-      }
+    nbRow = eMat.rows();
+    ListWeight = eMat.GetWeight();
+    TheMat = eMat.TheMat;
   }
   WeightMatrix<is_symmetric,T> operator=(WeightMatrix<is_symmetric,T> const& eMat)
   {
-    nbRow=eMat.rows();
-    ListWeight=eMat.GetWeight();
-    size_t nb=nbRow*nbRow;
-    TheMat.resize(nb);
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
-	Tidx_value eValue=eMat.GetValue(iRow, iCol);
-	size_t idx=iRow + nbRow*iCol;
-	TheMat[idx]=eValue;
-      }
+    nbRow = eMat.rows();
+    ListWeight = eMat.GetWeight();
+    TheMat = eMat.TheMat;
     return *this;
   }
   ~WeightMatrix()
@@ -139,12 +164,12 @@ public:
   }
   Tidx_value GetValue(size_t const& iRow, size_t const& iCol) const
   {
-    size_t idx=iRow + nbRow*iCol;
+    size_t idx = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
     return TheMat[idx];
   }
   void intDirectAssign(size_t const& iRow, size_t const& iCol, Tidx_value const& pos)
   {
-    size_t idx=iRow + nbRow*iCol;
+    size_t idx = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
     TheMat[idx]=pos;
   }
   void SetWeight(std::vector<T> const & inpWeight)
@@ -167,19 +192,18 @@ public:
       throw TerminalException{1};
     }
 #endif
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t iCol=0; iCol<nbRow; iCol++) {
-	size_t idx=iRow + nbRow*iCol;
-	Tidx_value eValue=TheMat[idx];
-	Tidx_value nValue=gListRev[eValue];
-	TheMat[idx]=nValue;
-      }
+    size_t nb = weightmatrix_get_nb<is_symmetric>(nbRow);
+    for (size_t idx=0; idx<nb; idx++) {
+      Tidx_value eValue=TheMat[idx];
+      Tidx_value nValue=gListRev[eValue];
+      TheMat[idx]=nValue;
+    }
     std::vector<T> NewListWeight(nbEnt);
     for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
       Tidx_value nEnt=gListRev[iEnt];
       NewListWeight[nEnt]=ListWeight[iEnt];
     }
-    ListWeight=NewListWeight;
+    ListWeight = NewListWeight;
   }
   // Some sophisticated functionalities
   void ReorderingSetWeight()
@@ -220,7 +244,7 @@ public:
 #endif
     ReorderingOfWeights(g);
 #ifdef DEBUG
-    std::vector<T> ListWeightB=WMat.GetWeight();
+    std::vector<T> const& ListWeightB = GetWeight();
     for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
       if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
@@ -229,7 +253,7 @@ public:
     }
 #endif
   }
-  Tidx_value ReorderingSetWeight_specificPosition(WeightMatrix<is_symmetric,T> & WMat, Tidx_value specificPosition)
+  Tidx_value ReorderingSetWeight_specificPosition(Tidx_value specificPosition)
   {
     std::map<T, int> ValueMap;
     size_t nbEnt=ListWeight.size();
@@ -267,7 +291,7 @@ public:
 #endif
     ReorderingOfWeights(g);
 #ifdef DEBUG
-    std::vector<T> ListWeightB=WMat.GetWeight();
+    std::vector<T> const& ListWeightB = GetWeight();
     for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
       if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
