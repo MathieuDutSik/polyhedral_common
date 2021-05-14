@@ -392,12 +392,6 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<T> &WMat)
 
 
 
-
-
-
-
-
-
 template<typename T>
 bool RenormalizeWeightMatrix(WeightMatrix<T> const& WMatRef, WeightMatrix<T> & WMat2)
 {
@@ -459,7 +453,6 @@ WeightMatrix<std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatri
   size_t nbMat=ListMat.size();
   std::vector<MyVector<T>> ListV(nbMat);
   auto f1=[&](size_t iRow) -> void {
-    std::vector<MyVector<T>> ListV(nbMat);
     for (size_t iMat=0; iMat<nbMat; iMat++) {
       MyVector<T> V(n);
       for (size_t i=0; i<n; i++) {
