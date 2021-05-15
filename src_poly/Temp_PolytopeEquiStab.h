@@ -219,29 +219,6 @@ public:
       g[pos] = idx;
       idx++;
     }
-#ifdef DEBUG_REORDER
-    std::set<T> SetWeight;
-    for (auto & eVal : ListWeight)
-      SetWeight.insert(eVal);
-    std::cerr << "SetWeight =";
-    for (auto & eVal : SetWeight)
-      std::cerr << " " << eVal;
-    std::cerr << "\n";
-    std::vector<Tidx_value> g_check(nbEnt);
-    std::cerr << "nbEnt=" << nbEnt << "\n";
-    for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-      T eVal = ListWeight[iEnt];
-      typename std::set<T>::iterator it = SetWeight.find(eVal);
-      int pos = std::distance(SetWeight.begin(), it);
-      g_check[iEnt] = pos;
-    }
-    for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-      if (g[iEnt] != g_check[iEnt]) {
-        std::cerr << "ERROR at iEnt=" << iEnt << "\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
     ReorderingOfWeights(g);
 #ifdef DEBUG
     std::vector<T> const& ListWeightB = GetWeight();
@@ -266,29 +243,6 @@ public:
       g[pos] = idx;
       idx++;
     }
-#ifdef DEBUG_REORDER
-    std::set<T> SetWeight;
-    for (auto & eVal : ListWeight)
-      SetWeight.insert(eVal);
-    std::cerr << "SetWeight =";
-    for (auto & eVal : SetWeight)
-      std::cerr << " " << eVal;
-    std::cerr << "\n";
-    std::vector<Tidx_value> g_check(nbEnt);
-    std::cerr << "nbEnt=" << nbEnt << "\n";
-    for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-      T eVal = ListWeight[iEnt];
-      typename std::set<T>::iterator it = SetWeight.find(eVal);
-      int pos = std::distance(SetWeight.begin(), it);
-      g_check[iEnt] = pos;
-    }
-    for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-      if (g[iEnt] != g_check[iEnt]) {
-        std::cerr << "ERROR at iEnt=" << iEnt << "\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
     ReorderingOfWeights(g);
 #ifdef DEBUG
     std::vector<T> const& ListWeightB = GetWeight();
