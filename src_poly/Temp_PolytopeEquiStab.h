@@ -40,6 +40,18 @@ inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_get
 }
 
 template<bool is_symmetric>
+inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_last_idx(size_t nbRow, size_t iRow)
+{
+  return iRow + 1;
+}
+
+template<bool is_symmetric>
+inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_last_idx(size_t nbRow, size_t iRow)
+{
+  return nbRow;
+}
+
+template<bool is_symmetric>
 inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t iCol)
 {
   if (iCol <= iRow) {
@@ -84,9 +96,7 @@ public:
     std::unordered_map<T, Tidx_value> ValueMap;
     int idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
-      size_t last_idx = nbRow;
-      if (is_symmetric)
-        last_idx = iRow + 1;
+      size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
       for (size_t iCol=0; iCol<last_idx; iCol++) {
         T val = f(iRow,iCol);
         Tidx_value & idx = ValueMap[val];
@@ -115,10 +125,7 @@ public:
     std::unordered_map<T, Tidx_value> ValueMap;
     int idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
-      size_t last_idx = nbRow;
-      if (is_symmetric)
-        last_idx = iRow + 1;
-      f1(iRow);
+      size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
       for (size_t iCol=0; iCol<last_idx; iCol++) {
         T val = f2(iCol);
         Tidx_value & idx = ValueMap[val];
