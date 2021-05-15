@@ -228,9 +228,8 @@ public:
     }
     ReorderingOfWeights(g);
 #ifdef DEBUG
-    std::vector<T> const& ListWeightB = GetWeight();
     for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
-      if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
+      if (ListWeight[iEnt-1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
         throw TerminalException{1};
       }
@@ -252,9 +251,8 @@ public:
     }
     ReorderingOfWeights(g);
 #ifdef DEBUG
-    std::vector<T> const& ListWeightB = GetWeight();
     for (size_t iEnt=1; iEnt<nbEnt; iEnt++) {
-      if (ListWeightB[iEnt-1] >= ListWeightB[iEnt]) {
+      if (ListWeight[iEnt-1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt << "\n";
         throw TerminalException{1};
       }
