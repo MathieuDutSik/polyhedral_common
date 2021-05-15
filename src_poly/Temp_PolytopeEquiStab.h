@@ -531,7 +531,7 @@ WeightMatrix<true,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatri
   Tidx_value idxWeight = 0;
   //
   auto set_entry=[&](size_t iRow, size_t iCol, Tidx_value val) -> void {
-    size_t idx = weightmatrix_get_idx<true>(nbRow, iRow, iCol);
+    size_t idx = weightmatrix_idx<true>(nbRow, iRow, iCol);
     INP_TheMat[idx] = val;
   };
   for (size_t iPair=0; iPair<nbPair; iPair++) {
