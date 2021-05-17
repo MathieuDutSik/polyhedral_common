@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& os, Delaunay<T,Tint> const& obj)
 
 template<typename T,typename Tint>
 struct DelaunayInv {
-  int nbVert;
+  size_t nbVert;
   Tint eIndex;
   T ePolyInv;
 };
@@ -69,7 +69,7 @@ template<typename T,typename Tint>
 template<typename T,typename Tint>
 std::istream& operator>>(std::istream& is, DelaunayInv<T,Tint>& obj)
 {
-  int nbVert;
+  size_t nbVert;
   Tint eIndex;
   T ePolyInv;
   is >> nbVert;
@@ -268,14 +268,14 @@ template<typename T,typename Tint>
 DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delaunay<T,Tint> const& eDel)
 {
   size_t nbVert=eDel.EXT.rows();
-  int n=eDel.EXT.cols() - 1;
+  size_t n=eDel.EXT.cols() - 1;
   Tint PreIndex=Int_IndexLattice(eDel.EXT);
   Tint eIndex=T_abs(PreIndex);
   MyVector<T> V(n);
   std::vector<T> ListDiagNorm(nbVert);
   for (size_t iVert=0; iVert<nbVert; iVert++) {
-    for (int iCol=0; iCol<n; iCol++)
-      V(iCol) = eDel.EXT(iVert, iCol+1);
+    for (size_t i=0; i<n; i++)
+      V(i) = eDel.EXT(iVert, i+1);
     ListDiagNorm[iVert] = EvaluationQuadForm<T,T>(GramMat, V);
   }
   size_t iVert_inp = 0;
@@ -297,8 +297,7 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
   };
   WeightMatrix<true,T> WMat(nbVert, f1, f2);
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);
-  DelaunayInv<T,Tint> eInv{nbVert, eIndex, ePolyInv_T};
-  return eInv;
+  return {nbVert, eIndex, ePolyInv_T};
 }
 
 

@@ -11,7 +11,8 @@
 #PROGRAM		= Timing_NullspaceFacet
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
-PROGRAM		= GRP_AutPolytope
+#PROGRAM		= GRP_AutPolytope
+PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks

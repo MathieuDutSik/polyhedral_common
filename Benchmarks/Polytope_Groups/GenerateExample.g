@@ -1,4 +1,4 @@
-n:=4;
+n:=8;
 
 GRA:=CompleteGraph(Group(()), n);
 eRec:=CMC_GetCutPolytope(GRA);
