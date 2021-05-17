@@ -33,7 +33,7 @@ template<typename T,typename Tint>
 std::istream& operator>>(std::istream& is, Delaunay<T,Tint>& obj)
 {
   MyMatrix<Tint> EXT=ReadMatrix<Tint>(is);
-  obj={EXT};
+  obj = {EXT};
   return is;
 }
 
@@ -267,17 +267,35 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
 template<typename T,typename Tint>
 DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delaunay<T,Tint> const& eDel)
 {
-  int nbVert=eDel.EXT.rows();
+  size_t nbVert=eDel.EXT.rows();
   int n=eDel.EXT.cols() - 1;
   Tint PreIndex=Int_IndexLattice(eDel.EXT);
   Tint eIndex=T_abs(PreIndex);
-  MyVector<T> eDiff(n);
-  auto f=[&](size_t i, size_t j) -> T {
+  MyVector<T> V(n);
+  std::vector<T> ListDiagNorm(nbVert);
+  for (size_t iVert=0; iVert<nbVert; iVert++) {
     for (int iCol=0; iCol<n; iCol++)
-      eDiff(iCol)=eDel.EXT(i,iCol+1) - eDel.EXT(j,iCol+1);
-    return EvaluationQuadForm<T,T>(GramMat, eDiff);
+      V(iCol) = eDel.EXT(iVert, iCol+1);
+    ListDiagNorm[iVert] = EvaluationQuadForm<T,T>(GramMat, V);
+  }
+  size_t iVert_inp = 0;
+  auto f1=[&](size_t iVert) -> void {
+    for (size_t i=0; i<n; i++) {
+      T eSum =0;
+      for (size_t j=0; j<n; j++) {
+        eSum += GramMat(i,j) * eDel.EXT(iVert, j+1);
+      }
+      V(i) = eSum;
+    }
+    iVert_inp = iVert;
   };
-  WeightMatrix<true,T> WMat(nbVert, f);
+  auto f2=[&](size_t jVert) -> T {
+    T eSum = ListDiagNorm[iVert_inp] + ListDiagNorm[jVert];
+    for (size_t i=0; i<n; i++)
+      eSum -= V(i) * eDel.EXT(jVert, i+1);
+    return eSum;
+  };
+  WeightMatrix<true,T> WMat(nbVert, f1, f2);
   T ePolyInv_T=GetInvariantWeightMatrix(WMat);
   DelaunayInv<T,Tint> eInv{nbVert, eIndex, ePolyInv_T};
   return eInv;
