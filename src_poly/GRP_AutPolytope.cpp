@@ -26,7 +26,11 @@ int main(int argc, char *argv[])
     MyMatrix<T> TheEXT = ReadMatrix<T>(is);
     int nbVert = TheEXT.rows();
     WeightMatrix<true, T> WMat = GetWeightMatrix(TheEXT);
+    std::cerr << "We have WMat\n";
+    PrintWeightedMatrix(std::cerr, WMat);
     Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
+    std::cerr << "We have eGR\n";
+    GRAPH_PrintOutput(std::cerr , eGR);
     std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbVert).second;
     Tgroup GRP = GetGroupListGen<Tgroup>(ListGen, nbVert);
     std::cerr << "|GRP|=" << GRP.size() << "\n";

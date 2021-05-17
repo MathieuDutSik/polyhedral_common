@@ -125,6 +125,7 @@ public:
     std::unordered_map<T, Tidx_value> ValueMap;
     int idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
+      f1(iRow);
       size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
       for (size_t iCol=0; iCol<last_idx; iCol++) {
         T val = f2(iCol);
