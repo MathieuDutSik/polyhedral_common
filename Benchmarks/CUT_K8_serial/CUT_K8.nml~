@@ -1,0 +1,24 @@
+&DATA
+! This case is interesting. Should have 2095154 facets in 3086 orbits
+ EXTfile = "CutK8.ext"
+ GRPfile = "CutK8.grp"
+ OUTfile = "CutK8.orbitFacet"
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "unset.heu"
+ DualDescriptionHeuristicFile    = "DualDesc.heu"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank.heu"
+/
+
+&METHOD
+ Saving = T
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = T
+/

@@ -1,0 +1,23 @@
+&DATA
+ EXTfile = "CutK8.ext"
+ GRPfile = "CutK8.grp"
+ OUTfile = "CutK8.orbitFacet"
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "unset.heu"
+ DualDescriptionHeuristicFile    = "DualDesc.heu"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank.heu"
+/
+
+&METHOD
+ Saving = T
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = T
+/
