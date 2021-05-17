@@ -477,61 +477,6 @@ WeightMatrix<false,std::vector<T>> T_TranslateToMatrix_ListMat_SHV(std::vector<M
 
 
 
-template<typename T, typename Tint>
-WeightMatrix<true,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV)
-{
-  size_t nbRow=SHV.rows();
-  size_t n=qMat.rows();
-  size_t INP_nbRow=nbRow;
-  size_t nbPair=nbRow / 2;
-  size_t nb = nbPair * (2*nbPair + 1);
-  std::vector<Tidx_value> INP_TheMat(nb);
-  std::vector<T> INP_ListWeight;
-  std::unordered_map<T, Tidx_value> ValueMap;
-  Tidx_value idxWeight = 0;
-  //
-  auto set_entry=[&](size_t iRow, size_t iCol, Tidx_value val) -> void {
-    size_t idx = weightmatrix_idx<true>(nbRow, iRow, iCol);
-    INP_TheMat[idx] = val;
-  };
-  for (size_t iPair=0; iPair<nbPair; iPair++) {
-    MyVector<T> V(n);
-    for (size_t i=0; i<n; i++) {
-      T eVal=0;
-      for (size_t j=0; j<n; j++)
-	eVal += qMat(j,i) * SHV(2*iPair, j);
-      V(i) = eVal;
-    }
-    for (size_t jPair=iPair; jPair<=iPair; jPair++) {
-      T eScal=0;
-      for (size_t i=0; i<n; i++)
-	eScal += V(i)*SHV(2*jPair,i);
-      Tidx_value& value1 = ValueMap[eScal];
-      if (value1 == 0) { // This is a missing value
-        idxWeight++;
-        value1 = idxWeight;
-        INP_ListWeight.push_back(eScal);
-      }
-      Tidx_value& value2 = ValueMap[-eScal];
-      if (value2 == 0) { // This is a missing value
-        idxWeight++;
-        value2 = idxWeight;
-        INP_ListWeight.push_back(-eScal);
-      }
-      Tidx_value pos1 = value1 - 1;
-      Tidx_value pos2 = value2 - 1;
-      set_entry(2*iPair  , 2*jPair  , pos1);
-      set_entry(2*iPair+1, 2*jPair  , pos2);
-      set_entry(2*iPair  , 2*jPair+1, pos2);
-      set_entry(2*iPair+1, 2*jPair+1, pos1);
-    }
-  }
-  return WeightMatrix<true,T>(INP_nbRow, INP_TheMat, INP_ListWeight);
-}
-
-
-
-
 
 
 
@@ -927,68 +872,57 @@ WeightMatrix<true, T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat,
 
 
 
-template<typename T>
-WeightMatrix<true, T> GetWeightMatrixGramMatShort_Fast(MyMatrix<T> const& TheGramMat, MyMatrix<int> const& ListShort)
+
+template<typename T, typename Tint>
+WeightMatrix<true,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV)
 {
-  // TO REMOVE
-  size_t nbShort=ListShort.rows();
-  size_t n=TheGramMat.rows();
-  auto GetValue=[&](size_t const&iShort, size_t const&jShort) -> T {
-    T eScal=0;
-    for (size_t i=0; i<n; i++)
-      for (size_t j=0; j<n; j++) {
-	int eVal12=ListShort(iShort, i) * ListShort(jShort, j);
-	eScal += eVal12 * TheGramMat(i,j);
-      }
-    return eScal;
-  };
-  MyMatrix<T> ScalMat(nbShort,nbShort);
-  std::set<T> setWeight;
-  for (size_t iShort=0; iShort<nbShort; iShort++)
-    for (size_t jShort=0; jShort<=iShort; jShort++) {
-      T eScal=GetValue(iShort,jShort);
-      ScalMat(iShort,jShort)=eScal;
-      ScalMat(jShort,iShort)=eScal;
-      setWeight.insert(eScal);
-    }
-  struct PairData {
-    T x;
-    size_t idx;
-  };
-  auto comp=[&](PairData const& a, PairData const& b) -> bool {
-    if (a.x < b.x)
-      return true;
-    if (a.x > b.x)
-      return false;
-    return false;
-  };
-  std::set<PairData,decltype(comp)> setWeightIdx(comp);
+  size_t nbRow=SHV.rows();
+  size_t n=qMat.rows();
+  size_t INP_nbRow=nbRow;
+  size_t nbPair=nbRow / 2;
+  size_t nb = nbPair * (2*nbPair + 1);
+  std::vector<Tidx_value> INP_TheMat(nb);
   std::vector<T> INP_ListWeight;
-  size_t idx=0;
-  for (auto & eX : setWeight) {
-    setWeightIdx.insert({eX,idx});
-    INP_ListWeight.push_back(eX);
-    idx++;
-  }
-  std::vector<Tidx_value> INP_TheMat(nbShort*nbShort);
-  for (size_t iShort=0; iShort<nbShort; iShort++)
-    for (size_t jShort=0; jShort<=iShort; jShort++) {
-      T eScal=GetValue(iShort,jShort);
-      PairData test{eScal,0};
-      auto iter=setWeightIdx.find(test);
-#ifdef DEBUG
-      if (iter == setWeightIdx.end()) {
-	std::cerr << "Without a doubt a bug\n";
-	throw TerminalException{1};
-      }
-#endif
-      Tidx_value idxret=iter->idx;
-      size_t pos1=iShort + nbShort*jShort;
-      size_t pos2=jShort + nbShort*iShort;
-      INP_TheMat[pos1]=idxret;
-      INP_TheMat[pos2]=idxret;
+  std::unordered_map<T, Tidx_value> ValueMap;
+  Tidx_value idxWeight = 0;
+  //
+  auto set_entry=[&](size_t iRow, size_t iCol, Tidx_value val) -> void {
+    size_t idx = weightmatrix_idx<true>(nbRow, iRow, iCol);
+    INP_TheMat[idx] = val;
+  };
+  for (size_t iPair=0; iPair<nbPair; iPair++) {
+    MyVector<T> V(n);
+    for (size_t i=0; i<n; i++) {
+      T eVal=0;
+      for (size_t j=0; j<n; j++)
+	eVal += qMat(j,i) * SHV(2*iPair, j);
+      V(i) = eVal;
     }
-  return WeightMatrix<true,T>(nbShort, INP_TheMat, INP_ListWeight);
+    for (size_t jPair=iPair; jPair<=iPair; jPair++) {
+      T eScal=0;
+      for (size_t i=0; i<n; i++)
+	eScal += V(i)*SHV(2*jPair,i);
+      Tidx_value& value1 = ValueMap[eScal];
+      if (value1 == 0) { // This is a missing value
+        idxWeight++;
+        value1 = idxWeight;
+        INP_ListWeight.push_back(eScal);
+      }
+      Tidx_value& value2 = ValueMap[-eScal];
+      if (value2 == 0) { // This is a missing value
+        idxWeight++;
+        value2 = idxWeight;
+        INP_ListWeight.push_back(-eScal);
+      }
+      Tidx_value pos1 = value1 - 1;
+      Tidx_value pos2 = value2 - 1;
+      set_entry(2*iPair  , 2*jPair  , pos1);
+      set_entry(2*iPair+1, 2*jPair  , pos2);
+      set_entry(2*iPair  , 2*jPair+1, pos2);
+      set_entry(2*iPair+1, 2*jPair+1, pos1);
+    }
+  }
+  return WeightMatrix<true,T>(INP_nbRow, INP_TheMat, INP_ListWeight);
 }
 
 
