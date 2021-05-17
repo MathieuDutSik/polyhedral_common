@@ -707,9 +707,12 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
   Tidx_value positionZero = -1;
   //
   auto set_entry=[&](size_t iRow, size_t jRow, Tidx_value pos, bool eChg) -> void {
-    size_t idx = iRow + nbPair*jRow;
+    size_t idx = weightmatrix_idx<true>(nbPair, iRow, jRow);
     INP_TheMat[idx] = pos;
-    ArrSigns[idx] = eChg;
+    size_t idx1 = iRow + nbPair*jRow;
+    size_t idx2 = jRow + nbPair*iRow;
+    ArrSigns[idx1] = eChg;
+    ArrSigns[idx2] = eChg;
   };
   MyVector<T> V(nbCol);
   for (size_t iPair=0; iPair<nbPair; iPair++) {
@@ -738,10 +741,10 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
       }
       Tidx_value pos = value - 1;
       set_entry(iPair  , jPair  , pos, ChgSign);
-      if (iPair != jPair)
-        set_entry(jPair  , iPair  , pos, ChgSign);
     }
   }
+  /* This cannot be simplified be a classic constructor WeightMatrix(nbRow,f1,f2)
+     because we also need to compute the positionZero and the ArrSigns. */
   WeightMatrix<true,T> WMat(nbPair, INP_TheMat, INP_ListWeight);
 #ifdef DEBUG
   std::cerr << "Before positionZero=" << positionZero << "\n";
@@ -754,7 +757,7 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return {positionZero, ArrSigns, WMat};
+  return {positionZero, std::move(ArrSigns), std::move(WMat)};
 }
 
 
@@ -2591,7 +2594,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
 #endif
 
-  return {true, RedMat};
+  return {true, std::move(RedMat)};
 }
 
 
@@ -2721,7 +2724,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
   }
   ListGenRet.push_back(AntipodalGen);
   //
-  return {true, ListGenRet};
+  return {true, std::move(ListGenRet)};
 }
 
 
@@ -2908,7 +2911,7 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
     }
   }
 #endif
-  return {true, TheEquiv};
+  return {true, std::move(TheEquiv)};
 }
 
 template<typename T, typename Telt>
@@ -2920,7 +2923,7 @@ EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T> 
   for (size_t i=0; i<len; i++)
     eList[i] = ePair.TheEquiv[i];
   Telt ePerm(eList);
-  return {ePair.TheReply, ePerm};
+  return {ePair.TheReply, std::move(ePerm)};
 }
 
 template<typename T, typename Telt>
@@ -2949,7 +2952,7 @@ EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T> const& WMa
   std::vector<Tidx> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
     v[i]=eResEquiv.TheEquiv.at(i);
-  return {true, Telt(v)};
+  return {true, std::move(Telt(v))};
 }
 
 
@@ -2993,7 +2996,7 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T> const& WMat, Face co
     int eVal=test.TheEquiv.at(i);
     eList[i] = eVal;
   }
-  return {true, Telt(eList)};
+  return {true, std::move(Telt(eList))};
 }
 
 
