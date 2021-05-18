@@ -27,6 +27,10 @@ using Tidx_value = int16_t;
 //#define TIMINGS
 
 
+//
+// The templatized functions
+//
+
 template<bool is_symmetric>
 inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_get_nb(size_t nbRow)
 {
@@ -65,6 +69,39 @@ template<bool is_symmetric>
 inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t jRow)
 {
   return iRow + nbRow * jRow;
+}
+
+//
+// The template traits
+//
+template<class T, typename Enable = void>
+struct is_vector {
+  static bool const value = false;
+};
+
+template<class T>
+struct is_vector<std::vector<T> > {
+  static bool const value = true;
+};
+
+//
+// The generation function
+//
+template<typename T>
+inline typename std::enable_if<is_vector<T>::value,T>::type GetSymmGenerateValue(int const& rVal)
+{
+  using Tval = typename T::value_type;
+  Tval eVal = rVal;
+  T eVect;
+  eVect.push_back(eVal);
+  return eVect;
+}
+
+template<typename T>
+inline typename std::enable_if<(not is_vector<T>::value),T>::type GetSymmGenerateValue(int const& rVal)
+{
+  T eVal = rVal;
+  return eVal;
 }
 
 
@@ -262,6 +299,44 @@ public:
     if (specificPosition == -1)
       return -1;
     return g[specificPosition];
+  }
+  WeightMatrix<true, T> GetSymmetricWeightMatrix()
+  {
+    size_t siz=ListWeight.size();
+    size_t nb = nbRow * (2*nbRow + 1);
+    std::vector<Tidx_value> RET_TheMat(nb);
+    auto set_entry=[&](size_t i, size_t j, Tidx_value pos) -> void {
+      size_t idx = weightmatrix_idx<true>(2*nbRow, i, j);
+      RET_TheMat[idx] = pos;
+    };
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t jRow=0; jRow<nbRow; jRow++) {
+        Tidx_value pos=GetValue(iRow, jRow);
+        set_entry(iRow, jRow + nbRow, pos);
+      }
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      for (size_t jRow=0; jRow<=iRow; jRow++) {
+        set_entry(iRow, jRow, siz);
+        set_entry(iRow + nbRow, jRow + nbRow, siz+1);
+      }
+    // Now the list of weights
+    std::unordered_set<T> setWeight;
+    std::vector<T> RET_ListWeight = ListWeight;
+    for (auto& eWei : ListWeight)
+      setWeight.insert(eWei);
+    int iVal=1;
+    for (int j=0; j<2; j++) {
+      while(true) {
+        T genVal = GetSymmGenerateValue<T>(iVal);
+        if (setWeight.count(genVal) == 0) {
+          setWeight.insert(genVal);
+          RET_ListWeight.push_back(genVal);
+          break;
+        }
+        iVal++;
+      }
+    }
+    return WeightMatrix<true,T>(2*nbRow, RET_TheMat, RET_ListWeight);
   }
 private:
   size_t nbRow;
@@ -926,87 +1001,6 @@ WeightMatrix<true,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatri
 }
 
 
-template<class T, typename Enable = void>
-struct is_vector {
-  static bool const value = false;
-};
-
-
-template<class T>
-struct is_vector<std::vector<T> > {
-  static bool const value = true;
-};
-
-
-
-template<typename T>
-inline typename std::enable_if<is_vector<T>::value,T>::type GetSymmGenerateValue(int const& rVal)
-{
-  using Tval = typename T::value_type;
-  Tval eVal = rVal;
-  T eVect;
-  eVect.push_back(eVal);
-  return eVect;
-}
-
-template<typename T>
-inline typename std::enable_if<(not is_vector<T>::value),T>::type GetSymmGenerateValue(int const& rVal)
-{
-  T eVal = rVal;
-  return eVal;
-}
-
-
-
-template<typename T>
-void GetSymmGenerateValue(int const& rVal, std::vector<T> & eVect)
-{
-  T eVal = rVal;
-  eVect.push_back(eVal);
-}
-
-
-
-template<typename T>
-WeightMatrix<true, T> GetSymmetricWeightMatrix(WeightMatrix<false, T> const& WMatI)
-{
-  std::set<T> setWeight;
-  std::vector<T> ListWeight;
-  size_t nbRow=WMatI.rows();
-  WeightMatrix<true,T> WMatO(2*nbRow);
-  size_t siz=WMatI.GetWeightSize();
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      Tidx_value pos=WMatI.GetValue(iRow, jRow);
-      WMatO.intDirectAssign(iRow, jRow+nbRow, pos);
-      WMatO.intDirectAssign(jRow+nbRow, iRow, pos);
-    }
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      WMatO.intDirectAssign(iRow      , jRow      , siz);
-      WMatO.intDirectAssign(iRow+nbRow, jRow+nbRow, siz+1);
-    }
-  for (auto& eWei : WMatI.GetWeight())
-    setWeight.insert(eWei);
-  ListWeight=WMatI.GetWeight();
-  int iVal=1;
-  for (int j=0; j<2; j++) {
-    while(true) {
-      T genVal = GetSymmGenerateValue<T>(iVal);
-      typename std::set<T>::iterator iterTEST=setWeight.find(genVal);
-      if (iterTEST == setWeight.end()) {
-	setWeight.insert(genVal);
-	ListWeight.push_back(genVal);
-	break;
-      }
-      iVal++;
-    }
-  }
-  WMatO.SetWeight(ListWeight);
-  return WMatO;
-}
-
-
 
 
 template<bool is_symmetric, typename T, typename Tout>
@@ -1199,8 +1193,7 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<true, T> const&WMat, Tgr
   WeightMatrix<true,int> WMatInt;
   if (UsePairOrbit) {
     WMatInt = WeightMatrixFromPairOrbits<int,Tgroup>(GRP, os);
-  }
-  else {
+  } else {
     WMatInt = NakedWeightedMatrix(WMat);
   }
   //  os << "ComputeLocalInvariantStrategy, step 5\n";
@@ -1322,8 +1315,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
     if (eSet[i] == 1) {
       eList[idx1]=i;
       idx1++;
-    }
-    else {
+    } else {
       eListCompl[idx2]=i;
       idx2++;
     }
@@ -1642,15 +1634,14 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T> const& WMat, Fco
       int eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
-	  eVal=nbWei;
+	  eVal = nbWei;
 	else
-	  eVal=nbWei+1;
-      }
-      else {
+	  eVal = nbWei+1;
+      } else {
 	if (jVert == nbRow)
-	  eVal=WMat.GetValue(iVert, iVert);
+	  eVal = WMat.GetValue(iVert, iVert);
 	else
-	  eVal=WMat.GetValue(iVert, jVert);
+	  eVal = WMat.GetValue(iVert, jVert);
       }
       GetBinaryExpression(eVal, e_pow, eVect);
       for (size_t i_pow=0; i_pow<e_pow; i_pow++)
@@ -1725,15 +1716,14 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T> const& WMat, Fco
       int eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
-	  eVal=nbWei;
+	  eVal = nbWei;
 	else
-	  eVal=nbWei+1;
-      }
-      else {
+	  eVal = nbWei+1;
+      } else {
 	if (jVert == nbRow)
-	  eVal=WMat.GetValue(iVert, iVert);
+	  eVal = WMat.GetValue(iVert, iVert);
 	else
-	  eVal=WMat.GetValue(iVert, jVert);
+	  eVal = WMat.GetValue(iVert, jVert);
       }
       GetBinaryExpression(eVal, hS, eVect);
       for (size_t iH=0; iH<hS; iH++)
@@ -1809,8 +1799,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
     if (iVert == jVert) {
       if (iH != jH) {
 	return true;
-      }
-      else {
+      } else {
 	return false;
       }
     }
@@ -1820,21 +1809,19 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
       }
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
-	  eVal=nbMult;
+	  eVal = nbMult;
 	else
-	  eVal=nbMult+1;
-      }
-      else {
+	  eVal = nbMult+1;
+      } else {
 	if (jVert == nbRow)
-	  eVal=WMat.GetValue(iVert, iVert);
+	  eVal = WMat.GetValue(iVert, iVert);
 	else
-	  eVal=WMat.GetValue(iVert, jVert);
+	  eVal = WMat.GetValue(iVert, jVert);
       }
       GetBinaryExpression(eVal, hS, eVect);
       if (eVect[iH] == 1) {
 	return true;
-      }
-      else {
+      } else {
 	return false;
       }
     }
@@ -2723,7 +2710,7 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T> const& WMatI)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  WeightMatrix<true, T> WMatO=GetSymmetricWeightMatrix(WMatI);
+  WeightMatrix<true, T> WMatO=WMatI.GetSymmetricWeightMatrix();
   size_t nbSHV=WMatI.rows();
   Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatO);
   std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
@@ -2877,8 +2864,8 @@ template<typename T, typename Telt>
 EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T> const& WMat1, WeightMatrix<false,T> const& WMat2)
 {
   using Tidx = typename Telt::Tidx;
-  WeightMatrix<true, T> WMatO1=GetSymmetricWeightMatrix<T>(WMat1);
-  WeightMatrix<true, T> WMatO2=GetSymmetricWeightMatrix<T>(WMat2);
+  WeightMatrix<true, T> WMatO1=WMat1.GetSymmetricWeightMatrix();
+  WeightMatrix<true, T> WMatO2=WMat2.GetSymmetricWeightMatrix();
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMatO1, WMatO2);
   if (!eResEquiv.TheReply)
     return eResEquiv;
