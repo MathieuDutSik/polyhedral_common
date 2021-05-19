@@ -743,7 +743,7 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, vec
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   if (BigGRP.size() == SmaGRP.size())
     return eListBig;
-  //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP, os);
+  //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP);
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {
     //    vectface ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, WMat, eSet, os);

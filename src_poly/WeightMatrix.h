@@ -343,6 +343,9 @@ private:
   std::vector<T> ListWeight;
 };
 
+//
+// Hashes and invariants
+//
 
 namespace std {
   template <bool is_symmetric,typename T, typename Tidx_value>
@@ -389,8 +392,91 @@ namespace std {
   };
 }
 
+template<typename T, typename Tidx_value>
+size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat, Face const& eSet)
+{
+  size_t n=eSet.size();
+  size_t nbVert=eSet.count();
+  std::vector<size_t> eList;
+  int set_val;
+  // We consider the set of smallest size which gain us speed.
+  if (2 * nbVert < n) {
+    eList.resize(nbVert);
+    size_t aRow=eSet.find_first();
+    for (size_t i=0; i<nbVert; i++) {
+      eList[i]=aRow;
+      aRow=eSet.find_next(aRow);
+    }
+    set_val = 1;
+  } else {
+    eList.resize(n - nbVert);
+    size_t idx = 0;
+    for (size_t i=0; i<n; i++) {
+      if (eSet[i] == 0) {
+        eList[idx] = i;
+        idx++;
+      }
+    }
+    set_val = 0;
+  }
+  size_t nbWeight=WMat.GetWeightSize();
+  std::vector<int> eInv(3 * nbWeight + 1, 0);
+  for (auto & aVert : eList) {
+    for (size_t i=0; i<n; i++) {
+      Tidx_value iWeight=WMat.GetValue(aVert, i);
+      if (eSet[i] != set_val) {
+        eInv[iWeight]++;
+      } else {
+        if (i != aVert) {
+          eInv[iWeight + nbWeight]++;
+        } else {
+          eInv[iWeight + 2 * nbWeight]++;
+        }
+      }
+    }
+  }
+  eInv[3 * nbWeight] = nbVert;
+  return std::hash<std::vector<int>>()(eInv);
+}
+
+template<bool is_symmetric, typename T, typename Tidx_value>
+inline typename std::enable_if<is_totally_ordered<T>::value,size_t>::type GetInvariantWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WMat)
+{
+  static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
+  size_t nbVert=WMat.rows();
+  std::vector<T> ListWeight=WMat.GetWeight();
+  size_t nbWeight=ListWeight.size();
+  std::vector<int> ListAttDiag(nbWeight,0);
+  std::vector<int> ListAttOff(nbWeight,0);
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t jVert=0; jVert<weightmatrix_last_idx<is_symmetric>(nbVert,iVert); jVert++) {
+      Tidx_value iWeight=WMat.GetValue(iVert, jVert);
+      if (iVert != jVert) {
+        ListAttOff[iWeight]++;
+      } else {
+        ListAttDiag[iWeight]++;
+      }
+    }
+  std::vector<int> eList = SortingPerm<T,int>(ListWeight);
+  std::vector<int> ListAtt(2*nbWeight);
+  std::vector<T> ListWeight_B(nbWeight);
+  for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
+    size_t jWeight=eList[iWeight];
+    ListAtt[iWeight] = ListAttDiag[jWeight];
+    ListAtt[iWeight + nbWeight] = ListAttOff[jWeight];
+    ListWeight_B[iWeight] = ListWeight[jWeight];
+  }
+  size_t hash1 = std::hash<std::vector<int>>()(ListAtt);
+  size_t hash2 = std::hash<std::vector<T>>()(ListWeight_B);
+  size_t hash = hash1 + (hash2 << 6) + (hash2 >> 2);
+  return hash;
+}
 
 
+
+//
+// Reading and Writing
+//
 
 template<bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrix(std::ostream &os, WeightMatrix<is_symmetric,T,Tidx_value> const&WMat)
@@ -462,6 +548,37 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<is_symmetric,T,T
   }
 }
 
+template<typename T>
+WeightMatrix<false, T> ReadWeightedMatrix(std::istream &is)
+{
+  size_t nbRow;
+  is >> nbRow;
+  WeightMatrix<false, T> WMat(nbRow);
+  size_t nbEnt=0;
+  int eVal;
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
+      is >> eVal;
+      WMat.intDirectAssign(iRow, jRow, eVal);
+      if (eVal> nbEnt)
+	nbEnt=eVal;
+    }
+  nbEnt++;
+  std::vector<T> ListWeight;
+  T eVal_T;
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    is >> eVal_T;
+    ListWeight.push_back(eVal_T);
+  }
+  WMat.SetWeight(ListWeight);
+  return WMat;
+}
+
+
+//
+// Other unsorted functions
+//
+
 
 
 template<bool is_symmetric, typename T, typename Tidx_value>
@@ -505,67 +622,9 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
 
 
 
-
-
-
-
-
-template<typename T, typename Tidx_value>
-size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat, Face const& eSet)
-{
-  size_t n=eSet.size();
-  size_t nbVert=eSet.count();
-  std::vector<size_t> eList;
-  int set_val;
-  // We consider the set of smallest size which gain us speed.
-  if (2 * nbVert < n) {
-    eList.resize(nbVert);
-    size_t aRow=eSet.find_first();
-    for (size_t i=0; i<nbVert; i++) {
-      eList[i]=aRow;
-      aRow=eSet.find_next(aRow);
-    }
-    set_val = 1;
-  } else {
-    eList.resize(n - nbVert);
-    size_t idx = 0;
-    for (size_t i=0; i<n; i++) {
-      if (eSet[i] == 0) {
-        eList[idx] = i;
-        idx++;
-      }
-    }
-    set_val = 0;
-  }
-  size_t nbWeight=WMat.GetWeightSize();
-  std::vector<int> eInv(3 * nbWeight + 1, 0);
-  for (auto & aVert : eList) {
-    for (size_t i=0; i<n; i++) {
-      Tidx_value iWeight=WMat.GetValue(aVert, i);
-      if (eSet[i] != set_val) {
-        eInv[iWeight]++;
-      } else {
-        if (i != aVert) {
-          eInv[iWeight + nbWeight]++;
-        } else {
-          eInv[iWeight + 2 * nbWeight]++;
-        }
-      }
-    }
-  }
-  eInv[3 * nbWeight] = nbVert;
-  return std::hash<std::vector<int>>()(eInv);
-}
-
-
-
-
 template<typename T, typename Tgroup>
-WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream & os)
+WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 {
-#ifdef DEBUG
-  bool IsDiag;
-#endif
   size_t n=GRP.n_act();
   WeightMatrix<true, T> WMat(n);
   using Tidx_value = typename WeightMatrix<true, T>::Tidx_value;
@@ -631,14 +690,6 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
     std::pair<int,int> eStart=GetUnset();
     if (eStart.first == -1)
       break;
-#ifdef DEBUG
-    IsDiag=false;
-    if (eStart.first == eStart.second)
-      IsDiag=true;
-    os << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
-    std::cerr << "iOrbit=" << iOrbit << " eStart=" << eStart.first << " , " << eStart.second << "\n";
-    std::cerr << "  IsDiag=" << IsDiag << "\n";
-#endif
     T insVal=iOrbit;
     ListWeight.push_back(insVal);
     FuncInsertIChoice(iChoice, eStart);
@@ -669,16 +720,9 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
       SetZero(iChoice);
       iChoice=iChoiceB;
     }
-#ifdef DEBUG
-    os << "     size=" << GRP.size() << " orbSize=" << orbSize << "\n";
-#endif
     iOrbit++;
   }
   WMat.SetWeight(ListWeight);
-#ifdef DEBUG
-  for (size_t i=0; i<n; i++)
-    os << "i=" << i << "/" << n << " val=" << int(WMat.GetValue(i,i)) << "\n";
-#endif
   return WMat;
 }
 
@@ -688,67 +732,6 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
 
 
 
-// The matrix should be square and the output does not depends on the ordering of the coefficients.
-template<bool is_symmetric, typename T, typename Tidx_value>
-inline typename std::enable_if<is_totally_ordered<T>::value,size_t>::type GetInvariantWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WMat)
-{
-  static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
-  size_t nbVert=WMat.rows();
-  std::vector<T> ListWeight=WMat.GetWeight();
-  size_t nbWeight=ListWeight.size();
-  std::vector<int> ListAttDiag(nbWeight,0);
-  std::vector<int> ListAttOff(nbWeight,0);
-  for (size_t iVert=0; iVert<nbVert; iVert++)
-    for (size_t jVert=0; jVert<weightmatrix_last_idx<is_symmetric>(nbVert,iVert); jVert++) {
-      Tidx_value iWeight=WMat.GetValue(iVert, jVert);
-      if (iVert != jVert) {
-        ListAttOff[iWeight]++;
-      } else {
-        ListAttDiag[iWeight]++;
-      }
-    }
-  std::vector<int> eList = SortingPerm<T,int>(ListWeight);
-  std::vector<int> ListAtt(2*nbWeight);
-  std::vector<T> ListWeight_B(nbWeight);
-  for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
-    size_t jWeight=eList[iWeight];
-    ListAtt[iWeight] = ListAttDiag[jWeight];
-    ListAtt[iWeight + nbWeight] = ListAttOff[jWeight];
-    ListWeight_B[iWeight] = ListWeight[jWeight];
-  }
-  size_t hash1 = std::hash<std::vector<int>>()(ListAtt);
-  size_t hash2 = std::hash<std::vector<T>>()(ListWeight_B);
-  size_t hash = hash1 + (hash2 << 6) + (hash2 >> 2);
-  return hash;
-}
-
-
-
-template<typename T>
-WeightMatrix<false, T> ReadWeightedMatrix(std::istream &is)
-{
-  size_t nbRow;
-  is >> nbRow;
-  WeightMatrix<false, T> WMat(nbRow);
-  size_t nbEnt=0;
-  int eVal;
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    for (size_t jRow=0; jRow<nbRow; jRow++) {
-      is >> eVal;
-      WMat.intDirectAssign(iRow, jRow, eVal);
-      if (eVal> nbEnt)
-	nbEnt=eVal;
-    }
-  nbEnt++;
-  std::vector<T> ListWeight;
-  T eVal_T;
-  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-    is >> eVal_T;
-    ListWeight.push_back(eVal_T);
-  }
-  WMat.SetWeight(ListWeight);
-  return WMat;
-}
 
 
 
@@ -785,8 +768,8 @@ inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
 
 #ifdef USE_PAIRS
 /* Unfortunately, the use of pairs while allowing for a graph with
-   a smaller number of vertices gives a running time that is larger.
-   Thus this idea while good looking is actually not a good one.
+   a smaller number of vertices gives a running time that is sometimes
+   larger. This happened with BLISS but not with TRACES.
 */
 
 /*
@@ -1734,7 +1717,7 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& W
        return WMat.GetValue(iRow,iCol);
      if (iRow == n && iCol == n)
        return siz + 2;
-     if (iRow == n) {
+     if (iRow == n) { // Thus iCol < n.
        if (f[iCol] == 0)
          return siz;
        else
@@ -1799,18 +1782,6 @@ Tgroup StabilizerSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face cons
     ListPerm.push_back(Telt(eList));
   }
   return Tgroup(ListPerm, n);
-}
-
-
-
-template<bool is_symmetric,typename T, typename Tidx_value>
-WeightMatrix<is_symmetric,int,Tidx_value> NakedWeightedMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat)
-{
-  size_t n=WMat.rows();
-  auto f=[&](size_t iRow, size_t iCol) -> int {
-    return WMat.GetValue(iRow, iCol);
-  };
-  return WeightMatrix<is_symmetric, int, Tidx_value>(n, f);
 }
 
 

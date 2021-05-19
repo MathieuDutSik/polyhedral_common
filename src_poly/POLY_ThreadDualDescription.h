@@ -83,17 +83,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
   if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
   os << "|eEnt.ListFace|=" << eEnt.ListFace.size() << "\n";
-  {
-    std::ofstream os1("CANONIC_GRPlin");
-    std::ofstream os2("CANONIC_GRPlin.gap");
-    std::ofstream os3("CANONIC_ListFace");
-    std::ofstream os4("CANONIC_EXT");
-    WriteGroup(os1, GRPlin);
-    WriteGroupGAP(os2, GRPlin);
-    WriteListFace(os3, eEnt.ListFace);
-    WriteMatrix(os4, EXTred);
-  }
-  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin, os);
+  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin);
   os << "We have WMatInt\n";
   struct Local {
     Face eFace;
