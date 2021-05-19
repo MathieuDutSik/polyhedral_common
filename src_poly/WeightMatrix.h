@@ -622,12 +622,13 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
 
 
 
-template<typename T, typename Tgroup>
-WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP)
+template<typename Tgroup>
+WeightMatrix<true, int> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 {
+  using Tidx_value = typename WeightMatrix<true, int>::Tidx_value;
+  using Telt = typename Tgroup::Telt;
   size_t n=GRP.n_act();
-  WeightMatrix<true, T> WMat(n);
-  using Tidx_value = typename WeightMatrix<true, T>::Tidx_value;
+  WeightMatrix<true, int> WMat(n);
   for (size_t i=0; i<n; i++)
     for (size_t j=0; j<n; j++)
       WMat.intDirectAssign(i,j,-1);
@@ -641,84 +642,35 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP)
       }
     return {-1,-1};
   };
-  struct VectorListPair {
-    std::vector<std::pair<int,int>> ListWorkingPair;
-    size_t nbWorkingPair=0;
-  };
-  VectorListPair VLP0, VLP1;
-  auto FuncInsert=[&](VectorListPair & VLP, std::pair<int,int> const& ePair) -> void {
-    if (VLP.nbWorkingPair < VLP.ListWorkingPair.size()) {
-      VLP.ListWorkingPair[VLP.nbWorkingPair]=ePair;
-    } else {
-      VLP.ListWorkingPair.push_back(ePair);
-    }
-    VLP.nbWorkingPair++;
-    int i=ePair.first;
-    int j=ePair.second;
-    WMat.intDirectAssign(i,j,-2);
-  };
-  auto FuncInsertIChoice=[&](int const& iChoice, std::pair<int,int> const& ePair) -> void {
-    if (iChoice == 0)
-      FuncInsert(VLP0, ePair);
-    else
-      FuncInsert(VLP1, ePair);
-  };
-  auto SetZero=[&](int const& iChoice) -> void {
-    if (iChoice == 0)
-      VLP0.nbWorkingPair = 0;
-    else
-      VLP1.nbWorkingPair = 0;
-  };
-  auto GetNbWorkingPair=[&](int const& iChoice) ->size_t {
-    if (iChoice == 0)
-      return VLP0.nbWorkingPair;
-    else
-      return VLP1.nbWorkingPair;
-  };
-  auto GetEntry=[&](int const& iChoice, int const& iPair) -> std::pair<int,int> {
-    if (iChoice == 0)
-      return VLP0.ListWorkingPair[iPair];
-    else
-      return VLP1.ListWorkingPair[iPair];
-  };
-  int iChoice=0;
   int iOrbit=0;
-  std::vector<T> ListWeight;
-  using Telt = typename Tgroup::Telt;
+  std::vector<int> ListWeight;
   std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
   while(true) {
     std::pair<int,int> eStart=GetUnset();
     if (eStart.first == -1)
       break;
-    T insVal=iOrbit;
-    ListWeight.push_back(insVal);
-    FuncInsertIChoice(iChoice, eStart);
-    size_t orbSize=0;
+    ListWeight.push_back(iOrbit);
+    std::vector<std::pair<int,int>> eList{eStart};
+    size_t orbSize = 0;
     while(true) {
-      int iChoiceB = 1 - iChoice;
-      int nbPair=GetNbWorkingPair(iChoice);
-      orbSize += nbPair;
+      int nbPair = eList.size();
       if (nbPair == 0)
 	break;
-      for (int iPair=0; iPair<nbPair; iPair++) {
-	std::pair<int,int> ePair=GetEntry(iChoice,iPair);
+      orbSize += nbPair;
+      std::vector<std::pair<int,int>> fList;
+      for (auto & ePair : eList) {
 	int i=ePair.first;
 	int j=ePair.second;
 	WMat.intDirectAssign(i,j,iOrbit);
 	for (auto & eGen : ListGen) {
 	  int iImg = OnPoints(i, eGen);
 	  int jImg = OnPoints(j, eGen);
-	  auto aInsert=[&](int const& u, int const& v) -> void {
-	    Tidx_value eVal1 = WMat.GetValue(u,v);
-	    if (eVal1 == -1)
-	      FuncInsertIChoice(iChoiceB, {u, v});
-	  };
-	  aInsert(iImg, jImg);
-	  aInsert(jImg, iImg);
+          Tidx_value eVal1 = WMat.GetValue(iImg,jImg);
+          if (eVal1 == -1)
+            fList.push_back({iImg,jImg});
 	}
       }
-      SetZero(iChoice);
-      iChoice=iChoiceB;
+      eList = std::move(fList);
     }
     iOrbit++;
   }

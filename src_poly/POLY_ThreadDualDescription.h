@@ -83,7 +83,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
   if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
   os << "|eEnt.ListFace|=" << eEnt.ListFace.size() << "\n";
-  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin);
+  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits(GRPlin);
   os << "We have WMatInt\n";
   struct Local {
     Face eFace;
