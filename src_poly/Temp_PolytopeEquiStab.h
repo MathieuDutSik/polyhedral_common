@@ -210,7 +210,7 @@ template<typename T, typename Tidx_value>
 struct WeightMatrixAbs {
   Tidx_value positionZero;
   Face ArrSigns;
-  WeightMatrix<true,T, Tidx_value> WMat;
+  WeightMatrix<true, T, Tidx_value> WMat;
 };
 
 
@@ -297,13 +297,14 @@ WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrixAntipodal(MyMatrix<T> con
   size_t nbPair=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   size_t INP_nbRow = 2*nbPair;
-  std::vector<Tidx_value> INP_TheMat(INP_nbRow * INP_nbRow);
+  size_t nb = nbPair * (2 * nbPair + 1);
+  std::vector<Tidx_value> INP_TheMat(nb);
   std::vector<T> INP_ListWeight;
   std::unordered_map<T, Tidx_value> ValueMap;
   Tidx_value idxWeight = 0;
   //
   auto set_entry=[&](size_t iRow, size_t jRow, Tidx_value pos) -> void {
-    size_t idx = iRow + INP_nbRow*jRow;
+    size_t idx = weightmatrix_idx<true>(2 * nbPair, iRow, jRow);
     INP_TheMat[idx] = pos;
   };
   MyVector<T> V(nbCol);
@@ -337,12 +338,6 @@ WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrixAntipodal(MyMatrix<T> con
       set_entry(2*iPair+1, 2*jPair  , pos2);
       set_entry(2*iPair  , 2*jPair+1, pos2);
       set_entry(2*iPair+1, 2*jPair+1, pos1);
-      if (iPair != jPair) {
-        set_entry(2*jPair  , 2*iPair  , pos1);
-        set_entry(2*jPair+1, 2*iPair  , pos2);
-        set_entry(2*jPair  , 2*iPair+1, pos2);
-        set_entry(2*jPair+1, 2*iPair+1, pos1);
-      }
     }
   }
 #ifdef TIMINGS
@@ -386,19 +381,28 @@ WeightMatrix<is_symmetric, std::vector<T>> GetWeightMatrix_ListComm(MyMatrix<T> 
     MyMatrix<T> eProd=ListComm[iComm]*GramMat;
     ListProd.push_back(eProd);
   }
-  std::vector<T> eVectSum(nbComm+1);
-  auto f=[&](size_t iRow, size_t jRow) -> std::vector<T> {
-    for (size_t iMat=0; iMat<=nbComm; iMat++)
-      eVectSum[iMat] = 0;
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      for (size_t jCol=0; jCol<nbCol; jCol++) {
-        T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
-        for (size_t iMat=0; iMat<=nbComm; iMat++)
-          eVectSum[iMat] += eProd * ListProd[iMat](iCol, jCol);
+  MyMatrix<T> M(nbComm+1, nbCol);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iMat=0; iMat<=nbComm; iMat++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
+        T eSum = 0;
+        for (size_t jCol=0; jCol<nbCol; jCol++)
+          eSum += ListProd[iMat](iCol, jCol) * TheEXT(iRow, jCol);
+        M(iMat, iCol) = eSum;
       }
+    }
+  };
+  std::vector<T> eVectSum(nbComm+1);
+  auto f2=[&](size_t jRow) -> std::vector<T> {
+    for (size_t iMat=0; iMat<=nbComm; iMat++) {
+      T eSum=0;
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        eSum += TheEXT(jRow, iCol) * M(iMat, iCol);
+      eVectSum[iMat] = eSum;
+    }
     return eVectSum;
   };
-  return WeightMatrix<false,std::vector<T>>(nbRow, f);
+  return WeightMatrix<false,std::vector<T>>(nbRow, f1, f2);
 }
 
 
@@ -409,19 +413,28 @@ WeightMatrix<false,std::vector<T>> GetWeightMatrix_ListMatrix(std::vector<MyMatr
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   size_t nbMat=ListMatrix.size();
-  std::vector<T> eVectScal(nbMat);
-  auto f=[&](size_t iRow, size_t jRow) -> std::vector<T> {
-    for (size_t iMat=0; iMat<nbMat; iMat++)
-      eVectScal[iMat] = 0;
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      for (size_t jCol=0; jCol<nbCol; jCol++) {
-	T eProd=TheEXT(iRow, iCol) * TheEXT(jRow, jCol);
-        for (size_t iMat=0; iMat<nbMat; iMat++)
-          eVectScal[iMat] += eProd * ListMatrix[iMat](iCol, jCol);
+  MyMatrix<T> M(nbMat, nbCol);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
+        T eSum = 0;
+        for (size_t jCol=0; jCol<nbCol; jCol++)
+          eSum += ListMatrix[iMat](iCol, jCol) * TheEXT(iRow, jCol);
+        M(iMat, iCol) = eSum;
       }
+    }
+  };
+  std::vector<T> eVectScal(nbMat);
+  auto f2=[&](size_t jRow) -> std::vector<T> {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
+      T eSum = 0;
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        eSum += TheEXT(jRow, iCol) * M(iMat, iCol);
+      eVectScal[iMat] = eSum;
+    }
     return eVectScal;
   };
-  return WeightMatrix<false,std::vector<T>>(nbRow, f);
+  return WeightMatrix<false,std::vector<T>>(nbRow, f1, f2);
 }
 
 
