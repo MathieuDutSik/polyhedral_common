@@ -155,7 +155,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  WeightMatrix<true,std::vector<T>> WMatSymm = GetSymmetricWeightMatrix(WMat);
+  WeightMatrix<true,std::vector<T>> WMatSymm = WMat.GetSymmetricWeightMatrix();
   std::pair<std::vector<int>, std::vector<int>> PairCanonicSymm = GetCanonicalizationVector<std::vector<T>,GraphBitset,int>(WMatSymm);
   std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationFromSymmetrized(PairCanonicSymm);
 #ifdef DEBUG_TIME

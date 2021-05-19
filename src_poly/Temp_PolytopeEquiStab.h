@@ -151,6 +151,7 @@ WeightMatrix<true, T> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<
 template<typename T>
 WeightMatrix<true,std::vector<T>> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
 {
+  using Tidx_value = typename WeightMatrix<true,std::vector<T>>::Tidx_value;
 #ifdef DEBUG
   for (auto & eMat : ListMat) {
     if (!IsSymmetricMatrix(eMat)) {
@@ -205,16 +206,16 @@ WeightMatrix<true,std::vector<T>> GetWeightMatrix_ListMat_Subset(MyMatrix<T> con
 
 
 
-template<typename T>
+template<typename T, typename Tidx_value>
 struct WeightMatrixAbs {
   Tidx_value positionZero;
   Face ArrSigns;
-  WeightMatrix<true,T> WMat;
+  WeightMatrix<true,T, Tidx_value> WMat;
 };
 
 
-template<typename T>
-WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
+template<typename T, typename Tidx_value>
+WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be a totally ordered field");
 #ifdef TIMINGS
@@ -269,7 +270,7 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
   }
   /* This cannot be simplified be a classic constructor WeightMatrix(nbRow,f1,f2)
      because we also need to compute the positionZero and the ArrSigns. */
-  WeightMatrix<true,T> WMat(nbPair, INP_TheMat, INP_ListWeight);
+  WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight);
 #ifdef DEBUG
   std::cerr << "Before positionZero=" << positionZero << "\n";
 #endif
@@ -287,8 +288,8 @@ WeightMatrixAbs<T> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const& Th
 
 
 
-template<typename T>
-WeightMatrix<true, T> GetSimpleWeightMatrixAntipodal(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrixAntipodal(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -364,11 +365,11 @@ WeightMatrix<true, T> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 
 
 
-template<typename T>
-WeightMatrix<true, T> GetWeightMatrixAntipodal(MyMatrix<T> const& TheEXT)
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetWeightMatrixAntipodal(MyMatrix<T> const& TheEXT)
 {
   MyMatrix<T> Qmat=GetQmatrix(TheEXT);
-  return GetSimpleWeightMatrixAntipodal(TheEXT, Qmat);
+  return GetSimpleWeightMatrixAntipodal<T,Tidx_value>(TheEXT, Qmat);
 }
 
 
@@ -454,6 +455,7 @@ WeightMatrix<true, T> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat,
 template<typename T, typename Tint>
 WeightMatrix<true,T> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV)
 {
+  using Tidx_value = typename WeightMatrix<true,T>::Tidx_value;
   size_t nbRow=SHV.rows();
   size_t n=qMat.rows();
   size_t INP_nbRow=nbRow;
@@ -570,12 +572,12 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 template<typename Tint>
 EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
+  using Tidx_value = int16_t;
   size_t nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-
-  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(EXT, Qmat);
+  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -821,12 +823,12 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 template<typename Tint>
 EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
+  using Tidx_value = int16_t;
   size_t nbRow= EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-
-  WeightMatrixAbs<Tint> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick(EXT, Qmat);
+  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -989,6 +991,8 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 template<typename T>
 std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
   size_t nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -1002,8 +1006,6 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-  //  using Tgr = GraphBitset;
-  using Tgr = GraphListAdj;
   Tgr eGR=GetGraphFromWeightedMatrix<std::vector<T>,Tgr>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -1140,6 +1142,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 template<typename Tint>
 MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 {
+  using Tidx_value = int16_t;
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
 #ifdef TIMINGS
@@ -1160,7 +1163,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-  WeightMatrix<true,Tint> WMat=GetWeightMatrixAntipodal(EXT);
+  WeightMatrix<true,Tint,Tidx_value> WMat=GetWeightMatrixAntipodal<Tint,Tidx_value>(EXT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
@@ -1227,6 +1230,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 template<typename Tint>
 std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
 {
+  using Tidx_value = int16_t;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -1245,7 +1249,7 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
   std::cerr << "|LinPolytopeAntipodalIntegral_Automorphism_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-  WeightMatrix<true,Tint> WMat=GetWeightMatrixAntipodal(EXT);
+  WeightMatrix<true,Tint,Tidx_value> WMat=GetWeightMatrixAntipodal<Tint,Tidx_value>(EXT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
