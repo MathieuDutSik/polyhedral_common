@@ -1,7 +1,19 @@
 Polytopes, lattices and quadratic forms programs
 ================================================
 
-This is the set of functionality for dealing with polytopes.
+This is the set of functionality for dealing with polytopes,
+quadratic forms and lattices.
+
+The general approach is to use polytope and polyhedral
+structures and groups are used to make everything faster
+as a general rule.
+
+The goal is to get extreme speed in order to solve record
+problems.
+
+
+Access to the source code
+-------------------------
 
 Since this repository uses submodules, the cloning command is
 
@@ -15,14 +27,28 @@ $ git submodule update --remote
 ```
 
 
+Compilation
+-----------
 
-There is a number of programs for polytopes, lattices and quadratic
-which are in a number of independent directories:
+The compilation of the software is relatively complex. However in
+**script_docker/Dockerfile** a dockerfile is given that should make everything
+clear. It should also allow any user to install the system on their
+computer and use it fairly easily.
+
+
+General organization of the code
+--------------------------------
+
+The program are in several independent subdirectory. The software of each
+directory can be compiled independently of the others:
   * *src_copos*: for copositivity / strict copositivity functionalities.
   * *src_poly*: for polyhedral computations.
   * *src_short*: for short vector related computations.
-  * *src_latt*: for lattice related computations
+  * *src_latt*: for lattice related computations (canonicalization of positive definite matrices and shortest vector mostly)
+  * *src_dualdesc*: for computing dual description on serial computers.
+  * *src_ctype_mpi*: for computing C-types. This was done for computing all the C-types in dimension 6.
   * *src_perfect*: for perfect form related computations.
+  * *src_vinberg*: for using the Vinberg algorithm of hyperbolic forms.
 
 
 Copositivity
@@ -76,10 +102,3 @@ The directory *src_sparse_solver* contains the code for a solver of the
 equations **Ax = b** by finding sparse solution **x** for sparse matrices
 **A** and **b**. The algorithmic method used is Generalized Approximate
 Message Passing.
-
-Compilation
------------
-
-The compilation of the software is relatively complex. However in
-**script_docker/Dockerfile** a dockerfile is given that should make everything
-clear.
