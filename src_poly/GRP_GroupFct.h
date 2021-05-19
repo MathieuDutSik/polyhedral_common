@@ -549,16 +549,13 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
 
 
 template<typename Tgroup>
-vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup const& SmaGRP, LocalInvInfo const& LocalInv, Face const& eList, std::ostream & os)
+vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup const& SmaGRP, WeightMatrix<true,int> const& WMat, Face const& eList)
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
-  //  os << "Beginning of DoubleCosetDescription\n";
   std::vector<Telt> ListGen=BigGRP.GeneratorsOfGroup();
   Tgroup TheStab=BigGRP.Stabilizer_OnSets(eList);
-  //  os << "BigGRP.size=" << BigGRP.size() << " TheStab.size=" << TheStab.size() << "\n";
   Tint TotalSize=BigGRP.size() / TheStab.size();
-  //  os << "TotalSize=" << TotalSize << "\n";
   //
   struct Local {
     int status;
@@ -568,7 +565,7 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
   Tint SizeGen=0;
   std::vector<Local> ListLocal;
   auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
-    size_t eInv=GetLocalInvariantWeightMatrix_Enhanced(LocalInv, testList);
+    size_t eInv=GetLocalInvariantWeightMatrix(WMat, testList);
     for (auto const& fLocal : ListLocal) {
       bool test = SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList).first;
       if (test)
@@ -601,7 +598,6 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
     ListListSet.push_back(eRec.eFace);
   if (SizeGen == TotalSize)
     return ListListSet;
-  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   vectface PartialOrbit = std::move(ListListSet);
   auto IsPresent=[&](Face const& testList) -> bool {
     for (auto & fList : PartialOrbit)
@@ -629,7 +625,7 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
     }
     pos_start = n_orb;
   }
-  os << "Likely not reachable stage\n";
+  std::cerr << "Likely not reachable stage\n";
   throw TerminalException{1};
 }
 
@@ -747,11 +743,10 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, vec
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   if (BigGRP.size() == SmaGRP.size())
     return eListBig;
-  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP, os);
-  LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMat, SmaGRP, "pairinv", os);
+  //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<int,Tgroup>(SmaGRP, os);
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {
-    //    vectface ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, LocalInv, eSet, os);
+    //    vectface ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, WMat, eSet, os);
     vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
     eListSma.append(ListListSet);
   }

@@ -95,15 +95,13 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
   }
   WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits<int>(GRPlin, os);
   os << "We have WMatInt\n";
-  LocalInvInfo LocalInv=ComputeLocalInvariantStrategy(WMatInt, GRPlin, "pairinv", os);
-  os << "We have LocalInv\n";
   struct Local {
     Face eFace;
     size_t eHash;
   };
   std::vector<Local> ListLocal;
   auto FuncInsert=[&](Face const& eFace) -> void {
-    size_t eHash=GetLocalInvariantWeightMatrix_Enhanced(LocalInv, eFace);
+    size_t eHash=GetLocalInvariantWeightMatrix(WMatInt, eFace);
     for (auto & eRec : ListLocal)
       if (eRec.eHash == eHash) {
 	bool test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace).first;
@@ -407,8 +405,6 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     TheMap["groupsizerelevant"]=TheGRPrelevant.size();
     std::string ansGRP=HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
     std::string ansStratLocInv=HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
-    LocalInvInfo eLocalInv=ComputeLocalInvariantStrategy(WMat, TheGRPrelevant, ansStratLocInv, MProc.GetO(TheId));
-    MProc.GetO(TheId) << "nbDiagCoeff=" << eLocalInv.nbDiagCoeff << " nbOffCoeff=" << eLocalInv.nbOffCoeff << "\n";
     Tint QuotSize=TheGRPrelevant.size() / GRP.size();
     MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP << " |TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize << "\n";
     mpz_class MaxAllowedUndone=eRank-2;
@@ -442,12 +438,6 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     int NewLevel=TheLevel+1;
     std::function<EquivTest<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
     std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
-    {
-      std::ofstream os1("DEBUG_GRPrelevant");
-      std::ofstream os2("DEBUG_GRPrelevant.gap");
-      WriteGroup(os1, TheGRPrelevant);
-      WriteGroupGAP(os2, TheGRPrelevant);
-    }
     if (ansGRP == "classic") {
       fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
 	std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
@@ -463,7 +453,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	int siz=eOrb.count();
 	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
-	size_t eHash = GetLocalInvariantWeightMatrix_Enhanced(eLocalInv, eOrb);
+	size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
 	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
 	return {eOrbF, eInv};
       };
@@ -492,7 +482,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	int siz=eOrb.count();
 	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
-	size_t eHash=GetLocalInvariantWeightMatrix_Enhanced(eLocalInv,eOrb);
+	size_t eHash=GetLocalInvariantWeightMatrix(WMat, eOrb);
 	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
 	return {eOrbF, eInv};
       };
