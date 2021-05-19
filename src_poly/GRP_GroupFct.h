@@ -563,12 +563,12 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
   struct Local {
     int status;
     Face eFace;
-    std::vector<int> eInv;
+    size_t eInv;
   };
   Tint SizeGen=0;
   std::vector<Local> ListLocal;
   auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
-    std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, testList);
+    size_t eInv=GetLocalInvariantWeightMatrix_Enhanced(LocalInv, testList);
     for (auto const& fLocal : ListLocal) {
       bool test = SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList).first;
       if (test)

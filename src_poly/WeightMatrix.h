@@ -510,9 +510,10 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
 
 
 
-template<bool is_symmetric, typename T, typename Tout, typename Tidx_value>
-std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const&WMat, Face const& eSet)
+template<typename T, typename Tidx_value>
+size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const&WMat, Face const& eSet)
 {
+  size_t n=eSet.size();
   size_t nbVert=eSet.count();
   std::vector<size_t> eList(nbVert);
   size_t aRow=eSet.find_first();
@@ -521,16 +522,19 @@ std::vector<Tout> GetLocalInvariantWeightMatrix(WeightMatrix<is_symmetric,T,Tidx
     aRow=eSet.find_next(aRow);
   }
   size_t nbWeight=WMat.GetWeightSize();
-  std::vector<Tout> eInv(nbWeight,0);
+  std::vector<int> eInv(2 * nbWeight, 0);
   for (size_t iVert=0; iVert<nbVert; iVert++) {
     size_t aVert=eList[iVert];
-    for (size_t jVert=0; jVert<nbVert; jVert++) {
-      size_t bVert=eList[jVert];
-      size_t iWeight=WMat.GetValue(aVert, bVert);
-      eInv[iWeight]++;
+    for (size_t i=0; i<n; i++) {
+      size_t iWeight=WMat.GetValue(aVert, i);
+      if (eSet[i] == 0) {
+        eInv[iWeight]++;
+      } else {
+        eInv[iWeight + nbWeight]++;
+      }
     }
   }
-  return eInv;
+  return std::hash<std::vector<int>>()(eInv);
 }
 
 
@@ -814,8 +818,7 @@ LocalInvInfo ComputeLocalInvariantStrategy(WeightMatrix<true,T,Tidx_value> const
 
 
 
-template<typename Tout>
-std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& LocalInv, Face const& eSet)
+size_t GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& LocalInv, Face const& eSet)
 {
   size_t nbVert=eSet.count();
   size_t nbRow=LocalInv.WMatInt.rows();
@@ -836,7 +839,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
   int nbDiagCoeff=LocalInv.nbDiagCoeff;
   int nbOffCoeff=LocalInv.nbOffCoeff;
   size_t nbTriple=LocalInv.ListChosenTriple.rows();
-  std::vector<Tout> eInv(nbDiagCoeff + 2*nbOffCoeff + nbTriple,0);
+  std::vector<int> eInv(nbDiagCoeff + 2*nbOffCoeff + nbTriple,0);
   int posShift=0;
   for (size_t iVert=0; iVert<nbVert; iVert++) {
     int aVert=eList[iVert];
@@ -866,7 +869,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
   }
   posShift += nbOffCoeff;
   if (nbTriple == 0)
-    return eInv;
+    return std::hash<std::vector<int>>()(eInv);
   std::vector<int> colorVect(3);
   auto FindITriple=[&]() -> int {
     for (size_t iTriple=0; iTriple<nbTriple; iTriple++) {
@@ -900,7 +903,7 @@ std::vector<Tout> GetLocalInvariantWeightMatrix_Enhanced(LocalInvInfo const& Loc
     if (!test)
       break;
   }
-  return eInv;
+  return std::hash<std::vector<int>>()(eInv);
 }
 
 
@@ -2040,32 +2043,6 @@ WeightMatrix<is_symmetric,int,Tidx_value> NakedWeightedMatrix(WeightMatrix<is_sy
   };
   return WeightMatrix<is_symmetric, int, Tidx_value>(n, f);
 }
-
-
-template<typename T, typename Telt, typename Tidx_value>
-Telt CanonicalizeWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
-{
-  using Tidx = typename Telt::Tidx;
-  GraphBitset eGR=GetGraphFromWeightedMatrix<T,GraphBitset>(WMat);
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  unsigned int nof_vertices=eGR.GetNbVert();
-  bliss::Stats stats;
-  const unsigned int* cl=g.canonical_form(stats, &report_aut_void, stderr);
-  std::vector<int> clR(nof_vertices);
-  for (unsigned int i=0; i<nof_vertices; i++)
-    clR[cl[i]]=i;
-  unsigned int nbVert=WMat.GetNbVert();
-  std::vector<unsigned int> eVect_R(nof_vertices);
-  std::vector<Tidx> eVect(nbVert);
-  for (unsigned int iVert=0; iVert<nbVert; iVert++) {
-    unsigned int i=cl[iVert]; // or clR? this needs to be debugged
-    eVect_R[i]=iVert;
-    eVect[iVert] = i;
-  }
-  // Need to check that code.
-  return Telt(eVect);
-}
-
 
 
 #endif

@@ -99,18 +99,18 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
   os << "We have LocalInv\n";
   struct Local {
     Face eFace;
-    std::vector<int> eInv;
+    size_t eHash;
   };
   std::vector<Local> ListLocal;
   auto FuncInsert=[&](Face const& eFace) -> void {
-    std::vector<int> eInv=GetLocalInvariantWeightMatrix_Enhanced<int>(LocalInv, eFace);
+    size_t eHash=GetLocalInvariantWeightMatrix_Enhanced(LocalInv, eFace);
     for (auto & eRec : ListLocal)
-      if (eRec.eInv == eInv) {
+      if (eRec.eHash == eHash) {
 	bool test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace).first;
 	if (test)
 	  return;
       }
-    ListLocal.push_back({eFace,eInv});
+    ListLocal.push_back({eFace, eHash});
   };
   int iter=0;
   for (auto & eFace : eEnt.ListFace) {
@@ -181,13 +181,11 @@ std::istream& operator>>(std::istream& is, SimpleOrbitFacet<T> & eEnt)
 // SimpleOrbitFacetInv related defines
 //
 
-using IntInv=short;
-
 template<typename T>
 struct SimpleOrbitFacetInv {
   int incd;
   mpz_class eOrbitSize;
-  std::vector<IntInv> ListNb;
+  size_t eHash;
 };
 
 template<typename T>
@@ -197,7 +195,7 @@ bool operator==(SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y
     return false;
   if (x.eOrbitSize != y.eOrbitSize)
     return false;
-  return x.ListNb == y.ListNb;
+  return x.eHash == y.eHash;
 }
 
 template<typename T>
@@ -205,11 +203,11 @@ std::istream& operator>>(std::istream& is, SimpleOrbitFacetInv<T>& obj)
 {
   int incd;
   mpz_class eOrbitSize;
-  std::vector<IntInv> ListNb;
+  size_t eHash;
   is >> incd;
   is >> eOrbitSize;
-  is >> ListNb;
-  obj={incd, eOrbitSize, ListNb};
+  is >> eHash;
+  obj={incd, eOrbitSize, eHash};
   return is;
 }
 
@@ -219,7 +217,7 @@ std::ostream& operator<<(std::ostream& os, SimpleOrbitFacetInv<T> const& obj)
 {
   os << obj.incd << " ";
   os << obj.eOrbitSize;
-  os << obj.ListNb;
+  os << obj.eHash;
   return os;
 }
 
@@ -236,19 +234,7 @@ bool operator<(SimpleOrbitFacetInv<T> const& eOrb, SimpleOrbitFacetInv<T> const&
     return true;
   if (eOrb.eOrbitSize < fOrb.eOrbitSize)
     return false;
-  int eLen=eOrb.ListNb.size();
-  int fLen=fOrb.ListNb.size();
-  if (eLen < fLen)
-    return true;
-  if (eLen > fLen)
-    return false;
-  for (int i=0; i<eLen; i++) {
-    if (eOrb.ListNb[i] < fOrb.ListNb[i])
-      return true;
-    if (eOrb.ListNb[i] > fOrb.ListNb[i])
-      return false;
-  }
-  return false;
+  return eOrb.eHash < fOrb.eHash;
 }
 
 //
@@ -477,8 +463,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	int siz=eOrb.count();
 	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
-	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
+	size_t eHash = GetLocalInvariantWeightMatrix_Enhanced(eLocalInv, eOrb);
+	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
 	return {eOrbF, eInv};
       };
     }
@@ -506,8 +492,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 	int siz=eOrb.count();
 	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
 	SimpleOrbitFacet<T> eOrbF{eOrb};
-	std::vector<IntInv> ListSingleInv=GetLocalInvariantWeightMatrix_Enhanced<IntInv>(eLocalInv,eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, ListSingleInv};
+	size_t eHash=GetLocalInvariantWeightMatrix_Enhanced(eLocalInv,eOrb);
+	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
 	return {eOrbF, eInv};
       };
     }
