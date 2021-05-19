@@ -541,7 +541,7 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
   std::vector<int> eInv(3 * nbWeight + 1, 0);
   for (auto & aVert : eList) {
     for (size_t i=0; i<n; i++) {
-      size_t iWeight=WMat.GetValue(aVert, i);
+      Tidx_value iWeight=WMat.GetValue(aVert, i);
       if (eSet[i] != set_val) {
         eInv[iWeight]++;
       } else {
@@ -658,7 +658,7 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
 	  int iImg = OnPoints(i, eGen);
 	  int jImg = OnPoints(j, eGen);
 	  auto aInsert=[&](int const& u, int const& v) -> void {
-	    int eVal1 = WMat.GetValue(u,v);
+	    Tidx_value eVal1 = WMat.GetValue(u,v);
 	    if (eVal1 == -1)
 	      FuncInsertIChoice(iChoiceB, {u, v});
 	  };
@@ -677,7 +677,7 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
   WMat.SetWeight(ListWeight);
 #ifdef DEBUG
   for (size_t i=0; i<n; i++)
-    os << "i=" << i << "/" << n << " val=" << WMat.GetValue(i,i) << "\n";
+    os << "i=" << i << "/" << n << " val=" << int(WMat.GetValue(i,i)) << "\n";
 #endif
   return WMat;
 }
@@ -928,7 +928,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> cons
   std::vector<int> eVect(e_pow);
   for (size_t iVert=0; iVert<nbVert-1; iVert++)
     for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
-      int eVal;
+      Tidx_value eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
 	  eVal = nbWei;
@@ -1010,7 +1010,7 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> cons
   std::vector<int> eVect(hS);
   for (size_t iVert=0; iVert<nbVert-1; iVert++)
     for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
-      int eVal;
+      Tidx_value eVal;
       if (jVert == nbRow+1) {
 	if (iVert == nbRow)
 	  eVal = nbWei;
@@ -1087,7 +1087,7 @@ inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type 
   size_t nbVert=nbRow + 2;
   size_t nof_vertices=hS*nbVert;
   std::function<bool(int,int)> fAdj=[=](size_t const& aVert, size_t const& bVert) -> bool {
-    int eVal;
+    Tidx_value eVal;
     size_t iVert=aVert % nbVert;
     size_t iH=(aVert - iVert)/nbVert;
     size_t jVert=bVert % nbVert;
@@ -1488,8 +1488,8 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
       for (size_t j=0; j<nbRow; j++) {
         int iImg = eGen[i];
         int jImg = eGen[j];
-        Tidx pos1 = WMat.GetValue(i, j);
-        Tidx pos2 = WMat.GetValue(iImg, jImg);
+        Tidx_value pos1 = WMat.GetValue(i, j);
+        Tidx_value pos2 = WMat.GetValue(iImg, jImg);
         if (pos1 != pos2) {
           std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
           std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
