@@ -363,7 +363,7 @@ namespace std {
         ListAttDiag[pos]++;
       }
       for (size_t iRow=0; iRow<nbRow; iRow++)
-        for (size_t jRow=0; jRow<nbRow; jRow++) {
+        for (size_t jRow=0; jRow<weightmatrix_last_idx<is_symmetric>(nbRow, iRow); jRow++) {
           if (iRow != jRow) {
             Tidx_value pos = WMat.GetValue(iRow, jRow);
             ListAttOff[pos]++;
