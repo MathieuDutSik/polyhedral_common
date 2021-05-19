@@ -515,19 +515,34 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
 {
   size_t n=eSet.size();
   size_t nbVert=eSet.count();
-  std::vector<size_t> eList(nbVert);
-  size_t aRow=eSet.find_first();
-  for (size_t i=0; i<nbVert; i++) {
-    eList[i]=aRow;
-    aRow=eSet.find_next(aRow);
+  std::vector<size_t> eList;
+  int set_val;
+  // We consider the set of smallest size which gain us speed.
+  if (2 * nbVert < n) {
+    eList.resize(nbVert);
+    size_t aRow=eSet.find_first();
+    for (size_t i=0; i<nbVert; i++) {
+      eList[i]=aRow;
+      aRow=eSet.find_next(aRow);
+    }
+    set_val = 1;
+  } else {
+    eList.resize(n - nbVert);
+    size_t idx = 0;
+    for (size_t i=0; i<n; i++) {
+      if (eSet[i] == 0) {
+        eList[idx] = i;
+        idx++;
+      }
+    }
+    set_val = 0;
   }
   size_t nbWeight=WMat.GetWeightSize();
-  std::vector<int> eInv(3 * nbWeight, 0);
-  for (size_t iVert=0; iVert<nbVert; iVert++) {
-    size_t aVert=eList[iVert];
+  std::vector<int> eInv(3 * nbWeight + 1, 0);
+  for (auto & aVert : eList) {
     for (size_t i=0; i<n; i++) {
       size_t iWeight=WMat.GetValue(aVert, i);
-      if (eSet[i] == 0) {
+      if (eSet[i] != set_val) {
         eInv[iWeight]++;
       } else {
         if (i != aVert) {
@@ -538,6 +553,7 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
       }
     }
   }
+  eInv[3 * nbWeight] = nbVert;
   return std::hash<std::vector<int>>()(eInv);
 }
 
