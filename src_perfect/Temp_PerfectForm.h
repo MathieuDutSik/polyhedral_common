@@ -688,34 +688,34 @@ template<typename T,typename Tint>
 
 template<typename T>
 struct SimplePerfectInv {
-  std::vector<T> ListSingleInv;
+  size_t hash;
 };
 
 template<typename T>
 bool operator==(SimplePerfectInv<T> const& x, SimplePerfectInv<T> const& y)
 {
-  return x.ListSingleInv == y.ListSingleInv;
+  return x.hash == y.hash;
 }
 
 template<typename T>
 std::istream& operator>>(std::istream& is, SimplePerfectInv<T>& obj)
 {
-  std::vector<T> ListSingleInv;
-  is >> ListSingleInv;
-  obj={ListSingleInv};
+  size_t hash;
+  is >> hash;
+  obj = {hash};
   return is;
 }
 template<typename T>
 std::ostream& operator<<(std::ostream& os, SimplePerfectInv<T> const& obj)
 {
-  os << obj.ListSingleInv;
+  os << obj.hash;
   return os;
 }
 
 template<typename T>
 bool operator<(SimplePerfectInv<T> const& x, SimplePerfectInv<T> const& y)
 {
-  return x.ListSingleInv < y.ListSingleInv;
+  return x.hash < y.hash;
 }
 
 template <typename T,typename Tint>
@@ -735,21 +735,17 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const& eGram)
   Tshortest<T,Tint> RecSHV=T_ShortestVector<T,Tint>(eGram);
   MyMatrix<T> eG = eGram / RecSHV.eMin;
   int nbSHV=RecSHV.SHV.size();
-  T eDet=DeterminantMat(eG);
-  Tint PreIndex=Int_IndexLattice(RecSHV.SHV);
-  Tint eIndex=T_abs(PreIndex);
   MyVector<Tint> V1(n), V2(n);
   auto f=[&](size_t i, size_t j) -> T {
     for (int iCol=0; iCol<n; iCol++) {
       V1(i)=RecSHV.SHV(i,iCol);
       V2(i)=RecSHV.SHV(j,iCol);
     }
-    return ScalarProductQuadForm<T,Tint>(eGram, V1, V2);
+    return ScalarProductQuadForm<T,Tint>(eG, V1, V2);
   };
   WeightMatrix<true,T> WMat(nbSHV, f);
-  T ePolyInv_T=GetInvariantWeightMatrix(WMat);
-  std::vector<T> ListSingleInv{nbSHV, eDet, eIndex, ePolyInv_T};
-  return {ListSingleInv};
+  size_t hash = GetInvariantWeightMatrix(WMat);
+  return {hash};
 }
 
 template<typename T>
@@ -767,7 +763,7 @@ struct DataLinSpa {
 
 template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
-		      DataLinSpa<T> const&eData,
+		      DataLinSpa<T> const& eData,
 		      MyMatrix<T> const& Gram1,
 		      MyMatrix<T> const& Gram2)
 {
@@ -946,7 +942,6 @@ template<typename T, typename Tint, typename Tgroup>
       if (IsComplete)
 	break;
       SimplePerfect<T,Tint> ePERF=ListOrbit.GetRepresentative(eEntry);
-      SimplePerfectInv<T> eInv=ListOrbit.GetInvariant(eEntry);
       Tshortest<T,Tint> RecSHV=T_ShortestVector<T,Tint>(ePERF.Gram);
       NakedPerfect<T,Tint> eNaked=GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV);
       Tgroup GRPshv=SimplePerfect_Stabilizer<T,Tint,Tgroup>(eData, ePERF.Gram, RecSHV);

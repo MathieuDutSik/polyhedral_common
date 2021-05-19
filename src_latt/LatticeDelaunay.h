@@ -49,7 +49,7 @@ template<typename T,typename Tint>
 struct DelaunayInv {
   size_t nbVert;
   Tint eIndex;
-  T ePolyInv;
+  size_t ePolyInv;
 };
 
 template<typename T,typename Tint>
@@ -71,7 +71,7 @@ std::istream& operator>>(std::istream& is, DelaunayInv<T,Tint>& obj)
 {
   size_t nbVert;
   Tint eIndex;
-  T ePolyInv;
+  size_t ePolyInv;
   is >> nbVert;
   is >> eIndex;
   is >> ePolyInv;
@@ -296,7 +296,7 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
     return eSum;
   };
   WeightMatrix<true,T> WMat(nbVert, f1, f2);
-  T ePolyInv_T=GetInvariantWeightMatrix(WMat);
+  size_t ePolyInv_T=GetInvariantWeightMatrix(WMat);
   return {nbVert, eIndex, ePolyInv_T};
 }
 

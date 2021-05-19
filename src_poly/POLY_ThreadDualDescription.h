@@ -25,14 +25,14 @@
 template<typename T>
 struct PolyhedralInv {
   int dim;
-  T eVal;
+  size_t eVal;
 };
 
 template<typename T>
 std::istream& operator>>(std::istream& is, PolyhedralInv<T>& obj)
 {
   int dim;
-  T eVal;
+  size_t eVal;
   is >> dim;
   is >> eVal;
   //
@@ -131,7 +131,6 @@ std::istream& operator>>(std::istream& is, PolyhedralEntry<T,Tgroup>& obj)
   MyMatrix<T> EXT=ReadMatrix<T>(is);
   Tgroup GRP=ReadGroup<Tgroup>(is);
   vectface ListFace=ReadListFace(is);
-  PolyhedralInv<T> eInv;
   //
   obj={EXT, GRP, ListFace};
   return is;
@@ -346,7 +345,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   int TheMinSize=TheBank.GetMinSize();
   if (TheMinSize != -1 && nbRow >= TheMinSize) {
     ComputeWMat();
-    T eValInv=GetInvariantWeightMatrix(WMat);
+    size_t eValInv=GetInvariantWeightMatrix(WMat);
     PolyhedralInv<T> eInv{nbRow, eValInv};
     PolyhedralEntry<T,Tgroup> eEnt{EXT, GRP, vectface(EXT.rows())};
     DataBank_ResultQuery<PolyhedralEntry<T,Tgroup>> eResBank=TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
@@ -646,7 +645,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 2\n";
     PolyhedralEntry<T,Tgroup> eEntryCan=CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
     MProc.GetO(TheId) << "BANK work, step 3\n";
-    T eValInv=GetInvariantWeightMatrix(WMat);
+    size_t eValInv=GetInvariantWeightMatrix(WMat);
     MProc.GetO(TheId) << "BANK work, step 4\n";
     PolyhedralInv<T> eInv{nbRow, eValInv};
     MProc.GetO(TheId) << "BANK work, step 5\n";

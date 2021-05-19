@@ -690,48 +690,36 @@ WeightMatrix<true, T> WeightMatrixFromPairOrbits(Tgroup const& GRP, std::ostream
 
 // The matrix should be square and the output does not depends on the ordering of the coefficients.
 template<bool is_symmetric, typename T, typename Tidx_value>
-inline typename std::enable_if<is_totally_ordered<T>::value,T>::type GetInvariantWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WMat)
+inline typename std::enable_if<is_totally_ordered<T>::value,size_t>::type GetInvariantWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WMat)
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
-  size_t nbInv=3;
   size_t nbVert=WMat.rows();
-  std::vector<int> ListM(nbInv);
-  ListM[0]=2;
-  ListM[1]=5;
-  ListM[2]=23;
-  size_t nbWeight=WMat.GetWeightSize();
   std::vector<T> ListWeight=WMat.GetWeight();
-  std::vector<int> ListAtt(nbWeight,0);
+  size_t nbWeight=ListWeight.size();
+  std::vector<int> ListAttDiag(nbWeight,0);
+  std::vector<int> ListAttOff(nbWeight,0);
   for (size_t iVert=0; iVert<nbVert; iVert++)
-    for (size_t jVert=0; jVert<nbVert; jVert++) {
+    for (size_t jVert=0; jVert<weightmatrix_last_idx<is_symmetric>(nbVert,iVert); jVert++) {
       Tidx_value iWeight=WMat.GetValue(iVert, jVert);
-      ListAtt[iWeight]++;
+      if (iVert != jVert) {
+        ListAttOff[iWeight]++;
+      } else {
+        ListAttDiag[iWeight]++;
+      }
     }
   std::vector<int> eList = SortingPerm<T,int>(ListWeight);
-#ifdef DEBUG
-  for (size_t jWeight=1; jWeight<nbWeight; jWeight++) {
-    size_t iWeight=jWeight-1;
-    int i=eList[iWeight];
-    int j=eList[jWeight];
-    if (ListWeight[i] > ListWeight[j]) {
-      std::cerr << "Logical error in the comparison\n";
-      throw TerminalException{1};
-    }
+  std::vector<int> ListAtt(2*nbWeight);
+  std::vector<T> ListWeight_B(nbWeight);
+  for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
+    size_t jWeight=eList[iWeight];
+    ListAtt[iWeight] = ListAttDiag[jWeight];
+    ListAtt[iWeight + nbWeight] = ListAttOff[jWeight];
+    ListWeight_B[iWeight] = ListWeight[jWeight];
   }
-#endif
-  T eMainInv=0;
-  for (size_t iInv=0; iInv<nbInv; iInv++) {
-    T eInv=0;
-    T ePow=ListM[iInv];
-    for (size_t iWeight=0; iWeight<nbWeight; iWeight++) {
-      size_t jWeight=eList[iWeight];
-      T prov2=ListAtt[jWeight]*ListWeight[jWeight];
-      eInv *= ePow;
-      eInv += prov2;
-    }
-    eMainInv += eInv;
-  }
-  return eMainInv;
+  size_t hash1 = std::hash<std::vector<int>>()(ListAtt);
+  size_t hash2 = std::hash<std::vector<T>>()(ListWeight_B);
+  size_t hash = hash1 + (hash2 << 6) + (hash2 >> 2);
+  return hash;
 }
 
 
