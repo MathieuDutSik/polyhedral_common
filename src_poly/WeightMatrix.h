@@ -522,7 +522,7 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
     aRow=eSet.find_next(aRow);
   }
   size_t nbWeight=WMat.GetWeightSize();
-  std::vector<int> eInv(2 * nbWeight, 0);
+  std::vector<int> eInv(3 * nbWeight, 0);
   for (size_t iVert=0; iVert<nbVert; iVert++) {
     size_t aVert=eList[iVert];
     for (size_t i=0; i<n; i++) {
@@ -530,7 +530,11 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
       if (eSet[i] == 0) {
         eInv[iWeight]++;
       } else {
-        eInv[iWeight + nbWeight]++;
+        if (i != aVert) {
+          eInv[iWeight + nbWeight]++;
+        } else {
+          eInv[iWeight + 2 * nbWeight]++;
+        }
       }
     }
   }
