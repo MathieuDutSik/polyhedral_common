@@ -627,16 +627,17 @@ WeightMatrix<true, int> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 {
   using Tidx_value = typename WeightMatrix<true, int>::Tidx_value;
   using Telt = typename Tgroup::Telt;
+  Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
   size_t n=GRP.n_act();
   WeightMatrix<true, int> WMat(n);
   for (size_t i=0; i<n; i++)
     for (size_t j=0; j<n; j++)
-      WMat.intDirectAssign(i,j,-1);
+      WMat.intDirectAssign(i,j,miss_val);
   auto GetUnset=[&]() -> std::pair<int,int> {
     for (size_t i=0; i<n; i++)
       for (size_t j=0; j<n; j++) {
 	Tidx_value eVal=WMat.GetValue(i,j);
-	if (eVal == -1) {
+	if (eVal == miss_val) {
 	  return {i,j};
 	}
       }
@@ -666,7 +667,7 @@ WeightMatrix<true, int> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 	  int iImg = OnPoints(i, eGen);
 	  int jImg = OnPoints(j, eGen);
           Tidx_value eVal1 = WMat.GetValue(iImg,jImg);
-          if (eVal1 == -1)
+          if (eVal1 == miss_val)
             fList.push_back({iImg,jImg});
 	}
       }
