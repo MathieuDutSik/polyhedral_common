@@ -183,14 +183,14 @@ public:
   }
   WeightMatrix(WeightMatrix<is_symmetric,T> const& eMat)
   {
-    nbRow = eMat.rows();
-    ListWeight = eMat.GetWeight();
+    nbRow = eMat.nbRow;
+    ListWeight = eMat.ListWeight;
     TheMat = eMat.TheMat;
   }
   WeightMatrix<is_symmetric,T> operator=(WeightMatrix<is_symmetric,T> const& eMat)
   {
-    nbRow = eMat.rows();
-    ListWeight = eMat.GetWeight();
+    nbRow = eMat.nbRow;
+    ListWeight = eMat.ListWeight;
     TheMat = eMat.TheMat;
     return *this;
   }
@@ -220,7 +220,7 @@ public:
   {
     ListWeight = inpWeight;
   }
-  std::vector<T> GetWeight() const
+  std::vector<T> const& GetWeight() const
   {
     return ListWeight;
   }
@@ -356,7 +356,7 @@ namespace std {
       auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
         seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
       };
-      std::vector<T> ListWeight = WMat.GetWeight();
+      std::vector<T> const& ListWeight = WMat.GetWeight();
       size_t nbWei = ListWeight.size();
       size_t nbRow = WMat.rows();
       std::vector<int> ListAttDiag(nbWei, 0);
@@ -444,7 +444,7 @@ inline typename std::enable_if<is_totally_ordered<T>::value,size_t>::type GetInv
 {
   static_assert(is_totally_ordered<T>::value, "Requires T to be totally ordered");
   size_t nbVert=WMat.rows();
-  std::vector<T> ListWeight=WMat.GetWeight();
+  std::vector<T> const& ListWeight=WMat.GetWeight();
   size_t nbWeight=ListWeight.size();
   std::vector<int> ListAttDiag(nbWeight,0);
   std::vector<int> ListAttOff(nbWeight,0);
@@ -490,7 +490,7 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<is_symmetric,T,Tidx_valu
       Tidx_value eVal=WMat.GetValue(iRow, iCol);
       ListValues[eVal]++;
     }
-  std::vector<T> ListWeight=WMat.GetWeight();
+  std::vector<T> const& ListWeight=WMat.GetWeight();
   for (size_t i=0; i<siz; i++) {
     if (i>0)
       os << ", ";
@@ -511,7 +511,7 @@ void PrintWeightedMatrix(std::ostream &os, WeightMatrix<is_symmetric,T,Tidx_valu
 template<bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrixGAP(std::ostream &os, WeightMatrix<is_symmetric,T,Tidx_value> const&WMat)
 {
-  std::vector<T> ListWeight=WMat.GetWeight();
+  std::vector<T> const& ListWeight=WMat.GetWeight();
   size_t nbRow=WMat.rows();
   os << "[";
   for (size_t iRow=0; iRow<nbRow; iRow++) {
@@ -592,8 +592,8 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
   size_t nbEnt2=WMat2.GetWeightSize();
   if (nbEnt != nbEnt2)
     return false;
-  std::vector<T> ListWeightRef=WMatRef.GetWeight();
-  std::vector<T> ListWeight=WMat2.GetWeight();
+  std::vector<T> const& ListWeightRef=WMatRef.GetWeight();
+  std::vector<T> const& ListWeight=WMat2.GetWeight();
   std::vector<Tidx_value> gListRev(nbEnt);
   for (size_t i=0; i<nbEnt; i++) {
     Tidx_value jFound=-1;
@@ -606,8 +606,8 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
   }
   WMat2.ReorderingOfWeights(gListRev);
 #ifdef DEBUG
-  std::vector<T> ListWeight1=WMatRef.GetWeight();
-  std::vector<T> ListWeight2=WMat2.GetWeight();
+  std::vector<T> const& ListWeight1=WMatRef.GetWeight();
+  std::vector<T> const& ListWeight2=WMat2.GetWeight();
   for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
     if (ListWeight1[iEnt] == ListWeight2[iEnt]) {
       std::cerr << "ERROR: The reordering failed\n";
