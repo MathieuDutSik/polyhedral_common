@@ -920,7 +920,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.Get_EXT_face(), GRPred, AllArr, NewPrefix, NewLevel);
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.EXT_face, GRPred, AllArr, NewPrefix, NewLevel);
       for (auto& eOrbB : TheOutput) {
         Face eFlip=FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);

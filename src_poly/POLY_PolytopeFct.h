@@ -151,11 +151,11 @@ template<typename T>
 struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
-  MyMatrix<T> EXT_face;
   Face OneInc;
   std::vector<int> OneInc_V;
   std::vector<T> ListInvScal;
 public:
+  MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const& EXT, Face const& _OneInc) : OneInc(_OneInc)
   {
     OneInc_V=Dynamic_bitset_to_vectorint(OneInc);
@@ -282,10 +282,6 @@ public:
     }
     // returning the found facet
     return fret;
-  }
-  MyMatrix<T> Get_EXT_face() const
-  {
-    return EXT_face;
   }
 };
 
