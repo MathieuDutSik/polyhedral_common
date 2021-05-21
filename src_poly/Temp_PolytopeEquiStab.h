@@ -224,8 +224,9 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
   size_t nbPair=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   size_t eProd = nbPair * nbPair;
-  std::vector<Tidx_value> INP_TheMat(eProd);
-  Face ArrSigns(eProd);
+  size_t n_ent = (nbPair * (nbPair + 1)) / 2;
+  std::vector<Tidx_value> INP_TheMat(n_ent);
+  Face ArrSigns(n_ent);
   std::vector<T> INP_ListWeight;
   std::unordered_map<T, Tidx_value> ValueMap;
   Tidx_value idxWeight = 0;
@@ -234,10 +235,7 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
   auto set_entry=[&](size_t iRow, size_t jRow, Tidx_value pos, bool eChg) -> void {
     size_t idx = weightmatrix_idx<true>(nbPair, iRow, jRow);
     INP_TheMat[idx] = pos;
-    size_t idx1 = iRow + nbPair*jRow;
-    size_t idx2 = jRow + nbPair*iRow;
-    ArrSigns[idx1] = eChg;
-    ArrSigns[idx2] = eChg;
+    ArrSigns[idx] = eChg;
   };
   MyVector<T> V(nbCol);
   for (size_t iPair=0; iPair<nbPair; iPair++) {
@@ -695,8 +693,10 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
             size_t jImg = eGen[j];
             Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
             if (pos != WMatAbs.positionZero) {
-              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
-              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
+              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
+              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
+              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
               bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
               uint8_t valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
@@ -756,7 +756,8 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
       if (k_row != i_row && ListSigns[k_row] != 0) {
         int k_row_orig = PairCanonic.second[k_row];
         if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
-          bool ChgSign = WMatAbs.ArrSigns[i_row_orig + nbRow * k_row_orig];
+          size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
+          bool ChgSign = WMatAbs.ArrSigns[idx];
           int ValSign = 1 - 2*int(ChgSign);
           int RetSign = ValSign * ListSigns[k_row];
           ListSigns[i_row] = RetSign;
@@ -907,8 +908,10 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
             size_t jImg = eGen[j];
             Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
             if (pos != WMatAbs.positionZero) {
-              bool ChgSign1 = WMatAbs.ArrSigns[i + nbRow * j];
-              bool ChgSign2 = WMatAbs.ArrSigns[iImg + nbRow * jImg];
+              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
+              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
+              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
               bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
               uint8_t valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
