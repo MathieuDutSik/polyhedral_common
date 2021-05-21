@@ -37,7 +37,7 @@ template<typename T, typename Telt>
 MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
   SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1);
-  std::vector<int> ListRowSelect=eSelect.ListRowSelect;
+  std::vector<int> const& ListRowSelect=eSelect.ListRowSelect;
   MyMatrix<T> M1=SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv=Inverse(M1);
   size_t nbRow=ListRowSelect.size();
