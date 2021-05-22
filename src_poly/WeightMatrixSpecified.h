@@ -63,8 +63,11 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 
 
 
-
-
+template<typename T, typename F1, typename F2, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalization_KnownSignature(nbRow, F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& DataSign)
+{
+  
+}
 
 
 

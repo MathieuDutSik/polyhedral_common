@@ -5,6 +5,144 @@
 #include "WeightMatrix.h"
 
 
+template<typename T, typename Telt, typename Tidx_value>
+EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face const& f1, Face const& f2)
+{
+  using Tidx = typename Telt::Tidx;
+  size_t siz=WMat.GetWeightSize();
+  size_t n=WMat.rows();
+  auto g=[&](Face const& f, size_t iRow, size_t iCol) -> int {
+     if (iRow < n && iCol < n)
+       return WMat.GetValue(iRow,iCol);
+     if (iRow == n && iCol == n)
+       return siz + 2;
+     if (iRow == n) { // Thus iCol < n.
+       if (f[iCol] == 0)
+         return siz;
+       else
+         return siz + 1;
+     }
+     // Last case: Necessarily we have iCol == n && iRow < n
+     if (f[iRow] == 0)
+       return siz;
+     else
+       return siz + 1;
+  };
+  WeightMatrix<true,int> WMat1(n+1,[&](size_t iRow, size_t iCol) -> int {
+    return g(f1, iRow, iCol);
+  });
+  WeightMatrix<true,int> WMat2(n+1,[&](size_t iRow, size_t iCol) -> int {
+    return g(f2, iRow, iCol);
+  });
+  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,Telt>(WMat1, WMat2);
+  if (!test.TheReply)
+    return {false, {}};
+  std::vector<Tidx> eList(n);
+  for (size_t i=0; i<n; i++) {
+    int eVal=test.TheEquiv.at(i);
+    eList[i] = eVal;
+  }
+  return {true, std::move(Telt(eList))};
+}
+
+
+
+template<typename T, typename Tgroup, typename Tidx_value>
+Tgroup StabilizerSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face const& f)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  size_t siz=WMat.GetWeightSize();
+  size_t n=WMat.rows();
+  auto g=[&](size_t iRow, size_t iCol) -> int {
+     if (iRow < n && iCol < n)
+       return WMat.GetValue(iRow,iCol);
+     if (iRow == n && iCol == n)
+       return siz + 2;
+     if (iRow == n) {
+       if (f[iCol] == 0)
+         return siz;
+       else
+         return siz + 1;
+     }
+     // Last case: Necessarily we have iCol == n && iRow < n
+     if (f[iRow] == 0)
+       return siz;
+     else
+       return siz + 1;
+  };
+  WeightMatrix<true,int> WMatW(n+1, g);
+  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatW);
+  std::vector<Telt> ListPerm;
+  for (auto & ePerm : GRP.GeneratorsOfGroup()) {
+    std::vector<Tidx> eList(n);
+    for (size_t i=0; i<n; i++)
+      eList[i]=OnPoints(i, ePerm);
+    ListPerm.push_back(Telt(eList));
+  }
+  return Tgroup(ListPerm, n);
+}
+
+
+template<typename Tgroup>
+WeightMatrix<true, int> WeightMatrixFromPairOrbits(Tgroup const& GRP)
+{
+  using Tidx_value = typename WeightMatrix<true, int>::Tidx_value;
+  using Telt = typename Tgroup::Telt;
+  Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
+  size_t n=GRP.n_act();
+  WeightMatrix<true, int> WMat(n);
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++)
+      WMat.intDirectAssign(i,j,miss_val);
+  auto GetUnset=[&]() -> std::pair<int,int> {
+    for (size_t i=0; i<n; i++)
+      for (size_t j=0; j<n; j++) {
+	Tidx_value eVal=WMat.GetValue(i,j);
+	if (eVal == miss_val) {
+	  return {i,j};
+	}
+      }
+    return {-1,-1};
+  };
+  int iOrbit=0;
+  std::vector<int> ListWeight;
+  std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
+  while(true) {
+    std::pair<int,int> eStart=GetUnset();
+    if (eStart.first == -1)
+      break;
+    ListWeight.push_back(iOrbit);
+    std::vector<std::pair<int,int>> eList{eStart};
+    size_t orbSize = 0;
+    while(true) {
+      int nbPair = eList.size();
+      if (nbPair == 0)
+	break;
+      orbSize += nbPair;
+      std::vector<std::pair<int,int>> fList;
+      for (auto & ePair : eList) {
+	int i=ePair.first;
+	int j=ePair.second;
+	WMat.intDirectAssign(i,j,iOrbit);
+	for (auto & eGen : ListGen) {
+	  int iImg = OnPoints(i, eGen);
+	  int jImg = OnPoints(j, eGen);
+          Tidx_value eVal1 = WMat.GetValue(iImg,jImg);
+          if (eVal1 == miss_val)
+            fList.push_back({iImg,jImg});
+	}
+      }
+      eList = std::move(fList);
+    }
+    iOrbit++;
+  }
+  WMat.SetWeight(ListWeight);
+  return WMat;
+}
+
+
+
 
 
 template<typename T>
@@ -274,7 +412,7 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
 #endif
   positionZero = WMat.ReorderingSetWeight_specificPosition(positionZero);
 #ifdef DEBUG
-  std::cerr << "Afeter positionZero=" << positionZero << "\n";
+  std::cerr << "After positionZero=" << positionZero << "\n";
 #endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();

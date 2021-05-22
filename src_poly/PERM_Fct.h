@@ -72,7 +72,7 @@ EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(MyMatrix<T> const& EX
   MyMatrix<T> M2_field=ConvertMatrixUniversal<Tfield,T>(M2);
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
   // Now testing that we have EXT1 EqMat = EXT2
-  for (size_t iRow=0, iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     size_t iRowImg = ePerm.at(iRow);
     for (size_t iCol=0; iCol<nbCol; iCol++) {
       Tfield eSum = -EXT2(iRowImg, iCol);
