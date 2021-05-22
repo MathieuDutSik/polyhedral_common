@@ -49,6 +49,102 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 }
 
 
+template<typename T, typename Tfield, typename Telt>
+EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
+{
+  static_assert(is_ring_field<Tfield>::value, "Requires Tfield to be a field in DivideVector");
+  size_t nbRow=EXT1.rows();
+  size_t nbCol=EXT1.cols();
+  SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1); // needs another version that do not use the type conversion
+  std::vector<int> const& ListRowSelect=eSelect.ListRowSelect;
+  MyMatrix<T> M1=SelectRow(EXT1, ListRowSelect);
+  MyMatrix<Tfield> M1_field=ConvertMatrixUniversal<Tfield,T>(M1);
+  MyMatrix<Tfield> M1inv_field=Inverse(M1_field);
+  size_t nbRow_select=ListRowSelect.size();
+  if (nbRow_select != nbCol) {
+    std::cerr << "nbRow_select should be equal to nbCol\n";
+    throw TerminalException{1};
+  }
+  std::vector<int> ListRowSelectImg(nbRow);
+  for (size_t iRow=0; iRow<nbRow_select; iRow++)
+    ListRowSelectImg[iRow]=ePerm.at(iRow);
+  MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
+  MyMatrix<T> M2_field=ConvertMatrixUniversal<Tfield,T>(M2);
+  MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
+  // Now testing that we have EXT1 EqMat = EXT2
+  for (size_t iRow=0, iRow<nbRow; iRow++) {
+    size_t iRowImg = ePerm.at(iRow);
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
+      Tfield eSum = -EXT2(iRowImg, iCol);
+      for (size_t jRow=0; jRow<nbCol; jRow++) {
+        eSum += EqMat(jRow,iCol) * EXT1(iRow, jRow);
+      }
+      if (eSum != 0) {
+        return {false, {}};
+      }
+    }
+  }
+  return {true, EqMat};
+}
+
+
+template<typename T, typename Tfield, typename Telt>
+EquivTest<Telt> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, MyMatrix<Tfield> const& P)
+{
+  using Tidx = typename Telt::Tidx;
+  size_t n_rows = EXT1.rows();
+  size_t n_cols = EXT1.cols();
+  MyMatrix<T> VectorContain(1,n_cols);
+  ContainerMatrix<T> Cont(EXT2);
+  Cont.SetPtr(&VectorContain);
+  //
+  // We are testing if EXT1 P = perm(EXT2) 
+  std::vector<Tidx> V(n_rows);
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    for (size_t i_col=0; i_col<n_cols; i_col++) {
+      Tfield eSum1 = 0;
+      for (size_t j_row=0; j_row<n_cols; j_row++)
+        eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
+      T eSum2 = UniversalTypeConversion<T,Tfield>(eSum1);
+      Tfield eSum3 = UniversalTypeConversion<Tfield,T>(eSum2);
+      if (eSum1 != eSum3) {
+        return {false,{}}; // We fail because the image is not integral.
+      }
+      VectorContain(0, i_col) = eSum2;
+    }
+    std::pair<bool, size_t> epair = Cont.GetIdx();
+    if (!epair.first) {
+      return {false,{}}; // We fail because the image does not belong to EXT2
+    }
+    V[i_row] = epair.second;
+  }
+  return {true, std::move(Telt(V))};
+}
+
+
+
+
+
+
+
+template<typename T, typename Telt>
+EquivTest<MyMatrix<T>> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
+{
+  SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1);
+  std::vector<int> const& ListRowSelect=eSelect.ListRowSelect;
+  MyMatrix<T> M1=SelectRow(EXT1, ListRowSelect);
+  MyMatrix<T> M1inv=Inverse(M1);
+  size_t nbRow=ListRowSelect.size();
+  std::vector<int> ListRowSelectImg(nbRow);
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    ListRowSelectImg[iRow]=ePerm.at(iRow);
+  MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
+  return M1inv*M2;
+}
+
+
+
+
 
 template<typename T, typename Telt>
 Telt GetPermutationOnVectors(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2)

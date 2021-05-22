@@ -65,4 +65,8 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 
 
 
+
+
+
+
 #endif
