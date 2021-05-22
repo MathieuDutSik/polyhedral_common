@@ -595,14 +595,14 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat
   std::vector<T> const& ListWeightRef=WMatRef.GetWeight();
   std::vector<T> const& ListWeight=WMat2.GetWeight();
   std::vector<Tidx_value> gListRev(nbEnt);
+  std::unordered_map<T,Tidx_value> map;
+  for (Tidx_value i=0; i<Tidx_value(nbEnt); i++)
+    map[ListWeight[i]] = i+1;
   for (size_t i=0; i<nbEnt; i++) {
-    Tidx_value jFound=-1;
-    for (size_t j=0; j<nbEnt; j++)
-      if (ListWeightRef[i] == ListWeight[j])
-	jFound=j;
-    if (jFound == -1)
+    Tidx_value jFound = map[ListWeightRef[i]];
+    if (jFound == 0)
       return false;
-    gListRev[jFound]=i;
+    gListRev[jFound - 1] = i;
   }
   WMat2.ReorderingOfWeights(gListRev);
 #ifdef DEBUG
@@ -936,64 +936,6 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 
-
-template<typename T, typename Tgr, typename Tidx_value>
-inline typename std::enable_if<is_functional_graph_class<Tgr>::value,Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
-{
-  size_t nbMult=WMat.GetWeightSize()+2;
-  size_t hS=GetNeededPower(nbMult);
-  size_t nbRow=WMat.rows();
-  size_t nbVert=nbRow + 2;
-  size_t nof_vertices=hS*nbVert;
-  std::function<bool(int,int)> fAdj=[=](size_t const& aVert, size_t const& bVert) -> bool {
-    Tidx_value eVal;
-    size_t iVert=aVert % nbVert;
-    size_t iH=(aVert - iVert)/nbVert;
-    size_t jVert=bVert % nbVert;
-    size_t jH=(aVert - iVert)/nbVert;
-    std::vector<int> eVect(hS);
-    if (iVert == jVert) {
-      if (iH != jH) {
-	return true;
-      } else {
-	return false;
-      }
-    }
-    if (iH == jH) {
-      if (iVert > jVert) {
-        std::swap(iVert, jVert);
-      }
-      if (jVert == nbRow+1) {
-	if (iVert == nbRow)
-	  eVal = nbMult;
-	else
-	  eVal = nbMult+1;
-      } else {
-	if (jVert == nbRow)
-	  eVal = WMat.GetValue(iVert, iVert);
-	else
-	  eVal = WMat.GetValue(iVert, jVert);
-      }
-      GetBinaryExpression(eVal, hS, eVect);
-      if (eVect[iH] == 1) {
-	return true;
-      } else {
-	return false;
-      }
-    }
-    return false;
-  };
-  std::function<int(int)> fColor=[=](int const& aVert) -> int {
-    size_t iVert=aVert % nbVert;
-    size_t iH=(aVert - iVert)/nbVert;
-    return iH;
-  };
-  Tgr eGR(nof_vertices, fAdj);
-  eGR.SetFColor(fColor);
-  return eGR;
-}
-
-
 template<typename Tgroup>
 Tgroup GetStabilizerBlissGraph(bliss::Graph g)
 {
@@ -1012,62 +954,6 @@ Tgroup GetStabilizerBlissGraph(bliss::Graph g)
     generatorList.push_back(Telt(gList));
   }
   return Tgroup(generatorList, nbVert);
-}
-
-
-template<typename Tgroup>
-Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const& ListGen, size_t const& nbVert)
-{
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  std::vector<Telt> generatorList;
-  std::vector<Tidx> gList(nbVert);
-  for (auto & eGen : ListGen) {
-    for (size_t iVert=0; iVert<nbVert; iVert++)
-      gList[iVert]=eGen[iVert];
-    generatorList.push_back(Telt(gList));
-  }
-  return Tgroup(generatorList, nbVert);
-}
-
-
-template<typename Tgr>
-bool CheckListGenerators(std::vector<std::vector<unsigned int>> const& ListGen, Tgr const& eGR)
-{
-  size_t nbVert = eGR.GetNbVert();
-  for (auto & eGen : ListGen) {
-    for (size_t iVert=0; iVert<nbVert; iVert++) {
-      int eColor = eGR.GetColor(iVert);
-      int iVert_img = eGen[iVert];
-      int fColor = eGR.GetColor(iVert_img);
-      if (eColor != fColor) {
-        return false;
-      }
-      //
-      for (auto & jVert : eGR.Adjacency(iVert)) {
-        int jVert_img = eGen[jVert];
-        bool test = eGR.IsAdjacent(iVert_img, jVert_img);
-        if (!test)
-          return false;
-      }
-    }
-  }
-  return true;
-}
-
-
-template<typename Tgr, typename Tgroup>
-void PrintStabilizerGroupSizes(std::ostream& os, Tgr const& eGR)
-{
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  size_t nbVert=eGR.GetNbVert();
-  std::vector<std::vector<unsigned int>> ListGen1 = BLISS_GetListGenerators(eGR);
-  std::vector<std::vector<unsigned int>> ListGen2 = TRACES_GetListGenerators(eGR);
-  auto siz1 = GetGroupListGen<Tgroup>(ListGen1, nbVert).size();
-  auto siz2 = GetGroupListGen<Tgroup>(ListGen2, nbVert).size();
-  bool test1 = CheckListGenerators(ListGen1, eGR);
-  bool test2 = CheckListGenerators(ListGen2, eGR);
-  os << "|GRP bliss|=" << siz1 << " |GRP traces|=" << siz2 << " test1=" << test1 << " test2=" << test2 << "\n";
 }
 
 
