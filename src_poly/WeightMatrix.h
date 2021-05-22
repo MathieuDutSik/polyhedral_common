@@ -936,26 +936,6 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 
-template<typename Tgroup>
-Tgroup GetStabilizerBlissGraph(bliss::Graph g)
-{
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  bliss::Stats stats;
-  std::vector<std::vector<unsigned int>> ListGen;
-  std::vector<std::vector<unsigned int>>* h = &ListGen;
-  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)h);
-  size_t nbVert = g.get_nof_vertices();
-  std::vector<Telt> generatorList;
-  for (auto & eGen : ListGen) {
-    std::vector<Tidx> gList(nbVert);
-    for (size_t iVert=0; iVert<nbVert; iVert++)
-      gList[iVert]=eGen[iVert];
-    generatorList.push_back(Telt(gList));
-  }
-  return Tgroup(generatorList, nbVert);
-}
-
 
 template<typename Tidx>
 std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
@@ -1023,14 +1003,12 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   unsigned int nof_vertices=eGR.GetNbVert();
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
 
 #ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
 # ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 # endif
-  //  std::cerr << "|GRP|=" << GetStabilizerBlissGraph(g).size << "\n";
 
   bliss::Stats stats;
   const unsigned int* cl;
@@ -1415,12 +1393,15 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
   return {true, std::move(TheEquiv)};
 }
 
+
+
 template<typename T, typename Telt, typename Tidx_value>
 EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
 {
+  using Tidx = typename Telt::Tidx;
   EquivTest<std::vector<unsigned int>> ePair = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
   size_t len = ePair.TheEquiv.size();
-  std::vector<int> eList(len);
+  std::vector<Tidx> eList(len);
   for (size_t i=0; i<len; i++)
     eList[i] = ePair.TheEquiv[i];
   Telt ePerm(eList);
