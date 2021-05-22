@@ -576,54 +576,8 @@ WeightMatrix<false, T> ReadWeightedMatrix(std::istream &is)
 
 
 //
-// Other unsorted functions
+// The building of graph from weighted graph.
 //
-
-
-
-template<bool is_symmetric, typename T, typename Tidx_value>
-bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMatRef, WeightMatrix<is_symmetric,T,Tidx_value> & WMat2)
-{
-  size_t nbRow=WMatRef.rows();
-  size_t nbRow2=WMat2.rows();
-  if (nbRow != nbRow2)
-    return false;
-  size_t nbEnt=WMatRef.GetWeightSize();
-  size_t nbEnt2=WMat2.GetWeightSize();
-  if (nbEnt != nbEnt2)
-    return false;
-  std::vector<T> const& ListWeightRef=WMatRef.GetWeight();
-  std::vector<T> const& ListWeight=WMat2.GetWeight();
-  std::vector<Tidx_value> gListRev(nbEnt);
-  std::unordered_map<T,Tidx_value> map;
-  for (Tidx_value i=0; i<Tidx_value(nbEnt); i++)
-    map[ListWeight[i]] = i+1;
-  for (size_t i=0; i<nbEnt; i++) {
-    Tidx_value jFound = map[ListWeightRef[i]];
-    if (jFound == 0)
-      return false;
-    gListRev[jFound - 1] = i;
-  }
-  WMat2.ReorderingOfWeights(gListRev);
-#ifdef DEBUG
-  std::vector<T> const& ListWeight1=WMatRef.GetWeight();
-  std::vector<T> const& ListWeight2=WMat2.GetWeight();
-  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
-    if (ListWeight1[iEnt] == ListWeight2[iEnt]) {
-      std::cerr << "ERROR: The reordering failed\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
-  return true;
-}
-
-
-
-
-
-
-
 
 
 int GetNeededPower(int nb)
@@ -654,7 +608,6 @@ inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
 }
 
 
-#ifdef USE_PAIRS
 /* Unfortunately, the use of pairs while allowing for a graph with
    a smaller number of vertices gives a running time that is sometimes
    larger. This happened with BLISS but not with TRACES.
@@ -680,7 +633,7 @@ inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
     Write N = 2K + 1 then nb_pair = 2K + 1 + (2K+1) 2K / 2 - (K+1) = K + (2K+1) K = 2 (K+1) K
 
  */
-int GetNeededN(int nb_color)
+int Pairs_GetNeededN(int nb_color)
 {
   int N=1;
   while (true) {
@@ -702,7 +655,7 @@ int GetNeededN(int nb_color)
   }
 }
 
-std::vector<int> GetListPair(int N, int nb_color)
+std::vector<int> Pairs_GetListPair(int N, int nb_color)
 {
   if (N == 1)
     return {0,0};
@@ -737,14 +690,12 @@ std::vector<int> GetListPair(int N, int nb_color)
 
 
 
-
-
-template<typename T, typename Tidx_value>
-size_t get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
+template<typename T, typename Tidx_value, bool use_pairs>
+inline typename std::enable_if<use_pairs,size_t>::type get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbWei=WMat.GetWeightSize();
   size_t nbMult=nbWei+2;
-  size_t hS=GetNeededN(nbMult);
+  size_t hS=Pairs_GetNeededN(nbMult);
   size_t nbRow=WMat.rows();
   size_t nbVert=nbRow + 2;
   size_t nbVertTot=nbVert * hS;
@@ -755,13 +706,13 @@ size_t get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 }
 
 
-template<typename T, typename Fcolor, typename Fadj, typename Tidx_value>
-void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> const& WMat, Fcolor f_color, Fadj f_adj)
+template<typename T, typename Fcolor, typename Fadj, typename Tidx_value, bool use_pairs>
+inline typename std::enable_if<use_pairs,void>::type GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> const& WMat, Fcolor f_color, Fadj f_adj)
 {
   size_t nbWei=WMat.GetWeightSize();
   size_t nbMult=nbWei+2;
-  size_t hS=GetNeededN(nbMult);
-  std::vector<int> V = GetListPair(hS, nbMult);
+  size_t hS=Pairs_GetNeededN(nbMult);
+  std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
 #ifdef DEBUG
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " e_pow=" << e_pow << "\n";
@@ -818,11 +769,10 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> cons
     }
 }
 
-#else
 
 
-template<typename T, typename Tidx_valud>
-size_t get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
+template<typename T, typename Tidx_value, bool use_pairs>
+inline typename std::enable_if<(not use_pairs),size_t>::type get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbWei=WMat.GetWeightSize();
   size_t nbMult=nbWei+2;
@@ -842,8 +792,8 @@ size_t get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 }
 
 
-template<typename T, typename Fcolor, typename Fadj, typename Tidx_value>
-void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> const& WMat, Fcolor f_color, Fadj f_adj)
+template<typename T, typename Fcolor, typename Fadj, typename Tidx_value, bool use_pairs>
+inline typename std::enable_if<(not use_pairs),void>::type GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> const& WMat, Fcolor f_color, Fadj f_adj)
 {
   size_t nbWei=WMat.GetWeightSize();
   size_t nbMult=nbWei+2;
@@ -892,13 +842,14 @@ void GetGraphFromWeightedMatrix_color_adj(WeightMatrix<true, T, Tidx_value> cons
     }
 }
 
-#endif
+
 
 
 template<typename T, typename Tidx_value>
 bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
-  size_t nbVert = get_total_number_vertices(WMat);
+  const bool use_pairs=true;
+  size_t nbVert = get_total_number_vertices<T,Tidx_value,use_pairs>(WMat);
   bliss::Graph g(nbVert);
   auto f_color=[&](size_t iVert, size_t eColor) -> void {
     g.change_color(iVert, eColor);
@@ -906,7 +857,7 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> c
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
     g.add_edge(iVert, jVert);
   };
-  GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
+  GetGraphFromWeightedMatrix_color_adj<T,decltype(f_color),decltype(f_adj),Tidx_value,use_pairs>(WMat, f_color, f_adj);
   return g;
 }
 
@@ -915,7 +866,8 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> c
 template<typename T, typename Tgr, typename Tidx_value>
 inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
-  size_t nof_vertices=get_total_number_vertices(WMat);
+  const bool use_pairs=true;
+  size_t nof_vertices=get_total_number_vertices<T,Tidx_value,use_pairs>(WMat);
 #ifdef DEBUG
   std::cerr << "nof_vertices=" << nof_vertices << "\n";
 #endif
@@ -930,7 +882,7 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
     eGR.AddAdjacent(iVert, jVert);
   };
-  GetGraphFromWeightedMatrix_color_adj(WMat, f_color, f_adj);
+  GetGraphFromWeightedMatrix_color_adj<T,decltype(f_color),decltype(f_adj),Tidx_value,use_pairs>(WMat, f_color, f_adj);
   return eGR;
 }
 
@@ -1204,24 +1156,6 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-#ifdef DEBUG
-  std::vector<std::vector<Tidx>> LGen = GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow).second;
-  for (auto & eGen : LGen) {
-    for (size_t i=0; i<nbRow; i++) {
-      for (size_t j=0; j<nbRow; j++) {
-        int iImg = eGen[i];
-        int jImg = eGen[j];
-        Tidx_value pos1 = WMat.GetValue(i, j);
-        Tidx_value pos2 = WMat.GetValue(iImg, jImg);
-        if (pos1 != pos2) {
-          std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
-          std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
-          throw TerminalException{1};
-        }
-      }
-    }
-  }
-#endif
   return GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
@@ -1407,6 +1341,53 @@ EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, 
   Telt ePerm(eList);
   return {ePair.TheReply, std::move(ePerm)};
 }
+
+
+
+
+
+
+
+template<bool is_symmetric, typename T, typename Tidx_value>
+bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMatRef, WeightMatrix<is_symmetric,T,Tidx_value> & WMat2)
+{
+  size_t nbRow=WMatRef.rows();
+  size_t nbRow2=WMat2.rows();
+  if (nbRow != nbRow2)
+    return false;
+  size_t nbEnt=WMatRef.GetWeightSize();
+  size_t nbEnt2=WMat2.GetWeightSize();
+  if (nbEnt != nbEnt2)
+    return false;
+  std::vector<T> const& ListWeightRef=WMatRef.GetWeight();
+  std::vector<T> const& ListWeight=WMat2.GetWeight();
+  std::vector<Tidx_value> gListRev(nbEnt);
+  std::unordered_map<T,Tidx_value> map;
+  for (Tidx_value i=0; i<Tidx_value(nbEnt); i++)
+    map[ListWeight[i]] = i+1;
+  for (size_t i=0; i<nbEnt; i++) {
+    Tidx_value jFound = map[ListWeightRef[i]];
+    if (jFound == 0)
+      return false;
+    gListRev[jFound - 1] = i;
+  }
+  WMat2.ReorderingOfWeights(gListRev);
+#ifdef DEBUG
+  std::vector<T> const& ListWeight1=WMatRef.GetWeight();
+  std::vector<T> const& ListWeight2=WMat2.GetWeight();
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++) {
+    if (ListWeight1[iEnt] == ListWeight2[iEnt]) {
+      std::cerr << "ERROR: The reordering failed\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return true;
+}
+
+
+
+
 
 template<typename T, typename Telt, typename Tidx_value>
 EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> &WMat2)
