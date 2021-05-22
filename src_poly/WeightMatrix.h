@@ -689,7 +689,6 @@ std::vector<int> Pairs_GetListPair(int N, int nb_color)
 }
 
 
-
 template<typename T, typename Tidx_value, bool use_pairs>
 inline typename std::enable_if<use_pairs,size_t>::type get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
@@ -770,7 +769,6 @@ inline typename std::enable_if<use_pairs,void>::type GetGraphFromWeightedMatrix_
 }
 
 
-
 template<typename T, typename Tidx_value, bool use_pairs>
 inline typename std::enable_if<(not use_pairs),size_t>::type get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
@@ -843,8 +841,6 @@ inline typename std::enable_if<(not use_pairs),void>::type GetGraphFromWeightedM
 }
 
 
-
-
 template<typename T, typename Tidx_value>
 bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
@@ -860,7 +856,6 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> c
   GetGraphFromWeightedMatrix_color_adj<T,decltype(f_color),decltype(f_adj),Tidx_value,use_pairs>(WMat, f_color, f_adj);
   return g;
 }
-
 
 
 template<typename T, typename Tgr, typename Tidx_value>
@@ -886,6 +881,10 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
   return eGR;
 }
 
+
+//
+// The computation of group and equivalences
+//
 
 
 
@@ -955,6 +954,7 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   unsigned int nof_vertices=eGR.GetNbVert();
+  std::vector<unsigned int> cl;
 
 #ifdef USE_BLISS
   bliss::Graph g=GetBlissGraphFromGraph(eGR);
@@ -963,8 +963,9 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 # endif
 
   bliss::Stats stats;
-  const unsigned int* cl;
-  cl=g.canonical_form(stats, &report_aut_void, stderr);
+  const unsigned int* cl_ptr = g.canonical_form(stats, &report_aut_void, stderr);
+  for (unsigned int i=0; i<nof_vertices; i++)
+    cl.push_back(cl_ptr[i]);
 # ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 # endif
@@ -975,64 +976,13 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 # ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 # endif
-  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
+  cl = TRACES_GetCanonicalOrdering(eGR);
 # ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 # endif
 #endif
   //
-  std::vector<unsigned int> clR(nof_vertices,-1);
-  for (size_t i=0; i<nof_vertices; i++)
-    clR[cl[i]]=i;
-  //
-  size_t nbVert=nbRow+2;
-  size_t hS = nof_vertices / nbVert;
-#ifdef DEBUG
-  if (hS * nbVert != nof_vertices) {
-    std::cerr << "Error in the number of vertices\n";
-    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  std::vector<int> MapVectRev(nbVert,-1);
-  std::vector<int> ListStatus(nof_vertices,1);
-  int posCanonic=0;
-  for (size_t iCan=0; iCan<nof_vertices; iCan++) {
-    if (ListStatus[iCan] == 1) {
-      int iNative=clR[iCan];
-      int iVertNative=iNative % nbVert;
-      MapVectRev[posCanonic] = iVertNative;
-      for (size_t iH=0; iH<hS; iH++) {
-	int uVertNative = iVertNative + nbVert * iH;
-	int jCan=cl[uVertNative];
-#ifdef DEBUG
-	if (ListStatus[jCan] == 0) {
-	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
-	  throw TerminalException{1};
-	}
-#endif
-	ListStatus[jCan] = 0;
-      }
-      posCanonic++;
-    }
-  }
-  std::vector<Tidx> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
-  int posCanonicB=0;
-  for (size_t iCan=0; iCan<nbVert; iCan++) {
-    int iNative=MapVectRev[iCan];
-    if (iNative < nbRow) {
-      MapVectRev2[posCanonicB] = iNative;
-      MapVect2[iNative] = posCanonicB;
-      posCanonicB++;
-    }
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-  return {std::move(MapVect2), std::move(MapVectRev2)};
+  return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
 }
 
 
@@ -1089,13 +1039,6 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   //
   size_t nbVert=nbRow+2;
   size_t hS = nof_vertices / nbVert;
-#ifdef DEBUG
-  if (hS * nbVert != nof_vertices) {
-    std::cerr << "Error in the number of vertices\n";
-    std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";
-    throw TerminalException{1};
-  }
-#endif
   std::vector<int> MapVectRev(nbVert,-1);
   std::vector<int> ListStatus(nof_vertices,1);
   int posCanonic=0;
@@ -1175,43 +1118,11 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  bliss::Stats stats;
-  std::vector<std::vector<unsigned int>> ListGen;
   size_t nbRow=WMat.rows();
-  GraphBitset eGR=GetGraphFromWeightedMatrix<T,GraphBitset>(WMat);
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-  g.find_automorphisms(stats, &report_aut_vectvectint, (void *)(&ListGen));
+  std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector<T,GraphListAdj,Tidx,Tidx_value>(WMat).second;
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
-    std::vector<Tidx> gList(nbRow);
-    for (size_t iVert=0; iVert<nbRow; iVert++) {
-      size_t jVert=eGen[iVert];
-#ifdef DEBUG
-      if (jVert >= nbRow) {
-	std::cerr << "jVert is too large\n";
-	std::cerr << "jVert=" << jVert << "\n";
-	std::cerr << "nbRow=" << nbRow << "\n";
-	throw TerminalException{1};
-      }
-#endif
-      gList[iVert]=jVert;
-    }
-#ifdef DEBUG
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      for (size_t jRow=0; jRow<nbRow; jRow++) {
-	int iRowI=gList[iRow];
-	int jRowI=gList[jRow];
-	Tidx_value eVal1=WMat.GetValue(iRow, jRow);
-	Tidx_value eVal2=WMat.GetValue(iRowI, jRowI);
-	if (eVal1 != eVal2) {
-	  std::cerr << "eVal1=" << eVal1 << " eVal2=" << eVal2 << "\n";
-	  std::cerr << "Clear error in automorphism computation\n";
-	  std::cerr << "AUT iRow=" << iRow << " jRow=" << jRow << "\n";
-	  throw TerminalException{1};
-	}
-      }
-#endif
-    generatorList.push_back(Telt(gList));
+    generatorList.push_back(Telt(eGen));
   }
   return Tgroup(generatorList, nbRow);
 }
