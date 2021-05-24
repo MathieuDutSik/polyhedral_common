@@ -896,7 +896,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
   for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
-  size_t nbVert=nbRow+2;
+  size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
@@ -905,11 +905,11 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
     throw TerminalException{1};
   }
 #endif
-  std::vector<int> MapVectRev(nbVert,-1);
-  std::vector<int> ListStatus(nof_vertices,1);
+  std::vector<int> MapVectRev(nbVert);
+  Face ListStatus(nof_vertices);
   int posCanonic=0;
   for (size_t iCan=0; iCan<nof_vertices; iCan++) {
-    if (ListStatus[iCan] == 1) {
+    if (ListStatus[iCan] == 0) {
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
       MapVectRev[posCanonic] = iVertNative;
@@ -917,23 +917,22 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
 	int uVertNative = iVertNative + nbVert * iH;
 	int jCan=cl[uVertNative];
 #ifdef DEBUG
-	if (ListStatus[jCan] == 0) {
+	if (ListStatus[jCan] == 1) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
 	  throw TerminalException{1};
 	}
 #endif
-	ListStatus[jCan] = 0;
+	ListStatus[jCan] = 1;
       }
       posCanonic++;
     }
   }
-  std::vector<Tidx> MapVect2(nbRow, -1), MapVectRev2(nbRow,-1);
+  std::vector<Tidx> MapVectRev2(nbRow);
   int posCanonicB=0;
   for (size_t iCan=0; iCan<nbVert; iCan++) {
     int iNative=MapVectRev[iCan];
     if (iNative < nbRow) {
       MapVectRev2[posCanonicB] = iNative;
-      MapVect2[iNative] = posCanonicB;
       posCanonicB++;
     }
   }
@@ -1008,6 +1007,9 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
 #endif
   //
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ePair.second) {
     std::vector<Tidx> eListO(nbRow);
@@ -1016,48 +1018,11 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     LGen.push_back(eListO);
   }
   //
-  std::vector<unsigned int> clR(nof_vertices,-1);
-  for (size_t i=0; i<nof_vertices; i++)
-    clR[ePair.first[i]]=i;
-  //
-  size_t nbVert=nbRow+2;
-  size_t hS = nof_vertices / nbVert;
-  std::vector<int> MapVectRev(nbVert,-1);
-  std::vector<int> ListStatus(nof_vertices,1);
-  int posCanonic=0;
-  for (size_t iCan=0; iCan<nof_vertices; iCan++) {
-    if (ListStatus[iCan] == 1) {
-      int iNative=clR[iCan];
-      int iVertNative=iNative % nbVert;
-      MapVectRev[posCanonic] = iVertNative;
-      for (size_t iH=0; iH<hS; iH++) {
-	int uVertNative = iVertNative + nbVert * iH;
-	int jCan=ePair.first[uVertNative];
-#ifdef DEBUG
-	if (ListStatus[jCan] == 0) {
-	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
-	  throw TerminalException{1};
-	}
-#endif
-	ListStatus[jCan] = 0;
-      }
-      posCanonic++;
-    }
-  }
-  std::vector<Tidx> MapVectRev2(nbRow,-1);
-  int posCanonicB=0;
-  for (size_t iCan=0; iCan<nbVert; iCan++) {
-    int iNative=MapVectRev[iCan];
-    if (iNative < nbRow) {
-      MapVectRev2[posCanonicB] = iNative;
-      posCanonicB++;
-    }
-  }
+  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetBlissGraphFromGraph|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|canonical_form|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|XXX_GetCanonicalOrdering_ListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return {std::move(MapVectRev2), std::move(LGen)};
 }
