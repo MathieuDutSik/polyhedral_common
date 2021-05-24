@@ -186,19 +186,19 @@ struct TripleCanonic {
 template<typename T, typename Tidx>
 std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat)
 {
-  std::pair<std::vector<Tidx>, std::vector<Tidx>> PairCanonic = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
+  std::vector<Tidx> CanonicOrd = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
   for (int i_row=0; i_row<n_row; i_row++) {
-    Tidx j_row=PairCanonic.second[i_row];
+    Tidx j_row=CanonicOrd[i_row];
     EXTcan.row(i_row) = EXT.row(j_row);
   }
   MyMatrix<T> RowRed = RowReduction(EXTcan);
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
   MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
   //
-  return {std::move(EXTretB), std::move(PairCanonic.second)};
+  return {std::move(EXTretB), std::move(CanonicOrd)};
 }
 
 

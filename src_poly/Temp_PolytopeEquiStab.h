@@ -362,7 +362,6 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
 #endif
   size_t nbPair=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
-  size_t eProd = nbPair * nbPair;
   size_t n_ent = (nbPair * (nbPair + 1)) / 2;
   std::vector<Tidx_value> INP_TheMat(n_ent);
   Face ArrSigns(n_ent);
@@ -875,7 +874,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   //
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector_KernelBis<int>(nbRow, ePair.first);
+  std::vector<int> CanonicOrd = GetCanonicalizationVector_KernelBis<int>(nbRow, ePair.first);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
@@ -890,10 +889,10 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "positionZero=" << WMatAbs.positionZero << "\n";
 #endif
   auto SetSign=[&](size_t const& i_row) -> void {
-    int i_row_orig = PairCanonic.second[i_row];
+    int i_row_orig = CanonicOrd[i_row];
     for (size_t k_row=0; k_row<nbRow; k_row++) {
       if (k_row != i_row && ListSigns[k_row] != 0) {
-        int k_row_orig = PairCanonic.second[k_row];
+        int k_row_orig = CanonicOrd[k_row];
         if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
           size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
           bool ChgSign = WMatAbs.ArrSigns[idx];
@@ -926,9 +925,9 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #ifdef DEBUG
   std::string strWMat;
   for (size_t i_row=0; i_row<nbRow; i_row++) {
-    int i_rowC = PairCanonic.second[i_row];
+    int i_rowC = CanonicOrd[i_row];
     for (size_t j_row=0; j_row<nbRow; j_row++) {
-      int j_rowC = PairCanonic.second[j_row];
+      int j_rowC = CanonicOrd[j_row];
       Tidx_value pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
       strWMat += " " + std::to_string(pos);
     }
@@ -941,7 +940,7 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
 #endif
 
   for (size_t i_row=0; i_row<nbRow; i_row++) {
-    int j_row = PairCanonic.second[i_row];
+    int j_row = CanonicOrd[i_row];
     int eSign = ListSigns[i_row];
     for (size_t i_col=0; i_col<n_cols; i_col++)
       EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
@@ -1265,14 +1264,14 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
+  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
-    size_t j_row = PairCanonic.second[i_row];
+    size_t j_row = CanonicOrd[i_row];
     for (size_t i_col=0; i_col<n_cols; i_col++)
       EXTreord(i_row, i_col) = EXT(j_row, i_col);
   }
@@ -1334,7 +1333,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
 
-  std::pair<std::vector<int>, std::vector<int>> PairCanonic = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
+  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
@@ -1344,7 +1343,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   size_t idx=0;
   Face IsIncluded(n_rows);
   for (size_t i_row=0; i_row<2*n_rows; i_row++) {
-    int j_row = PairCanonic.second[i_row];
+    int j_row = CanonicOrd[i_row];
     int res = j_row % 2;
     int pos = j_row / 2;
     if (res == 0) {

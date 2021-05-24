@@ -515,10 +515,12 @@ template<typename T, typename Tint, typename Tgroup>
 FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint> const& M)
 {
   using Telt=typename Tgroup::Telt;
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
   ShortIso<T,Tint> eRec1=SHORT_GetInformation<T,Tint>(M);
   int n=M.cols();
   WeightMatrix<true,T> WMat=T_TranslateToMatrix_QM_SHV(eRec1.GramMat, eRec1.SHVdisc);
-  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   std::cerr << "|GRP| = " << GRP.size() << "\n";
   MyMatrix<Tint> Mneg=-M;
   MyMatrix<Tint> Mtot=Concatenate(M, Mneg);

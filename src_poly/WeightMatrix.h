@@ -889,7 +889,7 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 template<typename Tidx>
-std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
+std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
 {
   size_t nof_vertices = cl.size();
   std::vector<unsigned int> clR(nof_vertices,-1);
@@ -937,7 +937,7 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
       posCanonicB++;
     }
   }
-  return {std::move(MapVect2), std::move(MapVectRev2)};
+  return MapVectRev2;
 }
 
 
@@ -948,7 +948,7 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
 template<typename Tgr, typename Tidx>
-std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
+std::vector<Tidx> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -976,7 +976,7 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
 template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
-std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector(WeightMatrix<true, T, Tidx_value> const& WMat)
+std::vector<Tidx> GetCanonicalizationVector(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbRow=WMat.rows();
 #ifdef TIMINGS
@@ -1121,33 +1121,37 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 
 
 
-std::pair<std::vector<int>, std::vector<int>> GetCanonicalizationFromSymmetrized(std::pair<std::vector<int>, std::vector<int>> const& PairVectSymm)
+template<typename Tidx>
+std::vector<Tidx> GetCanonicalizationFromSymmetrized(std::vector<Tidx> const& CanonicOrdSymmRev)
 {
-  size_t nbEnt=PairVectSymm.first.size() / 2;
-  std::vector<int> MapVect(nbEnt, -1), MapVectRev(nbEnt, -1);
-  std::vector<int> ListStatus(2*nbEnt,1);
+  size_t len = CanonicOrdSymmRev.size();
+  std::vector<Tidx> CanonicOrdSymm(len);
+  for (size_t i=0; i<len; i++)
+    CanonicOrdSymm[CanonicOrdSymmRev[i]] = i;
+  size_t nbEnt=len / 2;
+  std::vector<Tidx> MapVectRev(nbEnt);
+  Face ListStatus(2*nbEnt);
   size_t jEntCan=0;
   for (size_t iEntCan=0; iEntCan<2*nbEnt; iEntCan++) {
-    if (ListStatus[iEntCan] == 1) {
-      int iEntNative = PairVectSymm.second[iEntCan];
+    if (ListStatus[iEntCan] == 0) {
+      int iEntNative = CanonicOrdSymmRev[iEntCan];
       int jEntNative = iEntNative % nbEnt;
       MapVectRev[jEntCan] = jEntNative;
-      MapVect[jEntNative] = jEntCan;
       for (int iH=0; iH<2; iH++) {
 	int iEntNativeB = jEntNative + nbEnt * iH;
-	int iEntCanB=PairVectSymm.first[iEntNativeB];
+	int iEntCanB=CanonicOrdSymm[iEntNativeB];
 #ifdef DEBUG
-	if (ListStatus[iEntCanB] == 0) {
+	if (ListStatus[iEntCanB] == 1) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
 	  throw TerminalException{1};
 	}
 #endif
-	ListStatus[iEntCanB] = 0;
+	ListStatus[iEntCanB] = 1;
       }
       jEntCan++;
     }
   }
-  return {std::move(MapVect), std::move(MapVectRev)};
+  return MapVectRev;
 }
 
 

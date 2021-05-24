@@ -49,6 +49,7 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 }
 
 
+
 template<typename T, typename Tfield, typename Telt>
 EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
@@ -125,22 +126,6 @@ EquivTest<Telt> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix
 
 
 
-
-
-template<typename T, typename Telt>
-EquivTest<MyMatrix<T>> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
-{
-  SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1);
-  std::vector<int> const& ListRowSelect=eSelect.ListRowSelect;
-  MyMatrix<T> M1=SelectRow(EXT1, ListRowSelect);
-  MyMatrix<T> M1inv=Inverse(M1);
-  size_t nbRow=ListRowSelect.size();
-  std::vector<int> ListRowSelectImg(nbRow);
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    ListRowSelectImg[iRow]=ePerm.at(iRow);
-  MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
-  return M1inv*M2;
-}
 
 
 
