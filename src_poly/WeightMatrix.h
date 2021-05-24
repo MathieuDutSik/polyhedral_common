@@ -954,34 +954,18 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   unsigned int nof_vertices=eGR.GetNbVert();
-  std::vector<unsigned int> cl;
 
 #ifdef USE_BLISS
-  bliss::Graph g=GetBlissGraphFromGraph(eGR);
-# ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-# endif
-
-  bliss::Stats stats;
-  const unsigned int* cl_ptr = g.canonical_form(stats, &report_aut_void, stderr);
-  for (unsigned int i=0; i<nof_vertices; i++)
-    cl.push_back(cl_ptr[i]);
-# ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-# endif
-
+  std::vector<unsigned int> cl = BLISS_GetCanonicalOrdering(eGR);
 #endif
-  //
 #ifdef USE_TRACES
-# ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-# endif
-  cl = TRACES_GetCanonicalOrdering(eGR);
-# ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-# endif
+  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
 #endif
   //
+# ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|XXX_GetCanonicalOrdering|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+# endif
   return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
 }
 
@@ -1118,33 +1102,14 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using Tgr = GraphListAdj;
   size_t nbRow=WMat.rows();
-  std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector<T,GraphListAdj,Tidx,Tidx_value>(WMat).second;
+  std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector<T,Tgr,Tidx,Tidx_value>(WMat).second;
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
     generatorList.push_back(Telt(eGen));
   }
   return Tgroup(generatorList, nbRow);
-}
-
-
-template<typename T, typename Tgroup, typename Tidx_value>
-Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& WMatI)
-{
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  WeightMatrix<true, T> WMatO=WMatI.GetSymmetricWeightMatrix();
-  size_t nbSHV=WMatI.rows();
-  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatO);
-  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
-  std::vector<Tidx> v(nbSHV);
-  std::vector<Telt> ListGen;
-  for (auto & eGen : ListGenInput) {
-    for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
-      v[iSHV]=OnPoints(iSHV, eGen);
-    ListGen.push_back(Telt(v));
-  }
-  return Tgroup(ListGen, nbSHV);
 }
 
 
@@ -1187,14 +1152,14 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
 {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
-  Tgr eGR1=GetGraphFromWeightedMatrix<T,Tgr>(WMat1);
-  Tgr eGR2=GetGraphFromWeightedMatrix<T,Tgr>(WMat2);
-  unsigned int nof_vertices1=eGR1.GetNbVert();
-  unsigned int nof_vertices2=eGR2.GetNbVert();
+  Tgr eGR1 = GetGraphFromWeightedMatrix<T,Tgr>(WMat1);
+  Tgr eGR2 = GetGraphFromWeightedMatrix<T,Tgr>(WMat2);
+  unsigned int nof_vertices1 = eGR1.GetNbVert();
+  unsigned int nof_vertices2 = eGR2.GetNbVert();
   if (nof_vertices1 != nof_vertices2)
     return {false, {}};
-  unsigned int nof_vertices=nof_vertices1;
-  size_t nbRow=WMat1.rows();
+  unsigned int nof_vertices = nof_vertices1;
+  size_t nbRow = WMat1.rows();
 #ifdef USE_BLISS
   std::vector<unsigned int> cl1 = BLISS_GetCanonicalOrdering(eGR1);
   std::vector<unsigned int> cl2 = BLISS_GetCanonicalOrdering(eGR2);
@@ -1205,18 +1170,10 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
 #endif
   std::vector<unsigned int> clR2(nof_vertices);
   for (unsigned int i=0; i<nof_vertices; i++)
-    clR2[cl2[i]]=i;
-  std::vector<unsigned int> TheEquivExp(nof_vertices, -1);
+    clR2[cl2[i]] = i;
+  std::vector<unsigned int> TheEquivExp(nof_vertices);
   for (unsigned int iVert=0; iVert<nof_vertices; iVert++) {
     unsigned int jVert = clR2[cl1[iVert]];
-#ifdef DEBUG
-    unsigned int iBlock = iVert / (nbRow + 2);
-    unsigned int jBlock = jVert / (nbRow + 2);
-    if (iBlock != jBlock) {
-      std::cerr << "Not repecting block structure\n";
-      throw TerminalException{1};
-    }
-#endif
     TheEquivExp[iVert] = jVert;
   }
   for (unsigned int iVert=0; iVert<nof_vertices; iVert++) {
@@ -1310,6 +1267,30 @@ EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> co
 }
 
 
+//
+// The asymmetric matrix code.
+//
+
+
+
+template<typename T, typename Tgroup, typename Tidx_value>
+Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& WMatI)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  WeightMatrix<true, T> WMatO=WMatI.GetSymmetricWeightMatrix();
+  size_t nbSHV=WMatI.rows();
+  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatO);
+  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
+  std::vector<Tidx> v(nbSHV);
+  std::vector<Telt> ListGen;
+  for (auto & eGen : ListGenInput) {
+    for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
+      v[iSHV]=OnPoints(iSHV, eGen);
+    ListGen.push_back(Telt(v));
+  }
+  return Tgroup(ListGen, nbSHV);
+}
 
 
 
