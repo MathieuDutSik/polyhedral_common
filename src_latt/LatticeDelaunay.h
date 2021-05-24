@@ -166,7 +166,9 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
 {
   MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(EXT);
   WeightMatrix<true,T> WMatRed=GetWeightMatrixFromGramEXT(EXT_T, eData.GramMat, {});
-  Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,Tgroup>(WMatRed);
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
+  Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
     return GRPisomRed;
   if (eIndex == 1) {
@@ -186,7 +188,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
     eFace[iVert]=1;
   for (int iSHV=0; iSHV<nbSHV; iSHV++)
     eFace[nbVert+iSHV]=0;
-  Tgroup PreGRPisom=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+  Tgroup PreGRPisom=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   Tgroup GRPisom=ReducedGroupAction(PreGRPisom, eFace);
   if (IsGroupCorrect(EXT_T, GRPisom)) {
     return GRPisom;
@@ -208,6 +210,8 @@ template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eData, Delaunay<T,Tint> const& RecEXT1, Delaunay<T,Tint> const& RecEXT2, Tint const& eIndex)
 {
   using Telt=typename Tgroup::Telt;
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
   std::cerr << "Begin Delaunay_TestEquivalence\n";
   auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
     if (!eEq.TheReply)
@@ -253,7 +257,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
     return {true, MatEquiv_I};
   };
   std::cerr << "Trying other strategies\n";
-  Tgroup GRP1=GetStabilizerWeightMatrix<T,Tgroup>(WMat1);
+  Tgroup GRP1=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {
     std::function<bool(MyMatrix<T>)> IsMatrixCorrect=[](MyMatrix<T> const& M) -> bool {
       return IsIntegralMatrix(M);

@@ -75,10 +75,12 @@ struct PolyhedralEntry {
 template<typename T, typename Tgroup>
 PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> const& eEnt, std::ostream & os)
 {
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
   WeightMatrix<true,T> WMat=GetWeightMatrix(EXTred);
   os << "Canonicalization, we have WMat\n";
-  Tgroup GRPlin=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+  Tgroup GRPlin=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size() << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
   if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
@@ -320,6 +322,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 {
   using Tint=typename Tgroup::Tint;
   using Telt=typename Tgroup::Telt;
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
@@ -386,9 +390,9 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
     if (ansSymm == "yes")
-      TheGRPrelevant=GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
     else
-      TheGRPrelevant=GRP;
+      TheGRPrelevant = GRP;
     if (TheGRPrelevant.size() == GRP.size())
       ansSymm="no";
     TheMap["groupsizerelevant"]=TheGRPrelevant.size();

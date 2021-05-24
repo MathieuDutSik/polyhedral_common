@@ -52,6 +52,7 @@ Tgroup StabilizerSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face cons
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using Tgr = GraphListAdj;
   size_t siz=WMat.GetWeightSize();
   size_t n=WMat.rows();
   auto g=[&](size_t iRow, size_t iCol) -> int {
@@ -72,7 +73,7 @@ Tgroup StabilizerSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face cons
        return siz + 1;
   };
   WeightMatrix<true,int> WMatW(n+1, g);
-  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatW);
+  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatW);
   std::vector<Telt> ListPerm;
   for (auto & ePerm : GRP.GeneratorsOfGroup()) {
     std::vector<Tidx> eList(n);
@@ -1106,9 +1107,11 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 template<typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 {
+  using Tgr = GraphListAdj;
+  using Tidx_value = typename WeightMatrix<true,T>::Tidx_value;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   WeightMatrix<true,T> WMat=GetWeightMatrix(EXTred);
-  return GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+  return GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
 }
 
 

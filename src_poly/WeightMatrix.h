@@ -1097,17 +1097,25 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 
 
 
-template<typename T, typename Tgroup, typename Tidx_value>
+template<typename T, typename Tgr, typename Tgroup, typename Tidx_value>
 Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Tgr = GraphListAdj;
   size_t nbRow=WMat.rows();
-  std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector<T,Tgr,Tidx,Tidx_value>(WMat).second;
+  Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
+#ifdef USE_BLISS
+  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
+#endif
   std::vector<Telt> generatorList;
   for (auto & eGen : ListGen) {
-    generatorList.push_back(Telt(eGen));
+    std::vector<Tidx> V(nbRow);
+    for (size_t idx=0; idx<nbRow; idx++)
+      V[idx] = eGen[idx];
+    generatorList.push_back(Telt(V));
   }
   return Tgroup(generatorList, nbRow);
 }
@@ -1278,9 +1286,10 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& W
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using Tgr = GraphListAdj;
   WeightMatrix<true, T> WMatO=WMatI.GetSymmetricWeightMatrix();
   size_t nbSHV=WMatI.rows();
-  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgroup>(WMatO);
+  Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatO);
   std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
   std::vector<Tidx> v(nbSHV);
   std::vector<Telt> ListGen;
