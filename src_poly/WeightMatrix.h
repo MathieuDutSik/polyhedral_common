@@ -953,8 +953,7 @@ std::pair<std::vector<Tidx>, std::vector<Tidx>> GetCanonicalizationVector_Kernel
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  unsigned int nof_vertices=eGR.GetNbVert();
-
+  //
 #ifdef USE_BLISS
   std::vector<unsigned int> cl = BLISS_GetCanonicalOrdering(eGR);
 #endif

@@ -821,6 +821,8 @@ vectface DUALDESC_AdjacencyDecomposition(
 	 std::string const& ePrefix,
 	 int const& TheLevel)
 {
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
@@ -881,7 +883,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::cerr << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
       ComputeWMat();
-      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgroup>(WMat);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
       BankSymmCheck = false;
     } else {
       TheGRPrelevant = GRP;
