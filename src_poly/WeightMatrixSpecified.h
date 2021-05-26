@@ -320,7 +320,8 @@ Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertex
 /*
   ---F1/F2 : The first/second template function for creating the Weight matrix
   ---F3    : The function for testing acceptability of sets for consideration (e.g. rank function)
-  ---F4    : The function for testing acceptability of small generators
+  ---F4    : The function for testing acceptability of small generators and returning the big
+             generators.
 */
 template<typename T, typename F1, typename F2, typename F3, typename F4, typename Tgroup>
 Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
@@ -336,8 +337,9 @@ Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4
   std::vector<int> ListIdx;
   for (size_t iCase=0; iCase<nbCase; iCase++)
     ListIdx.push_back(iCase);
-  std::sort(ListIdx.begin(), ListIdx.end(), [&](int idx1, int idx2) -> bool {
-                                              return ListNbCase[idx1] < ListNbCase[idx2];});
+  std::sort(ListIdx.begin(), ListIdx.end(),
+            [&](int idx1, int idx2) -> bool {
+              return ListNbCase[idx1] < ListNbCase[idx2];});
 
   for (int idx=1; idx<nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
