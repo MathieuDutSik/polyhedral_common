@@ -124,8 +124,8 @@ template<typename T,typename Tint>
 
 
 
-template<typename T>
-WeightMatrix<true,T> GetWeightMatrixFromGramEXT(MyMatrix<T> const& EXT, MyMatrix<T> const& GramMat, MyMatrix<T> const& SHV)
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetWeightMatrixFromGramEXT(MyMatrix<T> const& EXT, MyMatrix<T> const& GramMat, MyMatrix<T> const& SHV)
 {
   int n=GramMat.rows();
   CP<T> eCP=CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
@@ -142,7 +142,7 @@ WeightMatrix<true,T> GetWeightMatrixFromGramEXT(MyMatrix<T> const& EXT, MyMatrix
     for (int i=0; i<n; i++)
       EXText(nbVert+iVect,i+1)=SHV(iVect,i);
   }
-  return GetSimpleWeightMatrix(EXText, Qmat);
+  return GetSimpleWeightMatrix<T, Tidx_value>(EXText, Qmat);
 }
 
 template<typename T, typename Tgroup>
@@ -164,10 +164,10 @@ bool IsGroupCorrect(MyMatrix<T> const& EXT_T, Tgroup const& eGRP)
 template<typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> const & EXT, Tint const& eIndex)
 {
-  MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(EXT);
-  WeightMatrix<true,T> WMatRed=GetWeightMatrixFromGramEXT(EXT_T, eData.GramMat, {});
-  using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
+  using Tgr = GraphListAdj;
+  MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(EXT);
+  WeightMatrix<true,T, Tidx_value> WMatRed=GetWeightMatrixFromGramEXT<T,Tidx_value>(EXT_T, eData.GramMat, {});
   Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
     return GRPisomRed;
@@ -180,7 +180,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
   // Now extending with the SHV vector set
   //
   MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eData.SHV);
-  WeightMatrix<true,T> WMat=GetWeightMatrixFromGramEXT(EXT_T, eData.GramMat, SHV_T);
+  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, SHV_T);
   int nbVert=EXT_T.rows();
   int nbSHV=SHV_T.rows();
   Face eFace(nbVert + nbSHV);
@@ -221,9 +221,9 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   };
   MyMatrix<T> EXT1_T=ConvertMatrixUniversal<T,Tint>(RecEXT1.EXT);
   MyMatrix<T> EXT2_T=ConvertMatrixUniversal<T,Tint>(RecEXT2.EXT);
-  WeightMatrix<true,T> WMatRed1=GetWeightMatrixFromGramEXT(EXT1_T, eData.GramMat, {});
-  WeightMatrix<true,T> WMatRed2=GetWeightMatrixFromGramEXT(EXT2_T, eData.GramMat, {});
-  EquivTest<Telt> eResRed=TestEquivalenceWeightMatrix<T,Telt>(WMatRed1, WMatRed2);
+  WeightMatrix<true, T, Tidx_value> WMatRed1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, {});
+  WeightMatrix<true, T, Tidx_value> WMatRed2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, {});
+  EquivTest<Telt> eResRed=TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMatRed1, WMatRed2);
   if (!eResRed.TheReply) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
     return {false, {}};
@@ -243,9 +243,9 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   // Now extending by adding more vectors.
   //
   MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eData.SHV);
-  WeightMatrix<true,T> WMat1=GetWeightMatrixFromGramEXT(EXT1_T, eData.GramMat, SHV_T);
-  WeightMatrix<true,T> WMat2=GetWeightMatrixFromGramEXT(EXT2_T, eData.GramMat, SHV_T);
-  EquivTest<Telt> eRes=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
+  WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, SHV_T);
+  WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, SHV_T);
+  EquivTest<Telt> eRes=TestEquivalenceWeightMatrix<T,Telt, Tidx_value>(WMat1, WMat2);
   if (!eRes.TheReply) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
     return {false, {}};
@@ -271,6 +271,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
 template<typename T,typename Tint>
 DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delaunay<T,Tint> const& eDel)
 {
+  using Tidx_value = int16_t;
   size_t nbVert=eDel.EXT.rows();
   size_t n=eDel.EXT.cols() - 1;
   Tint PreIndex=Int_IndexLattice(eDel.EXT);
@@ -299,7 +300,7 @@ DelaunayInv<T,Tint> ComputeInvariantDelaunay(MyMatrix<T> const& GramMat, Delauna
       eSum -= V(i) * eDel.EXT(jVert, i+1);
     return eSum;
   };
-  WeightMatrix<true,T> WMat(nbVert, f1, f2);
+  WeightMatrix<true, T, Tidx_value> WMat(nbVert, f1, f2);
   size_t ePolyInv_T=GetInvariantWeightMatrix(WMat);
   return {nbVert, eIndex, ePolyInv_T};
 }

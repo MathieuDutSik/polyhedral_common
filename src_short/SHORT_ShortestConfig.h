@@ -493,10 +493,11 @@ template<typename T, typename Tint, typename Tgroup>
 EquivTest<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMatrix<Tint> const& M2)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx_value = int16_t;
   ShortIso<T,Tint> eRec1=SHORT_GetInformation<T,Tint>(M1);
   ShortIso<T,Tint> eRec2=SHORT_GetInformation<T,Tint>(M2);
-  WeightMatrix<true,T> WMat1=T_TranslateToMatrix_QM_SHV(eRec1.GramMat, eRec1.SHVdisc);
-  WeightMatrix<true,T> WMat2=T_TranslateToMatrix_QM_SHV(eRec2.GramMat, eRec2.SHVdisc);
+  WeightMatrix<true, T, Tidx_value> WMat1=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat, eRec1.SHVdisc);
+  WeightMatrix<true, T, Tidx_value> WMat2=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec2.GramMat, eRec2.SHVdisc);
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply)
     return {false, {}};
@@ -519,7 +520,7 @@ FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint
   using Tidx_value = int16_t;
   ShortIso<T,Tint> eRec1=SHORT_GetInformation<T,Tint>(M);
   int n=M.cols();
-  WeightMatrix<true,T> WMat=T_TranslateToMatrix_QM_SHV(eRec1.GramMat, eRec1.SHVdisc);
+  WeightMatrix<true, T, Tidx_value> WMat=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat, eRec1.SHVdisc);
   Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   std::cerr << "|GRP| = " << GRP.size() << "\n";
   MyMatrix<Tint> Mneg=-M;

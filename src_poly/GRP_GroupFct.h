@@ -548,8 +548,8 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
 //
 
 
-template<typename Tgroup>
-vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup const& SmaGRP, WeightMatrix<true,int> const& WMat, Face const& eList)
+template<typename Tgroup, typename Tidx_value>
+vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup const& SmaGRP, WeightMatrix<true, int, Tidx_value> const& WMat, Face const& eList)
 {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;

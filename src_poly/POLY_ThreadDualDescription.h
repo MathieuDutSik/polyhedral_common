@@ -78,14 +78,14 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
-  WeightMatrix<true,T> WMat=GetWeightMatrix(EXTred);
+  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T,Tidx_value>(EXTred);
   os << "Canonicalization, we have WMat\n";
   Tgroup GRPlin=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size() << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
   if (GRPlin.size() == eEnt.GRP.size())
     return eEnt;
   os << "|eEnt.ListFace|=" << eEnt.ListFace.size() << "\n";
-  WeightMatrix<true,int> WMatInt=WeightMatrixFromPairOrbits(GRPlin);
+  WeightMatrix<true, int, Tidx_value> WMatInt=WeightMatrixFromPairOrbits<Tgroup,Tidx_value>(GRPlin);
   os << "We have WMatInt\n";
   struct Local {
     Face eFace;
@@ -292,11 +292,12 @@ template<typename T,typename Tgroup>
 FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx_value = int16_t;
   std::function<EquivTest<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> EquivTest<Telt> {
     MyMatrix<T> EXTred1=ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
-    WeightMatrix<true,T> WMat1=GetWeightMatrix(EXTred1);
-    WeightMatrix<true,T> WMat2=GetWeightMatrix(EXTred2);
+    WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrix<T,Tidx_value>(EXTred1);
+    WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrix<T,Tidx_value>(EXTred2);
     EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
     if (!eResEquiv.TheReply)
       return {false, {}};
@@ -327,12 +328,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   int nbRow=EXTred.rows();
   int eRank=EXTred.cols();
-  WeightMatrix<true,T> WMat;
+  WeightMatrix<true, T, Tidx_value> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
       return;
-    WMat=GetWeightMatrix(EXTred);
+    WMat=GetWeightMatrix<T, Tidx_value>(EXTred);
     int nbWeight=WMat.GetWeightSize();
     MProc.GetO(TheId) << "nbWeight=" << nbWeight << "\n";
   };

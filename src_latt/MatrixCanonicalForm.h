@@ -49,7 +49,8 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   //
   // Computing the scalar product matrix
   //
-  WeightMatrix<true,T> WMat = T_TranslateToMatrix_QM_SHV(inpMat, SHV);
+  using Tidx_value = int16_t;
+  WeightMatrix<true,T,Tidx_value> WMat = T_TranslateToMatrix_QM_SHV<T,Tint,Tidx_value>(inpMat, SHV);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "WMat : time3 - time2=" << std::chrono::duration_cast<std::chrono::milliseconds>(time3 - time2).count() << "\n";
@@ -139,7 +140,8 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   //
   // Computing the scalar product matrix
   //
-  WeightMatrix<false,std::vector<T>> WMat = T_TranslateToMatrix_ListMat_SHV(ListMat, SHV);
+  using Tidx_value = int16_t;
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat = T_TranslateToMatrix_ListMat_SHV<T,Tint,Tidx_value>(ListMat, SHV);
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "WMat : time3 - time2=" << std::chrono::duration_cast<std::chrono::milliseconds>(time3 - time2).count() << "\n";
@@ -152,7 +154,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  WeightMatrix<true,std::vector<T>> WMatSymm = WMat.GetSymmetricWeightMatrix();
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMatSymm = WMat.GetSymmetricWeightMatrix();
   std::vector<int> CanonicOrdSymm = GetCanonicalizationVector<std::vector<T>,GraphBitset,int>(WMatSymm);
   std::vector<int> CanonicOrd = GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
 #ifdef DEBUG_TIME

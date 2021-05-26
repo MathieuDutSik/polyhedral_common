@@ -183,8 +183,8 @@ struct TripleCanonic {
 
 
 
-template<typename T, typename Tidx>
-std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat)
+template<typename T, typename Tidx, typename Tidx_value>
+std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<true,T, Tidx_value> const& WMat)
 {
   std::vector<Tidx> CanonicOrd = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
@@ -204,8 +204,8 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
 
 
 
-template<typename T, typename Tgroup>
-TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat)
+template<typename T, typename Tgroup, typename Tidx_value>
+TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, WeightMatrix<true,T, Tidx_value> const& WMat)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -244,14 +244,15 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
 template<typename T>
 MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 {
-  WeightMatrix<true,T> WMat=GetWeightMatrix(EXT);
+  using Tidx_value = int16_t;
+  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T, Tidx_value>(EXT);
   WMat.ReorderingSetWeight();
-  return CanonicalizationPolytopePair<T,int>(EXT, WMat).first;
+  return CanonicalizationPolytopePair<T,int,Tidx_value>(EXT, WMat).first;
 }
 
 
 
-template<typename T, typename Tgroup>
+template<typename T, typename Tgroup, typename Tidx_value>
 struct DataBank {
 private:
   struct PairStore {
@@ -283,11 +284,11 @@ public:
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
+  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
   {
     if (!BankSymmCheck) {
       // The computation was already done for the full symmetry group. Only canonic form is needed.
-      std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
+      std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx,Tidx_value>(EXT, WMat);
       vectface ListFaceO(EXT.rows());
       Telt perm1 = Telt(ePair.second);
       Telt ePerm = ~perm1;
@@ -340,10 +341,10 @@ public:
       MinSize = std::min(MinSize, e_size);
     }
   }
-  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<true,T> const& WMat, Tgroup const& GRP) const
+  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& GRP) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
-    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx>(EXT, WMat);
+    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
     auto iter = ListEnt.find(ePair.first);
     if (iter == ListEnt.end())
       return vectface(0); // If returning empty then it means nothing has been found.
@@ -812,9 +813,9 @@ public:
 // ---Serial mode. Should be faster indeed.
 // ---
 //
-template<typename T,typename Tgroup>
+template<typename T,typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-         DataBank<T,Tgroup> & TheBank,
+         DataBank<T,Tgroup,Tidx_value> & TheBank,
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
@@ -822,7 +823,6 @@ vectface DUALDESC_AdjacencyDecomposition(
 	 int const& TheLevel)
 {
   using Tgr = GraphListAdj;
-  using Tidx_value = int16_t;
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
@@ -830,12 +830,12 @@ vectface DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int eRank=EXT.cols();
-  WeightMatrix<true,T> WMat;
+  WeightMatrix<true, T, Tidx_value> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
       return;
-    WMat=GetWeightMatrix(EXT);
+    WMat = GetWeightMatrix<T,Tidx_value>(EXT);
     WMat.ReorderingSetWeight();
   };
   //
@@ -1003,7 +1003,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 
 
 
-template<typename T, typename Tgroup>
+template<typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const& eFull)
 {
   // Setting up the Control C event.
@@ -1014,7 +1014,7 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
   bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
-  DataBank<T,Tgroup> TheBank(BANK_IsSaving, BANK_Prefix);
+  DataBank<T,Tgroup,Tidx_value> TheBank(BANK_IsSaving, BANK_Prefix);
   //
   std::cerr << "Reading DATA\n";
   SingleBlock BlockDATA=eFull.ListBlock.at("DATA");

@@ -155,10 +155,11 @@ EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
 				       MyMatrix<Tint> const& SHV1, MyMatrix<Tint> const& SHV2)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx_value = int16_t;
   MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(SHV1);
   MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(SHV2);
-  WeightMatrix<false,std::vector<T>> WMat1=GetWeightMatrix_ListComm<false,T>(T_SHV1, ePerf1, LinSpa.ListComm);
-  WeightMatrix<false,std::vector<T>> WMat2=GetWeightMatrix_ListComm<false,T>(T_SHV2, ePerf2, LinSpa.ListComm);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, ePerf1, LinSpa.ListComm);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, ePerf2, LinSpa.ListComm);
   EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>,T,Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply) {
     return {false, {}};
@@ -603,12 +604,13 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const& LinSpa)
 
 template<typename T, typename Tint, typename Tgroup>
 Tgroup PERF_Automorphism(LinSpaceMatrix<T> const& LinSpa,
-				 MyMatrix<T> const& ePerf,
-				 MyMatrix<Tint> const& SHV)
+                         MyMatrix<T> const& ePerf,
+                         MyMatrix<Tint> const& SHV)
 {
+  using Tidx_value = int16_t;
   MyMatrix<T> T_SHV=ConvertMatrixUniversal<T,Tint>(SHV);
-  WeightMatrix<false,std::vector<T>> WMat=GetWeightMatrix_ListComm<false,T>(T_SHV, ePerf, LinSpa.ListComm);
-  return GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat=GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, ePerf, LinSpa.ListComm);
+  return GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup, Tidx_value>(WMat);
 }
 
 
@@ -731,6 +733,7 @@ template <typename T,typename Tint>
 template<typename T,typename Tint>
 SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const& eGram)
 {
+  using Tidx_value = int16_t;
   int n=eGram.rows();
   Tshortest<T,Tint> RecSHV=T_ShortestVector<T,Tint>(eGram);
   MyMatrix<T> eG = eGram / RecSHV.eMin;
@@ -743,7 +746,7 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const& eGram)
     }
     return ScalarProductQuadForm<T,Tint>(eG, V1, V2);
   };
-  WeightMatrix<true,T> WMat(nbSHV, f);
+  WeightMatrix<true,T,Tidx_value> WMat(nbSHV, f);
   size_t hash = GetInvariantWeightMatrix(WMat);
   return {hash};
 }
@@ -768,12 +771,13 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
 		      MyMatrix<T> const& Gram2)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx_value = int16_t;
   Tshortest<T,Tint> RecSHV1=T_ShortestVector<T,Tint>(Gram1);
   Tshortest<T,Tint> RecSHV2=T_ShortestVector<T,Tint>(Gram2);
   MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(RecSHV1.SHV);
   MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(RecSHV2.SHV);
-  WeightMatrix<false,std::vector<T>> WMat1=GetWeightMatrix_ListComm<false,T>(T_SHV1, Gram1, eData.LinSpa.ListComm);
-  WeightMatrix<false,std::vector<T>> WMat2=GetWeightMatrix_ListComm<false,T>(T_SHV2, Gram2, eData.LinSpa.ListComm);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, Gram1, eData.LinSpa.ListComm);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, Gram2, eData.LinSpa.ListComm);
   EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply) {
     return {false, {}};
@@ -829,6 +833,7 @@ template<typename T, typename Tint, typename Tgroup>
 Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& Gram, Tshortest<T,Tint> const& RecSHV)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx_value = int16_t;
   //
   // Functionality for checking quality of equivalences
   //
@@ -865,7 +870,7 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& G
   //
   // Now the computation itself
   //
-  WeightMatrix<false,std::vector<T>> WMat=GetWeightMatrix_ListComm<false,T>(T_SHV, Gram, eData.LinSpa.ListComm);
+  WeightMatrix<false, std::vector<T>,Tidx_value> WMat=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV, Gram, eData.LinSpa.ListComm);
   Tgroup GRPshv1=GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat);
   if (IsCorrectGroup(GRPshv1))
     return GRPshv1;

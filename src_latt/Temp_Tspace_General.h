@@ -329,10 +329,11 @@ MyMatrix<T> T_GRAM_GetScalProdMat(MyMatrix<T> const& eMat, MyMatrix<int> const& 
 template<typename T, typename Tint, typename Tgroup>
 void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, Tgroup & GRPperm, std::vector<MyMatrix<Tint>> &ListMatrGens)
 {
+  using Tidx_value = int16_t;
   T MaxDet=T_GRAM_GetUpperBound(eMat);
   MyMatrix<Tint> ListShort=T_ShortVector(eMat, MaxDet);
   MyMatrix<T> ListShort_T=ConvertMatrixUniversal<T,Tint>(ListShort);
-  WeightMatrix<true,T> WMat=GetWeightMatrixGramMatShort(eMat, ListShort, TheTol);
+  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrixGramMatShort<T, Tidx_value>(eMat, ListShort, TheTol);
   GRPperm=GetStabilizerWeightMatrix(WMat);
   ListMatrGens.clear();
   for (auto & eGen : GRPperm.group->S) {
@@ -345,6 +346,7 @@ void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, 
 template<typename T, typename Telt>
 bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eMat2, T const &TheTol)
 {
+  using Tidx_value = int16_t;
   T MaxDet1=T_GRAM_GetUpperBound(eMat1);
   T MaxDet2=T_GRAM_GetUpperBound(eMat2);
   T MaxDet=MaxDet1;
@@ -352,8 +354,8 @@ bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eM
     MaxDet=MaxDet2;
   MyMatrix<int> ListShort1=T_ShortVector(eMat1, MaxDet);
   MyMatrix<int> ListShort2=T_ShortVector(eMat2, MaxDet);
-  WeightMatrix<true,T> WMat1=GetWeightMatrixGramMatShort(eMat1, ListShort1, TheTol);
-  WeightMatrix<true,T> WMat2=GetWeightMatrixGramMatShort(eMat2, ListShort2, TheTol);
+  WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrixGramMatShort<T, Tidx_value>(eMat1, ListShort1, TheTol);
+  WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrixGramMatShort<T, Tidx_value>(eMat2, ListShort2, TheTol);
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   return eResEquiv.TheReply;
 }

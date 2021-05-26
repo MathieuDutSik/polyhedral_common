@@ -101,7 +101,7 @@ inline typename std::enable_if<(not is_vector<T>::value),T>::type GetSymmGenerat
 
 
 
-template<bool is_symmetric, typename T, typename Tidx_value_impl = int16_t>
+template<bool is_symmetric, typename T, typename Tidx_value_impl>
 struct WeightMatrix {
 public:
   using Tidx_value = Tidx_value_impl;
@@ -176,13 +176,13 @@ public:
     std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   }
-  WeightMatrix(WeightMatrix<is_symmetric,T> const& eMat)
+  WeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& eMat)
   {
     nbRow = eMat.nbRow;
     ListWeight = eMat.ListWeight;
     TheMat = eMat.TheMat;
   }
-  WeightMatrix<is_symmetric,T> operator=(WeightMatrix<is_symmetric,T> const& eMat)
+  WeightMatrix<is_symmetric,T,Tidx_value> operator=(WeightMatrix<is_symmetric,T,Tidx_value> const& eMat)
   {
     nbRow = eMat.nbRow;
     ListWeight = eMat.ListWeight;
@@ -330,7 +330,7 @@ public:
         iVal++;
       }
     }
-    return WeightMatrix<true,T>(2*nbRow, RET_TheMat, RET_ListWeight);
+    return WeightMatrix<true,T,Tidx_value>(2*nbRow, RET_TheMat, RET_ListWeight);
   }
 private:
   size_t nbRow;
@@ -543,12 +543,12 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<is_symmetric,T,T
   }
 }
 
-template<typename T>
-WeightMatrix<false, T> ReadWeightedMatrix(std::istream &is)
+template<typename T, typename Tidx_value>
+WeightMatrix<false, T, Tidx_value> ReadWeightedMatrix(std::istream &is)
 {
   size_t nbRow;
   is >> nbRow;
-  WeightMatrix<false, T> WMat(nbRow);
+  WeightMatrix<false, T, Tidx_value> WMat(nbRow);
   size_t nbEnt=0;
   int eVal;
   for (size_t iRow=0; iRow<nbRow; iRow++)
@@ -1182,7 +1182,7 @@ EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, 
 
 
 template<bool is_symmetric, typename T, typename Tidx_value>
-bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMatRef, WeightMatrix<is_symmetric,T,Tidx_value> & WMat2)
+bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WMatRef, WeightMatrix<is_symmetric, T, Tidx_value> & WMat2)
 {
   size_t nbRow=WMatRef.rows();
   size_t nbRow2=WMat2.rows();
@@ -1244,7 +1244,7 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& W
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
-  WeightMatrix<true, T> WMatO=WMatI.GetSymmetricWeightMatrix();
+  WeightMatrix<true, T, Tidx_value> WMatO=WMatI.GetSymmetricWeightMatrix();
   size_t nbSHV=WMatI.rows();
   Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatO);
   std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
