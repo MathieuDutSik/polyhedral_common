@@ -742,7 +742,7 @@ inline typename std::enable_if<use_pairs,void>::type GetGraphFromWeightedMatrix_
 	if (iVert == nbRow)
 	  eVal = nbWei;
 	else
-	  eVal = nbWei+1;
+	  eVal = nbWei + 1;
       } else {
 	if (jVert == nbRow)
 	  eVal = WMat.GetValue(iVert, iVert);
@@ -774,19 +774,14 @@ inline typename std::enable_if<(not use_pairs),size_t>::type get_total_number_ve
 {
   size_t nbWei=WMat.GetWeightSize();
   size_t nbMult=nbWei+2;
-#ifdef DEBUG
-  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
-#endif
   size_t hS=GetNeededPower(nbMult);
-#ifdef DEBUG
-  std::cerr << "hS=" << hS << "\n";
-#endif
   size_t nbRow=WMat.rows();
   size_t nbVert=nbRow + 2;
+  size_t nbVertTot = hS * nbVert;
 #ifdef DEBUG
-  std::cerr << "nbVert=" << nbVert << "\n";
+  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
-  return hS*nbVert;
+  return nbVertTot;
 }
 
 
