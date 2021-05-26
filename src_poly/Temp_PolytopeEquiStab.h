@@ -5,6 +5,10 @@
 #include "WeightMatrix.h"
 #include "WeightMatrixSpecified.h"
 
+//
+// Equivalence of subsets and stabilizer of a WeightMatrix
+//
+
 
 template<typename T, typename Telt, typename Tidx_value>
 EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face const& f1, Face const& f2)
@@ -85,6 +89,9 @@ Tgroup StabilizerSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face cons
   return Tgroup(ListPerm, n);
 }
 
+//
+// PairOrbits as powerful invariants of subsets extracted from the group action on pairs.
+//
 
 template<typename Tgroup, typename Tidx_value>
 WeightMatrix<true, int,Tidx_value> WeightMatrixFromPairOrbits(Tgroup const& GRP)
@@ -143,55 +150,9 @@ WeightMatrix<true, int,Tidx_value> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 }
 
 
-
-
-
-template<typename T, typename Tidx_value>
-WeightMatrix<false, T, Tidx_value> T_TranslateToMatrix(MyMatrix<T> const& eMat)
-{
-  size_t nbRow=eMat.rows();
-  auto f=[&](size_t iRow, size_t iCol) -> T {
-    return eMat(iRow,iCol);
-  };
-  return WeightMatrix<false, T, Tidx_value>(nbRow, f);
-}
-
-
-
-
-
-// The matrices in ListMat do not have to be symmetric.
-template<typename T, typename Tint, typename Tidx_value>
-WeightMatrix<false, std::vector<T>, Tidx_value> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV)
-{
-  size_t nbRow=SHV.rows();
-  size_t n = SHV.cols();
-  size_t nbMat=ListMat.size();
-  std::vector<MyVector<T>> ListV(nbMat);
-  auto f1=[&](size_t iRow) -> void {
-    for (size_t iMat=0; iMat<nbMat; iMat++) {
-      MyVector<T> V(n);
-      for (size_t i=0; i<n; i++) {
-        T eVal=0;
-        for (size_t j=0; j<n; j++)
-          eVal += ListMat[iMat](j,i) * SHV(iRow, j);
-        V(i) = eVal;
-      }
-      ListV[iMat] = V;
-    }
-  };
-  std::vector<T> ListScal(nbMat);
-  auto f2=[&](size_t iCol) -> std::vector<T> {
-    for (size_t iMat=0; iMat<nbMat; iMat++) {
-      T eScal=0;
-      for (size_t i=0; i<n; i++)
-        eScal += ListV[iMat](i)*SHV(iCol,i);
-      ListScal[iMat] = eScal;
-    }
-    return ListScal;
-  };
-  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
-}
+//
+// The antipodal configurations and the absolute trick
+//
 
 
 
@@ -255,33 +216,6 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
   return RetMat;
 }
 
-
-
-
-
-
-template<typename T, typename Tidx_value>
-WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
-{
-  size_t nbRow=TheEXT.rows();
-  size_t nbCol=TheEXT.cols();
-  MyVector<T> V(nbCol);
-  auto f1=[&](size_t iRow) -> void {
-    for (size_t iCol=0; iCol<nbCol; iCol++) {
-      T eSum=0;
-      for (size_t jCol=0; jCol<nbCol; jCol++)
-        eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
-      V(iCol) = eSum;
-    }
-  };
-  auto f2=[&](size_t jRow) -> T {
-    T eSum=0;
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      eSum += V(iCol) * TheEXT(jRow, iCol);
-    return eSum;
-  };
-  return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
-}
 
 
 
@@ -482,6 +416,28 @@ WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrixAntipodal(MyMatrix<T> con
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat, INP_ListWeight);
 }
 
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
+{
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  MyVector<T> V(nbCol);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (size_t jCol=0; jCol<nbCol; jCol++)
+        eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
+      V(iCol) = eSum;
+    }
+  };
+  auto f2=[&](size_t jRow) -> T {
+    T eSum=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eSum += V(iCol) * TheEXT(jRow, iCol);
+    return eSum;
+  };
+  return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
+}
 
 
 template<typename T, typename Tidx_value>
@@ -501,6 +457,657 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrixAntipodal(MyMatrix<T> const& Th
   MyMatrix<T> Qmat=GetQmatrix(TheEXT);
   return GetSimpleWeightMatrixAntipodal<T,Tidx_value>(TheEXT, Qmat);
 }
+
+
+template<typename Tint>
+MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+{
+  using Tidx_value = int16_t;
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+
+  EquivTest<MyMatrix<Tint>> EauivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
+  if (EauivTest.TheReply) {
+    return EauivTest.TheEquiv;
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  //  std::cerr << "After direct construction WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMat);
+
+  WMat.ReorderingSetWeight();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+
+  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
+
+  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  size_t idx=0;
+  Face IsIncluded(n_rows);
+  for (size_t i_row=0; i_row<2*n_rows; i_row++) {
+    int j_row = CanonicOrd[i_row];
+    int res = j_row % 2;
+    int pos = j_row / 2;
+    if (res == 0) {
+      if (IsIncluded[pos] == 0) {
+        IsIncluded[pos]=1;
+        for (size_t i_col=0; i_col<n_cols; i_col++)
+          EXTreord(idx, i_col) = EXT(pos, i_col);
+        idx++;
+      }
+    } else {
+      if (IsIncluded[pos] == 0) {
+        IsIncluded[pos]=1;
+        for (size_t i_col=0; i_col<n_cols; i_col++)
+          EXTreord(idx, i_col) = -EXT(pos, i_col);
+        idx++;
+      }
+    }
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+#endif
+
+  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeColHermiteNormalForm 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
+#endif
+
+  SignRenormalizationMatrix(RedMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
+#endif
+  return RedMat;
+}
+
+
+
+template<typename Tint>
+std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
+{
+  using Tidx_value = int16_t;
+  using Tgr = GraphBitset;
+  int nbRow = EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+
+  EquivTest<std::vector<std::vector<unsigned int>>> EquivTest = LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(EXT, Qmat);
+  if (EquivTest.TheReply) {
+    return EquivTest.TheEquiv;
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeAntipodalIntegral_Automorphism_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
+  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+
+  using Tidx=unsigned int;
+#ifdef USE_BLISS
+  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
+  return ListGen;
+}
+
+
+template<typename T>
+void SignRenormalizationMatrix(MyMatrix<T> & M)
+{
+  size_t nbRow = M.rows();
+  size_t n=M.cols();
+  auto get_need_chgsign=[&](int const& iRow) -> bool {
+    for (size_t i=0; i<n; i++) {
+      T eVal = M(iRow,i);
+      if (eVal != 0) {
+        return eVal < 0;
+      }
+    }
+    return false;
+  };
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    if (get_need_chgsign(iRow)) {
+      for (size_t i=0; i<n; i++)
+        M(iRow,i) = - M(iRow,i);
+    }
+  }
+}
+
+template<typename T>
+MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
+{
+  size_t nbPair=M.rows();
+  size_t n=M.cols();
+  MyMatrix<T> Mret(2*nbPair, n);
+  for (size_t iPair=0; iPair<nbPair; iPair++)
+    for (size_t i=0; i<n; i++) {
+      Mret(2*iPair  , i) =  M(iPair, i);
+      Mret(2*iPair+1, i) = -M(iPair, i);
+    }
+  return Mret;
+}
+
+
+/*
+  Consider the case of the A2 root system with vectors
+  \pm (1,0), \pm (0,1), \pm (1,1).
+  If we consider the automorphisms of this vector configuration what we get is:
+  ---Rotation by 2pi / 6 : Define subgroup of size 6
+  ---Symmetry by axis.
+  All together the group is of size 12.
+  ----
+  If we consider the absolute graph formed by the 3 vectors: (1,0), (0,1) and (1,1)
+  then we get that this system defined a complete graph on 3 elements. So the group
+  is of size 6. So, we indeed have the equality G = {\pm Id} x G_{abs}.
+  ---
+  The following holds:
+  ---The construction of the weight matrix and so on means that orthogonal
+  transformation on the vectors are not a problem.
+  ---Since the absolute graph is the complete graph, we obtain that any ordering
+  of the vector is possible by the canonicalization code.
+  ---Thus if we put the vectors (1,0), (0,1) and (1,1)
+  then the absolute canonicalization code may return us
+  {(1,0), (0,1), (1,1)} or {(1,0), (1,1), (0,1)}.
+  I think the hermite normal form of those are different.
+  So, the method does not work.
+  ---But we may be able to do something better. We still have the signs
+  to be assigned.
+*/
+template<typename Tint>
+EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+{
+  using Tidx_value = int16_t;
+  using Tgr=GraphBitset;
+  size_t nbRow= EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
+  //  std::cerr << "WMatAbs.WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
+
+  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMatAbs.WMat);
+  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
+
+  //  std::cerr << "WMatAbs.WMat : ";
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  using Tidx=unsigned int;
+  int nbVert_G = eGR.GetNbVert();
+#ifdef USE_BLISS
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbVert_G);
+#endif
+#ifdef USE_TRACES
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbVert_G);
+#endif
+#ifdef DEBUG
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
+  mpz_class eHash1 = MD5_hash_mpz(eExpr);
+  std::cerr << "eHash1=" << eHash1 << "\n";
+  //
+  size_t hS = eGR.GetNbVert() / (nbRow + 2);
+  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
+  for (auto & eGen : ePair.second) {
+    std::vector<unsigned int> eGenRed(nbRow+2);
+    for (size_t i=0; i<nbRow+2; i++) {
+      unsigned int val = eGen[i];
+      if (val >= nbRow+2) {
+        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
+        throw TerminalException{1};
+      }
+      eGenRed[i] = val;
+    }
+    for (size_t i=nbRow; i<nbRow+2; i++) {
+      if (eGenRed[i] != i) {
+        std::cerr << "Point is not preserved\n";
+        throw TerminalException{1};
+      }
+    }
+    for (size_t iH=0; iH<hS; iH++) {
+      for (size_t i=0; i<nbRow+2; i++) {
+        unsigned int val1 = eGen[i + iH * (nbRow+2)];
+        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
+        if (val1 != val2) {
+          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
+          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
+          throw TerminalException{1};
+        }
+      }
+      for (size_t i=0; i<nbRow; i++) {
+        for (size_t j=0; j<nbRow; j++) {
+          int iImg = eGenRed[i];
+          int jImg = eGenRed[j];
+          Tidx_value pos1 = WMatAbs.WMat.GetValue(i, j);
+          Tidx_value pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
+          if (pos1 != pos2) {
+            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
+            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
+            throw TerminalException{1};
+          }
+        }
+      }
+    }
+
+  }
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
+  // We check if the Generating vector eGen can be mapped from the absolute
+  // graph to the original one.
+  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
+    /* We map a vector v_i to another v_j with sign +-1
+       V[i] = 0 for unassigned
+              1 for positive sign
+              2 for negative sign
+              3 for positive sign and treated
+              4 for negative sign and treated
+     */
+    std::vector<uint8_t> V(nbRow, 0);
+    V[0] = 1;
+    while(true) {
+      bool IsFinished = true;
+      for (size_t i=0; i<nbRow; i++) {
+        uint8_t val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished=false;
+          V[i] = val + 2;
+          size_t iImg = eGen[i];
+          for (size_t j=0; j<nbRow; j++) {
+            size_t jImg = eGen[j];
+            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
+              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
+              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
+              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              uint8_t valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
+                valJ = 2;
+              else
+                valJ = 1;
+              if (V[j] == 0) {
+                V[j] = valJ;
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished)
+        break;
+    }
+    return true;
+  };
+  auto IsCorrectListGen=[&]() -> bool {
+    for (auto& eGen : ePair.second) {
+      bool test = TestExistSignVector(eGen);
+      //      std::cerr << "test=" << test << "\n";
+      if (!test)
+        return false;
+    }
+    return true;
+  };
+  if (!IsCorrectListGen()) {
+    return {false, {}};
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+  //
+  std::vector<Tidx> CanonicOrd = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
+#endif
+
+  size_t n_cols=EXT.cols();
+  MyMatrix<Tint> EXTreord(nbRow, n_cols);
+  std::vector<int> ListSigns(nbRow,0);
+  ListSigns[0]=1;
+#ifdef DEBUG
+  std::string strAssign;
+  std::cerr << "positionZero=" << WMatAbs.positionZero << "\n";
+#endif
+  auto SetSign=[&](size_t const& i_row) -> void {
+    int i_row_orig = CanonicOrd[i_row];
+    for (size_t k_row=0; k_row<nbRow; k_row++) {
+      if (k_row != i_row && ListSigns[k_row] != 0) {
+        int k_row_orig = CanonicOrd[k_row];
+        if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
+          size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
+          bool ChgSign = WMatAbs.ArrSigns[idx];
+          int ValSign = 1 - 2*int(ChgSign);
+          int RetSign = ValSign * ListSigns[k_row];
+          ListSigns[i_row] = RetSign;
+#ifdef DEBUG
+          strAssign += " (" + std::to_string(i_row) + " / " + std::to_string(k_row) + ")";
+#endif
+          return;
+        }
+      }
+    }
+  };
+  while(true) {
+    int nbUndone=0;
+    for (size_t i_row=0; i_row<nbRow; i_row++)
+      if (ListSigns[i_row] == 0) {
+        nbUndone++;
+        SetSign(i_row);
+      }
+    if (nbUndone == 0)
+      break;
+  };
+#ifdef DEBUG
+  mpz_class eHash2 = MD5_hash_mpz(strAssign);
+  std::cerr << "strAssign=" << strAssign << "\n";
+  std::cerr << "eHash2=" << eHash2 << "\n";
+#endif
+#ifdef DEBUG
+  std::string strWMat;
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
+    int i_rowC = CanonicOrd[i_row];
+    for (size_t j_row=0; j_row<nbRow; j_row++) {
+      int j_rowC = CanonicOrd[j_row];
+      Tidx_value pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
+      strWMat += " " + std::to_string(pos);
+    }
+  }
+  for (auto & eVal : WMatAbs.WMat.GetWeight()) {
+    strWMat += " " + std::to_string(eVal);
+  }
+  mpz_class eHash3 = MD5_hash_mpz(strWMat);
+  std::cerr << "eHash3=" << eHash3 << "\n";
+#endif
+
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
+    int j_row = CanonicOrd[i_row];
+    int eSign = ListSigns[i_row];
+    for (size_t i_col=0; i_col<n_cols; i_col++)
+      EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
+  }
+#ifdef DEBUG
+  std::cerr << "EXTreord=\n";
+  WriteMatrix(std::cerr, EXTreord);
+  WriteMatrixGAP(std::cerr, EXTreord);
+  std::cerr << "\n";
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+#endif
+
+  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
+#endif
+  SignRenormalizationMatrix(RedMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
+#endif
+
+  return {true, std::move(RedMat)};
+}
+
+
+
+template<typename Tint>
+EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+{
+  using Tidx_value = int16_t;
+  using Tgr=GraphBitset;
+  size_t nbRow= EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
+  //  std::cerr << "WMatAbs.WMat=\n";
+  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
+
+  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMatAbs.WMat);
+  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
+
+  //  std::cerr << "WMatAbs.WMat : ";
+  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+
+  using Tidx = unsigned int;
+  int nbVert_G = eGR.GetNbVert();
+#ifdef USE_BLISS
+  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbVert_G);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbVert_G);
+#endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+
+  // We check if the Generating vector eGen can be mapped from the absolute
+  // graph to the original one.
+  std::vector<std::vector<unsigned int>> ListGenRet;
+  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
+    /* We map a vector v_i to another v_j with sign +-1
+       V[i] = 0 for unassigned
+              1 for positive sign
+              2 for negative sign
+              3 for positive sign and treated
+              4 for negative sign and treated
+     */
+    std::vector<uint8_t> V(nbRow, 0);
+    std::vector<unsigned int> eGenRet(2*nbRow,0);
+    auto setSign=[&](int const& idx, uint8_t const& val) -> void {
+      if (val == 1) {
+        eGenRet[idx        ] = eGen[idx];
+        eGenRet[idx + nbRow] = eGen[idx] + nbRow;
+      } else {
+        eGenRet[idx        ] = eGen[idx] + nbRow;
+        eGenRet[idx + nbRow] = eGen[idx];
+      }
+      V[idx] = val;
+    };
+    setSign(0, 1);
+    while(true) {
+      bool IsFinished = true;
+      for (size_t i=0; i<nbRow; i++) {
+        uint8_t val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished=false;
+          V[i] = val + 2;
+          size_t iImg = eGen[i];
+          for (size_t j=0; j<nbRow; j++) {
+            size_t jImg = eGen[j];
+            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
+              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
+              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
+              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              uint8_t valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
+                valJ = 2;
+              else
+                valJ = 1;
+              if (V[j] == 0) {
+                setSign(j, valJ);
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished)
+        break;
+    }
+    ListGenRet.push_back(eGenRet);
+    return true;
+  };
+  auto IsCorrectListGen=[&]() -> bool {
+    for (auto& eGen : ListGen) {
+      bool test = TestExistSignVector(eGen);
+      //      std::cerr << "test=" << test << "\n";
+      if (!test)
+        return false;
+    }
+    return true;
+  };
+  if (!IsCorrectListGen()) {
+    return {false, {}};
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
+  //
+  std::vector<unsigned int> AntipodalGen(2*nbRow,0);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    AntipodalGen[iRow] = iRow + nbRow;
+    AntipodalGen[nbRow + iRow] = iRow;
+  }
+  ListGenRet.push_back(AntipodalGen);
+  //
+  return {true, std::move(ListGenRet)};
+}
+
+
+
+//
+// Various construction of weighted matrix
+//
+
+
+
+
+
+
+
+
+
+
+template<typename T, typename Tidx_value>
+WeightMatrix<false, T, Tidx_value> T_TranslateToMatrix(MyMatrix<T> const& eMat)
+{
+  size_t nbRow=eMat.rows();
+  auto f=[&](size_t iRow, size_t iCol) -> T {
+    return eMat(iRow,iCol);
+  };
+  return WeightMatrix<false, T, Tidx_value>(nbRow, f);
+}
+
+
+
+// The matrices in ListMat do not have to be symmetric.
+template<typename T, typename Tint, typename Tidx_value>
+WeightMatrix<false, std::vector<T>, Tidx_value> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV)
+{
+  size_t nbRow=SHV.rows();
+  size_t n = SHV.cols();
+  size_t nbMat=ListMat.size();
+  std::vector<MyVector<T>> ListV(nbMat);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
+      MyVector<T> V(n);
+      for (size_t i=0; i<n; i++) {
+        T eVal=0;
+        for (size_t j=0; j<n; j++)
+          eVal += ListMat[iMat](j,i) * SHV(iRow, j);
+        V(i) = eVal;
+      }
+      ListV[iMat] = V;
+    }
+  };
+  std::vector<T> ListScal(nbMat);
+  auto f2=[&](size_t iCol) -> std::vector<T> {
+    for (size_t iMat=0; iMat<nbMat; iMat++) {
+      T eScal=0;
+      for (size_t i=0; i<n; i++)
+        eScal += ListV[iMat](i)*SHV(iCol,i);
+      ListScal[iMat] = eScal;
+    }
+    return ListScal;
+  };
+  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
+}
+
 
 
 
@@ -654,450 +1261,6 @@ WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& 
 
 
 
-template<typename T>
-void SignRenormalizationMatrix(MyMatrix<T> & M)
-{
-  size_t nbRow = M.rows();
-  size_t n=M.cols();
-  auto get_need_chgsign=[&](int const& iRow) -> bool {
-    for (size_t i=0; i<n; i++) {
-      T eVal = M(iRow,i);
-      if (eVal != 0) {
-        return eVal < 0;
-      }
-    }
-    return false;
-  };
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
-    if (get_need_chgsign(iRow)) {
-      for (size_t i=0; i<n; i++)
-        M(iRow,i) = - M(iRow,i);
-    }
-  }
-}
-
-template<typename T>
-MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
-{
-  size_t nbPair=M.rows();
-  size_t n=M.cols();
-  MyMatrix<T> Mret(2*nbPair, n);
-  for (size_t iPair=0; iPair<nbPair; iPair++)
-    for (size_t i=0; i<n; i++) {
-      Mret(2*iPair  , i) =  M(iPair, i);
-      Mret(2*iPair+1, i) = -M(iPair, i);
-    }
-  return Mret;
-}
-
-
-/*
-  Consider the case of the A2 root system with vectors
-  \pm (1,0), \pm (0,1), \pm (1,1).
-  If we consider the automorphisms of this vector configuration what we get is:
-  ---Rotation by 2pi / 6 : Define subgroup of size 6
-  ---Symmetry by axis.
-  All together the group is of size 12.
-  ----
-  If we consider the absolute graph formed by the 3 vectors: (1,0), (0,1) and (1,1)
-  then we get that this system defined a complete graph on 3 elements. So the group
-  is of size 6. So, we indeed have the equality G = {\pm Id} x G_{abs}.
-  ---
-  The following holds:
-  ---The construction of the weight matrix and so on means that orthogonal
-  transformation on the vectors are not a problem.
-  ---Since the absolute graph is the complete graph, we obtain that any ordering
-  of the vector is possible by the canonicalization code.
-  ---Thus if we put the vectors (1,0), (0,1) and (1,1)
-  then the absolute canonicalization code may return us
-  {(1,0), (0,1), (1,1)} or {(1,0), (1,1), (0,1)}.
-  I think the hermite normal form of those are different.
-  So, the method does not work.
-  ---But we may be able to do something better. We still have the signs
-  to be assigned.
-*/
-template<typename Tint>
-EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
-{
-  using Tidx_value = int16_t;
-  size_t nbRow= EXT.rows();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
-  //  std::cerr << "WMatAbs.WMat=\n";
-  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
-
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMatAbs.WMat);
-  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
-
-  //  std::cerr << "WMatAbs.WMat : ";
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-#ifdef USE_BLISS
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators(eGR);
-#endif
-#ifdef USE_TRACES
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
-#endif
-#ifdef DEBUG
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
-  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
-  mpz_class eHash1 = MD5_hash_mpz(eExpr);
-  std::cerr << "eHash1=" << eHash1 << "\n";
-  //
-  size_t hS = eGR.GetNbVert() / (nbRow + 2);
-  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
-  for (auto & eGen : ePair.second) {
-    std::vector<unsigned int> eGenRed(nbRow+2);
-    for (size_t i=0; i<nbRow+2; i++) {
-      unsigned int val = eGen[i];
-      if (val >= nbRow+2) {
-        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
-        throw TerminalException{1};
-      }
-      eGenRed[i] = val;
-    }
-    for (size_t i=nbRow; i<nbRow+2; i++) {
-      if (eGenRed[i] != i) {
-        std::cerr << "Point is not preserved\n";
-        throw TerminalException{1};
-      }
-    }
-    for (size_t iH=0; iH<hS; iH++) {
-      for (size_t i=0; i<nbRow+2; i++) {
-        unsigned int val1 = eGen[i + iH * (nbRow+2)];
-        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
-        if (val1 != val2) {
-          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
-          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
-          throw TerminalException{1};
-        }
-      }
-      for (size_t i=0; i<nbRow; i++) {
-        for (size_t j=0; j<nbRow; j++) {
-          int iImg = eGenRed[i];
-          int jImg = eGenRed[j];
-          Tidx_value pos1 = WMatAbs.WMat.GetValue(i, j);
-          Tidx_value pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
-          if (pos1 != pos2) {
-            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
-            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
-            throw TerminalException{1};
-          }
-        }
-      }
-    }
-
-  }
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-
-  // We check if the Generating vector eGen can be mapped from the absolute
-  // graph to the original one.
-  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
-    /* We map a vector v_i to another v_j with sign +-1
-       V[i] = 0 for unassigned
-              1 for positive sign
-              2 for negative sign
-              3 for positive sign and treated
-              4 for negative sign and treated
-     */
-    std::vector<uint8_t> V(nbRow, 0);
-    V[0] = 1;
-    while(true) {
-      bool IsFinished = true;
-      for (size_t i=0; i<nbRow; i++) {
-        uint8_t val = V[i];
-        if (val < 3 && val != 0) {
-          IsFinished=false;
-          V[i] = val + 2;
-          size_t iImg = eGen[i];
-          for (size_t j=0; j<nbRow; j++) {
-            size_t jImg = eGen[j];
-            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
-            if (pos != WMatAbs.positionZero) {
-              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
-              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
-              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
-              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
-              uint8_t valJ;
-              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
-                valJ = 2;
-              else
-                valJ = 1;
-              if (V[j] == 0) {
-                V[j] = valJ;
-              } else {
-                if ((valJ % 2) != (V[j] % 2)) {
-                  return false;
-                }
-              }
-            }
-          }
-        }
-      }
-      if (IsFinished)
-        break;
-    }
-    return true;
-  };
-  auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ePair.second) {
-      bool test = TestExistSignVector(eGen);
-      //      std::cerr << "test=" << test << "\n";
-      if (!test)
-        return false;
-    }
-    return true;
-  };
-  if (!IsCorrectListGen()) {
-    return {false, {}};
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-  //
-  std::vector<int> CanonicOrd = GetCanonicalizationVector_KernelBis<int>(nbRow, ePair.first);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
-#endif
-
-  size_t n_cols=EXT.cols();
-  MyMatrix<Tint> EXTreord(nbRow, n_cols);
-  std::vector<int> ListSigns(nbRow,0);
-  ListSigns[0]=1;
-#ifdef DEBUG
-  std::string strAssign;
-  std::cerr << "positionZero=" << WMatAbs.positionZero << "\n";
-#endif
-  auto SetSign=[&](size_t const& i_row) -> void {
-    int i_row_orig = CanonicOrd[i_row];
-    for (size_t k_row=0; k_row<nbRow; k_row++) {
-      if (k_row != i_row && ListSigns[k_row] != 0) {
-        int k_row_orig = CanonicOrd[k_row];
-        if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) != WMatAbs.positionZero) {
-          size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
-          bool ChgSign = WMatAbs.ArrSigns[idx];
-          int ValSign = 1 - 2*int(ChgSign);
-          int RetSign = ValSign * ListSigns[k_row];
-          ListSigns[i_row] = RetSign;
-#ifdef DEBUG
-          strAssign += " (" + std::to_string(i_row) + " / " + std::to_string(k_row) + ")";
-#endif
-          return;
-        }
-      }
-    }
-  };
-  while(true) {
-    int nbUndone=0;
-    for (size_t i_row=0; i_row<nbRow; i_row++)
-      if (ListSigns[i_row] == 0) {
-        nbUndone++;
-        SetSign(i_row);
-      }
-    if (nbUndone == 0)
-      break;
-  };
-#ifdef DEBUG
-  mpz_class eHash2 = MD5_hash_mpz(strAssign);
-  std::cerr << "strAssign=" << strAssign << "\n";
-  std::cerr << "eHash2=" << eHash2 << "\n";
-#endif
-#ifdef DEBUG
-  std::string strWMat;
-  for (size_t i_row=0; i_row<nbRow; i_row++) {
-    int i_rowC = CanonicOrd[i_row];
-    for (size_t j_row=0; j_row<nbRow; j_row++) {
-      int j_rowC = CanonicOrd[j_row];
-      Tidx_value pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
-      strWMat += " " + std::to_string(pos);
-    }
-  }
-  for (auto & eVal : WMatAbs.WMat.GetWeight()) {
-    strWMat += " " + std::to_string(eVal);
-  }
-  mpz_class eHash3 = MD5_hash_mpz(strWMat);
-  std::cerr << "eHash3=" << eHash3 << "\n";
-#endif
-
-  for (size_t i_row=0; i_row<nbRow; i_row++) {
-    int j_row = CanonicOrd[i_row];
-    int eSign = ListSigns[i_row];
-    for (size_t i_col=0; i_col<n_cols; i_col++)
-      EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
-  }
-#ifdef DEBUG
-  std::cerr << "EXTreord=\n";
-  WriteMatrix(std::cerr, EXTreord);
-  WriteMatrixGAP(std::cerr, EXTreord);
-  std::cerr << "\n";
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
-#endif
-
-  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
-#endif
-  SignRenormalizationMatrix(RedMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
-  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
-#endif
-
-  return {true, std::move(RedMat)};
-}
-
-
-
-template<typename Tint>
-EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
-{
-  using Tidx_value = int16_t;
-  size_t nbRow= EXT.rows();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-  WeightMatrixAbs<Tint,Tidx_value> WMatAbs = GetSimpleWeightMatrixAntipodal_AbsTrick<Tint,Tidx_value>(EXT, Qmat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
-  //  std::cerr << "WMatAbs.WMat=\n";
-  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
-
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMatAbs.WMat);
-  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
-
-  //  std::cerr << "WMatAbs.WMat : ";
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-#ifdef USE_BLISS
-  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-
-  // We check if the Generating vector eGen can be mapped from the absolute
-  // graph to the original one.
-  std::vector<std::vector<unsigned int>> ListGenRet;
-  auto TestExistSignVector=[&](std::vector<unsigned int> const& eGen) -> bool {
-    /* We map a vector v_i to another v_j with sign +-1
-       V[i] = 0 for unassigned
-              1 for positive sign
-              2 for negative sign
-              3 for positive sign and treated
-              4 for negative sign and treated
-     */
-    std::vector<uint8_t> V(nbRow, 0);
-    std::vector<unsigned int> eGenRet(2*nbRow,0);
-    auto setSign=[&](int const& idx, uint8_t const& val) -> void {
-      if (val == 1) {
-        eGenRet[idx        ] = eGen[idx];
-        eGenRet[idx + nbRow] = eGen[idx] + nbRow;
-      } else {
-        eGenRet[idx        ] = eGen[idx] + nbRow;
-        eGenRet[idx + nbRow] = eGen[idx];
-      }
-      V[idx] = val;
-    };
-    setSign(0, 1);
-    while(true) {
-      bool IsFinished = true;
-      for (size_t i=0; i<nbRow; i++) {
-        uint8_t val = V[i];
-        if (val < 3 && val != 0) {
-          IsFinished=false;
-          V[i] = val + 2;
-          size_t iImg = eGen[i];
-          for (size_t j=0; j<nbRow; j++) {
-            size_t jImg = eGen[j];
-            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
-            if (pos != WMatAbs.positionZero) {
-              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
-              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
-              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
-              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              bool ChgSign = ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
-              uint8_t valJ;
-              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
-                valJ = 2;
-              else
-                valJ = 1;
-              if (V[j] == 0) {
-                setSign(j, valJ);
-              } else {
-                if ((valJ % 2) != (V[j] % 2)) {
-                  return false;
-                }
-              }
-            }
-          }
-        }
-      }
-      if (IsFinished)
-        break;
-    }
-    ListGenRet.push_back(eGenRet);
-    return true;
-  };
-  auto IsCorrectListGen=[&]() -> bool {
-    for (auto& eGen : ListGen) {
-      bool test = TestExistSignVector(eGen);
-      //      std::cerr << "test=" << test << "\n";
-      if (!test)
-        return false;
-    }
-    return true;
-  };
-  if (!IsCorrectListGen()) {
-    return {false, {}};
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-  //
-  std::vector<unsigned int> AntipodalGen(2*nbRow,0);
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
-    AntipodalGen[iRow] = iRow + nbRow;
-    AntipodalGen[nbRow + iRow] = iRow;
-  }
-  ListGenRet.push_back(AntipodalGen);
-  //
-  return {true, std::move(ListGenRet)};
-}
-
 
 
 
@@ -1168,38 +1331,16 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-
+  using Tidx = unsigned int;
 #ifdef USE_BLISS
-  std::vector<std::vector<unsigned int>> ListGenTot = BLISS_GetListGenerators(eGR);
+  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
 #endif
 #ifdef USE_TRACES
-  std::vector<std::vector<unsigned int>> ListGenTot = TRACES_GetListGenerators(eGR);
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
 #endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-
-
-  std::vector<std::vector<unsigned int>> ListGen;
-  for (auto & eGen : ListGenTot) {
-    std::vector<unsigned int> eGenRed(nbRow);
-    for (size_t i=0; i<nbRow; i++) {
-      unsigned int val = eGen[i];
-#ifdef DEBUG
-      unsigned int nbRow_ui = nbRow;
-      if (val >= nbRow_ui) {
-        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
-        throw TerminalException{1};
-      }
-#endif
-      eGenRed[i] = val;
-    }
-    ListGen.push_back(eGenRed);
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return ListGen;
 }
@@ -1250,6 +1391,7 @@ template<typename Tint>
 MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 {
   using Tidx_value = int16_t;
+  using Tgr=GraphBitset;
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
 #ifdef TIMINGS
@@ -1266,7 +1408,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
 
-  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
+  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,Tgr,int>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
 #endif
@@ -1296,141 +1438,6 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 
 
 
-
-template<typename Tint>
-MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
-{
-  using Tidx_value = int16_t;
-  size_t n_rows = EXT.rows();
-  size_t n_cols = EXT.cols();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-
-  EquivTest<MyMatrix<Tint>> EauivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
-  if (EauivTest.TheReply) {
-    return EauivTest.TheEquiv;
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-  //  std::cerr << "After direct construction WMat=\n";
-  //  PrintWeightedMatrix(std::cerr, WMat);
-
-  WMat.ReorderingSetWeight();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-
-  std::vector<int> CanonicOrd = GetCanonicalizationVector<Tint,GraphBitset,int>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-#endif
-
-  MyMatrix<Tint> EXTreord(n_rows, n_cols);
-  size_t idx=0;
-  Face IsIncluded(n_rows);
-  for (size_t i_row=0; i_row<2*n_rows; i_row++) {
-    int j_row = CanonicOrd[i_row];
-    int res = j_row % 2;
-    int pos = j_row / 2;
-    if (res == 0) {
-      if (IsIncluded[pos] == 0) {
-        IsIncluded[pos]=1;
-        for (size_t i_col=0; i_col<n_cols; i_col++)
-          EXTreord(idx, i_col) = EXT(pos, i_col);
-        idx++;
-      }
-    } else {
-      if (IsIncluded[pos] == 0) {
-        IsIncluded[pos]=1;
-        for (size_t i_col=0; i_col<n_cols; i_col++)
-          EXTreord(idx, i_col) = -EXT(pos, i_col);
-        idx++;
-      }
-    }
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "|EXTreord 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
-#endif
-
-  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "|ComputeColHermiteNormalForm 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
-#endif
-
-  SignRenormalizationMatrix(RedMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
-  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
-#endif
-  return RedMat;
-}
-
-
-
-template<typename Tint>
-std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
-{
-  using Tidx_value = int16_t;
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-  MyMatrix<Tint> Qmat=GetQmatrix(EXT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-
-  EquivTest<std::vector<std::vector<unsigned int>>> EquivTest = LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(EXT, Qmat);
-  if (EquivTest.TheReply) {
-    return EquivTest.TheEquiv;
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|LinPolytopeAntipodalIntegral_Automorphism_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-#endif
-
-  GraphBitset eGR=GetGraphFromWeightedMatrix<Tint,GraphBitset>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-
-#ifdef USE_BLISS
-  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-#endif
-  return ListGen;
-}
 
 
 

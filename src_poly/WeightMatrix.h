@@ -879,10 +879,10 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 template<typename Tidx>
-std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<unsigned int> const& cl)
+std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<Tidx> const& cl)
 {
   size_t nof_vertices = cl.size();
-  std::vector<unsigned int> clR(nof_vertices,-1);
+  std::vector<Tidx> clR(nof_vertices,-1);
   for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
@@ -944,10 +944,10 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nb
 #endif
   //
 #ifdef USE_BLISS
-  std::vector<unsigned int> cl = BLISS_GetCanonicalOrdering(eGR);
+  std::vector<Tidx> cl = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR);
 #endif
 #ifdef USE_TRACES
-  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering(eGR);
+  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering<Tgr,Tidx>(eGR);
 #endif
   //
 # ifdef TIMINGS
@@ -989,23 +989,16 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #endif
 
 #ifdef USE_BLISS
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators(eGR);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbRow);
 #endif
   //
 #ifdef USE_TRACES
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators(eGR);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbRow);
 #endif
   //
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
-  std::vector<std::vector<Tidx>> LGen;
-  for (auto& eListI : ePair.second) {
-    std::vector<Tidx> eListO(nbRow);
-    for (Tidx i=0; i<Tidx(nbRow); i++)
-      eListO[i] = eListI[i];
-    LGen.push_back(eListO);
-  }
   //
   std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
 #ifdef TIMINGS
@@ -1013,7 +1006,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::cerr << "|XXX_GetCanonicalOrdering_ListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
-  return {std::move(MapVectRev2), std::move(LGen)};
+  return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
 
@@ -1050,28 +1043,35 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 
 
 
+template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const& WMat)
+{
+  size_t nbRow=WMat.rows();
+  Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
+#ifdef USE_BLISS
+  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
+#endif
+  return ListGen;
+}
+
+
 template<typename T, typename Tgr, typename Tgroup, typename Tidx_value>
 Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_Kernel<T,Tgr,Tidx,Tidx_value>(WMat);
   size_t nbRow=WMat.rows();
-  Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
-#ifdef USE_BLISS
-  std::vector<std::vector<unsigned int>> ListGen = BLISS_GetListGenerators(eGR);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators(eGR);
-#endif
-  std::vector<Telt> generatorList;
-  for (auto & eGen : ListGen) {
-    std::vector<Tidx> V(nbRow);
-    for (size_t idx=0; idx<nbRow; idx++)
-      V[idx] = eGen[idx];
-    generatorList.push_back(Telt(V));
-  }
-  return Tgroup(generatorList, nbRow);
+  std::vector<Telt> LGen;
+  for (auto & eList : ListGen)
+    LGen.push_back(Telt(eList));
+  return Tgroup(LGen, nbRow);
 }
+
+
 
 
 
@@ -1125,13 +1125,14 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
     return {false, {}};
   unsigned int nof_vertices = nof_vertices1;
   size_t nbRow = WMat1.rows();
+  using Tidx = unsigned int;
 #ifdef USE_BLISS
-  std::vector<unsigned int> cl1 = BLISS_GetCanonicalOrdering(eGR1);
-  std::vector<unsigned int> cl2 = BLISS_GetCanonicalOrdering(eGR2);
+  std::vector<Tidx> cl1 = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR1);
+  std::vector<Tidx> cl2 = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR2);
 #endif
 #ifdef USE_TRACES
-  std::vector<unsigned int> cl1 = TRACES_GetCanonicalOrdering(eGR1);
-  std::vector<unsigned int> cl2 = TRACES_GetCanonicalOrdering(eGR2);
+  std::vector<Tidx> cl1 = TRACES_GetCanonicalOrdering<Tgr,Tidx>(eGR1);
+  std::vector<Tidx> cl2 = TRACES_GetCanonicalOrdering<Tgr,Tidx>(eGR2);
 #endif
   std::vector<unsigned int> clR2(nof_vertices);
   for (unsigned int i=0; i<nof_vertices; i++)

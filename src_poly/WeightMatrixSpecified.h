@@ -254,7 +254,7 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(F1 f1, F2 f2, WeightM
 #endif
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces(f1, f2, WMVS);
-  std::vector<unsigned int> cl = TRACES_GetCanonicalOrdering_Arr(DT);
+  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time2).count() << "\n";
@@ -272,7 +272,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #endif
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces(f1, f2, WMVS);
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr(DT);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT);
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ePair.second) {
     std::vector<Tidx> eListO(nbRow);
@@ -301,7 +301,7 @@ Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertex
   using Tidx = typename Telt::Tidx;
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces(f1, f2, WMVS);
-  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators_Arr(DT);
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT);
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ListGen) {
     std::vector<Tidx> eListO(nbRow);
