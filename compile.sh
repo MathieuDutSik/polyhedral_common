@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 (cd src_latt && make clean && make)
 (cd src_poly && make clean && make)
 (cd src_short && make clean && make)
