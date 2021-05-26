@@ -60,7 +60,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     }
     std::vector<std::pair<int,int>> list_pair;
     for (auto & kv : map_mult)
-      the_sign.push_back({kv.first, kv.second});
+      list_pair.push_back({kv.first, kv.second});
     std::pair<int, std::vector<std::pair<int,int>>> e_pair{idx_specific, list_pair};
     int idx_sign = get_Tvs_idx(e_pair);
     ListSignatureByVertex[iRow] = idx_sign;
@@ -76,10 +76,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
   std::vector<T> const& ListWeight = WMVS.ListWeight;
-  std::unordered_map<T,Tidx_value> map;
+  std::unordered_map<T,int> map;
   for (size_t iWei=0; iWei<nbWeight; iWei++) {
-    Tidx_value pos = iWei;
-    map[ListWeight[iWei]] = pos;
+    map[ListWeight[iWei]] = iWei;
   }
   //
   size_t nbMult=nbWeight + 2;
@@ -117,12 +116,12 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   }
   map_vert_nRow[nbWeight]++;
   std::vector<std::pair<int,int>> f_vect;
-  for (auto & kv : map_mult)
+  for (auto & kv : map_vert_nRow)
     f_vect.push_back({kv.first, kv.second});
   new_list_signature.push_back(f_vect);
   // nbRow+1 : Adding the column corresponding to the external vertex
   std::vector<std::pair<int,int>> g_vect { {nbWeight,1} , {nbWeight+1, nbRow}};
-  new_list_signature.insert(g_vect);
+  new_list_signature.push_back(g_vect);
   size_t nbCase = new_list_signature.size();
   // Now adding the list_of index
   std::vector<int> list_signature = WMVS.ListSignatureByVertex;
@@ -131,12 +130,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   //
   // Now computing the list of signature
   //
-  size_t nbCase = new_list_signature.size();
   MyMatrix<int> MatrixAdj = ZeroMatrix<int>(hS, nbCase);
   // Adjacencies (iVert + nbVert*iH , iVert + nbVert*jH)
   size_t nb_adj1 = hS - 1;
   for (size_t iH=0; iH<hS; iH++)
-    for (size_t iCase=0; icase<nbCase; iCase++)
+    for (size_t iCase=0; iCase<nbCase; iCase++)
       MatrixAdj(iH, iCase) += nb_adj1;
   //
   // Now computing the contribution of the adjacencies
@@ -168,7 +166,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   int nbAdjacent = 0;
   std::vector<int> ListNbCase(nbCase,0);
   for (size_t i=0; i<nbVert; i++) {
-    int iCase = list_signature[iVert];
+    int iCase = list_signature[i];
     ListNbCase[iCase]++;
   }
   for (size_t iCase=0; iCase<nbCase; iCase++) {
@@ -210,12 +208,12 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     if (iVert < nbRow)
       f1(iVert);
     for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
-      Tidx_value eVal;
+      int eVal;
       if (jVert == nbRow+1) {
         if (iVert == nbRow)
-          eVal = nbWei;
+          eVal = nbWeight;
         else
-          eVal = nbWei + 1;
+          eVal = nbWeight + 1;
       } else {
         if (jVert == nbRow) {
           eVal = map[f2(iVert)];

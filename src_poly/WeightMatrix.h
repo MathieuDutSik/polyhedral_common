@@ -13,13 +13,8 @@
 #include "PERM_Fct.h"
 
 
-
-
 #undef USE_BLISS
 #define USE_TRACES
-
-#define USE_PAIRS
-
 
 //#define DEBUG
 //#define TIMINGS

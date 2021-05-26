@@ -3,6 +3,7 @@
 
 
 #include "WeightMatrix.h"
+#include "WeightMatrixSpecified.h"
 
 
 template<typename T, typename Telt, typename Tidx_value>
