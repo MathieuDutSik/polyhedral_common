@@ -11,6 +11,7 @@ struct WeightMatrixVertexSignatures {
   std::vector<T> ListWeight;
   std::vector<std::pair<int, std::vector<std::pair<int,int>>>> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
+  std::vector<int> ListNbCase;
 };
 
 
@@ -300,9 +301,9 @@ Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertex
   using Tidx = typename Telt::Tidx;
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces(f1, f2, WMVS);
-  std::pair<std::vector<unsigned int>, std::vector<std::vector<unsigned int>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr(DT);
+  std::vector<std::vector<unsigned int>> ListGen = TRACES_GetListGenerators_Arr(DT);
   std::vector<std::vector<Tidx>> LGen;
-  for (auto& eListI : ePair.second) {
+  for (auto& eListI : ListGen) {
     std::vector<Tidx> eListO(nbRow);
     for (Tidx i=0; i<Tidx(nbRow); i++)
       eListO[i] = eListI[i];
@@ -314,6 +315,74 @@ Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertex
 #endif
   return Tgroup(LGen, nbRow);
 }
+
+
+/*
+  ---F1/F2 : The first/second template function for creating the Weight matrix
+  ---F3    : The function for testing acceptability of sets for consideration (e.g. rank function)
+  ---F4    : The function for testing acceptability of small generators
+*/
+template<typename T, typename F1, typename F2, typename F3, typename F4, typename Tgroup>
+Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
+{
+  using Telt = typename Tgroup::Telt;
+  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures(nbRow, f1, f2);
+  size_t nbCase = WMVS.ListPossibleSignatures.size();
+  std::vector<int> ListNbCase(nbCase, 0);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    int iCase = WMVS.ListSignatureByVertex[iRow];
+    ListNbCase[iCase]++;
+  }
+  std::vector<int> ListIdx;
+  for (size_t iCase=0; iCase<nbCase; iCase++)
+    ListIdx.push_back(iCase);
+  std::sort(ListIdx.begin(), ListIdx.end(), [&](int idx1, int idx2) -> bool {
+                                              return ListNbCase[idx1] < ListNbCase[idx2];});
+
+  for (int idx=1; idx<nbCase; idx++) {
+    std::vector<int> StatusCase(nbCase,0);
+    for (int u=0; u<=idx; u++)
+      StatusCase[ListIdx[u]] = 1;
+    std::vector<int> CurrentListIdx;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      int iCase = WMVS.ListSignatureByVertex[iRow];
+      if (StatusCase[iCase] == 1)
+        CurrentListIdx.push_back(iRow);
+    }
+    size_t nbRow_res = CurrentListIdx.size();
+    //
+    if (f3(CurrentListIdx)) {
+      auto f1_res = [&](size_t iRow) -> void {
+        f1(CurrentListIdx[iRow]);
+      };
+      auto f2_res = [&](size_t jRow) -> void {
+        f2(CurrentListIdx[jRow]);
+      };
+      WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures(nbRow_res, f1_res, f2_res);
+      Tgroup GRP = GetStabilizerWeightMatrix_KnownSignature(f1_res, f2_res, WMVS_res);
+      bool IsCorrect = true;
+      std::vector<Telt> LGen;
+      for (auto & eGen : GRP.GeneratorsOfGroup()) {
+        if (IsCorrect) {
+          EquivTest<Telt> test = f4(eGen);
+          if (test.TheReply) {
+            LGen.push_back(test.TheEquiv);
+          } else {
+            IsCorrect = false;
+          }
+        }
+      }
+      if (IsCorrect) {
+        return Group(LGen, nbRow);
+      }
+    }
+  }
+}
+
+
+
+
+
 
 
 
