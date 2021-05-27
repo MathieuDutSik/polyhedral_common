@@ -89,10 +89,9 @@ EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(MyMatrix<T> const& EX
 }
 
 
-template<typename T, typename Tfield, typename Telt>
-EquivTest<Telt> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, MyMatrix<Tfield> const& P)
+template<typename T, typename Tfield, typename Tidx>
+EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, MyMatrix<Tfield> const& P)
 {
-  using Tidx = typename Telt::Tidx;
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
   MyMatrix<T> VectorContain(1,n_cols);
@@ -119,7 +118,7 @@ EquivTest<Telt> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix
     }
     V[i_row] = epair.second;
   }
-  return {true, std::move(Telt(V))};
+  return {true, std::move(V)};
 }
 
 

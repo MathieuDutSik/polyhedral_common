@@ -291,29 +291,20 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 
 
 
-template<typename T, typename F1, typename F2, typename Tgroup>
-Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
+template<typename T, typename F1, typename F2, typename Tidx>
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces(f1, f2, WMVS);
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT);
-  std::vector<std::vector<Tidx>> LGen;
-  for (auto& eListI : ListGen) {
-    std::vector<Tidx> eListO(nbRow);
-    for (Tidx i=0; i<Tidx(nbRow); i++)
-      eListO[i] = eListI[i];
-    LGen.push_back(eListO);
-  }
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetStabilizerWeightMatrix_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time2).count() << "\n";
 #endif
-  return Tgroup(LGen, nbRow);
+  return ListGen;
 }
 
 
@@ -323,10 +314,9 @@ Tgroup GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertex
   ---F4    : The function for testing acceptability of small generators and returning the big
              generators.
 */
-template<typename T, typename F1, typename F2, typename F3, typename F4, typename Tgroup>
-Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
+template<typename T, typename F1, typename F2, typename F3, typename F4, typename Tidx>
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
 {
-  using Telt = typename Tgroup::Telt;
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures(nbRow, f1, f2);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
   std::vector<int> ListNbCase(nbCase, 0);
@@ -361,12 +351,12 @@ Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4
         f2(CurrentListIdx[jRow]);
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures(nbRow_res, f1_res, f2_res);
-      Tgroup GRP = GetStabilizerWeightMatrix_KnownSignature(f1_res, f2_res, WMVS_res);
+      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature(f1_res, f2_res, WMVS_res);
       bool IsCorrect = true;
-      std::vector<Telt> LGen;
-      for (auto & eGen : GRP.GeneratorsOfGroup()) {
+      std::vector<std::vector<Tidx>> LGen;
+      for (auto & eList : ListGen) {
         if (IsCorrect) {
-          EquivTest<Telt> test = f4(eGen);
+          EquivTest<std::vector<Tidx>> test = f4(eList);
           if (test.TheReply) {
             LGen.push_back(test.TheEquiv);
           } else {
@@ -375,7 +365,7 @@ Tgroup GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4
         }
       }
       if (IsCorrect) {
-        return Group(LGen, nbRow);
+        return LGen;
       }
     }
   }
