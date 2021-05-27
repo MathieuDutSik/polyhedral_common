@@ -1265,7 +1265,7 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
       for (size_t iCol=0; iCol<nbCol; iCol++)
         M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
     };
-    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel(Vsubset.size(), nbCol, f);
+    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
     return TheSol.TheRank == nbCol;
   };
   auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
@@ -1275,10 +1275,10 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
         V(iCol) = TheEXT(Vsubset[iRow], iCol);
       return V;
     };
-    EquivTest<MyMatrix<Tfield>> test1 = RepresentVertexPermutationTest(Vsubset.size(), nbCol, g1, g1, Vin);
+    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx, decltype(g1)>(Vsubset.size(), nbCol, g1, g1, Vin);
     if (!test1.TheReply)
       return {false, {}};
-    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest(TheEXT, TheEXT, test1.TheEquiv);
+    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
     return test2;
   };
   return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
@@ -1290,12 +1290,13 @@ template<typename T>
 size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
   using Tidx_value = int16_t;
+  using Tidx = unsigned int;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
 
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx_value>(EXT, ListMat, eSubset);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT, ListMat, eSubset);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -1321,6 +1322,7 @@ template<typename T>
 std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
   using Tidx_value = int16_t;
+  using Tidx = unsigned int;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   size_t nbRow = EXT.rows();
@@ -1329,7 +1331,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #endif
 
 
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx_value>(EXT, ListMat, eSubset);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT, ListMat, eSubset);
   // No need to reorder in autom case
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -1367,12 +1369,13 @@ EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(
                                        MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
 {
   using Tidx_value = int16_t;
+  using Tidx = unsigned int;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Subset<T,Tidx_value>(EXT1, ListMat1, eSubset1);
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Subset<T,Tidx_value>(EXT2, ListMat2, eSubset2);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT1, ListMat1, eSubset1);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT2, ListMat2, eSubset2);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";

@@ -12,12 +12,12 @@
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= GRP_AutPolytope
-PROGRAM		= ComputeDelaunay
+#PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
-#PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
+PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= POLY_GapFindHyperplaneRegions

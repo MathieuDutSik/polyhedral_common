@@ -51,7 +51,7 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 
 
 template<typename T, typename Tfield, typename Tidx, typename F>
-EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(size_t nbRow, size_t nbCol, F f1, F f2, std::vector<Tidx> const& eList)
+EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2, std::vector<Tidx> const& eList)
 {
   static_assert(is_ring_field<Tfield>::value, "Requires Tfield to be a field in DivideVector");
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
@@ -60,7 +60,7 @@ EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(size_t nbRow, size_t 
       M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
     }
   };
-  SelectionRowCol<Tfield> eSelect=TMat_SelectRowCol<Tfield>(nbRow, nbCol, f);
+  SelectionRowCol<Tfield> eSelect=TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
   if (eSelect.TheRank != nbCol) {
     return {false, {}};
   }
@@ -72,7 +72,7 @@ EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(size_t nbRow, size_t 
       M1_field(iRow, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
   }
   MyMatrix<Tfield> M1inv_field=Inverse(M1_field);
-  MyMatrix<T> M2_field(eSelect.TheRank, nbCol);
+  MyMatrix<Tfield> M2_field(eSelect.TheRank, nbCol);
   for (size_t iRow=0; iRow<eSelect.TheRank; iRow++) {
     size_t jRow = eList[eSelect.ListRowSelect[iRow]];
     MyVector<T> V = f2(jRow);
@@ -82,7 +82,7 @@ EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(size_t nbRow, size_t 
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow=0; iRow<nbRow; iRow++) {
-    size_t iRowImg = eList(iRow);
+    size_t iRowImg = eList[iRow];
     MyVector<T> V1 = f1(iRow);
     MyVector<T> V2 = f2(iRowImg);
     for (size_t iCol=0; iCol<nbCol; iCol++) {
