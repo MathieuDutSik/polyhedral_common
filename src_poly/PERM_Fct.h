@@ -50,35 +50,45 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 
 
 
-template<typename T, typename Tfield, typename Telt>
-EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
+template<typename T, typename Tfield, typename Tidx, typename F>
+EquivTest<MyMatrix<Tfield>> RepresentVertexPermutationTest(size_t nbRow, size_t nbCol, F f1, F f2, std::vector<Tidx> const& eList)
 {
   static_assert(is_ring_field<Tfield>::value, "Requires Tfield to be a field in DivideVector");
-  size_t nbRow=EXT1.rows();
-  size_t nbCol=EXT1.cols();
-  SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1); // needs another version that do not use the type conversion
-  std::vector<int> const& ListRowSelect=eSelect.ListRowSelect;
-  MyMatrix<T> M1=SelectRow(EXT1, ListRowSelect);
-  MyMatrix<Tfield> M1_field=ConvertMatrixUniversal<Tfield,T>(M1);
-  MyMatrix<Tfield> M1inv_field=Inverse(M1_field);
-  size_t nbRow_select=ListRowSelect.size();
-  if (nbRow_select != nbCol) {
-    std::cerr << "nbRow_select should be equal to nbCol\n";
-    throw TerminalException{1};
+  auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+    MyVector<T> V = f1(iRow);
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
+      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+    }
+  };
+  SelectionRowCol<Tfield> eSelect=TMat_SelectRowCol<Tfield>(nbRow, nbCol, f);
+  if (eSelect.TheRank != nbCol) {
+    return {false, {}};
   }
-  std::vector<int> ListRowSelectImg(nbRow);
-  for (size_t iRow=0; iRow<nbRow_select; iRow++)
-    ListRowSelectImg[iRow]=ePerm.at(iRow);
-  MyMatrix<T> M2=SelectRow(EXT2, ListRowSelectImg);
-  MyMatrix<T> M2_field=ConvertMatrixUniversal<Tfield,T>(M2);
+  MyMatrix<Tfield> M1_field(eSelect.TheRank, nbCol);
+  for (size_t iRow=0; iRow<eSelect.TheRank; iRow++) {
+    size_t jRow = eSelect.ListRowSelect[iRow];
+    MyVector<T> V = f1(jRow);
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      M1_field(iRow, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+  }
+  MyMatrix<Tfield> M1inv_field=Inverse(M1_field);
+  MyMatrix<T> M2_field(eSelect.TheRank, nbCol);
+  for (size_t iRow=0; iRow<eSelect.TheRank; iRow++) {
+    size_t jRow = eList[eSelect.ListRowSelect[iRow]];
+    MyVector<T> V = f2(jRow);
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      M2_field(iRow, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+  }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow=0; iRow<nbRow; iRow++) {
-    size_t iRowImg = ePerm.at(iRow);
+    size_t iRowImg = eList(iRow);
+    MyVector<T> V1 = f1(iRow);
+    MyVector<T> V2 = f2(iRowImg);
     for (size_t iCol=0; iCol<nbCol; iCol++) {
-      Tfield eSum = -EXT2(iRowImg, iCol);
+      Tfield eSum = - V2(iCol);
       for (size_t jRow=0; jRow<nbCol; jRow++) {
-        eSum += EqMat(jRow,iCol) * EXT1(iRow, jRow);
+        eSum += EqMat(jRow,iCol) * V1(jRow);
       }
       if (eSum != 0) {
         return {false, {}};

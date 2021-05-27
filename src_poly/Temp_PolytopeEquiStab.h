@@ -1215,7 +1215,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 // ListMat is assumed to be symmetric
-template<typename T, typename Tidx_value>
+template<typename T, typename Tidx, typename Tidx_value>
 WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
 {
 #ifdef DEBUG
@@ -1256,6 +1256,30 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
       eVal = eSubset[jRow];
     LScal[nMat] = eVal;
     return LScal;
+  };
+  using Tfield = typename overlying_field<T>::field_type;
+  auto f3=[&](std::vector<int> const& Vsubset) -> bool {
+    if (Vsubset.size() < nbCol)
+      return false;
+    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
+    };
+    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel(Vsubset.size(), nbCol, f);
+    return TheSol.TheRank == nbCol;
+  };
+  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+    auto g1=[&](size_t iRow) -> MyVector<T> {
+      MyVector<T> V(nbCol);
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        V(iCol) = TheEXT(Vsubset[iRow], iCol);
+      return V;
+    };
+    EquivTest<MyMatrix<Tfield>> test1 = RepresentVertexPermutationTest(Vsubset.size(), nbCol, g1, g1, Vin);
+    if (!test1.TheReply)
+      return {false, {}};
+    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest(TheEXT, TheEXT, test1.TheEquiv);
+    return test2;
   };
   return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
 }
