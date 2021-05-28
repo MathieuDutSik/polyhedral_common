@@ -822,27 +822,11 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
   //  std::cerr << "WMatAbs.WMat=\n";
   //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
 
-  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMatAbs.WMat);
-  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
-
-  //  std::cerr << "WMatAbs.WMat : ";
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
+  using Tidx = unsigned int;
+  std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_Kernel<Tint,Tgr,Tidx,Tidx_value>(WMatAbs.WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-  using Tidx = unsigned int;
-  int nbVert_G = eGR.GetNbVert();
-#ifdef USE_BLISS
-  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbVert_G);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbVert_G);
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|GetStabilizerWeightMatrix_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -922,7 +906,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   //
   std::vector<unsigned int> AntipodalGen(2*nbRow,0);
@@ -940,6 +924,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
 template<typename Tint>
 std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
 {
+  using Tidx=unsigned int;
   using Tidx_value = int16_t;
   using Tgr = GraphBitset;
   int nbRow = EXT.rows();
@@ -967,22 +952,10 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
   std::cerr << "|GetWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
-  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMat);
+  std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_Kernel<Tint,Tgr,Tidx,Tidx_value>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
-
-  using Tidx=unsigned int;
-#ifdef USE_BLISS
-  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::cerr << "|GetStabilizerWeightMatrix_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return ListGen;
 }
