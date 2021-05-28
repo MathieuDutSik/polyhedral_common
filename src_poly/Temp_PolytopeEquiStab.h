@@ -853,7 +853,6 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
   using Tidx=unsigned int;
   using Tidx_value = int16_t;
   using Tgr = GraphBitset;
-  int nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -1239,7 +1238,6 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   using Tidx = unsigned int;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
-  size_t nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
