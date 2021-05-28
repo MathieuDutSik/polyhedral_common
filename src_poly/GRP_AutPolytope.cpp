@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr,Tidx_value>(WMat);
     std::cerr << "We have eGR\n";
     GRAPH_PrintOutput(std::cerr , eGR);
-    std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbVert).second;
+    std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(WMat).second;
     Tgroup GRP = GetGroupListGen<Tgroup>(ListGen, nbVert);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
 

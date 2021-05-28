@@ -941,6 +941,24 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
 template<typename Tgr, typename Tidx>
 std::vector<Tidx> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
 {
+}
+
+
+
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+//
+template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
+std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const& WMat)
+{
+  size_t nbRow=WMat.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -957,29 +975,6 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nb
   std::cerr << "|XXX_GetCanonicalOrdering|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 # endif
   return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
-}
-
-
-
-
-// This function takes a matrix and returns the vector
-// that canonicalize it.
-// This depends on the construction of the graph from GetGraphFromWeightedMatrix
-//
-template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
-std::vector<Tidx> GetCanonicalizationVector(WeightMatrix<true, T, Tidx_value> const& WMat)
-{
-  size_t nbRow=WMat.rows();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-
-  Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-  return GetCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
 

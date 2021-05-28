@@ -186,7 +186,7 @@ struct TripleCanonic {
 template<typename T, typename Tidx, typename Tidx_value>
 std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<T> const& EXT, WeightMatrix<true,T, Tidx_value> const& WMat)
 {
-  std::vector<Tidx> CanonicOrd = GetCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
+  std::vector<Tidx> CanonicOrd = GetCanonicalizationVector_Kernel<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
