@@ -19,16 +19,17 @@ int main(int argc, char *argv[])
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tidx_value = int16_t;
     //
     std::cerr << "GRP_AutPolytope : Reading input\n";
     //
     std::ifstream is(argv[1]);
     MyMatrix<T> TheEXT = ReadMatrix<T>(is);
     int nbVert = TheEXT.rows();
-    WeightMatrix<true, T> WMat = GetWeightMatrix(TheEXT);
+    WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T,Tidx_value>(TheEXT);
     std::cerr << "We have WMat\n";
     PrintWeightedMatrix(std::cerr, WMat);
-    Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
+    Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr,Tidx_value>(WMat);
     std::cerr << "We have eGR\n";
     GRAPH_PrintOutput(std::cerr , eGR);
     std::vector<std::vector<Tidx>> ListGen = GetGroupCanonicalizationVector_Kernel<Tgr,Tidx>(eGR, nbVert).second;

@@ -101,9 +101,11 @@ inline typename std::enable_if<(not is_vector<T>::value),T>::type GetSymmGenerat
 
 
 
-template<bool is_symmetric, typename T, typename Tidx_value_impl>
+template<bool is_symmetric_impl, typename T_impl, typename Tidx_value_impl>
 struct WeightMatrix {
 public:
+  static const bool is_symmetric = is_symmetric_impl;
+  using T = T_impl;
   using Tidx_value = Tidx_value_impl;
   WeightMatrix()
   {

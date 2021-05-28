@@ -1214,9 +1214,13 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 }
 
 
+
+
+
+
 // ListMat is assumed to be symmetric
-template<typename T, typename Tidx, typename Tidx_value>
-WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
+template<typename T, typename Tidx, typename Tidx_value, typename Treturn, typename F>
+Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
 {
 #ifdef DEBUG
   for (auto & eMat : ListMat) {
@@ -1258,7 +1262,7 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
     return LScal;
   };
   using Tfield = typename overlying_field<T>::field_type;
-  auto f3=[&](std::vector<int> const& Vsubset) -> bool {
+  auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
     if (Vsubset.size() < nbCol)
       return false;
     auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
@@ -1281,7 +1285,18 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
     EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
     return test2;
   };
-  return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
+  return f(nbRow, f1, f2, f3, f4);
+}
+
+
+template<typename T, typename Tidx, typename Tidx_value>
+WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
+{
+  using Treturn = WeightMatrix<true, std::vector<T>, Tidx_value>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4) -> Treturn {
+    return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
+  };
+  return FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(TheEXT, ListMat, eSubset, f);
 }
 
 
@@ -1338,22 +1353,10 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-  Tgr eGR=GetGraphFromWeightedMatrix<std::vector<T>,Tgr>(WMat);
+  std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-
-  using Tidx = unsigned int;
-#ifdef USE_BLISS
-  std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
-#endif
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|GetStabilizerWeightMatrix_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return ListGen;
 }
