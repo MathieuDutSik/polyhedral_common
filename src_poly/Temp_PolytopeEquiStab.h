@@ -474,82 +474,12 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
-  //  std::cerr << "WMatAbs.WMat=\n";
-  //  PrintWeightedMatrix(std::cerr, WMatAbs.WMat);
-
-  Tgr eGR=GetGraphFromWeightedMatrix<Tint,Tgr>(WMatAbs.WMat);
-  //  GRAPH_PrintOutputGAP_vertex_colored("GAP_graph", eGR);
-
-  //  std::cerr << "WMatAbs.WMat : ";
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
 
   using Tidx=unsigned int;
-  int nbVert_G = eGR.GetNbVert();
-#ifdef USE_BLISS
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbVert_G);
-#endif
-#ifdef USE_TRACES
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbVert_G);
-#endif
-#ifdef DEBUG
-  //  PrintStabilizerGroupSizes(std::cerr, eGR);
-  std::string eExpr = GetCanonicalForm_string(eGR, ePair.first);
-  mpz_class eHash1 = MD5_hash_mpz(eExpr);
-  std::cerr << "eHash1=" << eHash1 << "\n";
-  //
-  size_t hS = eGR.GetNbVert() / (nbRow + 2);
-  std::cerr << "|eGR|=" << eGR.GetNbVert() << " nbRow=" << nbRow << " hS=" << hS << "\n";
-  for (auto & eGen : ePair.second) {
-    std::vector<unsigned int> eGenRed(nbRow+2);
-    for (size_t i=0; i<nbRow+2; i++) {
-      unsigned int val = eGen[i];
-      if (val >= nbRow+2) {
-        std::cerr << "At i=" << i << " we have val=" << val << " nbRow=" << nbRow << "\n";
-        throw TerminalException{1};
-      }
-      eGenRed[i] = val;
-    }
-    for (size_t i=nbRow; i<nbRow+2; i++) {
-      if (eGenRed[i] != i) {
-        std::cerr << "Point is not preserved\n";
-        throw TerminalException{1};
-      }
-    }
-    for (size_t iH=0; iH<hS; iH++) {
-      for (size_t i=0; i<nbRow+2; i++) {
-        unsigned int val1 = eGen[i + iH * (nbRow+2)];
-        unsigned int val2 = iH * (nbRow+2) + eGenRed[i];
-        if (val1 != val2) {
-          std::cerr << "val1=" << val1 << " val2=" << val2 << "\n";
-          std::cerr << "iH" << iH << " i=" << i << " hS=" << hS << " nbRow=" << nbRow << "\n";
-          throw TerminalException{1};
-        }
-      }
-      for (size_t i=0; i<nbRow; i++) {
-        for (size_t j=0; j<nbRow; j++) {
-          int iImg = eGenRed[i];
-          int jImg = eGenRed[j];
-          Tidx_value pos1 = WMatAbs.WMat.GetValue(i, j);
-          Tidx_value pos2 = WMatAbs.WMat.GetValue(iImg, jImg);
-          if (pos1 != pos2) {
-            std::cerr << "Inconsistency at i=" << i << " j=" <<j << "\n";
-            std::cerr << "iImg=" << iImg << " jImg=" << jImg << "\n";
-            throw TerminalException{1};
-          }
-        }
-      }
-    }
-
-  }
-#endif
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalizationVector_Kernel<Tint,Tgr,Tidx,Tidx_value>(WMatAbs.WMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGroupCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -614,15 +544,11 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   if (!IsCorrectListGen()) {
     return {false, {}};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-#endif
   //
-  std::vector<Tidx> CanonicOrd = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
+  std::vector<Tidx> const& CanonicOrd = ePair.first;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time4).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
   size_t n_cols=EXT.cols();
@@ -697,19 +623,19 @@ EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMa
   std::cerr << "\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time8 - time7).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
 #endif
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time9 = std::chrono::system_clock::now();
-  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time9 - time8).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
+  std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
 #endif
 
   return {true, std::move(RedMat)};

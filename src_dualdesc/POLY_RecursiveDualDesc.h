@@ -209,7 +209,7 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp = GetGroupCanonicalizationVector<T,GraphBitset,Tidx>(WMat);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp = GetGroupCanonicalizationVector_Kernel<T,GraphBitset,Tidx>(WMat);
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
