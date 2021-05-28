@@ -1231,7 +1231,7 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
   return e_hash;
 }
 
-template<typename T>
+template<typename T, bool use_scheme>
 std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
   using Tidx_value = int16_t;
@@ -1241,19 +1241,19 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-
-
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT, ListMat, eSubset);
-  // No need to reorder in autom case
+  using Treturn = std::vector<std::vector<unsigned int>>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4) -> Treturn {
+    if constexpr(use_scheme) {
+        return GetStabilizerWeightMatrix_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4);
+    } else {
+      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
+      return GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+    }
+  };
+  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-
-  std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetStabilizerWeightMatrix_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetListGenAutomorphism_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return ListGen;
 }

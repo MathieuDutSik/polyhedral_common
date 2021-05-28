@@ -6,8 +6,8 @@
 
 template<typename T>
 struct WeightMatrixVertexSignatures {
-  int nbRow;
-  int nbWeight;
+  size_t nbRow;
+  size_t nbWeight;
   std::vector<T> ListWeight;
   std::vector<std::pair<int, std::vector<std::pair<int,int>>>> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
@@ -66,12 +66,12 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     int idx_sign = get_Tvs_idx(e_pair);
     ListSignatureByVertex[iRow] = idx_sign;
   }
-  int nbWeight = ListWeight.size();
+  size_t nbWeight = ListWeight.size();
   return {nbRow, nbWeight, std::move(ListWeight), std::move(ListPossibleSignatures), std::move(ListSignatureByVertex)};
 }
 
 
-template<typename T, typename F1, typename F2, typename Tidx>
+template<typename T, typename Tidx, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
   size_t nbRow = WMVS.nbRow;
@@ -246,14 +246,14 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
 
 
 
-template<typename T, typename F1, typename F2, typename Tidx>
+template<typename T, typename Tidx, typename F1, typename F2>
 std::vector<Tidx> GetCanonicalizationVector_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
   std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -264,14 +264,14 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(F1 f1, F2 f2, WeightM
 
 
 
-template<typename T, typename F1, typename F2, typename Tidx>
+template<typename T, typename Tidx, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalization_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT);
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ePair.second) {
@@ -291,14 +291,14 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 
 
 
-template<typename T, typename F1, typename F2, typename Tidx>
+template<typename T, typename Tidx, typename F1, typename F2>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
   std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -314,10 +314,10 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(F1 f1, F
   ---F4    : The function for testing acceptability of small generators and returning the big
              generators.
 */
-template<typename T, typename F1, typename F2, typename F3, typename F4, typename Tidx>
-std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(int nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
+template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4>
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
 {
-  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures(nbRow, f1, f2);
+  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
   std::vector<int> ListNbCase(nbCase, 0);
   for (size_t iRow=0; iRow<nbRow; iRow++) {
@@ -331,11 +331,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(int nbRow, F1
             [&](int idx1, int idx2) -> bool {
               return ListNbCase[idx1] < ListNbCase[idx2];});
 
-  for (int idx=1; idx<nbCase; idx++) {
+  for (size_t idx=1; idx<nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
-    for (int u=0; u<=idx; u++)
+    for (size_t u=0; u<=idx; u++)
       StatusCase[ListIdx[u]] = 1;
-    std::vector<int> CurrentListIdx;
+    std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       int iCase = WMVS.ListSignatureByVertex[iRow];
       if (StatusCase[iCase] == 1)
@@ -347,16 +347,16 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(int nbRow, F1
       auto f1_res = [&](size_t iRow) -> void {
         f1(CurrentListIdx[iRow]);
       };
-      auto f2_res = [&](size_t jRow) -> void {
-        f2(CurrentListIdx[jRow]);
+      auto f2_res = [&](size_t jRow) -> T {
+        return f2(CurrentListIdx[jRow]);
       };
-      WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures(nbRow_res, f1_res, f2_res);
-      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature(f1_res, f2_res, WMVS_res);
+      WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
+      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(f1_res, f2_res, WMVS_res);
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       for (auto & eList : ListGen) {
         if (IsCorrect) {
-          EquivTest<std::vector<Tidx>> test = f4(eList);
+          EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
           if (test.TheReply) {
             LGen.push_back(test.TheEquiv);
           } else {
@@ -369,6 +369,8 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(int nbRow, F1
       }
     }
   }
+  std::cerr << "We should never reach that stage\n";
+  throw TerminalException{1};
 }
 
 

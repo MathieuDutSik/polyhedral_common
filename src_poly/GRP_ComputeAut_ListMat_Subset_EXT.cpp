@@ -31,7 +31,8 @@ int main(int argc, char *argv[])
     Face eSubset = ReadFace(is);
     std::cerr << "|eSubset|=" << eSubset.size() << " / " << eSubset.count() << "\n";
     //
-    std::vector<std::vector<unsigned int>> ListGen = GetListGenAutomorphism_ListMat_Subset(EXT, ListMat, eSubset);
+    const bool use_scheme = true;
+    std::vector<std::vector<unsigned int>> ListGen = GetListGenAutomorphism_ListMat_Subset<T,use_scheme>(EXT, ListMat, eSubset);
     //
     std::ofstream os(argv[2]);
     os << "return [";
