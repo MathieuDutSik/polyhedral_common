@@ -240,7 +240,8 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
   std::vector<T> INP_ListWeight;
   std::unordered_map<T, Tidx_value> ValueMap;
   Tidx_value idxWeight = 0;
-  Tidx_value positionZero = -1;
+  Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
+  Tidx_value positionZero = miss_val;
   //
   auto set_entry=[&](size_t iRow, size_t jRow, Tidx_value pos, bool eChg) -> void {
     size_t idx = weightmatrix_idx<true>(nbPair, iRow, jRow);
@@ -266,7 +267,7 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<
       }
       Tidx_value& value = ValueMap[eScal];
       if (value == 0) { // This is a missing value
-        if (positionZero == -1 && eScal == 0)
+        if (positionZero == miss_val && eScal == 0)
           positionZero = idxWeight;
         idxWeight++;
         value = idxWeight;

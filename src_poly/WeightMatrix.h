@@ -272,6 +272,7 @@ public:
   }
   Tidx_value ReorderingSetWeight_specificPosition(Tidx_value specificPosition)
   {
+    Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
     std::map<T, int> ValueMap;
     size_t nbEnt=ListWeight.size();
     for (size_t i_w=0; i_w<ListWeight.size(); i_w++)
@@ -292,8 +293,8 @@ public:
       }
     }
 #endif
-    if (specificPosition == -1)
-      return -1;
+    if (specificPosition == miss_val)
+      return miss_val;
     return g[specificPosition];
   }
   WeightMatrix<true, T, Tidx_value> GetSymmetricWeightMatrix() const
@@ -884,7 +885,7 @@ template<typename Tidx>
 std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<Tidx> const& cl)
 {
   size_t nof_vertices = cl.size();
-  std::vector<Tidx> clR(nof_vertices,-1);
+  std::vector<Tidx> clR(nof_vertices);
   for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
