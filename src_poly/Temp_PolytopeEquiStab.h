@@ -1161,6 +1161,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     return LScal;
   };
   using Tfield = typename overlying_field<T>::field_type;
+  // Preemptive check that the subset is adequate
   auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
     if (Vsubset.size() < nbCol)
       return false;
@@ -1171,6 +1172,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
     return TheSol.TheRank == nbCol;
   };
+  // Extension of the partial automorphism
   auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
     auto g1=[&](size_t iRow) -> MyVector<T> {
       MyVector<T> V(nbCol);
@@ -1183,6 +1185,38 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
       return {false, {}};
     EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
     return test2;
+  };
+  // Extension of the partial canonicalization
+  auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
+    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+      size_t pos = Vsubset[PartOrd[iRow]];
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
+    };
+    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+    // Selecting the submatrix
+    MyMatrix<Tfield> M(nbCol,nbCol);
+    for (size_t iRow=0; iRow<nbCol; iRow++) {
+      size_t pos = Vsubset[ PartOrd[ TheSol.ListRowSelect[iRow]]];
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
+    }
+    MyMatrix<Tfield> Minv = Inverse(M);
+    MyMatrix<Tfield> Mop = ConvertMatrixUniversal<Tfield,T>(TheEXT) * Minv;
+    std::vector<Tidx> ListIdx(nbRow);
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      ListIdx[iRow] = iRow;
+    std::sort(ListIdx.begin(), ListIdx.end(),
+              [&](size_t iRow, size_t jRow) -> bool {
+                for (size_t iCol=0; iCol<nbCol; iCol++) {
+                  if (Mop(iRow, iCol) < Mop(jRow,iCol))
+                    return true;
+                  if (Mop(iRow, iCol) > Mop(jRow,iCol))
+                    return false;
+                }
+                return false;
+              });
+    return ListIdx;
   };
   return f(nbRow, f1, f2, f3, f4);
 }
