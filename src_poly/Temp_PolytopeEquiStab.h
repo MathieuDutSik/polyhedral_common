@@ -1296,6 +1296,34 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
 
 
 
+template<typename T, bool use_scheme>
+std::vector<unsigned int> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+{
+  using Tidx_value = int16_t;
+  using Tidx = unsigned int;
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+  using Treturn = std::vector<Tidx>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    if constexpr(use_scheme) {
+        return GetGroupCanonicalizationVector_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4, f5).first;
+    } else {
+      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
+      return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+    }
+  };
+  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetListGenAutomorphism_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  return ListGen;
+}
+
+
 
 
 template<typename T>

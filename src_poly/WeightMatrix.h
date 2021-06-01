@@ -933,20 +933,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
 }
 
 
-
-
-// This function takes a matrix and returns the vector
-// that canonicalize it.
-// This depends on the construction of the graph from GetGraphFromWeightedMatrix
-//
-template<typename Tgr, typename Tidx>
-std::vector<Tidx> GetCanonicalizationVector_Kernel(Tgr const& eGR, int const& nbRow)
-{
-}
-
-
-
-
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix

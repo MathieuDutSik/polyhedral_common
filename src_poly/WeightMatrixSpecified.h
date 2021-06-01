@@ -247,7 +247,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
 
 
 template<typename T, typename Tidx, typename F1, typename F2>
-std::vector<Tidx> GetCanonicalizationVector_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
+std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -265,7 +265,7 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(F1 f1, F2 f2, WeightM
 
 
 template<typename T, typename Tidx, typename F1, typename F2>
-std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalization_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalization_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -292,7 +292,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 
 
 template<typename T, typename Tidx, typename F1, typename F2>
-std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -351,7 +351,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
         return f2(CurrentListIdx[jRow]);
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
-      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(f1_res, f2_res, WMVS_res);
+      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       for (auto & eList : ListGen) {
@@ -366,6 +366,76 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       }
       if (IsCorrect) {
         return LGen;
+      }
+    }
+  }
+  std::cerr << "We should never reach that stage\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+
+/*
+  ---F1/F2 : The first/second template function for creating the Weight matrix
+  ---F3    : The function for testing acceptability of sets for consideration (e.g. rank function)
+  ---F4    : The function for testing acceptability of small generators and returning the big
+             generators.
+*/
+template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4, typename F5>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
+{
+  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
+  size_t nbCase = WMVS.ListPossibleSignatures.size();
+  std::vector<int> ListNbCase(nbCase, 0);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    int iCase = WMVS.ListSignatureByVertex[iRow];
+    ListNbCase[iCase]++;
+  }
+  std::vector<int> ListIdx;
+  for (size_t iCase=0; iCase<nbCase; iCase++)
+    ListIdx.push_back(iCase);
+  std::sort(ListIdx.begin(), ListIdx.end(),
+            [&](int idx1, int idx2) -> bool {
+              return ListNbCase[idx1] < ListNbCase[idx2];});
+
+  for (size_t idx=1; idx<nbCase; idx++) {
+    std::vector<int> StatusCase(nbCase,0);
+    for (size_t u=0; u<=idx; u++)
+      StatusCase[ListIdx[u]] = 1;
+    std::vector<Tidx> CurrentListIdx;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      int iCase = WMVS.ListSignatureByVertex[iRow];
+      if (StatusCase[iCase] == 1)
+        CurrentListIdx.push_back(iRow);
+    }
+    size_t nbRow_res = CurrentListIdx.size();
+    //
+    if (f3(CurrentListIdx)) {
+      auto f1_res = [&](size_t iRow) -> void {
+        f1(CurrentListIdx[iRow]);
+      };
+      auto f2_res = [&](size_t jRow) -> T {
+        return f2(CurrentListIdx[jRow]);
+      };
+      WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
+      std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
+      bool IsCorrect = true;
+      std::vector<std::vector<Tidx>> LGen;
+      for (auto & eList : ePair.second) {
+        if (IsCorrect) {
+          EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
+          if (test.TheReply) {
+            LGen.push_back(test.TheEquiv);
+          } else {
+            IsCorrect = false;
+          }
+        }
+      }
+      if (IsCorrect) {
+        return {f5(ePair.first), LGen};
       }
     }
   }
