@@ -1218,7 +1218,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
               });
     return ListIdx;
   };
-  return f(nbRow, f1, f2, f3, f4);
+  return f(nbRow, f1, f2, f3, f4, f5);
 }
 
 
@@ -1226,7 +1226,7 @@ template<typename T, typename Tidx, typename Tidx_value>
 WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
 {
   using Treturn = WeightMatrix<true, std::vector<T>, Tidx_value>;
-  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4) -> Treturn {
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
   };
   return FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(TheEXT, ListMat, eSubset, f);
@@ -1277,7 +1277,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   using Treturn = std::vector<std::vector<unsigned int>>;
-  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4) -> Treturn {
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     if constexpr(use_scheme) {
         return GetStabilizerWeightMatrix_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4);
     } else {
