@@ -832,7 +832,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
     return {false, {}};
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   //
@@ -1165,15 +1165,25 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
     if (Vsubset.size() < nbCol)
       return false;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
       for (size_t iCol=0; iCol<nbCol; iCol++)
         M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
     };
     SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_ListMat_Subset : f3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
     return TheSol.TheRank == nbCol;
   };
   // Extension of the partial automorphism
   auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     auto g1=[&](size_t iRow) -> MyVector<T> {
       MyVector<T> V(nbCol);
       for (size_t iCol=0; iCol<nbCol; iCol++)
@@ -1181,13 +1191,28 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
       return V;
     };
     EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx, decltype(g1)>(Vsubset.size(), nbCol, g1, g1, Vin);
-    if (!test1.TheReply)
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+    if (!test1.TheReply) {
+#ifdef TIMINGS
+      std::cerr << "|FCT_ListMat_Subset : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
       return {false, {}};
+    }
     EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_ListMat_Subset : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|FCT_ListMat_Subset : f4(2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
     return test2;
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
       size_t pos = Vsubset[PartOrd[iRow]];
       for (size_t iCol=0; iCol<nbCol; iCol++)
@@ -1216,6 +1241,10 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
                 }
                 return false;
               });
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_ListMat_Subset : f5|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
     return ListIdx;
   };
   return f(nbRow, f1, f2, f3, f4, f5);
@@ -1318,7 +1347,7 @@ std::vector<unsigned int> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT
   Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenAutomorphism_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|Canonicalization_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return ListGen;
 }

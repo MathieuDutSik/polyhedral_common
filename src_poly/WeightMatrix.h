@@ -16,10 +16,6 @@
 #undef USE_BLISS
 #define USE_TRACES
 
-//#define DEBUG
-//#define TIMINGS
-
-
 //
 // The templatized functions
 //
@@ -947,7 +943,7 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_va
 
   Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
   //
 #ifdef USE_BLISS
@@ -958,8 +954,9 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_va
 #endif
   //
 # ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|XXX_GetCanonicalOrdering|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|XXX_GetCanonicalOrdering|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 # endif
   return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
 }
