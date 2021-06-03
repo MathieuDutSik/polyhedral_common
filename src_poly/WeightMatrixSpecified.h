@@ -346,7 +346,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
   std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetStabilizerWeightMatrix_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time2).count() << "\n";
+  std::cerr << "|GetStabilizerWeightMatrix_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return ListGen;
 }
