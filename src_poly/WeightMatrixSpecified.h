@@ -71,6 +71,50 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 }
 
 
+template<typename T>
+void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
+{
+  // Building the permutation on the weights
+  std::map<T, int> map;
+  size_t n_Wei = WMVS.nbWeight;
+  for (size_t i=0; i<n_Wei; i++)
+    map[WMVS.ListWeight[i]] = i;
+  std::vector<int> g(n_Wei);
+  int idx=0;
+  for (auto & kv : map) {
+    int pos = kv.second;
+    g[pos] = idx;
+    idx++;
+  }
+  // Changing the weight
+  std::vector<T> NewListWeight(n_Wei);
+  for (size_t iW=0; iW<n_Wei; iW++) {
+    size_t jW = g[iW];
+    NewListWeight[jW] = WMVS.ListWeight[iW];
+  }
+  WMVS.ListWeight = NewListWeight;
+  // Changing the list of signatures
+  std::vector<std::pair<int, std::vector<std::pair<int,int>>>> NewListPossibleSignatures;
+  for (auto & ePossSignature : WMVS.ListPossibleSignatures) {
+    int NewDiag = g[ePossSignature.first];
+    std::map<int,int> NewMap_mult;
+    for (int i=0; i<int(ePossSignature.second.size()); i++) {
+      std::pair<int,int> ePair = ePossSignature.second[i];
+      int NewVal = g[ePair.first];
+      int eMult = ePair.second;
+      NewMap_mult[NewVal] = eMult;
+    }
+    std::vector<std::pair<int,int>> NewList_pair;
+    for (auto & kv : NewMap_mult)
+      NewList_pair.push_back({kv.first, kv.second});
+    std::pair<int, std::vector<std::pair<int,int>>> e_pair{NewDiag, NewList_pair};
+    NewListPossibleSignatures.push_back(e_pair);
+  }
+  WMVS.ListPossibleSignatures=NewListPossibleSignatures;
+}
+
+
+
 template<typename T, typename Tidx, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
@@ -388,6 +432,7 @@ template<typename T, typename Tidx, typename F1, typename F2, typename F3, typen
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
+  RenormalizeWMVS(WMVS);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
   std::vector<int> ListNbCase(nbCase, 0);
   for (size_t iRow=0; iRow<nbRow; iRow++) {
@@ -421,6 +466,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
         return f2(CurrentListIdx[jRow]);
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
+      RenormalizeWMVS(WMVS_res);
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
