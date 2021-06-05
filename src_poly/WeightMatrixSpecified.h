@@ -16,6 +16,36 @@ struct WeightMatrixVertexSignatures {
 
 
 
+
+template<typename T>
+void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
+{
+  size_t nbCase = WMVS.ListNbCase.size();
+  os << "nbRow=" << WMVS.nbRow << " nbWeight=" << WMVS.nbWeight << " nbCase=" << nbCase << "\n";
+  os << "ListWeight =";
+  for (auto & eVal : WMVS.ListWeight) {
+    os << " " << eVal;
+  }
+  os << "\n";
+  //
+  os << "ListNbCase =";
+  for (auto & eNB : WMVS.ListNbCase)
+    os << " " << eNB;
+  os << "\n";
+  //
+  for (size_t iCase=0; iCase<nbCase; iCase++) {
+    std::pair<int, std::vector<std::pair<int,int>>> eCase = WMVS.ListPossibleSignatures[iCase];
+    os << "iCase=" << iCase << "/" << nbCase << " eCase=" << eCase.first;
+    os << " LV=";
+    for (auto & eEnt : eCase.second) {
+      os << " [" << eEnt.first << "," << eEnt.second << "]";
+    }
+    os << "\n";
+  }
+}
+
+
+
 template<typename T, typename F1, typename F2>
 WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2)
 {
@@ -67,7 +97,14 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     ListSignatureByVertex[iRow] = idx_sign;
   }
   size_t nbWeight = ListWeight.size();
-  return {nbRow, nbWeight, std::move(ListWeight), std::move(ListPossibleSignatures), std::move(ListSignatureByVertex)};
+  //
+  size_t nbCase = ListPossibleSignatures.size();
+  std::vector<int> ListNbCase(nbCase, 0);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    int iCase = ListSignatureByVertex[iRow];
+    ListNbCase[iCase]++;
+  }
+  return {nbRow, nbWeight, std::move(ListWeight), std::move(ListPossibleSignatures), std::move(ListSignatureByVertex), std::move(ListNbCase)};
 }
 
 
@@ -361,23 +398,29 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
 {
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
+#endif
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
+#ifdef DEBUG_SPECIFIC
+  PrintWMVS(std::cerr, WMVS);
+#endif
   size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListNbCase(nbCase, 0);
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
-    int iCase = WMVS.ListSignatureByVertex[iRow];
-    ListNbCase[iCase]++;
-  }
   std::vector<int> ListIdx;
   for (size_t iCase=0; iCase<nbCase; iCase++)
     ListIdx.push_back(iCase);
   std::sort(ListIdx.begin(), ListIdx.end(),
             [&](int idx1, int idx2) -> bool {
-              return ListNbCase[idx1] < ListNbCase[idx2];});
+              return WMVS.ListNbCase[idx1] < WMVS.ListNbCase[idx2];});
+#ifdef DEBUG_SPECIFIC
+  for (size_t iCase=0; iCase<nbCase; iCase++) {
+    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << ListIdx[iCase] << "\n";
+  }
+#endif
 
-  for (size_t idx=1; idx<nbCase; idx++) {
+  for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
-    for (size_t u=0; u<=idx; u++)
+    for (size_t u=0; u<idx; u++)
       StatusCase[ListIdx[u]] = 1;
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
@@ -386,6 +429,9 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
         CurrentListIdx.push_back(iRow);
     }
     size_t nbRow_res = CurrentListIdx.size();
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "idx=" << idx << " nbRow_res=" << nbRow_res << "\n";
+#endif
     //
     if (f3(CurrentListIdx)) {
       auto f1_res = [&](size_t iRow) -> void {
@@ -413,7 +459,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       }
     }
   }
-  std::cerr << "We should never reach that stage\n";
+  std::cerr << "GetStabilizerWeightMatrix_Heuristic : We should never reach that stage\n";
   throw TerminalException{1};
 }
 
@@ -434,17 +480,12 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
   RenormalizeWMVS(WMVS);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListNbCase(nbCase, 0);
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
-    int iCase = WMVS.ListSignatureByVertex[iRow];
-    ListNbCase[iCase]++;
-  }
   std::vector<int> ListIdx;
   for (size_t iCase=0; iCase<nbCase; iCase++)
     ListIdx.push_back(iCase);
   std::sort(ListIdx.begin(), ListIdx.end(),
             [&](int idx1, int idx2) -> bool {
-              return ListNbCase[idx1] < ListNbCase[idx2];});
+              return WMVS.ListNbCase[idx1] < WMVS.ListNbCase[idx2];});
 
   for (size_t idx=1; idx<nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
@@ -485,16 +526,9 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
       }
     }
   }
-  std::cerr << "We should never reach that stage\n";
+  std::cerr << "GetGroupCanonicalizationVector_Heuristic : We should never reach that stage\n";
   throw TerminalException{1};
 }
-
-
-
-
-
-
-
 
 
 #endif

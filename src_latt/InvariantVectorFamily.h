@@ -47,7 +47,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
     if (fCorrect(SHVret))
       return SHVret;
   }
-  std::cerr << "We should never reach that stage\n";
+  std::cerr << "ExtractInvariantVectorFamily : We should never reach that stage\n";
   throw TerminalException{1};
 }
 
