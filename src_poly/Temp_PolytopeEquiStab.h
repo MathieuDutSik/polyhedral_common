@@ -1118,8 +1118,8 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 // ListMat is assumed to be symmetric
-template<typename T, typename Tidx, typename Tidx_value, typename Treturn, typename F>
-Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
+template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
+Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
 {
 #ifdef DEBUG
   for (auto & eMat : ListMat) {
@@ -1131,35 +1131,6 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
 #endif
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
-  size_t nMat = ListMat.size();
-  //
-  MyMatrix<T> MatV(nMat, nbCol);
-  std::vector<T> LScal(nMat + 1);
-  size_t iRow_stor = 0;
-  auto f1=[&](size_t iRow) -> void {
-    for (size_t iMat=0; iMat<nMat; iMat++) {
-      for (size_t iCol=0; iCol<nbCol; iCol++) {
-        T eSum=0;
-        for (size_t jCol=0; jCol<nbCol; jCol++)
-          eSum += ListMat[iMat](jCol,iCol) * TheEXT(iRow, jCol);
-        MatV(iMat, iCol) = eSum;
-      }
-    }
-    iRow_stor = iRow;
-  };
-  auto f2=[&](size_t jRow) -> std::vector<T> {
-    for (size_t iMat=0; iMat<nMat; iMat++) {
-      T eSum=0;
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
-      LScal[iMat] = eSum;
-    }
-    Tidx_value eVal = 0;
-    if (iRow_stor == jRow)
-      eVal = eSubset[jRow];
-    LScal[nMat] = eVal;
-    return LScal;
-  };
   using Tfield = typename overlying_field<T>::field_type;
   // Preemptive check that the subset is adequate
   auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
@@ -1251,6 +1222,55 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
 }
 
 
+
+
+
+template<typename T, typename Tidx, typename Treturn, typename F>
+Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
+{
+#ifdef DEBUG
+  for (auto & eMat : ListMat) {
+    if (!IsSymmetricMatrix(eMat)) {
+      std::cerr << "The matrix eMat should be symmetric\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  size_t nbCol=TheEXT.cols();
+  size_t nMat = ListMat.size();
+  //
+  MyMatrix<T> MatV(nMat, nbCol);
+  std::vector<T> LScal(nMat + 1);
+  size_t iRow_stor = 0;
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iMat=0; iMat<nMat; iMat++) {
+      for (size_t iCol=0; iCol<nbCol; iCol++) {
+        T eSum=0;
+        for (size_t jCol=0; jCol<nbCol; jCol++)
+          eSum += ListMat[iMat](jCol,iCol) * TheEXT(iRow, jCol);
+        MatV(iMat, iCol) = eSum;
+      }
+    }
+    iRow_stor = iRow;
+  };
+  auto f2=[&](size_t jRow) -> std::vector<T> {
+    for (size_t iMat=0; iMat<nMat; iMat++) {
+      T eSum=0;
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
+      LScal[iMat] = eSum;
+    }
+    int eVal = 0;
+    if (iRow_stor == jRow)
+      eVal = eSubset[jRow];
+    LScal[nMat] = eVal;
+    return LScal;
+  };
+  using Tweight = std::vector<T>;
+  return FCT_EXT<T,Tweight,Tidx,Treturn>(TheEXT, f, f1, f2);
+}
+
+
 template<typename T, typename Tidx, typename Tidx_value>
 WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
 {
@@ -1258,7 +1278,7 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
   auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(TheEXT, ListMat, eSubset, f);
+  return FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(TheEXT, ListMat, eSubset, f);
 }
 
 
@@ -1314,7 +1334,7 @@ std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyM
       return GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
-  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetListGenAutomorphism_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -1344,7 +1364,7 @@ std::vector<unsigned int> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT
       return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
-  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Tidx_value, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|Canonicalization_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
