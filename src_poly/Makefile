@@ -14,7 +14,6 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_LinearProgram \
-                  GRP_AutPolytope \
                   GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting \
                   GRP_VectorSplitting \
