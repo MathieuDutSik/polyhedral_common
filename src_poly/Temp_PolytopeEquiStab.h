@@ -151,12 +151,8 @@ WeightMatrix<true, int,Tidx_value> WeightMatrixFromPairOrbits(Tgroup const& GRP)
 
 
 //
-// The antipodal configurations and the absolute trick
+// The basic of EXT functionality
 //
-
-
-
-
 
 template<typename T>
 MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
@@ -215,6 +211,178 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
 #endif
   return RetMat;
 }
+
+
+template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
+Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
+{
+#ifdef DEBUG
+  for (auto & eMat : ListMat) {
+    if (!IsSymmetricMatrix(eMat)) {
+      std::cerr << "The matrix eMat should be symmetric\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  size_t nbRow=TheEXT.rows();
+  size_t nbCol=TheEXT.cols();
+  using Tfield = typename overlying_field<T>::field_type;
+  // Preemptive check that the subset is adequate
+  auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
+    if (Vsubset.size() < nbCol)
+      return false;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
+    };
+    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_EXT : f3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+    return TheSol.TheRank == nbCol;
+  };
+  // Extension of the partial automorphism
+  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+    auto g1=[&](size_t iRow) -> MyVector<T> {
+      MyVector<T> V(nbCol);
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        V(iCol) = TheEXT(Vsubset[iRow], iCol);
+      return V;
+    };
+    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx, decltype(g1)>(Vsubset.size(), nbCol, g1, g1, Vin);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+    if (!test1.TheReply) {
+#ifdef TIMINGS
+      std::cerr << "|FCT_EXT : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+      return {false, {}};
+    }
+    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_EXT : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|FCT_EXT : f4(2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+    return test2;
+  };
+  // Extension of the partial canonicalization
+  auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+      size_t pos = Vsubset[PartOrd[iRow]];
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
+    };
+    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+    // Selecting the submatrix
+    MyMatrix<Tfield> M(nbCol,nbCol);
+    for (size_t iRow=0; iRow<nbCol; iRow++) {
+      size_t pos = Vsubset[ PartOrd[ TheSol.ListRowSelect[iRow]]];
+      for (size_t iCol=0; iCol<nbCol; iCol++)
+        M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
+    }
+    MyMatrix<Tfield> Minv = Inverse(M);
+    MyMatrix<Tfield> Mop = ConvertMatrixUniversal<Tfield,T>(TheEXT) * Minv;
+    std::vector<Tidx> ListIdx(nbRow);
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      ListIdx[iRow] = iRow;
+    std::sort(ListIdx.begin(), ListIdx.end(),
+              [&](size_t iRow, size_t jRow) -> bool {
+                for (size_t iCol=0; iCol<nbCol; iCol++) {
+                  if (Mop(iRow, iCol) < Mop(jRow,iCol))
+                    return true;
+                  if (Mop(iRow, iCol) > Mop(jRow,iCol))
+                    return false;
+                }
+                return false;
+              });
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|FCT_EXT : f5|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+    return ListIdx;
+  };
+  return f(nbRow, f1, f2, f3, f4, f5);
+}
+
+
+template<typename T, typename Tidx, typename Treturn, typename F>
+Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f)
+{
+  size_t nbCol=TheEXT.cols();
+  MyVector<T> V(nbCol);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (size_t jCol=0; jCol<nbCol; jCol++)
+        eSum += Qinput(iCol,jCol) * TheEXT(iRow, jCol);
+      V(iCol) = eSum;
+    }
+  };
+  auto f2=[&](size_t jRow) -> T {
+    T eSum=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eSum += V(iCol) * TheEXT(jRow, iCol);
+    return eSum;
+  };
+  using Tweight = T;
+  return FCT_EXT<T,Tweight,Tidx,Treturn>(TheEXT, f, f1, f2);
+}
+
+
+template<typename T, typename Tidx, typename Treturn, typename F>
+Treturn FCT_EXT_Qinv(MyMatrix<T> const& TheEXT, F f)
+{
+  MyMatrix<T> Qmat=GetQmatrix(TheEXT);
+  return FCT_EXT_Qinput<T,Tidx,Treturn,decltype(f)>(TheEXT, Qmat, f);
+}
+
+
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput)
+{
+  using Tidx = int16_t;
+  using Treturn = WeightMatrix<true, T, Tidx_value>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
+  };
+  return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+}
+
+template<typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
+{
+  using Tidx = int16_t;
+  using Treturn = WeightMatrix<true, T, Tidx_value>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
+  };
+  return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+}
+
+
+
+
+
+
+//
+// The antipodal configurations and the absolute trick
+//
+
+
+
+
 
 
 template<typename T, typename Tidx_value>
@@ -354,37 +522,6 @@ WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrixAntipodal(MyMatrix<T> con
   std::cerr << "|GetSimpleWeightMatrixAntipodal|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat, INP_ListWeight);
-}
-
-template<typename T, typename Tidx_value>
-WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qmat)
-{
-  size_t nbRow=TheEXT.rows();
-  size_t nbCol=TheEXT.cols();
-  MyVector<T> V(nbCol);
-  auto f1=[&](size_t iRow) -> void {
-    for (size_t iCol=0; iCol<nbCol; iCol++) {
-      T eSum=0;
-      for (size_t jCol=0; jCol<nbCol; jCol++)
-        eSum += Qmat(iCol,jCol) * TheEXT(iRow, jCol);
-      V(iCol) = eSum;
-    }
-  };
-  auto f2=[&](size_t jRow) -> T {
-    T eSum=0;
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      eSum += V(iCol) * TheEXT(jRow, iCol);
-    return eSum;
-  };
-  return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
-}
-
-
-template<typename T, typename Tidx_value>
-WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
-{
-  MyMatrix<T> Qmat=GetQmatrix(TheEXT);
-  return GetSimpleWeightMatrix<T,Tidx_value>(TheEXT, Qmat);
 }
 
 
@@ -1076,109 +1213,6 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 
-
-template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
-Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
-{
-#ifdef DEBUG
-  for (auto & eMat : ListMat) {
-    if (!IsSymmetricMatrix(eMat)) {
-      std::cerr << "The matrix eMat should be symmetric\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
-  size_t nbRow=TheEXT.rows();
-  size_t nbCol=TheEXT.cols();
-  using Tfield = typename overlying_field<T>::field_type;
-  // Preemptive check that the subset is adequate
-  auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
-    if (Vsubset.size() < nbCol)
-      return false;
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
-    };
-    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_ListMat_Subset : f3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-    return TheSol.TheRank == nbCol;
-  };
-  // Extension of the partial automorphism
-  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto g1=[&](size_t iRow) -> MyVector<T> {
-      MyVector<T> V(nbCol);
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        V(iCol) = TheEXT(Vsubset[iRow], iCol);
-      return V;
-    };
-    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx, decltype(g1)>(Vsubset.size(), nbCol, g1, g1, Vin);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
-    if (!test1.TheReply) {
-#ifdef TIMINGS
-      std::cerr << "|FCT_ListMat_Subset : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-      return {false, {}};
-    }
-    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_ListMat_Subset : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-    std::cerr << "|FCT_ListMat_Subset : f4(2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-    return test2;
-  };
-  // Extension of the partial canonicalization
-  auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
-      size_t pos = Vsubset[PartOrd[iRow]];
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
-    };
-    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-    // Selecting the submatrix
-    MyMatrix<Tfield> M(nbCol,nbCol);
-    for (size_t iRow=0; iRow<nbCol; iRow++) {
-      size_t pos = Vsubset[ PartOrd[ TheSol.ListRowSelect[iRow]]];
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
-    }
-    MyMatrix<Tfield> Minv = Inverse(M);
-    MyMatrix<Tfield> Mop = ConvertMatrixUniversal<Tfield,T>(TheEXT) * Minv;
-    std::vector<Tidx> ListIdx(nbRow);
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      ListIdx[iRow] = iRow;
-    std::sort(ListIdx.begin(), ListIdx.end(),
-              [&](size_t iRow, size_t jRow) -> bool {
-                for (size_t iCol=0; iCol<nbCol; iCol++) {
-                  if (Mop(iRow, iCol) < Mop(jRow,iCol))
-                    return true;
-                  if (Mop(iRow, iCol) > Mop(jRow,iCol))
-                    return false;
-                }
-                return false;
-              });
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_ListMat_Subset : f5|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-    return ListIdx;
-  };
-  return f(nbRow, f1, f2, f3, f4, f5);
-}
 
 
 
