@@ -376,6 +376,77 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 
 
 
+template<typename T, typename Tgroup>
+Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
+{
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
+  MyMatrix<T> EXTred=ColumnReduction(EXT);
+  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T,Tidx_value>(EXTred);
+  return GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
+}
+
+
+
+
+
+
+
+
+
+
+template<typename Tint>
+MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+{
+  using Tidx_value = int16_t;
+  using Tgr=GraphBitset;
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+
+  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrix<Tint,Tidx_value>(EXT);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+
+  WMat.ReorderingSetWeight();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+
+  std::vector<int> CanonicOrd = GetCanonicalizationVector_Kernel<Tint,Tgr,int>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+#endif
+
+  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    size_t j_row = CanonicOrd[i_row];
+    for (size_t i_col=0; i_col<n_cols; i_col++)
+      EXTreord(i_row, i_col) = EXT(j_row, i_col);
+  }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+#endif
+
+  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
+  return RedMat;
+}
+
+
+
+
+
 //
 // The antipodal configurations and the absolute trick
 //
@@ -1197,26 +1268,6 @@ WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& 
 
 
 
-
-
-template<typename T, typename Tgroup>
-Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
-{
-  using Tgr = GraphListAdj;
-  using Tidx_value = int16_t;
-  MyMatrix<T> EXTred=ColumnReduction(EXT);
-  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T,Tidx_value>(EXTred);
-  return GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
-}
-
-
-
-
-
-
-
-
-
 // ListMat is assumed to be symmetric
 template<typename T, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
@@ -1401,57 +1452,6 @@ EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(
   std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   return PairTest;
-}
-
-
-
-
-template<typename Tint>
-MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
-{
-  using Tidx_value = int16_t;
-  using Tgr=GraphBitset;
-  size_t n_rows = EXT.rows();
-  size_t n_cols = EXT.cols();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-
-  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrix<Tint,Tidx_value>(EXT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
-
-  WMat.ReorderingSetWeight();
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-#endif
-
-  std::vector<int> CanonicOrd = GetCanonicalizationVector_Kernel<Tint,Tgr,int>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-#endif
-
-  MyMatrix<Tint> EXTreord(n_rows, n_cols);
-  for (size_t i_row=0; i_row<n_rows; i_row++) {
-    size_t j_row = CanonicOrd[i_row];
-    for (size_t i_col=0; i_col<n_cols; i_col++)
-      EXTreord(i_row, i_col) = EXT(j_row, i_col);
-  }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-#endif
-
-  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
-#endif
-  return RedMat;
 }
 
 
