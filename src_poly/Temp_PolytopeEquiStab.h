@@ -889,16 +889,8 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
 
 
 //
-// Various construction of weighted matrix
+// Several asymmetric matrtices
 //
-
-
-
-
-
-
-
-
 
 // The matrices in ListMat do not have to be symmetric.
 template<typename T, typename Tint, typename Tidx_value>
@@ -932,8 +924,6 @@ WeightMatrix<false, std::vector<T>, Tidx_value> T_TranslateToMatrix_ListMat_SHV(
   };
   return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
 }
-
-
 
 
 template<bool is_symmetric, typename T, typename Tidx_value>
@@ -1003,6 +993,15 @@ WeightMatrix<false, std::vector<T>, Tidx_value> GetWeightMatrix_ListMatrix(std::
   };
   return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
 }
+
+
+
+
+
+//
+// Various construction of weighted matrix
+//
+
 
 
 
