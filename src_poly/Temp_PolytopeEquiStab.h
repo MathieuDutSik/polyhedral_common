@@ -376,17 +376,45 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 
 
 
-template<typename T, typename Tgroup>
+template<typename T, bool use_scheme, typename Tgroup>
 Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
+  size_t nbRow = EXT.rows();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T,Tidx_value>(EXTred);
-  return GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+#endif
+  using Treturn = std::vector<std::vector<Tidx>>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    if constexpr(use_scheme) {
+        return GetStabilizerWeightMatrix_Heuristic<T,Tidx>(nbRow, f1, f2, f3, f4);
+    } else {
+      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
+      return GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+    }
+  };
+  Treturn ListGen = FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXTred, f);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+#endif
+  std::vector<Telt> LGen;
+  for (auto & eList : ListGen)
+    LGen.push_back(Telt(eList));
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytope_Aut : ColumnReduction|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|LinPolytope_Aut : FCT_EXT_Qinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|LinPolytope_Aut : LGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return Tgroup(LGen, nbRow);
 }
-
-
 
 
 

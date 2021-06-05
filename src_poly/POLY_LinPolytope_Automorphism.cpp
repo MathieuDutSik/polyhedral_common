@@ -24,7 +24,8 @@ int main(int argc, char *argv[])
     int nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    Tgroup GRP = LinPolytope_Automorphism<T,Tgroup>(EXT);
+    const bool use_scheme = true;
+    Tgroup GRP = LinPolytope_Automorphism<T,use_scheme,Tgroup>(EXT);
     //
     std::ofstream os(argv[2]);
     WriteGroup(os, GRP);
