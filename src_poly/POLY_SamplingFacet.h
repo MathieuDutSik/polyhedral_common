@@ -13,8 +13,6 @@ struct recSamplingOption {
   std::string prog;
 };
 
-
-
 template<typename T>
 vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSamplingOption const& eOption, int & nbCall)
 {

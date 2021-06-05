@@ -1,29 +1,4 @@
-PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
-		  POLY_ThreadedADM \
-		  POLY_CreateAffineBasis \
-		  ComputeDelaunay \
-		  POLY_cdd_skeletons \
-		  POLY_redundancy \
-		  POLY_redundancyClarkson \
-		  POLY_redundancyClarksonBlocks \
-		  POLY_IntegralPoints \
-		  POLY_lcdd \
-		  POLY_lrs \
-		  POLY_lrs_set \
-		  POLY_lrs_set_reduction \
-		  POLY_lp_cdd \
-		  POLY_LinearDetermineByInequalities \
-		  POLY_LinearProgram \
-                  GRP_AutPolytope \
-                  GRP_TestEquivalenceSets \
-                  GRP_OrbitSplitting \
-                  GRP_VectorSplitting \
-                  GRP_ComputeAut_ListMat_Subset_EXT \
-                  GRP_TestEquivalence_ListMat_Subset_EXT \
-                  GRP_Invariant_ListMat_Subset_EXT \
-                  POLY_LinPolytope_Automorphism \
-		  POLY_ComputeEngelSymbol \
-		  POLY_FaceLatticeDirect
+PROGRAM		= Timing_NullspaceFacet
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
