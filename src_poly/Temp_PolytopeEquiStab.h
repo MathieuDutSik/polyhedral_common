@@ -900,19 +900,6 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
 
 
 
-
-template<typename T, typename Tidx_value>
-WeightMatrix<false, T, Tidx_value> T_TranslateToMatrix(MyMatrix<T> const& eMat)
-{
-  size_t nbRow=eMat.rows();
-  auto f=[&](size_t iRow, size_t iCol) -> T {
-    return eMat(iRow,iCol);
-  };
-  return WeightMatrix<false, T, Tidx_value>(nbRow, f);
-}
-
-
-
 // The matrices in ListMat do not have to be symmetric.
 template<typename T, typename Tint, typename Tidx_value>
 WeightMatrix<false, std::vector<T>, Tidx_value> T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV)
@@ -1019,32 +1006,6 @@ WeightMatrix<false, std::vector<T>, Tidx_value> GetWeightMatrix_ListMatrix(std::
 
 
 
-template<typename T, typename Tidx_value>
-WeightMatrix<true, T, Tidx_value> GetWeightMatrixGramMatShort(MyMatrix<T> const& TheGramMat, MyMatrix<int> const& ListShort)
-{
-  size_t nbShort=ListShort.rows();
-  size_t n=TheGramMat.rows();
-  MyVector<T> V(n);
-  auto f1=[&](size_t iShort) -> void {
-    for (size_t i=0; i<n; i++) {
-      T eSum = 0;
-      for (size_t j=0; j<n; j++)
-        eSum += TheGramMat(i,j) * ListShort(iShort, j);
-      V(i) = eSum;
-    }
-  };
-  auto f2=[&](size_t jShort) -> T {
-    T eScal = 0;
-    for (size_t i=0; i<n; i++)
-      eScal += V(i) * ListShort(jShort, i);
-    return eScal;
-  };
-  return WeightMatrix<true, T, Tidx_value>(nbShort, f1, f2);
-}
-
-
-
-
 template<typename T, typename Tint, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& qMat, MyMatrix<Tint> const& SHV)
 {
@@ -1117,7 +1078,6 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 
-// ListMat is assumed to be symmetric
 template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
 Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
 {
@@ -1224,7 +1184,7 @@ Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
 
 
 
-
+// ListMat is assumed to be symmetric
 template<typename T, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
 {
