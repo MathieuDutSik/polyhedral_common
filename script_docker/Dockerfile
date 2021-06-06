@@ -176,16 +176,4 @@ ENV MPI_CXX_LINK "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
 # Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common/src_ctype_mpi && make
-RUN cd GIT/polyhedral_common/src_perfect_mpi && make
-RUN cd GIT/polyhedral_common/src_latt && make
-RUN cd GIT/polyhedral_common/src_poly && make
-RUN cd GIT/polyhedral_common/src_poly && make -f Makefile_double_cddlib
-RUN cd GIT/polyhedral_common/src_copos && make
-RUN cd GIT/polyhedral_common/src_short && make
-RUN cd GIT/polyhedral_common/src_perfect && make
-RUN cd GIT/polyhedral_common/src_dualdesc && make
-RUN cd GIT/polyhedral_common/src_sparse_solver && make
-RUN cd GIT/polyhedral_common/src_spectra && make
-
-
+RUN cd GIT/polyhedral_common && ./compile.sh
