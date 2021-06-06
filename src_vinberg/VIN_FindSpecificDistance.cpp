@@ -1,3 +1,4 @@
+#include "Permlib_specific.h"
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
