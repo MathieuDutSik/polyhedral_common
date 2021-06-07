@@ -167,6 +167,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   size_t hS=Pairs_GetNeededN(nbMult);
   size_t nbVert=nbRow + 2;
   size_t nbVertTot=nbVert * hS;
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow << " nbVert=" << nbVert << " nbVertTot=" << nbVertTot << "\n";
+#endif
   //
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
@@ -282,10 +285,26 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     DT.ptn[pos] = 0;
   }
   //
+#ifdef DEBUG_SPECIFIC
+  std::vector<int> ListDegExpe1(nbVertTot,0);
+  std::vector<int> ListDegExpe2(nbVertTot,0);
+#endif
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
     DT.sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
+#ifdef DEBUG_SPECIFIC
+    ListDegExpe1[iVert]++;
+    ListDegExpe2[jVert]++;
+#endif
   };
+  for (size_t iVert=0; iVert<nbVert; iVert++)
+    for (size_t iH=0; iH<hS-1; iH++)
+      for (size_t jH=iH+1; jH<hS; jH++) {
+        size_t aVert=iVert + nbVert*iH;
+        size_t bVert=iVert + nbVert*jH;
+        f_adj(aVert, bVert);
+        f_adj(bVert, aVert);
+      }
   for (size_t iVert=0; iVert<nbVert-1; iVert++) {
     if (iVert < nbRow)
       f1(iVert);
@@ -321,6 +340,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
         }
     }
   }
+#ifdef DEBUG_SPECIFIC
+  for (size_t iVert=0; iVert<nbVertTot; iVert++) {
+    std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+  }
+#endif
   return DT;
 }
 
