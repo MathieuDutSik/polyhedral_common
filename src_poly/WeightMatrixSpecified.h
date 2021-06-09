@@ -341,9 +341,12 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     }
   }
 #ifdef DEBUG_SPECIFIC
+  int sum_adj = 0;
   for (size_t iVert=0; iVert<nbVertTot; iVert++) {
     std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+    sum_adj += ListDegExpe2[iVert];
   }
+  std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent << "\n";
 #endif
   return DT;
 }

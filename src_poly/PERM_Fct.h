@@ -104,9 +104,10 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
 {
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
+  std::cerr << "|EXT1|=" << n_rows << " / " << n_cols << "\n";
+  std::cerr << "|EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << "\n";
   MyMatrix<T> VectorContain(1,n_cols);
-  ContainerMatrix<T> Cont(EXT2);
-  Cont.SetPtr(&VectorContain);
+  ContainerMatrix<T> Cont(EXT2, VectorContain);
   //
   // We are testing if EXT1 P = perm(EXT2) 
   std::vector<Tidx> V(n_rows);
@@ -123,11 +124,13 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       VectorContain(0, i_col) = eSum2;
     }
     std::pair<bool, size_t> epair = Cont.GetIdx();
+    std::cerr << "i_row=" << i_row << " epair=" << epair.first << " / " << epair.second << "\n";
     if (!epair.first) {
       return {false,{}}; // We fail because the image does not belong to EXT2
     }
     V[i_row] = epair.second;
   }
+  std::cerr << "Returning the EquivTest and moving the vector\n";
   return {true, std::move(V)};
 }
 
