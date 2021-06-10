@@ -1,7 +1,7 @@
 
 
 GeneratePartialHypermetric:=function(n, n_orbit)
-    local ListOrbit, GRP, FAC, eRepr, eOrb, ListIneq, FileSave, output;
+    local ListOrbit, GRP, FAC, eRepr, eOrb, ListIneq, FileSave, output, ePerm, FAC_B;
     ListOrbit := GetOrbitInequalityHypermetricCone(n);
     Print("|ListOrbit|=", Length(ListOrbit), "\n");
     GRP:=SymmetricGroup(n);
@@ -13,9 +13,13 @@ GeneratePartialHypermetric:=function(n, n_orbit)
         Print("eRepr=", eRepr, " |ListIneq|=", Length(ListIneq), "\n");
         Append(FAC, ListIneq);
     od;
+    ePerm:=Random(GRP);
+    FAC_B:=Permuted(FAC, ePerm);
+    #
     FileSave:=Concatenation("HYPpartial_", String(n), "_", String(n_orbit));
+    RemoveFileIfExist(FileSave);
     output:=OutputTextFile(FileSave, true);
-    CPP_WriteMatrix(output, FAC);
+    CPP_WriteMatrix(output, FAC_B);
     CloseStream(output);
 end;
 

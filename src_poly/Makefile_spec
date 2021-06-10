@@ -8,7 +8,7 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_c_lcdd
-PROGRAM		= POLY_LinPolytope_Automorphism
+#PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
@@ -19,6 +19,7 @@ PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
+PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= POLY_GapFindHyperplaneRegions
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 

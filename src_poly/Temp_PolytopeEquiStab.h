@@ -422,36 +422,50 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 
-
-
-
-
-template<typename Tint>
-MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+template<typename T, bool use_scheme, typename Tidx>
+std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 {
   using Tidx_value = int16_t;
   using Tgr=GraphBitset;
-  size_t n_rows = EXT.rows();
-  size_t n_cols = EXT.cols();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
-  WeightMatrix<true, Tint, Tidx_value> WMat=GetWeightMatrix<Tint,Tidx_value>(EXT);
+  using Treturn = std::vector<Tidx>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    if constexpr(use_scheme) {
+      return GetGroupCanonicalizationVector_Heuristic<T,Tidx>(nbRow, f1, f2, f3, f4, f5).first;
+    } else {
+      WeightMatrix<true, T, Tidx_value> WMat(nbRow, f1, f2);
+      WMat.ReorderingSetWeight();
+      return GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(WMat).first;
+    }
+  };
+  std::vector<Tidx> CanonicOrd = FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXT, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|FCT_EXT_Qinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+  return CanonicOrd;
+}
 
-  WMat.ReorderingSetWeight();
+
+
+
+
+
+
+
+template<typename Tint, bool use_scheme>
+MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+{
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+  using Tidx = int16_t;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-
-  std::vector<int> CanonicOrd = GetCanonicalizationVector_Kernel<Tint,Tgr,int>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-#endif
-
+  std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<Tint,use_scheme,Tidx>(EXT);
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
     size_t j_row = CanonicOrd[i_row];
@@ -459,17 +473,14 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
       EXTreord(i_row, i_col) = EXT(j_row, i_col);
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm(EXTreord).second;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return RedMat;
 }

@@ -28,14 +28,9 @@ void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
   }
   os << "\n";
   //
-  os << "ListNbCase =";
-  for (auto & eNB : WMVS.ListNbCase)
-    os << " " << eNB;
-  os << "\n";
-  //
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     std::pair<int, std::vector<std::pair<int,int>>> eCase = WMVS.ListPossibleSignatures[iCase];
-    os << "iCase=" << iCase << "/" << nbCase << " eCase=" << eCase.first;
+    os << "iCase=" << iCase << "/" << nbCase << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase.first;
     os << " LV=";
     for (auto & eEnt : eCase.second) {
       os << " [" << eEnt.first << "," << eEnt.second << "]";
@@ -343,7 +338,12 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
 #ifdef DEBUG_SPECIFIC
   int sum_adj = 0;
   for (size_t iVert=0; iVert<nbVertTot; iVert++) {
-    std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+    int deg0 = DT.sg1.d[iVert];
+    int deg1 = ListDegExpe1[iVert];
+    int deg2 = ListDegExpe2[iVert];
+    if (deg0 != deg1 || deg0 != deg2 || deg1 != deg2) {
+      std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+    }
     sum_adj += ListDegExpe2[iVert];
   }
   std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent << "\n";
@@ -380,7 +380,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #endif
   int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT);
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT, nbRow);
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ePair.second) {
     std::vector<Tidx> eListO(nbRow);
@@ -457,7 +457,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
     }
     size_t nbRow_res = CurrentListIdx.size();
 #ifdef DEBUG_SPECIFIC
-    std::cerr << "idx=" << idx << " nbRow_res=" << nbRow_res << "\n";
+    std::cerr << "idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
 #endif
     //
     if (f3(CurrentListIdx)) {
@@ -549,7 +549,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
         }
       }
       if (IsCorrect) {
-        return {f5(ePair.first), LGen};
+        return {f5(CurrentListIdx, ePair.first), LGen};
       }
     }
   }

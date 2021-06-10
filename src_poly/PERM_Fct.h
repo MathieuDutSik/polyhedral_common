@@ -124,13 +124,11 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       VectorContain(0, i_col) = eSum2;
     }
     std::pair<bool, size_t> epair = Cont.GetIdx();
-    std::cerr << "i_row=" << i_row << " epair=" << epair.first << " / " << epair.second << "\n";
     if (!epair.first) {
       return {false,{}}; // We fail because the image does not belong to EXT2
     }
     V[i_row] = epair.second;
   }
-  std::cerr << "Returning the EquivTest and moving the vector\n";
   return {true, std::move(V)};
 }
 
