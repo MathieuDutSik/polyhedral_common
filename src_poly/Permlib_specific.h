@@ -185,7 +185,7 @@ private:
 public:
   using Tint = Tint_inp;
   using Telt = permlib::Permutation;
-  TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp)
+  TheGroupFormat(std::vector<permlib::Permutation> const& ListPerm, int const& n_inp) : n(n_inp)
   {
     std::vector<permlib::Permutation::ptr> generatorList;
     for (auto & eGen : ListPerm) {
@@ -194,7 +194,6 @@ public:
         v[i]=eGen.at(i);
       generatorList.push_back(permlib::Permutation::ptr(new permlib::Permutation(v)));
     }
-    n = n_inp;
     group = construct(n, generatorList.begin(), generatorList.end());
     e_size = group->order<Tint>();
   }
