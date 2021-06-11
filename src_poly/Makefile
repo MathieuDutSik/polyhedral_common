@@ -21,6 +21,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
                   GRP_TestEquivalence_ListMat_Subset_EXT \
                   GRP_Invariant_ListMat_Subset_EXT \
                   POLY_LinPolytope_Automorphism \
+                  POLY_LinPolytope_TestAutomorphism \
                   POLY_LinPolytope_Canonic \
                   POLY_LinPolytope_TestCanonic \
 		  POLY_ComputeEngelSymbol \
