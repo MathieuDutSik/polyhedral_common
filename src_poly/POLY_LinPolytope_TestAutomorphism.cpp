@@ -33,8 +33,11 @@ int main(int argc, char *argv[])
     //
     bool test = GRP1 == GRP2;
     if (!test) {
+      std::cerr << "test = False\n";
       std::cerr << "The groups are different. It is the clear bug\n";
       throw TerminalException{1};
+    } else {
+      std::cerr << "test = True\n";
     }
     std::cerr << "Normal termination of the program\n";
   }

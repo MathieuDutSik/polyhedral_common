@@ -4,16 +4,69 @@
 
 
 
+using SignVertex = std::pair<int, std::vector<std::pair<int,int>>>;
+
+
 template<typename T>
 struct WeightMatrixVertexSignatures {
   size_t nbRow;
   size_t nbWeight;
   std::vector<T> ListWeight;
-  std::vector<std::pair<int, std::vector<std::pair<int,int>>>> ListPossibleSignatures;
+  std::vector<SignVertex> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
   std::vector<int> ListNbCase;
 };
 
+
+template<typename T>
+std::vector<int> GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const& WMVS)
+{
+  size_t nbCase = WMVS.ListNbCase.size();
+  std::vector<int> ListIdx(nbCase);
+  for (size_t iCase=0; iCase<nbCase; iCase++)
+    ListIdx[iCase] = iCase;
+  auto fctComp=[](auto val1, auto val2) -> std::pair<bool,bool> {
+    if (val1 < val2)
+      return {true, true};
+    if (val1 > val2)
+      return {true, false};
+    return {false,true};
+  };
+  std::sort(ListIdx.begin(), ListIdx.end(),
+            [&](int idx1, int idx2) -> bool {
+              // First selection by the number of cases.
+              std::pair<bool,bool> test1 = fctComp(WMVS.ListNbCase[idx1], WMVS.ListNbCase[idx2]);
+              if (test1.first)
+                return test1.second;
+              // The cases with high number of cases are preferable.
+              size_t len1 = WMVS.ListPossibleSignatures[idx1].second.size();
+              size_t len2 = WMVS.ListPossibleSignatures[idx2].second.size();
+              std::pair<bool,bool> test2 = fctComp(len2, len1);
+              if (test2.first)
+                return test2.second;
+              // Now the order does not really matter for speed but it has to be
+              // fully unicized for the canonical form.
+              // Now going after the diagonal value
+              int val1 = WMVS.ListPossibleSignatures[idx1].first;
+              int val2 = WMVS.ListPossibleSignatures[idx2].first;
+              std::pair<bool,bool> test3 = fctComp(val1, val2);
+              if (test3.first)
+                return test3.second;
+              // Now after the values
+              std::vector<std::pair<int,int>>& list_pair1 = WMVS.ListPossibleSignatures[idx1].second;
+              std::vector<std::pair<int,int>>& list_pair2 = WMVS.ListPossibleSignatures[idx2].second;
+              for (size_t i=0; i<len1; i++) {
+                std::pair<bool,bool> test4 = fctComp(list_pair1[i].first, list_pair2[i].first);
+                if (test4.first)
+                  return test4.second;
+                std::pair<bool,bool> test5 = fctComp(list_pair1[i].second, list_pair2[i].second);
+                if (test5.first)
+                  return test5.second;
+              }
+              return false;
+            });
+  return ListIdx;
+}
 
 
 
@@ -29,7 +82,7 @@ void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
   os << "\n";
   //
   for (size_t iCase=0; iCase<nbCase; iCase++) {
-    std::pair<int, std::vector<std::pair<int,int>>> eCase = WMVS.ListPossibleSignatures[iCase];
+    SignVertex eCase = WMVS.ListPossibleSignatures[iCase];
     os << "iCase=" << iCase << "/" << nbCase << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase.first;
     os << " LV=";
     for (auto & eEnt : eCase.second) {
@@ -57,11 +110,10 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     return idx - 1;
   };
 
-  using Tvertex_signature = std::pair<int, std::vector<std::pair<int,int>>>;
-  std::unordered_map<Tvertex_signature,int> ValueMap_Tvs;
-  std::vector<Tvertex_signature> ListPossibleSignatures;
+  std::unordered_map<SignVertex,int> ValueMap_Tvs;
+  std::vector<SignVertex> ListPossibleSignatures;
   int idxSign = 0;
-  auto get_Tvs_idx=[&](Tvertex_signature const& esign) -> int {
+  auto get_Tvs_idx=[&](SignVertex const& esign) -> int {
     int& idx = ValueMap_Tvs[esign];
     if (idx == 0) { // value is missing
       idxSign++;
@@ -87,7 +139,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     std::vector<std::pair<int,int>> list_pair;
     for (auto & kv : map_mult)
       list_pair.push_back({kv.first, kv.second});
-    std::pair<int, std::vector<std::pair<int,int>>> e_pair{idx_specific, list_pair};
+    SignVertex e_pair{idx_specific, list_pair};
     int idx_sign = get_Tvs_idx(e_pair);
     ListSignatureByVertex[iRow] = idx_sign;
   }
@@ -126,7 +178,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
   }
   WMVS.ListWeight = NewListWeight;
   // Changing the list of signatures
-  std::vector<std::pair<int, std::vector<std::pair<int,int>>>> NewListPossibleSignatures;
+  std::vector<SignVertex> NewListPossibleSignatures;
   for (auto & ePossSignature : WMVS.ListPossibleSignatures) {
     int NewDiag = g[ePossSignature.first];
     std::map<int,int> NewMap_mult;
@@ -139,7 +191,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
     std::vector<std::pair<int,int>> NewList_pair;
     for (auto & kv : NewMap_mult)
       NewList_pair.push_back({kv.first, kv.second});
-    std::pair<int, std::vector<std::pair<int,int>>> e_pair{NewDiag, NewList_pair};
+    SignVertex e_pair{NewDiag, NewList_pair};
     NewListPossibleSignatures.push_back(e_pair);
   }
   WMVS.ListPossibleSignatures=NewListPossibleSignatures;
@@ -433,12 +485,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   PrintWMVS(std::cerr, WMVS);
 #endif
   size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListIdx;
-  for (size_t iCase=0; iCase<nbCase; iCase++)
-    ListIdx.push_back(iCase);
-  std::sort(ListIdx.begin(), ListIdx.end(),
-            [&](int idx1, int idx2) -> bool {
-              return WMVS.ListNbCase[idx1] < WMVS.ListNbCase[idx2];});
+  std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
 #ifdef DEBUG_SPECIFIC
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << ListIdx[iCase] << "\n";
@@ -507,13 +554,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
   RenormalizeWMVS(WMVS);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListIdx;
-  for (size_t iCase=0; iCase<nbCase; iCase++)
-    ListIdx.push_back(iCase);
-  std::sort(ListIdx.begin(), ListIdx.end(),
-            [&](int idx1, int idx2) -> bool {
-              return WMVS.ListNbCase[idx1] < WMVS.ListNbCase[idx2];});
-
+  std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
   for (size_t idx=1; idx<nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
     for (size_t u=0; u<=idx; u++)
