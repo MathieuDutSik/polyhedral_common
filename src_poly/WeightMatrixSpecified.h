@@ -53,8 +53,8 @@ std::vector<int> GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const& WMVS
               if (test3.first)
                 return test3.second;
               // Now after the values
-              std::vector<std::pair<int,int>>& list_pair1 = WMVS.ListPossibleSignatures[idx1].second;
-              std::vector<std::pair<int,int>>& list_pair2 = WMVS.ListPossibleSignatures[idx2].second;
+              const std::vector<std::pair<int,int>>& list_pair1 = WMVS.ListPossibleSignatures[idx1].second;
+              const std::vector<std::pair<int,int>>& list_pair2 = WMVS.ListPossibleSignatures[idx2].second;
               for (size_t i=0; i<len1; i++) {
                 std::pair<bool,bool> test4 = fctComp(list_pair1[i].first, list_pair2[i].first);
                 if (test4.first)
