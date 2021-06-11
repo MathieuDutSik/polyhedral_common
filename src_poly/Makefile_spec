@@ -20,7 +20,8 @@
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
-PROGRAM		= POLY_LinPolytope_TestAutomorphism
+#PROGRAM		= POLY_LinPolytope_TestAutomorphism
+PROGRAM		= POLY_LinPolytope_TestCanonic
 #PROGRAM		= POLY_GapFindHyperplaneRegions
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 

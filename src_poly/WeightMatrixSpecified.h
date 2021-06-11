@@ -555,9 +555,9 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
   RenormalizeWMVS(WMVS);
   size_t nbCase = WMVS.ListPossibleSignatures.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
-  for (size_t idx=1; idx<nbCase; idx++) {
+  for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
-    for (size_t u=0; u<=idx; u++)
+    for (size_t u=0; u<idx; u++)
       StatusCase[ListIdx[u]] = 1;
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
