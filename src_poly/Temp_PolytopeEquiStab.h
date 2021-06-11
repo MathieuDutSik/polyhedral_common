@@ -396,8 +396,8 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
     if constexpr(use_scheme) {
         return GetStabilizerWeightMatrix_Heuristic<T,Tidx>(nbRow, f1, f2, f3, f4);
     } else {
-      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
-      return GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+      WeightMatrix<true, T, Tidx_value> WMat(nbRow, f1, f2);
+      return GetStabilizerWeightMatrix_Kernel<T,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
   Treturn ListGen = FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXTred, f);
