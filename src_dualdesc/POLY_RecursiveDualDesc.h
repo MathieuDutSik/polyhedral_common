@@ -7,6 +7,7 @@
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "GRP_GroupFct.h"
+#include "MAT_MatrixInt.h"
 
 #include "POLY_GAP.h"
 #include "POLY_netcdf_file.h"
@@ -194,11 +195,8 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
     Tidx j_row=CanonicOrd[i_row];
     EXTcan.row(i_row) = EXT.row(j_row);
   }
-  MyMatrix<T> RowRed = RowReduction(EXTcan);
-  MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
-  //
-  return {std::move(EXTretB), std::move(CanonicOrd)};
+  MyMatrix<T> EXTret = CanonicalizeOrderedMatrix(EXTcan);
+  return {std::move(EXTret), std::move(CanonicOrd)};
 }
 
 

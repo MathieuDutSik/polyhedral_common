@@ -453,9 +453,6 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 
 
 
-
-
-
 template<typename Tint, bool use_scheme>
 MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 {
@@ -475,7 +472,8 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
 
-  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
+  //  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
+  MyMatrix<Tint> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -907,9 +905,9 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-  EquivTest<MyMatrix<Tint>> EauivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
-  if (EauivTest.TheReply) {
-    return EauivTest.TheEquiv;
+  EquivTest<MyMatrix<Tint>> EquivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
+  if (EquivTest.TheReply) {
+    return EquivTest.TheEquiv;
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -946,15 +944,13 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
     if (res == 0) {
       if (IsIncluded[pos] == 0) {
         IsIncluded[pos]=1;
-        for (size_t i_col=0; i_col<n_cols; i_col++)
-          EXTreord(idx, i_col) = EXT(pos, i_col);
+        EXTreord.row(idx) = EXT.row(pos);
         idx++;
       }
     } else {
       if (IsIncluded[pos] == 0) {
         IsIncluded[pos]=1;
-        for (size_t i_col=0; i_col<n_cols; i_col++)
-          EXTreord(idx, i_col) = -EXT(pos, i_col);
+        EXTreord.row(idx) = - EXT.row(pos);
         idx++;
       }
     }
