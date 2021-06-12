@@ -76,8 +76,8 @@ void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
   size_t nbCase = WMVS.ListNbCase.size();
   os << "nbRow=" << WMVS.nbRow << " nbWeight=" << WMVS.nbWeight << " nbCase=" << nbCase << "\n";
   os << "ListWeight =";
-  for (auto & eVal : WMVS.ListWeight) {
-    os << " " << eVal;
+  for (size_t iWei=0; iWei<WMVS.nbWeight; iWei++) {
+    os << " (" << iWei << "," << WMVS.ListWeight[iWei] << ")";
   }
   os << "\n";
   //
@@ -389,16 +389,22 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   }
 #ifdef DEBUG_SPECIFIC
   int sum_adj = 0;
+  int nb_error = 0;
   for (size_t iVert=0; iVert<nbVertTot; iVert++) {
     int deg0 = DT.sg1.d[iVert];
     int deg1 = ListDegExpe1[iVert];
     int deg2 = ListDegExpe2[iVert];
     if (deg0 != deg1 || deg0 != deg2 || deg1 != deg2) {
       std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+      nb_error++;
     }
     sum_adj += ListDegExpe2[iVert];
   }
   std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent << "\n";
+  if (nb_error > 0) {
+    std::cerr << "nb_error=" << nb_error << "\n";
+    throw TerminalException{1};
+  }
 #endif
   return DT;
 }
@@ -553,6 +559,10 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
 {
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
   RenormalizeWMVS(WMVS);
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "WMVS=\n";
+  PrintWMVS(std::cerr, WMVS);
+#endif
   size_t nbCase = WMVS.ListPossibleSignatures.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
   for (size_t idx=1; idx<=nbCase; idx++) {
@@ -566,6 +576,9 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
         CurrentListIdx.push_back(iRow);
     }
     size_t nbRow_res = CurrentListIdx.size();
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "|CurrentListIdx|=" << nbRow_res << "\n";
+#endif
     //
     if (f3(CurrentListIdx)) {
       auto f1_res = [&](size_t iRow) -> void {
@@ -576,6 +589,10 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicali
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
       RenormalizeWMVS(WMVS_res);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "WMVS_res=\n";
+      PrintWMVS(std::cerr, WMVS_res);
+#endif
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
