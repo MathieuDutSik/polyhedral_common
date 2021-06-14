@@ -478,7 +478,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
   MyMatrix<Tint> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|CanonicOrdering + EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
   std::cerr << "|CanonicalizeOrderedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return RedMat;
