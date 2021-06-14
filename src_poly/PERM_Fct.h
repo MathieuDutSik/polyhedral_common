@@ -87,12 +87,10 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
     MyVector<T> V2 = f2(iRowImg);
     for (size_t iCol=0; iCol<nbCol; iCol++) {
       Tfield eSum = - V2(iCol);
-      for (size_t jRow=0; jRow<nbCol; jRow++) {
+      for (size_t jRow=0; jRow<nbCol; jRow++)
         eSum += EqMat(jRow,iCol) * V1(jRow);
-      }
-      if (eSum != 0) {
+      if (eSum != 0)
         return {false, {}};
-      }
     }
   }
   return {true, EqMat};
