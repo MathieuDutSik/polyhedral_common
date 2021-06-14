@@ -120,7 +120,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
       idx = idxSign;
       ListPossibleSignatures.push_back(esign);
     }
-    return idxSign - 1;
+    return idx - 1;
   };
   std::vector<int> ListSignatureByVertex(nbRow);
   for (size_t iRow=0; iRow<nbRow; iRow++) {
@@ -141,6 +141,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
       list_pair.push_back({kv.first, kv.second});
     SignVertex e_pair{idx_specific, list_pair};
     int idx_sign = get_Tvs_idx(e_pair);
+    std::cerr << "idx_sign=" << idx_sign << "\n";
     ListSignatureByVertex[iRow] = idx_sign;
   }
   size_t nbWeight = ListWeight.size();
@@ -558,9 +559,13 @@ template<typename T, typename Tidx, typename F1, typename F2, typename F3, typen
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "Before Renormalize WMVS=\n";
+  PrintWMVS(std::cerr, WMVS);
+#endif
   RenormalizeWMVS(WMVS);
 #ifdef DEBUG_SPECIFIC
-  std::cerr << "WMVS=\n";
+  std::cerr << "After Renormalize WMVS=\n";
   PrintWMVS(std::cerr, WMVS);
 #endif
   size_t nbCase = WMVS.ListPossibleSignatures.size();
