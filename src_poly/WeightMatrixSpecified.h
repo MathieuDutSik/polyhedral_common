@@ -21,6 +21,9 @@ struct WeightMatrixVertexSignatures {
 template<typename T>
 std::vector<int> GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const& WMVS)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   size_t nbCase = WMVS.ListNbCase.size();
   std::vector<int> ListIdx(nbCase);
   for (size_t iCase=0; iCase<nbCase; iCase++)
@@ -65,6 +68,10 @@ std::vector<int> GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const& WMVS
               }
               return false;
             });
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetOrdering_ListIdx|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   return ListIdx;
 }
 
@@ -97,6 +104,9 @@ void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
 template<typename T, typename F1, typename F2>
 WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   std::unordered_map<T,int> ValueMap_T;
   std::vector<T> ListWeight;
   int idxWeight = 0;
@@ -141,7 +151,6 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
       list_pair.push_back({kv.first, kv.second});
     SignVertex e_pair{idx_specific, list_pair};
     int idx_sign = get_Tvs_idx(e_pair);
-    std::cerr << "idx_sign=" << idx_sign << "\n";
     ListSignatureByVertex[iRow] = idx_sign;
   }
   size_t nbWeight = ListWeight.size();
@@ -152,6 +161,10 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     int iCase = ListSignatureByVertex[iRow];
     ListNbCase[iCase]++;
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeVertexSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   return {nbRow, nbWeight, std::move(ListWeight), std::move(ListPossibleSignatures), std::move(ListSignatureByVertex), std::move(ListNbCase)};
 }
 
@@ -159,6 +172,9 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 template<typename T>
 void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   // Building the permutation on the weights
   std::map<T, int> map;
   size_t n_Wei = WMVS.nbWeight;
@@ -196,6 +212,10 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
     NewListPossibleSignatures.push_back(e_pair);
   }
   WMVS.ListPossibleSignatures=NewListPossibleSignatures;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|RenormalizeWMVS|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
 }
 
 
@@ -203,6 +223,9 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
 template<typename T, typename Tidx, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
   std::vector<T> const& ListWeight = WMVS.ListWeight;
@@ -407,6 +430,10 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     throw TerminalException{1};
   }
 #endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetDataTraces|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   return DT;
 }
 
@@ -448,10 +475,14 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     LGen.push_back(eListO);
   }
   //
-  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetGroupCanonicalization_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|GetDataTraces + CanonicalListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|GetCanonicalizationVector_KernelBis|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return {std::move(MapVectRev2), std::move(LGen)};
 }
@@ -469,7 +500,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
   std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetStabilizerWeightMatrix_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|GetDataTraces + GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return ListGen;
 }

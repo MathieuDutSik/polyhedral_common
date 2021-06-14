@@ -104,8 +104,6 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
 {
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
-  std::cerr << "|EXT1|=" << n_rows << " / " << n_cols << "\n";
-  std::cerr << "|EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << "\n";
   MyMatrix<T> VectorContain(1,n_cols);
   ContainerMatrix<T> Cont(EXT2, VectorContain);
   //

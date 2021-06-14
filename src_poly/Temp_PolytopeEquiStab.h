@@ -292,8 +292,10 @@ Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
       for (size_t iCol=0; iCol<nbCol; iCol++)
         M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
     }
-    MyMatrix<Tfield> Minv = Inverse(M);
-    MyMatrix<Tfield> Mop = ConvertMatrixUniversal<Tfield,T>(TheEXT) * Minv;
+    MyMatrix<Tfield> Minv0 = Inverse(M);
+    MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
+    MyMatrix<T> Minv2 = ConvertMatrixUniversal<T, Tfield>(Minv1);
+    MyMatrix<T> Mop = TheEXT * Minv2;
     std::vector<Tidx> ListIdx(nbRow);
     for (size_t iRow=0; iRow<nbRow; iRow++)
       ListIdx[iRow] = iRow;
@@ -477,7 +479,7 @@ MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "|EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|ComputeColHermiteNormalForm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "|CanonicalizeOrderedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   return RedMat;
 }
