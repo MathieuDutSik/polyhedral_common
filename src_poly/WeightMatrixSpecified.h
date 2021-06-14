@@ -4,7 +4,7 @@
 
 
 
-using SignVertex = std::pair<int, std::vector<std::pair<int,int>>>;
+using SignVertex = std::vector<int>;
 
 
 template<typename T>
@@ -42,29 +42,20 @@ std::vector<int> GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const& WMVS
               if (test1.first)
                 return test1.second;
               // The cases with high number of cases are preferable.
-              size_t len1 = WMVS.ListPossibleSignatures[idx1].second.size();
-              size_t len2 = WMVS.ListPossibleSignatures[idx2].second.size();
+              size_t len1 = WMVS.ListPossibleSignatures[idx1].size();
+              size_t len2 = WMVS.ListPossibleSignatures[idx2].size();
               std::pair<bool,bool> test2 = fctComp(len2, len1);
               if (test2.first)
                 return test2.second;
               // Now the order does not really matter for speed but it has to be
               // fully unicized for the canonical form.
               // Now going after the diagonal value
-              int val1 = WMVS.ListPossibleSignatures[idx1].first;
-              int val2 = WMVS.ListPossibleSignatures[idx2].first;
-              std::pair<bool,bool> test3 = fctComp(val1, val2);
-              if (test3.first)
-                return test3.second;
-              // Now after the values
-              const std::vector<std::pair<int,int>>& list_pair1 = WMVS.ListPossibleSignatures[idx1].second;
-              const std::vector<std::pair<int,int>>& list_pair2 = WMVS.ListPossibleSignatures[idx2].second;
+              const std::vector<int>& list_pair1 = WMVS.ListPossibleSignatures[idx1];
+              const std::vector<int>& list_pair2 = WMVS.ListPossibleSignatures[idx2];
               for (size_t i=0; i<len1; i++) {
-                std::pair<bool,bool> test4 = fctComp(list_pair1[i].first, list_pair2[i].first);
+                std::pair<bool,bool> test4 = fctComp(list_pair1[i], list_pair2[i]);
                 if (test4.first)
                   return test4.second;
-                std::pair<bool,bool> test5 = fctComp(list_pair1[i].second, list_pair2[i].second);
-                if (test5.first)
-                  return test5.second;
               }
               return false;
             });
@@ -90,10 +81,13 @@ void PrintWMVS(std::ostream & os, WeightMatrixVertexSignatures<T> const& WMVS)
   //
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     SignVertex eCase = WMVS.ListPossibleSignatures[iCase];
-    os << "iCase=" << iCase << "/" << nbCase << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase.first;
+    os << "iCase=" << iCase << "/" << nbCase << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase[0];
+    size_t len = eCase.size() / 2;
     os << " LV=";
-    for (auto & eEnt : eCase.second) {
-      os << " [" << eEnt.first << "," << eEnt.second << "]";
+    for (size_t i=0; i<len; i++) {
+      int first = eCase[1 + 2*i];
+      int second = eCase[2 + 2*i];
+      os << " [" << first << "," << second << "]";
     }
     os << "\n";
   }
@@ -152,12 +146,14 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
         idx_specific = idx;
       }
     }
-    std::vector<std::pair<int,int>> list_pair;
+    std::vector<int> esign;
+    esign.push_back(idx_specific);
     for (int u=0; u<len; u++)
-      if (list_mult[u] > 0)
-        list_pair.push_back({u, list_mult[u]});
-    SignVertex e_pair{idx_specific, list_pair};
-    int idx_sign = get_Tvs_idx(e_pair);
+      if (list_mult[u] > 0) {
+        esign.push_back(u);
+        esign.push_back(list_mult[u]);
+      }
+    int idx_sign = get_Tvs_idx(esign);
     ListSignatureByVertex[iRow] = idx_sign;
   }
   size_t nbWeight = ListWeight.size();
@@ -204,19 +200,23 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
   // Changing the list of signatures
   std::vector<SignVertex> NewListPossibleSignatures;
   for (auto & ePossSignature : WMVS.ListPossibleSignatures) {
-    int NewDiag = g[ePossSignature.first];
-    std::map<int,int> NewMap_mult;
-    for (int i=0; i<int(ePossSignature.second.size()); i++) {
-      std::pair<int,int> ePair = ePossSignature.second[i];
-      int NewVal = g[ePair.first];
-      int eMult = ePair.second;
-      NewMap_mult[NewVal] = eMult;
+    int NewDiag = g[ePossSignature[0]];
+    size_t len = ePossSignature.size() / 2;
+    std::vector<int> list_mult(n_Wei, 0);
+    for (size_t i=0; i<len; i++) {
+      int NewVal = g[ePossSignature[1 + 2*i]];
+      int eMult = ePossSignature[2 + 2*i];
+      list_mult[NewVal] = eMult;
     }
-    std::vector<std::pair<int,int>> NewList_pair;
-    for (auto & kv : NewMap_mult)
-      NewList_pair.push_back({kv.first, kv.second});
-    SignVertex e_pair{NewDiag, NewList_pair};
-    NewListPossibleSignatures.push_back(e_pair);
+    //
+    std::vector<int> newsign;
+    newsign.push_back(NewDiag);
+    for (size_t i=0; i<len; i++)
+      if (list_mult[i] > 0) {
+        newsign.push_back(i);
+        newsign.push_back(list_mult[i]);
+      }
+    NewListPossibleSignatures.push_back(newsign);
   }
   WMVS.ListPossibleSignatures=NewListPossibleSignatures;
 #ifdef TIMINGS
@@ -255,8 +255,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   // Now building the list of possibilities for the 2 added vertices
   //
   std::vector<std::vector<std::pair<int,int>>> new_list_signature;
-  for (auto & e_pair : WMVS.ListPossibleSignatures) {
-    std::vector<std::pair<int,int>> e_vect = e_pair.second;
+  for (auto & esign : WMVS.ListPossibleSignatures) {
+    std::vector<std::pair<int,int>> e_vect;
+    size_t len = esign.size() / 2;
+    for (size_t u=0; u<len; u++)
+      e_vect.push_back({esign[1 + 2*u], esign[2 + 2*u]});
     auto fInsert=[&](int e_val) -> void {
       for (auto & e_pair : e_vect) {
         if (e_pair.first == e_val) {
@@ -266,7 +269,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
       }
       e_vect.push_back({e_val,1});
     };
-    fInsert(e_pair.first);
+    fInsert(esign[0]);
     fInsert(nbWeight + 1);
     new_list_signature.push_back(e_vect);
   }
@@ -274,7 +277,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   std::map<int,int> map_vert_nRow;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     int isign = WMVS.ListSignatureByVertex[iRow];
-    int iweight_specific = WMVS.ListPossibleSignatures[isign].first;
+    int iweight_specific = WMVS.ListPossibleSignatures[isign][0];
     map_vert_nRow[iweight_specific]++;
   }
   map_vert_nRow[nbWeight]++;
