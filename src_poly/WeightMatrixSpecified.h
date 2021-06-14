@@ -127,10 +127,10 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     return idx - 1;
   };
   std::vector<int> ListSignatureByVertex(nbRow);
+  int len = 0;
+  std::vector<int> list_mult;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
-    int len = ListPossibleSignatures.size();
-    std::vector<int> list_mult(len, 0);
     int idx_specific;
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       T val = f2(jRow);
@@ -152,6 +152,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
       if (list_mult[u] > 0) {
         esign.push_back(u);
         esign.push_back(list_mult[u]);
+        list_mult[u] = 0;
       }
     int idx_sign = get_Tvs_idx(esign);
     ListSignatureByVertex[iRow] = idx_sign;
