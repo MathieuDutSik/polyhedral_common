@@ -2,6 +2,42 @@
 #define INCLUDE_WEIGHT_MATRIX_SPECIFIED_H
 
 
+// The hash map do not seem to make much difference in the overall
+// performance. 
+
+//#define UNORDERED_MAP
+//#define TSL_SPARSE_MAP
+//#define TSL_ROBIN_MAP
+#define TSL_HOPSCOTCH_MAP
+
+#ifdef UNORDERED_MAP
+# include <unordered_map>
+# include <unordered_set>
+# define UNORD_MAP std::unordered_map
+# define UNORD_SET std::unordered_set
+#endif
+
+#ifdef TSL_SPARSE_MAP
+# include "sparse_map.h"
+# include "sparse_set.h"
+# define UNORD_MAP tsl::sparse_map
+# define UNORD_SET tsl::sparse_set
+#endif
+
+#ifdef TSL_ROBIN_MAP
+# include "robin_map.h"
+# include "robin_set.h"
+# define UNORD_MAP tsl::robin_map
+# define UNORD_SET tsl::robin_set
+#endif
+
+#ifdef TSL_HOPSCOTCH_MAP
+# include "hopscotch_map.h"
+# include "hopscotch_set.h"
+# define UNORD_MAP tsl::hopscotch_map
+# define UNORD_SET tsl::hopscotch_set
+#endif
+
 
 
 using SignVertex = std::vector<int>;
@@ -101,7 +137,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  std::unordered_map<T,int> ValueMap_T;
+  UNORD_MAP<T,int> ValueMap_T;
   std::vector<T> ListWeight;
   int idxWeight = 0;
   auto get_T_idx=[&](T eval) -> int {
@@ -114,7 +150,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     return idx - 1;
   };
 
-  std::unordered_map<SignVertex,int> ValueMap_Tvs;
+  UNORD_MAP<SignVertex,int> ValueMap_Tvs;
   std::vector<SignVertex> ListPossibleSignatures;
   int idxSign = 0;
   auto get_Tvs_idx=[&](SignVertex const& esign) -> int {
@@ -129,24 +165,23 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
   std::vector<int> ListSignatureByVertex(nbRow);
   int len = 0;
   std::vector<int> list_mult;
+  std::vector<int> esign;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
     int idx_specific;
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       T val = f2(jRow);
       int idx = get_T_idx(val);
+      if (idx == len) {
+        list_mult.push_back(0);
+        len++;
+      }
       if (iRow != jRow) {
-        if (idx >= len) {
-          for (int u=len; u<=idx; u++)
-            list_mult.push_back(0);
-          len = idx + 1;
-        }
         list_mult[idx]++;
       } else {
         idx_specific = idx;
       }
     }
-    std::vector<int> esign;
     esign.push_back(idx_specific);
     for (int u=0; u<len; u++)
       if (list_mult[u] > 0) {
@@ -155,6 +190,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
         list_mult[u] = 0;
       }
     int idx_sign = get_Tvs_idx(esign);
+    esign.clear();
     ListSignatureByVertex[iRow] = idx_sign;
   }
   size_t nbWeight = ListWeight.size();
@@ -336,11 +372,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     int iCase = list_signature[i];
     ListNbCase[iCase]++;
   }
-  for (size_t iCase=0; iCase<nbCase; iCase++) {
-    for (size_t iH=0; iH<hS; iH++) {
+  for (size_t iCase=0; iCase<nbCase; iCase++)
+    for (size_t iH=0; iH<hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
-    }
-  }
   DataTraces DT(nbVertTot, nbAdjacent);
   // Now setting up the adjacencies
   int pos=0;
@@ -435,7 +469,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     }
     sum_adj += ListDegExpe2[iVert];
   }
-  std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent << "\n";
+  double frac_adj = double(sum_adj) / (double(nbVertTot) * double(nbVertTot-1));
+  std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent << " frac_adj=" << frac_adj << "\n";
   if (nb_error > 0) {
     std::cerr << "nb_error=" << nb_error << "\n";
     throw TerminalException{1};
@@ -601,13 +636,9 @@ template<typename T, typename Tidx, typename F1, typename F2, typename F3, typen
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
-#ifdef DEBUG_SPECIFIC
-  std::cerr << "Before Renormalize WMVS=\n";
-  PrintWMVS(std::cerr, WMVS);
-#endif
   RenormalizeWMVS(WMVS);
 #ifdef DEBUG_SPECIFIC
-  std::cerr << "After Renormalize WMVS=\n";
+  std::cerr << "WMVS=\n";
   PrintWMVS(std::cerr, WMVS);
 #endif
   size_t nbCase = WMVS.ListPossibleSignatures.size();
