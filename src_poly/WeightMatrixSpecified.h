@@ -609,9 +609,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       std::vector<std::vector<Tidx>> LGen;
       for (auto & eList : ListGen) {
         if (IsCorrect) {
-          std::cerr << "Before call to f4\n";
           EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
-          std::cerr << "After call to f4\n";
           if (test.TheReply) {
             LGen.push_back(test.TheEquiv);
           } else {

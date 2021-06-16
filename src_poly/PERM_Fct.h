@@ -107,6 +107,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
   //
   // We are testing if EXT1 P = perm(EXT2) 
   std::vector<Tidx> V(n_rows);
+  Face f(n_rows);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
     for (size_t i_col=0; i_col<n_cols; i_col++) {
       Tfield eSum1 = 0;
@@ -123,6 +124,15 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       return {false,{}}; // We fail because the image does not belong to EXT2
     }
     V[i_row] = epair.second;
+    f[epair.second] = 1;
+  }
+  int n_error=0;
+  for (size_t i_row=0; i_row<n_rows; i_row++)
+    if (f[i_row] == 0)
+      n_error++;
+  if (n_error > 0) {
+    std::cerr << "We found several errors. n_error=" << n_error << "\n";
+    throw TerminalException{1};
   }
   return {true, std::move(V)};
 }
