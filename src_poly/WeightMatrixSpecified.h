@@ -5,37 +5,37 @@
 // The hash map do not seem to make much difference in the overall
 // performance. 
 
-//#define UNORDERED_MAP
-//#define TSL_SPARSE_MAP
-//#define TSL_ROBIN_MAP
-#define TSL_HOPSCOTCH_MAP
+//#define UNORDERED_MAP_SPECIFIC
+//#define TSL_SPARSE_MAP_SPECIFIC
+//#define TSL_ROBIN_MAP_SPECIFIC
+#define TSL_HOPSCOTCH_MAP_SPECIFIC
 
-#ifdef UNORDERED_MAP
+#ifdef UNORDERED_MAP_SPECIFIC
 # include <unordered_map>
 # include <unordered_set>
-# define UNORD_MAP std::unordered_map
-# define UNORD_SET std::unordered_set
+# define UNORD_MAP_SPECIFIC std::unordered_map
+# define UNORD_SET_SPECIFIC std::unordered_set
 #endif
 
-#ifdef TSL_SPARSE_MAP
+#ifdef TSL_SPARSE_MAP_SPECIFIC
 # include "sparse_map.h"
 # include "sparse_set.h"
-# define UNORD_MAP tsl::sparse_map
-# define UNORD_SET tsl::sparse_set
+# define UNORD_MAP_SPECIFIC tsl::sparse_map
+# define UNORD_SET_SPECIFIC tsl::sparse_set
 #endif
 
-#ifdef TSL_ROBIN_MAP
+#ifdef TSL_ROBIN_MAP_SPECIFIC
 # include "robin_map.h"
 # include "robin_set.h"
-# define UNORD_MAP tsl::robin_map
-# define UNORD_SET tsl::robin_set
+# define UNORD_MAP_SPECIFIC tsl::robin_map
+# define UNORD_SET_SPECIFIC tsl::robin_set
 #endif
 
-#ifdef TSL_HOPSCOTCH_MAP
+#ifdef TSL_HOPSCOTCH_MAP_SPECIFIC
 # include "hopscotch_map.h"
 # include "hopscotch_set.h"
-# define UNORD_MAP tsl::hopscotch_map
-# define UNORD_SET tsl::hopscotch_set
+# define UNORD_MAP_SPECIFIC tsl::hopscotch_map
+# define UNORD_SET_SPECIFIC tsl::hopscotch_set
 #endif
 
 
@@ -137,7 +137,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  UNORD_MAP<T,int> ValueMap_T;
+  UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
   std::vector<T> ListWeight;
   int idxWeight = 0;
   auto get_T_idx=[&](T eval) -> int {
@@ -150,7 +150,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     return idx - 1;
   };
 
-  UNORD_MAP<SignVertex,int> ValueMap_Tvs;
+  UNORD_MAP_SPECIFIC<SignVertex,int> ValueMap_Tvs;
   std::vector<SignVertex> ListPossibleSignatures;
   int idxSign = 0;
   auto get_Tvs_idx=[&](SignVertex const& esign) -> int {
@@ -564,6 +564,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
+
   WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
 #ifdef DEBUG_SPECIFIC
   PrintWMVS(std::cerr, WMVS);
@@ -572,7 +573,8 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
 #ifdef DEBUG_SPECIFIC
   for (size_t iCase=0; iCase<nbCase; iCase++) {
-    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << ListIdx[iCase] << "\n";
+    int idx = ListIdx[iCase];
+    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << WMVS.ListNbCase[idx] << "\n";
   }
 #endif
 
@@ -600,11 +602,16 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
       std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "|ListGen|=" << ListGen.size() << "\n";
+#endif
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       for (auto & eList : ListGen) {
         if (IsCorrect) {
+          std::cerr << "Before call to f4\n";
           EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
+          std::cerr << "After call to f4\n";
           if (test.TheReply) {
             LGen.push_back(test.TheEquiv);
           } else {
@@ -631,6 +638,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   ---F3    : The function for testing acceptability of sets for consideration (e.g. rank function)
   ---F4    : The function for testing acceptability of small generators and returning the big
              generators.
+  ---F5    : The lifting of canonicalization from a subset to the full set.
 */
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)

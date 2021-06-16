@@ -112,12 +112,11 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       Tfield eSum1 = 0;
       for (size_t j_row=0; j_row<n_cols; j_row++)
         eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
-      T eSum2 = UniversalTypeConversion<T,Tfield>(eSum1);
-      Tfield eSum3 = UniversalTypeConversion<Tfield,T>(eSum2);
-      if (eSum1 != eSum3) {
+      std::pair<bool,T> rec_eSum2 = UniversalTypeConversionCheck<T,Tfield>(eSum1);
+      if (!rec_eSum2.first) {
         return {false,{}}; // We fail because the image is not integral.
       }
-      VectorContain(0, i_col) = eSum2;
+      VectorContain(0, i_col) = rec_eSum2.second;
     }
     std::pair<bool, size_t> epair = Cont.GetIdx();
     if (!epair.first) {
