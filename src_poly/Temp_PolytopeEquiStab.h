@@ -1398,17 +1398,16 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
   return e_hash;
 }
 
-template<typename T, bool use_scheme>
-std::vector<std::vector<unsigned int>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+template<typename T, typename Tidx, bool use_scheme>
+std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
   using Tidx_value = int16_t;
-  using Tidx = unsigned int;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  using Treturn = std::vector<std::vector<unsigned int>>;
+  using Treturn = std::vector<std::vector<Tidx>>;
   auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     if constexpr(use_scheme) {
         return GetStabilizerWeightMatrix_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4);
