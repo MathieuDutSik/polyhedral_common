@@ -213,6 +213,9 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
 }
 
 
+
+
+
 template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
 Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
 {
@@ -1446,50 +1449,102 @@ std::vector<unsigned int> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT
       return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
-  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+  Treturn CanonicReord = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|Canonicalization_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return ListGen;
+  return CanonicReord;
 }
 
 
 
 
-template<typename T>
-EquivTest<std::vector<unsigned int>> TestEquivalence_ListMat_Subset(
-                                       MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
-                                       MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
+template<typename T, typename Tidx, bool use_scheme>
+EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
+                               MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
+                               MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
 {
   using Tidx_value = int16_t;
-  using Tidx = unsigned int;
+  using Tfield = typename overlying_field<T>::field_type;
+  using Tgr = GraphListAdj;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT1, ListMat1, eSubset1);
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT2, ListMat2, eSubset2);
+  size_t nbRow1 = EXT1.rows();
+  size_t nbRow2 = EXT2.rows();
+  if (nbRow1 != nbRow2) { // At this point it should be equal, but better to check
+    return {false, {}};
+  }
+
+
+  // Different scenario depending on the size
+  if (nbRow1 < 2000) {
+    WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT1, ListMat1, eSubset1);
+    WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT2, ListMat2, eSubset2);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
 
-  WMat1.ReorderingSetWeight();
-  WMat2.ReorderingSetWeight();
+    WMat1.ReorderingSetWeight();
+    WMat2.ReorderingSetWeight();
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "|ReorderingSetWeight|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
 
-  EquivTest<std::vector<unsigned int>> PairTest = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
+    EquivTest<std::vector<Tidx>> PairTest = TestEquivalenceWeightMatrix_norenorm<std::vector<T>,Tidx,Tidx_value>(WMat1, WMat2);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+    std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
-  return PairTest;
+    return PairTest;
+  }
+
+  // Now doing the special scheme
+  using Treturn = std::vector<Tidx>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    if constexpr(use_scheme) {
+        return GetGroupCanonicalizationVector_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4, f5).first;
+    } else {
+      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
+      return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+    }
+  };
+  Treturn CanonicReord1 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT1, ListMat1, eSubset1, f);
+  Treturn CanonicReord2 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT2, ListMat2, eSubset2, f);
+  // Building the combinatorial equivalence
+  std::vector<Tidx> CanonicReord2_Rev(nbRow1);
+  for (size_t idx=0; idx<nbRow1; idx++)
+    CanonicReord2_Rev[CanonicReord2[idx]] = idx;
+  std::vector<Tidx> ListIdx(nbRow1);
+  for (size_t idx=0; idx<nbRow1; idx++) {
+    Tidx pos = CanonicReord2_Rev[CanonicReord1[idx]];
+    ListIdx[idx] = pos;
+  }
+  // Building the matrix equivalence
+  MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
+  MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
+  MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
+  // Now testing the obtained mappings
+  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+  if (!test) // We fail the polytope equivalence
+    return {false, {}};
+  // Now checking the mapping of matrices
+  size_t nMat = ListMat1.size();
+  for (size_t iMat=0; iMat<nMat; iMat++) {
+    MyMatrix<Tfield> eMat1 = ConvertMatrixUniversal<Tfield,T>(ListMat1[iMat]);
+    MyMatrix<Tfield> eMat2 = ConvertMatrixUniversal<Tfield,T>(ListMat2[iMat]);
+    MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
+    if (!TestEqualityMatrix(eProd, eMat2)) {
+      return {false, {}};
+    }
+  }
+  return {true,std::move(ListIdx)};
 }
 
 

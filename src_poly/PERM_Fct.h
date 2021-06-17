@@ -140,6 +140,67 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
 
 
 
+template<typename T, typename Tfield, typename Tidx>
+bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const std::vector<Tidx>& ListIdx, const MyMatrix<Tfield>& P)
+{
+  size_t n_rows = EXT1.rows();
+  size_t n_cols = EXT1.cols();
+  //
+  // We are testing if EXT1 P = perm(EXT2) 
+  std::vector<Tidx> V(n_rows);
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    size_t i_row_img = ListIdx[i_row];
+    for (size_t i_col=0; i_col<n_cols; i_col++) {
+      Tfield eSum1 = 0;
+      for (size_t j_row=0; j_row<n_cols; j_row++)
+        eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
+      std::pair<bool,T> rec_eSum2 = UniversalTypeConversionCheck<T,Tfield>(eSum1);
+      if (!rec_eSum2.first) {
+        return false; // We fail because the image is not integral.
+      }
+      T Img_EXT1 = rec_eSum2.second;
+      //
+      T EXT2_map = EXT2(i_row_img, i_col);
+      if (Img_EXT1 != EXT2_map)
+        return false;
+    }
+  }
+  return true;
+}
+
+
+
+
+
+
+template<typename T, typename Tfield, typename Tidx>
+MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset)
+{
+  size_t nbCol = EXT.cols();
+  auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+    size_t pos = Vsubset[iRow];
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+  };
+  SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+  // Selecting the submatrix
+  MyMatrix<Tfield> M(nbCol,nbCol);
+  for (size_t iRow=0; iRow<nbCol; iRow++) {
+    size_t pos = Vsubset[ TheSol.ListRowSelect[iRow] ];
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+  }
+  return M;
+}
+
+
+
+
+
+
+
+
+
 
 
 

@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
       return -1;
     }
     using T = mpz_class;
+    using Tidx = unsigned int;
     //
     std::cerr << "Reading input\n";
     //
@@ -38,7 +39,8 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT2 = ReadMatrix<T>(is);
     Face eSubset2 = ReadFace(is);
     //
-    EquivTest<std::vector<unsigned int>> PairTest = TestEquivalence_ListMat_Subset(EXT1, ListMat1, eSubset1, EXT2, ListMat2, eSubset2);
+    const bool use_scheme = true;
+    EquivTest<std::vector<Tidx>> PairTest = TestEquivalence_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1, EXT2, ListMat2, eSubset2);
     //
     std::ofstream os(argv[2]);
     if (!PairTest.TheReply) {

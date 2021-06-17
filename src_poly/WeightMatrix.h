@@ -1082,8 +1082,8 @@ std::vector<Tidx> GetCanonicalizationFromSymmetrized(std::vector<Tidx> const& Ca
 
 
 
-template<typename T, typename Tidx_value>
-EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
+template<typename T, typename Tidx, typename Tidx_value>
+EquivTest<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
 {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
@@ -1094,8 +1094,7 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
   if (nof_vertices1 != nof_vertices2)
     return {false, {}};
   unsigned int nof_vertices = nof_vertices1;
-  size_t nbRow = WMat1.rows();
-  using Tidx = unsigned int;
+  Tidx nbRow = WMat1.rows();
 #ifdef USE_BLISS
   std::vector<Tidx> cl1 = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR1);
   std::vector<Tidx> cl2 = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR2);
@@ -1125,8 +1124,8 @@ EquivTest<std::vector<unsigned int>> TestEquivalenceWeightMatrix_norenorm(Weight
 	return {false, {}};
     }
   }
-  std::vector<unsigned int> TheEquiv(nbRow);
-  for (unsigned int i=0; i<nbRow; i++)
+  std::vector<Tidx> TheEquiv(nbRow);
+  for (Tidx i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
   return {true, std::move(TheEquiv)};
 }
