@@ -92,7 +92,7 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
     T val = f2(iRow);
-    int idx = get_T_idx(val);
+    size_t idx = get_T_idx(val);
     MapVertexBlock[iRow] = idx;
     if (idx < ListBlocks.size()) {
       ListBlocks[idx].push_back(iRow);

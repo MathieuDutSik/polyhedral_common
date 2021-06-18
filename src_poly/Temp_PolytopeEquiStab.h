@@ -228,95 +228,22 @@ Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
   }
 #endif
   size_t nbRow=TheEXT.rows();
-  size_t nbCol=TheEXT.cols();
   using Tfield = typename overlying_field<T>::field_type;
   // Preemptive check that the subset is adequate
   auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
-    if (Vsubset.size() < nbCol)
-      return false;
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(Vsubset[iRow], iCol));
-    };
-    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_EXT : f3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-    return TheSol.TheRank == nbCol;
+    return IsSubsetFullRank<T,Tfield,Tidx>(TheEXT, Vsubset);
   };
   // Extension of the partial automorphism
   auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto g1=[&](size_t iRow) -> MyVector<T> {
-      MyVector<T> V(nbCol);
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        V(iCol) = TheEXT(Vsubset[iRow], iCol);
-      return V;
-    };
-    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx, decltype(g1)>(Vsubset.size(), nbCol, g1, g1, Vin);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
+    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
     if (!test1.TheReply) {
-#ifdef TIMINGS
-      std::cerr << "|FCT_EXT : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
       return {false, {}};
     }
-    EquivTest<std::vector<Tidx>> test2 = RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_EXT : f4(1)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-    std::cerr << "|FCT_EXT : f4(2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-    return test2;
+    return RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
-      size_t pos = Vsubset[PartOrd[iRow]];
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
-    };
-    SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-    // Selecting the submatrix
-    MyMatrix<Tfield> M(nbCol,nbCol);
-    for (size_t iRow=0; iRow<nbCol; iRow++) {
-      size_t pos = Vsubset[ PartOrd[ TheSol.ListRowSelect[iRow]]];
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(TheEXT(pos, iCol));
-    }
-    MyMatrix<Tfield> Minv0 = Inverse(M);
-    MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
-    MyMatrix<T> Minv2 = ConvertMatrixUniversal<T, Tfield>(Minv1);
-    MyMatrix<T> Mop = TheEXT * Minv2;
-    std::vector<Tidx> ListIdx(nbRow);
-    for (size_t iRow=0; iRow<nbRow; iRow++)
-      ListIdx[iRow] = iRow;
-    std::sort(ListIdx.begin(), ListIdx.end(),
-              [&](size_t iRow, size_t jRow) -> bool {
-                for (size_t iCol=0; iCol<nbCol; iCol++) {
-                  if (Mop(iRow, iCol) < Mop(jRow,iCol))
-                    return true;
-                  if (Mop(iRow, iCol) > Mop(jRow,iCol))
-                    return false;
-                }
-                return false;
-              });
-#ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|FCT_EXT : f5|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-    return ListIdx;
+    return ExtendPartialCanonicalization<T,Tfield,Tidx>(TheEXT, Vsubset, PartOrd);
   };
   return f(nbRow, f1, f2, f3, f4, f5);
 }
