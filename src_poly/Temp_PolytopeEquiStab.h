@@ -219,14 +219,6 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
 template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
 Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
 {
-#ifdef DEBUG
-  for (auto & eMat : ListMat) {
-    if (!IsSymmetricMatrix(eMat)) {
-      std::cerr << "The matrix eMat should be symmetric\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
   size_t nbRow=TheEXT.rows();
   using Tfield = typename overlying_field<T>::field_type;
   // Preemptive check that the subset is adequate
@@ -464,6 +456,7 @@ EquivTest<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1, co
 template<typename T, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
 {
+  using Tfield = typename overlying_field<T>::field_type;
 #ifdef DEBUG
   for (auto & eMat : ListMat) {
     if (!IsSymmetricMatrix(eMat)) {
@@ -472,8 +465,14 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     }
   }
 #endif
+  size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   size_t nMat = ListMat.size();
+  std::vector<MyMatrix<Tfield>> ListMat_F;
+  for (auto & eMat : ListMat) {
+    MyMatrix<Tfield> eMat_F = ConvertMatrixUniversal<Tfield,T>(eMat);
+    ListMat_F.push_back(eMat_F);
+  }
   //
   MyMatrix<T> MatV(nMat, nbCol);
   std::vector<T> LScal(nMat + 1);
@@ -502,8 +501,29 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     LScal[nMat] = eVal;
     return LScal;
   };
-  using Tweight = std::vector<T>;
-  return FCT_EXT<T,Tweight,Tidx,Treturn>(TheEXT, f, f1, f2);
+  // Preemptive check that the subset is adequate
+  auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
+    return IsSubsetFullRank<T,Tfield,Tidx>(TheEXT, Vsubset);
+  };
+  // Extension of the partial automorphism
+  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
+    if (!test1.TheReply) {
+      return {false, {}};
+    }
+    const MyMatrix<Tfield>& P = test1.TheEquiv;
+    for (auto & eMat_F : ListMat_F) {
+      MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
+      if (!TestEqualityMatrix(eProd, eMat_F))
+        return {false, {}};
+    }
+    return RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
+  };
+  // Extension of the partial canonicalization
+  auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
+    return ExtendPartialCanonicalization<T,Tfield,Tidx>(TheEXT, Vsubset, PartOrd);
+  };
+  return f(nbRow, f1, f2, f3, f4, f5);
 }
 
 
