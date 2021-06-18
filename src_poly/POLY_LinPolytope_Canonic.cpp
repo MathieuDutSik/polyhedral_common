@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     size_t nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<T,use_scheme,Tidx>(EXT);
+    std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT);
     //
     if (argc == 3) {
       std::ofstream os(argv[2]);

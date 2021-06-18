@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     int nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    MyMatrix<Tint> EXT_can = LinPolytopeIntegral_CanonicForm<Tint,use_scheme>(EXT);
+    MyMatrix<Tint> EXT_can = LinPolytope_CanonicForm<Tint,use_scheme>(EXT);
     std::cerr << "------------------------------------------------------------\n";
     //
     auto get_random_equivalent=[](MyMatrix<Tint> const& eMat) -> MyMatrix<Tint> {
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     for (int i_iter=0; i_iter<n_iter; i_iter++) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
       MyMatrix<Tint> EXT2 = get_random_equivalent(EXT);
-      MyMatrix<Tint> EXT2_can = LinPolytopeIntegral_CanonicForm<Tint,use_scheme>(EXT2);
+      MyMatrix<Tint> EXT2_can = LinPolytope_CanonicForm<Tint,use_scheme>(EXT2);
       std::cerr << "------------------------------------------------------------\n";
       if (!TestEqualityMatrix(EXT_can, EXT2_can)) {
         std::cerr << "Inconsistency in the canonical code\n";

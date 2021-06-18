@@ -123,7 +123,6 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
 template<typename T, typename F1, typename F2>
 VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, int max_globiter)
 {
-  
 }
 */
 
