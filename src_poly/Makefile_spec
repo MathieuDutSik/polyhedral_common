@@ -18,10 +18,11 @@
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
-PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
+#PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= POLY_LinPolytope_TestAutomorphism
 #PROGRAM		= POLY_LinPolytope_TestCanonic
 #PROGRAM		= POLY_GapFindHyperplaneRegions
+PROGRAM		= POLY_LinPolytope_TestIsomorphism
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
