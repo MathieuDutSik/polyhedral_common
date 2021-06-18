@@ -24,6 +24,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
                   POLY_LinPolytope_TestAutomorphism \
                   POLY_LinPolytope_Canonic \
                   POLY_LinPolytope_TestCanonic \
+                  POLY_LinPolytope_TestIsomorphism \
 		  POLY_ComputeEngelSymbol \
 		  POLY_FaceLatticeDirect
 
@@ -41,8 +42,8 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++17 -Wall -O3
-#CC		= g++ -std=c++17 -Wall -O3
-CC		= g++ -std=c++17 -Wall -Wextra -O3
+CC		= g++ -std=c++17 -Wall -O3
+#CC		= g++ -std=c++17 -Wall -Wextra -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c

@@ -42,6 +42,7 @@
 
 
 
+template<typename T>
 std::pair<std::vector<T>, std::vector<int>> GetReorderingInfoWeight(const std::vector<T>& ListWeight)
 {
   size_t n_Wei = ListWeight.size();
@@ -72,7 +73,7 @@ struct VertexPartition {
 
 
 template<typename T, typename F1, typename F2>
-WeightMatrixVertexSignatures<T> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
+VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
 {
   std::vector<T> ListWeight;
   UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
@@ -107,16 +108,24 @@ WeightMatrixVertexSignatures<T> ComputeInitialVertexPartition(size_t nbRow, F1 f
       int NewIdx = g[MapVertexBlock[iRow]];
       MapVertexBlock[iRow] = NewIdx;
     }
+    size_t n_block = ListBlocks.size();
+    std::vector<std::vector<int>> NewListBlocks(n_block);
+    for (size_t iBlk=0; iBlk<n_block; iBlk++) {
+      size_t jBlk = g[iBlk];
+      NewListBlocks[jBlk] = std::move(ListBlocks[iBlk]);
+    }
+    ListBlocks = std::move(NewListBlocks);
   }
   return {std::move(MapVertexBlock), std::move(ListBlocks)};
 }
 
-
+/*
 template<typename T, typename F1, typename F2>
-WeightMatrixVertexSignatures<T> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, int max_globiter)
+VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, int max_globiter)
 {
+  
 }
-
+*/
 
 
 //
@@ -304,6 +313,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
 #endif
   // Building the permutation on the weights
   std::pair<std::vector<T>, std::vector<int>> rec_pair = GetReorderingInfoWeight(WMVS.ListWeight);
+  size_t n_Wei = WMVS.ListWeight.size();
   const std::vector<int>& g = rec_pair.second;
   WMVS.ListWeight = rec_pair.first;
   // Changing the list of signatures

@@ -1136,12 +1136,8 @@ template<typename T, typename Telt, typename Tidx_value>
 EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
 {
   using Tidx = typename Telt::Tidx;
-  EquivTest<std::vector<unsigned int>> ePair = TestEquivalenceWeightMatrix_norenorm(WMat1, WMat2);
-  size_t len = ePair.TheEquiv.size();
-  std::vector<Tidx> eList(len);
-  for (size_t i=0; i<len; i++)
-    eList[i] = ePair.TheEquiv[i];
-  Telt ePerm(eList);
+  EquivTest<std::vector<Tidx>> ePair = TestEquivalenceWeightMatrix_norenorm<T,Tidx,Tidx_value>(WMat1, WMat2);
+  Telt ePerm(ePair.TheEquiv);
   return {ePair.TheReply, std::move(ePerm)};
 }
 
