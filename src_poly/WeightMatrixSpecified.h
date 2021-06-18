@@ -3,7 +3,7 @@
 
 
 // The hash map do not seem to make much difference in the overall
-// performance. 
+// performance.
 
 //#define UNORDERED_MAP_SPECIFIC
 //#define TSL_SPARSE_MAP_SPECIFIC
@@ -38,6 +38,93 @@
 # define UNORD_SET_SPECIFIC tsl::hopscotch_set
 #endif
 
+
+
+
+
+std::pair<std::vector<T>, std::vector<int>> GetReorderingInfoWeight(const std::vector<T>& ListWeight)
+{
+  size_t n_Wei = ListWeight.size();
+  std::map<T, size_t> map;
+  for (size_t i=0; i<n_Wei; i++)
+    map[ListWeight[i]] = i;
+  std::vector<int> g(n_Wei);
+  int idx=0;
+  for (auto & kv : map) {
+    int pos = kv.second;
+    g[pos] = idx;
+    idx++;
+  }
+  std::vector<T> NewListWeight(n_Wei);
+  for (size_t iW=0; iW<n_Wei; iW++) {
+    size_t jW = g[iW];
+    NewListWeight[jW] = ListWeight[iW];
+  }
+  return {std::move(NewListWeight), std::move(g)};
+}
+
+
+
+struct VertexPartition {
+  std::vector<int> MapVertexBlock;
+  std::vector<std::vector<int>> ListBlocks;
+};
+
+
+template<typename T, typename F1, typename F2>
+WeightMatrixVertexSignatures<T> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
+{
+  std::vector<T> ListWeight;
+  UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
+  int idxWeight = 0;
+  auto get_T_idx=[&](T eval) -> int {
+    int& idx = ValueMap_T[eval];
+    if (idx == 0) { // value is missing
+      idxWeight++;
+      idx = idxWeight;
+      ListWeight.push_back(eval);
+    }
+    return idx - 1;
+  };
+  std::vector<int> MapVertexBlock;
+  std::vector<std::vector<int>> ListBlocks;
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    f1(iRow);
+    T val = f2(iRow);
+    int idx = get_T_idx(val);
+    MapVertexBlock[iRow] = idx;
+    if (idx < ListBlocks.size()) {
+      ListBlocks[idx].push_back(iRow);
+    } else {
+      std::vector<int> blk{int(iRow)};
+      ListBlocks.push_back(blk);
+    }
+  }
+  if (canonically) {
+    std::pair<std::vector<T>, std::vector<int>> rec_pair = GetReorderingInfoWeight(ListWeight);
+    const std::vector<int>& g = rec_pair.second;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      int NewIdx = g[MapVertexBlock[iRow]];
+      MapVertexBlock[iRow] = NewIdx;
+    }
+  }
+  return {std::move(MapVertexBlock), std::move(ListBlocks)};
+}
+
+
+template<typename T, typename F1, typename F2>
+WeightMatrixVertexSignatures<T> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, int max_globiter)
+{
+}
+
+
+
+//
+// The computation of vertex signatures is needed for the computation of vertex degrees
+// which are needed for TRACES graph construction. Therefore said computation cannot be
+// avoided when building our objects. However, for breaking down the vertex set into
+// blocks, they are too expensive
+//
 
 
 using SignVertex = std::vector<int>;
@@ -216,24 +303,9 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   // Building the permutation on the weights
-  std::map<T, int> map;
-  size_t n_Wei = WMVS.nbWeight;
-  for (size_t i=0; i<n_Wei; i++)
-    map[WMVS.ListWeight[i]] = i;
-  std::vector<int> g(n_Wei);
-  int idx=0;
-  for (auto & kv : map) {
-    int pos = kv.second;
-    g[pos] = idx;
-    idx++;
-  }
-  // Changing the weight
-  std::vector<T> NewListWeight(n_Wei);
-  for (size_t iW=0; iW<n_Wei; iW++) {
-    size_t jW = g[iW];
-    NewListWeight[jW] = WMVS.ListWeight[iW];
-  }
-  WMVS.ListWeight = NewListWeight;
+  std::pair<std::vector<T>, std::vector<int>> rec_pair = GetReorderingInfoWeight(WMVS.ListWeight);
+  const std::vector<int>& g = rec_pair.second;
+  WMVS.ListWeight = rec_pair.first;
   // Changing the list of signatures
   std::vector<SignVertex> NewListPossibleSignatures;
   for (auto & ePossSignature : WMVS.ListPossibleSignatures) {
