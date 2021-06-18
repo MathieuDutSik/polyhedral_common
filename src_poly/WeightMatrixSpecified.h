@@ -76,10 +76,10 @@ template<typename T, typename F1, typename F2>
 VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
 {
   std::vector<T> ListWeight;
-  UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
-  int idxWeight = 0;
-  auto get_T_idx=[&](T eval) -> int {
-    int& idx = ValueMap_T[eval];
+  UNORD_MAP_SPECIFIC<T,size_t> ValueMap_T;
+  size_t idxWeight = 0;
+  auto get_T_idx=[&](T eval) -> size_t {
+    size_t& idx = ValueMap_T[eval];
     if (idx == 0) { // value is missing
       idxWeight++;
       idx = idxWeight;
@@ -117,6 +117,21 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
     ListBlocks = std::move(NewListBlocks);
   }
   return {std::move(MapVertexBlock), std::move(ListBlocks)};
+}
+
+
+// We use stable_sort to make sure that from the canonical ordering of the blocks
+// we get a canonical ordering for the block sizes.
+std::vector<int> GetOrdering_ListIdx(const VertexPartition& VP)
+{
+  size_t nbCase = VP.ListBlocks.size();
+  std::vector<int> ListIdx(nbCase);
+  for (size_t iCase=0; iCase<nbCase; iCase++)
+    ListIdx[iCase] = iCase;
+  std::stable_sort(ListIdx.begin(), ListIdx.end(),
+                   [&](int idx1, int idx2) -> bool {
+                     return VP.ListBlocks[idx1].size() < VP.ListBlocks[idx2].size();});
+  return ListIdx;
 }
 
 /*
@@ -646,16 +661,14 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
 
-  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
-#ifdef DEBUG_SPECIFIC
-  PrintWMVS(std::cerr, WMVS);
-#endif
-  size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
+  bool canonically = false;
+  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  size_t nbCase = VP.ListBlocks.size();
+  std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     int idx = ListIdx[iCase];
-    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << WMVS.ListNbCase[idx] << "\n";
+    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
   }
 #endif
 
@@ -665,7 +678,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       StatusCase[ListIdx[u]] = 1;
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
-      int iCase = WMVS.ListSignatureByVertex[iRow];
+      int iCase = VP.MapVertexBlock[iRow];
       if (StatusCase[iCase] == 1)
         CurrentListIdx.push_back(iRow);
     }
@@ -722,21 +735,17 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
-  WeightMatrixVertexSignatures<T> WMVS = ComputeVertexSignatures<T>(nbRow, f1, f2);
-  RenormalizeWMVS(WMVS);
-#ifdef DEBUG_SPECIFIC
-  std::cerr << "WMVS=\n";
-  PrintWMVS(std::cerr, WMVS);
-#endif
-  size_t nbCase = WMVS.ListPossibleSignatures.size();
-  std::vector<int> ListIdx = GetOrdering_ListIdx(WMVS);
+  bool canonically = true;
+  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  size_t nbCase = VP.ListBlocks.size();
+  std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
   for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
     for (size_t u=0; u<idx; u++)
       StatusCase[ListIdx[u]] = 1;
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
-      int iCase = WMVS.ListSignatureByVertex[iRow];
+      int iCase = VP.MapVertexBlock[iRow];
       if (StatusCase[iCase] == 1)
         CurrentListIdx.push_back(iRow);
     }
