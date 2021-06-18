@@ -638,11 +638,10 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T>
 
 
 
-template<typename T, bool use_scheme>
-std::vector<unsigned int> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+template<typename T, typename Tidx, bool use_scheme>
+std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
   using Tidx_value = int16_t;
-  using Tidx = unsigned int;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef TIMINGS
@@ -675,7 +674,6 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
 {
   using Tidx_value = int16_t;
   using Tfield = typename overlying_field<T>::field_type;
-  using Tgr = GraphListAdj;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -713,18 +711,8 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
     return PairTest;
   }
 
-  // Now doing the special scheme
-  using Treturn = std::vector<Tidx>;
-  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
-    if constexpr(use_scheme) {
-        return GetGroupCanonicalizationVector_Heuristic<std::vector<T>,Tidx>(nbRow, f1, f2, f3, f4, f5).first;
-    } else {
-      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2);
-      return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
-    }
-  };
-  Treturn CanonicReord1 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT1, ListMat1, eSubset1, f);
-  Treturn CanonicReord2 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT2, ListMat2, eSubset2, f);
+  std::vector<Tidx> CanonicReord1 = Canonicalization_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1);
+  std::vector<Tidx> CanonicReord2 = Canonicalization_ListMat_Subset<T,Tidx,use_scheme>(EXT2, ListMat2, eSubset2);
 
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
   if (!IsoInfo)
