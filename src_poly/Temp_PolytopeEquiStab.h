@@ -452,7 +452,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 
 
 
-template<typename T, bool use_scheme, typename Tidx>
+template<typename T, typename Tidx, bool use_scheme>
 std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 {
   using Tidx_value = int16_t;
@@ -483,8 +483,8 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 
 
 
-template<typename Tint, bool use_scheme>
-MyMatrix<Tint> LinPolytope_CanonicForm(MyMatrix<Tint> const& EXT)
+template<typename T, bool use_scheme>
+MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
 {
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
@@ -492,8 +492,8 @@ MyMatrix<Tint> LinPolytope_CanonicForm(MyMatrix<Tint> const& EXT)
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<Tint,use_scheme,Tidx>(EXT);
-  MyMatrix<Tint> EXTreord(n_rows, n_cols);
+  std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT);
+  MyMatrix<T> EXTreord(n_rows, n_cols);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
     size_t j_row = CanonicOrd[i_row];
     EXTreord.row(i_row) = EXT.row(j_row);
@@ -502,8 +502,8 @@ MyMatrix<Tint> LinPolytope_CanonicForm(MyMatrix<Tint> const& EXT)
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
 
-  //  MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
-  MyMatrix<Tint> RedMat = CanonicalizeOrderedMatrix(EXTreord);
+  //  MyMatrix<T> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
+  MyMatrix<T> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "|CanonicOrdering + EXTreord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -511,6 +511,21 @@ MyMatrix<Tint> LinPolytope_CanonicForm(MyMatrix<Tint> const& EXT)
 #endif
   return RedMat;
 }
+
+
+template<typename T, typename Tidx, bool use_scheme>
+EquivTest<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2)
+{
+  std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT1);
+  std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT2);
+  using Tfield = typename overlying_field<T>::field_type;
+  std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+  if (!IsoInfo)
+    return {};
+  return {true,std::move(IsoInfo->first)};
+}
+
+
 
 
 //
