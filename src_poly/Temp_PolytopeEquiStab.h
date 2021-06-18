@@ -354,6 +354,31 @@ Treturn FCT_EXT_Qinv(MyMatrix<T> const& TheEXT, F f)
 }
 
 
+template<typename T, typename Tfield, typename Tidx>
+std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsomorphismFromCanonicReord(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const std::vector<Tidx>& CanonicReord1, const std::vector<Tidx>& CanonicReord2) {
+  size_t nbRow = EXT1.rows();
+  // Building the combinatorial equivalence
+  std::vector<Tidx> CanonicReord2_Rev(nbRow);
+  for (size_t idx=0; idx<nbRow; idx++)
+    CanonicReord2_Rev[CanonicReord2[idx]] = idx;
+  std::vector<Tidx> ListIdx(nbRow);
+  for (size_t idx=0; idx<nbRow; idx++) {
+    Tidx pos = CanonicReord2_Rev[CanonicReord1[idx]];
+    ListIdx[idx] = pos;
+  }
+  // Building the matrix equivalence
+  MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
+  MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
+  MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
+  // Now testing the obtained mappings
+  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+  if (!test) // We fail the polytope equivalence
+    return {};
+  std::pair<std::vector<Tidx>,MyMatrix<Tfield>> IsoInfo{ListIdx, P};
+  return IsoInfo;
+}
+
+
 template<typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput)
 {
@@ -459,7 +484,7 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 
 
 template<typename Tint, bool use_scheme>
-MyMatrix<Tint> LinPolytopeIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
+MyMatrix<Tint> LinPolytope_CanonicForm(MyMatrix<Tint> const& EXT)
 {
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
@@ -1139,7 +1164,7 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
 
 
 //
-// Several asymmetric matrtices
+// Several asymmetric matrices
 //
 
 // The matrices in ListMat do not have to be symmetric.
@@ -1517,23 +1542,11 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
   };
   Treturn CanonicReord1 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT1, ListMat1, eSubset1, f);
   Treturn CanonicReord2 = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT2, ListMat2, eSubset2, f);
-  // Building the combinatorial equivalence
-  std::vector<Tidx> CanonicReord2_Rev(nbRow1);
-  for (size_t idx=0; idx<nbRow1; idx++)
-    CanonicReord2_Rev[CanonicReord2[idx]] = idx;
-  std::vector<Tidx> ListIdx(nbRow1);
-  for (size_t idx=0; idx<nbRow1; idx++) {
-    Tidx pos = CanonicReord2_Rev[CanonicReord1[idx]];
-    ListIdx[idx] = pos;
-  }
-  // Building the matrix equivalence
-  MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
-  MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
-  MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
-  // Now testing the obtained mappings
-  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
-  if (!test) // We fail the polytope equivalence
+
+  std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+  if (!IsoInfo)
     return {false, {}};
+  const MyMatrix<Tfield>& P = IsoInfo->second;
   // Now checking the mapping of matrices
   size_t nMat = ListMat1.size();
   for (size_t iMat=0; iMat<nMat; iMat++) {
@@ -1544,7 +1557,7 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
       return {false, {}};
     }
   }
-  return {true,std::move(ListIdx)};
+  return {true,std::move(IsoInfo->first)};
 }
 
 
