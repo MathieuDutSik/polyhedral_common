@@ -216,11 +216,33 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
 
 
 
-template<typename T, typename Tweight, typename Tidx, typename Treturn, typename F, typename F1, typename F2>
-Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
+template<typename T, typename Tidx, typename Treturn, typename F>
+Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f)
 {
   size_t nbRow=TheEXT.rows();
+  size_t max_val = std::numeric_limits<Tidx>::max();
+  if (nbRow > max_val) {
+    std::cerr << "Error in FCT_EXT_Qinput due to too small coefficient rqnge\n";
+    std::cerr << "nbRow=" << nbRow << " max_val=" << max_val << "\n";
+    throw TerminalException{1};
+  }
+  size_t nbCol=TheEXT.cols();
   using Tfield = typename overlying_field<T>::field_type;
+  MyVector<T> V(nbCol);
+  auto f1=[&](size_t iRow) -> void {
+    for (size_t iCol=0; iCol<nbCol; iCol++) {
+      T eSum=0;
+      for (size_t jCol=0; jCol<nbCol; jCol++)
+        eSum += Qinput(iCol,jCol) * TheEXT(iRow, jCol);
+      V(iCol) = eSum;
+    }
+  };
+  auto f2=[&](size_t jRow) -> T {
+    T eSum=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eSum += V(iCol) * TheEXT(jRow, iCol);
+    return eSum;
+  };
   // Preemptive check that the subset is adequate
   auto f3=[&](std::vector<Tidx> const& Vsubset) -> bool {
     return IsSubsetFullRank<T,Tfield,Tidx>(TheEXT, Vsubset);
@@ -238,30 +260,6 @@ Treturn FCT_EXT(MyMatrix<T> const& TheEXT, F f, F1 f1, F2 f2)
     return ExtendPartialCanonicalization<T,Tfield,Tidx>(TheEXT, Vsubset, PartOrd);
   };
   return f(nbRow, f1, f2, f3, f4, f5);
-}
-
-
-template<typename T, typename Tidx, typename Treturn, typename F>
-Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f)
-{
-  size_t nbCol=TheEXT.cols();
-  MyVector<T> V(nbCol);
-  auto f1=[&](size_t iRow) -> void {
-    for (size_t iCol=0; iCol<nbCol; iCol++) {
-      T eSum=0;
-      for (size_t jCol=0; jCol<nbCol; jCol++)
-        eSum += Qinput(iCol,jCol) * TheEXT(iRow, jCol);
-      V(iCol) = eSum;
-    }
-  };
-  auto f2=[&](size_t jRow) -> T {
-    T eSum=0;
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      eSum += V(iCol) * TheEXT(jRow, iCol);
-    return eSum;
-  };
-  using Tweight = T;
-  return FCT_EXT<T,Tweight,Tidx,Treturn>(TheEXT, f, f1, f2);
 }
 
 
@@ -461,6 +459,12 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   }
 #endif
   size_t nbRow=TheEXT.rows();
+  size_t max_val = std::numeric_limits<Tidx>::max();
+  if (nbRow > max_val) {
+    std::cerr << "Error in FCT_ListMat_Subset due to too small coefficient rqnge\n";
+    std::cerr << "nbRow=" << nbRow << " max_val=" << max_val << "\n";
+    throw TerminalException{1};
+  }
   size_t nbCol=TheEXT.cols();
   size_t nMat = ListMat.size();
   std::vector<MyMatrix<Tfield>> ListMat_F;

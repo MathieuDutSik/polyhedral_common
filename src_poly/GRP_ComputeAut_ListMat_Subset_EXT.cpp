@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
       return -1;
     }
     using T = mpz_class;
-    using Tidx = int16_t;
+    using Tidx = int32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt,Tint>;

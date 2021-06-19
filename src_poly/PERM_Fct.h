@@ -136,6 +136,7 @@ bool IsSubsetFullRank(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset)
       M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(Vsubset[iRow], iCol));
   };
   SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
+  std::cerr << "After TMat_SelectRowCol_Kernel\n";
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|IsSubsetFullRank|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
