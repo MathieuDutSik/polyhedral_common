@@ -274,11 +274,8 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
     }
     return iBlockSel;
   };
-  auto DoRefinement=[&]() -> bool {
+  auto DoRefinement=[&](const int& iBlock) -> bool {
     int n_block = VP.ListBlocks.size();
-    int iBlock = GetPreferable_iBlock();
-    if (iBlock == -1)
-      return false;
     // First looking at the diagonal
     bool test1 = RefineSpecificVertexPartition<T>(VP, iBlock, iBlock, f1, f2, canonically);
 #ifdef DEBUG_SPECIFIC
@@ -318,13 +315,16 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
     return DidSomething;
   };
   while(true) {
-    bool test = DoRefinement();
+    int iBlock = GetPreferable_iBlock();
+    if (iBlock == -1)
+      break;
+    std::cerr << "iBlock=" << iBlock << "\n";
+    bool test = DoRefinement(iBlock);
 #ifdef DEBUG_SPECIFIC
     std::cerr << "After Dorefinement\n";
     PrintVertexParttionInfo(VP, status);
 #endif
-    if (!test)
-      break;
+    std::cerr << "test=" << test << "\n";
   }
   return VP;
 }
