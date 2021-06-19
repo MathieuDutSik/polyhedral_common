@@ -87,7 +87,7 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
     }
     return idx - 1;
   };
-  std::vector<int> MapVertexBlock;
+  std::vector<int> MapVertexBlock(nbRow);
   std::vector<std::vector<int>> ListBlocks;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
