@@ -142,7 +142,7 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     return idx - 1;
   };
   // Now computing the indices
-  const std::vector<int>& eBlockBreak = VP.ListBlocks[jBlock];
+  std::vector<int> eBlockBreak = VP.ListBlocks[jBlock]; // We do need a copy operation here
   const std::vector<int>& eBlockSpec = VP.ListBlocks[iBlock];
   size_t siz_block_break = eBlockBreak.size();
   size_t siz_block_spec = eBlockSpec.size();
@@ -173,9 +173,11 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     esign.clear();
     V[iBreak] = idx_sign;
   }
+  std::cerr << "RefineSpecificVertexPartition, step 1\n";
   size_t n_block = ListPossibleSignatures.size();
   if (n_block == 1)
     return false;
+  std::cerr << "RefineSpecificVertexPartition, step 1\n";
   if (canonically) {
     // First reordering the weights
     std::pair<std::vector<T>, std::vector<int>> rec_pair_A = GetReorderingInfoWeight(ListWeight);
@@ -208,6 +210,7 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
       V[iBreak] = NewIdx;
     }
   }
+  std::cerr << "RefineSpecificVertexPartition, step 2\n";
   int n_block_orig = VP.ListBlocks.size();
   std::vector<int> Vmap(n_block);
   Vmap[0] = jBlock;
@@ -215,10 +218,12 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     int pos = n_block_orig + i - 1;
     Vmap[i] = pos;
   }
+  std::cerr << "RefineSpecificVertexPartition, step 3\n";
   VP.ListBlocks[jBlock].clear();
   for (size_t i=1; i<n_block; i++) {
     VP.ListBlocks.push_back(std::vector<int>());
   }
+  std::cerr << "RefineSpecificVertexPartition, step 4\n";
   for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
     int iRow = eBlockBreak[iBreak];
     int iBlockLoc = V[iBreak];
@@ -226,51 +231,98 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     VP.MapVertexBlock[iRow] = iBlockGlob;
     VP.ListBlocks[iBlockGlob].push_back(iRow);
   }
+  std::cerr << "RefineSpecificVertexPartition, step 5\n";
   return true;
 }
 
 
-
+void PrintVertexParttionInfo(const VertexPartition& VP, const std::vector<uint8_t>& status)
+{
+  std::cerr << "nbRow=" << VP.nbRow << "\n";
+  size_t n_block = VP.ListBlocks.size();
+  for (size_t i=0; i<n_block; i++) {
+    std::cerr << "i=" << i << "/" << n_block << " siz=" << VP.ListBlocks[i].size() << " status=" << int(status[i]) << "\n";
+  }
+}
 
 template<typename T, typename F1, typename F2>
 VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
 {
   VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "After ComputeInitialVertexPartition\n";
+  PrintVertexParttionInfo(VP, status);
+#endif
+  auto GetPreferable_iBlock=[&]() -> int {
+    size_t min_size = nbRow + 1;
+    int iBlockSel = -1;
+    int n_block = VP.ListBlocks.size();
+    for (int iBlock=0; iBlock<n_block; iBlock++) {
+      size_t siz = VP.ListBlocks[iBlock].size();
+      if (status[iBlock] == 0 && siz < max_globiter) {
+        if (iBlockSel == -1) {
+          iBlockSel = iBlock;
+          min_size = siz;
+        } else {
+          if (siz < min_size) {
+            iBlockSel = iBlock;
+            min_size = siz;
+          }
+        }
+      }
+    }
+    return iBlockSel;
+  };
   auto DoRefinement=[&]() -> bool {
-    size_t n_block = VP.ListBlocks.size();
-    for (size_t iBlock=0; iBlock<n_block; iBlock++) {
-      if (status[iBlock] == 0 && VP.ListBlocks[iBlock].size() < max_globiter) {
-        // First looking at the diagonal
-        bool test1 = RefineSpecificVertexPartition<T>(VP, iBlock, iBlock, f1, f2, canonically);
-        if (test1) {
+    int n_block = VP.ListBlocks.size();
+    int iBlock = GetPreferable_iBlock();
+    if (iBlock == -1)
+      return false;
+    // First looking at the diagonal
+    bool test1 = RefineSpecificVertexPartition<T>(VP, iBlock, iBlock, f1, f2, canonically);
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "iBlock=" << iBlock << " test1=" << test1 << "\n";
+#endif
+    if (test1) {
+      size_t len1 = VP.ListBlocks.size();
+      size_t len2 = status.size();
+      for (size_t i=len2; i<len1; i++)
+        status.push_back(0);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "len1=" << len1 << " len2=" << len2 << "\n";
+#endif
+      return true;
+    }
+    status[iBlock] =1;
+    bool DidSomething = false;
+    for (int jBlock=0; jBlock<n_block; jBlock++) {
+      if (iBlock != jBlock) {
+#ifdef DEBUG_SPECIFIC
+        std::cerr << "Before RefineSpecificVertexPartition\n";
+#endif
+        bool test2 = RefineSpecificVertexPartition<T>(VP, jBlock, iBlock, f1, f2, canonically);
+#ifdef DEBUG_SPECIFIC
+        std::cerr << "iBlock=" << iBlock << " jBlock=" << jBlock << " test2=" << test2 << "\n";
+#endif
+        if (test2) {
+          status[jBlock] = 0;
           size_t len1 = VP.ListBlocks.size();
           size_t len2 = status.size();
           for (size_t i=len2; i<len1; i++)
             status.push_back(0);
-        } else {
-          return true;
+          DidSomething = true;
         }
-        status[iBlock] =1;
-        bool DidSomething = false;
-        for (size_t jBlock=0; jBlock<n_block; jBlock++) {
-          bool test2 = RefineSpecificVertexPartition<T>(VP, jBlock, iBlock, f1, f2, canonically);
-          if (test2) {
-            status[jBlock] = 0;
-            size_t len1 = VP.ListBlocks.size();
-            size_t len2 = status.size();
-            for (size_t i=len2; i<len1; i++)
-              status.push_back(0);
-            DidSomething = true;
-          }
-        }
-        return DidSomething;
       }
     }
-    return false;
+    return DidSomething;
   };
   while(true) {
     bool test = DoRefinement();
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "After Dorefinement\n";
+    PrintVertexParttionInfo(VP, status);
+#endif
     if (!test)
       break;
   }
