@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
       std::cerr << "OUTfile   : The file containing the two pairs\n";
       return -1;
     }
-    using T = mpz_class;
+    //    using T = mpz_class;
+    using T = long;
     using Tidx = int32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
