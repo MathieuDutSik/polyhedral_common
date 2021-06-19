@@ -250,7 +250,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
   UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
   std::vector<T> ListWeight;
   int idxWeight = 0;
-  auto get_T_idx=[&](T eval) -> int {
+  auto get_T_idx=[&](const T& eval) -> int {
     int& idx = ValueMap_T[eval];
     if (idx == 0) { // value is missing
       idxWeight++;
@@ -737,12 +737,21 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4, typename F5>
-std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>  GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
+#endif
   bool canonically = true;
   VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
+#ifdef DEBUG_SPECIFIC
+  for (size_t iCase=0; iCase<nbCase; iCase++) {
+    int idx = ListIdx[iCase];
+    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
+  }
+#endif
   for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
     for (size_t u=0; u<idx; u++)
