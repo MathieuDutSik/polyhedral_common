@@ -277,14 +277,9 @@ template<typename T, typename Tfield, typename Tidx>
 std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsomorphismFromCanonicReord(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const std::vector<Tidx>& CanonicReord1, const std::vector<Tidx>& CanonicReord2) {
   size_t nbRow = EXT1.rows();
   // Building the combinatorial equivalence
-  std::vector<Tidx> CanonicReord2_Rev(nbRow);
-  for (size_t idx=0; idx<nbRow; idx++)
-    CanonicReord2_Rev[CanonicReord2[idx]] = idx;
   std::vector<Tidx> ListIdx(nbRow);
-  for (size_t idx=0; idx<nbRow; idx++) {
-    Tidx pos = CanonicReord2_Rev[CanonicReord1[idx]];
-    ListIdx[idx] = pos;
-  }
+  for (size_t idx=0; idx<nbRow; idx++)
+    ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
   MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
