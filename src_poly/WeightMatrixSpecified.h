@@ -40,6 +40,7 @@
 
 
 
+using SignVertex = std::vector<int>;
 
 
 template<typename T>
@@ -67,6 +68,7 @@ std::pair<std::vector<T>, std::vector<int>> GetReorderingInfoWeight(const std::v
 
 
 struct VertexPartition {
+  size_t nbRow;
   std::vector<int> MapVertexBlock;
   std::vector<std::vector<int>> ListBlocks;
 };
@@ -88,18 +90,11 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
     return idx - 1;
   };
   std::vector<int> MapVertexBlock(nbRow);
-  std::vector<std::vector<int>> ListBlocks;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
     T val = f2(iRow);
     size_t idx = get_T_idx(val);
     MapVertexBlock[iRow] = idx;
-    if (idx < ListBlocks.size()) {
-      ListBlocks[idx].push_back(iRow);
-    } else {
-      std::vector<int> blk{int(iRow)};
-      ListBlocks.push_back(blk);
-    }
   }
   if (canonically) {
     std::pair<std::vector<T>, std::vector<int>> rec_pair = GetReorderingInfoWeight(ListWeight);
@@ -108,16 +103,182 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
       int NewIdx = g[MapVertexBlock[iRow]];
       MapVertexBlock[iRow] = NewIdx;
     }
-    size_t n_block = ListBlocks.size();
-    std::vector<std::vector<int>> NewListBlocks(n_block);
-    for (size_t iBlk=0; iBlk<n_block; iBlk++) {
-      size_t jBlk = g[iBlk];
-      NewListBlocks[jBlk] = std::move(ListBlocks[iBlk]);
-    }
-    ListBlocks = std::move(NewListBlocks);
   }
-  return {std::move(MapVertexBlock), std::move(ListBlocks)};
+  std::vector<std::vector<int>> ListBlocks(ListWeight.size());
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    int pos = MapVertexBlock[iRow];
+    ListBlocks[pos].push_back(iRow);
+  }
+  return {nbRow, std::move(MapVertexBlock), std::move(ListBlocks)};
 }
+
+// jBlock : is the block for which we look at breaking down
+template<typename T, typename F1, typename F2>
+bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, const int& iBlock, F1 f1, F2 f2, bool canonically)
+{
+  // The code for finding the indices
+  UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
+  std::vector<T> ListWeight;
+  int idxWeight = 0;
+  auto get_T_idx=[&](const T& eval) -> int {
+    int& idx = ValueMap_T[eval];
+    if (idx == 0) { // value is missing
+      idxWeight++;
+      idx = idxWeight;
+      ListWeight.push_back(eval);
+    }
+    return idx - 1;
+  };
+  UNORD_MAP_SPECIFIC<SignVertex,int> ValueMap_Tvs;
+  std::vector<SignVertex> ListPossibleSignatures;
+  int idxSign = 0;
+  auto get_Tvs_idx=[&](SignVertex const& esign) -> int {
+    int& idx = ValueMap_Tvs[esign];
+    if (idx == 0) { // value is missing
+      idxSign++;
+      idx = idxSign;
+      ListPossibleSignatures.push_back(esign);
+    }
+    return idx - 1;
+  };
+  // Now computing the indices
+  const std::vector<int>& eBlockBreak = VP.ListBlocks[jBlock];
+  const std::vector<int>& eBlockSpec = VP.ListBlocks[iBlock];
+  size_t siz_block_break = eBlockBreak.size();
+  size_t siz_block_spec = eBlockSpec.size();
+  std::vector<int> V(siz_block_break);
+  int len = 0;
+  std::vector<int> list_mult;
+  std::vector<int> esign;
+  for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
+    size_t iRow = eBlockBreak[iBreak];
+    f1(iRow);
+    for (size_t iSpec=0; iSpec<siz_block_spec; iSpec++) {
+      size_t jRow = eBlockSpec[iSpec];
+      T val = f2(jRow);
+      int idx = get_T_idx(val);
+      if (idx == len) {
+        list_mult.push_back(0);
+        len++;
+      }
+      list_mult[idx]++;
+    }
+    for (int u=0; u<len; u++)
+      if (list_mult[u] > 0) {
+        esign.push_back(u);
+        esign.push_back(list_mult[u]);
+        list_mult[u] = 0;
+      }
+    int idx_sign = get_Tvs_idx(esign);
+    esign.clear();
+    V[iBreak] = idx_sign;
+  }
+  size_t n_block = ListPossibleSignatures.size();
+  if (n_block == 1)
+    return false;
+  if (canonically) {
+    // First reordering the weights
+    std::pair<std::vector<T>, std::vector<int>> rec_pair_A = GetReorderingInfoWeight(ListWeight);
+    ListWeight = rec_pair_A.first;
+    size_t n_Wei = ListWeight.size();
+    std::vector<int> list_mult(n_Wei,0);
+    const std::vector<int>& g = rec_pair_A.second;
+    for (auto & esign : ListPossibleSignatures) {
+      size_t n_ent = esign.size() / 2;
+      for (size_t i=0; i<n_ent; i++) {
+        int NewVal = g[esign[2*i]];
+        int eMult = esign[1 + 2*i];
+        list_mult[NewVal] = eMult;
+      }
+      //
+      std::vector<int> newsign;
+      for (size_t i=0; i<n_Wei; i++)
+        if (list_mult[i] > 0) {
+          newsign.push_back(i);
+          newsign.push_back(list_mult[i]);
+        }
+      esign = std::move(newsign);
+    }
+    // Now reordering the signatures
+    std::pair<std::vector<std::vector<int>>, std::vector<int>> rec_pair_B = GetReorderingInfoWeight(ListPossibleSignatures);
+    ListPossibleSignatures = rec_pair_B.first;
+    const std::vector<int>& h = rec_pair_B.second;
+    for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
+      int NewIdx = h[V[iBreak]];
+      V[iBreak] = NewIdx;
+    }
+  }
+  int n_block_orig = VP.ListBlocks.size();
+  std::vector<int> Vmap(n_block);
+  Vmap[0] = jBlock;
+  for (size_t i=1; i<n_block; i++) {
+    int pos = n_block_orig + i - 1;
+    Vmap[i] = pos;
+  }
+  VP.ListBlocks[jBlock].clear();
+  for (size_t i=1; i<n_block; i++) {
+    VP.ListBlocks.push_back(std::vector<int>());
+  }
+  for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
+    int iRow = eBlockBreak[iBreak];
+    int iBlockLoc = V[iBreak];
+    int iBlockGlob = Vmap[iBlockLoc];
+    VP.MapVertexBlock[iRow] = iBlockGlob;
+    VP.ListBlocks[iBlockGlob].push_back(iRow);
+  }
+  return true;
+}
+
+
+
+
+template<typename T, typename F1, typename F2>
+VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
+{
+  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
+  auto DoRefinement=[&]() -> bool {
+    size_t n_block = VP.ListBlocks.size();
+    for (size_t iBlock=0; iBlock<n_block; iBlock++) {
+      if (status[iBlock] == 0 && VP.ListBlocks[iBlock].size() < max_globiter) {
+        // First looking at the diagonal
+        bool test1 = RefineSpecificVertexPartition<T>(VP, iBlock, iBlock, f1, f2, canonically);
+        if (test1) {
+          size_t len1 = VP.ListBlocks.size();
+          size_t len2 = status.size();
+          for (size_t i=len2; i<len1; i++)
+            status.push_back(0);
+        } else {
+          return true;
+        }
+        status[iBlock] =1;
+        bool DidSomething = false;
+        for (size_t jBlock=0; jBlock<n_block; jBlock++) {
+          bool test2 = RefineSpecificVertexPartition<T>(VP, jBlock, iBlock, f1, f2, canonically);
+          if (test2) {
+            status[jBlock] = 0;
+            size_t len1 = VP.ListBlocks.size();
+            size_t len2 = status.size();
+            for (size_t i=len2; i<len1; i++)
+              status.push_back(0);
+            DidSomething = true;
+          }
+        }
+        return DidSomething;
+      }
+    }
+    return false;
+  };
+  while(true) {
+    bool test = DoRefinement();
+    if (!test)
+      break;
+  }
+  return VP;
+}
+
+
+
 
 
 // We use stable_sort to make sure that from the canonical ordering of the blocks
@@ -134,12 +295,13 @@ std::vector<int> GetOrdering_ListIdx(const VertexPartition& VP)
   return ListIdx;
 }
 
-/*
-template<typename T, typename F1, typename F2>
-VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, int max_globiter)
-{
-}
-*/
+
+
+
+
+
+
+
 
 
 //
@@ -148,9 +310,6 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
 // avoided when building our objects. However, for breaking down the vertex set into
 // blocks, they are too expensive
 //
-
-
-using SignVertex = std::vector<int>;
 
 
 template<typename T>
@@ -259,7 +418,6 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1, F2 
     }
     return idx - 1;
   };
-
   UNORD_MAP_SPECIFIC<SignVertex,int> ValueMap_Tvs;
   std::vector<SignVertex> ListPossibleSignatures;
   int idxSign = 0;
@@ -662,7 +820,8 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 #endif
 
   bool canonically = false;
-  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  size_t max_globiter = 1000;
+  VertexPartition VP = ComputeVertexPartition<T>(nbRow, f1, f2, canonically, max_globiter);
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
@@ -743,7 +902,8 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
 #endif
   bool canonically = true;
-  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  size_t max_globiter = 1000;
+  VertexPartition VP = ComputeVertexPartition<T>(nbRow, f1, f2, canonically, max_globiter);
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
