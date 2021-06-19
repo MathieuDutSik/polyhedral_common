@@ -344,7 +344,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
     //
     std::vector<int> newsign;
     newsign.push_back(NewDiag);
-    for (size_t i=0; i<len; i++)
+    for (size_t i=0; i<n_Wei; i++)
       if (list_mult[i] > 0) {
         newsign.push_back(i);
         newsign.push_back(list_mult[i]);
@@ -764,7 +764,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     }
     size_t nbRow_res = CurrentListIdx.size();
 #ifdef DEBUG_SPECIFIC
-    std::cerr << "|CurrentListIdx|=" << nbRow_res << "\n";
+    std::cerr << "idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
 #endif
     //
     if (f3(CurrentListIdx)) {
@@ -775,9 +775,13 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
         return f2(CurrentListIdx[jRow]);
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "Before RenormalizeWMVS : WMVS_res=\n";
+      PrintWMVS(std::cerr, WMVS_res);
+#endif
       RenormalizeWMVS(WMVS_res);
 #ifdef DEBUG_SPECIFIC
-      std::cerr << "WMVS_res=\n";
+      std::cerr << "After RenormalizeWMVS : WMVS_res=\n";
       PrintWMVS(std::cerr, WMVS_res);
 #endif
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
