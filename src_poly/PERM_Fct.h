@@ -136,7 +136,6 @@ bool IsSubsetFullRank(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset)
       M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(Vsubset[iRow], iCol));
   };
   SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-  std::cerr << "After TMat_SelectRowCol_Kernel\n";
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|IsSubsetFullRank|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -159,7 +158,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
   MyMatrix<T> VectorContain(1,n_cols);
   ContainerMatrix<T> Cont(EXT2, VectorContain);
   //
-  // We are testing if EXT1 P = perm(EXT2) 
+  // We are testing if EXT1 P = perm(EXT2)
   std::vector<Tidx> V(n_rows);
   Face f(n_rows);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
