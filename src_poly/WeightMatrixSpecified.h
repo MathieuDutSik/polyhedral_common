@@ -695,6 +695,10 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
         return f2(CurrentListIdx[jRow]);
       };
       WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "WMVS_res=\n";
+      PrintWMVS(std::cerr, WMVS_res);
+#endif
       std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
 #ifdef DEBUG_SPECIFIC
       std::cerr << "|ListGen|=" << ListGen.size() << "\n";
