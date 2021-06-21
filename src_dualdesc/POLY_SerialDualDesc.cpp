@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt,Tint>;
-    using Tidx_value = int16_t;
+    //    using Tidx_value = int16_t;
+    using Tidx_value = int32_t;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionSerialDualDesc<T,Tgroup,Tidx_value>(eFull);

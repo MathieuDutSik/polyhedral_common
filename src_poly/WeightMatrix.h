@@ -123,7 +123,7 @@ public:
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
-    int idxWeight=0;
+    Tidx_value idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
       for (size_t iCol=0; iCol<last_idx; iCol++) {
@@ -139,6 +139,12 @@ public:
         TheMat[pos] = pos_val;
       }
     }
+    if (ValueMap.size() > size_t(std::numeric_limits<Tidx_value>::max() - 1)) {
+      std::cerr << "We have |ValueMap|=" << ValueMap.size() << "\n";
+      std::cerr << "std::numeric_limits<Tidx_value>::max()=" << size_t(std::numeric_limits<Tidx_value>::max()) << "\n";
+      std::cerr << "We also need some space for the missing values\n";
+      throw TerminalException{1};
+    }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "|WeightMatrix(nbRow,f)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -152,7 +158,7 @@ public:
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
-    int idxWeight=0;
+    Tidx_value idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       f1(iRow);
       size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
@@ -168,6 +174,12 @@ public:
         size_t pos = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
         TheMat[pos] = pos_val;
       }
+    }
+    if (ValueMap.size() > size_t(std::numeric_limits<Tidx_value>::max() - 1)) {
+      std::cerr << "We have |ValueMap|=" << ValueMap.size() << "\n";
+      std::cerr << "std::numeric_limits<Tidx_value>::max()=" << size_t(std::numeric_limits<Tidx_value>::max()) << "\n";
+      std::cerr << "We also need some space for the missing values\n";
+      throw TerminalException{1};
     }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -245,7 +257,7 @@ public:
   // Some sophisticated functionalities
   void ReorderingSetWeight()
   {
-    std::map<T, int> ValueMap;
+    std::map<T, Tidx_value> ValueMap;
     size_t nbEnt=ListWeight.size();
     for (size_t i_w=0; i_w<ListWeight.size(); i_w++)
       ValueMap[ListWeight[i_w]] = i_w;
