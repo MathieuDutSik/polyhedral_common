@@ -1,8 +1,8 @@
-PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc ConvertNC_to_NC_FB_FF Test_face Test_bool
+#PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc ConvertNC_to_NC_FB_FF Test_face Test_bool
 #PROGRAM		= DD_ConvertGAP_to_NC
 #PROGRAM		= POLY_CheckCanonicalGAP
 #PROGRAM		= POLY_NetcdfToGAP
-#PROGRAM		= POLY_SerialDualDesc
+PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= ConvertNC_to_NC_FB_FF
 #PROGRAM		= Test_face Test_bool
 

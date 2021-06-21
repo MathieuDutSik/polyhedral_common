@@ -652,6 +652,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   }
   //
   // Reordering the multiplier to maximize the sparsity
+  // (This is not perfect since if iH1 != iH2 we need to add more edges. See below)
+  // (There are more strange things happening. We should have gotten some improvement accross
+  // the board in memory usage, but we do not)
   //
   std::vector<size_t> ListIdx(nbMult);
   for (size_t iMult=0; iMult<nbMult; iMult++)

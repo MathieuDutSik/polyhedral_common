@@ -1009,6 +1009,8 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   signal(SIGINT, signal_callback_handler);
   //
   using Tint=typename Tgroup::Tint;
+  using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
   bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
@@ -1027,6 +1029,13 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT=ReadMatrix<T>(EXTfs);
   std::ifstream GRPfs(GRPfile);
+  if (size_t(EXT.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
+    std::cerr << "We have |EXT|=" << EXT.rows() << "\n";
+    std::cerr << "But <Tidx>::max()=" << size_t(std::numeric_limits<Tidx>::max()) << "\n";
+    throw TerminalException{1};
+  }
+
+  
   Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
   //
   SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
