@@ -601,7 +601,6 @@ int GetNeededPower(int nb)
 
 Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent)
 {
-  std::cerr << "GetAllBinaryExpressionsByWeight n=" << n << " n_ent=" << n_ent << "\n";
   Face f_total(n * n_ent);
   size_t pos = 0;
   for (size_t i=0; i<=n; i++) {
@@ -621,22 +620,6 @@ Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent)
   }
   std::cerr << "We should never reach that stage\n";
   throw TerminalException{1};
-}
-
-
-
-inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
-{
-  int eWork, eExpo, eExpoB, res;
-  eWork=eVal;
-  eExpo=1;
-  for (size_t i=0; i<h; i++) {
-    eExpoB=eExpo*2;
-    res=eWork % eExpoB;
-    eVect[i]=res/eExpo;
-    eExpo=eExpoB;
-    eWork=eWork - res;
-  }
 }
 
 
@@ -766,7 +749,7 @@ inline typename std::enable_if<use_pairs,void>::type GetGraphFromWeightedMatrix_
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
-  std::vector<int> eVect(e_pow);
+  Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iVert=0; iVert<nbVert-1; iVert++)
     for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
       Tidx_value eVal;
@@ -781,9 +764,9 @@ inline typename std::enable_if<use_pairs,void>::type GetGraphFromWeightedMatrix_
 	else
 	  eVal = WMat.GetValue(iVert, jVert);
       }
-      GetBinaryExpression(eVal, e_pow, eVect);
+      size_t shift = eVal * e_pow;
       for (size_t i_pow=0; i_pow<e_pow; i_pow++)
-	if (eVect[i_pow] == 1) {
+	if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2*i_pow];
           int iH2 = V[2*i_pow+1];
 	  size_t aVert=iVert + nbVert*iH1;
@@ -841,7 +824,7 @@ inline typename std::enable_if<(not use_pairs),void>::type GetGraphFromWeightedM
 	f_adj(aVert, bVert);
 	f_adj(bVert, aVert);
       }
-  std::vector<int> eVect(hS);
+  Face f_total = GetAllBinaryExpressionsByWeight(hS, nbMult);
   for (size_t iVert=0; iVert<nbVert-1; iVert++)
     for (size_t jVert=iVert+1; jVert<nbVert; jVert++) {
       Tidx_value eVal;
@@ -856,9 +839,9 @@ inline typename std::enable_if<(not use_pairs),void>::type GetGraphFromWeightedM
 	else
 	  eVal = WMat.GetValue(iVert, jVert);
       }
-      GetBinaryExpression(eVal, hS, eVect);
+      size_t shift = eVal * hS;
       for (size_t iH=0; iH<hS; iH++)
-	if (eVect[iH] == 1) {
+	if (f_total[shift + iH] == 1) {
 	  size_t aVert=iVert + nbVert*iH;
 	  size_t bVert=jVert + nbVert*iH;
 	  f_adj(aVert, bVert);
