@@ -630,6 +630,36 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   list_signature.push_back(nbCase-2); // for nbRow
   list_signature.push_back(nbCase-1); // for nbRow+1
   //
+  // Determining the number of cases
+  //
+  std::vector<int> ListNbCase(nbCase,0);
+  for (size_t i=0; i<nbVert; i++) {
+    int iCase = list_signature[i];
+    ListNbCase[iCase]++;
+  }
+  //
+  // Now computing the weight by multiplier
+  //
+  std::vector<size_t> WeightByMult(nbMult, 0);
+  for (size_t iCase=0; iCase<nbCase; iCase++) {
+    int sizCase = ListNbCase[iCase];
+    std::vector<std::pair<int,int>> e_vect = new_list_signature[iCase];
+    for (auto & e_pair : e_vect) {
+      int iWeight = e_pair.first;
+      int eMult = e_pair.second;
+      WeightByMult[iWeight] += sizCase * eMult;
+    }
+  }
+  //
+  // Reordering the multiplier to maximize the sparsity
+  //
+  std::vector<size_t> ListIdx(nbMult);
+  for (size_t iMult=0; iMult<nbMult; iMult++)
+    ListIdx[iMult] = iMult;
+  std::stable_sort(ListIdx.begin(), ListIdx.end(), [&](const size_t& idx1, const size_t& idx2) -> bool {
+    return WeightByMult[idx1] > WeightByMult[idx2];
+  });
+  //
   // Now computing the list of signature
   //
   MyMatrix<int> MatrixAdj = ZeroMatrix<int>(hS, nbCase);
@@ -642,17 +672,10 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   // Now computing the contribution of the adjacencies
   //
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
-  for (size_t iMult=0; iMult<nbMult; iMult++) {
-    std::cerr << "iMult=" << iMult << " f=";
-    for (size_t u=0; u<e_pow; u++)
-      std::cerr << f_total[iMult * e_pow + u];
-    std::cerr << "\n";
-  }
-  std::vector<int> eVect(e_pow);
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     std::vector<std::pair<int,int>> e_vect = new_list_signature[iCase];
     for (auto & e_pair : e_vect) {
-      int iWeight = e_pair.first;
+      int iWeight = ListIdx[e_pair.first];
       int eMult = e_pair.second;
       size_t shift = iWeight * e_pow;
       for (size_t i_pow=0; i_pow<e_pow; i_pow++) {
@@ -673,11 +696,6 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   // Now building the adjacencies for traces
   //
   int nbAdjacent = 0;
-  std::vector<int> ListNbCase(nbCase,0);
-  for (size_t i=0; i<nbVert; i++) {
-    int iCase = list_signature[i];
-    ListNbCase[iCase]++;
-  }
   for (size_t iCase=0; iCase<nbCase; iCase++)
     for (size_t iH=0; iH<hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
@@ -744,7 +762,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
           eVal = map[f2(jVert)];
         }
       }
-      size_t shift = e_pow * eVal;
+      size_t shift = e_pow * ListIdx[eVal];
       for (size_t i_pow=0; i_pow<e_pow; i_pow++)
         if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2*i_pow];
