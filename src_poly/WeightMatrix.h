@@ -587,6 +587,32 @@ int GetNeededPower(int nb)
 }
 
 
+Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent)
+{
+  std::cerr << "GetAllBinaryExpressionsByWeight n=" << n << " n_ent=" << n_ent << "\n";
+  Face f_total(n * n_ent);
+  size_t pos = 0;
+  for (size_t i=0; i<=n; i++) {
+    IteratorBinomial<int> IterBin(n, i);
+    Face f = IterBin.first_face();
+    while(true) {
+      size_t shift = pos * n;
+      for (size_t u=0; u<n; u++)
+        f_total[shift + u] = f[u];
+      pos++;
+      if (pos == n_ent)
+        return f_total;
+      bool test = IterBin.FaceIncrement(f);
+      if (!test)
+        break;
+    }
+  }
+  std::cerr << "We should never reach that stage\n";
+  throw TerminalException{1};
+}
+
+
+
 inline void GetBinaryExpression(int eVal, size_t h, std::vector<int> & eVect)
 {
   int eWork, eExpo, eExpoB, res;

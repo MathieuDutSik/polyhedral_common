@@ -19,10 +19,11 @@
 PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
+#PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= POLY_LinPolytope_TestAutomorphism
+#PROGRAM		= POLY_LinPolytope_TestIsomorphism
 #PROGRAM		= POLY_LinPolytope_TestCanonic
 #PROGRAM		= POLY_GapFindHyperplaneRegions
-#PROGRAM		= POLY_LinPolytope_TestIsomorphism
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
@@ -36,8 +37,8 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++17 -Wall -O3 -g
-#CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
+#CC		= g++ -std=c++17 -Wall -O3 -g
+CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
 #CC		= g++ -std=c++17 -Wall -g -O2 -fsanitize=address -fsanitize=undefined -fstack-protector-all

@@ -173,11 +173,9 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     esign.clear();
     V[iBreak] = idx_sign;
   }
-  std::cerr << "RefineSpecificVertexPartition, step 1\n";
   size_t n_block = ListPossibleSignatures.size();
   if (n_block == 1)
     return false;
-  std::cerr << "RefineSpecificVertexPartition, step 1\n";
   if (canonically) {
     // First reordering the weights
     std::pair<std::vector<T>, std::vector<int>> rec_pair_A = GetReorderingInfoWeight(ListWeight);
@@ -210,7 +208,6 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
       V[iBreak] = NewIdx;
     }
   }
-  std::cerr << "RefineSpecificVertexPartition, step 2\n";
   int n_block_orig = VP.ListBlocks.size();
   std::vector<int> Vmap(n_block);
   Vmap[0] = jBlock;
@@ -218,12 +215,10 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     int pos = n_block_orig + i - 1;
     Vmap[i] = pos;
   }
-  std::cerr << "RefineSpecificVertexPartition, step 3\n";
   VP.ListBlocks[jBlock].clear();
   for (size_t i=1; i<n_block; i++) {
     VP.ListBlocks.push_back(std::vector<int>());
   }
-  std::cerr << "RefineSpecificVertexPartition, step 4\n";
   for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
     int iRow = eBlockBreak[iBreak];
     int iBlockLoc = V[iBreak];
@@ -231,7 +226,6 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     VP.MapVertexBlock[iRow] = iBlockGlob;
     VP.ListBlocks[iBlockGlob].push_back(iRow);
   }
-  std::cerr << "RefineSpecificVertexPartition, step 5\n";
   return true;
 }
 
@@ -295,9 +289,6 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
     bool DidSomething = false;
     for (int jBlock=0; jBlock<n_block; jBlock++) {
       if (iBlock != jBlock) {
-#ifdef DEBUG_SPECIFIC
-        std::cerr << "Before RefineSpecificVertexPartition\n";
-#endif
         bool test2 = RefineSpecificVertexPartition<T>(VP, jBlock, iBlock, f1, f2, canonically);
 #ifdef DEBUG_SPECIFIC
         std::cerr << "iBlock=" << iBlock << " jBlock=" << jBlock << " test2=" << test2 << "\n";
@@ -325,6 +316,8 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
     PrintVertexParttionInfo(VP, status);
 #endif
     std::cerr << "test=" << test << "\n";
+    if (!test)
+      break;
   }
   return VP;
 }
@@ -648,15 +641,22 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   //
   // Now computing the contribution of the adjacencies
   //
+  Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
+  for (size_t iMult=0; iMult<nbMult; iMult++) {
+    std::cerr << "iMult=" << iMult << " f=";
+    for (size_t u=0; u<e_pow; u++)
+      std::cerr << f_total[iMult * e_pow + u];
+    std::cerr << "\n";
+  }
   std::vector<int> eVect(e_pow);
   for (size_t iCase=0; iCase<nbCase; iCase++) {
     std::vector<std::pair<int,int>> e_vect = new_list_signature[iCase];
     for (auto & e_pair : e_vect) {
       int iWeight = e_pair.first;
       int eMult = e_pair.second;
-      GetBinaryExpression(iWeight, e_pow, eVect);
+      size_t shift = iWeight * e_pow;
       for (size_t i_pow=0; i_pow<e_pow; i_pow++) {
-        if (eVect[i_pow] == 1) {
+        if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2*i_pow];
           int iH2 = V[2*i_pow+1];
           // Adjacency (iVert + nbVert*iH , jVert + nbVert*iH2)
@@ -744,9 +744,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
           eVal = map[f2(jVert)];
         }
       }
-      GetBinaryExpression(eVal, e_pow, eVect);
+      size_t shift = e_pow * eVal;
       for (size_t i_pow=0; i_pow<e_pow; i_pow++)
-        if (eVect[i_pow] == 1) {
+        if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2*i_pow];
           int iH2 = V[2*i_pow+1];
           size_t aVert=iVert + nbVert*iH1;
