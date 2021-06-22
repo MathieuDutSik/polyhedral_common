@@ -67,15 +67,16 @@ std::pair<std::vector<T>, std::vector<int>> GetReorderingInfoWeight(const std::v
 
 
 
+template<typename Tidx>
 struct VertexPartition {
   size_t nbRow;
-  std::vector<int> MapVertexBlock;
-  std::vector<std::vector<int>> ListBlocks;
+  std::vector<Tidx> MapVertexBlock;
+  std::vector<std::vector<Tidx>> ListBlocks;
 };
 
 
-template<typename T, typename F1, typename F2>
-VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
+template<typename T, typename Tidx, typename F1, typename F2>
+VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
 {
   std::vector<T> ListWeight;
   UNORD_MAP_SPECIFIC<T,size_t> ValueMap_T;
@@ -89,7 +90,7 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
     }
     return idx - 1;
   };
-  std::vector<int> MapVertexBlock(nbRow);
+  std::vector<Tidx> MapVertexBlock(nbRow);
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
     T val = f2(iRow);
@@ -104,7 +105,7 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
       MapVertexBlock[iRow] = NewIdx;
     }
   }
-  std::vector<std::vector<int>> ListBlocks(ListWeight.size());
+  std::vector<std::vector<Tidx>> ListBlocks(ListWeight.size());
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     int pos = MapVertexBlock[iRow];
     ListBlocks[pos].push_back(iRow);
@@ -113,8 +114,8 @@ VertexPartition ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool c
 }
 
 // jBlock : is the block for which we look at breaking down
-template<typename T, typename F1, typename F2>
-bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, const int& iBlock, F1 f1, F2 f2, bool canonically)
+template<typename T, typename Tidx, typename F1, typename F2>
+bool RefineSpecificVertexPartition(VertexPartition<Tidx> & VP, const int& jBlock, const int& iBlock, F1 f1, F2 f2, bool canonically)
 {
   // The code for finding the indices
   UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
@@ -142,8 +143,8 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
     return idx - 1;
   };
   // Now computing the indices
-  std::vector<int> eBlockBreak = VP.ListBlocks[jBlock]; // We do need a copy operation here
-  const std::vector<int>& eBlockSpec = VP.ListBlocks[iBlock];
+  std::vector<Tidx> eBlockBreak = VP.ListBlocks[jBlock]; // We do need a copy operation here
+  const std::vector<Tidx>& eBlockSpec = VP.ListBlocks[iBlock];
   size_t siz_block_break = eBlockBreak.size();
   size_t siz_block_spec = eBlockSpec.size();
   std::vector<int> V(siz_block_break);
@@ -217,7 +218,7 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
   }
   VP.ListBlocks[jBlock].clear();
   for (size_t i=1; i<n_block; i++) {
-    VP.ListBlocks.push_back(std::vector<int>());
+    VP.ListBlocks.push_back(std::vector<Tidx>());
   }
   for (size_t iBreak=0; iBreak<siz_block_break; iBreak++) {
     int iRow = eBlockBreak[iBreak];
@@ -229,8 +230,8 @@ bool RefineSpecificVertexPartition(VertexPartition & VP, const int& jBlock, cons
   return true;
 }
 
-
-void PrintVertexParttionInfo(const VertexPartition& VP, const std::vector<uint8_t>& status)
+template<typename Tidx>
+void PrintVertexParttionInfo(const VertexPartition<Tidx>& VP, const std::vector<uint8_t>& status)
 {
   std::cerr << "nbRow=" << VP.nbRow << "\n";
   size_t n_block = VP.ListBlocks.size();
@@ -239,10 +240,10 @@ void PrintVertexParttionInfo(const VertexPartition& VP, const std::vector<uint8_
   }
 }
 
-template<typename T, typename F1, typename F2>
-VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
+template<typename T, typename Tidx, typename F1, typename F2>
+VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
 {
-  VertexPartition VP = ComputeInitialVertexPartition<T>(nbRow, f1, f2, canonically);
+  VertexPartition<Tidx> VP = ComputeInitialVertexPartition<T,Tidx>(nbRow, f1, f2, canonically);
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_SPECIFIC
   std::cerr << "After ComputeInitialVertexPartition\n";
@@ -271,7 +272,7 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
   auto DoRefinement=[&](const int& iBlock) -> bool {
     int n_block = VP.ListBlocks.size();
     // First looking at the diagonal
-    bool test1 = RefineSpecificVertexPartition<T>(VP, iBlock, iBlock, f1, f2, canonically);
+    bool test1 = RefineSpecificVertexPartition<T,Tidx>(VP, iBlock, iBlock, f1, f2, canonically);
 #ifdef DEBUG_SPECIFIC
     std::cerr << "iBlock=" << iBlock << " test1=" << test1 << "\n";
 #endif
@@ -289,7 +290,7 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
     bool DidSomething = false;
     for (int jBlock=0; jBlock<n_block; jBlock++) {
       if (iBlock != jBlock) {
-        bool test2 = RefineSpecificVertexPartition<T>(VP, jBlock, iBlock, f1, f2, canonically);
+        bool test2 = RefineSpecificVertexPartition<T,Tidx>(VP, jBlock, iBlock, f1, f2, canonically);
 #ifdef DEBUG_SPECIFIC
         std::cerr << "iBlock=" << iBlock << " jBlock=" << jBlock << " test2=" << test2 << "\n";
 #endif
@@ -328,7 +329,8 @@ VertexPartition ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonica
 
 // We use stable_sort to make sure that from the canonical ordering of the blocks
 // we get a canonical ordering for the block sizes.
-std::vector<int> GetOrdering_ListIdx(const VertexPartition& VP)
+template<typename Tidx>
+std::vector<int> GetOrdering_ListIdx(const VertexPartition<Tidx>& VP)
 {
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx(nbCase);
@@ -894,7 +896,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 
   bool canonically = false;
   size_t max_globiter = 1000;
-  VertexPartition VP = ComputeVertexPartition<T>(nbRow, f1, f2, canonically, max_globiter);
+  VertexPartition<Tidx> VP = ComputeVertexPartition<T,Tidx>(nbRow, f1, f2, canonically, max_globiter);
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
@@ -903,7 +905,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
     std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
   }
 #endif
-
+  Face f_covered(nbCase);
   for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
     for (size_t u=0; u<idx; u++)
@@ -920,6 +922,13 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 #endif
     //
     if (f3(CurrentListIdx)) {
+      std::vector<std::vector<Tidx>> ListBlocks;
+      std::vector<size_t> ListEnt;
+      for (size_t u=0; u<nbCase; u++)
+        if (StatusCase[u] == 0) {
+          ListBlocks.push_back(VP.ListBlocks[u]);
+          ListEnt.push_back(u);
+        }
       auto f1_res = [&](size_t iRow) -> void {
         f1(CurrentListIdx[iRow]);
       };
@@ -937,15 +946,22 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 #endif
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
+      Face f_incorr(ListEnt.size());
       for (auto & eList : ListGen) {
-        if (IsCorrect) {
-          EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
-          if (test.TheReply) {
-            LGen.push_back(test.TheEquiv);
-          } else {
-            IsCorrect = false;
-          }
+        DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
+        if (test.correct) {
+          LGen.push_back(test.eGen);
+        } else {
+          IsCorrect = false;
         }
+        for (size_t u=0; u<ListEnt.size(); u++)
+          if (!test.block_status[u])
+            f_incorr[u] = 1;
+      }
+      for (size_t u=0; u<ListEnt.size(); u++) {
+        size_t pos = ListEnt[u];
+        if (f_incorr[u] == 0)
+          f_covered[pos] = 1;
       }
       if (IsCorrect) {
         return LGen;
@@ -976,7 +992,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #endif
   bool canonically = true;
   size_t max_globiter = 1000;
-  VertexPartition VP = ComputeVertexPartition<T>(nbRow, f1, f2, canonically, max_globiter);
+  VertexPartition<Tidx> VP = ComputeVertexPartition<T,Tidx>(nbRow, f1, f2, canonically, max_globiter);
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
@@ -985,6 +1001,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
   }
 #endif
+  Face f_covered(nbCase);
   for (size_t idx=1; idx<=nbCase; idx++) {
     std::vector<int> StatusCase(nbCase,0);
     for (size_t u=0; u<idx; u++)
@@ -1001,6 +1018,13 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #endif
     //
     if (f3(CurrentListIdx)) {
+      std::vector<std::vector<Tidx>> ListBlocks;
+      std::vector<size_t> ListEnt;
+      for (size_t u=0; u<nbCase; u++)
+        if (StatusCase[u] == 0) {
+          ListBlocks.push_back(VP.ListBlocks[u]);
+          ListEnt.push_back(u);
+        }
       auto f1_res = [&](size_t iRow) -> void {
         f1(CurrentListIdx[iRow]);
       };
@@ -1018,17 +1042,27 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
       PrintWMVS(std::cerr, WMVS_res);
 #endif
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
+#ifdef DEBUG_SPECIFIC
+      std::cerr << "|ListGen|=" << ePair.second.size() << "\n";
+#endif
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
+      Face f_incorr(ListEnt.size());
       for (auto & eList : ePair.second) {
-        if (IsCorrect) {
-          EquivTest<std::vector<Tidx>> test = f4(CurrentListIdx, eList);
-          if (test.TheReply) {
-            LGen.push_back(test.TheEquiv);
-          } else {
-            IsCorrect = false;
-          }
+        DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
+        if (test.correct) {
+          LGen.push_back(test.eGen);
+        } else {
+          IsCorrect = false;
         }
+        for (size_t u=0; u<ListEnt.size(); u++)
+          if (!test.block_status[u])
+            f_incorr[u] = 1;
+      }
+      for (size_t u=0; u<ListEnt.size(); u++) {
+        size_t pos = ListEnt[u];
+        if (f_incorr[u] == 0)
+          f_covered[pos] = 1;
       }
       if (IsCorrect) {
         return {f5(CurrentListIdx, ePair.first), LGen};

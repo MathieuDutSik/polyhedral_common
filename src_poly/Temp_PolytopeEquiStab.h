@@ -248,12 +248,11 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f
     return IsSubsetFullRank<T,Tfield,Tidx>(TheEXT, Vsubset);
   };
   // Extension of the partial automorphism
-  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+  auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
     EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
-    if (!test1.TheReply) {
+    if (!test1.TheReply)
       return {false, {}};
-    }
-    return RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
+    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
@@ -505,7 +504,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     return IsSubsetFullRank<T,Tfield,Tidx>(TheEXT, Vsubset);
   };
   // Extension of the partial automorphism
-  auto f4=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& Vin) -> EquivTest<std::vector<Tidx>> {
+  auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
     EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
     if (!test1.TheReply) {
       return {false, {}};
@@ -516,7 +515,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
       if (!TestEqualityMatrix(eProd, eMat_F))
         return {false, {}};
     }
-    return RepresentVertexPermutationTest<T,Tfield,Tidx>(TheEXT, TheEXT, test1.TheEquiv);
+    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {

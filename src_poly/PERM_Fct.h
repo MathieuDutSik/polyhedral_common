@@ -203,6 +203,58 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
 }
 
 
+template<typename Tidx>
+struct DataMapping {
+  bool correct;
+  Face block_status;
+  std::vector<Tidx> eGen;
+};
+
+
+template<typename T, typename Tfield, typename Tidx>
+DataMapping<Tidx> RepresentVertexPermutationTest_Blocks(const MyMatrix<T>& EXT, const MyMatrix<Tfield>& P, const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks)
+{
+  size_t n_rows = EXT.rows();
+  size_t n_cols = EXT.cols();
+  std::vector<Tidx> eGen(n_rows);
+  bool correct=true;
+  size_t n_block=ListBlocks.size();
+  std::vector<Tidx> MapRev(n_rows);
+  auto f_insert=[&](const std::vector<Tidx>& eSubset, const std::vector<Tidx>& eMap) -> void {
+    size_t len = eSubset.size();
+    for (size_t i=0; i<len; i++) {
+      Tidx pos = eMap[i];
+      Tidx i_m = eSubset[i];
+      Tidx pos_m = eSubset[pos];
+      eGen[i_m] = pos_m;
+    }
+  };
+  f_insert(Vsubset, Vin);
+  //
+  Face block_status(n_block);
+  for (size_t i_block=0; i_block<n_block; i_block++) {
+    size_t blk_size = ListBlocks[i_block].size();
+    MyMatrix<T> EXTred(blk_size, n_cols);
+    for (size_t i_row=0; i_row<blk_size; i_row++) {
+      size_t pos = ListBlocks[i_block][i_row];
+      EXTred.row(i_row) = EXT.row(pos);
+    }
+    EquivTest<std::vector<Tidx>> eEquiv = RepresentVertexPermutationTest<T,Tfield,Tidx>(EXTred, EXTred, P);
+    if (!eEquiv.TheReply) {
+      correct = false;
+    } else {
+      f_insert(ListBlocks[i_block], eEquiv.TheEquiv);
+    }
+    block_status[i_block] = eEquiv.TheReply;
+  }
+  return {correct, std::move(block_status), std::move(eGen)};
+}
+
+
+
+
+
+
 
 template<typename T, typename Tfield, typename Tidx>
 std::vector<Tidx> ExtendPartialCanonicalization(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& PartOrd)
