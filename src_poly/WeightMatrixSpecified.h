@@ -906,10 +906,39 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   }
 #endif
   Face f_covered(nbCase);
-  for (size_t idx=1; idx<=nbCase; idx++) {
-    std::vector<int> StatusCase(nbCase,0);
-    for (size_t u=0; u<idx; u++)
-      StatusCase[ListIdx[u]] = 1;
+  std::vector<int> StatusCase(nbCase);
+  size_t idx=0;
+  auto set_status_case=[&]() -> void {
+    for (size_t iCase=0; iCase<nbCase; iCase++)
+      StatusCase[iCase] = 0;
+    for (size_t u=0; u<idx; u++) {
+      size_t pos = ListIdx[u];
+      if (f_covered[pos] == 0)
+        StatusCase[ListIdx[u]] = 1;
+    }
+  };
+  auto sum_status_case=[&]() -> int {
+    int sum=0;
+    for (size_t iCase=0; iCase<nbCase; iCase++)
+      sum += StatusCase[iCase];
+    return sum;
+  };
+  auto increase_idx=[&]() -> bool {
+    int sum_prev = sum_status_case();
+    while(true) {
+      idx++;
+      set_status_case();
+      int sum_new = sum_status_case();
+      if (sum_new > sum_prev)
+        return true;
+      if (idx == nbCase)
+        return false;
+    }
+  };
+  while(true) {
+    bool test = increase_idx();
+    if (!test)
+      break;
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       int iCase = VP.MapVertexBlock[iRow];
@@ -958,6 +987,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
           if (!test.block_status[u])
             f_incorr[u] = 1;
       }
+      std::cerr << "f_incorr=";
+      for (size_t u=0; u<ListEnt.size(); u++)
+        std::cerr << int(f_incorr[u]);
+      std::cerr << "\n";
+
       for (size_t u=0; u<ListEnt.size(); u++) {
         size_t pos = ListEnt[u];
         if (f_incorr[u] == 0)
