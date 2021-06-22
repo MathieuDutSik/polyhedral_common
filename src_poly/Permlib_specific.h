@@ -197,7 +197,7 @@ public:
     group = construct(n, generatorList.begin(), generatorList.end());
     e_size = group->order<Tint>();
   }
-  TheGroupFormat(int const& n_inp) : TheGroupFormat({}, n) 
+  TheGroupFormat(int const& n_inp) : TheGroupFormat({}, n_inp)
   {
   }
   TheGroupFormat() : TheGroupFormat(0)
