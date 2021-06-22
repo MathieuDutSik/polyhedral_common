@@ -250,8 +250,9 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f
   // Extension of the partial automorphism
   auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
     EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
+    Face block_status(ListBlocks.size());
     if (!test1.TheReply)
-      return {false, {}};
+      return {false, block_status, {}};
     return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
   };
   // Extension of the partial canonicalization
@@ -506,14 +507,15 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   // Extension of the partial automorphism
   auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
     EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
+    Face block_status(ListBlocks.size());
     if (!test1.TheReply) {
-      return {false, {}};
+      return {false, block_status, {}};
     }
     const MyMatrix<Tfield>& P = test1.TheEquiv;
     for (auto & eMat_F : ListMat_F) {
       MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
       if (!TestEqualityMatrix(eProd, eMat_F))
-        return {false, {}};
+        return {false, block_status, {}};
     }
     return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
   };
