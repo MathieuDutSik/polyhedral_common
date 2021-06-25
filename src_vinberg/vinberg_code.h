@@ -86,6 +86,7 @@ struct VinbergInput {
 template<typename T, typename Tint>
 struct VinbergTot {
   MyMatrix<T> G;
+  MyVector<T> v0;
   MyVector<Tint> V_i;
   MyVector<Tint> Vtrans;
   MyMatrix<Tint> Mbas;
@@ -130,22 +131,20 @@ bool IsRoot(MyMatrix<T> const& M, MyVector<Tint> const& V)
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
+VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
-  int n=Vinput.G.rows();
+  int n=G.rows();
   // Computing the complement of the space.
-  MyVector<T> V = Vinput.G * Vinput.v0;
-  MyVector<T> Vred = RemoveFractionVector(V);
-  MyVector<Tint> V_i = ConvertMatrixUniversal<Tint,T>(Vred);
-  std::vector<Tint> vectV_i(n);
+  MyVector<Tint> V = G * v0;
+  std::vector<Tint> vectV(n);
   for (int i=0; i<n; i++)
-    vectV_i[i] = V_i(i);
-  GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV_i);
+    vectV[i] = V(i);
+  GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV);
   std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
-  MyMatrix<Tint> M = ConcatenateMatVec(Morth, V_i);
+  MyMatrix<Tint> M = ConcatenateMatVec(Morth, V);
   // The dterminant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
@@ -177,8 +176,66 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
   // Computing the side comput
   MyMatrix<T> GM_iGorth = Vinput.G * Morth * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(Vinput.G);
-  return {Vinput.G, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
+  return {Vinput.G, Vinput.v0, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
 }
+
+
+template<typename T, typename Tint>
+struct IterateRootDecompositions {
+private:
+  std::unordered_map<Tint,int> candidates;
+  const VinbergTot<T,Tint>& Vtot;
+  Tint len_sW;
+  MyVector<Tint> cand_a(const int& n) const {
+    size_t len_sW = Vtot.W.size();
+    int res = n % len_sW;
+    int q = n / len_sW;
+    return Vtot.W[res] + q * Vtot.v0;
+  }
+  Tint get_k() const {
+    bool we_found = false;
+    double minval_d;
+    Tint kfind;
+    for (auto & k : Vtot.root_lengths) {
+      Tint val = - V.dot(cand_a(candidates[k]));
+      double k_d = sqrt(UniversalTypeConversion<double,Tint>(val));
+      double val_d = UniversalTypeConversion<double,Tint>(val) / k_d;
+      if (!we_found) {
+        we_found = true;
+        minval_d = val_d;
+        kfind = k;
+      } else {
+        if (val_d < minval_d) {
+          minval_d = val_d;
+          kfind = k;
+        }
+      }
+    }
+    return k;
+  }
+public:
+  IterateRootDecompositions(const VinbergTot<T,Tint>& Vtot) : Vtot(Vtot) {
+    for (auto & k : Vtot.root_lengths)
+      candidates[k] = 1;
+  }
+  std::pair<MyVector<Tint>> get_cand() {
+    Tint k = get_k();
+    std::cerr << "IterateRootDecomposition, k=" << k << "\n";
+    int val = candidates[k];
+    candidates[k] = val + 1;
+    MyVector<Tint> V = cand_a(val);
+    std::cerr << "IterateRootDecomposition, cand_a(candidates[k])=" << V << "\n";
+    return {V, k};
+  }
+};
+
+
+
+
+
+
+
+
 
 
 /*
@@ -310,9 +367,7 @@ std::vector<MyVector<Tint>> GetIntegerPoints(MyMatrix<Tint> const& m)
         positive(i_col) += val;
     }
   }
-  
 }
-
 
 
 template<typename T, typename Tint>
@@ -326,6 +381,11 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(VinbergTot<T,Tint> const& Vtot)
 {
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
+
+
+  auto cand_a=[&](const Tint& n) -> MyVector<Tint> {
+    return Vtot.W[
+  };
   auto NextRoot=[&]() -> MyVector<Tint> {
     
   };
