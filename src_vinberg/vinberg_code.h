@@ -95,6 +95,7 @@ struct VinbergTot {
   Tint eDet; // The determinant of the matrix.
   MyMatrix<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
   MyMatrix<T> GM_iGorth; // The inverse of the coefficient for the computation.
+  std::vector<Tint> root_lengths;
 };
 
 
@@ -175,7 +176,8 @@ VinbergTot<T,Tint> GetVinbergAux(VinbergInput<T,Tint> const& Vinput)
   MyMatrix<T> GorthInv = Inverse(Gorth);
   // Computing the side comput
   MyMatrix<T> GM_iGorth = Vinput.G * Morth * GorthInv;
-  return {Vinput.G, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth};
+  std::vector<Tint> root_lengths = Get_root_lengths(Vinput.G);
+  return {Vinput.G, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
 }
 
 
