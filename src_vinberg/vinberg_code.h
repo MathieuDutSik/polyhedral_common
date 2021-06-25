@@ -6,6 +6,11 @@
 
 
 
+
+//
+// Finding the closest points
+//
+
 // Compute the solutions of G [x - eV] = a
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat, MyVector<T> const& eV, T const& a)
@@ -27,6 +32,48 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat
   }
   return info.short_vectors;
 }
+
+//
+// Small arithmetic computations for the Vinberg computation
+//
+
+template<typename Tint>
+Tint En_Quantity(const MyMatrix<Tint>& M)
+{
+  using Tfield=typename overlying_field<Tint>::field_type;
+  Tint eDet = DeternminantMat(M);
+  MyMatrix<Tfield> M_field = ConvertMatrixUniversal<Tfield,Tint>(M);
+  MyMatrix<Tfield> Minv_field = Inverse(M_field);
+  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
+  Tint eDen_T = UniversalTypeConversion<Tint,Tfield>(FrMat.TheMult);
+  Tint TheEn = T_abs(eDet / eDen_T);
+  return TheEn;
+}
+
+
+template<typename Tint>
+std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
+{
+  Tint TheEn = En_Quantity(M);
+  Tint limit = 2 * TheEn;
+  std::vector<Tint> root_lengths;
+  Tint k = 1;
+  while (true) {
+    Tint res = ResInt(limit, k);
+    if (res == 0)
+      root_lengths.push_back(k);
+    if (k >= limit)
+      break;
+    k++;
+  }
+  return root_lengths;
+}
+
+
+//
+// The fundamental data type
+//
+
 
 template<typename T, typename Tint>
 struct VinbergInput {
@@ -158,6 +205,12 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot
 }
 
 
+
+
+
+
+
+
 template<typename T, typename Tint>
 bool is_FundPoly(VinbergTot<T,Tint> const& Vtot, std::vector<MyVector<Tint>> const& ListRoot)
 {
@@ -238,11 +291,54 @@ bool is_FundPoly(VinbergTot<T,Tint> const& Vtot, std::vector<MyVector<Tint>> con
   return IsFiniteCovolume;
 }
 
+
 template<typename T, typename Tint>
-MyMatrix<Tint> FindRoots(VinbergTot<T,Tint> const& Vtot)
+std::vector<MyVector<Tint>> GetIntegerPoints(MyMatrix<Tint> const& m)
+{
+  size_t n_rows = m.rows();
+  size_t n_cols = m.cols();
+  MyVector<Tint> negative = ZeroVector<Tint>(n_cols);
+  MyVector<Tint> positive = ZeroVector<Tint>(n_cols);
+  for (size_t i_col=0; i_col<n_cols; i_col++) {
+    for (size_t i_row=0; i_row<n_rows; i_row++) {
+      Tint val = m(i_row,i_col);
+      if (val < 0)
+        negative(i_col) += val;
+      if (val > 0)
+        positive(i_col) += val;
+    }
+  }
+  
+}
+
+
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FundCone(VinbergTot<T,Tint> const& Vtot)
 {
   
 }
+
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FindRoots(VinbergTot<T,Tint> const& Vtot)
+{
+  std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
+  auto NextRoot=[&]() -> MyVector<Tint> {
+    
+  };
+  while (true) {
+    
+  }
+
+  return ListRoot;
+}
+
+
+
+
+
+
 
 
 

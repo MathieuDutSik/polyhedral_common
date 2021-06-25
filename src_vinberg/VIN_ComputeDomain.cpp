@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
       std::cerr << "VIN_ComputeDomain [FileI] [FileO]\n";
       throw TerminalException{1};
     }
-    using T=mpz_class;
+    using T=mpq_class;
     using Tint=mpz_class;
 
     std::string FileI  = argv[1];
@@ -24,10 +24,7 @@ int main(int argc, char* argv[])
     VinbergInput<T,Tint> Vin{G, v0};
     VinbergTot<T,Tint> Vtot = GetVinbergAux(Vin);
     //
-    MyVector<Tint> a = ReadVector<Tint>(is);
-    T n;
-    is >> n;
-    std::vector<MyVector<Tint>> ListVect = Roots_decomposed_into(Vtot, a, n);
+    std::vector<MyVector<Tint>> ListVect = FindRoots(Vtot);
     //
     std::ostream& os = std::cout;
     int nVect = ListVect.size();
