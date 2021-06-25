@@ -218,7 +218,7 @@ public:
     for (auto & k : Vtot.root_lengths)
       candidates[k] = 1;
   }
-  std::pair<MyVector<Tint>> get_cand() {
+  std::pair<MyVector<Tint>, Tint> get_cand() {
     Tint k = get_k();
     std::cerr << "IterateRootDecomposition, k=" << k << "\n";
     int val = candidates[k];
@@ -382,18 +382,23 @@ std::vector<MyVector<Tint>> FindRoots(VinbergTot<T,Tint> const& Vtot)
 {
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
 
-
-  auto cand_a=[&](const Tint& n) -> MyVector<Tint> {
-    return Vtot.W[
-  };
-  auto NextRoot=[&]() -> MyVector<Tint> {
-    
-  };
+  IterateRootDecompositions<T,Tint> iter(Vtot);
   while (true) {
-    
+    const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
+    const MyVector<Tint>& a = pair.first;
+    const Tint& k = pair.second;
+    std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, n)) {
+      if (IsRoot(Vtot.G, root_cand)) {
+        ListRoot.push_back(root_cand);
+        if (is_FundPoly(Vtot, ListRoot)) {
+          return ListRoot;
+        }
+      }
+    }
   }
-
-  return ListRoot;
+  std::cerr << "Should never reach that stage\n";
+  throw TerminalException{1};
 }
 
 
