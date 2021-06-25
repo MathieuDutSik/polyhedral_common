@@ -885,16 +885,18 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
   ---F1/F2 : The first/second template function for creating the Weight matrix
   ---F3    : The function for testing acceptability of sets for consideration (e.g. rank function)
   ---F4    : The function for testing acceptability of small generators and returning the big
-             generators.
+             generators. It also takes blocks in input and determine their nature, that is preserved
+             or not
+  ---Fproc1 : function processing the graph (and using traces for this)
+  ---Fproc2 : function taking the output and returning the list of generators
+  ---Fproc3 : function taking all of it and returning the output.
 */
-template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4>
-std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
+template<bool canonically, typename T, typename Tidx, typename Tret1, typename Tret2, typename Tret3, typename F1, typename F2, typename F3, typename F4, typename Fproc1, typename Fproc2, typename Fproc3>
+Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 fproc1, Fproc2 fproc2, Fproc3 fproc3)
 {
 #ifdef DEBUG_SPECIFIC
-  std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
+  std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
-
-  bool canonically = false;
   size_t max_globiter = 1000;
   VertexPartition<Tidx> VP = ComputeVertexPartition<T,Tidx>(nbRow, f1, f2, canonically, max_globiter);
   size_t nbCase = VP.ListBlocks.size();
@@ -969,14 +971,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
       std::cerr << "WMVS_res=\n";
       PrintWMVS(std::cerr, WMVS_res);
 #endif
-      std::vector<std::vector<Tidx>> ListGen = GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
-#ifdef DEBUG_SPECIFIC
-      std::cerr << "|ListGen|=" << ListGen.size() << "\n";
-#endif
+      Tret1 ret1 = fproc1(WMVS_res, f1_res, f2_res);
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       Face f_incorr(ListEnt.size());
-      for (auto & eList : ListGen) {
+      for (auto & eList : fproc2(ret1)) {
         DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
         if (test.correct) {
           LGen.push_back(test.eGen);
@@ -998,7 +997,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
           f_covered[pos] = 1;
       }
       if (IsCorrect) {
-        return LGen;
+        return fproc3(CurrentListIdx, ret1, LGen);
       }
     }
   }
@@ -1007,7 +1006,30 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 }
 
 
-
+template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4>
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
+{
+#ifdef DEBUG_SPECIFIC
+  std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
+#endif
+  using Tret1 = std::vector<std::vector<Tidx>>;
+  using Tret2 = std::vector<std::vector<Tidx>>;
+  using Tret3 = std::vector<std::vector<Tidx>>;
+  auto fproc1=[&](const WeightMatrixVertexSignatures<T>& WMVS_res, auto f1_res, auto f2_res) -> Tret1 {
+    return GetStabilizerWeightMatrix_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
+  };
+  auto fproc2=[&](const Tret1& ListGen) -> const Tret2& {
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "|ListGen|=" << ListGen.size() << "\n";
+#endif
+    return ListGen;
+  };
+  auto fproc3=[&](const std::vector<Tidx>& Vsubset, const Tret1& ret1, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
+    return LGenFinal;
+  };
+  const bool canonically=false;
+  return BlockBreakdown_Heuristic<canonically,T,Tidx,Tret1,Tret2,Tret3>(nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3);
+}
 
 
 
@@ -1024,87 +1046,23 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
 #endif
-  bool canonically = true;
-  size_t max_globiter = 1000;
-  VertexPartition<Tidx> VP = ComputeVertexPartition<T,Tidx>(nbRow, f1, f2, canonically, max_globiter);
-  size_t nbCase = VP.ListBlocks.size();
-  std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
+  using Tret1 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
+  using Tret2 = std::vector<std::vector<Tidx>>;
+  using Tret3 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
+  auto fproc1=[&](const WeightMatrixVertexSignatures<T>& WMVS_res, auto f1_res, auto f2_res) -> Tret1 {
+    return GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
+  };
+  auto fproc2=[&](const Tret1& ePair) -> const Tret2& {
 #ifdef DEBUG_SPECIFIC
-  for (size_t iCase=0; iCase<nbCase; iCase++) {
-    int idx = ListIdx[iCase];
-    std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
-  }
+    std::cerr << "|ListGen|=" << ePair.second.size() << "\n";
 #endif
-  Face f_covered(nbCase);
-  for (size_t idx=1; idx<=nbCase; idx++) {
-    std::vector<int> StatusCase(nbCase,0);
-    for (size_t u=0; u<idx; u++)
-      StatusCase[ListIdx[u]] = 1;
-    std::vector<Tidx> CurrentListIdx;
-    for (size_t iRow=0; iRow<nbRow; iRow++) {
-      int iCase = VP.MapVertexBlock[iRow];
-      if (StatusCase[iCase] == 1)
-        CurrentListIdx.push_back(iRow);
-    }
-    size_t nbRow_res = CurrentListIdx.size();
-#ifdef DEBUG_SPECIFIC
-    std::cerr << "idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
-#endif
-    //
-    if (f3(CurrentListIdx)) {
-      std::vector<std::vector<Tidx>> ListBlocks;
-      std::vector<size_t> ListEnt;
-      for (size_t u=0; u<nbCase; u++)
-        if (StatusCase[u] == 0) {
-          ListBlocks.push_back(VP.ListBlocks[u]);
-          ListEnt.push_back(u);
-        }
-      auto f1_res = [&](size_t iRow) -> void {
-        f1(CurrentListIdx[iRow]);
-      };
-      auto f2_res = [&](size_t jRow) -> T {
-        return f2(CurrentListIdx[jRow]);
-      };
-      WeightMatrixVertexSignatures<T> WMVS_res = ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
-#ifdef DEBUG_SPECIFIC
-      std::cerr << "Before RenormalizeWMVS : WMVS_res=\n";
-      PrintWMVS(std::cerr, WMVS_res);
-#endif
-      RenormalizeWMVS(WMVS_res);
-#ifdef DEBUG_SPECIFIC
-      std::cerr << "After RenormalizeWMVS : WMVS_res=\n";
-      PrintWMVS(std::cerr, WMVS_res);
-#endif
-      std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = GetGroupCanonicalization_KnownSignature<T,Tidx>(WMVS_res, f1_res, f2_res);
-#ifdef DEBUG_SPECIFIC
-      std::cerr << "|ListGen|=" << ePair.second.size() << "\n";
-#endif
-      bool IsCorrect = true;
-      std::vector<std::vector<Tidx>> LGen;
-      Face f_incorr(ListEnt.size());
-      for (auto & eList : ePair.second) {
-        DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
-        if (test.correct) {
-          LGen.push_back(test.eGen);
-        } else {
-          IsCorrect = false;
-        }
-        for (size_t u=0; u<ListEnt.size(); u++)
-          if (!test.block_status[u])
-            f_incorr[u] = 1;
-      }
-      for (size_t u=0; u<ListEnt.size(); u++) {
-        size_t pos = ListEnt[u];
-        if (f_incorr[u] == 0)
-          f_covered[pos] = 1;
-      }
-      if (IsCorrect) {
-        return {f5(CurrentListIdx, ePair.first), LGen};
-      }
-    }
-  }
-  std::cerr << "GetGroupCanonicalizationVector_Heuristic : We should never reach that stage\n";
-  throw TerminalException{1};
+    return ePair.second;
+  };
+  auto fproc3=[&](const std::vector<Tidx>& Vsubset, const Tret1& ePair, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
+    return {f5(Vsubset, ePair.first), LGenFinal};
+  };
+  const bool canonically=true;
+  return BlockBreakdown_Heuristic<canonically,T,Tidx,Tret1,Tret2,Tret3>(nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3);
 }
 
 
