@@ -407,7 +407,16 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 {
-  
+  std::vector<MyVector<Tint>> V1_roots;
+  size_t n = Vtot.G.rows();
+  MyVector<T> a = ZeroVector<T>(n);
+  for (auto & k : Vtot.root_lengths) {
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, k)) {
+      if (IsRoot(Vtot.G, root_cand))
+        V1_roots.push_back(root_cand);
+    }
+  }
+  return V1_roots;
 }
 
 
