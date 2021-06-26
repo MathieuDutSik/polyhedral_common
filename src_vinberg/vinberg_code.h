@@ -41,12 +41,13 @@ template<typename Tint>
 Tint En_Quantity(const MyMatrix<Tint>& M)
 {
   using Tfield=typename overlying_field<Tint>::field_type;
-  Tint eDet = DeternminantMat(M);
+  Tint eDet = DeterminantMat(M);
   MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(M);
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
   FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
   Tint eDen_T = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
-  Tint TheEn = T_abs(eDet / eDen_T);
+  Tint quot = eDet / eDen_T;
+  Tint TheEn = T_abs(quot);
   return TheEn;
 }
 
@@ -86,8 +87,10 @@ struct VinbergTot {
   MyMatrix<Tint> MbasInv;
   //
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
+  MyMatrix<T> Morth_T; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
   Tint eDet; // The determinant of the matrix.
-  MyMatrix<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
+  MyMatrix<Tint> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
+  MyMatrix<T> Gorth_T; // The Gram matrix of the orthogonal. Must be positive definite.
   MyMatrix<T> GM_iGorth; // The inverse of the coefficient for the computation.
   std::vector<MyVector<Tint>> W;
   std::vector<Tint> root_lengths;
@@ -198,6 +201,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
+  MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
   MyMatrix<Tint> M = ConcatenateMatVec(Morth, V);
   MyMatrix<Tint> M2 = ConcatenateMatVec(Morth, v0);
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2);
@@ -227,12 +231,13 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<Tint> MbasInv = Inverse(Mbas);
 
   // Gram matrix of the space.
-  MyMatrix<T> Gorth = Morth * G * Morth.transpose();
-  MyMatrix<T> GorthInv = Inverse(Gorth);
+  MyMatrix<Tint> Gorth = Morth * G * Morth.transpose();
+  MyMatrix<T> Gorth_T = UniversalMatrixConversion<T,Tint>(Gorth);
+  MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
-  MyMatrix<T> GM_iGorth = G * Morth * GorthInv;
+  MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
-  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, W, root_lengths};
+  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
 
@@ -250,10 +255,11 @@ private:
   }
   Tint get_k() const {
     bool we_found = false;
-    double minval_d;
+    double minval_d=0;
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
-      Tint val = - Vtot.v0.dot(cand_a(candidates[k]));
+      MyVector<Tint> V2 = cand_a(candidates.at(k));
+      Tint val = - Vtot.v0.dot(V2);
       double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
       double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
       if (!we_found) {
@@ -308,12 +314,13 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
 {
   MyVector<T> sV = a * Vtot.GM_iGorth;
-  T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth * sV);
+  T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth_T * sV);
   MyVector<T> eV = -sV;
-  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth, eV, normi);
+  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi);
   std::vector<MyVector<Tint>> RetSol;
   for (auto& eV : ListSol) {
-    MyVector<Tint> rX = a + eV * Vtot.Morth;
+    MyVector<T> rX_T = a + UniversalVectorConversion<T,Tint>(eV) * Vtot.Morth_T;
+    MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
     RetSol.emplace_back(rX);
   }
   return RetSol;
@@ -434,9 +441,10 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
+    const MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
     const T k_T = k;
     std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T)) {
       if (IsRoot(Vtot.G, root_cand)) {
         ListRoot.push_back(root_cand);
         if (is_FundPoly(Vtot, ListRoot)) {
