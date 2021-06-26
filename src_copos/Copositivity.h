@@ -54,8 +54,8 @@ int FindLargest(T const& a, T const& b, T const& C)
 {
   T C2=C/b;
   T a2=a/b;
-  double a2_doubl = UniversalTypeConversion<double,T>(a2);
-  double C2_doubl = UniversalTypeConversion<double,T>(C2);
+  double a2_doubl = UniversalScalarConversion<double,T>(a2);
+  double C2_doubl = UniversalScalarConversion<double,T>(C2);
 #ifdef DEBUG_UNDER_POS_COND
   if (b <= 0 || C <= 0) {
     std::cerr << "b should be strictly positive. b=" << b << "\n";
@@ -103,7 +103,7 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const& eSymmMat, MyMatrix<Tint> const& TheBasis, T const& MaxNorm)
 {
 #ifdef DEBUG_UNDER_POS_COND
-  MyMatrix<T> tstTheBasis_T=ConvertMatrixUniversal<T,Tint>(TheBasis);
+  MyMatrix<T> tstTheBasis_T=UniversalMatrixConversion<T,Tint>(TheBasis);
   MyMatrix<T> tstSymmMatB=TheBasis_T*eSymmMat*TheBasis_T.transpose();
   bool test1=TestCopositivityByPositivityCoeff(tstSymmMatB);
   if (!test1) {
@@ -113,9 +113,9 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
 #endif
   BasisReduction<Tint> eRedBas=ComputeBasisReduction(TheBasis);
   MyMatrix<Tint> TheBasisReord=eRedBas.TheBasisReord;
-  MyMatrix<T> Pmat_T=ConvertMatrixUniversal<T,Tint>(eRedBas.Pmat);
+  MyMatrix<T> Pmat_T=UniversalMatrixConversion<T,Tint>(eRedBas.Pmat);
   MyMatrix<T> Pinv=Pmat_T.inverse().eval();
-  MyMatrix<Tint> Pinv_int=ConvertMatrixUniversal<Tint,T>(Pinv);
+  MyMatrix<Tint> Pinv_int=UniversalMatrixConversion<Tint,T>(Pinv);
   MyMatrix<Tint> Pinv_cgr=Pinv_int.transpose();
   MyMatrix<T> eSymmMatB=Pinv*eSymmMat*Pinv.transpose();
 #ifdef DEBUG_UNDER_POS_COND
@@ -131,7 +131,7 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
   std::cerr << "TheBasisReord=\n";
   WriteMatrix(std::cerr, TheBasisReord);
 #endif
-  MyMatrix<T> TheBasisReord_T=ConvertMatrixUniversal<T,Tint>(TheBasisReord);
+  MyMatrix<T> TheBasisReord_T=UniversalMatrixConversion<T,Tint>(TheBasisReord);
   MyMatrix<T> eSymmMatC=TheBasisReord_T*eSymmMatB*TheBasisReord_T.transpose();
 #ifdef DEBUG_UNDER_POS_COND
   bool test2=TestCopositivityByPositivityCoeff(eSymmMatC);
@@ -203,7 +203,7 @@ std::vector<MyVector<Tint>> EnumerateShortVectorInCone_UnderPositivityCond(MyMat
 	throw TerminalException{1};
       }
 #endif
-      X(i)=UniversalTypeConversion<Tint,T>(eX_q);
+      X(i)=UniversalScalarConversion<Tint,T>(eX_q);
     }
 #ifdef DEBUG_UNDER_POS_COND
     std::cerr << "X=";
@@ -385,7 +385,7 @@ template<typename T, typename Tint>
 std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMatrix<Tint> const& TheBasis)
 {
   int n=eSymmMat.rows();
-  MyMatrix<T> TheBasis_T=ConvertMatrixUniversal<T,Tint>(TheBasis);
+  MyMatrix<T> TheBasis_T=UniversalMatrixConversion<T,Tint>(TheBasis);
   MyMatrix<T> eSymmMatB=TheBasis_T*eSymmMat*TheBasis_T.transpose();
   std::pair<Tint,Tint> PairXY_found{-1,-1};
   std::pair<int,int> PairIJ_found{-1,-1};
@@ -492,8 +492,8 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const& eSymmMat, MyMat
     TheBasis1.row(i) = eVect1;
     TheBasis2.row(i) = eVect2;
   }
-  MyMatrix<T> TheBasis1_T=ConvertMatrixUniversal<T,Tint>(TheBasis1);
-  MyMatrix<T> TheBasis2_T=ConvertMatrixUniversal<T,Tint>(TheBasis2);
+  MyMatrix<T> TheBasis1_T=UniversalMatrixConversion<T,Tint>(TheBasis1);
+  MyMatrix<T> TheBasis2_T=UniversalMatrixConversion<T,Tint>(TheBasis2);
   MyMatrix<T> eSymmMatB1=TheBasis1_T*eSymmMat*TheBasis1_T.transpose();
   MyMatrix<T> eSymmMatB2=TheBasis2_T*eSymmMat*TheBasis2_T.transpose();
   if (OptMinimum == 2) {
@@ -527,7 +527,7 @@ SingleTestResult<Tint> SingleTestStrictCopositivity(MyMatrix<T> const& eSymmMat,
 	  V(0) = -b;
 	  V(1) = a;
 	  MyVector<T> Vred = RemoveFractionVector(V);
-	  MyVector<Tint> Vint = ConvertVectorUniversal<Tint,T>(Vred);
+	  MyVector<Tint> Vint = UniversalVectorConversion<Tint,T>(Vred);
 	  MyVector<Tint> eVect = Vint(0) * TheBasis.row(i) + Vint(1) * TheBasis.row(j);
 	  return {false, "zero vector detected", std::move(eVect)};
 	}
@@ -622,7 +622,7 @@ SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const& eSymmMat)
     eVect1(iCol) = eSum;
   }
   MyVector<T> eVect2=RemoveFractionVector(eVect1);
-  MyVector<Tint> eVect3=ConvertVectorUniversal<Tint,T>(eVect2);
+  MyVector<Tint> eVect3=UniversalVectorConversion<Tint,T>(eVect2);
   return {false, "Zero vector from kernel", std::move(eVect3)};
 }
 
@@ -642,7 +642,7 @@ CopositivityEnumResult<Tint> KernelEnumerateShortVectorInCone(MyMatrix<T> const&
   //
   // First clear up with all signs being positive case
   //
-  MyMatrix<T> TheBasis_T=ConvertMatrixUniversal<T,Tint>(TheBasis);
+  MyMatrix<T> TheBasis_T=UniversalMatrixConversion<T,Tint>(TheBasis);
   MyMatrix<T> eSymmMatB=TheBasis_T*eSymmMat*TheBasis_T.transpose();
   bool test=TestCopositivityByPositivityCoeff(eSymmMatB);
   if (test) {
@@ -737,7 +737,7 @@ SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const& 
   };
   auto NextInTree=[&]() -> bool {
     MyMatrix<Tint> TheBasis = GetBasis();
-    MyMatrix<T> TheBasis_T=ConvertMatrixUniversal<T,Tint>(TheBasis);
+    MyMatrix<T> TheBasis_T=UniversalMatrixConversion<T,Tint>(TheBasis);
     MyMatrix<T> eSymmMatB=TheBasis_T*eSymmMat*TheBasis_T.transpose();
     //
     // If we can conclude the computation then we do so.

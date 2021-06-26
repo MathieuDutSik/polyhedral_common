@@ -186,10 +186,10 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
 
-  MyMatrix<Tfield> TheEXT_F = ConvertMatrixUniversal<Tfield,T>(TheEXT);
+  MyMatrix<Tfield> TheEXT_F = UniversalMatrixConversion<Tfield,T>(TheEXT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|ConvertMatrixUniversal1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|UniversalMatrixConversion1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
   MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
@@ -204,10 +204,10 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
   std::cerr << "|RemoveFractionMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 
-  MyMatrix<T> RetMat = ConvertMatrixUniversal<T,Tfield>(Q_F_red);
+  MyMatrix<T> RetMat = UniversalMatrixConversion<T,Tfield>(Q_F_red);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ConvertMatrixUniversal2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::cerr << "|UniversalMatrixConversion2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return RetMat;
 }
@@ -469,7 +469,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   size_t nMat = ListMat.size();
   std::vector<MyMatrix<Tfield>> ListMat_F;
   for (auto & eMat : ListMat) {
-    MyMatrix<Tfield> eMat_F = ConvertMatrixUniversal<Tfield,T>(eMat);
+    MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield,T>(eMat);
     ListMat_F.push_back(eMat_F);
   }
   //
@@ -683,8 +683,8 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
   // Now checking the mapping of matrices
   size_t nMat = ListMat1.size();
   for (size_t iMat=0; iMat<nMat; iMat++) {
-    MyMatrix<Tfield> eMat1 = ConvertMatrixUniversal<Tfield,T>(ListMat1[iMat]);
-    MyMatrix<Tfield> eMat2 = ConvertMatrixUniversal<Tfield,T>(ListMat2[iMat]);
+    MyMatrix<Tfield> eMat1 = UniversalMatrixConversion<Tfield,T>(ListMat1[iMat]);
+    MyMatrix<Tfield> eMat2 = UniversalMatrixConversion<Tfield,T>(ListMat2[iMat]);
     MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat2)) {
       return {false, {}};

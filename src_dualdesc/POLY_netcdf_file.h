@@ -240,7 +240,7 @@ void POLY_NC_WritePolytope_SpecType(netCDF::NcFile & dataFile, MyMatrix<T> const
   int idx = 0;
   for (int i_row=0; i_row<n_row; i_row++)
     for (int i_col=0; i_col<n_col; i_col++) {
-      Twrite eVal_write = UniversalTypeConversion<Twrite,T>(EXT(i_row,i_col));
+      Twrite eVal_write = UniversalScalarConversion<Twrite,T>(EXT(i_row,i_col));
       A[idx] = eVal_write;
       idx++;
     }
@@ -297,7 +297,7 @@ void POLY_NC_WritePolytope(netCDF::NcFile & dataFile, MyMatrix<T> const& EXT)
     throw TerminalException{1};
   }
   using Tring = typename underlying_ring<T>::ring_type;
-  MyMatrix<Tring> EXT_i=ConvertMatrixUniversal<Tring,T>(EXT);
+  MyMatrix<Tring> EXT_i=UniversalMatrixConversion<Tring,T>(EXT);
   POLY_NC_WritePolytope_INT(dataFile, EXT_i);
 }
 
@@ -394,7 +394,7 @@ std::vector<uint8_t> GetVectorUint8_t(Tint const& eVal)
   Tint cst256 = 256;
   while(true) {
     Tint res = ResInt(workVal, cst256);
-    uint8_t res_i = UniversalTypeConversion<uint8_t,Tint>(res);
+    uint8_t res_i = UniversalScalarConversion<uint8_t,Tint>(res);
     //    std::cerr << "  res=" << res << " res_i=" << (int)res_i << "\n";
     V.push_back(res_i);
     workVal = QuoInt(workVal, cst256);

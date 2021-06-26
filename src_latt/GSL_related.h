@@ -32,7 +32,7 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const & eMat)
   for (i=0; i<dimension; i++)
     for (j=0; j<dimension; j++) {
       eVal=eMat(i, j);
-      double eVal_d = UniversalTypeConversion<double,T>(eVal);
+      double eVal_d = UniversalScalarConversion<double,T>(eVal);
       gsl_matrix_set(Gram, i, j, eVal_d);
     }
   gsl_eigen_symmv (Gram, eigenvalues, EigenVectors, workspace);

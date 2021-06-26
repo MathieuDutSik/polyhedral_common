@@ -31,7 +31,7 @@ dd_MatrixPtr MyMatrix_PolyFile2Matrix_double(MyMatrix<T> const&TheEXT)
   for (i = 0; i < m_input; i++)
     for (j = 0; j < d_input; j++) {
       T val_T = TheEXT(i, j);
-      double val_d = UniversalTypeConversion<double,T>(val_T);
+      double val_d = UniversalScalarConversion<double,T>(val_T);
       dd_set(M->matrix[i][j], &val_d);
     }
   return M;
@@ -95,7 +95,7 @@ inline typename std::enable_if<std::is_same<T,mpq_class>::value,vectface>::type 
 template<typename T>
 inline typename std::enable_if<(not std::is_same<T,mpq_class>::value),vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
-  MyMatrix<mpq_class> EXT_mpq = ConvertMatrixUniversal<mpq_class,T>(TheEXT);
+  MyMatrix<mpq_class> EXT_mpq = UniversalMatrixConversion<mpq_class,T>(TheEXT);
   return DualDescription_incd_mpq(EXT_mpq);
 }
 

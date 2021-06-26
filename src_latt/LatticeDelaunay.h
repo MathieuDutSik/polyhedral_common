@@ -166,7 +166,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
 {
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
-  MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(EXT);
+  MyMatrix<T> EXT_T=UniversalMatrixConversion<T,Tint>(EXT);
   WeightMatrix<true,T, Tidx_value> WMatRed=GetWeightMatrixFromGramEXT<T,Tidx_value>(EXT_T, eData.GramMat, {});
   Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
@@ -179,7 +179,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
   //
   // Now extending with the SHV vector set
   //
-  MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eData.SHV);
+  MyMatrix<T> SHV_T=UniversalMatrixConversion<T,Tint>(eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, SHV_T);
   int nbVert=EXT_T.rows();
   int nbSHV=SHV_T.rows();
@@ -216,11 +216,11 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
     if (!eEq.TheReply)
       return {false, {}};
-    MyMatrix<Tint> eMat_I=ConvertMatrixUniversal<Tint,T>(eEq.TheEquiv);
+    MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(eEq.TheEquiv);
     return {true, eMat_I};
   };
-  MyMatrix<T> EXT1_T=ConvertMatrixUniversal<T,Tint>(RecEXT1.EXT);
-  MyMatrix<T> EXT2_T=ConvertMatrixUniversal<T,Tint>(RecEXT2.EXT);
+  MyMatrix<T> EXT1_T=UniversalMatrixConversion<T,Tint>(RecEXT1.EXT);
+  MyMatrix<T> EXT2_T=UniversalMatrixConversion<T,Tint>(RecEXT2.EXT);
   WeightMatrix<true, T, Tidx_value> WMatRed1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, {});
   WeightMatrix<true, T, Tidx_value> WMatRed2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, {});
   EquivTest<Telt> eResRed=TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMatRed1, WMatRed2);
@@ -230,7 +230,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   }
   MyMatrix<T> MatEquivRed_T=FindTransformation(EXT1_T, EXT2_T, eResRed.TheEquiv);
   if (IsIntegralMatrix(MatEquivRed_T)) {
-    MyMatrix<Tint> MatEquiv_I=ConvertMatrixUniversal<Tint,T>(MatEquivRed_T);
+    MyMatrix<Tint> MatEquiv_I=UniversalMatrixConversion<Tint,T>(MatEquivRed_T);
     std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
     return {true, MatEquiv_I};
   };
@@ -242,7 +242,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   //
   // Now extending by adding more vectors.
   //
-  MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eData.SHV);
+  MyMatrix<T> SHV_T=UniversalMatrixConversion<T,Tint>(eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, SHV_T);
   WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, SHV_T);
   EquivTest<Telt> eRes=TestEquivalenceWeightMatrix<T,Telt, Tidx_value>(WMat1, WMat2);
@@ -252,7 +252,7 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   }
   MyMatrix<T> MatEquiv_T=FindTransformation(EXT1_T, EXT2_T, eRes.TheEquiv);
   if (IsIntegralMatrix(MatEquiv_T)) {
-    MyMatrix<Tint> MatEquiv_I=ConvertMatrixUniversal<Tint,T>(MatEquiv_T);
+    MyMatrix<Tint> MatEquiv_I=UniversalMatrixConversion<Tint,T>(MatEquiv_T);
     std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
     return {true, MatEquiv_I};
   };
@@ -376,7 +376,7 @@ std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
       Delaunay<T,Tint> eDEL=ListOrbit.GetRepresentative(eEntry);
       DelaunayInv<T,Tint> eInv=ListOrbit.GetInvariant(eEntry);
       Tgroup GRPlatt=Delaunay_Stabilizer<T,Tint,Tgroup>(eData, eDEL.EXT, eInv.eIndex);
-      MyMatrix<T> EXT_T=ConvertMatrixUniversal<T,Tint>(eDEL.EXT);
+      MyMatrix<T> EXT_T=UniversalMatrixConversion<T,Tint>(eDEL.EXT);
       CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" + IntToString(eEntry) + "/");
       vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXT_T, GRPlatt, AllArr, eDir.str(), 0);
       for (auto& eOrbB : TheOutput) {

@@ -19,10 +19,9 @@ int main(int argc, char* argv[])
     std::string FileI  = argv[1];
     std::ifstream is(FileI);
     //
-    MyMatrix<T> G = ReadMatrix<T>(is);
-    MyMatrix<T> v0 = ReadVector<T>(is);
-    VinbergInput<T,Tint> Vin{G, v0};
-    VinbergTot<T,Tint> Vtot = GetVinbergAux(Vin);
+    MyMatrix<Tint> G = ReadMatrix<T>(is);
+    MyMatrix<Tint> v0 = ReadVector<T>(is);
+    VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G, v0);
     //
     std::vector<MyVector<Tint>> ListVect = FindRoots(Vtot);
     //

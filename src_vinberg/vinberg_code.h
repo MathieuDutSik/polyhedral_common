@@ -42,10 +42,10 @@ Tint En_Quantity(const MyMatrix<Tint>& M)
 {
   using Tfield=typename overlying_field<Tint>::field_type;
   Tint eDet = DeternminantMat(M);
-  MyMatrix<Tfield> M_field = ConvertMatrixUniversal<Tfield,Tint>(M);
+  MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(M);
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
   FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
-  Tint eDen_T = UniversalTypeConversion<Tint,Tfield>(FrMat.TheMult);
+  Tint eDen_T = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
   Tint TheEn = T_abs(eDet / eDen_T);
   return TheEn;
 }
@@ -76,17 +76,10 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
 
 
 template<typename T, typename Tint>
-struct VinbergInput {
-  MyMatrix<T> G; // The (n,n)-matrix with n-1 positive eigenvalues , 1 negative eigenvalue.
-  MyVector<T> v0; // a vector with negative norm with the input
-};
-
-
-
-template<typename T, typename Tint>
 struct VinbergTot {
-  MyMatrix<T> G;
-  MyVector<T> v0;
+  MyMatrix<Tint> G;
+  MyMatrix<T> G_T;
+  MyVector<Tint> v0;
   MyVector<Tint> V_i;
   MyVector<Tint> Vtrans;
   MyMatrix<Tint> Mbas;
@@ -96,6 +89,7 @@ struct VinbergTot {
   Tint eDet; // The determinant of the matrix.
   MyMatrix<T> Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
   MyMatrix<T> GM_iGorth; // The inverse of the coefficient for the computation.
+  std::vector<MyVector<Tint>> W;
   std::vector<Tint> root_lengths;
 };
 
@@ -129,12 +123,72 @@ bool IsRoot(const MyMatrix<T>& M, const MyVector<Tint>& V)
 }
 
 
+template<typename Tint>
+std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
+{
+  size_t n_rows = m.rows();
+  size_t n_cols = m.cols();
+  MyVector<Tint> negative = ZeroVector<Tint>(n_cols);
+  MyVector<Tint> positive = ZeroVector<Tint>(n_cols);
+  for (size_t i_col=0; i_col<n_cols; i_col++) {
+    for (size_t i_row=0; i_row<n_rows; i_row++) {
+      Tint val = m(i_row,i_col);
+      if (val < 0)
+        negative(i_col) += val;
+      if (val > 0)
+        positive(i_col) += val;
+    }
+  }
+  std::vector<int> ListSize(n_cols);
+  for (size_t i_col=0; i_col<n_cols; i_col++) {
+    int val1 = UniversalScalarConversion<int,Tint>(negative(i_col));
+    int val2 = UniversalScalarConversion<int,Tint>(positive(i_col));
+    int len = val2 + 1 - val1;
+    ListSize[i_col] = len;
+  }
+  using Tfield=typename overlying_field<Tint>::field_type;
+  MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(m);
+  MyMatrix<Tfield> Minv_field = Inverse(M_field);
+  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
+  Tint eDen = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
+  if (eDen < 0) {
+    std::cerr << "We should have eDen > 0. eDen=" << eDen << "\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<Tint> Comat = UniversalMatrixConversion<Tint,Tfield>(FrMat.TheMat);
+  auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
+    MyVector<Tint> Q = V * Comat;
+    for (size_t i_col=0; i_col<n_cols; i_col++) {
+      if (Q(i_col) < 0)
+        return false;
+      if (Q(i_col) >= eDen)
+        return false;
+    }
+    return true;
+  };
+  std::vector<MyVector<Tint>> ListPoint;
+  BlockIterationMultiple BlIter(ListSize);
+  for (const auto& eVect : BlIter) {
+    MyVector<Tint> ePoint(n_cols);
+    for (size_t i_col=0; i_col<n_cols; i_col++)
+      ePoint(i_col) = negative(i_col) + eVect[i_col];
+    if (ParallelepipedContains(ePoint))
+      ListPoint.push_back(ePoint);
+  }
+  return ListPoint;
+}
+
+
+
+
+
 
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
   int n=G.rows();
   // Computing the complement of the space.
+  MyVector<T> G_T = UniversalMatrixConversion<T,Tint>(G);
   MyVector<Tint> V = G * v0;
   std::vector<Tint> vectV(n);
   for (int i=0; i<n; i++)
@@ -145,6 +199,8 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
   MyMatrix<Tint> M = ConcatenateMatVec(Morth, V);
+  MyMatrix<Tint> M2 = ConcatenateMatVec(Morth, v0);
+  std::vector<MyVector<Tint>> W = GetIntegerPoints(M2);
   // The dterminant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
@@ -176,7 +232,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G * Morth * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
-  return {G, v0, V, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
+  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, W, root_lengths};
 }
 
 
@@ -198,8 +254,8 @@ private:
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
       Tint val = - Vtot.v0.dot(cand_a(candidates[k]));
-      double k_d = sqrt(UniversalTypeConversion<double,Tint>(val));
-      double val_d = UniversalTypeConversion<double,Tint>(val) / k_d;
+      double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
+      double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -252,7 +308,7 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
 {
   MyVector<T> sV = a * Vtot.GM_iGorth;
-  T normi = n - a.dot(Vtot.G * a) + sV.dot(Vtot.Gorth * sV);
+  T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth * sV);
   MyVector<T> eV = -sV;
   std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth, eV, normi);
   std::vector<MyVector<Tint>> RetSol;
@@ -276,7 +332,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   int n_root = ListRoot.size();
   MyMatrix<T> M(n_root, n_root);
   for (int i_root=0; i_root<n_root; i_root++) {
-    MyVector<T> eVG = ListRoot[i_root] * Vtot.G;
+    MyVector<Tint> eVG = ListRoot[i_root] * Vtot.G;
     for (int j_root=0; j_root<n_root; j_root++) {
       T eScal = eVG.dot(ListRoot[j_root]);
       M(i_root, j_root) = eScal;
@@ -352,69 +408,14 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
-{
-  size_t n_rows = m.rows();
-  size_t n_cols = m.cols();
-  MyVector<Tint> negative = ZeroVector<Tint>(n_cols);
-  MyVector<Tint> positive = ZeroVector<Tint>(n_cols);
-  for (size_t i_col=0; i_col<n_cols; i_col++) {
-    for (size_t i_row=0; i_row<n_rows; i_row++) {
-      Tint val = m(i_row,i_col);
-      if (val < 0)
-        negative(i_col) += val;
-      if (val > 0)
-        positive(i_col) += val;
-    }
-  }
-  std::vector<int> ListSize(n_cols);
-  for (size_t i_col=0; i_col<n_cols; i_col++) {
-    int val1 = UniversalTypeConversion<int,Tint>(negative(i_col));
-    int val2 = UniversalTypeConversion<int,Tint>(positive(i_col));
-    int len = val2 + 1 - val1;
-    ListSize[i_col] = len;
-  }
-  using Tfield=typename overlying_field<Tint>::field_type;
-  MyMatrix<Tfield> M_field = ConvertMatrixUniversal<Tfield,Tint>(m);
-  MyMatrix<Tfield> Minv_field = Inverse(M_field);
-  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
-  Tint eDen = UniversalTypeConversion<Tint,Tfield>(FrMat.TheMult);
-  if (eDen < 0) {
-    std::cerr << "We should have eDen > 0. eDen=" << eDen << "\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<Tint> Comat = ConvertMatrixUniversal<Tint,Tfield>(FrMat.TheMat);
-  auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
-    MyVector<Tint> Q = V * Comat;
-    for (size_t i_col=0; i_col<n_cols; i_col++) {
-      if (Q(i_col) < 0)
-        return false;
-      if (Q(i_col) >= eDen)
-        return false;
-    }
-    return true;
-  };
-  std::vector<MyVector<Tint>> ListPoint;
-  BlockIterationMultiple BlIter(ListSize);
-  for (auto const& eVect : BlIter) {
-    MyVector<Tint> ePoint(n_cols);
-    for (int i_col=0; i_col<n_cols; i_col++)
-      ePoint(i_col) = negative(i_col) + eVect[i_col];
-    if (ParallelepipedContains(ePoint))
-      ListPoint.push_back(ePoint);
-  }
-  return ListPoint;
-}
-
-
-template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 {
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<T> a = ZeroVector<T>(n);
   for (auto & k : Vtot.root_lengths) {
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, k)) {
+    T k_T = k;
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
       if (IsRoot(Vtot.G, root_cand))
         V1_roots.push_back(root_cand);
     }
@@ -433,8 +434,9 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
-    std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, k)) {
+    const T k_T = k;
+    std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
       if (IsRoot(Vtot.G, root_cand)) {
         ListRoot.push_back(root_cand);
         if (is_FundPoly(Vtot, ListRoot)) {

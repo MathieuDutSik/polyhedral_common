@@ -89,7 +89,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
   std::cerr << "ReductionMatrix : time7 - time6=" << std::chrono::duration_cast<std::chrono::milliseconds>(time7 - time6).count() << "\n";
 #endif
-  MyMatrix<T> BasisCan_T = ConvertMatrixUniversal<T,Tint>(BasisCan_Tint);
+  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T,Tint>(BasisCan_Tint);
 #ifdef DEBUG
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
@@ -182,7 +182,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
   std::cerr << "ReductionMatrix : time7 - time6=" << std::chrono::duration_cast<std::chrono::milliseconds>(time7 - time6).count() << "\n";
 #endif
-  MyMatrix<T> BasisCan_T = ConvertMatrixUniversal<T,Tint>(BasisCan_Tint);
+  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T,Tint>(BasisCan_Tint);
 #ifdef DEBUG
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
@@ -216,7 +216,7 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const& inpMat)
   }
   Canonic_PosDef<T,Tint> CanPosDef = ComputeCanonicalFormMultiple<T,Tint>({inpMat, SympFormMat});
   MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
-  MyMatrix<T> BasisSymp_T = ConvertMatrixUniversal<T,Tint>(BasisSymp_Tint);
+  MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T,Tint>(BasisSymp_Tint);
   MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);
   return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }

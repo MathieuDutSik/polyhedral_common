@@ -249,8 +249,8 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
   auto RED=[&](int const& l) -> void {
     //    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
     if (1 < mue(k,l) * 2 || mue(k,l) * 2 < -1) {
-      Tint q=UniversalNearestInteger<Tint,Tfield>(mue(k,l));
-      Tmat q_T = UniversalTypeConversion<Tmat,Tint>(q);
+      Tint q=UniversalNearestScalarInteger<Tint,Tfield>(mue(k,l));
+      Tmat q_T = UniversalScalarConversion<Tmat,Tint>(q);
       //      std::cerr << "RED, before oper q=" << q << "\n";
       //      WriteMatrix(std::cerr, gram);
       gram(k,k) -= q_T * gram(k,l);
@@ -305,17 +305,17 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
   }
   //  std::cerr << "After the if test r=" << r << " k=" << k << " kmax=" << kmax << "\n";
   MyVector<Tfield> B(n);
-  B(0) = UniversalTypeConversion<Tfield,Tmat>(gram(0,0));
+  B(0) = UniversalScalarConversion<Tfield,Tmat>(gram(0,0));
   //  std::cerr << "Before while loop\n";
   while (k < n) {
     //    std::cerr << "While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
     if (k > kmax) {
       kmax = k;
-      B(k) = UniversalTypeConversion<Tfield,Tmat>(gram(k,k));
+      B(k) = UniversalScalarConversion<Tfield,Tmat>(gram(k,k));
       for (int u=0; u<n; u++)
 	mue(k,u) = 0;
       for (int j=r+1; j<=k-1; j++) {
-        ak(j) = UniversalTypeConversion<Tfield,Tmat>(gram(k,j));
+        ak(j) = UniversalScalarConversion<Tfield,Tmat>(gram(k,j));
         for (int i=r+1; i<=j-1; i++)
           ak(j) -= mue(j,i) * ak(i);
         mue(k,j) = ak(j) / B(j);
@@ -400,7 +400,7 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
     for (int j=0; j<i; j++)
       gram(j,i) = gram(i,j);
 #ifdef DEBUG
-  MyMatrix<Tmat> H_T = ConvertMatrixUniversal<Tmat,Tint>(H);
+  MyMatrix<Tmat> H_T = UniversalMatrixConversion<Tmat,Tint>(H);
   MyMatrix<Tmat> eProd = H_T * GramMat * H_T.transpose();
   if (!TestEqualityMatrix(eProd, gram)) {
     std::cerr << "The needed equality is not satisfied in LLL. DEBUG!!!!\n";

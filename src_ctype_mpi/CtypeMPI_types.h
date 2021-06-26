@@ -299,7 +299,7 @@ bool CheckCoveringParityClasses(MyMatrix<T> const& M)
     T eTwo = 2;
     for (size_t i=0; i<n_cols; i++) {
       T res_T = ResInt(M(i_row, i), eTwo);
-      int res = UniversalTypeConversion<int,T>(res_T);
+      int res = UniversalScalarConversion<int,T>(res_T);
       pos += res * e_pow;
       e_pow *= 2;
     }
@@ -360,7 +360,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const& TheCtype, std::vector<triple> co
           T eTwo = 2;
           for (size_t i=0; i<n_cols; i++) {
             T res_T = ResInt(V[i], eTwo);
-            int res = UniversalTypeConversion<int,T>(res_T);
+            int res = UniversalScalarConversion<int,T>(res_T);
             pos += res * e_pow;
             e_pow *= 2;
           }
@@ -434,7 +434,7 @@ std::pair<std::vector<triple>, std::vector<int8_t>> CTYP_GetListTriple(MyMatrix<
       T eTwo = 2;
       for (int i=0; i<n_cols; i++) {
         T res_T = ResInt(eV(i), eTwo);
-        int res = UniversalTypeConversion<int,T>(res_T);
+        int res = UniversalScalarConversion<int,T>(res_T);
         pos += res * e_pow;
         e_pow *= 2;
       }
@@ -516,7 +516,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const& M)
     T eTwo = 2;
     for (int i=0; i<n; i++) {
       T res_T = ResInt(M(iRow,i), eTwo);
-      int res = UniversalTypeConversion<int,T>(res_T);
+      int res = UniversalScalarConversion<int,T>(res_T);
 #ifdef PRINT_EXPRESS
       std::cerr << "  i=" << i << " M(iRow,i)=" << M(iRow,i) << " res_T=" << res_T << " res=" << res << " e_pow=" << e_pow << "\n";
 #endif
@@ -1096,7 +1096,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const& TheCtypeArr)
   }
   Tgroup GRP(ListGenPerm, n_edge);
   Tint e_size = GRP.size();
-  int nb_autom = UniversalTypeConversion<int,Tint>(e_size);
+  int nb_autom = UniversalScalarConversion<int,Tint>(e_size);
 
 
 #ifdef TIMINGS

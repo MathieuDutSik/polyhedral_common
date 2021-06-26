@@ -156,8 +156,8 @@ EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
 {
   using Telt=typename Tgroup::Telt;
   using Tidx_value = int16_t;
-  MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(SHV1);
-  MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(SHV2);
+  MyMatrix<T> T_SHV1=UniversalMatrixConversion<T,Tint>(SHV1);
+  MyMatrix<T> T_SHV2=UniversalMatrixConversion<T,Tint>(SHV2);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, ePerf1, LinSpa.ListComm);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, ePerf2, LinSpa.ListComm);
   EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>,T,Telt>(WMat1, WMat2);
@@ -166,7 +166,7 @@ EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
   }
   MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
   if (IsIntegralMatrix(M3)) {
-    MyMatrix<Tint> eMatEquiv=ConvertMatrixUniversal<Tint,T>(M3);
+    MyMatrix<Tint> eMatEquiv=UniversalMatrixConversion<Tint,T>(M3);
     return {true, eMatEquiv};
   }
   std::cerr << "Need to write some code here\n";
@@ -608,7 +608,7 @@ Tgroup PERF_Automorphism(LinSpaceMatrix<T> const& LinSpa,
                          MyMatrix<Tint> const& SHV)
 {
   using Tidx_value = int16_t;
-  MyMatrix<T> T_SHV=ConvertMatrixUniversal<T,Tint>(SHV);
+  MyMatrix<T> T_SHV=UniversalMatrixConversion<T,Tint>(SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat=GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, ePerf, LinSpa.ListComm);
   return GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup, Tidx_value>(WMat);
 }
@@ -774,8 +774,8 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   using Tidx_value = int16_t;
   Tshortest<T,Tint> RecSHV1=T_ShortestVector<T,Tint>(Gram1);
   Tshortest<T,Tint> RecSHV2=T_ShortestVector<T,Tint>(Gram2);
-  MyMatrix<T> T_SHV1=ConvertMatrixUniversal<T,Tint>(RecSHV1.SHV);
-  MyMatrix<T> T_SHV2=ConvertMatrixUniversal<T,Tint>(RecSHV2.SHV);
+  MyMatrix<T> T_SHV1=UniversalMatrixConversion<T,Tint>(RecSHV1.SHV);
+  MyMatrix<T> T_SHV2=UniversalMatrixConversion<T,Tint>(RecSHV2.SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, Gram1, eData.LinSpa.ListComm);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, Gram2, eData.LinSpa.ListComm);
   EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
@@ -784,7 +784,7 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   }
   MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
   if (IsIntegralMatrix(M3)) {
-    MyMatrix<Tint> eMatEquiv=ConvertMatrixUniversal<Tint,T>(M3);
+    MyMatrix<Tint> eMatEquiv=UniversalMatrixConversion<Tint,T>(M3);
     return {true, eMatEquiv};
   }
   std::vector<MyVector<T>> ListMatVect;
@@ -810,7 +810,7 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
     if (!eEq.TheReply)
       return {false, {}};
-    MyMatrix<Tint> eMat_I=ConvertMatrixUniversal<Tint,T>(eEq.TheEquiv);
+    MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(eEq.TheEquiv);
     return {true, eMat_I};
   };
   Tgroup GRP1=GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat1);
@@ -843,7 +843,7 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& G
     ListMatVect.push_back(eVect);
   }
   MyMatrix<T> ListMatVectB=MatrixFromVectorFamily(ListMatVect);
-  MyMatrix<T> T_SHV=ConvertMatrixUniversal<T,Tint>(RecSHV.SHV);
+  MyMatrix<T> T_SHV=UniversalMatrixConversion<T,Tint>(RecSHV.SHV);
   std::function<bool(MyMatrix<T>)> IsMatrixCorrect=[&](MyMatrix<T> const& M) -> bool {
     if (!IsIntegralMatrix(M))
       return false;

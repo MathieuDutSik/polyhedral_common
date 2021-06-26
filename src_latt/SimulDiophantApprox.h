@@ -16,9 +16,9 @@ T ComputeDiophantinePenalty(MyVector<T> const& V, DiophantResult<Tint> const& Re
 {
   int n = V.size();
   T maxErr = 0;
-  T Denom_T = UniversalTypeConversion<T,Tint>(Res.Denominator);
+  T Denom_T = UniversalScalarConversion<T,Tint>(Res.Denominator);
   for (int i=0; i<n; i++) {
-    T eNum_T = UniversalTypeConversion<T,Tint>(Res.Numerators(i));
+    T eNum_T = UniversalScalarConversion<T,Tint>(Res.Numerators(i));
     T eFrac = eNum_T / Denom_T;
     T diff = eFrac - V(i);
     T err = T_abs(diff);

@@ -57,7 +57,7 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
     MyVector<T> V = f1(iRow);
     for (size_t iCol=0; iCol<nbCol; iCol++) {
-      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+      M(eRank, iCol) = UniversalScalarConversion<Tfield,T>(V(iCol));
     }
   };
   SelectionRowCol<Tfield> eSelect=TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
@@ -69,7 +69,7 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
     size_t jRow = eSelect.ListRowSelect[iRow];
     MyVector<T> V = f1(jRow);
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M1_field(iRow, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+      M1_field(iRow, iCol) = UniversalScalarConversion<Tfield,T>(V(iCol));
   }
   MyMatrix<Tfield> M1inv_field=Inverse(M1_field);
   MyMatrix<Tfield> M2_field(eSelect.TheRank, nbCol);
@@ -77,7 +77,7 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
     size_t jRow = eList[eSelect.ListRowSelect[iRow]];
     MyVector<T> V = f2(jRow);
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M2_field(iRow, iCol) = UniversalTypeConversion<Tfield,T>(V(iCol));
+      M2_field(iRow, iCol) = UniversalScalarConversion<Tfield,T>(V(iCol));
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
   // Now testing that we have EXT1 EqMat = EXT2
@@ -133,7 +133,7 @@ bool IsSubsetFullRank(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset)
 #endif
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(Vsubset[iRow], iCol));
+      M(eRank, iCol) = UniversalScalarConversion<Tfield,T>(EXT(Vsubset[iRow], iCol));
   };
   SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
 #ifdef TIMINGS
@@ -166,7 +166,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       Tfield eSum1 = 0;
       for (size_t j_row=0; j_row<n_cols; j_row++)
         eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
-      std::pair<bool,T> rec_eSum2 = UniversalTypeConversionCheck<T,Tfield>(eSum1);
+      std::pair<bool,T> rec_eSum2 = UniversalScalarConversionCheck<T,Tfield>(eSum1);
       if (!rec_eSum2.first) {
 #ifdef TIMINGS
         std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -267,7 +267,7 @@ std::vector<Tidx> ExtendPartialCanonicalization(const MyMatrix<T>& EXT, const st
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
     size_t pos = Vsubset[PartOrd[iRow]];
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+      M(eRank, iCol) = UniversalScalarConversion<Tfield,T>(EXT(pos, iCol));
   };
   SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
   // Selecting the submatrix
@@ -275,11 +275,11 @@ std::vector<Tidx> ExtendPartialCanonicalization(const MyMatrix<T>& EXT, const st
   for (size_t iRow=0; iRow<nbCol; iRow++) {
     size_t pos = Vsubset[ PartOrd[ TheSol.ListRowSelect[iRow]]];
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+      M(iRow, iCol) = UniversalScalarConversion<Tfield,T>(EXT(pos, iCol));
   }
   MyMatrix<Tfield> Minv0 = Inverse(M);
   MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
-  MyMatrix<T> Minv2 = ConvertMatrixUniversal<T, Tfield>(Minv1);
+  MyMatrix<T> Minv2 = UniversalMatrixConversion<T, Tfield>(Minv1);
   MyMatrix<T> Mop = EXT * Minv2;
   std::vector<Tidx> ListIdx(nbRow);
   for (size_t iRow=0; iRow<nbRow; iRow++)
@@ -318,7 +318,7 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
       Tfield eSum1 = 0;
       for (size_t j_row=0; j_row<n_cols; j_row++)
         eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
-      std::pair<bool,T> rec_eSum2 = UniversalTypeConversionCheck<T,Tfield>(eSum1);
+      std::pair<bool,T> rec_eSum2 = UniversalScalarConversionCheck<T,Tfield>(eSum1);
       if (!rec_eSum2.first) {
         return false; // We fail because the image is not integral.
       }
@@ -344,7 +344,7 @@ MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T>& EXT, const std::vector<
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
     size_t pos = Vsubset[iRow];
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M(eRank, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+      M(eRank, iCol) = UniversalScalarConversion<Tfield,T>(EXT(pos, iCol));
   };
   SelectionRowCol<Tfield> TheSol = TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
   // Selecting the submatrix
@@ -352,7 +352,7 @@ MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T>& EXT, const std::vector<
   for (size_t iRow=0; iRow<nbCol; iRow++) {
     size_t pos = Vsubset[ TheSol.ListRowSelect[iRow] ];
     for (size_t iCol=0; iCol<nbCol; iCol++)
-      M(iRow, iCol) = UniversalTypeConversion<Tfield,T>(EXT(pos, iCol));
+      M(iRow, iCol) = UniversalScalarConversion<Tfield,T>(EXT(pos, iCol));
   }
   return M;
 }

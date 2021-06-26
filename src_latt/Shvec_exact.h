@@ -53,8 +53,8 @@ int Infinitesimal_Floor_V1(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  double a_doubl = UniversalTypeConversion<double,T>(a);
-  double b_doubl = UniversalTypeConversion<double,T>(b);
+  double a_doubl = UniversalScalarConversion<double,T>(a);
+  double b_doubl = UniversalScalarConversion<double,T>(b);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
   //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
@@ -80,8 +80,8 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  double a_doubl = UniversalTypeConversion<double,T>(a);
-  double b_doubl = UniversalTypeConversion<double,T>(b);
+  double a_doubl = UniversalScalarConversion<double,T>(a);
+  double b_doubl = UniversalScalarConversion<double,T>(b);
   //  std::cerr << "a_doubl=" << a_doubl << "\n";
   //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
@@ -116,8 +116,8 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
   }
 #endif
   //  std::cerr << "a=" << a << " b=" << b << "\n";
-  double a_doubl = UniversalTypeConversion<double,T>(a);
-  double b_doubl = UniversalTypeConversion<double,T>(b);
+  double a_doubl = UniversalScalarConversion<double,T>(a);
+  double b_doubl = UniversalScalarConversion<double,T>(b);
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
   //  std::cerr << "alpha=" << alpha << "\n";
   double eD1=floor(alpha);
@@ -168,8 +168,8 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  double a_doubl = UniversalTypeConversion<double,T>(a);
-  double b_doubl = UniversalTypeConversion<double,T>(b);
+  double a_doubl = UniversalScalarConversion<double,T>(a);
+  double b_doubl = UniversalScalarConversion<double,T>(b);
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
   double eD1=ceil(alpha);
   long int eD2=lround(eD1);
@@ -325,9 +325,9 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  std::cerr << "eNorm is too large\n";
 	  //	  double bound_doubl, eNorm_doubl, eDiff_doubl;
 	  T eDiff=eNorm - bound;
-	  double bound_doubl = UniversalTypeConversion<double,T>(bound);
-	  double eNorm_doubl = UniversalTypeConversion<double,T>(eNorm);
-	  double eDiff_doubl = UniversalTypeConversion<double,T>(eDiff);
+	  double bound_doubl = UniversalScalarConversion<double,T>(bound);
+	  double eNorm_doubl = UniversalScalarConversion<double,T>(eNorm);
+	  double eDiff_doubl = UniversalScalarConversion<double,T>(eDiff);
 	  std::cerr << "bound_doubl=" << bound_doubl << "\n";
 	  std::cerr << "eNorm_doubl=" << eNorm_doubl << "\n";
 	  std::cerr << "eDiff_doubl=" << eDiff_doubl << "\n";
@@ -393,14 +393,14 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
   using Tfield=typename overlying_field<T>::field_type;
   //
   T_shvec_request<Tfield> request_field{info.request.dim, info.request.mode,
-      UniversalTypeConversion<Tfield,T>(info.request.bound),
-      ConvertVectorUniversal<Tfield,T>(info.request.coset),
-      ConvertMatrixUniversal<Tfield,T>(info.request.gram_matrix)};
+      UniversalScalarConversion<Tfield,T>(info.request.bound),
+      UniversalVectorConversion<Tfield,T>(info.request.coset),
+      UniversalMatrixConversion<Tfield,T>(info.request.gram_matrix)};
   //
-  T_shvec_info<Tfield,Tint> info_field{request_field, info.short_vectors, UniversalTypeConversion<Tfield,T>(info.minimum)};
+  T_shvec_info<Tfield,Tint> info_field{request_field, info.short_vectors, UniversalScalarConversion<Tfield,T>(info.minimum)};
   int retVal = computeIt_Kernel(info_field);
   info.short_vectors = info_field.short_vectors;
-  info.minimum = UniversalTypeConversion<T,Tfield>(info_field.minimum);
+  info.minimum = UniversalScalarConversion<T,Tfield>(info_field.minimum);
   return retVal;
 }
 
@@ -440,8 +440,8 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   }
   while (true) {
     info.request.bound = info.minimum;
-    //    double step_size_doubl = UniversalTypeConversion<double,T>(step_size);
-    //    double min_doubl = UniversalTypeConversion<double,T>(info.minimum);
+    //    double step_size_doubl = UniversalScalarConversion<double,T>(step_size);
+    //    double min_doubl = UniversalScalarConversion<double,T>(info.minimum);
     //    std::cerr << "min            =" << info.minimum << "\n";
     //    std::cerr << "min_doubl      =" << min_doubl << "\n";
     //    std::cerr << "step_size      =" << step_size << "\n";
@@ -558,7 +558,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
     T TheNorm=0;
     MyMatrix<Tint> ListVect(1,dim);
     for (int i=0; i<dim; i++)
-      ListVect(0,i)=UniversalTypeConversion<Tint,T>(eV(i));
+      ListVect(0,i)=UniversalScalarConversion<Tint,T>(eV(i));
     return {TheNorm, ListVect};
   }
   T bound=0; // should not be used

@@ -14,7 +14,7 @@ MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T con
   MyMatrix<Tfloat> M_f(n, n);
   for (int i=0; i<n; i++)
     for (int j=0; j<n; j++) {
-      Tfloat eVal_f=UniversalTypeConversion<Tfloat,T>(M(i,j));
+      Tfloat eVal_f=UniversalScalarConversion<Tfloat,T>(M(i,j));
       M_f(i,j)=eVal_f;
     }
   MyMatrix<Tfloat> ListEigVect(n,n);
@@ -56,7 +56,7 @@ MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T con
       std::cerr << "\n";*/
       for (int j=0; j<n; j++) {
 	Tfloat eVal_f = eMult * ListEigVect(i,j);
-	Tint eVal=UniversalNearestInteger<Tint,Tfloat>(eVal_f);
+	Tint eVal=UniversalNearestScalarInteger<Tint,Tfloat>(eVal_f);
 	//	std::cerr << "j=" << j << "  eVal_f=" << eVal_f << "  eVal=" << eVal << "\n";
 	if (eVal != 0)
 	  IsZero=false;

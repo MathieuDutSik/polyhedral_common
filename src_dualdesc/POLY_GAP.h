@@ -279,7 +279,7 @@ Face ConvertGAPread_Face(DataGAP<T,Telt> const& data, int const& n)
   Face f(n);
   for (auto & eEnt : data.ListEnt) {
     T val_T = ConvertGAPread_ScalarT(eEnt);
-    int val_i = UniversalTypeConversion<int,T>(val_T);
+    int val_i = UniversalScalarConversion<int,T>(val_T);
     f[val_i - 1] = 1;
   }
   return f;

@@ -122,7 +122,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const& GramMat, std::string cons
     else {
       for (int iVect=0; iVect<nbVectTot; iVect++) {
 	MyVector<Tint> fVect=GetMatrixRow(TheCVP.ListVect, iVect);
-	MyVector<T> fVect_T=ConvertVectorUniversal<T,Tint>(fVect);
+	MyVector<T> fVect_T=UniversalVectorConversion<T,Tint>(fVect);
 	ListRelevantPoint.push_back(fVect_T);
       }
     }

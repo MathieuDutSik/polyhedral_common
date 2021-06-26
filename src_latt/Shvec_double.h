@@ -26,7 +26,7 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
   }
   number = 0;
   check = 0;
-  double MaxNorm_d = UniversalTypeConversion<double,T>(MaxNorm);
+  double MaxNorm_d = UniversalScalarConversion<double,T>(MaxNorm);
   bound=MaxNorm_d*FudgeFact;
   mode = SHVEC_MODE_BOUND;
   //  std::cerr << "T_ShortVector, step 2\n";
@@ -34,7 +34,7 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++) {
       T eVal=eMat(i,j);
-      double eVal_d = UniversalTypeConversion<double,T>(eVal);
+      double eVal_d = UniversalScalarConversion<double,T>(eVal);
       gram_matrix[j][i] = eVal_d;
     }
   request = (shvec_request) malloc(sizeof(struct shvec_request_struct));
@@ -126,7 +126,7 @@ resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVecto
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++) {
       T eVal=GramMat(i,j);
-      double eVal_d = UniversalTypeConversion<double,T>(eVal);
+      double eVal_d = UniversalScalarConversion<double,T>(eVal);
       gram_matrix[j][i] = eVal_d;
     }
   request = (shvec_request) malloc(sizeof(struct shvec_request_struct));
@@ -146,7 +146,7 @@ resultCVP<T,Tint> CVPVallentinProgram_double(MyMatrix<T> const& GramMat, MyVecto
   }
   for (int i=0; i<dim; i++) {
     T eVal = -eV[i];
-    double eVal_d = UniversalTypeConversion<double,T>(eVal);
+    double eVal_d = UniversalScalarConversion<double,T>(eVal);
     request->coset[i]=eVal_d;
   }
   

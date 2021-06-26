@@ -53,7 +53,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
     T eNorm=0;
     for (int i=0; i<24; i++) {
       T eVal=eSumVect(i);
-      T eNear=UniversalNearestInteger<T,T>(eVal);
+      T eNear=UniversalNearestScalarInteger<T,T>(eVal);
       ListLow(i)=eNear;
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
@@ -109,7 +109,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version1(MyVector<T> const& eV)
     MyVector<T> fVnear=ListNearest[iFin];
     MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
     for (int i=0; i<24; i++)
-      MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
+      MatNearest(iFin,i)=UniversalScalarConversion<Tint,T>(eVnear(i));
   }
   T NearestNorm=2*MinNorm;
   //  std::cerr << "End of CVP_N23_24A1\n";
@@ -151,7 +151,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version2(MyVector<T> const& eV)
     T eNorm=0;
     for (int i=0; i<24; i++) {
       T eVal=eSumVect(i);
-      T eNear=UniversalNearestInteger<T,T>(eVal);
+      T eNear=UniversalNearestScalarInteger<T,T>(eVal);
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff*eDiff;
@@ -201,7 +201,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version2(MyVector<T> const& eV)
     //    std::cerr << "Iterate, step 2\n";
     for (int i=0; i<24; i++) {
       T eVal=eSumVect(i);
-      T eNear=UniversalNearestInteger<T,T>(eVal);
+      T eNear=UniversalNearestScalarInteger<T,T>(eVal);
       ListLow(i)=eNear;
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
@@ -289,7 +289,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version3(MyVector<T> const& eV)
     T eNorm=0;
     for (int i=0; i<24; i++) {
       T eVal=eSumVect(i);
-      T eNear=UniversalNearestInteger<T,T>(eVal);
+      T eNear=UniversalNearestScalarInteger<T,T>(eVal);
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff*eDiff;
@@ -341,7 +341,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version3(MyVector<T> const& eV)
     //    std::cerr << "Iterate, step 2\n";
     for (int i=0; i<24; i++) {
       T eVal=eSumVect(i);
-      T eNear=UniversalNearestInteger<T,T>(eVal);
+      T eNear=UniversalNearestScalarInteger<T,T>(eVal);
       ListLow(i)=eNear;
       T eDiff=eVal - eNear;
       //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
@@ -366,7 +366,7 @@ resultCVP<T,Tint> CVP_N23_24A1_Version3(MyVector<T> const& eV)
       MyVector<T> fVnear= W + fTransCoset;
       MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
       for (int i=0; i<24; i++)
-	MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
+	MatNearest(iFin,i)=UniversalScalarConversion<Tint,T>(eVnear(i));
       iFin++;
       int val=BlCVP.IncrementShow();
       if (val == -1)
@@ -486,7 +486,7 @@ resultCVP<T,Tint> CVP_N23_24A1(MyVector<T> const& eV)
       MyVector<T> fVnear= W + fTransCoset;
       MyVector<T> eVnear=ProductVectorMatrix(fVnear, eBasis);
       for (int i=0; i<24; i++)
-	MatNearest(iFin,i)=UniversalTypeConversion<Tint,T>(eVnear(i));
+	MatNearest(iFin,i)=UniversalScalarConversion<Tint,T>(eVnear(i));
       iFin++;
       int val=BlCVP.IncrementShow();
       if (val == -1)

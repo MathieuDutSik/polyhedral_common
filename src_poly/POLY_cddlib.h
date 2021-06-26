@@ -3875,7 +3875,7 @@ dd_lpdata<double>* dd_LPgmp2LPf(dd_lpdata<T>* lp)
     if (set_member(i, lp->equalityset)) set_addelem(lpf->equalityset,i);
     /* it is equality. Its reversed row will not be in this set */
     for (j = 1; j <= lp->d; j++)
-      lpf->A[i-1][j-1] = UniversalTypeConversion<double,T>(lp->A[i-1][j-1]);
+      lpf->A[i-1][j-1] = UniversalScalarConversion<double,T>(lp->A[i-1][j-1]);
   }
   return lpf;
 }

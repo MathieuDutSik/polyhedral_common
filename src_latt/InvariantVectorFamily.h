@@ -120,7 +120,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const& eMat)
 #endif
   //  std::cerr << "recLLL.GramMatRed=\n";
   //  WriteMatrix(std::cerr, recLLL.GramMatRed);
-  MyMatrix<T> Pmat_T = ConvertMatrixUniversal<T,Tint>(recLLL.Pmat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(recLLL.Pmat);
   //
   //  std::cerr << "eMat=\n";
   //  WriteMatrix(std::cerr, eMat);

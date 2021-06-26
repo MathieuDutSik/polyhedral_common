@@ -52,8 +52,8 @@ MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const& M, std::vector<MyVecto
     for (auto & eVect : ListVect) {
       MyVector<Tint> V(n);
       for (int i=0; i<n; i++) {
-	T eNear=UniversalNearestInteger<T,T>(eMult*eVect(i));
-	Tint eNear_i=UniversalTypeConversion<Tint,T>(eNear);
+	T eNear=UniversalNearestScalarInteger<T,T>(eMult*eVect(i));
+	Tint eNear_i=UniversalScalarConversion<Tint,T>(eNear);
 	V(i)=eNear_i;
       }
       T eVal=EvaluationQuadForm(M, V);
@@ -470,7 +470,7 @@ ShortIso<T,Tint> SHORT_GetInformation(MyMatrix<Tint> const& M)
   MyMatrix<T> Amat=ZeroMatrix<T>(n,n);
   for (int iVect=0; iVect<nbVect; iVect++) {
     MyVector<Tint> eVect_Tint=GetMatrixRow(M, iVect);
-    MyVector<T> eVect_T=ConvertVectorUniversal<T,Tint>(eVect_Tint);
+    MyVector<T> eVect_T=UniversalVectorConversion<T,Tint>(eVect_Tint);
     MyMatrix<T> pMat=RankOneMatrix(eVect_T);
     Amat += pMat;
   }
@@ -501,14 +501,14 @@ EquivTest<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMatr
   EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   if (!eResEquiv.TheReply)
     return {false, {}};
-  MyMatrix<T> SHV1_T=ConvertMatrixUniversal<T,Tint>(eRec1.SHVdisc);
-  MyMatrix<T> SHV2_T=ConvertMatrixUniversal<T,Tint>(eRec2.SHVdisc);
+  MyMatrix<T> SHV1_T=UniversalMatrixConversion<T,Tint>(eRec1.SHVdisc);
+  MyMatrix<T> SHV2_T=UniversalMatrixConversion<T,Tint>(eRec2.SHVdisc);
   MyMatrix<T> MatEquiv_T=FindTransformation(SHV1_T, SHV2_T, eResEquiv.TheEquiv);
   if (!IsIntegralMatrix(MatEquiv_T)) {
     std::cerr << "Error, the matrix is not integral\n";
     throw TerminalException{1};
   };
-  MyMatrix<Tint> MatEquiv_i=ConvertMatrixUniversal<Tint,T>(MatEquiv_T);
+  MyMatrix<Tint> MatEquiv_i=UniversalMatrixConversion<Tint,T>(MatEquiv_T);
   return {true, std::move(MatEquiv_i)};
 }
 
@@ -527,7 +527,7 @@ FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint
   MyMatrix<Tint> Mtot=Concatenate(M, Mneg);
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::vector<Telt> ListPermGen;
-  MyMatrix<T> SHV_T=ConvertMatrixUniversal<T,Tint>(eRec1.SHVdisc);
+  MyMatrix<T> SHV_T=UniversalMatrixConversion<T,Tint>(eRec1.SHVdisc);
   std::vector<Telt> LGen=GRP.GeneratorsOfGroup();
   for (auto const& eGen : LGen) {
     MyMatrix<T> MatEquiv_T=FindTransformation(SHV_T, SHV_T, eGen);
@@ -536,7 +536,7 @@ FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint
       std::cerr << "Error, the matrix is not integral\n";
       throw TerminalException{1};
     };
-    MyMatrix<Tint> MatEquiv_i=ConvertMatrixUniversal<Tint,T>(MatEquiv_T);
+    MyMatrix<Tint> MatEquiv_i=UniversalMatrixConversion<Tint,T>(MatEquiv_T);
     MyMatrix<Tint> MtotImg=Mtot * MatEquiv_i;
     Telt ePerm=GetPermutationOnVectors<Tint,Telt>(Mtot, MtotImg);
     ListMatrGen.push_back(MatEquiv_i);
@@ -621,7 +621,7 @@ ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> 
   std::vector<MyMatrix<T>> StdBasis=StandardSymmetricBasis<T>(n);
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto & eGen : eStab.ListMatrGen)
-    ListGen_T.push_back(ConvertMatrixUniversal<T,Tint>(eGen));
+    ListGen_T.push_back(UniversalMatrixConversion<T,Tint>(eGen));
   std::cerr << "Before BasisInvariantForm\n";
   std::vector<MyMatrix<T>> ListMat=BasisInvariantForm(n, ListGen_T);
   std::cerr << " After BasisInvariantForm\n";
@@ -670,7 +670,7 @@ ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> 
       MyMatrix<Tint> SHVret = MatrixFromVectorFamily(ListVectComplete);
       MyMatrix<Tint> TheTrans = RecLLL.ReductionMatrix;
       MyMatrix<Tint> InvTrans = Inverse(TheTrans);
-      MyMatrix<T> TheTrans_T = ConvertMatrixUniversal<T,Tint>(TheTrans);
+      MyMatrix<T> TheTrans_T = UniversalMatrixConversion<T,Tint>(TheTrans);
       MyMatrix<T> RetMat = TheTrans_T * RecTest.eMat * TheTrans_T.transpose();
       //
       RecTest.reply = replyRet;
@@ -836,7 +836,7 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
   IteratorBinomial<mpz_class> eIter(nbVect,n-1);
   std::vector<Face> ListAllFace=eIter.ListAllFace();
   std::vector<MyVector<T>> ListIneq;
-  MyMatrix<T> M_T=ConvertMatrixUniversal<T,Tint>(M);
+  MyMatrix<T> M_T=UniversalMatrixConversion<T,Tint>(M);
   for (auto const& eFace : ListAllFace) {
     MyMatrix<T> Mred=SelectRow(M_T, eFace);
     if (RankMat(Mred) == n-1) {
@@ -869,7 +869,7 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
   //
   std::vector<MyVector<Tint>> ListPt;
   for (auto & eVect : ListPt_T)
-    ListPt.push_back(ConvertVectorUniversal<Tint,T>(eVect));
+    ListPt.push_back(UniversalVectorConversion<Tint,T>(eVect));
   std::vector<MyMatrix<Tint>> ListGen;
   for (auto & eGen : eStab.ListMatrGen)
     ListGen.push_back(TransposedMat(eGen));
@@ -1199,7 +1199,7 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const& ListPrime, MyMa
 	    std::cerr << "The sum should be integral\n";
 	    throw TerminalException{1};
 	  }
-	  int sum_i=UniversalTypeConversion<int,T>(sum);
+	  int sum_i=UniversalScalarConversion<int,T>(sum);
 	  Vtest(i)=sum_i;
 	}
 	//	std::cerr << "Before CyclicCanonicalization_SymN_fact\n";

@@ -74,7 +74,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
   //
   std::function<void(std::ostream&,T)> PrintValue=[&](std::ostream& os, T const& eVal) -> void {
     if (eGLPKoption.UseDouble) {
-      double eVal_d = UniversalTypeConversion<double,T>(eVal);
+      double eVal_d = UniversalScalarConversion<double,T>(eVal);
       os << eVal_d;
     }
     else {
@@ -576,7 +576,7 @@ LinProgSparseDecomp<double> GetSparseDecompositionDouble(MyMatrix<T> const& List
     int nbCol=eMat.cols();
     eV=MyVector<double>(nbRow);
     for (int iRow=0; iRow<nbRow; iRow++)
-      eV(iRow)=UniversalTypeConversion<double,T>(-eMat(iRow,0));
+      eV(iRow)=UniversalScalarConversion<double,T>(-eMat(iRow,0));
     //
     int nnz=0;
     for (int iRow=0; iRow<nbRow; iRow++)
@@ -590,7 +590,7 @@ LinProgSparseDecomp<double> GetSparseDecompositionDouble(MyMatrix<T> const& List
       for (int iCol=1; iCol<nbCol; iCol++) {
 	T eVal=eMat(iRow,iCol);
 	if (eVal != 0) {
-	  double eVal_d=UniversalTypeConversion<double,T>(eVal);
+	  double eVal_d=UniversalScalarConversion<double,T>(eVal);
 	  tripletList[iZ]=T2(iRow,iCol-1,eVal_d);
 	  iZ++;
 	}
@@ -621,7 +621,7 @@ template<typename T>
 LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(MyMatrix<T> const& ListEqua, MyMatrix<T> const& ListIneq, MyVector<T> const& ToBeMinimized, GLPKoption const& eGLPKoption)
 {
   LinProgSparseDecomp<double> RecSpDecomp = GetSparseDecompositionDouble(ListEqua, ListIneq);
-  MyVector<double> ToBeMinimized_d = ConvertVectorUniversal<double,T>(ToBeMinimized);
+  MyVector<double> ToBeMinimized_d = UniversalVectorConversion<double,T>(ToBeMinimized);
   //  return GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(RecSpDecomp.Aspmat, RecSpDecomp.ListAconst, RecSpDecomp.Bspmat, RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
   return GLPK_LinearProgramming_Kernel_Sparse_PROC(RecSpDecomp.Aspmat, RecSpDecomp.ListAconst, RecSpDecomp.Bspmat, RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
 }

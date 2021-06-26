@@ -29,7 +29,7 @@ std::vector<MyVector<T>> GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T
     ListLow[iDim]=eLow;
     ListUpp[iDim]=eUpp;
     T eVal_T=1 + eUpp - eLow;
-    int eVal_I=UniversalTypeConversion<int,T>(eVal_T);
+    int eVal_I=UniversalScalarConversion<int,T>(eVal_T);
     ListSize[iDim]=eVal_I;
   }
   BlockIterationMultiple BlIter(ListSize);

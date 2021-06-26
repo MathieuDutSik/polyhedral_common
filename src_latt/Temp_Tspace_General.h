@@ -332,13 +332,13 @@ void T_GetGramMatrixAutomorphismGroup(MyMatrix<T> const& eMat, T const& TheTol, 
   using Tidx_value = int16_t;
   T MaxDet=T_GRAM_GetUpperBound(eMat);
   MyMatrix<Tint> ListShort=T_ShortVector(eMat, MaxDet);
-  MyMatrix<T> ListShort_T=ConvertMatrixUniversal<T,Tint>(ListShort);
+  MyMatrix<T> ListShort_T=UniversalMatrixConversion<T,Tint>(ListShort);
   WeightMatrix<true, T, Tidx_value> WMat=T_TranslateToMatrix_QM_SHV<T,Tint,Tidx_value>(eMat, ListShort);
   GRPperm=GetStabilizerWeightMatrix(WMat);
   ListMatrGens.clear();
   for (auto & eGen : GRPperm.group->S) {
     MyMatrix<T> M3_T=RepresentVertexPermutation(ListShort_T, ListShort_T, *eGen);
-    MyMatrix<Tint> M3_I=ConvertMatrixUniversal<Tint,T>(M3_T);
+    MyMatrix<Tint> M3_I=UniversalMatrixConversion<Tint,T>(M3_T);
     ListMatrGens.push_back(M3_I);
   }
 }
