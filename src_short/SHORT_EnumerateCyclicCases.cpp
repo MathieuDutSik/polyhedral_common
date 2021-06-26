@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	//	WriteMatrix(std::cerr, eBasis);
 	MyMatrix<Tfield> eBasisInv=Inverse(eBasis);
 	//	std::cerr << "Treating the case, step 5\n";
-	MyMatrix<int> SHV=ConvertMatrixUniversal<int,Tfield>(eBasisInv);
+	MyMatrix<int> SHV=UniversalMatrixConversion<int,Tfield>(eBasisInv);
 	std::cerr << "SHV : \n";
 	WriteMatrix(std::cerr, SHV);
 	//	std::cerr << "Treating the case, step 6\n";

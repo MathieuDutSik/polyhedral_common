@@ -45,7 +45,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI()
 template<typename T, typename Tint>
 std::vector<TypePerfectExch<Tint>> GetAdjacentObjects(TypePerfectExch<Tint> const& eObjIn)
 {
-  MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eObjIn.eMat);
+  MyMatrix<T> eMat_T = UniversalMatrixConversion<T,Tint>(eObjIn.eMat);
   Tshortest<T,Tint> eRec = T_ShortestVector<T,Tint>(eMat_T);
   int n=eRec.SHV.cols();
   int nbShort=eRec.SHV.rows() / 2;
@@ -69,7 +69,7 @@ std::vector<TypePerfectExch<Tint>> GetAdjacentObjects(TypePerfectExch<Tint> cons
     //
     MyMatrix<T> eMat2 = ComputeCanonicalForm<T,Tint>(ePairAdj.first).Mat;
     MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
-    MyMatrix<Tint> eMat4 = ConvertMatrixUniversal<Tint,T>(eMat3);
+    MyMatrix<Tint> eMat4 = UniversalMatrixConversion<Tint,T>(eMat3);
     TypePerfectExch<Tint> RecMat{incd, eMat4};
     ListAdjMat.emplace_back(RecMat);
   }
@@ -268,7 +268,7 @@ int main()
           std::cerr << "irank=" << irank << " eReq is non zero\n";
 	  SetMatrixAsDone(eReq->first);
           std::cerr << "irank=" << irank << " ePerfect=" << eReq->first << "\n";
-          MyMatrix<T> eMat_T = ConvertMatrixUniversal<T,Tint>(eReq->first.eMat);
+          MyMatrix<T> eMat_T = UniversalMatrixConversion<T,Tint>(eReq->first.eMat);
           int idxMatrixF = eReq->second;
           std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
           std::vector<TypePerfectExch<Tint>> ListAdjacentObject = GetAdjacentObjects<T,Tint>(eReq->first);
