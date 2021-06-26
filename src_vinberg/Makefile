@@ -1,4 +1,5 @@
-PROGRAM		= VIN_FindSpecificDistance
+#PROGRAM		= VIN_FindSpecificDistance
+PROGRAM		= VIN_ComputeDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

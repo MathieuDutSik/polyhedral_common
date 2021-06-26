@@ -153,9 +153,9 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
     for (int i=0; i<n; i++) {
       for (int j=0; j<2; j++) {
         int eps = -1 + 2 * j;
-        MyVector<Tint> V = V_i;
-        V(i) -= eps;
-        SolMatResult<Tint> Solu=SolutionMat(Morth, V);
+        MyVector<Tint> Vwork = V;
+        Vwork(i) -= eps;
+        SolMatResult<Tint> Solu=SolutionMat(Morth, Vwork);
         if (Solu.result) {
           MyVector<Tint> Vret = ZeroVector<Tint>(n);
           Vret(i) = eps;
@@ -171,12 +171,12 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<Tint> MbasInv = Inverse(Mbas);
 
   // Gram matrix of the space.
-  MyMatrix<T> Gorth = Morth * Vinput.G * Morth.transpose();
+  MyMatrix<T> Gorth = Morth * G * Morth.transpose();
   MyMatrix<T> GorthInv = Inverse(Gorth);
   // Computing the side comput
-  MyMatrix<T> GM_iGorth = Vinput.G * Morth * GorthInv;
-  std::vector<Tint> root_lengths = Get_root_lengths(Vinput.G);
-  return {Vinput.G, Vinput.v0, V_i, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
+  MyMatrix<T> GM_iGorth = G * Morth * GorthInv;
+  std::vector<Tint> root_lengths = Get_root_lengths(G);
+  return {G, v0, V, Vtrans, Mbas, MbasInv, Morth, eDet, Gorth, GM_iGorth, root_lengths};
 }
 
 
@@ -197,7 +197,7 @@ private:
     double minval_d;
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
-      Tint val = - V.dot(cand_a(candidates[k]));
+      Tint val = - Vtot.v0.dot(cand_a(candidates[k]));
       double k_d = sqrt(UniversalTypeConversion<double,Tint>(val));
       double val_d = UniversalTypeConversion<double,Tint>(val) / k_d;
       if (!we_found) {
@@ -211,7 +211,7 @@ private:
         }
       }
     }
-    return k;
+    return kfind;
   }
 public:
   IterateRootDecompositions(const VinbergTot<T,Tint>& Vtot) : Vtot(Vtot) {
@@ -379,7 +379,10 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
   FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
   Tint eDen = UniversalTypeConversion<Tint,Tfield>(FrMat.TheMult);
-  if (eDen_T
+  if (eDen < 0) {
+    std::cerr << "We should have eDen > 0. eDen=" << eDen << "\n";
+    throw TerminalException{1};
+  }
   MyMatrix<Tint> Comat = ConvertMatrixUniversal<Tint,Tfield>(FrMat.TheMat);
   auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
     MyVector<Tint> Q = V * Comat;
@@ -431,7 +434,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
     std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, n)) {
+    for (const MyVector<Tint>& root_cand : Roots_decomposed_into(Vtot, a, k)) {
       if (IsRoot(Vtot.G, root_cand)) {
         ListRoot.push_back(root_cand);
         if (is_FundPoly(Vtot, ListRoot)) {
