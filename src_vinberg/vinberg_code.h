@@ -13,7 +13,7 @@
 
 // Compute the solutions of G [x - eV] = a
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> ComputeSphericalSolutions(MyMatrix<T> const& GramMat, MyVector<T> const& eV, T const& a)
+std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& a)
 {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   int dim = GramMat.rows();
@@ -104,7 +104,7 @@ struct VinbergTot {
 
 
 template<typename T, typename Tint>
-T ScalProd(MyMatrix<T> const& M, MyVector<Tint> const& V1, MyVector<Tint> const& V2)
+T ScalProd(const MyMatrix<T>& M, const MyVector<Tint>& V1, const MyVector<Tint>& V2)
 {
   T eSum = 0;
   int n = M.rows();
@@ -116,7 +116,7 @@ T ScalProd(MyMatrix<T> const& M, MyVector<Tint> const& V1, MyVector<Tint> const&
 
 
 template<typename T, typename Tint>
-bool IsRoot(MyMatrix<T> const& M, MyVector<Tint> const& V)
+bool IsRoot(const MyMatrix<T>& M, const MyVector<Tint>& V)
 {
   int n = M.rows();
   T eNorm = ScalProd(M, V, V);
@@ -249,7 +249,7 @@ public:
 
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot, MyVector<T> const& a, T const& n)
+std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
 {
   MyVector<T> sV = a * Vtot.GM_iGorth;
   T normi = n - a.dot(Vtot.G * a) + sV.dot(Vtot.Gorth * sV);
@@ -271,7 +271,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(VinbergTot<T,Tint> const& Vtot
 
 
 template<typename T, typename Tint>
-bool is_FundPoly(VinbergTot<T,Tint> const& Vtot, std::vector<MyVector<Tint>> const& ListRoot)
+bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
   int n_root = ListRoot.size();
   MyMatrix<T> M(n_root, n_root);
@@ -352,7 +352,7 @@ bool is_FundPoly(VinbergTot<T,Tint> const& Vtot, std::vector<MyVector<Tint>> con
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> GetIntegerPoints(MyMatrix<Tint> const& m)
+std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 {
   size_t n_rows = m.rows();
   size_t n_cols = m.cols();
@@ -367,18 +367,27 @@ std::vector<MyVector<Tint>> GetIntegerPoints(MyMatrix<Tint> const& m)
         positive(i_col) += val;
     }
   }
+  std::vector<int> ListSize(n_cols);
+  for (size_t i_col=0; i_col<n_cols; i_col++) {
+    int val1 = UniversalTypeConversion<int,Tint>(negative(i_col));
+    int val2 = UniversalTypeConversion<int,Tint>(positive(i_col));
+    int len = val2 + 1 - val1;
+  }
+
+
+  
 }
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> FundCone(VinbergTot<T,Tint> const& Vtot)
+std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 {
   
 }
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> FindRoots(VinbergTot<T,Tint> const& Vtot)
+std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
 

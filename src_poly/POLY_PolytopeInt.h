@@ -45,8 +45,7 @@ std::vector<MyVector<T>> GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T
     return true;
   };
   std::vector<MyVector<T>> ListPoint;
-  while(true) {
-    std::vector<int> eVect=BlIter.GetVect();
+  for (auto const& eVect : BlIter) {
     MyVector<T> ePoint(n);
     ePoint(0)=1;
     for (int iDim=0; iDim<dim; iDim++)
@@ -54,9 +53,6 @@ std::vector<MyVector<T>> GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T
     bool test=IsCorrect(ePoint);
     if (test)
       ListPoint.push_back(ePoint);
-    int val=BlIter.IncrementShow();
-    if (val == -1)
-      break;
   }
   return ListPoint;
 }
