@@ -372,10 +372,35 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
     int val1 = UniversalTypeConversion<int,Tint>(negative(i_col));
     int val2 = UniversalTypeConversion<int,Tint>(positive(i_col));
     int len = val2 + 1 - val1;
+    ListSize[i_col] = len;
   }
-
-
-  
+  using Tfield=typename overlying_field<Tint>::field_type;
+  MyMatrix<Tfield> M_field = ConvertMatrixUniversal<Tfield,Tint>(m);
+  MyMatrix<Tfield> Minv_field = Inverse(M_field);
+  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
+  Tint eDen = UniversalTypeConversion<Tint,Tfield>(FrMat.TheMult);
+  if (eDen_T
+  MyMatrix<Tint> Comat = ConvertMatrixUniversal<Tint,Tfield>(FrMat.TheMat);
+  auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
+    MyVector<Tint> Q = V * Comat;
+    for (size_t i_col=0; i_col<n_cols; i_col++) {
+      if (Q(i_col) < 0)
+        return false;
+      if (Q(i_col) >= eDen)
+        return false;
+    }
+    return true;
+  };
+  std::vector<MyVector<Tint>> ListPoint;
+  BlockIterationMultiple BlIter(ListSize);
+  for (auto const& eVect : BlIter) {
+    MyVector<Tint> ePoint(n_cols);
+    for (int i_col=0; i_col<n_cols; i_col++)
+      ePoint(i_col) = negative(i_col) + eVect[i_col];
+    if (ParallelepipedContains(ePoint))
+      ListPoint.push_back(ePoint);
+  }
+  return ListPoint;
 }
 
 
