@@ -115,6 +115,7 @@ public:
   static const bool is_symmetric = is_symmetric_impl;
   using T = T_impl;
   using Tidx_value = Tidx_value_impl;
+  // The constructors
   WeightMatrix()
   {
     nbRow=-1;
@@ -198,19 +199,23 @@ public:
     std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   }
-  WeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& eMat)
+  // no assign
+  WeightMatrix& operator=(const WeightMatrix<is_symmetric,T,Tidx_value>&) = delete;
+  // no copy
+  WeightMatrix(const WeightMatrix<is_symmetric,T,Tidx_value>&) = delete;
+  // move constructor (see https://en.cppreference.com/w/cpp/language/move_constructor )
+  WeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value>&& eMat) : nbRow(eMat.nbRow), ListWeight(std::move(eMat.ListWeight)), TheMat(std::move(eMat.TheMat))
   {
-    nbRow = eMat.nbRow;
-    ListWeight = eMat.ListWeight;
-    TheMat = eMat.TheMat;
   }
-  WeightMatrix<is_symmetric,T,Tidx_value> operator=(WeightMatrix<is_symmetric,T,Tidx_value> const& eMat)
+  // move assignment (see https://en.cppreference.com/w/cpp/language/move_assignment )
+  WeightMatrix& operator=(WeightMatrix<is_symmetric,T,Tidx_value>&& eMat)
   {
     nbRow = eMat.nbRow;
-    ListWeight = eMat.ListWeight;
-    TheMat = eMat.TheMat;
+    ListWeight = std::move(eMat.ListWeight);
+    TheMat = std::move(eMat.TheMat);
     return *this;
   }
+  // The destructor
   ~WeightMatrix()
   {
   }
@@ -357,8 +362,8 @@ public:
   }
 private:
   size_t nbRow;
-  std::vector<Tidx_value> TheMat;
   std::vector<T> ListWeight;
+  std::vector<Tidx_value> TheMat;
 };
 
 //

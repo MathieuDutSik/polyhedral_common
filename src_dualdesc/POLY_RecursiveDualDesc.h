@@ -886,10 +886,8 @@ vectface DUALDESC_AdjacencyDecomposition(
     }
     Tint GroupSizeComp = TheGRPrelevant.size();
     std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
-    TheMap["groupsizerelevant"] = GroupSizeComp;
     std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
-    bool SavingTrigger=AllArr.Saving;
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, SavingTrigger);
+    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving);
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       vectface ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);

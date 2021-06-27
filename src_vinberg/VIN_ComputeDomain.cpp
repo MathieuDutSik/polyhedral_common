@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     using T=mpq_class;
     using Tint=mpz_class;
 
-    std::string FileI  = argv[1];
+    std::string FileI = argv[1];
     std::ifstream is(FileI);
     //
     MyMatrix<Tint> G = ReadMatrix<Tint>(is);

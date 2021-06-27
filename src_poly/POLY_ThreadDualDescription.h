@@ -333,7 +333,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
       return;
-    WMat=GetWeightMatrix<T, Tidx_value>(EXTred);
+    WMat = std::move(GetWeightMatrix<T, Tidx_value>(EXTred));
     int nbWeight=WMat.GetWeightSize();
     MProc.GetO(TheId) << "nbWeight=" << nbWeight << "\n";
   };
