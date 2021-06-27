@@ -125,7 +125,7 @@ public:
     size_t nb = weightmatrix_get_nb<is_symmetric>(nbRow);
     TheMat.resize(nb);
   }
-  WeightMatrix(size_t const& INP_nbRow, std::vector<Tidx_value> const& INP_TheMat, std::vector<T> const& INP_ListWeight) : nbRow(INP_nbRow), TheMat(INP_TheMat), ListWeight(INP_ListWeight)
+  WeightMatrix(size_t const& INP_nbRow, std::vector<Tidx_value> const& INP_TheMat, std::vector<T> const& INP_ListWeight) : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat)
   {
   }
   template<typename F>
