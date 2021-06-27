@@ -817,8 +817,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
-	 std::string const& ePrefix,
-	 int const& TheLevel)
+	 std::string const& ePrefix)
 {
   using Tgr = GraphListAdj;
   if (ExitEvent) {
@@ -827,7 +826,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   }
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
-  int eRank=EXT.cols();
+  int nbCol=EXT.cols();
   WeightMatrix<true, T, Tidx_value> WMat;
   bool HaveWMat=false;
   auto ComputeWMat=[&]() -> void {
@@ -850,12 +849,10 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   Tgroup TheGRPrelevant;
   std::map<std::string, Tint> TheMap;
-  int nbVert=EXT.rows();
-  int delta=nbVert - eRank;
+  int delta=nbRow - nbCol;
   TheMap["groupsize"]=GRP.size();
-  TheMap["incidence"]=nbVert;
-  TheMap["level"]=TheLevel;
-  TheMap["rank"]=eRank;
+  TheMap["incidence"]=nbRow;
+  TheMap["rank"]=nbCol;
   TheMap["delta"]=delta;
   std::string ansSplit=HeuristicEvaluation(TheMap, AllArr.Splitting);
   //
@@ -888,12 +885,11 @@ vectface DUALDESC_AdjacencyDecomposition(
       BankSymmCheck = true;
     }
     Tint GroupSizeComp = TheGRPrelevant.size();
-    std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << (eRank-1) << " |EXT|=" << nbRow << "\n";
+    std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
     TheMap["groupsizerelevant"] = GroupSizeComp;
-    std::string MainPrefix = ePrefix + "Database_" + std::to_string(TheLevel) + "_" + std::to_string(nbVert) + "_" + std::to_string(eRank);
+    std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
     bool SavingTrigger=AllArr.Saving;
     DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, SavingTrigger);
-    int NewLevel = TheLevel + 1;
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       vectface ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);
@@ -901,13 +897,13 @@ vectface DUALDESC_AdjacencyDecomposition(
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
     }
-    Tint TheDim = eRank-1;
+    Tint TheDim = nbCol - 1;
     while(true) {
       Tint nbUndone=RPL.FuncNumberUndone();
       if (RPL.FuncNumberOrbitDone() > 0) {
         Face eSetUndone=RPL.ComputeIntersectionUndone();
         if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
-          std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " Depth=" << TheLevel << " |EXT|=" << nbRow << "\n";
+          std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " |EXT|=" << nbRow << "\n";
           break;
         }
       }
@@ -918,9 +914,9 @@ vectface DUALDESC_AdjacencyDecomposition(
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
       Tint OrbSize=GroupSizeComp / TheStab.size();
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
-      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " Level=" << TheLevel << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
+      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.EXT_face, GRPred, AllArr, NewPrefix, NewLevel);
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.EXT_face, GRPred, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
         Face eFlip=FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);
@@ -1057,9 +1053,8 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::string DD_Prefix=BlockMETHOD.ListStringValues.at("Prefix");
   AllArr.Saving=DD_Saving;
   //
-  int TheLevel=0;
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix, TheLevel);
+  vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix);
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
   std::ofstream OUTfs(OUTfile);
