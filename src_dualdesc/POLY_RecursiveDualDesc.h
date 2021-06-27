@@ -795,7 +795,8 @@ public:
         return {pos, f};
       }
     }
-    return {-1,{}};
+    std::cerr << "We should never reach that stage as we should find some undone facet\n";
+    throw TerminalException{1};
   }
 };
 
@@ -910,7 +911,6 @@ vectface DUALDESC_AdjacencyDecomposition(
       Face eInc = ePair.second;
       FlippingFramework<T> FF(EXT, eInc);
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
-      Tint OrbSize=GroupSizeComp / TheStab.size();
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
       std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
