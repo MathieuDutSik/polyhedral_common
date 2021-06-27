@@ -573,12 +573,12 @@ WeightMatrix<false, T, Tidx_value> ReadWeightedMatrix(std::istream &is)
   is >> nbRow;
   WeightMatrix<false, T, Tidx_value> WMat(nbRow);
   size_t nbEnt=0;
-  int eVal;
+  Tidx_value eVal;
   for (size_t iRow=0; iRow<nbRow; iRow++)
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       is >> eVal;
       WMat.intDirectAssign(iRow, jRow, eVal);
-      if (eVal> nbEnt)
+      if (size_t(eVal)> nbEnt)
 	nbEnt=eVal;
     }
   nbEnt++;
