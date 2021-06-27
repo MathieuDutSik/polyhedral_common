@@ -416,6 +416,7 @@ private:
   FileBool* fb; // This is for storing the status
   FileFace* ff; // This is for storing the faces and the index of oribit
   bool SavingTrigger;
+  std::ostream& os;
   /* TRICK 2: We keep the list of orbit and the map. We could in principle have built the map
      from the start since we know the occurring orders. However, since some orbitsize never occur
      this would have populated it with entries that never occur and so slow it down. */
@@ -579,7 +580,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger) : EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger)
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os)
   {
     TotalNumber = 0;
     nbOrbitDone = 0;
@@ -633,20 +634,20 @@ public:
       std::string eFileNC = MainPrefix + ".nc";
       std::string eFileFB = MainPrefix + ".fb";
       std::string eFileFF = MainPrefix + ".ff";
-      std::cerr << "MainPrefix=" << MainPrefix << "\n";
+      os << "MainPrefix=" << MainPrefix << "\n";
       size_t n_orbit;
       if (IsExistingFile(eFileNC)) {
-        std::cerr << "Opening existing files (NC, FB, FF)\n";
+        os << "Opening existing files (NC, FB, FF)\n";
         dataFile.open(eFileNC, netCDF::NcFile::write);
         n_orbit = POLY_NC_ReadNbOrbit(dataFile);
         fb = new FileBool(eFileFB, n_orbit);
         ff = new FileFace(eFileFF, n_act + n_bit_orbsize, n_orbit);
       } else {
         if (!FILE_IsFileMakeable(eFileNC)) {
-          std::cerr << "Error in DatabaseOrbits: File eFileNC=" << eFileNC << " is not makeable\n";
+          os << "Error in DatabaseOrbits: File eFileNC=" << eFileNC << " is not makeable\n";
           throw TerminalException{1};
         }
-        std::cerr << "Creating the files (NC, FB, FF)\n";
+        os << "Creating the files (NC, FB, FF)\n";
         dataFile.open(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
         POLY_NC_WritePolytope(dataFile, EXT);
         bool orbit_setup = false;
@@ -672,7 +673,7 @@ public:
         // The other fields
         InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
       }
-      std::cerr << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
+      os << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
     }
   }
   ~DatabaseOrbits()
@@ -687,7 +688,7 @@ public:
       delete fb; // which closes the file and save the data to disk
     if (ff != nullptr)
       delete ff; // which closes the file and save the data to disk
-    std::cerr << "Clean closing of the DatabaseOrbits\n";
+    os << "Clean closing of the DatabaseOrbits\n";
   }
   vectface FuncListOrbitIncidence()
   {
@@ -795,7 +796,7 @@ public:
         return {pos, f};
       }
     }
-    std::cerr << "We should never reach that stage as we should find some undone facet\n";
+    os << "We should never reach that stage as we should find some undone facet\n";
     throw TerminalException{1};
   }
 };
@@ -888,7 +889,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     Tint GroupSizeComp = TheGRPrelevant.size();
     std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
     std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving);
+    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving, std::cerr);
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
       vectface ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);
