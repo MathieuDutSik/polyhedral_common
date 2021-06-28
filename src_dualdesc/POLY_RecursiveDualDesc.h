@@ -834,8 +834,12 @@ vectface DUALDESC_AdjacencyDecomposition(
   auto ComputeWMat=[&]() -> void {
     if (HaveWMat)
       return;
+    std::cerr << "Before GetWeightMatrix\n";
     WMat = GetWeightMatrix<T,Tidx_value>(EXT);
+    std::cerr << "After GetWeightMatrix\n";
     WMat.ReorderingSetWeight();
+    std::cerr << "After ReorderingSetWeight\n";
+    HaveWMat = true;
   };
   //
   // Checking if the entry is present in the map.
