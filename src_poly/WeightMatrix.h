@@ -206,12 +206,10 @@ public:
   // move constructor (see https://en.cppreference.com/w/cpp/language/move_constructor )
   WeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value>&& eMat) : nbRow(eMat.nbRow), ListWeight(std::move(eMat.ListWeight)), TheMat(std::move(eMat.TheMat))
   {
-    std::cerr << "WeightMatrix move constructor\n";
   }
   // move assignment (see https://en.cppreference.com/w/cpp/language/move_assignment )
   WeightMatrix& operator=(WeightMatrix<is_symmetric,T,Tidx_value>&& eMat)
   {
-    std::cerr << "WeightMatrix move assignment operator\n";
     nbRow = eMat.nbRow;
     ListWeight = std::move(eMat.ListWeight);
     TheMat = std::move(eMat.TheMat);

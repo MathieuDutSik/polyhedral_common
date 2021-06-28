@@ -805,6 +805,30 @@ public:
 
 
 
+template<typename T, typename Tidx_value>
+struct LazyWMat {
+public:
+  LazyWMat(const MyMatrix<T>& EXT) : EXT(EXT), HaveWMat(false) {
+  }
+  WeightMatrix<true, T, Tidx_value>& GetWMat() {
+    if (HaveWMat)
+      return WMat;
+    WMat = GetWeightMatrix<T,Tidx_value>(EXT);
+    WMat.ReorderingSetWeight();
+    HaveWMat = true;
+    return WMat;
+  }
+private:
+  const MyMatrix<T>& EXT;
+  WeightMatrix<true, T, Tidx_value> WMat;
+  bool HaveWMat;
+};
+
+
+
+
+
+
 //
 // A number of appoximations are done in this code:
 // ---In the bank we assume that the full symmetry is used.
@@ -829,24 +853,12 @@ vectface DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int nbCol=EXT.cols();
-  WeightMatrix<true, T, Tidx_value> WMat;
-  bool HaveWMat=false;
-  auto ComputeWMat=[&]() -> void {
-    if (HaveWMat)
-      return;
-    std::cerr << "Before GetWeightMatrix\n";
-    WMat = GetWeightMatrix<T,Tidx_value>(EXT);
-    std::cerr << "After GetWeightMatrix\n";
-    WMat.ReorderingSetWeight();
-    std::cerr << "After ReorderingSetWeight\n";
-    HaveWMat = true;
-  };
+  LazyWMat<T,Tidx_value> lwm(EXT);
   //
   // Checking if the entry is present in the map.
   //
   if (nbRow >= TheBank.get_minsize()) {
-    ComputeWMat();
-    vectface ListFace = TheBank.GetDualDesc(EXT, WMat, GRP);
+    vectface ListFace = TheBank.GetDualDesc(EXT, lwm.GetWMat(), GRP);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -883,8 +895,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     std::cerr << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
-      ComputeWMat();
-      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(lwm.GetWMat());
       BankSymmCheck = false;
     } else {
       TheGRPrelevant = GRP;
@@ -937,8 +948,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
   std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " ansSymm=" << ansSymm << "\n";
   if (ansBank == "yes") {
-    ComputeWMat();
-    TheBank.InsertEntry(EXT, WMat, TheGRPrelevant, BankSymmCheck, ListOrbitFaces);
+    TheBank.InsertEntry(EXT, lwm.GetWMat(), TheGRPrelevant, BankSymmCheck, ListOrbitFaces);
   }
   if (ansSymm == "yes") {
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
