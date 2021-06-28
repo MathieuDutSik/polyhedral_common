@@ -255,7 +255,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     i++;
   }
   bool central=!coset;
-  std::cerr << "central=" << central << "\n";
+  //  std::cerr << "central=" << central << "\n";
   //  std::cerr << "computeIt, coset=" << coset << "\n";
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
@@ -343,7 +343,6 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  std::cerr << " " << x(i);
 	std::cerr << "\n";
 #endif
-        std::cerr << "eNorm=" << eNorm << "\n";
         if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           info.short_vectors.push_back(x);
         } else {
@@ -377,7 +376,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     }
     //    std::cerr << "Case 11 i=" << i << "\n";
   }
-  std::cerr << "Normal return of computeIt\n";
+  //  std::cerr << "Normal return of computeIt\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
