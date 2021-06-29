@@ -982,9 +982,14 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 
         } else {
           IsCorrect = false;
         }
-        for (size_t u=0; u<ListEnt.size(); u++)
+        size_t n_incorr=0;
+        for (size_t u=0; u<ListEnt.size(); u++) {
           if (!test.block_status[u])
             f_incorr[u] = 1;
+          n_incorr += f_incorr[u];
+        }
+        if (n_incorr == ListEnt.size()) // All entries are incorrect. So, no need to continue
+          break;
       }
       std::cerr << "f_incorr=";
       for (size_t u=0; u<ListEnt.size(); u++)
