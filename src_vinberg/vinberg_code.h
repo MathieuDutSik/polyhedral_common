@@ -3,7 +3,7 @@
 
 #include "Shvec_exact.h"
 //#include "MAT_MatrixInt.h"
-
+#include "POLY_cddlib.h"
 
 
 
@@ -30,7 +30,22 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
     std::cerr << "Error in ComputeSphericalSolutions\n";
     throw TerminalException{1};
   }
-  return info.short_vectors;
+  std::vector<MyVector<Tint>> ListRet; // The vinberg computes all vectors up to length a.
+  for (auto & fV : info.short_vectors) {
+    T sum=0;
+    for (int i=0; i<dim; i++)
+      for (int j=0; j<=i; j++) {
+        T eMult = 2;
+        if (i == j)
+          eMult = 1;
+        T val1 = eV(i) - fV(i);
+        T val2 = eV(j) - fV(j);
+        sum += val1 * val2 * GramMat(i,j) * eMult;
+      }
+    if (sum == a)
+      ListRet.push_back(fV);
+  }
+  return ListRet;
 }
 
 //
@@ -100,20 +115,24 @@ struct VinbergTot {
 
 
 
-template<typename T, typename Tint>
-T ScalProd(const MyMatrix<T>& M, const MyVector<Tint>& V1, const MyVector<Tint>& V2)
+template<typename Tint>
+Tint ScalProd(const MyMatrix<Tint>& M, const MyVector<Tint>& V1, const MyVector<Tint>& V2)
 {
-  T eSum = 0;
+  Tint eSum = 0;
   int n = M.rows();
   for (int i=0; i<n; i++)
-    for (int j=0; j<n; j++)
-      eSum += V1(i) * V2(j) * M(i,j);
+    for (int j=0; j<=i; j++) {
+      Tint eMult = 2;
+      if (i == j)
+        eMult = 1;
+      eSum += V1(i) * V2(j) * M(i,j) * eMult;
+    }
   return eSum;
 }
 
 
 template<typename T, typename Tint>
-bool IsRoot(const MyMatrix<T>& M, const MyVector<Tint>& V)
+bool IsRoot(const MyMatrix<Tint>& M, const MyVector<Tint>& V)
 {
   int n = M.rows();
   T eNorm = ScalProd(M, V, V);
@@ -414,20 +433,135 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 }
 
 
+template<typename T>
+MyVector<T> SignCanonicalizeVector(const MyVector<T>& V)
+{
+  int len = V.size();
+  for (int u=0; u<len; u++) {
+    if (V(u) > 0)
+      return V;
+    if (V(u) < 0)
+      return -V;
+  }
+  std::cerr << "Error in SignCanonicalizeVector\n";
+  throw TerminalException{1};
+}
+
+
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 {
+  //
+  // First building the initial set of roots
+  //
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<T> a = ZeroVector<T>(n);
   for (auto & k : Vtot.root_lengths) {
     T k_T = k;
+    std::set<MyVector<Tint>> set;
     for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
-      if (IsRoot(Vtot.G, root_cand))
-        V1_roots.push_back(root_cand);
+      if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
+        MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
+        set.insert(root_can);
+      }
     }
+    for (auto & eV : set)
+      V1_roots.push_back(eV);
   }
-  return V1_roots;
+  //
+  // Selecting a basis of roots as a starting point
+  // (Not sure if that initial family is full dimensional or not. We assume full dimensional))
+  //
+  auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+    for (size_t i=0; i<n; i++)
+      M(eRank, i) = UniversalScalarConversion<T,Tint>(V1_roots[iRow](i));
+  };
+  size_t nbRow = V1_roots.size();
+  size_t nbCol = n;
+  SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(nbRow, nbCol, f);
+  Face selected(nbRow);
+  std::vector<MyVector<Tint>> SelectedRoots;
+  for (auto & idx : eSelect.ListRowSelect) {
+    selected[idx] = 1;
+    const MyVector<Tint>& uRoot = V1_roots[idx];
+    MyVector<Tint> Vprod = Vtot.G * uRoot;
+    size_t n_plus = 0, n_minus = 0;
+    for (auto& eRoot : SelectedRoots) {
+      Tint scal = Vprod.dot(eRoot);
+      if (scal > 0)
+        n_plus++;
+      if (scal < 0)
+        n_minus++;
+    }
+    if (n_minus > n_plus)
+      SelectedRoots.push_back(uRoot);
+    else
+      SelectedRoots.push_back(-uRoot);
+  }
+  //
+  // Now iterating over the roots.
+  //
+  auto get_facets=[&]() -> MyMatrix<T> {
+    size_t n_root = SelectedRoots.size();
+    MyMatrix<T> Mroot(n_root, n);
+    for (size_t i_root=0; i_root<n_root; i_root++)
+      for (size_t i=0; i<n; i++)
+        Mroot(i_root, i) = UniversalScalarConversion<T,Tint>(SelectedRoots[i_root](i));
+    return cdd::DualDescription(Mroot); // maybe use another dual description function
+  };
+  MyMatrix<T> FAC = get_facets();
+  auto insert_root=[&](const MyVector<Tint>& V) -> void {
+    size_t n_plus = 0;
+    size_t n_minus = 0;
+    size_t n_fac = FAC.rows();
+    const MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+    for (size_t i_fac=0; i_fac<n_fac; i_fac++) {
+      T scal = 0;
+      for (size_t i=0; i<n; i++)
+        scal += FAC(i_fac,i) * V_T(i);
+      if (scal > 0)
+        n_plus++;
+      if (scal < 0)
+        n_minus++;
+    }
+    if (n_plus == 0 || n_minus == 0) // The inequality is valid. Exiting
+      return;
+    auto get_root=[&]() -> MyVector<Tint> {
+      if (n_plus > n_minus) // We look for the vector that splits most
+        return -V;
+      else
+        return V;
+    };
+    MyVector<Tint> Vsel = get_root();
+    SelectedRoots.push_back(Vsel);
+    FAC = get_facets();
+    n_fac = FAC.rows();
+    std::vector<MyVector<T>> ListRowFAC;
+    for (size_t i_fac=0; i_fac<n_fac; i_fac++)
+      ListRowFAC.push_back(GetMatrixRow(FAC, i_fac));
+    std::vector<MyVector<Tint>> TheSelect;
+    for (auto & eRoot : SelectedRoots) {
+      const MyVector<T> eRoot_T = UniversalVectorConversion<T,Tint>(eRoot);
+      std::vector<size_t> TheIncd;
+      for (size_t i_fac=0; i_fac<n_fac; i_fac++) {
+        T scal = eRoot_T.dot(ListRowFAC[i_fac]);
+        if (scal == 0)
+          TheIncd.push_back(i_fac);
+      }
+      size_t eRank = TMat_SelectRowCol_subset(FAC, TheIncd).TheRank;
+      if (eRank == n - 1) {
+        TheSelect.push_back(eRoot);
+      }
+    }
+    SelectedRoots = TheSelect;
+  };
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    if (selected[iRow] == 0) {
+      const MyVector<Tint>& uRoot = V1_roots[iRow];
+      insert_root(uRoot);
+    }
+  return SelectedRoots;
 }
 
 
@@ -445,7 +579,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const T k_T = k;
     std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
     for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T)) {
-      if (IsRoot(Vtot.G, root_cand)) {
+      if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
         ListRoot.push_back(root_cand);
         if (is_FundPoly(Vtot, ListRoot)) {
           return ListRoot;
