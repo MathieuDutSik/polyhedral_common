@@ -1013,7 +1013,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 
 void OutputFacets(const vectface& TheOutput, const std::string& OUTfile, const std::string& OutFormat)
 {
-  if (OutFormat == "GAP") {
+  if (OutFormat == "Magma") {
     std::ofstream os(OUTfile);
     os << "return ";
     VectVectInt_Magma_Print(os, TheOutput);
@@ -1021,6 +1021,13 @@ void OutputFacets(const vectface& TheOutput, const std::string& OUTfile, const s
     return;
   }
   if (OutFormat == "GAP") {
+    std::ofstream os(OUTfile);
+    os << "return ";
+    VectVectInt_Gap_Print(os, TheOutput);
+    os << ";\n";
+    return;
+  }
+  if (OutFormat == "SetInt") {
     std::ofstream os(OUTfile);
     os << TheOutput.size() << "\n";
     for (const Face & face : TheOutput) {
@@ -1071,8 +1078,6 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
     std::cerr << "But <Tidx>::max()=" << size_t(std::numeric_limits<Tidx>::max()) << "\n";
     throw TerminalException{1};
   }
-
-  
   Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
   //
   SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
