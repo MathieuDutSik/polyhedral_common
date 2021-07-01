@@ -967,6 +967,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   ListStringValues1["EXTfile"]="unset.ext";
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
+  ListStringValues1["OutFormat"]="GAP";
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues=ListStringValues1;
   ListBlock["DATA"]=BlockDATA;
@@ -1010,6 +1011,31 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
 
 
 
+void OutputFacets(const vectface& TheOutput, const std::string& OUTfile, const std::string& OutFormat)
+{
+  if (OutFormat == "GAP") {
+    std::ofstream os(OUTfile);
+    os << "return ";
+    VectVectInt_Magma_Print(os, TheOutput);
+    os << ";\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    std::ofstream os(OUTfile);
+    os << TheOutput.size() << "\n";
+    for (const Face & face : TheOutput) {
+      mpz_class res = getsetasint<mpz_class>(face);
+      os << res << "\n";
+    }
+    return;
+  }
+  std::cerr << "No option has been chosen\n";
+  throw TerminalException{1};
+}
+
+
+
+
 template<typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const& eFull)
 {
@@ -1035,6 +1061,8 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::cerr << "GRPfile=" << GRPfile << "\n";
   std::string OUTfile=BlockDATA.ListStringValues.at("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
+  std::string OutFormat=BlockDATA.ListStringValues.at("OutFormat");
+  std::cerr << "OutFormat=" << OutFormat << "\n";
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT=ReadMatrix<T>(EXTfs);
   std::ifstream GRPfs(GRPfile);
@@ -1070,9 +1098,7 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix);
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  std::ofstream OUTfs(OUTfile);
-  VectVectInt_Magma_Print(OUTfs, TheOutput);
-  //
+  OutputFacets(TheOutput, OUTfile, OutFormat);
 }
 
 
