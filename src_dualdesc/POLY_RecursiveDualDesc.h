@@ -837,6 +837,19 @@ private:
 };
 
 
+template<typename Tint, typename T, typename Tgroup>
+std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T>& EXT, const Tgroup& GRP)
+{
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  std::map<std::string, Tint> TheMap;
+  int delta=nbRow - nbCol;
+  TheMap["groupsize"]=GRP.size();
+  TheMap["incidence"]=nbRow;
+  TheMap["rank"]=nbCol;
+  TheMap["delta"]=delta;
+  return TheMap;
+}
 
 
 
@@ -858,11 +871,11 @@ vectface DUALDESC_AdjacencyDecomposition(
 	 std::string const& ePrefix)
 {
   using Tgr = GraphListAdj;
+  using Tint=typename Tgroup::Tint;
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
   }
-  using Tint=typename Tgroup::Tint;
   int nbRow=EXT.rows();
   int nbCol=EXT.cols();
   LazyWMat<T,Tidx_value> lwm(EXT);
@@ -877,14 +890,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // Now computing the groups
   //
-  Tgroup TheGRPrelevant;
-  std::map<std::string, Tint> TheMap;
-  int delta=nbRow - nbCol;
-  TheMap["groupsize"]=GRP.size();
-  TheMap["incidence"]=nbRow;
-  TheMap["rank"]=nbCol;
-  TheMap["delta"]=delta;
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP);
   std::string ansSplit=HeuristicEvaluation(TheMap, AllArr.Splitting);
+  Tgroup TheGRPrelevant;
   //
   // The computations themselves
   //
