@@ -399,6 +399,14 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx,int> const& eMap)
 
 
 
+template<typename T, typename Tgroup>
+struct DataFacet {
+  size_t SelectedOrbit;
+  Face eInc;
+  FlippingFramework<T> FF;
+  Tgroup GRP;
+};
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -722,7 +730,7 @@ public:
   void FuncInsert(Face const& face)
   {
     Face face_can = GRP.CanonicalImage(face);
-    InsertListOrbitFace(face_can); 
+    InsertListOrbitFace(face_can);
     DictOrbit.insert(nbOrbit);
     if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
       return;
@@ -785,7 +793,7 @@ public:
   {
     return nbOrbitDone;
   }
-  std::pair<size_t,Face> FuncGetMinimalUndoneOrbit()
+  DataFacet<T,Tgroup> FuncGetMinimalUndoneOrbit()
   {
     for (auto & eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
@@ -794,7 +802,8 @@ public:
            in place but the vector may be extended without impacting this first entry. */
         size_t pos = eEnt.second[0];
         Face f = RetrieveListOrbitEntry(pos).face;
-        return {pos, f};
+        Tgroup TheStab=GRP.Stabilizer_OnSets(f);
+        return {pos, f, FlippingFramework<T>(EXT, f), ReducedGroupAction(TheStab, f)};
       }
     }
     os << "We should never reach that stage as we should find some undone facet\n";
@@ -896,11 +905,10 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // The computations themselves
   //
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  start = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   vectface ListOrbitFaces(nbRow);
   std::string ansSymm;
-  // 3 scenario
+  // 3 scenarii
   // --- 1 : We have the full symmetry group and the computation was done with respect to it.
   // --- 2 : We have computed for a subgroup which actually is the full group.
   // --- 3 : We have computed for a subgroup which actually is a strict subgroup.
@@ -935,17 +943,13 @@ vectface DUALDESC_AdjacencyDecomposition(
     while(true) {
       if (RPL.GetTerminationStatus())
         break;
-      std::pair<size_t,Face> ePair = RPL.FuncGetMinimalUndoneOrbit();
-      size_t SelectedOrbit = ePair.first;
-      Face eInc = ePair.second;
-      FlippingFramework<T> FF(EXT, eInc);
-      Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
-      Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
-      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " |stab|=" << GRPred.size() << " nbCol=" << nbCol << "\n";
+      DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
+      size_t SelectedOrbit = df.SelectedOrbit;
+      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << nbRow << " |inc|=" << df.eInc.count() << " |stab|=" << df.GRP.size() << " nbCol=" << nbCol << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.EXT_face, GRPred, AllArr, NewPrefix);
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.GRP, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
-        Face eFlip=FF.Flip(eOrbB);
+        Face eFlip = df.FF.Flip(eOrbB);
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
@@ -954,7 +958,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     };
     ListOrbitFaces = RPL.FuncListOrbitIncidence();
   }
-  end = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
