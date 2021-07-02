@@ -406,7 +406,8 @@ struct DatabaseOrbits {
 private:
   using Torbsize=uint16_t;
   using Tidx = typename Tgroup::Telt::Tidx;
-  MyMatrix<T> EXT;
+  const MyMatrix<T>& EXT;
+  Tint CritSiz;
   Tgroup GRP;
   Tint groupOrder;
   std::string MainPrefix;
@@ -580,7 +581,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os)
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), CritSiz(EXT.cols()-2), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os)
   {
     TotalNumber = 0;
     nbOrbitDone = 0;
@@ -799,6 +800,10 @@ public:
     os << "We should never reach that stage as we should find some undone facet\n";
     throw TerminalException{1};
   }
+  bool GetTerminationStatus() const
+  {
+    
+  }
 };
 
 
@@ -936,8 +941,7 @@ vectface DUALDESC_AdjacencyDecomposition(
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
-      nbUndone = RPL.FuncNumberUndone();
-      std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << nbUndone << "\n";
+      std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << RPL.FuncNumberUndone() << "\n";
       std::cerr << "\n";
     };
     ListOrbitFaces = RPL.FuncListOrbitIncidence();
