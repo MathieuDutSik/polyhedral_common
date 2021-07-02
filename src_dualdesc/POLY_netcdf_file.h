@@ -7,6 +7,8 @@
 #include "Basic_file.h"
 #include "Boost_bitset.h"
 
+#undef SUPPORT_LONG_LONG
+
 
 struct FileBool {
 private:
@@ -280,11 +282,18 @@ void POLY_NC_WritePolytope_INT(netCDF::NcFile & dataFile, MyMatrix<T> const& EXT
     POLY_NC_WritePolytope_SpecType<T,int32_t>(dataFile, EXT, "int");
     return;
   }
+#ifdef SUPPORT_LONG_LONG
   if (MaxCoeff < MaxCoeff_int64) {
     POLY_NC_WritePolytope_SpecType<T,int64_t>(dataFile, EXT, "int64");
     return;
   }
+#endif
   std::cerr << "We failed to find a type for writing the data type\n";
+#ifdef SUPPORT_LONG_LONG
+  std::cerr << "Compiled with LONG_LONG\n";
+#else
+  std::cerr << "Compiled without LONG_LONG\n";
+#endif
   throw TerminalException{1};
 }
 
@@ -362,6 +371,7 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
       }
     IsMatch=true;
   }
+#ifdef SUPPORT_LONG_LONG
   if (eType == netCDF::NcType::nc_INT64) {
     std::vector<int64_t> V(eProd);
     varVAL.getVar(V.data());
@@ -373,8 +383,14 @@ MyMatrix<T> POLY_NC_ReadPolytope(netCDF::NcFile & dataFile)
       }
     IsMatch=true;
   }
+#endif
   if (!IsMatch) {
     std::cerr << "We failed to find a matching type\n";
+#ifdef SUPPORT_LONG_LONG
+    std::cerr << "Compiled with LONG_LONG\n";
+#else
+    std::cerr << "Compiled without LONG_LONG\n";
+#endif
     throw TerminalException{1};
   }
   return EXT;
