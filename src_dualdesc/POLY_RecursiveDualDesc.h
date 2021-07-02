@@ -802,7 +802,14 @@ public:
   }
   bool GetTerminationStatus() const
   {
-    
+    if (nbOrbitDone > 0) {
+      Face eSetUndone=ComputeIntersectionUndone();
+      if (nbUndone <= CritSiz || eSetUndone.count() > 0) {
+        os << "End of computation, nbObj=" << TotalNumber << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " |EXT|=" << EXT.rows() << "\n";
+        return true;
+      }
+    }
+    return false;
   }
 };
 
@@ -917,23 +924,16 @@ vectface DUALDESC_AdjacencyDecomposition(
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
     }
-    Tint TheDim = nbCol - 1;
     while(true) {
-      Tint nbUndone=RPL.FuncNumberUndone();
-      if (RPL.FuncNumberOrbitDone() > 0) {
-        Face eSetUndone=RPL.ComputeIntersectionUndone();
-        if (nbUndone <= TheDim-1 || eSetUndone.count() > 0) {
-          std::cerr << "End of computation, nbObj=" << RPL.FuncNumber() << " nbUndone=" << nbUndone << " |eSetUndone|=" << eSetUndone.count() << " |EXT|=" << nbRow << "\n";
-          break;
-        }
-      }
+      if (RPL.GetTerminationStatus())
+        break;
       std::pair<size_t,Face> ePair = RPL.FuncGetMinimalUndoneOrbit();
       size_t SelectedOrbit = ePair.first;
       Face eInc = ePair.second;
       FlippingFramework<T> FF(EXT, eInc);
       Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eInc);
       Tgroup GRPred=ReducedGroupAction(TheStab, eInc);
-      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " |stab|=" << GRPred.size() << " dim=" << TheDim << "\n";
+      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << eInc.size() << " |inc|=" << eInc.count() << " |stab|=" << GRPred.size() << " nbCol=" << nbCol << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
       vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, FF.EXT_face, GRPred, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
