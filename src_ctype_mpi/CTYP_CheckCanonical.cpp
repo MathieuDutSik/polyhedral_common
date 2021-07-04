@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     auto get_random_equivalent=[&](MyMatrix<Tmat> const& eMat) -> MyMatrix<Tmat> {
       int nbRow = eMat.rows();
       int n = eMat.cols();
-      std::vector<int> ePerm = RandomPermutation(nbRow);
+      std::vector<int> ePerm = RandomPermutation<int>(nbRow);
       std::vector<int> AttV(nbRow,0);
       std::cerr << "ePerm=[";
       for (int iRow=0; iRow<nbRow; iRow++) {

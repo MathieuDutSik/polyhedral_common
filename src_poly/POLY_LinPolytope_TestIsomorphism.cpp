@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     auto get_random_equivalent=[](MyMatrix<Tint> const& eMat) -> MyMatrix<Tint> {
       int nbRow = eMat.rows();
       int n = eMat.cols();
-      std::vector<int> ePerm = RandomPermutation(nbRow);
+      std::vector<int> ePerm = RandomPermutation<int>(nbRow);
       MyMatrix<Tint> eUnimod = RandomUnimodularMatrix<Tint>(n);
       MyMatrix<Tint> eProd = eMat * eUnimod;
       MyMatrix<Tint> RetMat(nbRow, n);
