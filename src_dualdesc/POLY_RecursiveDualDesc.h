@@ -609,10 +609,8 @@ public:
     n_act = GRP.n_act();
     delta = n_bit_orbsize + n_act;
     n_act_div8 = (n_act + 7) / 8;
-    V_hash = std::vector<uint8_t>(n_act_div8);
+    V_hash = std::vector<uint8_t>(n_act_div8,0);
     std::function<size_t(size_t)> fctHash=[&](size_t idx) -> size_t {
-      for (size_t i=0; i<n_act_div8; i++)
-        V_hash[i] = 0;
       size_t pos = delta * idx;
       for (size_t i=0; i<n_act; i++) {
         bool val = getbit(ListOrbit, pos);
@@ -625,7 +623,7 @@ public:
     std::function<bool(size_t,size_t)> fctEqual=[&](size_t idx1, size_t idx2) -> bool {
       size_t pos1 = delta * idx1;
       size_t pos2 = delta * idx2;
-      for (size_t i=0; i<n_act; i++) {
+      for (size_t i=1; i<n_act; i++) { // TRICK 9: Two faces will differ by at least 2 bits
         bool val1 = getbit(ListOrbit, pos1);
         bool val2 = getbit(ListOrbit, pos2);
         if (val1 != val2)
