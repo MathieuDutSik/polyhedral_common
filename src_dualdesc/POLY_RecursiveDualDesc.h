@@ -625,7 +625,9 @@ public:
 #endif
 #ifdef ROBIN_HOOD_HASH
       const uint64_t seed = UINT64_C(0xe17a1465);
-      return robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
+      size_t hash = robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
+      std::cerr << "hash=" << hash << "\n";
+      return hash;
 #endif
     };
     std::function<bool(size_t,size_t)> fctEqual=[&](size_t idx1, size_t idx2) -> bool {

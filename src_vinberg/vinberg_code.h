@@ -208,13 +208,18 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
+  std::cerr << "GetVinbergAux, step 1\n";
   int n=G.rows();
+  std::cerr << "GetVinbergAux, step 1.1\n";
   // Computing the complement of the space.
-  MyVector<T> G_T = UniversalMatrixConversion<T,Tint>(G);
+  MyMatrix<T> G_T = UniversalMatrixConversion<T,Tint>(G);
+  std::cerr << "GetVinbergAux, step 1.2\n";
   MyVector<Tint> V = G * v0;
+  std::cerr << "GetVinbergAux, step 1.3\n";
   std::vector<Tint> vectV(n);
   for (int i=0; i<n; i++)
     vectV[i] = V(i);
+  std::cerr << "GetVinbergAux, step 2\n";
   GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV);
   std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
@@ -224,10 +229,12 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<Tint> M = ConcatenateMatVec(Morth, V);
   MyMatrix<Tint> M2 = ConcatenateMatVec(Morth, v0);
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2);
+  std::cerr << "GetVinbergAux, step 3\n";
   // The dterminant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
   // We want to find a vector v such that V_i = (det) v + Morth Z^{n-1}
+  std::cerr << "GetVinbergAux, step 4\n";
   auto GetVect = [&]() -> MyVector<Tint> {
     for (int i=0; i<n; i++) {
       for (int j=0; j<2; j++) {
@@ -246,16 +253,20 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
     throw TerminalException{1};
   };
   MyVector<Tint> Vtrans = GetVect();
+  std::cerr << "GetVinbergAux, step 5\n";
   MyMatrix<Tint> Mbas = ConcatenateMatVec(Morth, Vtrans);
   MyMatrix<Tint> MbasInv = Inverse(Mbas);
+  std::cerr << "GetVinbergAux, step 6\n";
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth * G * Morth.transpose();
   MyMatrix<T> Gorth_T = UniversalMatrixConversion<T,Tint>(Gorth);
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
+  std::cerr << "GetVinbergAux, step 7\n";
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
+  std::cerr << "GetVinbergAux, step 8\n";
   return {G, G_T, v0, V, Vtrans, Mbas, MbasInv, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
@@ -454,6 +465,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   //
   // First building the initial set of roots
   //
+  std::cerr << "FundCone, step 1\n";
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<T> a = ZeroVector<T>(n);
@@ -469,6 +481,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     for (auto & eV : set)
       V1_roots.push_back(eV);
   }
+  std::cerr << "FundCone, step 2\n";
   //
   // Selecting a basis of roots as a starting point
   // (Not sure if that initial family is full dimensional or not. We assume full dimensional))
@@ -480,6 +493,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   size_t nbRow = V1_roots.size();
   size_t nbCol = n;
   SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(nbRow, nbCol, f);
+  std::cerr << "FundCone, step 3\n";
   Face selected(nbRow);
   std::vector<MyVector<Tint>> SelectedRoots;
   for (auto & idx : eSelect.ListRowSelect) {
@@ -499,6 +513,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     else
       SelectedRoots.push_back(-uRoot);
   }
+  std::cerr << "FundCone, step 4\n";
   //
   // Now iterating over the roots.
   //
@@ -511,6 +526,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     return cdd::DualDescription(Mroot); // maybe use another dual description function
   };
   MyMatrix<T> FAC = get_facets();
+  std::cerr << "FundCone, step 5\n";
   auto insert_root=[&](const MyVector<Tint>& V) -> void {
     size_t n_plus = 0;
     size_t n_minus = 0;
@@ -556,11 +572,13 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     }
     SelectedRoots = TheSelect;
   };
+  std::cerr << "FundCone, step 6\n";
   for (size_t iRow=0; iRow<nbRow; iRow++)
     if (selected[iRow] == 0) {
       const MyVector<Tint>& uRoot = V1_roots[iRow];
       insert_root(uRoot);
     }
+  std::cerr << "FundCone, step 7\n";
   return SelectedRoots;
 }
 
@@ -568,9 +586,12 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
+  std::cerr << "FindRoots, step 1\n";
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
+  std::cerr << "FindRoots, step 2\n";
 
   IterateRootDecompositions<T,Tint> iter(Vtot);
+  std::cerr << "FindRoots, step 3\n";
   while (true) {
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
