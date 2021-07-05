@@ -191,7 +191,7 @@ std::pair<MyMatrix<T>, std::vector<Tidx>> CanonicalizationPolytopePair(MyMatrix<
   Tidx n_row=EXT.rows();
   Tidx n_col=EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (Tidx i_row=0; i_row<n_row; i_row++) {
     Tidx j_row=CanonicOrd[i_row];
     EXTcan.row(i_row) = EXT.row(j_row);
   }
@@ -242,7 +242,7 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
 template<typename T>
 MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   WeightMatrix<true, T, Tidx_value> WMat=GetWeightMatrix<T, Tidx_value>(EXT);
   WMat.ReorderingSetWeight();
   return CanonicalizationPolytopePair<T,int,Tidx_value>(EXT, WMat).first;
@@ -370,9 +370,8 @@ size_t get_matching_power(size_t const& val)
   size_t pow = 1;
   size_t pos = 0;
   while(true) {
-    if (pow >= val) {
+    if (pow >= val)
       return pos;
-    }
     pow *= 2;
     pos++;
   }
