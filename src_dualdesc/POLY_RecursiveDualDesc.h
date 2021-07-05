@@ -14,6 +14,9 @@
 #include "MatrixGroupBasic.h"
 #include <signal.h>
 
+//#define MURMUR_HASH
+#define ROBIN_HOOD_HASH
+
 
 //#define UNORDERED_MAP
 #define TSL_SPARSE_MAP
@@ -616,8 +619,14 @@ public:
         setbit(V_hash, i, val);
         pos++;
       }
-      uint32_t seed= 0x1b873560;
+#ifdef MURMUR_HASH
+      const uint32_t seed= 0x1b873560;
       return murmur3_32(V_hash.data(), n_act_div8, seed);
+#endif
+#ifdef ROBIN_HOOD_HASH
+      const uint64_t seed = UINT64_C(0xe17a1465);
+      return robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
+#endif
     };
     std::function<bool(size_t,size_t)> fctEqual=[&](size_t idx1, size_t idx2) -> bool {
       size_t pos1 = delta * idx1;
