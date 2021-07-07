@@ -419,7 +419,7 @@ private:
   using Tidx = typename Tgroup::Telt::Tidx;
   const MyMatrix<T>& EXT;
   Tint CritSiz;
-  Tgroup GRP;
+  const Tgroup& GRP;
   Tint groupOrder;
   std::string MainPrefix;
   netCDF::NcFile dataFile;
@@ -458,6 +458,8 @@ private:
   size_t n_act;
   size_t delta;
   size_t n_act_div8;
+  int nbRow;
+  int nbCol;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
 #endif
@@ -618,6 +620,8 @@ public:
     n_act = GRP.n_act();
     delta = n_bit_orbsize + n_act;
     n_act_div8 = (n_act + 7) / 8;
+    nbRow = EXT.rows();
+    nbCol = EXT.cols();
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8,0);
 #endif
@@ -809,6 +813,8 @@ public:
     V.pop_back();
     nbUndone -= ListPossOrbsize[eEnt.idx_orb];
     nbOrbitDone++;
+    os << "We have " << nbOrbit << " orbits  Nr treated=" << nbOrbitDone << " orbits  nbUndone=" << nbUndone << "\n";
+
   }
   Face ComputeIntersectionUndone() const
   {
@@ -852,6 +858,7 @@ public:
         size_t pos = eEnt.second[0];
         Face f = RetrieveListOrbitEntry(pos).face;
         Tgroup TheStab=GRP.Stabilizer_OnSets(f);
+        std::cerr << "Considering orbit " << pos << " |EXT|=" << nbRow << " |inc|=" << f.count() << " |stab|=" << TheStab.size() << " nbCol=" << nbCol << "\n";
         return {pos, f, FlippingFramework<T>(EXT, f), ReducedGroupAction(TheStab, f)};
       }
     }
@@ -994,7 +1001,6 @@ vectface DUALDESC_AdjacencyDecomposition(
         break;
       DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
       size_t SelectedOrbit = df.SelectedOrbit;
-      std::cerr << "Considering orbit " << SelectedOrbit << " |EXT|=" << nbRow << " |inc|=" << df.eInc.count() << " |stab|=" << df.GRP.size() << " nbCol=" << nbCol << "\n";
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
       vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.GRP, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
@@ -1002,7 +1008,6 @@ vectface DUALDESC_AdjacencyDecomposition(
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
-      std::cerr << "We have " << RPL.FuncNumberOrbit() << " orbits  Nr treated=" << RPL.FuncNumberOrbitDone() << " orbits  nbUndone=" << RPL.FuncNumberUndone() << "\n";
       std::cerr << "\n";
     };
     ListOrbitFaces = RPL.FuncListOrbitIncidence();
