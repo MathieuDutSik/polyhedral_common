@@ -7,13 +7,14 @@
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
+PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
-PROGRAM		= POLY_IntegralPoints
+#PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
@@ -38,7 +39,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++17 -Wall -O3 -g
+CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
 #CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
