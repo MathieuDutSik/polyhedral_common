@@ -15,7 +15,8 @@
 #include <signal.h>
 
 //#define MURMUR_HASH
-#define ROBIN_HOOD_HASH
+//#define ROBIN_HOOD_HASH
+#define SUBSET_HASH
 
 
 //#define UNORDERED_MAP
@@ -442,6 +443,10 @@ private:
   /* TRICK 3: Encoding the pair of face and idx_orb as bits allow us to save memory */
   std::vector<uint8_t> ListOrbit; // This CANNOT be replaced by vectface as we hack our way and so
                                   // making a vectface will not allow
+#ifdef SUBSET_HASH
+  std::vector<Tidx> subset_index;
+  size_t n_bit_hash;
+#endif
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -453,7 +458,9 @@ private:
   size_t n_act;
   size_t delta;
   size_t n_act_div8;
+#if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
+#endif
   bool is_opened;
 public:
   // conversion functions that depend only on n_act and n_bit_orbsize.
@@ -611,22 +618,56 @@ public:
     n_act = GRP.n_act();
     delta = n_bit_orbsize + n_act;
     n_act_div8 = (n_act + 7) / 8;
+#if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8,0);
+#endif
+#ifdef SUBSET_HASH
+    size_t n_ent_bit = 8 * sizeof(size_t); // The selection
+    if (n_act <= n_ent_bit) {
+      n_bit_hash = n_act;
+      for (size_t i=0; i<n_ent_bit; i++)
+        subset_index.push_back(Tidx(i));
+    } else {
+      n_bit_hash = n_ent_bit;
+      double frac = double(n_act-1) / double(n_ent_bit-1);
+      for (size_t i=0; i<n_ent_bit; i++) {
+        Tidx pos = Tidx(round(frac * double(i)));
+        if (pos < 0)
+          pos = 0;
+        if (pos >= n_act)
+          pos = n_act-1;
+        subset_index.push_back(pos);
+      }
+    }
+#endif
     std::function<size_t(size_t)> fctHash=[&](size_t idx) -> size_t {
       size_t pos = delta * idx;
+#if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
       for (size_t i=0; i<n_act; i++) {
         bool val = getbit(ListOrbit, pos);
         setbit(V_hash, i, val);
         pos++;
       }
-#ifdef MURMUR_HASH
+# ifdef MURMUR_HASH
       const uint32_t seed= 0x1b873560;
       return murmur3_32(V_hash.data(), n_act_div8, seed);
-#endif
-#ifdef ROBIN_HOOD_HASH
+# endif
+# ifdef ROBIN_HOOD_HASH
       const uint64_t seed = UINT64_C(0xe17a1465);
       size_t hash = robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
       std::cerr << "hash=" << hash << "\n";
+      return hash;
+# endif
+#endif
+#ifdef SUBSET_HASH
+      size_t hash=0;
+      size_t* ptr1 = &hash;
+      uint8_t* ptr2 = (uint8_t*) ptr1;
+      for (size_t i=0; i<n_bit_hash; i++) {
+        double idx = pos + size_t(subset_index[i]);
+        bool val = getbit(ListOrbit, idx);
+        setbit_ptr(ptr2, i, val);
+      }
       return hash;
 #endif
     };
