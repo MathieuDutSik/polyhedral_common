@@ -15,6 +15,12 @@
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& a)
 {
+  std::cerr << "ComputeSphericalSolutions, step 1\n";
+  std::cerr << "GramMat=\n";
+  WriteMatrix(std::cerr, GramMat);
+  std::cerr << "eV=\n";
+  WriteVector(std::cerr, eV);
+  std::cerr << "a=" << a << "\n";
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   int dim = GramMat.rows();
   MyVector<T> cosetVect	= - eV;
@@ -99,7 +105,7 @@ struct VinbergTot {
   MyVector<Tint> V_i;
   MyVector<Tint> Vtrans;
   MyMatrix<Tint> Mbas;
-  MyMatrix<Tint> MbasInv;
+  //  MyMatrix<Tint> MbasInv_T;
   //
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
   MyMatrix<T> Morth_T; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
@@ -150,6 +156,7 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 {
   size_t n_rows = m.rows();
   size_t n_cols = m.cols();
+  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
   MyVector<Tint> negative = ZeroVector<Tint>(n_cols);
   MyVector<Tint> positive = ZeroVector<Tint>(n_cols);
   for (size_t i_col=0; i_col<n_cols; i_col++) {
@@ -161,6 +168,14 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
         positive(i_col) += val;
     }
   }
+  std::cerr << "negative =";
+  for (size_t i_col=0; i_col<n_cols; i_col++)
+    std::cerr << " " << negative(i_col);
+  std::cerr << "\n";
+  std::cerr << "positive =";
+  for (size_t i_col=0; i_col<n_cols; i_col++)
+    std::cerr << " " << positive(i_col);
+  std::cerr << "\n";
   std::vector<int> ListSize(n_cols);
   for (size_t i_col=0; i_col<n_cols; i_col++) {
     int val1 = UniversalScalarConversion<int,Tint>(negative(i_col));
@@ -168,18 +183,26 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
     int len = val2 + 1 - val1;
     ListSize[i_col] = len;
   }
+  std::cerr << "We have ListSizes\n";
   using Tfield=typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(m);
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
+  std::cerr << "We have Minv_field\n";
   FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
+  std::cerr << "We have FrMat\n";
   Tint eDen = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
+  std::cerr << "We have eDen=" << eDen << "\n";
   if (eDen < 0) {
     std::cerr << "We should have eDen > 0. eDen=" << eDen << "\n";
     throw TerminalException{1};
   }
   MyMatrix<Tint> Comat = UniversalMatrixConversion<Tint,Tfield>(FrMat.TheMat);
+  std::cerr << "We have |Comat|=" << Comat.rows() << " / " << Comat.cols() << "\n";
+  WriteMatrix(std::cerr, Comat);
   auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
-    MyVector<Tint> Q = V * Comat;
+    std::cerr << "ParallelepipedContains, begin\n";
+    MyVector<Tint> Q = V.transpose() * Comat;
+    std::cerr << "ParallelepipedContains, we have Q\n";
     for (size_t i_col=0; i_col<n_cols; i_col++) {
       if (Q(i_col) < 0)
         return false;
@@ -192,8 +215,12 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
   BlockIterationMultiple BlIter(ListSize);
   for (const auto& eVect : BlIter) {
     MyVector<Tint> ePoint(n_cols);
-    for (size_t i_col=0; i_col<n_cols; i_col++)
+    std::cerr << "ePoint =";
+    for (size_t i_col=0; i_col<n_cols; i_col++) {
       ePoint(i_col) = negative(i_col) + eVect[i_col];
+      std::cerr << " " << ePoint(i_col);
+    }
+    std::cerr << "\n";
     if (ParallelepipedContains(ePoint))
       ListPoint.push_back(ePoint);
   }
@@ -224,10 +251,15 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
+  std::cerr << "GetVinbergAux, step 2.1\n";
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
+  std::cerr << "GetVinbergAux, step 2.2\n";
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
-  MyMatrix<Tint> M = ConcatenateMatVec(Morth, V);
-  MyMatrix<Tint> M2 = ConcatenateMatVec(Morth, v0);
+  std::cerr << "GetVinbergAux, step 2.3\n";
+  MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V);
+  std::cerr << "GetVinbergAux, step 2.4\n";
+  MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
+  std::cerr << "GetVinbergAux, step 2.5\n";
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2);
   std::cerr << "GetVinbergAux, step 3\n";
   // The dterminant. The scalar tell us how much we need to the quotient.
@@ -254,20 +286,24 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   };
   MyVector<Tint> Vtrans = GetVect();
   std::cerr << "GetVinbergAux, step 5\n";
-  MyMatrix<Tint> Mbas = ConcatenateMatVec(Morth, Vtrans);
-  MyMatrix<Tint> MbasInv = Inverse(Mbas);
+  MyMatrix<Tint> Mbas = ConcatenateMatVec_Tr(Morth, Vtrans);
+  std::cerr << "GetVinbergAux, step 5.1\n";
+  //  MyMatrix<T> MbasInv_T = Inverse(UniversalMatrixConversion<T,Tint>(Mbas));
   std::cerr << "GetVinbergAux, step 6\n";
 
   // Gram matrix of the space.
-  MyMatrix<Tint> Gorth = Morth * G * Morth.transpose();
+  MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
+  std::cerr << "GetVinbergAux, step 6.1\n";
   MyMatrix<T> Gorth_T = UniversalMatrixConversion<T,Tint>(Gorth);
+  std::cerr << "GetVinbergAux, step 6.2\n";
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   std::cerr << "GetVinbergAux, step 7\n";
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
   std::cerr << "GetVinbergAux, step 8\n";
-  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
+  //  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv_T, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
+  return {G, G_T, v0, V, Vtrans, Mbas, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
 
@@ -343,16 +379,23 @@ public:
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
 {
-  MyVector<T> sV = a * Vtot.GM_iGorth;
+  std::cerr << "Roots_decomposed_into, step 1\n";
+  MyVector<T> sV = a.transpose() * Vtot.GM_iGorth;
+  std::cerr << "Roots_decomposed_into, step 2\n";
   T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth_T * sV);
+  std::cerr << "Roots_decomposed_into, step 3\n";
   MyVector<T> eV = -sV;
+  std::cerr << "Roots_decomposed_into, step 4\n";
   std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi);
+  std::cerr << "Roots_decomposed_into, step 5\n";
   std::vector<MyVector<Tint>> RetSol;
+  std::cerr << "Roots_decomposed_into, step 6\n";
   for (auto& eV : ListSol) {
     MyVector<T> rX_T = a + UniversalVectorConversion<T,Tint>(eV) * Vtot.Morth_T;
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
     RetSol.emplace_back(rX);
   }
+  std::cerr << "Roots_decomposed_into, step 7\n";
   return RetSol;
 }
 
@@ -469,14 +512,18 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<T> a = ZeroVector<T>(n);
+  std::cerr << "FundCone, step 1.1\n";
   for (auto & k : Vtot.root_lengths) {
     T k_T = k;
+    std::cerr << " k=" << k << "\n";
     std::set<MyVector<Tint>> set;
     for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
+      std::cerr << "Before processing root_cand\n";
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
         MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
         set.insert(root_can);
       }
+      std::cerr << "After processing root_cand\n";
     }
     for (auto & eV : set)
       V1_roots.push_back(eV);
