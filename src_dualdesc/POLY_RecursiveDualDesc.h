@@ -408,6 +408,10 @@ struct DataFacet {
   Face eInc;
   FlippingFramework<T> FF;
   Tgroup GRP;
+  Face flip(const Face& f) const {
+    Face eFlip = FF.Flip(f);
+    return GRP.CanonicalImage(eFlip);
+  }
 };
 
 
@@ -780,15 +784,14 @@ public:
     }
     return retListOrbit;
   }
-  void FuncInsert(Face const& face)
+  void FuncInsert(Face const& face_can) // The face should have been canonicalized beforehand.
   {
-    Face face_can = GRP.CanonicalImage(face);
     InsertListOrbitFace(face_can);
     DictOrbit.insert(nbOrbit);
     if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
       return;
     /* TRICK 8: The insertion yield something new. So now we compute the expensive stabilizer */
-    Tint ordStab = GRP.Stabilizer_OnSets(face).size();
+    Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
     Tint orbSize = groupOrder / ordStab;
     Torbsize idx_orb = GetOrbSizeIndex(orbSize);
     InsertListOrbitIdxOrb(idx_orb);
@@ -814,7 +817,7 @@ public:
     nbUndone -= ListPossOrbsize[eEnt.idx_orb];
     nbOrbitDone++;
     os << "We have " << nbOrbit << " orbits  Nr treated=" << nbOrbitDone << " orbits  nbUndone=" << nbUndone << "\n";
-
+    os << "\n";
   }
   Face ComputeIntersectionUndone() const
   {
@@ -918,6 +921,19 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T>& EXT, const Tgro
 
 
 
+template<typename T, typename Tgroup>
+vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tgroup& GRP, const std::string& ansSamp)
+{
+  // We can do a little better by passing a lambda to the DirectComputationInitialFacetSet
+  // but that is a little overkill right now
+  size_t nbRow = EXT.rows();
+  vectface list_face(nbRow);
+  for (auto & eFace : DirectComputationInitialFacetSet(EXT, ansSamp))
+    list_face.push_back(GRP.CanonicalImage(eFace));
+  return list_face;
+}
+
+
 
 //
 // A number of appoximations are done in this code:
@@ -991,7 +1007,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving, std::cerr);
     if (RPL.FuncNumberOrbit() == 0) {
       std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-      vectface ListFace=DirectComputationInitialFacetSet(EXT, ansSamp);
+      vectface ListFace=DirectComputationInitialFacetSet_Group(EXT, TheGRPrelevant, ansSamp);
       std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
       for (auto & eInc : ListFace)
 	RPL.FuncInsert(eInc);
@@ -1004,11 +1020,10 @@ vectface DUALDESC_AdjacencyDecomposition(
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
       vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.GRP, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
-        Face eFlip = df.FF.Flip(eOrbB);
+        Face eFlip = df.flip(eOrbB);
         RPL.FuncInsert(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
-      std::cerr << "\n";
     };
     ListOrbitFaces = RPL.FuncListOrbitIncidence();
   }

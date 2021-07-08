@@ -210,7 +210,7 @@ public:
       j_row = OneInc.find_next(j_row);
     }
   }
-  Face Flip(Face const& sInc)
+  Face Flip(Face const& sInc) const
   {
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
