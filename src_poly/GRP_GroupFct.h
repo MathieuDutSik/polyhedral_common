@@ -94,23 +94,25 @@ Tgroup ReadGroup(std::istream &is)
     throw TerminalException{1};
   }
   int nbGen;
-  int n;
-  is >> n;
+  int n_i;
+  is >> n_i;
   is >> nbGen;
+  Tidx n = Tidx(n_i);
   std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
   std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
     std::vector<Tidx> v(n);
-    for (int i=0; i<n; i++) {
-      int eVal;
-      is >> eVal;
-      if (eVal > n-1) {
+    for (Tidx i=0; i<n; i++) {
+      int eVal_i;
+      is >> eVal_i;
+      Tidx eVal = Tidx(eVal_i);
+      if (eVal >= n) {
 	std::cerr << "Error in ReadGroup function\n";
 	std::cerr << "Number of elements acted on n=" << n << "\n";
 	std::cerr << "But eVal=" << eVal << "\n";
 	throw TerminalException{1};
       }
-      v[i]=eVal;
+      v[i] = eVal;
     }
     ListGen.push_back(Telt(v));
   }

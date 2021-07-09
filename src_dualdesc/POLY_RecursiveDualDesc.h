@@ -407,7 +407,8 @@ struct DataFacet {
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
-  Tgroup GRP;
+  const Tgroup& GRP;
+  Tgroup Stab;
   Face flip(const Face& f) const {
     Face eFlip = FF.Flip(f);
     return GRP.CanonicalImage(eFlip);
@@ -860,9 +861,9 @@ public:
            in place but the vector may be extended without impacting this first entry. */
         size_t pos = eEnt.second[0];
         Face f = RetrieveListOrbitEntry(pos).face;
-        Tgroup TheStab=GRP.Stabilizer_OnSets(f);
-        std::cerr << "Considering orbit " << pos << " |EXT|=" << nbRow << " |inc|=" << f.count() << " |stab|=" << TheStab.size() << " nbCol=" << nbCol << "\n";
-        return {pos, f, FlippingFramework<T>(EXT, f), ReducedGroupAction(TheStab, f)};
+        Tgroup Stab=GRP.Stabilizer_OnSets(f);
+        std::cerr << "Considering orbit " << pos << " |EXT|=" << nbRow << " |inc|=" << f.count() << " |stab|=" << Stab.size() << " nbCol=" << nbCol << "\n";
+        return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
       }
     }
     os << "We should never reach that stage as we should find some undone facet\n";
@@ -1018,7 +1019,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
       size_t SelectedOrbit = df.SelectedOrbit;
       std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.GRP, AllArr, NewPrefix);
+      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
       for (auto& eOrbB : TheOutput) {
         Face eFlip = df.flip(eOrbB);
         RPL.FuncInsert(eFlip);
