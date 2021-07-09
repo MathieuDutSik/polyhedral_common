@@ -1210,45 +1210,40 @@ namespace std {
 
 
 
-namespace boost { namespace serialization {
-    // TypeCtypeExch
-    template<class Archive, typename T>
-      inline void serialize(Archive & ar,
-                            TypeCtypeExch<T> & eRecMat,
-                            const unsigned int version)
-      {
-        int rows = eRecMat.eMat.rows();
-        int cols = eRecMat.eMat.cols();
-        ar & make_nvp("rows", rows);
-        ar & make_nvp("cols", cols);
-        eRecMat.eMat.resize(rows, cols);
-        for (int r = 0; r < rows; ++r)
-          for (int c = 0; c < cols; ++c)
-            ar & make_nvp("val", eRecMat.eMat(r,c));
-      }
+namespace boost::serialization {
 
-    // TypeCtypeExch
-    template<class Archive>
-      inline void serialize(Archive & ar,
-                            TypeIndex & eTypIdx,
-                            const unsigned int version)
-      {
-        ar & make_nvp("iProc", eTypIdx.iProc);
-        ar & make_nvp("idxMatrix", eTypIdx.idxMatrix);
-        ar & make_nvp("iAdj", eTypIdx.iAdj);
-      }
+  // TypeCtypeExch
+  template<class Archive, typename T>
+  inline void serialize(Archive & ar, TypeCtypeExch<T> & eRecMat, const unsigned int version)
+  {
+    int rows = eRecMat.eMat.rows();
+    int cols = eRecMat.eMat.cols();
+    ar & make_nvp("rows", rows);
+    ar & make_nvp("cols", cols);
+    eRecMat.eMat.resize(rows, cols);
+    for (int r = 0; r < rows; ++r)
+      for (int c = 0; c < cols; ++c)
+        ar & make_nvp("val", eRecMat.eMat(r,c));
+  }
 
-    // PairExch
-    template<class Archive, typename T>
-      inline void serialize(Archive & ar,
-                            PairExch<T> & ePair,
-                            const unsigned int version)
-      {
-        ar & make_nvp("perfect", ePair.eCtype);
-        ar & make_nvp("index"  , ePair.eIndex);
-      }
+  // TypeCtypeExch
+  template<class Archive>
+  inline void serialize(Archive & ar, TypeIndex & eTypIdx, const unsigned int version)
+  {
+    ar & make_nvp("iProc", eTypIdx.iProc);
+    ar & make_nvp("idxMatrix", eTypIdx.idxMatrix);
+    ar & make_nvp("iAdj", eTypIdx.iAdj);
+  }
 
-  }}
+  // PairExch
+  template<class Archive, typename T>
+  inline void serialize(Archive & ar, PairExch<T> & ePair, const unsigned int version)
+  {
+    ar & make_nvp("perfect", ePair.eCtype);
+    ar & make_nvp("index"  , ePair.eIndex);
+  }
+
+}
 
 namespace std {
   template <typename Tint>
