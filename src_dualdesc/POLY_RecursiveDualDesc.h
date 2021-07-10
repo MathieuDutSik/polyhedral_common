@@ -280,7 +280,8 @@ public:
         EquivariantDualDescription<T,Tgroup> eTriple = Read_BankEntry<T,Tgroup>(eFileBank);
         int e_size = eTriple.EXT.rows();
         std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << eTriple.ListFace.size() << "\n";
-        ListEnt[eTriple.EXT] = {eTriple.GRP, eTriple.ListFace};
+        ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(eTriple.EXT), {std::move(eTriple.GRP), eTriple.ListFace}));
+        //        ListEnt[eTriple.EXT] = {eTriple.GRP, eTriple.ListFace};
         MinSize = std::min(MinSize, e_size);
         iOrbit++;
       }
