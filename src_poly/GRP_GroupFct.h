@@ -711,14 +711,13 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
     return ListListSet;
   os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
-  vectface ListListSet_pop(ListListSet);
   while(true) {
-    Face eFace = ListListSet_pop.pop();
+    Face eFace = ListListSet.pop();
     for (auto & eGen : ListGen) {
       Face eNewList=OnFace(eFace, eGen);
       if (PartialOrbit.count(eNewList) == 0) {
         PartialOrbit.insert(eNewList);
-        ListListSet_pop.push_back(eNewList);
+        ListListSet.push_back(eNewList);
         DoubleCosetInsertEntry_second(eNewList);
         if (SizeGen == TotalSize) {
           vectface ListListFin(BigGRP.n_act());
@@ -740,11 +739,15 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
 
 
 template<typename Tgroup>
-vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, vectface eListBig, std::ostream & os)
+vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
 {
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
-  if (BigGRP.size() == SmaGRP.size())
-    return eListBig;
+  if (BigGRP.size() == SmaGRP.size()) {
+    vectface eListSma(BigGRP.n_act());
+    for (auto & eSet : eListBig)
+      eListSma.push_back(eSet);
+    return eListSma;
+  }
   //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<Tgroup>(SmaGRP);
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {

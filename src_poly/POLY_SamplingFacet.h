@@ -43,12 +43,15 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSampl
   };
   std::cerr << "dim=" << dim << "  len=" << len << "\n";
   if (!DoRecur) {
-    vectface ListIncd(EXT.rows());
-    if (prog == "lrs")
-      ListIncd=lrs::DualDescription_temp_incd(EXT);
-    if (prog == "cdd") {
-      ListIncd=cdd::DualDescription_incd(EXT);
-    }
+    auto comp_dd=[&]() -> vectface {
+      if (prog == "lrs")
+        return lrs::DualDescription_temp_incd(EXT);
+      if (prog == "cdd")
+        return cdd::DualDescription_incd(EXT);
+      std::cerr << "Failed to find a matching program\n";
+      throw TerminalException{1};
+    };
+    vectface ListIncd = comp_dd();
     for (auto & eFace : ListIncd)
       FuncInsert(eFace);
     std::cerr << "DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
@@ -135,42 +138,43 @@ template<typename T>
 vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string const& ansSamp)
 {
   std::cerr << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
-  bool WeAreDone=false;
-  vectface ListIncd(EXT.rows());
   std::vector<std::string> ListStr=STRING_Split(ansSamp, ":");
   std::string ansOpt=ListStr[0];
-  if (ansOpt == "lp_cdd") {
-    // So possible format is lp_cdd:iter_100
-    int iter=10;
-    if (ListStr.size() > 1) {
-      std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
-      if (ListStrB.size() == 2 && ListStrB[0] == "iter")
-	std::istringstream(ListStrB[1]) >> iter;
+
+  auto compute_samp=[&]() -> vectface {
+    if (ansOpt == "lp_cdd") {
+      // So possible format is lp_cdd:iter_100
+      int iter=10;
+      if (ListStr.size() > 1) {
+        std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
+        if (ListStrB.size() == 2 && ListStrB[0] == "iter")
+          std::istringstream(ListStrB[1]) >> iter;
+      }
+      return FindVertices(EXT, iter);
     }
-    ListIncd = FindVertices(EXT, iter);
-    WeAreDone=true;
-  }
-  if (ansOpt == "sampling") {
-    std::vector<std::string> ListOpt;
-    for (int i=1; i<int(ListStr.size()); i++)
-      ListOpt.push_back(ListStr[i]);
-    ListIncd=DUALDESC_SamplingFacetProcedure(EXT, ListOpt);
-    WeAreDone=true;
-  }
-  if (ansOpt == "lrs_limited") {
-    int upperlimit=100;
-    // So possible format is lrs_limited:upperlimit_1000
-    if (ListStr.size() > 1) {
-      std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
-      if (ListStrB.size() == 2 && ListStrB[0] == "upperlimit")
-	std::istringstream(ListStrB[1]) >> upperlimit;
+    if (ansOpt == "sampling") {
+      std::vector<std::string> ListOpt;
+      for (int i=1; i<int(ListStr.size()); i++)
+        ListOpt.push_back(ListStr[i]);
+      return DUALDESC_SamplingFacetProcedure(EXT, ListOpt);
     }
-    ListIncd=lrs::DualDescription_temp_incd_limited(EXT, upperlimit);
-    WeAreDone=true;
-  }
-  if (!WeAreDone) {
+    if (ansOpt == "lrs_limited") {
+      int upperlimit=100;
+      // So possible format is lrs_limited:upperlimit_1000
+      if (ListStr.size() > 1) {
+        std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
+        if (ListStrB.size() == 2 && ListStrB[0] == "upperlimit")
+          std::istringstream(ListStrB[1]) >> upperlimit;
+      }
+      return lrs::DualDescription_temp_incd_limited(EXT, upperlimit);
+    }
     std::cerr << "No right program found\n";
     std::cerr << "Let us die\n";
+    throw TerminalException{1};
+  };
+  vectface ListIncd = compute_samp();
+  if (ListIncd.size() == 0) {
+    std::cerr << "We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }
   return ListIncd;

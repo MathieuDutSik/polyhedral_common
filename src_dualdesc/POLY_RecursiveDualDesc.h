@@ -19,8 +19,8 @@
 #define SUBSET_HASH
 
 
-//#define UNORDERED_MAP
-#define TSL_SPARSE_MAP
+#define UNORDERED_MAP
+//#define TSL_SPARSE_MAP
 //#define TSL_ROBIN_MAP
 //#define TSL_HOPSCOTCH_MAP
 
@@ -306,7 +306,7 @@ public:
         std::cerr << "Insert entry to file eFile=" << eFile << "\n";
         Write_BankEntry(eFile, ePair.first, GrpConj, ListFaceO);
       }
-      ListEnt[ePair.first] = {GrpConj, ListFaceO};
+      ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(ePair.first), {std::move(GrpConj), std::move(ListFaceO)}));
       int e_size = ePair.first.rows();
       MinSize = std::min(MinSize, e_size);
     } else {
@@ -339,9 +339,9 @@ public:
         std::cerr << "Insert entry to file eFile=" << eFile << "\n";
         Write_BankEntry(eFile, eTriple.EXT, eTriple.GRP, ListFaceO);
       }
-      ListEnt[eTriple.EXT] = {eTriple.GRP, ListFaceO};
       int e_size = eTriple.EXT.rows();
       MinSize = std::min(MinSize, e_size);
+      ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(ListFaceO)}));
     }
   }
   vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& GRP) const
@@ -980,55 +980,57 @@ vectface DUALDESC_AdjacencyDecomposition(
   // The computations themselves
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-  vectface ListOrbitFaces(nbRow);
   std::string ansSymm;
   // 3 scenarii
   // --- 1 : We have the full symmetry group and the computation was done with respect to it.
   // --- 2 : We have computed for a subgroup which actually is the full group.
   // --- 3 : We have computed for a subgroup which actually is a strict subgroup.
   bool BankSymmCheck;
-  if (ansSplit != "split") {
-    TheGRPrelevant = GRP;
-    std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
-    ListOrbitFaces = DirectFacetOrbitComputation(EXT, GRP, ansProg, std::cerr);
-    BankSymmCheck = true;
-    ansSymm = "no";
-  } else {
-    ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-    std::cerr << "ansSymm=" << ansSymm << "\n";
-    if (ansSymm == "yes") {
-      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(lwm.GetWMat());
-      BankSymmCheck = false;
-    } else {
+  auto compute_split_or_not=[&]() -> vectface {
+    if (ansSplit != "split") {
       TheGRPrelevant = GRP;
+      std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       BankSymmCheck = true;
-    }
-    Tint GroupSizeComp = TheGRPrelevant.size();
-    std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
-    std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
-    DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving, std::cerr);
-    if (RPL.FuncNumberOrbit() == 0) {
-      std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-      vectface ListFace=DirectComputationInitialFacetSet_Group(EXT, TheGRPrelevant, ansSamp);
-      std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
-      for (auto & eInc : ListFace)
-	RPL.FuncInsert(eInc);
-    }
-    while(true) {
-      if (RPL.GetTerminationStatus())
-        break;
-      DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
-      size_t SelectedOrbit = df.SelectedOrbit;
-      std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
-      for (auto& eOrbB : TheOutput) {
-        Face eFlip = df.flip(eOrbB);
-        RPL.FuncInsert(eFlip);
+      ansSymm = "no";
+      return DirectFacetOrbitComputation(EXT, GRP, ansProg, std::cerr);
+    } else {
+      ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+      std::cerr << "ansSymm=" << ansSymm << "\n";
+      if (ansSymm == "yes") {
+        TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(lwm.GetWMat());
+        BankSymmCheck = false;
+      } else {
+        TheGRPrelevant = GRP;
+        BankSymmCheck = true;
       }
-      RPL.FuncPutOrbitAsDone(SelectedOrbit);
-    };
-    ListOrbitFaces = RPL.FuncListOrbitIncidence();
-  }
+      Tint GroupSizeComp = TheGRPrelevant.size();
+      std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
+      std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
+      DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving, std::cerr);
+      if (RPL.FuncNumberOrbit() == 0) {
+        std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+        vectface ListFace=DirectComputationInitialFacetSet_Group(EXT, TheGRPrelevant, ansSamp);
+        std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
+        for (auto & eInc : ListFace)
+          RPL.FuncInsert(eInc);
+      }
+      while(true) {
+        if (RPL.GetTerminationStatus())
+          break;
+        DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
+        size_t SelectedOrbit = df.SelectedOrbit;
+        std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+        vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+        for (auto& eOrbB : TheOutput) {
+          Face eFlip = df.flip(eOrbB);
+          RPL.FuncInsert(eFlip);
+        }
+        RPL.FuncPutOrbitAsDone(SelectedOrbit);
+      };
+      return RPL.FuncListOrbitIncidence();
+    }
+  };
+  vectface ListOrbitFaces = compute_split_or_not();
   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
