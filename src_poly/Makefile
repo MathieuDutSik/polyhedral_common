@@ -1,7 +1,6 @@
+#PROGRAM		= POLY_ThreadedADM ComputeDelaunay
 PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
-		  POLY_ThreadedADM \
 		  POLY_CreateAffineBasis \
-		  ComputeDelaunay \
 		  POLY_cdd_skeletons \
 		  POLY_redundancy \
 		  POLY_redundancyClarkson \

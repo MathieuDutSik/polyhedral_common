@@ -651,21 +651,14 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 6\n";
   }
   MProc.GetO(TheId) << "Bank entry processed\n";
-  vectface ListOrbitReturn(EXT.rows());
-  if (ansSymm == "yes") {
-    MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
-    {
-      std::ofstream os1("SPLIT_GRPrelevant");
-      std::ofstream os2("SPLIT_GRP");
-      std::ofstream os3("SPLIT_ListOrbitFaces");
-      WriteGroup(os1, TheGRPrelevant);
-      WriteGroup(os2, GRP);
-      WriteListFace(os3, ListOrbitFaces);
-    }
-    ListOrbitReturn=OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, MProc.GetO(TheId));
-  }
-  else
-    ListOrbitReturn=ListOrbitFaces;
+  auto get_split_dd=[&]() -> vectface {
+    if (ansSymm == "yes") {
+      MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
+      return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, MProc.GetO(TheId));
+    } else
+      return ListOrbitFaces;
+  };
+  vectface ListOrbitReturn = get_split_dd();
   MProc.GetO(TheId) << "Return list has been computed\n";
   return ListOrbitReturn;
 }

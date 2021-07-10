@@ -473,7 +473,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     FACset.push_back(eFace);
   }
   std::vector<vectface> ListListFace;
-  ListListFace.push_back(FACset);
+  ListListFace.emplace_back(std::move(FACset));
   std::vector<CollectedResult<int>> TheSub;
   for (int eDim=0; eDim<n-1; eDim++) {
     int TheRank=n-2-eDim;
@@ -522,9 +522,9 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     vectface NewListFace_vect(nbExt);
     for (auto & rFace : NewListFace_set)
       NewListFace_vect.push_back(rFace);
-    ListListFace.push_back(NewListFace_vect);
+    ListListFace.emplace_back(std::move(NewListFace_vect));
   }
-  return {n, TheSub, ListListFace};
+  return {n, std::move(TheSub), std::move(ListListFace)};
 }
 
 template<typename T>
