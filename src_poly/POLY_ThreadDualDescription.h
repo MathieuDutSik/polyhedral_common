@@ -378,257 +378,260 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   //
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
-  vectface ListOrbitFaces(EXT.rows());
   std::string ansSymm;
-  if (ansSplit != "split") {
-    TheGRPrelevant=GRP;
-    std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
-    ListOrbitFaces=DirectFacetOrbitComputation(EXTred, GRP, ansProg, MProc.GetO(TheId));
-    ansSymm="no";
-  }
-  else {
-    ComputeWMat();
-    ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-    MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
-    if (ansSymm == "yes")
-      TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
-    else
-      TheGRPrelevant = GRP;
-    if (TheGRPrelevant.size() == GRP.size())
+  auto compute_dd=[&]() -> vectface {
+    if (ansSplit != "split") {
+      TheGRPrelevant=GRP;
+      std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       ansSymm="no";
-    TheMap["groupsizerelevant"]=TheGRPrelevant.size();
-    std::string ansGRP=HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
-    std::string ansStratLocInv=HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
-    Tint QuotSize=TheGRPrelevant.size() / GRP.size();
-    MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP << " |TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize << "\n";
-    mpz_class MaxAllowedUndone=eRank-2;
-    std::function<bool(SimpleOrbitFacetInv<T> const&,SimpleOrbitFacetInv<T> const&)> CompFCT=[](SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y) -> bool {
-      return x < y;
-    };
-    std::function<void(PolyhedralBalinski &,SimpleOrbitFacet<T> const&,SimpleOrbitFacetInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[&](PolyhedralBalinski & eStat, SimpleOrbitFacet<T> const& fEnt, SimpleOrbitFacetInv<T> const& fInv, std::ostream& os) -> void {
-      if (eStat.final)
-	return;
-      eStat.nbUnsolved += fInv.eOrbitSize;
-      eStat.nbOrbitUnsolved++;
-      //
-      std::vector<int> gList=FaceTo01vector(fEnt.eRepr);
-      std::vector<int> rList = OrbitIntersection(GRP, gList);
-      if (eStat.IsFirst) {
-	eStat.rList=rList;
-	eStat.IsFirst=false;
+      return DirectFacetOrbitComputation(EXTred, GRP, ansProg, MProc.GetO(TheId));
+    } else {
+      ComputeWMat();
+      ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+      MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
+      if (ansSymm == "yes")
+        TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
+      else
+        TheGRPrelevant = GRP;
+      if (TheGRPrelevant.size() == GRP.size())
+        ansSymm="no";
+      TheMap["groupsizerelevant"]=TheGRPrelevant.size();
+      std::string ansGRP=HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
+      std::string ansStratLocInv=HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
+      Tint QuotSize=TheGRPrelevant.size() / GRP.size();
+      MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP << " |TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize << "\n";
+      mpz_class MaxAllowedUndone=eRank-2;
+      std::function<bool(SimpleOrbitFacetInv<T> const&,SimpleOrbitFacetInv<T> const&)> CompFCT=[](SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y) -> bool {
+        return x < y;
+      };
+      std::function<void(PolyhedralBalinski &,SimpleOrbitFacet<T> const&,SimpleOrbitFacetInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[&](PolyhedralBalinski & eStat, SimpleOrbitFacet<T> const& fEnt, SimpleOrbitFacetInv<T> const& fInv, std::ostream& os) -> void {
+        if (eStat.final)
+          return;
+        eStat.nbUnsolved += fInv.eOrbitSize;
+        eStat.nbOrbitUnsolved++;
+        //
+        std::vector<int> gList=FaceTo01vector(fEnt.eRepr);
+        std::vector<int> rList = OrbitIntersection(GRP, gList);
+        if (eStat.IsFirst) {
+          eStat.rList=rList;
+          eStat.IsFirst=false;
+        }
+        else {
+          for (int iVert=0; iVert<nbVert; iVert++)
+            eStat.rList[iVert] *= rList[iVert];
+        }
+        int eSum=0;
+        for (int iVert=0; iVert<nbVert; iVert++)
+          eSum += eStat.rList[iVert];
+        if (eSum == 0 && eStat.nbUnsolved > MaxAllowedUndone) {
+          eStat.final=true;
+          eStat.IsComplete=false;
+        }
+      };
+      int NewLevel=TheLevel+1;
+      std::function<EquivTest<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
+      std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
+      if (ansGRP == "classic") {
+        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
+          std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
+          startLoc = std::chrono::system_clock::now();
+          auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
+          endLoc = std::chrono::system_clock::now();
+          int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endLoc-startLoc).count();
+          MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
+          return {eReply.first, eReply.second};
+        };
+        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+          Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
+          int siz=eOrb.count();
+          Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
+          SimpleOrbitFacet<T> eOrbF{eOrb};
+          size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
+          SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
+          return {eOrbF, eInv};
+        };
       }
-      else {
-	for (int iVert=0; iVert<nbVert; iVert++)
-	  eStat.rList[iVert] *= rList[iVert];
+      if (ansGRP == "partition") {
+        fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
+          std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
+          startloc = std::chrono::system_clock::now();
+          auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
+          endloc = std::chrono::system_clock::now();
+          int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endloc-startloc).count();
+          MProc.GetO(TheId) << "PARTITION: After the test time = " << elapsed_seconds << "\n";
+          if (elapsed_seconds > 60) {
+            //
+            std::chrono::time_point<std::chrono::system_clock> start_C, end_C;
+            start_C = std::chrono::system_clock::now();
+            auto eReplyB=TestEquivalenceSubset<T,Telt>(WMat, x.eRepr, y.eRepr);
+            end_C = std::chrono::system_clock::now();
+            int elapsed_seconds_C = std::chrono::duration_cast<std::chrono::seconds>(end_C-start_C).count();
+            MProc.GetO(TheId) << "Second method (bliss) runtime = " << elapsed_seconds_C << "\n";
+          }
+          return {eReply.first, eReply.second};
+        };
+        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+          Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
+          int siz=eOrb.count();
+          Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
+          SimpleOrbitFacet<T> eOrbF{eOrb};
+          size_t eHash=GetLocalInvariantWeightMatrix(WMat, eOrb);
+          SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
+          return {eOrbF, eInv};
+        };
       }
-      int eSum=0;
-      for (int iVert=0; iVert<nbVert; iVert++)
-	eSum += eStat.rList[iVert];
-      if (eSum == 0 && eStat.nbUnsolved > MaxAllowedUndone) {
-	eStat.final=true;
-	eStat.IsComplete=false;
+      if (ansGRP == "exhaustive") {
+        // we choose here to discard the element realizing the equivalence
+        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
+          bool test=x.eRepr==y.eRepr;
+          return {test, {}};
+        };
+        OrbitMinimumArr<Tint> ArrMin=GetInitialMinimumArray(TheGRPrelevant);
+        GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+          ResultMinimum<Tint> ResMin=GetMinimumRecord(ArrMin, eOrb);
+          int siz=eOrb.count();
+          SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
+          SimpleOrbitFacetInv<T> eInv{siz, ResMin.OrbitSize, {}};
+          return {eOrbF, eInv};
+        };
       }
-    };
-    int NewLevel=TheLevel+1;
-    std::function<EquivTest<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
-    std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
-    if (ansGRP == "classic") {
-      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
-	std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
-	startLoc = std::chrono::system_clock::now();
-	auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-	endLoc = std::chrono::system_clock::now();
-	int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endLoc-startLoc).count();
-	MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
-	return {eReply.first, eReply.second};
+      bool Saving=AllArr.Saving;
+      bool eMemory=AllArr.eMemory;
+      NewEnumerationWork<SimpleOrbitFacet<T>> ListOrbit(Saving, eMemory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
+      mpz_class TotalNumberFacet=0;
+      auto FuncInsert=[&](Face const& eOrb, std::ostream &os) -> int {
+        PairT_Tinv<SimpleOrbitFacet<T>> eRec=GetRecord(eOrb,os);
+        int eVal=ListOrbit.InsertEntry(eRec, os);
+        if (eVal == -1)
+          TotalNumberFacet += eRec.xInv.eOrbitSize;
+        return eVal;
       };
-      GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
-	int siz=eOrb.count();
-	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
-	SimpleOrbitFacet<T> eOrbF{eOrb};
-	size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
-	return {eOrbF, eInv};
-      };
-    }
-    if (ansGRP == "partition") {
-      fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
-	std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
-	startloc = std::chrono::system_clock::now();
-	auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-	endloc = std::chrono::system_clock::now();
-	int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endloc-startloc).count();
-	MProc.GetO(TheId) << "PARTITION: After the test time = " << elapsed_seconds << "\n";
-	if (elapsed_seconds > 60) {
-	  //
-	  std::chrono::time_point<std::chrono::system_clock> start_C, end_C;
-	  start_C = std::chrono::system_clock::now();
-	  auto eReplyB=TestEquivalenceSubset<T,Telt>(WMat, x.eRepr, y.eRepr);
-	  end_C = std::chrono::system_clock::now();
-	  int elapsed_seconds_C = std::chrono::duration_cast<std::chrono::seconds>(end_C-start_C).count();
-	  MProc.GetO(TheId) << "Second method (bliss) runtime = " << elapsed_seconds_C << "\n";
-	}
-	return {eReply.first, eReply.second};
-      };
-      GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-        Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
-	int siz=eOrb.count();
-	Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
-	SimpleOrbitFacet<T> eOrbF{eOrb};
-	size_t eHash=GetLocalInvariantWeightMatrix(WMat, eOrb);
-	SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
-	return {eOrbF, eInv};
-      };
-    }
-    if (ansGRP == "exhaustive") {
-      // we choose here to discard the element realizing the equivalence
-      fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
-	bool test=x.eRepr==y.eRepr;
-	return {test, {}};
-      };
-      OrbitMinimumArr<Tint> ArrMin=GetInitialMinimumArray(TheGRPrelevant);
-      GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-        ResultMinimum<Tint> ResMin=GetMinimumRecord(ArrMin, eOrb);
-	int siz=eOrb.count();
-	SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
-	SimpleOrbitFacetInv<T> eInv{siz, ResMin.OrbitSize, {}};
-	return {eOrbF, eInv};
-      };
-    }
-    bool Saving=AllArr.Saving;
-    bool eMemory=AllArr.eMemory;
-    NewEnumerationWork<SimpleOrbitFacet<T>> ListOrbit(Saving, eMemory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
-    mpz_class TotalNumberFacet=0;
-    auto FuncInsert=[&](Face const& eOrb, std::ostream &os) -> int {
-      PairT_Tinv<SimpleOrbitFacet<T>> eRec=GetRecord(eOrb,os);
-      int eVal=ListOrbit.InsertEntry(eRec, os);
-      if (eVal == -1)
-	TotalNumberFacet += eRec.xInv.eOrbitSize;
-      return eVal;
-    };
-    int nbPresentOrbit=ListOrbit.GetNbEntry();
-    if (nbPresentOrbit == 0) {
-      std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-      MProc.GetO(TheId) << "Before InitialFacetComputation ansSamp=" << ansSamp << "\n";
-      vectface ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
-      MProc.GetO(TheId) << " After InitialFacetComputation\n";
-      for (auto & eInc : ListFace) {
-	int RetVal=FuncInsert(eInc, MProc.GetO(TheId));
-	MProc.GetO(TheId) << "Inserting |eInc|=" << eInc.count() <<" : RetVal=" << RetVal << "\n";
+      int nbPresentOrbit=ListOrbit.GetNbEntry();
+      if (nbPresentOrbit == 0) {
+        std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+        MProc.GetO(TheId) << "Before InitialFacetComputation ansSamp=" << ansSamp << "\n";
+        vectface ListFace=DirectComputationInitialFacetSet(EXTred, ansSamp);
+        MProc.GetO(TheId) << " After InitialFacetComputation\n";
+        for (auto & eInc : ListFace) {
+          int RetVal=FuncInsert(eInc, MProc.GetO(TheId));
+          MProc.GetO(TheId) << "Inserting |eInc|=" << eInc.count() <<" : RetVal=" << RetVal << "\n";
+        }
       }
-    }
-    std::atomic<int> nbSpannThread(0);
-    std::atomic<int> nbStuckThread(0);
-    std::condition_variable cv;
-    std::mutex mtx_cv;
-    auto WaitStuck=[&](int const& opt, int const& MyId) -> void {
-      MProc.GetO(MyId) << "WaitStuck, nbSpannThread=" << nbSpannThread << " stuck=" << ListOrbit.IsStuck() << "\n";
-      MProc.decNRT(MyId);
-      nbStuckThread++;
-      std::unique_lock<std::mutex> lk(mtx_cv);
-      cv.wait(lk, [&]{if (opt == 0)
-	    return ListOrbit.IsStuck() == false;
-	  else
-	    return nbSpannThread == 0;});
-      MProc.incNRT(MyId);
-      nbStuckThread--;
-      MProc.GetO(MyId) << "Exiting WaitStuck\n";
-    };
-    std::function<void(void)> SpannNewThread;
-    auto TreatDatabase=[&](int const& MyId) -> void {
-      int nbWork=0;
-      std::ostream & os = MProc.GetO(MyId);
-      nbSpannThread++;
+      std::atomic<int> nbSpannThread(0);
+      std::atomic<int> nbStuckThread(0);
+      std::condition_variable cv;
+      std::mutex mtx_cv;
+      auto WaitStuck=[&](int const& opt, int const& MyId) -> void {
+        MProc.GetO(MyId) << "WaitStuck, nbSpannThread=" << nbSpannThread << " stuck=" << ListOrbit.IsStuck() << "\n";
+        MProc.decNRT(MyId);
+        nbStuckThread++;
+        std::unique_lock<std::mutex> lk(mtx_cv);
+        cv.wait(lk, [&]{if (opt == 0)
+              return ListOrbit.IsStuck() == false;
+            else
+              return nbSpannThread == 0;});
+        MProc.incNRT(MyId);
+        nbStuckThread--;
+        MProc.GetO(MyId) << "Exiting WaitStuck\n";
+      };
+      std::function<void(void)> SpannNewThread;
+      auto TreatDatabase=[&](int const& MyId) -> void {
+        int nbWork=0;
+        std::ostream & os = MProc.GetO(MyId);
+        nbSpannThread++;
+        while(true) {
+          bool testStuck=ListOrbit.IsStuck();
+          os << "nbEntry=" << ListOrbit.GetNbEntry() << " testStuck=" << testStuck << "\n";
+          if (testStuck)
+            WaitStuck(0, MyId);
+          bool IsComplete=ListOrbit.GetCompleteStatus();
+          if (IsComplete)
+            break;
+          int eEntry=ListOrbit.GetNonTreatedOrbit(os);
+          if (eEntry == -1)
+            break;
+          Face eListI=ListOrbit.GetRepresentative(eEntry).eRepr;
+          MyMatrix<T> EXTredFace=SelectRow(EXT, eListI);
+          Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eListI);
+          Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
+          os << "eEntry=" << eEntry << " |TheGRPrelevant|=" << TheGRPrelevant.size() << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
+          Tgroup GRPred=ReducedGroupAction(TheStab, eListI);
+          CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(eEntry) + "/");
+          vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
+          os << "TreatDatabase, NewLevel=" << NewLevel << "  |EXT|=" << EXTredFace.rows() << "  eRank=" << eRank << "  |TheOutput|=" << TheOutput.size() << " |GRPred|=" << GRPred.size() << "\n";
+          int iter=0;
+          for (auto& eOrbB : TheOutput) {
+            Face eFlip=ComputeFlipping(EXTred, eListI, eOrbB);
+            os << " iter=" << iter << " |eFlip|=" << eFlip.count() << "\n";
+            int eVal=FuncInsert(eFlip, MProc.GetO(MyId));
+            os << " After FuncInsert\n";
+            if (eVal == -1) {
+              if (nbStuckThread > 0) {
+                cv.notify_one();
+              }
+              else {
+                if (MProc.MPU_NumberFree() > 0)
+                  SpannNewThread();
+              }
+            }
+            iter++;
+          }
+          os << "\n";
+          ListOrbit.SetEntryAsDone(eEntry, os);
+          os << "TreatDatabase: After SetEntryAsDone\n";
+          nbWork++;
+        }
+        os << "TreatDatabase: nbWork=" << nbWork << "\n";
+        if (MyId != TheId)
+          MProc.MPU_Terminate(MyId);
+        nbSpannThread--;
+        if (nbWork > 0)
+          cv.notify_all();
+      };
+      std::vector<std::thread> ListThreads;
+      SpannNewThread=[&]() -> void {
+        int NewId=MProc.MPU_GetId();
+        MProc.GetO(TheId) << "SpannNewThread NewId=" << NewId << "\n";
+        if (NewId != -1) {
+          ListThreads.push_back(std::thread(TreatDatabase, NewId));
+          ListThreads[ListThreads.size()-1].detach();
+        }
+      };
+      int NbThr=MProc.MPU_NumberFree();
+      MProc.GetO(TheId) << "We have NbThr=" << NbThr << "\n";
       while(true) {
-	bool testStuck=ListOrbit.IsStuck();
-	os << "nbEntry=" << ListOrbit.GetNbEntry() << " testStuck=" << testStuck << "\n";
-	if (testStuck)
-	  WaitStuck(0, MyId);
-	bool IsComplete=ListOrbit.GetCompleteStatus();
-	if (IsComplete)
-	  break;
-	int eEntry=ListOrbit.GetNonTreatedOrbit(os);
-	if (eEntry == -1)
-	  break;
-	Face eListI=ListOrbit.GetRepresentative(eEntry).eRepr;
-	MyMatrix<T> EXTredFace=SelectRow(EXT, eListI);
-	Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eListI);
-	Tint OrbSize=TheGRPrelevant.size() / TheStab.size();
-	os << "eEntry=" << eEntry << " |TheGRPrelevant|=" << TheGRPrelevant.size() << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
-	Tgroup GRPred=ReducedGroupAction(TheStab, eListI);
-	CondTempDirectory eDir(AllArr.Saving, ePrefix + "ADM" + IntToString(eEntry) + "/");
-	vectface TheOutput=DUALDESC_THR_AdjacencyDecomposition(MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(), NewLevel);
-	os << "TreatDatabase, NewLevel=" << NewLevel << "  |EXT|=" << EXTredFace.rows() << "  eRank=" << eRank << "  |TheOutput|=" << TheOutput.size() << " |GRPred|=" << GRPred.size() << "\n";
-	int iter=0;
-	for (auto& eOrbB : TheOutput) {
-	  Face eFlip=ComputeFlipping(EXTred, eListI, eOrbB);
-	  os << " iter=" << iter << " |eFlip|=" << eFlip.count() << "\n";
-	  int eVal=FuncInsert(eFlip, MProc.GetO(MyId));
-	  os << " After FuncInsert\n";
-	  if (eVal == -1) {
-	    if (nbStuckThread > 0) {
-	      cv.notify_one();
-	    }
-	    else {
-	      if (MProc.MPU_NumberFree() > 0)
-		SpannNewThread();
-	    }
-	  }
-	  iter++;
-	}
-	os << "\n";
-	ListOrbit.SetEntryAsDone(eEntry, os);
-	os << "TreatDatabase: After SetEntryAsDone\n";
-	nbWork++;
+        bool IsCompleteSpann=ListOrbit.GetCompleteStatus();
+        MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
+        if (IsCompleteSpann)
+          WaitStuck(1, TheId);
+        else {
+          for (int iThr=0; iThr<NbThr; iThr++)
+            SpannNewThread();
+          MProc.GetO(TheId) << "Before TreatDatabase\n";
+          TreatDatabase(TheId);
+          MProc.GetO(TheId) << "After my own call to TreatDatabase\n";
+        }
+        if (nbSpannThread == 0)
+          break;
       }
-      os << "TreatDatabase: nbWork=" << nbWork << "\n";
-      if (MyId != TheId)
-	MProc.MPU_Terminate(MyId);
-      nbSpannThread--;
-      if (nbWork > 0)
-	cv.notify_all();
-    };
-    std::vector<std::thread> ListThreads;
-    SpannNewThread=[&]() -> void {
-      int NewId=MProc.MPU_GetId();
-      MProc.GetO(TheId) << "SpannNewThread NewId=" << NewId << "\n";
-      if (NewId != -1) {
-	ListThreads.push_back(std::thread(TreatDatabase, NewId));
-	ListThreads[ListThreads.size()-1].detach();
+      bool IsComplete=ListOrbit.GetCompleteStatus();
+      int nbOrbitFacet=ListOrbit.GetNbEntry();
+      MProc.GetO(TheId) << "IsComplete=" << IsComplete << "\n";
+      MProc.GetO(TheId) << "TotalNumberFacet=" << TotalNumberFacet << "  nbOrbitFacet=" << nbOrbitFacet << "\n";
+      if (!IsComplete) {
+        std::cerr << "Major error in the code. We should be complete now\n";
+        throw TerminalException{1};
       }
-    };
-    int NbThr=MProc.MPU_NumberFree();
-    MProc.GetO(TheId) << "We have NbThr=" << NbThr << "\n";
-    while(true) {
-      bool IsCompleteSpann=ListOrbit.GetCompleteStatus();
-      MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
-      if (IsCompleteSpann)
-	WaitStuck(1, TheId);
-      else {
-	for (int iThr=0; iThr<NbThr; iThr++)
-	  SpannNewThread();
-	MProc.GetO(TheId) << "Before TreatDatabase\n";
-	TreatDatabase(TheId);
-	MProc.GetO(TheId) << "After my own call to TreatDatabase\n";
+      vectface ListOrbitFaces(EXT.rows());
+      for (int iOF=0; iOF<nbOrbitFacet; iOF++) {
+        SimpleOrbitFacet<T> x=ListOrbit.GetRepresentative(iOF);
+        ListOrbitFaces.push_back(x.eRepr);
       }
-      if (nbSpannThread == 0)
-	break;
+      ListOrbit.FuncClear();
+      return ListOrbitFaces;
     }
-    bool IsComplete=ListOrbit.GetCompleteStatus();
-    int nbOrbitFacet=ListOrbit.GetNbEntry();
-    MProc.GetO(TheId) << "IsComplete=" << IsComplete << "\n";
-    MProc.GetO(TheId) << "TotalNumberFacet=" << TotalNumberFacet << "  nbOrbitFacet=" << nbOrbitFacet << "\n";
-    if (!IsComplete) {
-      std::cerr << "Major error in the code. We should be complete now\n";
-      throw TerminalException{1};
-    }
-    for (int iOF=0; iOF<nbOrbitFacet; iOF++) {
-      SimpleOrbitFacet<T> x=ListOrbit.GetRepresentative(iOF);
-      ListOrbitFaces.push_back(x.eRepr);
-    }
-    ListOrbit.FuncClear();
-  }
+  };
+  vectface ListOrbitFaces = compute_dd();
   end = std::chrono::system_clock::now();
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
   TheMap["time"]=elapsed_seconds;
