@@ -94,58 +94,36 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
 {
   int nbVert=EXT.rows();
   int nbCol=EXT.cols();
-  bool WeAreDone=false;
-  vectface ListIncd(nbVert);
-#ifdef DEBUG_DIRECT_DUAL_DESC
-  if (nbVert >= 56) {
-    std::string FileSave="EXT_" + IntToString(nbVert);
-    std::ofstream os_save(FileSave);
-    WriteMatrix(os_save, EXT);
-  }
-#endif
   os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << " |GRP|=" << GRP.size() << "\n";
-  std::vector<std::string> ListProg;
   std::string eProg;
   //
-  eProg = "cdd"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = cdd::DualDescription_incd(EXT);
-    WeAreDone=true;
-  }
-  //
-  eProg = "lrs"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = lrs::DualDescription_temp_incd(EXT);
-    WeAreDone=true;
-  }
-  //
-  eProg = "lrs_ring"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = lrs::DualDescription_temp_incd_reduction(EXT);
-    WeAreDone=true;
-  }
-  //
-  eProg = "ppl_ext"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = CDD_PPL_ExternalProgram(EXT, "ppl_lcdd");
-    WeAreDone=true;
-  }
-  //
-  eProg = "cdd_ext"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = CDD_PPL_ExternalProgram(EXT, "lcdd_gmp");
-    WeAreDone=true;
-  }
-  //
-  eProg = "cdd_cbased"; ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-    ListIncd = cbased_cdd::DualDescription_incd(EXT);
-    WeAreDone=true;
-  }
-  //
-  if (!WeAreDone || ListIncd.size() == 0) {
+  auto compute_dd=[&]() -> vectface {
+    std::vector<std::string> ListProg;
+    eProg = "cdd"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return cdd::DualDescription_incd(EXT);
+    //
+    eProg = "lrs"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return lrs::DualDescription_temp_incd(EXT);
+    //
+    eProg = "lrs_ring"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return lrs::DualDescription_temp_incd_reduction(EXT);
+    //
+    eProg = "ppl_ext"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return CDD_PPL_ExternalProgram(EXT, "ppl_lcdd");
+    //
+    eProg = "cdd_ext"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return CDD_PPL_ExternalProgram(EXT, "lcdd_gmp");
+    //
+    eProg = "cdd_cbased"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return cbased_cdd::DualDescription_incd(EXT);
+    //
     std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
-    std::cerr << "WeAreDone=" << WeAreDone << " |ListIncd|=" << ListIncd.size() << "\n";
     std::cerr << "List of authorized programs :";
     bool IsFirst=true;
     for (auto & eP : ListProg) {
@@ -155,6 +133,11 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
       std::cerr << " " << eP;
     }
     std::cerr << "\n";
+    throw TerminalException{1};
+  };
+  vectface ListIncd = compute_dd();
+  if (ListIncd.size() == 0) {
+    std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
