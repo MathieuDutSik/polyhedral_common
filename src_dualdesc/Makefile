@@ -32,7 +32,8 @@ CC		= g++-11 -std=c++17 -Wall -Ofast -g
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-COPTIONS        = -DPERMUTALIB_BLOCKING_SANITY_CHECK
+#COPTIONS        = -DPERMUTALIB_BLOCKING_SANITY_CHECK
+COPTIONS        = 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_perfect -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(PERMLIB_INCDIR) $(PERMUTALIB_INCLUDE) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(MPI_INCLUDE_CPP) $(CDDLIB_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(NETCDF_CXX_ALLINC) -DEIGEN_NO_DEBUG

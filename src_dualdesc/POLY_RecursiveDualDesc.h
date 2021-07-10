@@ -19,8 +19,8 @@
 #define SUBSET_HASH
 
 
-#define UNORDERED_MAP
-//#define TSL_SPARSE_MAP
+//#define UNORDERED_MAP
+#define TSL_SPARSE_MAP
 //#define TSL_ROBIN_MAP
 //#define TSL_HOPSCOTCH_MAP
 
@@ -264,7 +264,12 @@ private:
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int MinSize;
-  UNORD_MAP<MyMatrix<T>, PairStore> ListEnt;
+  // It is better to use std::unordered_map for the List of entries:
+  // This makes the check of equality rarer and instead uses the hash
+  // more strictly.
+  // Plus it is better because the tsl::sparse_map requires having the
+  // copy operator and we want to avoid that for the vectface.
+  std::unordered_map<MyMatrix<T>, PairStore> ListEnt;
   bool Saving;
   std::string SavingPrefix;
 public:
