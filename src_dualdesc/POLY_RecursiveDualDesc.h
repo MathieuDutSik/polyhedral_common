@@ -980,7 +980,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   // The computations themselves
   //
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-  std::string ansSymm;
+  bool NeedSplit = false;
   // 3 scenarii
   // --- 1 : We have the full symmetry group and the computation was done with respect to it.
   // --- 2 : We have computed for a subgroup which actually is the full group.
@@ -991,13 +991,13 @@ vectface DUALDESC_AdjacencyDecomposition(
       TheGRPrelevant = GRP;
       std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       BankSymmCheck = true;
-      ansSymm = "no";
       return DirectFacetOrbitComputation(EXT, GRP, ansProg, std::cerr);
     } else {
-      ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+      std::string ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
       std::cerr << "ansSymm=" << ansSymm << "\n";
       if (ansSymm == "yes") {
         TheGRPrelevant = GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(lwm.GetWMat());
+        NeedSplit = TheGRPrelevant.size() != GRP.size();
         BankSymmCheck = false;
       } else {
         TheGRPrelevant = GRP;
@@ -1035,11 +1035,11 @@ vectface DUALDESC_AdjacencyDecomposition(
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"]=elapsed_seconds;
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
-  std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " ansSymm=" << ansSymm << "\n";
+  std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
     TheBank.InsertEntry(EXT, lwm.GetWMat(), TheGRPrelevant, BankSymmCheck, ListOrbitFaces);
   }
-  if (ansSymm == "yes") {
+  if (NeedSplit) {
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
   } else {
     return ListOrbitFaces;

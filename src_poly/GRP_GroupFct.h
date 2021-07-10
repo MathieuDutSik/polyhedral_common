@@ -742,12 +742,6 @@ template<typename Tgroup>
 vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
 {
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
-  if (BigGRP.size() == SmaGRP.size()) {
-    vectface eListSma(BigGRP.n_act());
-    for (auto & eSet : eListBig)
-      eListSma.push_back(eSet);
-    return eListSma;
-  }
   //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<Tgroup>(SmaGRP);
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {
