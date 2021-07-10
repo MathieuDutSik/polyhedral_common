@@ -1,4 +1,3 @@
-#include "Permlib_specific.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "NumberTheory.h"
@@ -38,7 +37,7 @@ int main(int argc, char *argv[])
     std::cerr << "LevSearch=" << LevSearch << "\n";
 
     std::cerr << "Step main 5\n";
-    std::vector<vectface> ListListOrb=EnumerationFaces<T,Tgroup>(TheGRP, TheEXT, LevSearch);
+    std::vector<vectface> ListListOrb = EnumerationFaces<T,Tgroup>(TheGRP, TheEXT, LevSearch);
     std::cerr << "Completion of the program\n";
 
     std::ofstream OUTfs(argv[4]);

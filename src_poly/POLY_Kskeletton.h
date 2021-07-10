@@ -234,7 +234,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
     nList[MinVal]=1;
     ListOrb.push_back(nList);
   }
-  RetList.push_back(ListOrb);
+  RetList.emplace_back(std::move(ListOrb));
   for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
     vectface NListOrb(n);
     for (auto &eOrb : RetList[iLevel-1]) {
@@ -245,7 +245,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
         NListOrb.push_back(fOrbCan);
       }
     }
-    RetList.push_back(NListOrb);
+    RetList.emplace_back(std::move(NListOrb));
   }
   return RetList;
 }
