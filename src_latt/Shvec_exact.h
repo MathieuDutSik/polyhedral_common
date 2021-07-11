@@ -236,7 +236,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     }
     for (int i2=i+1; i2<dim; i2++)
       for (int j2=i+1; j2<dim; j2++)
-	q(i2,j2)=q(i2,j2) - q(i,i)*q(i,i2)*q(i,j2);
+	q(i2,j2) -= q(i,i)*q(i,i2)*q(i,j2);
 #ifdef PRINT_DEBUG_INFO
     std::cerr << "diag q=" << q(i,i) << "\n";
     for (int j=i+1; j<dim; j++)
@@ -248,13 +248,15 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     Lower(ik)=0;
     Upper(ik)=0;
   }
-  bool coset = false;
+  // central is used purely internally to the code.
+  // Therefore computing central internally is ok.
+  bool central = true;
   i = 0;
-  while (i < dim && !coset) {
-    coset = (request.coset(i) != 0);
+  while (i < dim && central) {
+    central = (request.coset(i) == 0);
     i++;
   }
-  bool central = !coset;
+
   for (i = 0; i < dim; i++)
     C(i) = request.coset(i);
   bool needs_new_bound = true;
