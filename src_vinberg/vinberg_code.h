@@ -6,6 +6,8 @@
 #include "POLY_cddlib.h"
 
 
+#define DEBUG_VINBERG
+
 
 //
 // Finding the closest points
@@ -30,6 +32,7 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
   request.bound = a;
   request.mode = mode;
   request.coset = cosetVect;
+  request.only_exact_norm = true; // We want only the vectors of norm exactly a.
   info.minimum = a;
   //
   int result = computeIt(request, a, info);
@@ -37,7 +40,7 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
     std::cerr << "Error in ComputeSphericalSolutions\n";
     throw TerminalException{1};
   }
-  std::vector<MyVector<Tint>> ListRet; // The vinberg computes all vectors up to length a.
+#ifdef DEBUG_VINBERG
   for (auto & fV : info.short_vectors) {
     T sum=0;
     for (int i=0; i<dim; i++)
@@ -49,10 +52,14 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
         T val2 = eV(j) - fV(j);
         sum += val1 * val2 * GramMat(i,j) * eMult;
       }
-    if (sum == a)
-      ListRet.push_back(fV);
+    if (sum == a) {
+      std::cerr << "We shold have vectors of norm exactly a\n";
+      std::cerr << "sum=" << sum << " a=" << a << "\n";
+      throw TerminalException{1};
+    }
   }
-  return ListRet;
+#endif
+  return info.short_vectors;
 }
 
 //
