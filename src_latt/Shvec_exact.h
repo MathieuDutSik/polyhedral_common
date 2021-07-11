@@ -28,6 +28,7 @@ struct T_shvec_request {
   T bound;
   MyVector<T> coset;
   MyMatrix<T> gram_matrix;
+  bool only_exact_norm;
 };
 
 template<typename T, typename Tint>
@@ -324,7 +325,8 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 	std::cerr << "\n";
 #endif
         if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-          info.short_vectors.push_back(x);
+          if (!request.only_exact_norm || eNorm == info.minimum)
+            info.short_vectors.push_back(x);
         } else {
           if (eNorm < info.minimum) {
             info.short_vectors.clear();
@@ -464,6 +466,7 @@ void initShvecReq(int dim,
   request.gram_matrix = gram_matrix;
   request.mode = 0;
   request.bound = 0;
+  request.only_exact_norm = false;
   info.minimum = -1;
 }
 
