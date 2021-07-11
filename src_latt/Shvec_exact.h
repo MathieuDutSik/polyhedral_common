@@ -218,7 +218,9 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
   MyVector<T> U(dim);
   MyVector<T> C(dim);
   MyVector<Tint> x(dim);
+#if defined CHECK_BASIC_CONSISTENCY || defined PRINT_DEBUG_INFO
   const MyMatrix<T>& g = request.gram_matrix;
+#endif
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "g=\n";
   for (i=0; i<dim; i++) {
@@ -253,7 +255,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     coset = (request.coset(i) != 0);
     i++;
   }
-  bool central=!coset;
+  bool central = !coset;
   for (i = 0; i < dim; i++)
     C(i) = request.coset(i);
   bool needs_new_bound = true;
@@ -263,10 +265,12 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "Before while loop\n";
 #endif
+  bool not_finished;
+  T eQuot, eSum, hVal, eNorm;
   while (true) {
     if (needs_new_bound) {
-      T eQuot = Trem(i) / q(i,i);
-      T eSum = - U(i) - C(i);
+      eQuot = Trem(i) / q(i,i);
+      eSum = - U(i) - C(i);
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
       Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       x(i) = Lower(i);
@@ -277,7 +281,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
       if (i == 0) {
 	if (central) {
 	  j = dim - 1;
-	  bool not_finished = false;
+	  not_finished = false;
 	  while (j >= 0 && !not_finished) {
 	    not_finished = (x(j) != 0);
 	    j--;
@@ -289,8 +293,8 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
             return result;
           }
 	}
-	T hVal=x(0) + C(0) + U(0);
-	T eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
+	hVal=x(0) + C(0) + U(0);
+	eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
 #ifdef CHECK_BASIC_CONSISTENCY
 	T norm=0;
 	for (int i2=0; i2<dim; i2++)
@@ -304,7 +308,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 	}
 	if (eNorm > bound) {
 	  std::cerr << "eNorm is too large\n";
-	  //	  double bound_doubl, eNorm_doubl, eDiff_doubl;
 	  T eDiff=eNorm - bound;
 	  double bound_doubl = UniversalScalarConversion<double,T>(bound);
 	  double eNorm_doubl = UniversalScalarConversion<double,T>(eNorm);
@@ -344,7 +347,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
         U(i) = 0;
 	for (j = i + 1; j < dim; j++)
 	  U(i) += q(i,j) * (x(j) + C(j));
-	T hVal=x(i+1) + C(i+1) + U(i+1);
+	hVal=x(i+1) + C(i+1) + U(i+1);
 	Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal * hVal;
 	needs_new_bound = true;
       }
