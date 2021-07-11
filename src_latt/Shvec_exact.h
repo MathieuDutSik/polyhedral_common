@@ -207,7 +207,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
-  int result = 0;
   int dim = request.dim;
   // The value of bound is assumed to be correct.
   // Thus the Trem values should be strictly positive.
@@ -227,7 +226,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     for (j=0; j<dim; j++)
       std::cerr << " " << g(i,j);
     std::cerr << "\n";
-    }
+  }
 #endif
   MyMatrix<T> q = request.gram_matrix;
   for (i=0; i<dim; i++) {
@@ -268,6 +267,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
   bool not_finished;
   T eQuot, eSum, hVal, eNorm;
   while (true) {
+    std::cerr << "i=" << i << "\n";
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i,i);
       eSum = - U(i) - C(i);
@@ -288,9 +288,9 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 	  }
 	  if (!not_finished) {
 #ifdef PRINT_DEBUG_INFO
-            std::cerr << "Exiting by not_finished = false. result=" << result << "\n";
+            std::cerr << "Exiting because x=0 and central run\n";
 #endif
-            return result;
+            return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
           }
 	}
 	hVal=x(0) + C(0) + U(0);
@@ -353,13 +353,14 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
       }
     } else {
       i++;
-      if (i == dim) break;
+      if (i == dim) {
+#ifdef PRINT_DEBUG_INFO
+        std::cerr << "Normal return of computeIt\n";
+#endif
+        return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+      }
     }
   }
-#ifdef PRINT_DEBUG_INFO
-  std::cerr << "Normal return of computeIt\n";
-#endif
-  return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
 
