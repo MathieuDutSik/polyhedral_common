@@ -6,8 +6,8 @@
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
 
-#undef CHECK_BASIC_CONSISTENCY
-#undef PRINT_DEBUG_INFO
+#define CHECK_BASIC_CONSISTENCY
+#define PRINT_DEBUG_INFO
 
 
 namespace TempShvec_globals {
@@ -40,7 +40,7 @@ struct T_shvec_info {
 
 
 // We return
-// floor(sqrt(A) + epsilon + B) 
+// floor(sqrt(A) + epsilon + B)
 template<typename T>
 int Infinitesimal_Floor_V1(T const& a, T const& b)
 {
@@ -255,8 +255,6 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     i++;
   }
   bool central=!coset;
-  //  std::cerr << "central=" << central << "\n";
-  //  std::cerr << "computeIt, coset=" << coset << "\n";
   for (i = 0; i < dim; i++)
     C(i) = info.request.coset(i);
   bool not_finished = true;
@@ -264,42 +262,21 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
   i = dim - 1;
   Trem(i) = bound;
   U(i) = 0;
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "Before while loop\n";
+#endif
   while (not_finished) {
-    //    std::cerr << "Case 1 i=" << i << "\n";
     if (needs_new_bound) {
       T eQuot = Trem(i) / q(i,i);
       T eSum = - U(i) - C(i);
-      //      std::cerr << "i=" << i << " eQuot=" << eQuot << "\n";
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
       Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       x(i) = Lower(i);
       needs_new_bound = false;
     }
     x(i) += 1;
-    //    std::cerr << "dim=" << dim << "\n";
-    //    std::cerr << "needs_new_bound=" << needs_new_bound << "\n";
-    //    std::cerr << "Case 2 i=" << i << "\n";
-    //    std::cerr << "vect=";
-    //    for (int j=0; j<dim; j++)
-    //      std::cerr << " " << x(j);
-    //    std::cerr << "\n";
-    //    for (int j=0; j<dim; j++) {
-    //      std::cerr << "j=" << j << "  L/U=" << Lower(j) << "," << Upper(j) << "\n";
-    //    }
-    //    std::cerr << "\n";
-    //    for (int j=0; j<dim; j++) {
-    //      std::cerr << "j=" << j << "  T=" << Trem(j) << "\n";
-    //    }
-    //    std::cerr << "\n";
-    //    std::cerr << "Case 3 i=" << i << "\n";
     if (x(i) <= Upper(i)) {
-      //      std::cerr << "Case 4 i=" << i << "\n";
       if (i == 0) {
-	//	std::cerr << "Case 5 i=" << i << "\n";
-	//	std::cerr << "Insert vector x=";
-	//	for (int j3=0; j3<dim; j3++)
-	//	  std::cerr << " " << x(j3);
-	//	std::cerr << "\n";
 	if (central) {
 	  j = dim - 1;
 	  not_finished = false;
@@ -307,7 +284,12 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	    not_finished = (x(j) != 0);
 	    j--;
 	  }
-	  if (!not_finished) return result;
+	  if (!not_finished) {
+#ifdef PRINT_DEBUG_INFO
+            std::cerr << "Exiting by not_finished = false. result=" << result << "\n";
+#endif
+            return result;
+          }
 	}
 	T hVal=x(0) + C(0) + U(0);
 	T eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
@@ -349,14 +331,16 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
           if (eNorm < info.minimum) {
             info.short_vectors.clear();
             info.minimum = eNorm;
+#ifdef PRINT_DEBUG_INFO
+            std::cerr << "Exiting via STOP_COMPUTATION\n";
+#endif
             return TempShvec_globals::STOP_COMPUTATION;
           }
           info.short_vectors.push_back(x);
           if (central)
             info.short_vectors.push_back(-x);
         }
-      }
-      else {
+      } else {
 	i--;
 	T sum=0;
 	for (j = i + 1; j < dim; j++)
@@ -366,17 +350,14 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal * hVal;
 	needs_new_bound = true;
       }
-      //      std::cerr << "Case 8 i=" << i << "\n";
-    }
-    else {
-      //      std::cerr << "Case 9 i=" << i << "\n";
+    } else {
       i++;
       if (i >= dim) not_finished = false;
-      //      std::cerr << "Case 10 i=" << i << "\n";
     }
-    //    std::cerr << "Case 11 i=" << i << "\n";
   }
-  //  std::cerr << "Normal return of computeIt\n";
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "Normal return of computeIt\n";
+#endif
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
 
@@ -384,12 +365,18 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 template<typename T, typename Tint>
 inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(T_shvec_info<T,Tint> & info)
 {
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "computeIt (field case)\n";
+#endif
   return computeIt_Kernel(info);
 }
 
 template<typename T, typename Tint>
 inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(T_shvec_info<T,Tint> & info)
 {
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "computeIt (ring case)\n";
+#endif
   using Tfield=typename overlying_field<T>::field_type;
   //
   T_shvec_request<Tfield> request_field{info.request.dim, info.request.mode,
@@ -401,6 +388,9 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
   int retVal = computeIt_Kernel(info_field);
   info.short_vectors = info_field.short_vectors;
   info.minimum = UniversalScalarConversion<T,Tfield>(info_field.minimum);
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "computeIt (ring case) exit\n";
+#endif
   return retVal;
 }
 
@@ -413,6 +403,9 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 template<typename T, typename Tint>
 int computeMinimum(T_shvec_info<T,Tint> &info)
 {
+#ifdef PRINT_DEBUG_INFO
+  std::cerr << "computeMinimum, begin\n";
+#endif
   int result, coset, i, j;
   int dim = info.request.dim;
   MyVector<T> C(dim);
@@ -440,14 +433,9 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   }
   while (true) {
     info.request.bound = info.minimum;
-    //    double step_size_doubl = UniversalScalarConversion<double,T>(step_size);
-    //    double min_doubl = UniversalScalarConversion<double,T>(info.minimum);
-    //    std::cerr << "min            =" << info.minimum << "\n";
-    //    std::cerr << "min_doubl      =" << min_doubl << "\n";
-    //    std::cerr << "step_size      =" << step_size << "\n";
-    //    std::cerr << "step_size_doubl=" << step_size_doubl << "\n";
-    //    std::cerr << "min_step_size  =" << min_step_size << "\n";
-    //    std::cerr << "Before computeIt, case 1\n";
+#ifdef PRINT_DEBUG_INFO
+    std::cerr << "Before computeIt (in computeMinimum while loop)\n";
+#endif
     result = computeIt(info);
     //    std::cerr << "result=" << result << "\n";
     if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {

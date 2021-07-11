@@ -1,5 +1,5 @@
-PROGRAM		= ComputePerfect \
-		  InitialQuadPerfectMatrix
+PROGRAM		= InitialQuadPerfectMatrix
+#PROGRAM		= ComputePerfect InitialQuadPerfectMatrix
 
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
