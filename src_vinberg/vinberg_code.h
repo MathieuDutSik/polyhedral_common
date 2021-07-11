@@ -24,14 +24,15 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   int dim = GramMat.rows();
   MyVector<T> cosetVect	= - eV;
+  T_shvec_request<T> request;
   T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, info);
-  info.request.bound = a;
-  info.request.mode = mode;
-  info.request.coset = cosetVect;
+  initShvecReq<T>(dim, GramMat, request, info);
+  request.bound = a;
+  request.mode = mode;
+  request.coset = cosetVect;
   info.minimum = a;
   //
-  int result = computeIt(info);
+  int result = computeIt(request, a, info);
   if (result != TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
     std::cerr << "Error in ComputeSphericalSolutions\n";
     throw TerminalException{1};
