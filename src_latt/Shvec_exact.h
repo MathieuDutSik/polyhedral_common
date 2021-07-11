@@ -32,7 +32,6 @@ struct T_shvec_request {
 
 template<typename T, typename Tint>
 struct T_shvec_info {
-  T_shvec_request<T> request;
   std::vector<MyVector<Tint>> short_vectors;
   T minimum;
 };
@@ -203,13 +202,12 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 
 
 template<typename T, typename Tint>
-int computeIt_Kernel(T_shvec_info<T,Tint> & info)
+int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_info<T,Tint> & info)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
   int result = 0;
-  int dim = info.request.dim;
-  T bound = info.request.bound;
+  int dim = request.dim;
   // The value of bound is assumed to be correct.
   // Thus the Trem values should be strictly positive.
   //  std::cerr << "computeIt : bound=" << bound << "\n";
@@ -219,7 +217,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
   MyVector<T> U(dim);
   MyVector<T> C(dim);
   MyVector<Tint> x(dim);
-  MyMatrix<T> g = info.request.gram_matrix;
+  const MyMatrix<T>& g = request.gram_matrix;
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "g=\n";
   for (i=0; i<dim; i++) {
@@ -228,7 +226,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
     std::cerr << "\n";
     }
 #endif
-  MyMatrix<T> q = info.request.gram_matrix;
+  MyMatrix<T> q = request.gram_matrix;
   for (i=0; i<dim; i++) {
     for (j=i+1; j<dim; j++) {
       q(i,j) = q(i,j)/q(i,i);
@@ -251,12 +249,12 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
   bool coset = false;
   i = 0;
   while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0);
+    coset = (request.coset(i) != 0);
     i++;
   }
   bool central=!coset;
   for (i = 0; i < dim; i++)
-    C(i) = info.request.coset(i);
+    C(i) = request.coset(i);
   bool not_finished = true;
   bool needs_new_bound = true;
   i = dim - 1;
@@ -325,7 +323,7 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 	  std::cerr << " " << x(i);
 	std::cerr << "\n";
 #endif
-        if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
+        if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           info.short_vectors.push_back(x);
         } else {
           if (eNorm < info.minimum) {
@@ -363,29 +361,30 @@ int computeIt_Kernel(T_shvec_info<T,Tint> & info)
 
 
 template<typename T, typename Tint>
-inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(T_shvec_info<T,Tint> & info)
+inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T& bound, T_shvec_info<T,Tint> & info)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (field case)\n";
 #endif
-  return computeIt_Kernel(info);
+  return computeIt_Kernel(request, bound, info);
 }
 
 template<typename T, typename Tint>
-inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(T_shvec_info<T,Tint> & info)
+inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, T_shvec_info<T,Tint> & info)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (ring case)\n";
 #endif
   using Tfield=typename overlying_field<T>::field_type;
   //
-  T_shvec_request<Tfield> request_field{info.request.dim, info.request.mode,
-      UniversalScalarConversion<Tfield,T>(info.request.bound),
-      UniversalVectorConversion<Tfield,T>(info.request.coset),
-      UniversalMatrixConversion<Tfield,T>(info.request.gram_matrix)};
+  Tfield bound_field = UniversalScalarConversion<Tfield,T>(bound);
+  T_shvec_request<Tfield> request_field{request.dim, request.mode,
+      UniversalScalarConversion<Tfield,T>(request.bound),
+      UniversalVectorConversion<Tfield,T>(request.coset),
+      UniversalMatrixConversion<Tfield,T>(request.gram_matrix)};
   //
-  T_shvec_info<Tfield,Tint> info_field{request_field, info.short_vectors, UniversalScalarConversion<Tfield,T>(info.minimum)};
-  int retVal = computeIt_Kernel(info_field);
+  T_shvec_info<Tfield,Tint> info_field{info.short_vectors, UniversalScalarConversion<Tfield,T>(info.minimum)};
+  int retVal = computeIt_Kernel(request_field, bound_field, info_field);
   info.short_vectors = info_field.short_vectors;
   info.minimum = UniversalScalarConversion<T,Tfield>(info_field.minimum);
 #ifdef PRINT_DEBUG_INFO
@@ -401,42 +400,41 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 
 
 template<typename T, typename Tint>
-int computeMinimum(T_shvec_info<T,Tint> &info)
+int computeMinimum(const T_shvec_request<T>& request, T_shvec_info<T,Tint> &info)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeMinimum, begin\n";
 #endif
   int result, coset, i, j;
-  int dim = info.request.dim;
+  int dim = request.dim;
   MyVector<T> C(dim);
-  //  std::cerr << "Passing by computeMinimum\n";
   coset = 0;
   i = 0;
   while (i < dim && !coset) {
-    coset = (info.request.coset(i) != 0);
+    coset = (request.coset(i) != 0);
     i++;
   }
   for (i = 0; i < dim; i++)
-    C(i) = info.request.coset(i);
+    C(i) = request.coset(i);
   if (coset) {
     T eNorm=0;
     for (i=0; i<dim; i++)
       for (j=0; j<dim; j++)
-	eNorm += info.request.gram_matrix(i,j)*C(i)*C(j);
-    info.minimum=eNorm;
-  }
-  else {
-    info.minimum = info.request.gram_matrix(0,0);
+	eNorm += request.gram_matrix(i,j)*C(i)*C(j);
+    info.minimum = eNorm;
+  } else {
+    info.minimum = request.gram_matrix(0,0);
     for (i = 1; i < dim; i++)
-      if (info.minimum > info.request.gram_matrix(i,i))
-	info.minimum = info.request.gram_matrix(i,i);
+      if (info.minimum > request.gram_matrix(i,i))
+	info.minimum = request.gram_matrix(i,i);
   }
+  T bound;
   while (true) {
-    info.request.bound = info.minimum;
+    bound = info.minimum;
 #ifdef PRINT_DEBUG_INFO
     std::cerr << "Before computeIt (in computeMinimum while loop)\n";
 #endif
-    result = computeIt(info);
+    result = computeIt(request, bound, info);
     //    std::cerr << "result=" << result << "\n";
     if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
       break;
@@ -444,7 +442,7 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
   }
   //  std::cerr << "After while loop\n";
   //  std::cerr << "info.minimum=" << info.minimum << "\n";
-  //  info.minimum = info.request.bound + step_size;
+  //  info.minimum = request.bound + step_size;
   //  std::cerr << "Exiting from computeMinimum\n";
   return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
 }
@@ -454,27 +452,25 @@ int computeMinimum(T_shvec_info<T,Tint> &info)
 template<typename T, typename Tint>
 void initShvecReq(int dim,
 		  MyMatrix<T> const& gram_matrix,
+                  T_shvec_request<T>& request,
 		  T_shvec_info<T,Tint> &info)
 {
   if (dim < 2) {
-    std::cerr << "shvec: (initShvecReq) wrong input!\n";
-    std::cerr << "dimension too low or unassigned matrix\n";
+    std::cerr << "dim=" << dim << " while it should be at least 2\n";
     throw TerminalException{1};
   }
-  info.request.dim = dim;
-  info.request.coset = MyVector<T>(dim);
-  info.request.gram_matrix = gram_matrix;
-  info.request.mode = 0;
-  info.request.bound = 0;
+  request.dim = dim;
+  request.coset = MyVector<T>(dim);
+  request.gram_matrix = gram_matrix;
+  request.mode = 0;
+  request.bound = 0;
   info.minimum = -1;
 }
 
 template<typename T, typename Tint>
-int T_computeShvec(T_shvec_info<T,Tint> &info)
+int T_computeShvec(const T_shvec_request<T>& request, T_shvec_info<T,Tint> &info)
 {
-  //  int dim = info.request.dim;
-  //  std::cerr << "computeShvec mode=" << info.request.mode << "\n";
-  switch (info.request.mode)
+  switch (request.mode)
     {
     case TempShvec_globals::TEMP_SHVEC_MODE_UNDEF:
       {
@@ -482,26 +478,26 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
 	throw TerminalException{1};
       }
     case TempShvec_globals::TEMP_SHVEC_MODE_BOUND:
-      if (info.request.bound <= 0) {
-	std::cerr << "bound=" << info.request.bound << "\n";
-	std::cerr << "shvec.c (computeShvec): MODE_BOUND info.request.bound !\n";
+      if (request.bound <= 0) {
+	std::cerr << "bound=" << request.bound << "\n";
+	std::cerr << "shvec.c (computeShvec): MODE_BOUND request.bound !\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS:
-      if (info.request.bound != 0) {
+      if (request.bound != 0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_SHORTEST_VECTORS!\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM:
-      if (info.request.bound != 0) {
+      if (request.bound != 0) {
 	std::cerr << "shvec.c (computeShvec): wrong options MODE_MINIMUM!\n";
 	throw TerminalException{1};
       }
       break;
     case TempShvec_globals::TEMP_SHVEC_MODE_VINBERG:
-      info.minimum = info.request.bound;
+      info.minimum = request.bound;
       break;
     default:
       {
@@ -511,29 +507,23 @@ int T_computeShvec(T_shvec_info<T,Tint> &info)
     }
   //  std::cerr << "After switch loop\n";
   int result = -99;
-  if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
     //    std::cerr << "Before computeIt, case 2\n";
-    result = computeIt<T,Tint>(info);
+    result = computeIt(request, request.bound, info);
   }
-  else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
-    //    std::cerr << "Before computeMinimum\n";
-    result = computeMinimum<T,Tint>(info);
-    //    info.request.bound = info.minimum;
-    //    std::cerr << "Assign info.request.bound\n";
-    //    std::cerr << "Before computeIt, case 3\n";
-    //    result = computeIt<T,Tint>(info);
+  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
+    result = computeMinimum(request, info);
   }
-  else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
+  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
     //    std::cerr << "Before computeIt, case 4\n";
-    result = computeMinimum<T,Tint>(info);
+    result = computeMinimum(request, info);
   }
-  else if (info.request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-    info.minimum = info.request.bound;
+  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
+    info.minimum = request.bound;
     //    std::cerr << "Before computeIt, case 5\n";
-    result = computeIt<T,Tint>(info);
+    result = computeIt(request, request.bound, info);
   }
   return result;
-  //  std::cerr << "result=" << result << "\n";
 }
 
 
@@ -551,15 +541,14 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   }
   T bound=0; // should not be used
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
+  T_shvec_request<T> request;
   T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, info);
-  info.request.bound = bound;
-  info.request.mode = mode;
-  info.request.coset = cosetVect;
+  initShvecReq<T>(dim, GramMat, request, info);
+  request.bound = bound;
+  request.mode = mode;
+  request.coset = cosetVect;
   info.minimum = -44;
-  //  std::cerr << "Before T_computeShvec\n";
-  int result=T_computeShvec(info);
-  //  std::cerr << "After T_computeShvec\n";
+  int result=T_computeShvec(request, info);
   if (result == -2444) {
     std::cerr << "Probably wrong\n";
     throw TerminalException{1};
@@ -604,14 +593,15 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   T bound=MaxNorm;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
+  T_shvec_request<T> request;
   T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, info);
-  info.request.bound = bound;
-  info.request.mode = mode;
-  info.request.coset = cosetVect;
+  initShvecReq<T>(dim, GramMat, request, info);
+  request.bound = bound;
+  request.mode = mode;
+  request.coset = cosetVect;
   info.minimum = -44;
   //
-  int result=T_computeShvec(info);
+  int result=T_computeShvec(request, info);
   if (result == -2444) {
     std::cerr << "Probably wrong\n";
     throw TerminalException{1};

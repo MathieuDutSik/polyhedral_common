@@ -104,14 +104,15 @@ int main(int argc, char *argv[])
     //
     // Defining info and computing with it
     //
+    T_shvec_request<T> request;
     T_shvec_info<T,Tint> info;
-    initShvecReq<T,Tint>(dim, gram_matrix, info);
-    info.request.bound = bound;
-    info.request.mode = mode;
-    info.request.coset = cosetVect;
+    initShvecReq<T,Tint>(dim, gram_matrix, request, info);
+    request.bound = bound;
+    request.mode = mode;
+    request.coset = cosetVect;
     info.minimum = -44;
-    std::cerr << "Before computeShvec mode=" << info.request.mode << "\n";
-    int result=T_computeShvec(info);
+    std::cerr << "Before computeShvec mode=" << request.mode << "\n";
+    int result=T_computeShvec(request, info);
     int nbVect=info.short_vectors.size();
     std::cerr << "After computeShvec |V|=" << nbVect << "\n";
     //
