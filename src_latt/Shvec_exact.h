@@ -256,7 +256,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
   bool central=!coset;
   for (i = 0; i < dim; i++)
     C(i) = request.coset(i);
-  bool not_finished = true;
   bool needs_new_bound = true;
   i = dim - 1;
   Trem(i) = bound;
@@ -264,7 +263,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "Before while loop\n";
 #endif
-  while (not_finished) {
+  while (true) {
     if (needs_new_bound) {
       T eQuot = Trem(i) / q(i,i);
       T eSum = - U(i) - C(i);
@@ -278,7 +277,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
       if (i == 0) {
 	if (central) {
 	  j = dim - 1;
-	  not_finished = false;
+	  bool not_finished = false;
 	  while (j >= 0 && !not_finished) {
 	    not_finished = (x(j) != 0);
 	    j--;
@@ -342,17 +341,16 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
         }
       } else {
 	i--;
-	T sum=0;
+        U(i) = 0;
 	for (j = i + 1; j < dim; j++)
-	  sum += q(i,j) * (x(j) + C(j));
-	U(i) = sum;
+	  U(i) += q(i,j) * (x(j) + C(j));
 	T hVal=x(i+1) + C(i+1) + U(i+1);
 	Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal * hVal;
 	needs_new_bound = true;
       }
     } else {
       i++;
-      if (i >= dim) not_finished = false;
+      if (i == dim) break;
     }
   }
 #ifdef PRINT_DEBUG_INFO
