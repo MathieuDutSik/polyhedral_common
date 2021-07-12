@@ -256,6 +256,8 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     central = (request.coset(i) == 0);
     i++;
   }
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG)
+    central = false;
 
   for (i = 0; i < dim; i++)
     C(i) = request.coset(i);
