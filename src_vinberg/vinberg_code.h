@@ -52,8 +52,8 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
         T val2 = eV(j) - fV(j);
         sum += val1 * val2 * GramMat(i,j) * eMult;
       }
-    if (sum == a) {
-      std::cerr << "We shold have vectors of norm exactly a\n";
+    if (sum != a) {
+      std::cerr << "We should have vectors of norm exactly a\n";
       std::cerr << "sum=" << sum << " a=" << a << "\n";
       throw TerminalException{1};
     }
@@ -398,10 +398,16 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
   std::cerr << "Roots_decomposed_into, step 5\n";
   std::vector<MyVector<Tint>> RetSol;
   std::cerr << "Roots_decomposed_into, step 6\n";
-  for (auto& eV : ListSol) {
-    MyVector<T> rX_T = a + UniversalVectorConversion<T,Tint>(eV) * Vtot.Morth_T;
+  for (auto& eV_Tint : ListSol) {
+    std::cerr << "Roots_decomposed_into, step 6.1\n";
+    MyVector<T> eV_T = UniversalVectorConversion<T,Tint>(eV_Tint);
+    std::cerr << "Roots_decomposed_into, step 6.2\n";
+    std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
+    MyVector<T> rX_T = a + Vtot.Morth_T * eV_T;
+    std::cerr << "Roots_decomposed_into, step 6.3\n";
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
-    RetSol.emplace_back(rX);
+    std::cerr << "Roots_decomposed_into, step 6.4\n";
+    RetSol.emplace_back(std::move(rX));
   }
   std::cerr << "Roots_decomposed_into, step 7\n";
   return RetSol;

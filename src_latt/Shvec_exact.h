@@ -271,7 +271,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
   bool not_finished;
   T eQuot, eSum, hVal, eNorm;
   while (true) {
-    std::cerr << "i=" << i << "\n";
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i,i);
       eSum = - U(i) - C(i);
