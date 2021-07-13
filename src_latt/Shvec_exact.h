@@ -8,6 +8,7 @@
 
 #define CHECK_BASIC_CONSISTENCY
 #define PRINT_DEBUG_INFO
+#define PRINT_DEBUG_INFO_VECTOR
 
 
 namespace TempShvec_globals {
@@ -268,6 +269,9 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "Before while loop\n";
 #endif
+#ifdef PRINT_DEBUG_INFO_VECTOR
+  size_t n_vector = 0;
+#endif
   bool not_finished;
   T eQuot, eSum, hVal, eNorm;
   while (true) {
@@ -323,11 +327,13 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 	  throw TerminalException{1};
 	}
 #endif
-#ifdef PRINT_DEBUG_INFO
-	std::cerr << "x=";
+#ifdef PRINT_DEBUG_INFO_VECTOR
+        std::cerr << "n_vector=" << n_vector;
+	std::cerr << " x=";
 	for (int i=0; i<dim; i++)
 	  std::cerr << " " << x(i);
 	std::cerr << "\n";
+        n_vector++;
 #endif
         if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
           if (!request.only_exact_norm || eNorm == info.minimum)

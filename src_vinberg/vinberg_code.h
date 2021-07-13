@@ -41,6 +41,7 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
     throw TerminalException{1};
   }
 #ifdef DEBUG_VINBERG
+  std::cerr << "|info.short_vectors|=" << info.short_vectors.size() << "\n";
   for (auto & fV : info.short_vectors) {
     T sum=0;
     for (int i=0; i<dim; i++)
@@ -395,18 +396,19 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
   MyVector<T> eV = -sV;
   std::cerr << "Roots_decomposed_into, step 4\n";
   std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi);
+  std::cerr << "|ListSol|=" << ListSol.size() << "\n";
   std::cerr << "Roots_decomposed_into, step 5\n";
   std::vector<MyVector<Tint>> RetSol;
   std::cerr << "Roots_decomposed_into, step 6\n";
   for (auto& eV_Tint : ListSol) {
-    std::cerr << "Roots_decomposed_into, step 6.1\n";
+    //    std::cerr << "Roots_decomposed_into, step 6.1\n";
     MyVector<T> eV_T = UniversalVectorConversion<T,Tint>(eV_Tint);
-    std::cerr << "Roots_decomposed_into, step 6.2\n";
+    //    std::cerr << "Roots_decomposed_into, step 6.2\n";
     std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
     MyVector<T> rX_T = a + Vtot.Morth_T * eV_T;
-    std::cerr << "Roots_decomposed_into, step 6.3\n";
+    //    std::cerr << "Roots_decomposed_into, step 6.3\n";
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
-    std::cerr << "Roots_decomposed_into, step 6.4\n";
+    //    std::cerr << "Roots_decomposed_into, step 6.4\n";
     RetSol.emplace_back(std::move(rX));
   }
   std::cerr << "Roots_decomposed_into, step 7\n";
@@ -532,15 +534,14 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     std::cerr << " k=" << k << "\n";
     std::set<MyVector<Tint>> set;
     for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
-      std::cerr << "Before processing root_cand\n";
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
         MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
         set.insert(root_can);
       }
-      std::cerr << "After processing root_cand\n";
     }
     for (auto & eV : set)
       V1_roots.push_back(eV);
+    std::cerr << "|set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << "\n";
   }
   std::cerr << "FundCone, step 2\n";
   //
@@ -584,6 +585,9 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     for (size_t i_root=0; i_root<n_root; i_root++)
       for (size_t i=0; i<n; i++)
         Mroot(i_root, i) = UniversalScalarConversion<T,Tint>(SelectedRoots[i_root](i));
+    std::cerr << "Mroot=\n";
+    WriteMatrix(std::cerr, Mroot);
+    std::cerr << "Before cdd::DualDescription\n";
     return cdd::DualDescription(Mroot); // maybe use another dual description function
   };
   MyMatrix<T> FAC = get_facets();
