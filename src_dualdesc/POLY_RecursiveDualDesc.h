@@ -286,7 +286,6 @@ public:
         int e_size = eTriple.EXT.rows();
         std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << eTriple.ListFace.size() << "\n";
         ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(eTriple.ListFace)}));
-        //        ListEnt[eTriple.EXT] = {eTriple.GRP, eTriple.ListFace};
         MinSize = std::min(MinSize, e_size);
         iOrbit++;
       }
