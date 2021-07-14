@@ -135,7 +135,6 @@ struct PolyHeuristic {
   TheHeuristic<T> StabEquivFacet;
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> InvariantQuality;
-  TheHeuristic<T> CheckDatabaseBank;
   bool Saving;
   bool eMemory;
 };

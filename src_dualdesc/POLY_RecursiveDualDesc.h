@@ -253,29 +253,29 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 }
 
 
+template<typename Tgroup>
+struct PairStore {
+  Tgroup GRP;
+  vectface ListFace;
+};
 
 template<typename T, typename Tgroup, typename Tidx_value>
 struct DataBank {
 private:
-  struct PairStore {
-    Tgroup GRP;
-    vectface ListFace;
-  };
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  int MinSize;
   // It is better to use std::unordered_map for the List of entries:
   // This makes the check of equality rarer and instead uses the hash
   // more strictly.
   // Plus it is better because the tsl::sparse_map requires having the
   // copy operator and we want to avoid that for the vectface.
-  std::unordered_map<MyMatrix<T>, PairStore> ListEnt;
+  std::unordered_map<MyMatrix<T>, PairStore<Tgroup>> ListEnt;
   bool Saving;
   std::string SavingPrefix;
+  PairStore<Tgroup> TrivElt;
 public:
-  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
+  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix), TrivElt({Tgroup(), vectface(0)})
   {
-    MinSize = std::numeric_limits<int>::max();
     if (Saving) {
       size_t iOrbit=0;
       while(true) {
@@ -283,95 +283,109 @@ public:
         if (!IsExistingFile(eFileBank))
           break;
         EquivariantDualDescription<T,Tgroup> eTriple = Read_BankEntry<T,Tgroup>(eFileBank);
-        int e_size = eTriple.EXT.rows();
-        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << e_size << " |ListFace|=" << eTriple.ListFace.size() << "\n";
-        ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(eTriple.ListFace)}));
-        MinSize = std::min(MinSize, e_size);
+        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << eTriple.EXT.rows() << " |ListFace|=" << eTriple.ListFace.size() << "\n";
+        ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore<Tgroup>>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(eTriple.ListFace)}));
         iOrbit++;
       }
     }
   }
-  void InsertEntry(MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
+  void InsertEntry(MyMatrix<T> && EXT, Tgroup && GRP, vectface && ListFace)
   {
-    if (!BankSymmCheck) {
-      // The computation was already done for the full symmetry group. Only canonic form is needed.
-      std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx,Tidx_value>(EXT, WMat);
-      vectface ListFaceO(EXT.rows());
-      Telt perm1 = Telt(ePair.second);
-      Telt ePerm = ~perm1;
+    if (Saving) {
+      size_t n_orbit = ListEnt.size();
+      std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
+      std::cerr << "Insert entry to file eFile=" << eFile << "\n";
+      Write_BankEntry(eFile, EXT, GRP, ListFace);
+    }
+    ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore<Tgroup>>(std::move(EXT), {std::move(GRP), std::move(ListFace)}));
+  }
+  const PairStore<Tgroup>& GetDualDesc(MyMatrix<T> const& EXT) const
+  {
+    std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
+    typename std::unordered_map<MyMatrix<T>, PairStore<Tgroup>>::const_iterator iter = ListEnt.find(EXT);
+    if (iter == ListEnt.end())
+      return TrivElt; // If returning empty then it means nothing has been found.
+    return iter->second;
+  }
+};
+
+
+
+
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+void insert_entry_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& TheGRPrelevant, bool const& BankSymmCheck, vectface const& ListFace)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  if (!BankSymmCheck) {
+    // The computation was already done for the full symmetry group. Only canonic form is needed.
+    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T,Tidx,Tidx_value>(EXT, WMat);
+    vectface ListFaceO(EXT.rows());
+    Telt perm1 = Telt(ePair.second);
+    Telt ePerm = ~perm1;
+    for (auto & eFace : ListFace) {
+      Face eInc = OnFace(eFace, ePerm);
+      ListFaceO.push_back(eInc);
+    }
+    Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
+    bank.InsertEntry(std::move(ePair.first), std::move(GrpConj), std::move(ListFaceO));
+  } else {
+    TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
+    bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
+    vectface ListFaceO(EXT.rows());
+    Telt perm1 = Telt(eTriple.ListIdx);
+    Telt ePerm = ~perm1;
+    if (!NeedRemapOrbit) {
+      // We needed to compute the full group, but it turned out to be the same as the input group.
       for (auto & eFace : ListFace) {
         Face eInc = OnFace(eFace, ePerm);
         ListFaceO.push_back(eInc);
       }
-      Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
-      if (Saving) {
-        size_t n_orbit = ListEnt.size();
-        std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-        std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-        Write_BankEntry(eFile, ePair.first, GrpConj, ListFaceO);
-      }
-      ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(ePair.first), {std::move(GrpConj), std::move(ListFaceO)}));
-      int e_size = ePair.first.rows();
-      MinSize = std::min(MinSize, e_size);
     } else {
-      TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
-      bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
-      vectface ListFaceO(EXT.rows());
-      Telt perm1 = Telt(eTriple.ListIdx);
-      Telt ePerm = ~perm1;
-      if (!NeedRemapOrbit) {
-        // We needed to compute the full group, but it turned out to be the same as the input group.
-        for (auto & eFace : ListFace) {
-          Face eInc = OnFace(eFace, ePerm);
-          ListFaceO.push_back(eInc);
-        }
-      } else {
-        // The full group is bigger than the input group. So we need to reduce.
-        UNORD_SET<Face> SetFace;
-        for (auto & eFace : ListFace) {
-          Face eInc = OnFace(eFace, ePerm);
-          Face eIncCan = eTriple.GRP.CanonicalImage(eInc);
-          SetFace.insert(eIncCan);
-        }
-        for (auto & eInc : SetFace) {
-          ListFaceO.push_back(eInc);
-        }
+      // The full group is bigger than the input group. So we need to reduce.
+      UNORD_SET<Face> SetFace;
+      for (auto & eFace : ListFace) {
+        Face eInc = OnFace(eFace, ePerm);
+        Face eIncCan = eTriple.GRP.CanonicalImage(eInc);
+        SetFace.insert(eIncCan);
       }
-      if (Saving) {
-        size_t n_orbit = ListEnt.size();
-        std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-        std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-        Write_BankEntry(eFile, eTriple.EXT, eTriple.GRP, ListFaceO);
+      for (auto & eInc : SetFace) {
+        ListFaceO.push_back(eInc);
       }
-      int e_size = eTriple.EXT.rows();
-      MinSize = std::min(MinSize, e_size);
-      ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(ListFaceO)}));
     }
+    bank.InsertEntry(std::move(eTriple.EXT), std::move(eTriple.GRP), std::move(ListFaceO));
   }
-  vectface GetDualDesc(MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& GRP) const
-  {
-    std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
-    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
-    auto iter = ListEnt.find(ePair.first);
-    if (iter == ListEnt.end())
-      return vectface(0); // If returning empty then it means nothing has been found.
-    std::cerr << "Finding a matching entry\n";
-    vectface ListReprTrans(EXT.rows());
-    Telt ePerm = Telt(ePair.second);
-    for (auto const& eOrbit : iter->second.ListFace) {
-      Face eListJ=OnFace(eOrbit, ePerm);
-      ListReprTrans.push_back(eListJ);
-    }
-    if (GRP.size() == iter->second.GRP.size())
-      return ListReprTrans;
-    Tgroup GrpConj = iter->second.GRP.GroupConjugate(ePerm);
-    return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, std::cerr);
+}
+
+
+
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+vectface getdualdesc_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& GRP)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::pair<MyMatrix<T>, std::vector<Tidx>> ePair = CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
+  const PairStore<Tgroup>& RecAns = bank.GetDualDesc(ePair.first);
+  if (RecAns.ListFace.size() == 0) {
+    return vectface(0);
   }
-  int get_minsize() const
-  {
-    return MinSize;
+  std::cerr << "Finding a matching entry\n";
+  vectface ListReprTrans(EXT.rows());
+  Telt ePerm = Telt(ePair.second);
+  for (auto const& eOrbit : RecAns.ListFace) {
+    Face eListJ=OnFace(eOrbit, ePerm);
+    ListReprTrans.push_back(eListJ);
   }
-};
+  if (GRP.size() == RecAns.GRP.size())
+    return ListReprTrans;
+  Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
+  return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, std::cerr);
+}
+
+
+
+
+
 
 
 size_t get_matching_power(size_t const& val)
@@ -967,17 +981,21 @@ vectface DUALDESC_AdjacencyDecomposition(
   int nbCol=EXT.cols();
   LazyWMat<T,Tidx_value> lwm(EXT);
   //
+  // Now computing the groups
+  //
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP);
+  //
   // Checking if the entry is present in the map.
   //
-  if (nbRow >= TheBank.get_minsize()) {
-    vectface ListFace = TheBank.GetDualDesc(EXT, lwm.GetWMat(), GRP);
+  std::string ansBankCheck=HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
+  if (ansBankCheck == "yes") {
+    vectface ListFace = getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP);
     if (ListFace.size() > 0)
       return ListFace;
   }
   //
   // Now computing the groups
   //
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP);
   std::string ansSplit=HeuristicEvaluation(TheMap, AllArr.Splitting);
   Tgroup TheGRPrelevant;
   //
@@ -1041,7 +1059,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   std::string ansBank=HeuristicEvaluation(TheMap, AllArr.BankSave);
   std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
-    TheBank.InsertEntry(EXT, lwm.GetWMat(), TheGRPrelevant, BankSymmCheck, ListOrbitFaces);
+    insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant, BankSymmCheck, ListOrbitFaces);
   }
   if (NeedSplit) {
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, std::cerr);
@@ -1071,6 +1089,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   ListStringValuesH["DualDescriptionHeuristicFile"]="unset.heu";
   ListStringValuesH["MethodInitialFacetSetFile"]="unset.heu";
   ListStringValuesH["BankSaveHeuristicFile"]="unset.heu";
+  ListStringValuesH["CheckDatabaseBankFile"]="unset.heu";
   SingleBlock BlockHEURIS;
   BlockHEURIS.ListStringValues=ListStringValuesH;
   ListBlock["HEURISTIC"]=BlockHEURIS;
@@ -1182,11 +1201,13 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   SetHeuristic(eFull, "DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
+  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   std::cerr << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
   std::cerr << "DualDescriptionHeuristicFile\n" << AllArr.DualDescriptionProgram << "\n";
   std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
   std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
   //
   bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
   std::string DD_Prefix=BlockMETHOD.ListStringValues.at("Prefix");
