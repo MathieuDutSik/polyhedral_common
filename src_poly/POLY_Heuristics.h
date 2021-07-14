@@ -93,6 +93,23 @@ TheHeuristic<T> MethodInvariantQuality()
 }
 
 
+
+
+template<typename T>
+TheHeuristic<T> MethodCheckDatabaseBank()
+{
+  std::vector<std::string> ListString={
+    "1",
+    "1 incidence > 50 yes",
+    "no"};
+  return HeuristicFromListString<T>(ListString);
+}
+
+
+
+
+
+
 template<typename T>
 void SetHeuristic(FullNamelist const& eFull, std::string const& NamelistEnt, TheHeuristic<T> & eHeu)
 {
@@ -118,6 +135,7 @@ struct PolyHeuristic {
   TheHeuristic<T> StabEquivFacet;
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> InvariantQuality;
+  TheHeuristic<T> CheckDatabaseBank;
   bool Saving;
   bool eMemory;
 };
@@ -147,6 +165,7 @@ struct PolyHeuristicSerial {
   TheHeuristic<T> AdditionalSymmetry;
   TheHeuristic<T> DualDescriptionProgram;
   TheHeuristic<T> InitialFacetSet;
+  TheHeuristic<T> CheckDatabaseBank;
   bool Saving;
 };
 
@@ -161,6 +180,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial()
   AllArr.AdditionalSymmetry=StandardHeuristicAdditionalSymmetry<T>();
   AllArr.DualDescriptionProgram=StandardHeuristicDualDescriptionProgram<T>();
   AllArr.InitialFacetSet=MethodInitialFacetSet<T>();
+  AllArr.CheckDatabaseBank=MethodCheckDatabaseBank<T>();
   return AllArr;
 }
 
