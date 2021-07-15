@@ -268,58 +268,7 @@ void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const Pai
 }
 
 
-
-
-
-
-template<typename Tkey, typename Tval>
-struct DataBank {
-private:
-  // It is better to use std::unordered_map for the List of entries:
-  // This makes the check of equality rarer and instead uses the hash
-  // more strictly.
-  // Plus it is better because the tsl::sparse_map requires having the
-  // copy operator and we want to avoid that for the vectface.
-  std::unordered_map<Tkey, Tval> ListEnt;
-  bool Saving;
-  std::string SavingPrefix;
-  Tval TrivElt;
-public:
-  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
-  {
-    if (Saving) {
-      size_t iOrbit=0;
-      while(true) {
-        std::string eFileBank = SavingPrefix + "Dual_Desc_" + std::to_string(iOrbit) + ".nc";
-        if (!IsExistingFile(eFileBank))
-          break;
-        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << "\n";
-        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(eFileBank);
-        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first), std::move(PairKV.second)));
-        iOrbit++;
-      }
-    }
-  }
-  void InsertEntry(Tkey && eKey, Tval && eVal)
-  {
-    if (Saving) {
-      size_t n_orbit = ListEnt.size();
-      std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-      std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-      Write_BankEntry(eFile, eKey, eVal);
-    }
-    ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
-  }
-  const Tval& GetDualDesc(const Tkey& eKey) const
-  {
-    std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
-    typename std::unordered_map<Tkey, Tval>::const_iterator iter = ListEnt.find(eKey);
-    if (iter == ListEnt.end())
-      return TrivElt; // If returning empty then it means nothing has been found.
-    return iter->second;
-  }
-};
-
+#include "Databank.h"
 
 
 
