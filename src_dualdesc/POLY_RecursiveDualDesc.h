@@ -132,34 +132,6 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 
 
 
-template<typename T, typename Tgroup>
-EquivariantDualDescription<T,Tgroup> Read_BankEntry(std::string const& eFile)
-{
-  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
-  MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
-  Tgroup GRP = POLY_NC_ReadGroup<Tgroup>(dataFile);
-  //
-  vectface ListFace = POLY_NC_ReadAllFaces(dataFile);
-  return {std::move(EXT), std::move(GRP), std::move(ListFace)};
-}
-
-template<typename T, typename Tgroup>
-void Write_BankEntry(std::string const& eFile, MyMatrix<T> const& EXT, Tgroup const& GRP, vectface const& ListFace)
-{
-  if (!FILE_IsFileMakeable(eFile)) {
-    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
-    throw TerminalException{1};
-  }
-  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-  POLY_NC_WritePolytope(dataFile, EXT);
-  bool orbit_setup = true;
-  bool orbit_status = false;
-  POLY_NC_WriteGroup(dataFile, GRP, orbit_setup, orbit_status);
-  //
-  size_t n_orbit = ListFace.size();
-  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
-    POLY_NC_WriteFace(dataFile, i_orbit, ListFace[i_orbit]);
-}
 
 
 
@@ -253,28 +225,67 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 }
 
 
-template<typename Tgroup>
+template<typename Tgroup_impl>
 struct PairStore {
+  using Tgroup = Tgroup_impl;
   Tgroup GRP;
   vectface ListFace;
 };
 
-template<typename T, typename Tgroup, typename Tidx_value>
+
+template<typename Tkey, typename Tval>
+std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
+{
+  using T = typename Tkey::value_type;
+  using Tgroup = typename Tval::Tgroup;
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
+  MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
+  Tgroup GRP = POLY_NC_ReadGroup<Tgroup>(dataFile);
+  vectface ListFace = POLY_NC_ReadAllFaces(dataFile);
+  std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size() << "\n";
+  Tval eVal{std::move(GRP), std::move(ListFace)};
+  return {std::move(EXT), std::move(eVal)};
+}
+
+
+
+template<typename T, typename Tgroup>
+void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
+{
+  if (!FILE_IsFileMakeable(eFile)) {
+    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
+    throw TerminalException{1};
+  }
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  POLY_NC_WritePolytope(dataFile, EXT);
+  bool orbit_setup = true;
+  bool orbit_status = false;
+  POLY_NC_WriteGroup(dataFile, ePair.GRP, orbit_setup, orbit_status);
+  //
+  size_t n_orbit = ePair.ListFace.size();
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    POLY_NC_WriteFace(dataFile, i_orbit, ePair.ListFace[i_orbit]);
+}
+
+
+
+
+
+
+template<typename Tkey, typename Tval>
 struct DataBank {
 private:
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   // It is better to use std::unordered_map for the List of entries:
   // This makes the check of equality rarer and instead uses the hash
   // more strictly.
   // Plus it is better because the tsl::sparse_map requires having the
   // copy operator and we want to avoid that for the vectface.
-  std::unordered_map<MyMatrix<T>, PairStore<Tgroup>> ListEnt;
+  std::unordered_map<Tkey, Tval> ListEnt;
   bool Saving;
   std::string SavingPrefix;
-  PairStore<Tgroup> TrivElt;
+  Tval TrivElt;
 public:
-  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix), TrivElt({Tgroup(), vectface(0)})
+  DataBank(bool const& _Saving, std::string const& _SavingPrefix) : Saving(_Saving), SavingPrefix(_SavingPrefix)
   {
     if (Saving) {
       size_t iOrbit=0;
@@ -282,27 +293,27 @@ public:
         std::string eFileBank = SavingPrefix + "Dual_Desc_" + std::to_string(iOrbit) + ".nc";
         if (!IsExistingFile(eFileBank))
           break;
-        EquivariantDualDescription<T,Tgroup> eTriple = Read_BankEntry<T,Tgroup>(eFileBank);
-        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << " |EXT|=" << eTriple.EXT.rows() << " |ListFace|=" << eTriple.ListFace.size() << "\n";
-        ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore<Tgroup>>(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(eTriple.ListFace)}));
+        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << "\n";
+        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(eFileBank);
+        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first), std::move(PairKV.second)));
         iOrbit++;
       }
     }
   }
-  void InsertEntry(MyMatrix<T> && EXT, Tgroup && GRP, vectface && ListFace)
+  void InsertEntry(Tkey && eKey, Tval && eVal)
   {
     if (Saving) {
       size_t n_orbit = ListEnt.size();
       std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
       std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-      Write_BankEntry(eFile, EXT, GRP, ListFace);
+      Write_BankEntry(eFile, eKey, eVal);
     }
-    ListEnt.emplace(std::make_pair<MyMatrix<T>, PairStore<Tgroup>>(std::move(EXT), {std::move(GRP), std::move(ListFace)}));
+    ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
   }
-  const PairStore<Tgroup>& GetDualDesc(MyMatrix<T> const& EXT) const
+  const Tval& GetDualDesc(const Tkey& eKey) const
   {
     std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
-    typename std::unordered_map<MyMatrix<T>, PairStore<Tgroup>>::const_iterator iter = ListEnt.find(EXT);
+    typename std::unordered_map<Tkey, Tval>::const_iterator iter = ListEnt.find(eKey);
     if (iter == ListEnt.end())
       return TrivElt; // If returning empty then it means nothing has been found.
     return iter->second;
@@ -328,7 +339,7 @@ void insert_entry_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<tru
       ListFaceO.push_back(eInc);
     }
     Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
-    bank.InsertEntry(std::move(ePair.first), std::move(GrpConj), std::move(ListFaceO));
+    bank.InsertEntry(std::move(ePair.first), {std::move(GrpConj), std::move(ListFaceO)});
   } else {
     TripleCanonic<T,Tgroup> eTriple = CanonicalizationPolytopeTriple<T,Tgroup>(EXT, WMat);
     bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
@@ -353,7 +364,7 @@ void insert_entry_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<tru
         ListFaceO.push_back(eInc);
       }
     }
-    bank.InsertEntry(std::move(eTriple.EXT), std::move(eTriple.GRP), std::move(ListFaceO));
+    bank.InsertEntry(std::move(eTriple.EXT), {std::move(eTriple.GRP), std::move(ListFaceO)});
   }
 }
 
@@ -965,7 +976,7 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tg
 //
 template<typename T,typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-         DataBank<T,Tgroup,Tidx_value> & TheBank,
+         DataBank<MyMatrix<T>,PairStore<Tgroup>> & TheBank,
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
@@ -1042,7 +1053,7 @@ vectface DUALDESC_AdjacencyDecomposition(
         DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
         size_t SelectedOrbit = df.SelectedOrbit;
         std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-        vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+        vectface TheOutput=DUALDESC_AdjacencyDecomposition<T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
         for (auto& eOrbB : TheOutput) {
           Face eFlip = df.flip(eOrbB);
           RPL.FuncInsert(eFlip);
@@ -1168,7 +1179,9 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   SingleBlock BlockBANK=eFull.ListBlock.at("BANK");
   bool BANK_IsSaving=BlockBANK.ListBoolValues.at("Saving");
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
-  DataBank<T,Tgroup,Tidx_value> TheBank(BANK_IsSaving, BANK_Prefix);
+  using Tkey = MyMatrix<T>;
+  using Tval = PairStore<Tgroup>;
+  DataBank<Tkey,Tval> TheBank(BANK_IsSaving, BANK_Prefix);
   //
   std::cerr << "Reading DATA\n";
   SingleBlock BlockDATA=eFull.ListBlock.at("DATA");
@@ -1214,7 +1227,7 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   AllArr.Saving=DD_Saving;
   //
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  vectface TheOutput=DUALDESC_AdjacencyDecomposition(TheBank, EXTred, GRP, AllArr, DD_Prefix);
+  vectface TheOutput=DUALDESC_AdjacencyDecomposition<T,Tgroup,Tidx_value>(TheBank, EXTred, GRP, AllArr, DD_Prefix);
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
   OutputFacets(TheOutput, OUTfile, OutFormat);

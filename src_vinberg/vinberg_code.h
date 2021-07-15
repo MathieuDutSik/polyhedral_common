@@ -576,6 +576,8 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       SelectedRoots.push_back(-uRoot);
   }
   std::cerr << "FundCone, step 4\n";
+  MyMatrix<Tint> Mtest = MatrixFromVectorFamily(SelectedRoots);
+  std::cerr << "Rank(Mtest)=" << RankMat(Mtest) << "\n";
   //
   // Now iterating over the roots.
   //
