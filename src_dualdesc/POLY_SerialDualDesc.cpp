@@ -1,6 +1,8 @@
 #include "Permutation.h"
 #include "Group.h"
+#include "Group_serialization.h"
 #include "POLY_RecursiveDualDesc.h"
+
 int main(int argc, char *argv[])
 {
   try {

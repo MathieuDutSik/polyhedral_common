@@ -1,23 +1,7 @@
 #ifndef INCLUDE_DATABANK_H
 #define INCLUDE_DATABANK_H
 
-
 #include <boost/asio.hpp>
-
-
-#include <boost/archive/tmpdir.hpp>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/assume_abstract.hpp>
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/split_free.hpp>
 
 
 
@@ -111,6 +95,21 @@ struct TripleNKV {
 };
 
 
+namespace boost::serialization {
+
+  template<class Archive, typename Tkey, typename Tval>
+  inline void serialize(Archive & ar, TripleNKV<Tkey,Tval> & triple, const unsigned int version)
+  {
+    ar & make_nvp("nature", triple.nature);
+    ar & make_nvp("eKey", triple.eKey);
+    ar & make_nvp("eVal", triple.eVal);
+  }
+
+}
+
+
+
+
 template<typename Tkey, typename Tval>
 struct DataBankServer {
 private:
@@ -118,7 +117,6 @@ private:
   bool Saving;
   std::string SavingPrefix;
   short unsigned int port;
-  Tval TrivElt;
 public:
 DataBankServer(const bool& _Saving, const std::string& _SavingPrefix, const short unsigned int _port) : Saving(_Saving), SavingPrefix(_SavingPrefix), port(_port)
   {
@@ -159,7 +157,7 @@ DataBankServer(const bool& _Saving, const std::string& _SavingPrefix, const shor
         std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
         typename std::unordered_map<Tkey, Tval>::const_iterator iter = ListEnt.find(eTriple.eKey);
         if (iter == ListEnt.end())
-          send_data<Tval>(socket, TrivElt); // If returning empty then it means nothing has been found.
+          send_data<Tval>(socket, Tval()); // If returning empty then it means nothing has been found.
         send_data<Tval>(socket, iter->second);
       }
       std::cerr << "------------------------------ " << n_iter << " ------------------------------\n";
@@ -174,7 +172,6 @@ template<typename Tkey, typename Tval>
 struct DataBankClient {
 private:
   std::unordered_map<Tkey, Tval> ListEnt;
-  Tval TrivElt;
   short unsigned int port;
 public:
   DataBankClient(const short unsigned int& _port) : port(_port)
@@ -186,18 +183,17 @@ public:
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
     boost::asio::ip::tcp::socket socket(io_service);
     socket.connect(endpoint);
-    send_data<TripleNKV>(socket, {'i', eKey, eVal});
+    send_data<TripleNKV<Tkey,Tval>>(socket, {'i', std::move(eKey), std::move(eVal)});
     socket.close();
   }
-  const Tval& GetDualDesc(const Tkey& eKey) const
+  Tval GetDualDesc(const Tkey& eKey) const
   {
     boost::asio::io_service io_service;
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
     boost::asio::ip::tcp::socket socket(io_service);
     socket.connect(endpoint);
-    send_data<TripleNKV>(socket, {'g', eKey, TrivElt});
-    Tval eVal = read_data<Tval>(socket);
-    socket.close();
+    send_data<TripleNKV<Tkey,Tval>>(socket, {'g', std::move(eKey), Tval()});
+    return read_data<Tval>(socket);
   }
 };
 

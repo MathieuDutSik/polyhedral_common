@@ -814,6 +814,59 @@ SingleEntryStatus<Tint> POLY_NC_ReadSingleEntryStatus(netCDF::NcFile & dataFile,
 
 
 
+template<typename Tgroup_impl>
+struct PairStore {
+  using Tgroup = Tgroup_impl;
+  Tgroup GRP;
+  vectface ListFace;
+};
+
+
+
+namespace boost::serialization {
+
+  template<class Archive, typename Tgroup>
+  inline void serialize(Archive & ar, PairStore<Tgroup> & pair, const unsigned int version)
+  {
+    ar & make_nvp("GRP", pair.GRP);
+    ar & make_nvp("ListFace", pair.ListFace);
+  }
+
+}
+
+
+
+template<typename Tkey, typename Tval>
+std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
+{
+  using T = typename Tkey::value_type;
+  using Tgroup = typename Tval::Tgroup;
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
+  MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
+  Tgroup GRP = POLY_NC_ReadGroup<Tgroup>(dataFile);
+  vectface ListFace = POLY_NC_ReadAllFaces(dataFile);
+  std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size() << "\n";
+  Tval eVal{std::move(GRP), std::move(ListFace)};
+  return {std::move(EXT), std::move(eVal)};
+}
+
+
+template<typename T, typename Tgroup>
+void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
+{
+  if (!FILE_IsFileMakeable(eFile)) {
+    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
+    throw TerminalException{1};
+  }
+  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
+  POLY_NC_WritePolytope(dataFile, EXT);
+  bool orbit_setup = true;
+  bool orbit_status = false;
+  POLY_NC_WriteGroup(dataFile, ePair.GRP, orbit_setup, orbit_status);
+  size_t n_orbit = ePair.ListFace.size();
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    POLY_NC_WriteFace(dataFile, i_orbit, ePair.ListFace[i_orbit]);
+}
 
 
 

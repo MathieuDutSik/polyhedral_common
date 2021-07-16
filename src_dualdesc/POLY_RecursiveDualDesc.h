@@ -11,6 +11,7 @@
 
 #include "POLY_GAP.h"
 #include "POLY_netcdf_file.h"
+#include "Databank.h"
 #include "MatrixGroupBasic.h"
 #include <signal.h>
 
@@ -225,50 +226,7 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const& EXT)
 }
 
 
-template<typename Tgroup_impl>
-struct PairStore {
-  using Tgroup = Tgroup_impl;
-  Tgroup GRP;
-  vectface ListFace;
-};
 
-
-template<typename Tkey, typename Tval>
-std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
-{
-  using T = typename Tkey::value_type;
-  using Tgroup = typename Tval::Tgroup;
-  netCDF::NcFile dataFile(eFile, netCDF::NcFile::read);
-  MyMatrix<T> EXT = POLY_NC_ReadPolytope<T>(dataFile);
-  Tgroup GRP = POLY_NC_ReadGroup<Tgroup>(dataFile);
-  vectface ListFace = POLY_NC_ReadAllFaces(dataFile);
-  std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size() << "\n";
-  Tval eVal{std::move(GRP), std::move(ListFace)};
-  return {std::move(EXT), std::move(eVal)};
-}
-
-
-
-template<typename T, typename Tgroup>
-void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
-{
-  if (!FILE_IsFileMakeable(eFile)) {
-    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
-    throw TerminalException{1};
-  }
-  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-  POLY_NC_WritePolytope(dataFile, EXT);
-  bool orbit_setup = true;
-  bool orbit_status = false;
-  POLY_NC_WriteGroup(dataFile, ePair.GRP, orbit_setup, orbit_status);
-  //
-  size_t n_orbit = ePair.ListFace.size();
-  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
-    POLY_NC_WriteFace(dataFile, i_orbit, ePair.ListFace[i_orbit]);
-}
-
-
-#include "Databank.h"
 
 
 
@@ -923,9 +881,9 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tg
 // ---Serial mode. Should be faster indeed.
 // ---
 //
-template<typename T,typename Tgroup, typename Tidx_value>
+template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-         DataBank<MyMatrix<T>,PairStore<Tgroup>> & TheBank,
+         Tbank & TheBank, 
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
@@ -1002,7 +960,7 @@ vectface DUALDESC_AdjacencyDecomposition(
         DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
         size_t SelectedOrbit = df.SelectedOrbit;
         std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-        vectface TheOutput=DUALDESC_AdjacencyDecomposition<T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+        vectface TheOutput=DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
         for (auto& eOrbB : TheOutput) {
           Face eFlip = df.flip(eOrbB);
           RPL.FuncInsert(eFlip);
@@ -1035,12 +993,16 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, int> ListIntValues1;
   ListStringValues1["EXTfile"]="unset.ext";
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
   ListStringValues1["OutFormat"]="GAP";
+  ListStringValues1["parallelization_method"]="serial";
+  ListIntValues1["port"] = 1234;
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListIntValues=ListIntValues1;
   ListBlock["DATA"]=BlockDATA;
   // HEURISTIC
   std::map<std::string, std::string> ListStringValuesH;
@@ -1130,7 +1092,6 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::string BANK_Prefix=BlockBANK.ListStringValues.at("Prefix");
   using Tkey = MyMatrix<T>;
   using Tval = PairStore<Tgroup>;
-  DataBank<Tkey,Tval> TheBank(BANK_IsSaving, BANK_Prefix);
   //
   std::cerr << "Reading DATA\n";
   SingleBlock BlockDATA=eFull.ListBlock.at("DATA");
@@ -1153,6 +1114,10 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
     throw TerminalException{1};
   }
   Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
+  int port_i=BlockDATA.ListIntValues.at("port");
+  std::cerr << "port_i=" << port_i << "\n";
+  short unsigned int port = port_i;
+  std::string parallelization_method=BlockDATA.ListStringValues.at("parallelization_method");
   //
   SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
   //
@@ -1176,7 +1141,21 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   AllArr.Saving=DD_Saving;
   //
   MyMatrix<T> EXTred=ColumnReduction(EXT);
-  vectface TheOutput=DUALDESC_AdjacencyDecomposition<T,Tgroup,Tidx_value>(TheBank, EXTred, GRP, AllArr, DD_Prefix);
+  auto get_vectface=[&]() -> vectface {
+    if (parallelization_method == "serial") {
+      using Tbank = DataBank<Tkey,Tval>;
+      Tbank TheBank(BANK_IsSaving, BANK_Prefix);
+      return DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, EXTred, GRP, AllArr, DD_Prefix);
+    }
+    if (parallelization_method == "bank_asio") {
+      using Tbank = DataBankClient<Tkey,Tval>;
+      Tbank TheBank(port);
+      return DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, EXTred, GRP, AllArr, DD_Prefix);
+    }
+    std::cerr << "Failed to find a matching entry for parallelization_method\n";
+    throw TerminalException{1};
+  };
+  vectface TheOutput=get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
   OutputFacets(TheOutput, OUTfile, OutFormat);
