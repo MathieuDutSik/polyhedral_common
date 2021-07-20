@@ -13,6 +13,8 @@
 #include "POLY_netcdf_file.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
 #include <signal.h>
 
 //#define MURMUR_HASH
@@ -997,15 +999,19 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
          Tbank & TheBank,
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
+         boost::mpi::communicator & comm,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
 	 std::string const& ePrefix)
 {
   using Tgr = GraphListAdj;
   using Tint=typename Tgroup::Tint;
+  int irank=comm.rank();
+  int size=comm.size();
 
   std::vector<DatabaseOrbits<T,Tint,Tgroup>> ListRPL;
   ListRPL.emplace_back(DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr));
   while (true) {
+    
   }
   return vectface(0);
 }
