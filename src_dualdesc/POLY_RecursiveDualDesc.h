@@ -407,6 +407,11 @@ private:
 #endif
   bool is_opened;
 public:
+  DatabaseOrbits() = delete;
+  DatabaseOrbits(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
+  DatabaseOrbits(DatabaseOrbits<T,Tint,Tgroup> &&) = delete;
+  DatabaseOrbits& operator=(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
+
   // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const& f_in) const
   {
@@ -883,7 +888,7 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tg
 //
 template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-         Tbank & TheBank, 
+         Tbank & TheBank,
 	 MyMatrix<T> const& EXT,
 	 Tgroup const& GRP,
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
@@ -986,6 +991,30 @@ vectface DUALDESC_AdjacencyDecomposition(
   }
 }
 
+
+/*
+template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
+vectface MPI_DUALDESC_AdjacencyDecomposition(
+         Tbank & TheBank,
+	 MyMatrix<T> const& EXT,
+	 Tgroup const& GRP,
+	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
+	 std::string const& ePrefix)
+{
+  using Tgr = GraphListAdj;
+  using Tint=typename Tgroup::Tint;
+
+  std::vector<DatabaseOrbits<T,Tint,Tgroup>> ListRPL;
+  ListRPL.emplace_back(
+  while (true) {
+    
+
+
+    
+  }
+  return vectface(0);
+}
+*/
 
 
 FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
