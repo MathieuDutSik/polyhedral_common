@@ -992,7 +992,6 @@ vectface DUALDESC_AdjacencyDecomposition(
 }
 
 
-/*
 template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
 vectface MPI_DUALDESC_AdjacencyDecomposition(
          Tbank & TheBank,
@@ -1005,16 +1004,11 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
 
   std::vector<DatabaseOrbits<T,Tint,Tgroup>> ListRPL;
-  ListRPL.emplace_back(
+  ListRPL.emplace_back(DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr));
   while (true) {
-    
-
-
-    
   }
   return vectface(0);
 }
-*/
 
 
 FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
