@@ -994,6 +994,25 @@ vectface DUALDESC_AdjacencyDecomposition(
 }
 
 
+struct message_facet {
+  int e_hash;
+  vectface vf; // List of vectface by the DatabaseBank
+};
+
+namespace boost::serialization {
+
+  template<class Archive>
+  inline void serialize(Archive & ar, message_facet & mesg, const unsigned int version)
+  {
+    ar & make_nvp("hash", mesg.e_hash);
+    ar & make_nvp("vf", mesg.vf);
+  }
+
+}
+
+
+
+
 template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
 vectface MPI_DUALDESC_AdjacencyDecomposition(
          Tbank & TheBank,
@@ -1013,10 +1032,8 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   const int tag_request_status_enum = 38; // Request for the Balinski stuff
   const int tag_terminate_enumeration = 39; // Request to terminate enumeration as everything is matching
   const int tag_termination_confirmation = 40; // The enumeration is confirmed to have been terminated.
-  struct message_facet {
-    std::vector<int> list_hash;
-    std::vector<vectface> list_vectface; // List of vectface by the DatabaseBank
-  };
+
+
 
   // We can have DatabseBank created on disjoint processes.
   // The order will not be the same between processors.
@@ -1029,32 +1046,31 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   // The Buffers in output and receive
   std::vector<message_facet> ListEntries_OUT(size);
   std::vector<message_facet> ListEntries_IN;
+  // The MPI related stuff
+  std::vector<boost::mpi::request> ListRequest;
+  std::vector<int> RequestStatus;
   // The infinite loop to do the enumeration
   while (true) {
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_facets) {
+        message_facet e_mesg;
+        comm.recv(prob->source(), prob->tag(), e_mesg);
+        ListEntries_IN.push_back(e_mesg);
       }
     } else {
-      // First clearing the logs
+      // First clearing the buffers
       for (auto & eEntry_IN : ListEntries_IN) {
-        size_t len = eEntry_IN.list_hash.size();
-        for (size_t i=0; i<len; i++) {
-          int e_hash = eEntry_IN.list_hash[i];
-          size_t pos = map[e_hash];
-          for (auto & eFace : eEntry_IN.list_vectface[i])
-            ListRPL[pos].FuncInsert(eFace);
-        }
+        int e_hash = eEntry_IN.e_hash;
+        size_t pos = map[e_hash];
+        for (auto & eFace : eEntry_IN.vf)
+          ListRPL[pos].FuncInsert(eFace);
       }
-      // 
+      // Now treating the block with the smallest 
     }
-
-
-    
-    
   }
-  return vectface(0);
+  return ListRPL[0].FuncListOrbitIncidence();
 }
 
 
