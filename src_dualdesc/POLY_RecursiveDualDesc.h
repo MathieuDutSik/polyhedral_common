@@ -1007,10 +1007,51 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int irank=comm.rank();
   int size=comm.size();
+  // New Facets
+  const int tag_new_facets = 37; // New facets to be added, the most common request
+  // Balinski style premature termination
+  const int tag_request_status_enum = 38; // Request for the Balinski stuff
+  const int tag_terminate_enumeration = 39; // Request to terminate enumeration as everything is matching
+  const int tag_termination_confirmation = 40; // The enumeration is confirmed to have been terminated.
+  struct message_facet {
+    std::vector<int> list_hash;
+    std::vector<vectface> list_vectface; // List of vectface by the DatabaseBank
+  };
 
+  // We can have DatabseBank created on disjoint processes.
+  // The order will not be the same between processors.
   std::vector<DatabaseOrbits<T,Tint,Tgroup>> ListRPL;
   ListRPL.emplace_back(DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr));
+  std::unordered_map<int,size_t> map; // mapping from the hash of database orbit to the index in ListRPL
+  std::vector<int> map_rev; // mapping from index of ListRPL to hash
+  map[0] = 0;
+  map_rev.push_back(0);
+  // The Buffers in output and receive
+  std::vector<message_facet> ListEntries_OUT(size);
+  std::vector<message_facet> ListEntries_IN;
+  // The infinite loop to do the enumeration
   while (true) {
+    boost::optional<boost::mpi::status> prob = comm.iprobe();
+    if (prob) {
+      std::cerr << "We are probing something\n";
+      if (prob->tag() == tag_new_facets) {
+      }
+    } else {
+      // First clearing the logs
+      for (auto & eEntry_IN : ListEntries_IN) {
+        size_t len = eEntry_IN.list_hash.size();
+        for (size_t i=0; i<len; i++) {
+          int e_hash = eEntry_IN.list_hash[i];
+          size_t pos = map[e_hash];
+          for (auto & eFace : eEntry_IN.list_vectface[i])
+            ListRPL[pos].FuncInsert(eFace);
+        }
+      }
+      // 
+    }
+
+
+    
     
   }
   return vectface(0);
