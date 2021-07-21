@@ -709,7 +709,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
     ListListSet.push_back(eFace);
   if (SizeGen == TotalSize)
     return ListListSet;
-  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  //  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while(true) {
     Face eFace = ListListSet.pop();
@@ -736,8 +736,6 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
 
 
 
-
-
 template<typename Tgroup>
 vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
 {
@@ -752,6 +750,34 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, con
   os << "OrbitSplitting |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
   return eListSma;
 }
+
+
+
+
+// This is for the lifting of orbits coming with the dual description of perfect cones.
+// It should replace 
+template<typename Tgroup>
+void OrbitSplittingPerfectFacet(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os2, std::ostream& os3)
+{
+  std::cerr << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
+  size_t nb_orbit_big = eListBig.size();
+  mpz_class nb_orbit_sma;
+  size_t pos=0;
+  for (auto & eSet : eListBig) {
+    pos++;
+    vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, std::cerr);
+    mpz_class orb_siz = ListListSet.size();
+    nb_orbit_sma += orb_siz;
+    for (auto & eFace : ListListSet) {
+      mpz_class res = getsetasint<mpz_class>(eFace);
+      os3 << res << "\n";
+    }
+    std::cerr << "iInc=" << pos << " / " << nb_orbit_big << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz << "\n";
+  }
+  os2 << nb_orbit_sma << "\n";
+}
+
+
 
 
 
