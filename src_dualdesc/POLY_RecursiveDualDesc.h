@@ -59,11 +59,22 @@
 
 
 std::atomic<bool> ExitEvent;
+boost::asio::ip::tcp::endpoint endpoint_bank;
+
 
 void signal_callback_handler(int signum) {
   std::cout << "Caught signal " << signum << "\n";
   std::cout << "We are going to exit hopefully\n";
   ExitEvent = true;
+}
+
+
+template<typename Tkey, typename Tval>
+void signal_callback_handler_bank(int signum) {
+  std::cout << "Caught signal " << signum << "\n";
+  std::cout << "We are going to exit from the bank hopefully\n";
+  TripleNKV<Tkey,Tval> triple{'e', Tkey(), Tval()};
+  send_data_atomic<TripleNKV<Tkey,Tval>>(endpoint_bank, triple);
 }
 
 
@@ -1128,6 +1139,30 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   // Merging all data
   return {std::move(ListBlock), "undefined"};
 }
+
+
+FullNamelist NAMELIST_GetStandard_BankingSystem()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  ListBoolValues1["Saving"]=false;
+  ListStringValues1["Prefix"]="/irrelevant/";
+  ListIntValues1["port"] = 1234;
+  SingleBlock BlockPROC;
+  BlockPROC.ListIntValues = ListIntValues1;
+  BlockPROC.ListBoolValues = ListBoolValues1;
+  BlockPROC.ListStringValues = ListStringValues1;
+  ListBlock["PROC"]=BlockPROC;
+  // Merging all data
+  return {std::move(ListBlock), "undefined"};
+}
+
+
+
+
 
 
 

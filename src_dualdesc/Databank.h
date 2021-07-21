@@ -86,6 +86,19 @@ void send_data(boost::asio::ip::tcp::socket & socket, const T& data) {
   }
 }
 
+template<typename T>
+void send_data_atomic(const boost::asio::ip::tcp::endpoint& endpoint, const T& data) {
+  boost::asio::io_service io_service;
+  boost::asio::ip::tcp::socket socket(io_service);
+  socket.connect(endpoint);
+  send_data<T>(socket, data);
+  socket.close();
+}
+
+
+
+
+
 
 template<typename Tkey, typename Tval>
 struct TripleNKV {
@@ -173,23 +186,18 @@ struct DataBankClient {
 private:
   std::unordered_map<Tkey, Tval> ListEnt;
   short unsigned int port;
+  boost::asio::ip::tcp::endpoint endpoint;
 public:
-  DataBankClient(const short unsigned int& _port) : port(_port)
+  DataBankClient(const short unsigned int& _port) : port(_port), endpoint(boost::asio::ip::tcp::v4(), port)
   {
   }
   void InsertEntry(Tkey && eKey, Tval && eVal)
   {
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
-    boost::asio::ip::tcp::socket socket(io_service);
-    socket.connect(endpoint);
-    send_data<TripleNKV<Tkey,Tval>>(socket, {'i', std::move(eKey), std::move(eVal)});
-    socket.close();
+    send_data_atomic<TripleNKV<Tkey,Tval>>(endpoint, {'i', std::move(eKey), std::move(eVal)});
   }
   Tval GetDualDesc(const Tkey& eKey) const
   {
     boost::asio::io_service io_service;
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
     boost::asio::ip::tcp::socket socket(io_service);
     socket.connect(endpoint);
     send_data<TripleNKV<Tkey,Tval>>(socket, {'g', std::move(eKey), Tval()});
