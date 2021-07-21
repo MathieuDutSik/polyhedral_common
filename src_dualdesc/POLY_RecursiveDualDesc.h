@@ -1022,6 +1022,46 @@ namespace boost::serialization {
 }
 
 
+std::vector<size_t> get_subset_index_rev(const size_t& n_act) {
+  size_t n_ent_bit = 8 * sizeof(size_t); // The size of the selection
+  size_t n_bit_hash = n_ent_bit;
+  if (n_act <= n_ent_bit)
+    n_bit_hash = n_act;
+  std::vector<size_t> subset_index(n_bit_hash);
+  size_t pos_wrt = n_bit_hash;;
+  if (n_act <= n_ent_bit) {
+    for (size_t i=0; i<n_ent_bit; i++) {
+      pos_wrt--;
+      subset_index[pos_wrt] = i;
+    }
+  } else {
+    double frac = double(n_act-1) / double(n_ent_bit-1);
+    for (size_t i=0; i<n_ent_bit; i++) {
+      size_t pos = size_t(round(frac * double(i)));
+      if (pos < 0)
+        pos = 0;
+      if (pos >= n_act)
+        pos = n_act-1;
+      pos_wrt--;
+      subset_index[pos_wrt] = pos;
+    }
+  }
+  return subset_index;
+}
+
+template<typename Tidx>
+size_t evaluate_subset_hash(const std::vector<Tidx>& subset_index, const Face& f)
+{
+  size_t hash=0;
+  size_t* ptr1 = &hash;
+  uint8_t* ptr2 = (uint8_t*) ptr1;
+  size_t n_bit_hash = subset_index.size();
+  for (size_t i=0; i<n_bit_hash; i++) {
+    bool val = f[subset_index[i]];
+    setbit_ptr(ptr2, i, val);
+  }
+  return hash;
+}
 
 
 template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
@@ -1044,6 +1084,8 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   const int tag_terminate_enumeration = 39; // Request to terminate enumeration as everything is matching
   const int tag_termination_confirmation = 40; // The enumeration is confirmed to have been terminated.
 
+  size_t n_rows = EXT.rows();
+  std::vector<size_t> subset_index_proc = get_subset_index_rev(n_rows);
 
 
   // We can have DatabseBank created on disjoint processes.
