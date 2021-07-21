@@ -371,6 +371,19 @@ struct UndoneOrbitInfo {
   Face face;
 };
 
+template<typename Tint>
+UndoneOrbitInfo<Tint> CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>>& LComb)
+{
+  size_t n = LComb[0].face.size();
+  Tint nbUndone = LComb[0].nbUndone;
+  Face f = LComb[0].face;
+  for (size_t i=1; i<LComb.size(); i++) {
+    nbUndone += LComb[i].nbUndone;
+    f &= LComb[i].face;
+  }
+  return {nbUndone, f};
+}
+
 
 
 template<typename T, typename Tint, typename Tgroup>
