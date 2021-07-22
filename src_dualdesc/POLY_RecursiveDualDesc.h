@@ -368,31 +368,40 @@ struct DataFacet {
 template<typename Tint>
 struct UndoneOrbitInfo {
   Tint nbUndone;
-  Face face;
+  Face eSetUndone;
 };
 
 template<typename Tint>
 UndoneOrbitInfo<Tint> CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>>& LComb)
 {
-  size_t n = LComb[0].face.size();
   Tint nbUndone = LComb[0].nbUndone;
-  Face f = LComb[0].face;
+  Face f = LComb[0].eSetUndone;
   for (size_t i=1; i<LComb.size(); i++) {
     nbUndone += LComb[i].nbUndone;
-    f &= LComb[i].face;
+    f &= LComb[i].eSetUndone;
   }
   return {nbUndone, f};
+}
+
+
+template<typename Tint>
+bool ComputeStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& CritSiz)
+{
+  if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
+    return true;
+  return false;
 }
 
 
 
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
+public:
+  Tint CritSiz;
 private:
   using Torbsize=uint16_t;
   using Tidx = typename Tgroup::Telt::Tidx;
   const MyMatrix<T>& EXT;
-  Tint CritSiz;
   const Tgroup& GRP;
   Tint groupOrder;
   std::string MainPrefix;
@@ -1079,9 +1088,9 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int irank=comm.rank();
   int size=comm.size();
-  // New Facets
+  // New Facets (processed asynchronously)
   const int tag_new_facets = 37; // New facets to be added, the most common request
-  // Balinski style premature termination
+  // Balinski style premature termination (processed as early as possible)
   const int tag_request_status_enum = 38; // Request for the Balinski stuff
   const int tag_terminate_enumeration = 39; // Request to terminate enumeration as everything is matching
   const int tag_termination_confirmation = 40; // The enumeration is confirmed to have been terminated.
@@ -1109,7 +1118,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
-      if (prob->tag() == tag_new_facets) {
+      if (prob->tag() == tag_new_facets) { // proessed asynchronously
         message_facet e_mesg;
         comm.recv(prob->source(), prob->tag(), e_mesg);
         ListEntries_IN.push_back(e_mesg);
@@ -1122,7 +1131,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
         for (auto & eFace : eEntry_IN.vf)
           ListRPL[pos].FuncInsert(eFace);
       }
-      // Now treating the block with the smallest 
+      // Now treating the block with the smallest
     }
   }
   return ListRPL[0].FuncListOrbitIncidence();
