@@ -365,15 +365,43 @@ struct DataFacet {
   }
 };
 
+template<typename Tint>
+struct UndoneOrbitInfo {
+  Tint nbUndone;
+  Face eSetUndone;
+};
+
+template<typename Tint>
+UndoneOrbitInfo<Tint> CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>>& LComb)
+{
+  Tint nbUndone = LComb[0].nbUndone;
+  Face f = LComb[0].eSetUndone;
+  for (size_t i=1; i<LComb.size(); i++) {
+    nbUndone += LComb[i].nbUndone;
+    f &= LComb[i].eSetUndone;
+  }
+  return {nbUndone, f};
+}
+
+
+template<typename Tint>
+bool ComputeStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& CritSiz)
+{
+  if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
+    return true;
+  return false;
+}
+
 
 
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
+public:
+  Tint CritSiz;
 private:
   using Torbsize=uint16_t;
   using Tidx = typename Tgroup::Telt::Tidx;
   const MyMatrix<T>& EXT;
-  Tint CritSiz;
   const Tgroup& GRP;
   Tint groupOrder;
   std::string MainPrefix;
@@ -426,8 +454,7 @@ public:
   DatabaseOrbits& operator=(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
 
   // conversion functions that depend only on n_act and n_bit_orbsize.
-  SingEnt FaceToSingEnt(Face const& f_in) const
-  {
+  SingEnt FaceToSingEnt(Face const& f_in) const {
     Face f(n_act);
     for (size_t i=0; i<n_act; i++)
       f[i] = f_in[i];
@@ -441,8 +468,7 @@ public:
     }
     return {f,idx_orb};
   }
-  Face SingEntToFace(SingEnt const& eEnt) const
-  {
+  Face SingEntToFace(SingEnt const& eEnt) const {
     Face f(n_act + n_bit_orbsize);
     for (size_t i=0; i<n_act; i++)
       f[i] = eEnt.face[i];
@@ -457,8 +483,7 @@ public:
     return f;
   }
   // Database code that uses ListOrbit;
-  SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const
-  {
+  SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const {
     size_t i_acc = delta * i_orb;
     Face f(n_act);
     for (size_t i=0; i<n_act; i++) {
@@ -474,8 +499,7 @@ public:
     }
     return {f,idx_orb};
   }
-  void InsertListOrbitEntry(SingEnt const& eEnt)
-  {
+  void InsertListOrbitEntry(SingEnt const& eEnt) {
     // Insert bytes to avoid a memory segfault.
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
@@ -497,8 +521,7 @@ public:
       work_idx = work_idx / 2;
     }
   }
-  void InsertListOrbitFace(Face const& face)
-  {
+  void InsertListOrbitFace(Face const& face) {
     // Insert bytes to avoid a memory segfault.
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
@@ -513,8 +536,7 @@ public:
       i_acc++;
     }
   }
-  void InsertListOrbitIdxOrb(Torbsize const& idx_orb)
-  {
+  void InsertListOrbitIdxOrb(Torbsize const& idx_orb) {
     /* TRICK 8: The computation of the stabilizer is needed for getting the orbitsize
        but this is expensive to do. Therefore we first insert the list of faces and if
        found to be new then we insert afterwards the idx_orb */
@@ -528,8 +550,7 @@ public:
     }
   }
   // Group functionalities.
-  Torbsize GetOrbSizeIndex(Tint const& orbSize)
-  {
+  Torbsize GetOrbSizeIndex(Tint const& orbSize) {
     /* TRICK 4: value 0 is the default constructed one and so using it we can find if the entry is new or not
        in only one call */
     Torbsize & idx = OrbSize_Map[orbSize];
@@ -545,8 +566,7 @@ public:
     }
     return idx - 1;
   }
-  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos)
-  {
+  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos) {
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
@@ -560,8 +580,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), CritSiz(EXT.cols()-2), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os)
-  {
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), CritSiz(EXT.cols()-2), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
@@ -698,8 +717,7 @@ public:
       os << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
     }
   }
-  ~DatabaseOrbits()
-  {
+  ~DatabaseOrbits() {
     /* TRICK 5: The destructor does NOT destroy the database! This is because it can be used in another call.
        Note that the returning of the list of orbit does destroy the database and this gives a small window
        in which bad stuff can happen.
@@ -712,8 +730,7 @@ public:
       delete ff; // which closes the file and save the data to disk
     os << "Clean closing of the DatabaseOrbits\n";
   }
-  vectface FuncListOrbitIncidence()
-  {
+  vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
       std::string eFileNC = MainPrefix + ".nc";
       dataFile.close();
@@ -740,8 +757,7 @@ public:
     }
     return retListOrbit;
   }
-  void FuncInsert(Face const& face_can) // The face should have been canonicalized beforehand.
-  {
+  void FuncInsert(Face const& face_can) {// The face should have been canonicalized beforehand.
     InsertListOrbitFace(face_can);
     DictOrbit.insert(nbOrbit);
     if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
@@ -759,8 +775,7 @@ public:
       ff->setface(nbOrbit - 1, f);
     }
   }
-  void FuncPutOrbitAsDone(size_t const& iOrb)
-  {
+  void FuncPutOrbitAsDone(size_t const& iOrb) {
     const SingEnt & eEnt = RetrieveListOrbitEntry(iOrb);
     if (SavingTrigger) {
       fb->setbit(iOrb, true);
@@ -775,8 +790,7 @@ public:
     os << "We have " << nbOrbit << " orbits  Nr treated=" << nbOrbitDone << " orbits  nbUndone=" << nbUndone << "\n";
     os << "\n";
   }
-  Face ComputeIntersectionUndone() const
-  {
+  Face ComputeIntersectionUndone() const {
     size_t n_row = EXT.rows();
     Face eSetReturn(n_row);
     for (size_t i_row=0; i_row<n_row; i_row++)
@@ -791,24 +805,19 @@ public:
     }
     return eSetReturn;
   }
-  Tint FuncNumber() const
-  {
+  Tint FuncNumber() const {
     return TotalNumber;
   }
-  Tint FuncNumberUndone() const
-  {
+  Tint FuncNumberUndone() const {
     return nbUndone;
   }
-  size_t FuncNumberOrbit() const
-  {
+  size_t FuncNumberOrbit() const {
     return nbOrbit;
   }
-  size_t FuncNumberOrbitDone() const
-  {
+  size_t FuncNumberOrbitDone() const {
     return nbOrbitDone;
   }
-  DataFacet<T,Tgroup> FuncGetMinimalUndoneOrbit()
-  {
+  DataFacet<T,Tgroup> FuncGetMinimalUndoneOrbit() {
     for (auto & eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
@@ -824,8 +833,7 @@ public:
     os << "We should never reach that stage as we should find some undone facet\n";
     throw TerminalException{1};
   }
-  bool GetTerminationStatus() const
-  {
+  bool GetTerminationStatus() const {
     if (nbOrbitDone > 0) {
       Face eSetUndone=ComputeIntersectionUndone();
       if (nbUndone <= CritSiz || eSetUndone.count() > 0) {
@@ -834,6 +842,9 @@ public:
       }
     }
     return false;
+  }
+  UndoneOrbitInfo<Tint> GetTerminationInfo() const {
+    return {nbOrbitDone, ComputeIntersectionUndone()};
   }
 };
 
@@ -1022,6 +1033,46 @@ namespace boost::serialization {
 }
 
 
+std::vector<size_t> get_subset_index_rev(const size_t& n_act) {
+  size_t n_ent_bit = 8 * sizeof(size_t); // The size of the selection
+  size_t n_bit_hash = n_ent_bit;
+  if (n_act <= n_ent_bit)
+    n_bit_hash = n_act;
+  std::vector<size_t> subset_index(n_bit_hash);
+  size_t pos_wrt = n_bit_hash;;
+  if (n_act <= n_ent_bit) {
+    for (size_t i=0; i<n_ent_bit; i++) {
+      pos_wrt--;
+      subset_index[pos_wrt] = i;
+    }
+  } else {
+    double frac = double(n_act-1) / double(n_ent_bit-1);
+    for (size_t i=0; i<n_ent_bit; i++) {
+      size_t pos = size_t(round(frac * double(i)));
+      if (pos < 0)
+        pos = 0;
+      if (pos >= n_act)
+        pos = n_act-1;
+      pos_wrt--;
+      subset_index[pos_wrt] = pos;
+    }
+  }
+  return subset_index;
+}
+
+template<typename Tidx>
+size_t evaluate_subset_hash(const std::vector<Tidx>& subset_index, const Face& f)
+{
+  size_t hash=0;
+  size_t* ptr1 = &hash;
+  uint8_t* ptr2 = (uint8_t*) ptr1;
+  size_t n_bit_hash = subset_index.size();
+  for (size_t i=0; i<n_bit_hash; i++) {
+    bool val = f[subset_index[i]];
+    setbit_ptr(ptr2, i, val);
+  }
+  return hash;
+}
 
 
 template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
@@ -1037,13 +1088,15 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   using Tint=typename Tgroup::Tint;
   int irank=comm.rank();
   int size=comm.size();
-  // New Facets
+  // New Facets (processed asynchronously)
   const int tag_new_facets = 37; // New facets to be added, the most common request
-  // Balinski style premature termination
+  // Balinski style premature termination (processed as early as possible)
   const int tag_request_status_enum = 38; // Request for the Balinski stuff
   const int tag_terminate_enumeration = 39; // Request to terminate enumeration as everything is matching
   const int tag_termination_confirmation = 40; // The enumeration is confirmed to have been terminated.
 
+  size_t n_rows = EXT.rows();
+  std::vector<size_t> subset_index_proc = get_subset_index_rev(n_rows);
 
 
   // We can have DatabseBank created on disjoint processes.
@@ -1065,7 +1118,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       std::cerr << "We are probing something\n";
-      if (prob->tag() == tag_new_facets) {
+      if (prob->tag() == tag_new_facets) { // proessed asynchronously
         message_facet e_mesg;
         comm.recv(prob->source(), prob->tag(), e_mesg);
         ListEntries_IN.push_back(e_mesg);
@@ -1078,7 +1131,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
         for (auto & eFace : eEntry_IN.vf)
           ListRPL[pos].FuncInsert(eFace);
       }
-      // Now treating the block with the smallest 
+      // Now treating the block with the smallest
     }
   }
   return ListRPL[0].FuncListOrbitIncidence();
