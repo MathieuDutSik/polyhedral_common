@@ -111,6 +111,10 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
     if (ansProg == eProg)
       return lrs::DualDescription_temp_incd_reduction(EXT);
     //
+    eProg = "glrs"; ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return CDD_PPL_ExternalProgram(EXT, "glrs");
+    //
     eProg = "ppl_ext"; ListProg.push_back(eProg);
     if (ansProg == eProg)
       return CDD_PPL_ExternalProgram(EXT, "ppl_lcdd");
