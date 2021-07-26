@@ -580,7 +580,7 @@ public:
     }
     nbOrbit++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : EXT(_EXT), CritSiz(EXT.cols()-2), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2),EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
