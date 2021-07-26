@@ -19,24 +19,27 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
   std::string FileO = prefix + "EXT_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
   std::string FileI = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".ext";
   std::string FileE = prefix + "INE_" + std::to_string(n_row) + "_" + std::to_string(n_col) + "_" + rndStr + ".err";
-  std::ofstream os(FileO);
-  os << "V-representation\n";
-  os << "begin\n";
-  os << n_row << " " << DimEXT << " integer\n";
-  for (size_t i_row=0; i_row<n_row; i_row++) {
-    os << "0";
-    for (size_t i_col=0; i_col<n_col; i_col++)
-      os << " " << EXT(i_row, i_col);
-    os << "\n";
+  {
+    std::ofstream os(FileO);
+    os << "V-representation\n";
+    os << "begin\n";
+    os << n_row << " " << DimEXT << " integer\n";
+    for (size_t i_row=0; i_row<n_row; i_row++) {
+      os << "0";
+      for (size_t i_col=0; i_col<n_col; i_col++)
+        os << " " << EXT(i_row, i_col);
+      os << "\n";
+    }
+    os << "end\n";
   }
-  os << "end\n";
-  os.close();
   //  std::cerr << "FileO=" << FileO << " created\n";
   //
   // Now calling the external program
   //
   std::string order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
+  std::cerr << "order=" << order << "\n";
   int iret1=system(order.c_str());
+  std::cerr << "External program terminated\n";
   if (iret1 != 0) {
     std::cerr << "The program has not terminated correctly\n";
     std::cerr << "FileO=" << FileO << "\n";
@@ -50,32 +53,48 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
   size_t iLine = 0;
   size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
-  size_t headersize;
-  if (eCommand == "ppl_lcdd")
-    headersize = 3;
-  else
-    headersize = 4;
   T eScal;
-  while (std::getline(is, line)) {
-    //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
-    if (iLine == headersize - 1) {
-      std::vector<std::string> LStr = STRING_Split(line, " ");
-      iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
-      //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
+  auto isincd=[&](size_t i_row) -> bool {
+    eScal=0;
+    for (size_t i=1; i<DimEXT; i++)
+      eScal += LVal[i] * EXT(i_row,i-1);
+    return eScal == 0;
+  };
+  if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp") {
+    size_t headersize;
+    if (eCommand == "ppl_lcdd")
+      headersize = 3;
+    else
+      headersize = 4;
+    while (std::getline(is, line)) {
+      //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
+      if (iLine == headersize - 1) {
+        std::vector<std::string> LStr = STRING_Split(line, " ");
+        iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
+        //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
+      }
+      if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
+        std::vector<std::string> LStr = STRING_Split(line, " ");
+        for (size_t i=0; i<DimEXT; i++)
+          LVal[i] = ParseScalar<T>(LStr[i]);
+        ListFace.InsertFace(isincd);
+      }
+      iLine++;
     }
-    if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
-      std::vector<std::string> LStr = STRING_Split(line, " ");
-      for (size_t i=0; i<DimEXT; i++)
-        LVal[i] = ParseScalar<T>(LStr[i]);
-      auto isincd=[&](size_t i_row) -> bool {
-        eScal=0;
-        for (size_t i=1; i<DimEXT; i++)
-          eScal += LVal[i] * EXT(i_row,i-1);
-        return eScal == 0;
-      };
-      ListFace.InsertFace(isincd);
+  }
+  if (eCommand == "glrs") {
+    size_t headersize = 7;
+    while (std::getline(is, line)) {
+      if (line == "end")
+        break;
+      if (iLine >= headersize) {
+        std::vector<std::string> LStr = STRING_Split(line, " ");
+        for (size_t i=0; i<DimEXT; i++)
+          LVal[i] = ParseScalar<T>(LStr[i]);
+        ListFace.InsertFace(isincd);
+      }
+      iLine++;
     }
-    iLine++;
   }
   //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   RemoveFileIfExist(FileI);
