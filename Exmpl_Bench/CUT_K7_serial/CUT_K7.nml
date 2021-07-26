@@ -1,7 +1,7 @@
 &DATA
- EXTfile = "Cut_7.ext"
- GRPfile = "Cut_7.grp"
- OUTfile = "Cut_7.orbitFacet"
+ EXTfile = "CUT_7.ext"
+ GRPfile = "CUT_7.grp"
+ OUTfile = "CUT_7.orbitFacet"
 /
 
 &HEURISTIC
