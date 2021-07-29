@@ -447,6 +447,7 @@ private:
   std::vector<uint8_t> V_hash;
 #endif
   bool is_opened;
+  std::string strPresChar;
 public:
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
@@ -580,7 +581,12 @@ public:
     }
     nbOrbit++;
   }
+  void print_status() const {
+    os << "Status : orbit=(" << nbOrbit << "," << nbOrbitDone << "," << (nbOrbit - nbOrbitDone)
+       << " facet=(" << TotalNumber << "," << (TotalNumber - nbUndone) << "," << nbUndone << ")\n";
+  }
   DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2),EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
+    strPresChar = "|EXT|=" + std::to_string(EXT.rows()) + " |GRP|=" + std::to_string(GRP.size());
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
@@ -714,7 +720,7 @@ public:
         // The other fields
         InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
       }
-      os << "Starting with nbOrbitDone=" << nbOrbitDone << " nbUndone=" << nbUndone << " TotalNumber=" << TotalNumber << "\n";
+      print_status();
     }
   }
   ~DatabaseOrbits() {
@@ -787,8 +793,7 @@ public:
     V.pop_back();
     nbUndone -= ListPossOrbsize[eEnt.idx_orb];
     nbOrbitDone++;
-    os << "We have " << nbOrbit << " orbits  Nr treated=" << nbOrbitDone << " orbits  nbUndone=" << nbUndone << "\n";
-    os << "\n";
+    print_status();
   }
   Face ComputeIntersectionUndone() const {
     size_t n_row = EXT.rows();
@@ -826,7 +831,7 @@ public:
         size_t pos = eEnt.second[0];
         Face f = RetrieveListOrbitEntry(pos).face;
         Tgroup Stab=GRP.Stabilizer_OnSets(f);
-        std::cerr << "Considering orbit " << pos << " |EXT|=" << nbRow << " |inc|=" << f.count() << " |stab|=" << Stab.size() << " nbCol=" << nbCol << "\n";
+        std::cerr << strPresChar << " Considering orbit " << pos << " |inc|=" << f.count() << " |stab|=" << Stab.size() << "\n";
         return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
       }
     }
