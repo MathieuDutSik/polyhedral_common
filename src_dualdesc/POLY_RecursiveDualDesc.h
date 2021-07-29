@@ -586,7 +586,6 @@ public:
        << ") facet=(" << TotalNumber << "," << (TotalNumber - nbUndone) << "," << nbUndone << ")\n\n";
   }
   DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2),EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
-    strPresChar = "|EXT|=" + std::to_string(EXT.rows()) + " |GRP|=" + std::to_string(GRP.size());
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
@@ -607,6 +606,7 @@ public:
     n_act_div8 = (n_act + 7) / 8;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
+    strPresChar = "|EXT|=" + std::to_string(nbRow) +"/" + std::to_string(nbCol) + " |GRP|=" + std::to_string(GRP.size());
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8,0);
 #endif
