@@ -739,6 +739,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
 template<typename Tgroup>
 vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
 {
+  std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<Tgroup>(SmaGRP);
   vectface eListSma(BigGRP.n_act());
@@ -747,7 +748,9 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, con
     vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
     eListSma.append(ListListSet);
   }
-  os << "OrbitSplitting |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+  int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  os << "OrbitSplitting elapsed_seconds=" << elapsed_seconds << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size() << "\n";
   return eListSma;
 }
 
