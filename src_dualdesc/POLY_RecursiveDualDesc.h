@@ -367,30 +367,54 @@ struct DataFacet {
 
 template<typename Tint>
 struct UndoneOrbitInfo {
+  size_t nbOrbitDone;
   Tint nbUndone;
   Face eSetUndone;
 };
 
 template<typename Tint>
+UndoneOrbitInfo<Tint> get_default_undoneinfo(int n_rows)
+{
+  Face f(n_rows);
+  return {0, 0, f};
+}
+
+template<typename Tint>
 UndoneOrbitInfo<Tint> CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>>& LComb)
 {
+  size_t nbOrbitDone = LComb[0].nbOrbitDone;
   Tint nbUndone = LComb[0].nbUndone;
   Face f = LComb[0].eSetUndone;
   for (size_t i=1; i<LComb.size(); i++) {
+    nbOrbitDone += LComb[i].nbOrbitDone;
     nbUndone += LComb[i].nbUndone;
     f &= LComb[i].eSetUndone;
   }
-  return {nbUndone, f};
+  return {nbOrbitDone, nbUndone, f};
 }
 
 
 template<typename Tint>
 bool ComputeStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& CritSiz)
 {
+  if (eComb.nbOrbitDone > 0)
+    if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
+    return true;
+  return false;
+}
+
+
+// The condition on nbOrbitDone make the check more complex.
+// For parallel, we use this monotonic partial check as heuristic
+// about whether to do the major checks or not.
+template<typename Tint>
+bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& CritSiz)
+{
   if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
     return true;
   return false;
 }
+
 
 
 
@@ -849,7 +873,7 @@ public:
     return false;
   }
   UndoneOrbitInfo<Tint> GetTerminationInfo() const {
-    return {nbOrbitDone, ComputeIntersectionUndone()};
+    return {nbOrbitDone, nbUndone, ComputeIntersectionUndone()};
   }
 };
 
@@ -1060,6 +1084,7 @@ namespace boost::serialization {
   inline void serialize(Archive & ar, HashUndoneOrbitInfo<Tint> & mesg, const unsigned int version)
   {
     ar & make_nvp("hash", mesg.e_hash);
+    ar & make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
     ar & make_nvp("nbundone", mesg.erec.nbUndone);
     ar & make_nvp("setundone", mesg.erec.eSetUndone);
   }
@@ -1130,26 +1155,53 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   const int tag_nbundone_balinski = 38;
   // undone information for Balinski termination
   const int tag_terminate_send_vf = 38;
+  // undone information for Balinski termination
+  const int tag_setup_databank = 39;
 
-  size_t n_rows = EXT.rows();
-  std::vector<size_t> subset_index_proc = get_subset_index_rev(n_rows);
   struct BigRecordEntry {
     std::vector<size_t> subset_index_proc;
     DatabaseOrbits<T,Tint,Tgroup> databank;
+    bool did_something;
+    std::vector<UndoneOrbitInfo<Tint>> list_undoneinfo;
+    int initiating_proc;
+  };
+
+  struct SetupDatabank {
+    MyMatrix<T> EXT;
+    Tgroup GRP;
+    size_t e_hash;
   };
 
   // We can have DatabseBank created on disjoint processes.
   // The order will not be the same between processors.
   std::vector<BigRecordEntry> ListRPL;
-  ListRPL.emplace_back({get_subset_index_rev(EXT.rows()), DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr)});
+  ListRPL.emplace_back({get_subset_index_rev(EXT.rows()),
+      DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr),
+      false,
+      std::vector<UndoneOrbitInfo<Tint>>(size, get_default_undoneinfo(EXT.rows())),
+      -1 // no initiating for the main one
+    });
   std::unordered_map<size_t,uint8_t> map_databank; // mapping from the hash of database orbit to the index in ListRPL
   std::vector<size_t> map_databank_rev; // mapping from index of ListRPL to hash
   map_databank[0] = 0;
   map_databank_rev.push_back(0);
+  uint8_t selected_pos = 0;
+  size_t selected_hash = 0;
   auto get_pos=[&](auto & x) -> uint8_t {
     return map_databank[x.e_hash];
   };
-  auto remove_database_entry=[&](const size_t& e_hash, const uint8_t& pos) -> void {
+  auto set_selected_pos=[&]() -> void {
+    int min_dim = std::numeric_limits<int>::max();
+    for (size_t i=0; i<ListRPL.size(); i++) {
+      int dim = ListRPL[i].databank.EXT.cols();
+      if (dim < min_dim) {
+        selected_pos = i;
+        min_dim = dim;
+      }
+    }
+    selected_hash = map_databank_rev[selected_pos];
+  };
+  auto remove_databank=[&](const size_t& e_hash, const uint8_t& pos) -> void {
     // Correct ListRPL
     ListRPL.erase(pos);
     // Correct map_databank
@@ -1162,10 +1214,24 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
     for (size_t i=pos+1; i<map_databank_rev.size(); i++)
       map_databank_rev[i-1] = map_databank_rev[i];
     map_databank_rev.pop_back();
+    // Recomputed working_pos
+    set_selected_pos();
   };
-  auto insert_databank=[&](DatabaseOrbits<T,Tint,Tgroup>&& databank) -> std::pair<size_t,uint8_t> {
-    ListRPL.emplace_back({get_subset_index_rev(databank.EXT.rows()),databank});
-    
+  auto insert_databank=[&](int init_proc, const SetupDatabank& setup_db) -> std::pair<size_t,uint8_t> {
+    // Update ListRPL
+    ListRPL.emplace_back({get_subset_index_rev(setup_db.EXT.rows()),
+        DatabaseOrbits<T,Tint,Tgroup>(setup_db.EXT, setup_db.GRP, ePrefix, AllArr.Saving, std::cerr),
+        false,
+        std::vector<UndoneOrbitInfo<Tint>>(size, get_default_undoneinfo(setup_db.EXT.rows())),
+        init_proc
+      });
+    uint8_t pos = ListRPL.size();
+    // map_databank
+    map_databank[setup_db.e_hash] = pos;
+    // map_databank_rev
+    map_databank_rev.push_back(setup_db.e_hash);
+    // Recomputed working_pos
+    set_selected_pos();
   };
   // The Buffers in output and receive
   std::vector<message_facet> ListEntries_OUT(size);
@@ -1174,8 +1240,10 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   std::vector<std::pair<int,message_query>> ListMesgQuery;
   // The entry nbundone
   std::vector<std::pair<int,HashUndoneOrbitInfo<Tint>>> ListMesgUndone;
-  // The partial dual desc
+  // The partial dual desc (at the end of computation)
   std::vector<std::pair<int,message_facet>> ListMesgPartDualDesc;
+  // The bank setup
+  std::vector<std::pair<int,SetupDatabank>> ListSetupDatabank;
   // The MPI related stuff
   std::vector<boost::mpi::request> ListRequest;
   std::vector<int> RequestStatus;
@@ -1221,6 +1289,11 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
         comm.recv(prob->source(), prob->tag(), e_mesg);
         ListMesgPartDualDesc.push_back({prob->source(), std::move(e_mesg)});
       }
+      if (prob->tag() == tag_setup_databank) {
+        SetupDatabank e_mesg;
+        comm.recv(prob->source(), prob->tag(), e_mesg);
+        ListSetupDatabank.push_back({prob->source(), std::move(e_mesg)});
+      }
     } else {
       // First clearing the buffers of facets
       for (auto & eEntry_IN : ListEntries_IN) {
@@ -1244,11 +1317,49 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
           size_t u = GetFreeIndex();
           ListRequest[u] = comm.isend(0, tag_terminate_send_vf, e_mesg);
           RequestStatus[u] = 1;
-          remove_database_entry(eMesgQuery.second.e_hash, pos);
+          remove_databank(eMesgQuery.second.e_hash, pos);
         }
       }
       ListMesgQuery.clear();
-      // Now treating the block with the smallest size
+      // Update information regarding the undone status of orbits
+      for (auto & e_ent : ListMesgUndone) {
+        int jrank = e_ent.first;
+        uint8_t pos = get_pos(e_ent.second);
+        ListRPL[pos].list_undoneinfo[jrank] = e_ent.second.erec;
+      }
+      ListMesgUndone.clear();
+      // Create new databanks as required
+      for (auto & e_ent : ListSetupDatabank) {
+        int jrank = e_ent.first;
+        insert_databank(jrank, e_ent.second);
+      }
+      ListSetupDatabank.clear();
+      // Now treating the selected_block
+      if (ListRPL[selected_pos].did_something) {
+        ListRPL[selected_pos].did_something = false;
+        if (irank == 0) {
+          ListRPL[selected_pos].list_undoneinfo[0] = ListRPL[selected_pos].databank.GetTerminationInfo();
+          if (MonotonicCheckStatusUndone(ListRPL[selected_pos].list_undoneinfo[0], ListRPL[selected_pos].databank.CritSiz)) {
+            UndoneOrbitInfo<Tint> undoneinfo = CombineUndoneOrbitInfo(ListRPL[selected_pos].list_undoneinfo);
+            if (ComputeStatusUndone(undoneinfo)) {
+              if (selected_pos == 0) { // This is the main databank. Work is finished
+                break;
+              } else { // Not the main one, more work needed. Relocation to the initiating processor
+              }
+            } else {
+              message_query mq{selected_hash,0};
+              for (int jrank=1; jrank<size; jrank++) {
+                size_t u = GetFreeIndex();
+                ListRequest[u] = comm.isend(0, tag_message_query, mq);
+                RequestStatus[u] = 1;
+              }
+            }
+          }
+        }
+      } else {
+        ListRPL[selected_pos].did_something = true;
+      }
+
     }
   }
   return ListRPL[0].FuncListOrbitIncidence();
