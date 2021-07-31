@@ -398,11 +398,11 @@ template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 public:
   Tint CritSiz;
+  const MyMatrix<T>& EXT;
+  const Tgroup& GRP;
 private:
   using Torbsize=uint16_t;
   using Tidx = typename Tgroup::Telt::Tidx;
-  const MyMatrix<T>& EXT;
-  const Tgroup& GRP;
   Tint groupOrder;
   std::string MainPrefix;
   netCDF::NcFile dataFile;
@@ -585,7 +585,7 @@ public:
     os << "Status : orbit=(" << nbOrbit << "," << nbOrbitDone << "," << (nbOrbit - nbOrbitDone)
        << ") facet=(" << TotalNumber << "," << (TotalNumber - nbUndone) << "," << nbUndone << ")\n\n";
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2),EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
+  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2), EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
@@ -1163,7 +1163,10 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
       map_databank_rev[i-1] = map_databank_rev[i];
     map_databank_rev.pop_back();
   };
-  
+  auto insert_databank=[&](DatabaseOrbits<T,Tint,Tgroup>&& databank) -> std::pair<size_t,uint8_t> {
+    ListRPL.emplace_back({get_subset_index_rev(databank.EXT.rows()),databank});
+    
+  };
   // The Buffers in output and receive
   std::vector<message_facet> ListEntries_OUT(size);
   std::vector<message_facet> ListEntries_IN;
