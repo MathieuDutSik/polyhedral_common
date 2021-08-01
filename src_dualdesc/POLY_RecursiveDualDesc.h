@@ -462,12 +462,18 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
         fint &= e_vert;
       }
     }
+    if (true) {
+      std::cerr << "x=(" << x.first << ",";
+      for (auto & eVal : f_v)
+        std::cerr << " " << eVal;
+      std::cerr << ") |list_vert|=" << list_vert.size() << " |fint|=" << fint.count() << " |f|=" << f_v.size() << "\n";
+    }
     if (fint.count() > f_v.size())
       return true; // This is the linear programming check
     size_t n_rows_rel = n_rows - x.first;
     if (list_vert.size() <= n_rows_rel - 2)
       return true; // This is the pure Balinski case
-    if (rank_vertset(list_vert) <= n_rows_rel - 2) 
+    if (rank_vertset(list_vert) <= n_rows_rel - 2)
       return true; // This is the rank computation. A little advanced Balinski, see the paper
     return false;
   };
@@ -533,6 +539,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
 template<typename T, typename Tint, typename Tgroup>
 struct DatabaseOrbits {
 public:
+  using Telt=typename Tgroup::Telt;
   Tint CritSiz;
   const MyMatrix<T>& EXT;
   const Tgroup& GRP;
@@ -965,7 +972,7 @@ public:
         /* TRICK 1: Take the first element in the vector. This first element will remain
            in place but the vector may be extended without impacting this first entry. */
         size_t pos = eEnt.second[0];
-        Face f = RetrieveListOrbitEntry(pos).face;
+        const Face& f = RetrieveListOrbitEntry(pos).face;
         Tgroup Stab=GRP.Stabilizer_OnSets(f);
         std::cerr << strPresChar << " Considering orbit " << pos << " |inc|=" << f.count() << " |stab|=" << Stab.size() << "\n";
         return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
@@ -973,6 +980,28 @@ public:
     }
     os << "We should never reach that stage as we should find some undone facet\n";
     throw TerminalException{1};
+  }
+  bool attempt_connectedness_scheme() const {
+    vectface vf(nbRow);
+    std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
+    for (auto & eEnt : CompleteList_SetUndone) {
+      for (auto & pos : eEnt.second) {
+        const Face & eFace = RetrieveListOrbitEntry(pos).face;
+        for (auto & uFace : OrbitFace(eFace, LGen))
+          vf.push_back(uFace);
+      }
+    }
+    size_t max_iter=100;
+    size_t iter=0;
+    auto f_recur=[&](const std::pair<size_t,Face>& pfr) -> bool {
+      iter++;
+      if (iter == max_iter)
+        return false;
+      if (pfr.first > 1)
+        return false;
+      return true;
+    };
+    return EvaluationConnectednessCriterion(EXT, GRP, vf, f_recur);
   }
   bool GetTerminationStatus() const {
     if (nbOrbitDone > 0) {

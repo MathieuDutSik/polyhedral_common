@@ -482,7 +482,8 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 template<typename Telt>
 Face OnFace(Face const& eSet, Telt const& eElt)
 {
-  int nbExt=eSet.size();
+  using Tidx=typename Telt::Tidx;
+  size_t nbExt=eSet.size();
   Face fSet(nbExt);
   boost::dynamic_bitset<>::size_type pos=eSet.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
@@ -494,6 +495,40 @@ Face OnFace(Face const& eSet, Telt const& eElt)
 }
 
 
+template<typename Telt>
+vectface OrbitFace(const Face& f, const std::vector<Telt>& LGen)
+{
+  size_t len = f.size();
+  std::unordered_set<Face> set_f;
+  vectface vf(len);
+  std::vector<uint8_t> status;
+  auto func_insert=[&](const Face& f) -> void {
+    if (set_f.find(f) == set_f.end()) {
+      vf.push_back(f);
+      set_f.insert(f);
+      status.push_back(0);
+    }
+  };
+  func_insert(f);
+  while(true) {
+    bool is_finished=true;
+    size_t len = vf.size();
+    for (size_t i=0; i<len; i++) {
+      if (status[i] == 0) {
+        is_finished=false;
+        status[i] = 1;
+        Face fw = vf[i];
+        for (auto & eGen : LGen) {
+          Face gw = OnFace(fw, eGen);
+          func_insert(gw);
+        }
+      }
+    }
+    if (is_finished)
+      break;
+  }
+  return vf;
+}
 
 template<typename Tgroup>
 vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
