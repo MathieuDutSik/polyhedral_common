@@ -12,56 +12,57 @@
 template<typename T, typename Tgroup>
 vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
 {
-  MyMatrix<T> FACred=ColumnReduction(FAC);
-  int nbRow=FACred.rows();
-  int nbCol=FACred.cols();
+  int nbRow=FAC.rows();
+  int nbCol=FAC.cols();
   vectface TheReturn(nbRow);
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
-  std::vector<int> Treated(nbRow,0);
+  Face Treated(nbRow);
   int sizFace=face.count();
   MyMatrix<T> TestMat(sizFace+1, nbCol);
   int ePt=face.find_first();
   for (int iRow=0; iRow<sizFace; iRow++) {
     Treated[ePt]=1;
-    TestMat.row(iRow) = FACred.row(ePt);
+    TestMat.row(iRow) = FAC.row(ePt);
     ePt=face.find_next(ePt);
   }
   for (int iRow=0; iRow<nbRow; iRow++)
     if (Treated[iRow] == 0) {
-      TestMat.row(sizFace) = FACred.row(iRow);
+      TestMat.row(sizFace) = FAC.row(iRow);
       SelectionRowCol<T> eSelect=TMat_SelectRowCol(TestMat);
       MyMatrix<T> NSP=eSelect.NSP;
       int nbEqua=NSP.rows();
       Face eCand(nbRow);
       Face eCandCompl(nbRow);
-      std::vector<int> gList(nbRow);
+      Face gList(nbRow);
       for (int jRow=0; jRow<nbRow; jRow++) {
-	int test=1;
-	for (int iEqua=0; iEqua<nbEqua; iEqua++)
-	  if (test == 1) {
+        auto get_test=[&]() -> bool {
+          for (int iEqua=0; iEqua<nbEqua; iEqua++) {
 	    T eSum=0;
 	    for (int iCol=0; iCol<nbCol; iCol++)
-	      eSum += FACred(jRow, iCol)*NSP(iEqua, iCol);
+	      eSum += FAC(jRow, iCol)*NSP(iEqua, iCol);
 	    if (eSum != 0)
-	      test=0;
+              return false;
 	  }
-	gList[jRow]=test;
-	if (test == 1)
+          return true;
+        };
+	if (get_test()) {
 	  eCand[jRow]=1;
-	else
+          gList[jRow]=1;
+        } else {
 	  eCandCompl[jRow]=1;
+        }
       }
-      std::vector<int> rList = OrbitUnion(StabFace, gList);
+      Face rList = OrbitUnion(StabFace, gList);
       for (int jRow=0; jRow<nbRow; jRow++)
 	if (rList[jRow] == 1)
 	  Treated[jRow]=1;
       Tgroup TheStab=FullGRP.Stabilizer_OnSets(eCand);
       vectface ListOrb=DecomposeOrbitPoint(TheStab, eCand);
-      int nbOrb=ListOrb.size();
+      size_t nbOrb=ListOrb.size();
       MyMatrix<T> ListVectSpann(nbOrb, nbCol);
-      for (int iOrb=0; iOrb<nbOrb; iOrb++) {
+      for (size_t iOrb=0; iOrb<nbOrb; iOrb++) {
 	Face eOrb=ListOrb[iOrb];
-	MyVector<T> eVec=SumMatrixLineSubset(FACred, eOrb);
+	MyVector<T> eVec=SumMatrixLineSubset(FAC, eOrb);
 	AssignMatrixRow(ListVectSpann, iOrb, eVec);
       }
       MyMatrix<T> BasisSpann=RowReduction(ListVectSpann);
@@ -71,11 +72,11 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
       MyMatrix<T> TheTot=RowReduction(PreTheTot);
       // the complement
       vectface ListOrbCompl=DecomposeOrbitPoint(TheStab, eCandCompl);
-      int nbOrbCompl=ListOrbCompl.size();
+      size_t nbOrbCompl=ListOrbCompl.size();
       MyMatrix<T> PreListVectors(nbOrbCompl, nbCol);
-      for (int iOrb=0; iOrb<nbOrbCompl; iOrb++) {
+      for (size_t iOrb=0; iOrb<nbOrbCompl; iOrb++) {
 	Face eOrb=ListOrbCompl[iOrb];
-	MyVector<T> eVec=SumMatrixLineSubset(FACred, eOrb);
+	MyVector<T> eVec=SumMatrixLineSubset(FAC, eOrb);
 	AssignMatrixRow(PreListVectors, iOrb, eVec);
       }
       MyMatrix<T> TheTotInv=Inverse(TheTot);
@@ -130,11 +131,8 @@ bool TestInclusionProperFace(std::vector<int> const& eSet, MyMatrix<T> const& FA
       for (int iEqua=0; iEqua<nbEqua; iEqua++)
 	if (test == 1) {
 	  T eSum=0;
-	  for (int iCol=0; iCol<nbCol; iCol++) {
-	    T eVal1=FAC(kRow, iCol);
-	    T eVal2=NSP(iEqua, iCol);
-	    eSum += eVal1*eVal2;
-	  }
+	  for (int iCol=0; iCol<nbCol; iCol++)
+	    eSum += FAC(kRow, iCol) * NSP(iEqua, iCol);
 	  if (eSum != 0)
 	    test=0;
 	}
