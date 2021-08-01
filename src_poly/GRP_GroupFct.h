@@ -199,11 +199,12 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
     std::size_t eSumPrev=0;
     for (int i=0; i<n; i++)
       eSumPrev += rList[i];
-    for (auto & eGen : LGen) {
-      for (int i=0; i<n; i++) {
-	int j = OnPoints(i, eGen);
-	if (rList[i] == 0)
+    for (int i=0; i<n; i++) {
+      if (rList[i] == 0) {
+        for (auto & eGen : LGen) {
+          int j = OnPoints(i, eGen);
 	  rList[j]=0;
+        }
       }
     }
     std::size_t eSum=0;
@@ -238,11 +239,12 @@ Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
   Face rList = gList;
   while(true) {
     size_t eSumPrev = rList.count();
-    for (auto & eGen : LGen) {
-      for (int i=0; i<n; i++) {
-        std::size_t j = OnPoints(i, eGen);
-        if (rList[i] == 0)
+    for (int i=0; i<n; i++) {
+      if (rList[i] == 0) {
+        for (auto & eGen : LGen) {
+          std::size_t j = OnPoints(i, eGen);
           rList[j]=0;
+        }
       }
     }
     size_t eSum = rList.count();

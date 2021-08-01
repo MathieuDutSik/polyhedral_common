@@ -419,6 +419,7 @@ bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& 
 template<typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP, const vectface& vf, Teval_recur f_recur)
 {
+  using Tint = typename Tgroup::Tint;
   size_t n_rows = FAC.rows();
   size_t n_cols = FAC.cols();
   size_t n_vert = vf.size();
@@ -430,7 +431,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
       EXT(i_vert, i_col) = eEXT(i_col);
   }
   auto rank_vertset=[&](const std::vector<size_t>& elist) -> size_t {
-    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+    auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
       size_t pos = elist[iRow];
       for (size_t i_col=0; i_col<n_cols; i_col++)
         M(eRank, i_col) = EXT(pos, i_col);
@@ -439,14 +440,14 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
     return eSelect.TheRank;
   };
   using pfr = std::pair<size_t,Face>;
-  auto evaluate_single_entry=[&](const pfr& f) -> bool {
+  auto evaluate_single_entry=[&](const pfr& x) -> bool {
     std::vector<size_t> f_v;
     for (size_t i=0; i<n_rows; i++)
-      if (pfr.second[i] == 1)
+      if (x.second[i] == 1)
         f_v.push_back(i);
     auto is_vert_in_face=[&](const Face& g) -> bool {
       for (auto & idx : f_v)
-        if (g[i] == 0)
+        if (g[idx] == 0)
           return false;
       return true;
     };
@@ -463,7 +464,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
     }
     if (fint.count() > f_v.size())
       return true; // This is the linear programming check
-    size_t n_rows_rel = n_rows - pfr.first;
+    size_t n_rows_rel = n_rows - x.first;
     if (list_vert.size() <= n_rows_rel - 2)
       return true; // This is the pure Balinski case
     if (rank_vertset(list_vert) <= n_rows_rel - 2) 
@@ -471,7 +472,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
     return false;
   };
   std::unordered_map<Face,bool> map_face_status;
-  auto get_opt_face_status=[&](const prf& x) -> std::optional<bool> {
+  auto get_opt_face_status=[&](const pfr& x) -> std::optional<bool> {
     Face f_can = GRP.CanonicalImage(x.second);
     auto iter = map_face_status.find(f_can);
     if (iter == map_face_status.end()) {
@@ -480,24 +481,45 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
       return iter->second;
     }
   };
-  auto insert_prf=[&](const prf& x, const bool& val) -> bool {
+  auto insert_pfr=[&](const pfr& x, const bool& val) -> bool {
     Face f_can = GRP.CanonicalImage(x.second);
     map_face_status[f_can] = val;
     return val;
   };
-  std::function<bool(const prf&)> get_face_status=[&](const prf& x) -> bool {
+  std::function<bool(const pfr&)> get_face_status=[&](const pfr& x) -> bool {
+    std::optional<bool> val_opt = get_opt_face_status(x);
+    if (val_opt) {
+      return *val_opt;
+    }
     bool val = evaluate_single_entry(x);
     if (val) {
-      return insert_prf(x, val);
+      return insert_pfr(x, val);
     } else {
       if (!f_recur(x))
-        return insert_prf(x, false);
-      Tgroup eStab = GRP.StabilizerOnSets(x.second);
-      
+        return insert_pfr(x, false);
+      // Looking at the facets and maybe we can so conclude
+      Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
+      vectface vf = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
+      auto get_value=[&]() -> bool {
+        Tint siz_false = 0;
+        for (auto & eFace : vf) {
+          bool val_f = get_face_status({x.first+1,eFace});
+          if (!val_f) {
+            Tgroup eStab_B = eStab.Stabilizer_OnSets(eFace);
+            Tint orb_size = Order(eStab) / Order(eStab_B);
+            siz_false += orb_size;
+            // If we cannot prove connectivity for just 1 facet, then connectivity holds.
+            if (siz_false > 1)
+              return false;
+          }
+        }
+        return true;
+      };
+      return insert_pfr(x, get_value);
     }
   };
-  prf init_prf{0, Face(n_rows)};
-  return get_face_status(init_prf);
+  pfr init_pfr{0, Face(n_rows)};
+  return get_face_status(init_pfr);
 }
 
 
