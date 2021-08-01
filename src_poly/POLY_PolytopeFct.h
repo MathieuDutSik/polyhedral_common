@@ -344,8 +344,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 	EXT1_1=prov1;
 	EXT1_2=prov2;
 	nbForm++;
-      }
-      else {
+      } else {
 	TheDet=prov2*EXT1_1 - prov1*EXT1_2;
 	if (nbForm == 1) {
 	  if (TheDet != 0) {
@@ -354,8 +353,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 	    det12=TheDet;
 	    nbForm++;
 	  }
-	}
-	else {
+	} else {
 	  det1N=TheDet;
 	  det2N=prov2*EXT2_1 - prov1*EXT2_2;
 	  prodDet=det1N*det2N;
@@ -365,8 +363,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 	      EXT2_1=prov1;
 	      EXT2_2=prov2;
 	      det12=det1N;
-	    }
-	    else {
+	    } else {
 	      EXT1_1=prov1;
 	      EXT1_2=prov2;
 	      det12=-det2N;
@@ -383,8 +380,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
     LV(0, 1)=EXT2_2;
     eVal=-EXT2_1;
     LV(1, 1)=eVal;
-  }
-  else {
+  } else {
     LV(0, 0)=EXT1_2;
     eVal=-EXT1_1;
     LV(1, 0)=eVal;
@@ -504,8 +500,7 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
 	bool IsFace;
 	if (eIncd < TheRank) {
 	  IsFace=false;
-	}
-	else {
+	} else {
 	  MyMatrix<T> EXTmat=SelectRow(EXT, gList);
 	  int rank=RankMat(EXTmat);
 	  IsFace=rank == TheRank;

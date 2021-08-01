@@ -416,6 +416,96 @@ bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& 
 }
 
 
+template<typename T, typename Tgroup, typename Teval_recur>
+bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP, const vectface& vf, Teval_recur f_recur)
+{
+  size_t n_rows = FAC.rows();
+  size_t n_cols = FAC.cols();
+  size_t n_vert = vf.size();
+  MyMatrix<T> EXT(n_vert, n_cols);
+  for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
+    Face f = vf[i_vert];
+    MyVector<T> eEXT = FindFacetInequality(FAC, f);
+    for (size_t i_col=0; i_col<n_cols; i_col++)
+      EXT(i_vert, i_col) = eEXT(i_col);
+  }
+  auto rank_vertset=[&](const std::vector<size_t>& elist) -> size_t {
+    auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
+      size_t pos = elist[iRow];
+      for (size_t i_col=0; i_col<n_cols; i_col++)
+        M(eRank, i_col) = EXT(pos, i_col);
+    };
+    SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(elist.size(), n_cols, f);
+    return eSelect.TheRank;
+  };
+  using pfr = std::pair<size_t,Face>;
+  auto evaluate_single_entry=[&](const pfr& f) -> bool {
+    std::vector<size_t> f_v;
+    for (size_t i=0; i<n_rows; i++)
+      if (pfr.second[i] == 1)
+        f_v.push_back(i);
+    auto is_vert_in_face=[&](const Face& g) -> bool {
+      for (auto & idx : f_v)
+        if (g[i] == 0)
+          return false;
+      return true;
+    };
+    std::vector<size_t> list_vert;
+    Face fint(n_rows);
+    for (size_t i=0; i<n_rows; i++)
+      fint[i] = 1;
+    for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
+      Face e_vert = vf[i_vert];
+      if (is_vert_in_face(e_vert)) {
+        list_vert.push_back(i_vert);
+        fint &= e_vert;
+      }
+    }
+    if (fint.count() > f_v.size())
+      return true; // This is the linear programming check
+    size_t n_rows_rel = n_rows - pfr.first;
+    if (list_vert.size() <= n_rows_rel - 2)
+      return true; // This is the pure Balinski case
+    if (rank_vertset(list_vert) <= n_rows_rel - 2) 
+      return true; // This is the rank computation. A little advanced Balinski, see the paper
+    return false;
+  };
+  std::unordered_map<Face,bool> map_face_status;
+  auto get_opt_face_status=[&](const prf& x) -> std::optional<bool> {
+    Face f_can = GRP.CanonicalImage(x.second);
+    auto iter = map_face_status.find(f_can);
+    if (iter == map_face_status.end()) {
+      return {};
+    } else {
+      return iter->second;
+    }
+  };
+  auto insert_prf=[&](const prf& x, const bool& val) -> bool {
+    Face f_can = GRP.CanonicalImage(x.second);
+    map_face_status[f_can] = val;
+    return val;
+  };
+  std::function<bool(const prf&)> get_face_status=[&](const prf& x) -> bool {
+    bool val = evaluate_single_entry(x);
+    if (val) {
+      return insert_prf(x, val);
+    } else {
+      if (!f_recur(x))
+        return insert_prf(x, false);
+      Tgroup eStab = GRP.StabilizerOnSets(x.second);
+      
+    }
+  };
+  prf init_prf{0, Face(n_rows)};
+  return get_face_status(init_prf);
+}
+
+
+
+
+
+
+
 
 
 template<typename T, typename Tint, typename Tgroup>
