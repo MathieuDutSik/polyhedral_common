@@ -1358,7 +1358,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
     // Recomputed working_pos
     set_selected_pos();
   };
-  auto insert_databank=[&](int init_proc, const SetupDatabank& setup_db) -> std::pair<size_t,uint8_t> {
+  auto insert_databank=[&](int init_proc, const SetupDatabank& setup_db) -> void {
     // Update ListRPL
     ListRPL.emplace_back({get_subset_index_rev(setup_db.EXT.rows()),
         DatabaseOrbits<T,Tint,Tgroup>(setup_db.EXT, setup_db.GRP, ePrefix, AllArr.Saving, std::cerr),

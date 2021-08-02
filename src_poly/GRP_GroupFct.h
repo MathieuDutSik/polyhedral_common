@@ -487,7 +487,7 @@ Face OnFace(Face const& eSet, Telt const& eElt)
   Face fSet(nbExt);
   boost::dynamic_bitset<>::size_type pos=eSet.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
-    int jExt=eElt.at(pos);
+    Tidx jExt=eElt.at(pos);
     fSet[jExt]=1;
     pos = eSet.find_next(pos);
   }
