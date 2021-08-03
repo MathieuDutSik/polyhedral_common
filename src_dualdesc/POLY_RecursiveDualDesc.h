@@ -221,7 +221,7 @@ TripleCanonic<T,Tgroup> CanonicalizationPolytopeTriple(MyMatrix<T> const& EXT, W
       eList[i_row] = i_row4;
     }
     Telt nGen(eList);
-    LGen.push_back(nGen);
+    LGen.emplace_back(std::move(nGen));
   }
   Tgroup GRP(LGen, n_row);
   //
@@ -586,6 +586,7 @@ private:
   size_t n_act_div8;
   int nbRow;
   int nbCol;
+  std::vector<uint8_t> Vappend;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
 #endif
@@ -648,8 +649,8 @@ public:
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
-    for (size_t i=curr_len; i<needed_len; i++)
-      ListOrbit.push_back(0);
+    size_t delta = needed_len - curr_len;
+    ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin()+delta);
     // Now setting up the bits for face and idx_orb.
     size_t i_acc = nbOrbit * delta;
     for (size_t i=0; i<n_act; i++) {
@@ -670,8 +671,8 @@ public:
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
-    for (size_t i=curr_len; i<needed_len; i++)
-      ListOrbit.push_back(0);
+    size_t delta = needed_len - curr_len;
+    ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin()+delta);
     // Now setting up the bits but only for the faces as this suffices for the comparison of novelty.
     size_t i_acc = nbOrbit * delta;
     for (size_t i=0; i<n_act; i++) {
@@ -749,6 +750,7 @@ public:
     n_act_div8 = (n_act + 7) / 8;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
+    Vappend = std::vector<uint8_t>((nbRow+7)/8,0);
     strPresChar = "|EXT|=" + std::to_string(nbRow) +"/" + std::to_string(nbCol) + " |GRP|=" + std::to_string(GRP.size());
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8,0);
