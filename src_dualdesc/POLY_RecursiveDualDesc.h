@@ -650,7 +650,8 @@ public:
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
     size_t incr = needed_len - curr_len;
-    ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin() + incr);
+    if (incr > 0)
+      ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin() + incr);
     // Now setting up the bits for face and idx_orb.
     size_t i_acc = nbOrbit * delta;
     for (size_t i=0; i<n_act; i++) {
@@ -672,7 +673,8 @@ public:
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
     size_t incr = needed_len - curr_len;
-    ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin() + incr);
+    if (incr > 0)
+      ListOrbit.insert(ListOrbit.end(), Vappend.begin(), Vappend.begin() + incr);
     // Now setting up the bits but only for the faces as this suffices for the comparison of novelty.
     size_t i_acc = nbOrbit * delta;
     for (size_t i=0; i<n_act; i++) {
