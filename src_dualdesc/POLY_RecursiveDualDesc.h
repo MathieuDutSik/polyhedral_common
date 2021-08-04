@@ -59,7 +59,6 @@
 
 
 std::atomic<bool> ExitEvent;
-boost::asio::ip::tcp::endpoint endpoint_bank;
 
 
 void signal_callback_handler(int signum) {
@@ -67,16 +66,6 @@ void signal_callback_handler(int signum) {
   std::cout << "We are going to exit hopefully\n";
   ExitEvent = true;
 }
-
-
-template<typename Tkey, typename Tval>
-void signal_callback_handler_bank(int signum) {
-  std::cout << "Caught signal " << signum << "\n";
-  std::cout << "We are going to exit from the bank hopefully\n";
-  TripleNKV<Tkey,Tval> triple{'e', Tkey(), Tval()};
-  send_data_atomic<TripleNKV<Tkey,Tval>>(endpoint_bank, triple);
-}
-
 
 
 

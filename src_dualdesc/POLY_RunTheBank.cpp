@@ -3,6 +3,20 @@
 #include "Group_serialization.h"
 #include "POLY_RecursiveDualDesc.h"
 
+boost::asio::ip::tcp::endpoint endpoint_bank;
+
+
+template<typename Tkey, typename Tval>
+void signal_callback_handler_bank(int signum) {
+  std::cout << "Caught signal " << signum << "\n";
+  std::cout << "We are going to exit from the bank hopefully\n";
+  TripleNKV<Tkey,Tval> triple{'e', Tkey(), Tval()};
+  send_data_atomic<TripleNKV<Tkey,Tval>>(endpoint_bank, triple);
+}
+
+
+
+
 int main(int argc, char *argv[])
 {
   try {

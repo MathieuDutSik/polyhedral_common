@@ -212,25 +212,29 @@ public:
   }
   Face Flip(Face const& sInc) const
   {
+#ifdef DEBUG_FLIP
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
       throw TerminalException{1};
     }
+#endif
     size_t nb=sInc.count();
     size_t nbRow=EXT_red.rows();
     size_t nbCol=EXT_red.cols() + 1;
     MyMatrix<T> TheProv(nb, nbCol - 1);
-    int jRow=sInc.find_first();
+    boost::dynamic_bitset<>::size_type jRow=sInc.find_first();
     for (size_t iRow=0; iRow<nb; iRow++) {
       int aRow=OneInc_V[jRow];
       TheProv.row(iRow)=EXT_red.row(aRow);
       jRow=sInc.find_next(jRow);
     }
     MyMatrix<T> NSP = NullspaceTrMat(TheProv);
+#ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
       std::cerr << "Error in Flip 2\n";
       throw TerminalException{1};
     }
+#endif
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while(true) {
