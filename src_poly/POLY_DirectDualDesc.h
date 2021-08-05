@@ -9,8 +9,11 @@
 
 
 template<typename T>
-vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCommand)
+vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCommand)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   size_t DimEXT = n_col + 1;
@@ -32,6 +35,10 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
     }
     os << "end\n";
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|FileWriting|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   //  std::cerr << "FileO=" << FileO << " created\n";
   //
   // Now calling the external program
@@ -39,6 +46,10 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
   std::string order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
   std::cerr << "order=" << order << "\n";
   int iret1=system(order.c_str());
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|glrs/ppl/cdd|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
   std::cerr << "External program terminated\n";
   if (iret1 != 0) {
     std::cerr << "The program has not terminated correctly\n";
@@ -77,7 +88,7 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
         std::vector<std::string> LStr = STRING_Split(line, " ");
         for (size_t i=0; i<DimEXT; i++)
           LVal[i] = ParseScalar<T>(LStr[i]);
-        ListFace.InsertFace(isincd);
+        ListFace.InsertFaceRef(isincd);
       }
       iLine++;
     }
@@ -91,11 +102,15 @@ vectface CDD_PPL_ExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
         std::vector<std::string> LStr = STRING_Split(line, " ");
         for (size_t i=0; i<DimEXT; i++)
           LVal[i] = ParseScalar<T>(LStr[i]);
-        ListFace.InsertFace(isincd);
+        ListFace.InsertFaceRef(isincd);
       }
       iLine++;
     }
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|FileRead|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
   //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
@@ -113,6 +128,9 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
 {
   int nbVert=EXT.rows();
   int nbCol=EXT.cols();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << " |GRP|=" << GRP.size() << "\n";
   std::string eProg;
   //
@@ -132,15 +150,15 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
     //
     eProg = "glrs"; ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return CDD_PPL_ExternalProgram(EXT, "glrs");
+      return DualDescExternalProgram(EXT, "glrs");
     //
     eProg = "ppl_ext"; ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return CDD_PPL_ExternalProgram(EXT, "ppl_lcdd");
+      return DualDescExternalProgram(EXT, "ppl_lcdd");
     //
     eProg = "cdd_ext"; ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return CDD_PPL_ExternalProgram(EXT, "lcdd_gmp");
+      return DualDescExternalProgram(EXT, "lcdd_gmp");
     //
     eProg = "cdd_cbased"; ListProg.push_back(eProg);
     if (ansProg == eProg)
@@ -159,11 +177,19 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
     throw TerminalException{1};
   };
   vectface ListIncd = compute_dd();
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|DualDescription|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << " |ListIncd|=" << ListIncd.size() << "\n";
+#endif
   if (ListIncd.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|OrbitSplittingSet|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << " |TheOutput|=" << TheOutput.size() << "\n";
+#endif
   os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
 }
