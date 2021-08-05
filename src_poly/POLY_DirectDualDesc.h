@@ -71,6 +71,11 @@ vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
       eScal += LVal[i] * EXT(i_row,i-1);
     return eScal == 0;
   };
+  size_t pos_wrt=0;
+  auto f_read=[&](const std::string& str) -> void {
+    ParseScalar_inplace<T>(str, LVal[pos_wrt]);
+    pos_wrt++;
+  };
   if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp") {
     size_t headersize;
     if (eCommand == "ppl_lcdd")
@@ -85,9 +90,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
         //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
       }
       if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
-        std::vector<std::string> LStr = STRING_Split(line, " ");
-        for (size_t i=0; i<DimEXT; i++)
-          LVal[i] = ParseScalar<T>(LStr[i]);
+        STRING_Split_f(line, " ", f_read);
+        pos_wrt = 0;
         ListFace.InsertFaceRef(isincd);
       }
       iLine++;
@@ -99,9 +103,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
       if (line == "end")
         break;
       if (iLine >= headersize) {
-        std::vector<std::string> LStr = STRING_Split(line, " ");
-        for (size_t i=0; i<DimEXT; i++)
-          LVal[i] = ParseScalar<T>(LStr[i]);
+        STRING_Split_f(line, " ", f_read);
+        pos_wrt = 0;
         ListFace.InsertFaceRef(isincd);
       }
       iLine++;
