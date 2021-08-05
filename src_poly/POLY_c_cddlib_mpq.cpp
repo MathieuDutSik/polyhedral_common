@@ -58,14 +58,11 @@ vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
   dd_raydata* RayPtr = poly->child->FirstRay;
   std::vector<mpq_class> V(nbCol);
   mpq_class eScal;
-  auto process=[&](std::vector<mpq_class> const& V) {
-    auto isincd=[&](size_t iRow) -> bool {
-      eScal=0;
-      for (size_t iCol=0; iCol<nbCol; iCol++)
-        eScal += V[iCol] * TheEXT(iRow,iCol);
-      return eScal == 0;
-    };
-    ListIncd.InsertFace(isincd);
+  auto isincd=[&](size_t iRow) -> bool {
+    eScal=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eScal += V[iCol] * TheEXT(iRow,iCol);
+    return eScal == 0;
   };
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
@@ -73,7 +70,7 @@ vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
         mpq_class eVal(RayPtr->Ray[iCol]);
         V[iCol] = eVal;
       }
-      process(V);
+      ListIncd.InsertFaceRef(isincd);
     }
     RayPtr = RayPtr->Next;
   }
