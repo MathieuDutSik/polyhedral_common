@@ -7730,16 +7730,15 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly, MyMatrix<T> const& 
   vectface ListIncd(nbRow);
   dd_raydata<T>* RayPtr = poly->child->FirstRay;
   T eScal;
+  auto isincd=[&](size_t iRow) -> bool {
+    eScal=0;
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      eScal += RayPtr->Ray[iCol] * EXT(iRow,iCol);
+    return eScal == 0;
+  };
   while (RayPtr != nullptr) {
-    if (RayPtr->feasible) {
-      auto isincd=[&](size_t iRow) -> bool {
-        eScal=0;
-        for (size_t iCol=0; iCol<nbCol; iCol++)
-          eScal += RayPtr->Ray[iCol] * EXT(iRow,iCol);
-        return eScal == 0;
-      };
-      ListIncd.InsertFace(isincd);
-    }
+    if (RayPtr->feasible)
+      ListIncd.InsertFaceRef(isincd);
     RayPtr = RayPtr->Next;
   }
   return ListIncd;
