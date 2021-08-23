@@ -342,7 +342,7 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx,int> const& eMap)
 
 
 template<typename T, typename Tgroup>
-struct DataFacet {
+struct DataFacetCan {
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
@@ -353,6 +353,20 @@ struct DataFacet {
     return GRP.CanonicalImage(eFlip);
   }
 };
+
+template<typename T, typename Tgroup>
+struct DataFacetRepr {
+  size_t SelectedOrbit;
+  Face eInc;
+  FlippingFramework<T> FF;
+  const Tgroup& GRP;
+  Tgroup Stab;
+  Face flip(const Face& f) const {
+    return GRP.CanonicalImage(eFlip);
+  }
+};
+
+
 
 template<typename Tint>
 struct UndoneOrbitInfo {
@@ -520,93 +534,46 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T>& FAC, const Tgroup& GRP,
 
 
 
+struct SingEnt {
+  Face face;
+  Torbsize idx_orb;
+};
 
 
 
-
-
-template<typename T, typename Tint, typename Tgroup>
-struct DatabaseOrbits {
+template<typename Tint, typename Torbsize, typename Tidx>
+struct FaceOrbsizeContainer {
 public:
-  using Telt=typename Tgroup::Telt;
-  Tint CritSiz;
-  const MyMatrix<T>& EXT;
-  const Tgroup& GRP;
-private:
-  using Torbsize=uint16_t;
-  using Tidx = typename Tgroup::Telt::Tidx;
-  Tint groupOrder;
-  std::string MainPrefix;
-  netCDF::NcFile dataFile;
-  /* TRICK 7: Using separate files for faces and status allow us to gain locality.
-     The faces are written one by one while the access to status is random */
-  FileBool* fb; // This is for storing the status
-  FileFace* ff; // This is for storing the faces and the index of oribit
-  bool SavingTrigger;
-  std::ostream& os;
   /* TRICK 2: We keep the list of orbit and the map. We could in principle have built the map
      from the start since we know the occurring orders. However, since some orbitsize never occur
      this would have populated it with entries that never occur and so slow it down. */
   UNORD_MAP<Tint,Torbsize> OrbSize_Map;
   std::vector<Tint> ListPossOrbsize; // Canonically computed from the list of factors
-  struct SingEnt {
-    Face face;
-    Torbsize idx_orb;
-  };
-  UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
-  std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
-  /* TRICK 3: Encoding the pair of face and idx_orb as bits allow us to save memory */
-  std::vector<uint8_t> ListOrbit; // This CANNOT be replaced by vectface as we hack our way and so
-                                  // making a vectface will not allow
-#ifdef SUBSET_HASH
-  std::vector<Tidx> subset_index;
-  size_t n_bit_hash;
-#endif
-  Tint TotalNumber;
-  size_t nbOrbitDone;
-  Tint nbUndone;
-  size_t nbOrbit;
-  size_t n_grpsize;
   /* TRICK 3: Knowing the factorization of the order of the group allow us to know exactly
      what are the possible orbitsize occurring and so the number of bits needed to encode them */
   size_t n_bit_orbsize;
-  size_t n_act;
-  size_t delta;
-  size_t n_act_div8;
-  int nbRow;
-  int nbCol;
   std::vector<uint8_t> Vappend;
-#if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
-  std::vector<uint8_t> V_hash;
-#endif
-  bool is_opened;
-  std::string strPresChar;
-public:
-  DatabaseOrbits() = delete;
-  DatabaseOrbits(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
-  DatabaseOrbits(DatabaseOrbits<T,Tint,Tgroup> &&) = delete;
-  DatabaseOrbits& operator=(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
-
+  std::vector<uint8_t> ListOrbit; // This CANNOT be replaced by vectface as we hack our way and so
+                                  // making a vectface will not allow
   // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const& f_in) const {
-    Face f(n_act);
+    SingEnt se{Face(n_act), 0};
     for (size_t i=0; i<n_act; i++)
-      f[i] = f_in[i];
+      se.face[i] = f_in[i];
     size_t i_acc = n_act;
-    Torbsize idx_orb=0;
     Torbsize pow = 1;
     for (size_t i=0; i<n_bit_orbsize; i++) {
-      idx_orb += Torbsize(f_in[i_acc]) * pow;
+      se.idx_orb += Torbsize(f_in[i_acc]) * pow;
       i_acc++;
       pow *= 2;
     }
-    return {f,idx_orb};
+    return se;
   }
-  Face SingEntToFace(SingEnt const& eEnt) const {
+  Face SingEntToFace(const Face& face, const size_t& idx_orb) const {
     Face f(n_act + n_bit_orbsize);
     for (size_t i=0; i<n_act; i++)
-      f[i] = eEnt.face[i];
-    size_t work_idx = eEnt.idx_orb;
+      f[i] = face[i];
+    size_t work_idx = idx_orb;
     size_t i_acc = n_act;
     for (size_t i=0; i<n_bit_orbsize; i++) {
       bool val = work_idx % 2;
@@ -618,20 +585,28 @@ public:
   }
   // Database code that uses ListOrbit;
   SingEnt RetrieveListOrbitEntry(size_t const& i_orb) const {
+    SingEnt se{Face(n_act), 0};
     size_t i_acc = delta * i_orb;
-    Face f(n_act);
     for (size_t i=0; i<n_act; i++) {
-      f[i] = getbit(ListOrbit, i_acc);
+      se.face[i] = getbit(ListOrbit, i_acc);
       i_acc++;
     }
-    Torbsize idx_orb=0;
     Torbsize pow = 1;
     for (size_t i=0; i<n_bit_orbsize; i++) {
-      idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
+      se.idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
       i_acc++;
       pow *= 2;
     }
-    return {f,idx_orb};
+    return se;
+  }
+  Face RetrieveListOrbitFace(size_t const& i_orb) const {
+    Face face(n_act);
+    size_t i_acc = delta * i_orb;
+    for (size_t i=0; i<n_act; i++) {
+      face[i] = getbit(ListOrbit, i_acc);
+      i_acc++;
+    }
+    return face;
   }
   void InsertListOrbitEntry(SingEnt const& eEnt) {
     // Insert bytes to avoid a memory segfault.
@@ -702,11 +677,7 @@ public:
     }
     return idx - 1;
   }
-  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos) {
-    if (!status) {
-      size_t len = face.count();
-      CompleteList_SetUndone[len].push_back(pos);
-    }
+  void Counts_InsertOrbit(const bool& status, const size_t& i_orb) {
     Tint orbSize = ListPossOrbsize[idx_orb];
     TotalNumber += orbSize;
     if (status) {
@@ -716,17 +687,15 @@ public:
     }
     nbOrbit++;
   }
-  void print_status() const {
-    os << "Status : orbit=(" << nbOrbit << "," << nbOrbitDone << "," << (nbOrbit - nbOrbitDone)
-       << ") facet=(" << TotalNumber << "," << (TotalNumber - nbUndone) << "," << nbUndone << ")\n\n";
+  void Counts_SetOrbitDone(const size_t& i_orb) {
+    nbUndone -= ListPossOrbsize[eEnt.idx_orb];
+    nbOrbitDone++;
   }
-  DatabaseOrbits(MyMatrix<T> const& _EXT, Tgroup const& _GRP, std::string const& _MainPrefix, bool const& _SavingTrigger, std::ostream& os) : CritSiz(_EXT.cols()-2), EXT(_EXT), GRP(_GRP), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
+  FaceOrbsizeContainer(const std::map<Tidx,int>& LFact, const size_t& n_act) {
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
     nbOrbit = 0;
-    groupOrder = GRP.size();
-    std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
     for (auto & kv : LFact) {
       n_factor *= (1 + kv.second);
@@ -734,6 +703,56 @@ public:
     /* TRICK 4: We need to add 1 because of shift by 1 in the OrbSize_Map */
     n_bit_orbsize = get_matching_power(n_factor + 1);
     ListPossOrbsize = GetAllPossibilities<Tidx,Tint>(LFact);
+    Vappend = std::vector<uint8_t>((delta + 7)/8,0);
+  }
+
+};
+
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+struct DatabaseCanonic {
+public:
+  using Telt=typename Tgroup::Telt;
+  const MyMatrix<T>& EXT;
+  const Tgroup& GRP;
+  using DataFacet=DataFacetCan<T,Tgroup>;
+private:
+  using Torbsize=uint16_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
+  Tint groupOrder;
+  UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
+  std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
+  /* TRICK 3: Encoding the pair of face and idx_orb as bits allow us to save memory */
+#ifdef SUBSET_HASH
+  std::vector<Tidx> subset_index;
+  size_t n_bit_hash;
+#endif
+  size_t n_act;
+  size_t delta;
+  size_t n_act_div8;
+  int nbRow;
+  int nbCol;
+  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
+#if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
+  std::vector<uint8_t> V_hash;
+#endif
+public:
+  DatabaseCanonic() = delete;
+  DatabaseCanonic(const DatabaseCanonic<T,Tint,Tgroup>&) = delete;
+  DatabaseCanonic(DatabaseCanonic<T,Tint,Tgroup> &&) = delete;
+  DatabaseCanonic& operator=(const DatabaseCanonic<T,Tint,Tgroup>&) = delete;
+
+  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos) {
+    if (!status) {
+      size_t len = face.count();
+      CompleteList_SetUndone[len].push_back(pos);
+    }
+    foc.Counts_InsertOrbit(status, idx_orb);
+  }
+  DatabaseCanonic(MyMatrix<T> const& _EXT, Tgroup const& _GRP) : EXT(_EXT), GRP(_GRP), foc(GRP.factor_size(), EXT.rows()) {
+    groupOrder = GRP.size();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -741,8 +760,6 @@ public:
     n_act_div8 = (n_act + 7) / 8;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
-    Vappend = std::vector<uint8_t>((delta + 7)/8,0);
-    strPresChar = "|EXT|=" + std::to_string(nbRow) +"/" + std::to_string(nbCol) + " |GRP|=" + std::to_string(GRP.size());
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8,0);
 #endif
@@ -769,7 +786,7 @@ public:
       size_t pos = delta * idx;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
       for (size_t i=0; i<n_act; i++) {
-        bool val = getbit(ListOrbit, pos);
+        bool val = getbit(foc.ListOrbit, pos);
         setbit(V_hash, i, val);
         pos++;
       }
@@ -790,7 +807,7 @@ public:
       uint8_t* ptr2 = (uint8_t*) ptr1;
       for (size_t i=0; i<n_bit_hash; i++) {
         double idx = pos + size_t(subset_index[i]);
-        bool val = getbit(ListOrbit, idx);
+        bool val = getbit(foc.ListOrbit, idx);
         setbit_ptr(ptr2, i, val);
       }
       return hash;
@@ -800,8 +817,8 @@ public:
       size_t pos1 = delta * idx1;
       size_t pos2 = delta * idx2;
       for (size_t i=1; i<n_act; i++) { // TRICK 9: Two faces will differ by at least 2 bits
-        bool val1 = getbit(ListOrbit, pos1);
-        bool val2 = getbit(ListOrbit, pos2);
+        bool val1 = getbit(foc.ListOrbit, pos1);
+        bool val2 = getbit(foc.ListOrbit, pos2);
         if (val1 != val2)
           return false;
         pos1++;
@@ -810,6 +827,321 @@ public:
       return true;
     };
     DictOrbit = UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>>({}, fctHash, fctEqual);
+  }
+  ~DatabaseCanonic() {
+  }
+  vectface FuncListOrbitIncidence() {
+    DictOrbit.clear();
+    CompleteList_SetUndone.clear();
+    vectface retListOrbit(n_act);
+    for (size_t i_orbit=0; i_orbit<foc.nbOrbit; i_orbit++) {
+      Face f = foc.RetrieveListOrbitFace(i_orbit);
+      retListOrbit.push_back(f);
+    }
+    return retListOrbit;
+  }
+  void FuncInsert(Face const& face_can) {// The face should have been canonicalized beforehand.
+    foc.InsertListOrbitFace(face_can);
+    DictOrbit.insert(nbOrbit);
+    if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
+      return;
+    /* TRICK 8: The insertion yield something new. So now we compute the expensive stabilizer */
+    Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
+    Tint orbSize = groupOrder / ordStab;
+    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
+    foc.InsertListOrbitIdxOrb(idx_orb);
+    InsertEntryDatabase(face_can, false, idx_orb, nbOrbit);
+  }
+  void FuncPutOrbitAsDone(size_t const& i_orb) {
+    SingEnt eEnt = foc.RetrieveListOrbitEntry(i_orb);
+    size_t len = eEnt.face.count();
+    /* TRICK 1: We copy the last element in first position to erase it and then pop_back the vector. */
+    std::vector<size_t> & V = CompleteList_SetUndone[len];
+    if (V.size() == 1) {
+      CompleteList_SetUndone.erase(len);
+    } else {
+      V[0] = V[V.size()-1];
+      V.pop_back();
+    }
+    foc.Counts_SetOrbitDone(eEnt.idx_orb);
+  }
+  DataFacetCan<T,Tgroup> FuncGetMinimalUndoneOrbit() {
+    for (auto & eEnt : CompleteList_SetUndone) {
+      size_t len = eEnt.second.size();
+      if (len > 0) {
+        /* TRICK 1: Take the first element in the vector. This first element will remain
+           in place but the vector may be extended without impacting this first entry. */
+        size_t pos = eEnt.second[0];
+        Face f = foc.RetrieveListOrbitFace(pos);
+        Tgroup Stab=GRP.Stabilizer_OnSets(f);
+        return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
+      }
+    }
+    os << "We should never reach that stage as we should find some undone facet\n";
+    throw TerminalException{1};
+  }
+private:
+  struct IteratorType {
+  private:
+    std::map<size_t, std::vector<size_t>>::iterator iter;
+    size_t pos;
+  public:
+    size_t operator*() {
+      return iter->second[pos];
+    }
+    IteratorType& operator++() {
+      pos++;
+      if (pos == iter->second.size()) {
+        iter++;
+        pos=0;
+      }
+      return *this;
+    }
+    IteratorType operator++(int) {
+      IteratorType tmp = *this;
+      pos++;
+      if (pos == iter->second.size()) {
+        iter++;
+        pos = 0;
+      }
+      return tmp;
+    }
+    bool operator!=(const IteratorType& iter) const {
+      return pos != iter.pos || iter != iter.iter;
+    }
+    bool operator==(const IteratorType& iter) const {
+      return pos == iter.pos && iter == iter.iter;
+    }
+  };
+public:
+  using iterator = IteratorType;
+  iterator begin_undone() const {
+    return {CompleteList_SetUndone.begin(), 0};
+  }
+  iterator end_undone() const {
+    return {CompleteList_SetUndone.end(), 0};
+  }
+
+};
+
+
+template<typename T, typename Tint, typename Tgroup, typename Frepr, typename Fstab, typename Finv>
+struct DatabaseRepr {
+public:
+  using Telt=typename Tgroup::Telt;
+  const MyMatrix<T>& EXT;
+  const Tgroup& GRP;
+  using DataFacet=DataFacetRepr<T,Tgroup>;
+private:
+  using Torbsize=uint16_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
+  Tint groupOrder;
+  std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>> CompleteList_SetUndone;
+  std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>> CompleteList_SetDone;
+  size_t n_act;
+  size_t delta;
+  size_t n_act_div8;
+  int nbRow;
+  int nbCol;
+  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
+public:
+  DatabaseRepr() = delete;
+  DatabaseRepr(const DatabaseRepr<T,Tint,Tgroup>&) = delete;
+  DatabaseRepr(DatabaseRepr<T,Tint,Tgroup> &&) = delete;
+  DatabaseRepr& operator=(const DatabaseRepr<T,Tint,Tgroup>&) = delete;
+
+  void InsertEntryDatabase(Face const& face, bool const& status, size_t const& idx_orb, size_t const& pos) {
+    size_t len = face.count();
+    size_t eInv = f_inv(face);
+    if (status) {
+      CompleteList_SetDone[len][eInv].push_back(pos);
+    } else {
+      CompleteList_SetUndone[len][eInv].push_back(pos);
+    }
+    foc.Counts_InsertOrbit(status, idx_orb);
+  }
+  DatabaseRepr(MyMatrix<T> const& _EXT, Tgroup const& _GRP, F_repr f_repr, F_stab f_stab, F_inv f_inv) : EXT(_EXT), GRP(_GRP), foc(GRP.factor_size(), EXT.rows()), f_repr(f_repr), f_stab(f_stab), f_inv(f_inv) {
+    groupOrder = GRP.size();
+
+    /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
+    n_act = GRP.n_act();
+    delta = n_bit_orbsize + n_act;
+    n_act_div8 = (n_act + 7) / 8;
+    nbRow = EXT.rows();
+    nbCol = EXT.cols();
+  }
+  ~DatabaseOrbits() {
+  }
+  vectface FuncListOrbitIncidence() {
+    DictOrbit.clear();
+    CompleteList_SetUndone.clear();
+    CompleteList_SetDone.clear();
+    vectface retListOrbit(n_act);
+    for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+      Face f = foc.RetrieveListOrbitFace(i_orbit);
+      retListOrbit.push_back(f);
+    }
+    return retListOrbit;
+  }
+  std::optional<Face> FuncInsert(Face const& face_i) {
+    size_t len = face_i.count();
+    size_t eInv = f_inv(face_i);
+    if (CompleteList_SetDone.count(len) == 1) {
+      if (CompleteList_SetDone[len].count(eInv) == 1) {
+        for (size_t & i_orb : CompleteList_SetDone[len][eInv]) {
+          Face face_e = foc.RetrieveListOrbitFace(i_orb);
+          bool test = f_repr(face_i, face_e);
+          if (test)
+            return {};
+        }
+      }
+    }
+    if (CompleteList_SetUndone.count(len) == 1) {
+      if (CompleteList_SetUndone[len].count(eInv) == 1) {
+        for (size_t & i_orb : CompleteList_SetUndone[len][eInv]) {
+          Face face_e = foc.RetrieveListOrbitFace(i_orb);
+          bool test = f_repr(face_i, face_e);
+          if (test)
+            return {};
+        }
+      }
+    }
+    foc.InsertListOrbitFace(face_i);
+    Tint ordStab = GRP.Stabilizer_OnSets(face_i).size();
+    Tint orbSize = groupOrder / ordStab;
+    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
+    foc.InsertListOrbitIdxOrb(idx_orb);
+    InsertEntryDatabase(face_can, false, idx_orb, nbOrbit);
+    //
+    return SingEntToFace(face_can, idx_orb);
+  }
+  void FuncPutOrbitAsDone(size_t const& iOrb) {
+    SingEnt eEnt = foc.RetrieveListOrbitEntry(iOrb);
+    size_t len = eEnt.face.count();
+    /* TRICK 1: We copy the last element in first position to erase it and then pop_back the vector. */
+    size_t eInv = f_inv(eEnt.face);
+    std::vector<size_t> & V = CompleteList_SetUndone[len][eInv];
+    size_t spec_orbit = V[0];
+    V[0] = V[V.size()-1];
+    V.pop_back();
+    if (V.size() == 0) {
+      CompleteList_SetUndone[len].erase(eInv);
+    }
+    if (CompleteList_SetUndone[len].size() == 0) {
+      CompleteList_SetUndone.erase(len);
+    }
+    CompleteList_SetDone[len][eInv].push_back(spec_orbit);
+    foc.Counts_SetOrbitDone(eEnt.idx_orb);
+  }
+  DataFacetRepr<T,Tgroup> FuncGetMinimalUndoneOrbit() {
+    auto iter1 = CompleteList_SetUndone.begin();
+    if (iter1 == CompleteList_SetUndone.end()) {
+      os << "We have an empty map (1) We should not reach that stage\n";
+      throw TerminalException{1};
+    }
+    UNORD_MAP<size_t,std::vector<size_t>> & map_inv = iter1->second;
+    auto iter2 = map_inv.begin();
+    if (iter2 == map_inv.end()) {
+      os << "We have an empty map (2). We should not reach that stage\n";
+      throw TerminalException{1};
+    }
+    std::vector<size_t> & V = iter2->second;
+    /* TRICK 1: Take the first element in the vector. This first element will remain
+       in place but the vector may be extended without impacting this first entry. */
+    size_t pos = V[0];
+    Face f = foc.RetrieveListOrbitFace(pos);
+    Tgroup Stab=GRP.Stabilizer_OnSets(f);
+    return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
+  }
+private:
+  struct IteratorType {
+  private:
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1;
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1_end;
+    UNORD_MAP<size_t,std::vector<size_t>>::iterator iter2;
+    size_t pos;
+  public:
+    size_t operator*() {
+      return iter2->second[pos];
+    }
+    void PtrIncrease() {
+      pos++;
+      if (pos == iter2->second.size()) {
+        pos=0;
+        iter2++;
+        if (iter2 == iter1->second.end()) {
+          iter1++;
+          if (iter1 != iter1_end) {
+            iter2 = iter1->second.begin();
+          }
+        }
+      }
+    }
+    IteratorType& operator++() {
+      PtrIncrease();
+      return *this;
+    }
+    IteratorType operator++(int) {
+      IteratorType tmp = *this;
+      PtrIncrease();
+      return tmp;
+    }
+    bool operator!=(const IteratorType& x) const {
+      // If one of iter1 operator is the end then the comparison of the first one suffices to conclude
+      if (x.iter1 == iter1_end)
+        return iter1 != iter1_end;
+      if (iter1 == iter1_end)
+        return x.iter1 != iter1_end;
+      //
+      return x.iter1 != iter1 || x.iter2 != iter2 || x.pos != pos;
+    }
+  };
+public:
+  using iterator = IteratorType;
+  iterator begin_undone() const {
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1 = CompleteList_SetUndone.begin();
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1_end = CompleteList_SetUndone.end();
+    if (iter1 == iter1_end)
+      return {iter1, iter1_end, {}, 0};
+    UNORD_MAP<size_t,std::vector<size_t>>::iterator iter2 = CompleteList_SetUndone[iter1->first].begin();
+    return {iter1, iter1_end, iter2, 0};
+  }
+  iterator end_undone() const {
+    return {CompleteList_SetUndone.end(), CompleteList_SetUndone.end(), {}, 0};
+  }
+};
+
+
+
+
+template<typename TbasicBank>
+struct DatabaseOrbits {
+public:
+  using Telt=typename Tgroup::Telt;
+  using Tint=typename TbasicBank::Tint;
+  Tint CritSiz;
+private:
+  std::string MainPrefix;
+  netCDF::NcFile dataFile;
+  /* TRICK 7: Using separate files for faces and status allow us to gain locality.
+     The faces are written one by one while the access to status is random */
+  FileBool* fb; // This is for storing the status
+  FileFace* ff; // This is for storing the faces and the index of oribit
+  bool SavingTrigger;
+  std::ostream& os;
+  bool is_opened;
+  std::string strPresChar;
+public:
+  DatabaseOrbits() = delete;
+  DatabaseOrbits(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
+  DatabaseOrbits(DatabaseOrbits<T,Tint,Tgroup> &&) = delete;
+  DatabaseOrbits& operator=(const DatabaseOrbits<T,Tint,Tgroup>&) = delete;
+  void print_status() const {
+    os << "Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone)
+       << ") facet=(" << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone) << "," << bb.foc.nbUndone << ")\n\n";
+  }
+  DatabaseOrbits(TbasicBank & bb, const std::string& _MainPrefix, const bool& _SavingTrigger, std::ostream& os) : CritSiz(bb.EXT.cols() - 2), bb(bb), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
+    strPresChar = "|EXT|=" + std::to_string(bb.nbRow) +"/" + std::to_string(bb.nbCol) + " |GRP|=" + std::to_string(GRP.size());
     fb = nullptr;
     ff = nullptr;
     is_opened = false;
@@ -842,19 +1174,17 @@ public:
         fb = new FileBool(eFileFB);
         ff = new FileFace(eFileFF, n_act + n_bit_orbsize);
       }
-      netCDF::NcDim fDim = dataFile.getDim("n_grpsize");
-      n_grpsize = fDim.getSize();
       is_opened = true;
       //
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         Face f = ff->getface(i_orbit);
-        SingEnt eEnt = FaceToSingEnt(f);
+        SingEnt eEnt = foc.FaceToSingEnt(f);
         bool status = fb->getbit(i_orbit);
         // The DictOrbit
         InsertListOrbitEntry(eEnt);
         DictOrbit.insert(i_orbit);
         // The other fields
-        InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
+        bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
       }
       print_status();
     }
@@ -890,98 +1220,54 @@ public:
       //
       is_opened = false;
     }
-    DictOrbit.clear();
-    CompleteList_SetUndone.clear();
-    vectface retListOrbit(n_act);
-    for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
-      Face f = RetrieveListOrbitEntry(i_orbit).face;
-      retListOrbit.push_back(f);
-    }
-    return retListOrbit;
+    bb.clear();
+    return bb.FuncListOrbitIncidence();
   }
-  void FuncInsert(Face const& face_can) {// The face should have been canonicalized beforehand.
-    InsertListOrbitFace(face_can);
-    DictOrbit.insert(nbOrbit);
-    if (DictOrbit.size() == nbOrbit) // Insertion did not raise the count and so it was already present
-      return;
-    /* TRICK 8: The insertion yield something new. So now we compute the expensive stabilizer */
-    Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
-    Tint orbSize = groupOrder / ordStab;
-    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
-    InsertListOrbitIdxOrb(idx_orb);
-    InsertEntryDatabase(face_can, false, idx_orb, nbOrbit);
-    //
-    if (SavingTrigger) {
-      Face f = SingEntToFace({face_can, idx_orb});
-      fb->setbit(nbOrbit - 1, false);
-      ff->setface(nbOrbit - 1, f);
+  void FuncInsert(Face const& face_can) {
+    std::optional<Face> test = bb.FuncInsert(face_can);
+    if (test && SavingTrigger) {
+      fb->setbit(bb.foc.nbOrbit - 1, false);
+      ff->setface(bb.foc.nbOrbit - 1, *test);
     }
   }
-  void FuncPutOrbitAsDone(size_t const& iOrb) {
-    const SingEnt & eEnt = RetrieveListOrbitEntry(iOrb);
+  void FuncPutOrbitAsDone(size_t const& i_orb) {
+    bb.FuncPutOrbitAsDone(i_orb);
     if (SavingTrigger) {
-      fb->setbit(iOrb, true);
+      fb->setbit(i_orb, true);
     }
-    size_t len = eEnt.face.count();
-    /* TRICK 1: We copy the last element in first position to erase it and then pop_back the vector. */
-    std::vector<size_t> & V = CompleteList_SetUndone[len];
-    V[0] = V[V.size()-1];
-    V.pop_back();
-    nbUndone -= ListPossOrbsize[eEnt.idx_orb];
-    nbOrbitDone++;
     print_status();
   }
   Face ComputeIntersectionUndone() const {
-    size_t n_row = EXT.rows();
+    size_t n_row = bb.EXT.rows();
     Face eSetReturn(n_row);
     for (size_t i_row=0; i_row<n_row; i_row++)
       eSetReturn[i_row] = 1;
-    for (auto & eEnt : CompleteList_SetUndone) {
-      for (auto & pos : eEnt.second) {
-        const Face & eFace = RetrieveListOrbitEntry(pos).face;
-        eSetReturn &= OrbitIntersection(GRP, eFace);
-        if (eSetReturn.count() == 0)
-          return eSetReturn;
-      }
+    TbasicBank::iterator iter = bb.begin_undone();
+    while (iter != bb.end_undone()) {
+      eSetReturn &= OrbitIntersection(GRP, *iter);
+      if (eSetReturn.count() == 0)
+        return eSetReturn;
+      iter++;
     }
     return eSetReturn;
   }
-  Tint FuncNumber() const {
-    return TotalNumber;
-  }
-  Tint FuncNumberUndone() const {
-    return nbUndone;
-  }
   size_t FuncNumberOrbit() const {
-    return nbOrbit;
+    return bb.foc.nbOrbit;
   }
-  size_t FuncNumberOrbitDone() const {
-    return nbOrbitDone;
-  }
-  DataFacet<T,Tgroup> FuncGetMinimalUndoneOrbit() {
-    for (auto & eEnt : CompleteList_SetUndone) {
-      size_t len = eEnt.second.size();
-      if (len > 0) {
-        /* TRICK 1: Take the first element in the vector. This first element will remain
-           in place but the vector may be extended without impacting this first entry. */
-        size_t pos = eEnt.second[0];
-        const Face& f = RetrieveListOrbitEntry(pos).face;
-        Tgroup Stab=GRP.Stabilizer_OnSets(f);
-        std::cerr << strPresChar << " Considering orbit " << pos << " |inc|=" << f.count() << " |stab|=" << Stab.size() << "\n";
-        return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
-      }
-    }
-    os << "We should never reach that stage as we should find some undone facet\n";
-    throw TerminalException{1};
+  TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
+    TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
+    std::cerr << strPresChar << " Considering orbit " << data.pos << " |inc|=" << data.f.count() << " |stab|=" << data.Stab.size() << "\n";
+    return data;
   }
   bool attempt_connectedness_scheme() const {
     vectface vf(nbRow);
-    std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
-    for (auto & eEnt : CompleteList_SetUndone) {
-      for (auto & pos : eEnt.second) {
-        const Face & eFace = RetrieveListOrbitEntry(pos).face;
-        for (auto & uFace : OrbitFace(eFace, LGen))
+    std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
+    {
+      TbasicBank::iterator iter = bb.begin_undone();
+      while (iter != bb.end_undone()) {
+        for (auto & uFace : OrbitFace(*iter, LGen))
           vf.push_back(uFace);
+        iter++;
       }
     }
     size_t max_iter=100;
@@ -994,7 +1280,7 @@ public:
         return false;
       return true;
     };
-    return EvaluationConnectednessCriterion(EXT, GRP, vf, f_recur);
+    return EvaluationConnectednessCriterion(bb.EXT, bb.GRP, vf, f_recur);
   }
   bool GetTerminationStatus() const {
     if (nbOrbitDone > 0) {
@@ -1007,7 +1293,7 @@ public:
     return false;
   }
   UndoneOrbitInfo<Tint> GetTerminationInfo() const {
-    return {nbOrbitDone, nbUndone, ComputeIntersectionUndone()};
+    return {bb.foc.nbOrbitDone, bb.foc.nbUndone, ComputeIntersectionUndone()};
   }
 };
 
