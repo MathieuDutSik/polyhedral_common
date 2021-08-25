@@ -191,7 +191,8 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|OrbitSplittingSet|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << " |TheOutput|=" << TheOutput.size() << "\n";
+  auto dur32 = std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count();
+  std::cerr << "KEY=(OrbitSplitting," << ListIncd.size() << "," << TheOutput.size() << ") VALUE=" << dur32 << "\n";
 #endif
   os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
