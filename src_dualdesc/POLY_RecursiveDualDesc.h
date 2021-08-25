@@ -718,18 +718,24 @@ public:
 
 
 
-template<typename T_inp, typename Tint, typename Tgroup_inp>
+template<typename T_inp, typename Tint_inp, typename Tgroup_inp>
 struct DatabaseCanonic {
 public:
   using T=T_inp;
+  using Tint=Tint_inp;
   using Tgroup=Tgroup_inp;
   using Telt=typename Tgroup::Telt;
   const MyMatrix<T>& EXT;
   const Tgroup& GRP;
   using DataFacet=DataFacetCan<T,Tgroup>;
-private:
   using Torbsize=uint16_t;
-  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tidx = typename Telt::Tidx;
+  using SingEnt = typename FaceOrbsizeContainer<Tint,Torbsize,Tidx>::SingEnt;
+  int nbRow;
+  int nbCol;
+  size_t delta;
+  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
+private:
   Tint groupOrder;
   UNORD_SET<size_t,std::function<size_t(size_t)>,std::function<bool(size_t,size_t)>> DictOrbit;
   std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
@@ -739,12 +745,7 @@ private:
   size_t n_bit_hash;
 #endif
   size_t n_act;
-  size_t delta;
   size_t n_act_div8;
-  int nbRow;
-  int nbCol;
-  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
-  using SingEnt = typename FaceOrbsizeContainer<Tint,Torbsize,Tidx>::SingEnt;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
 #endif
@@ -891,14 +892,21 @@ public:
     std::cerr << "Failed to find an undone orbit\n";
     throw TerminalException{1};
   }
+  void InsertListOrbitEntry(SingEnt const& eEnt, const size_t& i_orbit) {
+    foc.InsertListOrbitEntry(eEnt);
+    DictOrbit.insert(i_orbit);
+  }
 private:
   struct IteratorType {
   private:
-    std::map<size_t, std::vector<size_t>>::iterator iter;
+    const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc;
+    std::map<size_t, std::vector<size_t>>::const_iterator iter;
     size_t pos;
   public:
-    size_t operator*() {
-      return iter->second[pos];
+    IteratorType(const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc, std::map<size_t, std::vector<size_t>>::const_iterator iter, size_t pos) : foc(foc), iter(iter), pos(pos) {
+    }
+    Face operator*() {
+      return foc.RetrieveListOrbitFace(iter->second[pos]);
     }
     IteratorType& operator++() {
       pos++;
@@ -917,44 +925,46 @@ private:
       }
       return tmp;
     }
-    bool operator!=(const IteratorType& iter) const {
-      return pos != iter.pos || iter != iter.iter;
+    bool operator!=(const IteratorType& x) const {
+      return pos != x.pos || iter != x.iter;
     }
-    bool operator==(const IteratorType& iter) const {
-      return pos == iter.pos && iter == iter.iter;
+    bool operator==(const IteratorType& x) const {
+      return pos == x.pos && iter == x.iter;
     }
   };
 public:
   using iterator = IteratorType;
   iterator begin_undone() const {
-    return {CompleteList_SetUndone.begin(), 0};
+    return IteratorType(foc, CompleteList_SetUndone.begin(), 0);
   }
   iterator end_undone() const {
-    return {CompleteList_SetUndone.end(), 0};
+    return IteratorType(foc, CompleteList_SetUndone.end(), 0);
   }
 };
 
 
-template<typename T_inp, typename Tint, typename Tgroup_inp, typename Frepr, typename Fstab, typename Finv>
+template<typename T_inp, typename Tint_inp, typename Tgroup_inp, typename Frepr, typename Fstab, typename Finv>
 struct DatabaseRepr {
 public:
   using T=T_inp;
+  using Tint=Tint_inp;
   using Tgroup=Tgroup_inp;
   using Telt=typename Tgroup::Telt;
   const MyMatrix<T>& EXT;
   const Tgroup& GRP;
   using DataFacet=DataFacetRepr<T,Tgroup>;
-private:
   using Torbsize=uint16_t;
-  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tidx = typename Telt::Tidx;
+  using SingEnt = typename FaceOrbsizeContainer<Tint,Torbsize,Tidx>::SingEnt;
+  int nbRow;
+  int nbCol;
+  size_t delta;
+  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
+private:
   Tint groupOrder;
   std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>> CompleteList_SetUndone;
   std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>> CompleteList_SetDone;
   size_t n_act;
-  int nbRow;
-  int nbCol;
-  FaceOrbsizeContainer<Tint,Torbsize,Tidx> foc;
-  using SingEnt = typename FaceOrbsizeContainer<Tint,Torbsize,Tidx>::SingEnt;
   Frepr f_repr;
   Fstab f_stab;
   Finv f_inv;
@@ -979,6 +989,7 @@ public:
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
+    delta = foc.delta;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
   }
@@ -1064,6 +1075,9 @@ public:
     Tgroup Stab=GRP.Stabilizer_OnSets(f);
     return {pos, f, FlippingFramework<T>(EXT, f), GRP, ReducedGroupAction(Stab, f)};
   }
+  void InsertListOrbitEntry(SingEnt const& eEnt, const size_t& i_orbit) {
+    foc.InsertListOrbitEntry(eEnt);
+  }
 private:
   struct IteratorType {
   private:
@@ -1132,9 +1146,10 @@ public:
   using T=typename TbasicBank::T;
   using Telt=typename Tgroup::Telt;
   using Tint=typename TbasicBank::Tint;
-  Tint CritSiz;
-private:
   using SingEnt=typename TbasicBank::SingEnt;
+  Tint CritSiz;
+  TbasicBank & bb;
+private:
   std::string MainPrefix;
   netCDF::NcFile dataFile;
   /* TRICK 7: Using separate files for faces and status allow us to gain locality.
@@ -1146,7 +1161,6 @@ private:
   bool is_opened;
   size_t delta;
   std::string strPresChar;
-  TbasicBank & bb;
 public:
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<TbasicBank>&) = delete;
@@ -1198,8 +1212,7 @@ public:
         SingEnt eEnt = bb.foc.FaceToSingEnt(f);
         bool status = fb->getbit(i_orbit);
         // The DictOrbit
-        InsertListOrbitEntry(eEnt);
-        DictOrbit.insert(i_orbit);
+        bb.InsertListOrbitEntry(eEnt, i_orbit);
         // The other fields
         bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
       }
@@ -1237,7 +1250,6 @@ public:
       //
       is_opened = false;
     }
-    bb.clear();
     return bb.FuncListOrbitIncidence();
   }
   void FuncInsert(Face const& face_can) {
@@ -1273,7 +1285,7 @@ public:
   }
   typename TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
     typename TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
-    std::cerr << strPresChar << " Considering orbit " << data.pos << " |inc|=" << data.f.count() << " |stab|=" << data.Stab.size() << "\n";
+    std::cerr << strPresChar << " Considering orbit " << data.SelectedOrbit << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size() << "\n";
     return data;
   }
   bool attempt_connectedness_scheme() const {
@@ -1441,7 +1453,10 @@ vectface DUALDESC_AdjacencyDecomposition(
       Tint GroupSizeComp = TheGRPrelevant.size();
       std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
       std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
-      DatabaseOrbits<T,Tint,Tgroup> RPL(EXT, TheGRPrelevant, MainPrefix, AllArr.Saving, std::cerr);
+      using TbasicBank = DatabaseCanonic<T,Tint,Tgroup>;
+      using DataFacet = typename TbasicBank::DataFacet;
+      TbasicBank bb(EXT, TheGRPrelevant);
+      DatabaseOrbits<TbasicBank> RPL(bb, MainPrefix, AllArr.Saving, std::cerr);
       if (RPL.FuncNumberOrbit() == 0) {
         std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
         vectface ListFace=DirectComputationInitialFacetSet_Group(EXT, TheGRPrelevant, ansSamp);
@@ -1452,7 +1467,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       while(true) {
         if (RPL.GetTerminationStatus())
           break;
-        DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
+        DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
         size_t SelectedOrbit = df.SelectedOrbit;
         std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
         vectface TheOutput=DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
@@ -1580,7 +1595,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
 	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
 	 std::string const& ePrefix)
 {
-  using Tgr = GraphListAdj;
+  //  using Tgr = GraphListAdj;
   using Tint=typename Tgroup::Tint;
   int irank=comm.rank();
   int size=comm.size();
@@ -1595,9 +1610,11 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   // undone information for Balinski termination
   const int tag_setup_databank = 39;
 
+  using TbasicBank = DatabaseCanonic<T,Tint,Tgroup>;
+  //  using DataFacet = typename TbasicBank::DataFacet;
   struct BigRecordEntry {
     std::vector<size_t> subset_index_proc;
-    DatabaseOrbits<T,Tint,Tgroup> databank;
+    DatabaseOrbits<TbasicBank> databank;
     bool did_something;
     std::vector<UndoneOrbitInfo<Tint>> list_undoneinfo;
     int initiating_proc;
@@ -1612,8 +1629,9 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   // We can have DatabseBank created on disjoint processes.
   // The order will not be the same between processors.
   std::vector<BigRecordEntry> ListRPL;
+  TbasicBank bb(EXT,GRP);
   ListRPL.emplace_back({get_subset_index_rev(EXT.rows()),
-      DatabaseOrbits<T,Tint,Tgroup>(EXT, GRP, ePrefix, AllArr.Saving, std::cerr),
+      DatabaseOrbits<TbasicBank>(bb, ePrefix, AllArr.Saving, std::cerr),
       false,
       std::vector<UndoneOrbitInfo<Tint>>(size, get_default_undoneinfo(EXT.rows())),
       -1 // no initiating for the main one
@@ -1656,8 +1674,9 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   };
   auto insert_databank=[&](int init_proc, const SetupDatabank& setup_db) -> void {
     // Update ListRPL
+    TbasicBank bb(setup_db.EXT, setup_db.GRP); // Bugged as we are passing a reference to a temporary object.
     ListRPL.emplace_back({get_subset_index_rev(setup_db.EXT.rows()),
-        DatabaseOrbits<T,Tint,Tgroup>(setup_db.EXT, setup_db.GRP, ePrefix, AllArr.Saving, std::cerr),
+        DatabaseOrbits<TbasicBank>(bb, ePrefix, AllArr.Saving, std::cerr),
         false,
         std::vector<UndoneOrbitInfo<Tint>>(size, get_default_undoneinfo(setup_db.EXT.rows())),
         init_proc
