@@ -1081,13 +1081,19 @@ public:
 private:
   struct IteratorType {
   private:
-    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1;
-    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1_end;
-    UNORD_MAP<size_t,std::vector<size_t>>::iterator iter2;
+    const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc;
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1;
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end;
+    UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2;
     size_t pos;
   public:
+    IteratorType(const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc,
+                 std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1,
+                 std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end,
+                 UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2, size_t pos) : foc(foc), iter1(iter1), iter1_end(iter1_end), pos(pos) {
+    }
     size_t operator*() {
-      return iter2->second[pos];
+      return foc.RetrieveListOrbitFace(iter2->second[pos]);
     }
     void PtrIncrease() {
       pos++;
@@ -1124,15 +1130,15 @@ private:
 public:
   using iterator = IteratorType;
   iterator begin_undone() const {
-    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1 = CompleteList_SetUndone.begin();
-    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::iterator iter1_end = CompleteList_SetUndone.end();
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1 = CompleteList_SetUndone.begin();
+    std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end = CompleteList_SetUndone.end();
     if (iter1 == iter1_end)
-      return {iter1, iter1_end, {}, 0};
-    UNORD_MAP<size_t,std::vector<size_t>>::iterator iter2 = CompleteList_SetUndone.at(iter1->first).begin();
-    return {iter1, iter1_end, iter2, 0};
+      return IteratorType(foc, iter1, iter1_end, {}, 0);
+    UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2 = CompleteList_SetUndone.at(iter1->first).begin();
+    return IteratorType(foc, iter1, iter1_end, iter2, 0);
   }
   iterator end_undone() const {
-    return {CompleteList_SetUndone.end(), CompleteList_SetUndone.end(), {}, 0};
+    return IteratorType(foc, CompleteList_SetUndone.end(), CompleteList_SetUndone.end(), {}, 0);
   }
 };
 
