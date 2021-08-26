@@ -107,6 +107,19 @@ TheHeuristic<T> MethodCheckDatabaseBank()
 
 
 
+template<typename T>
+TheHeuristic<T> MethodChosenDatabase()
+{
+  std::vector<std::string> ListString={
+    "2",
+    "1 groupsize > 5000000000000 incidence > 1000000 traces",
+    "1 groupsize > 5000000000000 incidence > 100000 repr",
+    "canonic"};
+  return HeuristicFromListString<T>(ListString);
+}
+
+
+
 
 
 
@@ -145,13 +158,13 @@ template<typename T>
 PolyHeuristic<T> AllStandardHeuristic()
 {
   PolyHeuristic<T> AllArr;
-  AllArr.Splitting=StandardHeuristicADM<T>();
-  AllArr.BankSave=StandardHeuristicBankSave<T>();
-  AllArr.AdditionalSymmetry=StandardHeuristicAdditionalSymmetry<T>();
-  AllArr.DualDescriptionProgram=StandardHeuristicDualDescriptionProgram<T>();
-  AllArr.StabEquivFacet=StandardHeuristicStabEquiv<T>();
-  AllArr.InitialFacetSet=MethodInitialFacetSet<T>();
-  AllArr.InvariantQuality=MethodInvariantQuality<T>();
+  AllArr.Splitting = StandardHeuristicADM<T>();
+  AllArr.BankSave = StandardHeuristicBankSave<T>();
+  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
+  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
+  AllArr.StabEquivFacet = StandardHeuristicStabEquiv<T>();
+  AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
+  AllArr.InvariantQuality = MethodInvariantQuality<T>();
   return AllArr;
 }
 
@@ -165,6 +178,7 @@ struct PolyHeuristicSerial {
   TheHeuristic<T> DualDescriptionProgram;
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> CheckDatabaseBank;
+  TheHeuristic<T> ChosenDatabase;
   bool Saving;
 };
 
@@ -174,12 +188,13 @@ template<typename T>
 PolyHeuristicSerial<T> AllStandardHeuristicSerial()
 {
   PolyHeuristicSerial<T> AllArr;
-  AllArr.Splitting=StandardHeuristicADM<T>();
-  AllArr.BankSave=StandardHeuristicBankSave<T>();
-  AllArr.AdditionalSymmetry=StandardHeuristicAdditionalSymmetry<T>();
-  AllArr.DualDescriptionProgram=StandardHeuristicDualDescriptionProgram<T>();
-  AllArr.InitialFacetSet=MethodInitialFacetSet<T>();
-  AllArr.CheckDatabaseBank=MethodCheckDatabaseBank<T>();
+  AllArr.Splitting = StandardHeuristicADM<T>();
+  AllArr.BankSave = StandardHeuristicBankSave<T>();
+  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
+  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
+  AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
+  AllArr.CheckDatabaseBank = MethodCheckDatabaseBank<T>();
+  AllArr.ChosenDatabase = MethodChosenDatabase<T>();
   return AllArr;
 }
 

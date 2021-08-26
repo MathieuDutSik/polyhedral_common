@@ -1088,7 +1088,7 @@ public:
       std::cerr << "We have an empty map (2). We should not reach that stage\n";
       throw TerminalException{1};
     }
-    std::vector<size_t> & V = iter2->second;
+    const std::vector<size_t> & V = iter2->second;
     /* TRICK 1: Take the first element in the vector. This first element will remain
        in place but the vector may be extended without impacting this first entry. */
     size_t pos = V[0];
@@ -1395,6 +1395,46 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T>& EXT, const Tgro
 }
 
 
+// Needs initial definition due to template crazyness
+template<typename Tbank, typename T,typename Tgroup, typename Tidx_value>
+vectface DUALDESC_AdjacencyDecomposition(
+         Tbank & TheBank,
+	 MyMatrix<T> const& EXT,
+	 Tgroup const& GRP,
+	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
+	 std::string const& ePrefix);
+
+
+template<typename Tbank, typename T,typename Tgroup, typename Tidx_value, typename TbasicBank>
+vectface Kernel_DUALDESC_AdjacencyDecomposition(
+         Tbank & TheBank,
+         TbasicBank & bb,
+	 PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
+	 std::string const& ePrefix,
+         std::map<std::string, typename Tgroup::Tint> const& TheMap) {
+  using DataFacet = typename TbasicBank::DataFacet;
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, std::cerr);
+  if (RPL.FuncNumberOrbit() == 0) {
+    std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+    for (auto & face : RPL.ComputeInitialSet(ansSamp))
+      RPL.FuncInsert(face);
+  }
+  while(true) {
+    if (RPL.GetTerminationStatus())
+      break;
+    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    size_t SelectedOrbit = df.SelectedOrbit;
+    std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+    vectface TheOutput=DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+    for (auto& eOrbB : TheOutput) {
+      Face eFlip = df.flip(eOrbB);
+      RPL.FuncInsert(eFlip);
+    }
+    RPL.FuncPutOrbitAsDone(SelectedOrbit);
+  };
+  return RPL.FuncListOrbitIncidence();
+}
+
 //
 // A number of appoximations are done in this code:
 // ---In the bank we assume that the full symmetry is used.
@@ -1468,29 +1508,30 @@ vectface DUALDESC_AdjacencyDecomposition(
       Tint GroupSizeComp = TheGRPrelevant.size();
       std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
       std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
-      using TbasicBank = DatabaseCanonic<T,Tint,Tgroup>;
-      using DataFacet = typename TbasicBank::DataFacet;
-      TbasicBank bb(EXT, TheGRPrelevant);
-      DatabaseOrbits<TbasicBank> RPL(bb, MainPrefix, AllArr.Saving, std::cerr);
-      if (RPL.FuncNumberOrbit() == 0) {
-        std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-        for (auto & face : RPL.ComputeInitialSet(ansSamp))
-          RPL.FuncInsert(face);
+      std::string ansChosenDatabase=HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+      if (ansChosenDatabase == "canonic") {
+        using TbasicBank = DatabaseCanonic<T,Tint,Tgroup>;
+        TbasicBank bb(EXT, TheGRPrelevant);
+        return Kernel_DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value,TbasicBank>(TheBank, bb, AllArr, MainPrefix, TheMap);
       }
-      while(true) {
-        if (RPL.GetTerminationStatus())
-          break;
-        DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-        size_t SelectedOrbit = df.SelectedOrbit;
-        std::string NewPrefix = ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-        vectface TheOutput=DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
-        for (auto& eOrbB : TheOutput) {
-          Face eFlip = df.flip(eOrbB);
-          RPL.FuncInsert(eFlip);
-        }
-        RPL.FuncPutOrbitAsDone(SelectedOrbit);
-      };
-      return RPL.FuncListOrbitIncidence();
+      if (ansChosenDatabase == "repr") {
+        WeightMatrix<true,int,Tidx_value> WMat=WeightMatrixFromPairOrbits<Tgroup,Tidx_value>(TheGRPrelevant);
+        auto f_repr=[&](const Face& f1, const Face& f2) -> bool {
+          return TheGRPrelevant.RepresentativeAction_OnSets(f1, f2).first;
+        };
+        auto f_stab=[&](const Face& f) -> Tgroup {
+          return TheGRPrelevant.Stabilizer_OnSets(f);
+        };
+        auto f_inv=[&](const Face& f) -> size_t {
+          return GetLocalInvariantWeightMatrix(WMat, f);
+        };
+        using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr), decltype(f_stab), decltype(f_inv)>;
+        TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_stab, f_inv);
+        return Kernel_DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value,TbasicBank>(TheBank, bb, AllArr, MainPrefix, TheMap);
+      }
+      std::cerr << "Failed to find a matching entry\n";
+      throw TerminalException{1};
+
     }
   };
   vectface ListOrbitFaces = compute_split_or_not();
@@ -1859,6 +1900,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   ListStringValuesH["MethodInitialFacetSetFile"]="unset.heu";
   ListStringValuesH["BankSaveHeuristicFile"]="unset.heu";
   ListStringValuesH["CheckDatabaseBankFile"]="unset.heu";
+  ListStringValuesH["ChosenDatabaseFile"]="unset.heu";
   SingleBlock BlockHEURIS;
   BlockHEURIS.ListStringValues=ListStringValuesH;
   ListBlock["HEURISTIC"]=BlockHEURIS;
@@ -2000,12 +2042,14 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
   SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank);
+  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   std::cerr << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
   std::cerr << "DualDescriptionHeuristicFile\n" << AllArr.DualDescriptionProgram << "\n";
   std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
   std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
   std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   //
   bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
   std::string DD_Prefix=BlockMETHOD.ListStringValues.at("Prefix");
