@@ -718,6 +718,21 @@ public:
 
 
 
+
+template<typename T, typename Tgroup>
+vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tgroup& GRP, const std::string& ansSamp)
+{
+  // We can do a little better by passing a lambda to the DirectComputationInitialFacetSet
+  // but that is a little overkill right now
+  size_t nbRow = EXT.rows();
+  vectface list_face(nbRow);
+  for (auto & eFace : DirectComputationInitialFacetSet(EXT, ansSamp))
+    list_face.push_back(GRP.CanonicalImage(eFace));
+  return list_face;
+}
+
+
+
 template<typename T_inp, typename Tint_inp, typename Tgroup_inp>
 struct DatabaseCanonic {
 public:
@@ -864,6 +879,9 @@ public:
     InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
     return foc.SingEntToFace(face_can, idx_orb);
   }
+  vectface ComputeInitialSet(const std::string& ansSamp) {
+    return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp);
+  }
   void FuncPutOrbitAsDone(size_t const& i_orb) {
     SingEnt eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.face.count();
@@ -905,7 +923,7 @@ private:
   public:
     IteratorType(const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc, std::map<size_t, std::vector<size_t>>::const_iterator iter, size_t pos) : foc(foc), iter(iter), pos(pos) {
     }
-    Face operator*() {
+    Face operator*() const {
       return foc.RetrieveListOrbitFace(iter->second[pos]);
     }
     IteratorType& operator++() {
@@ -1037,6 +1055,9 @@ public:
     //
     return foc.SingEntToFace(face_i, idx_orb);
   }
+  vectface ComputeInitialSet(const std::string& ansSamp) {
+    return DirectComputationInitialFacetSet(EXT, ansSamp);
+  }
   void FuncPutOrbitAsDone(size_t const& iOrb) {
     SingEnt eEnt = foc.RetrieveListOrbitEntry(iOrb);
     size_t len = eEnt.face.count();
@@ -1092,7 +1113,7 @@ private:
                  std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end,
                  UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2, size_t pos) : foc(foc), iter1(iter1), iter1_end(iter1_end), pos(pos) {
     }
-    size_t operator*() {
+    Face operator*() const {
       return foc.RetrieveListOrbitFace(iter2->second[pos]);
     }
     void PtrIncrease() {
@@ -1265,6 +1286,9 @@ public:
       ff->setface(bb.foc.nbOrbit - 1, *test);
     }
   }
+  vectface ComputeInitialSet(const std::string& ansSamp) {
+    return bb.ComputeInitialSet(ansSamp);
+  }
   void FuncPutOrbitAsDone(size_t const& i_orb) {
     bb.FuncPutOrbitAsDone(i_orb);
     if (SavingTrigger) {
@@ -1371,21 +1395,6 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T>& EXT, const Tgro
 }
 
 
-
-template<typename T, typename Tgroup>
-vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T>& EXT, const Tgroup& GRP, const std::string& ansSamp)
-{
-  // We can do a little better by passing a lambda to the DirectComputationInitialFacetSet
-  // but that is a little overkill right now
-  size_t nbRow = EXT.rows();
-  vectface list_face(nbRow);
-  for (auto & eFace : DirectComputationInitialFacetSet(EXT, ansSamp))
-    list_face.push_back(GRP.CanonicalImage(eFace));
-  return list_face;
-}
-
-
-
 //
 // A number of appoximations are done in this code:
 // ---In the bank we assume that the full symmetry is used.
@@ -1465,10 +1474,8 @@ vectface DUALDESC_AdjacencyDecomposition(
       DatabaseOrbits<TbasicBank> RPL(bb, MainPrefix, AllArr.Saving, std::cerr);
       if (RPL.FuncNumberOrbit() == 0) {
         std::string ansSamp=HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-        vectface ListFace=DirectComputationInitialFacetSet_Group(EXT, TheGRPrelevant, ansSamp);
-        std::cerr << "After DirectComputationInitialFacetSet |ListFace|=" << ListFace.size() << "\n";
-        for (auto & eInc : ListFace)
-          RPL.FuncInsert(eInc);
+        for (auto & face : RPL.ComputeInitialSet(ansSamp))
+          RPL.FuncInsert(face);
       }
       while(true) {
         if (RPL.GetTerminationStatus())
