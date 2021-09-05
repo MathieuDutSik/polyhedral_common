@@ -82,7 +82,7 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
       MyMatrix<T> TheTotInv=Inverse(TheTot);
       MyMatrix<T> PreListVectorsB=PreListVectors*TheTotInv;
       MyMatrix<T> ListVectors(nbOrbCompl, LPdim);
-      for (int jRow=0; jRow<nbOrbCompl; jRow++)
+      for (size_t jRow=0; jRow<nbOrbCompl; jRow++)
 	for (int iCol=0; iCol<LPdim; iCol++) {
 	  int jCol=iCol + nbRowSpann;
 	  ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
