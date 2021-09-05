@@ -1,5 +1,8 @@
 #PROGRAM		= POLY_ThreadedADM ComputeDelaunay
 PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
+                  TEST_LinPolytope_Isomorphism \
+                  TEST_LinPolytope_Automorphism \
+                  TEST_LinPolytope_Canonic \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons \
 		  POLY_redundancy \
@@ -16,15 +19,13 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
                   GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting \
                   GRP_VectorSplitting \
-                  GRP_ComputeAut_ListMat_Subset_EXT \
-                  GRP_TestEquivalence_ListMat_Subset_EXT \
-                  GRP_Invariant_ListMat_Subset_EXT \
-                  POLY_LinPolytope_Automorphism \
-                  POLY_LinPolytope_TestAutomorphism \
-                  POLY_LinPolytope_Canonic \
-                  POLY_LinPolytope_TestCanonic \
+                  GRP_ListMat_Subset_EXT_Automorphism \
+                  GRP_ListMat_Subset_EXT_Isomorphism \
+                  GRP_ListMat_Subset_EXT_Invariant \
+                  GRP_LinPolytope_Automorphism \
+                  GRP_LinPolytope_Isomorphism \
+                  GRP_LinPolytope_Canonic \
                   GRP_OrbitSplittingPerfect \
-                  POLY_LinPolytope_TestIsomorphism \
 		  POLY_ComputeEngelSymbol \
 		  POLY_FaceLatticeDirect
 

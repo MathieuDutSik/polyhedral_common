@@ -1,4 +1,7 @@
 #PROGRAM		= LATT_lll
+#PROGRAM		= TEST_LinPolytope_Automorphism
+#PROGRAM		= TEST_LinPolytope_Isomorphism
+#PROGRAM		= TEST_LinPolytope_Canonic
 #PROGRAM		= SHORT_SplitVectorFamily
 #PROGRAM		= SHORT_EnumerateCyclicCases
 #PROGRAM		= SHORT_GetShortestVector
@@ -23,10 +26,6 @@ PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
 #PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= POLY_LinPolytope_Automorphism
-#PROGRAM		= POLY_LinPolytope_TestAutomorphism
-#PROGRAM		= POLY_LinPolytope_TestIsomorphism
-#PROGRAM		= POLY_LinPolytope_TestCanonic
-#PROGRAM		= POLY_GapFindHyperplaneRegions
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

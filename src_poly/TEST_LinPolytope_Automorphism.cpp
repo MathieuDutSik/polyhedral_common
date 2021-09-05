@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_TestAutomorphism [EXTIN]\n";
+      std::cerr << "TEST_LinPolytope_Automorphism [EXTIN]\n";
       std::cerr << "\n";
       std::cerr << "EXTIN : The list of vertices (or inequalities for that matter)\n";
       return -1;
