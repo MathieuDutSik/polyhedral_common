@@ -581,7 +581,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
 
 
 template<typename T, typename Tidx, typename F1, typename F2>
-DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
+DataTraces* GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -719,7 +719,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   for (size_t iCase=0; iCase<nbCase; iCase++)
     for (size_t iH=0; iH<hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
-  DataTraces DT(nbVertTot, nbAdjacent);
+  DataTraces* DT = new DataTraces(nbVertTot, nbAdjacent);
   // Now setting up the adjacencies
   int pos=0;
   std::vector<int> ListShift(nbVertTot);
@@ -728,21 +728,21 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
     size_t iH = i / nbVert;
     int iCase = list_signature[iVert];
     int nbAdj = MatrixAdj(iH, iCase);
-    DT.sg1.d[i] = nbAdj;
-    DT.sg1.v[i] = pos;
+    DT->sg1.d[i] = nbAdj;
+    DT->sg1.v[i] = pos;
     ListShift[i] = pos;
     pos += nbAdj;
   }
   // Assigning the color stuff
   for (size_t i=0; i<nbVertTot; i++) {
-    DT.lab1[i] = i;
+    DT->lab1[i] = i;
   }
   for (size_t i=0; i<nbVertTot; i++) {
-    DT.ptn[i] = NAUTY_INFINITY;
+    DT->ptn[i] = NAUTY_INFINITY;
   }
   for (size_t iH=0; iH<hS; iH++) {
     size_t pos = iH * nbVert + nbVert - 1;
-    DT.ptn[pos] = 0;
+    DT->ptn[pos] = 0;
   }
   //
 #ifdef DEBUG_SPECIFIC
@@ -750,7 +750,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   std::vector<int> ListDegExpe2(nbVertTot,0);
 #endif
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
-    DT.sg1.e[ListShift[iVert]] = jVert;
+    DT->sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
 #ifdef DEBUG_SPECIFIC
     ListDegExpe1[iVert]++;
@@ -804,11 +804,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   int sum_adj = 0;
   int nb_error = 0;
   for (size_t iVert=0; iVert<nbVertTot; iVert++) {
-    int deg0 = DT.sg1.d[iVert];
+    int deg0 = DT->sg1.d[iVert];
     int deg1 = ListDegExpe1[iVert];
     int deg2 = ListDegExpe2[iVert];
     if (deg0 != deg1 || deg0 != deg2 || deg1 != deg2) {
-      std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
+      std::cerr << "iVert=" << iVert << " deg0=" << DT->sg1.d[iVert] << " deg1=" << ListDegExpe1[iVert] << " deg2=" << ListDegExpe2[iVert] << "\n";
       nb_error++;
     }
     sum_adj += ListDegExpe2[iVert];
@@ -837,12 +837,14 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSig
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
-  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
+  DataTraces* DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  std::cerr << "We have DT 1\n";
+  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(*DT);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetCanonicalizationVector_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+  delete DT;
   return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
 }
 
@@ -855,8 +857,10 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT, nbRow);
+  DataTraces* DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  std::cerr << "We have DT 2\n";
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(*DT, nbRow);
+  delete DT;
   std::vector<std::vector<Tidx>> LGen;
   for (auto& eListI : ePair.second) {
     std::vector<Tidx> eListO(nbRow);
@@ -886,8 +890,10 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
+  DataTraces* DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  std::cerr << "We have DT 3\n";
+  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(*DT, nbRow);
+  delete DT;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetDataTraces + GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
