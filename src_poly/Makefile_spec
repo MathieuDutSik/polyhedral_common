@@ -11,8 +11,9 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_lrs
-PROGRAM		= GRP_OrbitSplittingPerfect
+#PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
+PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM

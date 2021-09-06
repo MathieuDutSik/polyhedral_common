@@ -243,7 +243,14 @@ void PrintVertexParttionInfo(const VertexPartition<Tidx>& VP, const std::vector<
 template<typename T, typename Tidx, typename F1, typename F2>
 VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
 {
+  using Ttime = std::chrono::time_point<std::chrono::system_clock>;
+  Ttime time_vp1 = std::chrono::system_clock::now();
   VertexPartition<Tidx> VP = ComputeInitialVertexPartition<T,Tidx>(nbRow, f1, f2, canonically);
+  Ttime time_vp2 = std::chrono::system_clock::now();
+  uint64_t dur_vp = std::chrono::duration_cast<std::chrono::microseconds>(time_vp2 - time_vp1).count();
+#ifdef TIMINGS
+  std::cerr << "|ComputeInitialVertexPartition|=" << dur_vp << "\n";
+#endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_SPECIFIC
   std::cerr << "After ComputeInitialVertexPartition\n";
@@ -310,14 +317,22 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool ca
     int iBlock = GetPreferable_iBlock();
     if (iBlock == -1)
       break;
+#ifdef DEBUG_SPECIFIC
     std::cerr << "iBlock=" << iBlock << "\n";
+#endif
+    Ttime time_ref1 = std::chrono::system_clock::now();
     bool test = DoRefinement(iBlock);
+    Ttime time_ref2 = std::chrono::system_clock::now();
+    uint64_t dur_ref = std::chrono::duration_cast<std::chrono::microseconds>(time_ref2 - time_ref1).count();
+#ifdef TIMINGS
+    std::cerr << "|DoRefinement|=" << dur_ref << "\n";
+#endif
 #ifdef DEBUG_SPECIFIC
     std::cerr << "After Dorefinement\n";
     PrintVertexParttionInfo(VP, status);
-#endif
     std::cerr << "test=" << test << "\n";
-    if (!test)
+#endif
+    if (!test && dur_ref > 1000 && dur_ref > 10 * dur_vp)
       break;
   }
   return VP;
@@ -897,8 +912,15 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   size_t max_globiter = 1000;
   VertexPartition<Tidx> VP = ComputeVertexPartition<T,Tidx>(nbRow, f1, f2, canonically, max_globiter);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|ComputeVertexPartition|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
 #ifdef DEBUG_SPECIFIC
@@ -1006,7 +1028,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 
       }
     }
   }
-  std::cerr << "GetStabilizerWeightMatrix_Heuristic : We should never reach that stage\n";
+  std::cerr << "BlockBreakdown_Heuristic : We should never reach that stage\n";
   throw TerminalException{1};
 }
 
