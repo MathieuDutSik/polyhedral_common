@@ -918,11 +918,13 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename Tidx>
 std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<Tidx> const& cl)
 {
+  std::cerr << "GetCanonicalizationVector_KernelBis, step 1\n";
   size_t nof_vertices = cl.size();
   std::vector<Tidx> clR(nof_vertices);
   for (size_t i=0; i<nof_vertices; i++)
     clR[cl[i]]=i;
   //
+  std::cerr << "GetCanonicalizationVector_KernelBis, step 2\n";
   size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG
@@ -932,6 +934,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
     throw TerminalException{1};
   }
 #endif
+  std::cerr << "GetCanonicalizationVector_KernelBis, step 3\n";
   std::vector<int> MapVectRev(nbVert);
   Face ListStatus(nof_vertices);
   int posCanonic=0;
@@ -954,6 +957,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
       posCanonic++;
     }
   }
+  std::cerr << "GetCanonicalizationVector_KernelBis, step 4\n";
   std::vector<Tidx> MapVectRev2(nbRow);
   int posCanonicB=0;
   for (size_t iCan=0; iCan<nbVert; iCan++) {
@@ -963,6 +967,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
       posCanonicB++;
     }
   }
+  std::cerr << "GetCanonicalizationVector_KernelBis, step 5\n";
   return MapVectRev2;
 }
 

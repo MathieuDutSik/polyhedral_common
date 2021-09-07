@@ -9,9 +9,9 @@ int main(int argc, char *argv[])
     if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [INfile] [OUTfile]\n";
       std::cerr << "        or\n";
-      std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT [INfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [INfile]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";

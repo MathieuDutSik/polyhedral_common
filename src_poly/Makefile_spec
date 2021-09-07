@@ -13,7 +13,7 @@
 #PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
-PROGRAM		= GRP_LinPolytope_Isomorphism
+#PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
@@ -24,8 +24,8 @@ PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
-#PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT
-#PROGRAM		= GRP_TestEquivalence_ListMat_Subset_EXT GRP_ComputeAut_ListMat_Subset_EXT
+PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
+#PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= POLY_LinPolytope_Automorphism
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 

@@ -580,7 +580,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T>& WMVS)
 
 
 
-template<typename T, typename Tidx, typename F1, typename F2>
+template<typename T, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WMVS)
 {
 #ifdef TIMINGS
@@ -742,6 +742,10 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   }
   for (size_t iH=0; iH<hS; iH++) {
     size_t pos = iH * nbVert + nbVert - 1;
+    if (pos >= nbVertTot) {
+      std::cerr << "Now pos=" << pos << " nbVertTot=" << nbVertTot << "\n";
+      throw TerminalException{1};
+    }
     DT.ptn[pos] = 0;
   }
   //
@@ -750,6 +754,12 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   std::vector<int> ListDegExpe2(nbVertTot,0);
 #endif
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
+    if (iVert >= nbVertTot || jVert >= nbVertTot || ListShift[iVert] >= nbAdjacent) {
+      std::cerr << "f_adj : iVert=" << iVert << " jVert=" << jVert << "\n";
+      std::cerr << "        nbVertTot=" << nbVertTot << " nbAdjacent=" << nbAdjacent << "\n";
+      std::cerr << "        ListShift[iVert]=" << ListShift[iVert] << "\n";
+      throw TerminalException{1};
+    }
     DT.sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
 #ifdef DEBUG_SPECIFIC
@@ -837,7 +847,7 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSig
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 1\n";
   std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
 #ifdef TIMINGS
@@ -856,7 +866,7 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 2\n";
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT, nbRow);
   std::cerr << "After TRACES_GetCanonicalOrdering_ListGenerators_Arr\n";
@@ -865,14 +875,15 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     std::vector<Tidx> eListO(nbRow);
     for (Tidx i=0; i<Tidx(nbRow); i++)
       eListO[i] = eListI[i];
-    LGen.emplace_back(std::move(eListO));
+    LGen.push_back(eListO);
+    //    LGen.emplace_back(std::move(eListO));
   }
   std::cerr << "LGen is now built\n";
   //
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
 #endif
-  std::cerr << "Before GetCanonicalizationVector_KernelBis\n";
+  std::cerr << "Before GetCanonicalizationVector_KernelBis, nbRow=" << nbRow << "\n";
   std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
   std::cerr << " After GetCanonicalizationVector_KernelBis\n";
 #ifdef TIMINGS
@@ -892,7 +903,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
   int nbRow = WMVS.nbRow;
-  DataTraces DT = GetDataTraces<T,Tidx>(f1, f2, WMVS);
+  DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 3\n";
   std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 #ifdef TIMINGS
