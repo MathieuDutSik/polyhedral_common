@@ -921,12 +921,27 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
   std::cerr << "GetCanonicalizationVector_KernelBis, step 1\n";
   size_t nof_vertices = cl.size();
   std::vector<Tidx> clR(nof_vertices);
-  for (size_t i=0; i<nof_vertices; i++)
+  Tidx min_val_cl = std::numeric_limits<Tidx>::max();
+  Tidx max_val_cl = 0;
+  for (size_t i=0; i<nof_vertices; i++) {
+    if (cl[i] < min_val_cl)
+      min_val_cl = cl[i];
+    if (cl[i] > max_val_cl)
+      max_val_cl = cl[i];
+#ifdef DEBUG
+    if (cl[i] < 0 || cl[i] >= nof_vertices) {
+      std::cerr << "We have cl[i]=" << cl[i] << " but nof_vertices=" << nof_vertices << "\n";
+      throw TerminalException{1};
+    }
+#endif
     clR[cl[i]]=i;
+  }
   //
   std::cerr << "GetCanonicalizationVector_KernelBis, step 2\n";
   size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
+  std::cerr << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices << "\n";
+  std::cerr << "min_val_cl=" << min_val_cl << " max_val_cl=" << max_val_cl << "\n";
 #ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
@@ -942,6 +957,12 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
     if (ListStatus[iCan] == 0) {
       int iNative=clR[iCan];
       int iVertNative=iNative % nbVert;
+#ifdef DEBUG
+      if (posCanonic < 0 || posCanonic >= nbVert) {
+        std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
+        throw TerminalException{1};
+      }
+#endif
       MapVectRev[posCanonic] = iVertNative;
       for (size_t iH=0; iH<hS; iH++) {
 	int uVertNative = iVertNative + nbVert * iH;
@@ -957,6 +978,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
       posCanonic++;
     }
   }
+  std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
   std::cerr << "GetCanonicalizationVector_KernelBis, step 4\n";
   std::vector<Tidx> MapVectRev2(nbRow);
   int posCanonicB=0;
