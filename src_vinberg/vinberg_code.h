@@ -555,6 +555,8 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   size_t nbRow = V1_roots.size();
   size_t nbCol = n;
   SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(nbRow, nbCol, f);
+  size_t TheRank = eSelect.TheRank;
+  std::cerr << "eSelect.TheRank=" << TheRank << "\n";
   std::cerr << "FundCone, step 3\n";
   Face selected(nbRow);
   std::vector<MyVector<Tint>> SelectedRoots;
@@ -576,17 +578,18 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       SelectedRoots.push_back(-uRoot);
   }
   std::cerr << "FundCone, step 4\n";
-  MyMatrix<Tint> Mtest = MatrixFromVectorFamily(SelectedRoots);
-  std::cerr << "Rank(Mtest)=" << RankMat(Mtest) << "\n";
+  std::cerr << "Rank(SelectedRoots)=" << RankMat(MatrixFromVectorFamily(SelectedRoots)) << "\n";
   //
   // Now iterating over the roots.
   //
   auto get_facets=[&]() -> MyMatrix<T> {
     size_t n_root = SelectedRoots.size();
-    MyMatrix<T> Mroot(n_root, n);
+    MyMatrix<T> Mroot(n_root, TheRank);
     for (size_t i_root=0; i_root<n_root; i_root++)
-      for (size_t i=0; i<n; i++)
-        Mroot(i_root, i) = UniversalScalarConversion<T,Tint>(SelectedRoots[i_root](i));
+      for (size_t i=0; i<TheRank; i++) {
+        int iCol = eSelect.ListColSelect[i];
+        Mroot(i_root, i) = UniversalScalarConversion<T,Tint>(SelectedRoots[i_root](iCol));
+      }
     std::cerr << "Mroot=\n";
     WriteMatrix(std::cerr, Mroot);
     std::cerr << "Before cdd::DualDescription\n";
@@ -601,8 +604,10 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     const MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
     for (size_t i_fac=0; i_fac<n_fac; i_fac++) {
       T scal = 0;
-      for (size_t i=0; i<n; i++)
-        scal += FAC(i_fac,i) * V_T(i);
+      for (size_t i=0; i<TheRank; i++) {
+        int iCol = eSelect.ListColSelect[i];
+        scal += FAC(i_fac,i) * V_T(iCol);
+      }
       if (scal > 0)
         n_plus++;
       if (scal < 0)
@@ -625,15 +630,19 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       ListRowFAC.push_back(GetMatrixRow(FAC, i_fac));
     std::vector<MyVector<Tint>> TheSelect;
     for (auto & eRoot : SelectedRoots) {
-      const MyVector<T> eRoot_T = UniversalVectorConversion<T,Tint>(eRoot);
+      MyVector<T> eRootRestr_T(TheRank);
+      for (size_t i=0; i<TheRank; i++) {
+        int iCol = eSelect.ListColSelect[i];
+        eRootRestr_T(i) = UniversalScalarConversion<T,Tint>(eRoot(iCol));
+      }
       std::vector<size_t> TheIncd;
       for (size_t i_fac=0; i_fac<n_fac; i_fac++) {
-        T scal = eRoot_T.dot(ListRowFAC[i_fac]);
+        T scal = eRootRestr_T.dot(ListRowFAC[i_fac]);
         if (scal == 0)
           TheIncd.push_back(i_fac);
       }
       size_t eRank = TMat_SelectRowCol_subset(FAC, TheIncd).TheRank;
-      if (eRank == n - 1) {
+      if (eRank == TheRank - 1) {
         TheSelect.push_back(eRoot);
       }
     }
