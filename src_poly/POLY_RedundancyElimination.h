@@ -2,6 +2,7 @@
 #define INCLUDE_REDUNDANCY_CHECK
 
 #include "POLY_LinearProgramming.h"
+#include "GRP_GroupFct.h"
 
 
 template<typename T>
@@ -353,9 +354,10 @@ template<typename T,typename Tgroup>
 Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
   size_t n_rows=EXT.rows();
   size_t n_cols=EXT.cols();
-  Face status(n_rows);
+  Face status_ret(n_rows);
   //
   Face work(n_rows);
   for (size_t i_row=0; i_row<n_rows; i_row++)
@@ -366,6 +368,7 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     status_orbit[i_orbit] = 1;
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    Face e_orbit = vf[i_orbit];
     //
     // Selecting the relevant rows to test against
     //
@@ -407,13 +410,12 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     MyVector<T> V = GetMatrixRow(EXT, i_row);
     // return true if it is redundant. False if irredundant
     auto get_status=[&]() -> bool {
-      bool test1 = IsInVectorSpace(eSelect, V);
+      bool test1 = IsVectorInSpace(eSelect, V);
       if (!test1)
         return false;
       MyMatrix<T> M_sel = SelectColumn(M, eSelect.ListColSelect);
       MyVector<T> V_sel = SelectColumnVector(V, eSelect.ListColSelect);
-      LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
-      //    std::cerr << " After call to CDD_LinearProgramming\n";
+      LpSolution<T> eSol = CDD_LinearProgramming(M_sel, V_sel);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
         return false;
       }
@@ -423,11 +425,10 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     };
     bool status = get_status();
     if (!status) {
-      Face e_orbit = vf[i_orbit];
       boost::dynamic_bitset<>::size_type j_row = e_orbit.find_first();
       while (j_row != boost::dynamic_bitset<>::npos) {
-        status[j_row] = 1;
-        j_row = e_orb_stab.find_next(j_row);
+        status_ret[j_row] = 1;
+        j_row = e_orbit.find_next(j_row);
       }
 
     } else {
@@ -435,7 +436,7 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     }
 
   }
-  return status;
+  return status_ret;
 }
 
 
