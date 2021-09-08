@@ -71,13 +71,20 @@ template<typename Tint>
 Tint En_Quantity(const MyMatrix<Tint>& M)
 {
   using Tfield=typename overlying_field<Tint>::field_type;
+  size_t dim = M.rows();
   Tint eDet = DeterminantMat(M);
   MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(M);
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
-  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
-  Tint eDen_T = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
-  Tint quot = eDet / eDen_T;
-  Tint TheEn = T_abs(quot);
+  Tfield eDet_Tfield = DeterminantMat(M_field);
+  Tint eDet_Tint = UniversalScalarConversion<Tint,Tfield>(eDet_Tfield);
+  MyMatrix<Tint> M_adjoint = UniversalMatrixConversion<Tint,Tfield>(eDet_Tfield * Minv_field);
+  std::vector<Tint> ListX;
+  ListX.reserve(dim * dim);
+  for (size_t i=0; i<dim; i++)
+    for (size_t j=0; j<dim; j++)
+      ListX.push_back(M_adjoint(i,j));
+  Tint gcd = ComputeGCD_information(ListX).gcd;
+  Tint TheEn = T_abs(eDet_Tint) / T_abs(gcd);
   return TheEn;
 }
 
@@ -86,6 +93,7 @@ template<typename Tint>
 std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
 {
   Tint TheEn = En_Quantity(M);
+  std::cerr << "TheEn=" << TheEn << "\n";
   Tint limit = 2 * TheEn;
   std::vector<Tint> root_lengths;
   Tint k = 1;
@@ -163,6 +171,8 @@ bool IsRoot(const MyMatrix<Tint>& M, const MyVector<Tint>& V)
 template<typename Tint>
 std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 {
+  std::cerr << "GetIntegerPoints m=\n";
+  WriteMatrix(std::cerr, m);
   size_t n_rows = m.rows();
   size_t n_cols = m.cols();
   std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
@@ -233,6 +243,12 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
     if (ParallelepipedContains(ePoint))
       ListPoint.push_back(ePoint);
   }
+  std::cerr << "GetIntegerPoints |ListRet|=" << ListPoint.size() << "\n";
+  std::cerr << "GetIntegerPoints ListRet=\n";
+  for (auto & eVect : ListPoint) {
+    WriteVector(std::cerr, eVect);
+  }
+  std::cerr << "Leaving GetIntegerPoints\n";
   return ListPoint;
 }
 
@@ -310,6 +326,10 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
+  std::cerr << "s.root_lengths =";
+  for (auto & eVal : root_lengths)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
   std::cerr << "GetVinbergAux, step 8\n";
   //  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv_T, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
   return {G, G_T, v0, V, Vtrans, Mbas, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
