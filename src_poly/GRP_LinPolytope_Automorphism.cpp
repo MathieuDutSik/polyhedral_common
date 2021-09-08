@@ -1,7 +1,9 @@
 #include "NumberTheory.h"
-#include "Permlib_specific.h"
 #include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "Permutation.h"
+#include "Group.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -19,7 +21,10 @@ int main(int argc, char *argv[])
     }
     //
     using T=mpq_class;
-    using Tgroup=TheGroupFormat<mpz_class>;
+    using Tidx=uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tint = mpz_class;
+    using Tgroup = permutalib::Group<Telt,Tint>;
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT=ReadMatrix<T>(is);
     int nbCol=EXT.cols();

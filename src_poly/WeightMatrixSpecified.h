@@ -86,21 +86,20 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, 
   std::vector<T> ListWeight;
   UNORD_MAP_SPECIFIC<T,size_t> ValueMap_T;
   size_t idxWeight = 0;
-  auto get_T_idx=[&](T eval) -> size_t {
+  auto get_T_idx=[&](T eval) -> Tidx {
     size_t& idx = ValueMap_T[eval];
     if (idx == 0) { // value is missing
       idxWeight++;
       idx = idxWeight;
       ListWeight.push_back(eval);
     }
-    return idx - 1;
+    return Tidx(idx - 1);
   };
   std::vector<Tidx> MapVertexBlock(nbRow);
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     f1(iRow);
     T val = f2(iRow);
-    size_t idx = get_T_idx(val);
-    MapVertexBlock[iRow] = idx;
+    MapVertexBlock[iRow] = get_T_idx(val);
   }
   if (canonically) {
     std::pair<std::vector<T>, std::vector<int>> rec_pair = GetReorderingInfoWeight(ListWeight);
@@ -112,7 +111,7 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, 
   }
   std::vector<std::vector<Tidx>> ListBlocks(ListWeight.size());
   for (size_t iRow=0; iRow<nbRow; iRow++) {
-    int pos = MapVertexBlock[iRow];
+    Tidx pos = MapVertexBlock[iRow];
     ListBlocks[pos].push_back(iRow);
   }
   return {nbRow, std::move(MapVertexBlock), std::move(ListBlocks)};
@@ -758,10 +757,6 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   }
   for (size_t iH=0; iH<hS; iH++) {
     size_t pos = iH * nbVert + nbVert - 1;
-    if (pos >= nbVertTot) {
-      std::cerr << "Now pos=" << pos << " nbVertTot=" << nbVertTot << "\n";
-      throw TerminalException{1};
-    }
     DT.ptn[pos] = 0;
   }
   //
@@ -770,12 +765,6 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
   std::vector<int> ListDegExpe2(nbVertTot,0);
 #endif
   auto f_adj=[&](size_t iVert, size_t jVert) -> void {
-    if (iVert >= nbVertTot || jVert >= nbVertTot || ListShift[iVert] >= nbAdjacent) {
-      std::cerr << "f_adj : iVert=" << iVert << " jVert=" << jVert << "\n";
-      std::cerr << "        nbVertTot=" << nbVertTot << " nbAdjacent=" << nbAdjacent << "\n";
-      std::cerr << "        ListShift[iVert]=" << ListShift[iVert] << "\n";
-      throw TerminalException{1};
-    }
     DT.sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
 #ifdef DEBUG_SPECIFIC

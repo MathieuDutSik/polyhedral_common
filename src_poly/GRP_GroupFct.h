@@ -123,11 +123,12 @@ template<typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen=ListGen.size();
   os << TheGRP.n_act() << " " << nbGen << "\n";
   for (auto & eGen : ListGen) {
-    for (int i=0; i<TheGRP.n_act(); i++) {
+    for (Tidx i=0; i<TheGRP.n_act(); i++) {
       int eVal=OnPoints(i, eGen);
       os << " " << eVal;
     }

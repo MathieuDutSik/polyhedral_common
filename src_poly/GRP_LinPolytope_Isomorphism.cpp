@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     }
     //
     using Tint = mpz_class;
-    using Tidx = uint16_t;
+    //    using Tidx = uint16_t;
+    using Tidx = uint32_t;
     std::ifstream is1(argv[1]);
     MyMatrix<Tint> EXT1=ReadMatrix<Tint>(is1);
     std::ifstream is2(argv[2]);
