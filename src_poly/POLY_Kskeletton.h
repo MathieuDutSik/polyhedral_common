@@ -17,10 +17,10 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
   vectface TheReturn(nbRow);
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
   Face Treated(nbRow);
-  int sizFace=face.count();
+  size_t sizFace=face.count();
   MyMatrix<T> TestMat(sizFace+1, nbCol);
-  int ePt=face.find_first();
-  for (int iRow=0; iRow<sizFace; iRow++) {
+  boost::dynamic_bitset<>::size_type ePt=face.find_first();
+  for (size_t iRow=0; iRow<sizFace; iRow++) {
     Treated[ePt]=1;
     TestMat.row(iRow) = FAC.row(ePt);
     ePt=face.find_next(ePt);
@@ -207,8 +207,8 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const& TheGRP)
   vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
   std::vector<std::vector<int>> RetList;
   for (auto eOrb : vvO) {
-    int MinVal=eOrb.find_first();
-    std::vector<int> nList{MinVal};
+    boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
+    std::vector<int> nList{int(MinVal)};
     RetList.push_back(nList);
   }
   return RetList;
@@ -227,7 +227,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
     eList[i]=1;
   vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
   for (auto &eOrb : vvO) {
-    int MinVal=eOrb.find_first();
+    boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
     Face nList(n);
     nList[MinVal]=1;
     ListOrb.push_back(nList);
@@ -288,9 +288,9 @@ void PrintListListOrb_IntGAP(std::ostream &os, std::vector<vectface> const& List
 	os << ",";
       os << "[";
       Face eOrb=ListListOrb[iLev][iOrb];
-      int len=eOrb.count();
-      int aRow=eOrb.find_first();
-      for (int i=0; i<len; i++) {
+      size_t len=eOrb.count();
+      boost::dynamic_bitset<>::size_type aRow=eOrb.find_first();
+      for (size_t i=0; i<len; i++) {
 	if (i>0)
 	  os << ",";
 	os << aRow+1;

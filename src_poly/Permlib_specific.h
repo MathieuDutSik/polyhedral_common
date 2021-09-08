@@ -44,9 +44,9 @@ std::set<int> GetSetFrom_DB(Face const& eList)
 {
   int nb=eList.count();
   std::set<int> eSet;
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   for (int i=0; i<nb; i++) {
-    eSet.insert(aRow);
+    eSet.insert(int(aRow));
     aRow=eList.find_next(aRow);
   }
   return eSet;
@@ -121,7 +121,7 @@ Face PERMLIB_Canonicalization(int const& n, PermutationGroupPtr const& group, Fa
 {
   DsetList eListI(n), eListO(n);
   int siz=eList.count();
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   for (int i=0; i<siz; i++) {
     eListI[aRow]=1;
     aRow=eList.find_next(aRow);

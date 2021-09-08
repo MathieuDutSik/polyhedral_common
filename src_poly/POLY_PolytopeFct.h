@@ -12,7 +12,7 @@ MyVector<T> SumMatrixLineSubset(MyMatrix<T> const& eMat, Face const& eList)
   MyVector<T> eVec=ZeroVector<T>(nbCol);
   int eSize=eList.count();
   //
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   for (int i=0; i<eSize; i++) {
     for (int iCol=0; iCol<nbCol; iCol++)
       eVec(iCol) += eMat(aRow, iCol);
@@ -28,7 +28,7 @@ MyMatrix<T> SelectRow(MyMatrix<T> const&TheMat, Face const& eList)
   int nbRowRed=eList.count();
   int nbCol=TheMat.cols();
   MyMatrix<T> TheProv(nbRowRed, nbCol);
-  int jRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type jRow=eList.find_first();
   for (int iRow=0; iRow<nbRowRed; iRow++) {
     TheProv.row(iRow)=TheMat.row(jRow);
     jRow=eList.find_next(jRow);
@@ -64,7 +64,7 @@ void TestFacetness(MyMatrix<T> const& EXT, Face const& eList)
   int nbRow=TheEXT.rows();
   int nbCol=TheEXT.cols();
   MyMatrix<T> TheProv(nb, nbCol);
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   for (int iRow=0; iRow<nb; iRow++) {
     TheProv.row(iRow)=TheEXT.row(aRow);
     aRow=eList.find_next(aRow);
@@ -112,7 +112,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   MyMatrix<T> TheProv(nb, nbCol);
-  int aRow=OneInc.find_first();
+  boost::dynamic_bitset<>::size_type aRow=OneInc.find_first();
   for (size_t iRow=0; iRow<nb; iRow++) {
     TheProv.row(iRow)=TheEXT.row(aRow);
     aRow=OneInc.find_next(aRow);
@@ -138,10 +138,10 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
 std::vector<int> Dynamic_bitset_to_vectorint(Face const& eList)
 {
   int nb=eList.count();
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   std::vector<int> retList(nb);
   for (int i=0; i<nb; i++) {
-    retList[i] = aRow;
+    retList[i] = int(aRow);
     aRow=eList.find_next(aRow);
   }
   return retList;
@@ -198,7 +198,7 @@ public:
     //
     size_t e_incd = OneInc.count();
     EXT_face = MyMatrix<T>(e_incd, nbCol-1);
-    int j_row=OneInc.find_first();
+    boost::dynamic_bitset<>::size_type j_row=OneInc.find_first();
     for (size_t i_row=0; i_row<e_incd; i_row++) {
       size_t pos=0;
       for (size_t iCol=0; iCol<nbCol; iCol++) {
@@ -267,8 +267,8 @@ public:
           eSum += EXT_red(iRow,iCol) * F0(iCol);
         T beta = eSum * ListInvScal[iRow];
         if (!isAssigned || beta > beta_max) {
-          for (size_t jRow=0; jRow<iRow; jRow++)
-            fret[jRow] = 0;
+          for (size_t kRow=0; kRow<iRow; kRow++)
+            fret[kRow] = 0;
           beta_max = beta;
         }
         if (beta_max == beta) {
@@ -316,7 +316,7 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
   MyMatrix<T> LV(2,2);
   TestFacetness(TheEXT, OneInc);
   std::vector<int> OneInc_V=Dynamic_bitset_to_vectorint(OneInc);
-  int jRow=sInc.find_first();
+  boost::dynamic_bitset<>::size_type jRow=sInc.find_first();
   for (int iRow=0; iRow<nb; iRow++) {
     int aRow=OneInc_V[jRow];
     TheProv.row(iRow)=TheEXT.row(aRow);
@@ -422,15 +422,14 @@ Face ComputeFlipping(MyMatrix<T> const& EXT, Face const& OneInc, Face const& sIn
 
 void PrintListOrbit(std::ostream &os, vectface const& ListOrbit)
 {
-  int iOrbit, nbOrbit, siz, i, eVal;
-  nbOrbit=ListOrbit.size();
+  size_t nbOrbit=ListOrbit.size();
   os << "nbOrbit=" << nbOrbit << "\n";
-  for (iOrbit=0; iOrbit<nbOrbit; iOrbit++) {
+  for (size_t iOrbit=0; iOrbit<nbOrbit; iOrbit++) {
     Face eInc=ListOrbit[iOrbit];
-    siz=eInc.count();
+    size_t siz=eInc.count();
     os << "O" << iOrbit+1 << ": inc=" << siz << "list=";
-    eVal=eInc.find_first();
-    for (i=0; i<siz; i++) {
+    boost::dynamic_bitset<>::size_type eVal=eInc.find_first();
+    for (size_t i=0; i<siz; i++) {
       os << " " << eVal;
       eVal=eInc.find_next(eVal);
     }
@@ -484,9 +483,9 @@ EngelPolyhedralSubordination ComputeEngelPolyhedralSubordination(MyMatrix<T> con
     for (auto & eFace : ListListFace[eDim]) {
       int nb=eFace.count();
       std::vector<int> eList(nb);
-      int aRow=eFace.find_first();
+      boost::dynamic_bitset<>::size_type aRow=eFace.find_first();
       for (int i=0; i<nb; i++) {
-	eList[i]=aRow;
+	eList[i]=int(aRow);
 	aRow=eFace.find_next(aRow);
       }
       std::unordered_set<Face> ListSubFace;

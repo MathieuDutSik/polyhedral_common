@@ -33,13 +33,11 @@ int main(int argc, char *argv[])
     //
     const bool use_scheme = true;
     Tgroup GRP = LinPolytope_Automorphism<T,use_scheme,Tgroup>(EXT);
+    std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     if (argc == 3) {
       std::ofstream os(argv[2]);
       WriteGroup(os, GRP);
-    }
-    if (argc == 2) {
-      std::cerr << "|GRP|=" << GRP.size() << "\n";
     }
     std::cerr << "Normal termination of the program\n";
   }

@@ -43,30 +43,14 @@ int main(int argc, char *argv[])
     const bool use_scheme = true;
     std::vector<std::vector<Tidx>> ListGen = GetListGenAutomorphism_ListMat_Subset<T,Tidx,use_scheme>(EXT, ListMat, eSubset);
     //
+    std::vector<Telt> LGen;
+    for (auto & eList : ListGen)
+      LGen.emplace_back(std::move(Telt(eList)));
+    Tgroup GRP(LGen, n_rows);
+    std::cerr << "|GRP|=" << GRP.size() << "\n";
     if (argc == 3) {
       std::ofstream os(argv[2]);
-      os << "return [";
-      bool IsFirst=true;
-      for (auto & eList : ListGen) {
-        if (!IsFirst)
-          os << ",\n";
-        IsFirst=false;
-        os << "[";
-        for (int i=0; i<n_rows; i++) {
-          if (i > 0)
-            os << ",";
-          os << (eList[i] + 1);
-        }
-        os << "]";
-      }
-      os << "];\n";
-    }
-    if (argc == 2) {
-      std::vector<Telt> LGen;
-      for (auto & eList : ListGen)
-        LGen.push_back(Telt(eList));
-      Tgroup GRP(LGen, n_rows);
-      std::cerr << "|GRP|=" << GRP.size() << "\n";
+      os << "return " << GRP.GapString() << ";\n";
     }
   }
   catch (TerminalException const& e) {

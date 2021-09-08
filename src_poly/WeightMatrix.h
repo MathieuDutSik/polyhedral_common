@@ -425,9 +425,9 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
   // We consider the set of smallest size which gain us speed.
   if (2 * nbVert < n) {
     eList.resize(nbVert);
-    size_t aRow=eSet.find_first();
+    boost::dynamic_bitset<>::size_type aRow=eSet.find_first();
     for (size_t i=0; i<nbVert; i++) {
-      eList[i]=aRow;
+      eList[i]=size_t(aRow);
       aRow=eSet.find_next(aRow);
     }
     set_val = 1;

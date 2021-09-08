@@ -289,11 +289,11 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
     throw TerminalException{1};
   }
   std::vector<int> ListPositionRev(TheGRP.n_act(), -1);
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   std::vector<int> ListPosition(nb,-1);
   for (int iRow=0; iRow<nb; iRow++) {
     ListPositionRev[aRow]=iRow;
-    ListPosition[iRow]=aRow;
+    ListPosition[iRow]=int(aRow);
     aRow=eList.find_next(aRow);
   }
   std::vector<Telt> ListGen;
@@ -406,9 +406,9 @@ vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   vectface ListOrb(nbPoint);
   int len=eList.count();
-  int aRow=eList.find_first();
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   for (int i=0; i<len; i++) {
-    VSLT_StoreValue(Vlist, aRow);
+    VSLT_StoreValue(Vlist, int(aRow));
     aRow=eList.find_next(aRow);
   }
   while(true) {

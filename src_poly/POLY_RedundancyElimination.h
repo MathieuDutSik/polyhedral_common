@@ -348,4 +348,100 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const& EXT)
 
 
 
+
+template<typename T,typename Tgroup>
+Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
+{
+  using Telt=typename Tgroup::Telt;
+  size_t n_rows=EXT.rows();
+  size_t n_cols=EXT.cols();
+  Face status(n_rows);
+  //
+  Face work(n_rows);
+  for (size_t i_row=0; i_row<n_rows; i_row++)
+    work[i_row] = 1;
+  vectface vf = DecomposeOrbitPoint(GRP, work);
+  size_t n_orbit = vf.size();
+  Face status_orbit(n_orbit);
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    status_orbit[i_orbit] = 1;
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    //
+    // Selecting the relevant rows to test against
+    //
+    Face select(n_rows);
+    for (size_t j_orbit=0; j_orbit<n_orbit; j_orbit++) {
+      if (i_orbit != j_orbit && status_orbit[j_orbit] == 1) {
+        Face sing_orbit = vf[j_orbit];
+        boost::dynamic_bitset<>::size_type i_row = sing_orbit.find_first();
+        while (i_row != boost::dynamic_bitset<>::npos) {
+          select[i_row] = 1;
+          i_row = sing_orbit.find_next(i_row);
+        }
+      }
+    }
+    //
+    // The single vertex, stabilizer and orbit breakdown
+    //
+    boost::dynamic_bitset<>::size_type i_row = e_orbit.find_first();
+    Tgroup Stab = GRP.Stabilizer_OnPoints(Tidx(i_row));
+    vectface vf_stab = DecomposeOrbitPoint(Stab, select);
+    size_t n_row_sel = vf.size();
+    MyMatrix<T> M(n_row_sel, n_cols);
+    size_t i_row_sel = 0;
+    for (auto & e_orb_stab : vf_stab) {
+      for (size_t i_col=0; i_col<n_cols; i_col++)
+        M(i_row_sel, i_col) = 0;
+      boost::dynamic_bitset<>::size_type j_row = e_orb_stab.find_first();
+      while (j_row != boost::dynamic_bitset<>::npos) {
+        for (size_t i_col=0; i_col<n_cols; i_col++)
+          M(i_row_sel, i_col) += EXT(j_row,i_col);
+        j_row = e_orb_stab.find_next(j_row);
+      }
+      i_row_sel++;
+    }
+    //
+    // The computation itself
+    //
+    SelectionRowCol<T> eSelect = TMat_SelectRowCol(M);
+    MyVector<T> V = GetMatrixRow(EXT, i_row);
+    // return true if it is redundant. False if irredundant
+    auto get_status=[&]() -> bool {
+      bool test1 = IsInVectorSpace(eSelect, V);
+      if (!test1)
+        return false;
+      MyMatrix<T> M_sel = SelectColumn(M, eSelect.ListColSelect);
+      MyVector<T> V_sel = SelectColumnVector(V, eSelect.ListColSelect);
+      LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow);
+      //    std::cerr << " After call to CDD_LinearProgramming\n";
+      if (!eSol.DualDefined || !eSol.PrimalDefined) {
+        return false;
+      }
+      if (eSol.OptimalValue < 0)
+        return false;
+      return true;
+    };
+    bool status = get_status();
+    if (!status) {
+      Face e_orbit = vf[i_orbit];
+      boost::dynamic_bitset<>::size_type j_row = e_orbit.find_first();
+      while (j_row != boost::dynamic_bitset<>::npos) {
+        status[j_row] = 1;
+        j_row = e_orb_stab.find_next(j_row);
+      }
+
+    } else {
+      status_orbit[i_orbit] = 0;
+    }
+
+  }
+  return status;
+}
+
+
+
+
+
+
+
 #endif

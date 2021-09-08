@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
       }
     };
     if (argc == 4) {
-      std::ofstream os(argv[2]);
+      std::ofstream os(argv[3]);
       print_info(os);
     }
     if (argc == 3) {
