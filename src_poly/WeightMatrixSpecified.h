@@ -803,9 +803,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
           eVal = nbWeight + 1;
       } else {
         if (jVert == nbRow) {
-          eVal = map[f2(iVert)];
+          eVal = map.at(f2(iVert));
         } else {
-          eVal = map[f2(jVert)];
+          eVal = map.at(f2(jVert));
         }
       }
       size_t shift = e_pow * ListIdx[eVal];
