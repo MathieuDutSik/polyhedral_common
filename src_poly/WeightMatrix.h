@@ -916,18 +916,18 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 template<typename Tidx>
-std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vector<Tidx> const& cl)
+std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::vector<Tidx> const& cl)
 {
   std::cerr << "GetCanonicalizationVector_KernelBis, step 1\n";
   size_t nof_vertices = cl.size();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows || nof_vertices >= max_poss_rows) {
+    std::cerr << "GetCanonicalizationVector_KernelBis : We have nbRow=" << nbRow << " and nof_vertices=" << nof_vertices << "\n";
+    std::cerr << "which are larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   std::vector<Tidx> clR(nof_vertices);
-  Tidx min_val_cl = std::numeric_limits<Tidx>::max();
-  Tidx max_val_cl = 0;
   for (size_t i=0; i<nof_vertices; i++) {
-    if (cl[i] < min_val_cl)
-      min_val_cl = cl[i];
-    if (cl[i] > max_val_cl)
-      max_val_cl = cl[i];
 #ifdef DEBUG
     if (cl[i] < 0 || cl[i] >= nof_vertices) {
       std::cerr << "We have cl[i]=" << cl[i] << " but nof_vertices=" << nof_vertices << "\n";
@@ -941,7 +941,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
   size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
   std::cerr << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices << "\n";
-  std::cerr << "min_val_cl=" << min_val_cl << " max_val_cl=" << max_val_cl << "\n";
 #ifdef DEBUG
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
@@ -950,13 +949,13 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
   }
 #endif
   std::cerr << "GetCanonicalizationVector_KernelBis, step 3\n";
-  std::vector<int> MapVectRev(nbVert);
+  std::vector<Tidx> MapVectRev(nbVert);
   Face ListStatus(nof_vertices);
-  int posCanonic=0;
+  Tidx posCanonic=0;
   for (size_t iCan=0; iCan<nof_vertices; iCan++) {
     if (ListStatus[iCan] == 0) {
-      int iNative=clR[iCan];
-      int iVertNative=iNative % nbVert;
+      Tidx iNative=clR[iCan];
+      Tidx iVertNative=iNative % nbVert;
 #ifdef DEBUG
       if (posCanonic < 0 || posCanonic >= nbVert) {
         std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
@@ -965,8 +964,8 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
 #endif
       MapVectRev[posCanonic] = iVertNative;
       for (size_t iH=0; iH<hS; iH++) {
-	int uVertNative = iVertNative + nbVert * iH;
-	int jCan=cl[uVertNative];
+	Tidx uVertNative = iVertNative + nbVert * iH;
+	Tidx jCan=cl[uVertNative];
 #ifdef DEBUG
 	if (ListStatus[jCan] == 1) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
@@ -981,10 +980,11 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(int const& nbRow, std::vec
   std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
   std::cerr << "GetCanonicalizationVector_KernelBis, step 4\n";
   std::vector<Tidx> MapVectRev2(nbRow);
-  int posCanonicB=0;
+  Tidx posCanonicB=0;
+  Tidx nbRow_tidx=Tidx(nbRow);
   for (size_t iCan=0; iCan<nbVert; iCan++) {
-    int iNative=MapVectRev[iCan];
-    if (iNative < nbRow) {
+    Tidx iNative=MapVectRev[iCan];
+    if (iNative < nbRow_tidx) {
       MapVectRev2[posCanonicB] = iNative;
       posCanonicB++;
     }
@@ -1002,6 +1002,11 @@ template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
 std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbRow=WMat.rows();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetCanonicalizationVector_Kernel : We have nbRow=" << nbRow << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -1035,6 +1040,11 @@ template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbRow=WMat.rows();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetGroupCanonicalizationVector_Kernel : We have nbRow=" << nbRow << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -1082,6 +1092,11 @@ template<typename T, typename Tgr, typename Tidx, typename Tidx_value>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
   size_t nbRow=WMat.rows();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetStabilizerWeightMatrix_Kernel : We have nbRow=" << nbRow << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
 #ifdef USE_BLISS
   std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
@@ -1114,6 +1129,11 @@ template<typename Tidx>
 std::vector<Tidx> GetCanonicalizationFromSymmetrized(std::vector<Tidx> const& CanonicOrdSymmRev)
 {
   size_t len = CanonicOrdSymmRev.size();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (len >= max_poss_rows) {
+    std::cerr << "GetCanonicalizationFromSymmetrized : We have len=" << len << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   std::vector<Tidx> CanonicOrdSymm(len);
   for (size_t i=0; i<len; i++)
     CanonicOrdSymm[CanonicOrdSymmRev[i]] = i;
@@ -1156,6 +1176,12 @@ EquivTest<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<t
   Tgr eGR2 = GetGraphFromWeightedMatrix<T,Tgr>(WMat2);
   unsigned int nof_vertices1 = eGR1.GetNbVert();
   unsigned int nof_vertices2 = eGR2.GetNbVert();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (size_t(nof_vertices1) >= max_poss_rows || size_t(nof_vertices2) >= max_poss_rows) {
+    std::cerr << "TestEquivalenceWeightMatrix_norenorm : We have nof_vertices1=" << nof_vertices1 << " and nof_vertices2=" << nof_vertices2 << "\n";
+    std::cerr << "which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   if (nof_vertices1 != nof_vertices2)
     return {false, {}};
   unsigned int nof_vertices = nof_vertices1;
@@ -1283,8 +1309,8 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& W
   std::vector<Telt> ListGen;
   for (auto & eGen : ListGenInput) {
     for (size_t iSHV=0; iSHV<nbSHV; iSHV++)
-      v[iSHV]=OnPoints(iSHV, eGen);
-    ListGen.push_back(Telt(v));
+      v[iSHV] = OnPoints(iSHV, eGen);
+    ListGen.emplace_back(std::move(Telt(v)));
   }
   return Tgroup(ListGen, nbSHV);
 }

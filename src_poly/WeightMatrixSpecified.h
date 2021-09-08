@@ -78,6 +78,11 @@ struct VertexPartition {
 template<typename T, typename Tidx, typename F1, typename F2>
 VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically)
 {
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "ComputeInitialVertexPartition : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   std::vector<T> ListWeight;
   UNORD_MAP_SPECIFIC<T,size_t> ValueMap_T;
   size_t idxWeight = 0;
@@ -117,6 +122,12 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, 
 template<typename T, typename Tidx, typename F1, typename F2>
 bool RefineSpecificVertexPartition(VertexPartition<Tidx> & VP, const int& jBlock, const int& iBlock, F1 f1, F2 f2, bool canonically)
 {
+  size_t nbRow = VP.nbRow;
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "RefineSpecificVertexPartition : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   // The code for finding the indices
   UNORD_MAP_SPECIFIC<T,int> ValueMap_T;
   std::vector<T> ListWeight;
@@ -243,6 +254,11 @@ void PrintVertexParttionInfo(const VertexPartition<Tidx>& VP, const std::vector<
 template<typename T, typename Tidx, typename F1, typename F2>
 VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically, size_t max_globiter)
 {
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "ComputeVertexPartition : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
   using Ttime = std::chrono::time_point<std::chrono::system_clock>;
   Ttime time_vp1 = std::chrono::system_clock::now();
   VertexPartition<Tidx> VP = ComputeInitialVertexPartition<T,Tidx>(nbRow, f1, f2, canonically);
@@ -843,10 +859,15 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
 template<typename T, typename Tidx, typename F1, typename F2>
 std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
+  size_t nbRow = WMVS.nbRow;
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetCanonicalizationVector_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 1\n";
   std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
@@ -862,21 +883,25 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSig
 template<typename T, typename Tidx, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalization_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
+  size_t nbRow = WMVS.nbRow;
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetGroupCanonicalization_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 2\n";
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT, nbRow);
   std::cerr << "After TRACES_GetCanonicalOrdering_ListGenerators_Arr\n";
   std::vector<std::vector<Tidx>> LGen;
+  std::vector<Tidx> eListO(nbRow);
   for (auto& eListI : ePair.second) {
-    std::vector<Tidx> eListO(nbRow);
-    for (Tidx i=0; i<Tidx(nbRow); i++)
+    for (size_t i=0; i<nbRow; i++)
       eListO[i] = eListI[i];
     LGen.push_back(eListO);
-    //    LGen.emplace_back(std::move(eListO));
   }
   std::cerr << "LGen is now built\n";
   //
@@ -899,10 +924,15 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
 template<typename T, typename Tidx, typename F1, typename F2>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
+  size_t nbRow = WMVS.nbRow;
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetStabilizerWeightMatrix_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  int nbRow = WMVS.nbRow;
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
   std::cerr << "We have DT 3\n";
   std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
@@ -927,6 +957,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
 template<bool canonically, typename T, typename Tidx, typename Tret1, typename Tret2, typename Tret3, typename F1, typename F2, typename F3, typename F4, typename Fproc1, typename Fproc2, typename Fproc3>
 Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 fproc1, Fproc2 fproc2, Fproc3 fproc3)
 {
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "BlockBreakdown_Heuristic : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
@@ -1054,6 +1089,11 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4)
 {
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetStabilizerWeightMatrix_Heuristic : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
@@ -1088,6 +1128,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 template<typename T, typename Tidx, typename F1, typename F2, typename F3, typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5)
 {
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetGroupCanonicalizationVector_Heuristic : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
 #ifdef DEBUG_SPECIFIC
   std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
 #endif
