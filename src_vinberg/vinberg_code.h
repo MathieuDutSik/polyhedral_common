@@ -457,15 +457,40 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
 template<typename T, typename Tint>
 bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
-  int n_root = ListRoot.size();
+  std::cerr << "is_FundPoly, step 1\n";
+  size_t n_root = ListRoot.size();
   MyMatrix<T> M(n_root, n_root);
-  for (int i_root=0; i_root<n_root; i_root++) {
-    MyVector<Tint> eVG = ListRoot[i_root] * Vtot.G;
-    for (int j_root=0; j_root<n_root; j_root++) {
+  std::cerr << "is_FundPoly, step 2, n_root=" << n_root << "\n";
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<Tint> eVG = Vtot.G * ListRoot[i_root];
+    for (size_t j_root=0; j_root<n_root; j_root++) {
       T eScal = eVG.dot(ListRoot[j_root]);
       M(i_root, j_root) = eScal;
     }
   }
+  std::cerr << "M=\n";
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    for (size_t j_root=0; j_root<n_root; j_root++)
+      std::cerr << " " << M(i_root,j_root);
+    std::cerr << "\n";
+  }
+  std::cerr << "cos=\n";
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    for (size_t j_root=0; j_root<n_root; j_root++) {
+      T aII = M(i_root,i_root);
+      T aJJ = M(j_root,j_root);
+      T aIJ = M(i_root,j_root);
+      T cos2 = (aIJ * aIJ) / (aII * aJJ);
+      std::cerr << " " << cos2;
+    }
+    std::cerr << "\n";
+  }
+  std::cerr << "is_FundPoly, step 3\n";
+  T cst1 = T(1) / T(4); //  1/4
+  T cst2 = T(1) / T(2); //  1/2
+  T cst3 = T(3) / T(4); //  3/4
+  T cst4 = 1; //  1
+  std::cerr << "cst1=" << cst1 << " cst2=" << cst2 << " cst3=" << cst3 << "\n";
   auto weight=[&](int i, int j) -> int {
     T aII = M(i,i);
     T aJJ = M(j,j);
@@ -473,45 +498,51 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     T cos2 = (aIJ * aIJ) / (aII * aJJ);
     if (cos2 == 0)
       return 2;
-    if (cos2 == 1/4)
+    if (cos2 == cst1)
       return 3;
-    if (cos2 == 1/2)
+    if (cos2 == cst2)
       return 4;
-    if (cos2 == 3/4)
+    if (cos2 == cst3)
       return 6;
-    if (cos2 == 1)
+    if (cos2 == cst4)
       return 0;
-    if (cos2 > 1)
+    if (cos2 > cst4)
       return 1;
     std::cerr << "coxiter.py ERROR: cosine " << cos2 << "\n";
     throw TerminalException{1};
   };
+  std::cerr << "is_FundPoly, step 4\n";
   int d = Vtot.G.rows();
   std::string rnd_str = random_string(20);
   std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
   std::string FileO = "/tmp/CoxIter_" + rnd_str + ".out";
+  std::cerr << "is_FundPoly, step 5\n";
   {
     std::ofstream os(FileI);
     os << n_root << " " << d << "\n";
-    for (int i=0; i<n_root; i++)
-      for (int j=0; j<i; j++)
+    for (size_t i=0; i<n_root; i++)
+      for (size_t j=0; j<i; j++)
         if (M(i,j) != 0)
           os << (j+1) << " " << (i+1) << " " << weight(i, j) << "\n";
     os << "\n";
   }
+  std::cerr << "is_FundPoly, step 6\n";
   //
   // Running the CoxIter program
   //
+  std::cerr << "is_FundPoly, step 7\n";
   std::string eCommand = "coxiter";
   std::string opt = "-fv";
   eCommand += " " + opt;
   eCommand += " < " + FileI + " > " + FileO;
   std::cerr << "eCommand=" << eCommand << "\n";
   int iret=system(eCommand.c_str());
+  std::cerr << "is_FundPoly, step 8\n";
   if (iret == -1) {
     printf("Oh dear, something went wrong with glpsol! %s\n", strerror(errno));
     throw TerminalException{1};
   }
+  std::cerr << "is_FundPoly, step 7\n";
   //
   // Reading the output
   //
@@ -519,18 +550,26 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   {
     std::ifstream INfs(FileO);
     std::string line;
-    while (getline(INfs, line))
+    while (getline(INfs, line)) {
+      std::cerr << "line=" << line << "\n";
       RESUL.push_back(line);
+    }
   }
+  std::cerr << "is_FundPoly, step 9 |RESUL|=" << RESUL.size() << "\n";
   bool IsFiniteCovolume=false;
   std::string question = "Finite covolume";
   std::string answer = "yes";
   for (auto & eLine : RESUL) {
+    std::cerr << "eLine=" << eLine << "\n";
     std::vector<std::string> LStr1 = STRING_Split(eLine, question);
+    std::cerr << "After split 1\n";
     std::vector<std::string> LStr2 = STRING_Split(eLine, answer);
+    std::cerr << "After split 2\n";
     if (LStr1.size() > 1 && LStr2.size() > 1)
       IsFiniteCovolume = true;
+    std::cerr << "After test\n";
   }
+  std::cerr << "is_FundPoly, step 10 IsFiniteCovolume=" << IsFiniteCovolume << "\n";
   return IsFiniteCovolume;
 }
 
