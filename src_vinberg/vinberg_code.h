@@ -169,10 +169,12 @@ bool IsRoot(const MyMatrix<Tint>& M, const MyVector<Tint>& V)
 
 
 template<typename Tint>
-std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
+std::vector<MyVector<Tint>> GetIntegerPoints_V1(const MyMatrix<Tint>& m)
 {
   std::cerr << "GetIntegerPoints m=\n";
   WriteMatrix(std::cerr, m);
+  Tint det = DeterminantMat(m);
+  std::cerr << "det(m)=" << det << "\n";
   size_t n_rows = m.rows();
   size_t n_cols = m.cols();
   std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
@@ -253,7 +255,11 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 }
 
 
-
+template<typename Tint>
+std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
+{
+  return ComputeTranslationClasses<Tint,Tint>(m);
+}
 
 
 
