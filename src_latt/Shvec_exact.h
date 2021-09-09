@@ -7,8 +7,8 @@
 #include "MAT_Matrix.h"
 
 #define CHECK_BASIC_CONSISTENCY
-#define PRINT_DEBUG_INFO
-#define PRINT_DEBUG_INFO_VECTOR
+//#define PRINT_DEBUG_INFO
+//#define PRINT_DEBUG_INFO_VECTOR
 
 
 namespace TempShvec_globals {

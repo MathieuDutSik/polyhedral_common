@@ -246,11 +246,6 @@ std::vector<MyVector<Tint>> GetIntegerPoints_V1(const MyMatrix<Tint>& m)
       ListPoint.push_back(ePoint);
   }
   std::cerr << "GetIntegerPoints |ListRet|=" << ListPoint.size() << "\n";
-  std::cerr << "GetIntegerPoints ListRet=\n";
-  for (auto & eVect : ListPoint) {
-    WriteVector(std::cerr, eVect);
-  }
-  std::cerr << "Leaving GetIntegerPoints\n";
   return ListPoint;
 }
 
@@ -291,9 +286,14 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   std::cerr << "GetVinbergAux, step 2.4\n";
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   std::cerr << "GetVinbergAux, step 2.5\n";
-  std::vector<MyVector<Tint>> W = GetIntegerPoints(M2);
+  MyMatrix<Tint> M2_tr = M2.transpose();
+  std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
+  std::cerr << "W=\n";
+  for (auto & eVect : W) {
+    WriteVector(std::cerr, eVect);
+  }
   std::cerr << "GetVinbergAux, step 3\n";
-  // The dterminant. The scalar tell us how much we need to the quotient.
+  // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
   // We want to find a vector v such that V_i = (det) v + Morth Z^{n-1}
@@ -345,24 +345,29 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
 template<typename T, typename Tint>
 struct IterateRootDecompositions {
 private:
-  std::unordered_map<Tint,int> candidates;
+  std::unordered_map<Tint,size_t> candidates;
   const VinbergTot<T,Tint>& Vtot;
   Tint len_sW;
-  MyVector<Tint> cand_a(const int& n) const {
+  MyVector<Tint> cand_a(const size_t& n) const {
     size_t len_sW = Vtot.W.size();
-    int res = n % len_sW;
-    int q = n / len_sW;
+    size_t res = n % len_sW;
+    size_t q = n / len_sW;
     return Vtot.W[res] + q * Vtot.v0;
   }
   Tint get_k() const {
     bool we_found = false;
-    double minval_d=0;
+    double minval_d=std::numeric_limits<double>::max();
+    Tint scal = Vtot.v0.dot(Vtot.G * Vtot.v0);
+    std::cerr << "scal=" << scal << "\n";
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
       MyVector<Tint> V2 = cand_a(candidates.at(k));
-      Tint val = - Vtot.v0.dot(V2);
+      std::cerr << "k=" << k << " V2=";
+      WriteVector(std::cerr, V2);
+      Tint val = - Vtot.v0.dot(Vtot.G * V2);
       double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
       double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
+      std::cerr << "k=" << k << "  val=" << val << " val_d=" << val_d << "\n";
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -374,6 +379,7 @@ private:
         }
       }
     }
+    std::cerr << "kfind=" << kfind << "\n";
     return kfind;
   }
 public:
@@ -383,8 +389,8 @@ public:
   }
   std::pair<MyVector<Tint>, Tint> get_cand() {
     Tint k = get_k();
-    std::cerr << "IterateRootDecomposition, k=" << k << "\n";
-    int val = candidates[k];
+    size_t val = candidates[k];
+    std::cerr << "IterateRootDecomposition, k=" << k << " val=" << val << "\n";
     candidates[k] = val + 1;
     MyVector<Tint> V = cand_a(val);
     std::cerr << "IterateRootDecomposition, cand_a(candidates[k])=" << V << "\n";
@@ -430,7 +436,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
     //    std::cerr << "Roots_decomposed_into, step 6.1\n";
     MyVector<T> eV_T = UniversalVectorConversion<T,Tint>(eV_Tint);
     //    std::cerr << "Roots_decomposed_into, step 6.2\n";
-    std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
+    //    std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
     MyVector<T> rX_T = a + Vtot.Morth_T * eV_T;
     //    std::cerr << "Roots_decomposed_into, step 6.3\n";
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
@@ -681,6 +687,10 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       insert_root(uRoot);
     }
   std::cerr << "FundCone, step 7\n";
+  std::cerr << "SelectedRoots=\n";
+  for (auto & eVect : SelectedRoots) {
+    WriteVector(std::cerr, eVect);
+  }
   return SelectedRoots;
 }
 
@@ -701,8 +711,11 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
     const T k_T = k;
     std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T)) {
+    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T);
+    std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
+    for (const MyVector<Tint>& root_cand : list_root_cand) {
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
+        std::cerr << "Found a root\n";
         ListRoot.push_back(root_cand);
         if (is_FundPoly(Vtot, ListRoot)) {
           return ListRoot;
