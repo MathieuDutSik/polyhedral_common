@@ -560,14 +560,10 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   std::string question = "Finite covolume";
   std::string answer = "yes";
   for (auto & eLine : RESUL) {
-    std::cerr << "eLine=" << eLine << "\n";
     std::vector<std::string> LStr1 = STRING_Split(eLine, question);
-    std::cerr << "After split 1\n";
     std::vector<std::string> LStr2 = STRING_Split(eLine, answer);
-    std::cerr << "After split 2\n";
     if (LStr1.size() > 1 && LStr2.size() > 1)
       IsFiniteCovolume = true;
-    std::cerr << "After test\n";
   }
   std::cerr << "is_FundPoly, step 10 IsFiniteCovolume=" << IsFiniteCovolume << "\n";
   return IsFiniteCovolume;
