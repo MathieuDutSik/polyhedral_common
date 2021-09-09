@@ -4,6 +4,7 @@
 #include "Shvec_exact.h"
 //#include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
+#include "POLY_RedundancyElimination.h"
 
 
 #define DEBUG_VINBERG
@@ -258,6 +259,23 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 
 
 
+template<typename Tint>
+std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& ListRoot)
+{
+  MyMatrix<Tint> M_Tint = MatrixFromVectorFamily(ListRoot);
+  using Tfield=typename overlying_field<Tint>::field_type;
+  MyMatrix<Tfield> M_Tfield = UniversalMatrixConversion<Tfield,Tint>(M_Tint);
+  std::vector<int> ListIdx = Kernel_GetNonRedundant_CDD(M_Tfield);
+  std::vector<MyVector<Tint>> ListV;
+  for (auto & idx : ListIdx)
+    ListV.push_back(ListRoot[idx]);
+  return ListV;
+}
+
+
+
+
+
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
@@ -357,8 +375,6 @@ private:
   Tint get_k() const {
     bool we_found = false;
     double minval_d=std::numeric_limits<double>::max();
-    Tint scal = Vtot.v0.dot(Vtot.G * Vtot.v0);
-    std::cerr << "scal=" << scal << "\n";
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
       MyVector<Tint> V2 = cand_a(candidates.at(k));
@@ -420,7 +436,7 @@ public:
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
 {
-  std::cerr << "Roots_decomposed_into, step 1\n";
+  std::cerr << "Roots_decomposed_into, step 1 a=" << a << " n=" << n << "\n";
   MyVector<T> sV = a.transpose() * Vtot.GM_iGorth;
   std::cerr << "Roots_decomposed_into, step 2\n";
   T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth_T * sV);
@@ -438,7 +454,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
     //    std::cerr << "Roots_decomposed_into, step 6.2\n";
     //    std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
     MyVector<T> rX_T = a + Vtot.Morth_T * eV_T;
-    //    std::cerr << "Roots_decomposed_into, step 6.3\n";
+    //    std::cerr << "Roots_decomposed_into, step 6.3 rx_T=" << rX_T << "\n";
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
     //    std::cerr << "Roots_decomposed_into, step 6.4\n";
     RetSol.emplace_back(std::move(rX));
@@ -457,8 +473,24 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
 template<typename T, typename Tint>
 bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
-  std::cerr << "is_FundPoly, step 1\n";
   size_t n_root = ListRoot.size();
+  size_t nbCol = Vtot.G.rows();
+  std::cerr << "Preamble of is_FundPoly\n";
+  auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+    for (size_t i=0; i<nbCol; i++)
+      M(eRank, i) = UniversalScalarConversion<T,Tint>(ListRoot[iRow](i));
+  };
+  SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(n_root, nbCol, f);
+  std::cerr << "Preamble : rank=" << eSelect.TheRank << "\n";
+  MyMatrix<Tint> ListRoot_Tint = MatrixFromVectorFamily(ListRoot);
+  MyMatrix<T> ListRoot_T = UniversalMatrixConversion<T,Tint>(ListRoot_Tint);
+  std::cerr << "Preamble : ListRoot=\n";
+  WriteMatrix(std::cerr, ListRoot_T);
+  MyMatrix<T> ListRootSel = GetNonRedundant_CDD(ListRoot_T);
+  std::cerr << "Preamble : ListRootSel=\n";
+  WriteMatrix(std::cerr, ListRootSel);
+
+  std::cerr << "is_FundPoly, step 1\n";
   MyMatrix<T> M(n_root, n_root);
   std::cerr << "is_FundPoly, step 2, n_root=" << n_root << "\n";
   for (size_t i_root=0; i_root<n_root; i_root++) {
@@ -490,7 +522,6 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   T cst2 = T(1) / T(2); //  1/2
   T cst3 = T(3) / T(4); //  3/4
   T cst4 = 1; //  1
-  std::cerr << "cst1=" << cst1 << " cst2=" << cst2 << " cst3=" << cst3 << "\n";
   auto weight=[&](int i, int j) -> int {
     T aII = M(i,i);
     T aJJ = M(j,j);
@@ -608,7 +639,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     }
     for (auto & eV : set)
       V1_roots.push_back(eV);
-    std::cerr << "|set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << "\n";
+    std::cerr << "k=" << k << " |set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << "\n";
   }
   std::cerr << "FundCone, step 2\n";
   //
@@ -645,7 +676,6 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       SelectedRoots.push_back(-uRoot);
   }
   std::cerr << "FundCone, step 4\n";
-  std::cerr << "Rank(SelectedRoots)=" << RankMat(MatrixFromVectorFamily(SelectedRoots)) << "\n";
   //
   // Now iterating over the roots.
   //
@@ -723,9 +753,8 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     }
   std::cerr << "FundCone, step 7\n";
   std::cerr << "SelectedRoots=\n";
-  for (auto & eVect : SelectedRoots) {
+  for (auto & eVect : SelectedRoots)
     WriteVector(std::cerr, eVect);
-  }
   return SelectedRoots;
 }
 
@@ -752,6 +781,9 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
         std::cerr << "Found a root\n";
         ListRoot.push_back(root_cand);
+        std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
+        ListRoot = ReduceListRoot(ListRoot);
+        std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
         if (is_FundPoly(Vtot, ListRoot)) {
           return ListRoot;
         }
