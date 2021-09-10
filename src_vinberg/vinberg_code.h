@@ -475,7 +475,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 {
   size_t n_root = ListRoot.size();
   size_t nbCol = Vtot.G.rows();
-  std::cerr << "Preamble of is_FundPoly\n";
+  std::cerr << "Preamble of is_FundPoly n_root=" << n_root << " nbCol=" << nbCol << "\n";
   auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
     for (size_t i=0; i<nbCol; i++)
       M(eRank, i) = UniversalScalarConversion<T,Tint>(ListRoot[iRow](i));
@@ -543,7 +543,8 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     throw TerminalException{1};
   };
   std::cerr << "is_FundPoly, step 4\n";
-  int d = Vtot.G.rows();
+  int d = Vtot.G.rows() - 1;
+  std::cerr << "TEST d=" << d << " nbCol=" << nbCol << "\n";
   std::string rnd_str = random_string(20);
   std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
   std::string FileO = "/tmp/CoxIter_" + rnd_str + ".out";
@@ -588,13 +589,14 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   }
   std::cerr << "is_FundPoly, step 9 |RESUL|=" << RESUL.size() << "\n";
   bool IsFiniteCovolume=false;
-  std::string question = "Finite covolume";
+  std::string question = "Finite covolume: ";
   std::string answer = "yes";
   for (auto & eLine : RESUL) {
     std::vector<std::string> LStr1 = STRING_Split(eLine, question);
-    std::vector<std::string> LStr2 = STRING_Split(eLine, answer);
-    if (LStr1.size() > 1 && LStr2.size() > 1)
-      IsFiniteCovolume = true;
+    if (LStr1.size() > 1) {
+      if (LStr1[1] == answer)
+        IsFiniteCovolume = true;
+    }
   }
   std::cerr << "is_FundPoly, step 10 IsFiniteCovolume=" << IsFiniteCovolume << "\n";
   return IsFiniteCovolume;
