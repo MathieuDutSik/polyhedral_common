@@ -408,32 +408,38 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     work[i_row] = 1;
   vectface vf = DecomposeOrbitPoint(GRP, work);
   size_t n_orbit = vf.size();
+  std::cerr << "n_orbit=" << n_orbit << "\n";
   Face status_orbit(n_orbit);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     status_orbit[i_orbit] = 1;
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face e_orbit = vf[i_orbit];
+    std::cerr << "i_orbit=" << i_orbit << " |e_orbit|=" << e_orbit.count() << "\n";
     //
     // Selecting the relevant rows to test against
     //
     Face select(n_rows);
+    size_t sel_siz = 0;
     for (size_t j_orbit=0; j_orbit<n_orbit; j_orbit++) {
       if (i_orbit != j_orbit && status_orbit[j_orbit] == 1) {
         Face sing_orbit = vf[j_orbit];
         boost::dynamic_bitset<>::size_type i_row = sing_orbit.find_first();
         while (i_row != boost::dynamic_bitset<>::npos) {
           select[i_row] = 1;
+          sel_siz++;
           i_row = sing_orbit.find_next(i_row);
         }
       }
     }
+    std::cerr << "   sel_siz=" << sel_siz << "\n";
     //
     // The single vertex, stabilizer and orbit breakdown
     //
     boost::dynamic_bitset<>::size_type i_row = e_orbit.find_first();
     Tgroup Stab = GRP.Stabilizer_OnPoints(Tidx(i_row));
     vectface vf_stab = DecomposeOrbitPoint(Stab, select);
-    size_t n_row_sel = vf.size();
+    size_t n_row_sel = vf_stab.size();
+    std::cerr << "   |Stab|=" << Stab.size() << " n_row_sel=" << n_row_sel << "\n";
     MyMatrix<T> M(n_row_sel, n_cols);
     size_t i_row_sel = 0;
     for (auto & e_orb_stab : vf_stab) {

@@ -26,9 +26,11 @@ int main(int argc, char *argv[])
     std::string FileIneq = argv[1];
     std::ifstream is1(FileIneq);
     MyMatrix<T> EXT=ReadMatrix<T>(is1);
+    std::cerr << "We have EXT\n";
     std::string FileGRP = argv[2];
     std::ifstream is2(FileGRP);
     Tgroup GRP = ReadGroup<Tgroup>(is2);
+    std::cerr << "We have GRP\n";
     //
     Face status = GetNonRedundant_Equivariant(EXT, GRP);
     //
