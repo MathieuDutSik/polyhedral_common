@@ -97,11 +97,29 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
   std::cerr << "TheEn=" << TheEn << "\n";
   Tint limit = 2 * TheEn;
   std::vector<Tint> root_lengths;
+  bool is_even = true;
+  size_t n = M.rows();
+  for (size_t i=0; i<n; i++) {
+    Tint res = M(i,i) % Tint(2);
+    if (res != 0)
+      is_even = false;
+  }
+  std::cerr << "is_even=" << is_even << "\n";
+  auto is_correct=[&](Tint k) -> bool {
+    if (is_even) {
+      Tint res2 = k % Tint(2);
+      if (res2 != 0)
+        return false;
+    }
+    Tint res = ResInt(limit, k);
+    return res == 0;
+  };
+  //
   Tint k = 1;
   while (true) {
-    Tint res = ResInt(limit, k);
-    if (res == 0)
+    if (is_correct(k)) {
       root_lengths.push_back(k);
+    }
     if (k >= limit)
       break;
     k++;
@@ -421,44 +439,37 @@ public:
 
 
 
-
-
-
-
-
-
-
 /*
   We look for the solutions of (a+v , a+v) = k
   with v in the Morth space.
-  (a, a) + 2 (a, v) + (v,v) = n
+  (a, a) + 2 (a, v) + (v,v) = k
    v = M w  with  w in Z^{n-1}
-  2 a^t G Mw + w^t {M^t G M} w = n - (a,a)
-  2 w Gorth sV + w^t Gorth w = n -(a,a)
-  (w + sV)^t Gorth (w + sV) = n - (a,a) + sV^t Gorth sV
+  2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
+  2 w Gorth sV + w^t Gorth w = k -(a,a)
+  (w + sV)^t Gorth (w + sV) = k - (a,a) + sV^t Gorth sV
 
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<T>& a, const T& n)
+std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
 {
-  std::cerr << "Roots_decomposed_into, step 1 a=" << a << " n=" << n << "\n";
-  MyVector<T> sV = a.transpose() * Vtot.GM_iGorth;
+  T k_T = k;
+  MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
+  std::cerr << "Roots_decomposed_into, step 1 a=" << a_T << " n=" << k << "\n";
+  MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
   std::cerr << "Roots_decomposed_into, step 2\n";
-  T normi = n - a.dot(Vtot.G_T * a) + sV.dot(Vtot.Gorth_T * sV);
+  T normi = k_T - a_T.dot(Vtot.G_T * a_T) + sV.dot(Vtot.Gorth_T * sV);
   std::cerr << "Roots_decomposed_into, step 3\n";
   MyVector<T> eV = -sV;
   std::cerr << "Roots_decomposed_into, step 4\n";
   std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi);
   std::cerr << "|ListSol|=" << ListSol.size() << "\n";
-  std::cerr << "Roots_decomposed_into, step 5\n";
   std::vector<MyVector<Tint>> RetSol;
-  std::cerr << "Roots_decomposed_into, step 6\n";
   for (auto& eV_Tint : ListSol) {
     //    std::cerr << "Roots_decomposed_into, step 6.1\n";
     MyVector<T> eV_T = UniversalVectorConversion<T,Tint>(eV_Tint);
     //    std::cerr << "Roots_decomposed_into, step 6.2\n";
     //    std::cerr << "|a|=" << a.size() << " |eV_T|=" << eV_T.size() << " |Morth_T|=" << Vtot.Morth_T.rows() << " / " << Vtot.Morth_T.cols() << "\n";
-    MyVector<T> rX_T = a + Vtot.Morth_T * eV_T;
+    MyVector<T> rX_T = a_T + Vtot.Morth_T * eV_T;
     //    std::cerr << "Roots_decomposed_into, step 6.3 rx_T=" << rX_T << "\n";
     MyVector<Tint> rX = UniversalVectorConversion<Tint,T>(rX_T);
     //    std::cerr << "Roots_decomposed_into, step 6.4\n";
@@ -467,6 +478,98 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
   std::cerr << "Roots_decomposed_into, step 7\n";
   return RetSol;
 }
+
+
+
+/*
+  We want to find integer vectors such that (a+v, a+v) = k
+  with v in the Morth space and one vector a.
+  We want to also impose the condition that 2(a+v)G / k    \in Z^n
+  Thus the equations that we have are
+  ----
+  We write v = M w with w \in Z^{n-1}
+  2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
+  We have the additional condition (2/k) G (a + Mw) \in Z^n
+  ----
+  We can use SolutionIntmat to get one initial solution w_0
+  Then we need also to use a SolutionIntTrMat to get the vectspace U
+  So, we have w = w0 + U z
+  Putting it all together we get
+  2a^T G M (w0 + U z) + (w0^T + z^T U^T) M^T GM (w0 + U z) = k - (a,a)
+  z^T {U^T M^T G M U} z + 2 { a^T G M U + w0^T M^T G M U } z = k - (a,a) - w0^T M^T G M w0
+  z^T {U^T M^T G M U} z + 2 { U^T M^T G (a + M w0) }^T z = k - (a,a) - w0^T M^T G M w0
+  Write Gs = U^T M^T G M U    and Vs = Gs^{-1} Ws and Ws = U^T M^T G (a + M w0)
+  And so we finally get the equation
+  z^T Gs z + 2 Vs^T Gs z = k - (a,a) - w0^T M^T G M w0
+  or
+  (z + Vs)^T Gs (z + Vs) = k - (a,a) - w0^T M^T G M w0 + Vs Gs Vs
+  ---
+  Also we have x = a + Mw
+                 = a + M (w0 + Uz)
+                 = (a + Mw0) + MU z
+  ---
+  The equation to find the w0 and U are going to be
+  2 G (a + M w) = k h    with (w,h) in Z^{2 n -1}
+  So, we get
+  2 GM w - k h = -2 G a
+  
+ */
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
+{
+  if (k == 1 || k == 2) // No need for some complex linear algebra work, returning directly
+    return Roots_decomposed_into(Vtot, a, k);
+  //
+  size_t n = Vtot.G.rows();
+  MyMatrix<Tint> GM = Vtot.G * Vtot.Morth;
+  MyVector<Tint> m2_Ga = -2 * Vtot.G * a;
+  MyMatrix<Tint> Bmat(2*n-1, n);
+  for (size_t i=0; i<n-1; i++) {
+    for (size_t j=0; j<n; j++) {
+      Bmat(i,j) = 2 * GM(j,i);
+    }
+  }
+  for (size_t i=0; i<n; i++) {
+    for (size_t j=0; j<n; j++) {
+      if (i == j)
+        Bmat(n-1 + i, i) = -k;
+      else
+        Bmat(n-1 + i, j) = 0;
+    }
+  }
+  ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
+  if (!res.TheRes)
+    return {};
+  //
+  const MyMatrix<Tint>& w0 = res.eSol;
+  MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
+  size_t dim = U_block.rows();
+  MyMatrix<Tint> U(n,dim);
+  for (size_t i=0; i<dim; i++)
+    for (size_t j=0; j<n; j++)
+      U(j,i) = U_block(i,j);
+  //
+  MyMatrix<Tint> Gs = U.transpose() * Vtot.Morth.transpose() * Vtot.G * Vtot.Morth * U;
+  MyMatrix<Tint> Ws = U.transpose() * Vtot.Morth.transpose() * Vtot.G * ( a + Vtot.Morth * w0);
+  MyMatrix<T> Gs_T = UniversalMatrixConversion<T,Tint>(Gs);
+  MyMatrix<T> InvGs_T = Inverse(Gs_T);
+  MyMatrix<T> Vs = InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
+  MyMatrix<Tint> Mw0 = Vtot.Morth * w0;
+  T normi = T(k - a.dot(Vtot.G * a) - w0.dot(Vtot.G * w0)) + Vs.dot(Gs_T * Vs);
+  //
+  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Gs, Vs, normi);
+  std::cerr << "|ListSol|=" << ListSol.size() << "\n";
+  MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
+  MyMatrix<Tint> MU = Vtot.Morth * U;
+  std::vector<MyVector<Tint>> RetSol;
+  for (auto& eV_Tint : ListSol) {
+    MyVector<Tint> x = apMw0 + U * eV_Tint;
+    RetSol.emplace_back(std::move(x));
+  }
+  std::cerr << "Roots_decomposed_into_select, step 7\n";
+  return RetSol;
+}
+
 
 
 
@@ -701,13 +804,12 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   std::cerr << "FundCone, step 1\n";
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
-  MyVector<T> a = ZeroVector<T>(n);
+  MyVector<Tint> a = ZeroVector<Tint>(n);
   std::cerr << "FundCone, step 1.1\n";
   for (auto & k : Vtot.root_lengths) {
-    T k_T = k;
     std::cerr << " k=" << k << "\n";
     std::set<MyVector<Tint>> set;
-    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a, k_T);
+    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a, k);
     size_t n_root = 0;
     for (const MyVector<Tint>& root_cand : list_root_cand) {
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
@@ -851,10 +953,8 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
-    const MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
-    const T k_T = k;
-    std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
-    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T);
+    std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
+    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a, k);
     std::vector<MyVector<Tint>> ListRootFind;
     size_t n_root_find = 0;
     for (const MyVector<Tint>& root_cand : list_root_cand) {
