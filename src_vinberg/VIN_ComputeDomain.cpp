@@ -28,13 +28,15 @@ int main(int argc, char* argv[])
     VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G, v0);
     std::cerr << "We have Vtot\n";
     //
-    std::vector<MyVector<Tint>> ListVect = FindRoots(Vtot);
+    std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
+    DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G);
     //
     auto print=[&](std::ostream & os) -> void {
-      int nVect = ListVect.size();
-      os << "|ListVect|=" << nVect << "\n";
+      int nVect = ListRoot.size();
+      os << "|ListRoot|=" << nVect << "\n";
       for (int i=0; i<nVect; i++)
-        WriteVector(os, ListVect[i]);
+        WriteVector(os, ListRoot[i]);
+      Print_DataReflectionGroup(data, os);
     };
     //
     if (argc == 2) {

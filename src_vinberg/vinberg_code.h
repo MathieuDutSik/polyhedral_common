@@ -583,7 +583,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     std::ifstream INfs(FileO);
     std::string line;
     while (getline(INfs, line)) {
-      std::cerr << "line=" << line << "\n";
+      //      std::cerr << "line=" << line << "\n";
       RESUL.push_back(line);
     }
   }
@@ -616,6 +616,79 @@ MyVector<T> SignCanonicalizeVector(const MyVector<T>& V)
   std::cerr << "Error in SignCanonicalizeVector\n";
   throw TerminalException{1};
 }
+
+
+template<typename T, typename Tint>
+struct DataReflectionGroup {
+  std::vector<MyVector<Tint>> ListRoot;
+  MyMatrix<Tint> G;
+  MyMatrix<Tint> M;
+  MyMatrix<T> Cos;
+  MyMatrix<T> EXT;
+  std::vector<T> ListNorm;
+};
+
+
+template<typename T, typename Tint>
+DataReflectionGroup<T,Tint> GetDataReflectionGroup(const std::vector<MyVector<Tint>>& ListRoot, const MyMatrix<Tint>& G)
+{
+  size_t n_root = ListRoot.size();
+  MyMatrix<Tint> M(n_root,n_root);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<Tint> eVG = G * ListRoot[i_root];
+    for (size_t j_root=0; j_root<n_root; j_root++) {
+      T eScal = eVG.dot(ListRoot[j_root]);
+      M(i_root, j_root) = eScal;
+    }
+  }
+  //
+  MyMatrix<T> Cos(n_root,n_root);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    for (size_t j_root=0; j_root<n_root; j_root++) {
+      T aII = M(i_root,i_root);
+      T aJJ = M(j_root,j_root);
+      T aIJ = M(i_root,j_root);
+      T cos2 = (aIJ * aIJ) / (aII * aJJ);
+      Cos(i_root,j_root) = cos2;
+    }
+  }
+  //
+  size_t n_col = G.rows();
+  MyMatrix<T> FAC(n_root,n_col);
+  MyMatrix<T> G_T = UniversalMatrixConversion<T,Tint>(G);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<T> Root_T = UniversalVectorConversion<T,Tint>(ListRoot[i_root]);
+    MyVector<T> eProd = G_T * Root_T;
+    for (size_t i_col=0; i_col<n_col; i_col++)
+      FAC(i_root,i_col) = eProd(i_col);
+  }
+  MyMatrix<T> EXT = cdd::DualDescription(FAC);
+  size_t n_vert=EXT.rows();
+  std::vector<T> ListNorm(n_vert);
+  for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
+    MyVector<T> eEXT = GetMatrixRow(EXT, i_vert);
+    MyVector<T> eEXT_G = G_T * eEXT;
+    T eScal = eEXT_G.dot(eEXT);
+    ListNorm[i_vert] = eScal;
+  }
+  return {ListRoot, G, M, Cos, EXT, ListNorm};
+}
+
+
+
+template<typename T, typename Tint>
+void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
+{
+  os << "Printing the data from the Coxeter group\n";
+  for (auto & eNorm : data.ListNorm)
+    os << "norm=" << eNorm << "\n";
+}
+
+
+
+
+
+
 
 
 template<typename T, typename Tint>
