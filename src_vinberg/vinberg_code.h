@@ -513,10 +513,12 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
   if (k == 1 || k == 2) // No need for some complex linear algebra work, returning directly
     return Roots_decomposed_into(Vtot, a, k);
   //
+  std::cerr << "Roots_decomposed_into_select , Step 1\n";
   size_t n = Vtot.G.rows();
   MyMatrix<Tint> GM = Vtot.G * Vtot.Morth;
   MyVector<Tint> m2_Ga = -2 * Vtot.G * a;
   MyMatrix<Tint> Bmat(2*n-1, n);
+  std::cerr << "Roots_decomposed_into_select , Step 2\n";
   for (size_t i=0; i<n-1; i++) {
     for (size_t j=0; j<n; j++) {
       Bmat(i,j) = 2 * GM(j,i);
@@ -530,39 +532,55 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
         Bmat(n-1 + i, j) = 0;
     }
   }
+  std::cerr << "Roots_decomposed_into_select , Step 3\n";
   ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
+  std::cerr << "Roots_decomposed_into_select , Step 4\n";
   if (!res.TheRes)
     return {};
   //
-  const MyVector<Tint>& w0 = res.eSol;
+  MyVector<Tint> w0(n-1);
+  for (size_t i=0; i<n-1; i++)
+    w0(i) = res.eSol(i);
   MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
   size_t dim = U_block.rows();
+  std::cerr << "Roots_decomposed_into_select , Step 5\n";
 #ifdef DEBUG_VINBERG
   if (dim != n-1) {
     std::cerr << "The dimension dim should be equal to n-1\n";
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<Tint> U(n,dim);
+  MyMatrix<Tint> U(n-1,dim);
   for (size_t i=0; i<dim; i++)
-    for (size_t j=0; j<n; j++)
+    for (size_t j=0; j<n-1; j++)
       U(j,i) = U_block(i,j);
   //
+  std::cerr << "Roots_decomposed_into_select , Step 6\n";
   MyMatrix<Tint> Gs = U.transpose() * Vtot.Morth.transpose() * Vtot.G * Vtot.Morth * U;
+  std::cerr << "Roots_decomposed_into_select , Step 6.1\n";
   MyMatrix<Tint> Ws = U.transpose() * Vtot.Morth.transpose() * Vtot.G * ( a + Vtot.Morth * w0);
+  std::cerr << "Roots_decomposed_into_select , Step 6.2\n";
   MyMatrix<T> Gs_T = UniversalMatrixConversion<T,Tint>(Gs);
+  std::cerr << "Roots_decomposed_into_select , Step 6.3\n";
   MyMatrix<T> InvGs_T = Inverse(Gs_T);
+  std::cerr << "Roots_decomposed_into_select , Step 6.4\n";
   MyVector<T> Vs = - InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
-  MyMatrix<Tint> Mw0 = Vtot.Morth * w0;
-  Tint term1 = k - a.dot(Vtot.G * a) - w0.dot(Vtot.G * w0);
+  std::cerr << "Roots_decomposed_into_select , Step 6.5\n";
+  MyVector<Tint> Mw0 = Vtot.Morth * w0;
+  std::cerr << "Roots_decomposed_into_select , Step 6.6\n";
+  Tint term1 = k - a.dot(Vtot.G * a) - Mw0.dot(Vtot.G * Mw0);
+  std::cerr << "Roots_decomposed_into_select , Step 6.7\n";
   T term2 = Vs.dot(Gs_T * Vs);
+  std::cerr << "Roots_decomposed_into_select , Step 6.8\n";
   T normi = T(term1) + term2;
+  std::cerr << "Roots_decomposed_into_select , Step 7\n";
   //
   std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Gs_T, Vs, normi);
   std::cerr << "|ListSol|=" << ListSol.size() << "\n";
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
   std::vector<MyVector<Tint>> RetSol;
+  std::cerr << "Roots_decomposed_into_select , Step 8\n";
   for (auto& eV_Tint : ListSol) {
     MyVector<Tint> x = apMw0 + U * eV_Tint;
 #ifdef DEBUG_VINBERG
@@ -574,7 +592,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
 #endif
     RetSol.emplace_back(std::move(x));
   }
-  std::cerr << "Roots_decomposed_into_select, step 7\n";
+  std::cerr << "Roots_decomposed_into_select , Step 9\n";
   return RetSol;
 }
 
