@@ -475,49 +475,53 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 {
   size_t n_root = ListRoot.size();
   size_t nbCol = Vtot.G.rows();
-  std::cerr << "Preamble of is_FundPoly n_root=" << n_root << " nbCol=" << nbCol << "\n";
-  auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
-    for (size_t i=0; i<nbCol; i++)
-      M(eRank, i) = UniversalScalarConversion<T,Tint>(ListRoot[iRow](i));
-  };
-  SelectionRowCol<T> eSelect=TMat_SelectRowCol_Kernel<T>(n_root, nbCol, f);
-  std::cerr << "Preamble : rank=" << eSelect.TheRank << "\n";
-  MyMatrix<Tint> ListRoot_Tint = MatrixFromVectorFamily(ListRoot);
-  MyMatrix<T> ListRoot_T = UniversalMatrixConversion<T,Tint>(ListRoot_Tint);
-  std::cerr << "Preamble : ListRoot=\n";
-  WriteMatrix(std::cerr, ListRoot_T);
-  MyMatrix<T> ListRootSel = GetNonRedundant_CDD(ListRoot_T);
-  std::cerr << "Preamble : ListRootSel=\n";
-  WriteMatrix(std::cerr, ListRootSel);
 
-  std::cerr << "is_FundPoly, step 1\n";
+  std::cerr << "is_FundPoly : begin, n_root=" << n_root << " nbCol=" << nbCol << "\n";
   MyMatrix<T> M(n_root, n_root);
-  std::cerr << "is_FundPoly, step 2, n_root=" << n_root << "\n";
+  std::unordered_map<T,int> DiagVal;
+  std::unordered_map<T,int> OffDiagVal;
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<Tint> eVG = Vtot.G * ListRoot[i_root];
     for (size_t j_root=0; j_root<n_root; j_root++) {
       T eScal = eVG.dot(ListRoot[j_root]);
       M(i_root, j_root) = eScal;
+      if (i_root == j_root) {
+        DiagVal[eScal] += 1;
+      } else {
+        if (i_root < j_root)
+          OffDiagVal[eScal] += 1;
+      }
     }
   }
-  std::cerr << "M=\n";
-  for (size_t i_root=0; i_root<n_root; i_root++) {
-    for (size_t j_root=0; j_root<n_root; j_root++)
-      std::cerr << " " << M(i_root,j_root);
-    std::cerr << "\n";
-  }
-  std::cerr << "cos=\n";
+  std::cerr << "is_fundPoly : Diag =";
+  for (auto & kv : DiagVal)
+    std::cerr << " [" << kv.first << "," << kv.second << "]";
+  std::cerr << "\n";
+  std::cerr << "is_fundPoly : OffDiag =";
+  for (auto & kv : OffDiagVal)
+    std::cerr << " [" << kv.first << "," << kv.second << "]";
+  std::cerr << "\n";
+
+  std::unordered_map<T,int> CosVal;
+  MyMatrix<T> Cos(n_root,n_root);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     for (size_t j_root=0; j_root<n_root; j_root++) {
       T aII = M(i_root,i_root);
       T aJJ = M(j_root,j_root);
       T aIJ = M(i_root,j_root);
       T cos2 = (aIJ * aIJ) / (aII * aJJ);
-      std::cerr << " " << cos2;
+      Cos(i_root,j_root) = cos2;
+      if (i_root < j_root)
+        CosVal[cos2] += 1;
     }
-    std::cerr << "\n";
   }
-  std::cerr << "is_FundPoly, step 3\n";
+  std::cerr << "is_fundPoly : Cos =";
+  for (auto & kv : CosVal)
+    std::cerr << " [" << kv.first << "," << kv.second << "]";
+  std::cerr << "\n";
+  //
+  // Building of the input
+  //
   T cst1 = T(1) / T(4); //  1/4
   T cst2 = T(1) / T(2); //  1/2
   T cst3 = T(3) / T(4); //  3/4
@@ -542,13 +546,10 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     std::cerr << "coxiter.py ERROR: cosine " << cos2 << "\n";
     throw TerminalException{1};
   };
-  std::cerr << "is_FundPoly, step 4\n";
   int d = Vtot.G.rows() - 1;
-  std::cerr << "TEST d=" << d << " nbCol=" << nbCol << "\n";
   std::string rnd_str = random_string(20);
   std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
   std::string FileO = "/tmp/CoxIter_" + rnd_str + ".out";
-  std::cerr << "is_FundPoly, step 5\n";
   {
     std::ofstream os(FileI);
     os << n_root << " " << d << "\n";
@@ -558,23 +559,19 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
           os << (j+1) << " " << (i+1) << " " << weight(i, j) << "\n";
     os << "\n";
   }
-  std::cerr << "is_FundPoly, step 6\n";
   //
   // Running the CoxIter program
   //
-  std::cerr << "is_FundPoly, step 7\n";
   std::string eCommand = "coxiter";
   std::string opt = "-fv";
   eCommand += " " + opt;
   eCommand += " < " + FileI + " > " + FileO;
   std::cerr << "eCommand=" << eCommand << "\n";
   int iret=system(eCommand.c_str());
-  std::cerr << "is_FundPoly, step 8\n";
   if (iret == -1) {
     printf("Oh dear, something went wrong with glpsol! %s\n", strerror(errno));
     throw TerminalException{1};
   }
-  std::cerr << "is_FundPoly, step 7\n";
   //
   // Reading the output
   //
@@ -587,7 +584,6 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
       RESUL.push_back(line);
     }
   }
-  std::cerr << "is_FundPoly, step 9 |RESUL|=" << RESUL.size() << "\n";
   bool IsFiniteCovolume=false;
   std::string question = "Finite covolume: ";
   std::string answer = "yes";
@@ -598,7 +594,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
         IsFiniteCovolume = true;
     }
   }
-  std::cerr << "is_FundPoly, step 10 IsFiniteCovolume=" << IsFiniteCovolume << "\n";
+  std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "\n";
   return IsFiniteCovolume;
 }
 
