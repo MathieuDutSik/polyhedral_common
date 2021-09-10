@@ -136,37 +136,42 @@ struct VinbergTot {
 };
 
 
-
-
-
-template<typename Tint>
-Tint ScalProd(const MyMatrix<Tint>& M, const MyVector<Tint>& V1, const MyVector<Tint>& V2)
-{
-  Tint eSum = 0;
-  int n = M.rows();
-  for (int i=0; i<n; i++)
-    for (int j=0; j<=i; j++) {
-      Tint eMult = 2;
-      if (i == j)
-        eMult = 1;
-      eSum += V1(i) * V2(j) * M(i,j) * eMult;
-    }
-  return eSum;
-}
-
-
 template<typename T, typename Tint>
-bool IsRoot(const MyMatrix<Tint>& M, const MyVector<Tint>& V)
+bool IsRoot(const MyMatrix<Tint>& G, const MyVector<Tint>& V)
 {
-  int n = M.rows();
-  T eNorm = ScalProd(M, V, V);
-  for (int i=0; i<n; i++) {
-    T eFrac = 2 * V(i) / eNorm;
+  size_t n = G.rows();
+  MyVector<Tint> GV = G * V;
+  T eNorm = GV.dot(V);
+  for (size_t i=0; i<n; i++) {
+    T eFrac = T(2 * GV(i)) / eNorm;
     if (!IsInteger(eFrac))
       return false;
   }
   return true;
 }
+
+
+template<typename T, typename Tint>
+bool IsNewRoot(const MyMatrix<Tint>& G, const MyVector<Tint>& V, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  size_t n = G.rows();
+  MyVector<Tint> GV = G * V;
+  T eNorm = GV.dot(V);
+  for (size_t i=0; i<n; i++) {
+    T eFrac = T(2 * GV(i)) / eNorm;
+    if (!IsInteger(eFrac))
+      return false;
+  }
+  // Testing the scalar products
+  for (auto & eRoot : ListRoot) {
+    T scal = GV.dot(eRoot);
+    if (scal > 0)
+      return false;
+  }
+  return true;
+}
+
+
 
 
 template<typename Tint>
@@ -702,15 +707,18 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
     T k_T = k;
     std::cerr << " k=" << k << "\n";
     std::set<MyVector<Tint>> set;
-    for (const MyVector<Tint>& root_cand : Roots_decomposed_into<T,Tint>(Vtot, a, k_T)) {
+    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a, k_T);
+    size_t n_root = 0;
+    for (const MyVector<Tint>& root_cand : list_root_cand) {
       if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
+        n_root++;
         MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
         set.insert(root_can);
       }
     }
     for (auto & eV : set)
       V1_roots.push_back(eV);
-    std::cerr << "k=" << k << " |set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << "\n";
+    std::cerr << "k=" << k << " |set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << " |list_root_cand|=" << list_root_cand.size() << " n_root=" << n_root << "\n";
   }
   std::cerr << "FundCone, step 2\n";
   //
@@ -847,18 +855,22 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const T k_T = k;
     std::cerr << "  NextRoot a=" << a << " k=" << k << " k_T=" << k_T << "\n";
     std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into<T,Tint>(Vtot, a_T, k_T);
-    std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
+    std::vector<MyVector<Tint>> ListRootFind;
+    size_t n_root_find = 0;
     for (const MyVector<Tint>& root_cand : list_root_cand) {
-      if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
-        std::cerr << "Found a root\n";
-        ListRoot.push_back(root_cand);
-        std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
-        ListRoot = ReduceListRoot(ListRoot);
-        std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
-        if (is_FundPoly(Vtot, ListRoot)) {
-          return ListRoot;
-        }
+      if (IsNewRoot<T,Tint>(Vtot.G, root_cand, ListRoot)) {
+        n_root_find++;
+        ListRootFind.push_back(root_cand);
       }
+    }
+    std::cerr << "|list_root_cand|=" << list_root_cand.size() << " n_root_find=" << n_root_find << "\n";
+    for (auto & eRoot : ListRootFind) {
+      ListRoot.push_back(eRoot);
+      std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
+      ListRoot = ReduceListRoot(ListRoot);
+      std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
+      if (is_FundPoly(Vtot, ListRoot))
+        return ListRoot;
     }
   }
   std::cerr << "Should never reach that stage\n";
