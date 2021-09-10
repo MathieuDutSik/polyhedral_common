@@ -582,7 +582,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
   std::vector<MyVector<Tint>> RetSol;
   std::cerr << "Roots_decomposed_into_select , Step 8\n";
   for (auto& eV_Tint : ListSol) {
-    MyVector<Tint> x = apMw0 + U * eV_Tint;
+    MyVector<Tint> x = apMw0 + MU * eV_Tint;
 #ifdef DEBUG_VINBERG
     T scal = x.dot(Vtot.G * x);
     if (scal != k) {
