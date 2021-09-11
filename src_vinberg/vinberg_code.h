@@ -5,6 +5,7 @@
 //#include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
 #include "POLY_RedundancyElimination.h"
+#include "POLY_PolytopeInt.h"
 
 
 #define DEBUG_VINBERG
@@ -505,7 +506,8 @@ template<typename T, typename Tint, typename Fins_root>
 void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
 {
   DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
-  Solutioner_CVP(data, f_ins_root);
+  if (data.is_feasible)
+    Solutioner_CVP(data, f_ins_root);
 }
 
 
@@ -528,20 +530,61 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, const std::vector<MyVector<Tint>>& ListRoot)
 {
   std::vector<MyVector<Tint>> list_root;
-  std::vector<MyVector<Tint>> list_GV;
-  for (auto & e_root : ListRoot) {
-    MyVector<Tint> e_gv = Vtot.G * e_root;
-    list_GV.push_back(e_gv);
-  }
-  auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
-    for (auto & e_gv : list_GV) {
-      T scal = V.dot(e_gv);
-      if (scal > 0)
-        return;
+  DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
+  if (!data.is_feasible)
+    return {};
+
+
+  auto fct_CVP=[&]() -> void {
+    std::vector<MyVector<Tint>> list_GV;
+    for (auto & e_root : ListRoot) {
+      MyVector<Tint> e_gv = Vtot.G * e_root;
+      list_GV.push_back(e_gv);
     }
-    list_root.push_back(V);
+    auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
+      for (auto & e_gv : list_GV) {
+        T scal = V.dot(e_gv);
+        if (scal > 0)
+          return;
+      }
+      list_root.push_back(V);
+    };
+    Solutioner_CVP(data, f_ins_root);
   };
-  Roots_decomposed_into_select(Vtot, a, k, f_ins_root);
+  //
+  auto fct_PolyInt=[&]() -> void {
+    size_t n_root = ListRoot.size();
+    size_t dim = Vtot.G.rows();
+    MyMatrix<T> FAC(n_root, dim);
+    for (size_t i_root=0; i_root<n_root; i_root++) {
+      MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
+      Tint scal1 = e_gv.dot(data.shift_u);
+      FAC(i_root,0) = UniversalScalarConversion<T,Tint>(scal1);
+      for (size_t i=1; i<dim; i++) {
+        MyVector<Tint> eCol = GetMatrixColumn(data.trans_u, i-1);
+        Tint scal2 = e_gv.dot(eCol);
+        FAC(i_root,i) = UniversalScalarConversion<T,Tint>(scal2);
+      }
+    }
+    MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    auto f_insert=[&](const MyVector<Tint>& V) -> bool {
+      MyVector<Tint> x = data.shift_u + data.trans_u * V;
+      Tint scal = x.dot(Vtot.G * x);
+      if (scal == k) {
+        list_root.push_back(x);
+      }
+      return true;
+    };
+    Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
+  };
+  //
+  MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
+  if (RankMat(RootMat) == Vtot.G.rows()) {
+    fct_PolyInt();
+  } else {
+    fct_CVP();
+  }
+  //
   std::cerr << "|list_root|=" << list_root.size() << "\n";
   return list_root;
 }

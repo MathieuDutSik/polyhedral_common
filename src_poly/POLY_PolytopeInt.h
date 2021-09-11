@@ -30,25 +30,24 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
     ListLow[iDim] = eLow;
     ListUpp[iDim] = eUpp;
     Tint eSiz=1 + eUpp - eLow;
-    ListSize[iDim]=eSiz;
+    ListSize[iDim]=UniversalScalarConversion<int,Tint>(eSiz);
   }
   int nbFac=FAC.rows();
   auto IsCorrect=[&](MyVector<Tint> const& eVect) -> bool {
     for (int iFac=0; iFac<nbFac; iFac++) {
-      T eScal=0;
-      for (int i=0; i<n; i++)
-	eScal += FAC(iFac,i) * eVect(i);
+      T eScal=FAC(iFac,0);
+      for (int i=0; i<dim; i++)
+	eScal += FAC(iFac,i+1) * eVect(i);
       if (eScal <0)
 	return false;
     }
     return true;
   };
-  MyVector<Tint> ePoint(n);
-  ePoint(0)=1;
+  MyVector<Tint> ePoint(dim);
   BlockIterationMultiple BlIter(ListSize);
   for (auto const& eVect : BlIter) {
     for (int iDim=0; iDim<dim; iDim++)
-      ePoint(iDim+1) = ListLow[iDim] + eVect[iDim];
+      ePoint(iDim) = ListLow[iDim] + eVect[iDim];
     bool test=IsCorrect(ePoint);
     if (test) {
       bool retval = f_insert(ePoint);
@@ -91,7 +90,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
     for (size_t i_row=0; i_row<n_row; i_row++) {
       T val=FAC(i_row,0);
       for (size_t i=0; i<pos; i++)
-        val += FAC(i_row,1 + i) * ePoint(1 + i);
+        val += FAC(i_row,1 + i) * ePoint(i);
       FACred(i_row,0) = val;
       for (size_t i=0; i<dim-pos; i++)
         FACred(i_row,1+i) = FAC(i_row,1+pos+i);
@@ -124,10 +123,10 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
   };
   auto IsCorrect=[&](MyVector<Tint> const& eVect) -> bool {
     for (size_t i_row=0; i_row<n_row; i_row++) {
-      T eScal=0;
-      for (size_t i=0; i<=dim; i++)
-	eScal += FAC(i_row,i) * eVect(i);
-      if (eScal <0)
+      T eScal=FAC(i_row,0);
+      for (size_t i=0; i<dim; i++)
+	eScal += FAC(i_row,i+1) * eVect(i);
+      if (eScal < 0)
 	return false;
     }
     return true;
@@ -136,8 +135,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
   // Setting up the initial entries
   //
   size_t crit_siz = 1000000;
-  MyVector<Tint> ePoint(1 + dim);
-  ePoint(0) = 1;
+  MyVector<Tint> ePoint(dim);
   set_bound(ePoint, 0);
   size_t pos = 0;
   //
@@ -154,7 +152,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       BlockIterationMultiple BlIter(ListSize);
       for (auto const& eVect : BlIter) {
         for (size_t i=0; i<len; i++)
-          ePoint(1 + pos + i) = ListLow[pos + i] + eVect[i];
+          ePoint(pos + i) = ListLow[pos + i] + eVect[i];
         bool test=IsCorrect(ePoint);
         if (test) {
           bool retval = f_insert(ePoint);
@@ -167,8 +165,8 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       pos--;
       // Now we need to increase the positions
       while (true) {
-        if (ePoint(1+pos) < ListUpp[pos]) {
-          ePoint(1+pos) += 1;
+        if (ePoint(pos) < ListUpp[pos]) {
+          ePoint(pos) += 1;
           pos++;
           set_bound(ePoint,pos);
           break;
@@ -180,7 +178,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       if (pos == 0)
         break;
     } else { // If the number of cases is large, then implicitly, we can go deeper
-      ePoint(1 + pos) = ListLow[pos];
+      ePoint(pos) = ListLow[pos];
       pos++;
       set_bound(ePoint,pos);
     }
