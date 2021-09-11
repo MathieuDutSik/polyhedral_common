@@ -49,8 +49,11 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
     for (int iDim=0; iDim<dim; iDim++)
       ePoint(iDim+1) = ListLow[iDim] + eVect[iDim];
     bool test=IsCorrect(ePoint);
-    if (test)
-      f_insert(ePoint);
+    if (test) {
+      bool retval = f_insert(ePoint);
+      if (!retval)
+        return;
+    }
   }
 }
 
@@ -59,8 +62,9 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT)
 {
   std::vector<MyVector<Tint>> ListPoint;
-  auto f_insert=[&](const MyVector<Tint>& ePoint) -> void {
+  auto f_insert=[&](const MyVector<Tint>& ePoint) -> bool {
     ListPoint.push_back(ePoint);
+    return true;
   };
   Kernel_GetListIntegralPoint<T,Tint>(FAC, EXT, f_insert);
   return ListPoint;
@@ -74,7 +78,11 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
 {
   // Getting the bounds with the coordinates i<pos1 being fixed with values
   // set by eVert. The values of the coordinate pos2 is then computed.
-  auto get_bound=[&](const MyVector<T>& eVert, const size_t& pos1, const size_t& pos2) -> std::pair<Tint,Tint> {
+  size_t dim = FAC.cols() - 1;
+  std::vector<Tint> ListLow(dim);
+  std::vector<Tint> ListUpp(dim);
+  auto set_bound=[&](const MyVector<T>& eVert, const size_t& pos1) -> void {
+    
   };
   while(true) {
   }
