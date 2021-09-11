@@ -362,20 +362,35 @@ public:
 };
 
 
+template<typename T, typename Tint>
+struct DataMappingVinbergProblem {
+  MyMatrix<T> G;
+  MyVector<T> V;
+  T norm;
+  MyVector<Tint> shift_u;
+  MyMatrix<Tint> trans_u;
+  bool is_feasible;
+};
+
+
 
 
 template<typename T, typename Tint, typename Fins_root>
-void Solutioner(const MyMatrix<T>& G, const MyVector<T>& V, const T& norm, const MyVector<Tint>& shift_u, const MyMatrix<Tint>& trans_u, Fins_root f_ins_root)
+void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_ins_root)
 {
   size_t n_sol = 0;
   auto f_ins=[&](const MyVector<Tint>& u) -> void {
-    MyVector<Tint> x = shift_u + trans_u * u;
+    MyVector<Tint> x = data.shift_u + data.trans_u * u;
     n_sol++;
     f_ins_root(x);
   };
-  ComputeSphericalSolutions<T,Tint>(G, V, norm, f_ins);
+  ComputeSphericalSolutions<T,Tint>(data.G, data.V, data.norm, f_ins);
   std::cerr << "|ListSol|=" << n_sol << "\n";
 }
+
+
+
+
 
 
 /*
@@ -386,21 +401,7 @@ void Solutioner(const MyMatrix<T>& G, const MyVector<T>& V, const T& norm, const
   2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
   2 w Gorth sV + w^t Gorth w = k -(a,a)
   (w + sV)^t Gorth (w + sV) = k - (a,a) + sV^t Gorth sV
-
  */
-template<typename T, typename Tint, typename Fins_root>
-void Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
-{
-  MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
-  MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
-  Tint term1 = k - a.dot(Vtot.G * a);
-  T normi = T(term1) + sV.dot(Vtot.Gorth_T * sV);
-  MyVector<T> eV = -sV;
-  Solutioner(Vtot.Gorth_T, eV, normi, a, Vtot.Morth, f_ins_root);
-}
-
-
-
 /*
   We want to find integer vectors such that (a+v, a+v) = k
   with v in the Morth space and one vector a.
@@ -433,12 +434,16 @@ void Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>&
   So, we get
   2 GM w - k h = -2 G a
  */
-template<typename T, typename Tint, typename Fins_root>
-void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
+template<typename T, typename Tint>
+DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
 {
   if (k == 1 || k == 2) { // No need for some complex linear algebra work, returning directly
-    Roots_decomposed_into(Vtot, a, k, f_ins_root);
-    return;
+    MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
+    MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
+    Tint term1 = k - a.dot(Vtot.G * a);
+    T normi = T(term1) + sV.dot(Vtot.Gorth_T * sV);
+    MyVector<T> eV = -sV;
+    return {Vtot.Gorth_T, eV, normi, a, Vtot.Morth, true};
   }
   //
   size_t n = Vtot.G.rows();
@@ -460,7 +465,7 @@ void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector
   }
   ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
   if (!res.TheRes)
-    return;
+    return {{}, {}, 0, {}, {}, false};
   //
   MyVector<Tint> w0(n-1);
   for (size_t i=0; i<n-1; i++)
@@ -491,9 +496,18 @@ void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector
   //
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
-
-  Solutioner(Gs_T, Vs, normi, apMw0, MU, f_ins_root);
+  return {Gs_T, Vs, normi, apMw0, MU};
 }
+
+
+
+template<typename T, typename Tint, typename Fins_root>
+void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
+{
+  DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
+  Solutioner_CVP(data, f_ins_root);
+}
+
 
 
 template<typename T, typename Tint>
