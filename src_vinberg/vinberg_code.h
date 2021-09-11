@@ -15,8 +15,8 @@
 //
 
 // Compute the solutions of G [x - eV] = a
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm)
+template<typename T, typename Tint, typename Fins>
+void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
 {
   std::cerr << "ComputeSphericalSolutions, step 1\n";
   std::cerr << "GramMat=\n";
@@ -32,38 +32,16 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
   request.bound = norm;
   request.mode = mode;
   request.coset = cosetVect;
-  std::vector<MyVector<Tint>> short_vectors;
   //
   auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
     if (min == norm) {
-      short_vectors.push_back(V);
+      f_ins(V);
     }
     return true;
   };
 
 
   (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
-#ifdef DEBUG_VINBERG
-  std::cerr << "|info.short_vectors|=" << short_vectors.size() << "\n";
-  for (auto & fV : short_vectors) {
-    T sum=0;
-    for (int i=0; i<dim; i++)
-      for (int j=0; j<=i; j++) {
-        T eMult = 2;
-        if (i == j)
-          eMult = 1;
-        T val1 = eV(i) - fV(i);
-        T val2 = eV(j) - fV(j);
-        sum += val1 * val2 * GramMat(i,j) * eMult;
-      }
-    if (sum != norm) {
-      std::cerr << "We should have vectors of norm exactly a\n";
-      std::cerr << "sum=" << sum << " norm=" << norm << "\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
-  return short_vectors;
 }
 
 //
@@ -451,8 +429,8 @@ public:
   (w + sV)^t Gorth (w + sV) = k - (a,a) + sV^t Gorth sV
 
  */
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
+template<typename T, typename Tint, typename Fins_root>
+void Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
 {
   T k_T = k;
   MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
@@ -464,15 +442,21 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
   std::cerr << "Roots_decomposed_into, step 3\n";
   MyVector<T> eV = -sV;
   std::cerr << "Roots_decomposed_into, step 4\n";
-  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi);
-  std::cerr << "|ListSol|=" << ListSol.size() << "\n";
-  std::vector<MyVector<Tint>> RetSol;
-  for (auto& eV_Tint : ListSol) {
+  size_t n_sol = 0;
+  auto f_ins=[&](const MyVector<Tint>& eV_Tint) -> void {
     MyVector<Tint> x = a + Vtot.Morth * eV_Tint;
-    RetSol.emplace_back(std::move(x));
-  }
-  std::cerr << "Roots_decomposed_into, step 7\n";
-  return RetSol;
+#ifdef DEBUG_VINBERG
+    T scal = x.dot(Vtot.G * x);
+    if (scal != k) {
+      std::cerr << "We have scal=" << scal << " k=" << k << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    n_sol++;
+    f_ins_root(x);
+  };
+  ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi, f_ins);
+  std::cerr << "|ListSol|=" << n_sol << "\n";
 }
 
 
@@ -509,11 +493,13 @@ std::vector<MyVector<Tint>> Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot
   So, we get
   2 GM w - k h = -2 G a
  */
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
+template<typename T, typename Tint, typename Fins_root>
+void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
 {
-  if (k == 1 || k == 2) // No need for some complex linear algebra work, returning directly
-    return Roots_decomposed_into(Vtot, a, k);
+  if (k == 1 || k == 2) { // No need for some complex linear algebra work, returning directly
+    Roots_decomposed_into(Vtot, a, k, f_ins_root);
+    return;
+  }
   //
   std::cerr << "Roots_decomposed_into_select , Step 1\n";
   size_t n = Vtot.G.rows();
@@ -538,7 +524,7 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
   ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
   std::cerr << "Roots_decomposed_into_select , Step 4\n";
   if (!res.TheRes)
-    return {};
+    return;
   //
   MyVector<Tint> w0(n-1);
   for (size_t i=0; i<n-1; i++)
@@ -577,13 +563,10 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
   T normi = T(term1) + term2;
   std::cerr << "Roots_decomposed_into_select , Step 7\n";
   //
-  std::vector<MyVector<Tint>> ListSol = ComputeSphericalSolutions<T,Tint>(Gs_T, Vs, normi);
-  std::cerr << "|ListSol|=" << ListSol.size() << "\n";
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
-  std::vector<MyVector<Tint>> RetSol;
-  std::cerr << "Roots_decomposed_into_select , Step 8\n";
-  for (auto& eV_Tint : ListSol) {
+  size_t n_sol=0;
+  auto f_ins=[&](const MyVector<Tint>& eV_Tint) -> void {
     MyVector<Tint> x = apMw0 + MU * eV_Tint;
 #ifdef DEBUG_VINBERG
     T scal = x.dot(Vtot.G * x);
@@ -592,11 +575,50 @@ std::vector<MyVector<Tint>> Roots_decomposed_into_select(const VinbergTot<T,Tint
       throw TerminalException{1};
     }
 #endif
-    RetSol.emplace_back(std::move(x));
-  }
-  std::cerr << "Roots_decomposed_into_select , Step 9\n";
-  return RetSol;
+    n_sol++;
+    f_ins_root(x);
+  };
+  ComputeSphericalSolutions<T,Tint>(Gs_T, Vs, normi, f_ins);
+  std::cerr << "|ListSol|=" << n_sol << "\n";
 }
+
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FindRoot_no_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
+{
+  std::vector<MyVector<Tint>> list_root;
+  auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
+    list_root.push_back(V);
+  };
+  Roots_decomposed_into_select(Vtot, a, k, f_ins_root);
+  std::cerr << "|list_root|=" << list_root.size() << "\n";
+  return list_root;
+}
+
+
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  std::vector<MyVector<Tint>> list_root;
+  std::vector<MyVector<Tint>> list_GV;
+  for (auto & e_root : ListRoot) {
+    MyVector<Tint> e_gv = Vtot.G * e_root;
+    list_GV.push_back(e_gv);
+  }
+  auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
+    for (auto & e_gv : list_GV) {
+      T scal = V.dot(e_gv);
+      if (scal > 0)
+        return;
+    }
+    list_root.push_back(V);
+  };
+  Roots_decomposed_into_select(Vtot, a, k, f_ins_root);
+  std::cerr << "|list_root|=" << list_root.size() << "\n";
+  return list_root;
+}
+
 
 
 
@@ -837,18 +859,14 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
   for (auto & k : Vtot.root_lengths) {
     std::cerr << " k=" << k << "\n";
     std::set<MyVector<Tint>> set;
-    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into_select<T,Tint>(Vtot, a, k);
-    size_t n_root = 0;
+    std::vector<MyVector<Tint>> list_root_cand = FindRoot_no_filter<T,Tint>(Vtot, a, k);
     for (const MyVector<Tint>& root_cand : list_root_cand) {
-      if (IsRoot<T,Tint>(Vtot.G, root_cand)) {
-        n_root++;
-        MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
-        set.insert(root_can);
-      }
+      MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
+      set.insert(root_can);
     }
     for (auto & eV : set)
       V1_roots.push_back(eV);
-    std::cerr << "k=" << k << " |set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << " |list_root_cand|=" << list_root_cand.size() << " n_root=" << n_root << "\n";
+    std::cerr << "k=" << k << " |set|=" << set.size() << " |V1_roots|=" << V1_roots.size() << " |list_root_cand|=" << list_root_cand.size() << "\n";
   }
   std::cerr << "FundCone, step 2\n";
   //
@@ -982,17 +1000,9 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
     std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
-    std::vector<MyVector<Tint>> list_root_cand = Roots_decomposed_into_select<T,Tint>(Vtot, a, k);
-    std::vector<MyVector<Tint>> ListRootFind;
-    size_t n_root_find = 0;
-    for (const MyVector<Tint>& root_cand : list_root_cand) {
-      if (IsNewRoot<T,Tint>(Vtot.G, root_cand, ListRoot)) {
-        n_root_find++;
-        ListRootFind.push_back(root_cand);
-      }
-    }
-    std::cerr << "|list_root_cand|=" << list_root_cand.size() << " n_root_find=" << n_root_find << "\n";
-    for (auto & eRoot : ListRootFind) {
+    std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot);
+    std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
+    for (auto & eRoot : list_root_cand) {
       ListRoot.push_back(eRoot);
       std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
       ListRoot = ReduceListRoot(ListRoot);
