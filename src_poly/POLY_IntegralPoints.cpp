@@ -19,20 +19,22 @@ int main(int argc, char *argv[])
     //
     std::ifstream isFAC(argv[1]);
     using T=mpq_class;
+    using Tint=int;
     MyMatrix<T> FAC=ReadMatrix<T>(isFAC);
     //
     std::ifstream isEXT(argv[2]);
     MyMatrix<T> EXT=ReadMatrix<T>(isEXT);
     //
-    std::vector<MyVector<T>> ListPoint=GetListIntegralPoint(FAC, EXT);
+    std::vector<MyVector<Tint>> ListPoint = GetListIntegralPoint<T,Tint>(FAC, EXT);
     //
-    int len=ListPoint.size();
     std::ofstream os(argv[3]);
     os << "return [";
-    for (int i=0; i<len; i++) {
-      if (i>0)
+    bool IsFirst = true;
+    for (auto & ePt : ListPoint) {
+      if (!IsFirst)
 	os << ",\n";
-      WriteVectorGAP(os, ListPoint[i]);
+      IsFirst = false;
+      WriteVectorGAP(os, ePt);
     }
     os << "];\n";
     std::cerr << "Normal termination of the program\n";

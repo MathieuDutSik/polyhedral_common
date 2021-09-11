@@ -19,10 +19,10 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
-#PROGRAM		= POLY_IntegralPoints
+PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
-PROGRAM		= POLY_redundancy_Equivariant
+#PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism

@@ -24,15 +24,15 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
     MyVector<T> eCol(nbVert);
     for (int iVert=0; iVert<nbVert; iVert++)
       eCol(iVert) = EXTnorm(iVert,iDim+1);
-    Tint eLow=Ceil(eCol.minCoeff());
-    Tint eUpp=Floor(eCol.maxCoeff());
+    Tint eLow=UniversalScalarConversion<Tint,T>(Ceil(eCol.minCoeff()));
+    Tint eUpp=UniversalScalarConversion<Tint,T>(Floor(eCol.maxCoeff()));
     ListLow[iDim] = eLow;
     ListUpp[iDim] = eUpp;
     Tint eSiz=1 + eUpp - eLow;
     ListSize[iDim]=eSiz;
   }
   int nbFac=FAC.rows();
-  auto IsCorrect=[&](MyVector<T> const& eVect) -> bool {
+  auto IsCorrect=[&](MyVector<Tint> const& eVect) -> bool {
     for (int iFac=0; iFac<nbFac; iFac++) {
       T eScal=0;
       for (int i=0; i<n; i++)
@@ -55,14 +55,14 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
 }
 
 
-template<typename T, typename Tint, typename Tint>
+template<typename T, typename Tint>
 std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT)
 {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert=[&](const MyVector<Tint>& ePoint) -> void {
     ListPoint.push_back(ePoint);
   };
-  Kernel_GetListIntegralPoint(FAC, EXT, f_insert);
+  Kernel_GetListIntegralPoint<T,Tint>(FAC, EXT, f_insert);
   return ListPoint;
 }
 
