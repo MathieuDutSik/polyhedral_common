@@ -29,10 +29,9 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
   MyVector<T> cosetVect	= - eV;
   T_shvec_request<T> request;
   initShvecReq<T>(dim, GramMat, request);
-  request.bound = a;
+  request.bound = norm;
   request.mode = mode;
   request.coset = cosetVect;
-  info.minimum = norm;
   std::vector<MyVector<Tint>> short_vectors;
   //
   auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
@@ -45,8 +44,8 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
 
   (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
 #ifdef DEBUG_VINBERG
-  std::cerr << "|info.short_vectors|=" << info.short_vectors.size() << "\n";
-  for (auto & fV : info.short_vectors) {
+  std::cerr << "|info.short_vectors|=" << short_vectors.size() << "\n";
+  for (auto & fV : short_vectors) {
     T sum=0;
     for (int i=0; i<dim; i++)
       for (int j=0; j<=i; j++) {
@@ -57,14 +56,14 @@ std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat
         T val2 = eV(j) - fV(j);
         sum += val1 * val2 * GramMat(i,j) * eMult;
       }
-    if (sum != a) {
+    if (sum != norm) {
       std::cerr << "We should have vectors of norm exactly a\n";
-      std::cerr << "sum=" << sum << " a=" << a << "\n";
+      std::cerr << "sum=" << sum << " norm=" << norm << "\n";
       throw TerminalException{1};
     }
   }
 #endif
-  return info.short_vectors;
+  return short_vectors;
 }
 
 //
