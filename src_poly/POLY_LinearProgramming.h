@@ -127,7 +127,7 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const& InequalitySet, M
 
 
 template<typename T>
-LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const&eVect)
+LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const& eVect)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   cdd::dd_ErrorType error=cdd::dd_NoError;
