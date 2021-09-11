@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     int NeedBound=0;
     int c;
     while ((c = getopt (argc, argv, "hb:s:t:mMcgev")) != -1)
-      switch (c) 
+      switch (c)
 	{
 	case 'h':
 	  printf("Usage: sv [options] <file\n");
@@ -82,14 +82,12 @@ int main(int argc, char *argv[])
       }
       std::cerr << "\n";
     }
-    
     MyVector<T> cosetVect(dim);
     if (coset) {
-      for (i = 0; i < dim; i++)
-	{
-	  std::cin >> eT;
-	  cosetVect(i) = eT;
-	}
+      for (i = 0; i < dim; i++) {
+        std::cin >> eT;
+        cosetVect(i) = eT;
+      }
     }
     std::cerr << "coset=" << coset << " eV =";
     for (i = 0; i < dim; i++)
@@ -105,14 +103,12 @@ int main(int argc, char *argv[])
     // Defining info and computing with it
     //
     T_shvec_request<T> request;
-    T_shvec_info<T,Tint> info;
-    initShvecReq<T,Tint>(dim, gram_matrix, request, info);
+    initShvecReq(dim, gram_matrix, request);
     request.bound = bound;
     request.mode = mode;
     request.coset = cosetVect;
-    info.minimum = -44;
     std::cerr << "Before computeShvec mode=" << request.mode << "\n";
-    int result=T_computeShvec(request, info);
+    T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
     int nbVect=info.short_vectors.size();
     std::cerr << "After computeShvec |V|=" << nbVect << "\n";
     //
@@ -125,7 +121,6 @@ int main(int argc, char *argv[])
 	std::cout << " " << info.short_vectors[i](iCol);
       std::cout << "\n";
     }
-    return result;
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

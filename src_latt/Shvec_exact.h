@@ -29,7 +29,6 @@ struct T_shvec_request {
   T bound;
   MyVector<T> coset;
   MyMatrix<T> gram_matrix;
-  bool only_exact_norm;
 };
 
 template<typename T, typename Tint>
@@ -203,15 +202,14 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 
 
 
-template<typename T, typename Tint>
-int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_info<T,Tint> & info)
+template<typename T, typename Tint, typename Finsert>
+int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert f_insert)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
   int dim = request.dim;
   // The value of bound is assumed to be correct.
   // Thus the Trem values should be strictly positive.
-  //  std::cerr << "computeIt : bound=" << bound << "\n";
   MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
@@ -335,22 +333,9 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 	std::cerr << "\n";
         n_vector++;
 #endif
-        if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-          if (!request.only_exact_norm || eNorm == info.minimum)
-            info.short_vectors.push_back(x);
-        } else {
-          if (eNorm < info.minimum) {
-            info.short_vectors.clear();
-            info.minimum = eNorm;
-#ifdef PRINT_DEBUG_INFO
-            std::cerr << "Exiting via STOP_COMPUTATION\n";
-#endif
-            return TempShvec_globals::STOP_COMPUTATION;
-          }
-          info.short_vectors.push_back(x);
-          if (central)
-            info.short_vectors.push_back(-x);
-        }
+        bool ret_val = f_insert(x, eNorm);
+        if (!ret_val)
+          return TempShvec_globals::STOP_COMPUTATION;
       } else {
 	i--;
         U(i) = 0;
@@ -363,9 +348,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
     } else {
       i++;
       if (i == dim) {
-#ifdef PRINT_DEBUG_INFO
-        std::cerr << "Normal return of computeIt\n";
-#endif
         return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
       }
     }
@@ -373,17 +355,17 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, T_shvec_
 }
 
 
-template<typename T, typename Tint>
-inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T& bound, T_shvec_info<T,Tint> & info)
+template<typename T, typename Tint, typename Finsert>
+inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T& bound, Finsert f_insert)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (field case)\n";
 #endif
-  return computeIt_Kernel(request, bound, info);
+  return computeIt_Kernel<T,Tint,decltype(f_insert)>(request, bound, f_insert);
 }
 
-template<typename T, typename Tint>
-inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, T_shvec_info<T,Tint> & info)
+template<typename T, typename Tint, typename Finsert>
+inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (ring case)\n";
@@ -396,10 +378,11 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
       UniversalVectorConversion<Tfield,T>(request.coset),
       UniversalMatrixConversion<Tfield,T>(request.gram_matrix)};
   //
-  T_shvec_info<Tfield,Tint> info_field{info.short_vectors, UniversalScalarConversion<Tfield,T>(info.minimum)};
-  int retVal = computeIt_Kernel(request_field, bound_field, info_field);
-  info.short_vectors = info_field.short_vectors;
-  info.minimum = UniversalScalarConversion<T,Tfield>(info_field.minimum);
+  auto f_insert_field=[&](const MyVector<Tint>& V, const Tfield& min_Tfield) -> bool {
+    T min_T = UniversalScalarConversion<T,Tfield>(min_Tfield);
+    return f_insert(V, min_T);
+  };
+  int retVal = computeIt_Kernel<Tfield,Tint,decltype(f_insert_field)>(request_field, bound_field, f_insert_field);
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (ring case) exit\n";
 #endif
@@ -413,60 +396,69 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 
 
 template<typename T, typename Tint>
-int computeMinimum(const T_shvec_request<T>& request, T_shvec_info<T,Tint> &info)
+T_shvec_info<T,Tint> computeMinimum(const T_shvec_request<T>& request)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeMinimum, begin\n";
 #endif
-  int result, coset, i, j;
+  int i, j;
   int dim = request.dim;
   MyVector<T> C(dim);
-  coset = 0;
+  bool central = true;
   i = 0;
-  while (i < dim && !coset) {
-    coset = (request.coset(i) != 0);
+  while (i < dim && central) {
+    central = (request.coset(i) != 0);
     i++;
   }
   for (i = 0; i < dim; i++)
     C(i) = request.coset(i);
-  if (coset) {
-    T eNorm=0;
-    for (i=0; i<dim; i++)
-      for (j=0; j<dim; j++)
-	eNorm += request.gram_matrix(i,j)*C(i)*C(j);
-    info.minimum = eNorm;
-  } else {
-    info.minimum = request.gram_matrix(0,0);
+  auto get_minimum_atp=[&]() -> T {
+    if (!central) {
+      T eNorm=0;
+      for (i=0; i<dim; i++)
+        for (j=0; j<dim; j++)
+          eNorm += request.gram_matrix(i,j)*C(i)*C(j);
+      return eNorm;
+    }
+    T eMin = request.gram_matrix(0,0);
     for (i = 1; i < dim; i++)
-      if (info.minimum > request.gram_matrix(i,i))
-	info.minimum = request.gram_matrix(i,i);
-  }
-  T bound;
+      if (eMin > request.gram_matrix(i,i))
+        eMin = request.gram_matrix(i,i);
+    return eMin;
+  };
+  T_shvec_info<T,Tint> info;
+  info.minimum = get_minimum_atp();
   while (true) {
-    bound = info.minimum;
 #ifdef PRINT_DEBUG_INFO
     std::cerr << "Before computeIt (in computeMinimum while loop)\n";
 #endif
-    result = computeIt(request, bound, info);
-    //    std::cerr << "result=" << result << "\n";
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      if (min == info.minimum) {
+        info.short_vectors.push_back(V);
+        if (central) {
+          info.short_vectors.push_back(-V);
+        }
+        return true;
+      } else {
+        info.short_vectors.clear();
+        info.minimum = min;
+        return false;
+      }
+    };
+    int result = computeIt<T,Tint,decltype(f_insert)>(request, info.minimum, f_insert);
     if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
       break;
     }
   }
-  //  std::cerr << "After while loop\n";
-  //  std::cerr << "info.minimum=" << info.minimum << "\n";
-  //  info.minimum = request.bound + step_size;
-  //  std::cerr << "Exiting from computeMinimum\n";
-  return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+  return info;
 }
 
 
 
-template<typename T, typename Tint>
+template<typename T>
 void initShvecReq(int dim,
 		  MyMatrix<T> const& gram_matrix,
-                  T_shvec_request<T>& request,
-		  T_shvec_info<T,Tint> &info)
+                  T_shvec_request<T>& request)
 {
   if (dim < 2) {
     std::cerr << "dim=" << dim << " while it should be at least 2\n";
@@ -477,67 +469,29 @@ void initShvecReq(int dim,
   request.gram_matrix = gram_matrix;
   request.mode = 0;
   request.bound = 0;
-  request.only_exact_norm = false;
-  info.minimum = -1;
 }
 
 template<typename T, typename Tint>
-int T_computeShvec(const T_shvec_request<T>& request, T_shvec_info<T,Tint> &info)
+T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
 {
-  switch (request.mode)
-    {
-    case TempShvec_globals::TEMP_SHVEC_MODE_UNDEF:
-      {
-	std::cerr << "globals::TEMP_SHVEC_MODE is undefined\n";
-	throw TerminalException{1};
-      }
-    case TempShvec_globals::TEMP_SHVEC_MODE_BOUND:
-      if (request.bound <= 0) {
-	std::cerr << "bound=" << request.bound << "\n";
-	std::cerr << "shvec.c (computeShvec): MODE_BOUND request.bound !\n";
-	throw TerminalException{1};
-      }
-      break;
-    case TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS:
-      if (request.bound != 0) {
-	std::cerr << "shvec.c (computeShvec): wrong options MODE_SHORTEST_VECTORS!\n";
-	throw TerminalException{1};
-      }
-      break;
-    case TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM:
-      if (request.bound != 0) {
-	std::cerr << "shvec.c (computeShvec): wrong options MODE_MINIMUM!\n";
-	throw TerminalException{1};
-      }
-      break;
-    case TempShvec_globals::TEMP_SHVEC_MODE_VINBERG:
-      info.minimum = request.bound;
-      break;
-    default:
-      {
-	std::cerr << "shvec.c (computeShvec): wrong options (default)!\n";
-	throw TerminalException{1};
-      }
-    }
-  //  std::cerr << "After switch loop\n";
-  int result = -99;
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
-    //    std::cerr << "Before computeIt, case 2\n";
-    result = computeIt(request, request.bound, info);
+    T_shvec_info<T,Tint> info;
+    info.minimum = request.bound;
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      info.short_vectors.push_back(V);
+      return true;
+    };
+    (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
+    return info;
   }
   else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
-    result = computeMinimum(request, info);
+    return computeMinimum<T,Tint>(request);
   }
   else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
-    //    std::cerr << "Before computeIt, case 4\n";
-    result = computeMinimum(request, info);
+    return computeMinimum<T,Tint>(request);
   }
-  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG) {
-    info.minimum = request.bound;
-    //    std::cerr << "Before computeIt, case 5\n";
-    result = computeIt(request, request.bound, info);
-  }
-  return result;
+  std::cerr << "Failed to match an entry\n";
+  throw TerminalException{1};
 }
 
 
@@ -556,17 +510,11 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   T bound=0; // should not be used
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
   T_shvec_request<T> request;
-  T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, request, info);
+  initShvecReq(dim, GramMat, request);
   request.bound = bound;
   request.mode = mode;
   request.coset = cosetVect;
-  info.minimum = -44;
-  int result=T_computeShvec(request, info);
-  if (result == -2444) {
-    std::cerr << "Probably wrong\n";
-    throw TerminalException{1};
-  }
+  T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   int nbVect=info.short_vectors.size();
   MyMatrix<Tint> ListClos(nbVect, dim);
   for (int iVect=0; iVect<nbVect; iVect++)
@@ -576,7 +524,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   for (int i=0; i<dim; i++)
     eDiff(i)=ListClos(0,i) - eV(i);
   T TheNorm=EvaluationQuadForm<T,T>(GramMat, eDiff);
-  return {TheNorm, ListClos};
+  return {TheNorm, std::move(ListClos)};
 }
 
 
@@ -608,18 +556,12 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
   T_shvec_request<T> request;
-  T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, request, info);
+  initShvecReq(dim, GramMat, request);
   request.bound = bound;
   request.mode = mode;
   request.coset = cosetVect;
-  info.minimum = -44;
   //
-  int result=T_computeShvec(request, info);
-  if (result == -2444) {
-    std::cerr << "Probably wrong\n";
-    throw TerminalException{1};
-  }
+  T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   //
   return MatrixFromVectorFamily(info.short_vectors);
 }

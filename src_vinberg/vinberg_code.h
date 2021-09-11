@@ -16,31 +16,34 @@
 
 // Compute the solutions of G [x - eV] = a
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& a)
+std::vector<MyVector<Tint>> ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm)
 {
   std::cerr << "ComputeSphericalSolutions, step 1\n";
   std::cerr << "GramMat=\n";
   WriteMatrix(std::cerr, GramMat);
   std::cerr << "eV=\n";
   WriteVector(std::cerr, eV);
-  std::cerr << "a=" << a << "\n";
+  std::cerr << "norm=" << norm << "\n";
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   int dim = GramMat.rows();
   MyVector<T> cosetVect	= - eV;
   T_shvec_request<T> request;
-  T_shvec_info<T,Tint> info;
-  initShvecReq<T>(dim, GramMat, request, info);
+  initShvecReq<T>(dim, GramMat, request);
   request.bound = a;
   request.mode = mode;
   request.coset = cosetVect;
-  request.only_exact_norm = true; // We want only the vectors of norm exactly a.
-  info.minimum = a;
+  info.minimum = norm;
+  std::vector<MyVector<Tint>> short_vectors;
   //
-  int result = computeIt(request, a, info);
-  if (result != TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
-    std::cerr << "Error in ComputeSphericalSolutions\n";
-    throw TerminalException{1};
-  }
+  auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+    if (min == norm) {
+      short_vectors.push_back(V);
+    }
+    return true;
+  };
+
+
+  (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
 #ifdef DEBUG_VINBERG
   std::cerr << "|info.short_vectors|=" << info.short_vectors.size() << "\n";
   for (auto & fV : info.short_vectors) {
