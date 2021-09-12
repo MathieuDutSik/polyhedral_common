@@ -408,13 +408,13 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     work[i_row] = 1;
   vectface vf = DecomposeOrbitPoint(GRP, work);
   size_t n_orbit = vf.size();
-  std::cerr << "n_orbit=" << n_orbit << "\n";
+  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << " |GRP|=" << GRP.size() << " n_orbit=" << n_orbit << "\n";
   Face status_orbit(n_orbit);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
     status_orbit[i_orbit] = 1;
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face e_orbit = vf[i_orbit];
-    std::cerr << "i_orbit=" << i_orbit << " |e_orbit|=" << e_orbit.count() << "\n";
+    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |e_orbit|=" << e_orbit.count() << "\n";
     //
     // Selecting the relevant rows to test against
     //
@@ -431,7 +431,7 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
         }
       }
     }
-    std::cerr << "   sel_siz=" << sel_siz << "\n";
+    std::cerr << "    sel_siz=" << sel_siz << "\n";
     //
     // The single vertex, stabilizer and orbit breakdown
     //
@@ -439,7 +439,7 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
     Tgroup Stab = GRP.Stabilizer_OnPoints(Tidx(i_row));
     vectface vf_stab = DecomposeOrbitPoint(Stab, select);
     size_t n_row_sel = vf_stab.size();
-    std::cerr << "   |Stab|=" << Stab.size() << " n_row_sel=" << n_row_sel << "\n";
+    std::cerr << "    |Stab|=" << Stab.size() << " n_row_sel=" << n_row_sel << "\n";
     MyMatrix<T> M(n_row_sel, n_cols);
     size_t i_row_sel = 0;
     for (auto & e_orb_stab : vf_stab) {
@@ -474,13 +474,13 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T>& EXT, const Tgroup& GRP)
       return true;
     };
     bool status = get_status();
+    std::cerr << "    status=" << status << "\n";
     if (!status) {
       boost::dynamic_bitset<>::size_type j_row = e_orbit.find_first();
       while (j_row != boost::dynamic_bitset<>::npos) {
         status_ret[j_row] = 1;
         j_row = e_orbit.find_next(j_row);
       }
-
     } else {
       status_orbit[i_orbit] = 0;
     }

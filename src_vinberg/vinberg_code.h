@@ -5,6 +5,7 @@
 //#include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
 #include "POLY_RedundancyElimination.h"
+#include "POLY_PolytopeInt.h"
 
 
 #define DEBUG_VINBERG
@@ -134,43 +135,6 @@ struct VinbergTot {
 };
 
 
-template<typename T, typename Tint>
-bool IsRoot(const MyMatrix<Tint>& G, const MyVector<Tint>& V)
-{
-  size_t n = G.rows();
-  MyVector<Tint> GV = G * V;
-  T eNorm = GV.dot(V);
-  for (size_t i=0; i<n; i++) {
-    T eFrac = T(2 * GV(i)) / eNorm;
-    if (!IsInteger(eFrac))
-      return false;
-  }
-  return true;
-}
-
-
-template<typename T, typename Tint>
-bool IsNewRoot(const MyMatrix<Tint>& G, const MyVector<Tint>& V, const std::vector<MyVector<Tint>>& ListRoot)
-{
-  size_t n = G.rows();
-  MyVector<Tint> GV = G * V;
-  T eNorm = GV.dot(V);
-  for (size_t i=0; i<n; i++) {
-    T eFrac = T(2 * GV(i)) / eNorm;
-    if (!IsInteger(eFrac))
-      return false;
-  }
-  // Testing the scalar products
-  for (auto & eRoot : ListRoot) {
-    T scal = GV.dot(eRoot);
-    if (scal > 0)
-      return false;
-  }
-  return true;
-}
-
-
-
 
 template<typename Tint>
 std::vector<MyVector<Tint>> GetIntegerPoints_V1(const MyMatrix<Tint>& m)
@@ -282,43 +246,32 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
-  std::cerr << "GetVinbergAux, step 1\n";
   int n=G.rows();
-  std::cerr << "GetVinbergAux, step 1.1\n";
   // Computing the complement of the space.
   MyMatrix<T> G_T = UniversalMatrixConversion<T,Tint>(G);
-  std::cerr << "GetVinbergAux, step 1.2\n";
   MyVector<Tint> V = G * v0;
-  std::cerr << "GetVinbergAux, step 1.3\n";
   std::vector<Tint> vectV(n);
   for (int i=0; i<n; i++)
     vectV[i] = V(i);
-  std::cerr << "GetVinbergAux, step 2\n";
   GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV);
   std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
-  std::cerr << "GetVinbergAux, step 2.1\n";
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
-  std::cerr << "GetVinbergAux, step 2.2\n";
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
-  std::cerr << "GetVinbergAux, step 2.3\n";
   MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V);
-  std::cerr << "GetVinbergAux, step 2.4\n";
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
-  std::cerr << "GetVinbergAux, step 2.5\n";
   MyMatrix<Tint> M2_tr = M2.transpose();
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
   std::cerr << "W=\n";
   for (auto & eVect : W) {
     WriteVector(std::cerr, eVect);
   }
-  std::cerr << "GetVinbergAux, step 3\n";
   // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
+  std::cerr << "eDet=" << eDet << "\n";
   // We want to find a vector v such that V_i = (det) v + Morth Z^{n-1}
-  std::cerr << "GetVinbergAux, step 4\n";
   auto GetVect = [&]() -> MyVector<Tint> {
     for (int i=0; i<n; i++) {
       for (int j=0; j<2; j++) {
@@ -337,19 +290,12 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
     throw TerminalException{1};
   };
   MyVector<Tint> Vtrans = GetVect();
-  std::cerr << "GetVinbergAux, step 5\n";
   MyMatrix<Tint> Mbas = ConcatenateMatVec_Tr(Morth, Vtrans);
-  std::cerr << "GetVinbergAux, step 5.1\n";
-  //  MyMatrix<T> MbasInv_T = Inverse(UniversalMatrixConversion<T,Tint>(Mbas));
-  std::cerr << "GetVinbergAux, step 6\n";
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
-  std::cerr << "GetVinbergAux, step 6.1\n";
   MyMatrix<T> Gorth_T = UniversalMatrixConversion<T,Tint>(Gorth);
-  std::cerr << "GetVinbergAux, step 6.2\n";
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
-  std::cerr << "GetVinbergAux, step 7\n";
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
   std::vector<Tint> root_lengths = Get_root_lengths(G);
@@ -357,7 +303,6 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (auto & eVal : root_lengths)
     std::cerr << " " << eVal;
   std::cerr << "\n";
-  std::cerr << "GetVinbergAux, step 8\n";
   //  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv_T, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
   return {G, G_T, v0, V, Vtrans, Mbas, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
@@ -418,6 +363,36 @@ public:
 };
 
 
+template<typename T, typename Tint>
+struct DataMappingVinbergProblem {
+  MyMatrix<T> G;
+  MyVector<T> V;
+  T norm;
+  MyVector<Tint> shift_u;
+  MyMatrix<Tint> trans_u;
+  bool is_feasible;
+};
+
+
+
+
+template<typename T, typename Tint, typename Fins_root>
+void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_ins_root)
+{
+  size_t n_sol = 0;
+  auto f_ins=[&](const MyVector<Tint>& u) -> void {
+    MyVector<Tint> x = data.shift_u + data.trans_u * u;
+    n_sol++;
+    f_ins_root(x);
+  };
+  ComputeSphericalSolutions<T,Tint>(data.G, data.V, data.norm, f_ins);
+  std::cerr << "|ListSol|=" << n_sol << "\n";
+}
+
+
+
+
+
 
 /*
   We look for the solutions of (a+v , a+v) = k
@@ -427,40 +402,7 @@ public:
   2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
   2 w Gorth sV + w^t Gorth w = k -(a,a)
   (w + sV)^t Gorth (w + sV) = k - (a,a) + sV^t Gorth sV
-
  */
-template<typename T, typename Tint, typename Fins_root>
-void Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
-{
-  T k_T = k;
-  MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
-  std::cerr << "Roots_decomposed_into, step 1 a=" << a_T << " n=" << k << "\n";
-  MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
-  std::cerr << "Roots_decomposed_into, step 2\n";
-  Tint term1 = k - a.dot(Vtot.G * a);
-  T normi = T(term1) + sV.dot(Vtot.Gorth_T * sV);
-  std::cerr << "Roots_decomposed_into, step 3\n";
-  MyVector<T> eV = -sV;
-  std::cerr << "Roots_decomposed_into, step 4\n";
-  size_t n_sol = 0;
-  auto f_ins=[&](const MyVector<Tint>& eV_Tint) -> void {
-    MyVector<Tint> x = a + Vtot.Morth * eV_Tint;
-#ifdef DEBUG_VINBERG
-    T scal = x.dot(Vtot.G * x);
-    if (scal != k) {
-      std::cerr << "We have scal=" << scal << " k=" << k << "\n";
-      throw TerminalException{1};
-    }
-#endif
-    n_sol++;
-    f_ins_root(x);
-  };
-  ComputeSphericalSolutions<T,Tint>(Vtot.Gorth_T, eV, normi, f_ins);
-  std::cerr << "|ListSol|=" << n_sol << "\n";
-}
-
-
-
 /*
   We want to find integer vectors such that (a+v, a+v) = k
   with v in the Morth space and one vector a.
@@ -493,20 +435,22 @@ void Roots_decomposed_into(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>&
   So, we get
   2 GM w - k h = -2 G a
  */
-template<typename T, typename Tint, typename Fins_root>
-void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
+template<typename T, typename Tint>
+DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
 {
   if (k == 1 || k == 2) { // No need for some complex linear algebra work, returning directly
-    Roots_decomposed_into(Vtot, a, k, f_ins_root);
-    return;
+    MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
+    MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
+    Tint term1 = k - a.dot(Vtot.G * a);
+    T normi = T(term1) + sV.dot(Vtot.Gorth_T * sV);
+    MyVector<T> eV = -sV;
+    return {Vtot.Gorth_T, eV, normi, a, Vtot.Morth, true};
   }
   //
-  std::cerr << "Roots_decomposed_into_select , Step 1\n";
   size_t n = Vtot.G.rows();
   MyMatrix<Tint> GM = Vtot.G * Vtot.Morth;
   MyVector<Tint> m2_Ga = -2 * Vtot.G * a;
   MyMatrix<Tint> Bmat(2*n-1, n);
-  std::cerr << "Roots_decomposed_into_select , Step 2\n";
   for (size_t i=0; i<n-1; i++) {
     for (size_t j=0; j<n; j++) {
       Bmat(i,j) = 2 * GM(j,i);
@@ -520,11 +464,9 @@ void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector
         Bmat(n-1 + i, j) = 0;
     }
   }
-  std::cerr << "Roots_decomposed_into_select , Step 3\n";
   ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
-  std::cerr << "Roots_decomposed_into_select , Step 4\n";
   if (!res.TheRes)
-    return;
+    return {{}, {}, 0, {}, {}, false};
   //
   MyVector<Tint> w0(n-1);
   for (size_t i=0; i<n-1; i++)
@@ -543,44 +485,31 @@ void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector
     for (size_t j=0; j<n-1; j++)
       U(j,i) = U_block(i,j);
   //
-  std::cerr << "Roots_decomposed_into_select , Step 6\n";
   MyMatrix<Tint> Gs = U.transpose() * Vtot.Morth.transpose() * Vtot.G * Vtot.Morth * U;
-  std::cerr << "Roots_decomposed_into_select , Step 6.1\n";
   MyMatrix<Tint> Ws = U.transpose() * Vtot.Morth.transpose() * Vtot.G * ( a + Vtot.Morth * w0);
-  std::cerr << "Roots_decomposed_into_select , Step 6.2\n";
   MyMatrix<T> Gs_T = UniversalMatrixConversion<T,Tint>(Gs);
-  std::cerr << "Roots_decomposed_into_select , Step 6.3\n";
   MyMatrix<T> InvGs_T = Inverse(Gs_T);
-  std::cerr << "Roots_decomposed_into_select , Step 6.4\n";
   MyVector<T> Vs = - InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
-  std::cerr << "Roots_decomposed_into_select , Step 6.5\n";
   MyVector<Tint> Mw0 = Vtot.Morth * w0;
-  std::cerr << "Roots_decomposed_into_select , Step 6.6\n";
   Tint term1 = k - a.dot(Vtot.G * a) - Mw0.dot(Vtot.G * Mw0);
-  std::cerr << "Roots_decomposed_into_select , Step 6.7\n";
   T term2 = Vs.dot(Gs_T * Vs);
-  std::cerr << "Roots_decomposed_into_select , Step 6.8\n";
   T normi = T(term1) + term2;
-  std::cerr << "Roots_decomposed_into_select , Step 7\n";
   //
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
-  size_t n_sol=0;
-  auto f_ins=[&](const MyVector<Tint>& eV_Tint) -> void {
-    MyVector<Tint> x = apMw0 + MU * eV_Tint;
-#ifdef DEBUG_VINBERG
-    T scal = x.dot(Vtot.G * x);
-    if (scal != k) {
-      std::cerr << "We have scal=" << scal << " k=" << k << "\n";
-      throw TerminalException{1};
-    }
-#endif
-    n_sol++;
-    f_ins_root(x);
-  };
-  ComputeSphericalSolutions<T,Tint>(Gs_T, Vs, normi, f_ins);
-  std::cerr << "|ListSol|=" << n_sol << "\n";
+  return {Gs_T, Vs, normi, apMw0, MU};
 }
+
+
+
+template<typename T, typename Tint, typename Fins_root>
+void Roots_decomposed_into_select(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, Fins_root f_ins_root)
+{
+  DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
+  if (data.is_feasible)
+    Solutioner_CVP(data, f_ins_root);
+}
+
 
 
 template<typename T, typename Tint>
@@ -601,20 +530,65 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, const std::vector<MyVector<Tint>>& ListRoot)
 {
   std::vector<MyVector<Tint>> list_root;
-  std::vector<MyVector<Tint>> list_GV;
-  for (auto & e_root : ListRoot) {
-    MyVector<Tint> e_gv = Vtot.G * e_root;
-    list_GV.push_back(e_gv);
-  }
-  auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
-    for (auto & e_gv : list_GV) {
-      T scal = V.dot(e_gv);
-      if (scal > 0)
-        return;
+  DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
+  if (!data.is_feasible)
+    return {};
+
+
+  auto fct_CVP=[&]() -> void {
+    std::vector<MyVector<Tint>> list_GV;
+    for (auto & e_root : ListRoot) {
+      MyVector<Tint> e_gv = Vtot.G * e_root;
+      list_GV.push_back(e_gv);
     }
-    list_root.push_back(V);
+    auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
+      for (auto & e_gv : list_GV) {
+        T scal = V.dot(e_gv);
+        if (scal > 0)
+          return;
+      }
+      list_root.push_back(V);
+    };
+    Solutioner_CVP(data, f_ins_root);
   };
-  Roots_decomposed_into_select(Vtot, a, k, f_ins_root);
+  //
+  auto fct_PolyInt=[&]() -> void {
+    size_t n_root = ListRoot.size();
+    size_t dim = Vtot.G.rows();
+    MyMatrix<T> FAC(n_root, dim);
+    for (size_t i_root=0; i_root<n_root; i_root++) {
+      MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
+      Tint scal1 = e_gv.dot(data.shift_u);
+      FAC(i_root,0) = UniversalScalarConversion<T,Tint>(scal1);
+      for (size_t i=1; i<dim; i++) {
+        MyVector<Tint> eCol = GetMatrixColumn(data.trans_u, i-1);
+        Tint scal2 = e_gv.dot(eCol);
+        FAC(i_root,i) = UniversalScalarConversion<T,Tint>(scal2);
+      }
+    }
+    MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    size_t n_interior = 0;
+    auto f_insert=[&](const MyVector<Tint>& V) -> bool {
+      MyVector<Tint> x = data.shift_u + data.trans_u * V;
+      Tint scal = x.dot(Vtot.G * x);
+      if (scal == k) {
+        list_root.push_back(x);
+      }
+      n_interior++;
+      return true;
+    };
+    Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
+    std::cerr << "n_interior=" << n_interior << " |list_root|=" << list_root.size() << "\n";
+  };
+  //
+  MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
+  if (RankMat(RootMat) == Vtot.G.rows()) {
+    //    fct_CVP();
+    fct_PolyInt();
+  } else {
+    fct_CVP();
+  }
+  //
   std::cerr << "|list_root|=" << list_root.size() << "\n";
   return list_root;
 }
