@@ -567,19 +567,23 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       }
     }
     MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    size_t n_interior = 0;
     auto f_insert=[&](const MyVector<Tint>& V) -> bool {
       MyVector<Tint> x = data.shift_u + data.trans_u * V;
       Tint scal = x.dot(Vtot.G * x);
       if (scal == k) {
         list_root.push_back(x);
       }
+      n_interior++;
       return true;
     };
     Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
+    std::cerr << "n_interior=" << n_interior << " |list_root|=" << list_root.size() << "\n";
   };
   //
   MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
   if (RankMat(RootMat) == Vtot.G.rows()) {
+    //    fct_CVP();
     fct_PolyInt();
   } else {
     fct_CVP();

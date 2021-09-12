@@ -114,8 +114,9 @@ Tgroup ReadGroup(std::istream &is)
       }
       v[i] = eVal;
     }
-    ListGen.push_back(Telt(v));
+    ListGen.emplace_back(std::move(Telt(std::move(v))));
   }
+  std::cerr << "We have read the generators\n";
   return Tgroup(ListGen, n);
 }
 
@@ -126,11 +127,12 @@ void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
   using Tidx = typename Telt::Tidx;
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen=ListGen.size();
+  Tidx n = TheGRP.n_act();
   os << TheGRP.n_act() << " " << nbGen << "\n";
   for (auto & eGen : ListGen) {
-    for (Tidx i=0; i<TheGRP.n_act(); i++) {
-      int eVal=OnPoints(i, eGen);
-      os << " " << eVal;
+    for (Tidx i=0; i<n; i++) {
+      Tidx eVal=OnPoints(i, eGen);
+      os << " " << int(eVal);
     }
     os << "\n";
   }
@@ -141,13 +143,15 @@ template<typename Tgroup>
 void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   os << "nb acting element=" << TheGRP.n_act() << "\n";
   std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   int nbGen=0;
+  Tidx n = TheGRP.n_act();
   for (auto & eGen : ListGen) {
-    for (std::size_t i=0; i<TheGRP.n_act(); i++) {
-      int eVal = OnPoints(i, eGen);
-      os << " " << eVal;
+    for (Tidx i=0; i<TheGRP.n_act(); i++) {
+      Tidx eVal = OnPoints(i, eGen);
+      os << " " << int(eVal);
     }
     os << "\n";
     nbGen++;
@@ -160,16 +164,18 @@ template<typename Tgroup>
 void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<Telt> ListGen=TheGRP.GeneratorsOfGroup();
   os << "local eListList, ListGen, GRP;\n";
   os << "eListList:=[\n";
   bool IsFirst=true;
+  Tidx n = TheGRP.n_act();
   for (auto & eGen : ListGen) {
     if (!IsFirst)
       os << ",\n";
     IsFirst=false;
     os << "[";
-    for (int i=0; i<TheGRP.n_act(); i++) {
+    for (Tidx i=0; i<n; i++) {
       int eVal = 1 + OnPoints(i, eGen);
       if (i>0)
 	os << ",";
@@ -192,15 +198,17 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 template<typename Tgroup>
 std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const& gList)
 {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<int> eListReturn;
-  int n=TheGRP.n_act();
+  Tidx n=TheGRP.n_act();
   std::vector<int> rList = gList;
   auto LGen = TheGRP.GeneratorsOfGroup();
   while(true) {
-    std::size_t eSumPrev=0;
-    for (int i=0; i<n; i++)
+    Tidx eSumPrev = 0;
+    for (Tidx i=0; i<n; i++)
       eSumPrev += rList[i];
-    for (int i=0; i<n; i++) {
+    for (Tidx i=0; i<n; i++) {
       if (rList[i] == 0) {
         for (auto & eGen : LGen) {
           int j = OnPoints(i, eGen);
@@ -209,7 +217,7 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
       }
     }
     std::size_t eSum=0;
-    for (int i=0; i<n; i++)
+    for (Tidx i=0; i<n; i++)
       eSum += rList[i];
     if (eSum == eSumPrev)
       break;
@@ -221,12 +229,14 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
 template<typename Tgroup>
 std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
 {
-  int n=TheGRP.n_act();
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n=TheGRP.n_act();
   std::vector<int> gListB(n);
-  for (int i=0; i<n; i++)
+  for (Tidx i=0; i<n; i++)
     gListB[i] = 1 - gList[i];
-  std::vector<int> rListB=OrbitIntersection(TheGRP, gListB);
-  for (int i=0; i<n; i++)
+  std::vector<int> rListB = OrbitIntersection(TheGRP, gListB);
+  for (Tidx i=0; i<n; i++)
     rListB[i] = 1 - rListB[i];
   return rListB;
 }
@@ -235,15 +245,16 @@ template<typename Tgroup>
 Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
 {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
-  int n = GRP.n_act();
+  Tidx n = GRP.n_act();
   Face rList = gList;
   while(true) {
     size_t eSumPrev = rList.count();
-    for (int i=0; i<n; i++) {
+    for (Tidx i=0; i<n; i++) {
       if (rList[i] == 0) {
         for (auto & eGen : LGen) {
-          std::size_t j = OnPoints(i, eGen);
+          Tidx j = OnPoints(i, eGen);
           rList[j]=0;
         }
       }
@@ -259,12 +270,14 @@ Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
 template<typename Tgroup>
 Face OrbitUnion(Tgroup const& GRP, Face const& gList)
 {
-  int n = GRP.n_act();
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n = GRP.n_act();
   Face gListB(n);
-  for (int i=0; i<n; i++)
+  for (Tidx i=0; i<n; i++)
     gListB[i] = 1 - gList[i];
   Face rListB=OrbitIntersection(GRP, gListB);
-  for (int i=0; i<n; i++)
+  for (Tidx i=0; i<n; i++)
     rListB[i] = 1 - rListB[i];
   return rListB;
 }
@@ -283,29 +296,29 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  int nb=eList.count();
+  Tidx nb=eList.count();
   if (nb == 0) {
     std::cerr << "Call of ReducedGroupAction with 0 points\n";
     throw TerminalException{1};
   }
-  std::vector<int> ListPositionRev(TheGRP.n_act(), -1);
+  std::vector<Tidx> ListPositionRev(TheGRP.n_act(), -1);
   boost::dynamic_bitset<>::size_type aRow=eList.find_first();
-  std::vector<int> ListPosition(nb,-1);
-  for (int iRow=0; iRow<nb; iRow++) {
-    ListPositionRev[aRow]=iRow;
-    ListPosition[iRow]=int(aRow);
+  std::vector<Tidx> ListPosition(nb);
+  for (Tidx iRow=0; iRow<nb; iRow++) {
+    ListPositionRev[aRow] = iRow;
+    ListPosition[iRow] = Tidx(aRow);
     aRow=eList.find_next(aRow);
   }
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
     std::vector<Tidx> v(nb);
-    for (int i=0; i<nb; i++) {
-      int eVal1=ListPosition[i];
-      int eVal2=OnPoints(eVal1, eGen);
-      int eVal3=ListPositionRev[eVal2];
+    for (size_t i=0; i<nb; i++) {
+      Tidx eVal1=ListPosition[i];
+      Tidx eVal2=OnPoints(eVal1, eGen);
+      Tidx eVal3=ListPositionRev[eVal2];
       v[i]=eVal3;
     }
-    ListGen.push_back(Telt(v));
+    ListGen.emplace_back(std::move(Telt(std::move(v))));
   }
   return Tgroup(ListGen, nb);
 }
@@ -315,18 +328,19 @@ template<typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 {
   using Telt = typename Tgroup::Telt;
-  int n=TheGRP.n_act();
+  using Tidx = typename Telt::Tidx;
+  Tidx n=TheGRP.n_act();
   Telt ePermR=~ePerm;
   std::vector<Telt> ListGen;
   for (auto & eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<int> v(n);
-    for (int i=0; i<n; i++) {
-      int eVal1=OnPoints(i, ePermR);
-      int eVal2=OnPoints(eVal1, eGen);
-      int eVal3=OnPoints(eVal2, ePerm);
+    std::vector<Tidx> v(n);
+    for (Tidx i=0; i<n; i++) {
+      Tidx eVal1=OnPoints(i, ePermR);
+      Tidx eVal2=OnPoints(eVal1, eGen);
+      Tidx eVal3=OnPoints(eVal2, ePerm);
       v[i]=eVal3;
     }
-    ListGen.push_back(Telt(v));
+    ListGen.emplace_back(std::move(Telt(std::move(v))));
   }
   return Tgroup(ListGen, n);
 }
@@ -339,9 +353,8 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 template<typename Tgroup>
 void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, vectface &ListListSet)
 {
-  int nb=ListListSet.size();
-  for (int iList=0; iList<nb; iList++) {
-    bool test=TheGRP.RepresentativeAction_OnSets(eList, ListListSet[iList]).first;
+  for (auto & fList : ListListSet) {
+    bool test=TheGRP.RepresentativeAction_OnSets(eList, fList).first;
     if (test)
       return;
   }
@@ -356,8 +369,8 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 				  vectface & ListSet,
 				  std::vector<std::vector<int>> & ListInv)
 {
-  int nb=ListSet.size();
-  for (int iList=0; iList<nb; iList++)
+  size_t nb=ListSet.size();
+  for (size_t iList=0; iList<nb; iList++)
     if (eInv == ListInv[iList]) {
       bool test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]).first;
       if (test)

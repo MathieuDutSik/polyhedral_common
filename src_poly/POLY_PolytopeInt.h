@@ -21,6 +21,7 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
   std::vector<Tint> ListLow(dim);
   std::vector<Tint> ListUpp(dim);
   std::vector<int> ListSize(dim);
+  Tint eProd=1;
   for (int iDim=0; iDim<dim; iDim++) {
     MyVector<T> eCol(nbVert);
     for (int iVert=0; iVert<nbVert; iVert++)
@@ -31,7 +32,10 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
     ListUpp[iDim] = eUpp;
     Tint eSiz=1 + eUpp - eLow;
     ListSize[iDim]=UniversalScalarConversion<int,Tint>(eSiz);
+    std::cerr << "iDim=" << iDim << " eSiz=" << eSiz << "\n";
+    eProd *= eSiz;
   }
+  std::cerr << " dim=" << dim << " eProd=" << eProd << "\n";
   int nbFac=FAC.rows();
   auto IsCorrect=[&](MyVector<Tint> const& eVect) -> bool {
     for (int iFac=0; iFac<nbFac; iFac++) {
