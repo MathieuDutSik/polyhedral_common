@@ -147,7 +147,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
   //
   // Setting up the initial entries
   //
-  size_t crit_siz = 1000000;
+  size_t crit_siz = 10000; // This empirical value is obtained from an analysis of a number of cases.
   MyVector<Tint> ePoint(dim);
   set_bound(ePoint, 0);
   std::cerr << "ListBound =";
