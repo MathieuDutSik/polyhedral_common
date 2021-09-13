@@ -33,9 +33,14 @@ int main(int argc, char *argv[])
     MyMatrix<T> FAC=ReadMatrix<T>(isFAC);
     //
     MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
     MyMatrix<Tint> ListIntPoint1 = ReordListPoint(GetListIntegralPoint<T,Tint>(FAC, EXT));
-    std::cerr << "|ListIntPoint1|=" << ListIntPoint1.rows() << "\n";
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     MyMatrix<Tint> ListIntPoint2 = ReordListPoint(GetListIntegralPoint_LP<T,Tint>(FAC));
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "|GetListIntegralPoint|    = " << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "|GetListIntegralPoint_LP| = " << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+    std::cerr << "|ListIntPoint1|=" << ListIntPoint1.rows() << "\n";
     std::cerr << "|ListIntPoint2|=" << ListIntPoint2.rows() << "\n";
     if (ListIntPoint1 != ListIntPoint2) {
       std::cerr << "We found a different set of points. Please debug\n";
