@@ -319,12 +319,9 @@ private:
     Tint kfind;
     for (auto & k : Vtot.root_lengths) {
       MyVector<Tint> V2 = cand_a(candidates.at(k));
-      std::cerr << "k=" << k << " V2=";
-      WriteVector(std::cerr, V2);
       Tint val = - Vtot.v0.dot(Vtot.G * V2);
       double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
       double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
-      std::cerr << "k=" << k << "  val=" << val << " val_d=" << val_d << "\n";
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -336,7 +333,6 @@ private:
         }
       }
     }
-    std::cerr << "kfind=" << kfind << "\n";
     return kfind;
   }
 public:
@@ -559,9 +555,9 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
         FAC(i_root,i) = UniversalScalarConversion<T,Tint>(scal2);
       }
     }
-    std::cerr << "FAC=\n";
-    WriteMatrix(std::cerr, FAC);
-    MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    //    std::cerr << "FAC=\n";
+    //    WriteMatrix(std::cerr, FAC);
+    //    MyMatrix<T> EXT = cdd::DualDescription(FAC);
     size_t n_interior = 0;
     auto f_insert=[&](const MyVector<Tint>& V) -> bool {
       MyVector<Tint> x = data.shift_u + data.trans_u * V;
@@ -572,7 +568,8 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       n_interior++;
       return true;
     };
-    Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
+    //    Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
+    Kernel_GetListIntegralPoint_LP<T,Tint,decltype(f_insert)>(FAC, f_insert);
     std::cerr << "n_interior=" << n_interior << " |list_root|=" << list_root.size() << "\n";
   };
   //
