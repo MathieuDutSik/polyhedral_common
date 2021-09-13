@@ -968,14 +968,16 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot);
     std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
-    for (auto & eRoot : list_root_cand) {
-      ListRoot.push_back(eRoot);
+    if (list_root_cand.size() > 0) {
+      for (auto & eRoot : list_root_cand) {
+        ListRoot.push_back(eRoot);
+      }
+      std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
+      ListRoot = ReduceListRoot(ListRoot);
+      std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
+      if (is_FundPoly(Vtot, ListRoot))
+        return ListRoot;
     }
-    std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
-    ListRoot = ReduceListRoot(ListRoot);
-    std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
-    if (is_FundPoly(Vtot, ListRoot))
-      return ListRoot;
   }
   std::cerr << "Should never reach that stage\n";
   throw TerminalException{1};
