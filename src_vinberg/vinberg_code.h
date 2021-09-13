@@ -26,13 +26,8 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
   WriteVector(std::cerr, eV);
   std::cerr << "norm=" << norm << "\n";
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
-  int dim = GramMat.rows();
   MyVector<T> cosetVect	= - eV;
-  T_shvec_request<T> request;
-  initShvecReq<T>(dim, GramMat, request);
-  request.bound = norm;
-  request.mode = mode;
-  request.coset = cosetVect;
+  T_shvec_request<T> request = initShvecReq<T>(GramMat, cosetVect, norm, mode);
   //
   auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
     if (min == norm) {

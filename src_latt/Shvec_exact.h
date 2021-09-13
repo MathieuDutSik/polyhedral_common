@@ -29,6 +29,7 @@ struct T_shvec_request {
   T bound;
   MyVector<T> coset;
   MyMatrix<T> gram_matrix;
+  bool central;
 };
 
 template<typename T, typename Tint>
@@ -214,7 +215,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
-  MyVector<T> C(dim);
   MyVector<Tint> x(dim);
 #if defined CHECK_BASIC_CONSISTENCY || defined PRINT_DEBUG_INFO
   const MyMatrix<T>& g = request.gram_matrix;
@@ -249,17 +249,8 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
   }
   // central is used purely internally to the code.
   // Therefore computing central internally is ok.
-  bool central = true;
-  i = 0;
-  while (i < dim && central) {
-    central = (request.coset(i) == 0);
-    i++;
-  }
-  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG)
-    central = false;
-
-  for (i = 0; i < dim; i++)
-    C(i) = request.coset(i);
+  const bool& central = request.central;
+  const MyVector<T>& C = request.coset;
   bool needs_new_bound = true;
   i = dim - 1;
   Trem(i) = bound;
@@ -376,7 +367,8 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
   T_shvec_request<Tfield> request_field{request.dim, request.mode,
       UniversalScalarConversion<Tfield,T>(request.bound),
       UniversalVectorConversion<Tfield,T>(request.coset),
-      UniversalMatrixConversion<Tfield,T>(request.gram_matrix)};
+      UniversalMatrixConversion<Tfield,T>(request.gram_matrix),
+      request.central};
   //
   auto f_insert_field=[&](const MyVector<Tint>& V, const Tfield& min_Tfield) -> bool {
     T min_T = UniversalScalarConversion<T,Tfield>(min_Tfield);
@@ -395,6 +387,7 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 
 
 
+
 template<typename T, typename Tint>
 T_shvec_info<T,Tint> computeMinimum(const T_shvec_request<T>& request)
 {
@@ -403,21 +396,14 @@ T_shvec_info<T,Tint> computeMinimum(const T_shvec_request<T>& request)
 #endif
   int i, j;
   int dim = request.dim;
-  MyVector<T> C(dim);
-  bool central = true;
-  i = 0;
-  while (i < dim && central) {
-    central = (request.coset(i) != 0);
-    i++;
-  }
-  for (i = 0; i < dim; i++)
-    C(i) = request.coset(i);
+  const MyVector<T>& C = request.coset;
+  const bool& central = request.central;
   auto get_minimum_atp=[&]() -> T {
     if (!central) {
       T eNorm=0;
       for (i=0; i<dim; i++)
         for (j=0; j<dim; j++)
-          eNorm += request.gram_matrix(i,j)*C(i)*C(j);
+          eNorm += request.gram_matrix(i,j) * C(i) * C(j);
       return eNorm;
     }
     T eMin = request.gram_matrix(0,0);
@@ -456,19 +442,35 @@ T_shvec_info<T,Tint> computeMinimum(const T_shvec_request<T>& request)
 
 
 template<typename T>
-void initShvecReq(int dim,
-		  MyMatrix<T> const& gram_matrix,
-                  T_shvec_request<T>& request)
+bool get_central(const MyVector<T>& coset, const int& mode)
 {
+  int dim = coset.size();
+  for (int i=0; i<dim; i++) {
+    if (coset(i) != 0)
+      return false;
+  }
+  if (mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG)
+    return false;
+  return true;
+}
+
+
+template<typename T>
+T_shvec_request<T> initShvecReq(const MyMatrix<T>& gram_matrix, const MyVector<T>& coset, const T& bound, int mode)
+{
+  int dim = gram_matrix.rows();
   if (dim < 2) {
     std::cerr << "dim=" << dim << " while it should be at least 2\n";
     throw TerminalException{1};
   }
+  T_shvec_request<T> request;
   request.dim = dim;
-  request.coset = MyVector<T>(dim);
+  request.coset = coset;
   request.gram_matrix = gram_matrix;
-  request.mode = 0;
-  request.bound = 0;
+  request.mode = mode;
+  request.bound = bound;
+  request.central = get_central(coset, mode);
+  return request;
 }
 
 template<typename T, typename Tint>
@@ -509,11 +511,7 @@ resultCVP<T,Tint> CVPVallentinProgram_exact(MyMatrix<T> const& GramMat, MyVector
   }
   T bound=0; // should not be used
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
-  T_shvec_request<T> request;
-  initShvecReq(dim, GramMat, request);
-  request.bound = bound;
-  request.mode = mode;
-  request.coset = cosetVect;
+  T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
   T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   int nbVect=info.short_vectors.size();
   MyMatrix<Tint> ListClos(nbVect, dim);
@@ -555,11 +553,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   T bound=MaxNorm;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
-  T_shvec_request<T> request;
-  initShvecReq(dim, GramMat, request);
-  request.bound = bound;
-  request.mode = mode;
-  request.coset = cosetVect;
+  T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
   //
   T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   //

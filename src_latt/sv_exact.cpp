@@ -102,11 +102,7 @@ int main(int argc, char *argv[])
     //
     // Defining info and computing with it
     //
-    T_shvec_request<T> request;
-    initShvecReq(dim, gram_matrix, request);
-    request.bound = bound;
-    request.mode = mode;
-    request.coset = cosetVect;
+    T_shvec_request<T> request = initShvecReq(gram_matrix, cosetVect, bound, mode);
     std::cerr << "Before computeShvec mode=" << request.mode << "\n";
     T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
     int nbVect=info.short_vectors.size();
