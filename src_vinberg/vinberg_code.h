@@ -486,7 +486,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   //
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
-  return {Gs_T, Vs, normi, apMw0, MU};
+  return {Gs_T, Vs, normi, apMw0, MU, true};
 }
 
 
@@ -693,7 +693,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   std::cerr << "eCommand=" << eCommand << "\n";
   int iret=system(eCommand.c_str());
   if (iret == -1) {
-    printf("Oh dear, something went wrong with glpsol! %s\n", strerror(errno));
+    printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
     throw TerminalException{1};
   }
   //
