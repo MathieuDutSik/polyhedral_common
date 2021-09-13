@@ -35,8 +35,6 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     }
     return true;
   };
-
-
   (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
 }
 

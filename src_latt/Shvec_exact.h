@@ -116,17 +116,12 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     throw TerminalException{1};
   }
 #endif
-  //  std::cerr << "a=" << a << " b=" << b << "\n";
   double a_doubl = UniversalScalarConversion<double,T>(a);
   double b_doubl = UniversalScalarConversion<double,T>(b);
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
-  //  std::cerr << "alpha=" << alpha << "\n";
   double eD1=floor(alpha);
-  //  std::cerr << "eD1=" << eD1 << "\n";
   long int eD2=lround(eD1);
-  //  std::cerr << "eD2=" << eD2 << "\n";
   Tint eReturn=eD2;
-  //  std::cerr << "initial value eReturn=" << eReturn << "\n";
   auto f=[&](Tint const& x) -> bool {
     T eDiff=x - b;
     if (eDiff <= 0)
@@ -135,12 +130,9 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
       return true;
     return false;
   };
-  //  std::cerr << "Infinitesimal_floor, before while loop\n";
   while (true) {
-    //    std::cerr << "eReturn=" << eReturn << "\n";
     bool test1=f(eReturn);
     bool test2=f(eReturn+1);
-    //    std::cerr << "test1=" << test1 << " test2=" << test2 << "\n";
     if (test1 && !test2)
       break;
     if (!test1)
@@ -148,7 +140,6 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
     if (test2)
       eReturn++;
   }
-  //  std::cerr << "Infinitesimal_floor, after while loop\n";
   return eReturn;
 }
 
@@ -183,7 +174,6 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
       return true;
     return false;
   };
-  //  std::cerr << "Infinitesimal_ceil, before while loop\n";
   while (true) {
     bool test1=f(eReturn -1);
     bool test2=f(eReturn);
@@ -194,7 +184,6 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     if (!test2)
       eReturn++;
   }
-  //  std::cerr << "Infinitesimal_ceil, after while loop\n";
   return eReturn - 1;
 }
 
