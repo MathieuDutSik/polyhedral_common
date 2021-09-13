@@ -19,7 +19,8 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
-PROGRAM		= POLY_IntegralPoints
+#PROGRAM		= POLY_IntegralPoints
+PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_redundancy_Equivariant

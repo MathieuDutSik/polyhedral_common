@@ -559,6 +559,8 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
         FAC(i_root,i) = UniversalScalarConversion<T,Tint>(scal2);
       }
     }
+    std::cerr << "FAC=\n";
+    WriteMatrix(std::cerr, FAC);
     MyMatrix<T> EXT = cdd::DualDescription(FAC);
     size_t n_interior = 0;
     auto f_insert=[&](const MyVector<Tint>& V) -> bool {

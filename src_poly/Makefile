@@ -9,6 +9,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_redundancyClarkson \
 		  POLY_redundancyClarksonBlocks \
 		  POLY_IntegralPoints \
+		  TEST_PolytopeIntegralPoints \
 		  POLY_lcdd \
 		  POLY_lrs \
 		  POLY_lrs_set \
