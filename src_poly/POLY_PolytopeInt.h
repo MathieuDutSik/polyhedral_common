@@ -125,7 +125,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
   auto get_number_poss=[&](const size_t& pos) -> size_t {
     size_t nb_pos = 1;
     for (size_t i=pos; i<dim; i++) {
-      size_t len = UniversalScalarConversion<size_t,Tint>(1 + ListUpp[i] - ListLow[i]);
+      size_t len = size_t(UniversalScalarConversion<int,Tint>(1 + ListUpp[i] - ListLow[i]));
       size_t new_nb_pos = nb_pos * len;
       if (new_nb_pos < nb_pos) { // Case of going overflow
         return std::numeric_limits<size_t>::max();
@@ -150,6 +150,10 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
   size_t crit_siz = 1000000;
   MyVector<Tint> ePoint(dim);
   set_bound(ePoint, 0);
+  std::cerr << "ListBound =";
+  for (size_t iDim=0; iDim<dim; iDim++)
+    std::cerr << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
+  std::cerr << "\n";
   size_t pos = 0;
   //
   // While loop for iterating

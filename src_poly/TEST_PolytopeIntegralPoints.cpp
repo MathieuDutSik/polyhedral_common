@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
       std::cerr << "FAC: list of facets\n";
       return -1;
     }
-    auto get_reord=
     //
     //  std::cerr << "Reading input\n";
     //
@@ -36,7 +35,8 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT = cdd::DualDescription(FAC);
     MyMatrix<Tint> ListIntPoint1 = ReordListPoint(GetListIntegralPoint<T,Tint>(FAC, EXT));
     std::cerr << "|ListIntPoint1|=" << ListIntPoint1.rows() << "\n";
-    MyMatrix<Tint> ListIntPoint2 = ReordListPoint(GetListIntegralPoint_LP<T,Tint>(FAC, EXT));
+    MyMatrix<Tint> ListIntPoint2 = ReordListPoint(GetListIntegralPoint_LP<T,Tint>(FAC));
+    std::cerr << "|ListIntPoint2|=" << ListIntPoint2.rows() << "\n";
     if (ListIntPoint1 != ListIntPoint2) {
       std::cerr << "We found a different set of points. Please debug\n";
       throw TerminalException{1};
