@@ -56,16 +56,10 @@ int Infinitesimal_Floor_V1(T const& a, T const& b)
 #endif
   double a_doubl = UniversalScalarConversion<double,T>(a);
   double b_doubl = UniversalScalarConversion<double,T>(b);
-  //  std::cerr << "a_doubl=" << a_doubl << "\n";
-  //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=sqrt(a_doubl) + epsilon + b_doubl;
-  //  std::cerr << "alpha=" << alpha << "\n";
   double eD1=floor(alpha);
-  //  std::cerr << "eD1=" << eD1 << "\n";
   long int eD2=lround(eD1);
-  //  std::cerr << "eD2=" << eD2 << "\n";
   int eD3=eD2;
-  //  std::cerr << "eD3=" << eD3 << "\n";
   return eD3;
 }
 

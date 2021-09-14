@@ -557,7 +557,50 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     }
     //    std::cerr << "FAC=\n";
     //    WriteMatrix(std::cerr, FAC);
-    //    MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    std::cerr << "fct_PolyInt m step 1\n";
+    MyMatrix<T> EXT = cdd::DualDescription(FAC);
+    std::cerr << "EXT=\n";
+    WriteMatrix(std::cerr, EXT);
+    std::cerr << "fct_PolyInt m step 2\n";
+    T max_norm = 0;
+    size_t n_vert = EXT.rows();
+    std::cerr << "n_vert=" << n_vert << "\n";
+    MyVector<T> shift_u_T = UniversalVectorConversion<T,Tint>(data.shift_u);
+    MyMatrix<T> trans_u_T = UniversalMatrixConversion<T,Tint>(data.trans_u);
+    std::cerr << "fct_PolyInt m step 3\n";
+    int n_col = trans_u_T.cols();
+    MyVector<T> V(n_col);
+    size_t n_greater = 0;
+    T k_T = k;
+    for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
+      T val0 = EXT(i_vert,0);
+      if (val0 > 0) {
+        for (int i=0; i<n_col; i++)
+          V(i) = EXT(i_vert,i + 1) / val0;
+        MyVector<T> x_T = shift_u_T + trans_u_T * V;
+        T scal_T = x_T.dot(Vtot.G_T * x_T);
+        std::cerr << "i_vert=" << i_vert << "/" << n_vert << " scal=" << scal_T << "\n";
+        if (scal_T > k_T)
+          n_greater++;
+        if (scal_T > max_norm)
+          max_norm = scal_T;
+      } else {
+        for (int i=0; i<n_col; i++)
+          V(i) = EXT(i_vert,i + 1);
+        MyVector<T> x_T = shift_u_T + trans_u_T * V;
+        T scal_T = x_T.dot(Vtot.G_T * x_T);
+        std::cerr << "Finding an infinite ray V=";
+        WriteVector(std::cerr, V);
+        std::cerr << "Finding an infinite ray x=";
+        WriteVector(std::cerr, x_T);
+        std::cerr << "scal_T=" << scal_T << "\n";
+        max_norm = k + 1;
+      }
+    }
+    std::cerr << "k=" << k << " max_norm=" << max_norm << " n_greater=" << n_greater << "\n";
+    if (max_norm < k_T)
+      return;
+    std::cerr << "fct_PolyInt m step 4\n";
     size_t n_interior = 0;
     auto f_insert=[&](const MyVector<Tint>& V) -> bool {
       MyVector<Tint> x = data.shift_u + data.trans_u * V;
