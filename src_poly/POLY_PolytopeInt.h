@@ -14,6 +14,11 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
   MyMatrix<T> EXTnorm(nbVert,n);
   for (int iVert=0; iVert<nbVert; iVert++) {
     T eVal=EXT(iVert,0);
+    if (eVal <= 0) {
+      std::cerr << "We have eVal=" << eVal << "\n";
+      std::cerr << "which means the enumeration of integer points does not make sense\n";
+      throw TerminalException{1};
+    }
     T eValInv=1/eVal;
     for (int i=0; i<n; i++)
       EXTnorm(iVert,i)=eValInv*EXT(iVert,i);
@@ -113,10 +118,20 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
     for (size_t i=0; i<dim-pos; i++) {
       Vminimize(1 + i) = 1;
       eSol = CDD_LinearProgramming(FACred, Vminimize);
+      if (!eSol.DualDefined || !eSol.PrimalDefined) {
+        std::cerr << "Failed computation of ListLow at i=" << i << " which means that\n";
+        std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
+        throw TerminalException{1};
+      }
       ListLow[i+pos] = UniversalScalarConversion<Tint,T>(Ceil(eSol.OptimalValue));
       //
       Vminimize(1 + i) = -1;
       eSol = CDD_LinearProgramming(FACred, Vminimize);
+      if (!eSol.DualDefined || !eSol.PrimalDefined) {
+        std::cerr << "Failed computation of ListUpp at i=" << i << " which means that\n";
+        std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
+        throw TerminalException{1};
+      }
       ListUpp[i+pos] = UniversalScalarConversion<Tint,T>(Floor( - eSol.OptimalValue));
       //
       Vminimize(1 + i) = 0;

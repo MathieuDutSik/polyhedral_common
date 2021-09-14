@@ -587,13 +587,17 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       } else {
         for (int i=0; i<n_col; i++)
           V(i) = EXT(i_vert,i + 1);
-        MyVector<T> x_T = shift_u_T + trans_u_T * V;
-        T scal_T = x_T.dot(Vtot.G_T * x_T);
         std::cerr << "Finding an infinite ray V=";
         WriteVector(std::cerr, V);
-        std::cerr << "Finding an infinite ray x=";
-        WriteVector(std::cerr, x_T);
-        std::cerr << "scal_T=" << scal_T << "\n";
+        Tint prod = 1;
+        for (int j=0; j<10; j++) {
+          MyVector<T> x_T = shift_u_T + (prod - 1) * trans_u_T * V;
+          prod *= 2;
+          T scal_T = x_T.dot(Vtot.G_T * x_T);
+          std::cerr << "Finding an infinite ray x=";
+          WriteVector(std::cerr, x_T);
+          std::cerr << "scal_T=" << scal_T << "\n";
+        }
         max_norm = k + 1;
       }
     }
