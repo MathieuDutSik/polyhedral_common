@@ -218,12 +218,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
       std::cerr << "   j=" << j << " q=" << q(i,j) << "\n";
 #endif
   }
-  for (int ik=0; ik<dim; ik++) {
-    x(ik)=0;
-    Upper(ik)=0;
-  }
-  // central is used purely internally to the code.
-  // Therefore computing central internally is ok.
   const bool& central = request.central;
   const MyVector<T>& C = request.coset;
   bool needs_new_bound = true;
