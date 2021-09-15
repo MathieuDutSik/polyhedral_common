@@ -80,7 +80,7 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
   double eD1=ceil(alpha);
   long int eD2=lround(eD1);
-  int eD3=eD2 - 1;
+  int eD3=eD2;
   return eD3;
 }
 
@@ -95,7 +95,6 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
 template<typename T, typename Tint>
 Tint Infinitesimal_Floor(T const& a, T const& b)
 {
-  double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Floor\n";
@@ -106,7 +105,7 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
 #endif
   double a_doubl = UniversalScalarConversion<double,T>(a);
   double b_doubl = UniversalScalarConversion<double,T>(b);
-  double alpha=sqrt(a_doubl) + epsilon + b_doubl;
+  double alpha=sqrt(a_doubl) + b_doubl;
   double eD1=floor(alpha);
   long int eD2=lround(eD1);
   Tint eReturn=eD2;
@@ -139,7 +138,6 @@ Tint Infinitesimal_Floor(T const& a, T const& b)
 template<typename T, typename Tint>
 Tint Infinitesimal_Ceil(T const& a, T const& b)
 {
-  double epsilon=0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Ceil\n";
@@ -150,7 +148,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 #endif
   double a_doubl = UniversalScalarConversion<double,T>(a);
   double b_doubl = UniversalScalarConversion<double,T>(b);
-  double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
+  double alpha=-sqrt(a_doubl) + b_doubl;
   double eD1=ceil(alpha);
   long int eD2=lround(eD1);
   Tint eReturn=eD2;
@@ -172,7 +170,7 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
     if (!test2)
       eReturn++;
   }
-  return eReturn - 1;
+  return eReturn;
 }
 
 
@@ -238,8 +236,9 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
       x(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       needs_new_bound = false;
+    } else {
+      x(i) += 1;
     }
-    x(i) += 1;
     if (x(i) <= Upper(i)) {
       if (i == 0) {
 	if (central) {
