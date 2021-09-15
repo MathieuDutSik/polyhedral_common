@@ -12,14 +12,14 @@
 
 
 namespace TempShvec_globals {
-  const int TEMP_SHVEC_MODE_UNDEF=-1;
-  const int TEMP_SHVEC_MODE_BOUND=0;
-  const int TEMP_SHVEC_MODE_SHORTEST_VECTORS=1;
-  const int TEMP_SHVEC_MODE_MINIMUM=2;
-  const int TEMP_SHVEC_MODE_THETA_SERIES=3;
-  const int TEMP_SHVEC_MODE_VINBERG=4;
-  const int STOP_COMPUTATION=666;
-  const int NORMAL_TERMINATION_COMPUTATION=555;
+  const int TEMP_SHVEC_MODE_UNDEF = -1;
+  const int TEMP_SHVEC_MODE_BOUND = 0;
+  const int TEMP_SHVEC_MODE_SHORTEST_VECTORS = 1;
+  const int TEMP_SHVEC_MODE_MINIMUM = 2;
+  const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
+  const int TEMP_SHVEC_MODE_VINBERG = 4;
+  const int STOP_COMPUTATION = 666;
+  const int NORMAL_TERMINATION_COMPUTATION = 555;
 }
 
 template<typename T>
@@ -77,16 +77,10 @@ int Infinitesimal_Ceil_V1(T const& a, T const& b)
 #endif
   double a_doubl = UniversalScalarConversion<double,T>(a);
   double b_doubl = UniversalScalarConversion<double,T>(b);
-  //  std::cerr << "a_doubl=" << a_doubl << "\n";
-  //  std::cerr << "b_doubl=" << b_doubl << "\n";
   double alpha=-sqrt(a_doubl) - epsilon + b_doubl;
-  //  std::cerr << "alpha=" << alpha << "\n";
   double eD1=ceil(alpha);
-  //  std::cerr << "eD1=" << eD1 << "\n";
   long int eD2=lround(eD1);
-  //  std::cerr << "eD2=" << eD2 << "\n";
   int eD3=eD2 - 1;
-  //  std::cerr << "eD3=" << eD3 << "\n";
   return eD3;
 }
 
@@ -194,7 +188,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
   int dim = request.dim;
   // The value of bound is assumed to be correct.
   // Thus the Trem values should be strictly positive.
-  MyVector<Tint> Lower(dim);
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
@@ -227,7 +220,6 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
   }
   for (int ik=0; ik<dim; ik++) {
     x(ik)=0;
-    Lower(ik)=0;
     Upper(ik)=0;
   }
   // central is used purely internally to the code.
@@ -244,15 +236,13 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
 #ifdef PRINT_DEBUG_INFO_VECTOR
   size_t n_vector = 0;
 #endif
-  bool not_finished;
   T eQuot, eSum, hVal, eNorm;
   while (true) {
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i,i);
       eSum = - U(i) - C(i);
       Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
-      Lower(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
-      x(i) = Lower(i);
+      x(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
       needs_new_bound = false;
     }
     x(i) += 1;
@@ -260,7 +250,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
       if (i == 0) {
 	if (central) {
 	  j = dim - 1;
-	  not_finished = false;
+	  bool not_finished = false;
 	  while (j >= 0 && !not_finished) {
 	    not_finished = (x(j) != 0);
 	    j--;
