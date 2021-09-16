@@ -178,8 +178,8 @@ Tint Infinitesimal_Ceil(T const& a, T const& b)
 
 
 
-template<typename T, typename Tint, typename Finsert>
-int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert f_insert)
+template<typename T, typename Tint, typename Finsert, typename Fsetbound>
+int computeIt_Gen_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert f_insert, Fsetbound f_set_bound)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
@@ -233,8 +233,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i,i);
       eSum = - U(i) - C(i);
-      Upper(i) = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
-      x(i) = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
+      f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
       needs_new_bound = false;
     } else {
       x(i) += 1;
@@ -255,7 +254,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
             return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
           }
 	}
-	hVal=x(0) + C(0) + U(0);
+	hVal = x(0) + C(0) + U(0);
 	eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
 #ifdef CHECK_BASIC_CONSISTENCY
 	T norm=0;
@@ -298,7 +297,7 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
         U(i) = 0;
 	for (j = i + 1; j < dim; j++)
 	  U(i) += q(i,j) * (x(j) + C(j));
-	hVal=x(i+1) + C(i+1) + U(i+1);
+	hVal = x(i+1) + C(i+1) + U(i+1);
 	Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal * hVal;
 	needs_new_bound = true;
       }
@@ -312,17 +311,17 @@ int computeIt_Kernel(const T_shvec_request<T>& request, const T& bound, Finsert 
 }
 
 
-template<typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T& bound, Finsert f_insert)
+template<typename T, typename Tint, typename Finsert, typename Fsetbound>
+inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt_Gen(const T_shvec_request<T>& request, const T& bound, Finsert f_insert, Fsetbound f_set_bound)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (field case)\n";
 #endif
-  return computeIt_Kernel<T,Tint,decltype(f_insert)>(request, bound, f_insert);
+  return computeIt_Gen_Kernel<T,Tint,Finsert,Fsetbound>(request, bound, f_insert, f_set_bound);
 }
 
-template<typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
+template<typename T, typename Tint, typename Finsert, typename Fsetbound>
+inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt_Gen(const T_shvec_request<T>& request, const T&bound, Finsert f_insert, Fsetbound f_set_bound)
 {
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (ring case)\n";
@@ -340,11 +339,23 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
     T min_T = UniversalScalarConversion<T,Tfield>(min_Tfield);
     return f_insert(V, min_T);
   };
-  int retVal = computeIt_Kernel<Tfield,Tint,decltype(f_insert_field)>(request_field, bound_field, f_insert_field);
+  int retVal = computeIt_Gen_Kernel<Tfield,Tint,decltype(f_insert_field),Fsetbound>(request_field, bound_field, f_insert_field, f_set_bound);
 #ifdef PRINT_DEBUG_INFO
   std::cerr << "computeIt (ring case) exit\n";
 #endif
   return retVal;
+}
+
+
+template<typename T, typename Tint, typename Finsert>
+int computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
+{
+  using Tfield=typename overlying_field<T>::field_type;
+  auto f_set_bound=[&](const Tfield& eQuot, const Tfield& eSum, const MyMatrix<Tfield>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
+    upper = Infinitesimal_Floor<Tfield,Tint>(eQuot, eSum);
+    lower = Infinitesimal_Ceil<Tfield,Tint>(eQuot, eSum);
+  };
+  return computeIt_Gen<T,Tint,Finsert,decltype(f_set_bound)>(request, bound, f_insert, f_set_bound);
 }
 
 
