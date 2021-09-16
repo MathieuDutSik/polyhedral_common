@@ -393,7 +393,7 @@ int computeIt_polytope(const T_shvec_request<T>& request, const T&bound, const M
       if (eLow > lower)
         lower = eLow;
     }
-    if (!eSol.DualDefined && eSol.PrimalDefined) { // Infinite direction. Therefore no bound available
+    if (!eSol.DualDefined && eSol.PrimalDefined) { // Infinite direction. Therefore no better bound available
     }
     if (!eSol.PrimalDefined) { // No feasible solution. Therefore not feasible.
       upper = lower - 1; // This will lead to a backtrack operation
