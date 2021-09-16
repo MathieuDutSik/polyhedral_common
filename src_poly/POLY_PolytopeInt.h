@@ -113,7 +113,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       for (size_t i=0; i<dim-pos; i++)
         FACred(i_row,1+i) = FAC(i_row,1+pos+i);
     }
-    MyVector<T> Vminimize(1 + dim - pos);
+    MyVector<T> Vminimize = ZeroVector<T>(1 + dim - pos);
     LpSolution<T> eSol;
     for (size_t i=0; i<dim-pos; i++) {
       Vminimize(1 + i) = 1;
