@@ -119,6 +119,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       Vminimize(1 + i) = 1;
       eSol = CDD_LinearProgramming(FACred, Vminimize);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
+        std::cerr << "eSol.DualDefined=" << eSol.DualDefined << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
         std::cerr << "Failed computation of ListLow at i=" << i << " which means that\n";
         std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
         throw TerminalException{1};
@@ -128,6 +129,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
       Vminimize(1 + i) = -1;
       eSol = CDD_LinearProgramming(FACred, Vminimize);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
+        std::cerr << "eSol.DualDefined=" << eSol.DualDefined << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
         std::cerr << "Failed computation of ListUpp at i=" << i << " which means that\n";
         std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
         throw TerminalException{1};
