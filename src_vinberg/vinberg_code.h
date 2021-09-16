@@ -26,8 +26,7 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
   WriteVector(std::cerr, eV);
   std::cerr << "norm=" << norm << "\n";
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
-  MyVector<T> cosetVect	= - eV;
-  T_shvec_request<T> request = initShvecReq<T>(GramMat, cosetVect, norm, mode);
+  T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
   //
   auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
     if (min == norm) {
@@ -432,8 +431,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
     MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
     Tint term1 = k - a.dot(Vtot.G * a);
     T normi = T(term1) + sV.dot(Vtot.Gorth_T * sV);
-    MyVector<T> eV = -sV;
-    return {Vtot.Gorth_T, eV, normi, a, Vtot.Morth, true};
+    return {Vtot.Gorth_T, sV, normi, a, Vtot.Morth, true};
   }
   //
   size_t n = Vtot.G.rows();
@@ -441,9 +439,8 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   MyVector<Tint> m2_Ga = -2 * Vtot.G * a;
   MyMatrix<Tint> Bmat(2*n-1, n);
   for (size_t i=0; i<n-1; i++) {
-    for (size_t j=0; j<n; j++) {
+    for (size_t j=0; j<n; j++)
       Bmat(i,j) = 2 * GM(j,i);
-    }
   }
   for (size_t i=0; i<n; i++) {
     for (size_t j=0; j<n; j++) {
@@ -478,7 +475,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   MyMatrix<Tint> Ws = U.transpose() * Vtot.Morth.transpose() * Vtot.G * ( a + Vtot.Morth * w0);
   MyMatrix<T> Gs_T = UniversalMatrixConversion<T,Tint>(Gs);
   MyMatrix<T> InvGs_T = Inverse(Gs_T);
-  MyVector<T> Vs = - InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
+  MyVector<T> Vs = InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
   MyVector<Tint> Mw0 = Vtot.Morth * w0;
   Tint term1 = k - a.dot(Vtot.G * a) - Mw0.dot(Vtot.G * Mw0);
   T term2 = Vs.dot(Gs_T * Vs);
@@ -516,7 +513,7 @@ std::vector<MyVector<Tint>> FindRoot_no_filter(const VinbergTot<T,Tint>& Vtot, c
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, const std::vector<MyVector<Tint>>& ListRoot)
+std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k, const std::vector<MyVector<Tint>>& ListRoot, const MyMatrix<T>& FACfeasible)
 {
   std::vector<MyVector<Tint>> list_root;
   DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
@@ -539,6 +536,35 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       list_root.push_back(V);
     };
     Solutioner_CVP(data, f_ins_root);
+  };
+  //
+  auto fct_CVP_Poly=[&]() -> void {
+    size_t n_root = ListRoot.size();
+    size_t dim = Vtot.G.rows();
+    MyMatrix<T> FAC(n_root,dim);
+    for (size_t i_root=0; i_root<n_root; i_root++) {
+      MyVector<T> eFAC = GetMatrixRow(FACfeasible,i_root);
+      MyVector<T> v_T = UniversalVectorConversion<T,Tint>(data.shift_u);
+      T scal = eFAC.dot(v_T);
+      FAC(i_root,0) = scal;
+      for (size_t i=1; i<dim; i++) {
+        v_T = UniversalVectorConversion<T,Tint>(GetMatrixColumn(data.trans_u,i-1));
+        T scal = eFAC.dot(v_T);
+        FAC(i_root,i) = scal;
+      }
+    }
+    //
+    int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
+    T_shvec_request<T> request = initShvecReq<T>(data.G, data.V, data.norm, mode);
+    //
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      if (min == data.norm) {
+        MyVector<Tint> x = data.shift_u + data.trans_u * V;
+        list_root.emplace_back(std::move(x));
+      }
+      return true;
+    };
+    (void)computeIt_polytope<T,Tint,decltype(f_insert)>(request, data.norm, FAC, f_insert);
   };
   //
   auto fct_PolyInt=[&]() -> void {
@@ -623,7 +649,8 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
   MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
   if (RankMat(RootMat) == Vtot.G.rows()) {
     //    fct_CVP();
-    fct_PolyInt();
+    //    fct_PolyInt();
+    fct_CVP_Poly();
   } else {
     fct_CVP();
   }
@@ -999,11 +1026,39 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
 }
 
 
+// We compute here a polyhedral domain in which we expect to find
+// possibly roots.
+//
+// The computed domain lies inside of the cone and it comes before the
+// business of Vinberg of selecting the level at which the roots will
+// be found.
+//
+// All tricks are allowed in that search. We only want to restrict the
+// search space
+template<typename T, typename Tint>
+MyMatrix<T> GetInitial_FACfeasible(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  size_t n_root = ListRoot.size();
+  size_t dim = Vtot.G.rows();
+  MyMatrix<T> FACfeasible(n_root, dim);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
+    for (size_t i=0; i<dim; i++) {
+      T val = UniversalScalarConversion<T,Tint>(e_gv[i]);
+      FACfeasible(i_root,i) = val;
+    }
+  }
+  return FACfeasible;
+}
+
+
+
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
   std::cerr << "FindRoots, step 1\n";
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
+  MyMatrix<T> FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
   std::cerr << "FindRoots, step 2\n";
 
   IterateRootDecompositions<T,Tint> iter(Vtot);
@@ -1013,12 +1068,13 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
     std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
-    std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot);
+    std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
     std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
     if (list_root_cand.size() > 0) {
       for (auto & eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);
       }
+      FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
       std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
       ListRoot = ReduceListRoot(ListRoot);
       std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
