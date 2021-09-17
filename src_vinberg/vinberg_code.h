@@ -695,19 +695,12 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
 
 
 
-
-
-
-
-
-
 template<typename T, typename Tint>
-bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
+MyMatrix<int> GetWeightMatrix(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
   size_t n_root = ListRoot.size();
   size_t nbCol = Vtot.G.rows();
-
-  std::cerr << "is_FundPoly : begin, n_root=" << n_root << " nbCol=" << nbCol << "\n";
+  std::cerr << "GetWeightMatrix : begin, n_root=" << n_root << " nbCol=" << nbCol << "\n";
   MyMatrix<T> M(n_root, n_root);
   std::unordered_map<T,int> DiagVal;
   std::unordered_map<T,int> OffDiagVal;
@@ -724,11 +717,11 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
       }
     }
   }
-  std::cerr << "is_fundPoly : Diag =";
+  std::cerr << "GetWeightMatrix : Diag =";
   for (auto & kv : DiagVal)
     std::cerr << " [" << kv.first << "," << kv.second << "]";
   std::cerr << "\n";
-  std::cerr << "is_fundPoly : OffDiag =";
+  std::cerr << "GetWeightMatrix : OffDiag =";
   for (auto & kv : OffDiagVal)
     std::cerr << " [" << kv.first << "," << kv.second << "]";
   std::cerr << "\n";
@@ -746,7 +739,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
         CosVal[cos2] += 1;
     }
   }
-  std::cerr << "is_fundPoly : Cos =";
+  std::cerr << "GetWeightMatrix : Cos =";
   for (auto & kv : CosVal)
     std::cerr << " [" << kv.first << "," << kv.second << "]";
   std::cerr << "\n";
@@ -777,6 +770,61 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     std::cerr << "coxiter.py ERROR: cosine " << cos2 << "\n";
     throw TerminalException{1};
   };
+  MyMatrix<int> WeightMatrix(n_root,n_root);
+  for (size_t i=0; i<n_root; i++)
+    for (size_t j=0; j<n_root; j++)
+      WeightMatrix(i,j) = 444;
+  //
+  for (size_t i=0; i<n_root; i++)
+    for (size_t j=0; j<i; j++)
+      if (M(i,j) != 0) {
+        int w = weight(i, j);
+        WeightMatrix(i,j) = w;
+        WeightMatrix(j,i) = w;
+      }
+  return WeightMatrix;
+}
+
+
+
+
+
+/*
+
+template<typename T, typename Tint>
+bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  MyMatrix<int> WeightMatrix = GetWeightMatrix(Vtot, ListRoot);
+  size_t n_root = ListRoot.size();
+  int d = Vtot.G.rows() - 1;
+  //
+  size_t nb_spherical_subdiagramN_parabolic_subdiagramN1 = 0;
+  std::vector<int> ListPos;
+  ListPos.reserve(n_root);
+  size_t pos=0;
+  auto is_extendible_to_spherical=[&](const std::vector<int>& V) -> bool {
+    
+  };
+  auto is_spherical
+    
+  
+  while(true) {
+  }
+}
+
+*/
+
+
+
+
+
+
+
+template<typename T, typename Tint>
+bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  MyMatrix<int> WeightMatrix = GetWeightMatrix(Vtot, ListRoot);
+  size_t n_root = ListRoot.size();
   int d = Vtot.G.rows() - 1;
   std::string rnd_str = random_string(20);
   std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
@@ -786,8 +834,8 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
     os << n_root << " " << d << "\n";
     for (size_t i=0; i<n_root; i++)
       for (size_t j=0; j<i; j++)
-        if (M(i,j) != 0)
-          os << (j+1) << " " << (i+1) << " " << weight(i, j) << "\n";
+        if (WeightMatrix(i,j) != 444)
+          os << (j+1) << " " << (i+1) << " " << WeightMatrix(i, j) << "\n";
     os << "\n";
   }
   //
