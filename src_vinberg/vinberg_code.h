@@ -520,7 +520,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
   if (!data.is_feasible)
     return {};
 
-
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   auto fct_CVP=[&]() -> void {
     std::vector<MyVector<Tint>> list_GV;
     for (auto & e_root : ListRoot) {
@@ -655,7 +655,8 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     fct_CVP();
   }
   //
-  std::cerr << "|list_root|=" << list_root.size() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|list_root|=" << list_root.size() << " |FindRoot_filter|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
   return list_root;
 }
 
@@ -765,34 +766,27 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   eCommand += " " + opt;
   eCommand += " < " + FileI + " > " + FileO;
   std::cerr << "eCommand=" << eCommand << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   int iret=system(eCommand.c_str());
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
     throw TerminalException{1};
   }
+
   //
   // Reading the output
   //
-  std::vector<std::string> RESUL;
-  {
-    std::ifstream INfs(FileO);
-    std::string line;
-    while (getline(INfs, line)) {
-      //      std::cerr << "line=" << line << "\n";
-      RESUL.push_back(line);
-    }
-  }
   bool IsFiniteCovolume=false;
-  std::string question = "Finite covolume: ";
-  std::string answer = "yes";
-  for (auto & eLine : RESUL) {
-    std::vector<std::string> LStr1 = STRING_Split(eLine, question);
-    if (LStr1.size() > 1) {
+  std::string line, answer = "yes", question = "Finite covolume: ";
+  std::ifstream INfs(FileO);
+  while (getline(INfs, line)) {
+    std::vector<std::string> LStr1 = STRING_Split(line, question);
+    if (LStr1.size() > 1)
       if (LStr1[1] == answer)
         IsFiniteCovolume = true;
-    }
   }
-  std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "\n";
+  std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "  |coxiter|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
   return IsFiniteCovolume;
 }
 
@@ -818,8 +812,6 @@ struct DataReflectionGroup {
   MyMatrix<Tint> G;
   MyMatrix<Tint> M;
   MyMatrix<T> Cos;
-  MyMatrix<T> EXT;
-  std::vector<T> ListNorm;
 };
 
 
@@ -846,26 +838,7 @@ DataReflectionGroup<T,Tint> GetDataReflectionGroup(const std::vector<MyVector<Ti
       Cos(i_root,j_root) = cos2;
     }
   }
-  //
-  size_t n_col = G.rows();
-  MyMatrix<T> FAC(n_root,n_col);
-  MyMatrix<T> G_T = UniversalMatrixConversion<T,Tint>(G);
-  for (size_t i_root=0; i_root<n_root; i_root++) {
-    MyVector<T> Root_T = UniversalVectorConversion<T,Tint>(ListRoot[i_root]);
-    MyVector<T> eProd = G_T * Root_T;
-    for (size_t i_col=0; i_col<n_col; i_col++)
-      FAC(i_root,i_col) = eProd(i_col);
-  }
-  MyMatrix<T> EXT = cdd::DualDescription(FAC);
-  size_t n_vert=EXT.rows();
-  std::vector<T> ListNorm(n_vert);
-  for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
-    MyVector<T> eEXT = GetMatrixRow(EXT, i_vert);
-    MyVector<T> eEXT_G = G_T * eEXT;
-    T eScal = eEXT_G.dot(eEXT);
-    ListNorm[i_vert] = eScal;
-  }
-  return {ListRoot, G, M, Cos, EXT, ListNorm};
+  return {ListRoot, G, std::move(M), std::move(Cos)};
 }
 
 
@@ -873,9 +846,16 @@ DataReflectionGroup<T,Tint> GetDataReflectionGroup(const std::vector<MyVector<Ti
 template<typename T, typename Tint>
 void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
 {
-  os << "Printing the data from the Coxeter group\n";
-  for (auto & eNorm : data.ListNorm)
-    os << "norm=" << eNorm << "\n";
+  size_t n_root = data.ListRoot.size();
+  os << "|ListRoot|=" << n_root << "\n";
+  for (size_t i=0; i<n_root; i++)
+    WriteVector(os, data.ListRoot[i]);
+  os << "G=\n";
+  WriteMatrix(os, data.G);
+  os << "M=\n";
+  WriteMatrix(os, data.M);
+  os << "Cos=\n";
+  WriteMatrix(os, data.Cos);
 }
 
 

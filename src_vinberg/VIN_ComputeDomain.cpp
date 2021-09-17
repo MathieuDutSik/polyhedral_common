@@ -31,20 +31,12 @@ int main(int argc, char* argv[])
     std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
     DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G);
     //
-    auto print=[&](std::ostream & os) -> void {
-      int nVect = ListRoot.size();
-      os << "|ListRoot|=" << nVect << "\n";
-      for (int i=0; i<nVect; i++)
-        WriteVector(os, ListRoot[i]);
-      Print_DataReflectionGroup(data, os);
-    };
-    //
     if (argc == 2) {
-      print(std::cerr);
+      Print_DataReflectionGroup(data, std::cerr);
     } else {
       std::string FileO = argv[2];
       std::ofstream os(FileO);
-      print(os);
+      Print_DataReflectionGroup(data, os);
     }
   }
   catch (TerminalException const& e) {
