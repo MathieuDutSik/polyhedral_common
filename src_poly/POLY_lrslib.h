@@ -2039,7 +2039,7 @@ void Kernel_DualDescription(MyMatrix<T> const& EXT, F const& f)
 
 
 template<typename T, typename F>
-void Kernel_DualDescription_limited(MyMatrix<T> const& EXT, F const& f, int const& UpperLimit)
+void Kernel_DualDescription_cond(MyMatrix<T> const& EXT, F const& f)
 {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
@@ -2047,14 +2047,15 @@ void Kernel_DualDescription_limited(MyMatrix<T> const& EXT, F const& f, int cons
   initLRS(EXT, P, Q);
   T* output = new T[Q->n+1];
   unsigned long dict_count = 1;
-  int nbDone=0;
   do {
+    bool is_finished=false;
     for (col = 0; col <= P->d; col++)
       if (lrs_getsolution (P, Q, output, col)) {
-	f(output);
-	nbDone++;
+	bool test = f(output);
+        if (!test)
+          is_finished=true;
       }
-    if (nbDone > UpperLimit)
+    if (is_finished)
       break;
   }
   while (lrs_getnextbasis (&P, Q, globals::L_FALSE, dict_count));
@@ -2122,7 +2123,8 @@ vectface DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& Up
   vectface ListIncd(nbRow);
   bool IsFirst=true;
   T eScal;
-  auto f=[&](T* out) -> void {
+  int nbFound = 0;
+  auto f=[&](T* out) -> bool {
     if (!IsFirst) {
       auto isincd=[&](size_t iRow) -> bool {
 	eScal=0;
@@ -2131,10 +2133,12 @@ vectface DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& Up
         return eScal == 0;
       };
       ListIncd.InsertFace(isincd);
+      nbFound++;
     }
     IsFirst=false;
+    return nbFound != UpperLimit;
   };
-  Kernel_DualDescription_limited(EXTwork, f, UpperLimit);
+  Kernel_DualDescription_cond(EXTwork, f);
   return ListIncd;
 }
 
