@@ -822,23 +822,23 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   size_t n_root = ListRoot.size();
   size_t n_col = Vtot.G.rows();
-  MyMatrix<T> FAC(n_root,n_col);
+  MyMatrix<Tint> FAC(n_root,n_col);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
     for (size_t i_col=0; i_col<n_col; i_col++)
-      FAC(i_root, i_col) = UniversalScalarConversion<T,Tint>(e_gv(i_col));
+      FAC(i_root, i_col) = e_gv(i_col);
   }
-  MyMatrix<T> FACwork=lrs::FirstColumnZero(FAC);
+  MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
   bool IsFiniteCovolume = true;
   bool IsFirst = true;
   size_t n_iter = 0;
-  auto f=[&](T* out) -> bool {
+  auto f=[&](Tint* out) -> bool {
     if (!IsFirst) {
       n_iter++;
-      MyVector<T> V(n_col);
+      MyVector<Tint> V(n_col);
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
-      T scal = V.dot(Vtot.G_T * V);
+      Tint scal = V.dot(Vtot.G * V);
       if (scal > 0) {
         IsFiniteCovolume = false;
         return false;
@@ -1188,6 +1188,10 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     if (list_root_cand.size() > 0) {
       for (auto & eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);
+      }
+      std::cerr << "ListRoot=\n";
+      for (auto & eRoot : ListRoot) {
+        WriteVector(std::cerr, eRoot);
       }
       FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
       std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
