@@ -6,6 +6,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_RedundancyElimination.h"
 #include "POLY_PolytopeInt.h"
+#include "POLY_lrslib.h"
 
 
 #define DEBUG_VINBERG
@@ -20,11 +21,14 @@ template<typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
 {
   std::cerr << "ComputeSphericalSolutions, step 1\n";
-  std::cerr << "GramMat=\n";
-  WriteMatrix(std::cerr, GramMat);
-  std::cerr << "eV=\n";
-  WriteVector(std::cerr, eV);
-  std::cerr << "norm=" << norm << "\n";
+  bool PrintInput=false;
+  if (PrintInput) {
+    std::cerr << "GramMat=\n";
+    WriteMatrix(std::cerr, GramMat);
+    std::cerr << "eV=\n";
+    WriteVector(std::cerr, eV);
+    std::cerr << "norm=" << norm << "\n";
+  }
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
   T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
   //
@@ -224,7 +228,32 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
   MyMatrix<Tint> M_Tint = MatrixFromVectorFamily(ListRoot);
   using Tfield=typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> M_Tfield = UniversalMatrixConversion<Tfield,Tint>(M_Tint);
-  std::vector<int> ListIdx = Kernel_GetNonRedundant_CDD(M_Tfield);
+  int ChosenMethod=2;
+  auto get_listidx=[&]() -> std::vector<int> {
+    if (ChosenMethod == 1) {
+      return Kernel_GetNonRedundant_CDD(M_Tfield);
+    }
+    if (ChosenMethod == 2) {
+      MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
+      return cdd::RedundancyReductionClarkson(M2);
+    }
+    if (ChosenMethod == 3) {
+      std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield);
+      //      MyMatrix<Tfield> M2 = Polytopization(M_Tfield);
+      MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
+      std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2);
+      if (ListIdx1 != ListIdx2) {
+        std::cerr << "Inequality between ListIdx1 and ListIdx2\n";
+        std::cerr << "ListIdx1=" << ListIdx1 << "\n";
+        std::cerr << "ListIdx2=" << ListIdx2 << "\n";
+        throw TerminalException{1};
+      }
+      return ListIdx1;
+    }
+    std::cerr << "Failed to find a matching entry\n";
+    throw TerminalException{1};
+  };
+  std::vector<int> ListIdx = get_listidx();
   std::vector<MyVector<Tint>> ListV;
   for (auto & idx : ListIdx)
     ListV.push_back(ListRoot[idx]);
@@ -567,6 +596,10 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     (void)computeIt_polytope<T,Tint,decltype(f_insert)>(request, data.norm, FAC, f_insert);
   };
   //
+  /*
+    This code does not work because we can have an unbounded polytope
+    and for this kind of polytope the enumeration algorithm will not work.
+    --------------
   auto fct_PolyInt=[&]() -> void {
     size_t n_root = ListRoot.size();
     size_t dim = Vtot.G.rows();
@@ -645,11 +678,10 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     Kernel_GetListIntegralPoint_LP<T,Tint,decltype(f_insert)>(FAC, f_insert);
     std::cerr << "n_interior=" << n_interior << " |list_root|=" << list_root.size() << "\n";
   };
+  */
   //
   MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
   if (RankMat(RootMat) == Vtot.G.rows()) {
-    //    fct_CVP();
-    //    fct_PolyInt();
     fct_CVP_Poly();
   } else {
     fct_CVP();
