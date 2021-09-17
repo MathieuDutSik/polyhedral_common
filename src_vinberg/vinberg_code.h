@@ -20,7 +20,6 @@
 template<typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
 {
-  std::cerr << "ComputeSphericalSolutions, step 1\n";
   bool PrintInput=false;
   if (PrintInput) {
     std::cerr << "GramMat=\n";
@@ -488,7 +487,6 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
     w0(i) = res.eSol(i);
   MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
   size_t dim = U_block.rows();
-  std::cerr << "Roots_decomposed_into_select , Step 5\n";
 #ifdef DEBUG_VINBERG
   if (dim != n-1) {
     std::cerr << "The dimension dim should be equal to n-1\n";
@@ -586,7 +584,9 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
     T_shvec_request<T> request = initShvecReq<T>(data.G, data.V, data.norm, mode);
     //
+    size_t n_pass = 0;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      n_pass++;
       if (min == data.norm) {
         MyVector<Tint> x = data.shift_u + data.trans_u * V;
         list_root.emplace_back(std::move(x));
@@ -594,6 +594,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       return true;
     };
     (void)computeIt_polytope<T,Tint,decltype(f_insert)>(request, data.norm, FAC, f_insert);
+    std::cerr << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";
   };
   //
   /*
@@ -1182,9 +1183,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
-    std::cerr << "  NextRoot a=" << a << " k=" << k << "\n";
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
-    std::cerr << "|list_root_cand|=" << list_root_cand.size() << "\n";
     if (list_root_cand.size() > 0) {
       for (auto & eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);
