@@ -2077,5 +2077,41 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
 }
 
 
+template<typename T, typename Tgroup>
+vectface DualDescriptionStandard(const MyMatrix<T>& EXT, const Tgroup& GRP)
+{
+  using Tint=typename Tgroup::Tint;
+  using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
+  using Tkey = MyMatrix<T>;
+  using Tval = PairStore<Tgroup>;
+  using Tidx_value = int32_t;
+  bool BANK_IsSaving=false;
+  std::string BANK_Prefix="totally_irrelevant_first";
+  //
+  PolyHeuristicSerial<Tint> AllArr=AllStandardHeuristicSerial<Tint>();
+  std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  std::cerr << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
+  std::cerr << "DualDescriptionHeuristicFile\n" << AllArr.DualDescriptionProgram << "\n";
+  std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  //
+  bool DD_Saving=false;
+  std::string DD_Prefix="totally_irrelevant_second";
+  AllArr.Saving=DD_Saving;
+  //
+  MyMatrix<T> EXTred=ColumnReduction(EXT);
+  using Tbank = DataBank<Tkey,Tval>;
+  Tbank TheBank(BANK_IsSaving, BANK_Prefix);
+  return DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank, EXTred, GRP, AllArr, DD_Prefix);
+}
+
+
+
+
+
+
 
 #endif

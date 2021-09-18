@@ -544,8 +544,10 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
 {
   std::vector<MyVector<Tint>> list_root;
   DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
-  if (!data.is_feasible)
+  if (!data.is_feasible) {
+    std::cerr << "Conclude that no solution is feasible\n";
     return {};
+  }
 
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   auto fct_CVP=[&]() -> void {
