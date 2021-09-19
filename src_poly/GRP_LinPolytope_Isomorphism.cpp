@@ -29,15 +29,16 @@ int main(int argc, char *argv[])
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     const bool use_scheme = true;
-    EquivTest<std::vector<Tidx>> equiv = LinPolytope_Isomorphism<Tint,Tidx,use_scheme>(EXT1, EXT2);
+    std::optional<std::vector<Tidx>> equiv = LinPolytope_Isomorphism<Tint,Tidx,use_scheme>(EXT1, EXT2);
     //
     auto print_info=[&](std::ostream& os) -> void {
-      if (equiv.TheReply) {
+      if (equiv) {
+        const std::vector<Tidx>& V = *equiv;
         os << "return [";
         for (size_t iRow=0; iRow<nbRow; iRow++) {
           if (iRow > 0)
             os << ",";
-          os << (equiv.TheEquiv[iRow] + 1);
+          os << (V[iRow] + 1);
         }
         os << "];\n";
       } else {

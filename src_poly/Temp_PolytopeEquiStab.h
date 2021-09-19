@@ -511,13 +511,13 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
     if (!test1) {
       return {false, block_status, {}};
     }
-    const MyMatrix<Tfield>& P = test1.TheEquiv;
+    const MyMatrix<Tfield>& P = *test1;
     for (auto & eMat_F : ListMat_F) {
       MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
       if (!TestEqualityMatrix(eProd, eMat_F))
         return {false, block_status, {}};
     }
-    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
+    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, *test1, Vsubset, Vin, ListBlocks);
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {

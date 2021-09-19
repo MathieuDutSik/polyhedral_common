@@ -1205,20 +1205,20 @@ std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatr
   for (unsigned int iVert=0; iVert<nof_vertices; iVert++) {
     unsigned int jVert=TheEquivExp[iVert];
     if (eGR1.GetColor(iVert) != eGR2.GetColor(jVert))
-      return {false, {}};
+      return {};
   }
   for (unsigned int iVert1=0; iVert1<nof_vertices; iVert1++) {
     unsigned int iVert2=TheEquivExp[iVert1];
     for (unsigned int jVert1=0; jVert1<nof_vertices; jVert1++) {
       unsigned int jVert2=TheEquivExp[jVert1];
       if (eGR1.IsAdjacent(iVert1,jVert1) != eGR2.IsAdjacent(iVert2,jVert2) )
-	return {false, {}};
+	return {};
     }
   }
   std::vector<Tidx> TheEquiv(nbRow);
   for (Tidx i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
-  return std::move(TheEquiv);
+  return TheEquiv;
 }
 
 

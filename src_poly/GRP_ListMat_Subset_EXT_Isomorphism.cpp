@@ -40,18 +40,19 @@ int main(int argc, char *argv[])
     Face eSubset2 = ReadFace(is);
     //
     const bool use_scheme = true;
-    EquivTest<std::vector<Tidx>> PairTest = TestEquivalence_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1, EXT2, ListMat2, eSubset2);
+    std::optional<std::vector<Tidx>> PairTest = TestEquivalence_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1, EXT2, ListMat2, eSubset2);
     //
     std::ofstream os(argv[2]);
-    if (!PairTest.TheReply) {
+    if (!PairTest) {
       os << "return false;\n";
     } else {
+      const std::vector<Tidx>& V = *PairTest;
       int n_rows= EXT1.rows();
       os << "return [";
       for (int i=0; i<n_rows; i++) {
         if (i > 0)
           os << ",";
-        os << (PairTest.TheEquiv[i] + 1);
+        os << (V[i] + 1);
       }
       os << "];\n";
     }
