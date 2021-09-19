@@ -490,7 +490,7 @@ ShortIso<T,Tint> SHORT_GetInformation(MyMatrix<Tint> const& M)
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::option<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMatrix<Tint> const& M2)
+std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMatrix<Tint> const& M2)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx_value = int16_t;
@@ -498,12 +498,12 @@ std::option<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, MyMa
   ShortIso<T,Tint> eRec2=SHORT_GetInformation<T,Tint>(M2);
   WeightMatrix<true, T, Tidx_value> WMat1=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat, eRec1.SHVdisc);
   WeightMatrix<true, T, Tidx_value> WMat2=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec2.GramMat, eRec2.SHVdisc);
-  std::option<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
+  std::optional<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   if (!eResEquiv)
     return {};
   MyMatrix<T> SHV1_T=UniversalMatrixConversion<T,Tint>(eRec1.SHVdisc);
   MyMatrix<T> SHV2_T=UniversalMatrixConversion<T,Tint>(eRec2.SHVdisc);
-  MyMatrix<T> MatEquiv_T=FindTransformation(SHV1_T, SHV2_T, eResEquiv.TheEquiv);
+  MyMatrix<T> MatEquiv_T=FindTransformation(SHV1_T, SHV2_T, *eResEquiv);
   if (!IsIntegralMatrix(MatEquiv_T)) {
     std::cerr << "Error, the matrix is not integral\n";
     throw TerminalException{1};
@@ -863,13 +863,10 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
   }
   MyMatrix<T> FAC=MatrixFromVectorFamily(ListIneq);
   MyMatrix<T> EXT=cdd::DualDescription(FAC);
-  std::vector<MyVector<T>> ListPt_T=GetListIntegralPoint(FAC, EXT);
+  std::vector<MyVector<Tint>> ListPt=GetListIntegralPoint<T,Tint>(FAC, EXT);
   //
   // Breaking into orbits
   //
-  std::vector<MyVector<Tint>> ListPt;
-  for (auto & eVect : ListPt_T)
-    ListPt.push_back(UniversalVectorConversion<Tint,T>(eVect));
   std::vector<MyMatrix<Tint>> ListGen;
   for (auto & eGen : eStab.ListMatrGen)
     ListGen.push_back(TransposedMat(eGen));
@@ -882,7 +879,7 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
   //
   auto IsPresent=[&](MyMatrix<Tint> const& P) -> bool {
     for (auto & P2 : ListSHVinp) {
-      std::option<MyMatrix<Tint>> eResEquiv=SHORT_TestEquivalence<T,Tint,Tgroup>(P, P2);
+      std::optional<MyMatrix<Tint>> eResEquiv=SHORT_TestEquivalence<T,Tint,Tgroup>(P, P2);
       if (eResEquiv)
 	return true;
     }
@@ -906,7 +903,7 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
     if (!PassFacetIsoCheck(Mnew))
       return;
     for (auto & P2 : ListSpann) {
-      std::option<MyMatrix<Tint>> eResEquiv=SHORT_TestEquivalence<T,Tint,Tgroup>(Mnew, P2);
+      std::optional<MyMatrix<Tint>> eResEquiv=SHORT_TestEquivalence<T,Tint,Tgroup>(Mnew, P2);
       if (eResEquiv)
 	return;
     }
@@ -949,7 +946,7 @@ std::vector<MyMatrix<Tint>> SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tin
   bool eSave=false;
   bool eMemory=true;
   std::string ePrefix="/irrelevant";
-  std::function<std::option<MyMatrix<Tint>>(SHVshortest<T,Tint> const&, SHVshortest<T,Tint> const&)> fEquiv=[](SHVshortest<T,Tint> const& M1, SHVshortest<T,Tint> const& M2) -> std::option<MyMatrix<Tint>> {
+  std::function<std::optional<MyMatrix<Tint>>(SHVshortest<T,Tint> const&, SHVshortest<T,Tint> const&)> fEquiv=[](SHVshortest<T,Tint> const& M1, SHVshortest<T,Tint> const& M2) -> std::optional<MyMatrix<Tint>> {
     return SHORT_TestEquivalence<T,Tint,Tgroup>(M1.SHV, M2.SHV);
   };
   std::function<int(SHVshortest<T,Tint> const&)> fSize=[](SHVshortest<T,Tint> const& M) -> int {
@@ -1142,7 +1139,7 @@ template<typename T>
 bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const& ListPrime, MyMatrix<T> const& M)
 {
   //  std::cerr << "Before ListClasses computation\n";
-  std::vector<MyVector<int>> ListClasses=ComputeTranslationClasses(M);
+  std::vector<MyVector<int>> ListClasses=ComputeTranslationClasses<T,int>(M);
   //  std::cerr << "After ListClasses computation |ListClasses|=" << ListClasses.size() << "\n";
   int n=M.rows();
   MyMatrix<T> eInv=Inverse(M);
@@ -1233,7 +1230,7 @@ std::pair<std::vector<MyMatrix<Tint>>,std::vector<int>> SHORT_ReduceByIsomorphis
     }
     for (auto & iSpann : TheMap[eInv]) {
       MyMatrix<Tint> fSpann=ListRet[iSpann];
-      std::option<MyMatrix<Tint>> RecTest=SHORT_TestEquivalence<T,Tint,Tgroup>(eSpann, fSpann);
+      std::optional<MyMatrix<Tint>> RecTest=SHORT_TestEquivalence<T,Tint,Tgroup>(eSpann, fSpann);
       if (RecTest)
 	return iSpann;
     }
