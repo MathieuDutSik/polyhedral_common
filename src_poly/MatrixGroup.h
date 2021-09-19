@@ -501,7 +501,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
 
 
 template<typename T, typename Tgroup>
-EquivTest<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRPmatr, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2)
+std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRPmatr, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2)
 {
   using Telt=typename Tgroup::Telt;
   int n=TheSpace1.rows();
@@ -574,7 +574,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinPolytopeIntegral_Automorphism_Subs
 
 
 template<typename T, typename Tgroup>
-EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
+std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
 {
   using Telt=typename Tgroup::Telt;
   IteratorGrp eIter=GetInitialIterator(GRP1);
@@ -583,12 +583,12 @@ EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const
     Telt eEquivCand=fPerm*ePerm;
     MyMatrix<T> eBigMat=FindTransformation(EXT1_T, EXT2_T, eEquivCand);
     if (IsMatrixCorrect(eBigMat))
-      return {true, eBigMat};
+      return eBigMat;
     int res=IteratorIncrease(eIter);
     if (res == -1)
       break;
   }
-  return {false, {}};
+  return {};
 }
 
 template<typename T, typename Tgroup>
@@ -647,7 +647,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, Tgroup c
 
 
 template<typename T,typename Tgroup>
-EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRP2, typename Tgroup::Telt const& eEquiv)
+std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRP2, typename Tgroup::Telt const& eEquiv)
 {
   using Telt=typename Tgroup::Telt;
   int dim=EXT1_T.cols();
@@ -668,21 +668,21 @@ EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T> con
   FractionMatrix<T> eRec1=RemoveFractionMatrixPlusCoeff(eLatt1);
   FractionMatrix<T> eRec2=RemoveFractionMatrixPlusCoeff(eLatt2);
   if (eRec1.TheMult != eRec2.TheMult)
-    return {false, {}};
-  EquivTest<MyMatrix<T>> eSpaceEquiv=LinearSpace_Equivalence<T,Tgroup>(GRPspace, eRec1.TheMat, eRec2.TheMat);
-  if (!eSpaceEquiv.TheReply)
-    return {false, {}};
-  MyMatrix<T> eMatFinal=Inverse(eBasis1)*TheMatEquiv*eSpaceEquiv.TheEquiv*eBasis2;
+    return {};
+  std::optional<MyMatrix<T>> eSpaceEquiv=LinearSpace_Equivalence<T,Tgroup>(GRPspace, eRec1.TheMat, eRec2.TheMat);
+  if (!eSpaceEquiv)
+    return {};
+  MyMatrix<T> eMatFinal=Inverse(eBasis1) * TheMatEquiv * (*eSpaceEquiv) * eBasis2;
   if (!IsIntegralMatrix(eMatFinal)) {
     std::cerr << "eMatFinal should be integral\n";
     throw TerminalException{1};
   }
-  return {true, eMatFinal};
+  return eMatFinal;
 }
 
 
 template<typename T, typename Tgroup>
-EquivTest<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm)
+std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm)
 {
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListPermGens;

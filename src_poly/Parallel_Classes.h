@@ -34,7 +34,7 @@ struct DataBank_ResultQuery {
 template<typename T>
 struct FctsDataBank {
   typedef typename equiv_info<T>::equiv_type Tequiv;
-  std::function<EquivTest<Tequiv>(T const&, T const&)> FctEquiv;
+  std::function<std::optional<Tequiv>(T const&, T const&)> FctEquiv;
   std::function<int(T const&)> FctSize;
 };
 
@@ -137,9 +137,9 @@ public:
       Tinv fInv=ListInv[iEntry];
       if (fInv == eInv) {
 	T fEnt=GetEntry(iEntry);
-	EquivTest<Tequiv> eEquiv=FctEquiv(fEnt, eEnt);
-	if (eEquiv.TheReply)
-	  return {iEntry, eEquiv.TheEquiv, nbEntry};
+        std::optional<Tequiv> eEquiv=FctEquiv(fEnt, eEnt);
+	if (eEquiv)
+	  return {iEntry, *eEquiv, nbEntry};
       }
     }
     return {-1, {}, nbEntry};
@@ -208,7 +208,7 @@ public:
     }
   }
 private:
-  std::function<EquivTest<Tequiv>(T const&, T const&)> FctEquiv;
+  std::function<std::optional<Tequiv>(T const&, T const&)> FctEquiv;
   std::function<int(T const&)> FctSize;
   bool IsSaving;
   bool FullDataInMemory;
@@ -296,7 +296,7 @@ public:
   NewEnumerationWork(bool const& eSave, bool const& eMemory,std::string const& ePrefix,
 		     std::function<bool(Tinv const&,Tinv const&)> const& eCompFCT,
 		     std::function<void(Tbalinski &,T const&,Tinv const&,std::ostream&)> const& eUP,
-		     std::function<EquivTest<Tequiv>(T const&,T const&)> const& fEquiv,
+		     std::function<std::optional<Tequiv>(T const&,T const&)> const& fEquiv,
 		     std::ostream& os) :
   ListPendingCases(std::set<int,std::function<bool(int const&,int const&)>>([&](int const& i, int const&j) -> bool {if (eCompFCT(ListInv[i],ListInv[j]))
 	return true;
@@ -389,10 +389,10 @@ public:
       if (ListInv[iEntry] == eRec.xInv) {
 	//	os << "IsPresentNoLock, ListInv[iEntry]=" << ListInv[iEntry] << "\n";
 	T fEnt=GetRepresentative(iEntry);
-	EquivTest<Tequiv> eEquiv=TestEquivalence(fEnt, eRec.x);
-	if (eEquiv.TheReply) {
+        std::optional<Tequiv> eEquiv=TestEquivalence(fEnt, eRec.x);
+	if (eEquiv) {
 	  //	  os << "Before exit IsPresentNoLock. Find Isomorphism\n";
-	  return {iEntry, eEquiv.TheEquiv, nbEntry};
+	  return {iEntry, *eEquiv, nbEntry};
 	}
       }
     }
@@ -619,7 +619,7 @@ private:
   std::set<int> ListUnderConsideration;
   bool IsComplete;
   std::function<void(Tbalinski &,T const&,Tinv const&,std::ostream&)> UpgradeBalinskiStat;
-  std::function<EquivTest<Tequiv>(T const&,T const&)> TestEquivalence;
+  std::function<std::optional<Tequiv>(T const&,T const&)> TestEquivalence;
 };
 
 

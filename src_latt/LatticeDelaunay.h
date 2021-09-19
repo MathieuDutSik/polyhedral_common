@@ -167,7 +167,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
   MyMatrix<T> EXT_T=UniversalMatrixConversion<T,Tint>(EXT);
-  WeightMatrix<true,T, Tidx_value> WMatRed=GetWeightMatrixFromGramEXT<T,Tidx_value>(EXT_T, eData.GramMat, {});
+  WeightMatrix<true,T, Tidx_value> WMatRed = GetWeightMatrixFromGramEXT<T,Tidx_value>(EXT_T, eData.GramMat, {});
   Tgroup GRPisomRed=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
     return GRPisomRed;
@@ -207,32 +207,32 @@ Tgroup Delaunay_Stabilizer(DataLattice<T,Tint> const& eData, MyMatrix<Tint> cons
 
 
 template<typename T, typename Tint, typename Tgroup>
-EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eData, Delaunay<T,Tint> const& RecEXT1, Delaunay<T,Tint> const& RecEXT2, Tint const& eIndex)
+std::optional<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eData, Delaunay<T,Tint> const& RecEXT1, Delaunay<T,Tint> const& RecEXT2, Tint const& eIndex)
 {
   using Telt=typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
   std::cerr << "Begin Delaunay_TestEquivalence\n";
-  auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
-    if (!eEq.TheReply)
-      return {false, {}};
+  auto ConvertEquiv=[](std::optional<MyMatrix<T>> const& eEq) -> std::optional<MyMatrix<Tint>> {
+    if (!eEq)
+      return {};
     MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(eEq.TheEquiv);
-    return {true, eMat_I};
+    return eMat_I;
   };
   MyMatrix<T> EXT1_T=UniversalMatrixConversion<T,Tint>(RecEXT1.EXT);
   MyMatrix<T> EXT2_T=UniversalMatrixConversion<T,Tint>(RecEXT2.EXT);
   WeightMatrix<true, T, Tidx_value> WMatRed1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, {});
   WeightMatrix<true, T, Tidx_value> WMatRed2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, {});
-  EquivTest<Telt> eResRed=TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMatRed1, WMatRed2);
-  if (!eResRed.TheReply) {
+  std::optional<Telt> eResRed=TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMatRed1, WMatRed2);
+  if (!eResRed) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
-    return {false, {}};
+    return {};
   }
   MyMatrix<T> MatEquivRed_T=FindTransformation(EXT1_T, EXT2_T, eResRed.TheEquiv);
   if (IsIntegralMatrix(MatEquivRed_T)) {
     MyMatrix<Tint> MatEquiv_I=UniversalMatrixConversion<Tint,T>(MatEquivRed_T);
     std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
-    return {true, MatEquiv_I};
+    return MatEquiv_I;
   };
   if (eIndex == 1) {
     std::cerr << "We should not reach that stage. If eIndex=1 then\n";
@@ -245,10 +245,10 @@ EquivTest<MyMatrix<Tint>> Delaunay_TestEquivalence(DataLattice<T,Tint> const& eD
   MyMatrix<T> SHV_T=UniversalMatrixConversion<T,Tint>(eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, SHV_T);
   WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, SHV_T);
-  EquivTest<Telt> eRes=TestEquivalenceWeightMatrix<T,Telt, Tidx_value>(WMat1, WMat2);
-  if (!eRes.TheReply) {
+  std::optional<Telt> eRes=TestEquivalenceWeightMatrix<T,Telt, Tidx_value>(WMat1, WMat2);
+  if (!eRes) {
     std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
-    return {false, {}};
+    return {};
   }
   MyMatrix<T> MatEquiv_T=FindTransformation(EXT1_T, EXT2_T, eRes.TheEquiv);
   if (IsIntegralMatrix(MatEquiv_T)) {
@@ -318,7 +318,7 @@ template<typename T,typename Tint, typename Tgroup>
 std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
 	    MainProcessor &MProc, int const& TheId,
 	    DataBank<PolyhedralEntry<T,Tgroup>> &TheBank,
-	    DataLattice<T,Tint> const& eData, 
+	    DataLattice<T,Tint> const& eData,
 	    PolyHeuristic<mpz_class> const& AllArr)
 {
   std::function<bool(DelaunayInv<T,Tint> const&,DelaunayInv<T,Tint> const&)> CompFCT=[](DelaunayInv<T,Tint> const& x, DelaunayInv<T,Tint> const& y) -> bool {
@@ -326,7 +326,7 @@ std::vector<Delaunay<T,Tint>> EnumerationDelaunayPolytopes(
   };
   std::function<void(TrivialBalinski &,Delaunay<T,Tint> const&,DelaunayInv<T,Tint> const&,std::ostream&)> UpgradeBalinskiStat=[](TrivialBalinski const& eStat, Delaunay<T,Tint> const& eEnt, DelaunayInv<T,Tint> const& eInv, std::ostream&os) -> void {
   };
-  std::function<EquivTest<MyMatrix<Tint>>(Delaunay<T,Tint> const&,Delaunay<T,Tint> const&)> fEquiv=[&](Delaunay<T,Tint> const& x, Delaunay<T,Tint> const& y) -> EquivTest<MyMatrix<Tint>> {
+  std::function<std::optional<MyMatrix<Tint>>(Delaunay<T,Tint> const&,Delaunay<T,Tint> const&)> fEquiv=[&](Delaunay<T,Tint> const& x, Delaunay<T,Tint> const& y) -> std::optional<MyMatrix<Tint>> {
     Tint PreIndex=Int_IndexLattice(x.EXT);
     Tint eIndex=T_abs(PreIndex);
     return Delaunay_TestEquivalence<T,Tint,Tgroup>(eData, x, y, eIndex);

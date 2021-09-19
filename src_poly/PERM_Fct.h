@@ -51,7 +51,7 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const& EXT1, MyMatrix<T> cons
 
 
 template<typename T, typename Tfield, typename Tidx, typename F>
-EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2, std::vector<Tidx> const& eList)
+std::optional<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2, std::vector<Tidx> const& eList)
 {
   static_assert(is_ring_field<Tfield>::value, "Requires Tfield to be a field in DivideVector");
   auto f=[&](MyMatrix<Tfield> & M, size_t eRank, size_t iRow) -> void {
@@ -61,9 +61,8 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
     }
   };
   SelectionRowCol<Tfield> eSelect=TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
-  if (eSelect.TheRank != nbCol) {
-    return {false, {}};
-  }
+  if (eSelect.TheRank != nbCol)
+    return {};
   MyMatrix<Tfield> M1_field(eSelect.TheRank, nbCol);
   for (size_t iRow=0; iRow<eSelect.TheRank; iRow++) {
     size_t jRow = eSelect.ListRowSelect[iRow];
@@ -90,15 +89,15 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest(size_t nbRow, size_t nb
       for (size_t jRow=0; jRow<nbCol; jRow++)
         eSum += EqMat(jRow,iCol) * V1(jRow);
       if (eSum != 0)
-        return {false, {}};
+        return {};
     }
   }
-  return {true, EqMat};
+  return EqMat;
 }
 
 
 template<typename T, typename Tfield, typename Tidx>
-EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest_Subset(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin)
+std::optional<MyMatrix<Tfield>> FindMatrixTransformationTest_Subset(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -110,7 +109,7 @@ EquivTest<MyMatrix<Tfield>> FindMatrixTransformationTest_Subset(const MyMatrix<T
       V(iCol) = EXT(Vsubset[iRow], iCol);
     return V;
   };
-  EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx>(Vsubset.size(), nbCol, g1, g1, Vin);
+  std::optional<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest<T, Tfield, Tidx>(Vsubset.size(), nbCol, g1, g1, Vin);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|FindMatrixTransformationTest_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -148,7 +147,7 @@ bool IsSubsetFullRank(const MyMatrix<T>& EXT, const std::vector<Tidx>& Vsubset)
 
 
 template<typename T, typename Tfield, typename Tidx>
-EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, MyMatrix<Tfield> const& P)
+std::optional<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, MyMatrix<Tfield> const& P)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -172,7 +171,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
         std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
         std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-        return {false,{}}; // We fail because the image is not integral.
+        return {}; // We fail because the image is not integral.
       }
       VectorContain(0, i_col) = rec_eSum2.second;
     }
@@ -182,7 +181,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
       std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
       std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-      return {false,{}}; // We fail because the image does not belong to EXT2
+      return {}; // We fail because the image does not belong to EXT2
     }
     V[i_row] = epair.second;
     f[epair.second] = 1;
@@ -199,7 +198,7 @@ EquivTest<std::vector<Tidx>> RepresentVertexPermutationTest(MyMatrix<T> const& E
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|RepresentVertexPermutationTest|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return {true, std::move(V)};
+  return V;
 }
 
 
@@ -239,13 +238,13 @@ DataMapping<Tidx> RepresentVertexPermutationTest_Blocks(const MyMatrix<T>& EXT, 
       size_t pos = ListBlocks[i_block][i_row];
       EXTred.row(i_row) = EXT.row(pos);
     }
-    EquivTest<std::vector<Tidx>> eEquiv = RepresentVertexPermutationTest<T,Tfield,Tidx>(EXTred, EXTred, P);
-    if (!eEquiv.TheReply) {
+    std::optional<std::vector<Tidx>> eEquiv = RepresentVertexPermutationTest<T,Tfield,Tidx>(EXTred, EXTred, P);
+    if (!eEquiv) {
       correct = false;
     } else {
-      f_insert(ListBlocks[i_block], eEquiv.TheEquiv);
+      f_insert(ListBlocks[i_block], *eEquiv);
     }
-    block_status[i_block] = eEquiv.TheReply;
+    block_status[i_block] = bool(eEquiv);
   }
   return {correct, std::move(block_status), std::move(eGen)};
 }

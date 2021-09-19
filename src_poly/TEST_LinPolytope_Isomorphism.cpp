@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
     for (int i_iter=0; i_iter<n_iter; i_iter++) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
       MyMatrix<Tint> EXT2 = get_random_equivalent(EXT1);
-      EquivTest<std::vector<Tidx>> equiv = LinPolytope_Isomorphism<Tint,Tidx,use_scheme>(EXT1, EXT2);
-      if (!equiv.TheReply) {
+      std::optional<std::vector<Tidx>> equiv = LinPolytope_Isomorphism<Tint,Tidx,use_scheme>(EXT1, EXT2);
+      if (!equiv) {
         std::cerr << "The isomorhism check return wrong results\n";
         throw TerminalException{1};
       }

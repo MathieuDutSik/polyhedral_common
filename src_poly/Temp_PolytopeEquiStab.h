@@ -11,7 +11,7 @@
 
 
 template<typename T, typename Telt, typename Tidx_value>
-EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face const& f1, Face const& f2)
+std::optional<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& WMat, Face const& f1, Face const& f2)
 {
   using Tidx = typename Telt::Tidx;
   size_t siz=WMat.GetWeightSize();
@@ -39,15 +39,15 @@ EquivTest<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const& W
   WeightMatrix<true,int,Tidx_value> WMat2(n+1,[&](size_t iRow, size_t iCol) -> int {
     return g(f2, iRow, iCol);
   });
-  EquivTest<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,Telt>(WMat1, WMat2);
-  if (!test.TheReply)
-    return {false, {}};
+  std::optional<Telt> test=TestEquivalenceWeightMatrix_norenorm_perm<int,Telt>(WMat1, WMat2);
+  if (!test)
+    return {};
   std::vector<Tidx> eList(n);
   for (size_t i=0; i<n; i++) {
     int eVal=test.TheEquiv.at(i);
     eList[i] = eVal;
   }
-  return {true, std::move(Telt(eList))};
+  return Telt(std::move(eList));
 }
 
 
@@ -249,11 +249,11 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f
   };
   // Extension of the partial automorphism
   auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
-    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
+    std::optional<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
     Face block_status(ListBlocks.size());
-    if (!test1.TheReply)
+    if (!test1)
       return {false, block_status, {}};
-    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, test1.TheEquiv, Vsubset, Vin, ListBlocks);
+    return RepresentVertexPermutationTest_Blocks<T,Tfield,Tidx>(TheEXT, *test1, Vsubset, Vin, ListBlocks);
   };
   // Extension of the partial canonicalization
   auto f5=[&](std::vector<Tidx> const& Vsubset, std::vector<Tidx> const& PartOrd) -> std::vector<Tidx> {
@@ -426,7 +426,7 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
 
 
 template<typename T, typename Tidx, bool use_scheme>
-EquivTest<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2)
+std::optional<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2)
 {
   std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT1);
   std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<T,Tidx,use_scheme>(EXT2);
@@ -434,7 +434,7 @@ EquivTest<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1, co
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
   if (!IsoInfo)
     return {};
-  return {true,std::move(IsoInfo->first)};
+  return IsoInfo->first;
 }
 
 
@@ -506,9 +506,9 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   };
   // Extension of the partial automorphism
   auto f4=[&](const std::vector<Tidx>& Vsubset, const std::vector<Tidx>& Vin, const std::vector<std::vector<Tidx>>& ListBlocks) -> DataMapping<Tidx> {
-    EquivTest<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
+    std::optional<MyMatrix<Tfield>> test1 = FindMatrixTransformationTest_Subset<T,Tfield,Tidx>(TheEXT, Vsubset, Vin);
     Face block_status(ListBlocks.size());
-    if (!test1.TheReply) {
+    if (!test1) {
       return {false, block_status, {}};
     }
     const MyMatrix<Tfield>& P = test1.TheEquiv;
@@ -630,7 +630,7 @@ std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::v
 
 
 template<typename T, typename Tidx, bool use_scheme>
-EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
+std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
                                MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
                                MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
 {
@@ -643,7 +643,7 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
   size_t nbRow1 = EXT1.rows();
   size_t nbRow2 = EXT2.rows();
   if (nbRow1 != nbRow2) { // At this point it should be equal, but better to check
-    return {false, {}};
+    return {};
   }
 
 
@@ -665,7 +665,7 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
 #endif
 
 
-    EquivTest<std::vector<Tidx>> PairTest = TestEquivalenceWeightMatrix_norenorm<std::vector<T>,Tidx,Tidx_value>(WMat1, WMat2);
+    std::optional<std::vector<Tidx>> PairTest = TestEquivalenceWeightMatrix_norenorm<std::vector<T>,Tidx,Tidx_value>(WMat1, WMat2);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
     std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
@@ -678,7 +678,7 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
 
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
   if (!IsoInfo)
-    return {false, {}};
+    return {};
   const MyMatrix<Tfield>& P = IsoInfo->second;
   // Now checking the mapping of matrices
   size_t nMat = ListMat1.size();
@@ -687,10 +687,10 @@ EquivTest<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
     MyMatrix<Tfield> eMat2 = UniversalMatrixConversion<Tfield,T>(ListMat2[iMat]);
     MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat2)) {
-      return {false, {}};
+      return {};
     }
   }
-  return {true,std::move(IsoInfo->first)};
+  return IsoInfo->first;
 }
 
 
@@ -923,7 +923,7 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
   to be assigned.
 */
 template<typename Tint>
-EquivTest<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
   using Tidx_value = int16_t;
   using Tgr=GraphBitset;
@@ -1119,9 +1119,9 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
   std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-  EquivTest<MyMatrix<Tint>> EquivTest = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
-  if (EquivTest.TheReply) {
-    return EquivTest.TheEquiv;
+  std::optional<MyMatrix<Tint>> eEquiv = LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(EXT, Qmat);
+  if (eEquiv) {
+    return *eEquiv;
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -1191,7 +1191,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 
 
 template<typename Tint>
-EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
+std::optional<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
   using Tidx_value = int16_t;
   using Tgr=GraphBitset;
@@ -1287,9 +1287,8 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
     }
     return true;
   };
-  if (!IsCorrectListGen()) {
-    return {false, {}};
-  }
+  if (!IsCorrectListGen())
+    return {};
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|Check Generators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
@@ -1302,7 +1301,7 @@ EquivTest<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_A
   }
   ListGenRet.push_back(AntipodalGen);
   //
-  return {true, std::move(ListGenRet)};
+  return ListGenRet;
 }
 
 
@@ -1322,9 +1321,9 @@ std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism
   std::cerr << "|GetQmatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
 
-  EquivTest<std::vector<std::vector<unsigned int>>> EquivTest = LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(EXT, Qmat);
-  if (EquivTest.TheReply) {
-    return EquivTest.TheEquiv;
+  std::optional<std::vector<std::vector<unsigned int>>> eEquiv = LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(EXT, Qmat);
+  if (eEquiv) {
+    return *eEquiv;
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();

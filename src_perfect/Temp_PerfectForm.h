@@ -150,7 +150,7 @@ SinglePerfect<T,Tint,Tgroup> GetPerfectCone(LinSpaceMatrix<T> const&LinSpa, MyMa
 
 
 template<typename T, typename Tint, typename Tgroup>
-EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
+std::optional<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
 				       MyMatrix<T> const&ePerf1, MyMatrix<T> const&ePerf2,
 				       MyMatrix<Tint> const& SHV1, MyMatrix<Tint> const& SHV2)
 {
@@ -160,14 +160,14 @@ EquivTest<MyMatrix<Tint>> PERF_TestEquivalence(LinSpaceMatrix<T> const&LinSpa,
   MyMatrix<T> T_SHV2=UniversalMatrixConversion<T,Tint>(SHV2);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, ePerf1, LinSpa.ListComm);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, ePerf2, LinSpa.ListComm);
-  EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>,T,Telt>(WMat1, WMat2);
-  if (!eResEquiv.TheReply) {
-    return {false, {}};
+  std::optional<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>,T,Telt>(WMat1, WMat2);
+  if (!eResEquiv) {
+    return {};
   }
   MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
   if (IsIntegralMatrix(M3)) {
     MyMatrix<Tint> eMatEquiv=UniversalMatrixConversion<Tint,T>(M3);
-    return {true, eMatEquiv};
+    return eMatEquiv;
   }
   std::cerr << "Need to write some code here\n";
   throw TerminalException{1};
@@ -200,9 +200,9 @@ public:
     for (int iOrbit=iOrbitStart; iOrbit<nbOrbit; iOrbit++) {
       MyMatrix<T> oldGram=GetGram(iOrbit);
       MyMatrix<int> oldSHV=GetSHV(iOrbit);
-      EquivTest<MyMatrix<int>> eLinSpaRes=PERF_TestEquivalence<T,Tint,Tgroup>(LinSpa, eGram, oldGram, SHV, oldSHV);
-      if (eLinSpaRes.TheReply) {
-	PerfEquivInfo eEquiv{iOrbit, eLinSpaRes.TheEquiv, eTrivFace};
+      std::optional<MyMatrix<int>> eLinSpaRes=PERF_TestEquivalence<T,Tint,Tgroup>(LinSpa, eGram, oldGram, SHV, oldSHV);
+      if (eLinSpaRes) {
+	PerfEquivInfo eEquiv{iOrbit, *eLinSpaRes, eTrivFace};
 	return {true, nbOrbit, eEquiv};
       }
     }
@@ -765,7 +765,7 @@ struct DataLinSpa {
 
 
 template<typename T, typename Tint, typename Tgroup>
-EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
+std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
 		      DataLinSpa<T> const& eData,
 		      MyMatrix<T> const& Gram1,
 		      MyMatrix<T> const& Gram2)
@@ -778,14 +778,14 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   MyMatrix<T> T_SHV2=UniversalMatrixConversion<T,Tint>(RecSHV2.SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV1, Gram1, eData.LinSpa.ListComm);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2=GetWeightMatrix_ListComm<false,T,Tidx_value>(T_SHV2, Gram2, eData.LinSpa.ListComm);
-  EquivTest<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
-  if (!eResEquiv.TheReply) {
-    return {false, {}};
+  std::optional<Telt> eResEquiv=GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
+  if (!eResEquiv) {
+    return {};
   }
   MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
   if (IsIntegralMatrix(M3)) {
     MyMatrix<Tint> eMatEquiv=UniversalMatrixConversion<Tint,T>(M3);
-    return {true, eMatEquiv};
+    return eMatEquiv;
   }
   std::vector<MyVector<T>> ListMatVect;
   for (auto & eMat : eData.LinSpa.ListMat) {
@@ -807,20 +807,19 @@ EquivTest<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
     }
     return true;
   };
-  auto ConvertEquiv=[](EquivTest<MyMatrix<T>> const& eEq) -> EquivTest<MyMatrix<Tint>> {
+  auto ConvertEquiv=[](std::optional<MyMatrix<T>> const& eEq) -> std::optional<MyMatrix<Tint>> {
     if (!eEq.TheReply)
-      return {false, {}};
+      return {};
     MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(eEq.TheEquiv);
-    return {true, eMat_I};
+    return eMat_I;
   };
   Tgroup GRP1=GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv, IsMatrixCorrect));
-  }
-  else {
-    EquivTest<MyMatrix<T>> fResEquiv=LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv);
-    if (!fResEquiv.TheReply)
-      return {false, {}};
+  } else {
+    std::optional<MyMatrix<T>> fResEquiv=LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv);
+    if (!fResEquiv)
+      return {};
     if (IsMatrixCorrect(fResEquiv.TheEquiv))
       return ConvertEquiv(fResEquiv);
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv, IsMatrixCorrect));
@@ -901,7 +900,7 @@ template<typename T, typename Tint, typename Tgroup>
   };
   std::function<void(TrivialBalinski &,SimplePerfect<T,Tint> const&,SimplePerfectInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[](TrivialBalinski const& eStat, SimplePerfect<T,Tint> const& eEnt, SimplePerfectInv<T> const& eInv, std::ostream&os) -> void {
   };
-  std::function<EquivTest<MyMatrix<Tint>>(SimplePerfect<T,Tint> const&, SimplePerfect<T,Tint> const&)> fEquiv=[&](SimplePerfect<T,Tint> const& x, SimplePerfect<T,Tint> const& y) -> EquivTest<MyMatrix<Tint>> {
+  std::function<std::optional<MyMatrix<Tint>>(SimplePerfect<T,Tint> const&, SimplePerfect<T,Tint> const&)> fEquiv=[&](SimplePerfect<T,Tint> const& x, SimplePerfect<T,Tint> const& y) -> std::optional<MyMatrix<Tint>> {
     return SimplePerfect_TestEquivalence<T,Tint,Tgroup>(eData, x.Gram, y.Gram);
   };
   NewEnumerationWork<SimplePerfect<T,Tint>> ListOrbit(AllArr.Saving, AllArr.eMemory, eData.PrefixPerfect, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));

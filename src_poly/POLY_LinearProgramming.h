@@ -280,20 +280,20 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const& TheEXT, MyVector<T> const
 
 
 template<typename T>
-EquivTest<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const& NSP)
+std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const& NSP)
 {
   int TheDim=NSP.rows();
   int nbCol=NSP.cols();
   //  std::cerr << "TheDim=" << TheDim << "\n";
   if (TheDim == 0)
-    return {false,{}};
+    return {};
   int FirstVertex=-1;
   for (int iRow=0; iRow<TheDim; iRow++) {
     if (NSP(iRow,0) != 0)
       FirstVertex=iRow;
   }
   if (FirstVertex == -1)
-    return {false,{}};
+    return {};
   T ePivot=NSP(FirstVertex,0);
   MyMatrix<T> NSPred(TheDim, nbCol);
   MyVector<T> eVertex(nbCol);
@@ -306,11 +306,11 @@ EquivTest<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const& NSP)
       for (int i=0; i<nbCol; i++)
 	NSPred(pos,i) = NSP(iRow,i) - NSP(iRow,0) * NSPred(0,i);
     }
-  return {true,NSPred};
+  return NSPred;
 }
 
 template<typename T>
-EquivTest<MyMatrix<T>> ComputeStandardAffineSubspace(MyMatrix<T> const& ListEqua)
+std::optional<MyMatrix<T>> ComputeStandardAffineSubspace(MyMatrix<T> const& ListEqua)
 {
   MyMatrix<T> NSP=NullspaceTrMat(ListEqua);
   return AffinizeSubspace(NSP);
@@ -321,8 +321,8 @@ EquivTest<MyMatrix<T>> ComputeStandardAffineSubspace(MyMatrix<T> const& ListEqua
 template<typename T>
 bool TestRealizabilityInequalitiesEqualities(MyMatrix<T> const& ListIneq, MyMatrix<T> const& ListEqua, MyVector<T> const& ToBeMinimized)
 {
-  EquivTest<MyMatrix<T>> EquivArr=ComputeStandardAffineSubspace(ListEqua);
-  if (!EquivArr.TheReply)
+  std::optional<MyMatrix<T>> EquivArr=ComputeStandardAffineSubspace(ListEqua);
+  if (!EquivArr)
     return false;
   MyMatrix<T> NSPred=EquivArr.TheEquiv;
   MyMatrix<T> ListIneqRed=ListIneq * (NSPred.transpose());
@@ -1087,14 +1087,14 @@ EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const& ListIneq, MyMatri
   MyMatrix<T> FinalSpace=(LinSpa.transpose()) * NSP;
   //  std::cerr << "|FinalSpace| = " << FinalSpace.rows() << " / " << FinalSpace.cols() << "\n";
   //  std::cerr << "ComputeEmbeddedPolytope, step 5\n";
-  EquivTest<MyMatrix<T>> eRes=AffinizeSubspace(FinalSpace);
+  std::optional<MyMatrix<T>> eRes=AffinizeSubspace(FinalSpace);
   //  std::cerr << "ComputeEmbeddedPolytope, step 6\n";
-  if (!eRes.TheReply) {
+  if (!eRes) {
     std::cerr << "Call to ComputeEmbeddedPolytope failed\n";
     std::cerr << "Because the affinization operation failed\n";
     throw TerminalException{1};
   }
-  MyMatrix<T> FinalSpace_Aff=eRes.TheEquiv;
+  MyMatrix<T> FinalSpace_Aff=*eRes;
   //  std::cerr << "ComputeEmbeddedPolytope, step 7\n";
   MyMatrix<T> ListIneqFinal=ListIneq * (FinalSpace_Aff.transpose());
   //  std::cerr << "ComputeEmbeddedPolytope, step 8\n";

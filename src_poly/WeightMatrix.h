@@ -1168,7 +1168,7 @@ std::vector<Tidx> GetCanonicalizationFromSymmetrized(std::vector<Tidx> const& Ca
 
 
 template<typename T, typename Tidx, typename Tidx_value>
-EquivTest<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
+std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
 {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
@@ -1183,7 +1183,7 @@ EquivTest<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<t
     throw TerminalException{1};
   }
   if (nof_vertices1 != nof_vertices2)
-    return {false, {}};
+    return {};
   unsigned int nof_vertices = nof_vertices1;
   Tidx nbRow = WMat1.rows();
 #ifdef USE_BLISS
@@ -1218,18 +1218,19 @@ EquivTest<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(WeightMatrix<t
   std::vector<Tidx> TheEquiv(nbRow);
   for (Tidx i=0; i<nbRow; i++)
     TheEquiv[i]=TheEquivExp[i];
-  return {true, std::move(TheEquiv)};
+  return std::move(TheEquiv);
 }
 
 
 
 template<typename T, typename Telt, typename Tidx_value>
-EquivTest<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
+std::optional<Telt> TestEquivalenceWeightMatrix_norenorm_perm(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> const& WMat2)
 {
   using Tidx = typename Telt::Tidx;
-  EquivTest<std::vector<Tidx>> ePair = TestEquivalenceWeightMatrix_norenorm<T,Tidx,Tidx_value>(WMat1, WMat2);
-  Telt ePerm(ePair.TheEquiv);
-  return {ePair.TheReply, std::move(ePerm)};
+  std::optional<std::vector<Tidx>> ePair = TestEquivalenceWeightMatrix_norenorm<T,Tidx,Tidx_value>(WMat1, WMat2);
+  if (ePair)
+    return Telt(*ePair);
+  return {};
 }
 
 
@@ -1280,11 +1281,11 @@ bool RenormalizeWeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> const& WM
 
 
 template<typename T, typename Telt, typename Tidx_value>
-EquivTest<Telt> TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> &WMat2)
+std::optional<Telt> TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat1, WeightMatrix<true, T, Tidx_value> &WMat2)
 {
   bool test=RenormalizeWeightMatrix(WMat1, WMat2);
   if (!test)
-    return {false, {}};
+    return {};
   return TestEquivalenceWeightMatrix_norenorm_perm<T,Telt>(WMat1, WMat2);
 }
 
@@ -1318,19 +1319,19 @@ Tgroup GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& W
 
 
 template<typename T, typename Telt, typename Tidx_value>
-EquivTest<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& WMat1, WeightMatrix<false, T, Tidx_value> const& WMat2)
+std::optional<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const& WMat1, WeightMatrix<false, T, Tidx_value> const& WMat2)
 {
   using Tidx = typename Telt::Tidx;
   WeightMatrix<true, T, Tidx_value> WMatO1=WMat1.GetSymmetricWeightMatrix();
   WeightMatrix<true, T, Tidx_value> WMatO2=WMat2.GetSymmetricWeightMatrix();
-  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMatO1, WMatO2);
-  if (!eResEquiv.TheReply)
-    return eResEquiv;
+  std::optional<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMatO1, WMatO2);
+  if (!eResEquiv)
+    return {};
   size_t nbSHV=WMat1.rows();
   std::vector<Tidx> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
     v[i]=eResEquiv.TheEquiv.at(i);
-  return {true, std::move(Telt(v))};
+  return Telt(std::move(v));
 }
 
 

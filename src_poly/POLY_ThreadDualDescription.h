@@ -293,15 +293,12 @@ FctsDataBank<PolyhedralEntry<T,Tgroup>> GetRec_FctsDataBank()
 {
   using Telt=typename Tgroup::Telt;
   using Tidx_value = int16_t;
-  std::function<EquivTest<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> EquivTest<Telt> {
+  std::function<std::optional<Telt>(PolyhedralEntry<T,Tgroup> const&,PolyhedralEntry<T,Tgroup> const&)> fEquiv=[](PolyhedralEntry<T,Tgroup> const& eRec1, PolyhedralEntry<T,Tgroup> const& eRec2) -> std::optional<Telt> {
     MyMatrix<T> EXTred1=ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2=ColumnReduction(eRec2.EXT);
     WeightMatrix<true, T, Tidx_value> WMat1=GetWeightMatrix<T,Tidx_value>(EXTred1);
     WeightMatrix<true, T, Tidx_value> WMat2=GetWeightMatrix<T,Tidx_value>(EXTred2);
-    EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
-    if (!eResEquiv.TheReply)
-      return {false, {}};
-    return {true, eResEquiv.TheEquiv};
+    return TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
   };
   std::function<int(PolyhedralEntry<T,Tgroup> const&)> fSize=[](PolyhedralEntry<T,Tgroup> const& eRec) -> int {
     int siz=eRec.EXT.rows();
@@ -429,17 +426,17 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         }
       };
       int NewLevel=TheLevel+1;
-      std::function<EquivTest<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
+      std::function<std::optional<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
       std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
       if (ansGRP == "classic") {
-        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
+        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
           std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
           startLoc = std::chrono::system_clock::now();
           auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
           endLoc = std::chrono::system_clock::now();
           int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(endLoc-startLoc).count();
           MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
-          return {eReply.first, eReply.second};
+          return eReply;
         };
         GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
           Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
@@ -452,7 +449,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         };
       }
       if (ansGRP == "partition") {
-        fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
+        fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
           std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
           startloc = std::chrono::system_clock::now();
           auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
@@ -468,7 +465,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
             int elapsed_seconds_C = std::chrono::duration_cast<std::chrono::seconds>(end_C-start_C).count();
             MProc.GetO(TheId) << "Second method (bliss) runtime = " << elapsed_seconds_C << "\n";
           }
-          return {eReply.first, eReply.second};
+          return eReply;
         };
         GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
           Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
@@ -482,9 +479,11 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       }
       if (ansGRP == "exhaustive") {
         // we choose here to discard the element realizing the equivalence
-        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> EquivTest<Telt> {
-          bool test=x.eRepr==y.eRepr;
-          return {test, {}};
+        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
+          if (x.eRepr == y.eRepr) {
+            return Telt();
+          }
+          return {};
         };
         OrbitMinimumArr<Tint> ArrMin=GetInitialMinimumArray(TheGRPrelevant);
         GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {

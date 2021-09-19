@@ -356,8 +356,8 @@ bool T_TestGramMatrixEquivalence(MyMatrix<T> const& eMat1, MyMatrix<T> const& eM
   MyMatrix<Tint> ListShort2=T_ShortVector(eMat2, MaxDet);
   WeightMatrix<true, T, Tidx_value> WMat1 = T_TranslateToMatrix_QM_SHV<T,Tint,Tidx_value>(eMat1, ListShort1);
   WeightMatrix<true, T, Tidx_value> WMat2 = T_TranslateToMatrix_QM_SHV<T,Tint,Tidx_value>(eMat2, ListShort2);
-  EquivTest<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
-  return eResEquiv.TheReply;
+  std::optional<Telt> eResEquiv=TestEquivalenceWeightMatrix<T,Telt>(WMat1, WMat2);
+  return eResEquiv;
 }
 
 
