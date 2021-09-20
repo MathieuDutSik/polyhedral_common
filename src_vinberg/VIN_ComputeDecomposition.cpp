@@ -74,7 +74,10 @@ int main(int argc, char* argv[])
           return {};
         Telt ePerm(IsoInfo->first);
         Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(eEnt.WMat);
-        return LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
+        std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
+        if (eRes)
+          return UniversalMatrixConversion<Tint,T>(*eRes);
+        return {};
       };
       std::vector<std::pair<size_t,Tent>> NewListCand;
       auto f_ent=[&](const MyMatrix<Tint>& M) -> Tent {
@@ -104,7 +107,8 @@ int main(int argc, char* argv[])
               return;
           }
         }
-        NewListCand.push_back({e_inv,eEnt});
+        std::pair<size_t,Tent> e_pair{e_inv,std::move(eEnt)};
+        NewListCand.emplace_back(std::move(e_pair));
       };
       for (auto & eDomain : ListListDomain[i-1]) {
         Tent eEnt = f_ent(eDomain);
