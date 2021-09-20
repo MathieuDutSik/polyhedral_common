@@ -238,9 +238,10 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     for (int iGen=0; iGen<nbGen; iGen++) {
       MyMatrix<T> eMatrGen=GRPret.ListMatrGen[iGen];
       Telt ePermGen=GRPret.ListPermGen[iGen];
-      std::vector<int> v(siz);
-      for (int i=0; i<nbRow; i++) {
-	int j=ePermGen.at(i);
+      std::vector<Tidx> v(siz);
+      Tidx nbRow_tidx=nbRow;
+      for (Tidx i=0; i<nbRow_tidx; i++) {
+	Tidx j=ePermGen.at(i);
 	v[i]=j;
       }
       std::cerr << "We have initialized the first part\n";
@@ -258,9 +259,9 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	int jO=ePermGenSelect.at(iO);
 	v[nbRow+iO]=nbRow+jO;
       }
-      Telt eNewPerm(v);
+      Telt eNewPerm(std::move(v));
       std::cerr << "We have eNewPerm\n";
-      ListPermGenProv.push_back(eNewPerm);
+      ListPermGenProv.emplace_back(std::move(eNewPerm));
     }
     Tgroup GRPwork(ListPermGenProv, siz);
     std::cerr << "|GRPwork|=" << GRPwork.size() << "\n";
@@ -276,13 +277,13 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     std::vector<Telt> ListPermGen;
     std::vector<Telt> LGen = eStab.GeneratorsOfGroup();
     for (auto & eGen : LGen) {
-      std::vector<int> v(nbRow);
-      for (int i=0; i<nbRow; i++)
+      std::vector<Tidx> v(nbRow);
+      for (Tidx i=0; i<nbRow; i++)
 	v[i]=OnPoints(i, eGen);
-      Telt ePerm(v);
+      Telt ePerm(std::move(v));
       MyMatrix<T> eMatr=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, ePerm);
-      ListPermGen.push_back(ePerm);
-      ListMatrGen.push_back(eMatr);
+      ListPermGen.emplace_back(std::move(ePerm));
+      ListMatrGen.emplace_back(std::move(eMatr));
     }
     std::cerr << "All generators have been created\n";
     GRPret={n, GRPmatr.EXTfaithAct, ListMatrGen, ListPermGen};
@@ -409,7 +410,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
 	return false;
       }
     }
-    return true;    
+    return true;
   };
   FiniteMatrixGroup<T,Telt> GRPwork=GRPmatr;
   MyMatrix<T> eElt=IdentityMat<T>(n);
@@ -436,11 +437,10 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     for (int iGen=0; iGen<nbGen; iGen++) {
       MyMatrix<T> eMatrGen=GRPwork.ListMatrGen[iGen];
       Telt ePermGen=GRPwork.ListPermGen[iGen];
-      std::vector<int> v(siz);
-      for (int i=0; i<nbRow; i++) {
-	int j=ePermGen.at(i);
-	v[i]=j;
-      }
+      std::vector<Tidx> v(siz);
+      Tidx nbRow_tidx=nbRow;
+      for (Tidx i=0; i<nbRow_tidx; i++)
+	v[i] = ePermGen.at(i);
       std::vector<MyVector<T>> ListImage;
       for (auto & eV : O)
 	ListImage.push_back(TheAction(eV, eMatrGen));
@@ -474,18 +474,18 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     std::vector<Telt> ListPermGen;
     std::vector<Telt> LGen = eStab.GeneratorsOfGroup();
     for (auto & eGen : LGen) {
-      std::vector<int> v(nbRow);
+      std::vector<Tidx> v(nbRow);
       for (int i=0; i<nbRow; i++)
 	v[i]=OnPoints(i, eGen);
-      Telt ePerm(v);
+      Telt ePerm(std::move(v));
       MyMatrix<T> eMatr=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, ePerm);
-      ListPermGen.push_back(ePerm);
-      ListMatrGen.push_back(eMatr);
+      ListPermGen.emplace_back(std::move(ePerm));
+      ListMatrGen.emplace_back(std::move(eMatr));
     }
     GRPwork={n, GRPmatr.EXTfaithAct, ListMatrGen, ListPermGen};
     //
     MyMatrix<T> eMat=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, eRes.second);
-    eElt=eElt*eMat;
+    eElt = eElt*eMat;
   }
   for (auto & eGen : GRPwork.ListMatrGen) {
     MyVector<T> V;
@@ -503,12 +503,13 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
 template<typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRPmatr, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field in LinearSpace_Equivalence");
   using Telt=typename Tgroup::Telt;
   int n=TheSpace1.rows();
   T LFact1=LinearSpace_GetDivisor(TheSpace1);
   T LFact2=LinearSpace_GetDivisor(TheSpace2);
   if (LFact1 != LFact2)
-    return {false, {}};
+    return {};
   std::vector<T> eList=FactorsInt(LFact1);
   auto IsEquivalence=[&](MyMatrix<T> const& eEquiv) -> bool {
     for (int i=0; i<n; i++) {
@@ -526,28 +527,29 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename 
   MyMatrix<T> eElt=IdentityMat<T>(n);
   for (int i=1; i<=siz; i++) {
     if (IsEquivalence(eElt))
-      return {true, eElt};
+      return eElt;
     T TheMod=1;
     for (int j=0; j<i; j++)
       TheMod *= eList[j];
     MyMatrix<T> TheSpace1Img=TheSpace1*eElt;
     ResultTestModEquivalence<T,Telt> eRes=LinearSpace_ModEquivalence<T,Tgroup>(GRPwork, TheSpace1Img, TheSpace2, TheMod);
     if (!eRes.TheRes)
-      return {false, {}};
-    eElt=eElt*eRes.eEquiv;
-    GRPwork=eRes.GRPwork;
+      return {};
+    eElt = eElt*eRes.eEquiv;
+    GRPwork = eRes.GRPwork;
   }
   if (!IsEquivalence(eElt)) {
     std::cerr << "Error in LinearSpace_Equivalence\n";
     throw TerminalException{1};
   }
-  return {true, eElt};
+  return eElt;
 }
 
 
 template<typename T,typename Tgroup>
 FiniteMatrixGroup<T,typename Tgroup::Telt> LinPolytopeIntegral_Automorphism_Subspaces(FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRP)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field in LinPolytopeIntegral_Automorphism_Subspaces");
   using Telt=typename Tgroup::Telt;
   int dim=GRP.EXTfaithAct.cols();
   MyMatrix<T> eBasis=GetZbasis(GRP.EXTfaithAct);
@@ -577,16 +579,11 @@ template<typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
 {
   using Telt=typename Tgroup::Telt;
-  IteratorGrp eIter=GetInitialIterator(GRP1);
-  while(true) {
-    Telt fPerm=GetPermutation(eIter);
+  for (auto & fPerm : GRP1) {
     Telt eEquivCand=fPerm*ePerm;
     MyMatrix<T> eBigMat=FindTransformation(EXT1_T, EXT2_T, eEquivCand);
     if (IsMatrixCorrect(eBigMat))
       return eBigMat;
-    int res=IteratorIncrease(eIter);
-    if (res == -1)
-      break;
   }
   return {};
 }
@@ -594,32 +591,22 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(MyMatrix<T> c
 template<typename T, typename Tgroup>
 Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const& EXT_T, Tgroup const& GRPisom, std::function<bool(MyMatrix<T>)> const& IsMatrixCorrect)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method4");
   using Telt=typename Tgroup::Telt;
   int nbVert=EXT_T.rows();
   std::vector<Telt> generatorList;
   Tgroup GRPret(nbVert);
-  IteratorGrp eIterRet;
-  auto fConstruct=[&]() -> void {
-    GRPret = Tgroup(generatorList, nbVert);
-    eIterRet=GetInitialIterator(GRPret);
-  };
-  fConstruct();
   auto fInsert=[&](Telt const& ePerm) -> void {
-    bool test=TestBelongingInGroup(eIterRet, ePerm);
+    bool test=GRPret.isin(ePerm);
     if (!test) {
       generatorList.push_back(ePerm);
-      fConstruct();
+      GRPret = Tgroup(generatorList, nbVert);
     }
   };
-  IteratorGrp eIter=GetInitialIterator(GRPisom);
-  while(true) {
-    Telt ePerm=GetPermutation(eIter);
+  for (auto & ePerm : GRPisom) {
     MyMatrix<T> eBigMat=FindTransformation(EXT_T, EXT_T, ePerm);
     if (IsMatrixCorrect(eBigMat))
       fInsert(ePerm);
-    int res=IteratorIncrease(eIter);
-    if (res == -1)
-      break;
   }
   return GRPret;
 }
@@ -627,6 +614,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const& EXT_T, Tgroup c
 template<typename T, typename Tgroup>
 Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, Tgroup const& GRPisom)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method8");
   using Telt=typename Tgroup::Telt;
   int nbVert=EXT_T.rows();
   int dim=EXT_T.cols();
@@ -649,6 +637,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, Tgroup c
 template<typename T,typename Tgroup>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRP2, typename Tgroup::Telt const& eEquiv)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field in LinPolytopeIntegral_Isomorphism_Subspaces");
   using Telt=typename Tgroup::Telt;
   int dim=EXT1_T.cols();
   MyMatrix<T> eBasis1=GetZbasis(EXT1_T);

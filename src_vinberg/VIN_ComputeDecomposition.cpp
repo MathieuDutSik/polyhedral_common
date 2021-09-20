@@ -1,4 +1,5 @@
-#include "Permlib_specific.h"
+#include "Permutation.h"
+#include "Group.h"
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
@@ -16,8 +17,13 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     using T=mpq_class;
+    using Tgr=GraphBitset;
     using Tint=mpz_class;
-
+    using Tidx_value = int16_t;
+    using Tidx = uint16_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,Tint>;
+    //
     std::string FileI = argv[1];
     std::ifstream is(FileI);
     //
@@ -40,7 +46,7 @@ int main(int argc, char* argv[])
         MyMatrix<Tint> M;
         MyMatrix<Tint> Spann;
         MyMatrix<Tint> Qmat;
-        WeightMatrix<true,std::vector<Tint>,Tidx_value>> WMat;
+        WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat;
       };
       auto f_subset=[&](const size_t& n_row, const size_t& len) -> Face {
         Face subset(n_row);
@@ -50,23 +56,24 @@ int main(int argc, char* argv[])
       };
       auto f_stab=[&](const Tent& eEnt) -> Tgroup {
         Tgroup GRP1 = GetStabilizerWeightMatrix_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat);
-        MyMatrix<Tint> Concat = ConcatenateMatrix(eEnt.M, eEnt.Spann);
-        Tgroup GRP2 = LinPolytopeIntegral_Stabilizer_Method8(Concat, GRP1);
-        Face subset = f_subset(Concat.rows(), eEnt.M.rows());
+        MyMatrix<T> Concat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
+        Tgroup GRP2 = LinPolytopeIntegral_Stabilizer_Method8(Concat_T, GRP1);
+        Face subset = f_subset(Concat_T.rows(), eEnt.M.rows());
         return ReducedGroupAction(GRP2, subset);
       };
-      auto f_equiv=[&](const Tent& eEnt, const Tent& fEnt) -> std::option<MyMatrix<Tint>> {
-        MyMatrix<Tint> eConcat = ConcatenateMatrix(eEnt.M, eEnt.Spann);
-        MyMatrix<Tint> fConcat = ConcatenateMatrix(fEnt.M, fEnt.Spann);
+      auto f_equiv=[&](const Tent& eEnt, const Tent& fEnt) -> std::optional<MyMatrix<Tint>> {
+        MyMatrix<T> eConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
+        MyMatrix<T> fConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(fEnt.M, fEnt.Spann));
         std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(eEnt.WMat).first;
         std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(fEnt.WMat).first;
         // Computing the isomorphism
         using Tfield = typename overlying_field<Tint>::field_type;
-        std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(eConcat, fConcat, eCanonicReord, fCanonicReord);
+        std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord);
         if (!IsoInfo)
           return {};
         Telt ePerm(IsoInfo->first);
-        return LinPolytopeIntegral_Isomorphism_Method8(eConcat, fConcat, GRP1, ePerm);
+        Tgroup GRP1 = GetStabilizerWeightMatrix_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat);
+        return LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
       };
       std::vector<std::pair<size_t,Tent>> NewListCand;
       auto f_ent=[&](const MyMatrix<Tint>& M) -> Tent {
@@ -76,27 +83,27 @@ int main(int argc, char* argv[])
         MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
         MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
         MyMatrix<Tint> Spann = SHV * NSP;
-        MyMatrix<Tint> Concat = ConcatenateMatrix(M, Spann);
+        MyMatrix<Tint> Concat = Concatenate(M, Spann);
         MyMatrix<Tint> Qmat = GetQmatrix(Concat);
         Face subset = f_subset(Concat.rows(), M.rows());
         std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
         WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(EXT1, ListMat, subset);
         WMat.ReorderingSetWeight();
-        return {M, Spann, Qmat, WMat},
+        return {M, Spann, Qmat, WMat};
       };
       auto f_inv=[&](const Tent& eEnt) -> size_t {
-        return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(WMat);
+        return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
       };
-      auto f_insert=[&](const Tent& fEnt) -> void {
-        size_t e_inv = f_inv(fEnt);
+      auto f_insert=[&](const Tent& eEnt) -> void {
+        size_t e_inv = f_inv(eEnt);
         for (auto & eP : NewListCand) {
           if (eP.first == e_inv) {
-            std::option<MyMatrix<Tint>> eEquiv = f_equiv(eP.second, fEnt);
+            std::optional<MyMatrix<Tint>> eEquiv = f_equiv(eP.second, eEnt);
             if (eEquiv)
               return;
           }
         }
-        NewListCand.push_back({e_inv,fEnt});
+        NewListCand.push_back({e_inv,eEnt});
       };
       for (auto & eDomain : ListListDomain[i-1]) {
         Tent eEnt = f_ent(eDomain);
