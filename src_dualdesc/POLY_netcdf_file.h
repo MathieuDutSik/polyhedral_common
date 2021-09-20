@@ -10,6 +10,58 @@
 #undef SUPPORT_LONG_LONG
 
 
+struct FileNumber {
+private:
+  std::FILE* fp;
+  size_t n_ent;
+public:
+  FileNumber(std::string const& file, bool is_new)
+  {
+    if (is_new) {
+      if (IsExistingFile(file)) {
+        std::cerr << "FileNumber: The file " << file << " should be missing\n";
+        throw TerminalException{1};
+      }
+      fp =  std::fopen(file.data(), "w+");
+    } else {
+      if (!IsExistingFile(file)) {
+        std::cerr << "FileNumber: The file " << file << " should not be missing\n";
+        throw TerminalException{1};
+      }
+      fp =  std::fopen(file.data(), "r+");
+    }
+  }
+
+  ~FileNumber()
+  {
+    std::fclose(fp);
+  }
+
+  size_t getval()
+  {
+    size_t i_byte = 0;
+    std::fseek(fp, i_byte, SEEK_SET);
+    size_t val;
+    size_t ret = std::fread(&val, sizeof(size_t), 1, fp);
+    if (ret != 1) {
+      std::cerr << "FileNumber: Number of read element different from count. Please correct. ret=" << ret << "\n";
+      throw TerminalException{1};
+    }
+    return val;
+  }
+
+  void setval(size_t const& val)
+  {
+    size_t i_byte = 0;
+    std::fseek(fp, i_byte, SEEK_SET);
+    std::fwrite(&val, sizeof(size_t), 1, fp);
+  }
+};
+
+
+
+
+
 struct FileBool {
 private:
   std::FILE* fp;
@@ -18,7 +70,7 @@ public:
   FileBool(std::string const& file)
   {
     if (IsExistingFile(file)) {
-      std::cerr << "The file " << file << " should be missing\n";
+      std::cerr << "FileBool: The file " << file << " should be missing\n";
       throw TerminalException{1};
     }
     fp =  std::fopen(file.data(), "w+");
@@ -28,7 +80,7 @@ public:
   FileBool(std::string const& file, size_t const& _n_ent)
   {
     if (!IsExistingFile(file)) {
-      std::cerr << "The file " << file << " should not be missing\n";
+      std::cerr << "FileBool: The file " << file << " should not be missing\n";
       throw TerminalException{1};
     }
     fp =  std::fopen(file.data(), "r+");
@@ -49,7 +101,7 @@ public:
     uint8_t val;
     size_t ret = std::fread(&val, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "Number of read elementr different from count. Please correct. ret=" << ret << "\n";
+      std::cerr << "FileBool: Number of read elementr different from count. Please correct. ret=" << ret << "\n";
       throw TerminalException{1};
     }
     return val >> (i_pos & 0x07) & 1;
@@ -70,7 +122,7 @@ public:
     std::fseek(fp, i_byte, SEEK_SET);
     size_t ret = std::fread(&val_u8, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "Number of read elementr different from count. Please correct. ret=" << ret << "\n";
+      std::cerr << "FileBool: Number of read element different from count. Please correct. ret=" << ret << "\n";
       throw TerminalException{1};
     }
     std::fseek(fp, i_byte, SEEK_SET);
@@ -104,7 +156,7 @@ public:
   FileFace(std::string const& file, size_t const& _siz)
   {
     if (IsExistingFile(file)) {
-      std::cerr << "The file " << file << " should be missing\n";
+      std::cerr << "FileFace: The file " << file << " should be missing\n";
       throw TerminalException{1};
     }
     fp =  std::fopen(file.data(), "w+");
@@ -116,7 +168,7 @@ public:
   FileFace(std::string const& file, size_t const& _siz, size_t const& _n_face)
   {
     if (!IsExistingFile(file)) {
-      std::cerr << "The file " << file << " should not be missing\n";
+      std::cerr << "FileFace: The file " << file << " should not be missing\n";
       throw TerminalException{1};
     }
     fp =  std::fopen(file.data(), "r+");

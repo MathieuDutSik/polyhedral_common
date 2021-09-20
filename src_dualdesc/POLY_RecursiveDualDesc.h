@@ -140,6 +140,11 @@ void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::
 
 
 
+
+
+
+
+
 template<typename T, typename Tgroup>
 void CheckGroupPolytope(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& step)
 {
@@ -402,7 +407,7 @@ bool ComputeStatusUndone(const UndoneOrbitInfo<Tint>& eComb, const Tint& CritSiz
 {
   if (eComb.nbOrbitDone > 0)
     if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
-    return true;
+      return true;
   return false;
 }
 
