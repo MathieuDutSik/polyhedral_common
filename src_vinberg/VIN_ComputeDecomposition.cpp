@@ -4,6 +4,7 @@
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "POLY_RecursiveDualDesc.h"
 #include "vinberg_code.h"
 
 
@@ -55,7 +56,7 @@ int main(int argc, char* argv[])
         return subset;
       };
       auto f_stab=[&](const Tent& eEnt) -> Tgroup {
-        Tgroup GRP1 = GetStabilizerWeightMatrix_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat);
+        Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(eEnt.WMat);
         MyMatrix<T> Concat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
         Tgroup GRP2 = LinPolytopeIntegral_Stabilizer_Method8(Concat_T, GRP1);
         Face subset = f_subset(Concat_T.rows(), eEnt.M.rows());
@@ -64,15 +65,15 @@ int main(int argc, char* argv[])
       auto f_equiv=[&](const Tent& eEnt, const Tent& fEnt) -> std::optional<MyMatrix<Tint>> {
         MyMatrix<T> eConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
         MyMatrix<T> fConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(fEnt.M, fEnt.Spann));
-        std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(eEnt.WMat).first;
-        std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(fEnt.WMat).first;
+        std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat).first;
+        std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(fEnt.WMat).first;
         // Computing the isomorphism
         using Tfield = typename overlying_field<Tint>::field_type;
         std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord);
         if (!IsoInfo)
           return {};
         Telt ePerm(IsoInfo->first);
-        Tgroup GRP1 = GetStabilizerWeightMatrix_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat);
+        Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(eEnt.WMat);
         return LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
       };
       std::vector<std::pair<size_t,Tent>> NewListCand;
@@ -87,14 +88,14 @@ int main(int argc, char* argv[])
         MyMatrix<Tint> Qmat = GetQmatrix(Concat);
         Face subset = f_subset(Concat.rows(), M.rows());
         std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
-        WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(EXT1, ListMat, subset);
+        WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(Concat, ListMat, subset);
         WMat.ReorderingSetWeight();
-        return {M, Spann, Qmat, WMat};
+        return {M, Spann, Qmat, std::move(WMat)};
       };
       auto f_inv=[&](const Tent& eEnt) -> size_t {
         return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
       };
-      auto f_insert=[&](const Tent& eEnt) -> void {
+      auto f_insert=[&](Tent&& eEnt) -> void {
         size_t e_inv = f_inv(eEnt);
         for (auto & eP : NewListCand) {
           if (eP.first == e_inv) {
@@ -114,12 +115,12 @@ int main(int argc, char* argv[])
           std::vector<int> ListIdx = FaceToVector(eFace);
           MyMatrix<Tint> eDomainFace = SelectRow(eDomain, ListIdx);
           Tent fEnt = f_ent(eDomainFace);
-          f_insert(fEnt);
+          f_insert(std::move(fEnt));
         }
       }
       std::vector<MyMatrix<Tint>> NewListDomain;
       for (auto & eEnt : NewListCand)
-        NewListDomain.push_back(std::get<1>(eEnt));
+        NewListDomain.push_back(eEnt.second.M);
       ListListDomain.push_back(NewListDomain);
       std::cerr << "i=" << i << " |NewListDomain|=" << NewListDomain.size() << "\n";
     }

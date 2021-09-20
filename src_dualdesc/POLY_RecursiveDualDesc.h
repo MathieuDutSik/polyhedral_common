@@ -2081,8 +2081,6 @@ template<typename T, typename Tgroup>
 vectface DualDescriptionStandard(const MyMatrix<T>& EXT, const Tgroup& GRP)
 {
   using Tint=typename Tgroup::Tint;
-  using Telt=typename Tgroup::Telt;
-  using Tidx=typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = PairStore<Tgroup>;
   using Tidx_value = int32_t;

@@ -1117,7 +1117,7 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
   size_t nbRow=WMat.rows();
   std::vector<Telt> LGen;
   for (auto & eList : ListGen)
-    LGen.push_back(Telt(eList));
+    LGen.emplace_back(std::move(Telt(eList)));
   return Tgroup(LGen, nbRow);
 }
 
