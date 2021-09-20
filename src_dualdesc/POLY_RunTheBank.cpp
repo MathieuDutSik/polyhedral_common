@@ -1,6 +1,5 @@
 #include "Permutation.h"
 #include "Group.h"
-#include "Group_serialization.h"
 #include "POLY_RecursiveDualDesc.h"
 
 boost::asio::ip::tcp::endpoint endpoint_bank;

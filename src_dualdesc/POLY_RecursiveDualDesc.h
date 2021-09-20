@@ -10,7 +10,8 @@
 #include "MAT_MatrixInt.h"
 
 #include "POLY_GAP.h"
-#include "POLY_netcdf_file.h"
+//#include "POLY_netcdf_file.h"
+#include "basic_datafile.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
 #include <boost/mpi/environment.hpp>
@@ -111,30 +112,6 @@ EquivariantDualDescription<T,Tgroup> ConvertGAPread_EquivDualDesc(datagap::DataG
   //
   return {std::move(EXT), std::move(GRP), std::move(ListFace)};
 }
-
-
-
-
-template<typename T, typename Tgroup>
-void Write_EquivDualDesc(EquivariantDualDescription<T,Tgroup> const& eRec, std::string const& eFile)
-{
-  if (!FILE_IsFileMakeable(eFile)) {
-    std::cerr << "Error in Write_EquivDualDesc: File eFile=" << eFile << " is not makeable\n";
-    throw TerminalException{1};
-  }
-  netCDF::NcFile dataFile(eFile, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-  POLY_NC_WritePolytope(dataFile, eRec.EXT);
-  bool orbit_setup = true;
-  bool orbit_status = false;
-  POLY_NC_WriteGroup(dataFile, eRec.GRP, orbit_setup, orbit_status);
-  //
-  size_t n_orbit = eRec.ListFace.size();
-  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
-    POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
-}
-
-
-
 
 
 
@@ -1183,11 +1160,11 @@ public:
   TbasicBank & bb;
 private:
   std::string MainPrefix;
-  netCDF::NcFile dataFile;
   /* TRICK 7: Using separate files for faces and status allow us to gain locality.
      The faces are written one by one while the access to status is random */
   FileBool* fb; // This is for storing the status
   FileFace* ff; // This is for storing the faces and the index of oribit
+  FileNumber* fn; // The number of orbits of the polytope 
   bool SavingTrigger;
   std::ostream& os;
   bool is_opened;
@@ -1209,33 +1186,36 @@ public:
     ff = nullptr;
     is_opened = false;
     if (SavingTrigger) {
-      std::string eFileNC = MainPrefix + ".nc";
+      std::string eFileEXT = MainPrefix + ".ext";
+      std::string eFileGRP = MainPrefix + ".grp";
+      std::string eFileNB = MainPrefix + ".nb";
       std::string eFileFB = MainPrefix + ".fb";
       std::string eFileFF = MainPrefix + ".ff";
       os << "MainPrefix=" << MainPrefix << "\n";
       size_t n_orbit;
-      if (IsExistingFile(eFileNC)) {
-        os << "Opening existing files (NC, FB, FF)\n";
-        dataFile.open(eFileNC, netCDF::NcFile::write);
-        n_orbit = POLY_NC_ReadNbOrbit(dataFile);
+      if (IsExistingFile(eFileEXT)) {
+        os << "Opening existing files (NB, FB, FF)\n";
+        fn = new FileNumber(eFileNB, false);
         fb = new FileBool(eFileFB, n_orbit);
         ff = new FileFace(eFileFF, bb.delta, n_orbit);
+        n_orbit = fn->getval();
       } else {
-        if (!FILE_IsFileMakeable(eFileNC)) {
-          os << "Error in DatabaseOrbits: File eFileNC=" << eFileNC << " is not makeable\n";
+        if (!FILE_IsFileMakeable(eFileEXT)) {
+          os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT << " is not makeable\n";
           throw TerminalException{1};
         }
-        os << "Creating the files (NC, FB, FF)\n";
-        dataFile.open(eFileNC, netCDF::NcFile::replace, netCDF::NcFile::nc4);
-        POLY_NC_WritePolytope(dataFile, bb.EXT);
-        bool orbit_setup = false;
-        bool orbit_status = false;
-        POLY_NC_WriteGroup(dataFile, bb.GRP, orbit_setup, orbit_status);
-        POLY_NC_SetNbOrbit(dataFile);
-        POLY_NC_WriteNbOrbit(dataFile, 0);
-        n_orbit = 0;
+        os << "Creating the files (NB, FB, FF)\n";
+        // Writing Group
+        std::ofstream os_grp(eFileGRP);
+        os_grp << bb.GRP;
+        // Writing polytope
+        std::ofstream os_ext(eFileGRP);
+        WriteMatrix(os_ext, bb.EXT);
+        // Opening the files
+        fn = new FileNumber(eFileNB, true);
         fb = new FileBool(eFileFB);
         ff = new FileFace(eFileFF, bb.delta);
+        n_orbit = 0;
       }
       is_opened = true;
       //
@@ -1257,7 +1237,7 @@ public:
        in which bad stuff can happen.
      */
     if (is_opened)
-      POLY_NC_WriteNbOrbit(dataFile, bb.foc.nbOrbit);
+      fn->setval(bb.foc.nbOrbit);
     if (fb != nullptr)
       delete fb; // which closes the file and save the data to disk
     if (ff != nullptr)
@@ -1266,9 +1246,10 @@ public:
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
-      std::string eFileNC = MainPrefix + ".nc";
-      dataFile.close();
-      RemoveFile(eFileNC);
+      std::string eFileNB = MainPrefix + ".nb";
+      delete fn;
+      fn = nullptr;
+      RemoveFile(eFileNB);
       //
       std::string eFileFB = MainPrefix + ".fb";
       delete fb;
@@ -1281,6 +1262,12 @@ public:
       RemoveFile(eFileFF);
       //
       is_opened = false;
+      //
+      std::string eFileEXT = MainPrefix + ".ext";
+      RemoveFile(eFileEXT);
+      //
+      std::string eFileGRP = MainPrefix + ".grp";
+      RemoveFile(eFileGRP);
     }
     return bb.FuncListOrbitIncidence();
   }

@@ -4,6 +4,66 @@
 #include <boost/asio.hpp>
 
 
+template<typename Tgroup_impl>
+struct PairStore {
+  using Tgroup = Tgroup_impl;
+  Tgroup GRP;
+  vectface ListFace;
+};
+
+
+
+namespace boost::serialization {
+
+  template<class Archive, typename Tgroup>
+  inline void serialize(Archive & ar, PairStore<Tgroup> & pair, const unsigned int version)
+  {
+    ar & make_nvp("GRP", pair.GRP);
+    ar & make_nvp("ListFace", pair.ListFace);
+  }
+
+}
+
+
+
+
+template<typename Tkey, typename Tval>
+std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
+{
+  using T = typename Tkey::value_type;
+  using Tgroup = typename Tval::Tgroup;
+  std::string eFileEXT = eFile + ".ext";
+  std::string eFileGRP = eFile + ".grp";
+  std::string eFileNB = eFile + ".nb";
+  std::string eFileFF = eFile + ".ff";
+  //
+  std::ifstream is_ext(eFileEXT);
+  MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
+  size_t n_row = EXT.rows();
+  //
+  std::ifstream is_grp(eFileGRP);
+  Tgroup GRP;
+  is_grp >> GRP;
+  //
+  FileNumber fn(eFileNB);
+  size_t n_orbit = fn.getval();
+  //
+  FileFace ff(eFileFF);
+  vectface ListFace(n_row);
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    Face eFace = ff.getface(i_orbit);
+    ListFace.push_back(eFace);
+  }
+  std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size() << "\n";
+  Tval eVal{std::move(GRP), std::move(ListFace)};
+  return {std::move(EXT), std::move(eVal)};
+}
+
+
+
+
+
+
 
 // It is better to use std::unordered_map for the List of entries:
 // This makes the check of equality rarer and instead uses the hash
