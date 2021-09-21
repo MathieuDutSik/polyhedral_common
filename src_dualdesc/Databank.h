@@ -36,7 +36,7 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
   std::string eFileGRP = eFile + ".grp";
   std::string eFileNB = eFile + ".nb";
   std::string eFileFF = eFile + ".ff";
-  //
+ //
   std::ifstream is_ext(eFileEXT);
   MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
   size_t n_row = EXT.rows();
@@ -45,10 +45,10 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
   Tgroup GRP;
   is_grp >> GRP;
   //
-  FileNumber fn(eFileNB);
+  FileNumber fn(eFileNB, false);
   size_t n_orbit = fn.getval();
   //
-  FileFace ff(eFileFF);
+  FileFace ff(eFileFF, n_row, n_orbit);
   vectface ListFace(n_row);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face eFace = ff.getface(i_orbit);
@@ -58,6 +58,39 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
   Tval eVal{std::move(GRP), std::move(ListFace)};
   return {std::move(EXT), std::move(eVal)};
 }
+
+
+
+
+template<typename T, typename Tgroup>
+void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
+{
+  std::string eFileEXT = eFile + ".ext";
+  std::string eFileGRP = eFile + ".grp";
+  std::string eFileNB = eFile + ".nb";
+  std::string eFileFF = eFile + ".ff";
+  if (!FILE_IsFileMakeable(eFileEXT)) {
+    std::cerr << "Error in Write_BankEntry: File eFileEXT=" << eFileEXT << " is not makeable\n";
+    throw TerminalException{1};
+  }
+  //
+  std::ofstream os_ext(eFileEXT);
+  WriteMatrix(os_ext, EXT);
+  size_t n_row = EXT.rows();
+  //
+  std::ofstream os_grp(eFileGRP);
+  os_grp << ePair.GRP;
+  //
+  FileNumber fn(eFileNB, true);
+  size_t n_orbit = ePair.ListFace.size();
+  fn.setval(n_orbit);
+  //
+  FileFace ff(eFileFF, n_row);
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++)
+    ff.setface(i_orbit, ePair.ListFace[i_orbit]);
+}
+
+
 
 
 

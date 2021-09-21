@@ -633,7 +633,7 @@ std::pair<Tkey, Tval> Read_BankEntry_NC(std::string const& eFile)
 
 
 template<typename T, typename Tgroup>
-void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
+void Write_BankEntry_NC(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
 {
   if (!FILE_IsFileMakeable(eFile)) {
     std::cerr << "Error in Write_BankEntry: File eFile=" << eFile << " is not makeable\n";
