@@ -1003,9 +1003,8 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
     }
     return true;
   };
-  if (!IsCorrectListGen()) {
-    return {false, {}};
-  }
+  if (!IsCorrectListGen())
+    return {};
   //
   std::vector<Tidx> const& CanonicOrd = ePair.first;
 #ifdef TIMINGS
@@ -1100,7 +1099,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
   std::cerr << "|SignRenormalizationMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time7 - time6).count() << "\n";
 #endif
 
-  return {true, std::move(RedMat)};
+  return RedMat;
 }
 
 
