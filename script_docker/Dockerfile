@@ -141,7 +141,7 @@ RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git -
 ENV LIBSHORT_PATH /opt/libshort
 ENV LIBSHORT_INCDIR "$LIBSHORT_PATH/include"
 ENV LIBSHORT_LINK "-L$LIBSHORT_PATH/lib -lshort -Wl,-rpath,$LIBSHORT_PATH/lib"
-RUN cd GIT/polyhedral_common/ExternalLib/LibShort && make -f Makefile_lib && make -f Makefile_lib install
+RUN cd GIT/polyhedral_common/ExternalLib/LibShort  && make -f Makefile_lib && make -f Makefile_lib install
 
 
 # bliss

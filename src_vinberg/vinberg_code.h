@@ -422,7 +422,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
 /*
   We want to find integer vectors such that (a+v, a+v) = k
   with v in the Morth space and one vector a.
-  We want to also impose the condition that 2(a+v)G / k    \in Z^n
+  We want to also impose the condition that    2(a+v) G / k    \in Z^n
   Thus the equations that we have are
   ----
   We write v = M w with w \in Z^{n-1}

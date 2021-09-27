@@ -5,7 +5,11 @@
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "POLY_RecursiveDualDesc.h"
-#include "vinberg_code.h"
+
+
+// possible strategies for computing isomorphsim
+
+
 
 
 int main(int argc, char* argv[])

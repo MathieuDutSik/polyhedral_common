@@ -348,8 +348,24 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 }
 
 
+
+
+
+
 template<typename T, typename Tint, typename Finsert>
-int computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
+inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
+{
+  auto f_set_bound=[&](const T& eQuot, const T& eSum, const MyMatrix<T>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
+    upper = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
+    lower = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
+  };
+  return computeIt_Gen<T,Tint,Finsert,decltype(f_set_bound)>(request, bound, f_insert, f_set_bound);
+}
+
+
+
+template<typename T, typename Tint, typename Finsert>
+inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
 {
   using Tfield=typename overlying_field<T>::field_type;
   auto f_set_bound=[&](const Tfield& eQuot, const Tfield& eSum, const MyMatrix<Tfield>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
@@ -358,6 +374,11 @@ int computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert
   };
   return computeIt_Gen<T,Tint,Finsert,decltype(f_set_bound)>(request, bound, f_insert, f_set_bound);
 }
+
+
+
+
+
 
 
 

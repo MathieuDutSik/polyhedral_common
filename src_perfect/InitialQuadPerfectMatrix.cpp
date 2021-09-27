@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
       std::cerr << "InitialPerfectMatrix n\n";
       return -1;
     }
+    using field = QuadField<mpq_class,2>;
     sscanf(argv[1], "%d", &n);
     LinSpaceMatrix<field> LinSpa=ComputeCanonicalSpace<field>(n);
     MyMatrix<field> ThePerfMat=GetOnePerfectForm(LinSpa);
