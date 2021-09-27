@@ -112,8 +112,8 @@ TheHeuristic<T> MethodChosenDatabase()
 {
   std::vector<std::string> ListString={
     "2",
-    "1 groupsize > 5000000000000 incidence > 1000000 traces",
-    "1 groupsize > 5000000000000 incidence > 100000 repr",
+    "2 groupsize > 5000000000000 incidence > 1000000 traces",
+    "2 groupsize > 5000000000000 incidence > 100000 repr",
     "canonic"};
   return HeuristicFromListString<T>(ListString);
 }
@@ -129,9 +129,16 @@ void SetHeuristic(FullNamelist const& eFull, std::string const& NamelistEnt, The
   SingleBlock BlockHEU=eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile=BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
+    std::cerr << "NamelistEntFile=" << NamelistEntFile << "\n";
     IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
-    eHeu=ReadHeuristic<T>(is);
+    try {
+      eHeu=ReadHeuristic<T>(is);
+    }
+    catch (TerminalException const& e) {
+      std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt << "\n";
+      throw TerminalException{1};
+    }
   }
 }
 

@@ -2023,24 +2023,33 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::cerr << "port_i=" << port_i << "\n";
   short unsigned int port = port_i;
   std::string parallelization_method=BlockDATA.ListStringValues.at("parallelization_method");
+  std::cerr << "parallelization_method=" << parallelization_method << "\n";
   //
   SingleBlock BlockMETHOD=eFull.ListBlock.at("METHOD");
+  std::cerr << "We have BlockMETHOD\n";
   //
   PolyHeuristicSerial<Tint> AllArr=AllStandardHeuristicSerial<Tint>();
+  std::cerr << "We have AllArr\n";
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting);
-  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
-  SetHeuristic(eFull, "DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
-  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
-  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
-  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank);
-  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  //
+  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry);
   std::cerr << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
+  //
+  SetHeuristic(eFull, "DualDescriptionHeuristicFile", AllArr.DualDescriptionProgram);
   std::cerr << "DualDescriptionHeuristicFile\n" << AllArr.DualDescriptionProgram << "\n";
+  //
+  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
   std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  //
+  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
   std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  //
+  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank);
   std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  //
+  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase);
   std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   //
   bool DD_Saving=BlockMETHOD.ListBoolValues.at("Saving");
