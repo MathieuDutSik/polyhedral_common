@@ -28,14 +28,14 @@ namespace boost::serialization {
 
 
 template<typename Tkey, typename Tval>
-std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
+std::pair<Tkey, Tval> Read_BankEntry(std::string const& Prefix)
 {
   using T = typename Tkey::value_type;
   using Tgroup = typename Tval::Tgroup;
-  std::string eFileEXT = eFile + ".ext";
-  std::string eFileGRP = eFile + ".grp";
-  std::string eFileNB = eFile + ".nb";
-  std::string eFileFF = eFile + ".ff";
+  std::string eFileEXT = Prefix + ".ext";
+  std::string eFileGRP = Prefix + ".grp";
+  std::string eFileNB = Prefix + ".nb";
+  std::string eFileFF = Prefix + ".ff";
  //
   std::ifstream is_ext(eFileEXT);
   MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
@@ -63,12 +63,12 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const& eFile)
 
 
 template<typename T, typename Tgroup>
-void Write_BankEntry(const std::string& eFile, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
+void Write_BankEntry(const std::string& Prefix, const MyMatrix<T>& EXT, const PairStore<Tgroup>& ePair)
 {
-  std::string eFileEXT = eFile + ".ext";
-  std::string eFileGRP = eFile + ".grp";
-  std::string eFileNB = eFile + ".nb";
-  std::string eFileFF = eFile + ".ff";
+  std::string eFileEXT = Prefix + ".ext";
+  std::string eFileGRP = Prefix + ".grp";
+  std::string eFileNB = Prefix + ".nb";
+  std::string eFileFF = Prefix + ".ff";
   if (!FILE_IsFileMakeable(eFileEXT)) {
     std::cerr << "Error in Write_BankEntry: File eFileEXT=" << eFileEXT << " is not makeable\n";
     throw TerminalException{1};
@@ -132,9 +132,9 @@ public:
   {
     if (Saving) {
       size_t n_orbit = ListEnt.size();
-      std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-      std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-      Write_BankEntry(eFile, eKey, eVal);
+      std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+      std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+      Write_BankEntry(Prefix, eKey, eVal);
     }
     ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
   }
@@ -253,9 +253,9 @@ DataBankServer(const bool& _Saving, const std::string& _SavingPrefix, const shor
       if (eTriple.nature == 'i') {
         if (Saving) {
           size_t n_orbit = ListEnt.size();
-          std::string eFile = SavingPrefix + "DualDesc" + std::to_string(n_orbit) + ".nc";
-          std::cerr << "Insert entry to file eFile=" << eFile << "\n";
-          Write_BankEntry(eFile, eTriple.eKey, eTriple.eVal);
+          std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+          std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+          Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
         }
         ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey), std::move(eTriple.eVal)));
       }

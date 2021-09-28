@@ -1206,6 +1206,7 @@ public:
         }
         os << "Creating the files (NB, FB, FF)\n";
         // Writing Group
+        os << "eFileGRP=" << eFileGRP << "\n";
         std::ofstream os_grp(eFileGRP);
         os_grp << bb.GRP;
         // Writing polytope

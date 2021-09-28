@@ -918,7 +918,6 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 template<typename Tidx>
 std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::vector<Tidx> const& cl)
 {
-  std::cerr << "GetCanonicalizationVector_KernelBis, step 1\n";
   size_t nof_vertices = cl.size();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows || nof_vertices >= max_poss_rows) {
@@ -937,7 +936,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
     clR[cl[i]]=i;
   }
   //
-  std::cerr << "GetCanonicalizationVector_KernelBis, step 2\n";
   size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
   std::cerr << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices << "\n";
@@ -948,7 +946,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
     throw TerminalException{1};
   }
 #endif
-  std::cerr << "GetCanonicalizationVector_KernelBis, step 3\n";
   std::vector<Tidx> MapVectRev(nbVert);
   Face ListStatus(nof_vertices);
   Tidx posCanonic=0;
@@ -977,8 +974,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
       posCanonic++;
     }
   }
-  std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
-  std::cerr << "GetCanonicalizationVector_KernelBis, step 4\n";
   std::vector<Tidx> MapVectRev2(nbRow);
   Tidx posCanonicB=0;
   Tidx nbRow_tidx=Tidx(nbRow);
@@ -989,7 +984,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
       posCanonicB++;
     }
   }
-  std::cerr << "GetCanonicalizationVector_KernelBis, step 5\n";
   return MapVectRev2;
 }
 
