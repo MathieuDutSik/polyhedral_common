@@ -130,6 +130,12 @@ public:
   }
   void InsertEntry(Tkey && eKey, Tval && eVal)
   {
+    // We have to face the situation that what we are trying to insert is already present
+    // This can happen because of badly aligned heuristics
+    if (ListEnt.count(eKey) > 0) {
+      std::cerr << "Exiting because the key is already present\n";
+      return;
+    }
     if (Saving) {
       size_t n_orbit = ListEnt.size();
       std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
@@ -251,13 +257,17 @@ DataBankServer(const bool& _Saving, const std::string& _SavingPrefix, const shor
         break;
       }
       if (eTriple.nature == 'i') {
-        if (Saving) {
-          size_t n_orbit = ListEnt.size();
-          std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-          std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
-          Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
+        if (ListEnt.count(eTriple.eKey) > 0) {
+          std::cerr << "The entry is already present\n";
+        } else {
+          if (Saving) {
+            size_t n_orbit = ListEnt.size();
+            std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+            std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+            Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
+          }
+          ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey), std::move(eTriple.eVal)));
         }
-        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey), std::move(eTriple.eVal)));
       }
       if (eTriple.nature == 'g') {
         std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
