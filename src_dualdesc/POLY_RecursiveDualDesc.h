@@ -1874,15 +1874,18 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription()
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, int> ListIntValues1;
   ListStringValues1["EXTfile"]="unset.ext";
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
   ListStringValues1["OutFormat"]="GAP";
+  ListBoolValues1["DeterministicRuntime"]=true;
   ListStringValues1["parallelization_method"]="serial";
   ListIntValues1["port"] = 1234;
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListBoolValues=ListBoolValues1;
   BlockDATA.ListIntValues=ListIntValues1;
   ListBlock["DATA"]=BlockDATA;
   // HEURISTIC
@@ -2004,22 +2007,30 @@ void MainFunctionSerialDualDesc(FullNamelist const& eFull)
   std::string EXTfile=BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
   std::cerr << "EXTfile=" << EXTfile << "\n";
-  std::string GRPfile=BlockDATA.ListStringValues.at("GRPfile");
-  IsExistingFileDie(GRPfile);
-  std::cerr << "GRPfile=" << GRPfile << "\n";
-  std::string OUTfile=BlockDATA.ListStringValues.at("OUTfile");
-  std::cerr << "OUTfile=" << OUTfile << "\n";
-  std::string OutFormat=BlockDATA.ListStringValues.at("OutFormat");
-  std::cerr << "OutFormat=" << OutFormat << "\n";
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT=ReadMatrix<T>(EXTfs);
-  std::ifstream GRPfs(GRPfile);
   if (size_t(EXT.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
     std::cerr << "We have |EXT|=" << EXT.rows() << "\n";
     std::cerr << "But <Tidx>::max()=" << size_t(std::numeric_limits<Tidx>::max()) << "\n";
     throw TerminalException{1};
   }
+  //
+  std::string GRPfile=BlockDATA.ListStringValues.at("GRPfile");
+  IsExistingFileDie(GRPfile);
+  std::cerr << "GRPfile=" << GRPfile << "\n";
+  std::ifstream GRPfs(GRPfile);
   Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
+  //
+  std::string OUTfile=BlockDATA.ListStringValues.at("OUTfile");
+  std::cerr << "OUTfile=" << OUTfile << "\n";
+  //
+  bool DeterministicRuntime=BlockDATA.ListBoolValues.at("DeterministicRuntime");
+  std::cerr << "DeterministicRuntime=" << DeterministicRuntime << "\n";
+  if (!DeterministicRuntime)
+    srand_random_set();
+  //
+  std::string OutFormat=BlockDATA.ListStringValues.at("OutFormat");
+  std::cerr << "OutFormat=" << OutFormat << "\n";
   int port_i=BlockDATA.ListIntValues.at("port");
   std::cerr << "port_i=" << port_i << "\n";
   short unsigned int port = port_i;

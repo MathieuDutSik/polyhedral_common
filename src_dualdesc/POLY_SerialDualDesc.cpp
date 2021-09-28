@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
   try {
-    FullNamelist eFull=NAMELIST_GetStandard_RecursiveDualDescription();
+    FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
