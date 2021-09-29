@@ -11,6 +11,7 @@ PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
 		  POLY_IntegralPoints \
 		  TEST_PolytopeIntegralPoints \
 		  POLY_lcdd \
+		  POLY_FaceLatticeGen \
 		  POLY_lrs \
 		  POLY_lrs_set \
 		  POLY_lrs_set_reduction \

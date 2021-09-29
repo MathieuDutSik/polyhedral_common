@@ -6,6 +6,7 @@
 #include "POLY_LinearProgramming.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "GRP_GroupFct.h"
+#include "Namelist.h"
 
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
@@ -89,7 +90,7 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
 	}
       bool eTestExist=TestPositiveRelationSimple(ListVectors);
       if (eTestExist == 0)
-	TheReturn.emplace_back(std::move(eCand));
+	TheReturn.push_back(eCand);
     }
   return TheReturn;
 }
@@ -104,7 +105,7 @@ vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int con
   int nbCol=FAC.cols();
   vectface TheReturn(nbFac);
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
-  Face Treated(nbRow);
+  Face Treated(nbFac);
   size_t sizFace=face.count();
   MyMatrix<T> TestMat(sizFace+1, nbCol);
   boost::dynamic_bitset<>::size_type ePt=face.find_first();
@@ -148,26 +149,26 @@ vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int con
       int Rank = RankMat(EXTface);
       Face gList(nbFac);
       if (Rank == RankFaceTarget_ext) {
-        auto test_corr=[&](int const& iFac) -> bool {
+        auto test_corr=[&](int const& jFac) -> bool {
           boost::dynamic_bitset<>::size_type iExt=EXTincd_face.find_first();
           for (size_t iRow=0; iRow<sizEXT; iRow++) {
-            if (extfac_incd[iFac * nbExt + iExt] == 0)
+            if (extfac_incd[jFac * nbExt + iExt] == 0)
               return false;
             iExt = EXTincd_face.find_next(iExt);
           }
           return true;
         };
-        for (int iFac=0; iFac<nbFac; iFac++)
-          if (test_corr[iFac])
-            gList[iFac] = 1;
+        for (int jFac=0; jFac<nbFac; jFac++)
+          if (test_corr[jFac])
+            gList[jFac] = 1;
         TheReturn.push_back(gList);
       } else {
         gList[iFac] = 1;
       }
       Face rList = OrbitUnion(StabFace, gList);
-      for (int jRow=0; jRow<nbRow; jRow++)
-	if (rList[jRow] == 1)
-	  Treated[jRow]=1;
+      for (int jFac=0; jFac<nbFac; jFac++)
+	if (rList[jFac] == 1)
+	  Treated[jFac]=1;
     }
   return TheReturn;
 }
@@ -335,7 +336,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
     auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
       return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
     };
-    return EnumerationFaces_F(TheGRP, FAC, LevSearch, f);
+    return EnumerationFaces_F<T,Tgroup,decltype(F)>(TheGRP, FAC, LevSearch, f);
   }
   if (method == "ExtremeRays") {
     int nbFac = FAC.rows();
@@ -353,6 +354,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
     auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
       return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
     };
+    return EnumerationFaces_F<T,Tgroup,decltype(F)>(TheGRP, FAC, LevSearch, f);
   }
   std::cerr << "We failed to find a matching method\n";
   throw TerminalException{1};

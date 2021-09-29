@@ -1,4 +1,5 @@
 #PROGRAM		= LATT_lll
+ PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
@@ -20,7 +21,7 @@
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_IntegralPoints
-PROGRAM		= TEST_PolytopeIntegralPoints
+#PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_redundancy_Equivariant
