@@ -89,10 +89,89 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
 	}
       bool eTestExist=TestPositiveRelationSimple(ListVectors);
       if (eTestExist == 0)
-	TheReturn.push_back(eCand);
+	TheReturn.emplace_back(std::move(eCand));
     }
   return TheReturn;
 }
+
+
+
+template<typename T, typename Tgroup>
+vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int const& RankFace,
+                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+{
+  int nbFac=FAC.rows();
+  int nbCol=FAC.cols();
+  vectface TheReturn(nbFac);
+  MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
+  Face Treated(nbRow);
+  size_t sizFace=face.count();
+  MyMatrix<T> TestMat(sizFace+1, nbCol);
+  boost::dynamic_bitset<>::size_type ePt=face.find_first();
+  for (size_t iRow=0; iRow<sizFace; iRow++) {
+    Treated[ePt]=1;
+    TestMat.row(iRow) = FAC.row(ePt);
+    ePt=face.find_next(ePt);
+  }
+  int nbExt=EXT.rows();
+  Face EXTincd(nbExt);
+  for (int iExt=0; iExt<nbExt; iExt++) {
+    auto get_stat=[&]() -> bool {
+      boost::dynamic_bitset<>::size_type iFac=face.find_first();
+      for (size_t iRow=0; iRow<sizFace; iRow++) {
+        if (extfac_incd[iFac * nbExt + iExt] == 0)
+          return false;
+        iFac=face.find_next(ePt);
+      }
+    };
+    EXTincd[iExt] = get_stat();
+  }
+  int RankFace_fac = RankFace; // expressed from the facets
+  int RankFace_ext = nbCol - RankFace_fac;
+  int RankFaceTarget_ext = RankFace_ext - 1;
+
+  
+  for (int iFac=0; iFac<nbFac; iFac++)
+    if (Treated[iFac] == 0) {
+      Face EXTincd_face = EXTincd;
+      for (int iExt=0; iExt<nbExt; iExt++)
+        if (extfac_incd[iFac * nbExt + iExt] == 0)
+          EXTincd_face[iExt] = 0;
+      //
+      size_t sizEXT=EXTincd_face.count();
+      MyMatrix<T> EXTface(sizEXT, nbCol);
+      boost::dynamic_bitset<>::size_type iExt=EXTincd_face.find_first();
+      for (size_t iRow=0; iRow<sizEXT; iRow++) {
+        EXTface.row(iRow) = EXT.row(iExt);
+        iExt = EXTincd_face.find_next(iExt);
+      }
+      int Rank = RankMat(EXTface);
+      Face gList(nbFac);
+      if (Rank == RankFaceTarget_ext) {
+        auto test_corr=[&](int const& iFac) -> bool {
+          boost::dynamic_bitset<>::size_type iExt=EXTincd_face.find_first();
+          for (size_t iRow=0; iRow<sizEXT; iRow++) {
+            if (extfac_incd[iFac * nbExt + iExt] == 0)
+              return false;
+            iExt = EXTincd_face.find_next(iExt);
+          }
+          return true;
+        };
+        for (int iFac=0; iFac<nbFac; iFac++)
+          if (test_corr[iFac])
+            gList[iFac] = 1;
+        TheReturn.push_back(gList);
+      } else {
+        gList[iFac] = 1;
+      }
+      Face rList = OrbitUnion(StabFace, gList);
+      for (int jRow=0; jRow<nbRow; jRow++)
+	if (rList[jRow] == 1)
+	  Treated[jRow]=1;
+    }
+  return TheReturn;
+}
+
 
 
 
@@ -215,14 +294,13 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const& TheGRP)
 }
 
 
-template<typename T, typename Tgroup>
-std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch)
+template<typename T, typename Tgroup, template F>
+std::vector<vectface> EnumerationFaces_F(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch, F f)
 {
   std::vector<vectface> RetList;
   int n=TheGRP.n_act();
   vectface ListOrb(n);
   Face eList(n);
-  MyMatrix<T> FACred=ColumnReduction(FAC);
   for (int i=0; i<n; i++)
     eList[i]=1;
   vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
@@ -230,14 +308,14 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
     boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
     Face nList(n);
     nList[MinVal]=1;
-    ListOrb.push_back(nList);
+    ListOrb.emplace_back(std::move(nList));
   }
   RetList.emplace_back(std::move(ListOrb));
   for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
     vectface NListOrb(n);
     for (auto &eOrb : RetList[iLevel-1]) {
       Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
-      vectface TheSpann=SPAN_face_LinearProgramming(eOrb, StabFace, FACred, TheGRP);
+      vectface TheSpann=f(eOrb, StabFace, iLevel, FAC, TheGRP);
       for (Face fOrb : TheSpann) {
         Face fOrbCan = TheGRP.CanonicalImage(fOrb);
         NListOrb.push_back(fOrbCan);
@@ -247,6 +325,44 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
   }
   return RetList;
 }
+
+
+
+template<typename T, typename Tgroup>
+std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method)
+{
+  if (method == "LinearProgramming") {
+    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
+    };
+    return EnumerationFaces_F(TheGRP, FAC, LevSearch, f);
+  }
+  if (method == "ExtremeRays") {
+    int nbFac = FAC.rows();
+    int nbExt = EXT.rows();
+    int nbCol = EXT.cols();
+    Face extfac_incd(nbFac * nbExt);
+    for (int iFac=0; iFac<nbFac; iFac++)
+      for (int iExt=0; iExt<nbExt; iExt++) {
+        T sum = 0;
+        for (int i=0; i<nbCol; i++)
+          sum += FAC(iFac,i) * EXT(iExt,i);
+        if (sum == 0)
+          extfac_incd[iFac * nbExt + iExt] = 1;
+      }
+    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+    };
+  }
+  std::cerr << "We failed to find a matching method\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+
 
 
 void PrintListOrb_GAP(std::ostream &os, std::vector<std::vector<int>> const& ListOrb)
@@ -302,5 +418,123 @@ void PrintListListOrb_IntGAP(std::ostream &os, std::vector<vectface> const& List
   }
   os << "];\n";
 }
+
+
+
+
+void OutputFaces(const std::vector<vectface>& TheOutput, const std::string& OUTfile, const std::string& OutFormat)
+{
+  if (OutFormat == "GAP") {
+    std::ofstream os(OUTfile);
+    os << "return ";
+    os << "[";
+    int len = TheOutput.size();
+    for (int i=0; i<len; i++) {
+      if (i > 0)
+        os << ",\n";
+      VectVectInt_Gap_Print(os, TheOutput[i]);
+    }
+    os << "]";
+    os << ";\n";
+    return;
+  }
+  std::cerr << "No option has been chosen\n";
+  throw TerminalException{1};
+}
+
+
+
+
+FullNamelist NAMELIST_GetStandard_FaceLattice()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, int> ListIntValues1;
+  ListStringValues1["EXTfile"]="unset.ext";
+  ListStringValues1["FACfile"]="unset.ext";
+  ListStringValues1["GRPfile"]="unset.grp";
+  ListStringValues1["OUTfile"]="unset.out";
+  ListStringValues1["OutFormat"]="GAP";
+  ListStringValues1["Method"]="unset.out";
+  ListIntValues1["LevSearch"] = -1;
+  SingleBlock BlockDATA;
+  BlockDATA.ListStringValues=ListStringValues1;
+  BlockDATA.ListBoolValues=ListBoolValues1;
+  BlockDATA.ListIntValues=ListIntValues1;
+  ListBlock["PROC"]=BlockDATA;
+  // Merging all data
+  return {std::move(ListBlock), "undefined"};
+}
+
+
+
+template<typename T, typename Tgroup, typename Tidx_value>
+void MainFunctionFaceLattice(FullNamelist const& eFull)
+{
+  using Tint=typename Tgroup::Tint;
+  using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
+  std::cerr << "Reading PROC\n";
+  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
+  std::string FACfile=BlockPROC.ListStringValues.at("FACfile");
+  IsExistingFileDie(FACfile);
+  std::cerr << "FACfile=" << FACfile << "\n";
+  std::ifstream FACfs(FACfile);
+  MyMatrix<T> FAC=ReadMatrix<T>(FACfs);
+  if (size_t(FAC.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
+    std::cerr << "We have |FAC|=" << FAC.rows() << "\n";
+    std::cerr << "But <Tidx>::max()=" << size_t(std::numeric_limits<Tidx>::max()) << "\n";
+    throw TerminalException{1};
+  }
+  if (RankMat(FAC) != FAC.cols()) {
+    std::cerr << "The matrix EXT should be of full rank\n";
+    throw TerminalException{1};
+  }
+  //
+  std::string Method=BlockPROC.ListStringValues.at("Method");
+  std::cerr << "Method=" << Method << "\n";
+  //
+  MyMatrix<T> EXT;
+  if (Method == "ExtremeRays") {
+    std::string EXTfile=BlockPROC.ListStringValues.at("EXTfile");
+    IsExistingFileDie(EXTfile);
+    std::cerr << "EXTfile=" << EXTfile << "\n";
+    std::ifstream EXTfs(EXTfile);
+    EXT = ReadMatrix<T>(EXTfs);
+    if (FAC.cols() != EXT.cols()) {
+      std::cerr << "The dimension of EXT and FAC should be the same\n";
+      throw TerminalException{1};
+    }
+  }
+  //
+  std::string GRPfile=BlockPROC.ListStringValues.at("GRPfile");
+  IsExistingFileDie(GRPfile);
+  std::cerr << "GRPfile=" << GRPfile << "\n";
+  std::ifstream GRPfs(GRPfile);
+  Tgroup GRP=ReadGroup<Tgroup>(GRPfs);
+  //
+  int LevSearch=BlockPROC.ListIntValues.at("LevSearch");
+  std::cerr << "LevSearch=" << LevSearch << "\n";
+  //
+  std::string OUTfile=BlockPROC.ListStringValues.at("OUTfile");
+  std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
+  std::cerr << "OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
+  //
+  std::vector<vectface> TheOutput = EnumerationFaces(GRP, FAC, EXT, LevSearch, Method);
+  //
+  OutputFaces(TheOutput, OUTfile, OutFormat);
+}
+
+
+
+
+
+
+
+
+
+
 #endif
 

@@ -4,11 +4,11 @@
 # ---Copy this "Dockerfile" to a directory, e.g. "docker".
 #    Do NOT rename the file.
 # ---Compile the dockerfile with the command
-#    docker build -t standard_working_environment:build-env .
+#    docker build -t polyhedralcpp:build-env .
 # ---For building with no-cache option, use
-#    docker build --no-cache -t standard_working_environment:build-env .
+#    docker build --no-cache -t polyhedralcpp:build-env .
 # ---Run the docker and access a bash by doing
-#    docker run -i -t standard_working_environment:build-env /bin/bash
+#    docker run -i -t polyhedralcpp:build-env /bin/bash
 #
 # Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
 
