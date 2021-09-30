@@ -128,7 +128,6 @@ vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int con
   int RankFaceTarget_ext = RankFace_ext - 1;
   std::vector<size_t> EXTincd_face_vect;
   EXTincd_face_vect.reserve(nbExt);
-  
   for (int iFac=0; iFac<nbFac; iFac++)
     if (Treated[iFac] == 0) {
       Face EXTincd_face = EXTincd;
@@ -259,9 +258,9 @@ bool TestInclusionProperFace(std::vector<int> const& eSet, MyMatrix<T> const& FA
 	if (eVal > 0)
 	  eVectCand[eCandCompl[iElt]]=1;
       }
-    }
-    else
+    } else {
       return true;
+    }
   }
 }
 
@@ -307,6 +306,7 @@ std::vector<vectface> EnumerationFaces_F(Tgroup const& TheGRP, MyMatrix<T> const
     nList[MinVal]=1;
     ListOrb.push_back(nList);
   }
+  std::cerr << "iLevel=0 |NListOrb|=" << ListOrb.size() << "\n";
   RetList.emplace_back(std::move(ListOrb));
   for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
     vectface NListOrb(n);
@@ -318,6 +318,7 @@ std::vector<vectface> EnumerationFaces_F(Tgroup const& TheGRP, MyMatrix<T> const
         NListOrb.push_back(fOrbCan);
       }
     }
+    std::cerr << "iLevel=" << iLevel << " |NListOrb|=" << NListOrb.size() << "\n";
     RetList.emplace_back(std::move(NListOrb));
   }
   return RetList;
