@@ -514,6 +514,10 @@ void MainFunctionFaceLattice(FullNamelist const& eFull)
   //
   int LevSearch=BlockPROC.ListIntValues.at("LevSearch");
   std::cerr << "LevSearch=" << LevSearch << "\n";
+  if (LevSearch == -1) {
+    int nbCol = FAC.cols();
+    LevSearch = nbCol - 2;
+  }
   //
   std::string OUTfile=BlockPROC.ListStringValues.at("OUTfile");
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");

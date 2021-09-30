@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     using Tgroup = permutalib::Group<Telt,Tint>;
     //
     FullNamelist eFull = NAMELIST_GetStandard_FaceLattice();
-    if (argc != 3) {
+    if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_FaceLatticeGen [file.nml]\n";
