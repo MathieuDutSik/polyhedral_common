@@ -1502,6 +1502,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
       std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
       std::string ansChosenDatabase=HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+      std::cerr << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase << "\n";
       if (ansChosenDatabase == "canonic") {
         using TbasicBank = DatabaseCanonic<T,Tint,Tgroup>;
         TbasicBank bb(EXT, TheGRPrelevant);

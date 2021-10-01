@@ -222,8 +222,8 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f
   size_t nbRow=TheEXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr << "Error in FCT_EXT_Qinput due to too small coefficient rqnge\n";
-    std::cerr << "nbRow=" << nbRow << " max_val=" << max_val << "\n";
+    std::cerr << "Error in FCT_EXT_Qinput due to too small coefficient range\n";
+    std::cerr << "nbRow=" << nbRow << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
   size_t nbCol=TheEXT.cols();
@@ -461,8 +461,8 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   size_t nbRow=TheEXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr << "Error in FCT_ListMat_Subset due to too small coefficient rqnge\n";
-    std::cerr << "nbRow=" << nbRow << " max_val=" << max_val << "\n";
+    std::cerr << "Error in FCT_ListMat_Subset due to too small coefficient range\n";
+    std::cerr << "nbRow=" << nbRow << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
   size_t nbCol=TheEXT.cols();
