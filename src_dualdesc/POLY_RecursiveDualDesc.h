@@ -1093,7 +1093,7 @@ private:
     IteratorType(const FaceOrbsizeContainer<Tint,Torbsize,Tidx> & foc,
                  std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1,
                  std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end,
-                 UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2, size_t pos) : foc(foc), iter1(iter1), iter1_end(iter1_end), pos(pos) {
+                 UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2, size_t pos) : foc(foc), iter1(iter1), iter1_end(iter1_end), iter2(iter2), pos(pos) {
     }
     Face operator*() const {
       return foc.RetrieveListOrbitFace(iter2->second[pos]);
@@ -1133,14 +1133,19 @@ private:
 public:
   using iterator = IteratorType;
   iterator begin_undone() const {
+    std::cerr << "Begin of begin_undone()\n";
     std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1 = CompleteList_SetUndone.begin();
     std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end = CompleteList_SetUndone.end();
-    if (iter1 == iter1_end)
+    if (iter1 == iter1_end) {
+      std::cerr << "Exit begin_undone case 1\n";
       return IteratorType(foc, iter1, iter1_end, {}, 0);
+    }
     UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2 = CompleteList_SetUndone.at(iter1->first).begin();
+    std::cerr << "Exit begin_undone case 2\n";
     return IteratorType(foc, iter1, iter1_end, iter2, 0);
   }
   iterator end_undone() const {
+    std::cerr << "Begin of end_undone()\n";
     return IteratorType(foc, CompleteList_SetUndone.end(), CompleteList_SetUndone.end(), {}, 0);
   }
 };
