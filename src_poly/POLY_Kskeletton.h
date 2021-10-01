@@ -145,6 +145,7 @@ vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int c
         iExt = EXTincd_face.find_next(iExt);
       }
       Face gList(nbFac);
+      //      std::cerr << "|EXTface|=" << EXTface.rows() << " / " << EXTface.cols() << "\n";
       if (f_filt(EXTface, RankFaceTarget_ext)) {
         auto test_corr=[&](int const& jFac) -> bool {
           for (auto& iExt : EXTincd_face_vect)
@@ -188,6 +189,7 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(Face const& face, Tgroup const& Stab
                                             const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
 {
   auto f_filt=[&](MyMatrix<T> const& M, int const& RankTarget) -> bool {
+    //    std::cerr << "|M|=" << M.rows() << " / " << M.cols() << " RankTarget=" << RankTarget << "\n";
     if (M.rows() == RankTarget)
       return false; // If it were to be a face, it would be a simplicial one. So we remove it from consideration
     if (M.rows() < RankTarget)
@@ -541,7 +543,7 @@ void MainFunctionFaceLattice(FullNamelist const& eFull)
   std::cerr << "Method=" << Method << "\n";
   //
   MyMatrix<T> EXT;
-  if (Method == "ExtremeRays") {
+  if (Method == "ExtremeRays" || Method == "ExtremeRaysNonSimplicial") {
     std::string EXTfile=BlockPROC.ListStringValues.at("EXTfile");
     IsExistingFileDie(EXTfile);
     std::cerr << "EXTfile=" << EXTfile << "\n";
