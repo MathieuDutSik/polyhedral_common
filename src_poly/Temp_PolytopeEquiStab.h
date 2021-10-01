@@ -360,7 +360,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   size_t nbRow = EXT.rows();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -403,7 +403,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
 template<typename T, typename Tidx, bool use_scheme>
 std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tgr=GraphBitset;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -595,7 +595,7 @@ WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(My
 template<typename T>
 size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tidx = unsigned int;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -627,7 +627,7 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 template<typename T, typename Tidx, bool use_scheme>
 std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef TIMINGS
@@ -656,7 +656,7 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T>
 template<typename T, typename Tidx, bool use_scheme>
 std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef TIMINGS
@@ -687,7 +687,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
                                MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
                                MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -978,7 +978,7 @@ MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const& M)
 template<typename Tint>
 std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tgr=GraphBitset;
   size_t nbRow= EXT.rows();
 #ifdef TIMINGS
@@ -1159,7 +1159,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
 template<typename Tint>
 MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EXT)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
 #ifdef TIMINGS
@@ -1245,7 +1245,7 @@ MyMatrix<Tint> LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const& EX
 template<typename Tint>
 std::optional<std::vector<std::vector<unsigned int>>> LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const& EXT, MyMatrix<Tint> const& Qmat)
 {
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tgr=GraphBitset;
   size_t nbRow= EXT.rows();
 #ifdef TIMINGS
@@ -1362,7 +1362,7 @@ template<typename Tint>
 std::vector<std::vector<unsigned int>> LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const& EXT)
 {
   using Tidx=unsigned int;
-  using Tidx_value = int16_t;
+  using Tidx_value = uint16_t;
   using Tgr = GraphBitset;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
