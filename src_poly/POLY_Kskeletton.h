@@ -97,9 +97,9 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
 
 
 
-template<typename T, typename Tgroup>
-vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int const& RankFace,
-                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+template<typename T, typename Tgroup, typename Ffilt>
+vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int const& RankFace,
+                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP, Ffilt f_filt)
 {
   int nbFac=FAC.rows();
   int nbCol=FAC.cols();
@@ -144,9 +144,8 @@ vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int con
         EXTincd_face_vect.push_back(iExt);
         iExt = EXTincd_face.find_next(iExt);
       }
-      int Rank = RankMat(EXTface);
       Face gList(nbFac);
-      if (Rank == RankFaceTarget_ext) {
+      if (f_filt(EXTface, RankFaceTarget_ext)) {
         auto test_corr=[&](int const& jFac) -> bool {
           for (auto& iExt : EXTincd_face_vect)
             if (extfac_incd[jFac * nbExt + iExt] == 0)
@@ -168,6 +167,35 @@ vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int con
   return TheReturn;
 }
 
+
+
+template<typename T, typename Tgroup>
+vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int const& RankFace,
+                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+{
+  auto f_filt=[&](MyMatrix<T> const& M, int const& RankTarget) -> bool {
+    if (M.rows() < RankTarget)
+      return false; // The number of rows cannot match the rank, so reject
+    return RankMat(M) == RankTarget;
+  };
+  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP, f_filt);
+}
+
+
+
+template<typename T, typename Tgroup>
+vectface SPAN_face_ExtremeRaysNonSimplicial(Face const& face, Tgroup const& StabFace, int const& RankFace,
+                                            const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+{
+  auto f_filt=[&](MyMatrix<T> const& M, int const& RankTarget) -> bool {
+    if (M.rows() == RankTarget)
+      return false; // If it were to be a face, it would be a simplicial one. So we remove it from consideration
+    if (M.rows() < RankTarget)
+      return false; // The number of rows cannot match the rank, so reject
+    return RankMat(M) == RankTarget;
+  };
+  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP, f_filt);
+}
 
 
 
@@ -350,6 +378,24 @@ std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& 
       }
     auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
       return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+    };
+    return EnumerationFaces_F<T,Tgroup,decltype(f)>(TheGRP, FAC, LevSearch, f);
+  }
+  if (method == "ExtremeRaysNonSimplicial") {
+    int nbFac = FAC.rows();
+    int nbExt = EXT.rows();
+    int nbCol = EXT.cols();
+    Face extfac_incd(nbFac * nbExt);
+    for (int iFac=0; iFac<nbFac; iFac++)
+      for (int iExt=0; iExt<nbExt; iExt++) {
+        T sum = 0;
+        for (int i=0; i<nbCol; i++)
+          sum += FAC(iFac,i) * EXT(iExt,i);
+        if (sum == 0)
+          extfac_incd[iFac * nbExt + iExt] = 1;
+      }
+    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
     };
     return EnumerationFaces_F<T,Tgroup,decltype(f)>(TheGRP, FAC, LevSearch, f);
   }
