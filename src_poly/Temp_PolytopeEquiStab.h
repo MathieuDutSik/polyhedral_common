@@ -294,23 +294,59 @@ std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsomorphismFromCano
 template<typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput)
 {
-  using Tidx = int16_t;
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+  //
+  size_t n_rows = TheEXT.rows();
+  if (n_rows < size_t(std::numeric_limits<uint8_t>::max())) {
+    using Tidx = uint8_t;
+    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint16_t>::max())) {
+    using Tidx = uint16_t;
+    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint32_t>::max())) {
+    using Tidx = uint32_t;
+    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
+    using Tidx = uint64_t;
+    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
+  }
+  std::cerr << "Failed to find matching numeric in GetSimpleWeightMatrix\n";
+  throw TerminalException{1};
 }
 
 template<typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
 {
-  using Tidx = int16_t;
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+  //
+  size_t n_rows = TheEXT.rows();
+  if (n_rows < size_t(std::numeric_limits<uint8_t>::max())) {
+    using Tidx = uint8_t;
+    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint16_t>::max())) {
+    using Tidx = uint16_t;
+    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint32_t>::max())) {
+    using Tidx = uint32_t;
+    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+  }
+  if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
+    using Tidx = uint64_t;
+    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+  }
+  std::cerr << "Failed to find matching numeric in GetWeightMatrix\n";
+  throw TerminalException{1};
 }
 
 
@@ -395,12 +431,11 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const& EXT)
 
 
 
-template<typename T, bool use_scheme>
-MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
+template<typename T, bool use_scheme, typename Tidx>
+MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const& EXT)
 {
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
-  using Tidx = int16_t;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -423,6 +458,24 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
 #endif
   return RedMat;
 }
+
+template<typename T, bool use_scheme>
+MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
+{
+  size_t n_rows = EXT.rows();
+  if (n_rows < size_t(std::numeric_limits<uint8_t>::max()))
+    return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint8_t>(EXT);
+  if (n_rows < size_t(std::numeric_limits<uint16_t>::max()))
+    return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint16_t>(EXT);
+  if (n_rows < size_t(std::numeric_limits<uint32_t>::max()))
+    return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint32_t>(EXT);
+  if (n_rows < size_t(std::numeric_limits<uint64_t>::max()))
+    return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint64_t>(EXT);
+  std::cerr << "LinPolytope_CanonicForm : Failed to find matching numeric\n";
+  throw TerminalException{1};
+}
+
+
 
 
 template<typename T, typename Tidx, bool use_scheme>
