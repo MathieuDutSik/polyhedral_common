@@ -1210,7 +1210,7 @@ public:
         std::ofstream os_grp(eFileGRP);
         os_grp << bb.GRP;
         // Writing polytope
-        std::ofstream os_ext(eFileGRP);
+        std::ofstream os_ext(eFileEXT);
         WriteMatrix(os_ext, bb.EXT);
         // Opening the files
         fn = new FileNumber(eFileNB, true);
