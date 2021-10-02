@@ -12,8 +12,9 @@ struct FileNumber {
 private:
   std::FILE* fp;
   size_t n_ent;
+  std::string file;
 public:
-  FileNumber(std::string const& file, bool is_new)
+FileNumber(std::string const& file, bool is_new) : file(file)
   {
     if (is_new) {
       if (IsExistingFile(file)) {
@@ -42,7 +43,8 @@ public:
     size_t val;
     size_t ret = std::fread(&val, sizeof(size_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileNumber: Number of read element different from count. Please correct. ret=" << ret << "\n";
+      std::cerr << "FileNumber: Number of read element different from count. Please correct\n";
+      std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
     return val;
@@ -64,8 +66,9 @@ struct FileBool {
 private:
   std::FILE* fp;
   size_t n_ent;
+  std::string file;
 public:
-  FileBool(std::string const& file)
+FileBool(std::string const& file) : file(file)
   {
     if (IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should be missing\n";
@@ -99,7 +102,8 @@ public:
     uint8_t val;
     size_t ret = std::fread(&val, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileBool: Number of read elementr different from count. Please correct. ret=" << ret << "\n";
+      std::cerr << "FileBool: Number of read elementr different from count. Please correct.\n";
+      std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
     return val >> (i_pos & 0x07) & 1;
@@ -120,7 +124,8 @@ public:
     std::fseek(fp, i_byte, SEEK_SET);
     size_t ret = std::fread(&val_u8, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileBool: Number of read element different from count. Please correct. ret=" << ret << "\n";
+      std::cerr << "FileBool: Number of read element different from count. Please correct\n";
+      std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
     std::fseek(fp, i_byte, SEEK_SET);
@@ -137,6 +142,7 @@ public:
 struct FileFace {
 private:
   std::FILE* fp;
+  std::string file;
   size_t n_face;
   size_t siz;
   size_t ReadSize;
@@ -151,7 +157,7 @@ private:
     ZeroBuffer = std::vector<uint8_t>(ZeroSize, 0);
   }
 public:
-  FileFace(std::string const& file, size_t const& _siz)
+FileFace(std::string const& file, size_t const& _siz) : file(file)
   {
     if (IsExistingFile(file)) {
       std::cerr << "FileFace: The file " << file << " should be missing\n";
@@ -191,7 +197,7 @@ public:
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len, fp);
     if (ret != len) {
       std::cerr << "getface: Number of read element different from count. pos=" << pos << "\n";
-      std::cerr << "Please correct. ret=" << ret << " len=" << len << "\n";
+      std::cerr << "Please correct. ret=" << ret << " len=" << len << " file=" << file << "\n";
       throw TerminalException{1};
     }
     //
@@ -239,7 +245,7 @@ public:
     size_t ret = std::fread(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
     if (ret != len_rw) {
       std::cerr << "setface: Number of read element different from count. pos=" << pos << "\n";
-      std::cerr << "Please correct. ret=" << ret << " len_rw=" << len_rw << "\n";
+      std::cerr << "Please correct. ret=" << ret << " len_rw=" << len_rw << " file=" << file << "\n";
       throw TerminalException{1};
     }
     // Assigning the new values
