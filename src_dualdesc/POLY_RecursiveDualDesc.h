@@ -1133,19 +1133,14 @@ private:
 public:
   using iterator = IteratorType;
   iterator begin_undone() const {
-    std::cerr << "Begin of begin_undone()\n";
     std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1 = CompleteList_SetUndone.begin();
     std::map<size_t, UNORD_MAP<size_t,std::vector<size_t>>>::const_iterator iter1_end = CompleteList_SetUndone.end();
-    if (iter1 == iter1_end) {
-      std::cerr << "Exit begin_undone case 1\n";
+    if (iter1 == iter1_end)
       return IteratorType(foc, iter1, iter1_end, {}, 0);
-    }
     UNORD_MAP<size_t,std::vector<size_t>>::const_iterator iter2 = CompleteList_SetUndone.at(iter1->first).begin();
-    std::cerr << "Exit begin_undone case 2\n";
     return IteratorType(foc, iter1, iter1_end, iter2, 0);
   }
   iterator end_undone() const {
-    std::cerr << "Begin of end_undone()\n";
     return IteratorType(foc, CompleteList_SetUndone.end(), CompleteList_SetUndone.end(), {}, 0);
   }
 };
@@ -1242,29 +1237,30 @@ public:
        Note that the returning of the list of orbit does destroy the database and this gives a small window
        in which bad stuff can happen.
      */
-    if (is_opened)
+    if (is_opened) {
+      if (fn == nullptr || fb == nullptr || ff == nullptr) {
+        std::cerr << "Error: Some files are not opened\n";
+        std::cerr << "Not throwing exception because we are in a destructor\n";
+      }
       fn->setval(bb.foc.nbOrbit);
-    if (fb != nullptr)
-      delete fb; // which closes the file and save the data to disk
-    if (ff != nullptr)
-      delete ff; // which closes the file and save the data to disk
+      delete fn; // which closes the files and save the data to disk
+      delete fb;
+      delete ff;
+    }
     os << "Clean closing of the DatabaseOrbits\n";
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
       std::string eFileNB = MainPrefix + ".nb";
       delete fn;
-      fn = nullptr;
       RemoveFile(eFileNB);
       //
       std::string eFileFB = MainPrefix + ".fb";
       delete fb;
-      fb = nullptr;
       RemoveFile(eFileFB);
       //
       std::string eFileFF = MainPrefix + ".ff";
       delete ff;
-      ff = nullptr;
       RemoveFile(eFileFF);
       //
       is_opened = false;

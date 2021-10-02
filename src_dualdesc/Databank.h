@@ -36,7 +36,8 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const& Prefix)
   std::string eFileGRP = Prefix + ".grp";
   std::string eFileNB = Prefix + ".nb";
   std::string eFileFF = Prefix + ".ff";
- //
+  //
+  std::cerr << "eFileEXT=" << eFileEXT << "\n";
   std::ifstream is_ext(eFileEXT);
   MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
   size_t n_row = EXT.rows();
@@ -118,11 +119,12 @@ public:
     if (Saving) {
       size_t iOrbit=0;
       while(true) {
-        std::string eFileBank = SavingPrefix + "Dual_Desc_" + std::to_string(iOrbit) + ".nc";
+        std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
+        std::string eFileBank = Prefix + ".ext";
         if (!IsExistingFile(eFileBank))
           break;
-        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << "\n";
-        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(eFileBank);
+        std::cerr << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
+        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(Prefix);
         ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first), std::move(PairKV.second)));
         iOrbit++;
       }
@@ -235,11 +237,12 @@ DataBankServer(const bool& _Saving, const std::string& _SavingPrefix, const shor
     if (Saving) {
       size_t iOrbit=0;
       while(true) {
-        std::string eFileBank = SavingPrefix + "Dual_Desc_" + std::to_string(iOrbit) + ".nc";
+        std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
+        std::string eFileBank = Prefix + ".ext";
         if (!IsExistingFile(eFileBank))
           break;
-        std::cerr << "Read iOrbit=" << iOrbit << " FileBank=" << eFileBank << "\n";
-        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(eFileBank);
+        std::cerr << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
+        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey,Tval>(Prefix);
         ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first), std::move(PairKV.second)));
         iOrbit++;
       }
