@@ -1217,6 +1217,7 @@ public:
         fb = new FileBool(eFileFB);
         ff = new FileFace(eFileFF, bb.delta);
         n_orbit = 0;
+        fn->setval(n_orbit);
       }
       is_opened = true;
       //
@@ -1242,7 +1243,6 @@ public:
         std::cerr << "Error: Some files are not opened\n";
         std::cerr << "Not throwing exception because we are in a destructor\n";
       }
-      fn->setval(bb.foc.nbOrbit);
       delete fn; // which closes the files and save the data to disk
       delete fb;
       delete ff;
@@ -1278,6 +1278,7 @@ public:
     if (test && SavingTrigger) {
       fb->setbit(bb.foc.nbOrbit - 1, false);
       ff->setface(bb.foc.nbOrbit - 1, *test);
+      fn->setval(bb.foc.nbOrbit);
     }
   }
   vectface ComputeInitialSet(const std::string& ansSamp) {
