@@ -2091,13 +2091,17 @@ template<typename T>
 vectface DualDescription_temp_incd(MyMatrix<T> const& EXT)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
-  int nbCol=EXTwork.cols();
-  int nbRow=EXTwork.rows();
+  size_t nbCol=EXTwork.cols();
+  size_t nbRow=EXTwork.rows();
   vectface ListIncd(nbRow);
   bool IsFirst=true;
   T eScal;
+#if !defined USE_ISINCD
+  Face face(nbRow);
+#endif
   auto f=[&](T* out) -> void {
     if (!IsFirst) {
+#ifdef USE_ISINCD
       auto isincd=[&](size_t iRow) -> bool {
 	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
@@ -2105,6 +2109,15 @@ vectface DualDescription_temp_incd(MyMatrix<T> const& EXT)
 	return eScal == 0;
       };
       ListIncd.InsertFace(isincd);
+#else
+      for (size_t iRow=0; iRow<nbRow; iRow++) {
+	eScal=0;
+	for (size_t iCol=0; iCol<nbCol; iCol++)
+	  eScal += out[iCol]*EXTwork(iRow,iCol);
+	face[iRow] = bool(eScal == 0);
+      }
+      ListIncd.push_back(face);
+#endif
     }
     IsFirst=false;
   };
@@ -2118,14 +2131,18 @@ template<typename T>
 vectface DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& UpperLimit)
 {
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
-  int nbCol=EXTwork.cols();
-  int nbRow=EXTwork.rows();
+  size_t nbCol=EXTwork.cols();
+  size_t nbRow=EXTwork.rows();
   vectface ListIncd(nbRow);
   bool IsFirst=true;
   T eScal;
   int nbFound = 0;
+#if !defined USE_ISINCD
+  Face face(nbRow);
+#endif
   auto f=[&](T* out) -> bool {
     if (!IsFirst) {
+#ifdef USE_ISINCD
       auto isincd=[&](size_t iRow) -> bool {
 	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
@@ -2133,6 +2150,15 @@ vectface DualDescription_temp_incd_limited(MyMatrix<T> const& EXT, int const& Up
         return eScal == 0;
       };
       ListIncd.InsertFace(isincd);
+#else
+      for (size_t iRow=0; iRow<nbRow; iRow++) {
+	eScal=0;
+	for (size_t iCol=0; iCol<nbCol; iCol++)
+	  eScal += out[iCol]*EXTwork(iRow,iCol);
+        face[iRow] = bool(eScal == 0);
+      }
+      ListIncd.push_back(face);
+#endif
       nbFound++;
     }
     IsFirst=false;
@@ -2151,10 +2177,10 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
   MyMatrix<T> EXTwork=FirstColumnZero(EXT);
   using Tring = typename underlying_ring<T>::ring_type;
   //  typedef typename underlying_ring<T>::ring_type Tring;
-  int nbCol=EXTwork.cols();
-  int nbRow=EXTwork.rows();
+  size_t nbCol=EXTwork.cols();
+  size_t nbRow=EXTwork.rows();
   MyMatrix<Tring> EXTring(nbRow,nbCol);
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
     MyVector<T> eRow1=GetMatrixRow(EXTwork, iRow);
     MyVector<T> eRow2=RemoveFractionVector(eRow1);
     MyVector<Tring> eRow3=UniversalVectorConversion<Tring,T>(eRow2);
@@ -2163,8 +2189,12 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
   vectface ListIncd(nbRow);
   bool IsFirst=true;
   T eScal;
+#if !defined USE_ISINCD
+  Face face(nbRow);
+#endif
   auto f=[&](Tring* out) -> void {
     if (!IsFirst) {
+#ifdef USE_ISINCD
       auto isincd=[&](size_t iRow) -> bool {
 	eScal=0;
 	for (int iCol=0; iCol<nbCol; iCol++)
@@ -2172,6 +2202,15 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const& EXT)
         return eScal == 0;
       };
       ListIncd.InsertFace(isincd);
+#else
+      for (size_t iRow=0; iRow<nbRow; iRow++) {
+	eScal=0;
+	for (size_t iCol=0; iCol<nbCol; iCol++)
+	  eScal += out[iCol]*EXTring(iRow,iCol);
+        face[iRow] = bool(eScal == 0);
+      }
+      ListIncd.push_back(face);
+#endif
     }
     IsFirst=false;
   };
