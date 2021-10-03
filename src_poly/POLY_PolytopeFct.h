@@ -223,12 +223,20 @@ public:
     size_t nbCol=EXT_red.cols() + 1;
     MyMatrix<T> TheProv(nb, nbCol - 1);
     boost::dynamic_bitset<>::size_type jRow=sInc.find_first();
+    auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+      int aRow=OneInc_V[jRow];
+      M.row(eRank) = EXT_red.row(aRow);
+      jRow = sInc.find_next(jRow);
+    };
+    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T,decltype(f)>(nb, nbCol-1, f);
+    /*
     for (size_t iRow=0; iRow<nb; iRow++) {
       int aRow=OneInc_V[jRow];
       TheProv.row(iRow)=EXT_red.row(aRow);
-      jRow=sInc.find_next(jRow);
+      jRow = sInc.find_next(jRow);
     }
     MyMatrix<T> NSP = NullspaceTrMat(TheProv);
+    */
 #ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
       std::cerr << "Error in Flip 2\n";
