@@ -934,8 +934,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
     std::cerr << "which are larger than maximum allowed size of TidxIn = " << max_poss_cl << "\n";
     throw TerminalException{1};
   }
-  std::cerr << "nbRow=" << nbRow << " nof_vertices=" << nof_vertices << "\n";
-  std::cerr << "max_poss_rows=" << max_poss_rows << " max_poss_cl=" << max_poss_cl << "\n";
   std::vector<TidxIn> clR(nof_vertices);
   for (size_t i=0; i<nof_vertices; i++) {
 #ifdef DEBUG
@@ -970,7 +968,6 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
         throw TerminalException{1};
       }
 #endif
-      std::cerr << "posCanonic=" << size_t(posCanonic) << "\n";
       MapVectRev[posCanonic] = iVertNative;
       for (size_t iH=0; iH<hS; iH++) {
 	TidxIn uVertNative = iVertNative + nbVert * iH;
