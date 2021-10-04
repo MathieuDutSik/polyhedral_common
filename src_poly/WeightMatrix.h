@@ -934,6 +934,8 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
     std::cerr << "which are larger than maximum allowed size of TidxIn = " << max_poss_cl << "\n";
     throw TerminalException{1};
   }
+  std::cerr << "nbRow=" << nbRow << " nof_vertices=" << nof_vertices << "\n";
+  std::cerr << "max_poss_rows=" << max_poss_rows << " max_poss_cl=" << max_poss_cl << "\n";
   std::vector<TidxIn> clR(nof_vertices);
   for (size_t i=0; i<nof_vertices; i++) {
 #ifdef DEBUG
@@ -957,21 +959,22 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
 #endif
   std::vector<TidxIn> MapVectRev(nbVert);
   Face ListStatus(nof_vertices);
-  Tidx posCanonic=0;
+  TidxIn posCanonic=0;
   for (size_t iCan=0; iCan<nof_vertices; iCan++) {
     if (ListStatus[iCan] == 0) {
-      Tidx iNative=clR[iCan];
-      Tidx iVertNative=iNative % nbVert;
+      TidxIn iNative=clR[iCan];
+      TidxIn iVertNative=iNative % nbVert;
 #ifdef DEBUG
       if (posCanonic < 0 || posCanonic >= nbVert) {
         std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert << "\n";
         throw TerminalException{1};
       }
 #endif
+      std::cerr << "posCanonic=" << size_t(posCanonic) << "\n";
       MapVectRev[posCanonic] = iVertNative;
       for (size_t iH=0; iH<hS; iH++) {
-	Tidx uVertNative = iVertNative + nbVert * iH;
-	Tidx jCan=cl[uVertNative];
+	TidxIn uVertNative = iVertNative + nbVert * iH;
+	TidxIn jCan=cl[uVertNative];
 #ifdef DEBUG
 	if (ListStatus[jCan] == 1) {
 	  std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
