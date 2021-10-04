@@ -153,8 +153,6 @@ vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
 template<typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
 {
-  int nbVert=EXT.rows();
-  int nbCol=EXT.cols();
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif

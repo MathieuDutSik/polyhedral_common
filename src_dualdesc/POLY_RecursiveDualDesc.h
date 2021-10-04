@@ -225,9 +225,10 @@ void insert_entry_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<tru
     vectface ListFaceO(EXT.rows());
     Telt perm1 = Telt(ePair.second);
     Telt ePerm = ~perm1;
+    Face eFaceImg(EXT.rows());
     for (auto & eFace : ListFace) {
-      Face eInc = OnFace(eFace, ePerm);
-      ListFaceO.push_back(eInc);
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      ListFaceO.push_back(eFaceImg);
     }
     Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
     bank.InsertEntry(std::move(ePair.first), {std::move(GrpConj), std::move(ListFaceO)});
@@ -239,16 +240,18 @@ void insert_entry_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<tru
     Telt ePerm = ~perm1;
     if (!NeedRemapOrbit) {
       // We needed to compute the full group, but it turned out to be the same as the input group.
+      Face eFaceImg(EXT.rows());
       for (auto & eFace : ListFace) {
-        Face eInc = OnFace(eFace, ePerm);
-        ListFaceO.push_back(eInc);
+        OnFace_inplace(eFaceImg, eFace, ePerm);
+        ListFaceO.push_back(eFaceImg);
       }
     } else {
       // The full group is bigger than the input group. So we need to reduce.
       UNORD_SET<Face> SetFace;
+      Face eFaceImg(EXT.rows());
       for (auto & eFace : ListFace) {
-        Face eInc = OnFace(eFace, ePerm);
-        Face eIncCan = eTriple.GRP.CanonicalImage(eInc);
+        OnFace_inplace(eFaceImg, eFace, ePerm);
+        Face eIncCan = eTriple.GRP.CanonicalImage(eFaceImg);
         SetFace.insert(eIncCan);
       }
       for (auto & eInc : SetFace) {
@@ -274,9 +277,10 @@ vectface getdualdesc_in_bank(Tbank & bank, MyMatrix<T> const& EXT, WeightMatrix<
   std::cerr << "Finding a matching entry\n";
   vectface ListReprTrans(EXT.rows());
   Telt ePerm = Telt(ePair.second);
-  for (auto const& eOrbit : RecAns.ListFace) {
-    Face eListJ=OnFace(eOrbit, ePerm);
-    ListReprTrans.push_back(eListJ);
+  Face eFaceImg(EXT.rows());
+  for (auto const& eFace : RecAns.ListFace) {
+    OnFace_inplace(eFaceImg, eFace, ePerm);
+    ListReprTrans.push_back(eFaceImg);
   }
   if (GRP.size() == RecAns.GRP.size())
     return ListReprTrans;

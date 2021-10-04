@@ -111,13 +111,12 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
   size_t nb=OneInc.count();
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
-  MyMatrix<T> TheProv(nb, nbCol);
   boost::dynamic_bitset<>::size_type aRow=OneInc.find_first();
-  for (size_t iRow=0; iRow<nb; iRow++) {
-    TheProv.row(iRow)=TheEXT.row(aRow);
-    aRow=OneInc.find_next(aRow);
-  }
-  MyMatrix<T> NSP=NullspaceTrMat(TheProv);
+  auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+    M.row(eRank) = TheEXT.row(aRow);
+    aRow = OneInc.find_next(aRow);
+  };
+  MyMatrix<T> NSP=NullspaceTrMat_Kernel<T,decltype(f)>(nb, nbCol, f);
   MyVector<T> eVect(nbCol);
   for (size_t iCol=0; iCol<nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);

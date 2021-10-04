@@ -344,9 +344,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     if (eResBank.test) {
       MProc.GetO(TheId) << "Begin the use of bank data\n";
       vectface ListReprTrans(EXT.rows());
-      for (auto const& eOrbit : eResBank.eEnt.ListFace) {
-	Face eListJ=OnFace(eOrbit, eResBank.TheEquiv);
-	ListReprTrans.push_back(eListJ);
+      Face eFaceImg(EXT.rows());
+      for (auto const& eFace : eResBank.eEnt.ListFace) {
+	OnFace_inplace(eFaceImg, eFace, eResBank.TheEquiv);
+	ListReprTrans.push_back(eFaceImg);
       }
       MProc.GetO(TheId) << "Before the orbit splitting |ListReprTrans|=" << ListReprTrans.size() << "\n";
       Tgroup GRPconj=ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);

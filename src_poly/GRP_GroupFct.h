@@ -509,12 +509,29 @@ Face OnFace(Face const& eSet, Telt const& eElt)
 }
 
 
+
+template<typename Telt>
+void OnFace_inplace(Face & fSet, Face const& eSet, Telt const& eElt)
+{
+  using Tidx=typename Telt::Tidx;
+  fSet.reset();
+  boost::dynamic_bitset<>::size_type pos=eSet.find_first();
+  while (pos != boost::dynamic_bitset<>::npos) {
+    Tidx jExt=eElt.at(pos);
+    fSet[jExt]=1;
+    pos = eSet.find_next(pos);
+  }
+}
+
+
+
 template<typename Telt>
 vectface OrbitFace(const Face& f, const std::vector<Telt>& LGen)
 {
   size_t len = f.size();
   std::unordered_set<Face> set_f;
   vectface vf(len);
+  Face gw(len);
   std::vector<uint8_t> status;
   auto func_insert=[&](const Face& f) -> void {
     if (set_f.find(f) == set_f.end()) {
@@ -533,7 +550,7 @@ vectface OrbitFace(const Face& f, const std::vector<Telt>& LGen)
         status[i] = 1;
         Face fw = vf[i];
         for (auto & eGen : LGen) {
-          Face gw = OnFace(fw, eGen);
+          OnFace_inplace(gw, fw, eGen);
           func_insert(gw);
         }
       }
@@ -553,6 +570,7 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
   for (auto eFace : PreListTotal)
     ListTotal.insert(eFace);
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  Face fSet(TheGRP.n_act());
   while(true) {
     std::unordered_set<Face>::iterator iter=ListTotal.begin();
     if (iter == ListTotal.end())
@@ -566,7 +584,7 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
       std::unordered_set<Face> NewElts;
       for (auto const& gSet : Additional) {
 	for (auto const& eGen : ListGen) {
-	  Face fSet=OnFace(gSet, eGen);
+	  OnFace_inplace(fSet, gSet, eGen);
 	  if (SingleOrbit.count(fSet) == 0 && Additional.count(fSet) == 0) {
 	    if (NewElts.count(fSet) == 0) {
 #ifdef DEBUG
@@ -746,13 +764,14 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
     IncreaseSize(faceCan);
   };
   DoubleCosetInsertEntry_first(eList);
+  Face eFaceImg(BigGRP.n_act());
   while(true) {
     if (CurrList.size() == 0)
       break;
     Face eFace = CurrList.pop();
     for (auto const& eGen : ListGen) {
-      Face eNewList=OnFace(eFace, eGen);
-      DoubleCosetInsertEntry_first(eNewList);
+      OnFace_inplace(eFaceImg, eFace, eGen);
+      DoubleCosetInsertEntry_first(eFaceImg);
     }
   }
   vectface ListListSet(BigGRP.n_act());
@@ -765,11 +784,11 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
   while(true) {
     Face eFace = ListListSet.pop();
     for (auto & eGen : ListGen) {
-      Face eNewList=OnFace(eFace, eGen);
-      if (PartialOrbit.count(eNewList) == 0) {
-        PartialOrbit.insert(eNewList);
-        ListListSet.push_back(eNewList);
-        DoubleCosetInsertEntry_second(eNewList);
+      OnFace_inplace(eFaceImg, eFace, eGen);
+      if (PartialOrbit.count(eFaceImg) == 0) {
+        PartialOrbit.insert(eFaceImg);
+        ListListSet.push_back(eFaceImg);
+        DoubleCosetInsertEntry_second(eFaceImg);
         if (SizeGen == TotalSize) {
           vectface ListListFin(BigGRP.n_act());
           for (auto & eFace : SetFace)
