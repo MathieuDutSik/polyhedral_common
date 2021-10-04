@@ -2,6 +2,19 @@
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
 
+
+template<typename T, typename Tidx>
+void Process_eFull(FullNamelist const& eFull)
+{
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using Tint = mpz_class;
+  using Tgroup = permutalib::Group<Telt,Tint>;
+  //    using Tidx_value = int16_t;
+  using Tidx_value = int32_t;
+  MainFunctionSerialDualDesc<T,Tgroup,Tidx_value>(eFull);
+}
+
+
 int main(int argc, char *argv[])
 {
   try {
@@ -15,18 +28,25 @@ int main(int argc, char *argv[])
       return -1;
     }
     std::string eFileName=argv[1];
-    using T = mpq_class;
-    //    using Tidx = uint8_t;
-    //    using Tidx = uint16_t;
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt,Tint>;
-    //    using Tidx_value = int16_t;
-    using Tidx_value = int32_t;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionSerialDualDesc<T,Tgroup,Tidx_value>(eFull);
+    using T = mpq_class;
+    MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
+    //
+    auto process=[&]() -> void {
+      if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
+        return Process_eFull<T,uint8_t>(eFull);
+      if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
+        return Process_eFull<T,uint16_t>(eFull);
+      if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
+        return Process_eFull<T,uint32_t>(eFull);
+      if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
+        return Process_eFull<T,uint64_t>(eFull);
+      std::cerr << "Failed to find a numeric type that matches\n";
+      throw TerminalException{1};
+    };
+    process();
+    //
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {

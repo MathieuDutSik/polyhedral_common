@@ -845,6 +845,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const& WM
 
 
 
+
+
 template<typename T, typename Tidx, typename F1, typename F2>
 std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSignatures<T> const& WMVS, F1 f1, F2 f2)
 {
@@ -854,17 +856,29 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSig
     std::cerr << "GetCanonicalizationVector_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
-  std::cerr << "We have DT 1\n";
-  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering_Arr<Tidx>(DT);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector_KnownSignature|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-  return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
+  if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    using TidxIn = uint8_t;
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    using TidxIn = uint16_t;
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    using TidxIn = uint32_t;
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    using TidxIn = uint64_t;
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  std::cerr << "Failed to find matching type in GetCanonicalizationVector_KnownSignature\n";
+  throw TerminalException{1};
 }
 
 
@@ -878,34 +892,33 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     std::cerr << "GetGroupCanonicalization_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
-  std::cerr << "We have DT 2\n";
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<Tidx>(DT, nbRow);
-  std::cerr << "After TRACES_GetCanonicalOrdering_ListGenerators_Arr\n";
-  std::vector<std::vector<Tidx>> LGen;
-  std::vector<Tidx> eListO(nbRow);
-  for (auto& eListI : ePair.second) {
-    for (size_t i=0; i<nbRow; i++)
-      eListO[i] = eListI[i];
-    LGen.push_back(eListO);
+  if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    using TidxC = uint8_t;
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC,Tidx>(DT, nbRow);
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
   }
-  std::cerr << "LGen is now built\n";
-  //
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
-  std::cerr << "Before GetCanonicalizationVector_KernelBis, nbRow=" << nbRow << "\n";
-  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
-  std::cerr << " After GetCanonicalizationVector_KernelBis\n";
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetDataTraces + CanonicalListGen|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|GetCanonicalizationVector_KernelBis|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-  return {std::move(MapVectRev2), std::move(LGen)};
+  if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    using TidxC = uint16_t;
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC,Tidx>(DT, nbRow);
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    using TidxC = uint32_t;
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC,Tidx>(DT, nbRow);
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    using TidxC = uint64_t;
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC,Tidx>(DT, nbRow);
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  std::cerr << "Failed to find matching numeric in GetGroupCanonicalization_KnownSignature\n";
+  throw TerminalException{1};
 }
 
 
@@ -919,17 +932,8 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(WeightMa
     std::cerr << "GetStabilizerWeightMatrix_KnownSignature : We have nbRow=" << nbRow << " which is larger than the possible values of Tidx : " << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
   DataTraces DT = GetDataTraces<T,F1,F2>(f1, f2, WMVS);
-  std::cerr << "We have DT 3\n";
-  std::vector<std::vector<Tidx>> ListGen = TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetDataTraces + GetListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-  return ListGen;
+  return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
 }
 
 

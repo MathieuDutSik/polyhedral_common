@@ -888,6 +888,9 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> c
 template<typename T, typename Tgr, typename Tidx_value>
 inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>::type GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   const bool use_pairs=true;
   size_t nof_vertices=get_total_number_vertices<T,Tidx_value,use_pairs>(WMat);
 #ifdef DEBUG
@@ -905,6 +908,10 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
     eGR.AddAdjacent(iVert, jVert);
   };
   GetGraphFromWeightedMatrix_color_adj<T,decltype(f_color),decltype(f_adj),Tidx_value,use_pairs>(WMat, f_color, f_adj);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   return eGR;
 }
 
@@ -915,17 +922,19 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),Tgr>:
 
 
 
-template<typename Tidx>
-std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::vector<Tidx> const& cl)
+template<typename Tidx, typename TidxIn>
+std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::vector<TidxIn> const& cl)
 {
   size_t nof_vertices = cl.size();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
-  if (nbRow >= max_poss_rows || nof_vertices >= max_poss_rows) {
+  size_t max_poss_cl = size_t(std::numeric_limits<TidxIn>::max());
+  if (nbRow >= max_poss_rows || nof_vertices >= max_poss_cl) {
     std::cerr << "GetCanonicalizationVector_KernelBis : We have nbRow=" << nbRow << " and nof_vertices=" << nof_vertices << "\n";
     std::cerr << "which are larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
+    std::cerr << "which are larger than maximum allowed size of TidxIn = " << max_poss_cl << "\n";
     throw TerminalException{1};
   }
-  std::vector<Tidx> clR(nof_vertices);
+  std::vector<TidxIn> clR(nof_vertices);
   for (size_t i=0; i<nof_vertices; i++) {
 #ifdef DEBUG
     if (cl[i] < 0 || cl[i] >= nof_vertices) {
@@ -946,7 +955,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
     throw TerminalException{1};
   }
 #endif
-  std::vector<Tidx> MapVectRev(nbVert);
+  std::vector<TidxIn> MapVectRev(nbVert);
   Face ListStatus(nof_vertices);
   Tidx posCanonic=0;
   for (size_t iCan=0; iCan<nof_vertices; iCan++) {
@@ -978,7 +987,7 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
   Tidx posCanonicB=0;
   Tidx nbRow_tidx=Tidx(nbRow);
   for (size_t iCan=0; iCan<nbVert; iCan++) {
-    Tidx iNative=MapVectRev[iCan];
+    Tidx iNative=Tidx(MapVectRev[iCan]);
     if (iNative < nbRow_tidx) {
       MapVectRev2[posCanonicB] = iNative;
       posCanonicB++;
@@ -1001,28 +1010,51 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_va
     std::cerr << "GetCanonicalizationVector_Kernel : We have nbRow=" << nbRow << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
 
   Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-#endif
   //
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
+    using TidxIn = uint8_t;
 #ifdef USE_BLISS
-  std::vector<Tidx> cl = BLISS_GetCanonicalOrdering<Tgr,Tidx>(eGR);
+    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
 #endif
 #ifdef USE_TRACES
-  std::vector<Tidx> cl = TRACES_GetCanonicalOrdering<Tgr,Tidx>(eGR);
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
 #endif
-  //
-# ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-  std::cerr << "|XXX_GetCanonicalOrdering|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-# endif
-  return GetCanonicalizationVector_KernelBis<Tidx>(nbRow, cl);
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max())) {
+    using TidxIn = uint16_t;
+#ifdef USE_BLISS
+    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+#ifdef USE_TRACES
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max())) {
+    using TidxIn = uint32_t;
+#ifdef USE_BLISS
+    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+#ifdef USE_TRACES
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max())) {
+    using TidxIn = uint64_t;
+#ifdef USE_BLISS
+    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+#ifdef USE_TRACES
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+  }
+  std::cerr << "Failed to find matching numeric in GetCanonicalizationVector_Kernel\n";
+  throw TerminalException{1};
 }
 
 
@@ -1039,36 +1071,55 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     std::cerr << "GetGroupCanonicalizationVector_Kernel : We have nbRow=" << nbRow << " which is larger than maximum allowed size of Tidx = " << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-
   Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
 
-
+  //
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    using TidxC = uint8_t;
 #ifdef USE_BLISS
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbRow);
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
 #endif
-  //
 #ifdef USE_TRACES
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,Tidx>(eGR, nbRow);
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
 #endif
-  //
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|XXX_GetCanonicalOrdering_ListGenerators|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    using TidxC = uint16_t;
+#ifdef USE_BLISS
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
 #endif
-  //
-  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx>(nbRow, ePair.first);
-#ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|Array shuffling|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#ifdef USE_TRACES
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
 #endif
-  return {std::move(MapVectRev2), std::move(ePair.second)};
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    using TidxC = uint32_t;
+#ifdef USE_BLISS
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    using TidxC = uint64_t;
+#ifdef USE_BLISS
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+    return {std::move(MapVectRev2), std::move(ePair.second)};
+  }
+  std::cerr << "Failed to find matching numeric in GetGroupCanonicalizationVector_Kernel\n";
+  throw TerminalException{1};
 }
 
 

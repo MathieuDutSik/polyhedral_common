@@ -1989,6 +1989,18 @@ void OutputFacets(const vectface& TheOutput, const std::string& OUTfile, const s
 
 
 
+template<typename T>
+MyMatrix<T> GetEXT_from_efull(FullNamelist const& eFull)
+{
+  SingleBlock BlockDATA=eFull.ListBlock.at("DATA");
+  std::string EXTfile=BlockDATA.ListStringValues.at("EXTfile");
+  IsExistingFileDie(EXTfile);
+  std::ifstream EXTfs(EXTfile);
+  return ReadMatrix<T>(EXTfs);
+}
+
+
+
 template<typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const& eFull)
 {
