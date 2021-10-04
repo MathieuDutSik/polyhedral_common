@@ -158,7 +158,6 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  os << "DFOC prog=" << ansProg << " |EXT|=" << nbVert << " nbCol=" << nbCol << " |GRP|=" << GRP.size() << "\n";
   std::string eProg;
   //
   auto compute_dd=[&]() -> vectface {
@@ -216,9 +215,8 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   auto dur32 = std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count();
-  std::cerr << "KEY=(OrbitSplitting," << EXT.rows() << "," << EXT.cols() << "," << GRP.size() << "," << ListIncd.size() << "," << TheOutput.size() << ") VALUE=" << dur32 << "\n";
+  std::cerr << "KEY=(OrbitSplitting," << EXT.rows() << "," << EXT.cols() << "," << GRP.size() << "," << "," << ansProg << "," << ListIncd.size() << "," << TheOutput.size() << ") VALUE=" << dur32 << "\n";
 #endif
-  os << "DFOC |GRP|=" << GRP.size() << " |ListIncd|=" << ListIncd.size() << " |TheOutput|=" << TheOutput.size() << "\n";
   return TheOutput;
 }
 
