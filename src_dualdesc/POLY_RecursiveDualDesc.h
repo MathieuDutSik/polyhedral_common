@@ -1188,6 +1188,7 @@ public:
     delta = bb.delta;
     fb = nullptr;
     ff = nullptr;
+    fn = nullptr;
     is_opened = false;
     if (SavingTrigger) {
       std::string eFileEXT = MainPrefix + ".ext";
