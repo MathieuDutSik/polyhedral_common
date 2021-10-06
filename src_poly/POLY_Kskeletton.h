@@ -200,6 +200,132 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(Face const& face, Tgroup const& Stab
 }
 
 
+template<typename T, typename Tgroup, typename Fspann, typename Ffinal>
+std::vector<vectface> EnumerationFaces_Fspann_Ffinal(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch, Fspann f_spann, Ffinal f_final)
+{
+  std::vector<vectface> RetList;
+  int n=TheGRP.n_act();
+  vectface ListOrb(n);
+  Face eList(n);
+  for (int i=0; i<n; i++)
+    eList[i]=1;
+  vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
+  for (auto &eOrb : vvO) {
+    boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
+    Face nList(n);
+    nList[MinVal]=1;
+    ListOrb.push_back(nList);
+  }
+  std::cerr << "iLevel=0 |NListOrb|=" << ListOrb.size() << "\n";
+  bool test = f_final(0, ListOrb);
+  RetList.emplace_back(std::move(ListOrb));
+  if (test)
+    return RetList;
+  for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
+    vectface NListOrb(n);
+    for (auto &eOrb : RetList[iLevel-1]) {
+      Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
+      vectface TheSpann=f_spann(eOrb, StabFace, iLevel, FAC, TheGRP);
+      for (Face fOrb : TheSpann) {
+        Face fOrbCan = TheGRP.CanonicalImage(fOrb);
+        NListOrb.push_back(fOrbCan);
+      }
+    }
+    std::cerr << "iLevel=" << iLevel << " |NListOrb|=" << NListOrb.size() << "\n";
+    bool test = f_final(iLevel, NListOrb);
+    RetList.emplace_back(std::move(NListOrb));
+    if (test)
+      break;
+  }
+  return RetList;
+}
+
+
+
+template<typename T, typename Tgroup, typename Final>
+std::vector<vectface> EnumerationFaces_Ffinal(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method_spann, Final f_final)
+{
+  if (method_spann == "LinearProgramming") {
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
+    };
+    return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
+  }
+  if (method_spann == "ExtremeRays") {
+    int nbFac = FAC.rows();
+    int nbExt = EXT.rows();
+    int nbCol = EXT.cols();
+    Face extfac_incd(nbFac * nbExt);
+    for (int iFac=0; iFac<nbFac; iFac++)
+      for (int iExt=0; iExt<nbExt; iExt++) {
+        T sum = 0;
+        for (int i=0; i<nbCol; i++)
+          sum += FAC(iFac,i) * EXT(iExt,i);
+        if (sum == 0)
+          extfac_incd[iFac * nbExt + iExt] = 1;
+      }
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+    };
+    return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
+  }
+  if (method_spann == "ExtremeRaysNonSimplicial") {
+    int nbFac = FAC.rows();
+    int nbExt = EXT.rows();
+    int nbCol = EXT.cols();
+    Face extfac_incd(nbFac * nbExt);
+    for (int iFac=0; iFac<nbFac; iFac++)
+      for (int iExt=0; iExt<nbExt; iExt++) {
+        T sum = 0;
+        for (int i=0; i<nbCol; i++)
+          sum += FAC(iFac,i) * EXT(iExt,i);
+        if (sum == 0)
+          extfac_incd[iFac * nbExt + iExt] = 1;
+      }
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+      return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+    };
+    return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
+  }
+  std::cerr << "We failed to find a matching method_spann\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+template<typename T, typename Tgroup>
+std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method_spann, std::string const& method_final)
+{
+  if (method_final == "all") {
+    auto f_final=[&](int const& level, vectface const& RetList) -> bool {
+      return false;
+    };
+    return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann, f_final);
+  }
+  if (method_final == "stop_nonsimplicial") {
+    auto f_final=[&](int const& level, vectface const& RetList) -> bool {
+      size_t auth_len = level + 1;
+      for (auto & eFace : RetList) {
+        if (eFace.count() != auth_len)
+          return true;
+      }
+      return false;
+    };
+    return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann, f_final);
+  }
+  std::cerr << "We failed to find a matching method_final\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+
+
+
 
 
 // We test if eSet is included in a proper face of the polytope
@@ -320,98 +446,6 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const& TheGRP)
 }
 
 
-template<typename T, typename Tgroup, typename F>
-std::vector<vectface> EnumerationFaces_F(Tgroup const& TheGRP, MyMatrix<T> const& FAC, int LevSearch, F f)
-{
-  std::vector<vectface> RetList;
-  int n=TheGRP.n_act();
-  vectface ListOrb(n);
-  Face eList(n);
-  for (int i=0; i<n; i++)
-    eList[i]=1;
-  vectface vvO=DecomposeOrbitPoint(TheGRP, eList);
-  for (auto &eOrb : vvO) {
-    boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
-    Face nList(n);
-    nList[MinVal]=1;
-    ListOrb.push_back(nList);
-  }
-  std::cerr << "iLevel=0 |NListOrb|=" << ListOrb.size() << "\n";
-  RetList.emplace_back(std::move(ListOrb));
-  for (int iLevel=1; iLevel<=LevSearch; iLevel++) {
-    vectface NListOrb(n);
-    for (auto &eOrb : RetList[iLevel-1]) {
-      Tgroup StabFace=TheGRP.Stabilizer_OnSets(eOrb);
-      vectface TheSpann=f(eOrb, StabFace, iLevel, FAC, TheGRP);
-      for (Face fOrb : TheSpann) {
-        Face fOrbCan = TheGRP.CanonicalImage(fOrb);
-        NListOrb.push_back(fOrbCan);
-      }
-    }
-    std::cerr << "iLevel=" << iLevel << " |NListOrb|=" << NListOrb.size() << "\n";
-    RetList.emplace_back(std::move(NListOrb));
-  }
-  return RetList;
-}
-
-
-
-template<typename T, typename Tgroup>
-std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method)
-{
-  if (method == "LinearProgramming") {
-    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
-      return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
-    };
-    return EnumerationFaces_F<T,Tgroup,decltype(f)>(TheGRP, FAC, LevSearch, f);
-  }
-  if (method == "ExtremeRays") {
-    int nbFac = FAC.rows();
-    int nbExt = EXT.rows();
-    int nbCol = EXT.cols();
-    Face extfac_incd(nbFac * nbExt);
-    for (int iFac=0; iFac<nbFac; iFac++)
-      for (int iExt=0; iExt<nbExt; iExt++) {
-        T sum = 0;
-        for (int i=0; i<nbCol; i++)
-          sum += FAC(iFac,i) * EXT(iExt,i);
-        if (sum == 0)
-          extfac_incd[iFac * nbExt + iExt] = 1;
-      }
-    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
-      return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
-    };
-    return EnumerationFaces_F<T,Tgroup,decltype(f)>(TheGRP, FAC, LevSearch, f);
-  }
-  if (method == "ExtremeRaysNonSimplicial") {
-    int nbFac = FAC.rows();
-    int nbExt = EXT.rows();
-    int nbCol = EXT.cols();
-    Face extfac_incd(nbFac * nbExt);
-    for (int iFac=0; iFac<nbFac; iFac++)
-      for (int iExt=0; iExt<nbExt; iExt++) {
-        T sum = 0;
-        for (int i=0; i<nbCol; i++)
-          sum += FAC(iFac,i) * EXT(iExt,i);
-        if (sum == 0)
-          extfac_incd[iFac * nbExt + iExt] = 1;
-      }
-    auto f=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
-      return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
-    };
-    return EnumerationFaces_F<T,Tgroup,decltype(f)>(TheGRP, FAC, LevSearch, f);
-  }
-  std::cerr << "We failed to find a matching method\n";
-  throw TerminalException{1};
-}
-
-
-
-
-
-
-
-
 void PrintListOrb_GAP(std::ostream &os, std::vector<std::vector<int>> const& ListOrb)
 {
   int nbOrb, iOrb, len, i;
@@ -504,7 +538,8 @@ FullNamelist NAMELIST_GetStandard_FaceLattice()
   ListStringValues1["GRPfile"]="unset.grp";
   ListStringValues1["OUTfile"]="unset.out";
   ListStringValues1["OutFormat"]="GAP";
-  ListStringValues1["Method"]="unset.out";
+  ListStringValues1["method_spann"]="unset.out";
+  ListStringValues1["method_final"]="unset.out";
   ListIntValues1["LevSearch"] = -1;
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues=ListStringValues1;
@@ -539,11 +574,13 @@ void MainFunctionFaceLattice(FullNamelist const& eFull)
     throw TerminalException{1};
   }
   //
-  std::string Method=BlockPROC.ListStringValues.at("Method");
-  std::cerr << "Method=" << Method << "\n";
+  std::string method_spann=BlockPROC.ListStringValues.at("method_spann");
+  std::cerr << "method_spann=" << method_spann << "\n";
+  std::string method_final=BlockPROC.ListStringValues.at("method_final");
+  std::cerr << "method_final=" << method_final << "\n";
   //
   MyMatrix<T> EXT;
-  if (Method == "ExtremeRays" || Method == "ExtremeRaysNonSimplicial") {
+  if (method_spann == "ExtremeRays" || method_spann == "ExtremeRaysNonSimplicial") {
     std::string EXTfile=BlockPROC.ListStringValues.at("EXTfile");
     IsExistingFileDie(EXTfile);
     std::cerr << "EXTfile=" << EXTfile << "\n";
@@ -572,7 +609,7 @@ void MainFunctionFaceLattice(FullNamelist const& eFull)
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::cerr << "OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
   //
-  std::vector<vectface> TheOutput = EnumerationFaces(GRP, FAC, EXT, LevSearch, Method);
+  std::vector<vectface> TheOutput = EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final);
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
 }
