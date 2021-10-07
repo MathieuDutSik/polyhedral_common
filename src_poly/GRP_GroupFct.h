@@ -701,35 +701,6 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
 }
 
 
-template<typename T>
-struct popable_vector {
-private:
-  std::vector<T> V;
-  size_t pos;
-public:
-  popable_vector() : pos(0) {}
-  popable_vector(std::vector<T> const& _V) : V(_V), pos(_V.size()) {}
-  size_t size() const
-  {
-    return pos;
-  }
-  void push_back(T const& val)
-  {
-    if (V.size() == pos) {
-      V.push_back(val);
-      pos++;
-      return;
-    }
-    V[pos] = val;
-    pos++;
-  }
-  T pop()
-  {
-    pos--;
-    return V[pos];
-  }
-};
-
 
 template<typename Tgroup>
 vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaGRP, Face const& eList, std::ostream & os)
@@ -803,20 +774,75 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
 }
 
 
+template<typename Tgroup>
+vectface DoubleCosetDescription_Exhaustive(Tgroup const& BigGRP, Tgroup const& SmaGRP, Face const& eList, std::ostream & os)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n = BigGRP.n_act();
+  std::vector<Telt> LGenBig = BigGRP.GeneratorsOfGroup();
+  //
+  vectface vf(n);
+  std::vector<uint8_t> status;
+  std::unordered_set<Face> SetFace;
+  auto f_insert=[&](const Face& f) -> void {
+    if (SetFace.find(f) == SetFace.end()) {
+      vf.push_back(f);
+      status.push_back(0);
+      SetFace.insert(f);
+    }
+  };
+  size_t miss_val = std::numeric_limits<size_t>::max();
+  auto get_undone=[&]() -> size_t {
+    for (size_t i=0; i<status.size(); i++)
+      if (status[i] == 0)
+        return i;
+    return miss_val;
+  };
+  f_insert(eList);
+  Face eFaceImg(n);
+  while (true) {
+    size_t pos = get_undone();
+    if (pos == miss_val)
+      break;
+    status[pos] = 1;
+    Face f = vf[pos];
+    for (auto& eGen : LGenBig) {
+      OnFace_inplace(eFaceImg, f, eGen);
+      f_insert(eFaceImg);
+    }
+  }
+  return OrbitSplittingSet(vf, SmaGRP);
+}
+
+
 
 
 
 template<typename Tgroup>
-vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
+vectface OrbitSplittingListOrbit_spec(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::string const& method_split, std::ostream & os)
 {
   std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
-  //  WeightMatrix<true,int> WMat=WeightMatrixFromPairOrbits<Tgroup>(SmaGRP);
+  using Tidx_value = uint16_t;
+  WeightMatrix<true,int,Tidx_value> WMat;
+  if (method_split == "repr") {
+    WMat = WeightMatrixFromPairOrbits<Tgroup,Tidx_value>(SmaGRP);
+  }
   vectface eListSma(BigGRP.n_act());
   for (auto & eSet : eListBig) {
-    //    vectface ListListSet=DoubleCosetDescription_Representation(BigGRP, SmaGRP, WMat, eSet, os);
-    vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
-    eListSma.append(ListListSet);
+    if (method_split == "repr") {
+      vectface ListListSet=DoubleCosetDescription_Representation<Tgroup,Tidx_value>(BigGRP, SmaGRP, WMat, eSet);
+      eListSma.append(ListListSet);
+    }
+    if (method_split == "canonic") {
+      vectface ListListSet=DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
+      eListSma.append(ListListSet);
+    }
+    if (method_split == "exhaustive") {
+      vectface ListListSet=DoubleCosetDescription_Exhaustive(BigGRP, SmaGRP, eSet, os);
+      eListSma.append(ListListSet);
+    }
   }
   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
   int elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
@@ -827,8 +853,15 @@ vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, con
 
 
 
+template<typename Tgroup>
+vectface OrbitSplittingListOrbit(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os)
+{
+  std::string method_split = "canonic";
+  return OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, eListBig, method_split, os);
+}
+
+
 // This is for the lifting of orbits coming with the dual description of perfect cones.
-// It should replace 
 template<typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const& BigGRP, Tgroup const& SmaGRP, const vectface& eListBig, std::ostream & os2, std::ostream& os3)
 {

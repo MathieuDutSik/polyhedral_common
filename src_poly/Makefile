@@ -1,6 +1,5 @@
 #PROGRAM		= POLY_ThreadedADM ComputeDelaunay
-PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP \
-                  TEST_LinPolytope_Isomorphism \
+PROGRAM		= TEST_LinPolytope_Isomorphism \
                   TEST_LinPolytope_Automorphism \
                   TEST_LinPolytope_Canonic \
 		  POLY_CreateAffineBasis \

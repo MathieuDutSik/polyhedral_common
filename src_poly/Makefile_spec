@@ -16,7 +16,6 @@ PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
-#PROGRAM		= Temp_StandaloneOrbitFacePolytopeLP
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
