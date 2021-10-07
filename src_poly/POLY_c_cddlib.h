@@ -1,5 +1,5 @@
-#ifndef CDD_C_BASED_INCLUDE
-#define CDD_C_BASED_INCLUDE
+#ifndef INCLUDE_POLY_C_CDDLIB_H
+#define INCLUDE_POLY_C_CDDLIB_H
 
 #include <type_traits>
 #include "setoper.h"

@@ -1,5 +1,5 @@
-#ifndef TEMP_DIRECT_DUAL_DESC_H
-#define TEMP_DIRECT_DUAL_DESC_H
+#ifndef INCLUDE_POLY_DIRECTDUALDESC_H
+#define INCLUDE_POLY_DIRECTDUALDESC_H
 
 #include "POLY_lrslib.h"
 #include "POLY_cddlib.h"

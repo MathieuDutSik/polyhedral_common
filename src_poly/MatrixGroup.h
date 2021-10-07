@@ -1,5 +1,5 @@
-#ifndef MATRIX_GROUP_INCLUDE
-#define MATRIX_GROUP_INCLUDE
+#ifndef INCLUDE_MATRIX_GROUP_H
+#define INCLUDE_MATRIX_GROUP_H
 
 #include "factorizations.h"
 #include "MAT_MatrixInt.h"

@@ -1,5 +1,5 @@
-#ifndef LRS_TEMP_H_
-#define LRS_TEMP_H_
+#ifndef INCLUDE_POLY_LRSLIB_H
+#define INCLUDE_POLY_LRSLIB_H
 
 /* A templatized version of David Avis' lrs.
  * Code is mainly taken from lrslib.c

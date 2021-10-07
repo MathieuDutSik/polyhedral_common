@@ -1,5 +1,5 @@
-#ifndef TEMP_SKELETTON
-#define TEMP_SKELETTON
+#ifndef INCLUDE_POLY_KSKELETTON_H
+#define INCLUDE_POLY_KSKELETTON_H
 
 #include "MAT_Matrix.h"
 #include "POLY_PolytopeFct.h"

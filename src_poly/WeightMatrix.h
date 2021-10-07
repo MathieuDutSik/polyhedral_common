@@ -1,5 +1,5 @@
-#ifndef TEMP_POLYTOPE_EQUI_STAB
-#define TEMP_POLYTOPE_EQUI_STAB
+#ifndef INCLUDE_WEIGHT_MATRIX_H
+#define INCLUDE_WEIGHT_MATRIX_H
 
 #include "GRAPH_bliss.h"
 #include "GRAPH_traces.h"
@@ -365,6 +365,9 @@ private:
   std::vector<T> ListWeight;
   std::vector<Tidx_value> TheMat;
 };
+
+
+
 
 //
 // Hashes and invariants

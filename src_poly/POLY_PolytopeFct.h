@@ -1,5 +1,5 @@
-#ifndef TEMP_POLYTOPE_FCT_INCLUDE
-#define TEMP_POLYTOPE_FCT_INCLUDE
+#ifndef INCLUDE_POLY_POLYTOPE_FCT_H
+#define INCLUDE_POLY_POLYTOPE_FCT_H
 
 #include "MAT_Matrix.h"
 #include "Boost_bitset.h"

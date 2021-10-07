@@ -1,5 +1,5 @@
-#ifndef DEFINE_CDD_GRAPH
-#define DEFINE_CDD_GRAPH
+#ifndef INCLUDE_POLY_CDD_GRAPH_H
+#define INCLUDE_POLY_CDD_GRAPH_H
 
 
 #include "POLY_cddlib.h"

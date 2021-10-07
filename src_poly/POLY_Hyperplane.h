@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_HYPERPLANE
-#define INCLUDE_POLY_HYPERPLANE
+#ifndef INCLUDE_POLY_HYPERPLANE_H
+#define INCLUDE_POLY_HYPERPLANE_H
 
 #include "POLY_cddlib.h"
 #include "POLY_c_cddlib.h"
