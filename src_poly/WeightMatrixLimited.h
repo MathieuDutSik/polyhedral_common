@@ -16,28 +16,43 @@ public:
   {
     // Computing the diagional values
     list_diag_idx.resize(nbRow);
-    std::unordered_map<T, size_t> ValueMap;
+    std::vector<T> list_diag_weight_tmp;
+    std::unordered_map<T, size_t> unordmap_value;
     size_t idxWeight=0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       f1(iRow);
       T val = f2(iRow);
-      size_t & idx = ValueMap[val];
+      size_t & idx = unordmap_value[val];
       if (idx == 0) {
         idxWeight++;
         idx = idxWeight;
-        list_diag_weight.push_back(val);
+        list_diag_weight_tmp.push_back(val);
       }
       size_t pos_val = idx - 1;
       list_diag_idx[iRow] = pos_val;
     }
-    size_t n_weight = ValueMap.size();
+    size_t n_weight = unordmap_value.size();
     // Coding the reordering of the list_diag_weight
-
+    std::map<T, size_t> map_value;
+    size_t n_ent = list_diag_weight_tmp.size();
+    for (size_t i=0; i<n_ent; i++)
+      map_value[list_diag_weight_tmp[i]] = i;
+    std::vector<size_t> g(n_ent);
+    size_t idx=0;
+    for (auto & kv : map_value) {
+      g[kv.second] = idx;
+      idx++;
+    }
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      list_diag_idx[iRow] = g[list_diag_idx[iRow]];
+    list_diag_weight.resize(n_ent);
+    for (size_t i=0; i<n_ent; i++)
+      list_diag_weight[g[i]] = list_diag_weight_tmp[i];
     // Computing the shift and sizes
     list_diag_sizes.resize(n_weight);
     list_diag_shift.resize(n_weight+1);
     for (size_t i=0; i<n_weight; i++)
-      list_sizes[i] = 0;
+      list_diag_sizes[i] = 0;
     for (size_t iRow=0; iRow<nbRow; iRow++) {
       size_t iWeight = list_diag_idx[iRow];
       list_diag_sizes[iWeight]++;
@@ -71,7 +86,7 @@ public:
             map_pair[n_poss].push_back({i_weight, i_weight});
           }
         } else {
-          size_t siz2 = list_sizes[j_weight];
+          size_t siz2 = list_diag_sizes[j_weight];
           size_t n_poss = siz1 * siz2;
           map_pair[n_poss].push_back({i_weight, j_weight});
         }
@@ -92,17 +107,18 @@ public:
       iter++;
     }
     // Computing the arrays themselves
+    std::vector<T> list_offdiag_weight_tmp;
     list_offdiag_idx.resize(sel_size);
-    ValueMap.clear();
+    unordmap_value.clear();
     idxWeight=0;
     size_t pos = 0;
     auto insertval=[&](size_t const& jRow) -> void {
       T val = f2(jRow);
-      size_t & idx = ValueMap[val];
+      size_t & idx = unordmap_value[val];
       if (idx == 0) {
         idxWeight++;
         idx = idxWeight;
-        list_offdiag_weight.push_back(val);
+        list_offdiag_weight_tmp.push_back(val);
       }
       size_t pos_val = idx - 1;
       list_offdiag_idx[pos] = pos_val;
@@ -140,10 +156,10 @@ public:
           }
         }
       } else {
-        size_t i_siz = list_sizes[i_wei];
-        size_t i_shift = list_shift[i_wei];
-        size_t j_siz = list_sizes[j_wei];
-        size_t j_shift = list_shift[j_wei];
+        size_t i_siz = list_diag_sizes[i_wei];
+        size_t i_shift = list_diag_shift[i_wei];
+        size_t j_siz = list_diag_sizes[j_wei];
+        size_t j_shift = list_diag_shift[j_wei];
         for (size_t i=0; i<i_siz; i++) {
           size_t ipos = i_shift + i;
           size_t iRow = list_diag_element[ipos];
@@ -156,7 +172,42 @@ public:
         }
       }
     }
-    // Redordering of the ValueMap.
+    // Reordering of the unordmap_value.
+    map_value.clear();
+    n_ent = list_offdiag_weight_tmp.size();
+    for (size_t i=0; i<n_ent; i++)
+      map_value[list_offdiag_weight_tmp[i]] = i;
+    g.resize(n_ent);
+    idx=0;
+    for (auto & kv : map_value) {
+      g[kv.second] = idx;
+      idx++;
+    }
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      list_offdiag_idx[iRow] = g[list_offdiag_idx[iRow]];
+    list_offdiag_weight.resize(n_ent);
+    for (size_t i=0; i<n_ent; i++)
+      list_offdiag_weight[g[i]] = list_offdiag_weight_tmp[i];
+    // Now computing shifting information
+    list_offdiag_sizes.resize(n_weight);
+    list_offdiag_shift.resize(n_weight+1);
+    for (size_t i=0; i<n_weight; i++)
+      list_offdiag_sizes[i] = 0;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      size_t iWeight = list_diag_idx[iRow];
+      list_diag_sizes[iWeight]++;
+    }
+    list_diag_shift[0] = 0;
+    for (size_t i=0; i<n_weight; i++)
+      list_diag_shift[i+1] = list_diag_shift[i] + list_diag_sizes[i];
+    std::vector<size_t> list_diag_pos = list_diag_shift;
+    list_diag_element.resize(nbRow);
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      size_t iWeight = list_diag_idx[iRow];
+      size_t pos = list_diag_shift[iWeight];
+      list_diag_element[pos] = iRow;
+      list_diag_shift[iWeight] = pos + 1;
+    }
   }
 
 private:
