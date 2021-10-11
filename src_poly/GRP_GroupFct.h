@@ -415,19 +415,19 @@ std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
 template<typename Tgroup>
 vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
 {
-  int nbPoint=TheGRP.n_act();
+  size_t nbPoint=TheGRP.n_act();
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   vectface ListOrb(nbPoint);
-  int len=eList.count();
+  size_t len=eList.count();
   boost::dynamic_bitset<>::size_type aRow=eList.find_first();
-  for (int i=0; i<len; i++) {
-    VSLT_StoreValue(Vlist, int(aRow));
+  for (size_t i=0; i<len; i++) {
+    VSLT_StoreValue(Vlist, size_t(aRow));
     aRow=eList.find_next(aRow);
   }
   while(true) {
     if (VSLT_IsEmpty(Vlist))
       break;
-    int TheFirst=VSLT_TheFirstPosition(Vlist);
+    size_t TheFirst = VSLT_TheFirstPosition(Vlist);
     std::vector<int> eOrb=ComputeFullOrbitPoint(TheGRP, TheFirst);
     Face vectOrb(nbPoint);
     for (auto & ePt : eOrb) {

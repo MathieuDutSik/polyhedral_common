@@ -11,6 +11,7 @@ struct WeightMatrixLimited {
 public:
   static const bool is_symmetric = is_symmetric_impl;
   using T = T_impl;
+  using Tpair = std::pair<size_t, size_t>;
 private:
   void reorder_entries(std::vector<T> & list_weight, std::vector<size_t> & list_idx)
   {
@@ -57,33 +58,8 @@ private:
       list_pos[iWeight] = pos + 1;
     }
   }
-public:
-  template<typename F1, typename F2>
-  WeightMatrix(size_t const& _nbRow, F1 f1, F2 f2, size_t max_offdiag) : nbRow(_nbRow)
+  std::pair<size_t, std::vector<Tpair>> get_list_selected() const
   {
-    // Computing the diagional values
-    list_diag_idx.resize(nbRow);
-    std::unordered_map<T, size_t> unordmap_value;
-    size_t idxWeight=0;
-    for (size_t iRow=0; iRow<nbRow; iRow++) {
-      f1(iRow);
-      T val = f2(iRow);
-      size_t & idx = unordmap_value[val];
-      if (idx == 0) {
-        idxWeight++;
-        idx = idxWeight;
-        list_diag_weight.push_back(val);
-      }
-      size_t pos_val = idx - 1;
-      list_diag_idx[iRow] = pos_val;
-    }
-    size_t n_weight = unordmap_value.size();
-    // Coding the reordering of the list_diag_weight
-    reorder_entries(list_diag_weight, list_diag_idx);
-    // Computing the shift and sizes
-    compute_shift_size(list_diag_sizes, list_diag_shift, list_diag_element, list_diag_idx, list_diag_weight);
-    // Computing the set of off diagonal entries that we are interested in.
-    using Tpair = std::pair<size_t, size_t>;
     std::map<size_t,std::vector<Tpair>> map_pair;
     for (size_t i_weight=0; i_weight<n_weight; i_weight++) {
       size_t start=0;
@@ -120,6 +96,38 @@ public:
       list_selected.insert(list_selected.end(), e_pair.begin(), e_pair.end());
       iter++;
     }
+    return {sel_size, std::move(list_selected)};
+  }
+  
+public:
+  template<typename F1, typename F2>
+  WeightMatrix(size_t const& _nbRow, F1 f1, F2 f2, size_t max_offdiag) : nbRow(_nbRow)
+  {
+    // Computing the diagional values
+    list_diag_idx.resize(nbRow);
+    std::unordered_map<T, size_t> unordmap_value;
+    size_t idxWeight=0;
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      f1(iRow);
+      T val = f2(iRow);
+      size_t & idx = unordmap_value[val];
+      if (idx == 0) {
+        idxWeight++;
+        idx = idxWeight;
+        list_diag_weight.push_back(val);
+      }
+      size_t pos_val = idx - 1;
+      list_diag_idx[iRow] = pos_val;
+    }
+    size_t n_weight = unordmap_value.size();
+    // Coding the reordering of the list_diag_weight
+    reorder_entries(list_diag_weight, list_diag_idx);
+    // Computing the shift and sizes
+    compute_shift_size(list_diag_sizes, list_diag_shift, list_diag_element, list_diag_idx, list_diag_weight);
+    // Computing the set of off diagonal entries that we are interested in.
+    std::pair<size_t, std::vector<Tpair>> pair = get_list_selected();
+    const size_t& sel_size = pair.first;
+    const std::vector<Tpair>& list_selected = pair.second;
     // Computing the arrays themselves
     list_offdiag_idx.resize(sel_size);
     unordmap_value.clear();
@@ -193,7 +201,104 @@ public:
   template<typename Tgroup>
   WeightMatrix(const Tgroup& GRP) : nbRow(GRP.n_act())
   {
+    using Telt = typename Tgroup::Telt;
+    Face eList(nbRow);
+    for (size_t iRow=0; iRow<nbRow; iRow++)
+      eList[i] = 1;
+    std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
+    vectface vf = DecomposeOrbitPoint(GRP, eList);
+    size_t len = vf.size();
+    list_diag_weight.resize(len);
+    for (size_t i=0; i<len; i++)
+      list_diag_weight[i] = i;
+    list_diag_idx.resize(nbRow);
+    for (size_t i=0; i<len; i++) {
+      Face f = vf[i];
+      boost::dynamic_bitset<>::size_type pos=f.find_first();
+      while (pos != boost::dynamic_bitset<>::npos) {
+        list_diag[pos] = i;
+        pos = pos.find_next();
+      }
+    }
+    compute_shift_size(list_diag_sizes, list_diag_shift, list_diag_element, list_diag_idx, list_diag_weight);
+    // Selecting the groups.
+    std::pair<size_t, std::vector<Tpair>> pair = get_list_selected();
+    const size_t& sel_size = pair.first;
+    const std::vector<Tpair>& list_selected = pair.second;
+    // 
+    list_offdiag_idx.resize(sel_size);
     
+    for (auto& e_ent : list_selected) {
+      size_t i_wei = e_ent.first;
+      size_t j_wei = e_ent.second;
+      if (i_wei == j_wei) {
+        size_t siz = list_sizes[i_wei];
+        size_t shift = list_shift[i_wei];
+        if (constexpr is_symmetric) {
+          std::vector<Telt> LGenMap;
+          std::vector<size_t> map_rev(siz * siz);
+          size_t len = siz * (siz - 1) / 2;
+          std::vector<size_t> map(2 * len);
+          size_t pos=0;
+          for (size_t i=0; i<siz; i++) {
+            for (size_t j=i+1; j<siz; j++) {
+              map_rev[i + siz * j] = pos;
+              map_rev[j + siz * i] = pos;
+              map[2 * pos    ] = i;
+              map[2 * pos + 1] = j;
+              pos++;
+            }
+          }
+          for (auto & eGen : LGen) {
+            std::vector<uint64_t> eList(len);
+            for (size_t pos=0; pos<len; pos++) {
+              size_t i = map[2 * pos];
+              size_t j = map[2 * pos + 1];
+              
+            }
+          }
+          for (size_t i=0; i<siz; i++) {
+            size_t ipos = shift + i;
+            size_t iRow = list_diag_element[ipos];
+            f1(iRow);
+            for (size_t j=i+1; j<siz; j++) {
+              size_t jpos = shift + j;
+              size_t jRow = list_diag_element[jpos];
+              insertval(jRow);
+            }
+          }
+        } else {
+          for (size_t i=0; i<siz; i++) {
+            size_t ipos = shift + i;
+            size_t iRow = list_diag_element[ipos];
+            f1(iRow);
+            for (size_t j=0; j<siz; j++) {
+              if (i != j) {
+                size_t jpos = shift + j;
+                size_t jRow = list_diag_element[jpos];
+                insertval(jRow);
+              }
+            }
+          }
+        }
+      } else {
+        size_t i_siz = list_diag_sizes[i_wei];
+        size_t i_shift = list_diag_shift[i_wei];
+        size_t j_siz = list_diag_sizes[j_wei];
+        size_t j_shift = list_diag_shift[j_wei];
+        for (size_t i=0; i<i_siz; i++) {
+          size_t ipos = i_shift + i;
+          size_t iRow = list_diag_element[ipos];
+          f1(iRow);
+          for (size_t j=0; j<j_siz; j++) {
+            size_t jpos = j_shift + j;
+            size_t jRow = list_diag_element[jpos];
+            insertval(jRow);
+          }
+        }
+      }
+    }
+
   }
 private:
   size_t nbRow;
