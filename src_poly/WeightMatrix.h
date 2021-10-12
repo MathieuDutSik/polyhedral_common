@@ -418,10 +418,10 @@ namespace std {
   };
 }
 
-template<typename T, typename Tidx_value>
-size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat, Face const& eSet)
+
+std::pair<int,std::vector<size_t>> get_smallest_set(const Face& f)
 {
-  size_t n=eSet.size();
+  size_t n = eSet.size();
   size_t nbVert=eSet.count();
   std::vector<size_t> eList;
   int set_val;
@@ -445,6 +445,19 @@ size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat
     }
     set_val = 0;
   }
+  return {set_val, std::move(eList)};
+}
+
+
+template<typename T, typename Tidx_value>
+size_t GetLocalInvariantWeightMatrix(WeightMatrix<true,T,Tidx_value> const& WMat, Face const& eSet)
+{
+  size_t n=eSet.size();
+  size_t nbVert=eSet.count();
+  // We consider the set of smallest size which gain us speed.
+  std::pair<int,std::vector<size_t>> pair = get_smallest_set(eSet);
+  const std::vector<size_t> & eList = pair.second;
+  const int& set_val = pair.first;
   size_t nbWeight=WMat.GetWeightSize();
   std::vector<int> eInv(3 * nbWeight + 1, 0);
   for (auto & aVert : eList) {

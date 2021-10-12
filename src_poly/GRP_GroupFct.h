@@ -386,15 +386,12 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 //
 
 
-template<typename Tgroup>
-std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
+template<typename Telt>
+std::vector<int> ComputeFullOrbitPoint(const size_t& n, const std::vector<Telt>& ListGen, int const& ePoint)
 {
-  using Telt = typename Tgroup::Telt;
-  int n = TheGRP.n_act();
   IntegerSubsetStorage Vorb = VSLT_InitializeStorage(n);
   IntegerSubsetStorage Vactive = VSLT_InitializeStorage(n);
   std::vector<int> eList;
-  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   VSLT_StoreValue(Vactive, ePoint);
   while(true) {
     if (VSLT_IsEmpty(Vactive))
@@ -412,10 +409,10 @@ std::vector<int> ComputeFullOrbitPoint(Tgroup const& TheGRP, int const& ePoint)
   return eList;
 }
 
-template<typename Tgroup>
-vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
+template<typename Telt>
+vectface DecomposeOrbitPoint_Kernel(const std::vector<Telt>& LGen, Face const& eList)
 {
-  size_t nbPoint=TheGRP.n_act();
+  size_t nbPoint=eList.size();
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   vectface ListOrb(nbPoint);
   size_t len=eList.count();
@@ -428,7 +425,7 @@ vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
     if (VSLT_IsEmpty(Vlist))
       break;
     size_t TheFirst = VSLT_TheFirstPosition(Vlist);
-    std::vector<int> eOrb=ComputeFullOrbitPoint(TheGRP, TheFirst);
+    std::vector<int> eOrb=ComputeFullOrbitPoint(nbPoint, LGen, TheFirst);
     Face vectOrb(nbPoint);
     for (auto & ePt : eOrb) {
       vectOrb[ePt]=1;
@@ -438,6 +435,41 @@ vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
   }
   return ListOrb;
 }
+
+template<typename Tgroup>
+vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
+{
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = TheGRP.GeneratorsOfGroup();
+  return DecomposeOrbitPoint_Kernel(LGen, eList);
+}
+
+template<typename Tgroup>
+vectface DecomposeOrbitPoint_Full(Tgroup const& TheGRP)
+{
+  size_t n = TheGRP.n_act();
+  Face eList(n);
+  for (size_t i=0; i<n; i++)
+    eList[i] = 1;
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = TheGRP.GeneratorsOfGroup();
+  return DecomposeOrbitPoint_Kernel(LGen, eList);
+}
+
+
+template<typename Telt>
+vectface DecomposeOrbitPoint_KernelFull(const size_t& n, const std::vector<Telt>& LGen)
+{
+  Face eList(n);
+  for (size_t i=0; i<n; i++)
+    eList[i] = 1;
+  using Telt = typename Tgroup::Telt;
+  return DecomposeOrbitPoint_Kernel(LGen, eList);
+}
+
+
+
+
 
 template<typename Tobj, typename Tgen>
 std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTotal,
