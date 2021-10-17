@@ -1,3 +1,5 @@
+#include "Permutation.h"
+#include "Group.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -16,8 +18,10 @@ int main(int argc, char *argv[])
     }
     //
     using T=mpq_class;
+    using Tidx = uint16_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,mpz_class>;
     using Tint=int;
-    using Tgroup=TheGroupFormat<mpz_class>;
     int NPROC;
     sscanf(argv[1], "%d", &NPROC);
     //

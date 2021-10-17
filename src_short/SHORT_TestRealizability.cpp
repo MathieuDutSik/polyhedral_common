@@ -1,3 +1,6 @@
+#include "NumberTheory.h"
+#include "Permutation.h"
+#include "Group.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
@@ -15,7 +18,10 @@ int main(int argc, char *argv[])
     }
     using T=mpq_class;
     using Tint=int;
-    using Tgroup=TheGroupFormat<mpz_class>;
+
+    using Tidx = uint16_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,mpz_class>;
     //
     std::string FileMat=argv[1];
     std::string TheMethod=argv[2];
