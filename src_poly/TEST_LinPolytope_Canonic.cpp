@@ -1,6 +1,4 @@
 #include "NumberTheory.h"
-#include "Permlib_specific.h"
-#include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[])
