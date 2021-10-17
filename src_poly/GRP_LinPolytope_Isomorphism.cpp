@@ -1,5 +1,4 @@
 #include "NumberTheory.h"
-#include "Permlib_specific.h"
 #include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
 

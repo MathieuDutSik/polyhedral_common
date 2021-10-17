@@ -1,4 +1,6 @@
-#include "Permlib_specific.h"
+#include "NumberTheory.h"
+#include "Permutation.h"
+#include "Group.h"
 #include "GRP_GroupFct.h"
 int main(int argc, char *argv[])
 {
@@ -13,8 +15,10 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
-    using Tgroup=TheGroupFormat<mpz_class>;
-    using Telt=typename Tgroup::Telt;
+    using Tint = mpz_class;
+    using Tidx = uint16_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,Tint>;
     std::cerr << "Reading input\n";
     //
     std::ifstream is1(argv[1]);
