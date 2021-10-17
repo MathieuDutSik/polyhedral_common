@@ -3,6 +3,7 @@
 
 
 #include "WeightMatrix.h"
+#include "WeightMatrixLimited.h"
 #include "WeightMatrixSpecified.h"
 
 //
@@ -348,6 +349,21 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
   std::cerr << "Failed to find matching numeric in GetWeightMatrix\n";
   throw TerminalException{1};
 }
+
+
+
+template<typename T>
+WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const& TheEXT, size_t max_offdiag)
+{
+  using Treturn = WeightMatrixLimited<true, T>;
+  auto f=[&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5) -> Treturn {
+    return WeightMatrixLimited<true, T>(nbRow, f1, f2, max_offdiag);
+  };
+  using Tidx = size_t;
+  return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
+}
+
+
 
 
 
