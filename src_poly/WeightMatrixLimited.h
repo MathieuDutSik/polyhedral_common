@@ -300,8 +300,8 @@ public:
           }
         }
       } else {
-        size_t siz_B = list_diag_sizes[j_wei];
-        //        size_t shift_B = list_diag_shift[j_wei];
+        siz_B = list_diag_sizes[j_wei];
+        shift_B = list_diag_shift[j_wei];
         map_rev.resize(siz * siz_B);
         len = siz * siz_B;
         map.resize(2 * len);

@@ -1,4 +1,3 @@
-#include "Permlib_specific.h"
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[])
