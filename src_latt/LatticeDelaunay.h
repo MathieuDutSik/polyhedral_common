@@ -2,7 +2,7 @@
 #define LATTICE_DELAUNAY_INCLUDE
 
 #include "FundamentalDelaunay.h"
-#include "GRP_GroupFct.h"
+#include "GRP_DoubleCoset.h"
 #include "MatrixGroup.h"
 #include "POLY_ThreadDualDescription.h"
 #include "Namelist.h"

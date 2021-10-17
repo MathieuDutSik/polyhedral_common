@@ -3,6 +3,7 @@
 
 
 #include "GRP_GroupFct.h"
+#include "Permutation.h"
 
 
 
@@ -262,7 +263,7 @@ public:
     {
       size_t siz = list_diag_sizes[i_wei];
       size_t shift = list_diag_shift[i_wei];
-      size_t siz_B, shift_B;
+      size_t shift_B;
       std::vector<size_t> map_rev;
       size_t len;
       std::vector<size_t> map;

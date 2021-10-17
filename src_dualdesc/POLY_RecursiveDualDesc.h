@@ -6,7 +6,7 @@
 #include "POLY_DirectDualDesc.h"
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
-#include "GRP_GroupFct.h"
+#include "GRP_DoubleCoset.h"
 #include "MAT_MatrixInt.h"
 
 #include "POLY_GAP.h"

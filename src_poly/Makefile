@@ -2,6 +2,7 @@
 PROGRAM		= TEST_LinPolytope_Isomorphism \
                   TEST_LinPolytope_Automorphism \
                   TEST_LinPolytope_Canonic \
+                  TEST_WeightMatrixLimited \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons \
 		  POLY_redundancy \
