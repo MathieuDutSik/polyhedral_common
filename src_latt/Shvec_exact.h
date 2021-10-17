@@ -19,6 +19,7 @@ namespace TempShvec_globals {
   const int TEMP_SHVEC_MODE_MINIMUM = 2;
   const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
   const int TEMP_SHVEC_MODE_VINBERG = 4;
+  const int TEMP_SHVEC_MODE_HAN_TRAN = 0;
   const int STOP_COMPUTATION = 666;
   const int NORMAL_TERMINATION_COMPUTATION = 555;
 }
@@ -544,6 +545,19 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     info.minimum = request.bound;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
       info.short_vectors.push_back(V);
+      return true;
+    };
+    (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
+    return info;
+  }
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_HAN_TRAN) {
+    T_shvec_info<T,Tint> info;
+    info.minimum = request.bound;
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      if (min == request.bound) {
+        info.short_vectors.push_back(V);
+        return false;
+      }
       return true;
     };
     (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);

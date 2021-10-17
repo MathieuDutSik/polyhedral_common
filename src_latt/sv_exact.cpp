@@ -19,13 +19,13 @@ int main(int argc, char *argv[])
   using T=mpq_class;
   using Tint=mpz_class;
   try {
-    int i, j, mode, coset;
+    bool coset = false;
+    bool NeedBound = false;
+    int i, j, mode;
     mpq_class bound = 0;
     mode = TempShvec_globals::TEMP_SHVEC_MODE_UNDEF;
-    coset = 0;
-    int NeedBound=0;
     int c;
-    while ((c = getopt (argc, argv, "hb:s:t:mMcgev")) != -1)
+    while ((c = getopt (argc, argv, "hb:s:t:mMTcgev")) != -1)
       switch (c)
 	{
 	case 'h':
@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 	  printf("-v determine the vectors with (v-c, v-c) <= N with N defined later\n");
 	  printf("-m  determine the minimum\n");
 	  printf("-M  compute minimal vectors\n");
+	  printf("-T  compute one vector of fixed length (quaetsion of Han Tran)\n");
 	  printf("-c  find shortest vectors in a coset\n");
 	  printf("-e  do some additional checks\n");
 	  return 0;
@@ -46,16 +47,21 @@ int main(int argc, char *argv[])
 	case 'M':
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
 	  break;
+	case 'T':
+	  mode = TempShvec_globals::TEMP_SHVEC_MODE_HAN_TRAN;
+	  coset=false;
+	  NeedBound=true;
+	  break;
 	case 'm':
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM;
 	  break;
 	case 'v':
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
-	  coset=1;
-	  NeedBound=1;
+	  coset=true;
+	  NeedBound=true;
 	  break;
 	case 'c':
-	  coset = 1;
+	  coset = true;
 	  break;
 	case 'e':
 	  break;

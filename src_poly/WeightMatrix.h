@@ -421,24 +421,24 @@ namespace std {
 
 std::pair<int,std::vector<size_t>> get_smallest_set(const Face& f)
 {
-  size_t n = eSet.size();
-  size_t nbVert=eSet.count();
+  size_t n = f.size();
+  size_t nbVert = f.count();
   std::vector<size_t> eList;
   int set_val;
   // We consider the set of smallest size which gain us speed.
   if (2 * nbVert < n) {
     eList.resize(nbVert);
-    boost::dynamic_bitset<>::size_type aRow=eSet.find_first();
+    boost::dynamic_bitset<>::size_type aRow=f.find_first();
     for (size_t i=0; i<nbVert; i++) {
       eList[i]=size_t(aRow);
-      aRow=eSet.find_next(aRow);
+      aRow = f.find_next(aRow);
     }
     set_val = 1;
   } else {
     eList.resize(n - nbVert);
     size_t idx = 0;
     for (size_t i=0; i<n; i++) {
-      if (eSet[i] == 0) {
+      if (f[i] == 0) {
         eList[idx] = i;
         idx++;
       }

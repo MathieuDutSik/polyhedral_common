@@ -463,7 +463,6 @@ vectface DecomposeOrbitPoint_KernelFull(const size_t& n, const std::vector<Telt>
   Face eList(n);
   for (size_t i=0; i<n; i++)
     eList[i] = 1;
-  using Telt = typename Tgroup::Telt;
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
 
