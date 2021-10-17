@@ -1,6 +1,7 @@
 #include "Permutation.h"
 #include "Group.h"
 #include "GRP_GroupFct.h"
+#include "GRP_DoubleCoset.h"
 
 
 int main(int argc, char *argv[])

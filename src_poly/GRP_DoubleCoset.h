@@ -2,6 +2,7 @@
 #define INCLUDE_TEMP_GROUP_DOUBLE_COSET_H
 
 #include "GRP_GroupFct.h"
+#include "WeightMatrix.h"
 
 
 //

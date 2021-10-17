@@ -1396,7 +1396,65 @@ std::optional<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T, Tidx_v
 }
 
 
+//
+// PairOrbits as powerful invariants of subsets extracted from the group action on pairs.
+//
 
+template<typename Tgroup, typename Tidx_value>
+WeightMatrix<true, int,Tidx_value> WeightMatrixFromPairOrbits(Tgroup const& GRP)
+{
+  using Telt = typename Tgroup::Telt;
+  Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
+  size_t n=GRP.n_act();
+  WeightMatrix<true, int, Tidx_value> WMat(n);
+  for (size_t i=0; i<n; i++)
+    for (size_t j=0; j<n; j++)
+      WMat.intDirectAssign(i,j,miss_val);
+  auto GetUnset=[&]() -> std::pair<int,int> {
+    for (size_t i=0; i<n; i++)
+      for (size_t j=0; j<n; j++) {
+        Tidx_value eVal=WMat.GetValue(i,j);
+        if (eVal == miss_val) {
+          return {i,j};
+        }
+      }
+    return {-1,-1};
+  };
+  int iOrbit=0;
+  std::vector<int> ListWeight;
+  std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
+  while(true) {
+    std::pair<int,int> eStart=GetUnset();
+    if (eStart.first == -1)
+      break;
+    ListWeight.push_back(iOrbit);
+    std::vector<std::pair<int,int>> eList{eStart};
+    size_t orbSize = 0;
+    while(true) {
+      int nbPair = eList.size();
+      if (nbPair == 0)
+        break;
+      orbSize += nbPair;
+      std::vector<std::pair<int,int>> fList;
+      for (auto & ePair : eList) {
+        int i=ePair.first;
+        int j=ePair.second;
+        WMat.intDirectAssign(i,j,iOrbit);
+        for (auto & eGen : ListGen) {
+          int iImg = OnPoints(i, eGen);
+          int jImg = OnPoints(j, eGen);
+          Tidx_value eVal1 = WMat.GetValue(iImg,jImg);
+          if (eVal1 == miss_val)
+            fList.push_back({iImg,jImg});
+        }
+      }
+      eList = std::move(fList);
+    }
+    iOrbit++;
+  }
+  WMat.SetWeight(ListWeight);
+  return WMat;
+}
 
 
 

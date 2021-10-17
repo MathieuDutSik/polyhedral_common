@@ -1,5 +1,6 @@
 #include "Permlib_specific.h"
 #include "GRP_GroupFct.h"
+#include "GRP_DoubleCoset.h"
 int main(int argc, char *argv[])
 {
   try {
