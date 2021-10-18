@@ -315,10 +315,11 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx,int> const& eMap)
   for (auto & kv : eMap) {
     std::vector<Tint> NewVal;
     Tint ePow = 1;
+    Tint kv_first_tint = size_t(kv.first); // Needed conversion because of Mac typing issues.
     for (int i=0; i<=kv.second; i++) {
       for (auto & eVal : LVal)
         NewVal.push_back(ePow * eVal);
-      ePow *= kv.first;
+      ePow *= kv_first_tint;
     }
     LVal = NewVal;
   }
