@@ -274,6 +274,8 @@ public:
     const std::vector<Tpair>& list_selected = pair.second;
     //
     list_offdiag_idx.resize(sel_size);
+    for (size_t u=0; u<sel_size; u++)
+      list_offdiag_weight.push_back(u);
     size_t pos_offdiag = 0;
     auto f_insert=[&](const size_t& i_wei, const size_t& j_wei) -> void
     {
@@ -341,25 +343,25 @@ public:
         for (size_t u=0; u<len; u++) {
           size_t i = map[2*u];
           size_t i_B = map[2*u + 1];
-          std::cerr << "i=" << i << " i_B=" << i_B << "\n";
+          //          std::cerr << "i=" << i << " i_B=" << i_B << "\n";
           size_t ePt1 = list_diag_element[shift + i];
           size_t fPt1 = list_diag_element[shift_B + i_B];
-          std::cerr << "   ePt1=" << ePt1 << " fPt1=" << fPt1 << "\n";
+          //          std::cerr << "   ePt1=" << ePt1 << " fPt1=" << fPt1 << "\n";
           size_t ePt2 = OnPoints(ePt1, eGen);
           size_t fPt2 = OnPoints(fPt1, eGen);
-          std::cerr << "   ePt2=" << ePt2 << " fPt2=" << fPt2 << "\n";
+          //          std::cerr << "   ePt2=" << ePt2 << " fPt2=" << fPt2 << "\n";
           size_t j = list_revdiag_elements[ePt2];
           size_t j_B = list_revdiag_elements[fPt2];
           size_t u_img = map_rev[j + siz * j_B];
-          std::cerr << "   j=" << j << " j_B=" << j_B << " u_img=" << u_img << "\n";
+          //          std::cerr << "   j=" << j << " j_B=" << j_B << " u_img=" << u_img << "\n";
           eList[u] = u_img;
         }
-        std::cerr << "CheckList(eList)=" << permutalib::CheckList(eList) << "\n";
+        //        std::cerr << "CheckList(eList)=" << permutalib::CheckList(eList) << "\n";
         TeltBis eGB(eList);
         LGenMap.emplace_back(std::move(eGB));
       }
       std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf_b)\n";
-      vectface vf_b = DecomposeOrbitPoint_KernelFull(nbRow, LGenMap);
+      vectface vf_b = DecomposeOrbitPoint_KernelFull(len, LGenMap);
       std::cerr << "After  DecomposeOrbitPoint_KernelFull (vf_b)\n";
       size_t len_b = vf_b.size();
       for (size_t i_b=0; i_b<len_b; i_b++) {
@@ -377,6 +379,7 @@ public:
       size_t j_wei = e_ent.second;
       f_insert(i_wei, j_wei);
     }
+    compute_shift_size(list_offdiag_sizes, list_offdiag_shifts, list_offdiag_elements, list_offdiag_idx, list_offdiag_weight);
   }
   size_t get_hash(const Face& f) const
   {
@@ -387,7 +390,7 @@ public:
     size_t nbVert = eList.size();
     size_t nw_diag = list_diag_weight.size();
     size_t nw_offdiag = list_offdiag_weight.size();
-    std::cerr << "nw_diag=" << nw_diag << " nw_offdiag=" << nw_offdiag << "\n";
+    std::cerr << "nw_diag=" << nw_diag << " nw_offdiag=" << nw_offdiag << " |list_offdiag_shifts|=" << list_offdiag_shifts.size() << "\n";
     std::vector<size_t> eInv(nw_diag + 2 * nw_offdiag, 0);
     for (auto & eVal : eList) {
       size_t iWeight = list_diag_idx[eVal];
@@ -397,6 +400,7 @@ public:
       size_t iWeight = list_diag_idx[eVal];
       size_t jWeight = list_diag_idx[fVal];
       size_t pos = mat_select_pair[iWeight + nw_diag * jWeight];
+      //      std::cerr << "iWeight=" << iWeight << " jWeight=" << jWeight << " pos=" << pos << "\n";
       if (pos != std::numeric_limits<size_t>::max()) {
         size_t i = list_revdiag_elements[eVal];
         size_t j = list_revdiag_elements[fVal];
@@ -404,7 +408,7 @@ public:
         size_t siz2 = list_diag_sizes[j];
         size_t pos_B;
         if (iWeight != jWeight) {
-          pos_B = i * siz2 * j;
+          pos_B = i + siz2 * j;
         } else {
           if constexpr (is_symmetric) {
             if (i < j) {
@@ -416,6 +420,7 @@ public:
             pos_B = i + siz2 * j; // likely false
           }
         }
+        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
         size_t kWeight = list_offdiag_idx[list_offdiag_shifts[pos] + pos_B];
         eInv[nw_diag + shift_index + kWeight]++;
       }
