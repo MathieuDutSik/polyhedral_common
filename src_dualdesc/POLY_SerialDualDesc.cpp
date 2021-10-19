@@ -40,8 +40,10 @@ int main(int argc, char *argv[])
         return Process_eFull<T,uint16_t>(eFull);
       if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
         return Process_eFull<T,uint32_t>(eFull);
+#if !defined __APPLE__
       if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
         return Process_eFull<T,uint64_t>(eFull);
+#endif
       std::cerr << "Failed to find a numeric type that matches\n";
       throw TerminalException{1};
     };

@@ -11,7 +11,6 @@
 struct FileNumber {
 private:
   std::FILE* fp;
-  size_t n_ent;
   std::string file;
 public:
 FileNumber(std::string const& file, bool is_new) : file(file)

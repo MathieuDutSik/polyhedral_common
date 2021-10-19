@@ -253,10 +253,12 @@ WeightMatrix<true, T, Tidx_value> GetSimpleWeightMatrix(MyMatrix<T> const& TheEX
     using Tidx = uint32_t;
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
   }
+#if !defined __APPLE__
   if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
     using Tidx = uint64_t;
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
   }
+#endif
   std::cerr << "Failed to find matching numeric in GetSimpleWeightMatrix\n";
   throw TerminalException{1};
 }
@@ -282,10 +284,12 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const& TheEXT)
     using Tidx = uint32_t;
     return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
   }
+#if !defined __APPLE__
   if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
     using Tidx = uint64_t;
     return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f);
   }
+#endif
   std::cerr << "Failed to find matching numeric in GetWeightMatrix\n";
   throw TerminalException{1};
 }
@@ -425,8 +429,10 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const& EXT)
     return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint16_t>(EXT);
   if (n_rows < size_t(std::numeric_limits<uint32_t>::max()))
     return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint32_t>(EXT);
+#if !defined __APPLE__
   if (n_rows < size_t(std::numeric_limits<uint64_t>::max()))
     return LinPolytope_CanonicForm_Tidx<T,use_scheme,uint64_t>(EXT);
+#endif
   std::cerr << "LinPolytope_CanonicForm : Failed to find matching numeric\n";
   throw TerminalException{1};
 }

@@ -872,11 +872,13 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(WeightMatrixVertexSig
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
     return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
   }
+#if !defined __APPLE__
   if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxIn = uint64_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
     return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
   }
+#endif
   std::cerr << "Failed to find matching type in GetCanonicalizationVector_KnownSignature\n";
   throw TerminalException{1};
 }
@@ -911,12 +913,14 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
     std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
+#if !defined __APPLE__
   if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC,Tidx>(DT, nbRow);
     std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
+#endif
   std::cerr << "Failed to find matching numeric in GetGroupCanonicalization_KnownSignature\n";
   throw TerminalException{1};
 }
