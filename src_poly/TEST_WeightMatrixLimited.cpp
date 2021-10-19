@@ -26,18 +26,23 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT=ReadMatrix<T>(is);
     size_t len = EXT.rows();
     //
-    const bool use_scheme1 = true;
+    const bool use_scheme1 = false;
     Tgroup GRP = LinPolytope_Automorphism<T,use_scheme1,Tgroup>(EXT);
+    std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
+    int n_iter1=20;
+    int n_iter2=20;
     auto test_WMat = [&](const WeightMatrixLimited<true,T>& WMatLimited) -> void {
-      for (int iter=0; iter<20; iter++) {
+      for (int iter1=0; iter1<n_iter1; iter1++) {
+        std::cerr << "  iter1=" << iter1 << " / " << n_iter1 << "\n";
         Face eFace(len);
         for (Tidx i=0; i<len; i++) {
           int eVal = Tidx(rand()) % 2;
           eFace[i] = eVal;
         }
         size_t hash1 = WMatLimited.get_hash(eFace);
-        for (int iter2=0; iter2<20; iter2++) {
+        for (int iter2=0; iter2<n_iter2; iter2++) {
+          std::cerr << "    iter2=" << iter2 << " / " << n_iter2 << "\n";
           Telt eElt = GRP.rand();
           Face fFace = OnFace(eFace, eElt);
           size_t hash2 = WMatLimited.get_hash(eFace);
@@ -53,6 +58,7 @@ int main(int argc, char *argv[])
     int expo = 10;
     for (int i=1; i<=expo; i++) {
       size_t max_offdiag = size_t( double(total+1) * (double(i) / double(10)) );
+      std::cerr << "i=" << i << " max_offdiag=" << max_offdiag << " total=" << total << "\n";
       WeightMatrixLimited<true,T> WMatLimited1 = GetWeightMatrixLimited(EXT, max_offdiag);
       test_WMat(WMatLimited1);
       WeightMatrixLimited<true,T> WMatLimited2(GRP, max_offdiag);
