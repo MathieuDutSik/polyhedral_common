@@ -36,7 +36,7 @@ private:
     list_weight = std::move(list_weight_new);
   }
   void compute_shift_size(std::vector<size_t> & list_sizes, std::vector<size_t> & list_shift, std::vector<size_t> & list_element,
-                          const std::vector<size_t> & list_idx, const std::vector<T> & list_weight)
+                          const std::vector<size_t> & list_idx, const std::vector<T> & list_weight) const
   {
     size_t n_weight = list_weight.size();
     size_t len = list_idx.size();
@@ -45,9 +45,9 @@ private:
     list_shift.resize(n_weight+1);
     for (size_t i=0; i<n_weight; i++)
       list_sizes[i] = 0;
-    for (size_t iRow=0; iRow<nbRow; iRow++) {
-      size_t iWeight = list_diag_idx[iRow];
-      list_diag_sizes[iWeight]++;
+    for (size_t i=0; i<len; i++) {
+      size_t iWeight = list_idx[i];
+      list_sizes[iWeight]++;
     }
     list_shift[0] = 0;
     for (size_t i=0; i<n_weight; i++)
@@ -275,9 +275,7 @@ public:
     size_t n_offdiag_weight = list_selected.size();
     std::cerr << "sel_size=" << sel_size << " n_offdiag_weight=" << n_offdiag_weight << "\n";
     //
-    list_offdiag_weight.resize(n_offdiag_weight);
-    for (size_t u=0; u<n_offdiag_weight; u++)
-      list_offdiag_weight.push_back(u);
+    size_t idx_weight = 0;
     list_offdiag_idx.resize(sel_size);
     size_t pos_offdiag = 0;
     auto f_insert=[&](const size_t& i_wei, const size_t& j_wei) -> void
@@ -371,9 +369,11 @@ public:
         Face f_b = vf_b[i_b];
         boost::dynamic_bitset<>::size_type pos=f_b.find_first();
         while (pos != boost::dynamic_bitset<>::npos) {
-          list_offdiag_idx[pos_offdiag + pos] = i_b;
+          list_offdiag_idx[pos_offdiag + pos] = idx_weight;
           pos = f_b.find_next(pos);
         }
+        list_offdiag_weight.push_back(idx_weight);
+        idx_weight++;
       }
       pos_offdiag += len;
     };
@@ -383,6 +383,20 @@ public:
       f_insert(i_wei, j_wei);
     }
     compute_shift_size(list_offdiag_sizes, list_offdiag_shifts, list_offdiag_elements, list_offdiag_idx, list_offdiag_weight);
+    std::cerr << "list_offdiag_sizes =";
+    for (auto & val : list_offdiag_sizes)
+      std::cerr << " " << val;
+    std::cerr << "\n";
+    //
+    std::cerr << "list_offdiag_shifts =";
+    for (auto & val : list_offdiag_shifts)
+      std::cerr << " " << val;
+    std::cerr << "\n";
+    //
+    std::cerr << "list_offdiag_idx =";
+    for (auto & val : list_offdiag_idx)
+      std::cerr << " " << val;
+    std::cerr << "\n";
   }
   size_t get_hash(const Face& f) const
   {
@@ -403,8 +417,8 @@ public:
       size_t iWeight = list_diag_idx[eVal];
       size_t jWeight = list_diag_idx[fVal];
       size_t pos = mat_select_pair[iWeight + nw_diag * jWeight];
-      //      std::cerr << "iWeight=" << iWeight << " jWeight=" << jWeight << " pos=" << pos << "\n";
       if (pos != std::numeric_limits<size_t>::max()) {
+        std::cerr << "iWeight=" << iWeight << " jWeight=" << jWeight << " pos=" << pos << "\n";
         size_t i = list_revdiag_elements[eVal];
         size_t j = list_revdiag_elements[fVal];
         //        size_t siz1 = list_diag_sizes[i];
