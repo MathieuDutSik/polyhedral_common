@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     int expo = 10;
     for (int i=1; i<=expo; i++) {
       size_t max_offdiag = size_t( double(total+1) * (double(i) / double(10)) );
-      std::cerr << "i=" << i << " max_offdiag=" << max_offdiag << " total=" << total << "\n";
+      std::cerr << "i=" << i << " expo=" << expo << " max_offdiag=" << max_offdiag << " total=" << total << "\n";
       //      WeightMatrixLimited<true,T> WMatLimited1 = GetWeightMatrixLimited(EXT, max_offdiag);
       //      test_WMat(WMatLimited1);
       WeightMatrixLimited<true,T> WMatLimited2(GRP, max_offdiag);
