@@ -5,10 +5,27 @@
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "POLY_Kskeletton.h"
 
 
 // possible strategies for computing isomorphsim
 
+/*
+template<typename T>
+MyMatrix<T> SelectRow(const MyMatrix<T>& M, const Face& f)
+{
+  size_t cnt = f.count();
+  size_t nbCol = M.cols();
+  MyMatrix<T> ret(cnt, nbCol);
+  boost::dynamic_bitset<>::size_type aRow=f.find_first();
+  for (size_t i=0; i<cnt; i++) {
+    for (size_t iCol=0; iCol<nbCol; iCol++)
+      ret(i, iCol) = M(aRow, iCol);
+    aRow = f.find_next(aRow);
+  }
+  return ret;
+}
+*/
 
 
 
@@ -32,17 +49,55 @@ int main(int argc, char* argv[])
     std::string FileI = argv[1];
     std::ifstream is(FileI);
     //
+    // The polyhedral cone.
+    // So far, we encode all the EXT / FAC and the group
+    struct ConeDesc {
+      MyMatrix<T> EXT;
+      MyMatrix<Tint> EXT_i;
+      MyMatrix<T> FAC;
+      Face extfac_incd;
+      Tgroup GRP;
+    };
+    std::vector<ConeDesc> ListCones;
+    //
+    struct FaceDesc {
+      size_t iCone;
+      Face f;
+    };
+    //
     MyMatrix<Tint> G = ReadMatrix<Tint>(is);
     std::cerr << "We have G\n";
     size_t n_domain;
     is >> n_domain;
-    std::vector<MyMatrix<Tint>> ListDomain(n_domain);
+    std::vector<FaceDesc> ListDomain(n_domain);
     for (size_t i=0; i<n_domain; i++) {
-      MyMatrix<Tint> Dom = ReadMatrix<Tint>(is);
-      ListDomain[i] = Dom;
+      MyMatrix<T> EXT = ReadMatrix<T>(is);
+      MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
+      MyMatrix<T> FAC = ReadMatrix<T>(is);
+      Tgroup GRP = ReadGroup<Tgroup>(is);
+      //
+      int nbFac = FAC.rows();
+      int nbExt = EXT.rows();
+      int nbCol = EXT.cols();
+      Face extfac_incd(nbFac * nbExt);
+      for (int iFac=0; iFac<nbFac; iFac++) {
+        for (int iExt=0; iExt<nbExt; iExt++) {
+          T sum = 0;
+          for (int i=0; i<nbCol; i++)
+            sum += FAC(iFac,i) * EXT(iExt,i);
+          if (sum == 0)
+            extfac_incd[iFac * nbExt + iExt] = 1;
+        }
+      }
+      ListCones[i] = {EXT, EXT_i, FAC, extfac_incd, GRP};
+      size_t len = EXT.rows();
+      Face f(len);
+      for (size_t i=0; i<len; i++)
+        f[i] = 1;
+      ListDomain[i] = {i, f};
     }
     //
-    std::vector<std::vector<MyMatrix<Tint>>> ListListDomain;
+    std::vector<std::vector<FaceDesc>> ListListDomain;
     ListListDomain.push_back(ListDomain);
     //
     int TheDim = G.rows();
@@ -52,6 +107,7 @@ int main(int argc, char* argv[])
         MyMatrix<Tint> Spann;
         MyMatrix<Tint> Qmat;
         WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat;
+        FaceDesc fd;
       };
       auto f_subset=[&](const size_t& n_row, const size_t& len) -> Face {
         Face subset(n_row);
@@ -84,7 +140,8 @@ int main(int argc, char* argv[])
         return {};
       };
       std::vector<std::pair<size_t,Tent>> NewListCand;
-      auto f_ent=[&](const MyMatrix<Tint>& M) -> Tent {
+      auto f_ent=[&](const FaceDesc& fd) -> Tent {
+        MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, fd.f);
         MyMatrix<Tint> P = M * G;
         MyMatrix<Tint> NSP = NullspaceIntMat(P);
         MyMatrix<Tint> Gres = NSP * G * NSP.transpose();
@@ -97,7 +154,7 @@ int main(int argc, char* argv[])
         std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
         WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(Concat, ListMat, subset);
         WMat.ReorderingSetWeight();
-        return {M, Spann, Qmat, std::move(WMat)};
+        return {M, Spann, Qmat, std::move(WMat), fd};
       };
       auto f_inv=[&](const Tent& eEnt) -> size_t {
         return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
@@ -116,21 +173,25 @@ int main(int argc, char* argv[])
       };
       for (auto & eDomain : ListListDomain[i-1]) {
         Tent eEnt = f_ent(eDomain);
-        Tgroup GRP = f_stab(eEnt);
-        MyMatrix<T> Mred = ColumnReduction(UniversalMatrixConversion<T,Tint>(eDomain));
-        vectface ListFace = DualDescriptionStandard(Mred, GRP);
+        size_t iCone = eDomain.iCone;
+        Tgroup StabFace = ListCones[iCone].GRP.Stabilizer_OnSets(eDomain.f);
+        int RankFace = TheDim - i;
+        vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
+                                                  ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
+                                                  ListCones[iCone].EXT, ListCones[iCone].GRP);
+        //        Tgroup GRP = f_stab(eEnt);
+        //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
         for (auto & eFace : ListFace) {
-          std::vector<int> ListIdx = FaceToVector(eFace);
-          MyMatrix<Tint> eDomainFace = SelectRow(eDomain, ListIdx);
-          Tent fEnt = f_ent(eDomainFace);
+          FaceDesc fdn{iCone, eFace};
+          Tent fEnt = f_ent(fdn);
           f_insert(std::move(fEnt));
         }
       }
-      std::vector<MyMatrix<Tint>> NewListDomain;
+      std::vector<FaceDesc> NewListDomain;
       for (auto & eEnt : NewListCand)
-        NewListDomain.push_back(eEnt.second.M);
-      ListListDomain.push_back(NewListDomain);
+        NewListDomain.push_back(eEnt.second.fd);
       std::cerr << "i=" << i << " |NewListDomain|=" << NewListDomain.size() << "\n";
+      ListListDomain.emplace_back(std::move(NewListDomain));
     }
   }
   catch (TerminalException const& e) {

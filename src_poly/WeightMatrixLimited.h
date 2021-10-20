@@ -486,7 +486,7 @@ public:
             pos_B = i + siz2 * j; // false
           }
         }
-        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
+        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << " sum=" << (list_offdiag_shifts[pos] + pos_B) << "\n";
         size_t kWeight = list_offdiag_idx[list_offdiag_shifts[pos] + pos_B];
         std::cerr << "kWeight=" << kWeight << "\n";
         eInv[nw_diag + shift_index + kWeight]++;
