@@ -272,9 +272,11 @@ public:
     std::pair<size_t, std::vector<Tpair>> pair = get_list_selected(max_offdiag);
     const size_t& sel_size = pair.first;
     const std::vector<Tpair>& list_selected = pair.second;
+    size_t n_offdiag_weight = list_selected.size();
+    std::cerr << "sel_size=" << sel_size << " n_offdiag_weight=" << n_offdiag_weight << "\n";
     //
-    list_offdiag_idx.resize(sel_size);
-    for (size_t u=0; u<sel_size; u++)
+    list_offdiag_idx.resize(n_offdiag_weight);
+    for (size_t u=0; u<n_offdiag_weight; u++)
       list_offdiag_weight.push_back(u);
     size_t pos_offdiag = 0;
     auto f_insert=[&](const size_t& i_wei, const size_t& j_wei) -> void
@@ -420,7 +422,7 @@ public:
             pos_B = i + siz2 * j; // likely false
           }
         }
-        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
+        //        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
         size_t kWeight = list_offdiag_idx[list_offdiag_shifts[pos] + pos_B];
         eInv[nw_diag + shift_index + kWeight]++;
       }
