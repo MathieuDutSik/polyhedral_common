@@ -421,8 +421,10 @@ public:
         std::cerr << "iWeight=" << iWeight << " jWeight=" << jWeight << " pos=" << pos << "\n";
         size_t i = list_revdiag_elements[eVal];
         size_t j = list_revdiag_elements[fVal];
+        std::cerr << "i=" << i << " j=" << j << "\n";
         //        size_t siz1 = list_diag_sizes[i];
-        size_t siz2 = list_diag_sizes[j];
+        size_t siz2 = list_diag_sizes[jWeight];
+        std::cerr << "siz2=" << siz2 << "\n";
         size_t pos_B;
         if (iWeight != jWeight) {
           pos_B = i + siz2 * j;
@@ -437,9 +439,10 @@ public:
             pos_B = i + siz2 * j; // likely false
           }
         }
-        //        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
+        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << "\n";
+        std::cerr << "pos_B=" << pos_B << "\n";
         size_t kWeight = list_offdiag_idx[list_offdiag_shifts[pos] + pos_B];
-        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << " kWeight=" << kWeight << "\n";
+        std::cerr << "kWeight=" << kWeight << "\n";
         eInv[nw_diag + shift_index + kWeight]++;
       }
     };
