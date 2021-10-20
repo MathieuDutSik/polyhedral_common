@@ -275,9 +275,10 @@ public:
     size_t n_offdiag_weight = list_selected.size();
     std::cerr << "sel_size=" << sel_size << " n_offdiag_weight=" << n_offdiag_weight << "\n";
     //
-    list_offdiag_idx.resize(n_offdiag_weight);
+    list_offdiag_weight.resize(n_offdiag_weight);
     for (size_t u=0; u<n_offdiag_weight; u++)
       list_offdiag_weight.push_back(u);
+    list_offdiag_idx.resize(sel_size);
     size_t pos_offdiag = 0;
     auto f_insert=[&](const size_t& i_wei, const size_t& j_wei) -> void
     {
@@ -364,7 +365,7 @@ public:
       }
       std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf_b)\n";
       vectface vf_b = DecomposeOrbitPoint_KernelFull(len, LGenMap);
-      std::cerr << "After  DecomposeOrbitPoint_KernelFull (vf_b)\n";
+      std::cerr << "After  DecomposeOrbitPoint_KernelFull (vf_b) |list_offdiag_idx|=" << list_offdiag_idx.size() << "\n";
       size_t len_b = vf_b.size();
       for (size_t i_b=0; i_b<len_b; i_b++) {
         Face f_b = vf_b[i_b];
@@ -424,6 +425,7 @@ public:
         }
         //        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << "\n";
         size_t kWeight = list_offdiag_idx[list_offdiag_shifts[pos] + pos_B];
+        std::cerr << "pos=" << pos << " list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << " kWeight=" << kWeight << "\n";
         eInv[nw_diag + shift_index + kWeight]++;
       }
     };
