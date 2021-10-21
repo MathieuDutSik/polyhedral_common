@@ -156,11 +156,11 @@ int main(int argc, char* argv[])
       for (auto & eDomain : ListListDomain[i-1]) {
         Tent eEnt = f_ent(eDomain);
         size_t iCone = eDomain.iCone;
-        Tgroup StabFace = ListCones[iCone].GRP.Stabilizer_OnSets(eDomain.f);
+        Tgroup StabFace = ListCones[iCone].GRP_ext.Stabilizer_OnSets(eDomain.f);
         int RankFace = TheDim - i;
         vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
                                                   ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
-                                                  ListCones[iCone].EXT, ListCones[iCone].GRP);
+                                                  ListCones[iCone].EXT, ListCones[iCone].GRP_ext);
         //        Tgroup GRP = f_stab(eEnt);
         //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
         for (auto & eFace : ListFace) {
