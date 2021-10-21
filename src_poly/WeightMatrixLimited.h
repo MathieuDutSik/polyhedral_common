@@ -15,7 +15,7 @@ public:
   using T = T_impl;
   using Tpair = std::pair<size_t, size_t>;
 private:
-  void reorder_entries(std::vector<T> & list_weight, std::vector<size_t> & list_idx)
+  void reorder_entries(std::vector<T> & list_weight, std::vector<size_t> & list_idx) const
   {
     std::map<T, size_t> map_value;
     size_t n_ent = list_weight.size();
@@ -495,7 +495,7 @@ public:
         std::cerr << "siz1=" << siz1 << " siz2=" << siz2 << "\n";
         size_t pos_B;
         if (iWeight != jWeight) {
-          pos_B = i + siz2 * j;
+          pos_B = i + siz1 * j;
         } else {
           if constexpr (is_symmetric) {
             if (i < j) {
@@ -508,7 +508,9 @@ public:
             pos_B = i + siz2 * j; // false
           }
         }
-        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] << " pos_B=" << pos_B << " sum=" << (list_offdiag_shifts[pos] + pos_B) << "\n";
+        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos] <<
+          " list_offdiag_sizes[pos]=" << list_offdiag_sizes[pos] <<
+          " pos_B=" << pos_B << " sum=" << (list_offdiag_shifts[pos] + pos_B) << "\n";
         size_t pos_C = list_offdiag_shifts[pos] + pos_B;
         if (pos_C >= list_offdiag_idx.size()) {
           std::cerr << "The pos_C=" << pos_C << " above last index\n";

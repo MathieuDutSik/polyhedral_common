@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
       MyMatrix<Tint> EXT_i;
       MyMatrix<T> FAC;
       Face extfac_incd;
-      Tgroup GRP;
+      Tgroup GRP_ext;
     };
     std::vector<ConeDesc> ListCones;
     //
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
       MyMatrix<T> EXT = ReadMatrix<T>(is);
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
-      Tgroup GRP = ReadGroup<Tgroup>(is);
+      Tgroup GRP_ext = ReadGroup<Tgroup>(is);
       //
       int nbFac = FAC.rows();
       int nbExt = EXT.rows();
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
             extfac_incd[iFac * nbExt + iExt] = 1;
         }
       }
-      ListCones[i] = {EXT, EXT_i, FAC, extfac_incd, GRP};
+      ListCones[i] = {EXT, EXT_i, FAC, extfac_incd, GRP_ext};
       size_t len = EXT.rows();
       Face f(len);
       for (size_t i=0; i<len; i++)

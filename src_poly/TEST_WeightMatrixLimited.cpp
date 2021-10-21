@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
       std::cerr << "i=" << i << " expo=" << expo << " max_offdiag=" << max_offdiag << " total=" << total << "\n";
       WeightMatrixLimited<true,T> WMatLimited1 = GetWeightMatrixLimited(EXT, max_offdiag);
       test_WMat(WMatLimited1);
-      WeightMatrixLimited<true,T> WMatLimited2(GRP, max_offdiag);
-      test_WMat(WMatLimited2);
+      //      WeightMatrixLimited<true,T> WMatLimited2(GRP, max_offdiag);
+      //      test_WMat(WMatLimited2);
     }
     std::cerr << "Normal termination of the program\n";
   }
