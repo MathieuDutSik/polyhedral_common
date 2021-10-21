@@ -23,8 +23,8 @@ int main(int argc, char* argv[])
     using T=mpq_class;
     using Tgr=GraphBitset;
     using Tint=mpz_class;
-    using Tidx_value = int16_t;
-    using Tidx = uint16_t;
+    using Tidx_value = int32_t;
+    using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt,Tint>;
     //
@@ -39,6 +39,7 @@ int main(int argc, char* argv[])
       MyMatrix<T> FAC;
       Face extfac_incd;
       Tgroup GRP_ext;
+      Tgroup GRP_fac;
     };
     std::vector<ConeDesc> ListCones;
     //
@@ -53,30 +54,25 @@ int main(int argc, char* argv[])
     is >> n_domain;
     std::vector<FaceDesc> ListDomain(n_domain);
     for (size_t i=0; i<n_domain; i++) {
+      std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
+      //      std::cerr << "EXT=\n";
+      //      WriteMatrix(std::cerr, EXT);
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
+      //      std::cerr << "FAC=\n";
+      //      WriteMatrix(std::cerr, FAC);
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
+      Tgroup GRP_fac = ReadGroup<Tgroup>(is);
+      std::cerr << "|GRP_ext|=" << GRP_ext.size() << " |GRP_fac|=" << GRP_fac.size() << "\n";
       //
-      int nbFac = FAC.rows();
-      int nbExt = EXT.rows();
-      int nbCol = EXT.cols();
-      Face extfac_incd(nbFac * nbExt);
-      for (int iFac=0; iFac<nbFac; iFac++) {
-        for (int iExt=0; iExt<nbExt; iExt++) {
-          T sum = 0;
-          for (int i=0; i<nbCol; i++)
-            sum += FAC(iFac,i) * EXT(iExt,i);
-          if (sum == 0)
-            extfac_incd[iFac * nbExt + iExt] = 1;
-        }
-      }
-      ConeDesc eCone{EXT, EXT_i, FAC, extfac_incd, GRP_ext};
+      Face extfac_incd = Compute_extfac_incd(FAC, EXT);
+      ConeDesc eCone{EXT, EXT_i, FAC, extfac_incd, GRP_ext, GRP_fac};
       ListCones.push_back(eCone);
-      size_t len = EXT.rows();
+      size_t len = FAC.rows();
       Face f(len);
-      for (size_t i=0; i<len; i++)
-        f[i] = 1;
+      //      for (size_t i=0; i<len; i++)
+      //        f[i] = 1;
       ListDomain[i] = {i, f};
     }
     //
@@ -125,22 +121,31 @@ int main(int argc, char* argv[])
       std::vector<std::pair<size_t,Tent>> NewListCand;
       auto f_ent=[&](const FaceDesc& fd) -> Tent {
         std::cerr << "f_ent, step 1\n";
-        MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, fd.f);
+        int nbFac = ListCones[fd.iCone].FAC.rows();
+        int nbExt = ListCones[fd.iCone].EXT.rows();
+        Face face_ext = Compute_faceEXT_from_faceFAC(ListCones[fd.iCone].extfac_incd, nbFac, nbExt, fd.f);
+        MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, face_ext);
         std::cerr << "f_ent, step 2\n";
+        //        std::cerr << "M=\n";
+        //        WriteMatrix(std::cerr, M);
         MyMatrix<Tint> P = M * G;
         std::cerr << "f_ent, step 3\n";
+        //        std::cerr << "P=\n";
+        //        WriteMatrix(std::cerr, P);
         MyMatrix<Tint> Spann;
         std::cerr << "f_ent, step 4\n";
         MyMatrix<Tint> Concat = M;
         std::cerr << "f_ent, step 5\n";
         MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
-        std::cerr << "f_ent, step 6\n";
+        std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
         if (NSP.rows() > 0) {
           std::cerr << "f_ent, step 7\n";
           MyMatrix<Tint> Gres = NSP * G * NSP.transpose();
           std::cerr << "f_ent, step 8\n";
           MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
           std::cerr << "f_ent, step 9\n";
+          std::cerr << "Gres_T=\n";
+          WriteMatrix(std::cerr, Gres_T);
           MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
           std::cerr << "f_ent, step 10\n";
           Spann = SHV * NSP;
@@ -175,6 +180,7 @@ int main(int argc, char* argv[])
         }
         std::pair<size_t,Tent> e_pair{e_inv,std::move(eEnt)};
         NewListCand.emplace_back(std::move(e_pair));
+        std::cerr << "Now |NewListCand|=" << NewListCand.size() << "\n";
       };
       for (auto & eDomain : ListListDomain[i-1]) {
         std::cerr << "eDomain, step 1\n";
@@ -182,14 +188,19 @@ int main(int argc, char* argv[])
         std::cerr << "eDomain, step 2\n";
         size_t iCone = eDomain.iCone;
         std::cerr << "eDomain, step 3\n";
-        Tgroup StabFace = ListCones[iCone].GRP_ext.Stabilizer_OnSets(eDomain.f);
+        Tgroup StabFace = ListCones[iCone].GRP_fac.Stabilizer_OnSets(eDomain.f);
         std::cerr << "eDomain, step 4\n";
-        int RankFace = TheDim - i;
+        int RankFace = i;
         std::cerr << "eDomain, step 5\n";
+        //        vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
+        //                                                  ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
+        //                                                  ListCones[iCone].EXT, ListCones[iCone].GRP_fac);
+        // For the downward road from high dimension to lower dimension, we have to work with FAC as input
+        // 
         vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
                                                   ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
-                                                  ListCones[iCone].EXT, ListCones[iCone].GRP_ext);
-        std::cerr << "eDomain, step 6\n";
+                                                  ListCones[iCone].EXT, ListCones[iCone].GRP_fac);
+        std::cerr << "eDomain, step 6 |ListFace|=" << ListFace.size() << "\n";
         //        Tgroup GRP = f_stab(eEnt);
         //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
         for (auto & eFace : ListFace) {
