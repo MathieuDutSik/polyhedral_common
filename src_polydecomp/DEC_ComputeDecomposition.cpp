@@ -10,24 +10,6 @@
 
 // possible strategies for computing isomorphsim
 
-/*
-template<typename T>
-MyMatrix<T> SelectRow(const MyMatrix<T>& M, const Face& f)
-{
-  size_t cnt = f.count();
-  size_t nbCol = M.cols();
-  MyMatrix<T> ret(cnt, nbCol);
-  boost::dynamic_bitset<>::size_type aRow=f.find_first();
-  for (size_t i=0; i<cnt; i++) {
-    for (size_t iCol=0; iCol<nbCol; iCol++)
-      ret(i, iCol) = M(aRow, iCol);
-    aRow = f.find_next(aRow);
-  }
-  return ret;
-}
-*/
-
-
 
 int main(int argc, char* argv[])
 {
