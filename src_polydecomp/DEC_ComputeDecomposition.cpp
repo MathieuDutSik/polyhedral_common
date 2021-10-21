@@ -71,7 +71,8 @@ int main(int argc, char* argv[])
             extfac_incd[iFac * nbExt + iExt] = 1;
         }
       }
-      ListCones[i] = {EXT, EXT_i, FAC, extfac_incd, GRP_ext};
+      ConeDesc eCone{EXT, EXT_i, FAC, extfac_incd, GRP_ext};
+      ListCones.push_back(eCone);
       size_t len = EXT.rows();
       Face f(len);
       for (size_t i=0; i<len; i++)
@@ -123,19 +124,41 @@ int main(int argc, char* argv[])
       };
       std::vector<std::pair<size_t,Tent>> NewListCand;
       auto f_ent=[&](const FaceDesc& fd) -> Tent {
+        std::cerr << "f_ent, step 1\n";
         MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, fd.f);
+        std::cerr << "f_ent, step 2\n";
         MyMatrix<Tint> P = M * G;
-        MyMatrix<Tint> NSP = NullspaceIntMat(P);
-        MyMatrix<Tint> Gres = NSP * G * NSP.transpose();
-        MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
-        MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
-        MyMatrix<Tint> Spann = SHV * NSP;
-        MyMatrix<Tint> Concat = Concatenate(M, Spann);
+        std::cerr << "f_ent, step 3\n";
+        MyMatrix<Tint> Spann;
+        std::cerr << "f_ent, step 4\n";
+        MyMatrix<Tint> Concat = M;
+        std::cerr << "f_ent, step 5\n";
+        MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
+        std::cerr << "f_ent, step 6\n";
+        if (NSP.rows() > 0) {
+          std::cerr << "f_ent, step 7\n";
+          MyMatrix<Tint> Gres = NSP * G * NSP.transpose();
+          std::cerr << "f_ent, step 8\n";
+          MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
+          std::cerr << "f_ent, step 9\n";
+          MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
+          std::cerr << "f_ent, step 10\n";
+          Spann = SHV * NSP;
+          std::cerr << "f_ent, step 11\n";
+          Concat = Concatenate(M, Spann);
+          std::cerr << "f_ent, step 12\n";
+        }
+        std::cerr << "f_ent, step 13\n";
         MyMatrix<Tint> Qmat = GetQmatrix(Concat);
+        std::cerr << "f_ent, step 14\n";
         Face subset = f_subset(Concat.rows(), M.rows());
+        std::cerr << "f_ent, step 15\n";
         std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
+        std::cerr << "f_ent, step 16\n";
         WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(Concat, ListMat, subset);
+        std::cerr << "f_ent, step 17\n";
         WMat.ReorderingSetWeight();
+        std::cerr << "f_ent, step 18\n";
         return {M, Spann, Qmat, std::move(WMat), fd};
       };
       auto f_inv=[&](const Tent& eEnt) -> size_t {
@@ -154,13 +177,19 @@ int main(int argc, char* argv[])
         NewListCand.emplace_back(std::move(e_pair));
       };
       for (auto & eDomain : ListListDomain[i-1]) {
+        std::cerr << "eDomain, step 1\n";
         Tent eEnt = f_ent(eDomain);
+        std::cerr << "eDomain, step 2\n";
         size_t iCone = eDomain.iCone;
+        std::cerr << "eDomain, step 3\n";
         Tgroup StabFace = ListCones[iCone].GRP_ext.Stabilizer_OnSets(eDomain.f);
+        std::cerr << "eDomain, step 4\n";
         int RankFace = TheDim - i;
+        std::cerr << "eDomain, step 5\n";
         vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
                                                   ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
                                                   ListCones[iCone].EXT, ListCones[iCone].GRP_ext);
+        std::cerr << "eDomain, step 6\n";
         //        Tgroup GRP = f_stab(eEnt);
         //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
         for (auto & eFace : ListFace) {
@@ -168,6 +197,7 @@ int main(int argc, char* argv[])
           Tent fEnt = f_ent(fdn);
           f_insert(std::move(fEnt));
         }
+        std::cerr << "eDomain, step 7\n";
       }
       std::vector<FaceDesc> NewListDomain;
       for (auto & eEnt : NewListCand)
