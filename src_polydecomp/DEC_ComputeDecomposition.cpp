@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
         std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
         if (NSP.rows() > 0) {
           std::cerr << "f_ent, step 7\n";
-          MyMatrix<Tint> Gres = NSP * G * NSP.transpose();
+          MyMatrix<Tint> Gres = - NSP * G * NSP.transpose();
           std::cerr << "f_ent, step 8\n";
           MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
           std::cerr << "f_ent, step 9\n";
@@ -170,7 +170,9 @@ int main(int argc, char* argv[])
         return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
       };
       auto f_insert=[&](Tent&& eEnt) -> void {
+        std::cerr << "Beginning of f_insert\n";
         size_t e_inv = f_inv(eEnt);
+        std::cerr << "e_inv=" << e_inv << "\n";
         for (auto & eP : NewListCand) {
           if (eP.first == e_inv) {
             std::optional<MyMatrix<Tint>> eEquiv = f_equiv(eP.second, eEnt);
@@ -190,7 +192,7 @@ int main(int argc, char* argv[])
         std::cerr << "eDomain, step 3\n";
         Tgroup StabFace = ListCones[iCone].GRP_fac.Stabilizer_OnSets(eDomain.f);
         std::cerr << "eDomain, step 4\n";
-        int RankFace = i;
+        int RankFace = i - 1;
         std::cerr << "eDomain, step 5\n";
         //        vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
         //                                                  ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
