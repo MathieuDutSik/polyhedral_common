@@ -185,7 +185,6 @@ public:
     for (auto& e_ent : list_selected) {
       unordmap_value.clear();
       size_t jdxWeight=0;
-      size_t pos = 0;
       std::vector<size_t> list_part_idx;
       std::vector<T> list_part_weight;
       auto insertval=[&](size_t const& jRow) -> void {
