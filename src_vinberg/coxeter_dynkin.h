@@ -14,6 +14,8 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
   T val_five = 5; // Shows up in H3, H4
   T val_six = 6; // Shows up in G2
   size_t dim = M.rows();
+  if (dim == 1) // Case of A1
+    return true;
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
   std::vector<size_t> list_deg(dim);
   size_t n_higher_edge = 0;
@@ -142,7 +144,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
           return true; // Only F4 is possible
         }
         if (dim == 5) { // Only tilde{F4} is possible. So conclude from that
-          if (allowed_euclidean)
+          if (allow_euclidean)
             return true;
           return false;
         }
@@ -229,7 +231,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
     return true;
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[4] == 1) // It is E8
     return true;
-  if (!allowed_euclidean)
+  if (!allow_euclidean)
     return false; // In spherical, no other possibilities left
   if (map_len[2] == 3) // It is tilde{E6}
     return true;
@@ -241,11 +243,116 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
 }
 
 
-template<typename T, typename Tgr>
-bool IsDiagramSpherical(const MyMatrix<T>& M)
+template<typename T>
+bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
-  Tgraph
-  
+  T val_comm = 2;
+  size_t dim = M.rows();
+  GraphBitset eG(dim);
+  for (size_t i=0; i<dim; i++) {
+    for (size_t j=i+1; j<dim; j++) {
+      if (M(i,j) != val_comm) {
+        eG.AddAdjacent(i,j);
+        eG.AddAdjacent(j,i);
+      }
+    }
+  }
+  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  for (auto & eConn : LConn) {
+    size_t dim_res=eConn.size();
+    MyMatrix<T> Mres(dim_res, dim_res);
+    for (size_t i=0; i<dim; i++)
+      for (size_t j=0; j<dim; j++)
+        Mres(i,j) = M(eConn[i], eConn[j]);
+    bool test = IsIrreducibleDiagramSphericalEuclidean(M, allow_euclidean);
+    if (!test)
+      return false;
+  }
+  return true;
+}
+
+
+template<typename T>
+std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool& allow_euclidean)
+{
+  std::set<MyVector<T>> SetExtensions;
+  T val_comm = 2;
+  T val_single_edge = 3;
+  T val_six = 6;
+  size_t dim = M.rows();
+  std::vector<size_t> list_deg(dim);
+  std::vector<size_t> list_isolated;
+  for (size_t i=0; i<dim; i++) {
+    size_t n_adj = 0;
+    for (size_t j=0; j<dim; j++) {
+      T val = M(i,j);
+      if (i != j && val != val_comm)
+        n_adj++;
+    }
+    list_deg[i] = n_adj;
+    if (n_adj == 0)
+      list_isolated.push_back(i);
+  }
+  // Consider the case of adding unconnected vector
+  MyVector<T> V_basic(dim);
+  for (size_t i=0; i<dim; i++)
+    V_basic(i) = val_comm;
+  auto test_vector_and_insert=[&](const MyVector<T>& V) -> void {
+    MyMatrix<T> Mtest(dim+1,dim+1);
+    for (size_t i=0; i<dim; i++)
+      for (size_t j=0; j<dim; j++)
+        Mtest(i,j) = M(i,j);
+    for (size_t i=0; i<dim; i++) {
+      Mtest(i,dim) = V(i);
+      Mtest(dim,i) = V(i);
+    }
+    if (IsDiagramSpherical(Mtest, allow_euclidean))
+      SetExtensions.insert(V);
+  };
+  test_vector_and_insert(V_basic);
+  // Considering the case of just one edge
+  for (size_t i=0; i<dim; i++) {
+    // Here we have an arbitrary value
+    for (T val=val_single_edge; val<128; val++) {
+      MyVector<T> V = V_basic;
+      V(i) = val;
+      test_vector_and_insert(V);
+    }
+  }
+  // Considering the case of 2 edges
+  for (size_t i=0; i<dim; i++) {
+    for (size_t j=0; j<dim; j++) {
+      if (i != j) {
+        for (T val=val_single_edge; val<=val_six; val++) {
+          MyVector<T> V = V_basic;
+          V(i) = val_single_edge;
+          V(j) = val;
+          test_vector_and_insert(V);
+        }
+      }
+    }
+  }
+  // Considering the case of 3 edges. All have to be single edges
+  SetCppIterator SCI_A(dim,3);
+  for (auto & eV : SCI_A) {
+    MyVector<T> V = V_basic;
+    for (auto & eVal : eV)
+      V(eVal) = val_single_edge;
+    test_vector_and_insert(V);
+  }
+  // Considering the case of 4 edges. Only tilde{D4} is possible
+  size_t n_isolated = list_isolated.size();
+  SetCppIterator SCI_B(n_isolated,4);
+  for (auto & eV : SCI_B) {
+    MyVector<T> V = V_basic;
+    for (auto & eVal : eV)
+      V(list_isolated[eVal]) = val_single_edge;
+    test_vector_and_insert(V);
+  }
+  std::vector<MyVector<T>> ListExtensions;
+  for (auto &eEnt : SetExtensions)
+    ListExtensions.push_back(eEnt);
+  return ListExtensions;
 }
 
 

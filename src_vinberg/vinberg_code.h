@@ -7,6 +7,7 @@
 #include "POLY_RedundancyElimination.h"
 #include "POLY_PolytopeInt.h"
 #include "POLY_lrslib.h"
+#include "coxeter_dynkin.h"
 
 
 #define DEBUG_VINBERG
