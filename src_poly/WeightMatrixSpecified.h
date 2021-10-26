@@ -1060,7 +1060,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, Fproc1 
             f_incorr[u] = 1;
           n_incorr += f_incorr[u];
         }
-        if (n_incorr == ListEnt.size()) // All entries are incorrect. So, no need to continue
+        if (n_incorr == ListEnt.size() && n_incorr > 0) // All entries are incorrect. So, no need to continue
           break;
       }
       std::cerr << "f_incorr=";
@@ -1102,11 +1102,14 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
   };
   auto fproc2=[&](const Tret1& ListGen) -> const Tret2& {
 #ifdef DEBUG_SPECIFIC
-    std::cerr << "|ListGen|=" << ListGen.size() << "\n";
+    std::cerr << "GetStabilizerWeightMatrix_Heuristic : |ListGen|=" << ListGen.size() << "\n";
 #endif
     return ListGen;
   };
   auto fproc3=[&](const std::vector<Tidx>& Vsubset, const Tret1& ret1, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "GetStabilizerWeightMatrix_Heuristic : |LGenFinal|=" << LGenFinal.size() << "\n";
+#endif
     return LGenFinal;
   };
   const bool canonically=false;
@@ -1141,11 +1144,14 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   };
   auto fproc2=[&](const Tret1& ePair) -> const Tret2& {
 #ifdef DEBUG_SPECIFIC
-    std::cerr << "|ListGen|=" << ePair.second.size() << "\n";
+    std::cerr << "GetGroupCanonicalizationVector_Heuristic : |ListGen|=" << ePair.second.size() << "\n";
 #endif
     return ePair.second;
   };
   auto fproc3=[&](const std::vector<Tidx>& Vsubset, const Tret1& ePair, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
+#ifdef DEBUG_SPECIFIC
+    std::cerr << "GetGroupCanonicalizationVector_Heuristic : |LGenFinal|=" << LGenFinal.size() << "\n";
+#endif
     return {f5(Vsubset, ePair.first), LGenFinal};
   };
   const bool canonically=true;

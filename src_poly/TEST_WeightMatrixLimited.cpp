@@ -26,9 +26,10 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT=ReadMatrix<T>(is);
     size_t len = EXT.rows();
     //
-    const bool use_scheme1 = false;
+    const bool use_scheme1 = true;
     Tgroup GRP = LinPolytope_Automorphism<T,use_scheme1,Tgroup>(EXT);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
+    throw TerminalException{1};
     //
     int n_iter1=20;
     int n_iter2=20;

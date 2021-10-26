@@ -170,6 +170,7 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const& TheEXT, MyMatrix<T> const& Qinput, F f
   size_t nbCol=TheEXT.cols();
   using Tfield = typename overlying_field<T>::field_type;
   MyVector<T> V(nbCol);
+  // Functions for computing the weighted matrix entries.
   auto f1=[&](size_t iRow) -> void {
     for (size_t iCol=0; iCol<nbCol; iCol++) {
       T eSum=0;
@@ -343,7 +344,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
   std::vector<Telt> LGen;
-  std::cerr << "nbRow=" << nbRow << "\n";
+  std::cerr << "nbRow=" << nbRow << " |ListGen|=" << ListGen.size() << "\n";
   for (auto & eList : ListGen) {
     std::cerr << "|eList|=" << eList.size() << "\n";
     LGen.push_back(Telt(eList));
