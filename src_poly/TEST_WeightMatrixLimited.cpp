@@ -29,7 +29,6 @@ int main(int argc, char *argv[])
     const bool use_scheme1 = true;
     Tgroup GRP = LinPolytope_Automorphism<T,use_scheme1,Tgroup>(EXT);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
-    throw TerminalException{1};
     //
     int n_iter1=20;
     int n_iter2=20;

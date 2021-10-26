@@ -290,6 +290,34 @@ Face OrbitUnion(Tgroup const& GRP, Face const& gList)
 // Several building of new groups.
 //
 
+template<typename Telt>
+Telt ReduceElementAction(Telt const& eElt, Face const& eList)
+{
+  using Tidx = typename Telt::Tidx;
+  Tidx nb=eList.count();
+  if (nb == 0) {
+    std::cerr << "Call of ReducedGroupAction with 0 points\n";
+    throw TerminalException{1};
+  }
+  std::vector<Tidx> ListPositionRev(eElt.sizet(), -1);
+  boost::dynamic_bitset<>::size_type aRow=eList.find_first();
+  std::vector<Tidx> ListPosition(nb);
+  for (Tidx iRow=0; iRow<nb; iRow++) {
+    ListPositionRev[aRow] = iRow;
+    ListPosition[iRow] = Tidx(aRow);
+    aRow=eList.find_next(aRow);
+  }
+  std::vector<Tidx> v(nb);
+  for (size_t i=0; i<nb; i++) {
+    Tidx eVal1=ListPosition[i];
+    Tidx eVal2=OnPoints(eVal1, eGen);
+    Tidx eVal3=ListPositionRev[eVal2];
+    v[i]=eVal3;
+  }
+  return Telt(std::move(v));
+}
+
+
 template<typename Tgroup>
 Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 {
