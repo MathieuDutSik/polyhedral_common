@@ -18,8 +18,9 @@ namespace TempShvec_globals {
   const int TEMP_SHVEC_MODE_SHORTEST_VECTORS = 1;
   const int TEMP_SHVEC_MODE_MINIMUM = 2;
   const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
-  const int TEMP_SHVEC_MODE_VINBERG = 4;
-  const int TEMP_SHVEC_MODE_HAN_TRAN = 0;
+  const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4; // Find all the vectors at specific 
+  const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
+  const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
   const int STOP_COMPUTATION = 666;
   const int NORMAL_TERMINATION_COMPUTATION = 555;
 }
@@ -513,7 +514,7 @@ bool get_central(const MyVector<T>& coset, const int& mode)
     if (coset(i) != 0)
       return false;
   }
-  if (mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG)
+  if (mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO)
     return false;
   return true;
 }
@@ -563,13 +564,35 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
     return info;
   }
-  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO) {
+    T_shvec_info<T,Tint> info;
+    info.minimum = request.bound;
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      if (min == request.bound)
+        info.short_vectors.push_back(V);
+      return true;
+    };
+    (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
+    return info;
+  }
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {
+    T_shvec_info<T,Tint> info;
+    info.minimum = request.bound;
+    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+      info.short_vectors.push_back(V);
+      return true;
+    };
+    (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
+    return info;
+  }
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     return computeMinimum<T,Tint>(request);
   }
-  else if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
     return computeMinimum<T,Tint>(request);
   }
-  std::cerr << "Failed to match an entry\n";
+  std::cerr << "mode=" << request.mode << "\n";
+  std::cerr << "T_compiteShvec: Failed to match an entry\n";
   throw TerminalException{1};
 }
 

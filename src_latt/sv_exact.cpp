@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     mpq_class bound = 0;
     mode = TempShvec_globals::TEMP_SHVEC_MODE_UNDEF;
     int c;
-    while ((c = getopt (argc, argv, "hb:s:t:mMTcgev")) != -1)
+    while ((c = getopt (argc, argv, "hb:s:t:mMTcgevl")) != -1)
       switch (c)
 	{
 	case 'h':
@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
 	  printf("-h  show this help\n");
 	  printf("-bN compute vectors v with (v, v) <= N\n");
 	  printf("-tN compute the first N coefficients of the theta-series\n");
-	  printf("-v determine the vectors with (v-c, v-c) <= N with N defined later\n");
+	  printf("-l determine the vectors with (v-c, v-c) <= N with N defined later\n");
+	  printf("-v determine the vectors with (v-c, v-c) = N with N defined later\n");
 	  printf("-m  determine the minimum\n");
 	  printf("-M  compute minimal vectors\n");
 	  printf("-T  compute one vector of fixed length (quaetsion of Han Tran)\n");
@@ -56,7 +57,12 @@ int main(int argc, char *argv[])
 	  mode = TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM;
 	  break;
 	case 'v':
-	  mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
+	  mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
+	  coset=true;
+	  NeedBound=true;
+	  break;
+	case 'l':
+	  mode = TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN;
 	  coset=true;
 	  NeedBound=true;
 	  break;
