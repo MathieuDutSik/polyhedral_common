@@ -550,6 +550,35 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 }
 
 
+template<typename Telt, typename Tobj, typename Tact>
+std::vector<std::pair<Tobj,Telt>> OrbitWithRepresentative(const Telt& id, std::vector<Telt> const& ListGen, Tobj const& x, Tact act)
+{
+  std::vector<std::pair<Tobj,Telt>> ListObj{ {x, id} };
+  std::unordered_set<Tobj> SetObj{x};
+  size_t curr_pos = 0;
+  while(true) {
+    size_t len=ListObj.size();
+    if (curr_pos == len)
+      break;
+    for (size_t u=curr_pos; u<len; u++) {
+      for (auto & eElt : ListGen) {
+        Tobj eImg = act(ListObj[u].first, eElt);
+        if (SetObj.count(eImg) == 0) {
+          Telt NewElt = ListObj[u].second * eElt;
+          ListObj.push_back( {eImg, NewElt} );
+          SetObj.insert(eImg);
+        }
+      }
+    }
+    curr_pos = len;
+  }
+  return ListObj;
+}
+
+
+
+
+
 
 template<typename Telt>
 Face OnFace(Face const& eSet, Telt const& eElt)
@@ -580,6 +609,10 @@ void OnFace_inplace(Face & fSet, Face const& eSet, Telt const& eElt)
     pos = eSet.find_next(pos);
   }
 }
+
+
+
+
 
 
 
@@ -670,6 +703,55 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
   }
   return TheReturn;
 }
+
+
+// Test if f1 is a subset of f2
+bool is_subset(Face const& f1, Face const& f2)
+{
+  boost::dynamic_bitset<>::size_type pos=f1.find_first();
+  while (pos != boost::dynamic_bitset<>::npos) {
+    if (f2[pos] == 0)
+      return false;
+    pos = f1.find_next(pos);
+  }
+  return true;
+}
+
+
+/*
+  This is a combinatorial algorithm for finding all group elements g such that  set2 \subset g . set1
+  We could probably do better with double coset decompositions.
+ */
+template<typename Tgroup>
+std::vector<std::pair<Face, typename Tgroup::Telt>> FindContainingOrbit(Tgroup const& GRP_ext, Face const& set1, Face const& set2)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tgroup stab1 = GRP_ext.Stabilizer_OnSet(set1);
+  Tgroup stab2 = GRP_ext.Stabilizer_OnSet(set2);
+  std::vector<Telt> LGen = GRP_ext.GeneratorsOfGroup();
+  Tidx n = GRP_ext.n_act();
+  Telt id(n);
+  std::vector<std::pair<Face,Telt>> LPair = OrbitWithRepresentative(id, LGen, set1, OnFace);
+  std::unordered_map<Face,Telt> map_face_elt;
+  vectface list_face(n);
+  for (auto & ePair : LPair) {
+    if (is_subset(set2, ePair.first)) {
+      map_face_elt[ePair.first] = ePair.second;
+      list_face.push_back(ePair.first);
+    }
+  }
+  vectface vfRepr = OrbitSplittingSet(list_face, stab2);
+  std::vector<std::pair<Face, typename Tgroup::Telt>> list_ret;
+  for (auto & eRepr : vfRepr) {
+    Telt eElt = map_face_elt[eRepr];
+    list_ret.push_back( {eRepr, eElt} );
+  }
+  return list_ret;
+}
+
+
+
 
 
 #endif

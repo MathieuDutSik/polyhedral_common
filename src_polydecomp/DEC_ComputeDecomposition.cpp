@@ -310,39 +310,106 @@ std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeD
 
 
 // A face of the cellular complex is determined by all the ways in which 
+template<typename Tint>
 struct ent_face {
   size_t iCone;
-  size_t iorb_facet;
-  Telt ePerm;
+  Face f; // The subset itself
+  MyMatrix<Tint> eMat;
 };
 
 
-std::optional<MyMatrix<Tint>> test_equiv_ent_face(ent_face const& ef1, ent_face const& ef2)
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, ent_face const& ef1, ent_face const& ef2)
 {
-  
+  using Telt = typename Tgroup::Telt;
+  if (ef1.iCone != ef2.iCone)
+    return {};
+  const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef1.iCone];
+  size_t iC = ef1.iCone;
+  std::optional<Telt> test = eC.GRP_ext.RepresentativeAction_OnSets(ef1.f, ef2.f);
+  if (!test)
+    return {};
+  MyMatrix<Tint> eMat = FindTransformation(eC.M, eC.M, *test);
+  return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
-std::vector<ent_face> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const ent_face& ef)
+/*
+  Generate the list of entries in the face and the list of stabilizer generators
+ */
+template<typename T, typename Tint, typename Tgroup>
+std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj>> const& ll_adj_struct, const ent_face& ef)
 {
-  std::vector<ent_face> l_ent_face;
-  std::vector<uint8_t> l_status;
-  auto f_insert=[&](ent_face& ef_A) -> void {
-    for (auto & ef_B : l_ent_face) {
-      
-    }
-    l_ent_face.push_back(ef_A);
-    l_status.push_back(0);
-  };
-  while(true) {
-    bool is_finished=true;
-    for (size_t i=0; i<l_ent_face.size(); i++) {
-      if (l_status[i] == 0) {
-        l_status[i] = 1;
-        is_finished = false;
+  using Telt=typename Tgroup::Telt;
+  std::vector<MyMatrix<Tint>> ListMatrGen;
+  std::set<MyVector<Tint>> EXT;
+  size_t dim;
+  for (auto & ePt : FaceToVector(ef.f)) {
+    MyVector<Tint> V = GetMatrixRow(ListCones[ef.iCone], ePt);
+    MyVector<Tint> Vimg = ef.transpose() * V;
+    dim = Vimg.size();
+    EXT.insert(Vimg);
+  }
+  auto f_insert_generator=[&](const MyMatrix<Tint>& eGen) -> void {
+    ListMatrGen.push_back(eGen);
+    for (auto & eV : EXT) {
+      MyVector<Tint> Vimg = eGen.transpose() * eV;
+      if (EXT.count(Vimg) != 1) {
+        std::cerr << "Error: The generator does not preserve the face globally\n";
+        throw TerminalException{1};
       }
     }
-    if (is_finished)
+  };
+  std::vector<ent_face> l_ent_face;
+  auto f_insert=[&](ent_face& ef_A) -> void {
+    for (auto & ef_B : l_ent_face) {
+      std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
+      if (equiv_opt) {
+        f_insert_generator(*equiv_opt);
+        return;
+      }
+    }
+    l_ent_face.push_back(ef_A);
+    const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef_A.iCone];
+    Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef_A.f);
+    for (auto & eGen : stab.GeneratorsOfGroup()) {
+      MyMatrix<Tint> eMatGen = FindTransformation(eC.M, eC.M, eGen);
+      f_insert_generator(eMatGen);
+    }
+  };
+  size_t curr_pos = 0;
+  while(true) {
+    size_t len = l_ent_face.size();
+    if (curr_pos == len)
       break;
+    for (size_t i=curr_pos; i<len; i++) {
+      const ent_face& ef = l_ent_face[i];
+      const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
+      for (auto & e_sing_adj : ll_adj_struct[ef.iCone]) {
+        std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f, ef.f);
+        for (auto & e_pair : l_pair) {
+          MyMatrix<Tint> eMat1 = FindTransformation(eC.M, eC.M, e_pair.second);
+          size_t jCone = e_sing_adj.jCone;
+          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * ef.eMat * eMat1; // Needs to be cleaned up
+          MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.M;
+          MyMatrix<T> VectorContain(1,n_cols);
+          ContainerMatrix<T> Cont(EXTimg, VectorContain);
+          Face faceNew(EXTimg.rows());
+          for (auto & e_line : EXT) {
+            for (size_t i_col=0; i_col<dim; i++)
+              VectorContain(i_col) = e_line(i_col);
+            std::pair<bool, size_t> epair = Cont.GetIdx();
+            if (!epair.first) {
+              std::cerr << "The vector is not in the image. Clear bug\n";
+              throw TerminalException{1};
+            }
+            faceNew[epair.second] = 1;
+          }
+          ent_face efNew{jCone, faceNew, eMatAdj};
+          f_insert(efNew);
+        }
+      }
+    }
+
   }
   return l_ent_face;
 }
