@@ -310,7 +310,7 @@ Telt ReduceElementAction(Telt const& eElt, Face const& eList)
   std::vector<Tidx> v(nb);
   for (size_t i=0; i<nb; i++) {
     Tidx eVal1=ListPosition[i];
-    Tidx eVal2=OnPoints(eVal1, eGen);
+    Tidx eVal2=OnPoints(eVal1, eElt);
     Tidx eVal3=ListPositionRev[eVal2];
     v[i]=eVal3;
   }

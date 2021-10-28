@@ -26,7 +26,7 @@ struct FaceDesc {
 };
 
 
-template<typename Tint, typename Tidx_value>
+template<typename T, typename Tint, typename Tidx_value>
 struct Tent {
   MyMatrix<Tint> M;
   MyMatrix<Tint> Spann;
@@ -52,10 +52,11 @@ struct stab_info {
   std::vector<std::pair<typename Tgroup::Telt,MyMatrix<Tint>>> ListGenMat;
 };
 
-template<typename T, typename Tint, typename Tidx_value, typename Tgroup>
+template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 stab_info<Tgroup,Tint> f_stab(const Tent<T,Tint,Tgroup>& eEnt)
 {
   using Telt=typename Tgroup::Telt;
+  using Tgr=GraphBitset;
   Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(eEnt.WMat);
   MyMatrix<T> Concat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(Concat_T, GRP1);
@@ -73,9 +74,12 @@ stab_info<Tgroup,Tint> f_stab(const Tent<T,Tint,Tgroup>& eEnt)
   return {GRPfull, GRPres, ListGenMat};
 }
 
-template<typename T, typename Tint, typename Tidx_value, typename Tgroup>
+template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tgroup>& eEnt, const Tent<T,Tint,Tgroup>& fEnt)
 {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tgr = GraphBitset;
   MyMatrix<T> eConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
   MyMatrix<T> fConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(fEnt.M, fEnt.Spann));
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat).first;
@@ -94,8 +98,10 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tgroup>& eEnt, const Ten
 }
 
 
-Tent<T,Tint,Tgroup> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const FaceDesc& fd)
+template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
+Tent<T,Tint,Tgroup> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const MyMatrix<Tint>& G, const FaceDesc& fd)
 {
+  using Tidx = typename Tgroup::Telt::Tidx;
   std::cerr << "f_ent, step 1\n";
   int nbFac = ListCones[fd.iCone].FAC.rows();
   int nbExt = ListCones[fd.iCone].EXT.rows();
@@ -143,13 +149,14 @@ Tent<T,Tint,Tgroup> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones,
   return {M, Spann, Qmat, std::move(WMat), fd};
 }
 
+template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 size_t f_inv(const Tent<T,Tint,Tgroup>& eEnt)
 {
   return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
 }
 
 
-template<typename T, typename Tint, typename Tgroup>
+template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G, int TheLev)
 {
   std::vector<FaceDesc> ListDomain;
@@ -157,31 +164,31 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
     size_t len = ListCones[i].FAC.rows();
     Face f(len);
     FaceDesc fd = {i, f};
-    ListDomains.push_back(fd);
+    ListDomain.push_back(fd);
   }
   std::vector<std::vector<FaceDesc>> ListListDomain;
   ListListDomain.push_back(ListDomain);
   //
   for (int i=1; i<TheLev; i++) {
-    std::vector<std::pair<size_t,Tent>> NewListCand;
-    auto f_insert=[&](Tent&& eEnt) -> void {
+    std::vector<std::pair<size_t,Tent<T,Tint,Tgroup>>> NewListCand;
+    auto f_insert=[&](Tent<T,Tint,Tgroup>&& eEnt) -> void {
       std::cerr << "Beginning of f_insert\n";
-      size_t e_inv = f_inv(eEnt);
+      size_t e_inv = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
       std::cerr << "e_inv=" << e_inv << "\n";
       for (auto & eP : NewListCand) {
         if (eP.first == e_inv) {
-          std::optional<MyMatrix<Tint>> eEquiv = f_equiv(eP.second, eEnt);
+          std::optional<MyMatrix<Tint>> eEquiv = f_equiv<T,Tint,Tgroup,Tidx_value>(eP.second, eEnt);
           if (eEquiv)
             return;
         }
       }
-      std::pair<size_t,Tent> e_pair{e_inv,std::move(eEnt)};
+      std::pair<size_t,Tent<T,Tint,Tgroup>> e_pair{e_inv,std::move(eEnt)};
       NewListCand.emplace_back(std::move(e_pair));
       std::cerr << "Now |NewListCand|=" << NewListCand.size() << "\n";
     };
     for (auto & eDomain : ListListDomain[i-1]) {
       std::cerr << "eDomain, step 1\n";
-      Tent eEnt = f_ent(ListCones, eDomain);
+      Tent<T,Tint,Tgroup> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, eDomain);
       std::cerr << "eDomain, step 2\n";
       size_t iCone = eDomain.iCone;
       std::cerr << "eDomain, step 3\n";
@@ -197,7 +204,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
       //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
       for (auto & eFace : ListFace) {
         FaceDesc fdn{iCone, eFace};
-        Tent fEnt = f_ent(ListCones, fdn);
+        Tent<T,Tint,Tgroup> fEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fdn);
         f_insert(std::move(fEnt));
       }
       std::cerr << "eDomain, step 7\n";
@@ -218,10 +225,10 @@ struct sing_adj {
   MyMatrix<Tint> eMat;
 };
 
-template<typename T, typename Tint, typename Tgroup>
-std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G)
+template<typename T, typename Tint, typename Tgroup,typename Tidx_value>
+std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G)
 {
-  std::vector<std::vector<sing_adj>> adjacency_information;
+  std::vector<std::vector<sing_adj<Tint>>> adjacency_information;
   size_t n_domain = ListCones.size();
   struct ent_info {
     size_t i_domain;
@@ -242,12 +249,12 @@ std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeD
       size_t i_fac = MinVal;
       Face f_ext(n_ext);
       for (size_t i_ext=0; i_ext<n_ext; i_ext++)
-        if (ListCone[i_domain].extfac_incd[iFac * n_ext + i_ext] == 1)
+        if (ListCones[i_domain].extfac_incd[i_fac * n_ext + i_ext] == 1)
           f_ext[i_ext] = 1;
-      f_fac(n_fac);
+      Face f_fac(n_fac);
       f_fac[i_fac] = 1;
       FaceDesc fd{i_domain, f_fac};
-      Tent<T,Tint,Tgroup> eEnt = f_ent(ListCones, fd);
+      Tent<T,Tint,Tgroup> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
       size_t hash = f_inv(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, eEnt, hash};
       l_ent_info.push_back(e_ent_info);
@@ -263,7 +270,7 @@ std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeD
     throw TerminalException{1};
   };
   auto get_reverting_transformation=[&](const Tent<T,Tint,Tgroup> &eEnt) -> std::optional<MyMatrix<Tint>> {
-    stab_info<Tgroup,Tint> e_stab_info = f_stab(eEnt);
+    stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
     MyVector<Tint> eSpann = GetMatrixRow(eEnt.Spann, 0);
     for (auto& ePair : e_stab_info.ListGenMat) {
       MyVector<Tint> eSpannImg = eSpann * ePair.second;
@@ -277,19 +284,19 @@ std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeD
     }
     return {};
   };
-  auto get_mapped=[&](const ent_info& e_ent) -> sing_adj {
-    for (auto & f_ent : l_ent_info) {
-      if (f_ent.hash == e_ent.hash && (f_ent.i_domain != e_ent.i_domain || f_ent.i_adj != e_ent.i_adj)) {
-        std::optional<MyMatrix<Tint>> e_equiv = f_equiv(f_ent.eEnt, e_ent.eEnt);
+  auto get_mapped=[&](const ent_info& a_ent) -> sing_adj<Tint> {
+    for (auto & b_ent : l_ent_info) {
+      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+        std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
-          return {f_ent.i_domain, e_ent.f, *e_equiv};
+          return {b_ent.i_domain, a_ent.f, *e_equiv};
         }
       }
     }
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
   };
-  auto get_sing_adj=[&](size_t const& i_domain, size_t const& i_adj) -> sing_adj {
+  auto get_sing_adj=[&](size_t const& i_domain, size_t const& i_adj) -> sing_adj<Tint> {
     const ent_info& e_ent = get_ent_info(i_domain, i_adj);
     std::optional<MyMatrix<Tint>> trans_opt = get_reverting_transformation(e_ent.eEnt);
     if (trans_opt) {
@@ -298,12 +305,12 @@ std::vector<std::vector<sing_adj>> compute_adjacency_structure(std::vector<ConeD
     return get_mapped(e_ent);
   };
 
-  std::vector<std::vector<sing_adj>> ll_adj_struct;
+  std::vector<std::vector<sing_adj<Tint>>> ll_adj_struct;
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
-    std::vector<sing_adj> l_adj_struct;
+    std::vector<sing_adj<Tint>> l_adj_struct;
     for (size_t i_adj=0; i_adj<l_n_orb_adj[i_domain]; i_adj++)
       l_adj_struct.push_back(get_sing_adj(i_domain, i_adj));
-    ll_adj_struct.push_back(l_adj);
+    ll_adj_struct.push_back(l_adj_struct);
   }
   return ll_adj_struct;
 }
@@ -319,7 +326,7 @@ struct ent_face {
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, ent_face const& ef1, ent_face const& ef2)
+std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, ent_face<Tint> const& ef1, ent_face<Tint> const& ef2)
 {
   using Telt = typename Tgroup::Telt;
   if (ef1.iCone != ef2.iCone)
@@ -337,7 +344,7 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
   Generate the list of entries in the face and the list of stabilizer generators
  */
 template<typename T, typename Tint, typename Tgroup>
-std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj>> const& ll_adj_struct, const ent_face& ef)
+std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj<Tint>>> const& ll_adj_struct, const ent_face<Tint>& ef)
 {
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
@@ -359,8 +366,8 @@ std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_e
       }
     }
   };
-  std::vector<ent_face> l_ent_face;
-  auto f_insert=[&](ent_face& ef_A) -> void {
+  std::vector<ent_face<Tint>> l_ent_face;
+  auto f_insert=[&](ent_face<Tint>& ef_A) -> void {
     for (auto & ef_B : l_ent_face) {
       std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
       if (equiv_opt) {
@@ -382,7 +389,7 @@ std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_e
     if (curr_pos == len)
       break;
     for (size_t i=curr_pos; i<len; i++) {
-      const ent_face& ef = l_ent_face[i];
+      const ent_face<Tint>& ef = l_ent_face[i];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
       for (auto & e_sing_adj : ll_adj_struct[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f, ef.f);
@@ -391,12 +398,12 @@ std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_e
           size_t jCone = e_sing_adj.jCone;
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * ef.eMat * eMat1; // Needs to be cleaned up
           MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.M;
-          MyMatrix<T> VectorContain(1,n_cols);
+          MyMatrix<T> VectorContain(1,dim);
           ContainerMatrix<T> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
           for (auto & e_line : EXT) {
             for (size_t i_col=0; i_col<dim; i++)
-              VectorContain(i_col) = e_line(i_col);
+              VectorContain(0,i_col) = e_line(i_col);
             std::pair<bool, size_t> epair = Cont.GetIdx();
             if (!epair.first) {
               std::cerr << "The vector is not in the image. Clear bug\n";
@@ -411,7 +418,7 @@ std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_e
     }
 
   }
-  return l_ent_face;
+  return {l_ent_face, ListMatrGen};
 }
 
 
@@ -421,14 +428,13 @@ std::pair<std::vector<ent_face>,std::vector<MyMatrix<Tint>>> get_spanning_list_e
 int main(int argc, char* argv[])
 {
   try {
-    if (argc != 4 && argc != 3) {
-      std::cerr << "VIN_ComputeDomain [opt] [FileI] [FileO]\n";
+    if (argc != 5 && argc != 4) {
+      std::cerr << "VIN_ComputeDomain [opt] [TheLev] [FileI] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "VIN_ComputeDomain [opt] [FileI]\n";
+      std::cerr << "VIN_ComputeDomain [opt] [TheLev] [FileI]\n";
       throw TerminalException{1};
     }
     using T=mpq_class;
-    using Tgr=GraphBitset;
     using Tint=mpz_class;
     using Tidx_value = int32_t;
     using Tidx = uint32_t;
@@ -437,6 +443,7 @@ int main(int argc, char* argv[])
     //
     std::string opt = argv[1];
     std::string FileI = argv[2];
+    int TheLev = 4; // argv[3];
     std::ifstream is(FileI);
     //
     // The polyhedral cone.
@@ -448,7 +455,6 @@ int main(int argc, char* argv[])
     std::cerr << "We have G\n";
     size_t n_domain;
     is >> n_domain;
-    std::vector<FaceDesc> ListDomain(n_domain);
     for (size_t i=0; i<n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
@@ -463,21 +469,19 @@ int main(int argc, char* argv[])
       std::cerr << "|GRP_ext|=" << GRP_ext.size() << " |GRP_fac|=" << GRP_fac.size() << "\n";
       //
       Face extfac_incd = Compute_extfac_incd(FAC, EXT);
-      ConeDesc eCone{EXT, EXT_i, FAC, extfac_incd, GRP_ext, GRP_fac};
+      ConeDesc<T,Tint,Tgroup> eCone{EXT, EXT_i, FAC, extfac_incd, GRP_ext, GRP_fac};
       ListCones.push_back(eCone);
     }
     //
     std::vector<std::vector<FaceDesc>> ListListDomain;
     if (opt == "strategy2") {
-      ListListDomain = Compute_ListListDomain_strategy2(ListCones, G, TheLev);
+      ListListDomain = Compute_ListListDomain_strategy2<T,Tint,Tgroup,Tidx_value>(ListCones, G, TheLev);
     }
     if (opt == "strategy1") {
-      std::vector<std::vector<sing_adj>> ll_sing_adj = compute_adjacency_structure(ListCones, G);
+      std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj = compute_adjacency_structure<T,Tint,Tgroup,Tidx_value>(ListCones, G);
       
     }
-    
-    if (
-    
+
   }
   catch (TerminalException const& e) {
     exit(e.eVal);
