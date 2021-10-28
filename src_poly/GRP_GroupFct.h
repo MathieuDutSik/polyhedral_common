@@ -299,7 +299,7 @@ Telt ReduceElementAction(Telt const& eElt, Face const& eList)
     std::cerr << "Call of ReducedGroupAction with 0 points\n";
     throw TerminalException{1};
   }
-  std::vector<Tidx> ListPositionRev(eElt.sizet(), -1);
+  std::vector<Tidx> ListPositionRev(eElt.size(), -1);
   boost::dynamic_bitset<>::size_type aRow=eList.find_first();
   std::vector<Tidx> ListPosition(nb);
   for (Tidx iRow=0; iRow<nb; iRow++) {

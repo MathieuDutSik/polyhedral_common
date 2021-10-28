@@ -276,9 +276,10 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     std::vector<MyMatrix<T>> ListMatrGen;
     std::vector<Telt> ListPermGen;
     std::vector<Telt> LGen = eStab.GeneratorsOfGroup();
+    Tidx nbRow_tidx = nbRow;
     for (auto & eGen : LGen) {
       std::vector<Tidx> v(nbRow);
-      for (Tidx i=0; i<nbRow; i++)
+      for (Tidx i=0; i<nbRow_tidx; i++)
 	v[i]=OnPoints(i, eGen);
       Telt ePerm(std::move(v));
       MyMatrix<T> eMatr=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, ePerm);

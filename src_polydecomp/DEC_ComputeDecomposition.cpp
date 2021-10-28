@@ -53,7 +53,7 @@ struct stab_info {
 };
 
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
-stab_info<Tgroup,Tint> f_stab(const Tent<T,Tint,Tgroup>& eEnt)
+stab_info<Tgroup,Tint> f_stab(const Tent<T,Tint,Tidx_value>& eEnt)
 {
   using Telt=typename Tgroup::Telt;
   using Tgr=GraphBitset;
@@ -75,7 +75,7 @@ stab_info<Tgroup,Tint> f_stab(const Tent<T,Tint,Tgroup>& eEnt)
 }
 
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
-std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tgroup>& eEnt, const Tent<T,Tint,Tgroup>& fEnt)
+std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tidx_value>& eEnt, const Tent<T,Tint,Tidx_value>& fEnt)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -99,7 +99,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tgroup>& eEnt, const Ten
 
 
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
-Tent<T,Tint,Tgroup> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const MyMatrix<Tint>& G, const FaceDesc& fd)
+Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const MyMatrix<Tint>& G, const FaceDesc& fd)
 {
   using Tidx = typename Tgroup::Telt::Tidx;
   std::cerr << "f_ent, step 1\n";
@@ -150,15 +150,18 @@ Tent<T,Tint,Tgroup> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones,
 }
 
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
-size_t f_inv(const Tent<T,Tint,Tgroup>& eEnt)
+size_t f_inv(const Tent<T,Tint,Tidx_value>& eEnt)
 {
-  return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(eEnt.WMat);
+  static_assert(std::is_integral<Tidx_value>::value, "Tidx_value should be integral");
+  const WeightMatrix<true,std::vector<Tint>,Tidx_value>& WMat = eEnt.WMat;
+  return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(WMat);
 }
 
 
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G, int TheLev)
 {
+  static_assert(std::is_integral<Tidx_value>::value, "Tidx_value should be integral");
   std::vector<FaceDesc> ListDomain;
   for (size_t i=0; i<ListCones.size(); i++) {
     size_t len = ListCones[i].FAC.rows();
@@ -170,8 +173,8 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
   ListListDomain.push_back(ListDomain);
   //
   for (int i=1; i<TheLev; i++) {
-    std::vector<std::pair<size_t,Tent<T,Tint,Tgroup>>> NewListCand;
-    auto f_insert=[&](Tent<T,Tint,Tgroup>&& eEnt) -> void {
+    std::vector<std::pair<size_t,Tent<T,Tint,Tidx_value>>> NewListCand;
+    auto f_insert=[&](Tent<T,Tint,Tidx_value>&& eEnt) -> void {
       std::cerr << "Beginning of f_insert\n";
       size_t e_inv = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
       std::cerr << "e_inv=" << e_inv << "\n";
@@ -182,13 +185,13 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
             return;
         }
       }
-      std::pair<size_t,Tent<T,Tint,Tgroup>> e_pair{e_inv,std::move(eEnt)};
+      std::pair<size_t,Tent<T,Tint,Tidx_value>> e_pair{e_inv,std::move(eEnt)};
       NewListCand.emplace_back(std::move(e_pair));
       std::cerr << "Now |NewListCand|=" << NewListCand.size() << "\n";
     };
     for (auto & eDomain : ListListDomain[i-1]) {
       std::cerr << "eDomain, step 1\n";
-      Tent<T,Tint,Tgroup> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, eDomain);
+      Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, eDomain);
       std::cerr << "eDomain, step 2\n";
       size_t iCone = eDomain.iCone;
       std::cerr << "eDomain, step 3\n";
@@ -204,7 +207,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
       //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
       for (auto & eFace : ListFace) {
         FaceDesc fdn{iCone, eFace};
-        Tent<T,Tint,Tgroup> fEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fdn);
+        Tent<T,Tint,Tidx_value> fEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fdn);
         f_insert(std::move(fEnt));
       }
       std::cerr << "eDomain, step 7\n";
@@ -228,13 +231,14 @@ struct sing_adj {
 template<typename T, typename Tint, typename Tgroup,typename Tidx_value>
 std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G)
 {
+  static_assert(std::is_integral<Tidx_value>::value, "Tidx_value should be integral");
   std::vector<std::vector<sing_adj<Tint>>> adjacency_information;
   size_t n_domain = ListCones.size();
   struct ent_info {
     size_t i_domain;
     size_t i_adj;
     Face f;
-    Tent<T,Tint,Tgroup> eEnt;
+    Tent<T,Tint,Tidx_value> eEnt;
     size_t hash;
   };
   std::vector<ent_info> l_ent_info;
@@ -254,10 +258,10 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
       Face f_fac(n_fac);
       f_fac[i_fac] = 1;
       FaceDesc fd{i_domain, f_fac};
-      Tent<T,Tint,Tgroup> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
-      size_t hash = f_inv(eEnt);
-      ent_info e_ent_info{i_domain, i_adj, f_ext, eEnt, hash};
-      l_ent_info.push_back(e_ent_info);
+      Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
+      size_t hash = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
+      ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
+      l_ent_info.emplace_back(std::move(e_ent_info));
       i_adj++;
     }
     l_n_orb_adj.push_back(i_adj);
@@ -269,7 +273,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     std::cerr << "Failed to find the matching entry\n";
     throw TerminalException{1};
   };
-  auto get_reverting_transformation=[&](const Tent<T,Tint,Tgroup> &eEnt) -> std::optional<MyMatrix<Tint>> {
+  auto get_reverting_transformation=[&](const Tent<T,Tint,Tidx_value> &eEnt) -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
     MyVector<Tint> eSpann = GetMatrixRow(eEnt.Spann, 0);
     for (auto& ePair : e_stab_info.ListGenMat) {
