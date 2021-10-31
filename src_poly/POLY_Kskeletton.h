@@ -11,11 +11,11 @@
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
 template<typename T, typename Tgroup>
-vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP)
+vectface SPAN_face_LinearProgramming(Face const& face_fac, Tgroup const& StabFace_fac, MyMatrix<T> const& FAC, Tgroup const& GRP_fac)
 {
   int nbRow=FAC.rows();
-  size_t n_act_stabface = StabFace.n_act();
-  size_t n_act_fullgrp = FullGRP.n_act();
+  size_t n_act_stabface = StabFace_fac.n_act();
+  size_t n_act_fullgrp = GRP_fac.n_act();
   if (size_t(nbRow) != n_act_stabface || size_t(nbRow) != n_act_fullgrp) {
     std::cerr << "Inconsistency in nbRow, n_act_stabface, n_act_fullgrp\n";
     throw TerminalException{1};
@@ -24,13 +24,13 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
   vectface TheReturn(nbRow);
   MyMatrix<T> eMatId=IdentityMat<T>(nbCol);
   Face Treated(nbRow);
-  size_t sizFace=face.count();
+  size_t sizFace=face_fac.count();
   MyMatrix<T> TestMat(sizFace+1, nbCol);
-  boost::dynamic_bitset<>::size_type ePt=face.find_first();
+  boost::dynamic_bitset<>::size_type ePt=face_fac.find_first();
   for (size_t iRow=0; iRow<sizFace; iRow++) {
     Treated[ePt]=1;
     TestMat.row(iRow) = FAC.row(ePt);
-    ePt=face.find_next(ePt);
+    ePt=face_fac.find_next(ePt);
   }
   for (int iRow=0; iRow<nbRow; iRow++)
     if (Treated[iRow] == 0) {
@@ -59,11 +59,11 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
 	  eCandCompl[jRow]=1;
         }
       }
-      Face rList = OrbitUnion(StabFace, gList);
+      Face rList = OrbitUnion(StabFace_fac, gList);
       for (int jRow=0; jRow<nbRow; jRow++)
 	if (rList[jRow] == 1)
 	  Treated[jRow]=1;
-      Tgroup TheStab=FullGRP.Stabilizer_OnSets(eCand);
+      Tgroup TheStab=GRP_fac.Stabilizer_OnSets(eCand);
       vectface ListOrb=DecomposeOrbitPoint(TheStab, eCand);
       size_t nbOrb=ListOrb.size();
       MyMatrix<T> ListVectSpann(nbOrb, nbCol);
@@ -114,31 +114,27 @@ vectface SPAN_face_LinearProgramming(Face const& face, Tgroup const& StabFace, M
   It could be just 1 more or more.
  */
 template<typename T, typename Tgroup, typename Ffilt>
-vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int const& RankFace,
-                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP, Ffilt f_filt)
+vectface SPAN_face_ExtremeRays_F(Face const& face_fac, Tgroup const& StabFace_fac, int const& RankFace,
+                                 const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Ffilt f_filt)
 {
-  //  std::cerr << "SPAN_face_ExtremeRays_F, step 1\n";
   int nbFac=FAC.rows();
-  size_t n_act_stabface = StabFace.n_act();
-  size_t n_act_fullgrp = FullGRP.n_act();
-  if (size_t(nbFac) != n_act_stabface || size_t(nbFac) != n_act_fullgrp) {
-    std::cerr << "Inconsistency in nbFac, n_act_stabface, n_act_fullgrp\n";
-    std::cerr << "nbFac=" << nbFac << " n_act_stabface=" << n_act_stabface << " n_act_fullgrp=" << n_act_fullgrp << "\n";
+  size_t n_act_stabface = StabFace_fac.n_act();
+  if (size_t(nbFac) != n_act_stabface) {
+    std::cerr << "Inconsistency in nbFac, n_act_stabface\n";
+    std::cerr << "nbFac=" << nbFac << " n_act_stabface=" << n_act_stabface << "\n";
     throw TerminalException{1};
   }
   int nbCol=FAC.cols();
   vectface TheReturn(nbFac);
   Face Treated(nbFac);
-  size_t sizFace=face.count();
-  //  std::cerr << "SPAN_face_ExtremeRays_F, sizFace=" << sizFace << " nbCol=" << nbCol << " nbFac=" << nbFac << "\n";
-  boost::dynamic_bitset<>::size_type iFac=face.find_first();
+  size_t sizFace=face_fac.count();
+  boost::dynamic_bitset<>::size_type iFac=face_fac.find_first();
   std::vector<size_t> face_vect;
   for (size_t iRow=0; iRow<sizFace; iRow++) {
     Treated[iFac]=1;
     face_vect.push_back(iFac);
-    iFac=face.find_next(iFac);
+    iFac=face_fac.find_next(iFac);
   }
-  //  std::cerr << "SPAN_face_ExtremeRays_F, step 1.1\n";
   int nbExt=EXT.rows();
   Face EXTincd(nbExt);
   auto get_stat=[&](int const& iExt) -> bool {
@@ -149,22 +145,18 @@ vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int c
   };
   for (int iExt=0; iExt<nbExt; iExt++)
     EXTincd[iExt] = get_stat(iExt);
-  //  std::cerr << "SPAN_face_ExtremeRays_F, step 1.2\n";
   int RankFace_fac = RankFace; // expressed from the facets
   int RankFace_ext = nbCol - RankFace_fac;
   int RankFaceTarget_ext = RankFace_ext - 1;
   std::vector<size_t> EXTincd_face_vect;
   EXTincd_face_vect.reserve(nbExt);
-  //  std::cerr << "SPAN_face_ExtremeRays_F, step 2\n";
   for (int iFac=0; iFac<nbFac; iFac++)
     if (Treated[iFac] == 0) {
-      //      std::cerr << "SPAN_face_ExtremeRays_F, step 3 iFac=" << iFac << "\n";
       Face EXTincd_face = EXTincd;
       for (int iExt=0; iExt<nbExt; iExt++)
         if (extfac_incd[iFac * nbExt + iExt] == 0)
           EXTincd_face[iExt] = 0;
       //
-      //      std::cerr << "SPAN_face_ExtremeRays_F, step 4 iFac=" << iFac << "\n";
       size_t sizEXT=EXTincd_face.count();
       MyMatrix<T> EXTface(sizEXT, nbCol);
       boost::dynamic_bitset<>::size_type iExt=EXTincd_face.find_first();
@@ -175,8 +167,6 @@ vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int c
         iExt = EXTincd_face.find_next(iExt);
       }
       Face gList(nbFac);
-      //      std::cerr << "SPAN_face_ExtremeRays_F, step 5 iFac=" << iFac << "\n";
-      //      std::cerr << "|EXTface|=" << EXTface.rows() << " / " << EXTface.cols() << "\n";
       if (f_filt(EXTface, RankFaceTarget_ext)) {
         auto test_corr=[&](int const& jFac) -> bool {
           for (auto& iExt : EXTincd_face_vect)
@@ -191,12 +181,10 @@ vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int c
       } else {
         gList[iFac] = 1;
       }
-      //      std::cerr << "SPAN_face_ExtremeRays_F, step 6 iFac=" << iFac << "\n";
-      Face rList = OrbitUnion(StabFace, gList);
+      Face rList = OrbitUnion(StabFace_fac, gList);
       for (int jFac=0; jFac<nbFac; jFac++)
 	if (rList[jFac] == 1)
 	  Treated[jFac]=1;
-      //      std::cerr << "SPAN_face_ExtremeRays_F, step 7 iFac=" << iFac << "\n";
     }
   return TheReturn;
 }
@@ -205,21 +193,21 @@ vectface SPAN_face_ExtremeRays_F(Face const& face, Tgroup const& StabFace, int c
 
 template<typename T, typename Tgroup>
 vectface SPAN_face_ExtremeRays(Face const& face, Tgroup const& StabFace, int const& RankFace,
-                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+                               const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT)
 {
   auto f_filt=[&](MyMatrix<T> const& M, int const& RankTarget) -> bool {
     if (M.rows() < RankTarget)
       return false; // The number of rows cannot match the rank, so reject
     return RankMat(M) == RankTarget;
   };
-  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP, f_filt);
+  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, f_filt);
 }
 
 
 
 template<typename T, typename Tgroup>
 vectface SPAN_face_ExtremeRaysNonSimplicial(Face const& face, Tgroup const& StabFace, int const& RankFace,
-                                            const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, Tgroup const& FullGRP)
+                                            const Face& extfac_incd, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT)
 {
   auto f_filt=[&](MyMatrix<T> const& M, int const& RankTarget) -> bool {
     //    std::cerr << "|M|=" << M.rows() << " / " << M.cols() << " RankTarget=" << RankTarget << "\n";
@@ -229,7 +217,7 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(Face const& face, Tgroup const& Stab
       return false; // The number of rows cannot match the rank, so reject
     return RankMat(M) == RankTarget;
   };
-  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP, f_filt);
+  return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC, EXT, f_filt);
 }
 
 
@@ -293,6 +281,15 @@ Face Compute_extfac_incd(const MyMatrix<T>& FAC, const MyMatrix<T>& EXT)
   return extfac_incd;
 }
 
+Face Compute_facext(const Face& extfac_incd, int nbFac, int nbExt)
+{
+  Face facext_incd(nbFac * nbExt);
+  for (int iFac=0; iFac<nbFac; iFac++)
+    for (int iExt=0; iExt<nbExt; iExt++)
+      facext_incd[iExt * nbFac + iFac] = extfac_incd[iFac * nbExt + iExt];
+  return facext_incd;
+}
+
 
 Face Compute_faceEXT_from_faceFAC(const Face& extfac_incd, int nbFac, int nbExt, const Face& face_fac)
 {
@@ -303,10 +300,26 @@ Face Compute_faceEXT_from_faceFAC(const Face& extfac_incd, int nbFac, int nbExt,
           return false;
     return true;
   };
-  Face f(nbExt);
+  Face f_ext(nbExt);
   for (int iExt=0; iExt<nbExt; iExt++)
-    f[iExt] = is_in(iExt);
-  return f;
+    f_ext[iExt] = is_in(iExt);
+  return f_ext;
+}
+
+
+Face Compute_faceFAC_from_faceEXT(const Face& extfac_incd, int nbFac, int nbExt, const Face& face_ext)
+{
+  auto is_in=[&](int iFac) -> bool {
+    for (int iExt=0; iExt<nbExt; iExt++)
+      if (face_ext[iExt] == 1)
+        if (extfac_incd[iFac * nbExt + iExt] == 0)
+          return false;
+    return true;
+  };
+  Face f_fac(nbFac);
+  for (int iFac=0; iFac<nbFac; iFac++)
+    f_fac[iFac] = is_in(iFac);
+  return f_fac;
 }
 
 
@@ -325,7 +338,7 @@ std::vector<vectface> EnumerationFaces_Ffinal(Tgroup const& TheGRP, MyMatrix<T> 
   if (method_spann == "ExtremeRays") {
     Face extfac_incd = Compute_extfac_incd(FAC, EXT);
     auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
-      return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+      return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
   }
@@ -343,7 +356,7 @@ std::vector<vectface> EnumerationFaces_Ffinal(Tgroup const& TheGRP, MyMatrix<T> 
           extfac_incd[iFac * nbExt + iExt] = 1;
       }
     auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
-      return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT, FullGRP);
+      return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
   }
