@@ -28,16 +28,16 @@ T eval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
 
 
 template<typename T, typename Tint>
-std::pair<MyVector<Tint>, MyVector<Tint>> Isotropic(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
+std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
 {
   MyVector<Tint> m = r + l;
   T norm_mm = eval(G, m, m);
   T scal_ml = eval(G, m, l);
   if (norm_mm <= M || scal_ml < 0)
-    return Isotropic(G, M, r, m);
+    return Promised(G, M, r, m);
   if (eval(G, l, l) >= 0 && eval(G, r, l) > 0)
     return {l, -r};
-  return Isotropic(G, M, m, r);
+  return Promised(G, M, m, r);
 }
 
 
@@ -98,7 +98,7 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> Shorter(const MyMatrix<
   while(true) {
     // Step 2
     scal_rr = eval(G, r, r);
-    std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Isotropic(G, scal_rr, r, l);
+    std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, scal_rr, r, l);
     r = e_pair.first;
     l = e_pair.second;
     // Step 3
@@ -121,7 +121,7 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
 {
   T scal_rr = eval(G, r, r);
   if (scal_rr <= M) {
-    std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Isotropic(G, M, r, l);
+    std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, M, r, l);
     r = e_pair.first;
     l = e_pair.second;
     l = Canonical(G, M, r, l);
@@ -141,6 +141,39 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
 }
 
 
+template<typename T, typename Tint>
+std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic(const MyMatrix<T>& G, const T& M, MyVector<Tint> r, MyVector<Tint> l)
+{
+  std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> pair_opt = NotPromised(G, M, r, l);
+  if (!opt)
+    return {};
+  auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
+    return {eval(G, v1, v1), eval(G, v1, v2), eval(G, v2, v2)};
+  };
+  MyVector<Tint> r1 = pair_opt->first;
+  MyVector<Tint> l1 = pair_opt->second;
+  std::vector<MyVector<Tint>> list_r{r1};
+  MyVector<Tint> r = r1;
+  MyVector<Tint> l = l1;
+  std::vector<T> A_vect = get_char_mat(r, l);
+  while(true) {
+    std::pair<MyVector<Tint>,MyVector<Tint>> pair = Promised(G, M, r, l);
+    r = pair.first;
+    l = pair.second;
+    l = Canonical(G, M, r, l);
+    if (A_vect == get_char_mat(r,l)) { // Concluding step
+      MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily({r1, l1});
+      MyMatrix<T> M1_T = UniversalMatrixConversion<T,Tint>(M1_Tint);
+      MyMatrix<Tint> M_Tint = MatrixFromVectorFamily({r, l});
+      MyMatrix<T> M_T = UniversalMatrixConversion<T,Tint>(M_Tint);
+      MyMatrix<T> gMat_T = Inverse(M1_T) * M_T;
+      MyMatrix<Tint> gMat_Tint = UniversalMatrixConversion<Tint,T>(gMat_T);
+      return {gMat_Tint, list_r};
+    }
+    list_r.push_back(r);
+  }
+
+}
 
 
 
