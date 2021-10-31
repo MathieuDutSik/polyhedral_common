@@ -405,8 +405,8 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
           size_t jCone = e_sing_adj.jCone;
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * ef.eMat * eMat1; // Needs to be cleaned up
           MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.EXT_i;
-          MyMatrix<T> VectorContain(1,dim);
-          ContainerMatrix<T> Cont(EXTimg, VectorContain);
+          MyMatrix<Tint> VectorContain(1,dim);
+          ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
           for (auto & e_line : EXT) {
             for (size_t i_col=0; i_col<dim; i++)

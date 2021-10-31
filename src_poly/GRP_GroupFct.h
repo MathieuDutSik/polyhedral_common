@@ -727,12 +727,15 @@ std::vector<std::pair<Face, typename Tgroup::Telt>> FindContainingOrbit(Tgroup c
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  Tgroup stab1 = GRP_ext.Stabilizer_OnSet(set1);
-  Tgroup stab2 = GRP_ext.Stabilizer_OnSet(set2);
+  Tgroup stab1 = GRP_ext.Stabilizer_OnSets(set1);
+  Tgroup stab2 = GRP_ext.Stabilizer_OnSets(set2);
   std::vector<Telt> LGen = GRP_ext.GeneratorsOfGroup();
   Tidx n = GRP_ext.n_act();
   Telt id(n);
-  std::vector<std::pair<Face,Telt>> LPair = OrbitWithRepresentative(id, LGen, set1, OnFace);
+  auto f_act=[](const Face& x, const Telt& u) -> Face {
+    return OnFace(x, u);
+  };
+  std::vector<std::pair<Face,Telt>> LPair = OrbitWithRepresentative(id, LGen, set1, f_act);
   std::unordered_map<Face,Telt> map_face_elt;
   vectface list_face(n);
   for (auto & ePair : LPair) {
