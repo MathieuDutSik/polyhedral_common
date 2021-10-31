@@ -50,8 +50,8 @@ Tint LowerSquareRoot(const T& val)
     return val - x_T * x_T >= 0;
   };
   double val_d = UniversalScalarConversion<double,T>(val);
-  double val_sqrt = floor(sqrt(val_d));
-  Tint x_guess = UniversalScalarConversion<Tint,double>(val_sqrt);
+  long val_sqrt = long( floor(sqrt(val_d)) );
+  Tint x_guess = UniversalScalarConversion<Tint,long>(val_sqrt);
   while(true) {
     bool test1 = is_lower(x_guess);
     bool test2 = is_lower(x_guess+1);
@@ -82,7 +82,7 @@ MyVector<Tint> Canonical(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& 
   }
   Tint low_sqrt_tint =  LowerSquareRoot<T,Tint>(e_ent);
   T quot = (-scal1 + low_sqrt_tint) / scal2;
-  Tint K = UniversalFloorScalarConversion<Tint,T>(quot);
+  Tint K = UniversalFloorScalarInteger<Tint,T>(quot);
   MyVector<Tint> l_new = l + K * r;
   return l_new;
 }
