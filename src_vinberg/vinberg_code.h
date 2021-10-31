@@ -29,7 +29,7 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     WriteVector(std::cerr, eV);
     std::cerr << "norm=" << norm << "\n";
   }
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
+  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
   T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
   //
   auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
@@ -584,7 +584,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       }
     }
     //
-    int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG;
+    int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
     T_shvec_request<T> request = initShvecReq<T>(data.G, data.V, data.norm, mode);
     //
     size_t n_pass = 0;

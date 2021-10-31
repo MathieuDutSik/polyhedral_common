@@ -5,11 +5,12 @@
   We implement here algorithms from Section 8 in
   "AN ALTERNATIVE TO VINBERG’S ALGORITHM"
 
-  We work with a form of signature (n,1) (also in Allcock paper.
+  We work with a form of signature (n,1) (also in Allcock paper).
   In this article:
   ---"timelike" vectors are vector of negative norm
   (which are contained in the cone).
   ---"lightlike" vectors have zero norm
+  ---"spacelike" have positive norm
 
   R k is the boundary of the half plane.
 
@@ -63,6 +64,7 @@ Tint LowerSquareRoot(const T& val)
         if (!test1)
           x_guess--;
       }
+    }
   }
 }
 
@@ -78,7 +80,7 @@ MyVector<Tint> Canonical(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& 
     std::cerr << "We cannot compute square root of a negative number\n";
     throw TerminalException{1};
   }
-  Tint low_sqrt_tint =  LowerSquareRoot(e_ent);
+  Tint low_sqrt_tint =  LowerSquareRoot<T,Tint>(e_ent);
   T quot = (-scal1 + low_sqrt_tint) / scal2;
   Tint K = UniversalFloorScalarConversion<Tint,T>(quot);
   MyVector<Tint> l_new = l + K * r;
@@ -103,10 +105,12 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> Shorter(const MyMatrix<
     l = e_pair.second;
     // Step 3
     scal_rr = eval(G, r, r);
-    l = Canonicalize(scal_rr, r, l);
+    l = Canonical(G, scal_rr, r, l);
     // Step 4
-    if (scal_rr < M)
-      return {r, l};
+    if (scal_rr < M) {
+      std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
+      return pair;
+    }
     // Step 5
     std::vector<T> char_ent2 = get_char_mat(r, l);
     if (char_ent1 == char_ent2)
@@ -125,7 +129,8 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
     r = e_pair.first;
     l = e_pair.second;
     l = Canonical(G, M, r, l);
-    return {r, l};
+    std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
+    return pair;
   }
   while(true) {
     std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> opt_pair = Shorter(G, r, l);
@@ -135,17 +140,18 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
     l = opt_pair->second;
     if (eval(G, r, r) <= M) {
       l = Canonical(G, M, r, l);
-      return {r, l};
+      std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
+      return pair;
     }
   }
 }
 
 
 template<typename T, typename Tint>
-std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic(const MyMatrix<T>& G, const T& M, MyVector<Tint> r, MyVector<Tint> l)
+std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic(const MyMatrix<T>& G, const T& M, MyVector<Tint> r0, MyVector<Tint> l0)
 {
-  std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> pair_opt = NotPromised(G, M, r, l);
-  if (!opt)
+  std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> pair_opt = NotPromised(G, M, r0, l0);
+  if (!pair_opt)
     return {};
   auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
     return {eval(G, v1, v1), eval(G, v1, v2), eval(G, v2, v2)};
@@ -162,13 +168,14 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
     l = pair.second;
     l = Canonical(G, M, r, l);
     if (A_vect == get_char_mat(r,l)) { // Concluding step
-      MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily({r1, l1});
+      MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily<Tint>({r1, l1});
       MyMatrix<T> M1_T = UniversalMatrixConversion<T,Tint>(M1_Tint);
-      MyMatrix<Tint> M_Tint = MatrixFromVectorFamily({r, l});
+      MyMatrix<Tint> M_Tint = MatrixFromVectorFamily<Tint>({r, l});
       MyMatrix<T> M_T = UniversalMatrixConversion<T,Tint>(M_Tint);
       MyMatrix<T> gMat_T = Inverse(M1_T) * M_T;
       MyMatrix<Tint> gMat_Tint = UniversalMatrixConversion<Tint,T>(gMat_T);
-      return {gMat_Tint, list_r};
+      std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>> pair{gMat_Tint, list_r};
+      return pair;
     }
     list_r.push_back(r);
   }
