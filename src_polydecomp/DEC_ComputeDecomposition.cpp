@@ -196,13 +196,13 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
       std::cerr << "eDomain, step 2\n";
       size_t iCone = eDomain.iCone;
       std::cerr << "eDomain, step 3\n";
-      Tgroup StabFace = ListCones[iCone].GRP_fac.Stabilizer_OnSets(eDomain.f);
+      Tgroup StabFace_fac = ListCones[iCone].GRP_fac.Stabilizer_OnSets(eDomain.f_fac);
       std::cerr << "eDomain, step 4\n";
       int RankFace = i - 1;
       std::cerr << "eDomain, step 5\n";
-      vectface ListFace = SPAN_face_ExtremeRays(eDomain.f, StabFace, RankFace,
+      vectface ListFace = SPAN_face_ExtremeRays(eDomain.f_fac, StabFace_fac, RankFace,
                                                 ListCones[iCone].extfac_incd, ListCones[iCone].FAC,
-                                                ListCones[iCone].EXT, ListCones[iCone].GRP_fac);
+                                                ListCones[iCone].EXT);
       std::cerr << "eDomain, step 6 |ListFace|=" << ListFace.size() << "\n";
       //        Tgroup GRP = f_stab(eEnt);
       //        vectface ListFace = DualDescriptionStandard(Mred, GRP);
@@ -225,7 +225,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
 template<typename Tint>
 struct sing_adj {
   size_t jCone;
-  Face f;
+  Face f_ext;
   MyMatrix<Tint> eMat;
 };
 
@@ -238,7 +238,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   struct ent_info {
     size_t i_domain;
     size_t i_adj;
-    Face f;
+    Face f_ext;
     Tent<T,Tint,Tidx_value> eEnt;
     size_t hash;
   };
@@ -294,7 +294,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
       if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
         std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
-          return {b_ent.i_domain, a_ent.f, *e_equiv};
+          return {b_ent.i_domain, a_ent.f_ext, *e_equiv};
         }
       }
     }
@@ -305,7 +305,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     const ent_info& e_ent = get_ent_info(i_domain, i_adj);
     std::optional<MyMatrix<Tint>> trans_opt = get_reverting_transformation(e_ent.eEnt);
     if (trans_opt) {
-      return {i_domain, e_ent.f, *trans_opt};
+      return {i_domain, e_ent.f_ext, *trans_opt};
     }
     return get_mapped(e_ent);
   };
@@ -335,12 +335,13 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
   using Telt = typename Tgroup::Telt;
   if (ef1.iCone != ef2.iCone)
     return {};
-  const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef1.iCone];
   size_t iC = ef1.iCone;
-  std::optional<Telt> test = eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
-  if (!test)
+  const ConeDesc<T,Tint,Tgroup>& eC = ListCones[iC];
+  std::pair<bool,Telt> test = eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
+  if (!test.first)
     return {};
-  MyMatrix<Tint> eMat = FindTransformation(eC.M, eC.M, *test);
+  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, test.second);
+  MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint,T>(eMat_T);
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
@@ -355,8 +356,8 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   std::set<MyVector<Tint>> EXT;
   size_t dim;
   for (auto & ePt : FaceToVector(ef.f_ext)) {
-    MyVector<Tint> V = GetMatrixRow(ListCones[ef.iCone], ePt);
-    MyVector<Tint> Vimg = ef.transpose() * V;
+    MyVector<Tint> V = GetMatrixRow(ListCones[ef.iCone].EXT_i, ePt);
+    MyVector<Tint> Vimg = ef.eMat.transpose() * V;
     dim = Vimg.size();
     EXT.insert(Vimg);
   }
@@ -383,7 +384,8 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef_A.iCone];
     Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     for (auto & eGen : stab.GeneratorsOfGroup()) {
-      MyMatrix<Tint> eMatGen = FindTransformation(eC.M, eC.M, eGen);
+      MyMatrix<T> eMatGen_T = FindTransformation(eC.EXT, eC.EXT, eGen);
+      MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint,T>(eMatGen_T);
       f_insert_generator(eMatGen);
     }
   };
@@ -398,10 +400,11 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       for (auto & e_sing_adj : ll_adj_struct[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
         for (auto & e_pair : l_pair) {
-          MyMatrix<Tint> eMat1 = FindTransformation(eC.M, eC.M, e_pair.second);
+          MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
+          MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * ef.eMat * eMat1; // Needs to be cleaned up
-          MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.M;
+          MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.EXT_i;
           MyMatrix<T> VectorContain(1,dim);
           ContainerMatrix<T> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
@@ -415,7 +418,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
             }
             faceNew[epair.second] = 1;
           }
-          ent_face efNew{jCone, faceNew, eMatAdj};
+          ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
           f_insert(efNew);
         }
       }
@@ -450,7 +453,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
         size_t nExt = ListCones[iCone].EXT.rows();
         for (auto & eOrb : vf) {
           Face f_ext(nExt);
-          boost::dynamic_bitset<>::size_type eVal=eFace.find_first();
+          boost::dynamic_bitset<>::size_type eVal=eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
           ent_face<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
@@ -459,10 +462,11 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
       }
     } else {
       for (auto & eOrbit : ListListDomain[iLev - 2]) {
-        const ConeDesc<T,Tint,Tgroup>>& eC = ListCones[eOrbit.iCone];
-        Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(eOrbit.f_ext);
+        const ConeDesc<T,Tint,Tgroup>& eC = ListCones[eOrbit.iCone];
+        Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), eOrbit.f_fac);
+        Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(f_ext);
         int RankFace = iLev;
-        vectface vf = SPAN_face_ExtremeRays(eOrbit.f_ext, StabFace_face, RankFace,
+        vectface vf = SPAN_face_ExtremeRays(f_ext, StabFace_ext, RankFace,
                                             eC.facext_incd, eC.EXT, eC.FAC);
         for (auto & f_ext_new : vf) {
           ent_face<Tint> e_ent{eOrbit.iCone, f_ext_new, IdentityMat<Tint>(n_col)};
@@ -473,7 +477,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
     std::vector<FaceDesc> ListDomain;
     for (auto & eOrbit : list_face) {
       const ent_face<Tint>& e_ent = eOrbit.first[0];
-      auto ConeDesc<T,Tint,Tgroup>>& eC = ListCones[e_ent.iCone];
+      const ConeDesc<T,Tint,Tgroup>& eC = ListCones[e_ent.iCone];
       Face f_fac = Compute_faceFAC_from_faceEXT(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), e_ent.f_ext);
       FaceDesc fd{e_ent.iCone, f_fac};
       ListDomain.push_back(fd);
