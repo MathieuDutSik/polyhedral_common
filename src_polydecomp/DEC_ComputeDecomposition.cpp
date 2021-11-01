@@ -405,7 +405,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
-          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * ef.eMat * eMat1; // Needs to be cleaned up
+          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat; // Needs to be cleaned up
           MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.EXT_i;
           MyMatrix<Tint> VectorContain(1,dim);
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
@@ -510,11 +510,11 @@ int main(int argc, char* argv[])
     //
     std::string opt = argv[1];
     //
-    std::string FileI = argv[2];
-    std::ifstream is(FileI);
-    //
     int TheLev;
-    sscanf(argv[3], "%d", &TheLev);
+    sscanf(argv[2], "%d", &TheLev);
+    //
+    std::string FileI = argv[3];
+    std::ifstream is(FileI);
     //
     // The polyhedral cone.
     // So far, we encode all the EXT / FAC and the group
@@ -528,14 +528,18 @@ int main(int argc, char* argv[])
     for (size_t i=0; i<n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
+      std::cerr << "We have read EXT\n";
       //      std::cerr << "EXT=\n";
       //      WriteMatrix(std::cerr, EXT);
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
+      std::cerr << "We have read FAC\n";
       //      std::cerr << "FAC=\n";
       //      WriteMatrix(std::cerr, FAC);
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
+      std::cerr << "We have read GRP_ext\n";
       Tgroup GRP_fac = ReadGroup<Tgroup>(is);
+      std::cerr << "We have read GRP_fac\n";
       std::cerr << "|GRP_ext|=" << GRP_ext.size() << " |GRP_fac|=" << GRP_fac.size() << "\n";
       //
       Face extfac_incd = Compute_extfac_incd(FAC, EXT);
