@@ -103,50 +103,33 @@ template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, const MyMatrix<Tint>& G, const FaceDesc& fd)
 {
   using Tidx = typename Tgroup::Telt::Tidx;
-  std::cerr << "f_ent, step 1\n";
   int nbFac = ListCones[fd.iCone].FAC.rows();
   int nbExt = ListCones[fd.iCone].EXT.rows();
   Face face_ext = Compute_faceEXT_from_faceFAC(ListCones[fd.iCone].extfac_incd, nbFac, nbExt, fd.f_fac);
   MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, face_ext);
-  std::cerr << "f_ent, step 2\n";
   //        std::cerr << "M=\n";
   //        WriteMatrix(std::cerr, M);
   MyMatrix<Tint> P = M * G;
-  std::cerr << "f_ent, step 3\n";
   //        std::cerr << "P=\n";
   //        WriteMatrix(std::cerr, P);
   MyMatrix<Tint> Spann;
-  std::cerr << "f_ent, step 4\n";
   MyMatrix<Tint> Concat = M;
-  std::cerr << "f_ent, step 5\n";
   MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
   std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
   if (NSP.rows() > 0) {
-    std::cerr << "f_ent, step 7\n";
     MyMatrix<Tint> Gres = - NSP * G * NSP.transpose();
-    std::cerr << "f_ent, step 8\n";
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
-    std::cerr << "f_ent, step 9\n";
     std::cerr << "Gres_T=\n";
     WriteMatrix(std::cerr, Gres_T);
     MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
-    std::cerr << "f_ent, step 10\n";
     Spann = SHV * NSP;
-    std::cerr << "f_ent, step 11\n";
     Concat = Concatenate(M, Spann);
-    std::cerr << "f_ent, step 12\n";
   }
-  std::cerr << "f_ent, step 13\n";
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
-  std::cerr << "f_ent, step 14\n";
   Face subset = f_subset(Concat.rows(), M.rows());
-  std::cerr << "f_ent, step 15\n";
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
-  std::cerr << "f_ent, step 16\n";
   WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(Concat, ListMat, subset);
-  std::cerr << "f_ent, step 17\n";
   WMat.ReorderingSetWeight();
-  std::cerr << "f_ent, step 18\n";
   return {M, Spann, Qmat, std::move(WMat), fd};
 }
 
@@ -245,6 +228,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   std::vector<ent_info> l_ent_info;
   std::vector<size_t> l_n_orb_adj;
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
+    std::cerr << "i_domain=" << i_domain << "\n";
     size_t n_fac = ListCones[i_domain].FAC.rows();
     size_t n_ext = ListCones[i_domain].EXT.rows();
     vectface vf = DecomposeOrbitPoint_Full(ListCones[i_domain].GRP_fac);
@@ -252,6 +236,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     for (auto & eOrb : vf) {
       boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
       size_t i_fac = MinVal;
+      std::cerr << "  i_adj=" << i_adj << " i_fac=" << i_fac << "\n";
       Face f_ext(n_ext);
       for (size_t i_ext=0; i_ext<n_ext; i_ext++)
         if (ListCones[i_domain].extfac_incd[i_fac * n_ext + i_ext] == 1)
@@ -267,6 +252,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     }
     l_n_orb_adj.push_back(i_adj);
   }
+  std::cerr << "First block of data built\n";
   auto get_ent_info=[&](size_t const& i_domain, size_t const& i_adj) -> const ent_info& {
     for (auto & e_ent : l_ent_info)
       if (e_ent.i_domain == i_domain && e_ent.i_adj == i_adj)
@@ -276,9 +262,10 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   };
   auto get_reverting_transformation=[&](const Tent<T,Tint,Tidx_value> &eEnt) -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
+    std::cerr << "After f_stab call\n";
     MyVector<Tint> eSpann = GetMatrixRow(eEnt.Spann, 0);
     for (auto& ePair : e_stab_info.ListGenMat) {
-      MyVector<Tint> eSpannImg = eSpann * ePair.second;
+      MyVector<Tint> eSpannImg = ePair.second.transpose() * eSpann;
       if (eSpannImg == - eSpann) {
         return ePair.second;
       }
@@ -312,8 +299,10 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   std::vector<std::vector<sing_adj<Tint>>> ll_adj_struct;
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
     std::vector<sing_adj<Tint>> l_adj_struct;
-    for (size_t i_adj=0; i_adj<l_n_orb_adj[i_domain]; i_adj++)
+    for (size_t i_adj=0; i_adj<l_n_orb_adj[i_domain]; i_adj++) {
+      std::cerr << "i_domain=" << i_domain << " i_adj=" << i_adj << "\n";
       l_adj_struct.push_back(get_sing_adj(i_domain, i_adj));
+    }
     ll_adj_struct.push_back(l_adj_struct);
   }
   return ll_adj_struct;
@@ -548,18 +537,24 @@ int main(int argc, char* argv[])
       ListCones.push_back(eCone);
     }
     //
+    std::cerr << "Now computing ListListDomain opt=" << opt << "\n";
     std::vector<std::vector<FaceDesc>> ListListDomain;
     if (opt == "strategy2_from_high") {
+      std::cerr << "Matching strategy2_from_high\n";
       ListListDomain = Compute_ListListDomain_strategy2<T,Tint,Tgroup,Tidx_value>(ListCones, G, TheLev);
     }
-    if (opt == "strategy1_fom_low"|| opt == "strategy1_fom_high") {
+    if (opt == "strategy1_from_low" || opt == "strategy1_from_high") {
+      std::cerr << "Matching strateg1\n";
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj = compute_adjacency_structure<T,Tint,Tgroup,Tidx_value>(ListCones, G);
+      std::cerr << "We have ll_sing_adj\n";
       if (opt == "strategy1_fom_high") {
+        std::cerr << "Matching strategy1_from_high\n";
         std::cerr << "This needs to be implemented as it does not appear needed right now\n";
         // Implementation should use above code
         throw TerminalException{1};
       }
       if (opt == "strategy1_fom_low") {
+        std::cerr << "Matching strategy1_from_low\n";
         ListListDomain = Compute_ListListDomain_strategy1<T,Tint,Tgroup,Tidx_value>(ListCones, G, ll_sing_adj, TheLev);
       }
     }
