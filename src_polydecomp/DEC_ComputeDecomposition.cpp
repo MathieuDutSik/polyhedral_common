@@ -299,7 +299,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   };
   auto get_mapped=[&](const ent_info& a_ent) -> sing_adj<Tint> {
     for (auto & b_ent : l_ent_info) {
-      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != b_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
         std::cerr << "  b_ent : i_domain=" << b_ent.i_domain << " i_adj=" << b_ent.i_adj << "\n";
         std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
