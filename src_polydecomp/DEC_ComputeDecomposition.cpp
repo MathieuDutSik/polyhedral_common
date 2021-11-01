@@ -375,21 +375,21 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   std::cerr << "Beginning of get_spanning_list_ent_face\n";
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
-  std::set<MyVector<Tint>> EXT;
+  std::set<MyVector<Tint>> set_EXT;
   size_t dim;
   for (auto & ePt : FaceToVector(ef_input.f_ext)) {
     MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
     dim = V.size();
     // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
-    EXT.insert(Vimg);
+    set_EXT.insert(Vimg);
   }
   std::cerr << "Set of vertices built\n";
   auto f_insert_generator=[&](const MyMatrix<Tint>& eMatrGen) -> void {
     ListMatrGen.push_back(eMatrGen);
-    for (auto & eV : EXT) {
+    for (auto & eV : set_EXT) {
       MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
-      if (EXT.count(Vimg) != 1) {
+      if (set_EXT.count(Vimg) != 1) {
         std::cerr << "Error: The generator does not preserve the face globally\n";
         throw TerminalException{1};
       }
@@ -406,10 +406,12 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
         return;
       }
     }
+    std::cerr << "The entry is new\n";
     l_ent_face.push_back(ef_A);
     const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef_A.iCone];
     Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
+    std::cerr << "|stab|=" << stab.size() << " |LGen|=" << stab.GeneratorsOfGroup().size() << "\n";
     for (auto & eGen : stab.GeneratorsOfGroup()) {
       MyMatrix<T> eMatGen_T = FindTransformation(eC.EXT, eC.EXT, eGen);
       MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint,T>(eMatGen_T);
@@ -417,6 +419,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       std::cerr << "  Inserting stabilizing element\n";
       f_insert_generator(TransGen);
     }
+    std::cerr << "f_insert finished\n";
   };
   f_insert(ef_input);
   size_t curr_pos = 0;
@@ -428,20 +431,42 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     for (size_t i=curr_pos; i<len; i++) {
       const ent_face<Tint>& ef = l_ent_face[i];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
+      std::cerr << "i=" << i << " iCone=" << ef.iCone << "\n";
       for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
-        std::cerr << "|l_pair|=" << l_pair.size() << "\n";
+        vectface vfo = OrbitFace(e_sing_adj.f_ext, eC.GRP_ext.GeneratorsOfGroup());
+        Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
+        std::cerr << "|vfo|=" << vfo.size() << " |stab|=" << stab.size() << "\n";
+        size_t pos = ef.f_ext.find_first();
+        size_t n_match = 0;
+        vectface vfcont(vfo.get_n());
+        for (auto & eFace : vfo) {
+          if (eFace[pos]) {
+            std::cerr << "V=" << StringFace(eFace) << "\n";
+            vfcont.push_back(eFace);
+            n_match++;
+          }
+        }
+        vectface vfs = OrbitSplittingSet(vfcont, stab);
+        std::cerr << "|l_pair|=" << l_pair.size() << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext) << " |ef.f_ext|=" << SignatureFace(ef.f_ext) << " n_match=" << n_match << " |vfs|=" << vfs.size() << "\n";
+        if (vfs.size() != l_pair.size()) {
+          std::cerr << "We have a size error\n";
+          throw TerminalException{1};
+        }
         for (auto & e_pair : l_pair) {
+          std::cerr << "e_pair.second=" << e_pair.second << "\n";
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
+          const ConeDesc<T,Tint,Tgroup>& fC = ListCones[jCone];
           std::cerr << "  iCone=" << ef.iCone << " jCone=" << jCone << "\n";
-          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat; // Needs to be cleaned up
-          MyMatrix<Tint> EXTimg = eC.EXT_i * eMatAdj;
+          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
+          MyMatrix<Tint> EXTimg = fC.EXT_i * eMatAdj;
           MyMatrix<Tint> VectorContain(1,dim);
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
-          for (auto & e_line : EXT) {
+          std::cerr << "|set_EXT|=" << set_EXT.size() << "\n";
+          for (auto & e_line : set_EXT) {
             for (size_t i_col=0; i_col<dim; i_col++)
               VectorContain(0,i_col) = e_line(i_col);
             std::pair<bool, size_t> epair = Cont.GetIdx();
@@ -456,6 +481,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
         }
       }
     }
+    std::cerr << "Now |l_ent_face|=" << l_ent_face.size() << "\n";
     curr_pos = len;
   }
   std::cerr << "|l_ent_face|=" << l_ent_face.size() << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
