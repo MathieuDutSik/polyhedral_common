@@ -50,8 +50,18 @@ resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const
 template<typename T, typename Telt>
 MyMatrix<T> FindTransformation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
+  size_t siz1=ePerm.size();
+  size_t siz2=EXT1.rows();
+  if (siz1 < siz2) {
+    std::cerr << "siz1=" << siz1 << " siz2=" << siz2 << "\n";
+    std::cerr << "ePerm should be of the same size as EXT1\n";
+    throw TerminalException{1};
+  }
   resultFT<T> eRes=FindTransformationGeneral(EXT1, EXT2, ePerm);
-  assert(eRes.test);
+  if (!eRes.test) {
+    std::cerr << "FindTransformationGeneral fails\n";
+    throw TerminalException{1};
+  }
   return eRes.eMat;
 }
 
