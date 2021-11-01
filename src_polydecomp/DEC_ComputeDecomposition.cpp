@@ -349,22 +349,23 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
   Generate the list of entries in the face and the list of stabilizer generators
  */
 template<typename T, typename Tint, typename Tgroup>
-std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj<Tint>>> const& ll_adj_struct, const ent_face<Tint>& ef)
+std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj<Tint>>> const& ll_sing_adj, const ent_face<Tint>& ef_input)
 {
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> EXT;
   size_t dim;
-  for (auto & ePt : FaceToVector(ef.f_ext)) {
-    MyVector<Tint> V = GetMatrixRow(ListCones[ef.iCone].EXT_i, ePt);
-    MyVector<Tint> Vimg = ef.eMat.transpose() * V;
-    dim = Vimg.size();
+  for (auto & ePt : FaceToVector(ef_input.f_ext)) {
+    MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
+    dim = V.size();
+    // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
+    MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
     EXT.insert(Vimg);
   }
-  auto f_insert_generator=[&](const MyMatrix<Tint>& eGen) -> void {
-    ListMatrGen.push_back(eGen);
+  auto f_insert_generator=[&](const MyMatrix<Tint>& eMatrGen) -> void {
+    ListMatrGen.push_back(eMatrGen);
     for (auto & eV : EXT) {
-      MyVector<Tint> Vimg = eGen.transpose() * eV;
+      MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
       if (EXT.count(Vimg) != 1) {
         std::cerr << "Error: The generator does not preserve the face globally\n";
         throw TerminalException{1};
@@ -372,7 +373,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     }
   };
   std::vector<ent_face<Tint>> l_ent_face;
-  auto f_insert=[&](ent_face<Tint>& ef_A) -> void {
+  auto f_insert=[&](const ent_face<Tint>& ef_A) -> void {
     for (auto & ef_B : l_ent_face) {
       std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
       if (equiv_opt) {
@@ -389,6 +390,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       f_insert_generator(eMatGen);
     }
   };
+  f_insert(ef_input);
   size_t curr_pos = 0;
   while(true) {
     size_t len = l_ent_face.size();
@@ -397,7 +399,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     for (size_t i=curr_pos; i<len; i++) {
       const ent_face<Tint>& ef = l_ent_face[i];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
-      for (auto & e_sing_adj : ll_adj_struct[ef.iCone]) {
+      for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
         for (auto & e_pair : l_pair) {
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
@@ -409,7 +411,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
           for (auto & e_line : EXT) {
-            for (size_t i_col=0; i_col<dim; i++)
+            for (size_t i_col=0; i_col<dim; i_col++)
               VectorContain(0,i_col) = e_line(i_col);
             std::pair<bool, size_t> epair = Cont.GetIdx();
             if (!epair.first) {
@@ -465,8 +467,8 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
         const ConeDesc<T,Tint,Tgroup>& eC = ListCones[eOrbit.iCone];
         Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), eOrbit.f_fac);
         Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(f_ext);
-        int RankFace = iLev;
-        vectface vf = SPAN_face_ExtremeRays(f_ext, StabFace_ext, RankFace,
+        int RankFace_ext = iLev - 1;
+        vectface vf = SPAN_face_ExtremeRays(f_ext, StabFace_ext, RankFace_ext,
                                             eC.facext_incd, eC.EXT, eC.FAC);
         for (auto & f_ext_new : vf) {
           ent_face<Tint> e_ent{eOrbit.iCone, f_ext_new, IdentityMat<Tint>(n_col)};
@@ -507,9 +509,12 @@ int main(int argc, char* argv[])
     using Tgroup = permutalib::Group<Telt,Tint>;
     //
     std::string opt = argv[1];
+    //
     std::string FileI = argv[2];
-    int TheLev = 4; // argv[3];
     std::ifstream is(FileI);
+    //
+    int TheLev;
+    sscanf(argv[3], "%d", &TheLev);
     //
     // The polyhedral cone.
     // So far, we encode all the EXT / FAC and the group
@@ -554,7 +559,32 @@ int main(int argc, char* argv[])
         ListListDomain = Compute_ListListDomain_strategy1<T,Tint,Tgroup,Tidx_value>(ListCones, G, ll_sing_adj, TheLev);
       }
     }
-
+    //
+    auto do_print=[&](std::ostream& os) -> void {
+      size_t n_lev = ListListDomain.size();
+      os << "Number of levels = " << n_lev << "\n";
+      for (size_t i_lev=0; i_lev<n_lev; i_lev++) {
+        size_t n_orbit = ListListDomain[i_lev].size();
+        os << "Number of orbits at level " << i_lev << " = " << n_orbit << "\n";
+        for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+          const FaceDesc& fd = ListListDomain[i_lev][i_orbit];
+          const ConeDesc<T,Tint,Tgroup>& eC = ListCones[fd.iCone];
+          Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), fd.f_fac);
+          //
+          MyMatrix<Tint> EXT_sel = SelectRow(eC.EXT_i, f_ext);
+          os << "i_orbit=" << i_orbit << " |EXT|=" << EXT_sel.rows() << "\n";
+          WriteMatrix(os, EXT_sel);
+        }
+      }
+    };
+    //
+    if (argc == 4) {
+      do_print(std::cerr);
+    } else {
+      std::string FileO = argv[4];
+      std::ofstream os(FileO);
+      do_print(os);
+    }
   }
   catch (TerminalException const& e) {
     exit(e.eVal);
