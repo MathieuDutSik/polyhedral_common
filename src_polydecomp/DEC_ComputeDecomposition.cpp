@@ -340,6 +340,7 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
 template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj<Tint>>> const& ll_sing_adj, const ent_face<Tint>& ef_input)
 {
+  std::cerr << "Beginning of get_spanning_list_ent_face\n";
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> EXT;
@@ -351,6 +352,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
     EXT.insert(Vimg);
   }
+  std::cerr << "Set of vertices built\n";
   auto f_insert_generator=[&](const MyMatrix<Tint>& eMatrGen) -> void {
     ListMatrGen.push_back(eMatrGen);
     for (auto & eV : EXT) {
@@ -385,20 +387,25 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     size_t len = l_ent_face.size();
     if (curr_pos == len)
       break;
+    std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
     for (size_t i=curr_pos; i<len; i++) {
       const ent_face<Tint>& ef = l_ent_face[i];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
       for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
         for (auto & e_pair : l_pair) {
+          std::cerr << "get_spanning_list_ent_face, loop step 1\n";
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
+          std::cerr << "get_spanning_list_ent_face, loop step 2\n";
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat; // Needs to be cleaned up
-          MyMatrix<Tint> EXTimg = eMatAdj.transpose() * eC.EXT_i;
+          std::cerr << "get_spanning_list_ent_face, loop step 3\n";
+          MyMatrix<Tint> EXTimg = eC.EXT_i * eMatAdj;
           MyMatrix<Tint> VectorContain(1,dim);
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
+          std::cerr << "get_spanning_list_ent_face, loop step 4\n";
           for (auto & e_line : EXT) {
             for (size_t i_col=0; i_col<dim; i_col++)
               VectorContain(0,i_col) = e_line(i_col);
@@ -410,10 +417,13 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
             faceNew[epair.second] = 1;
           }
           ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
+          std::cerr << "get_spanning_list_ent_face, loop step 5\n";
           f_insert(efNew);
+          std::cerr << "get_spanning_list_ent_face, loop step 6\n";
         }
       }
     }
+    curr_pos = len;
   }
   return {l_ent_face, ListMatrGen};
 }
@@ -427,6 +437,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
   size_t n_col = G.rows();
   using Tface = std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>>;
   for (int iLev=1; iLev<=TheLev; iLev++) {
+    std::cerr << "iLev=" << iLev << "\n";
     std::vector<Tface> list_face;
     auto f_insert=[&](const ent_face<Tint>& ef_A) -> void {
       for (auto & eOrbit : list_face) {
@@ -442,13 +453,16 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
       for (size_t iCone=0; iCone<ListCones.size(); iCone++) {
         vectface vf = DecomposeOrbitPoint_Full(ListCones[iCone].GRP_ext);
         size_t nExt = ListCones[iCone].EXT.rows();
+        std::cerr << "iCone=" << iCone << " |vf|=" << vf.size() << " nExt=" << nExt << "\n";
         for (auto & eOrb : vf) {
           Face f_ext(nExt);
           boost::dynamic_bitset<>::size_type eVal=eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
           ent_face<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
+          std::cerr << "Before f_insert\n";
           f_insert(e_ent);
+          std::cerr << "After f_insert\n";
         }
       }
     } else {
@@ -547,13 +561,13 @@ int main(int argc, char* argv[])
       std::cerr << "Matching strateg1\n";
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj = compute_adjacency_structure<T,Tint,Tgroup,Tidx_value>(ListCones, G);
       std::cerr << "We have ll_sing_adj\n";
-      if (opt == "strategy1_fom_high") {
+      if (opt == "strategy1_from_high") {
         std::cerr << "Matching strategy1_from_high\n";
         std::cerr << "This needs to be implemented as it does not appear needed right now\n";
         // Implementation should use above code
         throw TerminalException{1};
       }
-      if (opt == "strategy1_fom_low") {
+      if (opt == "strategy1_from_low") {
         std::cerr << "Matching strategy1_from_low\n";
         ListListDomain = Compute_ListListDomain_strategy1<T,Tint,Tgroup,Tidx_value>(ListCones, G, ll_sing_adj, TheLev);
       }
