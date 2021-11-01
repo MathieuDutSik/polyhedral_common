@@ -117,16 +117,16 @@ Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCo
   MyMatrix<Tint> Spann;
   MyMatrix<Tint> Concat = M;
   MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
-  std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+  //  std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
   if (NSP.rows() > 0) {
     MyMatrix<Tint> Gres = - NSP * G * NSP.transpose();
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
+    /*
     std::cerr << "Gres_T=\n";
-    WriteMatrix(std::cerr, Gres_T);
+    WriteMatrix(std::cerr, Gres_T);*/
     MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
     Spann = SHV * NSP;
     Concat = Concatenate(M, Spann);
-    std::cerr << "|Spann|=" << Spann.rows() << " / " << Spann.cols() << "\n";
   }
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
   Face subset = f_subset(Concat.rows(), M.rows());
@@ -245,9 +245,9 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   std::vector<ent_info> l_ent_info;
   std::vector<size_t> l_n_orb_adj;
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
-    std::cerr << "i_domain=" << i_domain << "\n";
     size_t n_fac = ListCones[i_domain].FAC.rows();
     size_t n_ext = ListCones[i_domain].EXT.rows();
+    std::cerr << "i_domain=" << i_domain << " n_ext=" << n_ext << " n_fac=" << n_fac << "\n";
     vectface vf = DecomposeOrbitPoint_Full(ListCones[i_domain].GRP_fac);
     size_t i_adj = 0;
     for (auto & eOrb : vf) {
@@ -260,10 +260,11 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
           f_ext[i_ext] = 1;
       Face f_fac(n_fac);
       f_fac[i_fac] = 1;
+      //      std::cerr << "f_fac=" << StringFace(f_fac) << "\n";
       FaceDesc fd{i_domain, f_fac};
       Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
-      std::cerr << "Spann=\n";
-      WriteMatrix(std::cerr, eEnt.Spann);
+      //      std::cerr << "Spann=\n";
+      //      WriteMatrix(std::cerr, eEnt.Spann);
       size_t hash = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
       l_ent_info.emplace_back(std::move(e_ent_info));
@@ -297,10 +298,9 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     return {};
   };
   auto get_mapped=[&](const ent_info& a_ent) -> sing_adj<Tint> {
-    std::cerr << "a_ent : i_domain=" << a_ent.i_domain << " / " << a_ent.i_adj << "\n";
     for (auto & b_ent : l_ent_info) {
-      //      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
-      if (true && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+        std::cerr << "  b_ent : i_domain=" << b_ent.i_domain << " i_adj=" << b_ent.i_adj << "\n";
         std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
           std::cerr << "Returning from get_mapped\n";
@@ -308,6 +308,14 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
         }
       }
     }
+    std::cerr << "f_ext=" << a_ent.f_ext << " |f_ext|=" << a_ent.f_ext.count() << " / " << a_ent.f_ext.size() << "\n";
+    std::cerr << "f_fac=" << StringFace(a_ent.eEnt.fd.f_fac) << " |f_act|=" << a_ent.eEnt.fd.f_fac.count() << " / " << a_ent.eEnt.fd.f_fac.size() << "\n";
+    std::cerr << "M=\n";
+    WriteMatrix(std::cerr, a_ent.eEnt.M);
+    std::cerr << "Spann=\n";
+    WriteMatrix(std::cerr, a_ent.eEnt.Spann);
+    std::cerr << "Qmat=\n";
+    WriteMatrix(std::cerr, a_ent.eEnt.Qmat);
     std::cerr << "Failed to find a matching entry in get_mapped\n";
     throw TerminalException{1};
   };
@@ -333,11 +341,11 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
 }
 
 
-// A face of the cellular complex is determined by all the ways in which 
+// A face of the cellular complex is determined by all the ways in which
 template<typename Tint>
 struct ent_face {
   size_t iCone;
-  Face f_ext; // The subset itself 
+  Face f_ext; // The subset itself
   MyMatrix<Tint> eMat;
 };
 
