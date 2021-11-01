@@ -409,10 +409,13 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     l_ent_face.push_back(ef_A);
     const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef_A.iCone];
     Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
+    MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
     for (auto & eGen : stab.GeneratorsOfGroup()) {
       MyMatrix<T> eMatGen_T = FindTransformation(eC.EXT, eC.EXT, eGen);
       MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint,T>(eMatGen_T);
-      f_insert_generator(eMatGen);
+      MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
+      std::cerr << "  Inserting stabilizing element\n";
+      f_insert_generator(TransGen);
     }
   };
   f_insert(ef_input);
