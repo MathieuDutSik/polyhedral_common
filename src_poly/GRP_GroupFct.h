@@ -106,7 +106,7 @@ Tgroup ReadGroup(std::istream &is)
       is >> eVal_i;
       Tidx eVal = Tidx(eVal_i);
       if (eVal >= n) {
-	std::cerr << "Error in ReadGroup function\n";
+	std::cerr << "Error in ReadGroup function at i=" << i << "/" << n_i << "\n";
 	std::cerr << "Number of elements acted on n=" << n << " iGen=" << iGen << "/" << nbGen << "\n";
 	std::cerr << "But eVal=" << eVal << " eVal_i=" << eVal_i << "\n";
 	throw TerminalException{1};

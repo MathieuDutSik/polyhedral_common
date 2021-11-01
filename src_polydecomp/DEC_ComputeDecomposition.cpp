@@ -528,12 +528,12 @@ int main(int argc, char* argv[])
     for (size_t i=0; i<n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
-      std::cerr << "We have read EXT\n";
+      std::cerr << "We have read EXT, |EXT|=" << EXT.rows() << "/" << EXT.cols() << "\n";
       //      std::cerr << "EXT=\n";
       //      WriteMatrix(std::cerr, EXT);
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
-      std::cerr << "We have read FAC\n";
+      std::cerr << "We have read FAC, |FAC|=" << FAC.rows() << "/" << FAC.cols() << "\n";
       //      std::cerr << "FAC=\n";
       //      WriteMatrix(std::cerr, FAC);
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
