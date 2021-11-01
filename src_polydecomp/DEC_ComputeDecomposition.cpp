@@ -124,6 +124,7 @@ Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCo
     MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
     Spann = SHV * NSP;
     Concat = Concatenate(M, Spann);
+    std::cerr << "|Spann|=" << Spann.rows() << " / " << Spann.cols() << "\n";
   }
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
   Face subset = f_subset(Concat.rows(), M.rows());
@@ -212,6 +213,20 @@ struct sing_adj {
   MyMatrix<Tint> eMat;
 };
 
+template<typename T>
+MyVector<T> GetFirstNonZeroVector(const MyMatrix<T>& M)
+{
+  size_t n_rows = M.rows();
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    MyVector<T> V = GetMatrixRow(M, i_row);
+    if (!IsZeroVector(V))
+      return V;
+  }
+  std::cerr << "Failed to find a non-zero line\n";
+  throw TerminalException{1};
+}
+
+
 template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, MyMatrix<Tint> const& G)
 {
@@ -245,6 +260,8 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
       f_fac[i_fac] = 1;
       FaceDesc fd{i_domain, f_fac};
       Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
+      std::cerr << "Spann=\n";
+      WriteMatrix(std::cerr, eEnt.Spann);
       size_t hash = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
       l_ent_info.emplace_back(std::move(e_ent_info));
@@ -263,16 +280,18 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   auto get_reverting_transformation=[&](const Tent<T,Tint,Tidx_value> &eEnt) -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
     std::cerr << "After f_stab call\n";
-    MyVector<Tint> eSpann = GetMatrixRow(eEnt.Spann, 0);
+    MyVector<Tint> eSpann = GetFirstNonZeroVector(eEnt.Spann);
     for (auto& ePair : e_stab_info.ListGenMat) {
       MyVector<Tint> eSpannImg = ePair.second.transpose() * eSpann;
       if (eSpannImg == - eSpann) {
+        std::cerr << "It is opposite\n";
         return ePair.second;
       }
       if (eSpannImg != eSpann) {
         std::cerr << "Some inconsistency in the matrix transformation\n";
         throw TerminalException{1};
       }
+      std::cerr << "It is equal\n";
     }
     return {};
   };
@@ -294,6 +313,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     if (trans_opt) {
       return {i_domain, e_ent.f_ext, *trans_opt};
     }
+    std::cerr << "Before using get_mapped\n";
     return get_mapped(e_ent);
   };
   std::vector<std::vector<sing_adj<Tint>>> ll_adj_struct;
@@ -366,8 +386,10 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   std::vector<ent_face<Tint>> l_ent_face;
   auto f_insert=[&](const ent_face<Tint>& ef_A) -> void {
     for (auto & ef_B : l_ent_face) {
+      std::cerr << "Testing for equivalence\n";
       std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
       if (equiv_opt) {
+        std::cerr << "  Found a non-trivial equivalence\n";
         f_insert_generator(*equiv_opt);
         return;
       }
@@ -393,19 +415,17 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
       for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
+        std::cerr << "|l_pair|=" << l_pair.size() << "\n";
         for (auto & e_pair : l_pair) {
-          std::cerr << "get_spanning_list_ent_face, loop step 1\n";
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
-          std::cerr << "get_spanning_list_ent_face, loop step 2\n";
+          std::cerr << "  iCone=" << ef.iCone << " jCone=" << jCone << "\n";
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat; // Needs to be cleaned up
-          std::cerr << "get_spanning_list_ent_face, loop step 3\n";
           MyMatrix<Tint> EXTimg = eC.EXT_i * eMatAdj;
           MyMatrix<Tint> VectorContain(1,dim);
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
-          std::cerr << "get_spanning_list_ent_face, loop step 4\n";
           for (auto & e_line : EXT) {
             for (size_t i_col=0; i_col<dim; i_col++)
               VectorContain(0,i_col) = e_line(i_col);
@@ -417,14 +437,13 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
             faceNew[epair.second] = 1;
           }
           ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
-          std::cerr << "get_spanning_list_ent_face, loop step 5\n";
           f_insert(efNew);
-          std::cerr << "get_spanning_list_ent_face, loop step 6\n";
         }
       }
     }
     curr_pos = len;
   }
+  std::cerr << "|l_ent_face|=" << l_ent_face.size() << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
   return {l_ent_face, ListMatrGen};
 }
 
