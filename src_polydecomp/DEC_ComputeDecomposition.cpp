@@ -81,6 +81,8 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tidx_value>& eEnt, const
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
+  if ((eEnt.M.rows() != fEnt.M.rows()) || (eEnt.Spann.rows() != fEnt.Spann.rows()))
+    return {};
   MyMatrix<T> eConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(eEnt.M, eEnt.Spann));
   MyMatrix<T> fConcat_T = UniversalMatrixConversion<T,Tint>(Concatenate(fEnt.M, fEnt.Spann));
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(eEnt.WMat).first;
@@ -291,20 +293,22 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
         std::cerr << "Some inconsistency in the matrix transformation\n";
         throw TerminalException{1};
       }
-      std::cerr << "It is equal\n";
     }
     return {};
   };
   auto get_mapped=[&](const ent_info& a_ent) -> sing_adj<Tint> {
+    std::cerr << "a_ent : i_domain=" << a_ent.i_domain << " / " << a_ent.i_adj << "\n";
     for (auto & b_ent : l_ent_info) {
-      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+      //      if (b_ent.hash == a_ent.hash && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
+      if (true && (a_ent.i_domain != a_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
         std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
+          std::cerr << "Returning from get_mapped\n";
           return {b_ent.i_domain, a_ent.f_ext, *e_equiv};
         }
       }
     }
-    std::cerr << "Failed to find a matching entry\n";
+    std::cerr << "Failed to find a matching entry in get_mapped\n";
     throw TerminalException{1};
   };
   auto get_sing_adj=[&](size_t const& i_domain, size_t const& i_adj) -> sing_adj<Tint> {
