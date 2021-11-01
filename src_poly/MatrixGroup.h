@@ -385,6 +385,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n=TheSpace1.rows();
+  std::cerr << "------------------------------------------------------\n";
   std::cerr << "TheSpace1=\n";
   WriteMatrix(std::cerr, TheSpace1);
   std::cerr << "TheSpace2=\n";
@@ -409,7 +410,16 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       MyVector<T> eVectG=ProductVectorMatrix(eVect, eEquiv);
       ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVectG);
       if (!eRes.TheRes) {
-	V=VectorMod(eVect);
+	V=VectorMod(eVectG);
+        std::cerr << "   i=" << i << "\n";
+        std::cerr << "   Found vector eVect=";
+        WriteVector(std::cerr, eVect);
+        std::cerr << "   Found vector V=";
+        WriteVector(std::cerr, V);
+        std::cerr << "   Found vector eVectG=";
+        WriteVector(std::cerr, eVectG);
+        std::cerr << "   eEquiv=\n";
+        WriteMatrix(std::cerr, eEquiv);
 	return false;
       }
     }
@@ -429,13 +439,15 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     bool test=IsEquiv(V, eElt);
     if (test)
       return {true, GRPwork, eElt};
-    std::cerr << "V=\n";
+    std::cerr << "V =";
     WriteVector(std::cerr, V);
     std::vector<MyVector<T>> O=OrbitComputation(GRPwork.ListMatrGen, V, TheAction);
     int Osiz=O.size();
     //    std::vector<MyVector<T>> ListWork=ConcatenateVect(ListVect, O);
     int siz=nbRow + Osiz;
-    std::cerr << "Osiz=" << Osiz << " nbRow=" << nbRow << " iter=" << iter << "\n";
+    std::cerr << "Osiz=" << Osiz << " nbRow=" << nbRow << " iter=" << iter << " O=\n";
+    for (auto & eV : O)
+      WriteVector(std::cerr, eV);
     iter++;
     Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
     Telt ePermSinv=~ePermS;
@@ -462,8 +474,10 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       ListPermGenProv.emplace_back(std::move(eNewPerm));
     }
     Tgroup GRPperm(ListPermGenProv, siz);
-    MyMatrix<T> TheSpace1work=TheSpace1*eElt;
-    MyMatrix<T> TheSpace1workMod=Concatenate(TheSpace1work, ModSpace);
+    std::cerr << "|GRPperm|=" << GRPperm.size() << " siz=" << siz << "\n";
+    //    MyMatrix<T> TheSpace1work = TheSpace1*eElt;
+    //    MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
+    MyMatrix<T> TheSpace1workMod = TheSpace1Mod * eElt;
     std::cerr << "eElt=\n";
     WriteMatrix(std::cerr, eElt);
     Face eFace1(siz);
@@ -481,6 +495,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     }
     std::cerr << "|eFace1|=" << eFace1.size() << " / " << eFace1.count() << "    |eFace2|=" << eFace2.size() << " / " << eFace2.count() << "\n";
     if (eFace1.count() == 0 && eFace2.count() == 0) {
+      std::cerr << "Error in LinearSpace_ModEquivalence. |eFace1| = |eFace2| = 0\n";
       std::cerr << "Clear bug\n";
       throw TerminalException{1};
     }
