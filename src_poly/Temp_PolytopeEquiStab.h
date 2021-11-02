@@ -103,15 +103,15 @@ MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const& TheEXT)
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   MyMatrix<T> QMat(nbCol, nbCol);
-  for (size_t iCol=0; iCol<nbCol; iCol++)
-    for (size_t jCol=0; jCol<nbCol; jCol++) {
+  for (size_t iCol=0; iCol<nbCol; iCol++) {
+    for (size_t jCol=iCol; jCol<nbCol; jCol++) {
       T eSum=0;
       for (size_t iRow=0; iRow<nbRow; iRow++)
 	eSum += TheEXT(iRow, jCol) * TheEXT(iRow, iCol);
-      QMat(iCol, jCol)=eSum;
+      QMat(iCol, jCol) = eSum;
+      QMat(jCol, iCol) = eSum;
     }
-  std::cerr << "Qmat=\n";
-  WriteMatrix(std::cerr, QMat);
+  }
   return Inverse_destroy(QMat);
 }
 
@@ -461,35 +461,22 @@ std::optional<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1
 template<typename Tint, typename Tidx, typename Tgroup, typename Tidx_value, typename Tgr, bool use_scheme>
 std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint>& EXT1, const MyMatrix<Tint>& EXT2)
 {
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 1\n";
   std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<Tint,Tidx,use_scheme>(EXT1);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 2\n";
   std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<Tint,Tidx,use_scheme>(EXT2);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 3\n";
   //
   using Tfield = typename overlying_field<Tint>::field_type;
   using Telt = typename Tgroup::Telt;
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<Tint,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 4\n";
   if (!IsoInfo)
     return {};
   Telt ePerm(IsoInfo->first);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 5\n";
-  std::cerr << "ePerm=" << ePerm << "\n";
-  std::cerr << "Mat : ePerm->second=\n";
-  WriteMatrix(std::cerr, IsoInfo->second);
 
   MyMatrix<Tfield> EXT1_T = UniversalMatrixConversion<Tfield,Tint>(EXT1);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 6\n";
   MyMatrix<Tfield> EXT2_T = UniversalMatrixConversion<Tfield,Tint>(EXT2);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 7\n";
   Tgroup GRP1 = LinPolytope_Automorphism<Tfield,use_scheme,Tgroup>(EXT1_T);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 8\n";
   std::optional<MyMatrix<Tfield>> eRes = LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, ePerm);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 9\n";
   if (eRes)
     return UniversalMatrixConversion<Tint,Tfield>(*eRes);
-  std::cerr << "LinPolytopeIntegral_Isomorphism, step 10\n";
   return {};
 }
 

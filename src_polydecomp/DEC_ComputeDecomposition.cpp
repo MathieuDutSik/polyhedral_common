@@ -107,7 +107,9 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tidx_value>& eEnt, const
   using Tfield = typename overlying_field<Tint>::field_type;
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord);
   if (!IsoInfo) {
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Failed isomorphism at the graph level\n";
+#endif
     return {};
   }
   Telt ePerm(IsoInfo->first);
@@ -115,7 +117,9 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tidx_value>& eEnt, const
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
   if (eRes)
     return UniversalMatrixConversion<Tint,T>(*eRes);
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
   std::cerr << "Failed isomorphism at the integral level\n";
+#endif
   return {};
 }
 
@@ -128,20 +132,16 @@ Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCo
   int nbExt = ListCones[fd.iCone].EXT.rows();
   Face face_ext = Compute_faceEXT_from_faceFAC(ListCones[fd.iCone].extfac_incd, nbFac, nbExt, fd.f_fac);
   MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, face_ext);
-  //        std::cerr << "M=\n";
-  //        WriteMatrix(std::cerr, M);
   MyMatrix<Tint> P = M * G;
-  //        std::cerr << "P=\n";
-  //        WriteMatrix(std::cerr, P);
   MyMatrix<Tint> Spann;
   MyMatrix<Tint> Concat = M;
   MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
-  //  std::cerr << "f_ent, step 6 |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
   if (NSP.rows() > 0) {
     MyMatrix<Tint> Gres = - NSP * G * NSP.transpose();
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T,Tint>(Gres);
     MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(Gres_T);
     Spann = SHV * NSP;
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Gres_T=\n";
     WriteMatrix(std::cerr, Gres_T);
     std::cerr << "NSP=\n";
@@ -150,6 +150,7 @@ Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCo
     WriteMatrix(std::cerr, SHV);
     std::cerr << "Spann=\n";
     WriteMatrix(std::cerr, Spann);
+#endif
     Concat = Concatenate(M, Spann);
   }
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
@@ -207,13 +208,17 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
     size_t n_fac = ListCones[i_domain].FAC.rows();
     size_t n_ext = ListCones[i_domain].EXT.rows();
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "i_domain=" << i_domain << " n_ext=" << n_ext << " n_fac=" << n_fac << "\n";
+#endif
     vectface vf = DecomposeOrbitPoint_Full(ListCones[i_domain].GRP_fac);
     size_t i_adj = 0;
     for (auto & eOrb : vf) {
       boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
       size_t i_fac = MinVal;
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "  i_adj=" << i_adj << " i_fac=" << i_fac << "\n";
+#endif
       Face f_ext(n_ext);
       for (size_t i_ext=0; i_ext<n_ext; i_ext++)
         if (ListCones[i_domain].extfac_incd[i_fac * n_ext + i_ext] == 1)
@@ -229,7 +234,9 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     }
     l_n_orb_adj.push_back(i_adj);
   }
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
   std::cerr << "First block of data built\n";
+#endif
   auto get_ent_info=[&](size_t const& i_domain, size_t const& i_adj) -> const ent_info& {
     for (auto & e_ent : l_ent_info)
       if (e_ent.i_domain == i_domain && e_ent.i_adj == i_adj)
@@ -239,12 +246,16 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   };
   auto get_reverting_transformation=[&](const Tent<T,Tint,Tidx_value> &eEnt) -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "After f_stab call\n";
+#endif
     MyVector<Tint> eSpann = GetFirstNonZeroVector(eEnt.Spann);
     for (auto& ePair : e_stab_info.ListGenMat) {
       MyVector<Tint> eSpannImg = ePair.second.transpose() * eSpann;
       if (eSpannImg == - eSpann) {
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
         std::cerr << "It is opposite\n";
+#endif
         return ePair.second;
       }
       if (eSpannImg != eSpann) {
@@ -257,10 +268,8 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   auto get_mapped=[&](const ent_info& a_ent) -> sing_adj<Tint> {
     for (auto & b_ent : l_ent_info) {
       if (b_ent.hash == a_ent.hash && (a_ent.i_domain != b_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
-        std::cerr << "  b_ent : i_domain=" << b_ent.i_domain << " i_adj=" << b_ent.i_adj << "\n";
         std::optional<MyMatrix<Tint>> e_equiv = f_equiv<T,Tint,Tgroup,Tidx_value>(b_ent.eEnt, a_ent.eEnt);
         if (e_equiv) {
-          std::cerr << "Returning from get_mapped\n";
           return {b_ent.i_domain, a_ent.f_ext, *e_equiv};
         }
       }
@@ -282,14 +291,12 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     if (trans_opt) {
       return {i_domain, e_ent.f_ext, *trans_opt};
     }
-    std::cerr << "Before using get_mapped\n";
     return get_mapped(e_ent);
   };
   std::vector<std::vector<sing_adj<Tint>>> ll_adj_struct;
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
     std::vector<sing_adj<Tint>> l_adj_struct;
     for (size_t i_adj=0; i_adj<l_n_orb_adj[i_domain]; i_adj++) {
-      std::cerr << "i_domain=" << i_domain << " i_adj=" << i_adj << "\n";
       l_adj_struct.push_back(get_sing_adj(i_domain, i_adj));
     }
     ll_adj_struct.push_back(l_adj_struct);
@@ -311,8 +318,8 @@ template<typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, ent_face<Tint> const& ef1, ent_face<Tint> const& ef2)
 {
   using Telt = typename Tgroup::Telt;
-  std::cerr << "ef1.iCone=" << ef1.iCone << " ef2.iCone=" << ef2.iCone << "\n";
-  std::cerr << "test_equiv_ent_face ef1.f_ext=" << SignatureFace(ef1.f_ext) << " ef2.f_ext=" << SignatureFace(ef2.f_ext) << "\n";
+  //  std::cerr << "ef1.iCone=" << ef1.iCone << " ef2.iCone=" << ef2.iCone << "\n";
+  //  std::cerr << "test_equiv_ent_face ef1.f_ext=" << SignatureFace(ef1.f_ext) << " ef2.f_ext=" << SignatureFace(ef2.f_ext) << "\n";
   if (ef1.iCone != ef2.iCone)
     return {};
   size_t iC = ef1.iCone;
@@ -331,7 +338,7 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
 template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_list_ent_face(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCones, std::vector<std::vector<sing_adj<Tint>>> const& ll_sing_adj, const ent_face<Tint>& ef_input)
 {
-  std::cerr << "Beginning of get_spanning_list_ent_face\n";
+  //  std::cerr << "Beginning of get_spanning_list_ent_face\n";
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> set_EXT;
@@ -343,7 +350,6 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
     set_EXT.insert(Vimg);
   }
-  std::cerr << "Set of vertices built\n";
   auto f_insert_generator=[&](const MyMatrix<Tint>& eMatrGen) -> void {
     ListMatrGen.push_back(eMatrGen);
     for (auto & eV : set_EXT) {
@@ -357,29 +363,22 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   std::vector<ent_face<Tint>> l_ent_face;
   auto f_insert=[&](const ent_face<Tint>& ef_A) -> void {
     for (const auto & ef_B : l_ent_face) {
-      std::cerr << "Testing for equivalence |ef_B.f_ext|=" << SignatureFace(ef_B.f_ext) << "\n";
       std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
       if (equiv_opt) {
-        std::cerr << "  Found a non-trivial equivalence\n";
         f_insert_generator(*equiv_opt);
         return;
       }
     }
-    std::cerr << "The entry is new\n";
     l_ent_face.push_back(ef_A);
     const ConeDesc<T,Tint,Tgroup>& uC = ListCones[ef_A.iCone];
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
-    std::cerr << "|stab|=" << stab.size() << " |LGen|=" << stab.GeneratorsOfGroup().size() << "\n";
     for (auto & eGen : stab.GeneratorsOfGroup()) {
-      std::cerr << "|uC.EXT|=" << uC.EXT.rows() << " |eGen|=" << eGen.size() << "\n";
       MyMatrix<T> eMatGen_T = FindTransformation(uC.EXT, uC.EXT, eGen);
       MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint,T>(eMatGen_T);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
-      std::cerr << "  Inserting stabilizing element\n";
       f_insert_generator(TransGen);
     }
-    std::cerr << "f_insert finished\n";
   };
   f_insert(ef_input);
   size_t curr_pos = 0;
@@ -387,16 +386,22 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     size_t len = l_ent_face.size();
     if (curr_pos == len)
       break;
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
+#endif
     for (size_t i=curr_pos; i<len; i++) {
       ent_face<Tint> ef = l_ent_face[i]; // We cannot use const& here apparently for mysterious reasons (3 hours debugging)
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "i=" << i << " iCone=" << ef.iCone << " |ll_sing_adj[ef.iCone]|=" << ll_sing_adj[ef.iCone].size() << "\n";
       size_t n_facet = 0;
+#endif
       for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
         std::cerr << "|ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
+#endif
         std::vector<std::pair<Face, Telt>> l_pair = FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
-        //#ifdef JUST_CHECK
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
         vectface vfo = OrbitFace(e_sing_adj.f_ext, eC.GRP_ext.GeneratorsOfGroup());
         n_facet += vfo.size();
         Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
@@ -416,24 +421,17 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
           std::cerr << "We have a size error\n";
           throw TerminalException{1};
         }
-        //#endif
+#endif
         for (auto & e_pair : l_pair) {
-          std::cerr << "e_pair.second=" << e_pair.second << "\n";
-          std::cerr << "1 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
-          std::cerr << "|eC.EXT|=" << eC.EXT.rows() << " |eGen|=" << e_pair.second.size() << "\n";
           MyMatrix<T> eMat1_T = FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint,T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
           const ConeDesc<T,Tint,Tgroup>& fC = ListCones[jCone];
-          std::cerr << "  iCone=" << ef.iCone << " jCone=" << jCone << "\n";
-          std::cerr << "2 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
           MyMatrix<Tint> EXTimg = fC.EXT_i * eMatAdj;
           MyMatrix<Tint> VectorContain(1,dim);
           ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
           Face faceNew(EXTimg.rows());
-          std::cerr << "|set_EXT|=" << set_EXT.size() << "\n";
-          std::cerr << "3 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
           for (auto & e_line : set_EXT) {
             for (size_t i_col=0; i_col<dim; i_col++)
               VectorContain(0,i_col) = e_line(i_col);
@@ -444,23 +442,26 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
             }
             faceNew[epair.second] = 1;
           }
-          std::cerr << "4 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
           ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
-          std::cerr << "5 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << " |faceNew|=" << SignatureFace(faceNew) << "\n";
           f_insert(efNew);
-          std::cerr << "6 : |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
         }
       }
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "iCone=" << ef.iCone << " |ef.f_ext|=" << SignatureFace(ef.f_ext) << " n_facet=" << n_facet << "\n";
+#endif
     }
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Now |l_ent_face|=" << l_ent_face.size() << "\n";
+#endif
     curr_pos = len;
   }
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
   std::cerr << "|l_ent_face|=" << l_ent_face.size() << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
   std::cerr << "l_ent_face.iCon =";
   for (auto & e_ent : l_ent_face)
     std::cerr << " " << e_ent.iCone;
   std::cerr << "\n";
+#endif
   return {l_ent_face, ListMatrGen};
 }
 
@@ -483,9 +484,13 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
   std::vector<std::vector<FaceDesc>> ListListDomain;
   ListListDomain.push_back(ListDomain);
   //
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
   using Tface = std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>>;
+#endif
   for (int i=1; i<TheLev; i++) {
+    std::cerr << "i=" << i << "\n";
     std::vector<std::pair<size_t,Tent<T,Tint,Tidx_value>>> NewListCand;
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::vector<Tface> list_face;
     size_t n_equiv_found = 0;
     auto f_insert_face=[&](const FaceDesc& fd_A) -> void {
@@ -511,20 +516,15 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
             std::cerr << "ent_B=\n";
             PrintTent(std::cerr, ent_B);
             std::cerr << "test=" << test << "\n";
-            
-
-
-            
             return;
           }
         }
       }
       list_face.push_back(get_spanning_list_ent_face(ListCones, ll_sing_adj, ef_A));
     };
+#endif
     auto f_insert=[&](Tent<T,Tint,Tidx_value>&& eEnt) -> void {
-      std::cerr << "Beginning of f_insert\n";
       size_t e_inv = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
-      std::cerr << "e_inv=" << e_inv << "\n";
       for (auto & eP : NewListCand) {
         if (eP.first == e_inv) {
           std::optional<MyMatrix<Tint>> eEquiv = f_equiv<T,Tint,Tgroup,Tidx_value>(eP.second, eEnt);
@@ -532,10 +532,14 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
             return;
         }
       }
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       f_insert_face(eEnt.fd);
+#endif
       std::pair<size_t,Tent<T,Tint,Tidx_value>> e_pair{e_inv,std::move(eEnt)};
       NewListCand.emplace_back(std::move(e_pair));
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "Now |NewListCand|=" << NewListCand.size() << "\n";
+#endif
     };
     for (auto & eDomain : ListListDomain[i-1]) {
       Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, eDomain);
@@ -554,12 +558,14 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
     std::vector<FaceDesc> NewListDomain;
     for (auto & eEnt : NewListCand)
       NewListDomain.push_back(eEnt.second.fd);
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     if (list_face.size() != NewListDomain.size()) {
       std::cerr << "Inconsistent sizes\n";
       std::cerr << "|list_face|=" << list_face.size() << " |NewListDomain|=" << NewListDomain.size() << " n_equiv_found=" << n_equiv_found << "\n";
       throw TerminalException{1};
     }
     std::cerr << "i=" << i << " |NewListDomain|=" << NewListDomain.size() << "\n";
+#endif
     ListListDomain.emplace_back(std::move(NewListDomain));
   }
   return ListListDomain;
@@ -586,28 +592,21 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
         }
       }
       list_face.push_back(get_spanning_list_ent_face(ListCones, ll_sing_adj, ef_A));
-      std::cerr << "f_insert, now |list_face|=" << list_face.size() << "\n";
     };
     if (iLev == 1) {
-      std::cerr << "DecomposeOrbitPoint case\n";
       for (size_t iCone=0; iCone<ListCones.size(); iCone++) {
         vectface vf = DecomposeOrbitPoint_Full(ListCones[iCone].GRP_ext);
         size_t nExt = ListCones[iCone].EXT.rows();
-        std::cerr << "iCone=" << iCone << " |vf|=" << vf.size() << " nExt=" << nExt << "\n";
         for (auto & eOrb : vf) {
           Face f_ext(nExt);
-          std::cerr << "|eOrb|=" << eOrb.count() << "\n";
           boost::dynamic_bitset<>::size_type eVal=eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
           ent_face<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
-          std::cerr << "Before f_insert\n";
           f_insert(e_ent);
-          std::cerr << "After f_insert\n";
         }
       }
     } else {
-      std::cerr << "SPAN_face_ExtremeRays case\n";
       size_t iOrbit=0;
       for (auto & eOrbit : list_list_face[iLev - 2]) {
         size_t iRepr=0;
@@ -618,7 +617,6 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
           vectface vf = SPAN_face_ExtremeRays(eRepr.f_ext, StabFace_ext, RankFace_ext,
                                               eC.facext_incd, eC.EXT, eC.FAC);
           for (auto & f_ext_new : vf) {
-            std::cerr << "iLev=" << iLev << " Orbit=" << iOrbit << " iRepr=" << iRepr << " iCone=" << eRepr.iCone << " |f_ext_new|=" << SignatureFace(f_ext_new) << "\n";
             ent_face<Tint> e_ent{eRepr.iCone, f_ext_new, IdentityMat<Tint>(n_col)};
             f_insert(e_ent);
           }
@@ -632,8 +630,6 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
       ent_face<Tint> e_ent = eOrbit.first[0];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[e_ent.iCone];
       Face f_fac = Compute_faceFAC_from_faceEXT(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), e_ent.f_ext);
-      std::cerr << "signature = f_fac=" << SignatureFace(f_fac) << " f_ext=" << SignatureFace(e_ent.f_ext) << "\n";
-      std::cerr << "       value=" << e_ent.f_ext.find_first() << "\n";
       FaceDesc fd{e_ent.iCone, f_fac};
       ListDomain.push_back(fd);
     }
@@ -683,18 +679,11 @@ int main(int argc, char* argv[])
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
       std::cerr << "We have read EXT, |EXT|=" << EXT.rows() << "/" << EXT.cols() << "\n";
-      //      std::cerr << "EXT=\n";
-      //      WriteMatrix(std::cerr, EXT);
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
       std::cerr << "We have read FAC, |FAC|=" << FAC.rows() << "/" << FAC.cols() << "\n";
-      //      std::cerr << "FAC=\n";
-      //      WriteMatrix(std::cerr, FAC);
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
-      std::cerr << "We have read GRP_ext\n";
       Tgroup GRP_fac = ReadGroup<Tgroup>(is);
-      std::cerr << "We have read GRP_fac\n";
-      std::cerr << "|GRP_ext|=" << GRP_ext.size() << " |GRP_fac|=" << GRP_fac.size() << "\n";
       //
       Face extfac_incd = Compute_extfac_incd(FAC, EXT);
       Face facext_incd = Compute_facext(extfac_incd, FAC.rows(), EXT.rows());
@@ -706,11 +695,15 @@ int main(int argc, char* argv[])
     std::vector<std::vector<FaceDesc>> ListListDomain;
     if (opt == "strategy2_from_high") {
       std::cerr << "Matching strategy2_from_high\n";
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj = compute_adjacency_structure<T,Tint,Tgroup,Tidx_value>(ListCones, G);
+#else
+      std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj;
+#endif
       ListListDomain = Compute_ListListDomain_strategy2<T,Tint,Tgroup,Tidx_value>(ListCones, G, ll_sing_adj, TheLev);
     }
     if (opt == "strategy1_from_low" || opt == "strategy1_from_high") {
-      std::cerr << "Matching strateg1\n";
+      std::cerr << "Matching strategy1\n";
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj = compute_adjacency_structure<T,Tint,Tgroup,Tidx_value>(ListCones, G);
       std::cerr << "We have ll_sing_adj\n";
       if (opt == "strategy1_from_high") {

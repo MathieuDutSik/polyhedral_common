@@ -963,8 +963,8 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
   //
   size_t nbVert = nbRow+2;
   size_t hS = nof_vertices / nbVert;
-  std::cerr << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices << "\n";
 #ifdef DEBUG
+  std::cerr << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices << "\n";
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
     std::cerr << "hS=" << hS << " nbVert=" << nbVert << " nof_vertices=" << nof_vertices << "\n";

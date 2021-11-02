@@ -654,7 +654,9 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       }
       std::pair<bool,Telt> eRes=GrpInf.GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
       if (!eRes.first) {
+#ifdef DEBUG_MATRIX_GROUP
         std::cerr << "Exit while loop with proof that no equivalence exists\n";
+#endif
         return {false, {}, {}};
       }
       GRPwork = GetNewGRPwork(GrpInf, eFace2);
@@ -868,7 +870,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> c
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListPermGens;
   std::vector<MyMatrix<T>> ListMatrGens;
-  std::cerr << "|GRP1|=" << GRP1.size() << "\n";
   int n=EXT2_T.cols();
   std::vector<Telt> LGen = GRP1.GeneratorsOfGroup();
   for (auto & eGen : LGen) {
