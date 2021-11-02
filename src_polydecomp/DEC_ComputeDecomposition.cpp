@@ -46,6 +46,8 @@ void PrintTent(std::ostream& os, Tent<T,Tint,Tidx_value> const& e_ent)
   WriteMatrix(os, e_ent.Spann);
   os << "Qmat=\n";
   WriteMatrix(os, e_ent.Qmat);
+  os << "WMat=\n";
+  PrintWeightedMatrix(os, e_ent.WMat);
 }
 
 
@@ -104,13 +106,16 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T,Tint,Tidx_value>& eEnt, const
   // Computing the isomorphism
   using Tfield = typename overlying_field<Tint>::field_type;
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord);
-  if (!IsoInfo)
+  if (!IsoInfo) {
+    std::cerr << "Failed isomorphism at the graph level\n";
     return {};
+  }
   Telt ePerm(IsoInfo->first);
   Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(eEnt.WMat);
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm);
   if (eRes)
     return UniversalMatrixConversion<Tint,T>(*eRes);
+  std::cerr << "Failed isomorphism at the integral level\n";
   return {};
 }
 
@@ -396,8 +401,6 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
         n_facet += vfo.size();
         Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
         std::cerr << "|vfo|=" << vfo.size() << " |stab|=" << stab.size() << "\n";
-        size_t pos = ef.f_ext.find_first();
-        std::cerr << "We have pos\n";
         size_t n_match = 0;
         vectface vfcont(vfo.get_n());
         for (auto & eFace : vfo) {
@@ -508,7 +511,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(std::vector<
             std::cerr << "ent_B=\n";
             PrintTent(std::cerr, ent_B);
             std::cerr << "test=" << test << "\n";
-
+            
 
 
             

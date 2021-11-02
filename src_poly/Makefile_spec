@@ -28,8 +28,9 @@
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
-PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism
+#PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
+PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

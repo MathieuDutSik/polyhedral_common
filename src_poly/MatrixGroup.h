@@ -8,9 +8,6 @@
 #include "MatrixGroupBasic.h"
 
 
-//#define DEBUG_MATRIX_GROUP
-
-
 
 template<typename T>
 struct MatrixGroup {

@@ -5,6 +5,7 @@
 #include "WeightMatrix.h"
 #include "WeightMatrixLimited.h"
 #include "WeightMatrixSpecified.h"
+#include "MatrixGroup.h"
 
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix
@@ -451,6 +452,31 @@ std::optional<std::vector<Tidx>> LinPolytope_Isomorphism(const MyMatrix<T>& EXT1
   if (!IsoInfo)
     return {};
   return IsoInfo->first;
+}
+
+
+
+template<typename Tint, typename Tidx, typename Tgroup, typename Tidx_value, typename Tgr, bool use_scheme>
+std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint>& EXT1, const MyMatrix<Tint>& EXT2)
+{
+  std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<Tint,Tidx,use_scheme>(EXT1);
+  std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<Tint,Tidx,use_scheme>(EXT2);
+  //
+  using Tfield = typename overlying_field<Tint>::field_type;
+  using Telt = typename Tgroup::Telt;
+  std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<Tint,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+  if (!IsoInfo)
+    return {};
+  Telt ePerm(IsoInfo->first);
+
+  MyMatrix<Tfield> EXT1_T = UniversalMatrixConversion<Tfield,Tint>(EXT1);
+  MyMatrix<Tfield> EXT2_T = UniversalMatrixConversion<Tfield,Tint>(EXT2);
+  Tgroup GRP1 = LinPolytope_Automorphism<Tfield,use_scheme,Tgroup>(EXT1_T);
+  std::optional<MyMatrix<Tfield>> eRes = LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, ePerm);
+  if (eRes)
+    return UniversalMatrixConversion<Tint,Tfield>(*eRes);
+  std::cerr << "Failed isomorphism at the integral level\n";
+  return {};
 }
 
 

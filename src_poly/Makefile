@@ -26,6 +26,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism \
                   GRP_ListMat_Subset_EXT_Invariant \
                   GRP_LinPolytope_Automorphism \
                   GRP_LinPolytope_Isomorphism \
+                  GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic \
                   GRP_OrbitSplittingPerfect \
 		  POLY_ComputeEngelSymbol \
