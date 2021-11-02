@@ -469,7 +469,19 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     }
     return true;
   };
-  FiniteMatrixGroup<T,Telt> GRPwork=GRPmatr;
+  auto IsStabilizing=[&](FiniteMatrixGroup<T,Telt> const& GRPin) -> bool {
+    for (auto &eGen : GRPin.ListMatrGen) {
+      for (int i=0; i<n; i++) {
+        MyVector<T> eVect=GetMatrixRow(TheSpace2, i);
+        MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
+        ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVectG);
+        if (!eRes.TheRes)
+          return false;
+      }
+    }
+    return true;
+  };
+  FiniteMatrixGroup<T,Telt> GRPwork = GRPmatr;
   MyMatrix<T> eElt=IdentityMat<T>(n);
   int nbRow=GRPmatr.EXTfaithAct.rows();
   /*  std::vector<MyVector<T>> ListVect;
@@ -481,8 +493,16 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
   while(true) {
     MyVector<T> V;
     bool test=IsEquiv(V, eElt);
-    if (test)
+    if (test) {
+      if (!IsStabilizing(GRPwork)) { // There is a potential bug here.
+        std::cerr << "The GRPwork is not preserving TheSpace2\n";
+        throw TerminalException{1};
+      }
+#ifdef DEBUG_MATRIX_GROUP
+      std::cerr << "eElt is correct, we return from here\n";
+#endif
       return {true, GRPwork, eElt};
+    }
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "V =";
     WriteVector(std::cerr, V);
@@ -527,9 +547,9 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "|GRPperm|=" << GRPperm.size() << " siz=" << siz << "\n";
 #endif
-    //    MyMatrix<T> TheSpace1work = TheSpace1*eElt;
-    //    MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
-    MyMatrix<T> TheSpace1workMod = TheSpace1Mod * eElt;
+    MyMatrix<T> TheSpace1work = TheSpace1*eElt;
+    MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
+    //    MyMatrix<T> TheSpace1workMod = TheSpace1Mod * eElt;
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "eElt=\n";
     WriteMatrix(std::cerr, eElt);
@@ -602,13 +622,26 @@ template<typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRPmatr, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field in LinearSpace_Equivalence");
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of LinearSpace_Equivalence\n";
+#endif
   using Telt=typename Tgroup::Telt;
   int n=TheSpace1.rows();
   T LFact1=LinearSpace_GetDivisor(TheSpace1);
   T LFact2=LinearSpace_GetDivisor(TheSpace2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "LFact1 = " << LFact1 << "\n";
+  std::cerr << "LFact2 = " << LFact2 << "\n";
+#endif
   if (LFact1 != LFact2)
     return {};
   std::vector<T> eList=FactorsInt(LFact1);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "eList =";
+  for (auto & eVal : eList)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
+#endif
   auto IsEquivalence=[&](MyMatrix<T> const& eEquiv) -> bool {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace1, i);
@@ -736,6 +769,9 @@ template<typename T,typename Tgroup>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, FiniteMatrixGroup<T,typename Tgroup::Telt> const& GRP2, typename Tgroup::Telt const& eEquiv)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field in LinPolytopeIntegral_Isomorphism_Subspaces");
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
+#endif
   using Telt=typename Tgroup::Telt;
   int dim=EXT1_T.cols();
   MyMatrix<T> eBasis1=GetZbasis(EXT1_T);

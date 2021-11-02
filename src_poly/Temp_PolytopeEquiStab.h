@@ -475,6 +475,9 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism(const MyMatrix<Tin
     return {};
   Telt ePerm(IsoInfo->first);
   std::cerr << "LinPolytopeIntegral_Isomorphism, step 5\n";
+  std::cerr << "ePerm=" << ePerm << "\n";
+  std::cerr << "Mat : ePerm->second=\n";
+  WriteMatrix(std::cerr, IsoInfo->second);
 
   MyMatrix<Tfield> EXT1_T = UniversalMatrixConversion<Tfield,Tint>(EXT1);
   std::cerr << "LinPolytopeIntegral_Isomorphism, step 6\n";
