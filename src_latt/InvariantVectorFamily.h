@@ -20,8 +20,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
 #endif
   //  std::cerr << "MaxNorm = " << MaxNorm << " eMat =\n";
   //  WriteMatrix(std::cerr, eMat);
-  //  std::cerr << "|SHVall|=" << SHVall.rows() << "\n";
-  //  WriteMatrix(std::cerr, SHVall);
+  std::cerr << "|SHVall|=" << SHVall.rows() << "\n";
+  WriteMatrix(std::cerr, SHVall);
   std::set<T> SetNorm;
   int nbSHV=SHVall.rows();
   std::vector<T> ListNorm(nbSHV);
@@ -29,7 +29,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
     MyVector<Tint> eRow=GetMatrixRow(SHVall, iSHV);
     T eNorm=EvaluationQuadForm(eMat, eRow);
     ListNorm[iSHV]=eNorm;
-    SetNorm.insert(eNorm);
+    if (eNorm > 0)
+      SetNorm.insert(eNorm);
   }
 #ifdef DEBUG_TIME
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();

@@ -541,8 +541,14 @@ T_shvec_request<T> initShvecReq(const MyMatrix<T>& gram_matrix, const MyVector<T
 template<typename T, typename Tint>
 T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
 {
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
+    return computeMinimum<T,Tint>(request);
+  }
+  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
+    return computeMinimum<T,Tint>(request);
+  }
+  T_shvec_info<T,Tint> info;
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
-    T_shvec_info<T,Tint> info;
     info.minimum = request.bound;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
       info.short_vectors.push_back(V);
@@ -552,7 +558,6 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     return info;
   }
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_HAN_TRAN) {
-    T_shvec_info<T,Tint> info;
     info.minimum = request.bound;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
       if (min == request.bound) {
@@ -565,7 +570,6 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     return info;
   }
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO) {
-    T_shvec_info<T,Tint> info;
     info.minimum = request.bound;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
       if (min == request.bound)
@@ -576,7 +580,6 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     return info;
   }
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {
-    T_shvec_info<T,Tint> info;
     info.minimum = request.bound;
     auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
       info.short_vectors.push_back(V);
@@ -584,12 +587,6 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
     };
     (void)computeIt<T,Tint,decltype(f_insert)>(request, request.bound, f_insert);
     return info;
-  }
-  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
-    return computeMinimum<T,Tint>(request);
-  }
-  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_MINIMUM) {
-    return computeMinimum<T,Tint>(request);
   }
   std::cerr << "mode=" << request.mode << "\n";
   std::cerr << "T_compiteShvec: Failed to match an entry\n";
@@ -654,6 +651,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
+  request.central = false;
   //
   T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   //
