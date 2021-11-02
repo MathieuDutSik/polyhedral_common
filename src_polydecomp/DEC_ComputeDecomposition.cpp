@@ -401,14 +401,12 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   auto f_insert=[&](const ent_face<Tint>& ef_A) -> void {
     for (const auto & ef_B : l_ent_face) {
       std::cerr << "Testing for equivalence |ef_B.f_ext|=" << SignatureFace(ef_B.f_ext) << "\n";
-      /*
       std::optional<MyMatrix<Tint>> equiv_opt = test_equiv_ent_face(ListCones, ef_A, ef_B);
       if (equiv_opt) {
         std::cerr << "  Found a non-trivial equivalence\n";
         f_insert_generator(*equiv_opt);
         return;
       }
-      */
     }
     std::cerr << "The entry is new\n";
     l_ent_face.push_back(ef_A);
@@ -423,7 +421,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       std::cerr << "  Inserting stabilizing element\n";
       f_insert_generator(TransGen);
-      }
+    }
     std::cerr << "f_insert finished\n";
   };
   f_insert(ef_input);
@@ -434,7 +432,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
       break;
     std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
     for (size_t i=curr_pos; i<len; i++) {
-      const ent_face<Tint>& ef = l_ent_face[i];
+      ent_face<Tint> ef = l_ent_face[i]; // We cannot use const& here apparently for mysterious reasons (3 hours debugging)
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[ef.iCone];
       std::cerr << "i=" << i << " iCone=" << ef.iCone << " |ll_sing_adj[ef.iCone]|=" << ll_sing_adj[ef.iCone].size() << "\n";
       for (auto & e_sing_adj : ll_sing_adj[ef.iCone]) {
@@ -502,6 +500,10 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
     curr_pos = len;
   }
   std::cerr << "|l_ent_face|=" << l_ent_face.size() << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
+  std::cerr << "l_ent_face.iCon =";
+  for (auto & e_ent : l_ent_face)
+    std::cerr << " " << e_ent.iCone;
+  std::cerr << "\n";
   return {l_ent_face, ListMatrGen};
 }
 
@@ -513,6 +515,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
   std::vector<std::vector<FaceDesc>> ListListDomain;
   size_t n_col = G.rows();
   using Tface = std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>>;
+  std::vector<std::vector<Tface>> list_list_face;
   for (int iLev=1; iLev<=TheLev; iLev++) {
     std::cerr << "iLev=" << iLev << "\n";
     std::vector<Tface> list_face;
@@ -525,14 +528,17 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
         }
       }
       list_face.push_back(get_spanning_list_ent_face(ListCones, ll_sing_adj, ef_A));
+      std::cerr << "f_insert, now |list_face|=" << list_face.size() << "\n";
     };
     if (iLev == 1) {
+      std::cerr << "DecomposeOrbitPoint case\n";
       for (size_t iCone=0; iCone<ListCones.size(); iCone++) {
         vectface vf = DecomposeOrbitPoint_Full(ListCones[iCone].GRP_ext);
         size_t nExt = ListCones[iCone].EXT.rows();
         std::cerr << "iCone=" << iCone << " |vf|=" << vf.size() << " nExt=" << nExt << "\n";
         for (auto & eOrb : vf) {
           Face f_ext(nExt);
+          std::cerr << "|eOrb|=" << eOrb.count() << "\n";
           boost::dynamic_bitset<>::size_type eVal=eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
@@ -543,28 +549,33 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(std::vector<
         }
       }
     } else {
-      for (auto & eOrbit : ListListDomain[iLev - 2]) {
-        const ConeDesc<T,Tint,Tgroup>& eC = ListCones[eOrbit.iCone];
-        Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), eOrbit.f_fac);
-        Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(f_ext);
-        int RankFace_ext = iLev - 1;
-        vectface vf = SPAN_face_ExtremeRays(f_ext, StabFace_ext, RankFace_ext,
-                                            eC.facext_incd, eC.EXT, eC.FAC);
-        for (auto & f_ext_new : vf) {
-          ent_face<Tint> e_ent{eOrbit.iCone, f_ext_new, IdentityMat<Tint>(n_col)};
-          f_insert(e_ent);
+      std::cerr << "SPAN_face_ExtremeRays case\n";
+      for (auto & eOrbit : list_list_face[iLev - 2]) {
+        for (auto & eRepr : eOrbit.first) {
+          const ConeDesc<T,Tint,Tgroup>& eC = ListCones[eRepr.iCone];
+          Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(eRepr.f_ext);
+          int RankFace_ext = iLev - 1;
+          vectface vf = SPAN_face_ExtremeRays(eRepr.f_ext, StabFace_ext, RankFace_ext,
+                                              eC.facext_incd, eC.EXT, eC.FAC);
+          for (auto & f_ext_new : vf) {
+            ent_face<Tint> e_ent{eRepr.iCone, f_ext_new, IdentityMat<Tint>(n_col)};
+            f_insert(e_ent);
+          }
         }
       }
     }
     std::vector<FaceDesc> ListDomain;
     for (auto & eOrbit : list_face) {
-      const ent_face<Tint>& e_ent = eOrbit.first[0];
+      ent_face<Tint> e_ent = eOrbit.first[0];
       const ConeDesc<T,Tint,Tgroup>& eC = ListCones[e_ent.iCone];
       Face f_fac = Compute_faceFAC_from_faceEXT(eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), e_ent.f_ext);
+      std::cerr << "signature = f_fac=" << SignatureFace(f_fac) << " f_ext=" << SignatureFace(e_ent.f_ext) << "\n";
+      std::cerr << "       value=" << e_ent.f_ext.find_first() << "\n";
       FaceDesc fd{e_ent.iCone, f_fac};
       ListDomain.push_back(fd);
     }
     ListListDomain.push_back(ListDomain);
+    list_list_face.push_back(list_face);
   }
   return ListListDomain;
 }

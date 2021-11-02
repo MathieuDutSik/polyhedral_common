@@ -293,11 +293,14 @@ Face Compute_facext(const Face& extfac_incd, int nbFac, int nbExt)
 
 Face Compute_faceEXT_from_faceFAC(const Face& extfac_incd, int nbFac, int nbExt, const Face& face_fac)
 {
+  std::vector<int> eV;
+  for (int iFac=0; iFac<nbFac; iFac++)
+    if (face_fac[iFac] == 1)
+      eV.push_back(iFac);
   auto is_in=[&](int iExt) -> bool {
-    for (int iFac=0; iFac<nbFac; iFac++)
-      if (face_fac[iFac] == 1)
-        if (extfac_incd[iFac * nbExt + iExt] == 0)
-          return false;
+    for (auto & iFac : eV)
+      if (extfac_incd[iFac * nbExt + iExt] == 0)
+        return false;
     return true;
   };
   Face f_ext(nbExt);
@@ -309,11 +312,14 @@ Face Compute_faceEXT_from_faceFAC(const Face& extfac_incd, int nbFac, int nbExt,
 
 Face Compute_faceFAC_from_faceEXT(const Face& extfac_incd, int nbFac, int nbExt, const Face& face_ext)
 {
+  std::vector<int> eV;
+  for (int iExt=0; iExt<nbExt; iExt++)
+    if (face_ext[iExt] == 1)
+      eV.push_back(iExt);
   auto is_in=[&](int iFac) -> bool {
-    for (int iExt=0; iExt<nbExt; iExt++)
-      if (face_ext[iExt] == 1)
-        if (extfac_incd[iFac * nbExt + iExt] == 0)
-          return false;
+    for (auto & iExt : eV)
+      if (extfac_incd[iFac * nbExt + iExt] == 0)
+        return false;
     return true;
   };
   Face f_fac(nbFac);
