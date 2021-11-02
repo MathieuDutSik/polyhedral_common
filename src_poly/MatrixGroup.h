@@ -8,7 +8,7 @@
 #include "MatrixGroupBasic.h"
 
 
-#define DEBUG_MATRIX_GROUP
+//#define DEBUG_MATRIX_GROUP
 
 
 

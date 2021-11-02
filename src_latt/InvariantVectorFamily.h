@@ -43,6 +43,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
       if (ListNorm[iSHV] == eNorm) {
 	MyVector<Tint> eRow=GetMatrixRow(SHVall, iSHV);
 	ListVect.push_back(eRow);
+	ListVect.push_back(-eRow);
       }
     MyMatrix<Tint> SHVret=MatrixFromVectorFamily(ListVect);
     if (fCorrect(SHVret))

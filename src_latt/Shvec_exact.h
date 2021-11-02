@@ -651,7 +651,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect=ZeroVector<T>(dim);
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
-  request.central = false;
+  request.central = true;
   //
   T_shvec_info<T,Tint> info = T_computeShvec<T,Tint>(request);
   //
