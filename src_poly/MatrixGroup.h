@@ -206,6 +206,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
   FiniteMatrixGroup<T,Telt> GRPret=GRPmatr;
   std::vector<MyVector<T>> ListVect;
   int nbRow=GRPmatr.EXTfaithAct.rows();
+  Tidx nbRow_tidx=nbRow;
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "|G(EXT)|=" << Tgroup(GRPmatr.ListPermGen, nbRow).size() << "\n";
 #endif
@@ -252,7 +253,6 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       MyMatrix<T> eMatrGen=GRPret.ListMatrGen[iGen];
       Telt ePermGen=GRPret.ListPermGen[iGen];
       std::vector<Tidx> v(siz);
-      Tidx nbRow_tidx=nbRow;
       for (Tidx i=0; i<nbRow_tidx; i++) {
 	Tidx j=ePermGen.at(i);
 	v[i]=j;
@@ -427,15 +427,16 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
   int n=TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "------------------------------------------------------\n";
+  std::cerr << "LinearSpace_ModEquivalence, TheMod=" << TheMod << "\n";
   std::cerr << "TheSpace1=\n";
   WriteMatrix(std::cerr, TheSpace1);
   std::cerr << "TheSpace2=\n";
   WriteMatrix(std::cerr, TheSpace2);
-  std::cerr << "TheMod=" << TheMod << "\n";
+  std::cerr << "det(TheSpace1)=" << DeterminantMat(TheSpace1) << " det(TheSpace2)=" << DeterminantMat(TheSpace2) << "\n";
 #endif
-  MyMatrix<T> ModSpace=TheMod*IdentityMat<T>(n);
-  MyMatrix<T> TheSpace1Mod=Concatenate(TheSpace1, ModSpace);
-  MyMatrix<T> TheSpace2Mod=Concatenate(TheSpace2, ModSpace);
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  MyMatrix<T> TheSpace1Mod = Concatenate(TheSpace1, ModSpace);
+  MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   auto VectorMod=[&](MyVector<T> const& V) -> MyVector<T> {
     MyVector<T> Vret(n);
     for (int i=0; i<n; i++)
@@ -447,20 +448,18 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     return VectorMod(eVect);
   };
   auto IsEquiv=[&](MyVector<T> & V, MyMatrix<T> const& eEquiv) -> bool {
+    MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
     for (int i=0; i<n; i++) {
-      MyVector<T> eVect=GetMatrixRow(TheSpace1, i);
-      MyVector<T> eVectG=ProductVectorMatrix(eVect, eEquiv);
-      ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVectG);
+      MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
+      ResultSolutionIntMat<T> eRes = SolutionIntMat(TheSpace2Mod, eVect);
       if (!eRes.TheRes) {
-	V=VectorMod(eVectG);
+	V = VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "   i=" << i << "\n";
         std::cerr << "   Found vector eVect=";
         WriteVector(std::cerr, eVect);
         std::cerr << "   Found vector V=";
         WriteVector(std::cerr, V);
-        std::cerr << "   Found vector eVectG=";
-        WriteVector(std::cerr, eVectG);
         std::cerr << "   eEquiv=\n";
         WriteMatrix(std::cerr, eEquiv);
 #endif
@@ -471,10 +470,10 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
   };
   auto IsStabilizing=[&](FiniteMatrixGroup<T,Telt> const& GRPin) -> bool {
     for (auto &eGen : GRPin.ListMatrGen) {
+      MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i=0; i<n; i++) {
-        MyVector<T> eVect=GetMatrixRow(TheSpace2, i);
-        MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
-        ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVectG);
+        MyVector<T> eVect=GetMatrixRow(TheSpace2img, i);
+        ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVect);
         if (!eRes.TheRes)
           return false;
       }
@@ -484,11 +483,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
   FiniteMatrixGroup<T,Telt> GRPwork = GRPmatr;
   MyMatrix<T> eElt=IdentityMat<T>(n);
   int nbRow=GRPmatr.EXTfaithAct.rows();
-  /*  std::vector<MyVector<T>> ListVect;
-  for (int i=0; i<nbRow; i++) {
-    MyVector<T> eLine=GetMatrixRow(GRPmatr.EXTfaithAct, i);
-    ListVect.push_back(eLine);
-    }*/
+  Tidx nbRow_tidx = nbRow;
   size_t iter=0;
   while(true) {
     MyVector<T> V;
@@ -507,9 +502,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     std::cerr << "V =";
     WriteVector(std::cerr, V);
 #endif
-    std::vector<MyVector<T>> O=OrbitComputation(GRPwork.ListMatrGen, V, TheAction);
+    std::vector<MyVector<T>> O = OrbitComputation(GRPwork.ListMatrGen, V, TheAction);
     int Osiz=O.size();
-    //    std::vector<MyVector<T>> ListWork=ConcatenateVect(ListVect, O);
     int siz=nbRow + Osiz;
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "Osiz=" << Osiz << " nbRow=" << nbRow << " iter=" << iter << " O=\n";
@@ -532,15 +526,74 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       for (Tidx i=0; i<nbRow_tidx; i++)
 	v[i] = ePermGen.at(i);
       std::vector<MyVector<T>> ListImage;
-      for (auto & eV : O)
-	ListImage.push_back(TheAction(eV, eMatrGen));
-      Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
-      Telt ePermGenSelect=ePermB*ePermSinv;
+      std::vector<size_t> ListPos;
+      for (auto & eV : O) {
+        MyVector<T> Vimg = TheAction(eV, eMatrGen);
+        ListPos.push_back(PositionVect(O, Vimg));
+	ListImage.push_back(Vimg);
+      }
+      std::cerr << "ListPos =";
+      for (auto & eVal : ListPos)
+        std::cerr << " " << eVal;
+      std::cerr << "\n";
+      Telt ePermB = Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
+      auto prt=[&](std::string str, Telt u) -> void {
+        std::cerr << str << " =";
+        for (Tidx i=0; i<Tidx(Osiz); i++)
+          std::cerr << " " << u.at(i);
+        std::cerr << "\n";
+      };
+      prt("ePermB * ePermSinv", ePermB * ePermSinv);
+      prt("ePermS * (~ePermB)", ePermS * (~ePermB));
+      prt("ePermSinv * ePermB", ePermSinv * ePermB);
+      prt("(~ePermB) * ePermS", (~ePermB) * ePermS);
+
+      Telt ePermGenSelect = (~ePermB) * ePermS;
+      std::cerr << "ePermGenSelect =";
+      for (Tidx i=0; i<Tidx(Osiz); i++)
+        std::cerr << " " << ePermGenSelect.at(i);
+      std::cerr << "\n";
       for (int iO=0; iO<Osiz; iO++) {
 	Tidx jO=ePermGenSelect.at(iO);
 	v[nbRow_tidx + iO] = nbRow_tidx + jO;
       }
       Telt eNewPerm(v);
+#ifdef DEBUG_MATRIX_GROUP
+      std::cerr << "Check 1\n";
+      for (Tidx iRow=0; iRow<nbRow_tidx; iRow++) {
+        MyVector<T> eVect = GetMatrixRow(GRPmatr.EXTfaithAct, iRow);
+        //        std::cerr << "|eMatrGen|=" << eMatrGen.rows() << " / " << eMatrGen.cols() << " |eVect|=" << eVect.size() << "\n";
+        MyVector<T> eVectImg1 = eMatrGen.transpose() * eVect;
+        MyVector<T> eVectImg2 = GetMatrixRow(GRPmatr.EXTfaithAct, eNewPerm.at(iRow));
+        if (eVectImg1 != eVectImg2) {
+          std::cerr << "Incoherency in the eVectImg1 / eVectImg2 A\n";
+          throw TerminalException{1};
+        }
+      }
+      std::cerr << "Check 2\n";
+      for (int iO=0; iO<Osiz; iO++) {
+        MyVector<T> eVect = O[iO];
+        std::cerr << "|eMatrGen|=" << eMatrGen.rows() << " / " << eMatrGen.cols() << " |eVect|=" << eVect.size() << "\n";
+        MyVector<T> eVectImg1 = TheAction(eVect, eMatrGen);
+        std::cerr << "We have eVectImg1\n";
+        size_t pos = eNewPerm.at(iO + nbRow_tidx) - nbRow_tidx;
+        std::cerr << "pos=" << pos << " Osiz=" << Osiz << "\n";
+        MyVector<T> eVectImg2 = O[pos];
+        std::cerr << "We have eVectImg2\n";
+        std::cerr << "|eVectImg1|=" << eVectImg1.rows() << "/" << eVectImg1.cols() << "\n";
+        std::cerr << "|eVectImg2|=" << eVectImg2.rows() << "/" << eVectImg2.cols() << "\n";
+        if (eVectImg1 != eVectImg2) {
+          std::cerr << "Incoherency in the eVectImg1 / eVectImg2 B\n";
+          std::cerr << "eVectImg1=\n";
+          WriteVector(std::cerr, eVectImg1);
+          std::cerr << "eVectImg2=\n";
+          WriteVector(std::cerr, eVectImg2);
+          throw TerminalException{1};
+        }
+        std::cerr << "Passed the comparison\n";
+      }
+      std::cerr << "Check 3\n";
+#endif
       ListPermGenProv.emplace_back(std::move(eNewPerm));
     }
     Tgroup GRPperm(ListPermGenProv, siz);
@@ -564,10 +617,10 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
 #endif
       ResultSolutionIntMat<T> eRes1=SolutionIntMat(TheSpace1workMod, eVect);
       if (eRes1.TheRes)
-	eFace1[nbRow + iO]=1;
+	eFace1[nbRow_tidx + iO]=1;
       ResultSolutionIntMat<T> eRes2=SolutionIntMat(TheSpace2Mod, eVect);
       if (eRes2.TheRes)
-	eFace2[nbRow + iO]=1;
+	eFace2[nbRow_tidx + iO]=1;
     }
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "|eFace1|=" << eFace1.size() << " / " << eFace1.count() << "    |eFace2|=" << eFace2.size() << " / " << eFace2.count() << "\n";
@@ -578,8 +631,10 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       throw TerminalException{1};
     }
     std::pair<bool,Telt> eRes=GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
-    if (!eRes.first)
+    if (!eRes.first) {
+      std::cerr << "Exit while loop with proof that no equivalence exists\n";
       return {false, {}, {}};
+    }
     Tgroup eStab=GRPperm.Stabilizer_OnSets(eFace2);
     std::vector<MyMatrix<T>> ListMatrGen;
     std::vector<Telt> ListPermGen;
@@ -603,17 +658,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     std::cerr << "eMat=\n";
     WriteMatrix(std::cerr, eMat);
 #endif
-    eElt = eElt*eMat;
+    eElt = eElt * eMat;
   }
-  for (auto & eGen : GRPwork.ListMatrGen) {
-    MyVector<T> V;
-    bool test=IsEquiv(V, eGen);
-    if (!test) {
-      std::cerr << "We have a major inconsistency in LinearSpace_ModEquivalence\n";
-      throw TerminalException{1};
-    }
-  }
-  return {true, GRPwork, eElt};
 }
 
 
@@ -778,7 +824,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T>
   MyMatrix<T> eBasis2=GetZbasis(EXT2_T);
   MyMatrix<T> EXTbas1=EXT1_T*Inverse(eBasis1);
   MyMatrix<T> EXTbas2=EXT2_T*Inverse(eBasis2);
-
+  //
   MyMatrix<T> TheMatEquiv=FindTransformation(EXTbas1, EXTbas2, eEquiv);
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto & eGen : GRP2.ListPermGen) {
@@ -810,6 +856,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> c
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListPermGens;
   std::vector<MyMatrix<T>> ListMatrGens;
+  std::cerr << "|GRP1|=" << GRP1.size() << "\n";
   int n=EXT2_T.cols();
   std::vector<Telt> LGen = GRP1.GeneratorsOfGroup();
   for (auto & eGen : LGen) {
