@@ -29,12 +29,12 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT,
   Tint eProd=1;
   for (int iDim=0; iDim<dim; iDim++) {
     T val = EXTnorm(0, iDim+1);
-    Tint eLow=UniversalScalarConversion<Tint,T>(Ceil(val));
-    Tint eUpp=UniversalScalarConversion<Tint,T>(Floor(val));
+    Tint eLow = UniversalCeilScalarInteger<Tint,T>(val);
+    Tint eUpp = UniversalFloorScalarInteger<Tint,T>(val);
     for (int iVert=1; iVert<nbVert; iVert++) {
       T val_B = EXTnorm(iVert, iDim+1);
-      Tint eLow_B = UniversalScalarConversion<Tint,T>(Ceil(val_B));
-      Tint eUpp_B = UniversalScalarConversion<Tint,T>(Floor(val_B));
+      Tint eLow_B = UniversalCeilScalarInteger<Tint,T>(val_B);
+      Tint eUpp_B = UniversalFloorScalarInteger<Tint,T>(val_B);
       if (eLow_B < eLow)
         eLow = eLow_B;
       if (eUpp_B > eUpp)
@@ -124,7 +124,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
         std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
         throw TerminalException{1};
       }
-      ListLow[i+pos] = UniversalScalarConversion<Tint,T>(Ceil(eSol.OptimalValue));
+      ListLow[i+pos] = UniversalCeilScalarInteger<Tint,T>(eSol.OptimalValue);
       //
       Vminimize(1 + i) = -1;
       eSol = CDD_LinearProgramming(FACred, Vminimize);
@@ -134,7 +134,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const& FAC, Finsert f_insert)
         std::cerr << "the polytope is unbounded and thus the integer point enumeration will not work\n";
         throw TerminalException{1};
       }
-      ListUpp[i+pos] = UniversalScalarConversion<Tint,T>(Floor( - eSol.OptimalValue));
+      ListUpp[i+pos] = UniversalFloorScalarInteger<Tint,T>(- eSol.OptimalValue);
       //
       Vminimize(1 + i) = 0;
     }
