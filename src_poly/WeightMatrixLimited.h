@@ -297,6 +297,7 @@ public:
   {
     std::cerr << "nbRow=" << nbRow << " max_offdiag=" << max_offdiag << "\n";
     using Telt = typename Tgroup::Telt;
+    using Tidx = typename Tgroup::Telt::Tidx;
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf)\n";
     vectface vf = DecomposeOrbitPoint_KernelFull<Telt>(nbRow, LGen);
@@ -389,7 +390,7 @@ public:
       std::cerr << "len=" << len << " pos=" << pos << "\n";
       std::vector<Telt> LGenMap;
       for (auto & eGen : LGen) {
-        std::vector<size_t> eList(len);
+        std::vector<Tidx> eList(len);
         for (size_t u=0; u<len; u++) {
           size_t i = map[2*u];
           size_t i_B = map[2*u + 1];
