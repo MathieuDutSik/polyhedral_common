@@ -145,21 +145,21 @@ std::ostream& operator<<(std::ostream& os, PolyhedralEntry<T,Tgroup> const& eEnt
 // SimpleOrbitFacet
 //
 
-template<typename T>
+template<typename T, typename Tgroup>
 struct SimpleOrbitFacet {
   Face eRepr;
 };
 
-template<typename T>
-std::ostream& operator<<(std::ostream& os, SimpleOrbitFacet<T> const& eEnt)
+template<typename T, typename Tgroup>
+std::ostream& operator<<(std::ostream& os, SimpleOrbitFacet<T,Tgroup> const& eEnt)
 {
   WriteFace(os, eEnt.eRepr);
   return os;
 }
 
 
-template<typename T>
-std::istream& operator>>(std::istream& is, SimpleOrbitFacet<T> & eEnt)
+template<typename T, typename Tgroup>
+std::istream& operator>>(std::istream& is, SimpleOrbitFacet<T,Tgroup> & eEnt)
 {
   Face eSet=ReadFace(is);
   eEnt={eSet};
@@ -264,8 +264,8 @@ struct invariant_info<PolyhedralEntry<T,Tgroup>> {
   typedef PolyhedralInv<T> invariant_type;
 };
 
-template <typename T>
-struct invariant_info<SimpleOrbitFacet<T>> {
+template <typename T, typename Tgroup>
+struct invariant_info<SimpleOrbitFacet<T,Tgroup>> {
   typedef SimpleOrbitFacetInv<T> invariant_type;
 };
 
@@ -274,13 +274,13 @@ struct equiv_info<PolyhedralEntry<T,Tgroup>> {
   typedef typename Tgroup::Telt equiv_type;
 };
 
-template <typename T>
-struct equiv_info<SimpleOrbitFacet<T>> {
-  typedef permlib::Permutation equiv_type;
+template <typename T, typename Tgroup>
+struct equiv_info<SimpleOrbitFacet<T,Tgroup>> {
+  typedef typename Tgroup::Telt equiv_type;
 };
 
-template <typename T>
-struct balinski_info<SimpleOrbitFacet<T>> {
+template <typename T, typename Tgroup>
+struct balinski_info<SimpleOrbitFacet<T,Tgroup>> {
   typedef PolyhedralBalinski balinski_type;
 };
 
@@ -402,7 +402,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       std::function<bool(SimpleOrbitFacetInv<T> const&,SimpleOrbitFacetInv<T> const&)> CompFCT=[](SimpleOrbitFacetInv<T> const& x, SimpleOrbitFacetInv<T> const& y) -> bool {
         return x < y;
       };
-      std::function<void(PolyhedralBalinski &,SimpleOrbitFacet<T> const&,SimpleOrbitFacetInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[&](PolyhedralBalinski & eStat, SimpleOrbitFacet<T> const& fEnt, SimpleOrbitFacetInv<T> const& fInv, std::ostream& os) -> void {
+      std::function<void(PolyhedralBalinski &,SimpleOrbitFacet<T,Tgroup> const&,SimpleOrbitFacetInv<T> const&,std::ostream&)> UpgradeBalinskiStat=[&](PolyhedralBalinski & eStat, SimpleOrbitFacet<T,Tgroup> const& fEnt, SimpleOrbitFacetInv<T> const& fInv, std::ostream& os) -> void {
         if (eStat.final)
           return;
         eStat.nbUnsolved += fInv.eOrbitSize;
@@ -427,10 +427,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         }
       };
       int NewLevel=TheLevel+1;
-      std::function<std::optional<Telt>(SimpleOrbitFacet<T> const&,SimpleOrbitFacet<T> const&)> fEquiv;
-      std::function<PairT_Tinv<SimpleOrbitFacet<T>>(Face const&, std::ostream&)> GetRecord;
+      std::function<std::optional<Telt>(SimpleOrbitFacet<T,Tgroup> const&,SimpleOrbitFacet<T,Tgroup> const&)> fEquiv;
+      std::function<PairT_Tinv<SimpleOrbitFacet<T,Tgroup>>(Face const&, std::ostream&)> GetRecord;
       if (ansGRP == "classic") {
-        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
+        fEquiv=[&](SimpleOrbitFacet<T,Tgroup> const& x, SimpleOrbitFacet<T,Tgroup> const& y) -> std::optional<Telt> {
           std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
           startLoc = std::chrono::system_clock::now();
           auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
@@ -439,18 +439,18 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           MProc.GetO(TheId) << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
           return eReply;
         };
-        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T,Tgroup>> {
           Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
           int siz=eOrb.count();
           Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
-          SimpleOrbitFacet<T> eOrbF{eOrb};
+          SimpleOrbitFacet<T,Tgroup> eOrbF{eOrb};
           size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
           SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
           return {eOrbF, eInv};
         };
       }
       if (ansGRP == "partition") {
-        fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
+        fEquiv=[&TheGRPrelevant,&MProc,&TheId,&WMat](SimpleOrbitFacet<T,Tgroup> const& x, SimpleOrbitFacet<T,Tgroup> const& y) -> std::optional<Telt> {
           std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
           startloc = std::chrono::system_clock::now();
           auto eReply=TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
@@ -468,11 +468,11 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           }
           return eReply;
         };
-        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
+        GetRecord=[&](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T,Tgroup>> {
           Tgroup TheStab=TheGRPrelevant.Stabilizer_OnSets(eOrb);
           int siz=eOrb.count();
           Tint eOrbitSize=TheGRPrelevant.size() / TheStab.size();
-          SimpleOrbitFacet<T> eOrbF{eOrb};
+          SimpleOrbitFacet<T,Tgroup> eOrbF{eOrb};
           size_t eHash=GetLocalInvariantWeightMatrix(WMat, eOrb);
           SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
           return {eOrbF, eInv};
@@ -480,27 +480,39 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       }
       if (ansGRP == "exhaustive") {
         // we choose here to discard the element realizing the equivalence
-        fEquiv=[&](SimpleOrbitFacet<T> const& x, SimpleOrbitFacet<T> const& y) -> std::optional<Telt> {
+        fEquiv=[&](SimpleOrbitFacet<T,Tgroup> const& x, SimpleOrbitFacet<T,Tgroup> const& y) -> std::optional<Telt> {
           if (x.eRepr == y.eRepr) {
             return Telt();
           }
           return {};
         };
-        OrbitMinimumArr<Tint> ArrMin=GetInitialMinimumArray(TheGRPrelevant);
-        GetRecord=[ArrMin](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T>> {
-          ResultMinimum<Tint> ResMin=GetMinimumRecord(ArrMin, eOrb);
+        GetRecord=[TheGRPrelevant](Face const& eOrb, std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T,Tgroup>> {
+          Face eFaceMin = eOrb;
+          Tint n_match = 0;
+          for (auto & eElt : TheGRPrelevant) {
+            Face eFaceImg = OnFace(eOrb, eElt);
+            if (eFaceImg < eFaceMin) {
+              eFaceMin = eFaceImg;
+              n_match = 1;
+            } else {
+              if (eFaceMin == eFaceImg) {
+                n_match++;
+              }
+            }
+          }
+          Tint OrbSize = TheGRPrelevant.size() / n_match;
           int siz=eOrb.count();
-          SimpleOrbitFacet<T> eOrbF{ResMin.eMin};
-          SimpleOrbitFacetInv<T> eInv{siz, ResMin.OrbitSize, {}};
+          SimpleOrbitFacet<T,Tgroup> eOrbF{eFaceMin};
+          SimpleOrbitFacetInv<T> eInv{siz, OrbSize, {}};
           return {eOrbF, eInv};
         };
       }
       bool Saving=AllArr.Saving;
       bool eMemory=AllArr.eMemory;
-      NewEnumerationWork<SimpleOrbitFacet<T>> ListOrbit(Saving, eMemory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
+      NewEnumerationWork<SimpleOrbitFacet<T,Tgroup>> ListOrbit(Saving, eMemory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
       mpz_class TotalNumberFacet=0;
       auto FuncInsert=[&](Face const& eOrb, std::ostream &os) -> int {
-        PairT_Tinv<SimpleOrbitFacet<T>> eRec=GetRecord(eOrb,os);
+        PairT_Tinv<SimpleOrbitFacet<T,Tgroup>> eRec=GetRecord(eOrb,os);
         int eVal=ListOrbit.InsertEntry(eRec, os);
         if (eVal == -1)
           TotalNumberFacet += eRec.xInv.eOrbitSize;
@@ -624,7 +636,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       }
       vectface ListOrbitFaces(EXT.rows());
       for (int iOF=0; iOF<nbOrbitFacet; iOF++) {
-        SimpleOrbitFacet<T> x=ListOrbit.GetRepresentative(iOF);
+        SimpleOrbitFacet<T,Tgroup> x=ListOrbit.GetRepresentative(iOF);
         ListOrbitFaces.push_back(x.eRepr);
       }
       ListOrbit.FuncClear();
@@ -651,16 +663,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     MProc.GetO(TheId) << "BANK work, step 6\n";
   }
   MProc.GetO(TheId) << "Bank entry processed\n";
-  auto get_split_dd=[&]() -> vectface {
-    if (ansSymm == "yes") {
-      MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
-      return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, MProc.GetO(TheId));
-    } else
-      return ListOrbitFaces;
-  };
-  vectface ListOrbitReturn = get_split_dd();
-  MProc.GetO(TheId) << "Return list has been computed\n";
-  return ListOrbitReturn;
+  if (ansSymm == "yes") {
+    MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size() << " |GRP|=" << GRP.size() << "\n";
+    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, MProc.GetO(TheId));
+  } else {
+    return ListOrbitFaces;
+  }
 }
 
 

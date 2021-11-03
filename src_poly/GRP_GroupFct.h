@@ -763,7 +763,4 @@ std::vector<std::pair<Face, typename Tgroup::Telt>> FindContainingOrbit(Tgroup c
 }
 
 
-
-
-
 #endif

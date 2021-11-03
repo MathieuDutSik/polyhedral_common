@@ -2,6 +2,7 @@
 #include "QuadField.h"
 #include "Temp_PerfectForm.h"
 
+
 typedef QuadField<mpq_class,2> field;
 
 int main(int argc, char *argv[])

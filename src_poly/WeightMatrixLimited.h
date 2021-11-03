@@ -3,7 +3,7 @@
 
 
 #include "GRP_GroupFct.h"
-#include "Permutation.h"
+
 
 
 
@@ -387,8 +387,7 @@ public:
       std::cerr << "siz=" << siz << " shift=" << shift << "\n";
       std::cerr << "siz_B=" << siz_B << " shift_B=" << shift_B << "\n";
       std::cerr << "len=" << len << " pos=" << pos << "\n";
-      using TeltBis = permutalib::SingleSidedPerm<size_t>;
-      std::vector<TeltBis> LGenMap;
+      std::vector<Telt> LGenMap;
       for (auto & eGen : LGen) {
         std::vector<size_t> eList(len);
         for (size_t u=0; u<len; u++) {
@@ -408,7 +407,7 @@ public:
           eList[u] = u_img;
         }
         //        std::cerr << "CheckList(eList)=" << permutalib::CheckList(eList) << "\n";
-        TeltBis eGB(eList);
+        Telt eGB(eList);
         LGenMap.emplace_back(std::move(eGB));
       }
       std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf_b)\n";
