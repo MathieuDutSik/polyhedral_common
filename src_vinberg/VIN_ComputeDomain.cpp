@@ -8,8 +8,8 @@
 int main(int argc, char* argv[])
 {
   try {
-    if (argc != 3 && argc != 2) {
-      std::cerr << "VIN_ComputeDomain [FileI] [FileO]\n";
+    if (argc != 4 && argc != 2) {
+      std::cerr << "VIN_ComputeDomain [FileI] [mode] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "VIN_ComputeDomain [FileI]\n";
       throw TerminalException{1};
@@ -30,12 +30,15 @@ int main(int argc, char* argv[])
     std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
     DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G);
     //
+    std::string mode = "text";
     if (argc == 2) {
-      Print_DataReflectionGroup(data, std::cerr);
+      Print_DataReflectionGroup(data, mode, std::cerr);
     } else {
-      std::string FileO = argv[2];
+      mode = argv[2];
+      //
+      std::string FileO = argv[3];
       std::ofstream os(FileO);
-      Print_DataReflectionGroup(data, os);
+      Print_DataReflectionGroup(data, mode, os);
     }
   }
   catch (TerminalException const& e) {

@@ -983,7 +983,7 @@ DataReflectionGroup<T,Tint> GetDataReflectionGroup(const std::vector<MyVector<Ti
 
 
 template<typename T, typename Tint>
-void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
+void Print_DataReflectionGroup_TXT(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
 {
   size_t n_root = data.ListRoot.size();
   os << "|ListRoot|=" << n_root << "\n";
@@ -995,6 +995,35 @@ void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, std::ost
   WriteMatrix(os, data.M);
   os << "Cos=\n";
   WriteMatrix(os, data.Cos);
+}
+
+template<typename T, typename Tint>
+void Print_DataReflectionGroup_GAP(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
+{
+  os << "return rec(ListRoot:=";
+  MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(data.ListRoot);
+  WriteMatrixGAP(os, MatRoot);
+  os << ", G:=";
+  WriteMatrixGAP(os, data.G);
+  os << ", M:=";
+  WriteMatrixGAP(os, data.M);
+  os << ", Cos:=";
+  WriteMatrixGAP(os, data.Cos);
+  os << ");\n";
+}
+
+
+
+
+template<typename T, typename Tint>
+void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, const std::string& mode, std::ostream& os)
+{
+  if (mode == "txt")
+    return Print_DataReflectionGroup_TXT(data, os);
+  if (mode == "gap")
+    return Print_DataReflectionGroup_GAP(data, os);
+  std::cerr << "Failed to find matching entry\n";
+  throw TerminalException{1};
 }
 
 
