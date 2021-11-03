@@ -1,9 +1,9 @@
-#PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox
+PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_InvariantZBasisShortVectorNoGroup
 #PROGRAM		= CheckPositiveSemiDefinite
 #PROGRAM		= LATT_canonicalizeMultiple
 #PROGRAM		= LATT_canonicalizeSymplectic
 #PROGRAM		= sv_exact
-PROGRAM		= LATT_InvariantZBasisShortVectorNoGroup
+#PROGRAM		= LATT_InvariantZBasisShortVectorNoGroup
 
 
 OBJECTS		= $(PROGRAM:%=%.o)

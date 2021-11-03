@@ -412,7 +412,7 @@ int computeIt_polytope(const T_shvec_request<T>& request, const T&bound, const M
     Vminimize(1+i) = 1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize);
     if (eSol.DualDefined && eSol.PrimalDefined) { // Well defined so we get a potential lower bound
-      Tint eLow = UniversalScalarConversion<Tint,T>(Ceil(eSol.OptimalValue));
+      Tint eLow = UniversalCeilScalarInteger<Tint,T>(eSol.OptimalValue);
       if (eLow > lower)
         lower = eLow;
     }
@@ -426,7 +426,7 @@ int computeIt_polytope(const T_shvec_request<T>& request, const T&bound, const M
     Vminimize(1+i) = -1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize);
     if (eSol.DualDefined && eSol.PrimalDefined) { // Well defined so we get a potential upper bound
-      Tint eUpp = UniversalScalarConversion<Tint,T>(Floor( - eSol.OptimalValue));
+      Tint eUpp = UniversalFloorScalarInteger<Tint,T>(- eSol.OptimalValue);
       if (eUpp < upper)
         upper = eUpp;
     }
