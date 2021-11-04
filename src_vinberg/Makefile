@@ -1,6 +1,7 @@
 #PROGRAM		= VIN_FindSpecificDistance
-PROGRAM		= VIN_ComputeDomain
-#PROGRAM		= TEST_Anisotropic
+PROGRAM		= VIN_ComputeDomain TEST_Anisotropic
+#PROGRAM		= VIN_ComputeDomain
+#PROGRAM		=
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

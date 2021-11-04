@@ -46,7 +46,7 @@ std::optional<Telt> TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> cons
     return {};
   std::vector<Tidx> eList(n);
   for (size_t i=0; i<n; i++) {
-    int eVal=test.TheEquiv.at(i);
+    Tidx eVal=OnPoints(i, *test);
     eList[i] = eVal;
   }
   return Telt(std::move(eList));

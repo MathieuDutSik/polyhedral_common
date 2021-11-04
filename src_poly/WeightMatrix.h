@@ -1395,7 +1395,7 @@ std::optional<Telt> GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T, Tidx_v
   size_t nbSHV=WMat1.rows();
   std::vector<Tidx> v(nbSHV);
   for (size_t i=0; i<nbSHV; i++)
-    v[i]=eResEquiv.TheEquiv.at(i);
+    v[i]=OnPoints(i, *eResEquiv);
   return Telt(std::move(v));
 }
 

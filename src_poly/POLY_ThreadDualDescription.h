@@ -124,7 +124,7 @@ std::istream& operator>>(std::istream& is, PolyhedralEntry<T,Tgroup>& obj)
   Tgroup GRP=ReadGroup<Tgroup>(is);
   vectface ListFace=ReadListFace(is);
   //
-  obj={EXT, GRP, ListFace};
+  obj={EXT, GRP, std::move(ListFace)};
   return is;
 }
 

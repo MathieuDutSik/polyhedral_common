@@ -151,7 +151,7 @@ public:
     os << "DataBank.ProcessRequest, step 3\n";
     if (eEquiv.iEntry != -1) {
       T fEnt=GetEntry(eEquiv.iEntry);
-      return {true, fEnt, eEquiv.TheEquiv};
+      return {true, std::move(fEnt), eEquiv.TheEquiv};
     }
     os << "DataBank.ProcessRequest, step 4\n";
     return {false, {}, {}};

@@ -782,7 +782,7 @@ std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   if (!eResEquiv) {
     return {};
   }
-  MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
+  MyMatrix<T> M3=RepresentVertexPermutation(T_SHV1, T_SHV2, *eResEquiv);
   if (IsIntegralMatrix(M3)) {
     MyMatrix<Tint> eMatEquiv=UniversalMatrixConversion<Tint,T>(M3);
     return eMatEquiv;
@@ -808,21 +808,21 @@ std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
     return true;
   };
   auto ConvertEquiv=[](std::optional<MyMatrix<T>> const& eEq) -> std::optional<MyMatrix<Tint>> {
-    if (!eEq.TheReply)
+    if (!eEq)
       return {};
-    MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(eEq.TheEquiv);
+    MyMatrix<Tint> eMat_I=UniversalMatrixConversion<Tint,T>(*eEq);
     return eMat_I;
   };
   Tgroup GRP1=GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {
-    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv, IsMatrixCorrect));
+    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, *eResEquiv, IsMatrixCorrect));
   } else {
-    std::optional<MyMatrix<T>> fResEquiv=LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv);
+    std::optional<MyMatrix<T>> fResEquiv=LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1, *eResEquiv);
     if (!fResEquiv)
       return {};
-    if (IsMatrixCorrect(fResEquiv.TheEquiv))
+    if (IsMatrixCorrect(*fResEquiv))
       return ConvertEquiv(fResEquiv);
-    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, eResEquiv.TheEquiv, IsMatrixCorrect));
+    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(T_SHV1, T_SHV2, GRP1, *eResEquiv, IsMatrixCorrect));
   }
 }
 
