@@ -652,8 +652,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
-      std::pair<bool,Telt> eRes=GrpInf.GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
-      if (!eRes.first) {
+      std::optional<Telt> eRes=GrpInf.GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
+      if (!eRes) {
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "Exit while loop with proof that no equivalence exists\n";
 #endif
@@ -661,7 +661,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       }
       GRPwork = GetNewGRPwork(GrpInf, eFace2);
       //
-      MyMatrix<T> eMat=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, eRes.second);
+      MyMatrix<T> eMat=FindTransformation(GRPmatr.EXTfaithAct, GRPmatr.EXTfaithAct, *eRes);
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "eMat=\n";
       WriteMatrix(std::cerr, eMat);

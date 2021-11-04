@@ -75,6 +75,7 @@ struct PolyhedralEntry {
 template<typename T, typename Tgroup>
 PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> const& eEnt, std::ostream & os)
 {
+  using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
   MyMatrix<T> EXTred=ColumnReduction(eEnt.EXT);
@@ -96,7 +97,7 @@ PolyhedralEntry<T,Tgroup> CanonicalizationPolyEntry(PolyhedralEntry<T,Tgroup> co
     size_t eHash=GetLocalInvariantWeightMatrix(WMatInt, eFace);
     for (auto & eRec : ListLocal)
       if (eRec.eHash == eHash) {
-	bool test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace).first;
+        std::optional<Telt> test=GRPlin.RepresentativeAction_OnSets(eFace, eRec.eFace);
 	if (test)
 	  return;
       }

@@ -380,8 +380,9 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 template<typename Tgroup>
 void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, vectface &ListListSet)
 {
+  using Telt = typename Tgroup::Telt;
   for (auto & fList : ListListSet) {
-    bool test=TheGRP.RepresentativeAction_OnSets(eList, fList).first;
+    std::optional<Telt> test=TheGRP.RepresentativeAction_OnSets(eList, fList);
     if (test)
       return;
   }
@@ -396,10 +397,11 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
 				  vectface & ListSet,
 				  std::vector<std::vector<int>> & ListInv)
 {
+  using Telt = typename Tgroup::Telt;
   size_t nb=ListSet.size();
   for (size_t iList=0; iList<nb; iList++)
     if (eInv == ListInv[iList]) {
-      bool test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]).first;
+      std::optional<Telt> test=TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]);
       if (test)
 	return;
     }

@@ -1519,7 +1519,10 @@ vectface DUALDESC_AdjacencyDecomposition(
       if (ansChosenDatabase == "repr") {
         WeightMatrix<true,int,Tidx_value> WMat=WeightMatrixFromPairOrbits<Tgroup,Tidx_value>(TheGRPrelevant);
         auto f_repr=[&](const Face& f1, const Face& f2) -> bool {
-          return TheGRPrelevant.RepresentativeAction_OnSets(f1, f2).first;
+          auto test = TheGRPrelevant.RepresentativeAction_OnSets(f1, f2);
+          if (test)
+            return true;
+          return false;
         };
         auto f_stab=[&](const Face& f) -> Tgroup {
           return TheGRPrelevant.Stabilizer_OnSets(f);

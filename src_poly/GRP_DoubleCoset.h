@@ -29,7 +29,7 @@ vectface DoubleCosetDescription_Representation(Tgroup const& BigGRP, Tgroup cons
   auto DoubleCosetInsertEntry=[&](Face const& testList) -> void {
     size_t eInv=GetLocalInvariantWeightMatrix(WMat, testList);
     for (auto const& fLocal : ListLocal) {
-      bool test = SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList).first;
+      std::optional<Telt> test = SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList);
       if (test)
 	return;
     }

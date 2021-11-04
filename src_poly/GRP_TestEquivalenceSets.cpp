@@ -27,9 +27,12 @@ int main(int argc, char *argv[])
     std::ifstream is2(argv[2]);
     vectface ListFace=ReadListFace(is2);
     //
-    std::pair<bool,Telt> eReply=GRP.RepresentativeAction_OnSets(ListFace[0], ListFace[1]);
+    std::optional<Telt> eReply=GRP.RepresentativeAction_OnSets(ListFace[0], ListFace[1]);
     //
-    std::cerr << "result=" << eReply.second << "\n";
+    if (eReply)
+      std::cerr << "result=true\n";
+    else
+      std::cerr << "result=false\n";
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
