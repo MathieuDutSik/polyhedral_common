@@ -120,11 +120,12 @@ template<typename T, typename Tint, typename Tgroup>
 Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T,Tint> const& eNaked, Tgroup const& GRPshv)
 {
   using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
   int nbBlock=eNaked.ListBlock.size();
   std::vector<Telt> ListGen;
   std::vector<Telt> LGen = GRPshv.GeneratorsOfGroup();
   for (auto & eGen : LGen) {
-    std::vector<int> v(nbBlock);
+    std::vector<Tidx> v(nbBlock);
     for (int iBlock=0; iBlock<nbBlock; iBlock++) {
       int iSHV=eNaked.ListBlock[iBlock][0];
       int jSHV=OnPoints(iSHV, eGen);

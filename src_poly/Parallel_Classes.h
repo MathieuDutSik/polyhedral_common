@@ -106,7 +106,7 @@ public:
 	  if (MinSize == -1 || eSize < MinSize)
 	    MinSize=eSize;
 	  if (FullDataInMemory)
-	    ListDat.push_back(eEnt);
+	    ListDat.emplace_back(std::move(eEnt));
 	  //
 	  std::ifstream isI(FileSaveINV);
 	  Tinv eInv;
@@ -190,12 +190,6 @@ public:
       if (fEquiv.iEntry != -1)
 	return;
       int eSize=FctSize(eEnt);
-      if (eSize < MinSize)
-	MinSize=eSize;
-      if (FullDataInMemory)
-	ListDat.push_back(eEnt);
-      ListInv.push_back(eInv);
-      nbEntry=ListInv.size();
       if (IsSaving) {
 	std::string FileSaveDAT=ThePrefix + "BankEntryDAT_" + IntToString(nbEntry);
 	std::ofstream osT(FileSaveDAT);
@@ -203,8 +197,14 @@ public:
 	//
 	std::string FileSaveINV=ThePrefix + "BankEntryINV_" + IntToString(nbEntry);
 	std::ofstream osI(FileSaveINV);
-	osI << eEnt;
+	osI << eInv;
       }
+      if (eSize < MinSize)
+	MinSize=eSize;
+      if (FullDataInMemory)
+	ListDat.emplace_back(std::move(eEnt));
+      ListInv.push_back(eInv);
+      nbEntry=ListInv.size();
     }
   }
 private:

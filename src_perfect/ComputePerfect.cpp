@@ -1,5 +1,8 @@
 #include "Permlib_specific.h"
 #include "Temp_PerfectForm.h"
+#include "Permutation.h"
+#include "Group.h"
+
 int main(int argc, char *argv[])
 {
   try {
@@ -13,9 +16,11 @@ int main(int argc, char *argv[])
       NAMELIST_WriteNamelistFile(std::cerr, eFull);
       return -1;
     }
+    using Tidx = uint32_t;
     using T=mpq_class;
     using Tint=mpz_class;
-    using Tgroup=TheGroupFormat<mpz_class>;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,Tint>;
     //
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);

@@ -4,6 +4,7 @@
 #include "Basic_string.h"
 #include "Basic_file.h"
 #include "Namelist.h"
+#include "GRP_DoubleCoset.h"
 
 #include "POLY_Heuristics.h"
 
