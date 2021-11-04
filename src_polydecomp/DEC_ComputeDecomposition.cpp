@@ -324,10 +324,10 @@ std::optional<MyMatrix<Tint>> test_equiv_ent_face(std::vector<ConeDesc<T,Tint,Tg
     return {};
   size_t iC = ef1.iCone;
   const ConeDesc<T,Tint,Tgroup>& eC = ListCones[iC];
-  std::pair<bool,Telt> test = eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
-  if (!test.first)
+  std::optional<Telt> test = eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
+  if (!test)
     return {};
-  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, test.second);
+  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, *test);
   MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint,T>(eMat_T);
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
