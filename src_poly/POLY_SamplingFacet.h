@@ -228,14 +228,18 @@ vectface GetFullRankFacetSet(const MyMatrix<T>& EXT)
   };
   Face eSet = get_minincd();
   MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXTred, eSet));
+  std::cerr << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols() << " rnk=" << RankMat(EXTsel) << "\n";
   vectface ListRidge = GetFullRankFacetSet(EXTsel);
-  FlippingFramework<T> RPLlift(EXTsel, eSet);
+  std::cerr << "We have ListRidge\n";
+  FlippingFramework<T> RPLlift(EXTred, eSet);
+  std::cerr << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
   for (auto & eRidge : ListRidge) {
     Face eFace = RPLlift.Flip(eRidge);
     vf_ret.push_back(eFace);
   }
+  std::cerr << "We have vf_ret\n";
   return vf_ret;
 }
 

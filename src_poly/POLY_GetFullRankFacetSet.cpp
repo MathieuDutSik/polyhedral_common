@@ -13,10 +13,11 @@ int main(int argc, char *argv[])
     //
     std::ifstream is(argv[1]);
     using T=mpq_class;
-    MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
+    MyMatrix<T> EXT=ReadMatrix<T>(is);
     size_t n_rows = EXT.rows();
     //
     vectface ListFace = GetFullRankFacetSet(EXT);
+    std::cerr << "We have ListFace\n";
     //
     std::ofstream os(argv[2]);
     os << "return [";
@@ -34,6 +35,7 @@ int main(int argc, char *argv[])
           IsFirstB = false;
         }
       }
+      os << "]";
       IsFirst = false;
     }
     os << "];\n";
