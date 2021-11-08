@@ -4,7 +4,7 @@
 
 #include "POLY_PolytopeFct.h"
 #include "POLY_LinearProgramming.h"
-
+#include "POLY_lrslib.h"
 
 struct recSamplingOption {
   int critlevel;
@@ -181,5 +181,62 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string co
 }
 
 
+template<typename T>
+vectface GetFullRankFacetSet(const MyMatrix<T>& EXT)
+{
+  // Heuristic first, should work in many cases
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  size_t dim = EXTred.cols();
+  size_t n_rows = EXT.rows();
+  size_t nb = 10 * dim;
+  vectface ListSets = FindVertices(EXTred, nb);
+  std::unordered_set<Face> set_face;
+  for (auto & eFace : ListSets)
+    set_face.insert(eFace);
+  size_t n_face = set_face.size();
+  MyMatrix<T> FAC(n_face, dim);
+  size_t i_face=0;
+  for (auto & eFace : set_face) {
+    MyVector<T> V = FindFacetInequality(EXT, eFace);
+    AssignMatrixRow(FAC, i_face, V);
+    i_face++;
+  }
+  size_t rnk = RankMat(FAC);
+  std::cerr << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows << " rnk=" << rnk << " dim=" << dim <<  "\n";
+  if (rnk == dim) {
+    vectface vf(n_rows);
+    for (auto & eFace : set_face)
+      vf.push_back(eFace);
+    return vf;
+  }
+  // Otherwise we call recursively
+  std::cerr << "Failing, so calling the recursive algo\n";
+  auto get_minincd=[&]() -> Face {
+    size_t min_incd = std::numeric_limits<size_t>::max();
+    for (auto & eFace : set_face) {
+      size_t incd = eFace.count();
+      if (incd < min_incd)
+        min_incd = incd;
+    }
+    for (auto & eFace : set_face) {
+      size_t incd = eFace.count();
+      if (incd == min_incd)
+        return eFace;
+    }
+    std::cerr << "We should not reach that stage\n";
+    throw TerminalException{1};
+  };
+  Face eSet = get_minincd();
+  MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXTred, eSet));
+  vectface ListRidge = GetFullRankFacetSet(EXTsel);
+  FlippingFramework<T> RPLlift(EXTsel, eSet);
+  vectface vf_ret(n_rows);
+  vf_ret.push_back(eSet);
+  for (auto & eRidge : ListRidge) {
+    Face eFace = RPLlift.Flip(eRidge);
+    vf_ret.push_back(eFace);
+  }
+  return vf_ret;
+}
 
 #endif
