@@ -630,19 +630,14 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const& GramMat, T const&MaxNorm)
   int dim=GramMat.rows();
   if (dim == 1) {
     std::vector<MyVector<Tint>> ListVect;
-    MyVector<Tint> eVect(1);
-    eVect(0)=0;
-    ListVect.push_back(eVect);
     int idx=1;
     while (true) {
       T norm = idx*idx * GramMat(0,0);
       if (norm > MaxNorm)
 	break;
-      MyVector<Tint> eVect1(1), eVect2(1);
-      eVect1(0)=-idx;
-      eVect2(0)= idx;
+      MyVector<Tint> eVect1(1);
+      eVect1(0)= idx;
       ListVect.push_back(eVect1);
-      ListVect.push_back(eVect2);
       idx++;
     }
     return MatrixFromVectorFamily(ListVect);

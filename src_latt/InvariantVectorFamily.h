@@ -28,7 +28,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const& eMat, std::functi
   for (int iSHV=0; iSHV<nbSHV; iSHV++) {
     MyVector<Tint> eRow=GetMatrixRow(SHVall, iSHV);
     T eNorm=EvaluationQuadForm(eMat, eRow);
-    ListNorm[iSHV]=eNorm;
+    ListNorm[iSHV] = eNorm;
     if (eNorm > 0)
       SetNorm.insert(eNorm);
   }

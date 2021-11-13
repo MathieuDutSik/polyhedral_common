@@ -216,9 +216,6 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
     for (auto & eOrb : vf) {
       boost::dynamic_bitset<>::size_type MinVal=eOrb.find_first();
       size_t i_fac = MinVal;
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-      std::cerr << "  i_adj=" << i_adj << " i_fac=" << i_fac << "\n";
-#endif
       Face f_ext(n_ext);
       for (size_t i_ext=0; i_ext<n_ext; i_ext++)
         if (ListCones[i_domain].extfac_incd[i_fac * n_ext + i_ext] == 1)
@@ -229,6 +226,13 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
       Tent<T,Tint,Tidx_value> eEnt = f_ent<T,Tint,Tgroup,Tidx_value>(ListCones, G, fd);
       size_t hash = f_inv<T,Tint,Tgroup,Tidx_value>(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+      std::cerr << "  i_domain=" << i_domain << " i_adj=" << i_adj << " i_fac=" << i_fac << " |f_ext|=" << f_ext.count() << " hash=" << hash << "\n";
+      if (i_domain == 5 && f_ext.count() == 201) {
+        std::string FileO = "DEBUG_" + std::to_string(i_domain) + "_" + std::to_string(i_fac);
+        WriteMatrixGAPfile(FileO, e_ent_info.eEnt.M);
+      }
+#endif
       l_ent_info.emplace_back(std::move(e_ent_info));
       i_adj++;
     }
@@ -247,7 +251,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   auto get_reverting_transformation=[&](const Tent<T,Tint,Tidx_value> &eEnt) -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup,Tint> e_stab_info = f_stab<T,Tint,Tgroup,Tidx_value>(eEnt);
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-    std::cerr << "After f_stab call\n";
+    std::cerr << "After f_stab call |GRPfull|=" << e_stab_info.GRPfull.size() << " |GRPres|=" << e_stab_info.GRPres.size() << "\n";
 #endif
     MyVector<Tint> eSpann = GetFirstNonZeroVector(eEnt.Spann);
     for (auto& ePair : e_stab_info.ListGenMat) {
@@ -274,6 +278,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
         }
       }
     }
+    std::cerr << "a_ent: i_domain=" << a_ent.i_domain << " i_adj=" << a_ent.i_adj << "\n";
     std::cerr << "f_ext=" << a_ent.f_ext << " |f_ext|=" << a_ent.f_ext.count() << " / " << a_ent.f_ext.size() << "\n";
     std::cerr << "f_fac=" << StringFace(a_ent.eEnt.fd.f_fac) << " |f_act|=" << a_ent.eEnt.fd.f_fac.count() << " / " << a_ent.eEnt.fd.f_fac.size() << "\n";
     std::cerr << "M=\n";
@@ -287,6 +292,9 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(std::vector
   };
   auto get_sing_adj=[&](size_t const& i_domain, size_t const& i_adj) -> sing_adj<Tint> {
     const ent_info& e_ent = get_ent_info(i_domain, i_adj);
+#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+    std::cerr << "get_sing_adj i_domain=" << i_domain << " i_adj=" << i_adj << "\n";
+#endif
     std::optional<MyMatrix<Tint>> trans_opt = get_reverting_transformation(e_ent.eEnt);
     if (trans_opt) {
       return {i_domain, e_ent.f_ext, *trans_opt};
@@ -678,14 +686,23 @@ int main(int argc, char* argv[])
     for (size_t i=0; i<n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
+      size_t n_ext = EXT.rows();
       std::cerr << "We have read EXT, |EXT|=" << EXT.rows() << "/" << EXT.cols() << "\n";
       MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint,T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
+      size_t n_fac = FAC.rows();
       std::cerr << "We have read FAC, |FAC|=" << FAC.rows() << "/" << FAC.cols() << "\n";
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
       Tgroup GRP_fac = ReadGroup<Tgroup>(is);
       //
       Face extfac_incd = Compute_extfac_incd(FAC, EXT);
+      std::cerr << "List(|FAC|) =";
+      for (size_t iFac=0; iFac<n_fac; iFac++) {
+        Face f = GetFacet_extfac(extfac_incd, n_fac, n_ext, iFac);
+        TestFacetness(EXT, f);
+        std::cerr << " " << f.count();
+      }
+      std::cerr << "\n";
       Face facext_incd = Compute_facext(extfac_incd, FAC.rows(), EXT.rows());
       ConeDesc<T,Tint,Tgroup> eCone{EXT, EXT_i, FAC, extfac_incd, facext_incd, GRP_ext, GRP_fac};
       ListCones.push_back(eCone);

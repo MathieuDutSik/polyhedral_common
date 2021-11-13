@@ -17,7 +17,6 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
   shvec_info info;
   int dim=eMat.rows();
   double FudgeFact=1.1;
-  //  std::cerr << "T_ShortVector, step 1\n";
   if (dim == 1) {
     MyMatrix<Tint> TheSHV(2,1);
     TheSHV(0,0)=1;
@@ -29,7 +28,6 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
   double MaxNorm_d = UniversalScalarConversion<double,T>(MaxNorm);
   bound=MaxNorm_d*FudgeFact;
   mode = SHVEC_MODE_BOUND;
-  //  std::cerr << "T_ShortVector, step 2\n";
   doubleMakeSquareMatrix(dim, &gram_matrix);
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++) {
@@ -42,24 +40,19 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
     std::cerr << "Let us die now, it was nice so far...\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "T_ShortVector_double, step 3\n";
   request->ints.ComputeTheta=0;
   initShvecReq(dim, gram_matrix, NULL, check, request);
-  
+
   request->bound = bound;
   request->mode = mode;
   request->number = number;
-  //  std::cerr << "T_ShortVector_double, step 4\n";
   info = (shvec_info) malloc(sizeof(struct shvec_info_struct));
   if (info == NULL) {
     std::cerr << "Let us die now, it was nice so far...\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "T_ShortVector_double, step 5\n";
   initShvecInfo(info);
-  //  std::cerr << "T_ShortVector_double, step 6\n";
   computeShvec(request, info);
-  //  std::cerr << "T_ShortVector_double, step 7\n";
 
   int PreNbVect=info->short_vectors_number;
   std::vector<int> Status(PreNbVect);
@@ -76,7 +69,6 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
     }
     Status[i]=ePos;
   }
-  //  std::cerr << "T_ShortVector_double, step 8\n";
   MyMatrix<Tint> TheSHV(2*nbShort, dim);
   int idx=0;
   for (int iShort=0; iShort<PreNbVect; iShort++) {
@@ -89,17 +81,11 @@ MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const& eMat, T const&MaxNorm)
       idx++;
     }
   }
-  //  std::cerr << "T_ShortVector_double, step 9\n";
   destroyShvecInfo(info);
-  //  std::cerr << "T_ShortVector_double, step 10\n";
   destroyShvecReq(request);
-  //  std::cerr << "T_ShortVector_double, step 11\n";
   doubleDestroySquareMatrix(dim, &gram_matrix);
-  //  std::cerr << "T_ShortVector_double, step 12\n";
   free(request);
-  //  std::cerr << "T_ShortVector_double, step 13\n";
   free(info);
-  //  std::cerr << "T_ShortVector_double, step 14\n";
   return TheSHV;
 }
 

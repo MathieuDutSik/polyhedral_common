@@ -281,6 +281,16 @@ Face Compute_extfac_incd(const MyMatrix<T>& FAC, const MyMatrix<T>& EXT)
   return extfac_incd;
 }
 
+Face GetFacet_extfac(const Face& extfac_incd, size_t nbFac, size_t nbExt, size_t iFac)
+{
+  Face f(nbExt);
+  for (size_t iExt=0; iExt<nbExt; iExt++)
+    f[iExt] = extfac_incd[iFac * nbExt + iExt];
+  return f;
+}
+
+
+
 Face Compute_facext(const Face& extfac_incd, int nbFac, int nbExt)
 {
   Face facext_incd(nbFac * nbExt);
