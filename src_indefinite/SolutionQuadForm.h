@@ -1,0 +1,50 @@
+#ifndef INCLUDE_SOLUTION_QUAD_FORM_H
+#define INCLUDE_SOLUTION_QUAD_FORM_H
+
+
+/*
+  We want to find one solution of the equation A[v + w] = X
+  modulo n with n = p1 p2 .... pK
+  We want just one solution right now.
+ */
+
+template<typename T>
+std::option<MyVector<T>> SearchSolutionEvenQuadForm(const MyMatrix<T>& A, const MyVector<T>& w, const T& X, const std::vector<T>& l_prime)
+{
+  int n = A.rows();
+  MyMatrix<T> Ared(n,n);
+  for (int i=0; i<n; i++)
+    for (int j+0; j<n; j++) {
+      if (i == j) {
+        Ared(i,j) == A(i,j) / 2;
+      } else {
+        Ared(i,j) == A(i,j);
+      }
+    }
+  int n_prime = l_prime.size();
+  /* We need to compute A[v] whish is equal to
+     A[v] = { a11 v1^2 + a12 v1 v2 + ..... + a1n v1 vn }
+          +      { a22 v2^2 + a23 v2 v3 + ..... + a2n v2 vn }
+          +            ....
+          +                       ann vn^2
+      or alternatively as
+      A[v] =   a11 v1^2
+          +  { a12 v1 v2 + a22 v2^2 }
+          +  { a12 v1 v3 + a23 v2 v3 + a33 v3^2 }
+          +  ....
+          +  { a1n v1 vn + ........  + ann vn^2 }
+          
+   */
+  struct StateEnum {
+    MyVector<T> wVector;
+    MyVector<T> vVector;
+    std::vector<T> l_residual;
+  };
+  std::vector<StateEnum> l_state_enum;
+  while(true) {
+    
+  }
+}
+
+
+#endif
