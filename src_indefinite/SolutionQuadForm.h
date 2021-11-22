@@ -6,6 +6,10 @@
   We want to find one solution of the equation A[v + w] = X
   modulo n with n = p1 p2 .... pK
   We want just one solution right now.
+  ----
+  ----
+  CODE is unfinished since we found out that it is not needed.
+  If it were needed, we wuld need to finish that stub.
  */
 
 template<typename T>
@@ -27,22 +31,48 @@ std::option<MyVector<T>> SearchSolutionEvenQuadForm(const MyMatrix<T>& A, const 
           +      { a22 v2^2 + a23 v2 v3 + ..... + a2n v2 vn }
           +            ....
           +                       ann vn^2
-      or alternatively as
-      A[v] =   a11 v1^2
-          +  { a12 v1 v2 + a22 v2^2 }
-          +  { a12 v1 v3 + a23 v2 v3 + a33 v3^2 }
-          +  ....
-          +  { a1n v1 vn + ........  + ann vn^2 }
-          
+     or alternatively as
+     A[v] =   a11 v1^2
+         +  { a12 v1 v2 + a22 v2^2 }
+         +  { a12 v1 v3 + a23 v2 v3 + a33 v3^2 }
+         +  ....
+         +  { a1n v1 vn + ........  + ann vn^2 }
+     The list of residual is defined 
+     l_residual[Ø] = a11 v1^2
+     ..
+     l_residual[n-1] = a11 v1^2 + ..... + { a1n v1 vn + ........  + ann vn^2 }
    */
+  std::vector<T> l_product;
+  T val = 1;
+  for (int i_prime=0; i_prime<n_prime; <
   struct StateEnum {
     MyVector<T> wVector;
     MyVector<T> vVector;
-    std::vector<T> l_residual;
+    MyVector<T> l_residual;
   };
   std::vector<StateEnum> l_state_enum;
-  while(true) {
+  for (int i_prime=0; i_prime<n_prime; i_prime++) {
+    StateEnum state{ZeroVector<T>(n), ZeroVector<T>(n), ZeroVector<T>(n)};
+    l_state_enum.push_back(state);
+  }
+  int pos = -1;
+  auto GoDown=[&]() -> void {
+    if (pos == -1) {
+      pos++;
+      for (int i=0; i<n; i++)
+        l_state_enum[pos].wVector(i) = w(i);
+    } else {
+      pos++;
+      for (int i=0; i<n; i++)
+        l_state_enum[pos].wVector(i) = w(i);
+    }
     
+    
+  };
+       
+         
+  while(true) {
+    if 
   }
 }
 
