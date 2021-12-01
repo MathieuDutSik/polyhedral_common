@@ -38,7 +38,7 @@ PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const& SHV,
 
 
 template<typename T,typename Tint>
-TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& eMat)
+TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& eMat, MyMatrix<Tint> const& InitialBasis)
 {
   if (!IsSymmetricMatrix(eMat)) {
     std::cerr << "The matrix should be symmetric\n";
@@ -52,19 +52,19 @@ TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& e
   std::cerr << "eMatExpr=";
   WriteVector(std::cerr, eMatExpr);
   //
-  std::function<bool(MyMatrix<T>)> IsAdmissible=[](MyMatrix<T> const& eMatI) -> bool {
+  std::function<bool(MyMatrix<T>)> IsAdmissible=[&](MyMatrix<T> const& eMatI) -> bool {
     CopositivityEnumResult<Tint> CopoRes;
     T MaxNorm=1;
     RequestCopositivity<T> CopoReq{MaxNorm, true};
     std::cerr << "Case 1 eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
-    CopoRes=EnumerateCopositiveShortVector<T,Tint>(eMatI, CopoReq);
+    CopoRes=EnumerateCopositiveShortVector<T,Tint>(eMatI, InitialBasis, CopoReq);
     return CopoRes.test;
   };
-  std::function<Tshortest<T,Tint>(MyMatrix<T>)> ShortestFunction=[](MyMatrix<T> const& eMatI) -> Tshortest<T,Tint> {
+  std::function<Tshortest<T,Tint>(MyMatrix<T>)> ShortestFunction=[&](MyMatrix<T> const& eMatI) -> Tshortest<T,Tint> {
     std::cerr << "Case 2 eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
-    return T_CopositiveShortestVector<T,Tint>(eMatI);
+    return T_CopositiveShortestVector<T,Tint>(eMatI, InitialBasis);
   };
   RecShort<T,Tint> eRecShort{IsAdmissible, ShortestFunction};
   MyMatrix<T> SearchMatrix=AnLattice<T>(n) / T(2);
@@ -72,7 +72,7 @@ TestStrictPositivity<T,Tint> TestingAttemptStrictPositivity(MyMatrix<T> const& e
   while(true) {
     nbIter++;
     //    std::cerr << "Before CopositiveShortestVector nbIter=" << nbIter << "\n";
-    Tshortest<T,Tint> RecSHV=T_CopositiveShortestVector<T,Tint>(SearchMatrix);
+    Tshortest<T,Tint> RecSHV=T_CopositiveShortestVector<T,Tint>(SearchMatrix, InitialBasis);
     //    std::cerr << "Before GetNakedPerfectCone nbIter=" << nbIter << "\n";
     NakedPerfect<T,Tint> eNaked=GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV);
     int nbBlock=eNaked.ListBlock.size();

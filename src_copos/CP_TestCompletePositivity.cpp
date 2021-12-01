@@ -2,10 +2,12 @@
 int main(int argc, char *argv[])
 {
   try {
-    if (argc != 2) {
+    if (argc != 2 || argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCompletePositivity [eMat]\n";
+      std::cerr << "or\n";
+      std::cerr << "CP_TestCompletePositivity [eMat] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
       std::cerr << "If completely positive, we return an expression of it using integral vector\n";
@@ -20,7 +22,13 @@ int main(int argc, char *argv[])
     std::ifstream SYMMfs(argv[1]);
     MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
     //
-    TestStrictPositivity<T,Tint> StrictPos = TestingAttemptStrictPositivity<T,Tint>(eSymmMat);
+    MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
+    if (argc == 3) {
+      std::ifstream InitBas(argv[2]);
+      InitialBasis = ReadMatrix<Tint>(InitBas);
+    }
+    //
+    TestStrictPositivity<T,Tint> StrictPos = TestingAttemptStrictPositivity<T,Tint>(eSymmMat, InitialBasis);
     WriteStrictPositivityResult(std::cerr, StrictPos);
     std::cerr << "Normal completion of the program\n";
   }

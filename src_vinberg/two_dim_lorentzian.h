@@ -13,6 +13,7 @@
   ---"spacelike" have positive norm
 
   R k is the boundary of the half plane.
+  k has N(k) <= 0
 
   S is a set of vectors of posiive norm.
   What means "l must not lie in the interior of the
