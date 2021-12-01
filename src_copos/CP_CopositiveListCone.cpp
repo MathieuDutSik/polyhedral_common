@@ -17,8 +17,7 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    std::ifstream SYMMfs(argv[1]);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     //
     int MaxNorm_i;
     sscanf(argv[2], "%d", &MaxNorm_i);

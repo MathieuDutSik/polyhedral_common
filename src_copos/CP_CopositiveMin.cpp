@@ -21,16 +21,13 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    std::ifstream SYMMfs(argv[1]);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     std::cerr << "eSymmMat=\n";
     WriteMatrix(std::cerr, eSymmMat);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 4) {
-      std::ifstream InitBas(argv[3]);
-      InitialBasis = ReadMatrix<Tint>(InitBas);
-    }
+    if (argc == 4)
+      InitialBasis = ReadMatrixFile<Tint>(argv[3]);
     //
     int MaxNorm_i;
     sscanf(argv[2], "%d", &MaxNorm_i);

@@ -20,23 +20,15 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    std::string eFile=argv[1];
-    if (!IsExistingFile(eFile)) {
-      std::cerr << "File eFile=" << eFile << " is missing\n";
-      throw TerminalException{1};
-    }
     using T=mpq_class;
     using Tint=int;
-    std::ifstream SYMMfs(eFile);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     std::cerr << "eSymmMat=\n";
     WriteMatrix(std::cerr, eSymmMat);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3) {
-      std::ifstream InitBas(argv[2]);
-      InitialBasis = ReadMatrix<Tint>(InitBas);
-    }
+    if (argc == 3)
+      InitialBasis = ReadMatrixFile<Tint>(argv[2]);
     //
     Tshortest<T,Tint> eSh = T_CopositiveShortestVector<T,Tint>(eSymmMat, InitialBasis);
     std::cerr << "eMin=" << eSh.eMin << "\n";

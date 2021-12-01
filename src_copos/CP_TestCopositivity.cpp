@@ -24,21 +24,13 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     using Tint=int;
     //
-    std::string eFile=argv[1];
-    if (!IsExistingFile(eFile)) {
-      std::cerr << "File eFile=" << eFile << " is missing\n";
-      throw TerminalException{1};
-    }
-    std::ifstream SYMMfs(eFile);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     std::cerr << "eSymmMat=\n";
     WriteMatrix(std::cerr, eSymmMat);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3) {
-      std::ifstream InitBas(argv[2]);
-      InitialBasis = ReadMatrix<Tint>(InitBas);
-    }
+    if (argc == 3)
+      InitialBasis = ReadMatrixFile<Tint>(argv[2]);
     //
     SingleTestResult<Tint> eResult = TestCopositivity<T,Tint>(eSymmMat, InitialBasis);
     if (eResult.test) {

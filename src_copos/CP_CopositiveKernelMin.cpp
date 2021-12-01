@@ -16,24 +16,12 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    std::string eFile1=argv[1];
-    if (!IsExistingFile(eFile1)) {
-      std::cerr << "The file eFile1=" << eFile1 << " is missing\n";
-      throw TerminalException{1};
-    }
     using T=mpq_class;
     using Tint=mpz_class;
     //
-    std::ifstream SYMMfs(eFile1);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     //
-    std::string eFile2=argv[2];
-    if (!IsExistingFile(eFile2)) {
-      std::cerr << "The file eFile2=" << eFile2 << " is missing\n";
-      throw TerminalException{1};
-    }
-    std::ifstream BASfs(eFile2);
-    MyMatrix<Tint> TheBasis=ReadMatrix<Tint>(BASfs);
+    MyMatrix<Tint> TheBasis=ReadMatrixFile<Tint>(argv[2]);
     //
     int MaxNorm_i;
     sscanf(argv[3], "%d", &MaxNorm_i);

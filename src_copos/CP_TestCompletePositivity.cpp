@@ -19,14 +19,11 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    std::ifstream SYMMfs(argv[1]);
-    MyMatrix<T> eSymmMat=ReadMatrix<T>(SYMMfs);
+    MyMatrix<T> eSymmMat=ReadMatrixFile<T>(argv[1]);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3) {
-      std::ifstream InitBas(argv[2]);
-      InitialBasis = ReadMatrix<Tint>(InitBas);
-    }
+    if (argc == 3)
+      InitialBasis = ReadMatrixFile<Tint>(argv[2]);
     //
     TestStrictPositivity<T,Tint> StrictPos = TestingAttemptStrictPositivity<T,Tint>(eSymmMat, InitialBasis);
     WriteStrictPositivityResult(std::cerr, StrictPos);
