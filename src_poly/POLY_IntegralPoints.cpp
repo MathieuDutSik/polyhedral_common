@@ -4,10 +4,12 @@
 int main(int argc, char *argv[])
 {
   try {
+    using T=mpq_class;
+    using Tint=int;
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "TestStrictPositivity [FAC] [EXT] [OUT]\n";
+      std::cerr << "POLY_IntegralPoints [FAC] [EXT] [OUT]\n";
       std::cerr << "\n";
       std::cerr << "FAC: list of facets (IN)\n";
       std::cerr << "EXT: list of vertices (IN)\n";
@@ -17,13 +19,9 @@ int main(int argc, char *argv[])
     //
     //  std::cerr << "Reading input\n";
     //
-    std::ifstream isFAC(argv[1]);
-    using T=mpq_class;
-    using Tint=int;
-    MyMatrix<T> FAC=ReadMatrix<T>(isFAC);
+    MyMatrix<T> FAC=ReadMatrixFile<T>(argv[1]);
     //
-    std::ifstream isEXT(argv[2]);
-    MyMatrix<T> EXT=ReadMatrix<T>(isEXT);
+    MyMatrix<T> EXT=ReadMatrixFile<T>(argv[2]);
     //
     std::vector<MyVector<Tint>> ListPoint = GetListIntegralPoint<T,Tint>(FAC, EXT);
     //
