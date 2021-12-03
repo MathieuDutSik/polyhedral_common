@@ -21,6 +21,10 @@
 
  */
 
+#define DEBUG_TWO_DIM_LORENTZIAN
+//#undef DEBUG_TWO_DIM_LORENTZIAN
+
+
 template<typename T, typename Tint>
 T eval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
 {
@@ -28,18 +32,50 @@ T eval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
 }
 
 
+template<typename Tint>
+Tint det_two(const MyVector<Tint>& r, const MyVector<Tint>& l)
+{
+  return r(0) * l(1) - r(1) * l(0);
+}
+
 
 template<typename T, typename Tint>
 std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
 {
   MyVector<Tint> m = r + l;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  T norm_rr = eval(G, r, r);
+  if (norm_rr <= 0) {
+    std::cerr << "norm_rr=" << norm_rr << "\n";
+    std::cerr << "The vector r must be of positive norm\n";
+    throw TerminalException{1};
+  }
+  Tint det = det_two(r,l);
+  if (det != 1) {
+    std::cerr << "det=" << det << "\n";
+    std::cerr << "The configuration of vectors should satisfy det(r,l) = 1\n";
+    throw TerminalException{1};
+  }
+  T norm_ll = eval(G, l, l);
+  if (norm_ll > M) {
+    std::cerr << "norm_ll=" << norm_ll << " M=" << M << "\n";
+    std::cerr << "l must not lie in the interior of the norm M hyperbola in S, that is its norm must not go above M\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval(G, l, l) << " det=" << det_two(r,l) << "\n";
   T norm_mm = eval(G, m, m);
   T scal_ml = eval(G, m, l);
-  if (norm_mm <= M || scal_ml < 0)
+  if (norm_mm <= M || scal_ml < 0) {
+    std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm << " scal_ml=" << scal_ml << "\n";
     return Promised(G, M, r, m);
-  if (eval(G, l, l) >= 0 && eval(G, r, l) > 0)
+  }
+  if (eval(G, l, l) >= 0 && eval(G, r, l) > 0) {
+    std::cerr << "Promised : Exiting at the Done\n";
     return {l, -r};
-  return Promised(G, M, m, r);
+  }
+  std::cerr << "Promised : Exiting at the Go Left\n";
+  return Promised(G, M, m, l);
 }
 
 
@@ -166,6 +202,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   while(true) {
     std::pair<MyVector<Tint>,MyVector<Tint>> pair = Promised(G, M, r, l);
     r = pair.first;
+    std::cerr << "Finding |r|=" << eval(G, r, r) << "\n";
     l = pair.second;
     l = Canonical(G, M, r, l);
     if (A_vect == get_char_mat(r,l)) { // Concluding step
@@ -180,8 +217,77 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
     }
     list_r.push_back(r);
   }
-
 }
+
+
+
+template<typename T, typename Tint>
+MyVector<Tint> GetPositiveVector(const MyMatrix<T>& G)
+{
+  MyVector<Tint> r(2);
+  if (G(0,0) > 0) {
+    r(0) = 1;
+    r(1) = 0;
+    return r;
+  }
+  if (G(1,1) > 0) {
+    r(0) = 0;
+    r(1) = 1;
+    return r;
+  }
+  double a_d = UniversalScalarConversion<double,T>(G(0,0));
+  double b_d = UniversalScalarConversion<double,T>(G(0,1));
+  double c_d = UniversalScalarConversion<double,T>(G(1,1));
+  // Equation for eigenvalue is
+  // (a - lambda) (c - lambda) = b*b
+  // l^2 - (a + c) l + [a c - b b] = 0
+  // discriminant is D = (a+c)^2 - 4 (ac - b^2) = (a - c)^2 + 4 b^2
+  // positive root is l_1 = [ (a + c) + sqrt(D) ] / 2
+  // eigenvector equation is (a - l1) x + b y = 0
+  // Thus (x,y) = (-b , a - l1)
+  double disc = sqrt( (a_d - c_d) * (a_d - c_d) + 4 * b_d * b_d);
+  double l1 = ( (a_d + c_d) + sqrt(disc)) / 2;
+  double x = -b_d;
+  double y = a_d - l1;
+  size_t mult = 1;
+  while(true) {
+    Tint x_i = UniversalNearestScalarInteger<Tint,double>(mult * x);
+    Tint y_i = UniversalNearestScalarInteger<Tint,double>(mult * y);
+    T norm = G(0,0) * x_i * y_i + 2 * G(0,1) * x_i * y_i + G(1,1) * y_i * y_i;
+    if (norm > 0) {
+      Tint eGcd = GcdPair(x_i, y_i);
+      r(0) = x_i / eGcd;
+      r(1) = y_i / eGcd;
+      return r;
+    }
+    mult++;
+  }
+}
+
+
+template<typename Tint>
+MyVector<Tint> GetTwoComplement(const MyVector<Tint>& r)
+{
+  GCD_int<Tint> RecGCD = ComputePairGcd(r(0), r(1));
+  MyVector<Tint> l(2);
+  l(0) = -RecGCD.Pmat(1,0);
+  l(1) =  RecGCD.Pmat(0,0);
+  return l;
+}
+
+
+
+
+template<typename T, typename Tint>
+std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> AnisotropicComplete(const MyMatrix<T>& G, const T& M)
+{
+  MyVector<Tint> r = GetPositiveVector<T,Tint>(G);
+  MyVector<Tint> l_A = GetTwoComplement(r);
+  MyVector<Tint> l_B = Canonical(G, M, r, l_A);
+  std::cerr << "r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
+  return Anisotropic(G, M, r, l_B);
+}
+
 
 
 

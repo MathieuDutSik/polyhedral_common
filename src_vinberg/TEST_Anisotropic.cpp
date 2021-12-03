@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     set_r();
     std::cerr << "r = " << r(0) << "," << r(1) << "\n";
     //
-    // A very basic algorithm for computing 
+    // A very basic algorithm for computing
     MyVector<Tint> l(2);
     auto set_l=[&]() -> void {
       int shift = 1;
@@ -79,14 +79,18 @@ int main(int argc, char* argv[])
     G(0,1) = b_T;
     G(1,0) = b_T;
     G(1,1) = c_T;
-    std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> pair_opt = Anisotropic(G, M_T, r, l);
+    //    std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> pair_opt = Anisotropic(G, M_T, r, l);
+    std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> pair_opt = AnisotropicComplete<T,Tint>(G, M_T);
     if (pair_opt) {
       std::cerr << "g =\n";
       WriteMatrix(std::cerr, pair_opt->first);
       std::cerr << "|R| = " << pair_opt->second.size() << "\n";
       std::cerr << "R =";
       for (auto& eVect : pair_opt->second) {
-        std::cerr << " [" << eVect(0) << "," << eVect(1) << "]";
+        Tint x = eVect(0);
+        Tint y = eVect(1);
+        T norm = a_T * x * x  +  2 * b_T * x * y  +  c_T * y * y;
+        std::cerr << " [" << x << "," << y << "] : " << norm;
       }
       std::cerr << "\n";
     } else {
