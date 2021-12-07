@@ -1,6 +1,8 @@
 #ifndef INCLUDE_INDEFINITE_LLL_H
 #define INCLUDE_INDEFINITE_LLL_H
 
+#include "MAT_Matrix.h"
+
 template<typename T>
 struct ResultGramSchmidt_Indefinite {
   bool success; // true means we have a basis. False that we have an isotropic vector
@@ -41,7 +43,7 @@ ResultGramSchmidt_Indefinite<T> GramSchmidtOrthonormalization(MyMatrix<T> const&
     Bstar_norms.push_back(scal);
     l_inf.push_back(epair);
   }
-  return {true, Bstar, mu, Bstar_norms, {}};
+  return {true, Bstar, Bstar_norms, mu, {}};
 }
 
 
@@ -52,7 +54,7 @@ ResultGramSchmidt_Indefinite<T> GramSchmidtOrthonormalization(MyMatrix<T> const&
 template<typename T, typename Tint>
 struct ResultIndefiniteLLL {
   bool success; // true if we obtained the reduced matrix. false if we found an isotropic vector
-  std::vector<Myector<Tint>> B;
+  std::vector<MyVector<Tint>> B;
   MyVector<T> Xisotrop;
 };
 
@@ -84,7 +86,8 @@ ResultIndefiniteLLL<T,Tint> Indefinite_LLL(MyMatrix<T> const& M)
       }
     }
     T mu = ResGS.mu(k, k-1);
-    T sum1 = T_abs(ResGS.Bstar_norms[k] + mu * mu * ResGS.Bstar_norms[k-1]);
+    T sum1_pre = ResGS.Bstar_norms[k] + mu * mu * ResGS.Bstar_norms[k-1];
+    T sum1 = T_abs(sum1_pre);
     T sum2 = c * T_abs(ResGS.Bstar_norms[k-1]);
     if (sum1 < sum2) {
       std::swap(B[k], B[k-1]);
