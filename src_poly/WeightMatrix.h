@@ -34,29 +34,24 @@ inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_get
 
 // We need to have nbRow as input for template reasons. But it is unused in the symmetric case.
 // So, pragma statement is needed to avoid a warning being thrown.
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 template<bool is_symmetric>
-inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_last_idx(size_t nbRow, size_t iRow)
+inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_last_idx([[maybe_unused]] size_t nbRow, size_t iRow)
 {
   return iRow + 1;
 }
-#pragma GCC diagnostic pop
 
 // We need to have nbRow as input for template reasons. But it is unused in the symmetric case.
 // So, pragma statement is needed to avoid a warning being thrown.
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 template<bool is_symmetric>
-inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_last_idx(size_t nbRow, size_t iRow)
+inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_last_idx(size_t nbRow, [[maybe_unused]] size_t iRow)
 {
   return nbRow;
 }
-#pragma GCC diagnostic pop
 
 // We need to have nbRow as input for template reasons. But it is unused in the symmetric case.
 // So, pragma statement is needed to avoid a warning being thrown.
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 template<bool is_symmetric>
-inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t iCol)
+inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_idx([[maybe_unused]] size_t nbRow, size_t iRow, size_t iCol)
 {
   if (iCol <= iRow) {
     return (iRow * (iRow + 1)) / 2 + iCol;
@@ -64,7 +59,6 @@ inline typename std::enable_if<is_symmetric,size_t>::type weightmatrix_idx(size_
     return (iCol * (iCol + 1)) / 2 + iRow;
   }
 }
-#pragma GCC diagnostic pop
 
 template<bool is_symmetric>
 inline typename std::enable_if<(not is_symmetric),size_t>::type weightmatrix_idx(size_t nbRow, size_t iRow, size_t jRow)

@@ -1106,7 +1106,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Heuristic(size_t nbRow,
 #endif
     return ListGen;
   };
-  auto fproc3=[&](const std::vector<Tidx>& Vsubset, const Tret1& ret1, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
+  auto fproc3=[&]([[maybe_unused]] const std::vector<Tidx>& Vsubset, [[maybe_unused]] const Tret1& ret1, const std::vector<std::vector<Tidx>>& LGenFinal) -> Tret3 {
 #ifdef DEBUG_SPECIFIC
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : |LGenFinal|=" << LGenFinal.size() << "\n";
 #endif
