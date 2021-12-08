@@ -26,7 +26,13 @@
 
 
 template<typename T, typename Tint>
-T eval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
+T eval_quad(const MyMatrix<T>& G, const MyVector<Tint>& v)
+{
+  return v(0) * v(0) * G(0,0) + 2 * G(0,1) * v(0) * v(1) + v(1) * v(1) * G(1,1);
+}
+
+template<typename T, typename Tint>
+T eval_sval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
 {
   return v1(0) * v2(0) * G(0,0) + G(0,1) * (v1(0) * v2(1) + v1(1) * v2(0)) + v1(1) * v2(1) * G(1,1);
 }
@@ -44,7 +50,7 @@ std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T
 {
   MyVector<Tint> m = r + l;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  T norm_rr = eval(G, r, r);
+  T norm_rr = eval_quad(G, r);
   if (norm_rr <= 0) {
     std::cerr << "norm_rr=" << norm_rr << "\n";
     std::cerr << "The vector r must be of positive norm\n";
@@ -56,21 +62,21 @@ std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T
     std::cerr << "The configuration of vectors should satisfy det(r,l) = 1\n";
     throw TerminalException{1};
   }
-  T norm_ll = eval(G, l, l);
+  T norm_ll = eval_quad(G, l);
   if (norm_ll > M) {
     std::cerr << "norm_ll=" << norm_ll << " M=" << M << "\n";
     std::cerr << "l must not lie in the interior of the norm M hyperbola in S, that is its norm must not go above M\n";
     throw TerminalException{1};
   }
 #endif
-  std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval(G, l, l) << " det=" << det_two(r,l) << "\n";
-  T norm_mm = eval(G, m, m);
-  T scal_ml = eval(G, m, l);
+  std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l) << " det=" << det_two(r,l) << "\n";
+  T norm_mm = eval_quad(G, m);
+  T scal_ml = eval_scal(G, m, l);
   if (norm_mm <= M || scal_ml < 0) {
     std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm << " scal_ml=" << scal_ml << "\n";
     return Promised(G, M, r, m);
   }
-  if (eval(G, l, l) >= 0 && eval(G, r, l) > 0) {
+  if (eval_quad(G, l) >= 0 && eval_scal(G, r, l) > 0) {
     std::cerr << "Promised : Exiting at the Done\n";
     return {l, -r};
   }
@@ -109,9 +115,9 @@ Tint LowerSquareRoot(const T& val)
 template<typename T, typename Tint>
 MyVector<Tint> Canonical(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
 {
-  T scal1 = eval(G, r, l);
-  T scal2 = eval(G, r, r);
-  T scal3 = eval(G, l, l);
+  T scal1 = eval_scal(G, r, l);
+  T scal2 = eval_quad(G, r);
+  T scal3 = eval_quad(G, l);
   T e_ent = scal1 * scal1 - scal2 * (scal3 - M);
   if (e_ent < 0) {
     std::cerr << "We cannot compute square root of a negative number\n";
@@ -129,19 +135,19 @@ template<typename T, typename Tint>
 std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> Shorter(const MyMatrix<T>& G, MyVector<Tint> r, MyVector<Tint> l)
 {
   auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
-    return {eval(G, v1, v1), eval(G, v1, v2), eval(G, v2, v2)};
+    return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };
-  T M = eval(G, r, r);
+  T M = eval_quad(G, r);
   std::vector<T> char_ent1 = get_char_mat(r, l);
   T scal_rr;
   while(true) {
     // Step 2
-    scal_rr = eval(G, r, r);
+    scal_rr = eval_quad(G, r);
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, scal_rr, r, l);
     r = e_pair.first;
     l = e_pair.second;
     // Step 3
-    scal_rr = eval(G, r, r);
+    scal_rr = eval_quad(G, r);
     l = Canonical(G, scal_rr, r, l);
     // Step 4
     if (scal_rr < M) {
@@ -160,7 +166,7 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> Shorter(const MyMatrix<
 template<typename T, typename Tint>
 std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMatrix<T>& G, const T& M, MyVector<Tint> r, MyVector<Tint> l)
 {
-  T scal_rr = eval(G, r, r);
+  T scal_rr = eval_quad(G, r);
   if (scal_rr <= M) {
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, M, r, l);
     r = e_pair.first;
@@ -175,7 +181,7 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
       return {};
     r = opt_pair->first;
     l = opt_pair->second;
-    if (eval(G, r, r) <= M) {
+    if (eval_quad(G, r) <= M) {
       l = Canonical(G, M, r, l);
       std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
       return pair;
@@ -191,7 +197,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   if (!pair_opt)
     return {};
   auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
-    return {eval(G, v1, v1), eval(G, v1, v2), eval(G, v2, v2)};
+    return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };
   MyVector<Tint> r1 = pair_opt->first;
   MyVector<Tint> l1 = pair_opt->second;
@@ -202,7 +208,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   while(true) {
     std::pair<MyVector<Tint>,MyVector<Tint>> pair = Promised(G, M, r, l);
     r = pair.first;
-    std::cerr << "Finding |r|=" << eval(G, r, r) << "\n";
+    std::cerr << "Finding |r|=" << eval_quad(G, r) << "\n";
     l = pair.second;
     l = Canonical(G, M, r, l);
     if (A_vect == get_char_mat(r,l)) { // Concluding step
