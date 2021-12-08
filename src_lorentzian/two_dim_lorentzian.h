@@ -32,7 +32,7 @@ T eval_quad(const MyMatrix<T>& G, const MyVector<Tint>& v)
 }
 
 template<typename T, typename Tint>
-T eval_sval(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
+T eval_scal(const MyMatrix<T>& G, const MyVector<Tint>& v1, const MyVector<Tint>& v2)
 {
   return v1(0) * v2(0) * G(0,0) + G(0,1) * (v1(0) * v2(1) + v1(1) * v2(0)) + v1(1) * v2(1) * G(1,1);
 }
@@ -71,9 +71,9 @@ std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T
 #endif
   std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l) << " det=" << det_two(r,l) << "\n";
   T norm_mm = eval_quad(G, m);
-  T scal_ml = eval_scal(G, m, l);
-  if (norm_mm <= M || scal_ml < 0) {
-    std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm << " scal_ml=" << scal_ml << "\n";
+  T scal_mr = eval_scal(G, m, r);
+  if (norm_mm <= M || scal_mr < 0) {
+    std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm << " scal_mr=" << scal_mr << "\n";
     return Promised(G, M, r, m);
   }
   if (eval_quad(G, l) >= 0 && eval_scal(G, r, l) > 0) {
