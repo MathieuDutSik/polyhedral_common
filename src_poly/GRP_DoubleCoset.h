@@ -166,7 +166,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const& BigGRP, Tgroup const& SmaG
 
 
 template<typename Tgroup>
-vectface DoubleCosetDescription_Exhaustive(Tgroup const& BigGRP, Tgroup const& SmaGRP, Face const& eList, std::ostream & os)
+vectface DoubleCosetDescription_Exhaustive(Tgroup const& BigGRP, Tgroup const& SmaGRP, Face const& eList)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -231,7 +231,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const& BigGRP, Tgroup const& SmaGRP
       eListSma.append(ListListSet);
     }
     if (method_split == "exhaustive") {
-      vectface ListListSet=DoubleCosetDescription_Exhaustive(BigGRP, SmaGRP, eSet, os);
+      vectface ListListSet=DoubleCosetDescription_Exhaustive(BigGRP, SmaGRP, eSet);
       eListSma.append(ListListSet);
     }
   }

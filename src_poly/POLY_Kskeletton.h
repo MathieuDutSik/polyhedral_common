@@ -281,7 +281,7 @@ Face Compute_extfac_incd(const MyMatrix<T>& FAC, const MyMatrix<T>& EXT)
   return extfac_incd;
 }
 
-Face GetFacet_extfac(const Face& extfac_incd, size_t nbFac, size_t nbExt, size_t iFac)
+Face GetFacet_extfac(const Face& extfac_incd, [[maybe_unused]] size_t nbFac, size_t nbExt, size_t iFac)
 {
   Face f(nbExt);
   for (size_t iExt=0; iExt<nbExt; iExt++)
@@ -346,14 +346,14 @@ template<typename T, typename Tgroup, typename Final>
 std::vector<vectface> EnumerationFaces_Ffinal(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method_spann, Final f_final)
 {
   if (method_spann == "LinearProgramming") {
-    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, [[maybe_unused]] int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
       return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
     };
     return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
   }
   if (method_spann == "ExtremeRays") {
     Face extfac_incd = Compute_extfac_incd(FAC, EXT);
-    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, [[maybe_unused]] Tgroup const& FullGRP) -> vectface {
       return SPAN_face_ExtremeRays(face, StabFace, RankFace, extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
@@ -371,7 +371,7 @@ std::vector<vectface> EnumerationFaces_Ffinal(Tgroup const& TheGRP, MyMatrix<T> 
         if (sum == 0)
           extfac_incd[iFac * nbExt + iExt] = 1;
       }
-    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, Tgroup const& FullGRP) -> vectface {
+    auto f_spann=[&](Face const& face, Tgroup const& StabFace, int const& RankFace, MyMatrix<T> const& FAC, [[maybe_unused]] Tgroup const& FullGRP) -> vectface {
       return SPAN_face_ExtremeRaysNonSimplicial(face, StabFace, RankFace, extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T,Tgroup,decltype(f_spann),decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final);
@@ -388,7 +388,7 @@ template<typename T, typename Tgroup>
 std::vector<vectface> EnumerationFaces(Tgroup const& TheGRP, MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, int LevSearch, std::string const& method_spann, std::string const& method_final)
 {
   if (method_final == "all") {
-    auto f_final=[&](int const& level, vectface const& RetList) -> bool {
+    auto f_final=[&]([[maybe_unused]] int const& level, [[maybe_unused]] vectface const& RetList) -> bool {
       return false;
     };
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann, f_final);

@@ -112,7 +112,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
   size_t nbRow=TheEXT.rows();
   size_t nbCol=TheEXT.cols();
   boost::dynamic_bitset<>::size_type aRow=OneInc.find_first();
-  auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+  auto f=[&](MyMatrix<T> & M, size_t eRank, [[maybe_unused]] size_t iRow) -> void {
     M.row(eRank) = TheEXT.row(aRow);
     aRow = OneInc.find_next(aRow);
   };
@@ -222,7 +222,7 @@ public:
     size_t nbCol=EXT_red.cols() + 1;
     MyMatrix<T> TheProv(nb, nbCol - 1);
     boost::dynamic_bitset<>::size_type jRow=sInc.find_first();
-    auto f=[&](MyMatrix<T> & M, size_t eRank, size_t iRow) -> void {
+    auto f=[&](MyMatrix<T> & M, size_t eRank, [[maybe_unused]] size_t iRow) -> void {
       int aRow=OneInc_V[jRow];
       M.row(eRank) = EXT_red.row(aRow);
       jRow = sInc.find_next(jRow);

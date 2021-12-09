@@ -380,7 +380,7 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin)
       Lin[i] = new T[Q->n+1];
       if (!(Q->homogeneous && Q->hull && i == 0))	/* skip redund col 1 for homog. hull */
         lrs_getray (*D_p, Q, Col[0], (*D_p)->C[0] + i - hull, Lin[i]);		/* adjust index for deletions */
-      if (!removecobasicindex (*D_p, Q, 0L)) {
+      if (!removecobasicindex (*D_p, 0)) {
         //	    std::cerr << "Exit case 2\n";
         return globals::L_FALSE;
       }
@@ -393,7 +393,7 @@ long lrs_getfirstbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, T** &Lin)
 
 /* Now solve LP if objective function was given */
   if (Q->maximize || Q->minimize) {
-    Q->unbounded = !lrs_solvelp (*D_p, Q, Q->maximize);
+    Q->unbounded = !lrs_solvelp (*D_p, Q);
     if (Q->lponly) {
       //	std::cerr << "Exit case 4\n";
       return globals::L_TRUE;
@@ -476,7 +476,7 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
         (*D_p)->depth--;
         selectpivot (*D_p, Q, &i, &j);
         pivot (*D_p, Q, i, j);
-        update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
+        update(*D_p, &i, &j);
       }
 
       j++;			/* go to next column */
@@ -503,7 +503,7 @@ long lrs_getnextbasis (lrs_dic<T> ** D_p, lrs_dat<T> * Q, long backtrack, unsign
 
       pivot (*D_p, Q, i, j);
       //	  PrintP(*D_p, "After pivot");
-      update (*D_p, Q, &i, &j);	/*Update B,C,i,j */
+      update(*D_p, &i, &j);
       //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin (*D_p, Q, 0);	/* see if lexmin basis */
@@ -883,7 +883,7 @@ long primalfeasible (lrs_dic<T> * P, lrs_dat<T> * Q)
       if (j >= d)
         return globals::L_FALSE;	/* no positive entry */
       pivot (P, Q, i, j);
-      update (P, Q, &i, &j);
+      update(P, &i, &j);
     }
     else
       primalinfeasible = globals::L_FALSE;
@@ -893,7 +893,7 @@ long primalfeasible (lrs_dic<T> * P, lrs_dat<T> * Q)
 
 
 template<typename T>
-long lrs_solvelp (lrs_dic<T> * P, lrs_dat<T> * Q, long maximize)
+long lrs_solvelp (lrs_dic<T> * P, lrs_dat<T> * Q)
 /* Solve primal feasible lp by Dantzig`s rule and lexicographic ratio test */
 /* return globals::TRUE if bounded, globals::FALSE if unbounded                              */
 {
@@ -904,14 +904,14 @@ long lrs_solvelp (lrs_dic<T> * P, lrs_dat<T> * Q, long maximize)
   while (dan_selectpivot (P, Q, &i, &j)) {
     Q->count[3]++;
     pivot (P, Q, i, j);
-    update (P, Q, &i, &j);	/*Update B,C,i,j */
+    update(P, &i, &j);
   }
 
   if (j < d && i == 0) { /* selectpivot gives information on unbounded solution */
     return globals::L_FALSE;
   }
   return globals::L_TRUE;
-}				/* end of lrs_solvelp  */
+}
 
 template<typename T>
 long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
@@ -950,8 +950,8 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
       while (C[k] <= d && A[Row[i]][Col[k]] == 0)
         k++;
       if (C[k] <= d) {
-        pivot (P, Q, i, k);
-        update (P, Q, &i, &k);
+        pivot(P, Q, i, k);
+        update(P, &i, &k);
       } else if (j < nlinearity) { /* cannot pivot linearity to cobasis */
         if (A[Row[i]][0] == 0)
           linearity[j] = 0;
@@ -993,7 +993,7 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
       //	  std::cerr << "Error removing linearity\n";
       return globals::L_FALSE;
     }
-    if (!removecobasicindex (P, Q, k))
+    if (!removecobasicindex (P, k))
       return globals::L_FALSE;
     d = P->d;
   }
@@ -1010,7 +1010,7 @@ long getabasis (lrs_dic<T> * P, lrs_dat<T> * Q, long order[])
 }				/*  end of getabasis */
 
 template<typename T>
-long removecobasicindex (lrs_dic<T> * P, lrs_dat<T> * Q, long k)
+long removecobasicindex (lrs_dic<T> * P, long k)
 /* remove the variable C[k] from the problem */
 /* used after detecting column dependency    */
 {
@@ -1051,7 +1051,7 @@ long removecobasicindex (lrs_dic<T> * P, lrs_dat<T> * Q, long k)
 
   P->d--;
   return globals::L_TRUE;
-}				/* end of removecobasicindex */
+}
 
 template<typename T>
 lrs_dic<T>* new_lrs_dic (long m, long d, long m_A)
@@ -1180,7 +1180,7 @@ long restartpivots (lrs_dic<T> * P, lrs_dat<T> * Q)
         /*faster (and safer) as done below                          */
         long  ii=i;
         pivot (P, Q, ii, k);
-        update (P, Q, &ii, &k);
+        update(P, &ii, &k);
       } else {
 	delete [] Cobasic;
         return globals::L_FALSE;
@@ -1230,7 +1230,7 @@ long lexmin (lrs_dic<T> * P, lrs_dat<T> * Q, long col)
             if (A[r][s] != 0)
               return globals::L_FALSE;
           }
-          else if (A[r][s] < 0 && ismin (P, Q, r, s)) {
+          else if (A[r][s] < 0 && ismin (P, r, s)) {
             return globals::L_FALSE;
           }
         }			/* end of if B[i] ... */
@@ -1240,7 +1240,7 @@ long lexmin (lrs_dic<T> * P, lrs_dat<T> * Q, long col)
 }
 
 template<typename T>
-long ismin (lrs_dic<T> * P, lrs_dat<T> * Q, long r, long s)
+long ismin (lrs_dic<T> * P, long r, long s)
 /*test if A[r][s] is a min ratio for col s */
 {
   long i;
@@ -1257,7 +1257,7 @@ long ismin (lrs_dic<T> * P, lrs_dat<T> * Q, long r, long s)
 }
 
 template<typename T>
-void update (lrs_dic<T> * P, lrs_dat<T> * Q, long *i, long *j)
+void update(lrs_dic<T> * P, long *i, long *j)
  /*update the B,C arrays after a pivot */
  /*   involving B[bas] and C[cob]           */
 {
@@ -1280,29 +1280,26 @@ void update (lrs_dic<T> * P, lrs_dat<T> * Q, long *i, long *j)
 /* restore i and j to new positions in basis */
   for (*i = 1; B[*i] != enter; (*i)++);		/*Find basis index */
   for (*j = 0; C[*j] != leave; (*j)++);		/*Find co-basis index */
-}				/* end of update */
+}
 
-template<typename T>
-long lrs_degenerate (lrs_dic<T> * P, lrs_dat<T> * Q)
 /* globals::TRUE if the current dictionary is primal degenerate */
 /* not thoroughly tested   2000/02/15                  */
+/*
+template<typename T>
+long lrs_degenerate(lrs_dic<T> * P)
 {
   long i;
   long *B, *Row;
-
   T** A = P->A;
   long d = P->d;
   long m = P->m;
-
   B = P->B;
   Row = P->Row;
-
   for (i = d + 1; i <= m; i++)
     if (A[Row[i]][0] == 0)
       return globals::L_TRUE;
-
   return globals::L_FALSE;
-}
+}*/
 
 
 /*********************************************************/
@@ -1366,7 +1363,7 @@ long checkredund (lrs_dic<T> * P, lrs_dat<T> * Q)
       return globals::L_FALSE;		/* non-redundant */
 
     pivot (P, Q, i, j);
-    update (P, Q, &i, &j);	/*Update B,C,i,j */
+    update(P, &i, &j);
   }
   return !(j < d && i == 0);	/* unbounded is also non-redundant */
 }				/* end of checkredund  */
@@ -1413,10 +1410,10 @@ long checkcobasic (lrs_dic<T> * P, lrs_dat<T> * Q, long index)
       return globals::L_TRUE;
 
   pivot (P, Q, i, j);
-  update (P, Q, &i, &j);	/*Update B,C,i,j */
+  update(P, &i, &j);
 
   return globals::L_FALSE;			/*index is no longer cobasic */
-}				/* end of checkcobasic */
+}
 
 template<typename T>
 long checkindex (lrs_dic<T> * P, lrs_dat<T> * Q, long index)
@@ -1483,13 +1480,13 @@ void cache_dict (lrs_dic<T> ** D_p, lrs_dat<T> * global, long i, long j, unsigne
     (*D_p)->i = i;
     (*D_p)->j = j;
     pushQ (global, (*D_p)->m, (*D_p)->d, (*D_p)->m_A, dict_count);
-    copy_dict (global, global->Qtail, *D_p);
+    copy_dict(global->Qtail, *D_p);
   }
   *D_p = global->Qtail;
 }
 
 template<typename T>
-void copy_dict (lrs_dat<T> * global, lrs_dic<T> * dest, lrs_dic<T> * src)
+void copy_dict(lrs_dic<T> * dest, lrs_dic<T> * src)
 {
   long m = src->m;
   long m_A = src->m_A;        /* number of rows in A */
@@ -1902,8 +1899,8 @@ long phaseone(lrs_dic<T> * P, lrs_dat<T> * Q)
       j++;
     if (j >= d)
       return globals::L_FALSE;       /* no positive entry */
-    pivot (P, Q, i, j);
-    update (P, Q, &i, &j);
+    pivot(P, Q, i, j);
+    update(P, &i, &j);
   }
   return globals::L_TRUE;
 }
