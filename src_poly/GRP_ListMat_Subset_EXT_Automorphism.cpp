@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     //
     std::vector<Telt> LGen;
     for (auto & eList : ListGen)
-      LGen.emplace_back(std::move(Telt(std::move(eList))));
+      LGen.push_back(Telt(eList));
     Tgroup GRP(LGen, n_rows);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     if (argc == 3) {
