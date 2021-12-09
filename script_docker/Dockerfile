@@ -172,8 +172,8 @@ RUN cp -r GIT/polyhedral_common/ExternalLib/mpfrc++-3.6.8 /opt/mpfrc++-3.6.8
 
 # openmpi
 RUN apt-get install -y openmpi-bin libopenmpi-dev
-ENV MPI_CXX_INCLUDE "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
-ENV MPI_CXX_LINK "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
+ENV MPI_INCLUDE_CPP "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
+ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
 # Compiling polyhedral functionality

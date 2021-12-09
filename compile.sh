@@ -12,4 +12,4 @@ set -e
 (cd src_ctype_mpi && make clean && make)
 (cd src_perfect && make clean && make)
 (cd src_perfect_mpi && make clean && make)
-(cd src_vinberg && make clean && make)
+(cd src_lorentzian && make clean && make)
