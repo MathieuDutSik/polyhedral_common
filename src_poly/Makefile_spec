@@ -11,7 +11,7 @@
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
-PROGRAM		= POLY_lrs
+#PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -28,7 +28,7 @@ PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_lrs POLY_lrs_set POLY_lrs_set_reduction
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
-#PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism
+PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= POLY_GetFullRankFacetSet

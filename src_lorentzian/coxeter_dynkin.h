@@ -5,6 +5,14 @@
 #include "GRAPH_GraphicalFunctions.h"
 #include "GRAPH_BitsetType.h"
 
+
+/*
+  The Coxeter Dynkin diagram are build in the following way:
+  --- The values for i != j are the exponent m such that (g_ig_j)^m = Id
+  --- The values M(i,i) are not used.
+ */
+
+
 template<typename T>
 bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
@@ -17,7 +25,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
   if (dim == 1) // Case of A1
     return true;
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
-  std::vector<size_t> list_deg(dim);
+  std::vector<size_t> list_deg(dim, 0);
   size_t n_higher_edge = 0;
   GraphBitset eG(dim);
   std::map<T,size_t> multiplicity;
@@ -58,24 +66,21 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
         return M(u,j);
     return std::numeric_limits<T>::max(); // That case should not happen
   };
-  if (list_degN.size() > 0) // vertices of degree 5 or more never occurs for
+  if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
     return false;
   if (list_deg4.size() > 0) { // Vertex of degree 4 can occur for \tilde{D4} only
-    if (!allow_euclidean)
+    if (!allow_euclidean) // Only possibilities is not allowed, exit.
       return false;
     // We are now in Euclidean 
     if (dim != 5) // It has to be \tilde{D4}.
       return false;
-    if (list_deg4.size() != 1 && list_deg1.size() != 4 && list_deg2.size() != 0 && list_deg3.size() != 0)
+    if (list_deg4.size() != 1 || list_deg1.size() != 4 || list_deg2.size() != 0 || list_deg3.size() != 0)
       return false;
     size_t i_4 = list_deg4[0];
-    if (M(i_4,i_4) != 2)
-      return false;
     for (int i=0; i<dim; i++)
-      if (i != i_4) {
-        if (M(i, i_4) != -1)
+      if (i != i_4)
+        if (M(i, i_4) != 3)
           return false;
-      }
     return true; // This is \tilde{D4}
   }
   std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
@@ -95,7 +100,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
     return true; // Only tilde{An} is left as possibility
   }
   // Now it is a tree
-  if (list_deg1.size() == 2 && list_deg2.size() != dim - 2 && n_higher_edge != 0)
+  if (list_deg1.size() == 2 && list_deg2.size() == dim - 2 && n_higher_edge == 0)
     return true; // Only An is possible so ok.
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2)
@@ -357,5 +362,115 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
 
 
 
+template<typename T, typename Tint>
+std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root)
+{
+  int n = G.rows();
+  auto get_scal=[&](int i, int j) -> T {
+    T sum=0;
+    for (int u=0; u<n; u++)
+      for (int v=0; v<n; v++)
+        sum += G(u,v) * l_root[i](u) * l_root[j](v);
+    return sum;
+  };
+  T val3 = T(1) / T(4);
+  T val4 = T(1) / T(2);
+  T val6 = T(3) / T(4);
+  auto get_val=[&](int i, int j) -> std::pair<T,T> {
+    if (i == j) {
+      T scal12 = get_scal(i, i);
+      return {scal12, scal12};
+    } else {
+      T scal12 = get_scal(i, j);
+      if (scal12 == 0)
+        return {2,scal12};
+      T scal11 = get_scal(i, i);
+      T scal22 = get_scal(j, j);
+      T quot = (scal12 * scal12) / (scal11 * scal22);
+      if (quot == val3)
+        return {3,scal12};
+      if (quot == val4)
+        return {4,scal12};
+      if (quot == val6)
+        return {6,scal12};
+      std::cerr << "Failed to find matching entry\n";
+      throw TerminalException{1};
+    }
+  };
+  size_t n_root=l_root.size();
+  MyMatrix<T> CoxMat(n_root,n_root);
+  MyMatrix<T> ScalMat(n_root,n_root);
+  for (size_t i=0; i<n_root; i++)
+    for (size_t j=0; j<n_root; j++) {
+      std::pair<T,T> ep = get_val(i,j);
+      CoxMat(i,j) = ep.first;
+      ScalMat(i,j) = ep.second;
+    }
+  return {CoxMat, ScalMat};
+}
+
+
+
+template<typename T>
+struct Possible_Extension {
+  MyVector<T> u;
+  T res_norm;
+  T e_norm;
+};
+
+template<typename T, typename Tint>
+std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool allow_euclidean)
+{
+  std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+  const MyMatrix<T> & CoxMat = ep.first;
+  const MyMatrix<T> & ScalMat = ep.second;
+  int dim = G.rows();
+  int dim_cox = l_root.size();
+  std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, allow_euclidean);
+  T val3 = T(1) / T(4);
+  T val4 = T(1) / T(2);
+  T val6 = T(3) / T(4);
+  auto get_cos_square=[&](T val) -> T {
+    if (val == 3)
+      return val3;
+    if (val == 4)
+      return val4;
+    if (val == 6)
+      return val6;
+    std::cerr << "Failed to find a matching entry\n";
+    throw TerminalException{1};
+  };
+  std::vector<Possible_Extension<T>> l_extensions;
+  auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
+    MyVector<T> l_scal(dim_cox);
+    for (int i=0; i<dim_cox; i++) {
+      T val = e_vect(i);
+      T cos_square = get_cos_square(val);
+      T scal_square = cos_square * M(i,i) * e_norm;
+      std::optional<T> opt = UniversalSquareRoot(scal_square);
+      if (!opt)
+        return;
+      T scal = - *opt;
+      l_scal(i) = scal;
+    }
+    /* So, we have computed alpha.dot.ui = u.dot.ui
+       If u = sum wi u_i then w = G^{-1} l_scal
+       eNorm = w.dot.w  is the Euclidean norm of u.
+     */
+    MyVector<T> w = Inverse(ScalMat) * l_scal;
+    T eNorm = l_scal.dot(w);
+    T res_norm = e_norm - eNorm;
+    if (res_norm <= 0)
+      return;
+    MyVector<T> u = ZeroVector<T>(dim);
+    for (int i=0; i<dim_cox; i++)
+      u += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
+    l_extensions.push_back({u, res_norm, e_norm});
+  };
+  for (auto & e_norm : l_norm)
+    for (auto & e_vect : l_vect)
+      get_entry(e_vect, e_norm);
+  return l_extensions;
+}
 
 #endif
