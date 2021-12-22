@@ -271,6 +271,111 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T>& G)
 }
 
 
+
+
+/*
+  The matrix is written as
+  | a b |
+  | b c |
+  The associated quadratic form is
+  Q(x,y) = a x^2 + 2 b xy + c y^2
+  The associated polynomial is
+  P(x)   = a x^2 + 2 b x + c
+  The disciminant is Delta =  4 b^2 - 4 a c
+  If that disciminant is a square then no isotropic decomposition is possible
+  ---
+  The roots of the polynomial are
+  x1 = (-2b + sqrt(4 Delta)) / 2a = (-b + sqrt(Delta)) / a
+  x2 = (-2b = sqrt(4 Delta)) / 2a = (-b - sqrt(Delta)) / a
+ */
+template<typename T, typename Tint>
+std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
+{
+  T a = G(0,0);
+  T b = G(1,0);
+  T c = G(1,1);
+  T Delta = b * b - a * c;
+  std::optional<T> opt_root = UniversalSquareRoot(Delta);
+  if (!opt_root)
+    return {};
+  T Delta_root = *opt_root;
+  MyMatrix<T> F(2,2);
+  if (a != 0) {
+    T x1 = (-b + Delta_root) / a;
+    T x2 = (-b - Delta_root) / a;
+    // So we have a factorization as a (x - x1) (x - x2)
+    // and so of the quadratic form as
+    // (a x - a x1 y) (x - x2 y)
+    F(0,0) = a;
+    F(0,1) = -a x1;
+    F(1,0) = 1;
+    F(1,1) = -x2;
+    return F;
+  }
+  if (c != 0) {
+    // Polynomial becomes c y^2 + 2 b y + a
+    // roots are
+    // y1 = (-b + sqrt(Delta)) / c
+    // y2 = (-b - sqrt(Delta)) / c
+    T y1 = (-b + Delta_root) / c;
+    T y2 = (-b - Delta_root) / c;
+    // So now we have a factorization of the form
+    // c (y - y1) ( y - y2)
+    // and so the quadratic form as
+    // Q(x,y) = (c y - cy1 x) (y - y2 x)
+    F(0,0) = -c * y1;
+    F(0,1) = c;
+    F(1,0) = -y2;
+    F(1,1) = 1;
+    return F;
+  }
+  // We are now in the case a = 0, c=0
+  // Factorization is obvious: (2b x) ( y )
+  F(0,0) = 2 * b;
+  F(0,1) = 0;
+  F(1,0) = 0;
+  F(1,1) = 1;
+  return F;
+}
+
+
+
+/*
+  We are happy for the purpose of this code to have only an upper bound of the
+  minimum
+  Finding the exact minimum appears relatively complex. See 
+ */
+template<typename T, typename Tint>
+T GetUpperBoundMinimum(const MyMatrix<T>& G)
+{
+  MyVector<Tint> eV = GetPositiveVector(G);
+  T eNorm = eval_quad(G, eV);
+  auto get_spann=[&](MyVector<Tint> const& v) -> std::vector<MyVector<Tint>> {
+    MyVector<Tint> v1{v(0), v(1)+1};
+    MyVector<Tint> v2{v(0), v(1)-1};
+    MyVector<Tint> v3{v(0)+1, v(1)};
+    MyVector<Tint> v4{v(0)-1, v(1)};
+    return {v1,v2,v3,v4};
+  };
+  auto try_better=[&]() -> bool {
+    for (auto & newV : get_spann(eV)) {
+      T newNorm = eval_quad(G, newV);
+      if (newNorm < eNorm) {
+        eV = newV;
+        eNorm = newNorm;
+        return true;
+      }
+    }
+    return false;
+  };
+  while(try_better()) {}
+  return eNorm;
+}
+
+
+
+
+
 template<typename Tint>
 MyVector<Tint> GetTwoComplement(const MyVector<Tint>& r)
 {
@@ -293,6 +398,20 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   std::cerr << "r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
   return Anisotropic(G, M, r, l_B);
 }
+
+
+
+
+template<typename T, typename Tint>
+std::option<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
+{
+  T M = 
+  MyVector<Tint> l_A = GetTwoComplement(r);
+  MyVector<Tint> l_B = Canonical(G, M, r, l_A);
+}
+
+
+
 
 
 

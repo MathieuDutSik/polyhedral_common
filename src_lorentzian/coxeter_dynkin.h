@@ -413,7 +413,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
 
 template<typename T>
 struct Possible_Extension {
-  MyVector<T> u;
+  MyVector<T> u_component;
   T res_norm;
   T e_norm;
 };
@@ -462,10 +462,10 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     T res_norm = e_norm - eNorm;
     if (res_norm <= 0)
       return;
-    MyVector<T> u = ZeroVector<T>(dim);
+    MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
-      u += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
-    l_extensions.push_back({u, res_norm, e_norm});
+      u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
+    l_extensions.push_back({u_component, res_norm, e_norm});
   };
   for (auto & e_norm : l_norm)
     for (auto & e_vect : l_vect)
