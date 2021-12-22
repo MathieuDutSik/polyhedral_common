@@ -289,10 +289,12 @@ struct ResultEdgewalk {
 
 
 template<typename T, typename Tint>
-ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& Nlist_norms, FundDomainVertex<T,Tint> const& eVert)
+ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
-  std::vector<std::pair<bool, PairVertices<T,Tint>>> l_orbit_pair_vertices;
+  using Tdone = std::pair<bool,bool>;
+  using Tentry = std::pair<Tdone, PairVertices<T,Tint>>;
+  std::vector<Tentry> l_entry;
   auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G2 = eP_T * G * eP_T.transpose();
@@ -300,16 +302,59 @@ ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
+    l_gen_isom_cox.push_back(eP);
   };
-  auto func_insert_pair_vertices=[&](PairVertices<T,Tint> const& e_pair) -> void {
-    for (auto & u_pair : l_orbit_pair_vertices) {
-      PairVertices<T,Tint> const& f_pair = u_pair.second;
-      
+  auto func_insert_pair_vertices=[&](Tentry const& v_pair) -> void {
+    for (auto & u_pair : l_entry) {
+      std::optional<MyMatrix<Tint>> equiv_opt = f_equiv(u_pair.second, v_pair.second);
+      if (eauiv_opt) {
+        f_insert_gen(*eauiv_opt);
+        return;
+      }
+    }
+    l_entry.push_back(v_pair);
+    for (auto & eGen : f_stab(v_pair)) {
+      f_insert_gen(eGen);
     }
   };
-  for (
+  size_t len = eVert.l_roots.size();
+  auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
+    for (size_t i=0; i<len; i++) {
+      std::vector<MyVector<Tint>> l_ui;
+      for (size_t j=0; j<len; j++) {
+        if (i != j) {
+          l_ui.push_back(theVert.l_roots[j]);
+        }
+      }
+      MyVector<Tint> v_disc = theVert.l_roots[i];
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      PairVertices<T,Tint> epair = gen_pair_vertices(theVert, fVert);
+      Tentry entry{{true,false},epair};
+      func_insert_pair_vertices(entry);
+    }
+  };
   while(true) {
+    bool IsFinished = true;
+    for (auto & entry : l_entry) {
+      Tdone & eDone = entry.first;
+      if (eDone.first) {
+        eDone.first = false;
+        insert_edges_from_vertex(entry.second.vert1);
+        IsFinished = false;
+      }
+      if (eDone.second) {
+        eDone.second = false;
+        insert_edges_from_vertex(entry.second.vert2);
+        IsFinished = false;
+      }
+    }
+    if (IsFinished)
+      break;
   }
+  std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
+  for (auto & epair : l_entry)
+    l_orbit_pair_vertices.push_back(epair.second);
+  return {l_gen_isom_cox, l_orbit_pair_vertices};
 }
 
 
