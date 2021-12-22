@@ -241,8 +241,11 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "We should have just one vector in order to conclude. Rethink needed\n";
     throw TerminalException{1};
   }
-  
-
+  std::vector<MyVector<Tint>> l_roots = l_ui;
+  MyVector<Tint> w(n);
+  /// FILL OUT THE CODE
+  l_roots.push_back(w);
+  return {l_gens[0], l_roots};
 }
 
 
@@ -255,7 +258,24 @@ template<typename T, typename Tint>
 struct PairVertices {
   FundDomainVertex<T,Tint> vert1;
   FundDomainVertex<T,Tint> vert2;
+  MyMatrix<Tint> BasisRoot;
 };
+
+template<typename T, typename Tint>
+PairVertices<T,Tint> gen_pair_vertices(FundDomainVertex<T,Tint> const& vert1, FundDomainVertex<T,Tint> const& vert2)
+{
+  std::unordered_set<MyVector<Tint>> set_v;
+  for (auto & eV : vert1.l_roots)
+    set_v.insert(eV);
+  for (auto & eV : vert2.l_roots)
+    set_v.insert(eV);
+  std::vector<MyVector<Tint>> l_roots;
+  for (auto & eV : set_v)
+    l_roots.push_back(eV);
+  MyMatrix<Tint> MatV = MatrixFromVectorFamily(l_roots);
+  return {vert1, vert2, MatV};
+}
+
 
 
 template<typename T, typename Tint>
@@ -269,13 +289,25 @@ struct ResultEdgewalk {
 
 
 template<typename T, typename Tint>
-  ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& Nlist_norms, FundDomainVertex<T,Tint> const& eVert)
+ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& Nlist_norms, FundDomainVertex<T,Tint> const& eVert)
 {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
-  std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
-  auto func_insert_pair_vertices=[&](PairVertices<T,Tint> const& e_pair) -> void {
+  std::vector<std::pair<bool, PairVertices<T,Tint>>> l_orbit_pair_vertices;
+  auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
+    MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
+    MyMatrix<T> G2 = eP_T * G * eP_T.transpose();
+    if (G2 != G) {
+      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
+      throw TerminalException{1};
+    }
   };
-  
+  auto func_insert_pair_vertices=[&](PairVertices<T,Tint> const& e_pair) -> void {
+    for (auto & u_pair : l_orbit_pair_vertices) {
+      PairVertices<T,Tint> const& f_pair = u_pair.second;
+      
+    }
+  };
+  for (
   while(true) {
   }
 }
