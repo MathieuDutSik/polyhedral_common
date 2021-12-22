@@ -291,6 +291,10 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T>& G)
 template<typename T, typename Tint>
 std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 {
+  if (G.rows() != 2 || G.cols() != 2) {
+    std::cerr << "The matrix is not square of order 2\n";
+    throw TerminalException{1};
+  }
   T a = G(0,0);
   T b = G(1,0);
   T c = G(1,1);

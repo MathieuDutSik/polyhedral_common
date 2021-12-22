@@ -27,7 +27,7 @@ struct FundDomainVertex {
 
 
 template<typename T, typename Tint>
-struct PossibleExtension {
+struct RootCandidate {
   int sign; // 0 for 0, 1 for positive, -1 for negative
   T quant1; // this is (k.alpha_{N,\Delta'})^2 / R_{N,\Delta'}
   T quant2; // this is (k.alpha_{N,\Delta'})^2 / N
@@ -68,8 +68,8 @@ int get_sign_pair_stdpair(std::pair<int,T> const& p1, std::pair<int,T> const& p2
 }
 
 
-template<typename T>
-PossibleExtension<T> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> const& k, MyVector<Tint> const& alpha, T const& res_norm, T const& e_norm)
+template<typename T, typename Tint>
+RootCandidate<T,Tint> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> const& k, MyVector<Tint> const& alpha, T const& res_norm, T const& e_norm)
 {
   MyVector<T> alpha_T = UniversalVectorConversion<T,Tint>(alpha);
   T scal = - k.dot(G * alpha_T);
@@ -82,7 +82,7 @@ PossibleExtension<T> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> co
 // sign as before + means preferable according to page 27.
 // return 1 if poss1 is preferable to poss2
 template<typename T, typename Tint>
-int get_sign_poss_ext(PossibleExtension<T,Tint> const& poss1, PossibleExtension<T,Tint> const& poss2)
+int get_sign_cand(RootCandidate<T,Tint> const& poss1, RootCandidate<T,Tint> const& poss2)
 {
   int sign1 = get_sign_pair_stdpair({poss1.sign, poss1.quant1}, {poss2.sign, poss2.quant1});
   if (sign1 != 0)
@@ -93,6 +93,26 @@ int get_sign_poss_ext(PossibleExtension<T,Tint> const& poss1, PossibleExtension<
   int sign3 = get_sign_pair_t(poss1.e_norm, poss2.e_norm);
   return sign3; // because N1 < N2 corresponds to 1
 }
+
+
+
+template<typename T, typename Tint>
+RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> const& l_cand)
+{
+  if (l_cand.size() == 0) {
+    std::cerr << "We have zero candidates. Abort\n";
+    throw TerminalException{1};
+  }
+  RootCandidate<T,Tint> best_cand = l_cand[0];
+  for (auto & eCand : l_cand) {
+    if (get_sign_cand(eCand, best_cand) == 1) {
+      best_cand = eCand;
+    }
+  }
+  return best_cand;
+}
+
+
 
 
 
@@ -110,7 +130,7 @@ int get_sign_poss_ext(PossibleExtension<T,Tint> const& poss1, PossibleExtension<
 
  */
 template<typename T, typename Tint>
-std::option<FundDomainVertex<T,Tint>> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> l_ui, std::vector<T> const& l_norms)
+FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
   int dim = G.size();
   size_t n_root = l_ui.size();
@@ -138,7 +158,7 @@ std::option<FundDomainVertex<T,Tint>> EdgewalkProcedure(MyMatrix<T> const& G, My
     throw TerminalException{1};
   }
   MyVector<T> r0 = GetMatrixRow(NSP,0);
-  std::vector<FundDomainVertex<T,Tint>> l_candidates;
+  std::vector<RootCandidate<T,Tint>> l_candidates;
   bool allow_euclidean = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norm, allow_euclidean);
   for (auto & e_extension : l_extension) {
@@ -156,14 +176,72 @@ std::option<FundDomainVertex<T,Tint>> EdgewalkProcedure(MyMatrix<T> const& G, My
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
     if (opt_v) {
       MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
-      
-      MyVector<T> root_T = e_extension.u + v * NSP;
-      MyVector<Tint> root = UniversalVectorConversion<Tint,T>(root_T);
-      
-      
-     
+      MyVector<T> alpha_T = e_extension.u + v * NSP;
+      MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(root_T);
+      RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm);
+      l_candidates.push_back(eCand);
     }
   }
+  if (l_candidates.size() > 0) {
+    RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
+    std::vector<MyVector<Tint>> l_roots = l_ui;
+    l_roots.push_back(best_cand.alpha);
+    MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+    MyMatrix<T> EquaMat = Mat_root * G;
+    MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
+    if (NSP.rows() != 1) {
+      std::cerr << "We should have exactly one row\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> gen = GetMatrixRow(NSP, 0);
+    T scal = gen.dot(G * k);
+    if (scal > 0) {
+      return {gen, l_roots};
+    }
+    if (scal < 0) {
+      return {-gen, l_roots};
+    }
+    std::cerr << "Failed to find a matching entry\n";
+    throw TerminalException{1};
+  }
+  // So, no candidates were found. We need to find isotropic vectors.
+  MyMatrix<T> NSPbas(n,2);
+  SetMatrixRow(NSPbas, k, 0);
+  SetMatrixRow(NSPbas, r0, 1);
+  MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
+  std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
+  if (!opt) {
+    std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> Factor = *Factor_opt;
+  // We want a vector inside of the cone (there are two: C and -C)
+  auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
+    T scal = k.dot(G * v);
+    if (scal > 0)
+      return v;
+    if (scal < 0)
+      return -v;
+    std::cerr << "We should have scal != 0 to be able to conclude\n";
+    throw TerminalException{1};
+  };
+  std::vector<MyVector<T>> l_gens;
+  for (size_t i=0; i<2; i++) {
+    // a x + by correspond to the ray (u0, u1) = (-b, a)
+    T u0 = -Factor(i,1);
+    T u1 =  Factor(i,0);
+    MyVector<T> gen = u0 * k + u1 * r0;
+    MyVector<T> can_gen = get_can_gen(gen);
+    MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
+    T scal = v_disc_t.dot(G * can_gen);
+    if (scal > 0)
+      l_gens.push_back(can_gen);
+  }
+  if (l_gens.size() != 1) {
+    std::cerr << "We should have just one vector in order to conclude. Rethink needed\n";
+    throw TerminalException{1};
+  }
+  
 
 }
 
