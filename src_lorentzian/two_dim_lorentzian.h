@@ -350,7 +350,7 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> EnumerateVectorFixedNorm(MyMatrix<T> const& F, T const& M)
+std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const& F, T const& M)
 {
   MyVector<T> v1(2);
   v1(0) = F(0,0);
@@ -453,14 +453,66 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
 }
 
 
+template<typename T, typename Tint>
+std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm, MyMatrix<T> const& F)
+{
+  std::vector<MyVector<Tint>> l_sol = EnumerateVectorFixedNorm_Factorization(F, SearchNorm);
+  auto det=[&](MyVector<Tint> const& v1, MyVector<Tint> const& v2) -> Tint {
+    return v1(0) * v2(1) - v1(1) * v2(0);
+  };
+  auto is_corr=[&](MyVector<Tint> const& x) -> bool {
+    T norm = eval_quad(G, x);
+    if (norm != SearchNorm)
+      return false;
+    T scal = eval_scal(G, r0, x);
+    if (scal <= 0)
+      return false;
+    return det(r0, x) > 0;
+  };
+  std::vector<MyVector<Tint>> l_sol_red;
+  std::optional<MyVector<Tint>> e_sol;
+  for (auto & e_v : l_sol) {
+    if (is_corr(e_v)) {
+      if (e_sol) {
+        if (det(e_v, *e_sol) > 0)
+          e_sol = e_v;
+      }
+    } else {
+      e_sol = e_v;
+    }
+  }
+  return e_sol;
+}
+
+template<typename T, typename Tint>
+std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
+{
+  MyVector<Tint> l_A = GetTwoComplement(r0);
+  MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
+  T M = eval_quad(G, r0);
+  std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> epair = Anisotropic(G, M, r0, l_B);
+  if (!opt)
+    return {};
+  std::vector<MyVector<Tint>> const& l_vect = opt->second;
+  for (auto & e_v : l_vect) {
+    T norm = eval_quad(G, e_v);
+    if (norm == SearchNorm)
+      return e_v;
+  }
+  return {};
+}
+
+
+
 
 
 template<typename T, typename Tint>
-std::option<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
+std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
-  T M = 
-  MyVector<Tint> l_A = GetTwoComplement(r);
-  MyVector<Tint> l_B = Canonical(G, M, r, l_A);
+  std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
+  if (opt)
+    return get_first_next_vector_isotropic(G, r0, SearchNorm, *opt);
+  return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 
 
