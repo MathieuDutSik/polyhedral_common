@@ -345,6 +345,55 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 
 
 /*
+  F is the factorization with each row representing one term of the factorization.
+  Q(x,y) = (a1 x + b1 y) (a2 x + b2 y)
+
+ */
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> EnumerateVectorFixedNorm(MyMatrix<T> const& F, T const& M)
+{
+  MyVector<T> v1(2);
+  v1(0) = F(0,0);
+  v1(1) = F(0,1);
+  FractionVector<T> Fr1 = RemoveFractionVectorPlusCoeff(v1);
+  //
+  MyVector<T> v2(2);
+  v2(0) = F(1,0);
+  v2(1) = F(1,1);
+  FractionVector<T> Fr2 = RemoveFractionVectorPlusCoeff(v2);
+  //
+  T M_scal = M * Fr1.TheMult * Fr2.TheMult;
+  std::cerr << "M_scal=" << M_scal << "\n";
+  if (!IsInteger(M_scal))
+    return {};
+  MyMatrix<T> A(2,2);
+  A(0,0) = Fr1.TheVect(0);
+  A(0,1) = Fr1.TheVect(1);
+  A(1,0) = Fr1.TheVect(0);
+  A(1,1) = Fr1.TheVect(1);
+  MyMatrix<T> Ainv = Inverse(A);
+  MyVector<T> v(2);
+  std::vector<MyVector<Tint>> l_sol;
+  std::vector<T> list_div = GetAllFactors(T_abs(M_scal));
+  for (auto & e_div : list_div) {
+    v(0) = e_div;
+    v(1) = M_scal / e_div;
+    MyVector<T> e_sol = Ainv * v;
+    if (IsIntegralVector(eSol)) {
+      l_sol.push_back( e_sol);
+      l_sol.push_back(-e_sol);
+    }
+  }
+  return l_sol;
+}
+
+
+
+
+
+
+
+/*
   We are happy for the purpose of this code to have only an upper bound of the
   minimum
   Finding the exact minimum appears relatively complex. See 
