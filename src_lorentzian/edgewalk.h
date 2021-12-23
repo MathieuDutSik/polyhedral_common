@@ -8,6 +8,31 @@
 
 
 
+
+FullNamelist NAMELIST_GetStandard_EDGEWALK()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListIntValues1["n"]=9;
+  ListStringValues1["FileLorMat"]="/tmp/unset";
+  ListStringValues1["OptionInitialVertex"]="vinberg";
+  ListStringValues1["FileVertDomain"]="/tmp/unset";
+  ListStringValues1["OptionNorms"]="all";
+  ListStringValues1["OutFormat"]="unset";
+  ListStringValues1["FileOut"]="unset";
+  SingleBlock BlockPROC;
+  BlockPROC.ListStringValues=ListStringValues1;
+  ListBlock["PROC"]=BlockPROC;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
+
+
 template<typename T>
 MyMatrix<T> ComputeLattice_LN(MyMatrix<T> const& G, T const& N)
 {
@@ -23,6 +48,30 @@ struct FundDomainVertex {
   MyVector<T> gen;
   std::vector<MyVector<Tint>> l_roots;
 };
+
+template<typename T, typename Tint>
+void WriteFundDomainVertex(FundDomainVertex<T,Tint> const& vert, std::ostream & os, std::string const& OutFormat)
+{
+  MyMatrix<Tint> Mroot = MatrixFromVectorFamily(vert.l_roots);
+  if (OutFormat == "GAP") {
+    os << "rec(gen:=";
+    WriteMatrixGAP(os, vert.gen);
+    os << ", l_roots:=";
+    WriteMatrixGAP(os, Mroot);
+    os << ")";
+  }
+  if (OutFormat == "TXT") {
+    os << "gen=";
+    WriteMatrix(os, vert.gen);
+    os << "l_roots=\n";
+    WriteMatrixGAP(os, Mroot);
+  }
+  std::cerr << "Failed to find a matching entry for WritePairVertices\n";
+  throw TerminalException{1};
+}
+
+
+
 
 
 
@@ -262,6 +311,27 @@ struct PairVertices {
 };
 
 template<typename T, typename Tint>
+void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std::string const& OutFormat)
+{
+  if (OutFormat == "GAP") {
+    os << "rec(vert1:=";
+    WriteFundDomainVertex(epair.vert1, os, OutFormat);
+    os << ", vert2:=";
+    WriteFundDomainVertex(epair.vert2, os, OutFormat);
+    os << ")";
+  }
+  if (OutFormat == "TXT") {
+    os << "vert&=\n";
+    WriteFundDomainVertex(epair.vert1, os, OutFormat);
+    os << "vert2=\n";
+    WriteFundDomainVertex(epair.vert2, os, OutFormat);
+  }
+  std::cerr << "Failed to find a matching entry for WritePairVertices\n";
+  throw TerminalException{1};
+}
+
+
+template<typename T, typename Tint>
 PairVertices<T,Tint> gen_pair_vertices(FundDomainVertex<T,Tint> const& vert1, FundDomainVertex<T,Tint> const& vert2)
 {
   std::unordered_set<MyVector<Tint>> set_v;
@@ -284,11 +354,52 @@ struct ResultEdgewalk {
   std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
 };
 
-
-
+template<typename T, typename Tint>
+std::vector<T> get_list_norms(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re)
+{
+  std::set<T> set_norms;
+  auto proc_vertex=[&](FundDomainVertex<T,Tint> const& vert) -> void {
+    for (auto root : vert.l_roots) {
+      MyVector<T> root_t = UniversalVectorConversion<T,Tint>(root);
+      T norm = root_t.dot(G * root_t);
+      set_norms.insert(norm);
+    }
+  };
+  for (auto & e_pair : re.l_orbit_pair_vertices) {
+    proc_vertex(e_pair.vert1);
+    proc_vertex(e_pair.vert2);
+  }
+  std::vector<T> l_norms;
+  for (auto & v : set_norms)
+    l_norms.push_back(v);
+  return l_norms;
+}
 
 
 template<typename T, typename Tint>
+void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re, std::ostream& os, const std::string& OutFormat)
+{
+  std::vector<T> l_norms = get_list_norms(G, re);
+  if (OutFormat == "GAP") {
+    os << "return rec(l_norms:=";
+    WriteStdVectorGAP(os, l_norms);
+    os << ", ListIsomCox:=";
+    WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
+    os << ", ListVertices:=";
+    
+  }
+  if (OutFormat == "TXT") {
+    os << "List of found generators of Isom / Cox\n";
+  }
+  std::cerr << "Failed to find a matching entry in PrintResultEdgewalk\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+template<typename T, typename Tint, typename Tgroup>
 ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
@@ -360,8 +471,72 @@ ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 
+template<typename T, typename Tint>
+std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& OptionNorms)
+{
+  if (OptionNorms == "K3")
+    return {"2"};
+  if (OptionNorms == "all") {
+    MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint,T>(G);
+    std::vector<Tint> l_norms_tint = Get_root_lengths(G_tint);
+    std::vector<T> l_norms;
+    for (auto & eN : l_norms_tint)
+      l_norms.push_back(T(eN));
+    return l_norms;
+  }
+  std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
+  throw TerminalException{1};
+}
 
 
+
+template<typename T, typename Tint, typename Tgroup>
+FundDomainVertex<T,Tint> const& eVert)
+  std::vector<T> get_initial_vertex(MyMatrix<T> const& G, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+{
+  if (OptionInitialVertex == "File") {
+    std::ifstream is(FileInitialVertex);
+    MyVector<T> gen = ReadVector<T>(is);
+    MyMatrix<Tint> Mroot = ReadMatrix<Tint>(is);
+    std::vector<MyVector<Tint>> l_roots;
+    for (size_t i=0; i<Mroot.rows(); i++) {
+      
+    }
+    return {gen, l_roots};
+  }
+  if (OptionInitialVertex == "vinberg") {
+  }
+  std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
+  throw TerminalException{1};
+}
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+void MainFunctionEdgewalk(FullNamelist const& eFull)
+{
+  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
+  std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
+  MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
+  //
+  std::string OptionNorms=BlockPROC.ListStringValues.at("OptionIniti");
+  std::vector<T> l_norms = get_initial_list_norms(G, OptionNorms);
+  //
+  std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
+  std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex(G, OptionInitialVertex, FileInitialVertex);
+  //
+  ResultEdgeWalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm(G, l_norms, eVert);
+  std::string OutMethod=BlockPROC.ListStringValues.at("OutMethod");
+  std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
+  if (FileOut == "unset") {
+    PrintResultEdgewalk(G, re, std::cerr, OutFormat);
+  } else {
+    std::ofstream os(FileOut);
+    PrintResultEdgewalk(G, re, os, OutFormat);
+  }
+
+}
 
 
 
