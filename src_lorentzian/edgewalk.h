@@ -1,11 +1,12 @@
 #ifndef INCLUDE_EDGEWALK_H
 #define INCLUDE_EDGEWALK_H
 
-
+#include "MatrixCanonicalForm.h"
+#include "Temp_PolytopeEquiStab.h"
 #include "two_dim_lorentzian.h"
 #include "coxeter_dynkin.h"
 #include "vinberg_code.h"
-
+#include "Namelist.h"
 
 
 
@@ -133,10 +134,10 @@ RootCandidate<T,Tint> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> c
 template<typename T, typename Tint>
 int get_sign_cand(RootCandidate<T,Tint> const& poss1, RootCandidate<T,Tint> const& poss2)
 {
-  int sign1 = get_sign_pair_stdpair({poss1.sign, poss1.quant1}, {poss2.sign, poss2.quant1});
+  int sign1 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant1}, {poss2.sign, poss2.quant1});
   if (sign1 != 0)
     return sign1; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
-  int sign2 = get_sign_pair_stdpair({poss1.sign, poss1.quant2}, {poss2.sign, poss2.quant2});
+  int sign2 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant2}, {poss2.sign, poss2.quant2});
   if (sign2 != 0)
     return sign2; // because -k.alpha1 / sqrt(N1)    <     -k.alpha2 / sqrt(N2)   correspond to 1 in the above.
   int sign3 = get_sign_pair_t(poss1.e_norm, poss2.e_norm);
@@ -181,10 +182,10 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
-  int dim = G.size();
+  int n = G.size();
   size_t n_root = l_ui.size();
-  MyMatrix<T> Space(n_root,dim);
-  MyMatrix<T> EquaB(n_root+1,dim);
+  MyMatrix<T> Space(n_root,n);
+  MyMatrix<T> EquaB(n_root+1,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
     MyVector<T> eP = G * eV;
@@ -193,13 +194,13 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       std::cerr << "The scalar product should be 0\n";
       throw TerminalException{1};
     }
-    for (int i=0; i<dim; i++) {
+    for (int i=0; i<n; i++) {
       Space(i_root,i) = eV(i);
       EquaB(i_root,i) = eP(i);
     }
   }
   MyVector<T> eP = G * k;
-  for (int i=0; i<dim; i++)
+  for (int i=0; i<n; i++)
     EquaB(n_root,i) = eP(i);
   MyMatrix<T> NSP = NullspaceMat(EquaB);
   if (NSP.rows() != 1) {
@@ -209,7 +210,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   MyVector<T> r0 = GetMatrixRow(NSP,0);
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool allow_euclidean = false;
-  std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norm, allow_euclidean);
+  std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, allow_euclidean);
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
@@ -226,7 +227,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     if (opt_v) {
       MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
       MyVector<T> alpha_T = e_extension.u + v * NSP;
-      MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(root_T);
+      MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
       RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm);
       l_candidates.push_back(eCand);
     }
@@ -259,7 +260,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   SetMatrixRow(NSPbas, r0, 1);
   MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
-  if (!opt) {
+  if (!Factor_opt) {
     std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
     throw TerminalException{1};
   }
@@ -400,7 +401,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 
 
 template<typename T, typename Tint, typename Tgroup>
-ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
+ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   using Tdone = std::pair<bool,bool>;
@@ -418,8 +419,8 @@ ResultEdgeWalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   auto func_insert_pair_vertices=[&](Tentry const& v_pair) -> void {
     for (auto & u_pair : l_entry) {
       std::optional<MyMatrix<Tint>> equiv_opt = f_equiv(u_pair.second, v_pair.second);
-      if (eauiv_opt) {
-        f_insert_gen(*eauiv_opt);
+      if (equiv_opt) {
+        f_insert_gen(*equiv_opt);
         return;
       }
     }
@@ -475,10 +476,10 @@ template<typename T, typename Tint>
 std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& OptionNorms)
 {
   if (OptionNorms == "K3")
-    return {"2"};
+    return {T(2)};
   if (OptionNorms == "all") {
     MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint,T>(G);
-    std::vector<Tint> l_norms_tint = Get_root_lengths(G_tint);
+    std::vector<Tint> l_norms_tint = Get_root_lengths(G_Tint);
     std::vector<T> l_norms;
     for (auto & eN : l_norms_tint)
       l_norms.push_back(T(eN));
@@ -490,7 +491,7 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& O
 
 
 
-template<typename T, typename Tint, typename Tgroup>
+template<typename T, typename Tint>
 FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   if (OptionInitialVertex == "File") {
@@ -505,7 +506,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::string co
     return {gen, l_roots};
   }
   if (OptionInitialVertex == "vinberg") {
-    VinbergTot<T,Tint> Vtot = GetVinbergFromG(G);
+    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G);
     std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
     return {UniversalVectorConversion<T,Tint>(epair.first), epair.second};
   }
@@ -523,14 +524,14 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionIniti");
-  std::vector<T> l_norms = get_initial_list_norms(G, OptionNorms);
+  std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex(G, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, OptionInitialVertex, FileInitialVertex);
   //
-  ResultEdgeWalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm(G, l_norms, eVert);
-  std::string OutMethod=BlockPROC.ListStringValues.at("OutMethod");
+  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
+  std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
   if (FileOut == "unset") {
     PrintResultEdgewalk(G, re, std::cerr, OutFormat);

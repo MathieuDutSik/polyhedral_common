@@ -311,7 +311,7 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
     // and so of the quadratic form as
     // (a x - a x1 y) (x - x2 y)
     F(0,0) = a;
-    F(0,1) = -a x1;
+    F(0,1) = -a * x1;
     F(1,0) = 1;
     F(1,1) = -x2;
     return F;
@@ -379,7 +379,7 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
     v(0) = e_div;
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
-    if (IsIntegralVector(eSol)) {
+    if (IsIntegralVector(e_sol)) {
       l_sol.push_back( e_sol);
       l_sol.push_back(-e_sol);
     }
@@ -487,10 +487,10 @@ std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const&
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
+  T M = eval_quad(G, r0);
   MyVector<Tint> l_A = GetTwoComplement(r0);
   MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
-  T M = eval_quad(G, r0);
-  std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> epair = Anisotropic(G, M, r0, l_B);
+  std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic(G, M, r0, l_B);
   if (!opt)
     return {};
   std::vector<MyVector<Tint>> const& l_vect = opt->second;

@@ -1,6 +1,6 @@
+#include "Permutation.h"
+#include "Group.h"
 #include "NumberTheory.h"
-#include "MatrixCanonicalForm.h"
-#include "Temp_PolytopeEquiStab.h"
 #include "edgewalk.h"
 
 
@@ -15,11 +15,14 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     std::string eFileName=argv[1];
-    using T=mpq_class;
-    using Tint=mpz_class;
+    using T = mpq_class;
+    using Tint = mpz_class;
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tgroup = permutalib::Group<Telt,Tint>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionEdgewalk(eFull);
+    MainFunctionEdgewalk<T,Tint,Tgroup>(eFull);
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

@@ -8,6 +8,7 @@
 #include "POLY_PolytopeInt.h"
 #include "POLY_lrslib.h"
 #include "coxeter_dynkin.h"
+#include "Temp_ShortVectorUndefinite.h"
 
 
 #define DEBUG_VINBERG
@@ -341,7 +342,7 @@ VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G)
   bool NeedNonZero = true;
   MyVector<Tint> eVect=GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
-  return GetVinbergAux(G_i, eVect);
+  return GetVinbergAux<T,Tint>(G_i, eVect);
 }
 
 
@@ -871,7 +872,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
   };
   lrs::Kernel_DualDescription_cond(FACwork, f);
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  bool test=opt;
+  bool test=opt.has_value();
   std::cerr << "has found vertex=" << test << " n_iter=" << n_iter << " |GetOneInteriorVertex|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
   return opt;
 }
@@ -1290,8 +1291,6 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
       ListRoot = ReduceListRoot(ListRoot);
       std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
       FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
-      if (is_FundPoly(Vtot, ListRoot))
-        return ListRoot;
     }
   }
 }
@@ -1301,7 +1300,7 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
-  std::vector<MyVector<Tint>> ListRotRet;
+  std::vector<MyVector<Tint>> ListRootRet;
   auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
     if (is_FundPoly(Vtot, ListRoot)) {
       ListRootRet = ListRoot;

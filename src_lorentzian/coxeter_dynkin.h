@@ -446,7 +446,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
-      T scal_square = cos_square * M(i,i) * e_norm;
+      T scal_square = cos_square * G(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
       if (!opt)
         return;
