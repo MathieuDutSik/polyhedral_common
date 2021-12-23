@@ -491,8 +491,7 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& O
 
 
 template<typename T, typename Tint, typename Tgroup>
-FundDomainVertex<T,Tint> const& eVert)
-  std::vector<T> get_initial_vertex(MyMatrix<T> const& G, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   if (OptionInitialVertex == "File") {
     std::ifstream is(FileInitialVertex);
@@ -500,11 +499,15 @@ FundDomainVertex<T,Tint> const& eVert)
     MyMatrix<Tint> Mroot = ReadMatrix<Tint>(is);
     std::vector<MyVector<Tint>> l_roots;
     for (size_t i=0; i<Mroot.rows(); i++) {
-      
+      MyVector<Tint> root = GetMatrixRow(Mroot,i);
+      l_roots.push_back(root);
     }
     return {gen, l_roots};
   }
   if (OptionInitialVertex == "vinberg") {
+    VinbergTot<T,Tint> Vtot = GetVinbergFromG(G);
+    std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
+    return {UniversalVectorConversion<T,Tint>(epair.first), epair.second};
   }
   std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
   throw TerminalException{1};

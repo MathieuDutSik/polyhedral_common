@@ -264,6 +264,10 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
 
 
 
+
+
+
+
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
 {
@@ -327,6 +331,20 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   //  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv_T, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
   return {G, G_T, v0, V, Vtrans, Mbas, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
+
+
+template<typename T, typename Tint>
+VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G)
+{
+  T CritNorm = 0;
+  bool StrictIneq = true;
+  bool NeedNonZero = true;
+  MyVector<Tint> eVect=GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
+  MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
+  return GetVinbergAux(G_i, eVect);
+}
+
+
 
 
 template<typename T, typename Tint>
@@ -821,6 +839,47 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 
 
 template<typename T, typename Tint>
+std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
+{
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  size_t n_root = ListRoot.size();
+  size_t n_col = Vtot.G.rows();
+  MyMatrix<Tint> FAC(n_root,n_col);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
+    for (size_t i_col=0; i_col<n_col; i_col++)
+      FAC(i_root, i_col) = e_gv(i_col);
+  }
+  MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
+  bool IsFirst = true;
+  std::optional<MyVector<Tint>> opt;
+  size_t n_iter = 0;
+  auto f=[&](Tint* out) -> bool {
+    if (!IsFirst) {
+      n_iter++;
+      MyVector<Tint> V(n_col);
+      for (size_t i_col=0; i_col<n_col; i_col++)
+        V(i_col) = out[i_col+1];
+      Tint scal = V.dot(Vtot.G * V);
+      if (scal <= 0) {
+        opt = V;
+        return false;
+      }
+    }
+    IsFirst=false;
+    return true;
+  };
+  lrs::Kernel_DualDescription_cond(FACwork, f);
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  bool test=opt;
+  std::cerr << "has found vertex=" << test << " n_iter=" << n_iter << " |GetOneInteriorVertex|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
+  return opt;
+}
+
+
+
+
+template<typename T, typename Tint>
 bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -1201,8 +1260,9 @@ MyMatrix<T> GetInitial_FACfeasible(const VinbergTot<T,Tint>& Vtot, const std::ve
 
 
 
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
+
+template<typename T, typename Tint, typename F>
+void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
 {
   std::cerr << "FindRoots, step 1\n";
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
@@ -1212,6 +1272,8 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
   IterateRootDecompositions<T,Tint> iter(Vtot);
   std::cerr << "FindRoots, step 3\n";
   while (true) {
+    if (f_exit(ListRoot, FACfeasible))
+      break;
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
@@ -1224,16 +1286,57 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
       for (auto & eRoot : ListRoot) {
         WriteVector(std::cerr, eRoot);
       }
-      FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
       std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
       ListRoot = ReduceListRoot(ListRoot);
       std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
+      FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
       if (is_FundPoly(Vtot, ListRoot))
         return ListRoot;
     }
   }
-  std::cerr << "Should never reach that stage\n";
-  throw TerminalException{1};
+}
+
+
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
+{
+  std::vector<MyVector<Tint>> ListRotRet;
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
+    if (is_FundPoly(Vtot, ListRoot)) {
+      ListRootRet = ListRoot;
+      return true;
+    }
+    return false;
+  };
+  FindRoots_Kernel(Vtot, f_exit);
+  return ListRootRet;
+}
+
+
+
+
+template<typename T, typename Tint>
+std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
+{
+  std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair;
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
+    std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
+    if (opt) {
+      MyVector<Tint> v = *opt;
+      std::vector<MyVector<Tint>> l_roots;
+      for (auto & root : ListRoot) {
+        Tint scal = v.dot(Vtot.G * root);
+        if (scal == 0)
+          l_roots.push_back(root);
+      }
+      epair = {v, l_roots};
+      return true;
+    }
+    return false;
+  };
+  FindRoots_Kernel(Vtot, f_exit);
+  return epair;
 }
 
 
