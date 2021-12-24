@@ -380,8 +380,9 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
     if (IsIntegralVector(e_sol)) {
-      l_sol.push_back( e_sol);
-      l_sol.push_back(-e_sol);
+      MyVector<Tint> e_sol_i = UniversalVectorConversion<Tint,T>(e_sol);
+      l_sol.push_back( e_sol_i);
+      l_sol.push_back(-e_sol_i);
     }
   }
   return l_sol;
@@ -456,7 +457,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm, MyMatrix<T> const& F)
 {
-  std::vector<MyVector<Tint>> l_sol = EnumerateVectorFixedNorm_Factorization(F, SearchNorm);
+  std::vector<MyVector<Tint>> l_sol = EnumerateVectorFixedNorm_Factorization<T,Tint>(F, SearchNorm);
   auto det=[&](MyVector<Tint> const& v1, MyVector<Tint> const& v2) -> Tint {
     return v1(0) * v2(1) - v1(1) * v2(0);
   };

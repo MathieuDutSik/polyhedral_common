@@ -221,12 +221,17 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyMatrix<T> NSP = NullspaceIntMat(TransposedMat(Equas));
     MyMatrix<T> GP_LN = NSP * G_LN * NSP.transpose();
     MyVector<T> r0_LN = Inverse(Latt).transpose() * r0;
-    MyVector<T> r0_NSP = SolutionMat(NSP, r0_LN);
-    MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveVectorFraction(r0_NSP));
+    auto RecSol = SolutionMat(NSP, r0_LN);
+    if (!RecSol.result) {
+      std::cerr << "Failed to resolve the SolutionMat problem\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> r0_NSP = RecSol.eSol;
+    MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
     if (opt_v) {
       MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
-      MyVector<T> alpha_T = e_extension.u + v * NSP;
+      MyVector<T> alpha_T = e_extension.u_component + NSP.transpose() * v;
       MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
       RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm);
       l_candidates.push_back(eCand);
@@ -345,8 +350,9 @@ PairVertices<T,Tint> gen_pair_vertices(MyMatrix<T> const& G, FundDomainVertex<T,
     l_roots.push_back(eV);
   MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
   using Tidx_value = uint16_t;
-  WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix(MatV, G);
-  return {vert1, vert2, {MatV,WMat}};
+  WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix<T,Tidx_value>(MatV, G);
+  std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>> pair_char{std::move(MatV),std::move(WMat)};
+  return {vert1, vert2, std::move(pair_char)};
 }
 
 
@@ -421,7 +427,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     l_gen_isom_cox.push_back(eP);
   };
-  auto func_insert_pair_vertices=[&](EnumEntry const& v_pair) -> void {
+  auto func_insert_pair_vertices=[&](EnumEntry & v_pair) -> void {
     for (auto & u_pair : l_entry) {
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair.val.pair_char, v_pair.val.pair_char);
       if (equiv_opt) {
@@ -431,7 +437,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     for (auto & eGen : LinPolytopeWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair.val.pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
-    l_entry.push_back(v_pair);
+    l_entry.emplace_back(std::move(v_pair));
   };
   size_t len = eVert.l_roots.size();
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
@@ -468,8 +474,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   }
   std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
   for (auto & epair : l_entry)
-    l_orbit_pair_vertices.emplace_back(epair.val);
-  return {l_gen_isom_cox, l_orbit_pair_vertices};
+    l_orbit_pair_vertices.emplace_back(std::move(epair.val));
+  return {l_gen_isom_cox, std::move(l_orbit_pair_vertices)};
 }
 
 
