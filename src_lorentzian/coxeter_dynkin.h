@@ -77,7 +77,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
     if (list_deg4.size() != 1 || list_deg1.size() != 4 || list_deg2.size() != 0 || list_deg3.size() != 0)
       return false;
     size_t i_4 = list_deg4[0];
-    for (int i=0; i<dim; i++)
+    for (size_t i=0; i<dim; i++)
       if (i != i_4)
         if (M(i, i_4) != 3)
           return false;
