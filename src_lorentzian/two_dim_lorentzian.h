@@ -288,7 +288,7 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T>& G)
   x1 = (-2b + sqrt(4 Delta)) / 2a = (-b + sqrt(Delta)) / a
   x2 = (-2b = sqrt(4 Delta)) / 2a = (-b - sqrt(Delta)) / a
  */
-template<typename T, typename Tint>
+template<typename T>
 std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 {
   if (G.rows() != 2 || G.cols() != 2) {

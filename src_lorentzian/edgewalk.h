@@ -256,8 +256,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   // So, no candidates were found. We need to find isotropic vectors.
   MyMatrix<T> NSPbas(n,2);
-  SetMatrixRow(NSPbas, k, 0);
-  SetMatrixRow(NSPbas, r0, 1);
+  AssignMatrixRow(NSPbas, 0, k);
+  AssignMatrixRow(NSPbas, 1, r0);
   MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
   if (!Factor_opt) {
