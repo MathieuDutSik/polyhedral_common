@@ -1,7 +1,7 @@
 #PROGRAM		= LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
-#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock
+PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock
 
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		=

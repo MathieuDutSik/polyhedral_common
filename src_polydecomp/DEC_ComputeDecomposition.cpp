@@ -350,7 +350,7 @@ std::pair<std::vector<ent_face<Tint>>,std::vector<MyMatrix<Tint>>> get_spanning_
   using Telt=typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> set_EXT;
-  size_t dim;
+  size_t dim = -1; // That value should be overwritten later
   for (auto & ePt : FaceToVector(ef_input.f_ext)) {
     MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
     dim = V.size();

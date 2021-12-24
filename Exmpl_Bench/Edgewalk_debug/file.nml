@@ -1,0 +1,9 @@
+&PROC
+ FileLorMat = "DEBUG_24_LorMat"
+ OptionInitialVertex = "vinberg"
+ FileVertDomain = "DEBUG_24_Vert"
+ OptionNorms = "K3"
+ OutFormat = "GAP"
+ FileOut = "stdout"
+/
+

@@ -20,13 +20,12 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListIntValues1["n"]=9;
-  ListStringValues1["FileLorMat"]="/tmp/unset";
-  ListStringValues1["OptionInitialVertex"]="vinberg";
-  ListStringValues1["FileVertDomain"]="/tmp/unset";
-  ListStringValues1["OptionNorms"]="all";
-  ListStringValues1["OutFormat"]="unset";
-  ListStringValues1["FileOut"]="unset";
+  ListStringValues1["FileLorMat"]="the lorentzian matrix used";
+  ListStringValues1["OptionInitialVertex"]="vinberg or File and if File selected use FileVertDomain as initial vertex";
+  ListStringValues1["FileVertDomain"]="unset put the name of the file used for the initial vertex";
+  ListStringValues1["OptionNorms"]="possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
+  ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues=ListStringValues1;
   ListBlock["PROC"]=BlockPROC;
@@ -550,11 +549,15 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
-  if (FileOut == "unset") {
+  if (FileOut == "stderr") {
     PrintResultEdgewalk(G, re, std::cerr, OutFormat);
   } else {
-    std::ofstream os(FileOut);
-    PrintResultEdgewalk(G, re, os, OutFormat);
+    if (FileOut == "stdout") {
+      PrintResultEdgewalk(G, re, std::cout, OutFormat);
+    } else {
+      std::ofstream os(FileOut);
+      PrintResultEdgewalk(G, re, os, OutFormat);
+    }
   }
 
 }
