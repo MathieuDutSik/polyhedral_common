@@ -455,6 +455,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       func_insert_pair_vertices(entry);
     }
   };
+  insert_edges_from_vertex(eVert);
   while(true) {
     bool IsFinished = true;
     for (auto & entry : l_entry) {
