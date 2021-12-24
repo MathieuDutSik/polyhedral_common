@@ -9,9 +9,9 @@ int main(int argc, char* argv[])
 {
   try {
     if (argc != 4 && argc != 2) {
-      std::cerr << "VIN_ComputeDomain [FileI] [mode] [FileO]\n";
+      std::cerr << "LORENTZ_FundDomain_Vinberg [FileI] [mode] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "VIN_ComputeDomain [FileI]\n";
+      std::cerr << "LORENTZ_FundDomain_Vinberg [FileI]\n";
       throw TerminalException{1};
     }
     using T=mpq_class;
