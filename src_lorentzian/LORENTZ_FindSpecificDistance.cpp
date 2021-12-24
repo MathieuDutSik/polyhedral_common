@@ -1,4 +1,3 @@
-#include "Permlib_specific.h"
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
@@ -19,10 +18,9 @@ int main(int argc, char* argv[])
     std::string FileIn  = argv[1];
     std::ifstream is(FileIn);
     //
-    MyMatrix<T> G = ReadMatrix<T>(is);
-    MyMatrix<T> v0 = ReadVector<T>(is);
-    VinbergInput<T,Tint> Vin{G, v0};
-    VinbergTot<T,Tint> Vtot = GetVinbergAux(Vin);
+    MyMatrix<Tint> G = ReadMatrix<T>(is);
+    MyVector<Tint> v0 = ReadVector<T>(is);
+    VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G, v0);
     //
     MyVector<Tint> a = ReadVector<Tint>(is);
     T n;
