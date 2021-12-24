@@ -7,6 +7,7 @@
 #include "coxeter_dynkin.h"
 #include "vinberg_code.h"
 #include "Namelist.h"
+#include "Temp_Positivity.h"
 
 
 
@@ -532,6 +533,12 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
   std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeNonDegenerateSymmetricMatrix(G);
+  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
+    std::cerr << "We have nbZero=" << DiagInfo.nbZero << " nbPlus=" << DiagInfo.nbPlus << " nbMinus=" << DiagInfo.nbMinus << "\n";
+    std::cerr << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
+    throw TerminalException{1};
+  }
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionIniti");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);

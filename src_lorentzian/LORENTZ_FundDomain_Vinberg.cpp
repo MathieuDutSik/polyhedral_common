@@ -22,6 +22,13 @@ int main(int argc, char* argv[])
     //
     MyMatrix<Tint> G = ReadMatrix<Tint>(is);
     std::cerr << "We have G\n";
+    MyMatrix<T> G_T=UniversalMatrixConversion<T,Tint>(G);
+    DiagSymMat<T> DiagInfo = DiagonalizeNonDegenerateSymmetricMatrix(G_T);
+    if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
+      std::cerr << "We have nbZero=" << DiagInfo.nbZero << " nbPlus=" << DiagInfo.nbPlus << " nbMinus=" << DiagInfo.nbMinus << "\n";
+      std::cerr << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
+      throw TerminalException{1};
+    }
     MyMatrix<Tint> v0 = ReadVector<Tint>(is);
     std::cerr << "We have v0\n";
     VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G, v0);
