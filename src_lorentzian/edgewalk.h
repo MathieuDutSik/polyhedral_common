@@ -22,7 +22,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["FileLorMat"]="the lorentzian matrix used";
   ListStringValues1["OptionInitialVertex"]="vinberg or File and if File selected use FileVertDomain as initial vertex";
-  ListStringValues1["FileVertDomain"]="unset put the name of the file used for the initial vertex";
+  ListStringValues1["FileInitialVertex"]="unset put the name of the file used for the initial vertex";
   ListStringValues1["OptionNorms"]="possible option K3 (then just 2) or all where all norms are considered";
   ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
@@ -539,7 +539,7 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
     throw TerminalException{1};
   }
   //
-  std::string OptionNorms=BlockPROC.ListStringValues.at("OptionIniti");
+  std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
