@@ -308,7 +308,7 @@ template<typename T, typename Tint>
 struct PairVertices {
   FundDomainVertex<T,Tint> vert1;
   FundDomainVertex<T,Tint> vert2;
-  MyMatrix<Tint> BasisRoot;
+  std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>> pair_char;
 };
 
 template<typename T, typename Tint>
@@ -333,7 +333,7 @@ void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std
 
 
 template<typename T, typename Tint>
-PairVertices<T,Tint> gen_pair_vertices(FundDomainVertex<T,Tint> const& vert1, FundDomainVertex<T,Tint> const& vert2)
+PairVertices<T,Tint> gen_pair_vertices(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert1, FundDomainVertex<T,Tint> const& vert2)
 {
   std::unordered_set<MyVector<Tint>> set_v;
   for (auto & eV : vert1.l_roots)
@@ -343,8 +343,10 @@ PairVertices<T,Tint> gen_pair_vertices(FundDomainVertex<T,Tint> const& vert1, Fu
   std::vector<MyVector<Tint>> l_roots;
   for (auto & eV : set_v)
     l_roots.push_back(eV);
-  MyMatrix<Tint> MatV = MatrixFromVectorFamily(l_roots);
-  return {vert1, vert2, MatV};
+  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+  using Tidx_value = uint16_t;
+  WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix(MatV, G);
+  return {vert1, vert2, {MatV,WMat}};
 }
 
 
@@ -418,16 +420,15 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   auto func_insert_pair_vertices=[&](Tentry const& v_pair) -> void {
     for (auto & u_pair : l_entry) {
-      std::optional<MyMatrix<Tint>> equiv_opt = f_equiv(u_pair.second, v_pair.second);
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair.second.pair_char, v_pair.second.pair_char);
       if (equiv_opt) {
-        f_insert_gen(*equiv_opt);
+        f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
     }
+    for (auto & eGen : LinPolytopeWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair.second.pair_char))
+      f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     l_entry.push_back(v_pair);
-    for (auto & eGen : f_stab(v_pair)) {
-      f_insert_gen(eGen);
-    }
   };
   size_t len = eVert.l_roots.size();
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
@@ -440,8 +441,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       }
       MyVector<Tint> v_disc = theVert.l_roots[i];
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
-      PairVertices<T,Tint> epair = gen_pair_vertices(theVert, fVert);
-      Tentry entry{{true,false},epair};
+      PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
+      Tdone eDone{true,false};
+      Tentry entry{eDone,epair};
       func_insert_pair_vertices(entry);
     }
   };

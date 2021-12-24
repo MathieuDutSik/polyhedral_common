@@ -1561,42 +1561,41 @@ WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& 
 
 
 
-template<typename T, typename Tgroup, typename Tidx_value>
-std::vector<MyMatrix<T>> LinPolytopeWMat_Automorphism(std::pair<MyMatrix<T>, WeightMatrix<true,std::vector<typename Tgroup::Tint>,Tidx_value>> const& ep)
+template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
+std::vector<MyMatrix<T>> LinPolytopeWMat_Automorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep)
 {
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
   using Tgr=GraphBitset;
-  Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(ep.second);
+  Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1);
   std::vector<MyMatrix<T>> ListGenMat;
   for (auto & eGen : GRPfull.GeneratorsOfGroup()) {
     MyMatrix<T> eMat_T = FindTransformation(ep.first, ep.first, eGen);
-    ListGenMat.push_back({eGenRed, eMat});
+    ListGenMat.push_back(eMat_T);
   }
   return ListGenMat;
 }
 
 
-template<typename T, typename Tint, typename Tgroup, typename Tidx_value>
-std::optional<MyMatrix<Tint>> LinPolytopeWMat_Isomorphism(std::pair<MyMatrix<T>, WeightMatrix<true,std::vector<typename Tgroup::Tint>,Tidx_value>> const& ep,
-                                                          std::pair<MyMatrix<T>, WeightMatrix<true,std::vector<typename Tgroup::Tint>,Tidx_value>> const& fp)
+template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
+std::optional<MyMatrix<T>> LinPolytopeWMat_Isomorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep,
+                                                       std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& fp)
 {
   using Telt = typename Tgroup::Telt;
-  using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
   if (ep.first.rows() != fp.first.rows() || ep.first.cols() != fp.first.cols())
     return {};
-  std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(ep.second).first;
-  std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<std::vector<Tint>,Tgr,Tidx,Tidx_value>(fp.second).first;
+  std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
+  std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(fp.second).first;
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord);
   if (!IsoInfo) {
     return {};
   }
   Telt ePerm(IsoInfo->first);
-  Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>,Tgr,Tgroup,Tidx_value>(ep.second);
+  Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
   if (eRes)
     return *eRes;
