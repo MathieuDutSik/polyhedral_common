@@ -1564,8 +1564,6 @@ WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& 
 template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
 std::vector<MyMatrix<T>> LinPolytopeWMat_Automorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep)
 {
-  using Telt=typename Tgroup::Telt;
-  using Tint=typename Tgroup::Tint;
   using Tgr=GraphBitset;
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1);
