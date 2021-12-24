@@ -253,6 +253,7 @@ bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
   T val_comm = 2;
   size_t dim = M.rows();
+  std::cerr << "IsDiagramSpherical dim=" << dim << "\n";
   GraphBitset eG(dim);
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
@@ -262,14 +263,19 @@ bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
       }
     }
   }
+  std::cerr << "eG is built\n";
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  std::cerr << "LConn is built\n";
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
+    std::cerr << "dim_res=" << dim_res << "\n";
     MyMatrix<T> Mres(dim_res, dim_res);
-    for (size_t i=0; i<dim; i++)
-      for (size_t j=0; j<dim; j++)
+    for (size_t i=0; i<dim_res; i++)
+      for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
+    std::cerr << "Before IsIrreducibleDiagramSphericalEuclidean\n";
     bool test = IsIrreducibleDiagramSphericalEuclidean(M, allow_euclidean);
+    std::cerr << "After IsIrreducibleDiagramSphericalEuclidean\n";
     if (!test)
       return false;
   }
@@ -280,6 +286,7 @@ bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
 template<typename T>
 std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
+  std::cerr << "FindDiagramExtensions, step 1\n";
   std::set<MyVector<T>> SetExtensions;
   T val_comm = 2;
   T val_single_edge = 3;
@@ -299,9 +306,11 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       list_isolated.push_back(i);
   }
   // Consider the case of adding unconnected vector
+  std::cerr << "FindDiagramExtensions, step 2\n";
   MyVector<T> V_basic(dim);
   for (size_t i=0; i<dim; i++)
     V_basic(i) = val_comm;
+  std::cerr << "FindDiagramExtensions, step 3\n";
   auto test_vector_and_insert=[&](const MyVector<T>& V) -> void {
     MyMatrix<T> Mtest(dim+1,dim+1);
     for (size_t i=0; i<dim; i++)
@@ -311,19 +320,23 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       Mtest(i,dim) = V(i);
       Mtest(dim,i) = V(i);
     }
+    std::cerr << "Mtest built\n";
     if (IsDiagramSpherical(Mtest, allow_euclidean))
       SetExtensions.insert(V);
   };
   test_vector_and_insert(V_basic);
+  std::cerr << "FindDiagramExtensions, step 4\n";
   // Considering the case of just one edge
   for (size_t i=0; i<dim; i++) {
     // Here we have an arbitrary value
     for (T val=val_single_edge; val<128; val++) {
+      std::cerr << "i=" << i << " val=" << val << "\n";
       MyVector<T> V = V_basic;
       V(i) = val;
       test_vector_and_insert(V);
     }
   }
+  std::cerr << "FindDiagramExtensions, step 5\n";
   // Considering the case of 2 edges
   for (size_t i=0; i<dim; i++) {
     for (size_t j=0; j<dim; j++) {
@@ -337,6 +350,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       }
     }
   }
+  std::cerr << "FindDiagramExtensions, step 6\n";
   // Considering the case of 3 edges. All have to be single edges
   SetCppIterator SCI_A(dim,3);
   for (auto & eV : SCI_A) {
@@ -346,6 +360,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
     test_vector_and_insert(V);
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
+  std::cerr << "FindDiagramExtensions, step 7\n";
   size_t n_isolated = list_isolated.size();
   SetCppIterator SCI_B(n_isolated,4);
   for (auto & eV : SCI_B) {
@@ -354,9 +369,11 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       V(list_isolated[eVal]) = val_single_edge;
     test_vector_and_insert(V);
   }
+  std::cerr << "FindDiagramExtensions, step 8\n";
   std::vector<MyVector<T>> ListExtensions;
   for (auto &eEnt : SetExtensions)
     ListExtensions.push_back(eEnt);
+  std::cerr << "FindDiagramExtensions, step 9\n";
   return ListExtensions;
 }
 
@@ -421,12 +438,16 @@ struct Possible_Extension {
 template<typename T, typename Tint>
 std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool allow_euclidean)
 {
+  std::cerr << "ComputePossibleExtensions, step 1\n";
   std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+  std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
   int dim = G.rows();
   int dim_cox = l_root.size();
+  std::cerr << "ComputePossibleExtensions, step 3\n";
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, allow_euclidean);
+  std::cerr << "ComputePossibleExtensions, step 4\n";
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
   T val6 = T(3) / T(4);
@@ -467,9 +488,11 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
+  std::cerr << "ComputePossibleExtensions, step 5\n";
   for (auto & e_norm : l_norm)
     for (auto & e_vect : l_vect)
       get_entry(e_vect, e_norm);
+  std::cerr << "ComputePossibleExtensions, step 6\n";
   return l_extensions;
 }
 

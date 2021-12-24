@@ -1,6 +1,6 @@
 &PROC
  FileLorMat = "DEBUG_24_LorMat"
- OptionInitialVertex = "vinberg"
+ OptionInitialVertex = "File"
  FileInitialVertex = "DEBUG_24_Vert"
  OptionNorms = "K3"
  OutFormat = "GAP"

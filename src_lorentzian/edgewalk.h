@@ -182,8 +182,9 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
-  int n = G.size();
+  int n = G.rows();
   size_t n_root = l_ui.size();
+  std::cerr << "n_root=" << n_root << "\n";
   MyMatrix<T> Space(n_root,n);
   MyMatrix<T> EquaB(n_root+1,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
@@ -200,17 +201,28 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
   }
   MyVector<T> eP = G * k;
+  T norm = k.dot(eP);
+  std::cerr << "norm=" << norm << "\n";
   for (int i=0; i<n; i++)
     EquaB(n_root,i) = eP(i);
-  MyMatrix<T> NSP = NullspaceMat(EquaB);
+  std::cerr << "EquaB=\n";
+  WriteMatrix(std::cerr, EquaB);
+  std::cerr << "RankMat(EquaB)=" << RankMat(EquaB) << "\n";
+  MyMatrix<T> NSP = NullspaceTrMat(EquaB);
+  std::cerr << "Edgewalk Procedure, step 1\n";
   if (NSP.rows() != 1) {
-    std::cerr << "The dimension should be exactly 2\n";
+    std::cerr << "|NSP|=" << NSP.rows() << "/" << NSP.cols() << "\n";
+    std::cerr << "The dimension should be exactly 1\n";
     throw TerminalException{1};
   }
+  std::cerr << "Edgewalk Procedure, step 1\n";
   MyVector<T> r0 = GetMatrixRow(NSP,0);
+  std::cerr << "Edgewalk Procedure, step 2\n";
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool allow_euclidean = false;
+  std::cerr << "Edgewalk Procedure, step 3\n";
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, allow_euclidean);
+  std::cerr << "Edgewalk Procedure, step 4\n";
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
@@ -440,6 +452,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     l_entry.emplace_back(std::move(v_pair));
   };
   size_t len = eVert.l_roots.size();
+  std::cerr << "|l_roots| len=" << len << "\n";
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
     for (size_t i=0; i<len; i++) {
       std::vector<MyVector<Tint>> l_ui;
