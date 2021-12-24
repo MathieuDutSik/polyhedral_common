@@ -111,6 +111,8 @@ struct DiagSymMat {
 template<typename T>
 DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
 {
+  //  std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
+  //  WriteMatrix(std::cerr, SymMat);
   int n=SymMat.rows();
   std::vector<MyVector<T>> ListVect;
   for (int i=0; i<n; i++) {
@@ -130,6 +132,8 @@ DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
   }
   MyMatrix<T> TheBasis=MatrixFromVectorFamily(ListVect);
   MyMatrix<T> RedMat=TheBasis*SymMat*TheBasis.transpose();
+  //  std::cerr << "RedMat=\n";
+  //  WriteMatrix(std::cerr, RedMat);
   int nbPlus=0;
   int nbMinus=0;
   int nbZero=0;
@@ -137,8 +141,9 @@ DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
     if (RedMat(i,i) > 0)
       nbPlus++;
     if (RedMat(i,i) < 0)
-      nbPlus++;
+      nbMinus++;
   }
+  //  std::cerr << "nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
   return {TheBasis, RedMat, nbZero, nbPlus, nbMinus};
 }
 
@@ -205,6 +210,8 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const& SymMat)
 template<typename T>
 DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const& SymMat)
 {
+  //  std::cerr << "DiagonalizeSymmetricMatrix\n";
+  //  WriteMatrix(std::cerr, SymMat);
   //  std::cerr << "DiagonalizeSymmetricMatrix, RankMat(SymMat)=" << RankMat(SymMat) << "\n";
   int n1=SymMat.rows();
   NSPreduction<T> NSP1=NullspaceReduction(SymMat);
