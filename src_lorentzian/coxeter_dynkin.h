@@ -397,8 +397,12 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
           return {};
         }
       }
-      // Only possibility is to have 4 at one extremity. This is Bn = Cn
-      return IrrCoxDyn{"B",n_vert,0};
+      if (n_four == 1 && n_sing == 1) {
+        // Only possibility is to have 4 at one extremity. This is Bn = Cn
+        return IrrCoxDyn{"B",n_vert,0};
+      }
+      // No other possibilities
+      return {};
     }
     std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
