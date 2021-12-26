@@ -181,12 +181,16 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
   if (type == "G" && dim == 2) {
     set_v(0, 1, val_six);
   }
-  if (type == "H") {
+  if (type == "H" && dim >= 2 && dim <= 4) {
     for (int i=2; i<dim; i++)
       set_v(i-1,i,val_single_edge);
     set_v(0,1,val_five);
   }
-  if (type == "I") {
+  if (type == "I" && dim == 2) {
+    if (cd.param < 7) {
+      std::cerr << "For the I case the values 2, 3, 4, 5, 6 are covered by A1+A1 , A2 , B2 , H2 and G2\n";
+      throw TerminalException{1};
+    }
     set_v(0,1, cd.param);
   }
   // Now the euclidean ones
@@ -227,7 +231,7 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
     set_v(2, 3, val_single_edge);
     set_v(3, 4, val_single_edge);
   }
-  if (type == "tildeG" && dim == 4) {
+  if (type == "tildeG" && dim == 2) {
     set_v(0, 1, val_single_edge);
     set_v(1, 2, val_six);
   }
