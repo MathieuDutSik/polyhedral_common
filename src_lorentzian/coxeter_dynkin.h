@@ -547,7 +547,6 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
   std::cerr << "LConn is built\n";
   std::vector<IrrCoxDyn> l_cd;
-  bool IsFirst=true;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
     std::cerr << "dim_res=" << dim_res << "\n";
@@ -570,6 +569,71 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
   return l_cd;
 }
 
+
+
+template<typename T>
+MyMatrix<T> string_to_coxdyn_matrix(std::string const& str)
+{
+  std::vector<std::string> LStr = STRING_Split(str, "+");
+  std::vector<MyMatrix<T>> LMat;
+  size_t n_vert = 0;
+  for (auto & s1 : LStr) {
+    std::string s2 = s1;
+    s2.erase(remove(s2.begin(), s2.end(), ' '), s2.end());
+    IrrCoxDyn cd = string_to_IrrCoxDyn(s2);
+    MyMatrix<T> M = IrrCoxDyn_to_matrix<T>(cd);
+    LMat.push_back(M);
+    n_vert += M.rows();
+  }
+  MyMatrix<T> Mret(n_vert,n_vert);
+  for (int i=0; i<n_vert; i++)
+    for (int j=0; j<n_vert; j++)
+      Mret(i,j) = 2;
+  size_t shift = 0;
+  for (auto & M : LMat) {
+    size_t len = M.rows();
+    for (size_t i=0; i<len; i++)
+      for (size_t j=0; j<len; j++)
+        Mret(shift + i, shift + j) = M(i,j);
+    shift += len;
+  }
+  return Mret;
+}
+
+template<typename T>
+std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
+{
+  bool allow_euclidean = true;
+  std::optional<std::vector<IrrCoxDyn>> opt = IsDiagramSphericalEuclidean(M, allow_euclidean);
+  if (opt) {
+    const std::vector<IrrCoxDyn> & l_irr = *opt;
+    std::string str = IrrCoxDyn_to_string(l_irr[0]);
+    for (int i=1; i<l_irr.size(); i++)
+      str += "+" + IrrCoxDyn_to_string(l_irr[i]);
+    return str;
+  }
+  std::cerr << "The recognition failed so coxdyn_matrix_to_string cannot work\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+template<typename T>
+MyMatrix<T> ExtendMatrix(MyMatrix<T> const& M, MyVector<T> const& V)
+{
+  size_t len = M.rows();
+  MyMatrix<T> Mret(len+1, len+1);
+  for (int i=0; i<len; i++)
+    for (int j=0; j<len; j++)
+      Mret(i,j) = M(i,j);
+  for (int i=0; i<len; i++) {
+    Mret(len,i) = V(i);
+    Mret(i,len) = V(i);
+  }
+  return Mret;
+}
 
 template<typename T>
 std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool& allow_euclidean)
