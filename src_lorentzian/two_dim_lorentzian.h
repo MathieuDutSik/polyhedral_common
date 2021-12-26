@@ -373,12 +373,15 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
   MyMatrix<T> A(2,2);
   A(0,0) = Fr1.TheVect(0);
   A(0,1) = Fr1.TheVect(1);
-  A(1,0) = Fr1.TheVect(0);
-  A(1,1) = Fr1.TheVect(1);
+  A(1,0) = Fr2.TheVect(0);
+  A(1,1) = Fr2.TheVect(1);
+  std::cerr << "We have A\n";
   MyMatrix<T> Ainv = Inverse(A);
+  std::cerr << "We have Ainv\n";
   MyVector<T> v(2);
   std::vector<MyVector<Tint>> l_sol;
   std::vector<T> list_div = GetAllFactors(T_abs(M_scal));
+  std::cerr << "|list_div|=" << list_div.size() << "\n";
   for (auto & e_div : list_div) {
     v(0) = e_div;
     v(1) = M_scal / e_div;
@@ -389,6 +392,7 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
       l_sol.push_back(-e_sol_i);
     }
   }
+  std::cerr << "|l_sol|=" << l_sol.size() << "\n";
   return l_sol;
 }
 
