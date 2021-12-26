@@ -59,10 +59,11 @@ std::string IrrCoxDyn_to_string(IrrCoxDyn const& cd)
   if (type == "I") {
     return std::string("I_2(") + std::to_string(cd.param) + ")";
   }
-  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE") {
+  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE" || type == "tildeF" || type == "tildeG") {
     std::string type_red = type.substr(5,1);
     return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) + "}";
   }
+  std::cerr << "cd  type=" << cd.type << " dim=" << cd.dim << " param=" << cd.param << "\n";
   std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
   throw TerminalException{1};
 }
