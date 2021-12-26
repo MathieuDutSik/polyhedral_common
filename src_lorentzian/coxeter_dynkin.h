@@ -139,6 +139,8 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
   if (type == "A") {
     for (int i=1; i<dim; i++)
       set_v(i-1,i,val_single_edge);
+    if (dim == 1) // That one has zero edges. So, we need to increase so as to pass.
+      n_assign++;
   }
   if (type == "B" || type == "C") {
     for (int i=1; i<dim-1; i++)
