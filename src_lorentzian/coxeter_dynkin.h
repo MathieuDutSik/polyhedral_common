@@ -270,7 +270,8 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       if (i != j && val != val_comm) {
         n_adj++;
         eG.AddAdjacent(i, j);
-        multiplicity[val]++;
+        if (j > i)
+          multiplicity[val]++;
         if (val != val_single_edge)
           n_higher_edge++;
       }
@@ -396,6 +397,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       // Only possibility is to have 4 at one extremity. This is Bn = Cn
       return IrrCoxDyn{"B",dim,0};
     }
+    std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
       if (dim == 2)
         return IrrCoxDyn{"H", 2,0}; // It is H2
@@ -516,6 +518,10 @@ MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
   if (opt) {
     IrrCoxDyn cd2 = *opt;
     if (cd.type != cd2.type || cd.dim != cd2.dim || cd.param != cd2.param) {
+      std::cerr << "M=\n";
+      WriteMatrix(std::cerr, M);
+      std::cerr << "cd   type=" << cd.type << " dim" << cd.dim << " param=" << cd.param << "\n";
+      std::cerr << "cd2  type=" << cd2.type << " dim" << cd2.dim << " param=" << cd2.param << "\n";
       std::cerr << "The recognition of the matrix did not yield the original Coxeter-Dynkin diagram\n";
       throw TerminalException{1};
     }

@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
       LOut.push_back(stro);
     }
     size_t pos_found=0;
+    std::cerr << "input = " << str << "\n";
     for (auto & stro : LOut) {
       std::cerr << "pos=" << pos_found << " diagram=" << stro << "\n";
       pos_found++;
