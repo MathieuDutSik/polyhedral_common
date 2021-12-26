@@ -270,10 +270,11 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       if (i != j && val != val_comm) {
         n_adj++;
         eG.AddAdjacent(i, j);
-        if (j > i)
+        if (j > i) {
           multiplicity[val]++;
-        if (val != val_single_edge)
-          n_higher_edge++;
+          if (val != val_single_edge)
+            n_higher_edge++;
+        }
       }
     }
     if (n_adj == 1)
@@ -322,6 +323,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   }
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 4\n";
   std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
+  std::cerr << "|ListCycles|=" << ListCycles.size() << "\n";
   if (ListCycles.size() > 0) { // Only tilde{An} is possible.
     if (ListCycles.size() > 1) // If more than 1 cycle, then not possible
       return {};
@@ -487,13 +489,21 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     }
     return len;
   };
-  size_t eCent = list_deg1[0];
+  std::cerr << "|list_deg3|=" << list_deg3.size() << "\n";
+  size_t eCent = list_deg3[0];
+  std::cerr << "eCent=" << eCent << "\n";
   std::map<size_t, size_t> map_len;
   for (auto & eAdj : get_list_adjacent(eCent)) {
     size_t len = get_length(eCent, eAdj);
+    std::cerr << "eAdj=" << eAdj << " len=" << len << "\n";
     map_len[len]++;
   }
+  for (auto & kv : map_len) {
+    std::cerr << "kv=" << kv.first << " / " << kv.second << "\n";
+  }
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 9\n";
+  if (map_len[1] == 3) // It is D4
+    return IrrCoxDyn{"D",4,0};
   if (map_len[1] == 2) // It is Dn
     return IrrCoxDyn{"D",dim,0};
   if (map_len[1] == 1 && map_len[2] == 2) // It is E6
