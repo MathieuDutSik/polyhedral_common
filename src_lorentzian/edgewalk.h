@@ -226,6 +226,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    std::cerr << "We have Latt=\n";
+    WriteMatrix(std::cerr, Latt);
+    std::cerr << "We have Space=\n";
+    WriteMatrix(std::cerr, Space);
     // Now getting into the LN space
     MyMatrix<T> Space_LN = Space * Inverse(Latt);
     MyMatrix<T> G_LN = Latt * G * Latt.transpose();
@@ -241,6 +245,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyVector<T> r0_NSP = RecSol.eSol;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
+    std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
       MyVector<T> alpha_T = e_extension.u_component + NSP.transpose() * v;
@@ -249,6 +254,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       l_candidates.push_back(eCand);
     }
   }
+  std::cerr << "|l_candidates|=" << l_candidates.size() << "\n";
   if (l_candidates.size() > 0) {
     RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
     std::vector<MyVector<Tint>> l_roots = l_ui;
@@ -272,16 +278,21 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     throw TerminalException{1};
   }
   // So, no candidates were found. We need to find isotropic vectors.
-  MyMatrix<T> NSPbas(n,2);
+  MyMatrix<T> NSPbas(2,n);
   AssignMatrixRow(NSPbas, 0, k);
   AssignMatrixRow(NSPbas, 1, r0);
+  std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
   MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
+  std::cerr << "We have Gred=\n";
+  WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
+  std::cerr << "We have Factor_opt\n";
   if (!Factor_opt) {
     std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
     throw TerminalException{1};
   }
   MyMatrix<T> Factor = *Factor_opt;
+  std::cerr << "We have Factor\n";
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);

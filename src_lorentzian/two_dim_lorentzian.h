@@ -21,6 +21,7 @@
 
  */
 
+#define CHECK_TWO_DIM_LORENTZIAN
 #define DEBUG_TWO_DIM_LORENTZIAN
 //#undef DEBUG_TWO_DIM_LORENTZIAN
 
@@ -49,7 +50,7 @@ template<typename T, typename Tint>
 std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
 {
   MyVector<Tint> m = r + l;
-#ifdef DEBUG_TWO_DIM_LORENTZIAN
+#ifdef CHECK_TWO_DIM_LORENTZIAN
   T norm_rr = eval_quad(G, r);
   if (norm_rr <= 0) {
     std::cerr << "norm_rr=" << norm_rr << "\n";
@@ -211,7 +212,9 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
     std::cerr << "Finding |r|=" << eval_quad(G, r) << "\n";
     l = pair.second;
     l = Canonical(G, M, r, l);
+    std::cerr << "After canonical\n";
     if (A_vect == get_char_mat(r,l)) { // Concluding step
+      std::cerr << "Exiting case\n";
       MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily<Tint>({r1, l1});
       MyMatrix<T> M1_T = UniversalMatrixConversion<T,Tint>(M1_Tint);
       MyMatrix<Tint> M_Tint = MatrixFromVectorFamily<Tint>({r, l});
@@ -219,6 +222,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
       MyMatrix<T> gMat_T = Inverse(M1_T) * M_T;
       MyMatrix<Tint> gMat_Tint = UniversalMatrixConversion<Tint,T>(gMat_T);
       std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>> pair{gMat_Tint, list_r};
+      std::cerr << "Before returning pair\n";
       return pair;
     }
     list_r.push_back(r);
@@ -489,17 +493,22 @@ template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
   T M = eval_quad(G, r0);
+  std::cerr << "M=" << M << " SearchNorm=" << SearchNorm << "\n";
   MyVector<Tint> l_A = GetTwoComplement(r0);
   MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
   std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic(G, M, r0, l_B);
+  std::cerr << "We have opt\n";
   if (!opt)
     return {};
   std::vector<MyVector<Tint>> const& l_vect = opt->second;
+  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   for (auto & e_v : l_vect) {
     T norm = eval_quad(G, e_v);
+    std::cerr << "norm=" << norm << " SearchNorm=" << SearchNorm << "\n";
     if (norm == SearchNorm)
       return e_v;
   }
+  std::cerr << "returning missing\n";
   return {};
 }
 
