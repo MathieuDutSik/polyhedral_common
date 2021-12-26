@@ -1585,9 +1585,14 @@ std::optional<MyMatrix<T>> LinPolytopeWMat_Isomorphism(std::pair<MyMatrix<T>, We
   using Tgr = GraphBitset;
   if (ep.first.rows() != fp.first.rows() || ep.first.cols() != fp.first.cols())
     return {};
+  std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
+  std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
+  std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
+  std::cerr << "Before fCanonicReord\n";
   std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(fp.second).first;
   using Tfield = typename overlying_field<T>::field_type;
+  std::cerr << "Before IsomorphismFromCanonicReord\n";
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord);
   if (!IsoInfo) {
     return {};

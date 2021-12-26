@@ -205,8 +205,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::cerr << "norm=" << norm << "\n";
   for (int i=0; i<n; i++)
     EquaB(n_root,i) = eP(i);
-  std::cerr << "EquaB=\n";
-  WriteMatrix(std::cerr, EquaB);
+  //  std::cerr << "EquaB=\n";
+  //  WriteMatrix(std::cerr, EquaB);
   std::cerr << "RankMat(EquaB)=" << RankMat(EquaB) << "\n";
   MyMatrix<T> NSP = NullspaceTrMat(EquaB);
   std::cerr << "Edgewalk Procedure, step 1\n";
@@ -296,6 +296,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);
+    std::cerr << "  scal=" << scal << "\n";
     if (scal > 0)
       return v;
     if (scal < 0)
@@ -305,16 +306,22 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   };
   std::vector<MyVector<T>> l_gens;
   for (size_t i=0; i<2; i++) {
+    std::cerr << "i=" << i << "\n";
     // a x + by correspond to the ray (u0, u1) = (-b, a)
     T u0 = -Factor(i,1);
     T u1 =  Factor(i,0);
     MyVector<T> gen = u0 * k + u1 * r0;
+    std::cerr << "gen="; WriteVector(std::cerr, gen);
     MyVector<T> can_gen = get_can_gen(gen);
+    std::cerr << "can_gen="; WriteVector(std::cerr, can_gen);
     MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
+    std::cerr << "v_disc_t="; WriteVector(std::cerr, v_disc_t);
     T scal = v_disc_t.dot(G * can_gen);
+    std::cerr << "scal=" << scal << "\n";
     if (scal > 0)
       l_gens.push_back(can_gen);
   }
+  std::cerr << "|l_gens|=" << l_gens.size() << "\n";
   if (l_gens.size() != 1) {
     std::cerr << "We should have just one vector in order to conclude. Rethink needed\n";
     throw TerminalException{1};
@@ -452,7 +459,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   auto func_insert_pair_vertices=[&](EnumEntry & v_pair) -> void {
     for (auto & u_pair : l_entry) {
+      std::cerr <<  "Before LinPolytopeWMat_Isomorphism\n";
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair.val.pair_char, v_pair.val.pair_char);
+      std::cerr <<  "After  LinPolytopeWMat_Isomorphism\n";
       if (equiv_opt) {
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
@@ -466,6 +475,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::cerr << "|l_roots| len=" << len << "\n";
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
     for (size_t i=0; i<len; i++) {
+      std::cerr << "ADJ i=" << i << "/" << len << "\n";
       std::vector<MyVector<Tint>> l_ui;
       for (size_t j=0; j<len; j++) {
         if (i != j) {
@@ -474,8 +484,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       }
       MyVector<Tint> v_disc = theVert.l_roots[i];
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      std::cerr << "We have fVert\n";
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
+      std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
+      std::cerr << "We have entry\n";
       func_insert_pair_vertices(entry);
     }
   };
