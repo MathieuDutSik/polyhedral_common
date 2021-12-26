@@ -13,9 +13,242 @@
  */
 
 
-template<typename T>
-bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& allow_euclidean)
+struct IrrCoxDyn {
+  std::string type;
+  size_t dim;
+  int param; // For In only
+};
+
+
+bool IsDiagramSpherical(IrrCoxDyn const& cd)
 {
+  std::string type = cd.type;
+  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE")
+    return false;
+  return true;
+}
+
+
+bool IsDiagramADE(IrrCoxDyn const& cd)
+{
+  std::string type = cd.type;
+  if (type == "A" || type == "D" || type == "E")
+    return true;
+  return false;
+}
+
+
+int GetNrVertices(IrrCoxDyn const& cd)
+{
+  std::string type = cd.type;
+  int dim = cd.dim;
+  if (type.size() > 5) {
+    std::string s_res = type.substr(0,5);
+    if (s_res == "tilde")
+      return dim+1;
+  }
+  return dim;
+}
+
+
+std::string IrrCoxDyn_to_string(IrrCoxDyn const& cd)
+{
+  std::string type = cd.type;
+  if (type == "A" || type == "B" || type == "C" || type == "D" || type == "E" || type == "F" || type == "G" || type == "H")
+    return cd.type + "_{" + std::to_string(cd.dim) + "}";
+  if (type == "I") {
+    return std::string("I_2(") + std::to_string(cd.param) + ")";
+  }
+  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE") {
+    std::string type_red = type.substr(5,1);
+    return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) + "}";
+  }
+  std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
+  throw TerminalException{1};
+}
+
+
+IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
+{
+  std::string s_work = s;
+  auto remove_char=[&](char ec) -> void {
+    s_work.erase(remove(s_work.begin(), s_work.end(), ec), s_work.end());
+  };
+  remove_char('_');
+  remove_char('\\');
+  remove_char('{');
+  remove_char('}');
+  remove_char('(');
+  remove_char(')');
+  auto recognize=[&]() -> IrrCoxDyn {
+    std::vector<std::string> LS{"A", "B", "C", "D", "E", "F", "G", "H", "tildeA", "tildeB", "tildeC", "tildeD", "tildeE", "I2"};
+    for (auto & eLS : LS) {
+      size_t len1 = s_work.size();
+      size_t len2 = eLS.size();
+      if (len1 > len2) {
+        std::string s_red = s_work.substr(0,len2);
+        if (s_red == eLS) {
+          std::string s_rem = s_work.substr(len2,len1-len2);
+          int val = atoi(s_rem.c_str());
+          if (eLS == "I2") {
+            return IrrCoxDyn{"I", 2, val};
+          } else {
+            return IrrCoxDyn{eLS,size_t(val),0};
+          }
+        }
+      }
+    }
+    std::cerr << "s_work=" << s_work << "\n";
+    throw TerminalException{1};
+  };
+  IrrCoxDyn cd = recognize();
+  std::string s_map = IrrCoxDyn_to_string(cd);
+  if (s_map != s) {
+    std::cerr << "Initial string in input is s=" << s << "\n";
+    std::cerr << "Found matching to be type=" << cd.type << " dim=" << cd.dim << " param=" << cd.param << "\n";
+    std::cerr << "Mapped string is s_map=" << s_map << "\n";
+    throw TerminalException{1};
+  }
+  return cd;
+}
+
+
+
+template<typename T>
+MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
+{
+  T val_comm = 2;
+  T val_single_edge = 3;
+  T val_four = 4; // Shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
+  T val_five = 5; // Shows up in H3, H4
+  T val_six = 6; // Shows up in G2
+  std::string type = cd.type;
+  int dim = cd.dim;
+  int n_vert = GetNrVertices(cd);
+  MyMatrix<T> M(n_vert,n_vert);
+  for (int i=0; i<n_vert; i++)
+    for (int j=0; j<n_vert; j++)
+      M(i,j) = val_comm;
+  size_t n_assign = 0;
+  auto set_v=[&](int i, int j, T val) -> void {
+    M(i,j) = val;
+    M(j,i) = val;
+    n_assign++;
+  };
+  if (type == "A") {
+    for (int i=1; i<dim; i++)
+      set_v(i-1,i,val_single_edge);
+  }
+  if (type == "B" || type == "C") {
+    for (int i=1; i<dim-1; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(dim-2,dim-1,val_four);
+  }
+  if (type == "D") {
+    for (int i=1; i<dim-1; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(1,dim-1,val_single_edge);
+  }
+  auto set_from_triple=[&](int l1, int l2, int l3) -> void {
+    auto set_line=[&](int l, int shift) -> void {
+      for (int i=0; i<l; i++) {
+        if (i == 0)
+          set_v(0, shift + i + 1, val_single_edge);
+        else
+          set_v(shift + i, shift + i + 1, val_single_edge);
+      }
+    };
+    set_line(l1, 0);
+    set_line(l2, l1);
+    set_line(l3, l1+l2);
+  };
+  if (type == "E") {
+    if (dim == 6)
+      set_from_triple(1,2,2);
+    if (dim == 7)
+      set_from_triple(1,2,3);
+    if (dim == 8)
+      set_from_triple(1,2,4);
+  }
+  if (type == "F" && dim == 4) {
+    set_v(0, 1, val_single_edge);
+    set_v(1, 2, val_four);
+    set_v(2, 3, val_single_edge);
+  }
+  if (type == "G" && dim == 2) {
+    set_v(0, 1, val_six);
+  }
+  if (type == "H") {
+    for (int i=2; i<dim-1; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(0,1,val_five);
+  }
+  if (type == "I") {
+    set_v(0,1, cd.param);
+  }
+  // Now the euclidean ones
+  if (type == "tildeA") {
+    for (int i=1; i<n_vert; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(0,n_vert-1,val_single_edge);
+  }
+  if (type == "tildeB") {
+    for (int i=1; i<n_vert-2; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(0,n_vert-2,val_four);
+    set_v(n_vert-4,n_vert-1,val_single_edge);
+  }
+  if (type == "tildeC") {
+    for (int i=1; i<n_vert-2; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(0,n_vert-2,val_four);
+    set_v(n_vert-3,n_vert-1,val_four);
+  }
+  if (type == "tildeD") {
+    for (int i=1; i<n_vert-2; i++)
+      set_v(i-1,i,val_single_edge);
+    set_v(1,n_vert-2,val_single_edge);
+    set_v(n_vert-4,n_vert-1,val_single_edge);
+  }
+  if (type == "tildeE") {
+    if (dim == 6)
+      set_from_triple(2,2,2);
+    if (dim == 7)
+      set_from_triple(1,3,3);
+    if (dim == 8)
+      set_from_triple(1,2,5);
+  }
+  if (type == "tildeF" && dim == 4) {
+    set_v(0, 1, val_single_edge);
+    set_v(1, 2, val_four);
+    set_v(2, 3, val_single_edge);
+    set_v(3, 4, val_single_edge);
+  }
+  if (type == "tildeG" && dim == 4) {
+    set_v(0, 1, val_single_edge);
+    set_v(1, 2, val_six);
+  }
+  if (type == "tildeI" && dim == 2) {
+    std::cerr << "For tildeI, we should have value infinity which we cannot represent\n";
+    throw TerminalException{1};
+  }
+  if (n_assign == 0) {
+    std::cerr << "We assign 0 edges. Likely that case was not covered\n";
+    std::cerr << "type=" << type << " dim=" << dim << " param=" << cd.param << "\n";
+    throw TerminalException{1};
+  }
+  return M;
+}
+
+
+
+
+
+template<typename T>
+std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, bool allow_euclidean)
+{
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean allow_euclidean=" << allow_euclidean << " M=\n";
+  WriteMatrix(std::cerr, M);
   T val_comm = 2;
   T val_single_edge = 3;
   T val_four = 4; // Shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
@@ -23,7 +256,8 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
   T val_six = 6; // Shows up in G2
   size_t dim = M.rows();
   if (dim == 1) // Case of A1
-    return true;
+    return IrrCoxDyn{"A",1,0};
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 1\n";
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
   std::vector<size_t> list_deg(dim, 0);
   size_t n_higher_edge = 0;
@@ -53,6 +287,7 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
       list_degN.push_back(i);
     list_deg[i] = n_adj;
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 2\n";
   auto get_list_adjacent=[&](size_t u) -> std::vector<size_t> {
     std::vector<size_t> LAdj;
     for (size_t j=0; j<dim; j++)
@@ -67,50 +302,53 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
     return std::numeric_limits<T>::max(); // That case should not happen
   };
   if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
-    return false;
+    return {};
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 3\n";
   if (list_deg4.size() > 0) { // Vertex of degree 4 can occur for \tilde{D4} only
     if (!allow_euclidean) // Only possibilities is not allowed, exit.
-      return false;
-    // We are now in Euclidean 
+      return {};
+    // We are now in Euclidean
     if (dim != 5) // It has to be \tilde{D4}.
-      return false;
+      return {};
     if (list_deg4.size() != 1 || list_deg1.size() != 4 || list_deg2.size() != 0 || list_deg3.size() != 0)
-      return false;
+      return {};
     size_t i_4 = list_deg4[0];
     for (size_t i=0; i<dim; i++)
       if (i != i_4)
         if (M(i, i_4) != 3)
-          return false;
-    return true; // This is \tilde{D4}
+          return {};
+    return IrrCoxDyn{"tildeD", 4, 0}; // This is \tilde{D4}
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 4\n";
   std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
   if (ListCycles.size() > 0) { // Only tilde{An} is possible.
     if (ListCycles.size() > 1) // If more than 1 cycle, then not possible
-      return false;
+      return {};
     if (!allow_euclidean)
-      return false;
+      return {};
     // We are now in Euclidean case
     const std::vector<size_t>& eCycle = ListCycles[0];
     if (eCycle.size() != dim)
-      return false;
+      return {};
     if (list_deg2.size() != dim)
-      return false;
+      return {};
     if (n_higher_edge != 0)
-      return false;
-    return true; // Only tilde{An} is left as possibility
+      return {};
+    return IrrCoxDyn{"tildeA", dim, 0}; // Only tilde{An} is left as possibility
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 5\n";
   // Now it is a tree
   if (list_deg1.size() == 2 && list_deg2.size() == dim - 2 && n_higher_edge == 0)
-    return true; // Only An is possible so ok.
+    return IrrCoxDyn{"A",dim,0}; // Only An is possible so ok.
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2)
-    return false; // No possibility for spherical and euclidean
+    return {}; // No possibility for spherical and euclidean
   if (list_deg3.size() == 2) {
     if (!allow_euclidean)
-      return false;
+      return {};
     // We are now in Euclidean case
     if (n_higher_edge != 0)
-      return false;
+      return {};
     for (auto & ePt : list_deg3) {
       std::vector<size_t> LAdj = get_list_adjacent(ePt);
       size_t n_deg1 = 0;
@@ -118,24 +356,25 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
         if (list_deg[fPt] == 1)
           n_deg1++;
       if (n_deg1 != 2)
-        return false;
+        return {};
     }
-    return true; // Only tilde{Dn} is possible
+    return IrrCoxDyn{"tildeD", dim, 0}; // Only tilde{Dn} is possible
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 6\n";
   if (list_deg3.size() == 0) { // We are in a single path.
     if (multiplicity[val_four] == 2) {
       if (n_higher_edge != 2) // There are some other higher edge, excluded
-        return false;
+        return {};
       if (!allow_euclidean) // Only tilde{Cn} is feasible and it is Euclidean
-        return false;
+        return {};
       for (auto & eVert : list_deg1)
         if (get_value_isolated(eVert) != val_four)
-          return false;
-      return true; // This is tilde{Cn}
+          return {};
+      return IrrCoxDyn{"tildeC",dim,0}; // This is tilde{Cn}
     }
     if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4 and tilde{F4} are possible
       if (n_higher_edge != 1)
-        return false; // There are other edges, excluded.
+        return {}; // There are other edges, excluded.
       size_t n_sing = 0;
       size_t n_four = 0;
       for (auto & eVert : list_deg1) {
@@ -146,22 +385,22 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
       }
       if (n_sing == 2) {
         if (dim == 4) {
-          return true; // Only F4 is possible
+          return IrrCoxDyn{"F", 4,0}; // Only F4 is possible
         }
         if (dim == 5) { // Only tilde{F4} is possible. So conclude from that
           if (allow_euclidean)
-            return true;
-          return false;
+            return IrrCoxDyn{"tildeF", 4, 0};
+          return {};
         }
       }
       // Only possibility is to have 4 at one extremity. This is Bn = Cn
-      return true;
+      return IrrCoxDyn{"B",dim,0};
     }
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
       if (dim == 2)
-        return true; // It is H2
+        return IrrCoxDyn{"H", 2,0}; // It is H2
       if (dim > 5)
-        return false; // No possibility
+        return {}; // No possibility
       size_t n_sing=0;
       size_t n_five=0;
       for (auto & eVert : list_deg1) {
@@ -170,21 +409,32 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
         if (get_value_isolated(eVert) != val_single_edge)
           n_five++;
       }
-      if (n_sing == 1 && n_five == 1) // It is H3 or H4 depending on the dimension
-        return true;
-      return false;
+      if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
+        if (dim == 3)
+          return IrrCoxDyn{"H", 3, 0};
+        if (dim == 4)
+          return IrrCoxDyn{"H", 4, 0};
+      }
+      return {};
     }
     if (multiplicity[val_six] == 1) { // Looking for G2 or tilde{G2}
       if (n_higher_edge != 1)
-        return false; // There are other edges, excluded.
-      if (dim == 2 || dim == 3) // It is G2 or tilde{G2}
-        return true;
-      return false;
+        return {}; // There are other edges, excluded.
+      if (dim == 2 || dim == 3) { // It is G2 or tilde{G2}
+        if (dim == 2)
+          return IrrCoxDyn{"G", 2, 0};
+        if (dim == 3)
+          return IrrCoxDyn{"tildeG", 2, 0};
+      }
+      return {};
     }
-    if (dim == 2)
-      return true; // It is In.
-    return false;
+    if (dim == 2) {
+      int param = UniversalScalarConversion<int,T>(M(0,1));
+      return IrrCoxDyn{"I", 2, param}; // It is I2(n)
+    }
+    return {};
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 7\n";
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
     size_t eCent = list_deg1[0];
@@ -195,27 +445,35 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
         n_sing++;
     }
     if (n_sing != 2)
-      return false;
+      return {};
     bool has_edge_four = false;
     for (auto & eVert : list_deg1)
       if (get_value_isolated(eVert) == val_four)
         has_edge_four = true;
     if (has_edge_four)
-      return true; // It is tilde{Bn}
-    return false;
+      return IrrCoxDyn{"tildeB",dim,0}; // It is tilde{Bn}
+    return {};
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 8\n";
   if (n_higher_edge != 0)
-    return false;
+    return {};
   auto get_length=[&](size_t val1, size_t val2) -> size_t {
     size_t len = 1;
+    size_t iter=0;
     while(true) {
+      std::cerr << "get_length, passing iter=" << iter << " val1=" << val1 << " val2=" << val2 << "\n";
+      iter++;
       std::vector<size_t> LVal = get_list_adjacent(val2);
+      std::cerr << "val2=" << val2 << "    LVal =";
+      for (auto & u : LVal)
+        std::cerr << " " << u;
+      std::cerr << "\n";
       if (LVal.size() == 1)
         break;
       size_t NewPt = -1;
       for (auto & eVal : LVal)
         if (eVal != val1)
-          NewPt = val2;
+          NewPt = eVal;
       val1 = val2;
       val2 = NewPt;
       len++;
@@ -228,32 +486,54 @@ bool IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& al
     size_t len = get_length(eCent, eAdj);
     map_len[len]++;
   }
+  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 9\n";
   if (map_len[1] == 2) // It is Dn
-    return true;
+    return IrrCoxDyn{"D",dim,0};
   if (map_len[1] == 1 && map_len[2] == 2) // It is E6
-    return true;
+    return IrrCoxDyn{"E",6,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[3] == 1) // It is E7
-    return true;
+    return IrrCoxDyn{"E",7,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[4] == 1) // It is E8
-    return true;
+    return IrrCoxDyn{"E",8,0};
   if (!allow_euclidean)
-    return false; // In spherical, no other possibilities left
+    return {}; // In spherical, no other possibilities left
   if (map_len[2] == 3) // It is tilde{E6}
-    return true;
+    return IrrCoxDyn{"tildeE",6,0};
   if (map_len[1] == 1 && map_len[3] == 2) // It is tilde{E7}
-    return true;
+    return IrrCoxDyn{"tildeE",7,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[5] == 1) // It is tilde{E8}
-    return true;
-  return false; // No other possibilities left
+    return IrrCoxDyn{"tildeE",8,0};
+  return {}; // No other possibilities left
 }
 
 
 template<typename T>
-bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
+MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
+{
+  MyMatrix<T> M = Kernel_IrrCoxDyn_to_matrix<T>(cd);
+  bool allow_euclidean = true;
+  std::optional<IrrCoxDyn> opt = IsIrreducibleDiagramSphericalEuclidean(M, allow_euclidean);
+  if (opt) {
+    IrrCoxDyn cd2 = *opt;
+    if (cd.type != cd2.type || cd.dim != cd2.dim || cd.param != cd2.param) {
+      std::cerr << "The recognition of the matrix did not yield the original Coxeter-Dynkin diagram\n";
+      throw TerminalException{1};
+    }
+    return M;
+  }
+  std::cerr << "The created matrix was not recognized. Some bug somewhere\n";
+  throw TerminalException{1};
+}
+
+
+
+
+template<typename T>
+std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
   T val_comm = 2;
   size_t dim = M.rows();
-  std::cerr << "IsDiagramSpherical dim=" << dim << "\n";
+  std::cerr << "IsDiagramSphericalEuclidean dim=" << dim << "\n";
   GraphBitset eG(dim);
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
@@ -266,6 +546,8 @@ bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
   std::cerr << "eG is built\n";
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
   std::cerr << "LConn is built\n";
+  std::vector<IrrCoxDyn> l_cd;
+  bool IsFirst=true;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
     std::cerr << "dim_res=" << dim_res << "\n";
@@ -274,12 +556,18 @@ bool IsDiagramSpherical(const MyMatrix<T>& M, const bool& allow_euclidean)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
     std::cerr << "Before IsIrreducibleDiagramSphericalEuclidean\n";
-    bool test = IsIrreducibleDiagramSphericalEuclidean(M, allow_euclidean);
+    std::optional<IrrCoxDyn> opt = IsIrreducibleDiagramSphericalEuclidean(Mres, allow_euclidean);
     std::cerr << "After IsIrreducibleDiagramSphericalEuclidean\n";
-    if (!test)
-      return false;
+    if (opt) {
+      IrrCoxDyn cd = *opt;
+      l_cd.push_back(cd);
+      std::cerr << "symb=" << IrrCoxDyn_to_string(cd) << "\n";
+    } else {
+      std::cerr << "Answer is false\n";
+      return {};
+    }
   }
-  return true;
+  return l_cd;
 }
 
 
@@ -321,7 +609,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       Mtest(dim,i) = V(i);
     }
     std::cerr << "Mtest built\n";
-    if (IsDiagramSpherical(Mtest, allow_euclidean))
+    if (IsDiagramSphericalEuclidean(Mtest, allow_euclidean))
       SetExtensions.insert(V);
   };
   test_vector_and_insert(V_basic);
@@ -425,6 +713,12 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
     }
   return {CoxMat, ScalMat};
 }
+
+
+
+
+
+
 
 
 
