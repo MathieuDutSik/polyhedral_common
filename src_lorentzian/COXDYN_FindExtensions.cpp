@@ -13,10 +13,20 @@ int main(int argc, char* argv[])
     std::string str = argv[1];
     std::string option = argv[2];
     bool allow_euclidean = true;
-    if (option == "spherical")
+    bool setval = false;
+    if (option == "spherical") {
       allow_euclidean = false;
-    if (option == "euclidean")
+      setval = true;
+    }
+    if (option == "euclidean") {
       allow_euclidean = true;
+      setval = true;
+    }
+    if (!setval) {
+      std::cerr << "We have option=" << option << "\n";
+      std::cerr << "Only allowed values are spherical or euclidean\n";
+      throw TerminalException{1};
+    }
 
     MyMatrix<T> M = string_to_coxdyn_matrix<T>(str);
     std::vector<std::string> LOut;
@@ -26,7 +36,7 @@ int main(int argc, char* argv[])
       LOut.push_back(stro);
     }
     size_t pos_found=0;
-    std::cerr << "input = " << str << "\n";
+    std::cerr << "input = " << str << " allow_euclidean=" << allow_euclidean << "\n";
     for (auto & stro : LOut) {
       std::cerr << "pos=" << pos_found << " diagram=" << stro << "\n";
       pos_found++;

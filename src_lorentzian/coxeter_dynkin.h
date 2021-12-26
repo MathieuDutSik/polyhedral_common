@@ -23,7 +23,7 @@ struct IrrCoxDyn {
 bool IsDiagramSpherical(IrrCoxDyn const& cd)
 {
   std::string type = cd.type;
-  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE")
+  if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE" || type == "tildeF" || type == "tildeG")
     return false;
   return true;
 }
@@ -61,7 +61,7 @@ std::string IrrCoxDyn_to_string(IrrCoxDyn const& cd)
   }
   if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE" || type == "tildeF" || type == "tildeG") {
     std::string type_red = type.substr(5,1);
-    return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) + "}";
+    return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) + "}}";
   }
   std::cerr << "cd  type=" << cd.type << " dim=" << cd.dim << " param=" << cd.param << "\n";
   std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
@@ -255,18 +255,18 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   T val_four = 4; // Shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
   T val_five = 5; // Shows up in H3, H4
   T val_six = 6; // Shows up in G2
-  size_t dim = M.rows();
-  if (dim == 1) // Case of A1
+  size_t n_vert = M.rows();
+  if (n_vert == 1) // Case of A1
     return IrrCoxDyn{"A",1,0};
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 1\n";
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
-  std::vector<size_t> list_deg(dim, 0);
+  std::vector<size_t> list_deg(n_vert, 0);
   size_t n_higher_edge = 0;
-  GraphBitset eG(dim);
+  GraphBitset eG(n_vert);
   std::map<T,size_t> multiplicity;
-  for (size_t i=0; i<dim; i++) {
+  for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
-    for (size_t j=0; j<dim; j++) {
+    for (size_t j=0; j<n_vert; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm) {
         n_adj++;
@@ -293,13 +293,13 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 2\n";
   auto get_list_adjacent=[&](size_t u) -> std::vector<size_t> {
     std::vector<size_t> LAdj;
-    for (size_t j=0; j<dim; j++)
+    for (size_t j=0; j<n_vert; j++)
       if (u != j && M(u,j) != val_comm)
         LAdj.push_back(j);
     return LAdj;
   };
   auto get_value_isolated=[&](size_t u) -> T {
-    for (size_t j=0; j<dim; j++)
+    for (size_t j=0; j<n_vert; j++)
       if (u != j && M(u,j) != val_comm)
         return M(u,j);
     return std::numeric_limits<T>::max(); // That case should not happen
@@ -311,12 +311,12 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     if (!allow_euclidean) // Only possibilities is not allowed, exit.
       return {};
     // We are now in Euclidean
-    if (dim != 5) // It has to be \tilde{D4}.
+    if (n_vert != 5) // It has to be \tilde{D4}.
       return {};
     if (list_deg4.size() != 1 || list_deg1.size() != 4 || list_deg2.size() != 0 || list_deg3.size() != 0)
       return {};
     size_t i_4 = list_deg4[0];
-    for (size_t i=0; i<dim; i++)
+    for (size_t i=0; i<n_vert; i++)
       if (i != i_4)
         if (M(i, i_4) != 3)
           return {};
@@ -332,18 +332,18 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       return {};
     // We are now in Euclidean case
     const std::vector<size_t>& eCycle = ListCycles[0];
-    if (eCycle.size() != dim)
+    if (eCycle.size() != n_vert)
       return {};
-    if (list_deg2.size() != dim)
+    if (list_deg2.size() != n_vert)
       return {};
     if (n_higher_edge != 0)
       return {};
-    return IrrCoxDyn{"tildeA", dim, 0}; // Only tilde{An} is left as possibility
+    return IrrCoxDyn{"tildeA", n_vert-1, 0}; // Only tilde{An} is left as possibility
   }
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 5\n";
   // Now it is a tree
-  if (list_deg1.size() == 2 && list_deg2.size() == dim - 2 && n_higher_edge == 0)
-    return IrrCoxDyn{"A",dim,0}; // Only An is possible so ok.
+  if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 && n_higher_edge == 0)
+    return IrrCoxDyn{"A",n_vert,0}; // Only An is possible so ok.
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2)
     return {}; // No possibility for spherical and euclidean
@@ -362,7 +362,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       if (n_deg1 != 2)
         return {};
     }
-    return IrrCoxDyn{"tildeD", dim, 0}; // Only tilde{Dn} is possible
+    return IrrCoxDyn{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
   }
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 6\n";
   if (list_deg3.size() == 0) { // We are in a single path.
@@ -374,7 +374,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       for (auto & eVert : list_deg1)
         if (get_value_isolated(eVert) != val_four)
           return {};
-      return IrrCoxDyn{"tildeC",dim,0}; // This is tilde{Cn}
+      return IrrCoxDyn{"tildeC",n_vert-1,0}; // This is tilde{Cn}
     }
     if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4 and tilde{F4} are possible
       if (n_higher_edge != 1)
@@ -388,24 +388,24 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
           n_four++;
       }
       if (n_sing == 2) {
-        if (dim == 4) {
+        if (n_vert == 4) {
           return IrrCoxDyn{"F", 4,0}; // Only F4 is possible
         }
-        if (dim == 5) { // Only tilde{F4} is possible. So conclude from that
+        if (n_vert == 5) { // Only tilde{F4} is possible. So conclude from that
           if (allow_euclidean)
             return IrrCoxDyn{"tildeF", 4, 0};
           return {};
         }
       }
       // Only possibility is to have 4 at one extremity. This is Bn = Cn
-      return IrrCoxDyn{"B",dim,0};
+      return IrrCoxDyn{"B",n_vert,0};
     }
     std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
-      std::cerr << "dim=" << dim << "\n";
-      if (dim == 2)
+      std::cerr << "n_vert=" << n_vert << "\n";
+      if (n_vert == 2)
         return IrrCoxDyn{"H", 2,0}; // It is H2
-      if (dim > 5)
+      if (n_vert > 5)
         return {}; // No possibility
       size_t n_sing=0;
       size_t n_five=0;
@@ -420,9 +420,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       std::cerr << "\n";
       std::cerr << "n_sing=" << n_sing << " n_five=" << n_five << "\n";
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
-        if (dim == 3)
+        if (n_vert == 3)
           return IrrCoxDyn{"H", 3, 0};
-        if (dim == 4)
+        if (n_vert == 4)
           return IrrCoxDyn{"H", 4, 0};
       }
       return {};
@@ -430,15 +430,17 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     if (multiplicity[val_six] == 1) { // Looking for G2 or tilde{G2}
       if (n_higher_edge != 1)
         return {}; // There are other edges, excluded.
-      if (dim == 2 || dim == 3) { // It is G2 or tilde{G2}
-        if (dim == 2)
+      if (n_vert == 2 || n_vert == 3) { // It is G2 or tilde{G2}
+        if (n_vert == 2)
           return IrrCoxDyn{"G", 2, 0};
-        if (dim == 3)
+        if (!allow_euclidean)
+          return {};
+        if (n_vert == 3)
           return IrrCoxDyn{"tildeG", 2, 0};
       }
       return {};
     }
-    if (dim == 2) {
+    if (n_vert == 2) {
       int param = UniversalScalarConversion<int,T>(M(0,1));
       return IrrCoxDyn{"I", 2, param}; // It is I2(n)
     }
@@ -461,7 +463,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       if (get_value_isolated(eVert) == val_four)
         has_edge_four = true;
     if (has_edge_four)
-      return IrrCoxDyn{"tildeB",dim,0}; // It is tilde{Bn}
+      return IrrCoxDyn{"tildeB",n_vert-1,0}; // It is tilde{Bn}
     return {};
   }
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 8\n";
@@ -506,7 +508,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   if (map_len[1] == 3) // It is D4
     return IrrCoxDyn{"D",4,0};
   if (map_len[1] == 2) // It is Dn
-    return IrrCoxDyn{"D",dim,0};
+    return IrrCoxDyn{"D",n_vert,0};
   if (map_len[1] == 1 && map_len[2] == 2) // It is E6
     return IrrCoxDyn{"E",6,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[3] == 1) // It is E7
