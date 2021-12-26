@@ -179,7 +179,7 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
     set_v(0, 1, val_six);
   }
   if (type == "H") {
-    for (int i=2; i<dim-1; i++)
+    for (int i=2; i<dim; i++)
       set_v(i-1,i,val_single_edge);
     set_v(0,1,val_five);
   }
@@ -379,9 +379,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       size_t n_sing = 0;
       size_t n_four = 0;
       for (auto & eVert : list_deg1) {
-        if (get_value_isolated(eVert) != val_single_edge)
+        if (get_value_isolated(eVert) == val_single_edge)
           n_sing++;
-        if (get_value_isolated(eVert) != val_four)
+        if (get_value_isolated(eVert) == val_four)
           n_four++;
       }
       if (n_sing == 2) {
@@ -399,18 +399,23 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     }
     std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
+      std::cerr << "dim=" << dim << "\n";
       if (dim == 2)
         return IrrCoxDyn{"H", 2,0}; // It is H2
       if (dim > 5)
         return {}; // No possibility
       size_t n_sing=0;
       size_t n_five=0;
+      std::cerr << "list_deg1 =";
       for (auto & eVert : list_deg1) {
-        if (get_value_isolated(eVert) != val_single_edge)
+        std::cerr << " " << eVert;
+        if (get_value_isolated(eVert) == val_single_edge)
           n_sing++;
-        if (get_value_isolated(eVert) != val_single_edge)
+        if (get_value_isolated(eVert) == val_five)
           n_five++;
       }
+      std::cerr << "\n";
+      std::cerr << "n_sing=" << n_sing << " n_five=" << n_five << "\n";
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
         if (dim == 3)
           return IrrCoxDyn{"H", 3, 0};
