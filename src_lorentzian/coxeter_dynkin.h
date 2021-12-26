@@ -12,6 +12,8 @@
   --- The values M(i,i) are not used.
  */
 
+//#define DEBUG_COXETER_DYNKIN_COMBINATORICS
+
 
 struct IrrCoxDyn {
   std::string type;
@@ -254,8 +256,10 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
 template<typename T>
 std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, bool allow_euclidean)
 {
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean allow_euclidean=" << allow_euclidean << " M=\n";
   WriteMatrix(std::cerr, M);
+#endif
   T val_comm = 2;
   T val_single_edge = 3;
   T val_four = 4; // Shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
@@ -264,7 +268,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   size_t n_vert = M.rows();
   if (n_vert == 1) // Case of A1
     return IrrCoxDyn{"A",1,0};
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 1\n";
+#endif
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
   std::vector<size_t> list_deg(n_vert, 0);
   size_t n_higher_edge = 0;
@@ -296,7 +302,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       list_degN.push_back(i);
     list_deg[i] = n_adj;
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 2\n";
+#endif
   auto get_list_adjacent=[&](size_t u) -> std::vector<size_t> {
     std::vector<size_t> LAdj;
     for (size_t j=0; j<n_vert; j++)
@@ -312,7 +320,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   };
   if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
     return {};
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 3\n";
+#endif
   if (list_deg4.size() > 0) { // Vertex of degree 4 can occur for \tilde{D4} only
     if (!allow_euclidean) // Only possibilities is not allowed, exit.
       return {};
@@ -328,9 +338,13 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
           return {};
     return IrrCoxDyn{"tildeD", 4, 0}; // This is \tilde{D4}
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 4\n";
+#endif
   std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "|ListCycles|=" << ListCycles.size() << "\n";
+#endif
   if (ListCycles.size() > 0) { // Only tilde{An} is possible.
     if (ListCycles.size() > 1) // If more than 1 cycle, then not possible
       return {};
@@ -346,7 +360,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       return {};
     return IrrCoxDyn{"tildeA", n_vert-1, 0}; // Only tilde{An} is left as possibility
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 5\n";
+#endif
   // Now it is a tree
   if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 && n_higher_edge == 0)
     return IrrCoxDyn{"A",n_vert,0}; // Only An is possible so ok.
@@ -370,7 +386,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     }
     return IrrCoxDyn{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 6\n";
+#endif
   if (list_deg3.size() == 0) { // We are in a single path.
     if (multiplicity[val_four] == 2) {
       if (n_higher_edge != 2) // There are some other higher edge, excluded
@@ -410,25 +428,22 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       // No other possibilities
       return {};
     }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
+#endif
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
-      std::cerr << "n_vert=" << n_vert << "\n";
       if (n_vert == 2)
         return IrrCoxDyn{"H", 2,0}; // It is H2
       if (n_vert > 5)
         return {}; // No possibility
       size_t n_sing=0;
       size_t n_five=0;
-      std::cerr << "list_deg1 =";
       for (auto & eVert : list_deg1) {
-        std::cerr << " " << eVert;
         if (get_value_isolated(eVert) == val_single_edge)
           n_sing++;
         if (get_value_isolated(eVert) == val_five)
           n_five++;
       }
-      std::cerr << "\n";
-      std::cerr << "n_sing=" << n_sing << " n_five=" << n_five << "\n";
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
         if (n_vert == 3)
           return IrrCoxDyn{"H", 3, 0};
@@ -456,7 +471,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     }
     return {};
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 7\n";
+#endif
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
     size_t eCent = list_deg1[0];
@@ -476,20 +493,17 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       return IrrCoxDyn{"tildeB",n_vert-1,0}; // It is tilde{Bn}
     return {};
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 8\n";
+#endif
   if (n_higher_edge != 0)
     return {};
   auto get_length=[&](size_t val1, size_t val2) -> size_t {
     size_t len = 1;
     size_t iter=0;
     while(true) {
-      std::cerr << "get_length, passing iter=" << iter << " val1=" << val1 << " val2=" << val2 << "\n";
       iter++;
       std::vector<size_t> LVal = get_list_adjacent(val2);
-      std::cerr << "val2=" << val2 << "    LVal =";
-      for (auto & u : LVal)
-        std::cerr << " " << u;
-      std::cerr << "\n";
       if (LVal.size() == 1)
         break;
       size_t NewPt = -1;
@@ -502,19 +516,12 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     }
     return len;
   };
-  std::cerr << "|list_deg3|=" << list_deg3.size() << "\n";
   size_t eCent = list_deg3[0];
-  std::cerr << "eCent=" << eCent << "\n";
   std::map<size_t, size_t> map_len;
   for (auto & eAdj : get_list_adjacent(eCent)) {
     size_t len = get_length(eCent, eAdj);
-    std::cerr << "eAdj=" << eAdj << " len=" << len << "\n";
     map_len[len]++;
   }
-  for (auto & kv : map_len) {
-    std::cerr << "kv=" << kv.first << " / " << kv.second << "\n";
-  }
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 9\n";
   if (map_len[1] == 3) // It is D4
     return IrrCoxDyn{"D",4,0};
   if (map_len[1] == 2) // It is Dn
@@ -567,7 +574,9 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
 {
   T val_comm = 2;
   size_t dim = M.rows();
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "IsDiagramSphericalEuclidean dim=" << dim << "\n";
+#endif
   GraphBitset eG(dim);
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
@@ -577,26 +586,34 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
       }
     }
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "eG is built\n";
+#endif
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "LConn is built\n";
+#endif
   std::vector<IrrCoxDyn> l_cd;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "dim_res=" << dim_res << "\n";
+#endif
     MyMatrix<T> Mres(dim_res, dim_res);
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
-    std::cerr << "Before IsIrreducibleDiagramSphericalEuclidean\n";
     std::optional<IrrCoxDyn> opt = IsIrreducibleDiagramSphericalEuclidean(Mres, allow_euclidean);
-    std::cerr << "After IsIrreducibleDiagramSphericalEuclidean\n";
     if (opt) {
       IrrCoxDyn cd = *opt;
       l_cd.push_back(cd);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       std::cerr << "symb=" << IrrCoxDyn_to_string(cd) << "\n";
+#endif
     } else {
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       std::cerr << "Answer is false\n";
+#endif
       return {};
     }
   }
@@ -672,7 +689,9 @@ MyMatrix<T> ExtendMatrix(MyMatrix<T> const& M, MyVector<T> const& V)
 template<typename T>
 std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool& allow_euclidean)
 {
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 1\n";
+#endif
   std::set<MyVector<T>> SetExtensions;
   T val_comm = 2;
   T val_single_edge = 3;
@@ -692,11 +711,15 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       list_isolated.push_back(i);
   }
   // Consider the case of adding unconnected vector
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 2\n";
+#endif
   MyVector<T> V_basic(dim);
   for (size_t i=0; i<dim; i++)
     V_basic(i) = val_comm;
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 3\n";
+#endif
   auto test_vector_and_insert=[&](const MyVector<T>& V) -> void {
     MyMatrix<T> Mtest(dim+1,dim+1);
     for (size_t i=0; i<dim; i++)
@@ -706,23 +729,31 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       Mtest(i,dim) = V(i);
       Mtest(dim,i) = V(i);
     }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
+#endif
     if (IsDiagramSphericalEuclidean(Mtest, allow_euclidean))
       SetExtensions.insert(V);
   };
   test_vector_and_insert(V_basic);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 4\n";
+#endif
   // Considering the case of just one edge
   for (size_t i=0; i<dim; i++) {
     // Here we have an arbitrary value
     for (T val=val_single_edge; val<128; val++) {
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       std::cerr << "i=" << i << " val=" << val << "\n";
+#endif
       MyVector<T> V = V_basic;
       V(i) = val;
       test_vector_and_insert(V);
     }
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 5\n";
+#endif
   // Considering the case of 2 edges
   for (size_t i=0; i<dim; i++) {
     for (size_t j=0; j<dim; j++) {
@@ -736,7 +767,9 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       }
     }
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 6\n";
+#endif
   // Considering the case of 3 edges. All have to be single edges
   SetCppIterator SCI_A(dim,3);
   for (auto & eV : SCI_A) {
@@ -746,7 +779,9 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
     test_vector_and_insert(V);
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 7\n";
+#endif
   size_t n_isolated = list_isolated.size();
   SetCppIterator SCI_B(n_isolated,4);
   for (auto & eV : SCI_B) {
@@ -755,11 +790,15 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
       V(list_isolated[eVal]) = val_single_edge;
     test_vector_and_insert(V);
   }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 8\n";
+#endif
   std::vector<MyVector<T>> ListExtensions;
   for (auto &eEnt : SetExtensions)
     ListExtensions.push_back(eEnt);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 9\n";
+#endif
   return ListExtensions;
 }
 
@@ -796,7 +835,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
         return {4,scal12};
       if (quot == val6)
         return {6,scal12};
-      std::cerr << "Failed to find matching entry\n";
+      std::cerr << "Failed to find matching entry quot=" << quot << "\n";
       throw TerminalException{1};
     }
   };
@@ -838,23 +877,41 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   int dim = G.rows();
   int dim_cox = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
-  std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, allow_euclidean);
+  std::vector<MyVector<T>> l_vect_pre = FindDiagramExtensions(CoxMat, allow_euclidean);
+  std::cerr << "|l_vect_pre|=" << l_vect_pre.size() << "\n";
+  // We should have a cleaner code where the constraint on edge size is part of the enumeration
+  auto f_corr=[&](MyVector<T> const& V) -> bool {
+    for (int i=0; i<dim_cox; i++)
+      if (V(i) != 2 && V(i) != 3 && V(i) != 4 && V(i) != 6)
+        return false;
+    return true;
+  };
+  std::vector<MyVector<T>> l_vect;
+  for (auto & eVect : l_vect_pre)
+    if (f_corr(eVect))
+      l_vect.push_back(eVect);
+  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   std::cerr << "ComputePossibleExtensions, step 4\n";
+  T val2 = 0;
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
   T val6 = T(3) / T(4);
   auto get_cos_square=[&](T val) -> T {
+    if (val == 2)
+      return val2;
     if (val == 3)
       return val3;
     if (val == 4)
       return val4;
     if (val == 6)
       return val6;
-    std::cerr << "Failed to find a matching entry\n";
+    std::cerr << "Failed to find a matching entry val=" << val << "\n";
     throw TerminalException{1};
   };
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
+    std::cerr << "e_norm=" << e_norm << " e_vect=";
+    WriteVector(std::cerr, e_vect);
     MyVector<T> l_scal(dim_cox);
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
