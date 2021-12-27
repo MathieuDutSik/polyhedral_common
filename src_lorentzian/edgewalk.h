@@ -211,8 +211,14 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   for (int i=0; i<n-2; i++)
     V[i] = i+2;
   MyMatrix<T> Latt3 = SelectColumn(Latt2, V);
+  std::cerr << "Latt3=\n";
+  WriteMatrix(std::cerr, Latt3);
   MyMatrix<T> NSP = NullspaceIntMat(Latt3);
+  std::cerr << "NSP=\n";
+  WriteMatrix(std::cerr, NSP);
   MyMatrix<T> IntBasis = NSP * Latt;
+  std::cerr << "IntBasis=\n";
+  WriteMatrix(std::cerr, IntBasis);
   std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
   if (!opt_u) {
     std::cerr << "We failed to find a solution for u\n";
@@ -221,6 +227,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   MyVector<T> sol_u = *opt_u;
   T u1 = sol_u(0);
   T u2 = sol_u(1);
+  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
   std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
   if (!opt_k) {
     std::cerr << "We failed to find a solution for k\n";
@@ -229,6 +236,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   MyVector<T> sol_k = *opt_k;
   T k1 = sol_k(0);
   T k2 = sol_k(1);
+  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
   //
   GCD_int<T> ep = ComputePairGcd(k1, k2);
   T u1_norm = ep.Pmat(0,0) * u1 + ep.Pmat(1,0) * u2;
@@ -263,20 +271,30 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms,
                                                        MyVector<T> const& k, MyVector<T> const& kP)
 {
+  std::cerr << "DetermineRootsCuspidalCase, step 1\n";
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+  std::cerr << "DetermineRootsCuspidalCase, step 2\n";
   std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
   for (auto & e_extension : l_extension) {
+    std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
+      std::cerr << "We have Latt=\n";
+      WriteMatrix(std::cerr, Latt);
       std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
+      std::cerr << "We have opt_v\n";
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
+        std::cerr << "v_T =";
+        WriteVector(std::cerr, v_T);
         RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
+        std::cerr << "We have e_cand\n";
         l_candidates.push_back(e_cand);
       }
     }
   }
+  std::cerr << "DetermineRootsCuspidalCase, step 3\n";
   std::sort(l_candidates.begin(), l_candidates.end(),
             [&](RootCandidateCuspidal<T,Tint> const& x, RootCandidateCuspidal<T,Tint> const& y) -> bool {
               int sign = get_sign_pair_stdpair<T>({x.sign, x.quant}, {y.sign, y.quant});
@@ -284,6 +302,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
                 return sign < 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
               return x.e_norm < y.e_norm;
             });
+  std::cerr << "DetermineRootsCuspidalCase, step 4\n";
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
   auto is_approved=[&](MyVector<Tint> const& cand) -> bool {
     MyVector<T> G_cand_T = G * UniversalVectorConversion<T,Tint>(cand);
@@ -300,6 +319,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     if (is_approved(eV_i))
       l_ui_ret.push_back(eV_i);
   }
+  std::cerr << "DetermineRootsCuspidalCase, step 5\n";
   return l_ui_ret;
 }
 
