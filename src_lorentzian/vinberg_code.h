@@ -304,8 +304,8 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
         int eps = -1 + 2 * j;
         MyVector<Tint> Vwork = V;
         Vwork(i) -= eps;
-        SolMatResult<Tint> Solu=SolutionMat(Morth, Vwork);
-        if (Solu.result) {
+        std::optional<MyVector<Tint>> opt = SolutionMat(Morth, Vwork);
+        if (opt) {
           MyVector<Tint> Vret = ZeroVector<Tint>(n);
           Vret(i) = eps;
           return Vret;
@@ -498,13 +498,14 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
         Bmat(n-1 + i, j) = 0;
     }
   }
-  ResultSolutionIntMat<Tint> res = SolutionIntMat(Bmat, m2_Ga);
-  if (!res.TheRes)
+  std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
+  if (!opt)
     return {{}, {}, 0, {}, {}, false};
+  MyVector<Tint> res = *opt;
   //
   MyVector<Tint> w0(n-1);
   for (size_t i=0; i<n-1; i++)
-    w0(i) = res.eSol(i);
+    w0(i) = res(i);
   MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
   size_t dim = U_block.rows();
 #ifdef DEBUG_VINBERG

@@ -200,10 +200,11 @@ RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& 
   solvability condition becomes u1 in Z.
  */
 template<typename T>
-std::option<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
+std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
 {
   int n = Latt.rows();
-  MyMatrix<T> eIndep = MatrixFromVectorFamily({u,k});
+  std::vector<MyVector<T>> l_v = {u,k};
+  MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
   MyMatrix<T> eBasis = ExtendToBasis(eIndep);
   MyMatrix<T> Latt2 = Latt * Inverse(eBasis);
   std::vector<int> V(n-2);
@@ -267,11 +268,11 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
   for (auto & e_extension : l_extension) {
     if (e_extension.res_norm == 0) {
-      MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-      std::option<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_comp, k);
+      MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
+      std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
-        RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension(G, kP, v_T, e_extension.e_norm);
+        RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
         l_candidates.push_back(e_cand);
       }
     }
@@ -284,7 +285,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
               return x.e_norm < y.e_norm;
             });
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
-  bool is_approved=[&](MyVector<Tint> const& cand) -> bool {
+  auto is_approved=[&](MyVector<Tint> const& cand) -> bool {
     MyVector<T> G_cand_T = G * UniversalVectorConversion<T,Tint>(cand);
     for (auto & v : l_ui_ret) {
       MyVector<T> v_T = UniversalVectorConversion<T,Tint>(v);
@@ -378,12 +379,12 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyMatrix<T> NSP = NullspaceIntMat(TransposedMat(Equas));
     MyMatrix<T> GP_LN = NSP * G_LN * NSP.transpose();
     MyVector<T> r0_LN = Inverse(Latt).transpose() * r0;
-    auto RecSol = SolutionMat(NSP, r0_LN);
-    if (!RecSol.result) {
+    std::optional<MyVector<T>> opt = SolutionMat(NSP, r0_LN);
+    if (!opt) {
       std::cerr << "Failed to resolve the SolutionMat problem\n";
       throw TerminalException{1};
     }
-    MyVector<T> r0_NSP = RecSol.eSol;
+    MyVector<T> r0_NSP = *opt;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
     std::cerr << "We have opt_v\n";
