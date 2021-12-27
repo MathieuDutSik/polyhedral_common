@@ -219,9 +219,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   MyVector<T> r0 = GetMatrixRow(NSP,0);
   std::cerr << "Edgewalk Procedure, step 2\n";
   std::vector<RootCandidate<T,Tint>> l_candidates;
-  bool allow_euclidean = false;
+  bool only_spherical = true;
   std::cerr << "Edgewalk Procedure, step 3\n";
-  std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, allow_euclidean);
+  std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "Edgewalk Procedure, step 4\n";
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
@@ -328,7 +328,19 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   std::vector<MyVector<Tint>> l_roots = l_ui;
   MyVector<Tint> w(n);
-  /// FILL OUT THE CODE
+  /* FILL OUT THE CODE
+     What we are looking for is the roots satisfying say A[x] = 2
+     and x.v = 0.
+     This can only be infinite. Since otherwise, there would only be
+     a finite set of roots incident to the vector.
+     ----
+     But we could add the constraint of negative scalar product with the known
+     roots.
+     This just could work. But is would be expensive, as the problem is N-dimensional.
+     Most likely, it would just introduce Vinberg back and break our speed
+     improvements.
+
+   */
   l_roots.push_back(w);
   return {l_gens[0], l_roots};
 }

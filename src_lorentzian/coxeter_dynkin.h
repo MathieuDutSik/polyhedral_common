@@ -31,12 +31,21 @@ bool IsDiagramSpherical(IrrCoxDyn const& cd)
 }
 
 
-bool IsDiagramADE(IrrCoxDyn const& cd)
+bool IsDiagramSimplyLaced(IrrCoxDyn const& cd)
 {
   std::string type = cd.type;
   if (type == "A" || type == "D" || type == "E")
     return true;
   return false;
+}
+
+
+bool IsDiagramIntegerLorentzianFeasible(IrrCoxDyn const& cd)
+{
+  std::string type = cd.type;
+  if (type == "H" || type == "I")
+    return false;
+  return true;
 }
 
 
@@ -254,10 +263,10 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
 
 
 template<typename T>
-std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T>& M, bool allow_euclidean)
+std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
 {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean allow_euclidean=" << allow_euclidean << " M=\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
   WriteMatrix(std::cerr, M);
 #endif
   T val_comm = 2;
@@ -269,7 +278,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   if (n_vert == 1) // Case of A1
     return IrrCoxDyn{"A",1,0};
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 1\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 1\n";
 #endif
   std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
   std::vector<size_t> list_deg(n_vert, 0);
@@ -303,7 +312,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     list_deg[i] = n_adj;
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 2\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 2\n";
 #endif
   auto get_list_adjacent=[&](size_t u) -> std::vector<size_t> {
     std::vector<size_t> LAdj;
@@ -321,11 +330,9 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
     return {};
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 3\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 3\n";
 #endif
   if (list_deg4.size() > 0) { // Vertex of degree 4 can occur for \tilde{D4} only
-    if (!allow_euclidean) // Only possibilities is not allowed, exit.
-      return {};
     // We are now in Euclidean
     if (n_vert != 5) // It has to be \tilde{D4}.
       return {};
@@ -339,7 +346,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return IrrCoxDyn{"tildeD", 4, 0}; // This is \tilde{D4}
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 4\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 4\n";
 #endif
   std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -347,8 +354,6 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
 #endif
   if (ListCycles.size() > 0) { // Only tilde{An} is possible.
     if (ListCycles.size() > 1) // If more than 1 cycle, then not possible
-      return {};
-    if (!allow_euclidean)
       return {};
     // We are now in Euclidean case
     const std::vector<size_t>& eCycle = ListCycles[0];
@@ -361,7 +366,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return IrrCoxDyn{"tildeA", n_vert-1, 0}; // Only tilde{An} is left as possibility
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 5\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 5\n";
 #endif
   // Now it is a tree
   if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 && n_higher_edge == 0)
@@ -370,8 +375,6 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
   if (list_deg3.size() > 2)
     return {}; // No possibility for spherical and euclidean
   if (list_deg3.size() == 2) {
-    if (!allow_euclidean)
-      return {};
     // We are now in Euclidean case
     if (n_higher_edge != 0)
       return {};
@@ -387,14 +390,13 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return IrrCoxDyn{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 6\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6\n";
 #endif
   if (list_deg3.size() == 0) { // We are in a single path.
     if (multiplicity[val_four] == 2) {
       if (n_higher_edge != 2) // There are some other higher edge, excluded
         return {};
-      if (!allow_euclidean) // Only tilde{Cn} is feasible and it is Euclidean
-        return {};
+      // Only tilde{Cn} is feasible and it is Euclidean
       for (auto & eVert : list_deg1)
         if (get_value_isolated(eVert) != val_four)
           return {};
@@ -416,9 +418,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
           return IrrCoxDyn{"F", 4,0}; // Only F4 is possible
         }
         if (n_vert == 5) { // Only tilde{F4} is possible. So conclude from that
-          if (allow_euclidean)
-            return IrrCoxDyn{"tildeF", 4, 0};
-          return {};
+          return IrrCoxDyn{"tildeF", 4, 0};
         }
       }
       if (n_four == 1 && n_sing == 1) {
@@ -458,8 +458,6 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
       if (n_vert == 2 || n_vert == 3) { // It is G2 or tilde{G2}
         if (n_vert == 2)
           return IrrCoxDyn{"G", 2, 0};
-        if (!allow_euclidean)
-          return {};
         if (n_vert == 3)
           return IrrCoxDyn{"tildeG", 2, 0};
       }
@@ -472,7 +470,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return {};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 7\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 7\n";
 #endif
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
@@ -494,7 +492,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return {};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsIrreducibleDiagramSphericalEuclidean, step 8\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 8\n";
 #endif
   if (n_higher_edge != 0)
     return {};
@@ -532,8 +530,7 @@ std::optional<IrrCoxDyn> IsIrreducibleDiagramSphericalEuclidean(const MyMatrix<T
     return IrrCoxDyn{"E",7,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[4] == 1) // It is E8
     return IrrCoxDyn{"E",8,0};
-  if (!allow_euclidean)
-    return {}; // In spherical, no other possibilities left
+  // In spherical, no other possibilities left
   if (map_len[2] == 3) // It is tilde{E6}
     return IrrCoxDyn{"tildeE",6,0};
   if (map_len[1] == 1 && map_len[3] == 2) // It is tilde{E7}
@@ -548,8 +545,7 @@ template<typename T>
 MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
 {
   MyMatrix<T> M = Kernel_IrrCoxDyn_to_matrix<T>(cd);
-  bool allow_euclidean = true;
-  std::optional<IrrCoxDyn> opt = IsIrreducibleDiagramSphericalEuclidean(M, allow_euclidean);
+  std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
   if (opt) {
     IrrCoxDyn cd2 = *opt;
     if (cd.type != cd2.type || cd.dim != cd2.dim || cd.param != cd2.param) {
@@ -567,16 +563,11 @@ MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
 }
 
 
-
-
 template<typename T>
-std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix<T>& M, const bool& allow_euclidean)
+std::vector<std::vector<size_t>> GetIrreducibleComponents(const MyMatrix<T>& M)
 {
   T val_comm = 2;
   size_t dim = M.rows();
-#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "IsDiagramSphericalEuclidean dim=" << dim << "\n";
-#endif
   GraphBitset eG(dim);
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
@@ -586,13 +577,13 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
       }
     }
   }
-#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "eG is built\n";
-#endif
-  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
-#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "LConn is built\n";
-#endif
+  return ConnectedComponents_set(eG);
+}
+
+template<typename T>
+std::optional<std::vector<IrrCoxDyn>> RecognizeSphericalEuclideanDiagram(const MyMatrix<T>& M)
+{
+  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
   std::vector<IrrCoxDyn> l_cd;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
@@ -603,7 +594,7 @@ std::optional<std::vector<IrrCoxDyn>> IsDiagramSphericalEuclidean(const MyMatrix
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
-    std::optional<IrrCoxDyn> opt = IsIrreducibleDiagramSphericalEuclidean(Mres, allow_euclidean);
+    std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(Mres);
     if (opt) {
       IrrCoxDyn cd = *opt;
       l_cd.push_back(cd);
@@ -654,8 +645,7 @@ MyMatrix<T> string_to_coxdyn_matrix(std::string const& str)
 template<typename T>
 std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
 {
-  bool allow_euclidean = true;
-  std::optional<std::vector<IrrCoxDyn>> opt = IsDiagramSphericalEuclidean(M, allow_euclidean);
+  std::optional<std::vector<IrrCoxDyn>> opt = RecognizeSphericalEuclideanDiagram(M);
   if (opt) {
     const std::vector<IrrCoxDyn> & l_irr = *opt;
     std::string str = IrrCoxDyn_to_string(l_irr[0]);
@@ -668,7 +658,61 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
 }
 
 
+struct DiagramSelector {
+  bool OnlySimplyLaced;
+  bool OnlyLorentzianAdmissible;
+  bool OnlySpherical;
+};
 
+
+
+
+template<typename T>
+bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
+{
+  int n = M.rows();
+  for (int i=0; i<n; i++)
+    for (int j=i+1; j<n; j++) {
+      T val = M(i,j);
+      if (DS.OnlySimplyLaced) {
+        if (val != 2 && val != 3)
+          return false;
+      }
+      if (DS.OnlyLorentzianAdmissible) {
+        if (val != 2 && val != 3 && val != 4 && val != 6)
+          return false;
+      }
+    }
+  std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
+  if (opt) {
+    if (DS.OnlySpherical) {
+      const IrrCoxDyn& cd = *opt;
+      return IsDiagramSpherical(cd);
+    }
+    return true;
+  }
+  return false;
+}
+
+
+
+template<typename T>
+bool CheckDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
+{
+  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
+  std::vector<IrrCoxDyn> l_cd;
+  for (auto & eConn : LConn) {
+    size_t dim_res=eConn.size();
+    MyMatrix<T> Mres(dim_res, dim_res);
+    for (size_t i=0; i<dim_res; i++)
+      for (size_t j=0; j<dim_res; j++)
+        Mres(i,j) = M(eConn[i], eConn[j]);
+    bool test = CheckIrreducibleDiagram(Mres, DS);
+    if (!test)
+      return false;
+  }
+  return true;
+}
 
 
 template<typename T>
@@ -687,7 +731,7 @@ MyMatrix<T> ExtendMatrix(MyMatrix<T> const& M, MyVector<T> const& V)
 }
 
 template<typename T>
-std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool& allow_euclidean)
+std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const DiagramSelector& DS)
 {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 1\n";
@@ -732,7 +776,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const bool&
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
-    if (IsDiagramSphericalEuclidean(Mtest, allow_euclidean))
+    if (CheckDiagram(Mtest, DS))
       SetExtensions.insert(V);
   };
   test_vector_and_insert(V_basic);
@@ -867,8 +911,13 @@ struct Possible_Extension {
 };
 
 template<typename T, typename Tint>
-std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool allow_euclidean)
+std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool only_spherical)
 {
+  DiagramSelector DS;
+  DS.OnlySimplyLaced = false;
+  DS.OnlyLorentzianAdmissible = true;
+  DS.OnlySpherical = only_spherical;
+  //
   std::cerr << "ComputePossibleExtensions, step 1\n";
   std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
   std::cerr << "ComputePossibleExtensions, step 2\n";
@@ -877,19 +926,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   int dim = G.rows();
   int dim_cox = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
-  std::vector<MyVector<T>> l_vect_pre = FindDiagramExtensions(CoxMat, allow_euclidean);
-  std::cerr << "|l_vect_pre|=" << l_vect_pre.size() << "\n";
-  // We should have a cleaner code where the constraint on edge size is part of the enumeration
-  auto f_corr=[&](MyVector<T> const& V) -> bool {
-    for (int i=0; i<dim_cox; i++)
-      if (V(i) != 2 && V(i) != 3 && V(i) != 4 && V(i) != 6)
-        return false;
-    return true;
-  };
-  std::vector<MyVector<T>> l_vect;
-  for (auto & eVect : l_vect_pre)
-    if (f_corr(eVect))
-      l_vect.push_back(eVect);
+  std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, DS);
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   std::cerr << "ComputePossibleExtensions, step 4\n";
   T val2 = 0;
