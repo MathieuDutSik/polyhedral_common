@@ -197,7 +197,11 @@ RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& 
   We thus remap the equation to
   u1 + c k1 = a1
   u2        = a2
-  solvability condition becomes u1 in Z.
+  solvability condition becomes u2 in Z.
+  c0 = -u1 / k1
+  cS = 1/k1
+  Solution is c = c0 + h cS
+  k = - c0 / cS
  */
 template<typename T>
 std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
@@ -237,12 +241,18 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   T k1 = sol_k(0);
   T k2 = sol_k(1);
   std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
+  std::cerr << "u=";
+  WriteVector(std::cerr, u);
+  std::cerr << "k=";
+  WriteVector(std::cerr, k);
   //
   GCD_int<T> ep = ComputePairGcd(k1, k2);
   T u1_norm = ep.Pmat(0,0) * u1 + ep.Pmat(1,0) * u2;
   T u2_norm = ep.Pmat(0,1) * u1 + ep.Pmat(1,1) * u2;
   T k1_norm = ep.Pmat(0,0) * k1 + ep.Pmat(1,0) * k2;
   T k2_norm = ep.Pmat(0,1) * k1 + ep.Pmat(1,1) * k2;
+  std::cerr << "norm : u1=" << u1_norm << " u2=" << u2_norm << "\n";
+  std::cerr << "norm : k1=" << k1_norm << " k2=" << k2_norm << "\n";
   if (k2_norm != 0) {
     std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
     throw TerminalException{1};
@@ -250,8 +260,18 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   if (!IsInteger(u2_norm)) // No solution then
     return {};
   //
-  T a1 = UniversalCeilScalarInteger<T,T>(u1_norm);
-  T c = a1 - u1_norm;
+  T c0 = - u1_norm / k1_norm;
+  T cS = 1 / k1_norm;
+  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
+  T hinp = -c0 / cS;
+  T h;
+  if (cS > 0) {
+    h = UniversalFloorScalarInteger<T,T>(hinp);
+  } else {
+    h = UniversalCeilScalarInteger<T,T>(hinp);
+  }
+  T c = c0 + h * cS;
+  std::cerr << "h=" << h << " c=" << c << "\n";
   return u + c * k;
 }
 
