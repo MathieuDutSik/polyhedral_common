@@ -434,7 +434,15 @@ T GetUpperBoundMinimum(const MyMatrix<T>& G)
   return eNorm;
 }
 
-
+template<typename T>
+T GetLowerBoundMinimum(const MyMatrix<T>& G)
+{
+  T val1 = G(0,0);
+  T val2 = 2 * G(0,1);
+  T val3 = G(1,1);
+  T eGcd1 = GcdPair(val1, val2);
+  return GcdPair(eGcd1, val3);
+}
 
 
 
@@ -523,6 +531,12 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> cons
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
+  std::cerr << "SearchNorm=" << SearchNorm << "\n";
+  if (SearchNorm <= 0)
+    return {};
+  T lower_bnd = GetLowerBoundMinimum(G);
+  if (SearchNorm < lower_bnd) // no solution possible
+    return {};
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
   if (opt)
     return get_first_next_vector_isotropic(G, r0, SearchNorm, *opt);

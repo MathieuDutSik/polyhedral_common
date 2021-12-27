@@ -967,8 +967,6 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     MyVector<T> w = Inverse(ScalMat) * l_scal;
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
-    if (res_norm <= 0)
-      return;
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);

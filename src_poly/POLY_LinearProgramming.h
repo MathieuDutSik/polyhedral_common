@@ -627,9 +627,8 @@ MyMatrix<T> LP_GetExpressionForLP(MyMatrix<T> const& EXT)
   eEntOne(0)=1;
   for (int iRow=0; iRow<nbRow; iRow++) {
     MyVector<T> eVect1=ListDiff.row(iRow);
-    SolMatResult<T> RecSol=SolutionMat(TheBasis, eVect1);
-    assert(RecSol.result);
-    MyVector<T> eVect2=RecSol.eSol;
+    std::optional<MyVector<T>> opt=SolutionMat(TheBasis, eVect1);
+    const MyVector<T> & eVect2=*opt;
     MyVector<T> eVect3=Concatenation(eEntOne, eVect2);
     NewListCoord.row(iRow)=eVect3;
   }
@@ -654,7 +653,7 @@ Face FindViolatedFace(MyMatrix<T> const& EXT, MyVector<T> const& eVect)
   std::cerr << "eVect=\n";
   WriteVector(std::cerr, eVect);
   std::cerr << "RankMat(EXT)=" << RankMat(EXT) << "\n";*/
-  SolMatResult<T> eSolMat=SolutionMat(EXT, eVect);
+  std::optional<MyVector<T>> opt=SolutionMat(EXT, eVect);
   int nbRow=EXT.rows();
   int nbCol=EXT.cols();
   int nbColVect = eVect.size();
@@ -662,7 +661,7 @@ Face FindViolatedFace(MyMatrix<T> const& EXT, MyVector<T> const& eVect)
     std::cerr << "We have nbCol=" << nbCol << " but nbColVect=" << nbColVect << "\n";
     throw TerminalException{1};
   }
-  if (!eSolMat.result) {
+  if (!opt) {
     std::cerr << "Error in the input of FindVolatedFace\n";
     std::cerr << "The vector eVect should belong to the space spanned by EXT\n";
     throw TerminalException{1};
@@ -917,14 +916,13 @@ PosRelRes<T> SearchPositiveRelationSimple(MyMatrix<T> const& ListVect)
 
 
 template<typename T>
-SolMatResult<T> SolutionMatNonnegative(MyMatrix<T> const& ListVect, MyVector<T> const& eVect)
+std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const& ListVect, MyVector<T> const& eVect)
 {
   int nbVect=ListVect.rows();
   int nbCol=ListVect.cols();
   MyMatrix<T> InputListVect(nbVect+1,nbCol);
-  for (int iVect=0; iVect<nbVect; iVect++) {
+  for (int iVect=0; iVect<nbVect; iVect++)
     InputListVect.row(iVect) = ListVect.row(iVect);
-  }
   for (int iCol=0; iCol<nbCol; iCol++)
     InputListVect(nbVect,iCol) = - eVect(iCol);
   //
@@ -941,11 +939,11 @@ SolMatResult<T> SolutionMatNonnegative(MyMatrix<T> const& ListVect, MyVector<T> 
   //
   PosRelRes<T> PRR = SearchPositiveRelation(ListVect, eConstraint);
   if (!PRR.eTestExist)
-    return {false, {}};
+    return {};
   MyVector<T> TheSol(nbVect);
   for (int iVect=0; iVect<nbVect; iVect++)
     TheSol(iVect) = PRR.TheRelat(iVect) / PRR.TheRelat(nbVect);
-  return {true, TheSol};
+  return TheSol;
 }
 
 
@@ -961,8 +959,8 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const& ListIneq, MyVecto
   MyMatrix<T> ListIneq_Incd = SelectRow(ListIneq, ListRowSelect);
   MyVector<T> eVectTest = ToBeMinimized;
   eVectTest(0) -= TheLP.OptimalValue;
-  SolMatResult<T> SolRes = SolutionMatNonnegative(ListIneq_Incd, eVectTest);
-  if (!SolRes.result)
+  std::optional<MyVector<T>> opt = SolutionMatNonnegative(ListIneq_Incd, eVectTest);
+  if (!opt)
     return CDD_LinearProgramming(ListIneq, ToBeMinimized);
   return TheLP;
 }

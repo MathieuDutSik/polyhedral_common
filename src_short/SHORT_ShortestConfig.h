@@ -643,8 +643,8 @@ ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> 
   MyMatrix<T> ListRankOne_mat=MatrixFromVectorFamily(ListRankOne);
   auto IsNeededInsert=[&StdBasis,&ListRankOne_mat](MyVector<Tint> const& eVect) -> bool {
     MyVector<T> VectImg=SHORT_GetIneq_Tspace<T,Tint>(StdBasis, eVect);
-    SolMatResult<T> eRes=SolutionMat(ListRankOne_mat, VectImg);
-    return eRes.result;
+    std::optional<MyVector<T>> opt = SolutionMat(ListRankOne_mat, VectImg);
+    return opt.has_value();
   };
   int TheRank=RankMat(ListRankOne_mat);
   bool NoExtension=false;

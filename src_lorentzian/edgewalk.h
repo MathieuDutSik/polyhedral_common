@@ -163,6 +163,147 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
 }
 
 
+template<typename T, typename Tint>
+struct RootCandidateCuspidal {
+  int sign; // 0 for 0, 1 for positive, -1 for negative
+  T quant; // this is (kP.v_{N,\Delta'})^2 / N
+  T e_norm;
+  MyVector<Tint> v;
+};
+
+
+template<typename T, typename Tint>
+RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& G, MyVector<T> const& kP, MyVector<T> const& v_T, T const& e_norm)
+{
+  MyVector<Tint> v = UniversalVectorConversion<Tint,T>(v_T);
+  T scal = - kP.dot(G * v_T);
+  T quant = (scal * scal) / e_norm;
+  return {get_sign_sing(scal), quant, e_norm, v};
+}
+
+
+
+/*
+  We are looking forthe smallest solution c>0 for the equation
+  u + c k in Latt
+  By selecting an adequate basis for Latt we can reduce the problem to
+  u + ck = a1 v1 + a2 v2
+  with a1, a2 in Z and v1, v2 in Latt.
+  We write u = u1 v1 + x2 u2   and   k = k1 v1 + k2 v2
+  This gets us
+  u1 + ck1 = a1
+  u2 + ck2 = a2
+  The right way to solve the equation is to compute kG = gcd(k1, k2) and a basis of the kernel.
+  We thus remap the equation to
+  u1 + c k1 = a1
+  u2        = a2
+  solvability condition becomes u1 in Z.
+ */
+template<typename T>
+std::option<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
+{
+  int n = Latt.rows();
+  MyMatrix<T> eIndep = MatrixFromVectorFamily({u,k});
+  MyMatrix<T> eBasis = ExtendToBasis(eIndep);
+  MyMatrix<T> Latt2 = Latt * Inverse(eBasis);
+  std::vector<int> V(n-2);
+  for (int i=0; i<n-2; i++)
+    V[i] = i+2;
+  MyMatrix<T> Latt3 = SelectColumn(Latt2, V);
+  MyMatrix<T> NSP = NullspaceIntMat(Latt3);
+  MyMatrix<T> IntBasis = NSP * Latt;
+  std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
+  if (!opt_u) {
+    std::cerr << "We failed to find a solution for u\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> sol_u = *opt_u;
+  T u1 = sol_u(0);
+  T u2 = sol_u(1);
+  std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
+  if (!opt_k) {
+    std::cerr << "We failed to find a solution for k\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> sol_k = *opt_k;
+  T k1 = sol_k(0);
+  T k2 = sol_k(1);
+  //
+  GCD_int<T> ep = ComputePairGcd(k1, k2);
+  T u1_norm = ep.Pmat(0,0) * u1 + ep.Pmat(1,0) * u2;
+  T u2_norm = ep.Pmat(0,1) * u1 + ep.Pmat(1,1) * u2;
+  T k1_norm = ep.Pmat(0,0) * k1 + ep.Pmat(1,0) * k2;
+  T k2_norm = ep.Pmat(0,1) * k1 + ep.Pmat(1,1) * k2;
+  if (k2_norm != 0) {
+    std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
+    throw TerminalException{1};
+  }
+  if (!IsInteger(u2_norm)) // No solution then
+    return {};
+  //
+  T a1 = UpperInterger(u1_norm);
+  T c = a1 - u1_norm;
+  return u + c * k;
+}
+
+
+
+
+
+/*
+  We use solution of Problem 7.1 in the edgewalk text.
+  It is indeed true that we are searching roots that contain k.
+  The dimension of that space is n.
+  But since k is isotropic that space is actually the span of k and the l_ui.
+  --
+  Now if we write a vector as u + ck then we get N(u + ck) = N(u)
+ */
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms,
+                                                       MyVector<T> const& k, MyVector<T> const& kP)
+{
+  bool only_spherical = false;
+  std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+  std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
+  for (auto & e_extension : l_extension) {
+    if (e_extension.res_norm == 0) {
+      MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+      std::option<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_comp, k);
+      if (opt_v) {
+        const MyVector<T>& v_T = *opt_v;
+        RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension(G, kP, v_T, e_extension.e_norm);
+        l_candidates.push_back(e_cand);
+      }
+    }
+  }
+  std::sort(l_candidates.begin(), l_candidates.end(),
+            [&](RootCandidateCuspidal<T,Tint> const& x, RootCandidateCuspidal<T,Tint> const& y) -> bool {
+              int sign = get_sign_pair_stdpair<T>({x.sign, x.quant}, {y.sign, y.quant});
+              if (sign != 0)
+                return sign < 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
+              return x.e_norm < y.e_norm;
+            });
+  std::vector<MyVector<Tint>> l_ui_ret = l_ui;
+  bool is_approved=[&](MyVector<Tint> const& cand) -> bool {
+    MyVector<T> G_cand_T = G * UniversalVectorConversion<T,Tint>(cand);
+    for (auto & v : l_ui_ret) {
+      MyVector<T> v_T = UniversalVectorConversion<T,Tint>(v);
+      T scal = v_T.dot(G_cand_T);
+      if (scal > 0)
+        return false;
+    }
+    return true;
+  };
+  for (auto & eV : l_candidates) {
+    MyVector<Tint> eV_i = eV.v;
+    if (is_approved(eV_i))
+      l_ui_ret.push_back(eV_i);
+  }
+  return l_ui_ret;
+}
+
+
+
 
 
 
@@ -180,7 +321,7 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
 
  */
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
+FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
   int n = G.rows();
   size_t n_root = l_ui.size();
@@ -326,8 +467,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "We should have just one vector in order to conclude. Rethink needed\n";
     throw TerminalException{1};
   }
-  std::vector<MyVector<Tint>> l_roots = l_ui;
-  MyVector<Tint> w(n);
+  const MyVector<T> & k_new = l_gens[0];
   /* FILL OUT THE CODE
      What we are looking for is the roots satisfying say A[x] = 2
      and x.v = 0.
@@ -341,8 +481,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
      improvements.
 
    */
-  l_roots.push_back(w);
-  return {l_gens[0], l_roots};
+  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
+  return {k_new, l_roots_ret};
 }
 
 

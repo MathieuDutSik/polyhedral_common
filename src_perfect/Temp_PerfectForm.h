@@ -801,8 +801,8 @@ std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
       for (auto & eMat : eData.LinSpa.ListMat) {
 	MyMatrix<T> eProd=M*eMat*TransposedMat(M);
 	MyVector<T> eVect=SymmetricMatrixToVector(eProd);
-	SolMatResult<T> eSol=SolutionMat(ListMatVectB, eVect);
-	if (!eSol.result)
+        std::optional<MyVector<T>> opt = SolutionMat(ListMatVectB, eVect);
+	if (!opt)
 	  return false;
       }
     }
@@ -851,8 +851,8 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const& eData, MyMatrix<T> const& G
       for (auto & eMat : eData.LinSpa.ListMat) {
 	MyMatrix<T> eProd=M*eMat*TransposedMat(M);
 	MyVector<T> eVect=SymmetricMatrixToVector(eProd);
-	SolMatResult<T> eSol=SolutionMat(ListMatVectB, eVect);
-	if (!eSol.result)
+        std::optional<MyVector<T>> opt = SolutionMat(ListMatVectB, eVect);
+	if (!opt)
 	  return false;
       }
     }

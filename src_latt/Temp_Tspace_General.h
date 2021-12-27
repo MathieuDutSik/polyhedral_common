@@ -257,12 +257,12 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const& LinSpa, 
     MyVector<T> V=SymmetricMatrixToVector(LinSpa.ListMat[iLinSpa]);
     AssignMatrixRow(TotalMatrix, iLinSpa, V);
   }
-  SolMatResult<T> RecSol=SolutionMat(TotalMatrix, eMatVect);
-  if (!RecSol.result) {
+  std::optional<MyVector<T>> RecSol=SolutionMat(TotalMatrix, eMatVect);
+  if (!RecSol) {
     std::cerr << "The matrix does not belong to the linear space of matrix. Exclude it\n";
     throw TerminalException{1};
   }
-  return RecSol.eSol;
+  return *RecSol;
 }
 
 

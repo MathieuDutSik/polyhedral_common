@@ -183,13 +183,13 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 #endif
       for (auto & eGen : TheGRP.ListMatrGen) {
 	MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
-	ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpaceMod, eVectG);
+        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpaceMod, eVectG);
 	bool test=CanTestSolutionIntMat(eCan, eVectG);
-	if (test != eRes.TheRes) {
+	if (test != eRes.has_value()) {
 	  std::cerr << "Inconsistency of result between two SolutionIntMat functions\n";
 	  throw TerminalException{1};
 	}
-	if (!eRes.TheRes) {
+	if (!eRes) {
 	  V=VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
 	  std::cerr << "eVect=\n";
@@ -282,8 +282,8 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 #endif
     Face eFace(siz);
     for (int iO=0; iO<Osiz; iO++) {
-      ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpaceMod, O[iO]);
-      if (eRes.TheRes)
+      std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpaceMod, O[iO]);
+      if (eRes)
 	eFace[nbRow + iO]=1;
     }
     Tgroup eStab=GRPwork.Stabilizer_OnSets(eFace);
@@ -327,7 +327,7 @@ T LinearSpace_GetDivisor(MyMatrix<T> const& TheSpace)
       if (IsOK) {
 	MyVector<T> eVect=ZeroVector<T>(n);
 	eVect(i)=eDiv;
-	bool test=SolutionIntMat(TheSpace, eVect).TheRes;
+	bool test=SolutionIntMat(TheSpace, eVect).has_value();
 	if (!test)
 	  IsOK=false;
       }
@@ -361,8 +361,8 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_Stabilizer(FiniteMatrixGr
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
       for (auto & eGen : TheGRP.ListMatrGen) {
 	MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
-	ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace, eVectG);
-	if (!eRes.TheRes) {
+        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace, eVectG);
+	if (!eRes) {
 #ifdef DEBUG_MATRIX_GROUP
 	  std::cerr << "Leaving IsStabilzing: false\n";
 #endif
@@ -447,8 +447,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
     for (int i=0; i<n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
-      ResultSolutionIntMat<T> eRes = SolutionIntMat(TheSpace2Mod, eVect);
-      if (!eRes.TheRes) {
+      std::optional<MyVector<T>> eRes = SolutionIntMat(TheSpace2Mod, eVect);
+      if (!eRes) {
 	MyVector<T> V = VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "   i=" << i << "\n";
@@ -469,8 +469,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i=0; i<n; i++) {
         MyVector<T> eVect=GetMatrixRow(TheSpace2img, i);
-        ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2Mod, eVect);
-        if (!eRes.TheRes)
+        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2Mod, eVect);
+        if (!eRes)
           return VectorMod(eVect);
       }
     }
@@ -592,8 +592,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     Face eFace(siz);
     for (size_t iO=0; iO<Osiz; iO++) {
       MyVector<T> eVect=O[iO];
-      ResultSolutionIntMat<T> eRes1=SolutionIntMat(TheSpace, eVect);
-      if (eRes1.TheRes)
+      std::optional<MyVector<T>> eRes1=SolutionIntMat(TheSpace, eVect);
+      if (eRes1)
 	eFace[nbRow_tidx + iO]=1;
     }
     return eFace;
@@ -706,8 +706,8 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename 
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace1, i);
       MyVector<T> eVectG=ProductVectorMatrix(eVect, eEquiv);
-      ResultSolutionIntMat<T> eRes=SolutionIntMat(TheSpace2, eVectG);
-      if (!eRes.TheRes)
+      std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2, eVectG);
+      if (!eRes)
 	return false;
     }
     return true;
