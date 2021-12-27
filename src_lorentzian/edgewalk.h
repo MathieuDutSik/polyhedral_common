@@ -242,7 +242,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   if (!IsInteger(u2_norm)) // No solution then
     return {};
   //
-  T a1 = UpperInterger(u1_norm);
+  T a1 = UniversalCeilScalarInteger<T,T>(u1_norm);
   T c = a1 - u1_norm;
   return u + c * k;
 }
