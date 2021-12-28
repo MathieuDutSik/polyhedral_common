@@ -919,10 +919,12 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
         sum += G(u,v) * l_root[i](u) * l_root[j](v);
     return sum;
   };
-  T val3 = T(1) / T(4);
-  T val4 = T(1) / T(2);
-  T val6 = T(3) / T(4);
-  auto get_val=[&](int i, int j) -> std::pair<T,T> {
+  T cossqr_val3 = T(1) / T(4);
+  T cossqr_val4 = T(1) / T(2);
+  T cossqr_val6 = T(3) / T(4);
+  T cossqr_valInf = 1;
+  T pr_inf = practical_infinity<T>();
+  auto get_cossqr_scal=[&](int i, int j) -> std::pair<T,T> {
     T scal12 = get_scal(i, j);
     if (i == j) {
       return {scal12, scal12};
@@ -932,12 +934,14 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
       T scal11 = get_scal(i, i);
       T scal22 = get_scal(j, j);
       T quot = (scal12 * scal12) / (scal11 * scal22);
-      if (quot == val3)
+      if (quot == cossqr_val3)
         return {3,scal12};
-      if (quot == val4)
+      if (quot == cossqr_val4)
         return {4,scal12};
-      if (quot == val6)
+      if (quot == cossqr_val6)
         return {6,scal12};
+      if (quot == cossqr_valInf)
+        return {pr_inf,scal12};
       std::cerr << "i=" << i << " j=" << j << "\n";
       std::cerr << "scal12=" << scal12 << " scal11=" << scal11 << " scal22=" << scal22 << "\n";
       std::cerr << "l_root=\n";
@@ -951,7 +955,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
   MyMatrix<T> ScalMat(n_root,n_root);
   for (size_t i=0; i<n_root; i++)
     for (size_t j=0; j<n_root; j++) {
-      std::pair<T,T> ep = get_val(i,j);
+      std::pair<T,T> ep = get_cossqr_scal(i,j);
       CoxMat(i,j) = ep.first;
       ScalMat(i,j) = ep.second;
     }
