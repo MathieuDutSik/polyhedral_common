@@ -15,14 +15,16 @@
 //#define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
 
+template<typename T>
 struct IrrCoxDyn {
   std::string type;
   size_t dim;
-  int param; // For In only
+  T param; // For In only
 };
 
 
-bool IsDiagramSpherical(IrrCoxDyn const& cd)
+template<typename T>
+bool IsDiagramSpherical(IrrCoxDyn<T> const& cd)
 {
   std::string type = cd.type;
   if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE" || type == "tildeF" || type == "tildeG")
@@ -31,7 +33,8 @@ bool IsDiagramSpherical(IrrCoxDyn const& cd)
 }
 
 
-bool IsDiagramSimplyLaced(IrrCoxDyn const& cd)
+template<typename T>
+bool IsDiagramSimplyLaced(IrrCoxDyn<T> const& cd)
 {
   std::string type = cd.type;
   if (type == "A" || type == "D" || type == "E")
@@ -40,16 +43,23 @@ bool IsDiagramSimplyLaced(IrrCoxDyn const& cd)
 }
 
 
-bool IsDiagramIntegerLorentzianFeasible(IrrCoxDyn const& cd)
+template<typename T>
+bool IsDiagramIntegerLorentzianFeasible(IrrCoxDyn<T> const& cd)
 {
   std::string type = cd.type;
-  if (type == "H" || type == "I")
+  if (type == "I") {
+    if (cd.dim == 1 && cd.param == practical_infinity<T>())
+      return true;
+    return false;
+  }
+  if (type == "H")
     return false;
   return true;
 }
 
 
-int GetNrVertices(IrrCoxDyn const& cd)
+template<typename T>
+int GetNrVertices(IrrCoxDyn<T> const& cd)
 {
   std::string type = cd.type;
   int dim = cd.dim;
@@ -62,12 +72,15 @@ int GetNrVertices(IrrCoxDyn const& cd)
 }
 
 
-std::string IrrCoxDyn_to_string(IrrCoxDyn const& cd)
+template<typename T>
+std::string IrrCoxDyn_to_string(IrrCoxDyn<T> const& cd)
 {
   std::string type = cd.type;
   if (type == "A" || type == "B" || type == "C" || type == "D" || type == "E" || type == "F" || type == "G" || type == "H")
     return cd.type + "_{" + std::to_string(cd.dim) + "}";
   if (type == "I") {
+    if (cd.param == practical_infinity<T>())
+      return "I_2(infinity)";
     return std::string("I_2(") + std::to_string(cd.param) + ")";
   }
   if (type == "tildeA" || type == "tildeB" || type == "tildeC" || type == "tildeD" || type == "tildeE" || type == "tildeF" || type == "tildeG") {
@@ -80,7 +93,8 @@ std::string IrrCoxDyn_to_string(IrrCoxDyn const& cd)
 }
 
 
-IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
+template<typename T>
+IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const& s)
 {
   std::string s_work = s;
   auto remove_char=[&](char ec) -> void {
@@ -92,8 +106,8 @@ IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
   remove_char('}');
   remove_char('(');
   remove_char(')');
-  auto recognize=[&]() -> IrrCoxDyn {
-    std::vector<std::string> LS{"A", "B", "C", "D", "E", "F", "G", "H", "tildeA", "tildeB", "tildeC", "tildeD", "tildeE", "I2"};
+  auto recognize=[&]() -> IrrCoxDyn<T> {
+    std::vector<std::string> LS{"A", "B", "C", "D", "E", "F", "G", "H", "tildeA", "tildeB", "tildeC", "tildeD", "tildeE", "I2", "tildeI1"};
     for (auto & eLS : LS) {
       size_t len1 = s_work.size();
       size_t len2 = eLS.size();
@@ -101,11 +115,17 @@ IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
         std::string s_red = s_work.substr(0,len2);
         if (s_red == eLS) {
           std::string s_rem = s_work.substr(len2,len1-len2);
-          int val = atoi(s_rem.c_str());
-          if (eLS == "I2") {
-            return IrrCoxDyn{"I", 2, val};
+          if (eLS == "tildeI1") {
+            if (s_rem == "infinity")
+              IrrCoxDyn<T>{"I", 1, practical_infinity<T>()};
           } else {
-            return IrrCoxDyn{eLS,size_t(val),0};
+            if (eLS == "I2") {
+              T val = ParseScalar<T>(s_rem);
+              return IrrCoxDyn<T>{"I", 2, val};
+            } else {
+              size_t val = ParseScalar<size_t>(s_rem);
+              return IrrCoxDyn<T>{eLS,val,0};
+            }
           }
         }
       }
@@ -113,7 +133,7 @@ IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
     std::cerr << "s_work=" << s_work << "\n";
     throw TerminalException{1};
   };
-  IrrCoxDyn cd = recognize();
+  IrrCoxDyn<T> cd = recognize();
   std::string s_map = IrrCoxDyn_to_string(cd);
   if (s_map != s) {
     std::cerr << "Initial string in input is s=" << s << "\n";
@@ -127,7 +147,7 @@ IrrCoxDyn string_to_IrrCoxDyn(std::string const& s)
 
 
 template<typename T>
-MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
+MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 {
   T val_comm = 2;
   T val_single_edge = 3;
@@ -202,6 +222,10 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
       std::cerr << "For the I case the values 2, 3, 4, 5, 6 are covered by A1+A1 , A2 , B2 , H2 and G2\n";
       throw TerminalException{1};
     }
+    if (cd.param == practical_infinity<T>()) {
+      std::cerr << "The I2(infinity) is not allowed\n";
+      throw TerminalException{1};
+    }
     set_v(0,1, cd.param);
   }
   // Now the euclidean ones
@@ -246,9 +270,8 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
     set_v(0, 1, val_single_edge);
     set_v(1, 2, val_six);
   }
-  if (type == "tildeI" && dim == 2) {
-    std::cerr << "For tildeI, we should have value infinity which we cannot represent\n";
-    throw TerminalException{1};
+  if (type == "tildeI" && dim == 1) {
+    set_v(0, 1, practical_infinity<T>());
   }
   if (n_assign == 0) {
     std::cerr << "We assign 0 edges. Likely that case was not covered\n";
@@ -263,7 +286,7 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
 
 
 template<typename T>
-std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
+std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
 {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
@@ -276,7 +299,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
   T val_six = 6; // Shows up in G2
   size_t n_vert = M.rows();
   if (n_vert == 1) // Case of A1
-    return IrrCoxDyn{"A",1,0};
+    return IrrCoxDyn<T>{"A",1,0};
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 1\n";
 #endif
@@ -343,7 +366,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       if (i != i_4)
         if (M(i, i_4) != 3)
           return {};
-    return IrrCoxDyn{"tildeD", 4, 0}; // This is \tilde{D4}
+    return IrrCoxDyn<T>{"tildeD", 4, 0}; // This is \tilde{D4}
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 4\n";
@@ -363,14 +386,14 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       return {};
     if (n_higher_edge != 0)
       return {};
-    return IrrCoxDyn{"tildeA", n_vert-1, 0}; // Only tilde{An} is left as possibility
+    return IrrCoxDyn<T>{"tildeA", n_vert-1, 0}; // Only tilde{An} is left as possibility
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 5\n";
 #endif
   // Now it is a tree
   if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 && n_higher_edge == 0)
-    return IrrCoxDyn{"A",n_vert,0}; // Only An is possible so ok.
+    return IrrCoxDyn<T>{"A",n_vert,0}; // Only An is possible so ok.
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2)
     return {}; // No possibility for spherical and euclidean
@@ -387,7 +410,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       if (n_deg1 != 2)
         return {};
     }
-    return IrrCoxDyn{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
+    return IrrCoxDyn<T>{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6\n";
@@ -400,7 +423,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       for (auto & eVert : list_deg1)
         if (get_value_isolated(eVert) != val_four)
           return {};
-      return IrrCoxDyn{"tildeC",n_vert-1,0}; // This is tilde{Cn}
+      return IrrCoxDyn<T>{"tildeC",n_vert-1,0}; // This is tilde{Cn}
     }
     if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4 and tilde{F4} are possible
       if (n_higher_edge != 1)
@@ -415,15 +438,15 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       }
       if (n_sing == 2) {
         if (n_vert == 4) {
-          return IrrCoxDyn{"F", 4,0}; // Only F4 is possible
+          return IrrCoxDyn<T>{"F", 4,0}; // Only F4 is possible
         }
         if (n_vert == 5) { // Only tilde{F4} is possible. So conclude from that
-          return IrrCoxDyn{"tildeF", 4, 0};
+          return IrrCoxDyn<T>{"tildeF", 4, 0};
         }
       }
       if (n_four == 1 && n_sing == 1) {
         // Only possibility is to have 4 at one extremity. This is Bn = Cn
-        return IrrCoxDyn{"B",n_vert,0};
+        return IrrCoxDyn<T>{"B",n_vert,0};
       }
       // No other possibilities
       return {};
@@ -433,7 +456,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
 #endif
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
       if (n_vert == 2)
-        return IrrCoxDyn{"H", 2,0}; // It is H2
+        return IrrCoxDyn<T>{"H", 2,0}; // It is H2
       if (n_vert > 5)
         return {}; // No possibility
       size_t n_sing=0;
@@ -446,9 +469,9 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       }
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
         if (n_vert == 3)
-          return IrrCoxDyn{"H", 3, 0};
+          return IrrCoxDyn<T>{"H", 3, 0};
         if (n_vert == 4)
-          return IrrCoxDyn{"H", 4, 0};
+          return IrrCoxDyn<T>{"H", 4, 0};
       }
       return {};
     }
@@ -457,15 +480,18 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
         return {}; // There are other edges, excluded.
       if (n_vert == 2 || n_vert == 3) { // It is G2 or tilde{G2}
         if (n_vert == 2)
-          return IrrCoxDyn{"G", 2, 0};
+          return IrrCoxDyn<T>{"G", 2, 0};
         if (n_vert == 3)
-          return IrrCoxDyn{"tildeG", 2, 0};
+          return IrrCoxDyn<T>{"tildeG", 2, 0};
       }
       return {};
     }
     if (n_vert == 2) {
-      int param = UniversalScalarConversion<int,T>(M(0,1));
-      return IrrCoxDyn{"I", 2, param}; // It is I2(n)
+      T param = M(0,1);
+      if (param == practical_infinity<T>()) {
+        return IrrCoxDyn<T>{"tildeI", 1, param}; // It is I1(infinity)
+      }
+      return IrrCoxDyn<T>{"I", 2, param}; // It is I2(n)
     }
     return {};
   }
@@ -488,7 +514,7 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
       if (get_value_isolated(eVert) == val_four)
         has_edge_four = true;
     if (has_edge_four)
-      return IrrCoxDyn{"tildeB",n_vert-1,0}; // It is tilde{Bn}
+      return IrrCoxDyn<T>{"tildeB",n_vert-1,0}; // It is tilde{Bn}
     return {};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -521,33 +547,33 @@ std::optional<IrrCoxDyn> RecognizeIrreducibleSphericalEuclideanDiagram(const MyM
     map_len[len]++;
   }
   if (map_len[1] == 3) // It is D4
-    return IrrCoxDyn{"D",4,0};
+    return IrrCoxDyn<T>{"D",4,0};
   if (map_len[1] == 2) // It is Dn
-    return IrrCoxDyn{"D",n_vert,0};
+    return IrrCoxDyn<T>{"D",n_vert,0};
   if (map_len[1] == 1 && map_len[2] == 2) // It is E6
-    return IrrCoxDyn{"E",6,0};
+    return IrrCoxDyn<T>{"E",6,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[3] == 1) // It is E7
-    return IrrCoxDyn{"E",7,0};
+    return IrrCoxDyn<T>{"E",7,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[4] == 1) // It is E8
-    return IrrCoxDyn{"E",8,0};
+    return IrrCoxDyn<T>{"E",8,0};
   // In spherical, no other possibilities left
   if (map_len[2] == 3) // It is tilde{E6}
-    return IrrCoxDyn{"tildeE",6,0};
+    return IrrCoxDyn<T>{"tildeE",6,0};
   if (map_len[1] == 1 && map_len[3] == 2) // It is tilde{E7}
-    return IrrCoxDyn{"tildeE",7,0};
+    return IrrCoxDyn<T>{"tildeE",7,0};
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[5] == 1) // It is tilde{E8}
-    return IrrCoxDyn{"tildeE",8,0};
+    return IrrCoxDyn<T>{"tildeE",8,0};
   return {}; // No other possibilities left
 }
 
 
 template<typename T>
-MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn const& cd)
+MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 {
   MyMatrix<T> M = Kernel_IrrCoxDyn_to_matrix<T>(cd);
-  std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
+  std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
   if (opt) {
-    IrrCoxDyn cd2 = *opt;
+    IrrCoxDyn<T> cd2 = *opt;
     if (cd.type != cd2.type || cd.dim != cd2.dim || cd.param != cd2.param) {
       std::cerr << "M=\n";
       WriteMatrix(std::cerr, M);
@@ -581,10 +607,10 @@ std::vector<std::vector<size_t>> GetIrreducibleComponents(const MyMatrix<T>& M)
 }
 
 template<typename T>
-std::optional<std::vector<IrrCoxDyn>> RecognizeSphericalEuclideanDiagram(const MyMatrix<T>& M)
+std::optional<std::vector<IrrCoxDyn<T>>> RecognizeSphericalEuclideanDiagram(const MyMatrix<T>& M)
 {
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
-  std::vector<IrrCoxDyn> l_cd;
+  std::vector<IrrCoxDyn<T>> l_cd;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -594,9 +620,9 @@ std::optional<std::vector<IrrCoxDyn>> RecognizeSphericalEuclideanDiagram(const M
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
-    std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(Mres);
+    std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(Mres);
     if (opt) {
-      IrrCoxDyn cd = *opt;
+      IrrCoxDyn<T> cd = *opt;
       l_cd.push_back(cd);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       std::cerr << "symb=" << IrrCoxDyn_to_string(cd) << "\n";
@@ -622,7 +648,7 @@ MyMatrix<T> string_to_coxdyn_matrix(std::string const& str)
   for (auto & s1 : LStr) {
     std::string s2 = s1;
     s2.erase(remove(s2.begin(), s2.end(), ' '), s2.end());
-    IrrCoxDyn cd = string_to_IrrCoxDyn(s2);
+    IrrCoxDyn<T> cd = string_to_IrrCoxDyn<T>(s2);
     MyMatrix<T> M = IrrCoxDyn_to_matrix<T>(cd);
     LMat.push_back(M);
     n_vert += M.rows();
@@ -645,9 +671,9 @@ MyMatrix<T> string_to_coxdyn_matrix(std::string const& str)
 template<typename T>
 std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
 {
-  std::optional<std::vector<IrrCoxDyn>> opt = RecognizeSphericalEuclideanDiagram(M);
+  std::optional<std::vector<IrrCoxDyn<T>>> opt = RecognizeSphericalEuclideanDiagram(M);
   if (opt) {
-    const std::vector<IrrCoxDyn> & l_irr = *opt;
+    const std::vector<IrrCoxDyn<T>> & l_irr = *opt;
     std::string str = IrrCoxDyn_to_string(l_irr[0]);
     for (int i=1; i<l_irr.size(); i++)
       str += "+" + IrrCoxDyn_to_string(l_irr[i]);
@@ -671,6 +697,7 @@ template<typename T>
 bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
 {
   int n = M.rows();
+  T valInfinity = practical_infinity<T>();
   for (int i=0; i<n; i++)
     for (int j=i+1; j<n; j++) {
       T val = M(i,j);
@@ -679,14 +706,14 @@ bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
           return false;
       }
       if (DS.OnlyLorentzianAdmissible) {
-        if (val != 2 && val != 3 && val != 4 && val != 6)
+        if (val != 2 && val != 3 && val != 4 && val != 6 && val != valInfinity)
           return false;
       }
     }
-  std::optional<IrrCoxDyn> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
+  std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
   if (opt) {
     if (DS.OnlySpherical) {
-      const IrrCoxDyn& cd = *opt;
+      const IrrCoxDyn<T>& cd = *opt;
       return IsDiagramSpherical(cd);
     }
     return true;
@@ -700,7 +727,7 @@ template<typename T>
 bool CheckDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
 {
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
-  std::vector<IrrCoxDyn> l_cd;
+  std::vector<IrrCoxDyn<T>> l_cd;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
     MyMatrix<T> Mres(dim_res, dim_res);
@@ -730,6 +757,24 @@ MyMatrix<T> ExtendMatrix(MyMatrix<T> const& M, MyVector<T> const& V)
   return Mret;
 }
 
+
+template<typename T>
+MyMatrix<T> ExtendMatrixNorm(MyMatrix<T> const& M, MyVector<T> const& V, T const& norm)
+{
+  size_t len = M.rows();
+  MyMatrix<T> Mret(len+1, len+1);
+  for (int i=0; i<len; i++)
+    for (int j=0; j<len; j++)
+      Mret(i,j) = M(i,j);
+  for (int i=0; i<len; i++) {
+    Mret(len,i) = V(i);
+    Mret(i,len) = V(i);
+  }
+  Mret(len,len) = norm;
+  return Mret;
+}
+
+
 template<typename T>
 std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const DiagramSelector& DS)
 {
@@ -739,7 +784,20 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   std::set<MyVector<T>> SetExtensions;
   T val_comm = 2;
   T val_single_edge = 3;
+  T val_four = 4;
   T val_six = 6;
+  T val_inf = practical_infinity<T>();
+  std::vector<T> allowed_vals;
+  if (DS.OnlyLorentzianAdmissible) {
+    allowed_vals.push_back(val_single_edge);
+    allowed_vals.push_back(val_four);
+    allowed_vals.push_back(val_six);
+    allowed_vals.push_back(val_inf);
+  } else {
+    for (T val=val_single_edge; val<128; val++)
+      allowed_vals.push_back(val);
+    allowed_vals.push_back(val_inf);
+  }
   size_t dim = M.rows();
   std::vector<size_t> list_deg(dim);
   std::vector<size_t> list_isolated;
@@ -786,7 +844,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   // Considering the case of just one edge
   for (size_t i=0; i<dim; i++) {
     // Here we have an arbitrary value
-    for (T val=val_single_edge; val<128; val++) {
+    for (auto & val : allowed_vals) {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       std::cerr << "i=" << i << " val=" << val << "\n";
 #endif
@@ -939,6 +997,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
   T val6 = T(3) / T(4);
+  T valInfinity = 1;
   auto get_cos_square=[&](T val) -> T {
     if (val == 2)
       return val2;
@@ -948,6 +1007,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       return val4;
     if (val == 6)
       return val6;
+    if (val == practical_infinity<T>())
+      return valInfinity;
     std::cerr << "Failed to find a matching entry val=" << val << "\n";
     throw TerminalException{1};
   };
