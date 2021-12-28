@@ -29,10 +29,10 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     //
-    std::string opt_lor = argv[2];
+    std::string opt_lor = argv[3];
     bool only_lorentzian = true;
     setval = false;
-    if (opt_lor == "spherical") {
+    if (opt_lor == "lorentzian") {
       only_lorentzian = true;
       setval = true;
     }

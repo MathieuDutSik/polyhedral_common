@@ -87,6 +87,8 @@ std::string IrrCoxDyn_to_string(IrrCoxDyn<T> const& cd)
     std::string type_red = type.substr(5,1);
     return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) + "}}";
   }
+  if (type == "tildeI")
+    return std::string("\\tilde{I_{1}(infinity)}");
   std::cerr << "cd  type=" << cd.type << " dim=" << cd.dim << " param=" << cd.param << "\n";
   std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
   throw TerminalException{1};
@@ -117,7 +119,7 @@ IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const& s)
           std::string s_rem = s_work.substr(len2,len1-len2);
           if (eLS == "tildeI1") {
             if (s_rem == "infinity")
-              IrrCoxDyn<T>{"I", 1, practical_infinity<T>()};
+              return IrrCoxDyn<T>{"tildeI", 1, practical_infinity<T>()};
           } else {
             if (eLS == "I2") {
               T val = ParseScalar<T>(s_rem);
