@@ -564,6 +564,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     throw TerminalException{1};
   }
   const MyVector<T> & k_new = l_gens[0];
+  std::cerr << "k_new="; WriteVector(std::cerr, RemoveFractionVector(k_new));
   /* FILL OUT THE CODE
      What we are looking for is the roots satisfying say A[x] = 2
      and x.v = 0.
@@ -673,7 +674,6 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
     os << ", ListVertices:=";
-    
   }
   if (OutFormat == "TXT") {
     os << "List of found generators of Isom / Cox\n";

@@ -1023,8 +1023,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::vector<Possible_Extension<T>> l_extensions;
   size_t n_zero=0;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    std::cerr << "e_norm=" << e_norm << " e_vect=";
-    WriteVector(std::cerr, e_vect);
+    //    std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     MyVector<T> l_scal(dim_cox);
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
@@ -1036,16 +1035,16 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       T scal = - *opt;
       l_scal(i) = scal;
     }
-    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
+    //    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
      */
     MyVector<T> w = Inverse(ScalMat) * l_scal;
-    std::cerr << "w ="; WriteVector(std::cerr, w);
+    //    std::cerr << "w ="; WriteVector(std::cerr, w);
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
-    std::cerr << "eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
+    //    std::cerr << "eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
