@@ -1,7 +1,7 @@
 #PROGRAM		= LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
-#PROGRAM		= COXDYN_FindExtensions
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+PROGRAM		= COXDYN_FindExtensions
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock COXDYN_FindExtensions
 
 #PROGRAM		= LORENTZ_ComputeDomain

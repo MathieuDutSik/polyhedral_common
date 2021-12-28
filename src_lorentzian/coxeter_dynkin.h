@@ -926,6 +926,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
+  std::cerr << "ScalMat=\n";
+  WriteMatrix(std::cerr, ScalMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int dim_cox = l_root.size();
@@ -950,6 +952,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     throw TerminalException{1};
   };
   std::vector<Possible_Extension<T>> l_extensions;
+  size_t n_zero=0;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
     std::cerr << "e_norm=" << e_norm << " e_vect=";
     WriteVector(std::cerr, e_vect);
@@ -965,7 +968,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       l_scal(i) = scal;
     }
     std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
-    /* So, we have computed alpha.dot.ui = u.dot.ui
+    /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
      */
@@ -977,13 +980,27 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
+    if (res_norm == 0) {
+      std::vector<MyVector<T>> l_root_tot;
+      for (auto & ev_tint : l_root)
+        l_root_tot.push_back(UniversalVectorConversion<T,Tint>(ev_tint));
+      l_root_tot.push_back(u_component);
+      MyMatrix<T> CoxMatExt = ComputeCoxeterMatrix(G, l_root_tot).first;
+      std::cerr << "CoxMatExt=\n";
+      WriteMatrix(std::cerr, CoxMatExt);
+      std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
+      std::cerr << "ExtendMatrix(M,V)=\n";
+      WriteMatrix(std::cerr,ExtendMatrix(CoxMat, e_vect));
+      std::cerr << "u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
+      n_zero++;
+    }
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
   std::cerr << "ComputePossibleExtensions, step 5\n";
   for (auto & e_norm : l_norm)
     for (auto & e_vect : l_vect)
       get_entry(e_vect, e_norm);
-  std::cerr << "ComputePossibleExtensions, step 6\n";
+  std::cerr << "ComputePossibleExtensions, step 6 |l_extensions|=" << l_extensions.size() << " n_zero=" << n_zero << "\n";
   return l_extensions;
 }
 

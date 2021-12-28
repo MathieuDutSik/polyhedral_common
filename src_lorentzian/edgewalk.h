@@ -207,6 +207,7 @@ RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& 
 template<typename T>
 std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
 {
+  std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr, RemoveFractionVector(k));
   int n = Latt.rows();
   std::vector<MyVector<T>> l_v = {u,k};
   MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
@@ -738,6 +739,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
 
+      std::cerr << "ENDING FOR THAT DEBUG PART\n";
+      throw TerminalException{1};
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
