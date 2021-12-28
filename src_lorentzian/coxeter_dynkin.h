@@ -863,11 +863,10 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
   T val4 = T(1) / T(2);
   T val6 = T(3) / T(4);
   auto get_val=[&](int i, int j) -> std::pair<T,T> {
+    T scal12 = get_scal(i, j);
     if (i == j) {
-      T scal12 = get_scal(i, i);
       return {scal12, scal12};
     } else {
-      T scal12 = get_scal(i, j);
       if (scal12 == 0)
         return {2,scal12};
       T scal11 = get_scal(i, i);
@@ -879,6 +878,10 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
         return {4,scal12};
       if (quot == val6)
         return {6,scal12};
+      std::cerr << "i=" << i << " j=" << j << "\n";
+      std::cerr << "scal12=" << scal12 << " scal11=" << scal11 << " scal22=" << scal22 << "\n";
+      std::cerr << "l_root=\n";
+      WriteMatrix(std::cerr, MatrixFromVectorFamily(l_root));
       std::cerr << "Failed to find matching entry quot=" << quot << "\n";
       throw TerminalException{1};
     }
@@ -892,7 +895,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeCoxeterMatrix(MyMatrix<T> const& G, st
       CoxMat(i,j) = ep.first;
       ScalMat(i,j) = ep.second;
     }
-  return {CoxMat, ScalMat};
+  return {std::move(CoxMat), std::move(ScalMat)};
 }
 
 
@@ -923,6 +926,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
+  std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int dim_cox = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
@@ -953,20 +957,23 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
-      T scal_square = cos_square * G(i,i) * e_norm;
+      T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
       if (!opt)
         return;
       T scal = - *opt;
       l_scal(i) = scal;
     }
+    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
      */
     MyVector<T> w = Inverse(ScalMat) * l_scal;
+    std::cerr << "w ="; WriteVector(std::cerr, w);
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
+    std::cerr << "eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);

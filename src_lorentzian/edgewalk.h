@@ -216,11 +216,15 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   for (int i=0; i<n-2; i++)
     V[i] = i+2;
   MyMatrix<T> Latt3 = SelectColumn(Latt2, V);
-  std::cerr << "Latt3=\n";
-  WriteMatrix(std::cerr, Latt3);
+  //  std::cerr << "Latt3=\n";
+  //  WriteMatrix(std::cerr, Latt3);
   MyMatrix<T> NSP = NullspaceIntMat(Latt3);
-  std::cerr << "NSP=\n";
-  WriteMatrix(std::cerr, NSP);
+  if (!IsIntegralMatrix(NSP)) {
+    std::cerr << "NSP should be integral\n";
+    throw TerminalException{1};
+  }
+  //  std::cerr << "NSP=\n";
+  //  WriteMatrix(std::cerr, NSP);
   MyMatrix<T> IntBasis = NSP * Latt;
   std::cerr << "IntBasis=\n";
   WriteMatrix(std::cerr, IntBasis);
@@ -312,13 +316,13 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
-      std::cerr << "We have Latt=\n";
-      WriteMatrix(std::cerr, Latt);
+      //      std::cerr << "We have Latt=\n";
+      //      WriteMatrix(std::cerr, Latt);
       std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
       std::cerr << "We have opt_v\n";
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
-        std::cerr << "v_T =";
+        std::cerr << "Proposed v_T =";
         WriteVector(std::cerr, v_T);
         RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
         std::cerr << "We have e_cand\n";
@@ -349,8 +353,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   };
   for (auto & eV : l_candidates) {
     MyVector<Tint> eV_i = eV.v;
-    if (is_approved(eV_i))
+    if (is_approved(eV_i)) {
+      std::cerr << "Inserting eV_i=\n"; WriteVector(std::cerr, eV_i);
       l_ui_ret.push_back(eV_i);
+    }
   }
   std::cerr << "DetermineRootsCuspidalCase, step 5\n";
   return l_ui_ret;
@@ -520,9 +526,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);
     std::cerr << "  scal=" << scal << "\n";
-    if (scal > 0)
+    if (scal < 0) // The value should be negative because with the chosen convention, interior vectors have negative pairwise scalar products
       return v;
-    if (scal < 0)
+    if (scal > 0)
       return -v;
     std::cerr << "We should have scal != 0 to be able to conclude\n";
     throw TerminalException{1};
@@ -534,15 +540,12 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T u0 = -Factor(i,1);
     T u1 =  Factor(i,0);
     std::cerr << "u0=" << u0 << " u1=" << u1 << "\n";
-    T sum1 = u0 * u0 * Gred(0,0);
-    T sum2 = 2 * u0 * u1 * Gred(0,1);
-    T sum3 = u1 * u1 * Gred(1,1);
-    T sum = sum1 + sum2 + sum3;
-    std::cerr << "sum1=" << sum1 << " sum2=" << sum2 << " sum3=" << sum3 << " Gred11=" << Gred(1,1) << " sum" << sum << "\n";
+    T sum = u0 * u0 * Gred(0,0) + 2 * u0 * u1 * Gred(0,1) + u1 * u1 * Gred(1,1);
+    std::cerr << "sum=" << sum << "\n";
     MyVector<T> gen = u0 * k + u1 * r0;
-    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
-    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
-    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
+    //    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
+    //    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
+    //    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
     T sum_B = gen.dot(G * gen);
     std::cerr << "sum_B=" << sum_B << "\n";
     std::cerr << "gen="; WriteVector(std::cerr, gen);
