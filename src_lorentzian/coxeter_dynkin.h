@@ -794,11 +794,13 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
     allowed_vals.push_back(val_single_edge);
     allowed_vals.push_back(val_four);
     allowed_vals.push_back(val_six);
-    allowed_vals.push_back(val_inf);
+    if (!DS.OnlySpherical)
+      allowed_vals.push_back(val_inf);
   } else {
     for (T val=val_single_edge; val<128; val++)
       allowed_vals.push_back(val);
-    allowed_vals.push_back(val_inf);
+    if (!DS.OnlySpherical)
+      allowed_vals.push_back(val_inf);
   }
   size_t dim = M.rows();
   std::vector<size_t> list_deg(dim);
@@ -1053,11 +1055,16 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
         l_root_tot.push_back(UniversalVectorConversion<T,Tint>(ev_tint));
       l_root_tot.push_back(u_component);
       MyMatrix<T> CoxMatExt = ComputeCoxeterMatrix(G, l_root_tot).first;
-      std::cerr << "CoxMatExt=\n";
-      WriteMatrix(std::cerr, CoxMatExt);
+      MyMatrix<T> CoxMatBld = ExtendMatrixNorm(CoxMat, e_vect, e_norm);
+      if (CoxMatExt != CoxMatBld) {
+        std::cerr << "CoxMatExt=\n";
+        WriteMatrix(std::cerr, CoxMatExt);
+        std::cerr << "CoxMatBld=\n";
+        WriteMatrix(std::cerr, CoxMatBld);
+        std::cerr << "The matrices should be equal\n";
+        throw TerminalException{1};
+      }
       std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
-      std::cerr << "ExtendMatrix(M,V)=\n";
-      WriteMatrix(std::cerr,ExtendMatrix(CoxMat, e_vect));
       std::cerr << "u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
       n_zero++;
     }

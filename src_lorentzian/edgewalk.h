@@ -495,7 +495,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         if (opt_k_new) {
           const MyVector<T> & k_new = *opt_k_new;
           T scal = v_disc_t.dot(G * k_new);
-          if (scal > 0) {
+          if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
             FundDomainVertex<T,Tint> fund_v{k_new,l_roots};
             RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm, fund_v);
             l_candidates.push_back(eCand);
@@ -555,7 +555,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "RemoveFraction(can_gen)="; WriteVector(std::cerr, RemoveFractionVector(can_gen));
     T scal = v_disc_t.dot(G * can_gen);
     std::cerr << "scal=" << scal << "\n";
-    if (scal > 0)
+    if (scal < 0) // Convention is negative scalar in Lorentzian theory (see end of sect 2 of edgewalk paper)
       l_gens.push_back(can_gen);
   }
   std::cerr << "|l_gens|=" << l_gens.size() << "\n";
