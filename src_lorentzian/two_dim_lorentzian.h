@@ -356,6 +356,8 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const& F, T const& M)
 {
+  std::cerr << "EnumerateVectorFixedNorm_Factorization M=" << M << " F=\n";
+  WriteMatrix(std::cerr, F);
   MyVector<T> v1(2);
   v1(0) = F(0,0);
   v1(1) = F(0,1);
@@ -375,9 +377,11 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
   A(0,1) = Fr1.TheVect(1);
   A(1,0) = Fr2.TheVect(0);
   A(1,1) = Fr2.TheVect(1);
-  std::cerr << "We have A\n";
+  std::cerr << "EnumerateVectorFixedNorm_Factorization A=\n";
+  WriteMatrix(std::cerr, A);
   MyMatrix<T> Ainv = Inverse(A);
-  std::cerr << "We have Ainv\n";
+  std::cerr << "EnumerateVectorFixedNorm_Factorization Ainv=\n";
+  WriteMatrix(std::cerr, Ainv);
   MyVector<T> v(2);
   std::vector<MyVector<Tint>> l_sol;
   std::vector<T> list_div = GetAllFactors(T_abs(M_scal));
@@ -386,6 +390,7 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
     v(0) = e_div;
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
+    std::cerr << "v="; WriteVectorGAP(std::cerr, v); std::cerr << "  e_sol="; WriteVectorGAP(std::cerr, e_sol); std::cerr << "\n";
     if (IsIntegralVector(e_sol)) {
       MyVector<Tint> e_sol_i = UniversalVectorConversion<Tint,T>(e_sol);
       l_sol.push_back( e_sol_i);
@@ -488,8 +493,10 @@ std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const&
   };
   std::vector<MyVector<Tint>> l_sol_red;
   std::optional<MyVector<Tint>> e_sol;
+  size_t n_match=0;
   for (auto & e_v : l_sol) {
     if (is_corr(e_v)) {
+      n_match++;
       if (e_sol) {
         if (det(e_v, *e_sol) > 0)
           e_sol = e_v;
@@ -498,6 +505,7 @@ std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const&
       e_sol = e_v;
     }
   }
+  std::cerr << "n_match=" << n_match << "\n";
   return e_sol;
 }
 
@@ -538,8 +546,11 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVect
   if (SearchNorm < lower_bnd) // no solution possible
     return {};
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
-  if (opt)
+  if (opt) {
+    std::cerr << "get_first_next_vector : isotropic\n";
     return get_first_next_vector_isotropic(G, r0, SearchNorm, *opt);
+  }
+  std::cerr << "get_first_next_vector : anisotropic\n";
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 

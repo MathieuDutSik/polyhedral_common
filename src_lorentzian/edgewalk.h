@@ -83,6 +83,7 @@ struct RootCandidate {
   T quant2; // this is (k.alpha_{N,\Delta'})^2 / N
   T e_norm;
   MyVector<Tint> alpha;
+  FundDomainVertex<T,Tint> fund_v;
 };
 
 template<typename T>
@@ -119,13 +120,13 @@ int get_sign_pair_stdpair(std::pair<int,T> const& p1, std::pair<int,T> const& p2
 
 
 template<typename T, typename Tint>
-RootCandidate<T,Tint> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> const& k, MyVector<Tint> const& alpha, T const& res_norm, T const& e_norm)
+RootCandidate<T,Tint> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> const& k, MyVector<Tint> const& alpha, T const& res_norm, T const& e_norm, FundDomainVertex<T,Tint> const& fund_v)
 {
   MyVector<T> alpha_T = UniversalVectorConversion<T,Tint>(alpha);
   T scal = - k.dot(G * alpha_T);
   T quant1 = (scal * scal) / res_norm;
   T quant2 = (scal * scal) / e_norm;
-  return {get_sign_sing(scal), quant1, quant2, e_norm, alpha};
+  return {get_sign_sing(scal), quant1, quant2, e_norm, alpha, fund_v};
 }
 
 
@@ -266,12 +267,22 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   T hinp = -c0 / cS;
   T h;
   if (cS > 0) {
-    h = UniversalFloorScalarInteger<T,T>(hinp);
-  } else {
     h = UniversalCeilScalarInteger<T,T>(hinp);
+    std::cerr << "1 : hinp=" << hinp << " h=" << h << "\n";
+    if (hinp == h)
+      h += 1;
+  } else {
+    h = UniversalFloorScalarInteger<T,T>(hinp);
+    std::cerr << "2 : hinp=" << hinp << " h=" << h << "\n";
+    if (hinp == h)
+      h -= 1;
   }
   T c = c0 + h * cS;
   std::cerr << "h=" << h << " c=" << c << "\n";
+  if (c <= 0) {
+    std::cerr << "We should have c>0\n";
+    throw TerminalException{1};
+  }
   return u + c * k;
 }
 
@@ -294,6 +305,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::cerr << "DetermineRootsCuspidalCase, step 1\n";
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+  std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
   std::cerr << "DetermineRootsCuspidalCase, step 2\n";
   std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
   for (auto & e_extension : l_extension) {
@@ -314,6 +326,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
       }
     }
   }
+  std::cerr << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
   std::cerr << "DetermineRootsCuspidalCase, step 3\n";
   std::sort(l_candidates.begin(), l_candidates.end(),
             [&](RootCandidateCuspidal<T,Tint> const& x, RootCandidateCuspidal<T,Tint> const& y) -> bool {
@@ -364,6 +377,8 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
+  MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
+  std::cerr << "v_disc_t="; WriteVector(std::cerr, v_disc_t);
   int n = G.rows();
   size_t n_root = l_ui.size();
   std::cerr << "n_root=" << n_root << "\n";
@@ -382,7 +397,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       EquaB(i_root,i) = eP(i);
     }
   }
+  std::cerr << "l_roots(Common)=\n";
+  WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
+  std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
   T norm = k.dot(eP);
   std::cerr << "norm=" << norm << "\n";
   for (int i=0; i<n; i++)
@@ -399,24 +417,30 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   std::cerr << "Edgewalk Procedure, step 1\n";
   MyVector<T> r0 = GetMatrixRow(NSP,0);
+  MyMatrix<T> NSPbas(2,n);
+  AssignMatrixRow(NSPbas, 0, k);
+  AssignMatrixRow(NSPbas, 1, r0);
+  std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
+  std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
   std::cerr << "Edgewalk Procedure, step 2\n";
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool only_spherical = true;
   std::cerr << "Edgewalk Procedure, step 3\n";
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+  std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
   std::cerr << "Edgewalk Procedure, step 4\n";
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    std::cerr << "We have Latt=\n";
-    WriteMatrix(std::cerr, Latt);
-    std::cerr << "We have Space=\n";
-    WriteMatrix(std::cerr, Space);
+    //    std::cerr << "We have Latt=\n";
+    //    WriteMatrix(std::cerr, Latt);
+    //    std::cerr << "We have Space=\n";
+    //    WriteMatrix(std::cerr, Space);
     // Now getting into the LN space
     MyMatrix<T> Space_LN = Space * Inverse(Latt);
     MyMatrix<T> G_LN = Latt * G * Latt.transpose();
     MyMatrix<T> Equas = Space_LN * G_LN;
-    MyMatrix<T> NSP = NullspaceIntMat(TransposedMat(Equas));
+    MyMatrix<T> NSP = NullspaceIntTrMat(Equas);
     MyMatrix<T> GP_LN = NSP * G_LN * NSP.transpose();
     MyVector<T> r0_LN = Inverse(Latt).transpose() * r0;
     std::optional<MyVector<T>> opt = SolutionMat(NSP, r0_LN);
@@ -430,41 +454,57 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
-      MyVector<T> alpha_T = e_extension.u_component + NSP.transpose() * v;
+      MyVector<T> r_component = Latt.transpose() * NSP.transpose() * v;
+      std::optional<MyVector<T>> opt_s = SolutionMat(NSPbas, r_component);
+      if (!opt_s) {
+        std::cerr << "The r_component should belong to the space spanned by k and r0\n";
+        throw TerminalException{1};
+      }
+      MyVector<T> alpha_T = e_extension.u_component + r_component;
       MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
-      RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm);
-      l_candidates.push_back(eCand);
+      std::cerr << "alpha="; WriteVector(std::cerr, alpha);
+      auto f_ins=[&]() -> void {
+        std::vector<MyVector<Tint>> l_roots = l_ui;
+        l_roots.push_back(alpha);
+        MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+        MyMatrix<T> EquaMat = Mat_root * G;
+        MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
+        if (NSP.rows() != 1) {
+          std::cerr << "We should have exactly one row\n";
+          return;
+        }
+        MyVector<T> gen = GetMatrixRow(NSP, 0);
+        T scal = gen.dot(G * k);
+        auto get_gen=[&]() -> std::optional<MyVector<T>> {
+          if (scal < 0) { // The sign convention means that two vectors in the same cone have negative scalar product.
+            return gen;
+          }
+          if (scal > 0) {
+            return -gen;
+          }
+          return {};
+        };
+        std::optional<MyVector<T>> opt_k_new = get_gen();
+        if (opt_k_new) {
+          const MyVector<T> & k_new = *opt_k_new;
+          T scal = v_disc_t.dot(G * k_new);
+          if (scal > 0) {
+            FundDomainVertex<T,Tint> fund_v{k_new,l_roots};
+            RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm, fund_v);
+            l_candidates.push_back(eCand);
+          }
+        }
+      };
+      f_ins();
     }
   }
-  std::cerr << "|l_candidates|=" << l_candidates.size() << "\n";
+  std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
   if (l_candidates.size() > 0) {
     RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
-    std::vector<MyVector<Tint>> l_roots = l_ui;
-    l_roots.push_back(best_cand.alpha);
-    MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
-    MyMatrix<T> EquaMat = Mat_root * G;
-    MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
-    if (NSP.rows() != 1) {
-      std::cerr << "We should have exactly one row\n";
-      throw TerminalException{1};
-    }
-    MyVector<T> gen = GetMatrixRow(NSP, 0);
-    T scal = gen.dot(G * k);
-    if (scal > 0) {
-      return {gen, l_roots};
-    }
-    if (scal < 0) {
-      return {-gen, l_roots};
-    }
-    std::cerr << "Failed to find a matching entry\n";
-    throw TerminalException{1};
+    return best_cand.fund_v;
   }
   // So, no candidates were found. We need to find isotropic vectors.
-  MyMatrix<T> NSPbas(2,n);
-  AssignMatrixRow(NSPbas, 0, k);
-  AssignMatrixRow(NSPbas, 1, r0);
-  std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
-  MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
+  const MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
   std::cerr << "We have Gred=\n";
   WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
@@ -474,7 +514,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     throw TerminalException{1};
   }
   MyMatrix<T> Factor = *Factor_opt;
-  std::cerr << "We have Factor\n";
+  std::cerr << "We have Factor=\n";
+  WriteMatrix(std::cerr, Factor);
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);
@@ -492,12 +533,22 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     // a x + by correspond to the ray (u0, u1) = (-b, a)
     T u0 = -Factor(i,1);
     T u1 =  Factor(i,0);
+    std::cerr << "u0=" << u0 << " u1=" << u1 << "\n";
+    T sum1 = u0 * u0 * Gred(0,0);
+    T sum2 = 2 * u0 * u1 * Gred(0,1);
+    T sum3 = u1 * u1 * Gred(1,1);
+    T sum = sum1 + sum2 + sum3;
+    std::cerr << "sum1=" << sum1 << " sum2=" << sum2 << " sum3=" << sum3 << " Gred11=" << Gred(1,1) << " sum" << sum << "\n";
     MyVector<T> gen = u0 * k + u1 * r0;
+    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
+    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
+    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
+    T sum_B = gen.dot(G * gen);
+    std::cerr << "sum_B=" << sum_B << "\n";
     std::cerr << "gen="; WriteVector(std::cerr, gen);
     MyVector<T> can_gen = get_can_gen(gen);
     std::cerr << "can_gen="; WriteVector(std::cerr, can_gen);
-    MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
-    std::cerr << "v_disc_t="; WriteVector(std::cerr, v_disc_t);
+    std::cerr << "RemoveFraction(can_gen)="; WriteVector(std::cerr, RemoveFractionVector(can_gen));
     T scal = v_disc_t.dot(G * can_gen);
     std::cerr << "scal=" << scal << "\n";
     if (scal > 0)
@@ -523,7 +574,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
 
    */
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
-  return {k_new, l_roots_ret};
+  return {RemoveFractionVector(k_new), l_roots_ret};
 }
 
 
@@ -677,7 +728,13 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       }
       MyVector<Tint> v_disc = theVert.l_roots[i];
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
-      std::cerr << "We have fVert\n";
+      T norm = fVert.gen.dot(G * fVert.gen);
+      std::cerr << "Result of EdgewalkProcedure norm=" << norm << "\n";
+      std::cerr << "We have fVert=";
+      WriteVector(std::cerr, fVert.gen);
+      std::cerr << "l_roots=\n";
+      WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
+
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
