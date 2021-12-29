@@ -493,13 +493,14 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //
   MyMatrix<T> ProjP = GetProjectionMatrix(G, NSPbas);
   struct SingComp {
+    MyMatrix<T> Latt;
     MyMatrix<T> Basis_ProjP_LN;
     MyMatrix<T> Basis_P_inter_LN;
+    MyMatrix<T> Gwork;
     std::vector<MyVector<T>> l_vect;
   };
   auto get_sing_comp=[&](T const& e_norm) -> SingComp {
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    
     MyMatrix<T> ProjFamily(n,n);
     for (int i=0; i<n; i++) {
       MyVector<T> eVect = GetMatrixRow(Latt, i);
@@ -508,7 +509,52 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyMatrix<T> Basis_ProjP_LN = GetZbasis(ProjFamily);
     MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
-    MyMatrix<T> 
+    MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
+    T res_norm = map_max_resnorm[e_norm];
+    std::optional<MyVector<T>> opt = SolutionMat(Basis_ProjP_LN, r0);
+    if (!opt) {
+      std::cerr << "Failed to resolve the SolutionMat problem\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> r0_NSP = *opt;
+    MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+    MyVector<Tint> l_A = GetTwoComplement(r0_work);
+    MyVector<Tint> l_B = Canonical(Gwork, res_norm, r0_work, l_A);
+    std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic(Gwork, res_norm, r0, l_B);
+    if (!opt) {
+      return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
+    }
+    const std::vector<MyVector<Tint>>& l_vect1 = opt->second;
+    const MyMatrix<Tint>& P = opt->first;
+    MyMatrix<T> Expr_t = Basis_P_inter_LN * Inverse(Basis_ProjP_LN);
+    if (!IsIntegerMatrix(Expr_t)) {
+      std::cerr << "The matrix should be integral\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<Tint> Expr_i = UniversalMatrixConversion<Tint,T>(Expr_t);
+    size_t order = GetMatrixExponentSublattice(P, Expr_i);
+    std::vector<MyMatrix<Tint>> l_vect2;
+    for (auto & e_vect1 : l_vect1) {
+      T norm1 = eval_norm(Gwork, e_vect1);
+      size_t ord = 1;
+      while(true) {
+        T norm2 = ord * ord * norm1;
+        if (norm2 > res_norm)
+          break;
+        l_vect2.push_back(ord * e_vect1);
+        ord++;
+      }
+    }
+    std::vector<MyMatrix<Tint>> l_vect3;
+    MyMatrix<Tint> TheMat = IdentityMat<Tint>(2);
+    for (size_t i=0; i<order; i++) {
+      for (auto & e_vect2 : l_vect2) {
+        MyVector<Tint> e_vect3 = TheMat.transpose() * e_vect2;
+        l_vect3.push_back(e_vect3);
+      }
+      TheMat = TheMat * P;
+    }
+    return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   using Tanisotropic = std::map<T, SingComp>;
   auto compute_anisotropic_data=[&]() -> std::optional<Tanisotropic> {
@@ -522,19 +568,41 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return map;
   };
   std::optional<Tanisotropic> opt_anisotrop = compute_anisotropic_data();
+  auto get_next_anisotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    T const& e_norm = poss.e_norm;
+    SingComp const& e_comp = (*opt_anisotrop)[e_norm];
+    for (auto & e_vect : e_comp.l_vect) {
+      T val = eval_quad(e_comp, e_vect);
+      if (val == poss.res_norm) {
+        MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * e_vect;
+        if (IsIntegerVector(v_T)) {
+          std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
+          if (!eSol) {
+            MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+            return v_i;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+
+
+  
+  auto get_next_isotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    
+  };
+
+  
   //
   //
   //
   for (auto & e_extension : l_extension) {
+    std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " ----------\n";
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> LattInv = Inverse(Latt);
-    std::cerr << "----------- Determinant(Latt)=" << DeterminantMat(Latt) << " ---------------\n";
-    //    std::cerr << "We have Latt=\n";
-    //    WriteMatrix(std::cerr, Latt);
-    //    std::cerr << "We have Space=\n";
-    //    WriteMatrix(std::cerr, Space);
-    // Now getting into the LN space
     MyMatrix<T> Space_LN = Space * LattInv;
     MyMatrix<T> G_LN = Latt * G * Latt.transpose();
     MyMatrix<T> Equas = Space_LN * G_LN;
@@ -548,7 +616,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyVector<T> r0_NSP = *opt;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
-    std::cerr << "u_component=" << StringVectorGAP(e_extension.u_component) << "\n";
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
     std::cerr << "We have opt_v\n";
     if (opt_v) {
