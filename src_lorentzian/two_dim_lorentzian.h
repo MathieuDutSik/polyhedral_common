@@ -513,7 +513,8 @@ template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
   T M = eval_quad(G, r0);
-  std::cerr << "M=" << M << " SearchNorm=" << SearchNorm << "\n";
+  std::cerr << "M=" << M << " SearchNorm=" << SearchNorm << " r0=" << StringVectorGAP(r0) << " G=\n";
+  WriteMatrix(std::cerr, G);
   MyVector<Tint> l_A = GetTwoComplement(r0);
   MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
   std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic(G, M, r0, l_B);
@@ -524,7 +525,7 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> cons
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   for (auto & e_v : l_vect) {
     T norm = eval_quad(G, e_v);
-    std::cerr << "norm=" << norm << " SearchNorm=" << SearchNorm << "\n";
+    std::cerr << "norm=" << norm << " SearchNorm=" << SearchNorm << " e_v=" << StringVectorGAP(e_v) << "\n";
     if (norm == SearchNorm)
       return e_v;
   }
@@ -543,6 +544,7 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVect
   if (SearchNorm <= 0)
     return {};
   T lower_bnd = GetLowerBoundMinimum(G);
+  std::cerr << "lower_bnd=" << lower_bnd << "\n";
   if (SearchNorm < lower_bnd) // no solution possible
     return {};
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);

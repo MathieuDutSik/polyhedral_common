@@ -5,8 +5,10 @@
 int main(int argc, char* argv[])
 {
   try {
-    if (argc != 3) {
+    if (argc != 3 && argc != 4) {
       std::cerr << "COXDYN_ComputeSymbol [FileG] [FileRoot]\n";
+      std::cerr << "or\n";
+      std::cerr << "COXDYN_ComputeSymbol [FileG] [FileRoot] [OutFile]\n";
       throw TerminalException{1};
     }
     using T = mpq_class;
@@ -21,7 +23,21 @@ int main(int argc, char* argv[])
       l_root.push_back(eLine);
     }
     MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_root).first;
-    std::cerr << "Symbol of CoxMat=" << coxdyn_matrix_to_string(CoxMat) << "\n";
+    //    std::cerr << "CoxMat=\n";
+    //    WriteMatrix(std::cerr, CoxMat);
+    std::string symb = coxdyn_matrix_to_string(CoxMat);
+    auto prt=[&](std::ostream & os) -> void {
+      os << "return rec(CoxMat:=";
+      WriteMatrixGAP(os, CoxMat);
+      os << ", symb:=\"" << symb << "\");\n";
+    };
+    if (argc == 3) {
+      prt(std::cerr);
+    } else {
+      std::string out(argv[3]);
+      std::ofstream os(out);
+      prt(os);
+    }
   }
   catch (TerminalException const& e) {
     exit(e.eVal);

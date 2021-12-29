@@ -597,14 +597,17 @@ std::vector<std::vector<size_t>> GetIrreducibleComponents(const MyMatrix<T>& M)
   T val_comm = 2;
   size_t dim = M.rows();
   GraphBitset eG(dim);
+  //  std::cerr << "LEdge =";
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
       if (M(i,j) != val_comm) {
         eG.AddAdjacent(i,j);
         eG.AddAdjacent(j,i);
+        //        std::cerr << " [" << i << "/" << j << "]";
       }
     }
   }
+  //  std::cerr << "\n";
   return ConnectedComponents_set(eG);
 }
 
@@ -616,7 +619,10 @@ std::optional<std::vector<IrrCoxDyn<T>>> RecognizeSphericalEuclideanDiagram(cons
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-    std::cerr << "dim_res=" << dim_res << "\n";
+    std::cerr << "eConn =";
+    for (auto & val : eConn)
+      std::cerr << " " << val;
+    std::cerr << "\n";
 #endif
     MyMatrix<T> Mres(dim_res, dim_res);
     for (size_t i=0; i<dim_res; i++)
@@ -703,14 +709,12 @@ bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
   for (int i=0; i<n; i++)
     for (int j=i+1; j<n; j++) {
       T val = M(i,j);
-      if (DS.OnlySimplyLaced) {
+      if (DS.OnlySimplyLaced)
         if (val != 2 && val != 3)
           return false;
-      }
-      if (DS.OnlyLorentzianAdmissible) {
+      if (DS.OnlyLorentzianAdmissible)
         if (val != 2 && val != 3 && val != 4 && val != 6 && val != valInfinity)
           return false;
-      }
     }
   std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
   if (opt) {
@@ -729,14 +733,27 @@ template<typename T>
 bool CheckDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
 {
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
+  //  std::cerr << "CheckDiagram M=\n";
+  //  WriteMatrix(std::cerr, M);
   std::vector<IrrCoxDyn<T>> l_cd;
   for (auto & eConn : LConn) {
     size_t dim_res=eConn.size();
+    /*
+    std::cerr << "eConn =";
+    for (auto & val : eConn)
+      std::cerr << " " << val;
+      std::cerr << "\n";*/
     MyMatrix<T> Mres(dim_res, dim_res);
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
     bool test = CheckIrreducibleDiagram(Mres, DS);
+    /*
+    std::cerr << "  test=" << test << " eConn=";
+    for (auto & v : eConn)
+      std::cerr << v << " ";
+    std::cerr << "Mres=\n";
+    WriteMatrix(std::cerr, Mres);*/
     if (!test)
       return false;
   }
@@ -838,7 +855,9 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
-    if (CheckDiagram(Mtest, DS))
+    bool test = CheckDiagram(Mtest, DS);
+    //    std::cerr << "test=" << test << "\n";
+    if (test)
       SetExtensions.insert(V);
   };
   test_vector_and_insert(V_basic);
@@ -868,6 +887,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
           MyVector<T> V = V_basic;
           V(i) = val_single_edge;
           V(j) = val;
+          //          std::cerr << "i=" << i << " j=" << j << " V=" << StringVector(V);
           test_vector_and_insert(V);
         }
       }
@@ -992,8 +1012,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
-  std::cerr << "ScalMat=\n";
-  WriteMatrix(std::cerr, ScalMat);
+  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int dim_cox = l_root.size();
@@ -1023,18 +1042,20 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::vector<Possible_Extension<T>> l_extensions;
   size_t n_zero=0;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    //    std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    //std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     MyVector<T> l_scal(dim_cox);
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
+      //      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
       if (!opt)
         return;
       T scal = - *opt;
       l_scal(i) = scal;
     }
+    std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     //    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
@@ -1044,7 +1065,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     //    std::cerr << "w ="; WriteVector(std::cerr, w);
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
-    //    std::cerr << "eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
+    std::cerr << "  eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
@@ -1064,9 +1085,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
         throw TerminalException{1};
       }
       std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
-      std::cerr << "u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
       n_zero++;
     }
+    std::cerr << "  u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
   std::cerr << "ComputePossibleExtensions, step 5\n";

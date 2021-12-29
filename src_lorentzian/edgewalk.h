@@ -34,6 +34,35 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
 }
 
 
+
+template<typename T>
+size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
+{
+  int n = Latt.rows();
+  auto is_preserving=[&](MyMatrix<T> const& h) -> bool {
+    for (int i=0; i<n; i++) {
+      MyVector<T> eV = GetMatrixRow(Latt, i);
+      MyVector<T> eVimg = h.transpose() * eV;
+      std::optional<MyVector<T>> opt = SolutionIntMat(Latt, eVimg);
+      if (!opt)
+        return false;
+    }
+    return true;
+  };
+  size_t ord = 1;
+  MyMatrix<T> h = g;
+  while(true) {
+    if (is_preserving(h))
+      break;
+    ord++;
+    h = h * g;
+  }
+  return ord;
+}
+
+
+
+
 template<typename T>
 MyMatrix<T> ComputeLattice_LN(MyMatrix<T> const& G, T const& N)
 {
@@ -379,9 +408,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 
 
 
-
-
-
 /*
   We take the notations as in EDGEWALK paper.
   ---The dimension is n+1
@@ -397,6 +423,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
+  //
+  // Initial computation of linear algebra nature:
+  // Find a basis (k,r0) of the plane P
+  //
   MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
   std::cerr << "v_disc_t="; WriteVector(std::cerr, v_disc_t);
   int n = G.rows();
@@ -442,6 +472,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   AssignMatrixRow(NSPbas, 1, r0);
   std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
   std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
+  //
+  // Computing the extension and the maximum norms from that.
+  //
   std::cerr << "Edgewalk Procedure, step 2\n";
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool only_spherical = true;
@@ -449,20 +482,65 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
   std::cerr << "Edgewalk Procedure, step 4\n";
+  std::map<T,T> map_max_resnorm;
+  for (auto & e_extension : l_extension) {
+    T norm = e_extension.e_norm;
+    T res_norm = e_extension.res_norm;
+    map_max_resnorm[norm] = std::max(map_max_resnorm[norm], res_norm);
+  }
+  //
+  // Determine if the plane P is isotropic and if not compute the set of test vectors
+  //
+  MyMatrix<T> ProjP = GetProjectionMatrix(G, NSPbas);
+  struct SingComp {
+    MyMatrix<T> Basis_ProjP_LN;
+    MyMatrix<T> Basis_P_inter_LN;
+    std::vector<MyVector<T>> l_vect;
+  };
+  auto get_sing_comp=[&](T const& e_norm) -> SingComp {
+    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    
+    MyMatrix<T> ProjFamily(n,n);
+    for (int i=0; i<n; i++) {
+      MyVector<T> eVect = GetMatrixRow(Latt, i);
+      MyVector<T> eVectProj = ProjMat * eVect;
+      AssignMatrixRow(ProjFamily, i, eVectProj);
+    }
+    MyMatrix<T> Basis_ProjP_LN = GetZbasis(ProjFamily);
+    MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
+    MyMatrix<T> 
+  };
+  using Tanisotropic = std::map<T, SingComp>;
+  auto compute_anisotropic_data=[&]() -> std::optional<Tanisotropic> {
+    MyMatrix<T> Gtest = NSPbas * G * NSPbas.transpose();
+    std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
+    if (opt)
+      return {};
+    Tanisotropic map;
+    for (auto & u_norm : l_norms)
+      map[u_norm] = get_sing_comp(u_norm);
+    return map;
+  };
+  std::optional<Tanisotropic> opt_anisotrop = compute_anisotropic_data();
+  //
+  //
+  //
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    MyMatrix<T> LattInv = Inverse(Latt);
+    std::cerr << "----------- Determinant(Latt)=" << DeterminantMat(Latt) << " ---------------\n";
     //    std::cerr << "We have Latt=\n";
     //    WriteMatrix(std::cerr, Latt);
     //    std::cerr << "We have Space=\n";
     //    WriteMatrix(std::cerr, Space);
     // Now getting into the LN space
-    MyMatrix<T> Space_LN = Space * Inverse(Latt);
+    MyMatrix<T> Space_LN = Space * LattInv;
     MyMatrix<T> G_LN = Latt * G * Latt.transpose();
     MyMatrix<T> Equas = Space_LN * G_LN;
     MyMatrix<T> NSP = NullspaceIntTrMat(Equas);
     MyMatrix<T> GP_LN = NSP * G_LN * NSP.transpose();
-    MyVector<T> r0_LN = Inverse(Latt).transpose() * r0;
+    MyVector<T> r0_LN = LattInv.transpose() * r0;
     std::optional<MyVector<T>> opt = SolutionMat(NSP, r0_LN);
     if (!opt) {
       std::cerr << "Failed to resolve the SolutionMat problem\n";
@@ -470,6 +548,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyVector<T> r0_NSP = *opt;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+    std::cerr << "u_component=" << StringVectorGAP(e_extension.u_component) << "\n";
     std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
     std::cerr << "We have opt_v\n";
     if (opt_v) {
@@ -592,7 +671,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
 
    */
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
-  return {RemoveFractionVector(k_new), l_roots_ret};
+  return {k_new, l_roots_ret};
 }
 
 
@@ -735,7 +814,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   size_t len = eVert.l_roots.size();
   std::cerr << "|l_roots| len=" << len << "\n";
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
-    for (size_t i=0; i<len; i++) {
+    for (size_t i=1; i<len; i++) {
       std::cerr << "ADJ i=" << i << "/" << len << "\n";
       std::vector<MyVector<Tint>> l_ui;
       for (size_t j=0; j<len; j++) {
@@ -752,8 +831,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
 
-      std::cerr << "ENDING FOR THAT DEBUG PART\n";
-      throw TerminalException{1};
+      if (i == 1) {
+        std::cerr << "ENDING FOR THAT DEBUG PART i=" << i << "\n";
+        throw TerminalException{1};
+      }
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
