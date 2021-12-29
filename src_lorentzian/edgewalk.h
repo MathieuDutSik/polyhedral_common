@@ -113,9 +113,13 @@ int get_sign_pair_t(T const& p1, T const& p2)
 template<typename T>
 int get_sign_pair_stdpair(std::pair<int,T> const& p1, std::pair<int,T> const& p2)
 {
-  if (p1.first == p2.first)
+  if (p1.first != p2.first)
+    return get_sign_pair_t(p1.first, p2.first);
+  if (p1.first == 1)
     return get_sign_pair_t(p1.second, p2.second);
-  return get_sign_pair_t(p1.first, p2.first);
+  if (p1.first == -1)
+    return -get_sign_pair_t(p1.second, p2.second);
+  return 0;
 }
 
 
@@ -317,8 +321,8 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
-      //      std::cerr << "We have Latt=\n";
-      //      WriteMatrix(std::cerr, Latt);
+      std::cerr << "We have det(Latt)=" << DeterminantMat(Latt) << " Latt=\n";
+      WriteMatrix(std::cerr, Latt);
       std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
       std::cerr << "We have opt_v\n";
       if (opt_v) {
@@ -333,13 +337,22 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   }
   std::cerr << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
   std::cerr << "DetermineRootsCuspidalCase, step 3\n";
+  /* std::sort is sorting from the highest to the smallest
+   */
   std::sort(l_candidates.begin(), l_candidates.end(),
             [&](RootCandidateCuspidal<T,Tint> const& x, RootCandidateCuspidal<T,Tint> const& y) -> bool {
+              // We want x > y if -k.alpha(x) / sqrt(Nx) < -k.alpha(y) / sqrt(Ny) or if equality if
+              // Nx < Ny
               int sign = get_sign_pair_stdpair<T>({x.sign, x.quant}, {y.sign, y.quant});
+              //              std::cerr << "x: (" << x.sign << "," << x.quant << ") y: (" << y.sign << "," << y.quant << ") sign=" << sign << "\n";
               if (sign != 0)
-                return sign < 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
+                return sign > 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
               return x.e_norm < y.e_norm;
             });
+ 
+ for (auto & x : l_candidates) {
+    std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v="; WriteVector(std::cerr, x.v);
+  }
   std::cerr << "DetermineRootsCuspidalCase, step 4\n";
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
   auto is_approved=[&](MyVector<Tint> const& cand) -> bool {
@@ -355,7 +368,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   for (auto & eV : l_candidates) {
     MyVector<Tint> eV_i = eV.v;
     if (is_approved(eV_i)) {
-      std::cerr << "Inserting eV_i=\n"; WriteVector(std::cerr, eV_i);
+      std::cerr << "Inserting eV_i="; WriteVector(std::cerr, eV_i);
       l_ui_ret.push_back(eV_i);
     }
   }
