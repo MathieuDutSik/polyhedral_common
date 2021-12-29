@@ -241,25 +241,9 @@ template<typename T>
 std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
 {
   std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr, RemoveFractionVector(k));
-  int n = Latt.rows();
   std::vector<MyVector<T>> l_v = {u,k};
   MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
-  MyMatrix<T> eBasis = ExtendToBasis(eIndep);
-  MyMatrix<T> Latt2 = Latt * Inverse(eBasis);
-  std::vector<int> V(n-2);
-  for (int i=0; i<n-2; i++)
-    V[i] = i+2;
-  MyMatrix<T> Latt3 = SelectColumn(Latt2, V);
-  //  std::cerr << "Latt3=\n";
-  //  WriteMatrix(std::cerr, Latt3);
-  MyMatrix<T> NSP = NullspaceIntMat(Latt3);
-  if (!IsIntegralMatrix(NSP)) {
-    std::cerr << "NSP should be integral\n";
-    throw TerminalException{1};
-  }
-  //  std::cerr << "NSP=\n";
-  //  WriteMatrix(std::cerr, NSP);
-  MyMatrix<T> IntBasis = NSP * Latt;
+  MyMatrix<T> IntBasis = IntersectionLattice_VectorSpace(Latt, eIndep);
   std::cerr << "IntBasis=\n";
   WriteMatrix(std::cerr, IntBasis);
   std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
