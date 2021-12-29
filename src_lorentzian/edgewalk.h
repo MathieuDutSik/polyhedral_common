@@ -492,14 +492,21 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // Determine if the plane P is isotropic and if not compute the set of test vectors
   //
   MyMatrix<T> ProjP = GetProjectionMatrix(G, NSPbas);
-  struct SingComp {
+  struct SingCompAnisotropic {
     MyMatrix<T> Latt;
     MyMatrix<T> Basis_ProjP_LN;
     MyMatrix<T> Basis_P_inter_LN;
     MyMatrix<T> Gwork;
     std::vector<MyVector<T>> l_vect;
   };
-  auto get_sing_comp=[&](T const& e_norm) -> SingComp {
+  struct SingCompIsotropic {
+    MyMatrix<T> Latt;
+    MyMatrix<T> NSP;
+    MyMatrix<T> GP_LN;
+    MyMatrix<T> Factor_GP_LN;
+    MyVector<T> r0_work;
+  };
+  auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> ProjFamily(n,n);
     for (int i=0; i<n; i++) {
@@ -556,51 +563,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
-  using Tanisotropic = std::map<T, SingComp>;
-  auto compute_anisotropic_data=[&]() -> std::optional<Tanisotropic> {
-    MyMatrix<T> Gtest = NSPbas * G * NSPbas.transpose();
-    std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
-    if (opt)
-      return {};
-    Tanisotropic map;
-    for (auto & u_norm : l_norms)
-      map[u_norm] = get_sing_comp(u_norm);
-    return map;
-  };
-  std::optional<Tanisotropic> opt_anisotrop = compute_anisotropic_data();
-  auto get_next_anisotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
-    T const& e_norm = poss.e_norm;
-    SingComp const& e_comp = (*opt_anisotrop)[e_norm];
-    for (auto & e_vect : e_comp.l_vect) {
-      T val = eval_quad(e_comp, e_vect);
-      if (val == poss.res_norm) {
-        MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * e_vect;
-        if (IsIntegerVector(v_T)) {
-          std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          if (!eSol) {
-            MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
-            return v_i;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
-
-
-  
-  auto get_next_isotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
-    
-  };
-
-  
-  //
-  //
-  //
-  for (auto & e_extension : l_extension) {
-    std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " ----------\n";
-    T e_norm = e_extension.e_norm;
+  auto get_sing_comp_isotropic=[&](Possible_extension<T> const& poss) -> SingCompIsotropic {
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> LattInv = Inverse(Latt);
     MyMatrix<T> Space_LN = Space * LattInv;
@@ -616,18 +579,84 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyVector<T> r0_NSP = *opt;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
-    std::optional<MyVector<Tint>> opt_v = get_first_next_vector(GP_LN, r0_work, e_extension.res_norm);
+    std::optional<MyMatrix<T>> opt_factor = GetIsotropicFactorization(GP_LN);
+    if (!opt_factor) {
+      std::cerr << "Computation of isotropy factorization failed\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> Factor_GP_LN = *opt_factor;
+    return {Latt, NSP, GP_LN, Factor_GP_LN, r0_work};
+  };
+  bool is_isotropic;
+  std::map<T, SingCompAnisotropic> map_anisotropic;
+  std::map<T, SingCompIsotropic> map_isotropic;
+  auto compute_anisotropic_data=[&]() -> std::optional<Tanisotropic> {
+    MyMatrix<T> Gtest = NSPbas * G * NSPbas.transpose();
+    std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
+    if (opt) {
+      is_isotropic = true;
+      for (auto & u_norm : l_norms)
+        map_isotropic[u_norm] = get_sing_comp_isotropic(u_norm);
+    } else {
+      is_isotropic = false;
+      for (auto & u_norm : l_norms)
+        map_anisotropic[u_norm] = get_sing_comp_anisotropic(u_norm);
+    }
+  };
+  // Evaluation of fun
+  auto get_next_anisotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    T const& e_norm = poss.e_norm;
+    SingCompAnisotropic const& e_comp = map_anisotrop[e_norm];
+    for (auto & e_vect : e_comp.l_vect) {
+      T val = eval_quad(e_comp, e_vect);
+      if (val == poss.res_norm) {
+        MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * e_vect;
+        if (IsIntegerVector(v_T)) {
+          std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
+          if (!eSol) {
+            MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+            return v_i;
+          }
+        }
+      }
+    }
+    return {};
+  };
+  auto get_next_isotropic=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    T const& e_norm = poss.e_norm;
+    SingCompIsotropic const& e_comp = map_isotrop[e_norm];
+    T res_norm = poss.res_norm;
+    std::optional<MyVector<Tint>> opt_v = get_first_next_vector_isotropic(e_comp.GP_LN, e_comp.r0_work, res_norm, e_comp.Factor_GP_LN);
+    if (!opt_v)
+      return {};
+    MyVector<Tint> v_i = *opt_v;
+    MyVector<T> v_t = UniversalVectorConversion<T,Tint>(v_i);
+    MyVector<T> r_component = e_comp.Latt.transpose() * e_comp.NSP.transpose() * v_t;
+    MyVector<T> alpha_T = e_extension.u_component + r_component;
+    MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
+    return alpha;
+  };
+  auto get_next=[&](Possible_extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    if (is_isotropic) {
+      return get_next_isotropic(poss);
+    } else {
+      return get_next_anisotropic(poss);
+    }
+  };
+
+  
+  //
+  //
+  //
+  for (auto & e_extension : l_extension) {
+    std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " ----------\n";
+    T e_norm = e_extension.e_norm;
+
+
+    std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
     std::cerr << "We have opt_v\n";
     if (opt_v) {
-      MyVector<T> v = UniversalVectorConversion<T,Tint>(*opt_v);
-      MyVector<T> r_component = Latt.transpose() * NSP.transpose() * v;
-      std::optional<MyVector<T>> opt_s = SolutionMat(NSPbas, r_component);
-      if (!opt_s) {
-        std::cerr << "The r_component should belong to the space spanned by k and r0\n";
-        throw TerminalException{1};
-      }
-      MyVector<T> alpha_T = e_extension.u_component + r_component;
-      MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
+      MyVector<Tint> alpha = *opt_v;
       std::cerr << "alpha="; WriteVector(std::cerr, alpha);
       auto f_ins=[&]() -> void {
         std::vector<MyVector<Tint>> l_roots = l_ui;
