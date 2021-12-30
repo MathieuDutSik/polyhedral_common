@@ -390,9 +390,10 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
     v(0) = e_div;
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
-    std::cerr << "v="; WriteVectorGAP(std::cerr, v); std::cerr << "  e_sol="; WriteVectorGAP(std::cerr, e_sol); std::cerr << "\n";
+    std::cerr << "v=" << StringVectorGAP(v) << "  e_sol=" << StringVectorGAP(e_sol) << "\n";
     if (IsIntegralVector(e_sol)) {
       MyVector<Tint> e_sol_i = UniversalVectorConversion<Tint,T>(e_sol);
+      std::cerr << "  e_sol_i=" << StringVectorGAP(e_sol_i) << "\n";
       l_sol.push_back( e_sol_i);
       l_sol.push_back(-e_sol_i);
     }

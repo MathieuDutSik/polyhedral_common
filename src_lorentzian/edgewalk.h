@@ -662,7 +662,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     //    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      //      std::cerr << "gna, step 2\n";
+      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
       if (val == poss.res_norm) {
         //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
         //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
@@ -714,16 +714,16 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
     std::cerr << "|l_vect|=" << l_vect.size() << "\n";
     for (auto & e_vect : l_vect) {
+      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
       //      std::cerr << "Before v_T computation\n";
       //      std::cerr << "u_component=" << StringVectorGAP(poss.u_component) << "\n";
-      //      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
       //      std::cerr << "Basis_ProjP_LN=";
       //      WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
       MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
       std::cerr << "After v_T computation v_T=" << StringVectorGAP(v_T) << "\n";
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-        if (!eSol) {
+        if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
           return v_i;
         }
@@ -1010,10 +1010,13 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     size_t iFAC = 0;
     for (auto & eFAC : vf) {
+      Face fFAC = eFAC;
+      /*
       Face fFAC(n_root); // Hack to the one that we want to de bug.
       for (size_t i_root=0; i_root<n_root; i_root++)
         fFAC[i_root] = 1;
       fFAC[12] = 0;
+      */
       size_t i_disc = std::numeric_limits<size_t>::max();
       std::vector<MyVector<Tint>> l_ui;
       for (size_t i_root=0; i_root<n_root; i_root++) {
@@ -1032,10 +1035,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
-      if (norm == -9100) {
-        std::cerr << "This norm actually does not occur in the lattice\n";
-        throw TerminalException{1};
-      }
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
