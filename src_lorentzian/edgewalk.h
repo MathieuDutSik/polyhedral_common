@@ -1028,12 +1028,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
-
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
       std::cerr << "We have entry\n";
       func_insert_pair_vertices(entry);
+      iFAC++;
     }
   };
   insert_edges_from_vertex(eVert);
