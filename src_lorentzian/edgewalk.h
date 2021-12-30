@@ -8,6 +8,7 @@
 #include "vinberg_code.h"
 #include "Namelist.h"
 #include "Temp_Positivity.h"
+#include "POLY_lrslib.h"
 
 
 
@@ -520,6 +521,16 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       AssignMatrixRow(ProjFamily, i, eVectProj);
     }
     MyMatrix<T> BasisProj = GetZbasis(ProjFamily);
+    if (BasisProj.rows() != 2) {
+      std::cerr << "NSPbas=\n";
+      WriteMatrix(std::cerr, NSPbas);
+      MyMatrix<T> Gprt = NSPbas * G * NSPbas.transpose();
+      std::cerr << "Gprt=\n";
+      WriteMatrix(std::cerr, Gprt);
+      std::cerr << "ProjFamily=\n";
+      WriteMatrix(std::cerr, ProjFamily);
+      throw TerminalException{1};
+    }
     MyMatrix<T> Expr = ExpressVectorsInIndependentFamilt(BasisProj, NSPbas);
     std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
     if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
@@ -624,7 +635,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       throw TerminalException{1};
     }
     MyMatrix<T> Factor_GP_LN = *opt_factor;
-    return {Latt, NSP, GP_LN, Factor_GP_LN, r0_work, {}};
+    return {Latt, Basis_ProjP_LN, GP_LN, Factor_GP_LN, r0_work, {}};
   };
   bool is_isotropic;
   std::map<T, SingCompAnisotropic> map_anisotropic;
@@ -701,8 +712,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     SingCompIsotropic & e_comp = map_isotropic[e_norm];
     T res_norm = poss.res_norm;
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
+    std::cerr << "|l_vect|=" << l_vect.size() << "\n";
     for (auto & e_vect : l_vect) {
-      MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * UniversalVectorConversion<T,Tint>(e_vect);
+      std::cerr << "Before v_T computation\n";
+      std::cerr << "u_component=" << StringVectorGAP(poss.u_component) << "\n";
+      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
+      std::cerr << "Basis_ProjP_LN=";
+      WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
+      MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
+      std::cerr << "After v_T computation\n";
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
         if (!eSol) {
@@ -720,8 +738,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       return get_next_anisotropic(poss);
     }
   };
-
-  
   //
   //
   //
@@ -984,19 +1000,27 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     l_entry.emplace_back(std::move(v_pair));
   };
-  size_t len = eVert.l_roots.size();
-  std::cerr << "|l_roots| len=" << len << "\n";
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
-    int i_test = 7;
-    for (size_t i=i_test; i<len; i++) {
-      std::cerr << "ADJ i=" << i << "/" << len << "\n";
+    size_t dim = G.rows();
+    size_t n_root = theVert.l_roots.size();
+    MyMatrix<T> FAC(n_root,dim);
+    for (size_t i_root=0; i_root<n_root; i_root++)
+      AssignMatrixRow(FAC, i_root, UniversalVectorConversion<T,Tint>(theVert.l_roots[i_root]));
+    MyMatrix<T> FACred = ColumnReduction(FAC);
+    vectface vf = lrs::DualDescription_temp_incd(FACred);
+    size_t iFAC = 0;
+    for (auto & eFAC : vf) {
+      std::cerr << "iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << "\n";
+      size_t i_disc = std::numeric_limits<size_t>::max();
       std::vector<MyVector<Tint>> l_ui;
-      for (size_t j=0; j<len; j++) {
-        if (i != j) {
-          l_ui.push_back(theVert.l_roots[j]);
+      for (size_t i_root=0; i_root<n_root; i_root++) {
+        if (eFAC[i_root] == 1) {
+          l_ui.push_back(theVert.l_roots[i_root]);
+        } else {
+          i_disc = i_root;
         }
       }
-      MyVector<Tint> v_disc = theVert.l_roots[i];
+      MyVector<Tint> v_disc = theVert.l_roots[i_disc];
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
       MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
       T norm = gen_nofrac.dot(G * gen_nofrac);
@@ -1005,10 +1029,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
 
-      if (i == i_test) {
-        std::cerr << "ENDING FOR THAT DEBUG PART i=" << i << "\n";
-        throw TerminalException{1};
-      }
       PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
       std::cerr << "We have epair\n";
       EnumEntry entry{true, false, std::move(epair)};
