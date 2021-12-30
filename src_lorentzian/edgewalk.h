@@ -613,25 +613,27 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
-    std::cerr << "get_next_anisotropic, step 1\n";
+    //    std::cerr << "get_next_anisotropic, step 1\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      std::cerr << "get_next_anisotropic, step 2\n";
+      //      std::cerr << "get_next_anisotropic, step 2\n";
       if (val == poss.res_norm) {
-        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
-        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
+        //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
+        //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
         MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
-        std::cerr << "get_next_anisotropic, step 3\n";
+        //        std::cerr << "get_next_anisotropic, step 3\n";
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          std::cerr << "get_next_anisotropic, step 4\n";
+          //          std::cerr << "get_next_anisotropic, step 4\n";
           if (!eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+            std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
             return v_i;
           }
         }
       }
     }
+    std::cerr << "No good vector found\n";
     return {};
   };
   auto get_successive_list_cand=[&](SingCompIsotropic & e_comp, T const& res_norm) -> std::vector<MyVector<Tint>> {
