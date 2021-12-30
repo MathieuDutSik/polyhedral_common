@@ -481,27 +481,26 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyMatrix<T> Basis_ProjP_LN;
     MyMatrix<T> Basis_P_inter_LN;
     MyMatrix<T> Gwork;
-    std::vector<MyVector<T>> l_vect;
+    std::vector<MyVector<Tint>> l_vect;
   };
   struct SingCompIsotropic {
     MyMatrix<T> Latt;
-    MyMatrix<T> NSP;
+    MyMatrix<T> Basis_ProjP_LN;
     MyMatrix<T> GP_LN;
     MyMatrix<T> Factor_GP_LN;
     MyVector<Tint> r0_work;
+    std::map<T,std::optional<std::vector<MyVector<Tint>>>> map_res_norm;
   };
-  auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
-    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+  auto get_basis_projp_ln=[&](MyMatrix<T> const& Latt) -> MyMatrix<T> {
     MyMatrix<T> ProjFamily(n,n);
     for (int i=0; i<n; i++) {
       MyVector<T> eVect = GetMatrixRow(Latt, i);
       MyVector<T> eVectProj = ProjP * eVect;
       AssignMatrixRow(ProjFamily, i, eVectProj);
     }
-    MyMatrix<T> Basis_ProjP_LN = GetZbasis(ProjFamily);
-    MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
-    MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
-    T res_norm = map_max_resnorm[e_norm];
+    return GetZbasis(ProjFamily);
+  };
+  auto get_r0work=[&](MyMatrix<T> const& Basis_ProjP_LN, MyVector<T> const& r0) -> MyVector<Tint> {
     std::optional<MyVector<T>> opt_r0 = SolutionMat(Basis_ProjP_LN, r0);
     if (!opt_r0) {
       std::cerr << "Failed to resolve the SolutionMat problem\n";
@@ -509,6 +508,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyVector<T> r0_NSP = *opt_r0;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+    return r0_work;
+  };
+  auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
+    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
+    MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
+    MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
+    T res_norm = map_max_resnorm[e_norm];
+    MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
     MyVector<Tint> l_B = Canonical(Gwork, res_norm, r0_work, l_A);
     std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic<T,Tint>(Gwork, res_norm, r0_work, l_B);
@@ -536,12 +544,11 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         ord++;
       }
     }
-    std::vector<MyVector<T>> l_vect3;
+    std::vector<MyVector<Tint>> l_vect3;
     MyMatrix<Tint> TheMat = IdentityMat<Tint>(2);
     for (size_t i=0; i<order; i++) {
       for (auto & e_vect2 : l_vect2) {
-        MyVector<Tint> e_vect3_i = TheMat.transpose() * e_vect2;
-        MyVector<T> e_vect3 = UniversalVectorConversion<T,Tint>(e_vect3_i);
+        MyVector<Tint> e_vect3 = TheMat.transpose() * e_vect2;
         l_vect3.push_back(e_vect3);
       }
       TheMat = TheMat * P;
@@ -550,27 +557,16 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    MyMatrix<T> LattInv = Inverse(Latt);
-    MyMatrix<T> Space_LN = Space * LattInv;
-    MyMatrix<T> G_LN = Latt * G * Latt.transpose();
-    MyMatrix<T> Equas = Space_LN * G_LN;
-    MyMatrix<T> NSP = NullspaceIntTrMat(Equas);
-    MyMatrix<T> GP_LN = NSP * G_LN * NSP.transpose();
-    MyVector<T> r0_LN = LattInv.transpose() * r0;
-    std::optional<MyVector<T>> opt = SolutionMat(NSP, r0_LN);
-    if (!opt) {
-      std::cerr << "Failed to resolve the SolutionMat problem\n";
-      throw TerminalException{1};
-    }
-    MyVector<T> r0_NSP = *opt;
-    MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+    MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
+    MyMatrix<T> GP_LN = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
+    MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
     std::optional<MyMatrix<T>> opt_factor = GetIsotropicFactorization(GP_LN);
     if (!opt_factor) {
       std::cerr << "Computation of isotropy factorization failed\n";
       throw TerminalException{1};
     }
     MyMatrix<T> Factor_GP_LN = *opt_factor;
-    return {Latt, NSP, GP_LN, Factor_GP_LN, r0_work};
+    return {Latt, NSP, GP_LN, Factor_GP_LN, r0_work, {}};
   };
   bool is_isotropic;
   std::map<T, SingCompAnisotropic> map_anisotropic;
@@ -596,7 +592,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
       if (val == poss.res_norm) {
-        MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * e_vect;
+        MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * UniversalVectorConversion<T,Tint>(e_vect);
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
           if (!eSol) {
@@ -608,19 +604,47 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     return {};
   };
+  auto get_successive_list_cand=[&](SingCompIsotropic & e_comp, T const& res_norm) -> std::vector<MyVector<Tint>> {
+    std::optional<std::vector<MyVector<Tint>>> & opt = e_comp.map_res_norm[res_norm];
+    if (opt)
+      return *opt;
+    std::vector<MyVector<Tint>> l_vect1 = EnumerateVectorFixedNorm_Factorization<T,Tint>(e_comp.Factor_GP_LN, res_norm);
+    std::vector<MyVector<Tint>> l_vect2;
+    auto det=[&](MyVector<Tint> const& v1, MyVector<Tint> const& v2) -> Tint {
+      return v1(0) * v2(1) - v1(1) * v2(0);
+    };
+    auto is_corr=[&](MyVector<Tint> const& x) -> bool {
+      T scal = eval_scal(G, e_comp.r0_work, x);
+      if (scal <= 0)
+        return false;
+      return det(e_comp.r0_work, x) > 0;
+    };
+    for (auto & e_vect1 : l_vect1)
+      if (is_corr(e_vect1))
+        l_vect2.push_back(e_vect1);
+    std::sort(l_vect2.begin(), l_vect2.end(),
+              [&](MyVector<Tint> const& x, MyVector<Tint> const& y) -> bool {
+                return det(x, y) > 0;
+              });
+    opt = l_vect2;
+    return l_vect2;
+  };
   auto get_next_isotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
-    SingCompIsotropic const& e_comp = map_isotropic[e_norm];
+    SingCompIsotropic & e_comp = map_isotropic[e_norm];
     T res_norm = poss.res_norm;
-    std::optional<MyVector<Tint>> opt_v = get_first_next_vector_isotropic<T,Tint>(e_comp.GP_LN, e_comp.r0_work, res_norm, e_comp.Factor_GP_LN);
-    if (!opt_v)
-      return {};
-    MyVector<Tint> v_i = *opt_v;
-    MyVector<T> v_t = UniversalVectorConversion<T,Tint>(v_i);
-    MyVector<T> r_component = e_comp.Latt.transpose() * e_comp.NSP.transpose() * v_t;
-    MyVector<T> alpha_T = poss.u_component + r_component;
-    MyVector<Tint> alpha = UniversalVectorConversion<Tint,T>(alpha_T);
-    return alpha;
+    std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
+    for (auto & e_vect : l_vect) {
+      MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN * UniversalVectorConversion<T,Tint>(e_vect);
+      if (IsIntegerVector(v_T)) {
+        std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
+        if (!eSol) {
+          MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+          return v_i;
+        }
+      }
+    }
+    return {};
   };
   auto get_next=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     if (is_isotropic) {
