@@ -472,6 +472,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T res_norm = e_extension.res_norm;
     map_max_resnorm[norm] = std::max(map_max_resnorm[norm], res_norm);
   }
+  for (auto & kv : map_max_resnorm)
+    std::cerr << "kv : norm=" << kv.first << " res_norm=" << kv.second << "\n";
   std::cerr << "Edgewalk Procedure, step 5\n";
   //
   // Determine if the plane P is isotropic and if not compute the set of test vectors
@@ -559,7 +561,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         T norm2 = ord * ord * norm1;
         if (norm2 > res_norm)
           break;
-        l_vect2.push_back(ord * e_vect1);
+        MyVector<Tint> e_vect2 = ord * e_vect1;
+        std::cerr << "norm2=" << norm2 << " e_vect2=" << StringVectorGAP(e_vect2) << "\n";
+        l_vect2.push_back(e_vect2);
         ord++;
       }
     }
@@ -613,18 +617,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
-    //    std::cerr << "get_next_anisotropic, step 1\n";
+    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      //      std::cerr << "get_next_anisotropic, step 2\n";
+      std::cerr << "gna, step 2\n";
       if (val == poss.res_norm) {
-        //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
-        //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
+        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
+        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
         MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
-        //        std::cerr << "get_next_anisotropic, step 3\n";
+        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          //          std::cerr << "get_next_anisotropic, step 4\n";
+          std::cerr << "get_next_anisotropic, step 4\n";
           if (!eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
