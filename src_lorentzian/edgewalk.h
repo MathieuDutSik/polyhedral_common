@@ -450,10 +450,23 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     throw TerminalException{1};
   }
   std::cerr << "Edgewalk Procedure, step 1\n";
+  /*
+    The vector r0 is orthogonal to k and is well defined up to a sign.
+    The half plane (1/2)P is shown on Figure 8.1 as being orthogonal to
+    k. Note that the mention on page 26 "(1/)2P is the open half plane corresponding to e"
+    is not correct. It should be corresponding to k. But how to build it?
+    How to select the sign?
+   */
   MyVector<T> r0 = GetMatrixRow(NSP,0);
+  T scal_r0 = r0.dot(G * v_disc_t);
+  std::cerr << "scal_r0=" << scal_r0 << "\n";
+  if (scal_r0 > 0)
+    r0 = -r0;
+  // We follow here the convention on oriented basis of Section 8:
+  // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> NSPbas(2,n);
-  AssignMatrixRow(NSPbas, 0, k);
-  AssignMatrixRow(NSPbas, 1, r0);
+  AssignMatrixRow(NSPbas, 0, r0);
+  AssignMatrixRow(NSPbas, 1, k);
   std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
   std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
   //
@@ -506,7 +519,14 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       MyVector<T> eVectProj = ProjP * eVect;
       AssignMatrixRow(ProjFamily, i, eVectProj);
     }
-    return GetZbasis(ProjFamily);
+    MyMatrix<T> BasisProj = GetZbasis(ProjFamily);
+    MyMatrix<T> Expr = ExpressVectorsInIndependentFamilt(BasisProj, NSPbas);
+    std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
+    if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
+      for (int i=0; i<n; i++)
+        BasisProj(0,i) = -BasisProj(0,i);
+    }
+    return BasisProj;
   };
   auto get_r0work=[&](MyMatrix<T> const& Basis_ProjP_LN, MyVector<T> const& r0) -> MyVector<Tint> {
     std::optional<MyVector<T>> opt_r0 = SolutionMat(Basis_ProjP_LN, r0);
@@ -516,18 +536,29 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyVector<T> r0_NSP = *opt_r0;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+    std::cerr << "r0_work=" << StringVectorGAP(r0_work) << "\n";
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
     std::cerr << "get_sing_comp_anisotropic, step 1\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
+    std::cerr << "Basis_ProjP_LN=\n";
+    WriteMatrix(std::cerr, Basis_ProjP_LN);
+    MyVector<T> Basis0 = GetMatrixRow(Basis_ProjP_LN, 0);
+    std::cerr << "Basis0=" << StringVectorGAP(Basis0) << "\n";
+    MyVector<T> Basis1 = GetMatrixRow(Basis_ProjP_LN, 1);
+    std::cerr << "Basis0=" << StringVectorGAP(Basis1) << "\n";
     MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
     MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
     T res_norm = map_max_resnorm[e_norm];
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
+    T r0_norm = eval_quad(Gwork, r0_work);
+    std::cerr << "r0_norm=" << r0_norm << "\n";
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
+    std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
     MyVector<Tint> l_B = Canonical(Gwork, res_norm, r0_work, l_A);
+    std::cerr << "l_B=" << StringVectorGAP(l_B) << "\n";
     std::cerr << "get_sing_comp_anisotropic, step 2\n";
     std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic<T,Tint>(Gwork, res_norm, r0_work, l_B);
     std::cerr << "get_sing_comp_anisotropic, step 3\n";
@@ -629,7 +660,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
           std::cerr << "get_next_anisotropic, step 4\n";
-          if (!eSol) {
+          if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
             return v_i;
