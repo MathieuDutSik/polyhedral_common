@@ -997,10 +997,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       }
       MyVector<Tint> v_disc = theVert.l_roots[i];
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
-      T norm = fVert.gen.dot(G * fVert.gen);
+      MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
+      T norm = gen_nofrac.dot(G * gen_nofrac);
       std::cerr << "Result of EdgewalkProcedure norm=" << norm << "\n";
       std::cerr << "We have fVert=";
-      WriteVector(std::cerr, fVert.gen);
+      WriteVector(std::cerr, gen_nofrac);
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
 
