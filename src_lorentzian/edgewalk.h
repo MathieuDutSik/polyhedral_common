@@ -648,18 +648,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
-    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
+    //    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      std::cerr << "gna, step 2\n";
+      //      std::cerr << "gna, step 2\n";
       if (val == poss.res_norm) {
-        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
-        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
+        //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
+        //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
         MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
-        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
+        //        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          std::cerr << "get_next_anisotropic, step 4\n";
+          //          std::cerr << "get_next_anisotropic, step 4\n";
           if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
@@ -987,7 +987,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   size_t len = eVert.l_roots.size();
   std::cerr << "|l_roots| len=" << len << "\n";
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
-    for (size_t i=1; i<len; i++) {
+    int i_test = 7;
+    for (size_t i=i_test; i<len; i++) {
       std::cerr << "ADJ i=" << i << "/" << len << "\n";
       std::vector<MyVector<Tint>> l_ui;
       for (size_t j=0; j<len; j++) {
@@ -1000,12 +1001,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
       T norm = gen_nofrac.dot(G * gen_nofrac);
       std::cerr << "Result of EdgewalkProcedure norm=" << norm << "\n";
-      std::cerr << "We have fVert=";
-      WriteVector(std::cerr, gen_nofrac);
+      std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
 
-      if (i == 1) {
+      if (i == i_test) {
         std::cerr << "ENDING FOR THAT DEBUG PART i=" << i << "\n";
         throw TerminalException{1};
       }
