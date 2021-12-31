@@ -1321,7 +1321,10 @@ template<typename T, typename Tint>
 std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
 {
   std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair;
-  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, [[maybe_unused]] MyMatrix<T> const& FACfeasible) -> bool {
+  int dim = Vtot.G.rows();
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
+    if (RankMat(FACfeasible) != dim)
+      return false;
     std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
     if (opt) {
       MyVector<Tint> v = *opt;

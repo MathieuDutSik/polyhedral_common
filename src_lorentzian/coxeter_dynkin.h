@@ -891,7 +891,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       n_diagram_match++;
     }
   };
-  test_vector_and_insert(V_basic);
+  test_vector_and_insert(V_basic); // Adding just an A1, always works.
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 4\n";
 #endif
@@ -907,10 +907,10 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
     for (auto & eIsol : list_isolated) {
       MyVector<T> V = V_basic;
       V(eIsol) = val_six;
-      test_vector_and_insert(V);
+      test_vector_and_insert(V); // G2, always works
       if (!DS.OnlySpherical) {
         V(eIsol) = val_inf;
-        test_vector_and_insert(V);
+        test_vector_and_insert(V); // I1(infinity), always works.
       }
     }
   } else {

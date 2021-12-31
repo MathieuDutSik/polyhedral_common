@@ -994,7 +994,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
-  auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> const& v_pair) -> void {
+  auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> v_pair) -> void {
     std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     pair_char<T> v_pair_char = gen_pair_char(G, v_pair);
     std::cerr << "2 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
