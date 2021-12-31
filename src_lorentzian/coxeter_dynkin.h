@@ -311,15 +311,18 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   GraphBitset eG(n_vert);
   std::map<T,size_t> multiplicity;
   std::vector<std::vector<size_t>> LLAdj;
+  std::vector<T> list_isolated_adjacent(n_vert);
   for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
     std::vector<size_t> LAdj;
+    T e_isolated_adjacent = std::numeric_limits<T>::max();
     for (size_t j=0; j<n_vert; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm) {
         n_adj++;
         eG.AddAdjacent(i, j);
         LAdj.push_back(j);
+        e_isolated_adjacent = val;
         if (j > i) {
           multiplicity[val]++;
           if (val != val_single_edge)
@@ -339,16 +342,11 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
       list_degN.push_back(i);
     list_deg[i] = n_adj;
     LLAdj.push_back(LAdj);
+    list_isolated_adjacent[i] = e_isolated_adjacent;
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 2\n";
 #endif
-  auto get_value_isolated=[&](size_t u) -> T {
-    for (size_t j=0; j<n_vert; j++)
-      if (u != j && M(u,j) != val_comm)
-        return M(u,j);
-    return std::numeric_limits<T>::max(); // That case should not happen
-  };
   if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
     return {};
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -420,7 +418,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
         return {};
       // Only tilde{Cn} is feasible and it is Euclidean
       for (auto & eVert : list_deg1)
-        if (get_value_isolated(eVert) != val_four)
+        if (list_isolated_adjacent[eVert] != val_four)
           return {};
       return IrrCoxDyn<T>{"tildeC",n_vert-1,0}; // This is tilde{Cn}
     }
@@ -430,9 +428,9 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
       size_t n_sing = 0;
       size_t n_four = 0;
       for (auto & eVert : list_deg1) {
-        if (get_value_isolated(eVert) == val_single_edge)
+        if (list_isolated_adjacent[eVert] == val_single_edge)
           n_sing++;
-        if (get_value_isolated(eVert) == val_four)
+        if (list_isolated_adjacent[eVert] == val_four)
           n_four++;
       }
       if (n_sing == 2) {
@@ -461,9 +459,9 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
       size_t n_sing=0;
       size_t n_five=0;
       for (auto & eVert : list_deg1) {
-        if (get_value_isolated(eVert) == val_single_edge)
+        if (list_isolated_adjacent[eVert] == val_single_edge)
           n_sing++;
-        if (get_value_isolated(eVert) == val_five)
+        if (list_isolated_adjacent[eVert] == val_five)
           n_five++;
       }
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
@@ -510,7 +508,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
       return {};
     bool has_edge_four = false;
     for (auto & eVert : list_deg1)
-      if (get_value_isolated(eVert) == val_four)
+      if (list_isolated_adjacent[eVert] == val_four)
         has_edge_four = true;
     if (has_edge_four)
       return IrrCoxDyn<T>{"tildeB",n_vert-1,0}; // It is tilde{Bn}
