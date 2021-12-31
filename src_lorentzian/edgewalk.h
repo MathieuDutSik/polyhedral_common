@@ -873,8 +873,12 @@ template<typename T, typename Tint>
 struct PairVertices {
   FundDomainVertex<T,Tint> vert1;
   FundDomainVertex<T,Tint> vert2;
-  std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>> pair_char;
 };
+
+template<typename T>
+using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>>;
+
+
 
 template<typename T, typename Tint>
 void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std::string const& OutFormat)
@@ -897,22 +901,26 @@ void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std
 }
 
 
+
+
+
+
 template<typename T, typename Tint>
-PairVertices<T,Tint> gen_pair_vertices(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert1, FundDomainVertex<T,Tint> const& vert2)
+pair_char<T> gen_pair_char(MyMatrix<T> const& G, PairVertices<T,Tint> const& ep)
 {
   std::unordered_set<MyVector<Tint>> set_v;
-  for (auto & eV : vert1.l_roots)
+  for (auto & eV : ep.vert1.l_roots)
     set_v.insert(eV);
-  for (auto & eV : vert2.l_roots)
+  for (auto & eV : ep.vert2.l_roots)
     set_v.insert(eV);
+  std::cerr << "|ep.vert1.l_roots|=" << ep.vert1.l_roots.size() << "  |ep.vert2.l_roots|=" << ep.vert2.l_roots.size() << "\n";
   std::vector<MyVector<Tint>> l_roots;
   for (auto & eV : set_v)
     l_roots.push_back(eV);
   MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
   using Tidx_value = uint16_t;
   WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix<T,Tidx_value>(MatV, G);
-  std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>> pair_char{std::move(MatV),std::move(WMat)};
-  return {vert1, vert2, std::move(pair_char)};
+  return {std::move(MatV),std::move(WMat)};
 }
 
 
@@ -986,19 +994,24 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
-  auto func_insert_pair_vertices=[&](EnumEntry & v_pair) -> void {
+  auto func_insert_pair_vertices=[&](EnumEntry const& v_pair) -> void {
+    pair_char<T> v_pair_char = gen_pair_char(G, v_pair.val);
     for (auto & u_pair : l_entry) {
       std::cerr <<  "Before LinPolytopeWMat_Isomorphism\n";
-      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair.val.pair_char, v_pair.val.pair_char);
+      pair_char<T> u_pair_char = gen_pair_char(G, u_pair.val);
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair_char, v_pair_char);
       std::cerr <<  "After  LinPolytopeWMat_Isomorphism\n";
       if (equiv_opt) {
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
     }
-    for (auto & eGen : LinPolytopeWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair.val.pair_char))
+    std::cerr << "Before the automorphism insertions\n";
+    for (auto & eGen : LinPolytopeWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
-    l_entry.emplace_back(std::move(v_pair));
+    std::cerr << "Before v_pair insertions\n";
+    l_entry.push_back(v_pair);
+    std::cerr << "After v_pair insertions\n";
   };
   size_t iVERT = 0;
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
@@ -1011,6 +1024,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     size_t iFAC = 0;
+    std::cerr << "1 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     for (auto & eFAC : vf) {
       Face fFAC = eFAC;
       /*
@@ -1020,31 +1034,43 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       fFAC[0] = 0;
       */
       size_t i_disc = std::numeric_limits<size_t>::max();
+      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << "\n";
       std::vector<MyVector<Tint>> l_ui;
+      std::cerr << "2 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       for (size_t i_root=0; i_root<n_root; i_root++) {
+        std::cerr << "i_root=" << i_root << " / " << n_root << "\n";
         if (fFAC[i_root] == 1) {
+          std::cerr << "  Before l_ui push_back operation |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
           l_ui.push_back(theVert.l_roots[i_root]);
+          std::cerr << "  After l_ui push_back operation\n";
         } else {
           i_disc = i_root;
         }
       }
       std::cerr << "iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
       MyVector<Tint> v_disc = theVert.l_roots[i_disc];
+      std::cerr << "3 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      std::cerr << "4 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
       T norm = gen_nofrac.dot(G * gen_nofrac);
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " Result of EdgewalkProcedure norm=" << norm << "\n";
       std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
-      PairVertices<T,Tint> epair = gen_pair_vertices(G, theVert, fVert);
+      std::cerr << "5 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
+      PairVertices<T,Tint> epair{theVert, fVert};
+      std::cerr << "6 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::cerr << "We have epair\n";
-      EnumEntry entry{false, true, std::move(epair)};
+      EnumEntry entry{false, true, epair};
+      std::cerr << "7 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::cerr << "We have entry\n";
       func_insert_pair_vertices(entry);
       iFAC++;
+      std::cerr << "8 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     }
     iVERT++;
+    std::cerr << "Exiting from the insert_edges_from_vertex\n";
   };
   insert_edges_from_vertex(eVert);
   while(true) {

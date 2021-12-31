@@ -662,8 +662,8 @@ MyMatrix<T> string_to_coxdyn_matrix(std::string const& str)
     n_vert += M.rows();
   }
   MyMatrix<T> Mret(n_vert,n_vert);
-  for (int i=0; i<n_vert; i++)
-    for (int j=0; j<n_vert; j++)
+  for (size_t i=0; i<n_vert; i++)
+    for (size_t j=0; j<n_vert; j++)
       Mret(i,j) = 2;
   size_t shift = 0;
   for (auto & M : LMat) {
@@ -683,7 +683,7 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
   if (opt) {
     const std::vector<IrrCoxDyn<T>> & l_irr = *opt;
     std::string str = IrrCoxDyn_to_string(l_irr[0]);
-    for (int i=1; i<l_irr.size(); i++)
+    for (size_t i=1; i<l_irr.size(); i++)
       str += "+" + IrrCoxDyn_to_string(l_irr[i]);
     return str;
   }
@@ -766,10 +766,10 @@ MyMatrix<T> ExtendMatrix(MyMatrix<T> const& M, MyVector<T> const& V)
 {
   size_t len = M.rows();
   MyMatrix<T> Mret(len+1, len+1);
-  for (int i=0; i<len; i++)
-    for (int j=0; j<len; j++)
+  for (size_t i=0; i<len; i++)
+    for (size_t j=0; j<len; j++)
       Mret(i,j) = M(i,j);
-  for (int i=0; i<len; i++) {
+  for (size_t i=0; i<len; i++) {
     Mret(len,i) = V(i);
     Mret(i,len) = V(i);
   }
@@ -782,10 +782,10 @@ MyMatrix<T> ExtendMatrixNorm(MyMatrix<T> const& M, MyVector<T> const& V, T const
 {
   size_t len = M.rows();
   MyMatrix<T> Mret(len+1, len+1);
-  for (int i=0; i<len; i++)
-    for (int j=0; j<len; j++)
+  for (size_t i=0; i<len; i++)
+    for (size_t j=0; j<len; j++)
       Mret(i,j) = M(i,j);
-  for (int i=0; i<len; i++) {
+  for (size_t i=0; i<len; i++) {
     Mret(len,i) = V(i);
     Mret(i,len) = V(i);
   }
