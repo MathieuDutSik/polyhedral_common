@@ -800,12 +800,13 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 1\n";
 #endif
+  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
   std::set<MyVector<T>> SetExtensions;
   T val_comm = 2;
   T val_single_edge = 3;
   T val_four = 4;
   T val_six = 6;
-  T val_inf = practical_infinity<T>();
+  T val_inf = practical_infinity<T>(); // For supporting I1(infinity)
   std::vector<T> allowed_vals;
   if (DS.OnlyLorentzianAdmissible) {
     allowed_vals.push_back(val_single_edge);
@@ -821,17 +822,47 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   }
   size_t dim = M.rows();
   std::vector<size_t> list_deg(dim);
+  std::vector<size_t> list_n_higher(dim);
   std::vector<size_t> list_isolated;
   for (size_t i=0; i<dim; i++) {
     size_t n_adj = 0;
+    size_t n_higher = 0;
     for (size_t j=0; j<dim; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm)
         n_adj++;
+      if (i != j && val != val_comm && val != val_single_edge)
+        n_higher++;
     }
     list_deg[i] = n_adj;
+    list_n_higher[i] = n_higher;
     if (n_adj == 0)
       list_isolated.push_back(i);
+  }
+  size_t n_isolated = list_isolated.size();
+  std::vector<size_t> list_deg01_for_triple_vertex; // Part of En, Dn, tilde or not
+  for (auto &eConn : LConn) {
+    size_t dim_res=eConn.size();
+    MyMatrix<T> Mres(dim_res, dim_res);
+    for (size_t i=0; i<dim_res; i++)
+      for (size_t j=0; j<dim_res; j++)
+        Mres(i,j) = M(eConn[i], eConn[j]);
+    std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(Mres);
+    if (!opt) {
+      std::cerr << "The diagram should have been recognized\n";
+      throw TerminalException{1};
+    }
+    const IrrCoxDyn<T>& cd = *opt;
+    // The diagrams that can be part of triple points are:
+    //   An, Dn, Bn
+    // The diagrams that cannot be part of triple points are:
+    //   En, tildeEn, tildeDn, tildeBn, tildeCn, F4, tildeF4, G2, tildeG2
+    if (cd.type == "A" || cd.type == "D" || cd.type == "B") {
+      for (auto & eVert : eConn) {
+        if (list_deg[eVert] <= 1) // Case 0 corresponds to A1
+          list_deg01_for_triple_vertex.push_back(eVert);
+      }
+    }
   }
   // Consider the case of adding unconnected vector
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -843,6 +874,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 3\n";
 #endif
+  size_t n_diagram_considered = 0;
+  size_t n_diagram_match = 0;
   auto test_vector_and_insert=[&](const MyVector<T>& V) -> void {
     MyMatrix<T> Mtest(dim+1,dim+1);
     for (size_t i=0; i<dim; i++)
@@ -855,40 +888,92 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
+    n_diagram_considered++;
     bool test = CheckDiagram(Mtest, DS);
     //    std::cerr << "test=" << test << "\n";
-    if (test)
+    if (test) {
       SetExtensions.insert(V);
+      n_diagram_match++;
+    }
   };
   test_vector_and_insert(V_basic);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 4\n";
 #endif
   // Considering the case of just one edge
-  for (size_t i=0; i<dim; i++) {
-    // Here we have an arbitrary value
-    for (auto & val : allowed_vals) {
-#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-      std::cerr << "i=" << i << " val=" << val << "\n";
-#endif
+  if (DS.OnlyLorentzianAdmissible && false) {
+    for (size_t i=0; i<dim; i++) {
       MyVector<T> V = V_basic;
-      V(i) = val;
+      V(i) = val_single_edge;
       test_vector_and_insert(V);
+      V(i) = val_four;
+      test_vector_and_insert(V);
+    }
+    for (auto & eIsol : list_isolated) {
+      MyVector<T> V = V_basic;
+      V(eIsol) = val_six;
+      test_vector_and_insert(V);
+      V(eIsol) = val_inf;
+      test_vector_and_insert(V);
+    }
+  } else {
+    for (size_t i=0; i<dim; i++) {
+      // Here we have an arbitrary value
+      for (auto & val : allowed_vals) {
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+        std::cerr << "i=" << i << " val=" << val << "\n";
+#endif
+        MyVector<T> V = V_basic;
+        V(i) = val;
+        test_vector_and_insert(V);
+      }
     }
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 5\n";
 #endif
   // Considering the case of 2 edges
-  for (size_t i=0; i<dim; i++) {
-    for (size_t j=0; j<dim; j++) {
-      if (i != j) {
-        for (T val=val_single_edge; val<=val_six; val++) {
+  if (DS.OnlyLorentzianAdmissible) {
+    for (size_t i=0; i<dim; i++) {
+      for (size_t j=i+1; j<dim; j++) {
+        MyVector<T> V = V_basic;
+        V(i) = val_single_edge;
+        V(j) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+    for (size_t i=0; i<dim; i++) {
+      for (size_t j=0; j<dim; j++) {
+        if (i != j) {
           MyVector<T> V = V_basic;
           V(i) = val_single_edge;
-          V(j) = val;
-          //          std::cerr << "i=" << i << " j=" << j << " V=" << StringVector(V);
+          V(j) = val_four;
           test_vector_and_insert(V);
+        }
+      }
+    }
+    if (!DS.OnlySpherical) { // Only tildeG2 is possible here
+      for (size_t i=0; i<n_isolated; i++) {
+        for (size_t j=0; j<n_isolated; j++) {
+          if (i != j) {
+            MyVector<T> V = V_basic;
+            V(list_isolated[i]) = val_single_edge;
+            V(list_isolated[j]) = val_six;
+            test_vector_and_insert(V);
+          }
+        }
+      }
+    }
+  } else {
+    for (size_t i=0; i<dim; i++) {
+      for (size_t j=0; j<dim; j++) {
+        if (i != j) {
+          for (T val=val_single_edge; val<=val_six; val++) {
+            MyVector<T> V = V_basic;
+            V(i) = val_single_edge;
+            V(j) = val;
+            test_vector_and_insert(V);
+          }
         }
       }
     }
@@ -897,24 +982,26 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   std::cerr << "FindDiagramExtensions, step 6\n";
 #endif
   // Considering the case of 3 edges. All have to be single edges
-  SetCppIterator SCI_A(dim,3);
+  size_t n_cand_triple = list_deg01_for_triple_vertex.size();
+  SetCppIterator SCI_A(n_cand_triple,3);
   for (auto & eV : SCI_A) {
     MyVector<T> V = V_basic;
     for (auto & eVal : eV)
-      V(eVal) = val_single_edge;
+      V(list_deg01_for_triple_vertex[eVal]) = val_single_edge;
     test_vector_and_insert(V);
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 7\n";
 #endif
-  size_t n_isolated = list_isolated.size();
-  SetCppIterator SCI_B(n_isolated,4);
-  for (auto & eV : SCI_B) {
-    MyVector<T> V = V_basic;
-    for (auto & eVal : eV)
-      V(list_isolated[eVal]) = val_single_edge;
-    test_vector_and_insert(V);
+  if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
+    SetCppIterator SCI_B(n_isolated,4);
+    for (auto & eV : SCI_B) {
+      MyVector<T> V = V_basic;
+      for (auto & eVal : eV)
+        V(list_isolated[eVal]) = val_single_edge;
+      test_vector_and_insert(V);
+    }
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 8\n";
@@ -922,9 +1009,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   std::vector<MyVector<T>> ListExtensions;
   for (auto &eEnt : SetExtensions)
     ListExtensions.push_back(eEnt);
-#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "FindDiagramExtensions, step 9\n";
-#endif
+  std::cerr << "Stats : |ListExtensions|=" << ListExtensions.size() << " n_diagram_considered=" << n_diagram_considered << " n_diagram_match=" << n_diagram_match << "\n";
   return ListExtensions;
 }
 
