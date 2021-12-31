@@ -901,7 +901,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   std::cerr << "FindDiagramExtensions, step 4\n";
 #endif
   // Considering the case of just one edge
-  if (DS.OnlyLorentzianAdmissible && false) {
+  if (DS.OnlyLorentzianAdmissible) {
     for (size_t i=0; i<dim; i++) {
       MyVector<T> V = V_basic;
       V(i) = val_single_edge;
@@ -913,8 +913,10 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       MyVector<T> V = V_basic;
       V(eIsol) = val_six;
       test_vector_and_insert(V);
-      V(eIsol) = val_inf;
-      test_vector_and_insert(V);
+      if (!DS.OnlySpherical) {
+        V(eIsol) = val_inf;
+        test_vector_and_insert(V);
+      }
     }
   } else {
     for (size_t i=0; i<dim; i++) {
