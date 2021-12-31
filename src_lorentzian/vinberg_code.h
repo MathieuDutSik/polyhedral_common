@@ -1302,7 +1302,7 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
   std::vector<MyVector<Tint>> ListRootRet;
-  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, [[maybe_unused]] MyMatrix<T> const& FACfeasible) -> bool {
     if (is_FundPoly(Vtot, ListRoot)) {
       ListRootRet = ListRoot;
       return true;
@@ -1320,7 +1320,7 @@ template<typename T, typename Tint>
 std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
 {
   std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair;
-  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, [[maybe_unused]] MyMatrix<T> const& FACfeasible) -> bool {
     std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
     if (opt) {
       MyVector<Tint> v = *opt;

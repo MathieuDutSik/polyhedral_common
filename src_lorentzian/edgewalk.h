@@ -662,7 +662,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     //    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
+      //      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
       if (val == poss.res_norm) {
         //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
         //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);

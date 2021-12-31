@@ -310,13 +310,16 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   size_t n_higher_edge = 0;
   GraphBitset eG(n_vert);
   std::map<T,size_t> multiplicity;
+  std::vector<std::vector<size_t>> LLAdj;
   for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
+    std::vector<size_t> LAdj;
     for (size_t j=0; j<n_vert; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm) {
         n_adj++;
         eG.AddAdjacent(i, j);
+        LAdj.push_back(j);
         if (j > i) {
           multiplicity[val]++;
           if (val != val_single_edge)
@@ -335,17 +338,11 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     if (n_adj > 4)
       list_degN.push_back(i);
     list_deg[i] = n_adj;
+    LLAdj.push_back(LAdj);
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 2\n";
 #endif
-  auto get_list_adjacent=[&](size_t u) -> std::vector<size_t> {
-    std::vector<size_t> LAdj;
-    for (size_t j=0; j<n_vert; j++)
-      if (u != j && M(u,j) != val_comm)
-        LAdj.push_back(j);
-    return LAdj;
-  };
   auto get_value_isolated=[&](size_t u) -> T {
     for (size_t j=0; j<n_vert; j++)
       if (u != j && M(u,j) != val_comm)
@@ -404,7 +401,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     if (n_higher_edge != 0)
       return {};
     for (auto & ePt : list_deg3) {
-      std::vector<size_t> LAdj = get_list_adjacent(ePt);
+      std::vector<size_t> const& LAdj = LLAdj[ePt];
       size_t n_deg1 = 0;
       for (auto & fPt : LAdj)
         if (list_deg[fPt] == 1)
@@ -503,7 +500,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
     size_t eCent = list_deg1[0];
-    std::vector<size_t> LAdj = get_list_adjacent(eCent);
+    std::vector<size_t> const& LAdj = LLAdj[eCent];
     size_t n_sing = 0;
     for (auto & eAdj : LAdj) {
       if (list_deg[eAdj] == 1)
@@ -529,7 +526,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     size_t iter=0;
     while(true) {
       iter++;
-      std::vector<size_t> LVal = get_list_adjacent(val2);
+      std::vector<size_t> const& LVal = LLAdj[val2];
       if (LVal.size() == 1)
         break;
       size_t NewPt = -1;
@@ -544,7 +541,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   };
   size_t eCent = list_deg3[0];
   std::map<size_t, size_t> map_len;
-  for (auto & eAdj : get_list_adjacent(eCent)) {
+  for (auto & eAdj : LLAdj[eCent]) {
     size_t len = get_length(eCent, eAdj);
     map_len[len]++;
   }

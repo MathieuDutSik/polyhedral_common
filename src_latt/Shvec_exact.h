@@ -357,7 +357,7 @@ inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeI
 template<typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<is_ring_field<T>::value,int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
 {
-  auto f_set_bound=[&](const T& eQuot, const T& eSum, const MyMatrix<T>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
+  auto f_set_bound=[&](const T& eQuot, const T& eSum, [[maybe_unused]] const MyMatrix<T>&q, [[maybe_unused]] const MyVector<Tint>& x, [[maybe_unused]] const int& i, Tint& upper, Tint& lower) -> void {
     upper = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
   };
@@ -370,7 +370,7 @@ template<typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<(not is_ring_field<T>::value),int>::type computeIt(const T_shvec_request<T>& request, const T&bound, Finsert f_insert)
 {
   using Tfield=typename overlying_field<T>::field_type;
-  auto f_set_bound=[&](const Tfield& eQuot, const Tfield& eSum, const MyMatrix<Tfield>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
+  auto f_set_bound=[&](const Tfield& eQuot, const Tfield& eSum, [[maybe_unused]] const MyMatrix<Tfield>&q, [[maybe_unused]] const MyVector<Tint>& x, [[maybe_unused]] const int& i, Tint& upper, Tint& lower) -> void {
     upper = Infinitesimal_Floor<Tfield,Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<Tfield,Tint>(eQuot, eSum);
   };
@@ -394,7 +394,7 @@ int computeIt_polytope(const T_shvec_request<T>& request, const T&bound, const M
     std::cerr << "Error in the size of FAC\n";
     throw TerminalException{1};
   }
-  auto f_set_bound=[&](const T& eQuot, const T& eSum, const MyMatrix<T>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
+  auto f_set_bound=[&](const T& eQuot, const T& eSum, [[maybe_unused]] const MyMatrix<T>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
     upper = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
     int len = 2+i;
@@ -550,7 +550,7 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
   T_shvec_info<T,Tint> info;
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_BOUND) {
     info.minimum = request.bound;
-    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+    auto f_insert=[&](const MyVector<Tint>& V, [[maybe_unused]] const T& min) -> bool {
       info.short_vectors.push_back(V);
       return true;
     };
@@ -581,7 +581,7 @@ T_shvec_info<T,Tint> T_computeShvec(const T_shvec_request<T>& request)
   }
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {
     info.minimum = request.bound;
-    auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+    auto f_insert=[&](const MyVector<Tint>& V, [[maybe_unused]] const T& min) -> bool {
       info.short_vectors.push_back(V);
       return true;
     };
