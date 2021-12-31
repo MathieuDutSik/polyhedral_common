@@ -77,15 +77,16 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
   std::vector<Tint> root_lengths;
   bool is_even = true;
   size_t n = M.rows();
+  Tint two = 2;
   for (size_t i=0; i<n; i++) {
-    Tint res = M(i,i) % Tint(2);
+    Tint res = ResInt(M(i,i), two);
     if (res != 0)
       is_even = false;
   }
   std::cerr << "is_even=" << is_even << "\n";
   auto is_correct=[&](Tint k) -> bool {
     if (is_even) {
-      Tint res2 = k % Tint(2);
+      Tint res2 = ResInt(k,two);
       if (res2 != 0)
         return false;
     }

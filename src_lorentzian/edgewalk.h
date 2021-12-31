@@ -1017,7 +1017,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before v_pair insertions\n";
     l_entry.push_back(entry);
-    l_orbit_pair_vertices.push_back(v_pair);
+    l_orbit_pair_vertices.emplace_back(std::move(v_pair));
     std::cerr << "7 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "After v_pair insertions\n";
   };
