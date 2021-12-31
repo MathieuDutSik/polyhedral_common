@@ -402,7 +402,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(MySparseMatrix<T> 
 
 
 
-LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(MySparseMatrix<double> const& Aspmat, MyVector<double> const& ListAconst, MySparseMatrix<double> const& Bspmat, MyVector<double> const& ListBconst, MyVector<double> const& ToBeMinimized, GLPKoption const& eGLPKoption)
+LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(MySparseMatrix<double> const& Aspmat, MyVector<double> const& ListAconst, MySparseMatrix<double> const& Bspmat, [[maybe_unused]] MyVector<double> const& ListBconst, MyVector<double> const& ToBeMinimized, [[maybe_unused]] GLPKoption const& eGLPKoption)
 {
   glp_prob *prob = NULL;
   //  glp_erase_prob(prob);
