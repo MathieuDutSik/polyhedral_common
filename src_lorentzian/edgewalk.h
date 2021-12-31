@@ -255,7 +255,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   MyVector<T> sol_u = *opt_u;
   T u1 = sol_u(0);
   T u2 = sol_u(1);
-  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
+  //  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
   std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
   if (!opt_k) {
     std::cerr << "We failed to find a solution for k\n";
@@ -264,19 +264,19 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   MyVector<T> sol_k = *opt_k;
   T k1 = sol_k(0);
   T k2 = sol_k(1);
-  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
-  std::cerr << "u=";
-  WriteVector(std::cerr, u);
-  std::cerr << "k=";
-  WriteVector(std::cerr, k);
+  //  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
+  //  std::cerr << "u=";
+  //  WriteVector(std::cerr, u);
+  //  std::cerr << "k=";
+  //  WriteVector(std::cerr, k);
   //
   GCD_int<T> ep = ComputePairGcd(k1, k2);
   T u1_norm = ep.Pmat(0,0) * u1 + ep.Pmat(1,0) * u2;
   T u2_norm = ep.Pmat(0,1) * u1 + ep.Pmat(1,1) * u2;
   T k1_norm = ep.Pmat(0,0) * k1 + ep.Pmat(1,0) * k2;
   T k2_norm = ep.Pmat(0,1) * k1 + ep.Pmat(1,1) * k2;
-  std::cerr << "norm : u1=" << u1_norm << " u2=" << u2_norm << "\n";
-  std::cerr << "norm : k1=" << k1_norm << " k2=" << k2_norm << "\n";
+  //  std::cerr << "norm : u1=" << u1_norm << " u2=" << u2_norm << "\n";
+  //  std::cerr << "norm : k1=" << k1_norm << " k2=" << k2_norm << "\n";
   if (k2_norm != 0) {
     std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
     throw TerminalException{1};
@@ -286,22 +286,22 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   //
   T c0 = - u1_norm / k1_norm;
   T cS = 1 / k1_norm;
-  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
+  //  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
   T hinp = -c0 / cS;
   T h;
   if (cS > 0) {
     h = UniversalCeilScalarInteger<T,T>(hinp);
-    std::cerr << "1 : hinp=" << hinp << " h=" << h << "\n";
+    //    std::cerr << "1 : hinp=" << hinp << " h=" << h << "\n";
     if (hinp == h)
       h += 1;
   } else {
     h = UniversalFloorScalarInteger<T,T>(hinp);
-    std::cerr << "2 : hinp=" << hinp << " h=" << h << "\n";
+    //    std::cerr << "2 : hinp=" << hinp << " h=" << h << "\n";
     if (hinp == h)
       h -= 1;
   }
   T c = c0 + h * cS;
-  std::cerr << "h=" << h << " c=" << c << "\n";
+  //  std::cerr << "h=" << h << " c=" << c << "\n";
   if (c <= 0) {
     std::cerr << "We should have c>0\n";
     throw TerminalException{1};
@@ -970,7 +970,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 template<typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
-  std::vector<MyMatrix<Tint>> l_gen_isom_cox;
+  std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
   struct EnumEntry {
     bool stat1;
     bool stat2;
@@ -984,7 +984,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
-    l_gen_isom_cox.push_back(eP);
+    s_gen_isom_cox.insert(eP);
   };
   auto func_insert_pair_vertices=[&](EnumEntry & v_pair) -> void {
     for (auto & u_pair : l_entry) {
@@ -1002,6 +1002,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   size_t iVERT = 0;
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
+    std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     size_t dim = G.rows();
     size_t n_root = theVert.l_roots.size();
     MyMatrix<T> FAC(n_root,dim);
@@ -1066,6 +1067,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
   for (auto & epair : l_entry)
     l_orbit_pair_vertices.emplace_back(std::move(epair.val));
+  std::vector<MyMatrix<Tint>> l_gen_isom_cox;
+  for (auto & e_gen : s_gen_isom_cox)
+    l_gen_isom_cox.push_back(e_gen);
   return {l_gen_isom_cox, std::move(l_orbit_pair_vertices)};
 }
 
