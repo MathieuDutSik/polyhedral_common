@@ -1055,7 +1055,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       T scal = - *opt;
       l_scal(i) = scal;
     }
-    std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     //    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
@@ -1084,7 +1084,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
         std::cerr << "The matrices should be equal\n";
         throw TerminalException{1};
       }
-      std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
+      //      std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
       n_zero++;
     }
     std::cerr << "  u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";

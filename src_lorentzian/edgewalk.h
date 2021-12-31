@@ -468,7 +468,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   MyMatrix<T> NSPbas(2,n);
   AssignMatrixRow(NSPbas, 0, r0);
   AssignMatrixRow(NSPbas, 1, k);
-  std::cerr << "|NSPbas|=" << NSPbas.rows() << " / " << NSPbas.cols() << "\n";
   std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
   //
   // Computing the extension and the maximum norms from that.
@@ -654,6 +653,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
   };
   compute_iso_aniso_data();
+  std::cerr << "is_isotropic=" << is_isotropic << "\n";
   std::cerr << "Edgewalk Procedure, step 7\n";
   // Evaluation of fun
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
@@ -824,7 +824,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "u0=" << u0 << " u1=" << u1 << "\n";
     T sum = u0 * u0 * Gred(0,0) + 2 * u0 * u1 * Gred(0,1) + u1 * u1 * Gred(1,1);
     std::cerr << "sum=" << sum << "\n";
-    MyVector<T> gen = u0 * k + u1 * r0;
+    MyVector<T> gen = u0 * r0 + u1 * k;
     //    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
     //    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
     //    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
@@ -1000,6 +1000,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     l_entry.emplace_back(std::move(v_pair));
   };
+  size_t iVERT = 0;
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
     size_t dim = G.rows();
     size_t n_root = theVert.l_roots.size();
@@ -1015,7 +1016,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       Face fFAC(n_root); // Hack to the one that we want to de bug.
       for (size_t i_root=0; i_root<n_root; i_root++)
         fFAC[i_root] = 1;
-      fFAC[12] = 0;
+      fFAC[0] = 0;
       */
       size_t i_disc = std::numeric_limits<size_t>::max();
       std::vector<MyVector<Tint>> l_ui;
@@ -1031,7 +1032,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
       MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
       T norm = gen_nofrac.dot(G * gen_nofrac);
-      std::cerr << "Result of EdgewalkProcedure norm=" << norm << "\n";
+      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " Result of EdgewalkProcedure norm=" << norm << "\n";
       std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       std::cerr << "l_roots=\n";
       WriteMatrix(std::cerr, MatrixFromVectorFamily(fVert.l_roots));
@@ -1042,6 +1043,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       func_insert_pair_vertices(entry);
       iFAC++;
     }
+    iVERT++;
   };
   insert_edges_from_vertex(eVert);
   while(true) {
