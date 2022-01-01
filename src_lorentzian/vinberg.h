@@ -1345,7 +1345,10 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
   std::vector<MyVector<Tint>> ListRootRet;
+  int dim = Vtot.G.rows();
   auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, [[maybe_unused]] MyMatrix<T> const& FACfeasible) -> bool {
+    if (RankMat(FACfeasible) != dim)
+      return false;
     if (is_FundPoly(Vtot, ListRoot)) {
       ListRootRet = ListRoot;
       return true;

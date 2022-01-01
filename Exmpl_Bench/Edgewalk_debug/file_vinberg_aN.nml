@@ -1,6 +1,6 @@
 &PROC
-! FileLorMat = "Debug_a3_LorMat"
- FileLorMat = "Debug_a2_LorMat"
+ FileLorMat = "Debug_a3_LorMat"
+! FileLorMat = "Debug_a2_LorMat"
  FileV0 = "compute"
  OptionNorms = "all"
  OutFormat = "GAP"
