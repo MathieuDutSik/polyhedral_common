@@ -157,7 +157,7 @@ template<typename T, typename Tint>
 RootCandidate<T,Tint> gen_possible_extension(MyMatrix<T> const& G, MyVector<T> const& k, MyVector<Tint> const& alpha, T const& res_norm, T const& e_norm, FundDomainVertex<T,Tint> const& fund_v)
 {
   MyVector<T> alpha_T = UniversalVectorConversion<T,Tint>(alpha);
-  T scal = - k.dot(G * alpha_T);
+  T scal = - alpha_T.dot(G * k);
   T quant1 = (scal * scal) / res_norm;
   T quant2 = (scal * scal) / e_norm;
   return {get_sign_sing(scal), quant1, quant2, e_norm, alpha, fund_v};
@@ -363,8 +363,8 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
                 return sign > 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
               return x.e_norm < y.e_norm;
             });
- 
- for (auto & x : l_candidates) {
+
+  for (auto & x : l_candidates) {
     std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v="; WriteVector(std::cerr, x.v);
   }
   std::cerr << "DetermineRootsCuspidalCase, step 4\n";
@@ -785,6 +785,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
           T scal = v_disc_t.dot(G * k_new);
           if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
             FundDomainVertex<T,Tint> fund_v{k_new,l_roots};
+            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
             RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm, fund_v);
             l_candidates.push_back(eCand);
           }
@@ -795,7 +796,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
   if (l_candidates.size() > 0) {
+    for (auto e_cand : l_candidates)
+      std::cerr << "e_cand sign=" << e_cand.sign << " quant1=" << e_cand.quant1 << " quant2=" << e_cand.quant2 << " e_norm=" << e_cand.e_norm << " fund_v=" << StringVectorGAP(e_cand.fund_v.gen) << " alpha=" << StringVectorGAP(e_cand.alpha) << "\n";
     RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
+    std::cerr << "fund_v=" << StringVectorGAP(best_cand.fund_v.gen) << "\n";
     return best_cand.fund_v;
   }
   // So, no candidates were found. We need to find isotropic vectors.
@@ -1009,12 +1013,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     pair_char<T> v_pair_char = gen_pair_char(G, v_pair);
     std::cerr << "2 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     for (auto & u_pair : l_orbit_pair_vertices) {
-      std::cerr <<  "Before LinPolytopeWMat_Isomorphism\n";
+      std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
       pair_char<T> u_pair_char = gen_pair_char(G, u_pair);
       std::cerr << "3 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
-      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair_char, v_pair_char);
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair_char, v_pair_char);
       std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
-      std::cerr <<  "After  LinPolytopeWMat_Isomorphism\n";
+      std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
@@ -1022,7 +1026,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before the automorphism insertions\n";
-    for (auto & eGen : LinPolytopeWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair_char))
+    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before v_pair insertions\n";

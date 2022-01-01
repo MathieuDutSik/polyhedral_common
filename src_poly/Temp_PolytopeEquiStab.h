@@ -1562,7 +1562,7 @@ WeightMatrix<true, T, Tidx_value> T_TranslateToMatrix_QM_SHV(MyMatrix<T> const& 
 
 
 template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
-std::vector<MyMatrix<T>> LinPolytopeWMat_Automorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep)
+std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep)
 {
   using Tgr=GraphBitset;
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
@@ -1577,8 +1577,8 @@ std::vector<MyMatrix<T>> LinPolytopeWMat_Automorphism(std::pair<MyMatrix<T>, Wei
 
 
 template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
-std::optional<MyMatrix<T>> LinPolytopeWMat_Isomorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep,
-                                                       std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& fp)
+std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep,
+                                                               std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& fp)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
