@@ -1113,13 +1113,14 @@ void Print_DataReflectionGroup_GAP(const DataReflectionGroup<T,Tint>& data, std:
 
 
 template<typename T, typename Tint>
-void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, const std::string& mode, std::ostream& os)
+void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, const std::string& OutFormat, std::ostream& os)
 {
-  if (mode == "txt")
+  if (OutFormat == "TXT")
     return Print_DataReflectionGroup_TXT(data, os);
-  if (mode == "gap")
+  if (OutFormat == "GAP")
     return Print_DataReflectionGroup_GAP(data, os);
-  std::cerr << "Failed to find matching entry\n";
+  std::cerr << "Failed to find matching entry in Print_DataReflectionGroup_TXT\n";
+  std::cerr << "OutFormat=" << OutFormat << " with allowed values being GAP or TXT\n";
   throw TerminalException{1};
 }
 
