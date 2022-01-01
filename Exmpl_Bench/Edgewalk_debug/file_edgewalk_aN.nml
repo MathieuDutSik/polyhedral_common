@@ -1,5 +1,6 @@
 &PROC
- FileLorMat = "Debug_a3_LorMat"
+! FileLorMat = "Debug_a3_LorMat"
+ FileLorMat = "Debug_a2_LorMat"
  OptionInitialVertex = "vinberg"
  FileInitialVertex = "irrelevant"
  OptionNorms = "all"

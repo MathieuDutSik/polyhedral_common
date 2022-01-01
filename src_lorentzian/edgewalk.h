@@ -994,8 +994,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
   auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
-    MyMatrix<T> G2 = eP_T * G * eP_T.transpose();
-    if (G2 != G) {
+    MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
+    if (G_img != G) {
+      std::cerr << "G="; WriteMatrix(std::cerr, G);
+      std::cerr << "eP_T="; WriteMatrix(std::cerr, eP_T);
+      std::cerr << "G_img="; WriteMatrix(std::cerr, G_img);
       std::cerr << "The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
