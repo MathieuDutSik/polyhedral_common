@@ -1032,7 +1032,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
-  auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> v_pair) -> void {
+  auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> const& v_pair) -> void {
     std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     pair_char<T> v_pair_char = gen_pair_char(G, v_pair);
     std::cerr << "2 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
@@ -1045,10 +1045,17 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
         std::cerr << "Find some isomorphism\n";
-        //        std::cerr << "u : EXT=\n";
-        //        WriteMatrix(std::cerr, u_pair_char.first);
-        //        std::cerr << "v : EXT=\n";
-        //        WriteMatrix(std::cerr, v_pair_char.first);
+        /*
+        std::cerr << "u : EXT=\n";
+        WriteMatrix(std::cerr, u_pair_char.first);
+        std::cerr << "u : WMat=\n";
+        PrintWeightedMatrix(std::cerr, u_pair_char.second);
+        //
+        std::cerr << "v : EXT=\n";
+        WriteMatrix(std::cerr, v_pair_char.first);
+        std::cerr << "u : WMat=\n";
+        PrintWeightedMatrix(std::cerr, v_pair_char.second);
+        */
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
@@ -1061,7 +1068,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before v_pair insertions\n";
     l_entry.push_back(entry);
-    l_orbit_pair_vertices.emplace_back(std::move(v_pair));
+    l_orbit_pair_vertices.push_back(v_pair);
+    std::cerr << "|l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
     std::cerr << "7 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "After v_pair insertions\n";
   };

@@ -1592,6 +1592,8 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   using Tgr = GraphBitset;
   if (ep.first.rows() != fp.first.rows() || ep.first.cols() != fp.first.cols())
     return {};
+  if (ep.second.GetWeight() != fp.second.GetWeight())
+    return {};
   //  std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
   //  std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
   //  std::cerr << "ep.second=\n";
