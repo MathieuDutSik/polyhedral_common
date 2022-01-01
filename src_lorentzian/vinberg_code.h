@@ -9,7 +9,7 @@
 #include "POLY_lrslib.h"
 #include "coxeter_dynkin.h"
 #include "Temp_ShortVectorUndefinite.h"
-
+#include "Namelist.h"
 
 #define DEBUG_VINBERG
 
@@ -105,6 +105,29 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
   }
   return root_lengths;
 }
+
+
+template<typename T, typename Tint>
+std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& OptionNorms)
+{
+  if (OptionNorms == "K3")
+    return {T(2)};
+  if (OptionNorms == "all") {
+    FractionMatrix<T> Fr = RemoveFractionMatrixPlusCoeff(G);
+    MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint,T>(Fr.TheMat);
+    std::vector<Tint> l_norms_tint = Get_root_lengths(G_Tint);
+    std::vector<T> l_norms;
+    for (auto & eN : l_norms_tint) {
+      T val1 = UniversalScalarConversion<T,Tint>(eN);
+      T val2 = val1 / Fr.TheMult;
+      l_norms.push_back(val2);
+    }
+    return l_norms;
+  }
+  std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
+  throw TerminalException{1};
+}
+
 
 
 //
@@ -271,7 +294,7 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0)
+VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0, std::vector<Tint> const& root_lengths)
 {
   int n=G.rows();
   // Computing the complement of the space.
@@ -325,7 +348,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
-  std::vector<Tint> root_lengths = Get_root_lengths(G);
+  //  std::vector<Tint> root_lengths = Get_root_lengths(G);
   std::cerr << "s.root_lengths =";
   for (auto & eVal : root_lengths)
     std::cerr << " " << eVal;
@@ -336,14 +359,23 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G)
+MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
 {
   T CritNorm = 0;
   bool StrictIneq = true;
   bool NeedNonZero = true;
   MyVector<Tint> eVect=GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
+  return eVect;
+}
+
+
+
+template<typename T, typename Tint>
+VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<Tint> const& root_lengths)
+{
+  MyVector<Tint> eVect=GetV0_vector<T,Tint>(G);
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
-  return GetVinbergAux<T,Tint>(G_i, eVect);
+  return GetVinbergAux<T,Tint>(G_i, eVect, root_lengths);
 }
 
 
@@ -1343,12 +1375,74 @@ std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> FindOneInitialRay(const V
   return epair;
 }
 
+FullNamelist NAMELIST_GetStandard_VINBERG()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListStringValues1["FileLorMat"]="the lorentzian matrix used";
+  ListStringValues1["OptionInitialVertex"]="vinberg or File and if File selected use FileVertDomain as initial vertex";
+  ListStringValues1["FileInitialVertex"]="unset put the name of the file used for the initial vertex";
+  ListStringValues1["OptionNorms"]="possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
+  ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
+  SingleBlock BlockPROC;
+  BlockPROC.ListStringValues=ListStringValues1;
+  ListBlock["PROC"]=BlockPROC;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
 
 
-
-
-
-
+template<typename T, typename Tint>
+void MainFunctionVinberg(FullNamelist const& eFull)
+{
+  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
+  std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
+  MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeNonDegenerateSymmetricMatrix(G);
+  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
+    std::cerr << "We have nbZero=" << DiagInfo.nbZero << " nbPlus=" << DiagInfo.nbPlus << " nbMinus=" << DiagInfo.nbMinus << "\n";
+    std::cerr << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
+    throw TerminalException{1};
+  }
+  //
+  std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
+  MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
+  std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
+  std::vector<Tint> root_lengths;
+  for (auto & eN : l_norms)
+    root_lengths.push_back(UniversalScalarConversion<Tint,T>(eN));
+  //
+  std::string FileV0=BlockPROC.ListStringValues.at("FileV0");
+  MyVector<Tint> v0;
+  if (FileV0 == "compute") {
+    v0 = GetV0_vector<T,Tint>(G);
+  } else {
+    MyVector<Tint> v0 = ReadVectorFile<Tint>(FileV0);
+  }
+  //
+  VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G_i, v0, root_lengths);
+  std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
+  DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G_i);
+  //
+  std::string mode=BlockPROC.ListStringValues.at("mode");
+  std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
+  if (FileOut == "stderr") {
+    Print_DataReflectionGroup(data, mode, std::cerr);
+  } else {
+    if (FileOut == "stdout") {
+      Print_DataReflectionGroup(data, mode, std::cout);
+    } else {
+      std::ofstream os(FileOut);
+      Print_DataReflectionGroup(data, mode, os);
+    }
+  }
+}
 
 
 #endif

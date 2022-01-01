@@ -1110,27 +1110,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 
-template<typename T, typename Tint>
-std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& OptionNorms)
-{
-  if (OptionNorms == "K3")
-    return {T(2)};
-  if (OptionNorms == "all") {
-    MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint,T>(G);
-    std::vector<Tint> l_norms_tint = Get_root_lengths(G_Tint);
-    std::vector<T> l_norms;
-    for (auto & eN : l_norms_tint)
-      l_norms.push_back(T(eN));
-    return l_norms;
-  }
-  std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
-  throw TerminalException{1};
-}
-
-
 
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<Tint> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   if (OptionInitialVertex == "File") {
     std::ifstream is(FileInitialVertex);
@@ -1145,11 +1127,11 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::string co
     return {gen, l_roots};
   }
   if (OptionInitialVertex == "vinberg") {
-    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G);
+    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
     std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
     return {UniversalVectorConversion<T,Tint>(epair.first), epair.second};
   }
-  std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
+  std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
   throw TerminalException{1};
 }
 
@@ -1173,7 +1155,7 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, OptionInitialVertex, FileInitialVertex);
   //
   ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
