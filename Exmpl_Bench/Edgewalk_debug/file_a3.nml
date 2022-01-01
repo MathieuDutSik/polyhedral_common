@@ -1,0 +1,9 @@
+&PROC
+ FileLorMat = "Debug_a3_LorMat"
+ OptionInitialVertex = "vinberg"
+ FileInitialVertex = "irrelevant"
+ OptionNorms = "all"
+ OutFormat = "GAP"
+ FileOut = "stdout"
+/
+

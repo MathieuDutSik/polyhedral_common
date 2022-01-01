@@ -12,7 +12,7 @@
   --- The values M(i,i) are not used.
  */
 
-//#define DEBUG_COXETER_DYNKIN_COMBINATORICS
+#define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
 
 template<typename T>
@@ -410,7 +410,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     return IrrCoxDyn<T>{"tildeD",n_vert-1, 0}; // Only tilde{Dn} is possible
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6\n";
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6 |list_deg3|=" << list_deg3.size() << "\n";
 #endif
   if (list_deg3.size() == 0) { // We are in a single path.
     if (multiplicity[val_four] == 2) {
@@ -422,7 +422,11 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
           return {};
       return IrrCoxDyn<T>{"tildeC",n_vert-1,0}; // This is tilde{Cn}
     }
-    if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4 and tilde{F4} are possible
+    if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4, tilde{F4}, and I2(4) are possible
+      if (n_vert == 2) {
+        T param = 4;
+        return IrrCoxDyn<T>{"I", 2, param}; // It is I2(4)
+      }
       if (n_higher_edge != 1)
         return {}; // There are other edges, excluded.
       size_t n_sing = 0;
@@ -623,6 +627,10 @@ std::optional<std::vector<IrrCoxDyn<T>>> RecognizeSphericalEuclideanDiagram(cons
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+    std::cerr << "Mres=\n";
+    WriteMatrix(std::cerr, Mres);
+#endif
     std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(Mres);
     if (opt) {
       IrrCoxDyn<T> cd = *opt;
@@ -682,6 +690,8 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
       str += "+" + IrrCoxDyn_to_string(l_irr[i]);
     return str;
   }
+  std::cerr << "M=\n";
+  WriteMatrix(std::cerr, M);
   std::cerr << "The recognition failed so coxdyn_matrix_to_string cannot work\n";
   throw TerminalException{1};
 }
