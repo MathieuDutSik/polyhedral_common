@@ -1585,8 +1585,14 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   using Tgr = GraphBitset;
   if (ep.first.rows() != fp.first.rows() || ep.first.cols() != fp.first.cols())
     return {};
-  std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
-  std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
+  //  std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
+  //  std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
+  //  std::cerr << "ep.second=\n";
+  //  PrintWeightedMatrix(std::cerr, ep.second);
+  //  std::cerr << "fp.second=\n";
+  //  PrintWeightedMatrix(std::cerr, fp.second);
+
+  
   std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
   std::cerr << "Before fCanonicReord\n";
@@ -1598,6 +1604,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
     return {};
   }
   Telt ePerm(IsoInfo->first);
+  std::cerr << "ePerm=" << ePerm << "\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
   if (eRes)

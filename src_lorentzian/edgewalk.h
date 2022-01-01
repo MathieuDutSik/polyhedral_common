@@ -931,6 +931,7 @@ pair_char<T> gen_pair_char(MyMatrix<T> const& G, PairVertices<T,Tint> const& ep)
   MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
   using Tidx_value = uint16_t;
   WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix<T,Tidx_value>(MatV, G);
+  WMat.ReorderingSetWeight();
   return {MatV,std::move(WMat)};
 }
 
@@ -1020,6 +1021,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
+        std::cerr << "u : EXT=\n";
+        WriteMatrix(std::cerr, u_pair_char.first);
+        std::cerr << "v : EXT=\n";
+        WriteMatrix(std::cerr, v_pair_char.first);
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
