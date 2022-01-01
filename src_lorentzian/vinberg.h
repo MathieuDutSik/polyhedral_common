@@ -933,6 +933,7 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
   bool IsFiniteCovolume = true;
   bool IsFirst = true;
   size_t n_iter = 0;
+  std::unordered_map<Tint,int> map;
   auto f=[&](Tint* out) -> bool {
     if (!IsFirst) {
       n_iter++;
@@ -940,6 +941,7 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
       Tint scal = V.dot(Vtot.G * V);
+      map[scal]++;
       if (scal > 0) {
         IsFiniteCovolume = false;
         return false;
@@ -951,6 +953,10 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
   lrs::Kernel_DualDescription_cond(FACwork, f);
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter << " |is_FundPoly_LRS|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
+  std::cerr << "norm multiplicities =";
+  for (auto & kv : map)
+    std::cerr << " [" << kv.first << "," << kv.second << "]";
+  std::cerr << "\n";
   return IsFiniteCovolume;
 }
 
