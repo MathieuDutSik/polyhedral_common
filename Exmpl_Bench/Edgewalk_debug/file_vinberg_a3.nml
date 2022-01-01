@@ -1,0 +1,7 @@
+&PROC
+ FileLorMat = "Debug_a3_LorMat"
+ OptionNorms = "all"
+ OutFormat = "GAP"
+ FileOut = "stdout"
+/
+

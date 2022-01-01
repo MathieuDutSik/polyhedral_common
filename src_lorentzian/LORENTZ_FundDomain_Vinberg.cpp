@@ -2,7 +2,7 @@
 #include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
-#include "vinberg_code.h"
+#include "vinberg.h"
 
 
 int main(int argc, char* argv[])

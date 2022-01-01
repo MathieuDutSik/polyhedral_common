@@ -5,7 +5,7 @@
 #include "Temp_PolytopeEquiStab.h"
 #include "two_dim_lorentzian.h"
 #include "coxeter_dynkin.h"
-#include "vinberg_code.h"
+#include "vinberg.h"
 #include "Namelist.h"
 #include "Temp_Positivity.h"
 #include "POLY_lrslib.h"
@@ -413,7 +413,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // Find a basis (k,r0) of the plane P
   //
   MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
-  std::cerr << "v_disc_t="; WriteVector(std::cerr, v_disc_t);
+  std::cerr << "v_disc_t=" << StringVectorGAP(v_disc_t) << "\n";
+  MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_ui).first;
+  std::string symb = coxdyn_matrix_to_string(CoxMat);
+  std::cerr << "Coxeter diagram of the vertex k in u_i direction=" << symb << "\n";
   int n = G.rows();
   size_t n_root = l_ui.size();
   std::cerr << "n_root=" << n_root << "\n";
@@ -1030,10 +1033,19 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     size_t dim = G.rows();
     size_t n_root = theVert.l_roots.size();
+    MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, theVert.l_roots).first;
+    std::cerr << "CoxMat=\n";
+    WriteMatrix(std::cerr, CoxMat);
+    std::string symb = coxdyn_matrix_to_string(CoxMat);
+    std::cerr << "Coxeter diagram of the vertex k=" << symb << "\n";
     MyMatrix<T> FAC(n_root,dim);
     for (size_t i_root=0; i_root<n_root; i_root++)
       AssignMatrixRow(FAC, i_root, UniversalVectorConversion<T,Tint>(theVert.l_roots[i_root]));
+    std::cerr << "FAC=\n";
+    WriteMatrix(std::cerr, FAC);
     MyMatrix<T> FACred = ColumnReduction(FAC);
+    std::cerr << "FACred=\n";
+    WriteMatrix(std::cerr, FACred);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     size_t iFAC = 0;
     std::cerr << "1 : SIZ |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
