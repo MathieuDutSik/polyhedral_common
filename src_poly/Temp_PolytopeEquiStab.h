@@ -1593,18 +1593,18 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   //  PrintWeightedMatrix(std::cerr, fp.second);
 
   
-  std::cerr << "Before eCanonicReord\n";
+  //  std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
-  std::cerr << "Before fCanonicReord\n";
+  //  std::cerr << "Before fCanonicReord\n";
   std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(fp.second).first;
   using Tfield = typename overlying_field<T>::field_type;
-  std::cerr << "Before IsomorphismFromCanonicReord\n";
+  //  std::cerr << "Before IsomorphismFromCanonicReord\n";
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord);
   if (!IsoInfo) {
     return {};
   }
   Telt ePerm(IsoInfo->first);
-  std::cerr << "ePerm=" << ePerm << "\n";
+  //  std::cerr << "ePerm=" << ePerm << "\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
   if (eRes)

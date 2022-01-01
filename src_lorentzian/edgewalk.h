@@ -86,18 +86,21 @@ void WriteFundDomainVertex(FundDomainVertex<T,Tint> const& vert, std::ostream & 
   MyMatrix<Tint> Mroot = MatrixFromVectorFamily(vert.l_roots);
   if (OutFormat == "GAP") {
     os << "rec(gen:=";
-    WriteMatrixGAP(os, vert.gen);
+    WriteVectorGAP(os, vert.gen);
     os << ", l_roots:=";
     WriteMatrixGAP(os, Mroot);
     os << ")";
+    return;
   }
   if (OutFormat == "TXT") {
     os << "gen=";
-    WriteMatrix(os, vert.gen);
+    WriteVector(os, vert.gen);
     os << "l_roots=\n";
     WriteMatrixGAP(os, Mroot);
+    return;
   }
   std::cerr << "Failed to find a matching entry for WritePairVertices\n";
+  std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
   throw TerminalException{1};
 }
 
@@ -900,14 +903,17 @@ void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std
     os << ", vert2:=";
     WriteFundDomainVertex(epair.vert2, os, OutFormat);
     os << ")";
+    return;
   }
   if (OutFormat == "TXT") {
     os << "vert&=\n";
     WriteFundDomainVertex(epair.vert1, os, OutFormat);
     os << "vert2=\n";
     WriteFundDomainVertex(epair.vert2, os, OutFormat);
+    return;
   }
   std::cerr << "Failed to find a matching entry for WritePairVertices\n";
+  std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
   throw TerminalException{1};
 }
 
@@ -974,12 +980,24 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     WriteStdVectorGAP(os, l_norms);
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
-    os << ", ListVertices:=";
+    os << ", ListVertices:=[";
+    bool IsFirst = true;
+    for (auto & e_pair_vert : re.l_orbit_pair_vertices) {
+      os << "\n";
+      if (!IsFirst)
+        os << ",";
+      IsFirst = false;
+      WritePairVertices(e_pair_vert, os, OutFormat);
+    }
+    os << "]);\n";
+    return;
   }
   if (OutFormat == "TXT") {
     os << "List of found generators of Isom / Cox\n";
+    return;
   }
   std::cerr << "Failed to find a matching entry in PrintResultEdgewalk\n";
+  std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
   throw TerminalException{1};
 }
 
@@ -1021,14 +1039,16 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
-        std::cerr << "u : EXT=\n";
-        WriteMatrix(std::cerr, u_pair_char.first);
-        std::cerr << "v : EXT=\n";
-        WriteMatrix(std::cerr, v_pair_char.first);
+        std::cerr << "Find some isomorphism\n";
+        //        std::cerr << "u : EXT=\n";
+        //        WriteMatrix(std::cerr, u_pair_char.first);
+        //        std::cerr << "v : EXT=\n";
+        //        WriteMatrix(std::cerr, v_pair_char.first);
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
     }
+    std::cerr << "Failed to find some isomorphism\n";
     std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before the automorphism insertions\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair_char))
@@ -1160,6 +1180,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<Ti
     return {UniversalVectorConversion<T,Tint>(epair.first), epair.second};
   }
   std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
+  std::cerr << "OptionInitialVertex=" << OptionInitialVertex << " but allowed values are File and vinberg\n";
   throw TerminalException{1};
 }
 
