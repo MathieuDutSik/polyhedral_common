@@ -28,10 +28,14 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT = ReadMatrix<T>(is);
     int n_rows= EXT.rows();
     std::cerr << "n_rows=" << n_rows << "\n";
-    Face eSubset = ReadFace(is);
-    std::cerr << "|eSubset|=" << eSubset.size() << " / " << eSubset.count() << "\n";
+    std::vector<T> Vdiag(n_rows);
+    for	(int i=0; i<n_rows; i++) {
+      T val;
+      is >> val;
+      Vdiag[i] = val;
+    }
     //
-    size_t e_hash = GetInvariant_ListMat_Subset(EXT, ListMat, eSubset);
+    size_t e_hash = GetInvariant_ListMat_Vdiag(EXT, ListMat, Vdiag);
     //
     std::ofstream os(argv[2]);
     os << "return " << e_hash << ";\n";

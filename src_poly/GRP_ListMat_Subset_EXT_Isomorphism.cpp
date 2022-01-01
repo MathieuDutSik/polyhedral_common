@@ -28,7 +28,13 @@ int main(int argc, char *argv[])
       ListMat1.push_back(eMat);
     }
     MyMatrix<T> EXT1 = ReadMatrix<T>(is);
-    Face eSubset1 = ReadFace(is);
+    int n_row1=EXT1.rows();
+    std::vector<T> Vdiag1(n_row1);
+    for	(int i=0; i<n_row1; i++) {
+      T val;
+      is >> val;
+      Vdiag1[i] = val;
+    }
     //
     is >> nbMat;
     std::vector<MyMatrix<T>> ListMat2;
@@ -37,10 +43,16 @@ int main(int argc, char *argv[])
       ListMat2.push_back(eMat);
     }
     MyMatrix<T> EXT2 = ReadMatrix<T>(is);
-    Face eSubset2 = ReadFace(is);
+    int n_row2=EXT2.rows();
+    std::vector<T> Vdiag2(n_row2);
+    for	(int i=0; i<n_row2; i++) {
+      T val;
+      is >> val;
+      Vdiag2[i] = val;
+    }
     //
     const bool use_scheme = true;
-    std::optional<std::vector<Tidx>> PairTest = TestEquivalence_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1, EXT2, ListMat2, eSubset2);
+    std::optional<std::vector<Tidx>> PairTest = TestEquivalence_ListMat_Vdiag<T,Tidx,use_scheme>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
     //
     std::ofstream os(argv[2]);
     if (!PairTest) {

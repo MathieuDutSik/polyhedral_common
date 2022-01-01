@@ -37,11 +37,15 @@ int main(int argc, char *argv[])
     MyMatrix<T> EXT = ReadMatrix<T>(is);
     int n_rows= EXT.rows();
     std::cerr << "n_rows=" << n_rows << "\n";
-    Face eSubset = ReadFace(is);
-    std::cerr << "|eSubset|=" << eSubset.size() << " / " << eSubset.count() << "\n";
+    std::vector<T> Vdiag(n_rows);
+    for (int i=0; i<n_rows; i++) {
+      T val;
+      is >> val;
+      Vdiag[i] = val;
+    }
     //
     const bool use_scheme = true;
-    std::vector<std::vector<Tidx>> ListGen = GetListGenAutomorphism_ListMat_Subset<T,Tidx,use_scheme>(EXT, ListMat, eSubset);
+    std::vector<std::vector<Tidx>> ListGen = GetListGenAutomorphism_ListMat_Vdiag<T,Tidx,use_scheme>(EXT, ListMat, Vdiag);
     //
     std::vector<Telt> LGen;
     for (auto & eList : ListGen)

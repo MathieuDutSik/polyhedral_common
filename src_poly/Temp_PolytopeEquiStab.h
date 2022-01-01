@@ -490,7 +490,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism(const MyMatrix<Tin
 
 // ListMat is assumed to be symmetric
 template<typename T, typename Tidx, typename Treturn, typename F>
-Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset, F f)
+Treturn FCT_ListMat_Vdiag(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, std::vector<T> const& Vdiag, F f)
 {
   using Tfield = typename overlying_field<T>::field_type;
 #ifdef DEBUG
@@ -504,7 +504,7 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
   size_t nbRow=TheEXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr << "Error in FCT_ListMat_Subset due to too small coefficient range\n";
+    std::cerr << "Error in FCT_ListMat_Vdiag due to too small coefficient range\n";
     std::cerr << "nbRow=" << nbRow << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
@@ -537,9 +537,9 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
         eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
       LScal[iMat] = eSum;
     }
-    int eVal = 0;
+    T eVal = 0;
     if (iRow_stor == jRow)
-      eVal = eSubset[jRow];
+      eVal = Vdiag[jRow];
     LScal[nMat] = eVal;
     return LScal;
   };
@@ -571,19 +571,19 @@ Treturn FCT_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> c
 
 
 template<typename T, typename Tidx, typename Tidx_value>
-WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Subset(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, Face const& eSubset)
+WeightMatrix<true, std::vector<T>, Tidx_value> GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const& TheEXT, std::vector<MyMatrix<T>> const& ListMat, std::vector<T> const& Vdiag)
 {
   using Treturn = WeightMatrix<true, std::vector<T>, Tidx_value>;
   auto f=[&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3, [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(TheEXT, ListMat, eSubset, f);
+  return FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(TheEXT, ListMat, Vdiag, f);
 }
 
 
 
 template<typename T>
-size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, std::vector<T> const& Vdiag)
 {
   using Tidx_value = uint16_t;
   using Tidx = unsigned int;
@@ -592,7 +592,7 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 #endif
 
 
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT, ListMat, eSubset);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(EXT, ListMat, Vdiag);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -615,7 +615,7 @@ size_t GetInvariant_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<
 }
 
 template<typename T, typename Tidx, bool use_scheme>
-std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, std::vector<T> const& Vdiag)
 {
   using Tidx_value = uint16_t;
   //  using Tgr = GraphBitset;
@@ -632,10 +632,10 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T>
       return GetStabilizerWeightMatrix_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
-  Treturn ListGen = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+  Treturn ListGen = FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|GetListGenAutomorphism_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|GetListGenAutomorphism_ListMat_Vdiag|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return ListGen;
 }
@@ -644,7 +644,7 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Subset(MyMatrix<T>
 
 
 template<typename T, typename Tidx, bool use_scheme>
-std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, Face const& eSubset)
+std::vector<Tidx> Canonicalization_ListMat_Vdiag(MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const&ListMat, std::vector<T> const& Vdiag)
 {
   using Tidx_value = uint16_t;
   //  using Tgr = GraphBitset;
@@ -661,10 +661,10 @@ std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::v
       return GetCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
     }
   };
-  Treturn CanonicReord = FCT_ListMat_Subset<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, eSubset, f);
+  Treturn CanonicReord = FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|Canonicalization_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "|Canonicalization_ListMat_Vdiag|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   return CanonicReord;
 }
@@ -673,9 +673,9 @@ std::vector<Tidx> Canonicalization_ListMat_Subset(MyMatrix<T> const& EXT, std::v
 
 
 template<typename T, typename Tidx, bool use_scheme>
-std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
-                               MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, Face const& eSubset1,
-                               MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, Face const& eSubset2)
+std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
+                          MyMatrix<T> const& EXT1, std::vector<MyMatrix<T>> const&ListMat1, std::vector<T> const& Vdiag1,
+                          MyMatrix<T> const& EXT2, std::vector<MyMatrix<T>> const&ListMat2, std::vector<T> const& Vdiag2)
 {
   using Tidx_value = uint16_t;
   using Tfield = typename overlying_field<T>::field_type;
@@ -692,8 +692,8 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
 
   // Different scenario depending on the size
   if (nbRow1 < 2000) {
-    WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT1, ListMat1, eSubset1);
-    WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Subset<T,Tidx,Tidx_value>(EXT2, ListMat2, eSubset2);
+    WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(EXT1, ListMat1, Vdiag1);
+    WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(EXT2, ListMat2, Vdiag2);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -711,13 +711,13 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
     std::optional<std::vector<Tidx>> PairTest = TestEquivalenceWeightMatrix_norenorm<std::vector<T>,Tidx,Tidx_value>(WMat1, WMat2);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-    std::cerr << "|TestEquivalence_ListMat_Subset|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+    std::cerr << "|TestEquivalence_ListMat_Vdiag|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
     return PairTest;
   }
 
-  std::vector<Tidx> CanonicReord1 = Canonicalization_ListMat_Subset<T,Tidx,use_scheme>(EXT1, ListMat1, eSubset1);
-  std::vector<Tidx> CanonicReord2 = Canonicalization_ListMat_Subset<T,Tidx,use_scheme>(EXT2, ListMat2, eSubset2);
+  std::vector<Tidx> CanonicReord1 = Canonicalization_ListMat_Vdiag<T,Tidx,use_scheme>(EXT1, ListMat1, Vdiag1);
+  std::vector<Tidx> CanonicReord2 = Canonicalization_ListMat_Vdiag<T,Tidx,use_scheme>(EXT2, ListMat2, Vdiag2);
 
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
   if (!IsoInfo)
@@ -733,7 +733,14 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Subset(
       return {};
     }
   }
-  return IsoInfo->first;
+  const std::vector<Tidx>& eList = IsoInfo->first;
+  Tidx nbRow1_tidx = nbRow1;
+  for (Tidx i1=0; i1<nbRow1_tidx; i1++) {
+    Tidx i2 = eList[i1];
+    if (Vdiag1[i1] != Vdiag2[i2])
+      return {};
+  }
+  return eList;
 }
 
 
