@@ -890,7 +890,7 @@ struct PairVertices {
 };
 
 template<typename T>
-using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,T,uint16_t>>;
+using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_t>>;
 
 
 
@@ -925,18 +925,23 @@ void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std
 template<typename T, typename Tint>
 pair_char<T> gen_pair_char(MyMatrix<T> const& G, PairVertices<T,Tint> const& ep)
 {
-  std::unordered_set<MyVector<Tint>> set_v;
+  std::unordered_map<MyVector<Tint>,int> map_v;
   for (auto & eV : ep.vert1.l_roots)
-    set_v.insert(eV);
+    map_v[eV]++;
   for (auto & eV : ep.vert2.l_roots)
-    set_v.insert(eV);
-  std::cerr << "|ep.vert1.l_roots|=" << ep.vert1.l_roots.size() << "  |ep.vert2.l_roots|=" << ep.vert2.l_roots.size() << "\n";
+    map_v[eV]++;
+  //  std::cerr << "|ep.vert1.l_roots|=" << ep.vert1.l_roots.size() << "  |ep.vert2.l_roots|=" << ep.vert2.l_roots.size() << "\n";
   std::vector<MyVector<Tint>> l_roots;
-  for (auto & eV : set_v)
-    l_roots.push_back(eV);
+  std::vector<T> Vdiag;
+  for (auto & kv : map_v) {
+    l_roots.push_back(kv.first);
+    Vdiag.push_back(T(kv.second));
+  }
   MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+  std::vector<MyMatrix<T>> ListMat{G};
+  using Tidx = uint32_t;
   using Tidx_value = uint16_t;
-  WeightMatrix<true, T, Tidx_value> WMat = GetSimpleWeightMatrix<T,Tidx_value>(MatV, G);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
   WMat.ReorderingSetWeight();
   return {MatV,std::move(WMat)};
 }
@@ -1035,7 +1040,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
       pair_char<T> u_pair_char = gen_pair_char(G, u_pair);
       std::cerr << "3 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
-      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,T,uint16_t>(u_pair_char, v_pair_char);
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(u_pair_char, v_pair_char);
       std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
@@ -1051,7 +1056,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "Failed to find some isomorphism\n";
     std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before the automorphism insertions\n";
-    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,T,uint16_t>(v_pair_char))
+    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(v_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before v_pair insertions\n";
