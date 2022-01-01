@@ -12,7 +12,7 @@
   --- The values M(i,i) are not used.
  */
 
-#define DEBUG_COXETER_DYNKIN_COMBINATORICS
+//#define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
 
 template<typename T>

@@ -418,7 +418,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   size_t n_root = l_ui.size();
   std::cerr << "n_root=" << n_root << "\n";
   MyMatrix<T> Space(n_root,n);
-  MyMatrix<T> EquaB(n_root+1,n);
+  MyMatrix<T> EquaRvect(n_root+1,n);
+  MyMatrix<T> EquaPplane(n_root,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
     MyVector<T> eP = G * eV;
@@ -429,21 +430,21 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     for (int i=0; i<n; i++) {
       Space(i_root,i) = eV(i);
-      EquaB(i_root,i) = eP(i);
+      EquaRvect(i_root,i) = eP(i);
+      EquaPplane(i_root,i) = eP(i);
     }
   }
+  MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
+  std::cerr << "Plane P=\n";
+  WriteMatrix(std::cerr, Pplane);
   std::cerr << "l_roots(Common)=\n";
   WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
-  std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
   T norm = k.dot(eP);
-  std::cerr << "norm=" << norm << "\n";
+  std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
   for (int i=0; i<n; i++)
-    EquaB(n_root,i) = eP(i);
-  //  std::cerr << "EquaB=\n";
-  //  WriteMatrix(std::cerr, EquaB);
-  std::cerr << "RankMat(EquaB)=" << RankMat(EquaB) << "\n";
-  MyMatrix<T> NSP = NullspaceTrMat(EquaB);
+    EquaRvect(n_root,i) = eP(i);
+  MyMatrix<T> NSP = NullspaceTrMat(EquaRvect);
   std::cerr << "Edgewalk Procedure, step 1\n";
   if (NSP.rows() != 1) {
     std::cerr << "|NSP|=" << NSP.rows() << "/" << NSP.cols() << "\n";
@@ -491,6 +492,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //
   // Determine if the plane P is isotropic and if not compute the set of test vectors
   //
+  MyMatrix<T> G_Pplane = Pplane * G * Pplane.transpose();
+  std::cerr << "G_Pplane=\n";
+  WriteMatrix(std::cerr, G_Pplane);
   std::cerr << "G=\n";
   WriteMatrix(std::cerr, G);
   std::cerr << "NSPbas=\n";

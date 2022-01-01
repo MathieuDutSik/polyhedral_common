@@ -124,7 +124,9 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& O
     }
     return l_norms;
   }
+  std::cerr << "OptionNorms = " << OptionNorms << "\n";
   std::cerr << "Failed to find a matching entry in get_initial_list_norms\n";
+  std::cerr << "allowed possibilities are K3 and all\n";
   throw TerminalException{1};
 }
 
@@ -373,9 +375,10 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
 template<typename T, typename Tint>
 VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<Tint> const& root_lengths)
 {
-  MyVector<Tint> eVect=GetV0_vector<T,Tint>(G);
+  MyVector<Tint> v0 = GetV0_vector<T,Tint>(G);
+  std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
-  return GetVinbergAux<T,Tint>(G_i, eVect, root_lengths);
+  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths);
 }
 
 
