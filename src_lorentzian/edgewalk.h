@@ -78,6 +78,16 @@ template<typename T, typename Tint>
 struct FundDomainVertex {
   MyVector<T> gen;
   std::vector<MyVector<Tint>> l_roots;
+  FundDomainVertex<T,Tint> operator=(FundDomainVertex<T,Tint> const& x) {
+    std::cerr << "Copy operator\n";
+    gen = x.gen;
+    //    std::cerr << "Bef |x.l_roots|=" << x.l_roots.size() << "\n";
+    //    l_roots = x.l_roots;
+    for (auto const& eV : x.l_roots)
+      l_roots.push_back(eV);
+    //    std::cerr << "Aft |x.l_roots|=" << x.l_roots.size() << "\n";
+    return *this;
+  }
 };
 
 template<typename T, typename Tint>
@@ -834,6 +844,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
           if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
             FundDomainVertex<T,Tint> fund_v{k_new,l_roots};
             std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
+            std::cerr << "fund_v.l_roots=";
+            WriteMatrix(std::cerr, MatrixFromVectorFamily(fund_v.l_roots));
+            std::cerr << "l_roots=";
+            WriteMatrix(std::cerr, MatrixFromVectorFamily(l_roots));
             RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm, fund_v);
             l_candidates.push_back(eCand);
           }
@@ -1091,7 +1105,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
+  //  std::function<void(FundDomainVertex<T,Tint>const&,StatusEntry const&, PairVertices<T,Tint> const&)> func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> const& v_pair) -> void {
   auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> const& v_pair) -> void {
+    theVert.l_roots.size();
     std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before computing v_pair_char\n";
     pair_char<T> v_pair_char = gen_pair_char(G, v_pair);
@@ -1131,8 +1147,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "Before v_pair insertions\n";
     l_entry.push_back(entry);
+    std::cerr << "Bef |l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
     l_orbit_pair_vertices.push_back(v_pair);
-    std::cerr << "|l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
+    std::cerr << "Aft |l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
+    std::cerr << "|v_pair.vert1.l_roots|=" << v_pair.vert1.l_roots.size() << "|v_pair.vert2.l_roots|=" << v_pair.vert2.l_roots.size() << "\n";
     std::cerr << "7 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     std::cerr << "After v_pair insertions\n";
   };
@@ -1172,7 +1190,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       for (size_t i_root=0; i_root<n_root; i_root++) {
         std::cerr << "i_root=" << i_root << " / " << n_root << "\n";
         if (fFAC[i_root] == 1) {
-          std::cerr << "  Before l_ui push_back operation |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
+          std::cerr << "  Before l_ui push_back operation |theVert.l_roots|=" << theVert.l_roots.size() << " \n";
           l_ui.push_back(theVert.l_roots[i_root]);
           std::cerr << "  After l_ui push_back operation\n";
         } else {
@@ -1228,7 +1246,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
-  return {l_gen_isom_cox, std::move(l_orbit_pair_vertices)};
+  return {l_gen_isom_cox, l_orbit_pair_vertices};
 }
 
 

@@ -4879,6 +4879,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error)
   dd_FreeLPData(lpw);
 
   dd_FreeArow(shootdir);
+  set_free(is_decided);
   return redset;
 }
 
