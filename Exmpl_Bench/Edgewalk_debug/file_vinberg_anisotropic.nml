@@ -1,0 +1,9 @@
+&PROC
+! FileLorMat = "Anisotropic_LorMat_dim3_2"
+ FileLorMat = "Anisotropic_LorMat_dim3_3"
+ FileV0 = "compute"
+ OptionNorms = "all"
+ OutFormat = "GAP"
+ FileOut = "stdout"
+/
+

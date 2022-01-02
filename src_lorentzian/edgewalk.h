@@ -476,9 +476,11 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2,n);
   if (norm < 0) { // the point is inner, the oriented basis is clear.
+    std::cerr << "Builging OrientedBasis, ordinary case\n";
     AssignMatrixRow(OrientedBasis, 0, r0);
     AssignMatrixRow(OrientedBasis, 1, k);
   } else { // Now the point is ideal
+    std::cerr << "Builging OrientedBasis, ideal case\n";
     /*
       The roots to be found are of positive norms.
       In general, we cannot think of which zone of positive norms to select from since
@@ -494,9 +496,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       while(true) {
         for (int i_bas=0; i_bas<2; i_bas++) {
           MyVector<T> v_bas = GetMatrixRow(Pplane, i_bas);
-          for (int u=-1; u<1; u += 2) {
+          for (int u=-1; u<2; u += 2) {
             MyVector<T> v_pos_cand = k + u * alpha * v_bas;
             T norm = v_pos_cand.dot(G * v_pos_cand);
+            std::cerr << "u=" << u << " alpha=" << alpha << " v_pos_cand=" << v_pos_cand << " norm=" << norm << "\n";
             if (norm > 0)
               return v_pos_cand;
           }
@@ -509,8 +512,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     if (scal > 0) { // The convention is that negative scalar product is for facets.
       v_pos = -v_pos;
     }
-    AssignMatrixRow(OrientedBasis, 0, k);
-    AssignMatrixRow(OrientedBasis, 1, v_pos);
+    AssignMatrixRow(OrientedBasis, 0, v_pos);
+    AssignMatrixRow(OrientedBasis, 1, k);
+    r0 = -k;
   }
   std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
   //
@@ -530,7 +534,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     map_max_resnorm[norm] = std::max(map_max_resnorm[norm], res_norm);
   }
   for (auto & kv : map_max_resnorm)
-    std::cerr << "kv : norm=" << kv.first << " res_norm=" << kv.second << "\n";
+    std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
   std::cerr << "Edgewalk Procedure, step 5\n";
   //
   // Determine if the plane P is isotropic and if not compute the set of test vectors
@@ -855,6 +859,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       return v;
     if (scal > 0)
       return -v;
+    std::cerr << "k=" << StringVectorGAP(k) << " v=" << StringVectorGAP(v) << "\n";
     std::cerr << "We should have scal != 0 to be able to conclude\n";
     throw TerminalException{1};
   };
