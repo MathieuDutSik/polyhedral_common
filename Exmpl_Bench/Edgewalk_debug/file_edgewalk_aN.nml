@@ -1,6 +1,7 @@
 &PROC
 ! FileLorMat = "Debug_a3_LorMat"
- FileLorMat = "Isotropic_LorMat_dim3_1"
+! FileLorMat = "Isotropic_LorMat_dim3_1"
+ FileLorMat = "Isotropic_LorMat_dim4_1"
  OptionInitialVertex = "vinberg"
  FileInitialVertex = "irrelevant"
  OptionNorms = "all"
