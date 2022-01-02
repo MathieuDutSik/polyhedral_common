@@ -1055,7 +1055,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   std::vector<StatusEntry> l_entry;
   std::vector<PairVertices<T,Tint>> l_orbit_pair_vertices;
+  MyMatrix<Tint> IdMat = IdentityMat<T>(G.rows());
   auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
+    if (eP == IdMat)
+      return;
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
