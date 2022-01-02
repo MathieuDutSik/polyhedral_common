@@ -479,12 +479,10 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     if (multiplicity[val_six] == 1) { // Looking for G2 or tilde{G2}
       if (n_higher_edge != 1)
         return {}; // There are other edges, excluded.
-      if (n_vert == 2 || n_vert == 3) { // It is G2 or tilde{G2}
-        if (n_vert == 2)
-          return IrrCoxDyn<T>{"G", 2, 0};
-        if (n_vert == 3)
-          return IrrCoxDyn<T>{"tildeG", 2, 0};
-      }
+      if (n_vert == 2)
+        return IrrCoxDyn<T>{"G", 2, 0};
+      if (n_vert == 3)
+        return IrrCoxDyn<T>{"tildeG", 2, 0};
       return {};
     }
     if (n_vert == 2) {
@@ -499,15 +497,18 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 7\n";
 #endif
+  if (list_deg3.size() != 1) {
+    std::cerr << "We should hqve just one vertex of degree 3\n";
+    throw TerminalException{1};
+  }
+  size_t eCent = list_deg3[0];
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
-    size_t eCent = list_deg1[0];
     std::vector<size_t> const& LAdj = LLAdj[eCent];
     size_t n_sing = 0;
-    for (auto & eAdj : LAdj) {
+    for (auto & eAdj : LAdj)
       if (list_deg[eAdj] == 1)
         n_sing++;
-    }
     if (n_sing != 2)
       return {};
     bool has_edge_four = false;
@@ -541,7 +542,6 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     }
     return len;
   };
-  size_t eCent = list_deg3[0];
   std::map<size_t, size_t> map_len;
   for (auto & eAdj : LLAdj[eCent]) {
     size_t len = get_length(eCent, eAdj);
