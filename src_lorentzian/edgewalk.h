@@ -81,20 +81,22 @@ struct FundDomainVertex {
 };
 
 template<typename T, typename Tint>
-void WriteFundDomainVertex(FundDomainVertex<T,Tint> const& vert, std::ostream & os, std::string const& OutFormat)
+void WriteFundDomainVertex(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert, std::ostream & os, std::string const& OutFormat)
 {
   MyMatrix<Tint> Mroot = MatrixFromVectorFamily(vert.l_roots);
+  MyVector<T> gen_nf = RemoveFractionVector(vert.gen);
+  T norm = gen_nf.dot(G * gen_nf);
   if (OutFormat == "GAP") {
     os << "rec(gen:=";
-    WriteVectorGAP(os, vert.gen);
-    os << ", l_roots:=";
+    WriteVectorGAP(os, gen_nf);
+    os << ", norm:=" << norm << ", l_roots:=";
     WriteMatrixGAP(os, Mroot);
     os << ")";
     return;
   }
   if (OutFormat == "TXT") {
     os << "gen=";
-    WriteVector(os, vert.gen);
+    WriteVector(os, gen_nf);
     os << "l_roots=\n";
     WriteMatrixGAP(os, Mroot);
     return;
@@ -472,10 +474,45 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     r0 = -r0;
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
-  MyMatrix<T> NSPbas(2,n);
-  AssignMatrixRow(NSPbas, 0, r0);
-  AssignMatrixRow(NSPbas, 1, k);
-  std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
+  MyMatrix<T> OrientedBasis(2,n);
+  if (norm < 0) { // the point is inner, the oriented basis is clear.
+    AssignMatrixRow(OrientedBasis, 0, r0);
+    AssignMatrixRow(OrientedBasis, 1, k);
+  } else { // Now the point is ideal
+    /*
+      The roots to be found are of positive norms.
+      In general, we cannot think of which zone of positive norms to select from since
+      those are connected.
+      However, in the specific case of dimension 2, yes the vectors of positive norms
+      are in two connected components.
+      How to select which connected component?
+      The scalar product with k allows us to select which one
+     */
+    auto get_positive_norm_vector=[&]() -> MyVector<T> {
+      T two = 2;
+      T alpha = 1;
+      while(true) {
+        for (int i_bas=0; i_bas<2; i_bas++) {
+          MyVector<T> v_bas = GetMatrixRow(Pplane, i_bas);
+          for (int u=-1; u<1; u += 2) {
+            MyVector<T> v_pos_cand = k + u * alpha * v_bas;
+            T norm = v_pos_cand.dot(G * v_pos_cand);
+            if (norm > 0)
+              return v_pos_cand;
+          }
+        }
+        alpha /= two;
+      }
+    };
+    MyVector<T> v_pos = get_positive_norm_vector();
+    T scal = v_pos.dot(G * k);
+    if (scal > 0) { // The convention is that negative scalar product is for facets.
+      v_pos = -v_pos;
+    }
+    AssignMatrixRow(OrientedBasis, 0, k);
+    AssignMatrixRow(OrientedBasis, 1, v_pos);
+  }
+  std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
   //
   // Computing the extension and the maximum norms from that.
   //
@@ -503,9 +540,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   WriteMatrix(std::cerr, G_Pplane);
   std::cerr << "G=\n";
   WriteMatrix(std::cerr, G);
-  std::cerr << "NSPbas=\n";
-  WriteMatrix(std::cerr, NSPbas);
-  MyMatrix<T> ProjP = GetProjectionMatrix(G, NSPbas);
+  MyMatrix<T> ProjP = GetProjectionMatrix(G, Pplane);
   std::cerr << "Edgewalk Procedure, step 6\n";
   struct SingCompAnisotropic {
     MyMatrix<T> Latt;
@@ -531,16 +566,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     }
     MyMatrix<T> BasisProj = GetZbasis(ProjFamily);
     if (BasisProj.rows() != 2) {
-      std::cerr << "NSPbas=\n";
-      WriteMatrix(std::cerr, NSPbas);
-      MyMatrix<T> Gprt = NSPbas * G * NSPbas.transpose();
-      std::cerr << "Gprt=\n";
-      WriteMatrix(std::cerr, Gprt);
-      std::cerr << "ProjFamily=\n";
-      WriteMatrix(std::cerr, ProjFamily);
+      std::cerr << "The BasisProj should be of rank 2\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> Expr = ExpressVectorsInIndependentFamilt(BasisProj, NSPbas);
+    MyMatrix<T> Expr = ExpressVectorsInIndependentFamilt(BasisProj, OrientedBasis);
     std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
     if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
       for (int i=0; i<n; i++)
@@ -569,7 +598,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     std::cerr << "Basis_ProjP_LN=\n";
     WriteMatrix(std::cerr, Basis_ProjP_LN);
-    MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, NSPbas);
+    MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, Pplane);
     MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
     T res_norm = map_max_resnorm[e_norm];
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
@@ -650,7 +679,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::map<T, SingCompAnisotropic> map_anisotropic;
   std::map<T, SingCompIsotropic> map_isotropic;
   auto compute_iso_aniso_data=[&]() -> void {
-    MyMatrix<T> Gtest = NSPbas * G * NSPbas.transpose();
+    MyMatrix<T> Gtest = Pplane * G * Pplane.transpose();
     std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
     if (opt) {
       is_isotropic = true;
@@ -806,7 +835,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return best_cand.fund_v;
   }
   // So, no candidates were found. We need to find isotropic vectors.
-  const MyMatrix<T> Gred = NSPbas * G * NSPbas.transpose();
+  const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
   std::cerr << "We have Gred=\n";
   WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
@@ -833,12 +862,13 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   for (size_t i=0; i<2; i++) {
     std::cerr << "i=" << i << "\n";
     // a x + by correspond to the ray (u0, u1) = (-b, a)
-    T u0 = -Factor(i,1);
-    T u1 =  Factor(i,0);
-    std::cerr << "u0=" << u0 << " u1=" << u1 << "\n";
-    T sum = u0 * u0 * Gred(0,0) + 2 * u0 * u1 * Gred(0,1) + u1 * u1 * Gred(1,1);
+    MyVector<T> U(2);
+    U(0) = -Factor(i,1);
+    U(1) =  Factor(i,0);
+    std::cerr << "U=" << StringVectorGAP(U) << "\n";
+    T sum = U.dot(Gred * U);
     std::cerr << "sum=" << sum << "\n";
-    MyVector<T> gen = u0 * r0 + u1 * k;
+    MyVector<T> gen = Pplane.transpose() * U;
     //    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
     //    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
     //    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
@@ -859,7 +889,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     throw TerminalException{1};
   }
   const MyVector<T> & k_new = l_gens[0];
-  std::cerr << "k_new="; WriteVector(std::cerr, RemoveFractionVector(k_new));
+  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
   /* FILL OUT THE CODE
      What we are looking for is the roots satisfying say A[x] = 2
      and x.v = 0.
@@ -895,21 +925,21 @@ using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_
 
 
 template<typename T, typename Tint>
-void WritePairVertices(PairVertices<T,Tint> const& epair, std::ostream & os, std::string const& OutFormat)
+void WritePairVertices(MyMatrix<T> const& G, PairVertices<T,Tint> const& epair, std::ostream & os, std::string const& OutFormat)
 {
   if (OutFormat == "GAP") {
     os << "rec(vert1:=";
-    WriteFundDomainVertex(epair.vert1, os, OutFormat);
+    WriteFundDomainVertex(G, epair.vert1, os, OutFormat);
     os << ", vert2:=";
-    WriteFundDomainVertex(epair.vert2, os, OutFormat);
+    WriteFundDomainVertex(G, epair.vert2, os, OutFormat);
     os << ")";
     return;
   }
   if (OutFormat == "TXT") {
     os << "vert&=\n";
-    WriteFundDomainVertex(epair.vert1, os, OutFormat);
+    WriteFundDomainVertex(G, epair.vert1, os, OutFormat);
     os << "vert2=\n";
-    WriteFundDomainVertex(epair.vert2, os, OutFormat);
+    WriteFundDomainVertex(G, epair.vert2, os, OutFormat);
     return;
   }
   std::cerr << "Failed to find a matching entry for WritePairVertices\n";
@@ -992,7 +1022,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
       if (!IsFirst)
         os << ",";
       IsFirst = false;
-      WritePairVertices(e_pair_vert, os, OutFormat);
+      WritePairVertices(G, e_pair_vert, os, OutFormat);
     }
     os << "]);\n";
     return;

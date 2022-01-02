@@ -1,6 +1,7 @@
 &PROC
- FileLorMat = "Debug_a3_LorMat"
+! FileLorMat = "Debug_a3_LorMat"
 ! FileLorMat = "Debug_a2_LorMat"
+ FileLorMat = "Isotropic_LorMat_dim3_1"
  FileV0 = "compute"
  OptionNorms = "all"
  OutFormat = "GAP"

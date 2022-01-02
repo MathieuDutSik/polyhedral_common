@@ -940,9 +940,10 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
       MyVector<Tint> V(n_col);
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
-      Tint scal = V.dot(Vtot.G * V);
-      map[scal]++;
-      if (scal > 0) {
+      Tint norm = V.dot(Vtot.G * V);
+      std::cerr << "V=" << V << " norm=" << norm << "\n";
+      map[norm]++;
+      if (norm > 0) {
         IsFiniteCovolume = false;
         return false;
       }
@@ -1346,7 +1347,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 {
   std::vector<MyVector<Tint>> ListRootRet;
   int dim = Vtot.G.rows();
-  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, [[maybe_unused]] MyMatrix<T> const& FACfeasible) -> bool {
+  auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
     if (RankMat(FACfeasible) != dim)
       return false;
     if (is_FundPoly(Vtot, ListRoot)) {
