@@ -310,7 +310,16 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
   size_t n_cols = EXT1.cols();
   //
   // We are testing if EXT1 P = perm(EXT2) 
-  std::vector<Tidx> V(n_rows);
+  //  std::vector<Tidx> V(n_rows);
+  std::cerr << "CheckEquivalence EXT1=\n";
+  WriteMatrix(std::cerr, EXT1);
+  std::cerr << "CheckEquivalence EXT2=\n";
+  WriteMatrix(std::cerr, EXT2);
+  std::cerr << "ListIdx=" << ListIdx << "\n";
+  std::cerr << "CheckEquivalence P=\n";
+  WriteMatrix(std::cerr, P);
+
+  MyVector<T> Vimg(n_cols);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
     size_t i_row_img = ListIdx[i_row];
     for (size_t i_col=0; i_col<n_cols; i_col++) {
@@ -322,11 +331,13 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
         return false; // We fail because the image is not integral.
       }
       T Img_EXT1 = rec_eSum2.second;
+      Vimg[i_col] = Img_EXT1;
       //
       T EXT2_map = EXT2(i_row_img, i_col);
       if (Img_EXT1 != EXT2_map)
         return false;
     }
+    std::cerr << "i_row=" << i_row << " Vimg=" << StringVectorGAP(Vimg) << " i_row_img=" << i_row_img << " EXTé(i_row_img)=" << StringVectorGAP(GetMatrixRow(EXT2, i_row_img)) << "\n";
   }
   return true;
 }

@@ -966,13 +966,22 @@ pair_char<T> gen_pair_char(MyMatrix<T> const& G, PairVertices<T,Tint> const& ep)
   for (auto & eV : ep.vert2.l_roots)
     map_v[eV]++;
   //  std::cerr << "|ep.vert1.l_roots|=" << ep.vert1.l_roots.size() << "  |ep.vert2.l_roots|=" << ep.vert2.l_roots.size() << "\n";
-  std::vector<MyVector<Tint>> l_roots;
+  std::vector<MyVector<Tint>> l_vect;
   std::vector<T> Vdiag;
   for (auto & kv : map_v) {
-    l_roots.push_back(kv.first);
+    l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
   }
-  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+  l_vect.push_back(UniversalVectorConversion<Tint,T>(RemoveFractionVector(ep.vert1.gen)));
+  l_vect.push_back(UniversalVectorConversion<Tint,T>(RemoveFractionVector(ep.vert2.gen)));
+  T insVal = 10;
+  Vdiag.push_back(insVal);
+  Vdiag.push_back(insVal);
+  std::cerr << "Vdiag=" << Vdiag << "\n";
+  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
+  MyMatrix<T> Gred = MatV * G * MatV.transpose();
+  std::cerr << "Gred=\n";
+  WriteMatrix(std::cerr, Gred);
   std::vector<MyMatrix<T>> ListMat{G};
   using Tidx = uint32_t;
   using Tidx_value = uint16_t;
@@ -1072,10 +1081,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, PairVertices<T,Tint> const& v_pair) -> void {
     std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
+    std::cerr << "Before computing v_pair_char\n";
     pair_char<T> v_pair_char = gen_pair_char(G, v_pair);
     std::cerr << "2 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
     for (auto & u_pair : l_orbit_pair_vertices) {
       std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
+      std::cerr << "Before computing u_pair_char\n";
       pair_char<T> u_pair_char = gen_pair_char(G, u_pair);
       std::cerr << "3 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(u_pair_char, v_pair_char);
@@ -1083,6 +1094,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
         std::cerr << "Find some isomorphism\n";
+        std::cerr << "u : vert1=" << StringVectorGAP(u_pair.vert1.gen) << " vert2=" << StringVectorGAP(u_pair.vert2.gen) << "\n";
+        std::cerr << "v : vert1=" << StringVectorGAP(v_pair.vert1.gen) << " vert2=" << StringVectorGAP(v_pair.vert2.gen) << "\n";
         /*
         std::cerr << "u : EXT=\n";
         WriteMatrix(std::cerr, u_pair_char.first);
@@ -1214,6 +1227,10 @@ template<typename T, typename Tint>
 FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<Tint> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   if (OptionInitialVertex == "File") {
+    if (!IsExistingFile(FileInitialVertex)) {
+      std::cerr << "The file FileInitialVertex=" << FileInitialVertex << " is missing\n";
+      throw TerminalException{1};
+    }
     std::ifstream is(FileInitialVertex);
     MyVector<T> gen = ReadVector<T>(is);
     MyMatrix<Tint> Mroot = ReadMatrix<Tint>(is);

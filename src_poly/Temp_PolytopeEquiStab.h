@@ -223,10 +223,16 @@ std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsomorphismFromCano
   std::vector<Tidx> ListIdx(nbRow);
   for (size_t idx=0; idx<nbRow; idx++)
     ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
+  std::cerr << "IsomorphismFromCanonicReord : CanonicReord1=" << CanonicReord1 << "\n";
+  std::cerr << "IsomorphismFromCanonicReord : CanonicReord2=" << CanonicReord2 << "\n";
+  std::cerr << "IsomorphismFromCanonicReord : ListIdx=" << ListIdx << "\n";
+
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
   MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
+  std::cerr << "P=\n";
+  WriteMatrix(std::cerr, P);
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
   if (!test) // We fail the polytope equivalence
@@ -1596,10 +1602,15 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
     return {};
   //  std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
   //  std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
-  //  std::cerr << "ep.second=\n";
-  //  PrintWeightedMatrix(std::cerr, ep.second);
-  //  std::cerr << "fp.second=\n";
-  //  PrintWeightedMatrix(std::cerr, fp.second);
+  std::cerr << "ep.first=\n";
+  WriteMatrix(std::cerr, ep.first);
+  std::cerr << "fp.first=\n";
+  WriteMatrix(std::cerr, fp.first);
+  std::cerr << "ep.second=\n";
+  PrintWeightedMatrix(std::cerr, ep.second);
+  std::cerr << "fp.second=\n";
+  PrintWeightedMatrix(std::cerr, fp.second);
+  
 
   
   //  std::cerr << "Before eCanonicReord\n";
@@ -1613,7 +1624,9 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
     return {};
   }
   Telt ePerm(IsoInfo->first);
-  //  std::cerr << "ePerm=" << ePerm << "\n";
+  std::cerr << "ePerm=" << ePerm << "\n";
+  std::cerr << "eMat=\n";
+  WriteMatrix(std::cerr, IsoInfo->second);
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
   if (eRes)
