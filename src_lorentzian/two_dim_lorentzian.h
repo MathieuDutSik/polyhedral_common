@@ -50,6 +50,9 @@ template<typename T, typename Tint>
 std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T&M, const MyVector<Tint>& r, const MyVector<Tint>& l)
 {
   MyVector<Tint> m = r + l;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "Promised G=" << G(0,0) << "," << G(1,0) << "," << G(1,1) << " M=" << M << "\n";
+#endif
 #ifdef CHECK_TWO_DIM_LORENTZIAN
   T norm_rr = eval_quad(G, r);
   if (norm_rr <= 0) {
@@ -70,18 +73,26 @@ std::pair<MyVector<Tint>, MyVector<Tint>> Promised(const MyMatrix<T>& G, const T
     throw TerminalException{1};
   }
 #endif
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l) << " det=" << det_two(r,l) << "\n";
+#endif
   T norm_mm = eval_quad(G, m);
   T scal_mr = eval_scal(G, m, r);
   if (norm_mm <= M || scal_mr < 0) {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm << " scal_mr=" << scal_mr << "\n";
+#endif
     return Promised(G, M, r, m);
   }
   if (eval_quad(G, l) >= 0 && eval_scal(G, r, l) > 0) {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "Promised : Exiting at the Done\n";
+#endif
     return {l, -r};
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "Promised : Exiting at the Go Left\n";
+#endif
   return Promised(G, M, m, l);
 }
 
@@ -139,24 +150,43 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> Shorter(const MyMatrix<
     return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };
   T M = eval_quad(G, r);
+  //  l = Canonical(G, M, r, l);
   std::vector<T> char_ent1 = get_char_mat(r, l);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "Shorter M=" << M << "\n";
+#endif
   T scal_rr;
   while(true) {
     // Step 2
     scal_rr = eval_quad(G, r);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+    std::cerr << "Shorter : Step 2, scal_rr=" << scal_rr << "\n";
+#endif
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, scal_rr, r, l);
     r = e_pair.first;
     l = e_pair.second;
     // Step 3
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+    std::cerr << "Shorter : Step 3\n";
+#endif
     scal_rr = eval_quad(G, r);
     l = Canonical(G, scal_rr, r, l);
     // Step 4
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+    std::cerr << "Shorter : Step 4\n";
+#endif
     if (scal_rr < M) {
       std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
       return pair;
     }
     // Step 5
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+    std::cerr << "Shorter : Step 5\n";
+#endif
     std::vector<T> char_ent2 = get_char_mat(r, l);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+    std::cerr << "Shorter : char_ent2=" << char_ent2 << " char_ent1=" << char_ent1 << "\n";
+#endif
     if (char_ent1 == char_ent2)
       return {};
   }
@@ -168,6 +198,9 @@ template<typename T, typename Tint>
 std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMatrix<T>& G, const T& M, MyVector<Tint> r, MyVector<Tint> l)
 {
   T scal_rr = eval_quad(G, r);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "NotPromised : scal_rr=" << scal_rr << " M=" << M << "\n";
+#endif
   if (scal_rr <= M) {
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, M, r, l);
     r = e_pair.first;
@@ -176,6 +209,9 @@ std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> NotPromised(const MyMat
     std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
     return pair;
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "NotPromised : Before infinite loop\n";
+#endif
   while(true) {
     std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> opt_pair = Shorter(G, r, l);
     if (!opt_pair)
@@ -197,6 +233,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> pair_opt = NotPromised(G, M, r0, l0);
   if (!pair_opt)
     return {};
+  std::cerr << "We pass the NotPromised stage\n";
   auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
     return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };

@@ -577,7 +577,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "r0_norm=" << r0_norm << "\n";
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
     std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
-    MyVector<Tint> l_B = Canonical(Gwork, res_norm, r0_work, l_A);
+    MyVector<Tint> l_B = Canonical(Gwork, r0_norm, r0_work, l_A);
     std::cerr << "l_B=" << StringVectorGAP(l_B) << "\n";
     std::cerr << "get_sing_comp_anisotropic, step 2\n";
     std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic<T,Tint>(Gwork, res_norm, r0_work, l_B);
