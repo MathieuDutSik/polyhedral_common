@@ -475,6 +475,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2,n);
+  std::cerr << "OrientedBasis RES k=" << StringVectorGAP(k) << "\n";
   if (norm < 0) { // the point is inner, the oriented basis is clear.
     std::cerr << "Builging OrientedBasis, ordinary case\n";
     AssignMatrixRow(OrientedBasis, 0, r0);
@@ -751,23 +752,28 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return l_vect2;
   };
   auto get_next_isotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    std::cerr << "get_next_isotropic 1 RES k=" << StringVectorGAP(k) << "\n";
     T const& e_norm = poss.e_norm;
     SingCompIsotropic & e_comp = map_isotropic[e_norm];
     T res_norm = poss.res_norm;
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
     std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+    std::cerr << "get_next_isotropic 2 RES k=" << StringVectorGAP(k) << "\n";
     for (auto & e_vect : l_vect) {
       std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
+      std::cerr << "get_next_isotropic 3 RES k=" << StringVectorGAP(k) << "\n";
       //      std::cerr << "Before v_T computation\n";
       //      std::cerr << "u_component=" << StringVectorGAP(poss.u_component) << "\n";
       //      std::cerr << "Basis_ProjP_LN=";
       //      WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
       MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
       std::cerr << "After v_T computation v_T=" << StringVectorGAP(v_T) << "\n";
+      std::cerr << "get_next_isotropic 3 RES k=" << StringVectorGAP(k) << "\n";
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
         if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+          std::cerr << "get_next_isotropic 4 RES k=" << StringVectorGAP(k) << "\n";
           return v_i;
         }
       }
@@ -790,6 +796,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
 
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
+    std::cerr << "After get_next RES k=" << StringVectorGAP(k) << "\n";
     std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<Tint> alpha = *opt_v;
@@ -797,15 +804,20 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       auto f_ins=[&]() -> void {
         std::vector<MyVector<Tint>> l_roots = l_ui;
         l_roots.push_back(alpha);
+        std::cerr << "We have l_roots\n";
         MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+        std::cerr << "We have MatRoot\n";
         MyMatrix<T> EquaMat = Mat_root * G;
+        std::cerr << "We have EquaMat\n";
         MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
         if (NSP.rows() != 1) {
           std::cerr << "We should have exactly one row\n";
           return;
         }
         MyVector<T> gen = GetMatrixRow(NSP, 0);
+        std::cerr << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
         T scal = gen.dot(G * k);
+        std::cerr << "We have scal\n";
         auto get_gen=[&]() -> std::optional<MyVector<T>> {
           if (scal < 0) { // The sign convention means that two vectors in the same cone have negative scalar product.
             return gen;
