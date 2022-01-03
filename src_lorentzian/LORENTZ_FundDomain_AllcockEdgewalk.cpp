@@ -1,6 +1,9 @@
 #include "Permutation.h"
 #include "Group.h"
-#include "NumberTheory.h"
+
+
+
+#include "NumberTheoryBoost.h"
 #include "edgewalk.h"
 
 
@@ -15,8 +18,10 @@ int main(int argc, char* argv[])
       throw TerminalException{1};
     }
     std::string eFileName=argv[1];
-    using T = mpq_class;
-    using Tint = mpq_class;
+    //    using T = mpq_class;
+    //    using Tint = mpq_class;
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt,Tint>;

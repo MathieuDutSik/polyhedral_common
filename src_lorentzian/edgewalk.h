@@ -1284,7 +1284,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<Tint> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   if (OptionInitialVertex == "File") {
     if (!IsExistingFile(FileInitialVertex)) {
@@ -1321,7 +1321,6 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
-  
   if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
     std::cerr << "G=\n";
     WriteMatrix(std::cerr, G);

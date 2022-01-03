@@ -373,12 +373,15 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<Tint> const& root_lengths)
+VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& root_lengths)
 {
   MyVector<Tint> v0 = GetV0_vector<T,Tint>(G);
   std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
-  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths);
+  std::vector<Tint> root_lengths_i;
+  for (auto & eN : root_lengths)
+    root_lengths_i.push_back(UniversalScalarConversion<Tint,T>(eN));
+  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths_i);
 }
 
 
