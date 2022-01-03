@@ -235,7 +235,7 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const& SymMat)
     if (RedMat(i,i) > 0)
       nbPlus++;
     if (RedMat(i,i) < 0)
-      nbPlus++;
+      nbMinus++;
     if (RedMat(i,i) == 0)
       nbZero++;
   }

@@ -1417,8 +1417,10 @@ void MainFunctionVinberg(FullNamelist const& eFull)
   SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
   std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeNonDegenerateSymmetricMatrix(G);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
   if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
+    std::cerr << "G=\n";
+    WriteMatrix(std::cerr, G);
     std::cerr << "We have nbZero=" << DiagInfo.nbZero << " nbPlus=" << DiagInfo.nbPlus << " nbMinus=" << DiagInfo.nbMinus << "\n";
     std::cerr << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
     throw TerminalException{1};
