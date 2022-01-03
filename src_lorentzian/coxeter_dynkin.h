@@ -704,8 +704,6 @@ struct DiagramSelector {
 };
 
 
-
-
 template<typename T>
 bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
 {
@@ -731,7 +729,6 @@ bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
   }
   return false;
 }
-
 
 
 template<typename T>
