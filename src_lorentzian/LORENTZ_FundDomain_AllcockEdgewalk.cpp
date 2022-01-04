@@ -1,9 +1,9 @@
+#include "NumberTheoryBoost.h"
 #include "Permutation.h"
 #include "Group.h"
 
 
 
-#include "NumberTheoryBoost.h"
 #include "edgewalk.h"
 
 
