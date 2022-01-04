@@ -2059,7 +2059,6 @@ void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
 		dd_colindex reducedcol)
 {
   long j,j1;
-  T b;
   for (j = 1; j <= d_origsize; j++) {
     j1=reducedcol[j];
     if (j1>0) {
@@ -2285,7 +2284,6 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly)
   dd_rowrange i=0;
   dd_rowrange total;
   dd_colrange j, j1;
-  T b;
   bool outputorigin=false;
 
   total=poly->child->LinearityDim + poly->child->FeasibleRayCount;
@@ -5967,7 +5965,6 @@ void dd_AValue(T *val, dd_colrange d_size, T** A, T *p, dd_rowrange i)
 {
   /*return the ith component of the vector  A x p */
   dd_colrange j;
-  T x;
 
   *val=0;
  /* Changed by Marc Pfetsch 010219 */
@@ -6677,7 +6674,7 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
  */
 {
   dd_colrange j;
-  T temp,tnext;
+  T temp;
   dd_raydata<T> *Ptr;
   dd_raydata<T> *PrevPtr;
   dd_raydata<T> *TempPtr;
@@ -6720,7 +6717,7 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
  */
 {
   dd_colrange j;
-  T temp,tnext;
+  T temp;
   dd_raydata<T> *Ptr;
   dd_raydata<T> *NextPtr;
   bool zerofound=false,negfound=false,posfound=false;
@@ -6944,7 +6941,7 @@ void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i, dd_conedata<
   /*Evaluate the number of feasible rays and infeasible rays*/
   /*  w.r.t the hyperplane  i*/
   dd_colrange j;
-  T temp, tnext;
+  T temp;
   dd_raydata<T> *Ptr;
 
   *fnum = 0;
