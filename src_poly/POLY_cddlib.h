@@ -1802,10 +1802,8 @@ template<typename T>
 void dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
 {
   dd_rowrange i,m;
-  dd_colrange d;
 
   m=(*M)->rowsize;
-  d=(*M)->colsize;
 
   if (r >= 1 && r <=m) {
     (*M)->rowsize=m-1;
@@ -6446,9 +6444,8 @@ template<typename T>
 void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_rowindex roworder)
 {
  /* copy the rows of A whose roworder is positive.  roworder[i] is the row index of the copied row. */
-  dd_rowrange i,k;
+  dd_rowrange i;
 
-  k=0;
   for (i = 1; i<= m; i++) {
     if (roworder[i]>0) dd_CopyArow(Acopy[roworder[i]-1],A[i-1],d);
   }
