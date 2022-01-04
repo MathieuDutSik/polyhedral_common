@@ -14,7 +14,8 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= icpc -std=c++17 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++17
 #CC		= clang++ -Wall -std=c++17 -g -fsanitize=memory
-#CC		= clang++ -g -Wall -Wextra -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
+CC		= clang++ -g -Wall -Wextra -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
+CC		= clang++ -g -Wall -Wextra -std=c++17
 #CC		= clang++ -O2 -Weverything -std=c++17 -DDEBUG
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
@@ -22,7 +23,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fstack-protector-strong -fstack-protector-explicit  -fstack-check
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fstack-protector-strong -fstack-protector-explicit
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full
-CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full -fstack-check -fno-stack-clash-protection -fsanitize=leak -fsanitize-recover -fbounds-check
+#CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full -fstack-check -fno-stack-clash-protection -fsanitize=leak -fsanitize-recover -fbounds-check
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=memory

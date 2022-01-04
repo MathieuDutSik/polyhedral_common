@@ -2767,7 +2767,6 @@ void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T**
   dd_rowrange i;
   T x;
   bool red=false;
-  long numbred=0;
 
   for (i=1; i<= m_size; i++) {
     red=true;
@@ -2776,7 +2775,6 @@ void dd_GetRedundancyInformation(dd_rowrange m_size,dd_colrange d_size,T** A,T**
       if (red && x < 0) red=false;
     }
     if (bflag[i]<0 && red) {
-      numbred+=1;
       set_addelem(redset,i);
     }
   }

@@ -1341,11 +1341,9 @@ long checkredund (lrs_dic<T> * P, lrs_dat<T> * Q)
 
 /* assign local variables to structures */
   T** A = P->A;
-  long *B, *C, *Row, *Col;
+  long *Row, *Col;
   long d = P->d;
 
-  B = P->B;
-  C = P->C;
   Row = P->Row;
   Col = P->Col;
 
@@ -1378,14 +1376,13 @@ long checkcobasic (lrs_dic<T> * P, lrs_dat<T> * Q, long index)
 /* assign local variables to structures */
 
   T** A = P->A;
-  long *B, *C, *Row, *Col;
+  long *C, *Row, *Col;
   long d = P->d;
   long m = P->m;
   long i = 0;
   long j = 0;
   long s;
 
-  B = P->B;
   C = P->C;
   Row = P->Row;
   Col = P->Col;

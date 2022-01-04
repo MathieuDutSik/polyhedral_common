@@ -1427,12 +1427,10 @@ WeightMatrix<true, int,Tidx_value> WeightMatrixFromPairOrbits(Tgroup const& GRP)
       break;
     ListWeight.push_back(iOrbit);
     std::vector<std::pair<int,int>> eList{eStart};
-    size_t orbSize = 0;
     while(true) {
       int nbPair = eList.size();
       if (nbPair == 0)
         break;
-      orbSize += nbPair;
       std::vector<std::pair<int,int>> fList;
       for (auto & ePair : eList) {
         int i=ePair.first;
