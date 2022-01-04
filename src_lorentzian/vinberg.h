@@ -51,7 +51,6 @@ Tint En_Quantity(const MyMatrix<Tint>& M)
 {
   using Tfield=typename overlying_field<Tint>::field_type;
   size_t dim = M.rows();
-  Tint eDet = DeterminantMat(M);
   MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(M);
   MyMatrix<Tfield> Minv_field = Inverse(M_field);
   Tfield eDet_Tfield = DeterminantMat(M_field);
