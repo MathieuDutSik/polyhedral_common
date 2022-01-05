@@ -1,3 +1,4 @@
+#include "NumberTheory.h"
 #include "MAT_MatrixInt.h"
 int main(int argc, char *argv[])
 {

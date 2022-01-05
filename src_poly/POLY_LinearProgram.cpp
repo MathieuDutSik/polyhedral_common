@@ -1,3 +1,4 @@
+#include "NumberTheory.h"
 #include "POLY_LinearProgramming.h"
 
 int main(int argc, char *argv[])
