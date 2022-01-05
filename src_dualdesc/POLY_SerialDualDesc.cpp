@@ -1,3 +1,4 @@
+#include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
