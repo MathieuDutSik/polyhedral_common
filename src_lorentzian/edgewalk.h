@@ -101,6 +101,52 @@ struct FundDomainVertex {
   */
 };
 
+template<typename T, typename Tint>
+FundDomainVertex<T,Tint> GetEntry(size_t pos)
+{
+  std::vector<T> V_gen;
+  std::vector<Tint> V_MR;
+  if (pos == 0) {
+    V_gen = {3, 1, 1, 1};
+    V_MR = {0, 0, 1, -1, 0, 1, -1, 0, -1, -1, -1, -1};
+  }
+  if (pos == 1) {
+    V_gen = {2, 0, 1, 1};
+    V_MR = {0, 0, 1, -1, 1, 0, 1, 1, -1, -1, -1, -1};
+  }
+  if (pos == 2) {
+    V_gen = {1, 0, 0, 1};
+    V_MR = {0, 1, -1, 0, 1, 0, 1, 1, -1, -1, -1, -1};
+  }
+  if (pos == 3) {
+    V_gen = {2, 1, 1, 1};
+    V_MR = {0, 0, 1, -1, 0, 1, -1, 0, 1, 0, 1, 1};
+  }
+  if (pos == 4) {
+    V_gen = {6, -2, 4, 4};
+    V_MR = {0, 0, 1, -1, -1, -1, -1, -1, 4, 0, 3, 3, 3, -1, 1, 3};
+  }
+  if (pos == 5) {
+    V_gen = {1, 0, 0, 1};
+    V_MR = {0, 1, -1, 0, -1, -1, -1, -1, 2, 1, 1, 2, 1, -1, 1, 1};
+  }
+  size_t len = V_gen.size();
+  MyVector<T> gen(len);
+  for (size_t i=0; i<len; i++)
+    gen(i) = V_gen[i];
+  size_t n_root=V_MR.size() / len;
+  MyMatrix<Tint> MatRoot(n_root,len);
+  size_t idx = 0;
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    for (size_t i=0; i<len; i++) {
+      MatRoot(i_root,i) = V_MR[idx];
+      idx++;
+    }
+  }
+  return {gen, MatRoot};
+}
+
+
 
 template<typename T, typename Tint>
 std::string StringPointerAddresses(FundDomainVertex<T,Tint> const& eVert)
@@ -1141,6 +1187,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   std::vector<StatusEntry> l_entry;
   std::vector<FundDomainVertex<T,Tint>> l_orbit_pair_vertices;
+  /*
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
   auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
     if (eP == IdMat)
@@ -1156,6 +1203,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
+  */
+  /*
   auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, FundDomainVertex<T,Tint> evert1, FundDomainVertex<T,Tint> evert2) -> void {
     //    theVert.l_roots.clear();
     //    std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
@@ -1177,7 +1226,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
         std::cerr << "Find some isomorphism\n";
-        /*
         std::cerr << "u : vert1=" << StringVectorGAP(hvert1.gen) << " vert2=" << StringVectorGAP(hvert2.gen) << "\n";
         std::cerr << "v : vert1=" << StringVectorGAP(evert1.gen) << " vert2=" << StringVectorGAP(evert2.gen) << "\n";
         std::cerr << "u : EXT=\n";
@@ -1189,7 +1237,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         WriteMatrix(std::cerr, v_pair_char.first);
         std::cerr << "u : WMat=\n";
         PrintWeightedMatrix(std::cerr, v_pair_char.second);
-        */
         f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         return;
       }
@@ -1222,7 +1269,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "9 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
     std::cerr << "After v_pair insertions\n";
   };
+  */
   size_t iVERT = 0;
+  size_t iResult = 0;
   auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> const& theVert) -> void {
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     size_t n_root = theVert.MatRoot.rows();
@@ -1239,17 +1288,14 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     MyMatrix<T> FACred = ColumnReduction(FAC);
     std::cerr << "FACred=\n";
     WriteMatrix(std::cerr, FACred);
-    vectface vf = lrs::DualDescription_temp_incd(FACred);
+    //    vectface vf = lrs::DualDescription_temp_incd(FACred);
     size_t iFAC = 0;
     std::cerr << "1 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    for (auto & eFAC : vf) {
-      Face fFAC = eFAC;
+    //    std::cerr << "|vf|=" << vf.size() << "\n";
+    for (int w=0; w<3; w++) {
+      //    for (auto & eFAC : vf) {
+      //      Face fFAC = eFAC;
       /*
-      Face fFAC(n_root); // Hack to the one that we want to de bug.
-      for (size_t i_root=0; i_root<n_root; i_root++)
-        fFAC[i_root] = 1;
-      fFAC[0] = 0;
-      */
       size_t i_disc = std::numeric_limits<size_t>::max();
       std::cerr << "\n";
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << "\n";
@@ -1267,41 +1313,52 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         }
       }
       std::cerr << "iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
-      MyVector<Tint> v_disc = GetMatrixRow(theVert.MatRoot, i_disc);
-      std::cerr << "3 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      */
+      /*
+      auto get_fund=[&]() -> FundDomainVertex<T,Tint> {
+        if (iResult < 6)
+          return GetEntry<T,Tint>(iResult);
+        MyVector<Tint> v_disc = GetMatrixRow(theVert.MatRoot, i_disc);
+        std::cerr << "3 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
+        return EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      };
+      */
+      FundDomainVertex<T,Tint> fVert = GetEntry<T,Tint>(iResult);
+      std::cerr << "Result of EdgewalkProcedure iResult=" << iResult << "\n";
+      std::cerr << "fVert=" << StringVectorGAP(fVert.gen) << " MatRoot=\n";
+      WriteMatrix(std::cerr, fVert.MatRoot);
+      iResult++;
       /*
       MyVector<T> gen(4);
       for (int i=0; i<4; i++)
         gen(i) = 1;
         FundDomainVertex<T,Tint> fVert{gen, std::vector<MyVector<Tint>>(5,MyVector<Tint>(4))};*/
-      std::cerr << "l_roots=\n";
-      WriteMatrix(std::cerr, fVert.MatRoot);
-      std::cerr << "4 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
-      T norm = gen_nofrac.dot(G * gen_nofrac);
-      std::cerr << "\n";
-      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " Result of EdgewalkProcedure norm=" << norm << "\n";
-      std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
+      //      std::cerr << "l_roots=\n";
+      //      WriteMatrix(std::cerr, fVert.MatRoot);
+      //      std::cerr << "4 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
+      //      MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
+      //      T norm = gen_nofrac.dot(G * gen_nofrac);
+      //      std::cerr << "\n";
+      //      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " norm=" << norm << "\n";
+      //      std::cerr << "We have fVert=" << StringVectorGAP(gen_nofrac) << "\n";
       //      std::cerr << "5 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       StatusEntry entry{false,true};
       //      std::cerr << "6 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       //      std::cerr << "7 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      FundDomainVertex<T,Tint> evert1 = DirectExplicitCopyHack(theVert);
-      std::cerr << "theVert = " << StringPointerAddresses(theVert) << " evert1 = " << StringPointerAddresses(evert1) << "\n";
+      FundDomainVertex<T,Tint> evert1 = theVert;
+      //      std::cerr << "theVert = " << StringPointerAddresses(theVert) << " evert1 = " << StringPointerAddresses(evert1) << "\n";
       //      std::cerr << "8 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      FundDomainVertex<T,Tint> evert2 = DirectExplicitCopyHack(fVert);
-      std::cerr << "fVert = " << StringPointerAddresses(fVert) << " evert2 = " << StringPointerAddresses(evert2) << "\n";
+      FundDomainVertex<T,Tint> evert2 = fVert;
+      //      std::cerr << "fVert = " << StringPointerAddresses(fVert) << " evert2 = " << StringPointerAddresses(evert2) << "\n";
       //      std::cerr << "9 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      func_insert_pair_vertices(theVert, entry, evert1, evert2);
-      /*
-    l_orbit_pair_vertices.push_back(epair);
-    std::cerr << "Failed to find some isomorphism\n";
-    std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.l_roots.size() << "\n";
-    l_entry.push_back(entry);
-      */
+      //      func_insert_pair_vertices(theVert, entry, evert1, evert2);
+      l_entry.push_back(entry);
+      l_orbit_pair_vertices.push_back(evert1);
+      l_orbit_pair_vertices.push_back(evert2);
 
-      std::cerr << "10 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
+      
+
+      //      std::cerr << "10 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       iFAC++;
     }
     iVERT++;
