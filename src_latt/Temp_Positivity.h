@@ -111,6 +111,7 @@ struct DiagSymMat {
 template<typename T>
 DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   //  std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
   //  WriteMatrix(std::cerr, SymMat);
   int n=SymMat.rows();
@@ -119,8 +120,7 @@ DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
     MyMatrix<T> BasisOrthogonal;
     if (i == 0) {
       BasisOrthogonal=IdentityMat<T>(n);
-    }
-    else {
+    } else {
       MyMatrix<T> TheBasis=MatrixFromVectorFamily(ListVect);
       MyMatrix<T> eProd=SymMat*TheBasis.transpose();
       BasisOrthogonal=NullspaceMat(eProd);
@@ -210,6 +210,7 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const& SymMat)
 template<typename T>
 DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const& SymMat)
 {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   //  std::cerr << "DiagonalizeSymmetricMatrix\n";
   //  WriteMatrix(std::cerr, SymMat);
   //  std::cerr << "DiagonalizeSymmetricMatrix, RankMat(SymMat)=" << RankMat(SymMat) << "\n";

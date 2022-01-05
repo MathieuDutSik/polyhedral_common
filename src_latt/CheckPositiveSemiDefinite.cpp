@@ -1,3 +1,4 @@
+#include "NumberTheory.h"
 #include "Temp_Positivity.h"
 int main(int argc, char *argv[])
 {
@@ -13,7 +14,7 @@ int main(int argc, char *argv[])
     std::ifstream INmat(argv[1]);
     MyMatrix<T> TheMat=ReadMatrix<T>(INmat);
     // computing the kernel
-    DiagSymMat<T> eDiag = DiagonalizeNonDegenerateSymmetricMatrix(TheMat);
+    DiagSymMat<T> eDiag = DiagonalizeSymmetricMatrix(TheMat);
     if (eDiag.nbMinus > 0)
       std::cout << "The matrix is NOT positive semidefinite\n";
     else {
