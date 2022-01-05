@@ -52,6 +52,14 @@ void PrintTent(std::ostream& os, Tent<T,Tint,Tidx_value> const& e_ent)
 
 
 
+template<typename T>
+std::vector<T> f_vsub(const size_t& n_row, const size_t& len)
+{
+  std::vector<T> Vsub(n_row,23);
+  for (size_t i=0; i<len; i++)
+    Vsub[i] = 37;
+  return Vsub;
+}
 
 Face f_subset(const size_t& n_row, const size_t& len)
 {
@@ -154,9 +162,9 @@ Tent<T,Tint,Tidx_value> f_ent(std::vector<ConeDesc<T,Tint,Tgroup>> const& ListCo
     Concat = Concatenate(M, Spann);
   }
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
-  Face subset = f_subset(Concat.rows(), M.rows());
+  std::vector<Tint> Vsubset = f_vsub<Tint>(Concat.rows(), M.rows());
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
-  WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Subset<Tint,Tidx,Tidx_value>(Concat, ListMat, subset);
+  WeightMatrix<true,std::vector<Tint>,Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<Tint,Tidx,Tidx_value>(Concat, ListMat, Vsubset);
   WMat.ReorderingSetWeight();
   return {M, Spann, Qmat, std::move(WMat), fd};
 }
