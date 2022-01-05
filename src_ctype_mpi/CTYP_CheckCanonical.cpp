@@ -1,5 +1,5 @@
-#include "MAT_Matrix.h"
 #include "NumberTheory.h"
+#include "MAT_Matrix.h"
 #include "Temp_PolytopeEquiStab.h"
 
 

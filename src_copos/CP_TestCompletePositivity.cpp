@@ -1,3 +1,4 @@
+#include "NumberTheory.h"
 #include "StrictPositivity.h"
 int main(int argc, char *argv[])
 {

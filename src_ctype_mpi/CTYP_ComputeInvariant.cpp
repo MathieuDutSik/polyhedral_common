@@ -1,6 +1,6 @@
+#include "NumberTheory.h"
 #include "Permlib_specific.h"
 #include "CtypeMPI_types.h"
-#include "NumberTheory.h"
 #include "Namelist.h"
 #include <boost/mpi.hpp>
 
