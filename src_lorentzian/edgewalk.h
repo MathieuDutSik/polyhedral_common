@@ -11,7 +11,7 @@
 #include "POLY_lrslib.h"
 
 
-//#define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
+#define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
 
 
@@ -439,12 +439,23 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
 {
+  std::cerr << "-------------------------------------- EDGEWALK PROCEDURE ---------------------------------------------\n";
+  std::cerr << "k=" << StringVectorGAP(k) << "\n";
+  std::cerr << "l_norms =";
+  for (auto & eN : l_norms)
+    std::cerr << " " << eN;
+  std::cerr << "\n";
+  std::cerr << "l_ui =";
+  for (auto & eV : l_ui)
+    std::cerr << " " << StringVectorGAP(eV);
+  std::cerr << "\n";
+  std::cerr << "v_disc=" << StringVectorGAP(v_disc) << "\n";
+  std::cerr << "    Real work starts now\n";
   //
   // Initial computation of linear algebra nature:
   // Find a basis (k,r0) of the plane P
   //
   MyVector<T> v_disc_t = UniversalVectorConversion<T,Tint>(v_disc);
-  std::cerr << "v_disc_t=" << StringVectorGAP(v_disc_t) << "\n";
   /*
   MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_ui).first;
   std::string symb = coxdyn_matrix_to_string(CoxMat);
@@ -503,7 +514,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2,n);
-  std::cerr << "OrientedBasis RES k=" << StringVectorGAP(k) << "\n";
   if (norm < 0) { // the point is inner, the oriented basis is clear.
     std::cerr << "Builging OrientedBasis, ordinary case\n";
     AssignMatrixRow(OrientedBasis, 0, r0);
@@ -712,7 +722,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   bool is_isotropic;
   std::map<T, SingCompAnisotropic> map_anisotropic;
   std::map<T, SingCompIsotropic> map_isotropic;
-  auto compute_iso_aniso_data=[&]() -> void {
+  {
     MyMatrix<T> Gtest = Pplane * G * Pplane.transpose();
     std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
     if (opt) {
@@ -724,8 +734,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       for (auto & u_norm : l_norms)
         map_anisotropic[u_norm] = get_sing_comp_anisotropic(u_norm);
     }
-  };
-  compute_iso_aniso_data();
+  }
   std::cerr << "is_isotropic=" << is_isotropic << "\n";
   std::cerr << "Edgewalk Procedure, step 7\n";
   // Evaluation of fun
@@ -781,28 +790,24 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return l_vect2;
   };
   auto get_next_isotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
-    std::cerr << "get_next_isotropic 1 RES k=" << StringVectorGAP(k) << "\n";
     T const& e_norm = poss.e_norm;
     SingCompIsotropic & e_comp = map_isotropic[e_norm];
     T res_norm = poss.res_norm;
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
     std::cerr << "|l_vect|=" << l_vect.size() << "\n";
-    std::cerr << "get_next_isotropic 2 RES k=" << StringVectorGAP(k) << "\n";
     for (auto & e_vect : l_vect) {
       std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
-      std::cerr << "get_next_isotropic 3 RES k=" << StringVectorGAP(k) << "\n";
       //      std::cerr << "Before v_T computation\n";
       //      std::cerr << "u_component=" << StringVectorGAP(poss.u_component) << "\n";
       //      std::cerr << "Basis_ProjP_LN=";
       //      WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
       MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
       std::cerr << "After v_T computation v_T=" << StringVectorGAP(v_T) << "\n";
-      std::cerr << "get_next_isotropic 3 RES k=" << StringVectorGAP(k) << "\n";
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
         if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
-          std::cerr << "get_next_isotropic 4 RES k=" << StringVectorGAP(k) << "\n";
+          std::cerr << "get_next_isotropic. Returning v_i=" << StringVectorGAP(v_i) << "\n";
           return v_i;
         }
       }
@@ -825,7 +830,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
 
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
-    std::cerr << "After get_next RES k=" << StringVectorGAP(k) << "\n";
     std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<Tint> alpha = *opt_v;
@@ -833,11 +837,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       auto f_ins=[&]() -> void {
         std::vector<MyVector<Tint>> l_roots = l_ui;
         l_roots.push_back(alpha);
-        std::cerr << "We have l_roots\n";
         MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
-        std::cerr << "We have MatRoot\n";
         MyMatrix<T> EquaMat = Mat_root * G;
-        std::cerr << "We have EquaMat\n";
         MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
         if (NSP.rows() != 1) {
           std::cerr << "We should have exactly one row\n";
@@ -1307,7 +1308,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
   if (OptionInitialVertex == "vinberg") {
     VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
     std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
-    return {UniversalVectorConversion<T,Tint>(epair.first), epair.second};
+    return {UniversalVectorConversion<T,Tint>(epair.first), MatrixFromVectorFamily(epair.second)};
   }
 #endif
   std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
