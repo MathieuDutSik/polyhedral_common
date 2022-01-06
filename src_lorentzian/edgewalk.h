@@ -928,13 +928,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T sum_B = gen.dot(G * gen);
     std::cerr << "sum_B=" << sum_B << "\n";
     std::cerr << "gen="; WriteVector(std::cerr, gen);
-    MyVector<T> can_gen = get_can_gen(gen);
-    std::cerr << "can_gen="; WriteVector(std::cerr, can_gen);
-    std::cerr << "RemoveFraction(can_gen)="; WriteVector(std::cerr, RemoveFractionVector(can_gen));
-    T scal = v_disc_t.dot(G * can_gen);
-    std::cerr << "scal=" << scal << "\n";
-    if (scal < 0) // Convention is negative scalar in Lorentzian theory (see end of sect 2 of edgewalk paper)
-      l_gens.push_back(can_gen);
+    if (!IsVectorMultiple(gen, k)) {
+      MyVector<T> can_gen = get_can_gen(gen);
+      std::cerr << "can_gen="; WriteVector(std::cerr, can_gen);
+      std::cerr << "RemoveFraction(can_gen)="; WriteVector(std::cerr, RemoveFractionVector(can_gen));
+      T scal = v_disc_t.dot(G * can_gen);
+      std::cerr << "scal=" << scal << "\n";
+      if (scal < 0) // Convention is negative scalar in Lorentzian theory (see end of sect 2 of edgewalk paper)
+        l_gens.push_back(can_gen);
+    }
   }
   std::cerr << "|l_gens|=" << l_gens.size() << "\n";
   if (l_gens.size() != 1) {
