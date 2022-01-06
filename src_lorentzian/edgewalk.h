@@ -19,15 +19,18 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
 {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
+  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["FileLorMat"]="the lorentzian matrix used";
-  ListStringValues1["OptionInitialVertex"]="vinberg or File and if File selected use FileVertDomain as initial vertex";
-  ListStringValues1["FileInitialVertex"]="unset put the name of the file used for the initial vertex";
-  ListStringValues1["OptionNorms"]="possible option K3 (then just 2) or all where all norms are considered";
-  ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
-  ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
+  ListStringValues1["FileLorMat"] = "the lorentzian matrix used";
+  ListStringValues1["OptionInitialVertex"] = "vinberg or File and if File selected use FileVertDomain as initial vertex";
+  ListStringValues1["FileInitialVertex"] = "unset put the name of the file used for the initial vertex";
+  ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
+  ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
+  ListBoolValues1["ComputeAllSimpleRoots"]=true;
   SingleBlock BlockPROC;
-  BlockPROC.ListStringValues=ListStringValues1;
+  BlockPROC.ListStringValues = ListStringValues1;
+  BlockPROC.ListBoolValues = ListBoolValues1;
   ListBlock["PROC"]=BlockPROC;
   // Merging all data
   return {ListBlock, "undefined"};
@@ -940,32 +943,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   const MyVector<T> & k_new = l_gens[0];
   std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
-  /* FILL OUT THE CODE
-     What we are looking for is the roots satisfying say A[x] = 2
-     and x.v = 0.
-     This can only be infinite. Since otherwise, there would only be
-     a finite set of roots incident to the vector.
-     ----
-     But we could add the constraint of negative scalar product with the known
-     roots.
-     This just could work. But is would be expensive, as the problem is N-dimensional.
-     Most likely, it would just introduce Vinberg back and break our speed
-     improvements.
-
-   */
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
   return {k_new, MatrixFromVectorFamily(l_roots_ret)};
 }
 
-
-
-/*
-template<typename T, typename Tint>
-struct PairVertices {
-FundDomainVertex<T,Tint> vert1;
-  FundDomainVertex<T,Tint> vert2;
-};
-*/
 
 
 
@@ -1052,6 +1033,52 @@ struct ResultEdgewalk {
   std::vector<FundDomainVertex<T,Tint>> l_orbit_pair_vertices;
 };
 
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> const& re)
+{
+  std::unordered_set<MyVector<Tint>> TotalList;
+  auto f_insert=[&](MyVector<Tint> const& v) -> void {
+    if (TotalList.count(v) != 0)
+      return;
+    std::unordered_set<MyVector<Tint>> s_v;
+    std::vector<MyVector<Tint>> l_v;
+    auto f_ins=[&](MyVector<Tint> const& w) -> void {
+      if (s_v.count(w) != 0)
+        return;
+      s_v.insert(w);
+      l_v.push_back(w);
+    };
+    f_ins(v);
+    size_t pos=0;
+    while(true) {
+      size_t len = l_v.size();
+      if (pos == len)
+        break;
+      for (size_t i=pos; i<len; i++) {
+        for (auto & eGen : re.l_gen_isom_cox) {
+          MyVector<Tint> w_img = eGen.transpose() * l_v[i];
+          f_ins(w_img);
+        }
+      }
+    }
+  };
+  for (auto & fdv : re.l_orbit_pair_vertices) {
+    size_t len = fdv.MatRoot.rows();
+    for (size_t i=0; i<len; i++) {
+      MyVector<Tint> e_root = GetMatrixRow(fdv.MatRoot, i);
+      f_insert(e_root);
+    }
+  }
+  std::vector<MyVector<Tint>> l_root;
+  for (auto & v : TotalList)
+    l_root.push_back(v);
+  return l_root;
+}
+
+
+
+
 template<typename T, typename Tint>
 std::vector<T> get_list_norms(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re)
 {
@@ -1075,9 +1102,12 @@ std::vector<T> get_list_norms(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const
 
 
 template<typename T, typename Tint>
-void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re, std::ostream& os, const std::string& OutFormat)
+void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re, std::ostream& os, const std::string& OutFormat, bool const& ComputeAllSimpleRoots)
 {
   std::vector<T> l_norms = get_list_norms(G, re);
+  std::vector<MyVector<Tint>> l_simple_root;
+  if (ComputeAllSimpleRoots)
+    l_simple_root = get_complete_finite_root_set(re);
   if (OutFormat == "GAP") {
     os << "return rec(l_norms:=";
     WriteStdVectorGAP(os, l_norms);
@@ -1095,7 +1125,17 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
       const FundDomainVertex<T,Tint> & evert2 = re.l_orbit_pair_vertices[2*i+1];
       WritePairVertices(G, evert1, evert2, os, OutFormat);
     }
-    os << "]);\n";
+    os << "]";
+    if (ComputeAllSimpleRoots) {
+      os << ", ListSimpleRoots:=[";
+      for (size_t i=0; i<l_simple_root.size(); i++) {
+        if (i>0)
+          os << ",";
+        os << StringVectorGAP(l_simple_root[i]);
+      }
+      os << "]";
+    }
+    os << ");\n";
     return;
   }
   if (OutFormat == "TXT") {
@@ -1352,14 +1392,15 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
+  bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
   if (FileOut == "stderr") {
-    PrintResultEdgewalk(G, re, std::cerr, OutFormat);
+    PrintResultEdgewalk(G, re, std::cerr, OutFormat, ComputeAllSimpleRoots);
   } else {
     if (FileOut == "stdout") {
-      PrintResultEdgewalk(G, re, std::cout, OutFormat);
+      PrintResultEdgewalk(G, re, std::cout, OutFormat, ComputeAllSimpleRoots);
     } else {
       std::ofstream os(FileOut);
-      PrintResultEdgewalk(G, re, os, OutFormat);
+      PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
     }
   }
 
