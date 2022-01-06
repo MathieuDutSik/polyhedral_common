@@ -1039,8 +1039,13 @@ struct ResultEdgewalk {
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> const& re)
 {
+  for (auto & eGen : re.l_gen_isom_cox) {
+    std::cerr << "eGen=\n";
+    WriteMatrix(std::cerr, eGen);
+  }
   std::unordered_set<MyVector<Tint>> TotalList;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
+    std::cerr << "f_insert call with v=" << StringVectorGAP(v) << "\n";
     if (TotalList.count(v) != 0)
       return;
     std::unordered_set<MyVector<Tint>> s_v;
@@ -1055,6 +1060,7 @@ std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> 
     size_t pos=0;
     while(true) {
       size_t len = l_v.size();
+      std::cerr << "pos=" << pos << " len=" << len << "\n";
       if (pos == len)
         break;
       for (size_t i=pos; i<len; i++) {
@@ -1063,6 +1069,7 @@ std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> 
           f_ins(w_img);
         }
       }
+      pos=len;
     }
   };
   for (auto & fdv : re.l_orbit_pair_vertices) {
@@ -1323,6 +1330,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     if (IsFinished)
       break;
   }
+  std::cerr << "Exiting from the infinite loop of enumeration of vertex pairs\n";
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
