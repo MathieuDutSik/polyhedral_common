@@ -476,8 +476,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
   std::cerr << "Plane P=\n";
   WriteMatrix(std::cerr, Pplane);
-  std::cerr << "Space=\n";
-  WriteMatrix(std::cerr, Space);
+  //  std::cerr << "Space=\n";
+  //  WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
   std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
@@ -1244,13 +1244,27 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     MyMatrix<T> FACred = ColumnReduction(FAC);
     std::cerr << "FACred=\n";
     WriteMatrix(std::cerr, FACred);
+    std::cerr << "RankMat(FAC)=" << RankMat(FAC) << " RankMat(FACred)=" << RankMat(FACred) << "\n";
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     std::cerr << "|vf|=" << vf.size() << "\n";
+    for (auto & eIncd : vf) {
+      MyVector<T> eFAC = FindFacetInequality(FACred, eIncd);
+      std::cerr << "vf eIncd=" << eIncd << " eFAC=" << eFAC << "\n";
+    }
     // Doing the std::sort(vf.begin(), vf.end()) seems science fiction right now.
     std::vector<Face> vf_ugly;
     for (auto & eFAC : vf)
       vf_ugly.push_back(eFAC);
-    std::sort(vf_ugly.begin(), vf_ugly.end());
+    std::sort(vf_ugly.begin(), vf_ugly.end(),
+              [&](Face const& x, Face const& y) -> bool {
+                for (size_t i_root=0; i_root<n_root; i_root++) {
+                  if (x[i_root] == 1 && y[i_root] == 0)
+                    return false;
+                  if (x[i_root] == 0 && y[i_root] == 1)
+                    return true;
+                }
+                return false;
+              });
     size_t pos=0;
     for (auto & eFAC : vf_ugly) {
       std::cerr << "pos=" << pos << " eFAC=" << eFAC << "\n";
@@ -1266,12 +1280,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::vector<MyVector<Tint>> l_ui;
       //      std::cerr << "2 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       for (size_t i_root=0; i_root<n_root; i_root++) {
-        std::cerr << "i_root=" << i_root << " / " << n_root << "\n";
         if (fFAC[i_root] == 1) {
-          std::cerr << "  Before l_ui push_back operation |theVert.l_roots|=" << theVert.MatRoot.rows() << " \n";
           MyVector<Tint> root = GetMatrixRow(theVert.MatRoot, i_root);
           l_ui.push_back(root);
-          std::cerr << "  After l_ui push_back operation\n";
         } else {
           i_disc = i_root;
         }

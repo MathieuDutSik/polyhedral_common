@@ -117,6 +117,10 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
     aRow = OneInc.find_next(aRow);
   };
   MyMatrix<T> NSP=NullspaceTrMat_Kernel<T,decltype(f)>(nb, nbCol, f);
+  if (NSP.rows() != 1) {
+    std::cerr << "We should have just one row in NSP\n";
+    throw TerminalException{1};
+  }
   MyVector<T> eVect(nbCol);
   for (size_t iCol=0; iCol<nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
@@ -129,8 +133,8 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const& TheEXT, Face const& OneInc)
     if (eScal < 0)
       return -eVect;
   }
-  // This part should never be reached.
-  return eVect;
+  std::cerr << "Error in FindFacetInequality\n";
+  throw TerminalException{1};
 }
 
 

@@ -311,6 +311,7 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
   //
   // We are testing if EXT1 P = perm(EXT2) 
   //  std::vector<Tidx> V(n_rows);
+  /*
   std::cerr << "CheckEquivalence EXT1=\n";
   WriteMatrix(std::cerr, EXT1);
   std::cerr << "CheckEquivalence EXT2=\n";
@@ -318,6 +319,7 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
   std::cerr << "ListIdx=" << ListIdx << "\n";
   std::cerr << "CheckEquivalence P=\n";
   WriteMatrix(std::cerr, P);
+  */
 
   MyVector<T> Vimg(n_cols);
   for (size_t i_row=0; i_row<n_rows; i_row++) {
@@ -337,7 +339,7 @@ bool CheckEquivalence(const MyMatrix<T>& EXT1, const MyMatrix<T>& EXT2, const st
       if (Img_EXT1 != EXT2_map)
         return false;
     }
-    std::cerr << "i_row=" << i_row << " Vimg=" << StringVectorGAP(Vimg) << " i_row_img=" << i_row_img << " EXTé(i_row_img)=" << StringVectorGAP(GetMatrixRow(EXT2, i_row_img)) << "\n";
+    //    std::cerr << "i_row=" << i_row << " Vimg=" << StringVectorGAP(Vimg) << " i_row_img=" << i_row_img << " EXTé(i_row_img)=" << StringVectorGAP(GetMatrixRow(EXT2, i_row_img)) << "\n";
   }
   return true;
 }
