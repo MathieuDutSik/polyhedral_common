@@ -484,13 +484,11 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   for (int i=0; i<n; i++)
     EquaRvect(n_root,i) = eP(i);
   MyMatrix<T> NSP = NullspaceTrMat(EquaRvect);
-  std::cerr << "Edgewalk Procedure, step 1\n";
   if (NSP.rows() != 1) {
     std::cerr << "|NSP|=" << NSP.rows() << "/" << NSP.cols() << "\n";
     std::cerr << "The dimension should be exactly 1\n";
     throw TerminalException{1};
   }
-  std::cerr << "Edgewalk Procedure, step 1\n";
   /*
     The vector r0 is orthogonal to k and is well defined up to a sign.
     The half plane (1/2)P is shown on Figure 8.1 as being orthogonal to
@@ -551,13 +549,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //
   // Computing the extension and the maximum norms from that.
   //
-  std::cerr << "Edgewalk Procedure, step 2\n";
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool only_spherical = true;
-  std::cerr << "Edgewalk Procedure, step 3\n";
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
-  std::cerr << "Edgewalk Procedure, step 4\n";
   std::map<T,T> map_max_resnorm;
   // For each norm, there is a corresponding maximum possible norms and specific enumeration.
   for (auto & e_extension : l_extension) {
@@ -567,17 +562,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   for (auto & kv : map_max_resnorm)
     std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
-  std::cerr << "Edgewalk Procedure, step 5\n";
   //
   // Determine if the plane P is isotropic and if not compute the set of test vectors
   //
   MyMatrix<T> G_Pplane = Pplane * G * Pplane.transpose();
-  std::cerr << "G_Pplane=\n";
-  WriteMatrix(std::cerr, G_Pplane);
-  std::cerr << "G=\n";
-  WriteMatrix(std::cerr, G);
+  //  std::cerr << "G_Pplane=\n";
+  //  WriteMatrix(std::cerr, G_Pplane);
+  //  std::cerr << "G=\n";
+  //  WriteMatrix(std::cerr, G);
   MyMatrix<T> ProjP = GetProjectionMatrix(G, Pplane);
-  std::cerr << "Edgewalk Procedure, step 6\n";
   struct SingCompAnisotropic {
     MyMatrix<T> Latt;
     MyMatrix<T> Basis_ProjP_LN;
@@ -632,8 +625,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "get_sing_comp_anisotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
-    std::cerr << "Basis_ProjP_LN=\n";
-    WriteMatrix(std::cerr, Basis_ProjP_LN);
+    //    std::cerr << "Basis_ProjP_LN=\n";
+    //    WriteMatrix(std::cerr, Basis_ProjP_LN);
     MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, Pplane);
     MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
     T res_norm = map_max_resnorm[e_norm];
@@ -653,10 +646,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     const std::vector<MyVector<Tint>>& l_vect1 = opt->second;
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
     const MyMatrix<Tint>& P = opt->first;
-    std::cerr << "Basis_ProjP_LN=\n";
-    WriteMatrix(std::cerr, Basis_ProjP_LN);
-    std::cerr << "Basis_P_inter_LN=\n";
-    WriteMatrix(std::cerr, Basis_P_inter_LN);
+    //    std::cerr << "Basis_ProjP_LN=\n";
+    //    WriteMatrix(std::cerr, Basis_ProjP_LN);
+    //    std::cerr << "Basis_P_inter_LN=\n";
+    //    WriteMatrix(std::cerr, Basis_P_inter_LN);
     MyMatrix<T> Expr_t = ExpressVectorsInIndependentFamilt(Basis_P_inter_LN, Basis_ProjP_LN);
     std::cerr << "Expr_t=\n";
     WriteMatrix(std::cerr, Expr_t);
@@ -701,6 +694,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     MyMatrix<T> GP_LN = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
@@ -767,14 +761,25 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       return v1(0) * v2(1) - v1(1) * v2(0);
     };
     auto is_corr=[&](MyVector<Tint> const& x) -> bool {
-      T scal = eval_scal(G, e_comp.r0_work, x);
-      if (scal <= 0)
-        return false;
-      return det(e_comp.r0_work, x) > 0;
+      std::cerr << "Testing adequateness of x=" << x << " norm=" << norm << "\n";
+      // In the isotropic case, there is no relevant test
+      // See Right picture on Figure 8.1 of the edgewalk paper
+      if (norm < 0) {
+        T scal = eval_scal(e_comp.GP_LN, e_comp.r0_work, x);
+        if (scal <= 0) {
+          std::cerr << "scal=" << scal << "\n";
+          return false;
+        }
+      }
+      Tint eDet = det(e_comp.r0_work, x);
+      std::cerr << "eDet=" << eDet << "\n";
+      return eDet > 0;
     };
+    std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
     for (auto & e_vect1 : l_vect1)
       if (is_corr(e_vect1))
         l_vect2.push_back(e_vect1);
+    std::cerr << "We found |l_vect2|=" << l_vect2.size() << "\n";
     std::sort(l_vect2.begin(), l_vect2.end(),
               [&](MyVector<Tint> const& x, MyVector<Tint> const& y) -> bool {
                 return det(x, y) > 0;
@@ -785,7 +790,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_next_isotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
     SingCompIsotropic & e_comp = map_isotropic[e_norm];
-    T res_norm = poss.res_norm;
+    T const& res_norm = poss.res_norm;
+    std::cerr << "get_next_isotropic with e_norm=" << e_norm << " res_norm=" << res_norm << "\n";
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
     std::cerr << "|l_vect|=" << l_vect.size() << "\n";
     for (auto & e_vect : l_vect) {
@@ -876,6 +882,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
     return best_cand.fund_v;
   }
+  std::cerr << "         --------------- Looking for an isotropic vector ------------\n";
   // So, no candidates were found. We need to find isotropic vectors.
   const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
   std::cerr << "We have Gred=\n";
@@ -1239,19 +1246,21 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "Coxeter diagram of the vertex k=" << symb << "\n";
     */
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
-    std::cerr << "FAC=\n";
-    WriteMatrix(std::cerr, FAC);
+    //    std::cerr << "FAC=\n";
+    //    WriteMatrix(std::cerr, FAC);
     MyMatrix<T> FACred = ColumnReduction(FAC);
-    std::cerr << "FACred=\n";
-    WriteMatrix(std::cerr, FACred);
-    std::cerr << "RankMat(FAC)=" << RankMat(FAC) << " RankMat(FACred)=" << RankMat(FACred) << "\n";
+    //    std::cerr << "FACred=\n";
+    //    WriteMatrix(std::cerr, FACred);
+    //    std::cerr << "RankMat(FAC)=" << RankMat(FAC) << " RankMat(FACred)=" << RankMat(FACred) << "\n";
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     std::cerr << "|vf|=" << vf.size() << "\n";
+    /*
     for (auto & eIncd : vf) {
       TestFacetness(FACred, eIncd);
       MyVector<T> eFAC = RemoveFractionVector(FindFacetInequality(FACred, eIncd));
       std::cerr << "vf eIncd=" << StringFace(eIncd) << " eFAC=" << eFAC << "\n";
     }
+    */
     // Doing the std::sort(vf.begin(), vf.end()) seems science fiction right now.
     std::vector<Face> vf_ugly;
     for (auto & eFAC : vf)

@@ -1256,7 +1256,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       Mtest(i,dim) = V(i);
       Mtest(dim,i) = V(i);
     }
-    std::cerr << "V=" << StringVectorGAP(V) << "\n";
+    //    std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
@@ -1471,8 +1471,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
-  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
-  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  //  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int dim_cox = l_root.size();
@@ -1501,24 +1501,25 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   };
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    //    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     MyVector<T> l_scal(dim_cox);
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
-      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
+      //      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
       //      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
       if (!opt) {
-        std::cerr << "   Failed to match\n";
+        //        std::cerr << "   Failed to match\n";
         return;
       }
       T scal = - *opt;
-      std::cerr << "     scal=" << scal << "\n";
+      //      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
-    std::cerr << "Scalar products found : l_scal ="; WriteVector(std::cerr, l_scal);
+    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    //    std::cerr << "Scalar products found : l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
