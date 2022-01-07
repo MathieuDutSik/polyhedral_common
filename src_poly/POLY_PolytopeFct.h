@@ -90,6 +90,10 @@ void TestFacetness(MyMatrix<T> const& EXT, Face const& eList)
     if (eScal < 0)
       nbMinus++;
   }
+  if (nbZero == EXT.rows()) {
+    std::cerr << "All vectors seems to be incident. And that is not allowed for a facet\n";
+    throw TerminalException{1};
+  }
   if (nbZero != nb) {
     std::cerr << "Error in computing incidence\n";
     std::cerr << "nbZero=" << nbZero << " nb=" << nb << "\n";

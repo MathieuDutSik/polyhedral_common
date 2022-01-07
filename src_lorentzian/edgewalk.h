@@ -207,16 +207,16 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
     throw TerminalException{1};
   }
   RootCandidate<T,Tint> best_cand = l_cand[0];
-  std::cerr << "First best_cand=\n";
-  WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
+  //  std::cerr << "First best_cand=\n";
+  //  WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
   for (size_t i=1; i<l_cand.size(); i++) {
-    std::cerr << "i=" << i << "\n";
-    std::cerr << "Considering l_cand[i]=\n";
-    WriteMatrix(std::cerr, l_cand[i].fund_v.MatRoot);;
+    //    std::cerr << "i=" << i << "\n";
+    //    std::cerr << "Considering l_cand[i]=\n";
+    //    WriteMatrix(std::cerr, l_cand[i].fund_v.MatRoot);;
     if (get_sign_cand(l_cand[i], best_cand) == 1) {
       best_cand = l_cand[i];
-      std::cerr << "Now best_cand=\n";
-      WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
+      //      std::cerr << "Now best_cand=\n";
+      //      WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
     }
   }
   return best_cand;
@@ -851,7 +851,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         };
         std::optional<MyVector<T>> opt_k_new = get_gen();
         if (opt_k_new) {
-          const MyVector<T> & k_new = *opt_k_new;
+          MyVector<T> k_new = RemoveFractionVector(*opt_k_new);
           T scal = v_disc_t.dot(G * k_new);
           if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
             MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
@@ -935,7 +935,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   const MyVector<T> & k_new = l_gens[0];
   std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
-  return {k_new, MatrixFromVectorFamily(l_roots_ret)};
+  return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
 
 
@@ -1180,16 +1180,15 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
     size_t len = l_orbit_pair_vertices.size() / 2;
     for (size_t i=0; i<len; i++) {
-
-      std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
-      std::cerr << "Before computing u_pair_char\n";
+      //      std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
+      //      std::cerr << "Before computing u_pair_char\n";
       const FundDomainVertex<T,Tint>& hvert1 = l_orbit_pair_vertices[2*i];
       const FundDomainVertex<T,Tint>& hvert2 = l_orbit_pair_vertices[2*i+1];
       pair_char<T> u_pair_char = gen_pair_char(G, hvert1, hvert2);
       //      std::cerr << "3 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(u_pair_char, v_pair_char);
       //      std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
+      //      std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
       if (equiv_opt) {
         std::cerr << "Find some isomorphism\n";
         /*
@@ -1212,9 +1211,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     //    std::cerr << "ipass=" << ipass << "\n";
     //    v_pair.vert1.l_roots.clear();
     std::cerr << "Failed to find some isomorphism\n";
-    std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
+    //    std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
     l_entry.push_back(entry);
-    std::cerr << "Before the automorphism insertions\n";
+    //    std::cerr << "Before the automorphism insertions\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(v_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     l_orbit_pair_vertices.push_back(evert1);
@@ -1248,8 +1247,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     std::cerr << "|vf|=" << vf.size() << "\n";
     for (auto & eIncd : vf) {
-      MyVector<T> eFAC = FindFacetInequality(FACred, eIncd);
-      std::cerr << "vf eIncd=" << eIncd << " eFAC=" << eFAC << "\n";
+      TestFacetness(FACred, eIncd);
+      MyVector<T> eFAC = RemoveFractionVector(FindFacetInequality(FACred, eIncd));
+      std::cerr << "vf eIncd=" << StringFace(eIncd) << " eFAC=" << eFAC << "\n";
     }
     // Doing the std::sort(vf.begin(), vf.end()) seems science fiction right now.
     std::vector<Face> vf_ugly;
@@ -1259,15 +1259,15 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
               [&](Face const& x, Face const& y) -> bool {
                 for (size_t i_root=0; i_root<n_root; i_root++) {
                   if (x[i_root] == 1 && y[i_root] == 0)
-                    return false;
-                  if (x[i_root] == 0 && y[i_root] == 1)
                     return true;
+                  if (x[i_root] == 0 && y[i_root] == 1)
+                    return false;
                 }
                 return false;
               });
     size_t pos=0;
     for (auto & eFAC : vf_ugly) {
-      std::cerr << "pos=" << pos << " eFAC=" << eFAC << "\n";
+      std::cerr << "pos=" << pos << " eFAC=" << StringFace(eFAC) << "\n";
       pos++;
     }
 
@@ -1278,7 +1278,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "\n";
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << "\n";
       std::vector<MyVector<Tint>> l_ui;
-      //      std::cerr << "2 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
       for (size_t i_root=0; i_root<n_root; i_root++) {
         if (fFAC[i_root] == 1) {
           MyVector<Tint> root = GetMatrixRow(theVert.MatRoot, i_root);
@@ -1288,15 +1287,14 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         }
       }
       MyVector<Tint> v_disc = GetMatrixRow(theVert.MatRoot, i_disc);
-      std::cerr << "iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
+      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
+      T norm = fVert.gen.dot(G * fVert.gen);
       std::cerr << "Result of EdgewalkProcedure\n";
-      std::cerr << "fVert=" << StringVectorGAP(fVert.gen) << " MatRoot=\n";
+      std::cerr << "We have fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
+      std::cerr << "MatRoot=\n";
       WriteMatrix(std::cerr, fVert.MatRoot);
       //
-      MyVector<T> gen_nofrac = RemoveFractionVector(fVert.gen);
-      T norm = gen_nofrac.dot(G * gen_nofrac);
-      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " norm=" << norm << "\n";
       StatusEntry entry{false,true};
       func_insert_pair_vertices(theVert, entry, theVert, fVert);
       iFAC++;
