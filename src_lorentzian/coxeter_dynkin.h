@@ -1256,6 +1256,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       Mtest(i,dim) = V(i);
       Mtest(dim,i) = V(i);
     }
+    std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
@@ -1279,11 +1280,11 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       test_vector_and_insert(V);
       V(i) = val_four;
       test_vector_and_insert(V);
+      V(i) = val_six; // This covers G2 and tilde{G2}
+      test_vector_and_insert(V);
     }
     for (auto & eIsol : list_isolated) {
       MyVector<T> V = V_basic;
-      V(eIsol) = val_six;
-      test_vector_and_insert(V); // G2, always works
       if (!DS.OnlySpherical) {
         V(eIsol) = val_inf;
         test_vector_and_insert(V); // I1(infinity), always works.
@@ -1470,7 +1471,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
-  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int dim_cox = l_root.size();
@@ -1498,23 +1500,25 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     throw TerminalException{1};
   };
   std::vector<Possible_Extension<T>> l_extensions;
-  size_t n_zero=0;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    //std::cerr << "e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
     MyVector<T> l_scal(dim_cox);
     for (int i=0; i<dim_cox; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
+      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
       //      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
-      if (!opt)
+      if (!opt) {
+        std::cerr << "   Failed to match\n";
         return;
+      }
       T scal = - *opt;
+      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
-    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
-    //    std::cerr << "l_scal ="; WriteVector(std::cerr, l_scal);
+    std::cerr << "Scalar products found : l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
@@ -1527,6 +1531,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<dim_cox; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
+#ifdef SANITY_CHECK
     if (res_norm == 0) {
       std::vector<MyVector<T>> l_root_tot;
       for (auto & ev_tint : l_root)
@@ -1543,8 +1548,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
         throw TerminalException{1};
       }
       //      std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
-      n_zero++;
     }
+#endif
     std::cerr << "  u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
@@ -1552,7 +1557,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   for (auto & e_norm : l_norm)
     for (auto & e_vect : l_vect)
       get_entry(e_vect, e_norm);
-  std::cerr << "ComputePossibleExtensions, step 6 |l_extensions|=" << l_extensions.size() << " n_zero=" << n_zero << "\n";
+  std::cerr << "ComputePossibleExtensions, step 6 |l_extensions|=" << l_extensions.size() << "\n";
   return l_extensions;
 }
 

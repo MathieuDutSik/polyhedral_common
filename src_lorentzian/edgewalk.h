@@ -629,7 +629,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
-    std::cerr << "get_sing_comp_anisotropic, step 1\n";
+    std::cerr << "get_sing_comp_anisotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     std::cerr << "Basis_ProjP_LN=\n";
@@ -699,6 +699,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
+    std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     MyMatrix<T> GP_LN = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
@@ -1290,6 +1291,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
       T norm = fVert.gen.dot(G * fVert.gen);
+      std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
+      for (auto & root : l_ui)
+        std::cerr << " " << StringVectorGAP(root);
+      std::cerr << "\n";
       std::cerr << "Result of EdgewalkProcedure\n";
       std::cerr << "We have fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
       std::cerr << "MatRoot=\n";
@@ -1301,7 +1306,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     iVERT++;
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
-    throw TerminalException{1};
+    //    throw TerminalException{1};
   };
   insert_edges_from_vertex(eVert);
   while(true) {
