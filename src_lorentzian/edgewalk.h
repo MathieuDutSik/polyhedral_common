@@ -1052,6 +1052,7 @@ std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> 
         return;
       s_v.insert(w);
       l_v.push_back(w);
+      TotalList.insert(w);
     };
     f_ins(v);
     size_t pos=0;
@@ -1134,12 +1135,13 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     os << "]";
     if (ComputeAllSimpleRoots) {
       os << ", ListSimpleRoots:=[";
-      for (size_t i=0; i<l_simple_root.size(); i++) {
+      size_t n_simple = l_simple_root.size();
+      for (size_t i=0; i<n_simple; i++) {
         if (i>0)
           os << ",";
         os << StringVectorGAP(l_simple_root[i]);
       }
-      os << "]";
+      os << "], n_simple:=" << n_simple;
     }
     os << ");\n";
     return;
