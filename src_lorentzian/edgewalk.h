@@ -83,17 +83,6 @@ struct FundDomainVertex {
 };
 
 
-template<typename T, typename Tint>
-std::string StringPointerAddresses(FundDomainVertex<T,Tint> const& eVert)
-{
-  void* ptr1 = (void*)eVert.gen.data();
-  void* ptr2 = (void*)eVert.MatRoot.data();
-  std::ostringstream os;
-  os << "(ptr1=" << ptr1 << " ptr2=" << ptr2 << ")";
-  return os.str();
-}
-
-
 
 /*
   Direct copy. We have some memory hack
@@ -1228,25 +1217,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "Before the automorphism insertions\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(v_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
-    std::cerr << "6 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    std::cerr << "Address :                     evert1=" << StringPointerAddresses(evert1) << "\n";
-    std::cerr << "Address :                    theVert=" << StringPointerAddresses(theVert) << "\n";
     l_orbit_pair_vertices.push_back(evert1);
-    std::cerr << "Address : l_orbit_pair_vertices(end)=" << StringPointerAddresses(l_orbit_pair_vertices[l_orbit_pair_vertices.size() - 1])
-              << " |l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
-    std::cerr << "Address :                     evert1=" << StringPointerAddresses(evert1) << "\n";
-    std::cerr << "Address :                    theVert=" << StringPointerAddresses(theVert) << "\n";
-
-    std::cerr << "7 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    std::cerr << "Address :                     evert2=" << StringPointerAddresses(evert2) << "\n";
     l_orbit_pair_vertices.push_back(evert2);
-    std::cerr << "Address : l_orbit_pair_vertices(end)=" << StringPointerAddresses(l_orbit_pair_vertices[l_orbit_pair_vertices.size() - 1])
-              << " |l_orbit_pair_vertices|=" << l_orbit_pair_vertices.size() << "\n";
-    std::cerr << "8 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    std::cerr << "Before v_pair insertions\n";
-    std::cerr << "|v_pair.vert1.l_roots|=" << evert1.MatRoot.rows() << "  |v_pair.vert2.l_roots|=" << evert2.MatRoot.rows() << "\n";
-    std::cerr << "9 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    std::cerr << "After v_pair insertions\n";
   };
   size_t iVERT = 0;
   // We have to do a copy of the Vert since when the vector is extended the previous entries arfe desttroyed when a new
@@ -1273,10 +1245,20 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "FACred=\n";
     WriteMatrix(std::cerr, FACred);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
-    size_t iFAC = 0;
-    std::cerr << "1 : SIZ |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
     std::cerr << "|vf|=" << vf.size() << "\n";
-    for (auto & eFAC : vf) {
+    // Doing the std::sort(vf.begin(), vf.end()) seems science fiction right now.
+    std::vector<Face> vf_ugly;
+    for (auto & eFAC : vf)
+      vf_ugly.push_back(eFAC);
+    std::sort(vf_ugly.begin(), vf_ugly.end());
+    size_t pos=0;
+    for (auto & eFAC : vf_ugly) {
+      std::cerr << "pos=" << pos << " eFAC=" << eFAC << "\n";
+      pos++;
+    }
+
+    size_t iFAC = 0;
+    for (auto & eFAC : vf_ugly) {
       Face fFAC = eFAC;
       size_t i_disc = std::numeric_limits<size_t>::max();
       std::cerr << "\n";
@@ -1310,6 +1292,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     iVERT++;
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
+    throw TerminalException{1};
   };
   insert_edges_from_vertex(eVert);
   while(true) {

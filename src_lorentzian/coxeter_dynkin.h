@@ -287,6 +287,375 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 
 
 
+
+
+
+
+
+
+
+template<typename T>
+std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
+{
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
+  WriteMatrix(std::cerr, M);
+#endif
+  T val_comm = 2;
+  T val_single_edge = 3;
+  T val_four = 4; // Shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
+  T val_five = 5; // Shows up in H3, H4
+  T val_six = 6; // Shows up in G2
+  size_t n_vert = M.rows();
+  if (n_vert == 1) // Case of A1
+    return {0};
+  auto error=[&]() -> void {
+    std::cerr << "The diagram is not spherical or euclidean. Contrary to hypothesis\n";
+    throw TerminalException{1};
+  };
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 1\n";
+#endif
+  std::vector<size_t> list_deg1, list_deg2, list_deg3, list_deg4, list_degN;
+  std::vector<size_t> list_deg(n_vert, 0);
+  size_t n_higher_edge = 0;
+  GraphBitset eG(n_vert);
+  std::map<T,size_t> multiplicity;
+  std::vector<std::vector<size_t>> LLAdj;
+  std::vector<T> list_isolated_adjacent(n_vert);
+  for (size_t i=0; i<n_vert; i++) {
+    size_t n_adj = 0;
+    std::vector<size_t> LAdj;
+    T e_isolated_adjacent = std::numeric_limits<T>::max();
+    for (size_t j=0; j<n_vert; j++) {
+      T val = M(i,j);
+      if (i != j && val != val_comm) {
+        n_adj++;
+        eG.AddAdjacent(i, j);
+        LAdj.push_back(j);
+        e_isolated_adjacent = val;
+        if (j > i) {
+          multiplicity[val]++;
+          if (val != val_single_edge)
+            n_higher_edge++;
+        }
+      }
+    }
+    if (n_adj == 1)
+      list_deg1.push_back(i);
+    if (n_adj == 2)
+      list_deg2.push_back(i);
+    if (n_adj == 3)
+      list_deg3.push_back(i);
+    if (n_adj == 4)
+      list_deg4.push_back(i);
+    if (n_adj > 4)
+      list_degN.push_back(i);
+    list_deg[i] = n_adj;
+    LLAdj.push_back(LAdj);
+    list_isolated_adjacent[i] = e_isolated_adjacent;
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 2\n";
+#endif
+  if (list_degN.size() > 0) // vertices of degree 5 or more never occurs.
+    error();
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 3\n";
+#endif
+  if (list_deg4.size() > 0) { // Vertex of degree 4 can occur for \tilde{D4} only
+    // We are now in Euclidean
+    if (n_vert != 5) // It has to be \tilde{D4}.
+      error();
+    if (list_deg4.size() != 1 || list_deg1.size() != 4 || list_deg2.size() != 0 || list_deg3.size() != 0)
+      error();
+    size_t i_4 = list_deg4[0];
+    for (size_t i=0; i<n_vert; i++)
+      if (i != i_4)
+        if (M(i, i_4) != 3)
+          error();;
+    return {}; // This is \tilde{D4}. No extension vertices.
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 4\n";
+#endif
+  std::vector<std::vector<size_t>> ListCycles = GRAPH_FindAllCycles(eG);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "|ListCycles|=" << ListCycles.size() << "\n";
+#endif
+  if (ListCycles.size() > 0) { // Only tilde{An} is possible.
+    if (ListCycles.size() > 1) // If more than 1 cycle, then not possible
+      error();
+    // We are now in Euclidean case
+    const std::vector<size_t>& eCycle = ListCycles[0];
+    if (eCycle.size() != n_vert)
+      error();
+    if (list_deg2.size() != n_vert)
+      error();
+    if (n_higher_edge != 0)
+      error();
+    return {}; // This is tilde{An}. No extension possible
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 5\n";
+#endif
+  // Now it is a tree
+  if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 && n_higher_edge == 0) {
+    // This is A_n. But finding the possible vertices for extension is not going to be easy:
+    std::vector<size_t> AllExtens;
+    if (n_vert <= 7) { // In that case all the vertices can potentially be used
+      for (size_t i=0; i<n_vert; i++)
+        AllExtens.push_back(i);
+      return AllExtens;
+    }
+    auto append=[&](size_t e_vert, size_t e_lev) -> void {
+      size_t evert1 = e_vert;
+      size_t evert2 = LLAdj[evert1][0];
+      for (size_t i_lev=0; i_lev<e_lev; i_lev++) {
+        AllExtens.push_back(evert1);
+        size_t evert2sav = evert2;
+        auto set_evert2=[&]() -> void { // It all collapses for A2, but it does not matter here
+          for (auto & eAdj : LLAdj[evert2]) {
+            if (eAdj != evert1) {
+              evert2 = eAdj;
+              return;
+            }
+          }
+        };
+        set_evert2();
+        evert1 = evert2sav;
+      }
+    };
+    if (n_vert == 8) { // We have the extension to D9, but also to tilde{E8}
+      append(list_deg1[0], 3);
+      append(list_deg1[1], 3);
+    } else { // Only A(n+1) and D(n+1) are possible
+      append(list_deg1[0], 2);
+      append(list_deg1[1], 2);
+    }
+    return AllExtens;
+  }
+  // An and tilde{An} have been covered
+  if (list_deg3.size() > 2)
+    error(); // No possibility for spherical and euclidean
+  if (list_deg3.size() == 2) {
+    // We are now in Euclidean case
+    if (n_higher_edge != 0)
+      error();
+    for (auto & ePt : list_deg3) {
+      std::vector<size_t> const& LAdj = LLAdj[ePt];
+      size_t n_deg1 = 0;
+      for (auto & fPt : LAdj)
+        if (list_deg[fPt] == 1)
+          n_deg1++;
+      if (n_deg1 != 2)
+        error();
+    }
+    return {}; // For tilde{Dn} no extension is possible
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6 |list_deg3|=" << list_deg3.size() << "\n";
+#endif
+  if (list_deg3.size() == 0) { // We are in a single path.
+    if (multiplicity[val_four] == 2) {
+      if (n_higher_edge != 2) // There are some other higher edge, excluded
+        error();
+      // Only tilde{Cn} is feasible and it is Euclidean
+      for (auto & eVert : list_deg1)
+        if (list_isolated_adjacent[eVert] != val_four)
+          error();
+      return {}; // No extension possible for tilde{Cn}
+    }
+    if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4, tilde{F4}, and I2(4) are possible
+      if (n_vert == 2) {
+        T param = 4;
+        return {0,1}; // For I2(4), There is extension on both vertices
+      }
+      if (n_higher_edge != 1)
+        error(); // There are other edges, excluded.
+      size_t n_sing = 0;
+      size_t n_four = 0;
+      size_t e_vert_sing;
+      size_t e_vert_four;
+      for (auto & eVert : list_deg1) {
+        if (list_isolated_adjacent[eVert] == val_single_edge) {
+          n_sing++;
+          e_vert_sing = eVert;
+        }
+        if (list_isolated_adjacent[eVert] == val_four) {
+          n_four++;
+          e_vert_four = eVert;
+        }
+      }
+      if (n_sing == 2) {
+        if (n_vert == 4) {
+          return list_deg1; // For F4 there are extension on both extremities.
+        }
+        if (n_vert == 5) { // Only tilde{F4} is possible. So conclude from that
+          return {}; // No extension is possible here
+        }
+      }
+      if (n_four == 1 && n_sing == 1) {
+        // Only possibility is to have 4 at one extremity. This is Bn = Cn
+        // But this is complicated to cover all cases.
+        if (n_vert <= 3) { // All vertices are possible then
+          return {0,1,2};
+        }
+        std::vector<size_t> AllExtens;
+        if (n_vert == 4) { // For B4, we can extend to tilde{F4}
+          AllExtens.push_back(e_vert_four);
+        }
+        AllExtens.push_back(e_vert_sing); // Extension to B(n+1)
+        size_t e_adj = LLAdj[e_vert_sing][0];
+        AllExtens.push_back(e_adj); // Extension to tilde(Bn)
+        return AllExtens;
+      }
+      // No other possibilities
+      error();
+    }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+    std::cerr << "multiplicity[val_five]=" << multiplicity[val_five] << "\n";
+#endif
+    if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
+      if (n_vert == 2)
+        return {0,1}; // Extensions to H3 possible on both ends.
+      if (n_vert > 5)
+        return {}; // No possibility
+      size_t n_sing=0;
+      size_t n_five=0;
+      size_t e_vert_sing;
+      for (auto & eVert : list_deg1) {
+        if (list_isolated_adjacent[eVert] == val_single_edge) {
+          n_sing++;
+          e_vert_sing = eVert;
+        }
+        if (list_isolated_adjacent[eVert] == val_five)
+          n_five++;
+      }
+      if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
+        if (n_vert == 3)
+          return {e_vert_sing}; // Extension to H4 is the only possibility
+        if (n_vert == 4)
+          return {}; // H4 cannot be extended.
+      }
+      return {};
+    }
+    if (multiplicity[val_six] == 1) { // Looking for G2 or tilde{G2}
+      if (n_higher_edge != 1)
+        error(); // There are other edges, excluded.
+      if (n_vert == 2)
+        return {0,1}; // Extension to tilde{G2} possible on both vertices
+      if (n_vert == 3)
+        return {}; // tilde{G2} cannot be extended
+      error();
+    }
+    if (n_vert == 2) {
+      T param = M(0,1);
+      if (param == practical_infinity<T>()) {
+        return {}; // I1(infinity) cannot be extended
+      }
+      return {}; // We have now param > 6 and no extension is possible for I2(param) in that case
+    }
+    error();
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 7\n";
+#endif
+  if (list_deg3.size() != 1) {
+    std::cerr << "We should hqve just one vertex of degree 3\n";
+    throw TerminalException{1};
+  }
+  size_t eCent = list_deg3[0];
+  // Now just one vertex of degree 3.
+  if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
+    std::vector<size_t> const& LAdj = LLAdj[eCent];
+    size_t n_sing = 0;
+    for (auto & eAdj : LAdj)
+      if (list_deg[eAdj] == 1)
+        n_sing++;
+    if (n_sing != 2)
+      return {};
+    bool has_edge_four = false;
+    for (auto & eVert : list_deg1)
+      if (list_isolated_adjacent[eVert] == val_four)
+        has_edge_four = true;
+    if (has_edge_four) {
+      return {}; // tilde{Bn} cannot be extended
+    }
+    error();
+  }
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
+  std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 8\n";
+#endif
+  if (n_higher_edge != 0)
+    error();
+  auto get_length=[&](size_t val1, size_t val2) -> std::pair<size_t,size_t> {
+    size_t len = 1;
+    size_t iter=0;
+    while(true) {
+      iter++;
+      std::vector<size_t> const& LVal = LLAdj[val2];
+      if (LVal.size() == 1)
+        break;
+      size_t NewPt = -1;
+      for (auto & eVal : LVal)
+        if (eVal != val1)
+          NewPt = eVal;
+      val1 = val2;
+      val2 = NewPt;
+      len++;
+    }
+    return {len,val2};
+  };
+  // map from the length to the list of vertices of that length
+  std::map<size_t, std::vector<size_t>> map_len;
+  for (auto & eAdj : LLAdj[eCent]) {
+    std::pair<size_t,size_t> ep = get_length(eCent, eAdj);
+    map_len[ep.first].push_back(ep.second);
+  }
+  if (map_len[1].size() == 3) { // It is D4
+    return {0,1,2,3}; // Possible extensions are to D5 from the 3 vertices of degree 1 and to tilde{D4} from the vertex of degree 3
+  }
+  std::vector<size_t> AllExtens;
+  if (map_len[1].size() == 2) { // It is Dn with n >= 5
+    size_t oth_len = n_vert - 3;
+    size_t oth_vert = map_len[oth_len][0];
+    AllExtens.push_back(oth_vert); // Extension to D(n+1) always possible
+    size_t oth_vert_b = LLAdj[oth_vert][0];
+    AllExtens.push_back(oth_vert_b); // Extension to tilde(Dn) always possible
+    if (n_vert <= 8) { // Extension to E6, E7, E8, tilde{E8} are possible.
+      AllExtens.push_back(map_len[1][0]);
+      AllExtens.push_back(map_len[1][1]);
+    }
+    return AllExtens;
+  }
+  if (map_len[1].size() == 1 && map_len[2].size() == 2) { // It is E6
+    return {map_len[1][0], map_len[2][0], map_len[2][1]}; // Extensions to E7 and to tilde{E6}
+  }
+  if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[3].size() == 1) { // It is E7
+    return {map_len[3][0], map_len[2][0]}; // Extensions to E8 and to tilde{E7}
+  }
+  if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[4].size() == 1) { // It is E8
+    return {map_len[4][0]}; // Extension to tilde{E8} is the only possibility
+  }
+  // In spherical, no other possibilities left
+  if (map_len[2].size() == 3) { // It is tilde{E6}
+    return {}; // No extension is possible
+  }
+  if (map_len[1].size() == 1 && map_len[3].size() == 2) { // It is tilde{E7}
+    return {}; // No extension is possible
+  }
+  if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[5].size() == 1) { // It is tilde{E8}
+    return {}; // No extension is possible
+  }
+  error(); // No other possibilities left
+}
+
+
+
+
+
+
 template<typename T>
 std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
 {
