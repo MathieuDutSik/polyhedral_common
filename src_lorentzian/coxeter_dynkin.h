@@ -1326,6 +1326,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
         }
       }
     }
+    
     if (!DS.OnlySpherical) { // Only tildeG2 is possible here
       for (size_t i=0; i<n_isolated; i++) {
         for (size_t j=0; j<n_isolated; j++) {
@@ -1333,6 +1334,9 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
             MyVector<T> V = V_basic;
             V(list_isolated[i]) = val_single_edge;
             V(list_isolated[j]) = val_six;
+            test_vector_and_insert(V);
+            V(list_isolated[i]) = val_four;
+            V(list_isolated[j]) = val_four;
             test_vector_and_insert(V);
           }
         }

@@ -1302,14 +1302,17 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
       T norm = fVert.gen.dot(G * fVert.gen);
+      std::cerr << "Result of EdgewalkProcedure\n";
       std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
       for (auto & root : l_ui)
         std::cerr << " " << StringVectorGAP(root);
-      std::cerr << "\n";
-      std::cerr << "Result of EdgewalkProcedure\n";
-      std::cerr << "We have fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
+      std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
       std::cerr << "MatRoot=\n";
       WriteMatrix(std::cerr, fVert.MatRoot);
+      std::cerr << "DBG=" << StringVectorGAP(fVert.gen) << " l_roots =";
+      for (size_t i_root=0; i_root<size_t(fVert.MatRoot.rows()); i_root++)
+        std::cerr << " " << StringVectorGAP(GetMatrixRow(fVert.MatRoot, i_root));
+      std::cerr << "\n";
       //
       StatusEntry entry{false,true};
       func_insert_pair_vertices(theVert, entry, theVert, fVert);
@@ -1360,13 +1363,13 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
     std::ifstream is(FileInitialVertex);
     MyVector<T> gen = ReadVector<T>(is);
     MyMatrix<Tint> Mroot = ReadMatrix<Tint>(is);
-    return {gen, Mroot};
+    return {RemoveFractionVector(gen), Mroot};
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
     VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
     std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
-    return {UniversalVectorConversion<T,Tint>(epair.first), MatrixFromVectorFamily(epair.second)};
+    return {RemoveFractionVector(UniversalVectorConversion<T,Tint>(epair.first)), MatrixFromVectorFamily(epair.second)};
   }
 #endif
   std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
