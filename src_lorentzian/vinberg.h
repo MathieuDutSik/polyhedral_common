@@ -101,14 +101,16 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
     if (res != 0)
       is_even = false;
   }
-  std::cerr << "is_even=" << is_even << "\n";
+  std::cerr << "limit=" << limit << " is_even=" << is_even << "\n";
   auto is_correct=[&](Tint k) -> bool {
     if (is_even) {
       Tint res2 = ResInt(k,two);
       if (res2 != 0)
         return false;
     }
+    std::cerr << "k=" << k << "\n";
     Tint res = ResInt(limit, k);
+    std::cerr << "res=" << res << "\n";
     return res == 0;
   };
   //
@@ -121,6 +123,7 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
       break;
     k++;
   }
+  std::cerr << "Before returning root_lengths\n";
   return root_lengths;
 }
 
@@ -917,7 +920,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
       Tint scal = V.dot(Vtot.G * V);
-      if (scal <= 0) {
+      if (scal < 0) {
         opt = V;
         return false;
       }

@@ -1356,6 +1356,13 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
 {
   std::cerr << "G=\n";
   WriteMatrix(std::cerr, G);
+  T norm = V.dot(G*V);
+  std::cerr << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
+  if (norm >= 0) {
+    std::cerr << "We need a vector of negative norm in order to get on the orthogonal\n";
+    std::cerr << "a positive definite lattice\n";
+    throw TerminalException{1};
+  }
   int dim = G.rows();
   MyVector<T> eProd = G * V;
   MyMatrix<T> eProdB(1,dim);
@@ -1367,11 +1374,26 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dim-1);
   for (auto & e_norm : l_norm) {
+    std::cerr << "e_norm=" << e_norm << "\n";
     T e_norm_t = UniversalScalarConversion<T,Tint>(e_norm);
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm_t);
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
     MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
+    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
+    if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
+      std::cerr << "G_P=\n";
+      WriteMatrix(std::cerr, G_P);
+      std::cerr << "NSP=\n";
+      WriteMatrix(std::cerr, NSP);
+      std::cerr << "Latt=\n";
+      WriteMatrix(std::cerr, Latt);
+      std::cerr << "Latt_i_Orth=\n";
+      WriteMatrix(std::cerr, Latt_i_Orth);
+      std::cerr << "nZero = " << DiagInfo.nbZero << " nMinus=" << DiagInfo.nbMinus << "\n";
+      std::cerr << "G_P should be positive definite\n";
+      throw TerminalException{1};
+    }
     std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm_t);
     for (auto & e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
@@ -1398,9 +1420,12 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
   };
   auto get_random_vect=[&]() -> MyVector<Tint> {
     MyVector<Tint> w(dim-1);
+    size_t spr = 10;
+    size_t tot_spr = 2 * spr + 1;
     while (true) {
       for (int i=0; i<dim-1; i++)
-        w(i) = rand() % 5 - 2;
+        w(i) = rand() % tot_spr - spr;
+      std::cerr << "w=" << w << "\n";
       if (is_corr(w))
         return w;
     }
