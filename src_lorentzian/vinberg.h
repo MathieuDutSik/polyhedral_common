@@ -943,7 +943,9 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
       Tint norm = V.dot(Vtot.G * V);
-      std::cerr << "V=" << V << " norm=" << norm << "\n";
+      MyVector<Tint> Vred = RemoveFractionVector(V);
+      Tint norm_red = Vred.dot(Vtot.G * Vred);
+      std::cerr << "V=" << StringVectorGAP(Vred) << " norm=" << norm_red << "\n";
       map[norm]++;
       if (norm > 0) {
         IsFiniteCovolume = false;
@@ -1106,7 +1108,20 @@ void Print_DataReflectionGroup_TXT(const DataReflectionGroup<T,Tint>& data, std:
 template<typename T, typename Tint>
 void Print_DataReflectionGroup_GAP(const DataReflectionGroup<T,Tint>& data, std::ostream& os)
 {
-  os << "return rec(ListRoot:=";
+  std::unordered_set<Tint> s_norm;
+  for (auto & root : data.ListRoot) {
+    Tint e_norm = root.dot(data.G * root);
+    s_norm.insert(e_norm);
+  }
+  os << "return rec(n_simple:=" << data.ListRoot.size() << ", ListNorm:=[";
+  bool IsFirst=true;
+  for (auto & e_norm : s_norm) {
+    if (!IsFirst)
+      os << ",";
+    IsFirst=false;
+    os << e_norm;
+  }
+  os << "], ListRoot:=";
   MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(data.ListRoot);
   WriteMatrixGAP(os, MatRoot);
   os << ", G:=";
