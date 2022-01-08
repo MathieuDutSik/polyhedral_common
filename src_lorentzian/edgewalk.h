@@ -9,6 +9,7 @@
 #include "Namelist.h"
 #include "Temp_Positivity.h"
 #include "POLY_lrslib.h"
+#include "POLY_cddlib.h"
 
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
@@ -1350,6 +1351,91 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 
+template<typename T, typename Tint>
+MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
+{
+  std::cerr << "G=\n";
+  WriteMatrix(std::cerr, G);
+  int dim = G.rows();
+  MyVector<T> eProd = G * V;
+  MyMatrix<T> eProdB(1,dim);
+  AssignMatrixRow(eProdB, 0, eProd);
+  MyMatrix<T> NSP = NullspaceIntTrMat(eProdB);
+  MyMatrix<Tint> NSP_tint = UniversalMatrixConversion<Tint,T>(NSP);
+  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint,T>(G);
+  std::vector<Tint> l_norm = Get_root_lengths(G_int);
+  std::vector<MyVector<Tint>> l_roots;
+  MyVector<T> zeroVect = ZeroVector<T>(dim-1);
+  for (auto & e_norm : l_norm) {
+    T e_norm_t = UniversalScalarConversion<T,Tint>(e_norm);
+    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm_t);
+    MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
+    MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
+    MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
+    std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm_t);
+    for (auto & e_v : l_v) {
+      MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
+      std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, e_root);
+      if (opt) {
+        l_roots.push_back(*opt);
+      } else {
+        std::cerr << "Failed to find the solution in the subspace\n";
+        throw TerminalException{1};
+      }
+    }
+    std::cerr << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
+  }
+  std::cerr << "l_roots=\n";
+  for (auto & e_root : l_roots)
+    std::cerr << " " << StringVectorGAP(e_root) << "\n";
+  auto is_corr=[&](MyVector<Tint> const& w) -> bool {
+    for (auto & e_root : l_roots) {
+      Tint scal = e_root.dot(w);
+      if (scal == 0)
+        return false;
+    }
+    return true;
+  };
+  auto get_random_vect=[&]() -> MyVector<Tint> {
+    MyVector<Tint> w(dim-1);
+    while (true) {
+      for (int i=0; i<dim-1; i++)
+        w(i) = rand() % 5 - 2;
+      if (is_corr(w))
+        return w;
+    }
+  };
+  MyVector<Tint> selVect = get_random_vect();
+  std::cerr << "selVect=" << StringVectorGAP(selVect) << "\n";
+  int n_root = l_roots.size() / 2;
+  MyMatrix<T> EXT(n_root,dim);
+  std::vector<size_t> list_idx(n_root);
+  size_t pos=0;
+  for (size_t i=0; i<l_roots.size(); i++) {
+    Tint scal = selVect.dot(l_roots[i]);
+    if (scal > 0) {
+      list_idx[pos] = i;
+      MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_roots[i]);
+      EXT(pos,0);
+      for (int i=1; i<dim; i++)
+        EXT(pos,i) = eV(i-1);
+      pos++;
+    }
+  }
+  std::cerr << "EXT=\n";
+  WriteMatrix(std::cerr, EXT);
+  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
+  size_t siz = list_red.size();
+  std::cerr << "dim-1 =" << (dim-1) << " |list_red|=" << siz << "\n";
+  MyMatrix<Tint> MatRoot(siz, dim);
+  for (size_t i=0; i<siz; i++) {
+    size_t pos = list_idx[list_red[i]];
+    MyVector<Tint> v = NSP_tint.transpose() * l_roots[pos];
+    AssignMatrixRow(MatRoot, i, v);
+  }
+  return MatRoot;
+}
+
 
 
 template<typename T, typename Tint>
@@ -1366,10 +1452,17 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
     return {RemoveFractionVector(gen), Mroot};
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
-  if (OptionInitialVertex == "vinberg") {
+  if (OptionInitialVertex == "vinberg_orig") {
     VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
     std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
     return {RemoveFractionVector(UniversalVectorConversion<T,Tint>(epair.first)), MatrixFromVectorFamily(epair.second)};
+  }
+  if (OptionInitialVertex == "vinberg") {
+    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
+    std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
+    MyVector<T> V = UniversalVectorConversion<T,Tint>(epair.first);
+    MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, V);
+    return {RemoveFractionVector(V), MatRoot};
   }
 #endif
   std::cerr << "Failed to find a matching entry in get_initial_vertex\n";

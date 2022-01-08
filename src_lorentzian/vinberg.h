@@ -18,6 +18,25 @@
 // Finding the closest points
 //
 
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm)
+{
+  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
+  T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
+  //
+  std::vector<MyVector<Tint>> l_vect;
+  auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+    if (min == norm) {
+      l_vect.push_back(V);
+    }
+    return true;
+  };
+  (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
+  return l_vect;
+}
+
+
+
 // Compute the solutions of G [x - eV] = a
 template<typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
@@ -865,11 +884,8 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
   ListPos.reserve(n_root);
   size_t pos=0;
   auto is_extendible_to_spherical=[&](const std::vector<int>& V) -> bool {
-    
   };
   auto is_spherical
-    
-  
   while(true) {
   }
 }
