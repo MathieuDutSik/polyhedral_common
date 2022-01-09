@@ -573,8 +573,11 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
     for (auto & eAdj : LAdj)
       if (list_deg[eAdj] == 1)
         n_sing++;
-    if (n_sing != 2)
+    if (n_sing == 3) { // It is actualla tilde{B3}. No extension possible
       return {};
+    }
+    if (n_sing != 2)
+      error();
     bool has_edge_four = false;
     for (auto & eVert : list_deg1)
       if (list_isolated_adjacent[eVert] == val_four)
@@ -1337,10 +1340,15 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
             V(list_isolated[i]) = val_single_edge;
             V(list_isolated[j]) = val_six;
             test_vector_and_insert(V); // For tilde{G2}
-            V(list_isolated[i]) = val_four;
-            V(list_isolated[j]) = val_four;
-            test_vector_and_insert(V); // For tilde{C2}
           }
+        }
+      }
+      for (size_t i=0; i<n_isolated; i++) {
+        for (size_t j=i+1; j<n_isolated; j++) {
+          MyVector<T> V = V_basic;
+          V(list_isolated[i]) = val_four;
+          V(list_isolated[j]) = val_four;
+          test_vector_and_insert(V); // For tilde{C2}
         }
       }
     }
@@ -1361,7 +1369,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 6\n";
 #endif
-  // Considering the case of 3 edges. All have to be single edges
+  // Considering the case of 3 edges. Considering first part with single edges
   size_t n_cand_triple = list_deg01_for_triple_vertex.size();
   SetCppIterator SCI_A(n_cand_triple,3);
   for (auto & eV : SCI_A) {
@@ -1369,6 +1377,22 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
     for (auto & eVal : eV)
       V(list_deg01_for_triple_vertex[eVal]) = val_single_edge;
     test_vector_and_insert(V);
+  }
+  if (!DS.OnlySpherical) { // Considering now the tilde{B3} cases
+    SetCppIterator SCI_B(n_isolated,3);
+    T val;
+    for (auto & eV : SCI_B) {
+      MyVector<T> V = V_basic;
+      for (int i=0; i<3; i++) {
+        for (int j=0; j<3; j++) {
+          val = val_single_edge;
+          if (i == j)
+            val = val_four;
+          V(list_isolated[eV[j]]) = val;
+        }
+        test_vector_and_insert(V);
+      }
+    }
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS

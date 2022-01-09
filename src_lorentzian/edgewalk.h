@@ -1524,7 +1524,15 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
   FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, OptionInitialVertex, FileInitialVertex);
   std::cerr << "Initial vertex is\n";
-  std::cerr << "eVert.gen=" << StringVectorGAP(eVert.gen) << "\n";
+  T norm = eVert.gen.dot(G * eVert.gen);
+  std::vector<MyVector<Tint>> l_root;
+  for (int i=0; i<eVert.MatRoot.rows(); i++) {
+    MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
+    l_root.push_back(eLine);
+  }
+  MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_root).first;
+  std::string symb = coxdyn_matrix_to_string(CoxMat);
+  std::cerr << "eVert.gen=" << StringVectorGAP(eVert.gen) << " norm=" << norm << " symb=" << symb << "\n";
   std::cerr << "l_roots=\n";
   WriteMatrix(std::cerr, eVert.MatRoot);
   //
