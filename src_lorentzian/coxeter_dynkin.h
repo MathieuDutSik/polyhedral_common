@@ -878,6 +878,9 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     for (auto & eAdj : LAdj)
       if (list_deg[eAdj] == 1)
         n_sing++;
+    if (n_sing == 3) { // All neighbors are single. Only one possibility
+      return IrrCoxDyn<T>{"tildeB",3,0}; // It is tilde{B3}
+    }
     if (n_sing != 2)
       return {};
     bool has_edge_four = false;
