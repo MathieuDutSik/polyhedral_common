@@ -442,7 +442,7 @@ namespace std {
     std::size_t operator()(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat) const
     {
       size_t seed_in = 15;
-      return ComputeHashWeightMatrix(WMat, seed_in);
+      return ComputeHashWeightMatrix_up_to_equiv(WMat, seed_in);
     }
   };
 }
