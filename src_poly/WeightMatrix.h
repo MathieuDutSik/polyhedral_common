@@ -369,7 +369,7 @@ private:
 
 
 template <bool is_symmetric,typename T, typename Tidx_value>
-size_t ComputeHashWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat, size_t const& seed_in)
+size_t ComputeHashWeightMatrix_up_to_equiv(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat, size_t const& seed_in)
 {
   auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -405,6 +405,32 @@ size_t ComputeHashWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WM
       combine_hash(seed, e_hash2);
     }
   }
+  return seed;
+}
+
+
+
+
+
+template <bool is_symmetric,typename T, typename Tidx_value>
+size_t ComputeHashWeightMatrix_raw(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat, size_t const& seed_in)
+{
+  auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  };
+  std::vector<T> const& ListWeight = WMat.GetWeight();
+  size_t nbWei = ListWeight.size();
+  size_t nbRow = WMat.rows();
+  std::vector<size_t> ListWeightHash(nbWei);
+  for (size_t iW=0; iW<nbWei; iW++) {
+    ListWeightHash[iW] = std::hash<T>()(ListWeight[iW]);
+  }
+  size_t seed = seed_in;
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<weightmatrix_last_idx<is_symmetric>(nbRow, iRow); jRow++) {
+      Tidx_value pos = WMat.GetValue(iRow, jRow);
+      combine_hash(seed, ListWeightHash[pos]);
+    }
   return seed;
 }
 
