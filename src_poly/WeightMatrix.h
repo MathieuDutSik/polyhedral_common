@@ -367,47 +367,56 @@ private:
 // Hashes and invariants
 //
 
+
+template <bool is_symmetric,typename T, typename Tidx_value>
+size_t ComputeHashWeightMatrix(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat, size_t const& seed_in)
+{
+  auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  };
+  std::vector<T> const& ListWeight = WMat.GetWeight();
+  size_t nbWei = ListWeight.size();
+  size_t nbRow = WMat.rows();
+  std::vector<int> ListAttDiag(nbWei, 0);
+  std::vector<int> ListAttOff(nbWei, 0);
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    Tidx_value pos = WMat.GetValue(iRow, iRow);
+    ListAttDiag[pos]++;
+  }
+  for (size_t iRow=0; iRow<nbRow; iRow++)
+    for (size_t jRow=0; jRow<weightmatrix_last_idx<is_symmetric>(nbRow, iRow); jRow++) {
+      if (iRow != jRow) {
+        Tidx_value pos = WMat.GetValue(iRow, jRow);
+        ListAttOff[pos]++;
+      }
+    }
+  size_t seed = seed_in;
+  for (size_t iWei=0; iWei<nbWei; iWei++) {
+    if (ListAttDiag[iWei] > 0) {
+      size_t e_hash1 = std::hash<T>()(ListWeight[iWei]);
+      size_t e_hash2 = std::hash<int>()(ListAttDiag[iWei]);
+      combine_hash(seed, e_hash1);
+      combine_hash(seed, e_hash2);
+    }
+    if (ListAttOff[iWei] > 0) {
+      size_t e_hash1 = std::hash<T>()(ListWeight[iWei]);
+      size_t e_hash2 = std::hash<int>()(ListAttOff[iWei]);
+      combine_hash(seed, e_hash1);
+      combine_hash(seed, e_hash2);
+    }
+  }
+  return seed;
+}
+
+
 namespace std {
   template <bool is_symmetric,typename T, typename Tidx_value>
   struct hash<WeightMatrix<is_symmetric,T,Tidx_value>>
   {
     std::size_t operator()(WeightMatrix<is_symmetric,T,Tidx_value> const& WMat) const
     {
-      auto combine_hash=[](size_t & seed, size_t new_hash) -> void {
-        seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-      };
-      std::vector<T> const& ListWeight = WMat.GetWeight();
-      size_t nbWei = ListWeight.size();
-      size_t nbRow = WMat.rows();
-      std::vector<int> ListAttDiag(nbWei, 0);
-      std::vector<int> ListAttOff(nbWei, 0);
-      for (size_t iRow=0; iRow<nbRow; iRow++) {
-        Tidx_value pos = WMat.GetValue(iRow, iRow);
-        ListAttDiag[pos]++;
-      }
-      for (size_t iRow=0; iRow<nbRow; iRow++)
-        for (size_t jRow=0; jRow<weightmatrix_last_idx<is_symmetric>(nbRow, iRow); jRow++) {
-          if (iRow != jRow) {
-            Tidx_value pos = WMat.GetValue(iRow, jRow);
-            ListAttOff[pos]++;
-          }
-        }
-      size_t seed = 0;
-      for (size_t iWei=0; iWei<nbWei; iWei++) {
-        if (ListAttDiag[iWei] > 0) {
-          size_t e_hash1 = std::hash<T>()(ListWeight[iWei]);
-          size_t e_hash2 = std::hash<int>()(ListAttDiag[iWei]);
-          combine_hash(seed, e_hash1);
-          combine_hash(seed, e_hash2);
-        }
-        if (ListAttOff[iWei] > 0) {
-          size_t e_hash1 = std::hash<T>()(ListWeight[iWei]);
-          size_t e_hash2 = std::hash<int>()(ListAttOff[iWei]);
-          combine_hash(seed, e_hash1);
-          combine_hash(seed, e_hash2);
-        }
-      }
-      return seed;
+      size_t seed_in = 15;
+      return ComputeHashWeightMatrix(WMat, seed_in);
     }
   };
 }
