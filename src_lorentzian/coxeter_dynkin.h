@@ -1505,7 +1505,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   //  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
-  int dim_cox = l_root.size();
+  int n_root = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, DS);
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
@@ -1532,8 +1532,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
     //    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
-    MyVector<T> l_scal(dim_cox);
-    for (int i=0; i<dim_cox; i++) {
+    MyVector<T> l_scal(n_root);
+    for (int i=0; i<n_root; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
@@ -1560,7 +1560,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     T res_norm = e_norm - eNorm;
     std::cerr << "  eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
     MyVector<T> u_component = ZeroVector<T>(dim);
-    for (int i=0; i<dim_cox; i++)
+    for (int i=0; i<n_root; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
 #ifdef SANITY_CHECK
     if (res_norm == 0) {
@@ -1585,9 +1585,32 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
   std::cerr << "ComputePossibleExtensions, step 5\n";
-  for (auto & e_norm : l_norm)
-    for (auto & e_vect : l_vect)
-      get_entry(e_vect, e_norm);
+  size_t len = l_norm.size();
+  Face status_norm(len);
+  for (auto & e_vect : l_vect) {
+    for (size_t i_norm=0; i_norm<len; i_norm++)
+      status_norm[i_norm] = 1;
+    for (int i=0; i<n_root; i++) {
+      T norm = CoxMat(i,i);
+      for (size_t i_norm=0; i_norm<len; i_norm++) {
+        if (e_vect(i) == 3) {
+          if (l_norm[i_norm] != norm)
+            status_norm[i_norm] = 0;
+        }
+        if (e_vect(i) == 4) {
+          if (2 * l_norm[i_norm] != norm && l_norm[i_norm] != 2 * norm)
+            status_norm[i_norm] = 0;
+        }
+        if (e_vect(i) == 6) {
+          if (3 * l_norm[i_norm] != norm && l_norm[i_norm] != 3 * norm)
+            status_norm[i_norm] = 0;
+        }
+      }
+    }
+    for (size_t i_norm=0; i_norm<len; i_norm++)
+      if (status_norm[i_norm] == 1)
+        get_entry(e_vect, l_norm[i_norm]);
+  }
   std::cerr << "ComputePossibleExtensions, step 6 |l_extensions|=" << l_extensions.size() << "\n";
   return l_extensions;
 }
