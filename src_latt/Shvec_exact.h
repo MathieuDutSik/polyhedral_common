@@ -223,6 +223,9 @@ int computeIt_Gen_Kernel(const T_shvec_request<T>& request, const T& bound, Fins
   const MyVector<T>& C = request.coset;
   bool needs_new_bound = true;
   i = dim - 1;
+  if (bound < 0) { // Nothing in that case
+    return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+  }
   Trem(i) = bound;
   U(i) = 0;
 #ifdef PRINT_DEBUG_INFO
@@ -233,8 +236,10 @@ int computeIt_Gen_Kernel(const T_shvec_request<T>& request, const T& bound, Fins
 #endif
   T eQuot, eSum, hVal, eNorm;
   while (true) {
+    //    std::cerr << "i=" << i << " Upper=" << Upper << " x=" << x << "\n";
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i,i);
+      //      std::cerr << "Trem(i)=" << Trem(i) << " q(i,i)=" << q(i,i) << "\n";
       eSum = - U(i) - C(i);
       f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
       needs_new_bound = false;
@@ -258,7 +263,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T>& request, const T& bound, Fins
           }
 	}
 	hVal = x(0) + C(0) + U(0);
-	eNorm=bound - Trem(0) + q(0,0) * hVal * hVal;
+	eNorm = bound - Trem(0) + q(0,0) * hVal * hVal;
 #ifdef CHECK_BASIC_CONSISTENCY
 	T norm=0;
 	for (int i2=0; i2<dim; i2++)

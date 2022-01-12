@@ -41,10 +41,11 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T>& GramMat, con
 template<typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
 {
-  bool PrintInput=false;
+  bool PrintInput=true;
   if (PrintInput) {
     std::cerr << "GramMat=\n";
     WriteMatrix(std::cerr, GramMat);
+    std::cerr << "det=" << DeterminantMat(GramMat) << "\n";
     std::cerr << "eV=\n";
     WriteVector(std::cerr, eV);
     std::cerr << "norm=" << norm << "\n";
@@ -336,15 +337,15 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
-  std::cerr << "W=\n";
-  for (auto & eVect : W)
-    WriteVector(std::cerr, eVect);
+  //  std::cerr << "W=\n";
+  //  for (auto & eVect : W)
+  //    WriteVector(std::cerr, eVect);
   // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
   std::cerr << "eDet=" << eDet << "\n";
-  std::cerr << "Morth=\n";
-  WriteMatrix(std::cerr, Morth);
+  //  std::cerr << "Morth=\n";
+  //  WriteMatrix(std::cerr, Morth);
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
