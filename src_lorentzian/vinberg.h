@@ -22,12 +22,19 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm)
 {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
+  LLLreduction<T,Tint> RecLLL = LLLreducedBasis<T,Tint>(GramMat);
+  const MyMatrix<Tint>& Pmat = RecLLL.Pmat;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
+  const MyMatrix<T>& GramMatRed = RecLLL.GramMatRed;
+  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
   //
   std::vector<MyVector<Tint>> l_vect;
-  auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+  auto f_insert=[&](const MyVector<Tint>& V_y, const T& min) -> bool {
     if (min == norm) {
-      l_vect.push_back(V);
+      MyVector<Tint> V_x = Pmat.transpose() * V_y;
+      l_vect.push_back(V_x);
     }
     return true;
   };
@@ -51,10 +58,10 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     std::cerr << "norm=" << norm << "\n";
   }
   LLLreduction<T,Tint> RecLLL = LLLreducedBasis<T,Tint>(GramMat);
-  std::cerr << "GramMatRed=\n";
-  WriteMatrix(std::cerr, RecLLL.GramMatRed);
-  std::cerr << "Pmat=\n";
-  WriteMatrix(std::cerr, RecLLL.Pmat);
+  //  std::cerr << "GramMatRed=\n";
+  //  WriteMatrix(std::cerr, RecLLL.GramMatRed);
+  //  std::cerr << "Pmat=\n";
+  //  WriteMatrix(std::cerr, RecLLL.Pmat);
   const MyMatrix<Tint>& Pmat = RecLLL.Pmat;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
@@ -286,7 +293,21 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   WriteMatrixGAP(std::cerr, M2_tr);
   std::cerr << "Det(M2_tr)=" << DeterminantMat(M2_tr) << "\n";
   std::cerr << "Before GetIntegerPoints\n";
-  std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
+  std::vector<MyVector<Tint>> W_in = GetIntegerPoints(M2_tr);
+  std::vector<MyVector<Tint>> W;
+  Tint norm_shift = - v0.dot(G * v0);
+  for (auto & eW_in : W_in) {
+    Tint scal = - eW_in.dot(G * v0);
+    Tint q = QuoInt(scal, norm_shift);
+    Tint res = ResInt(scal, norm_shift);
+    MyVector<Tint> eW_out = eW_in - q * v0;
+    Tint scal_o = eW_out.dot(G * v0);
+    std::cerr << "scal=" << scal << " norm_shift=" << norm_shift << " q=" << q << " res=" << res << " scal_o=" << scal_o << "\n";
+    W.push_back(eW_out);
+  }
+
+
+  
   std::cerr << "|W|=" << W.size() << "\n";
   std::cerr << "W=[";
   bool IsFirst=true;
@@ -369,6 +390,7 @@ private:
       Tint val = - Vtot.v0.dot(Vtot.G * V2);
       double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
       double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
+      std::cerr << "IterateRootDecompositions k=" << k << " val=" << val << " k_d=" << k_d << " candidates.at(k)=" << candidates.at(k) << " V2=" << V2 << "\n";
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -416,6 +438,10 @@ template<typename T, typename Tint, typename Fins_root>
 void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_ins_root)
 {
   size_t n_sol = 0;
+  std::cerr << "shift_u=" << StringVectorGAP(data.shift_u) << "\n";
+  std::cerr << "data.trans_u=";
+  WriteMatrixGAP(std::cerr, data.trans_u);
+
   auto f_ins=[&](const MyVector<Tint>& u) -> void {
     MyVector<Tint> x = data.shift_u + data.trans_u * u;
     n_sol++;
@@ -438,8 +464,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
   2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
   2 w Gorth sV + w^t Gorth w = k -(a,a)
   (w + sV)^t Gorth (w + sV) = k - (a,a) + sV^t Gorth sV
- */
-/*
+  ---
   We want to find integer vectors such that (a+v, a+v) = k
   with v in the Morth space and one vector a.
   We want to also impose the condition that    2(a+v) G / k    \in Z^n
@@ -474,6 +499,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
 template<typename T, typename Tint>
 DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
 {
+  std::cerr << "Get_DataMapping k=" << k << "\n";
   if (k == 1 || k == 2) { // No need for some complex linear algebra work, returning directly
     MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
     MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
@@ -572,12 +598,14 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
 
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   auto fct_CVP=[&]() -> void {
+    std::cerr << "Beginning of fct_CVP\n";
     std::vector<MyVector<Tint>> list_GV;
     for (auto & e_root : ListRoot) {
       MyVector<Tint> e_gv = Vtot.G * e_root;
       list_GV.push_back(e_gv);
     }
     auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
+      std::cerr << "Inserting a vector V\n";
       for (auto & e_gv : list_GV) {
         T scal = V.dot(e_gv);
         if (scal > 0)
@@ -589,6 +617,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
   };
   //
   auto fct_CVP_Poly=[&]() -> void {
+    std::cerr << "Beginning of fct_CVP_Poly\n";
     size_t n_root = ListRoot.size();
     size_t dim = Vtot.G.rows();
     MyMatrix<T> FAC(n_root,dim);
@@ -619,90 +648,6 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     (void)computeIt_polytope<T,Tint,decltype(f_insert)>(request, data.norm, FAC, f_insert);
     std::cerr << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";
   };
-  //
-  /*
-    This code does not work because we can have an unbounded polytope
-    and for this kind of polytope the enumeration algorithm will not work.
-    --------------
-  auto fct_PolyInt=[&]() -> void {
-    size_t n_root = ListRoot.size();
-    size_t dim = Vtot.G.rows();
-    MyMatrix<T> FAC(n_root, dim);
-    for (size_t i_root=0; i_root<n_root; i_root++) {
-      MyVector<Tint> e_gv = - Vtot.G * ListRoot[i_root];
-      Tint scal1 = e_gv.dot(data.shift_u);
-      FAC(i_root,0) = UniversalScalarConversion<T,Tint>(scal1);
-      for (size_t i=1; i<dim; i++) {
-        MyVector<Tint> eCol = GetMatrixColumn(data.trans_u, i-1);
-        Tint scal2 = e_gv.dot(eCol);
-        FAC(i_root,i) = UniversalScalarConversion<T,Tint>(scal2);
-      }
-    }
-    //    std::cerr << "FAC=\n";
-    //    WriteMatrix(std::cerr, FAC);
-    std::cerr << "fct_PolyInt m step 1\n";
-    MyMatrix<T> EXT = cdd::DualDescription(FAC);
-    std::cerr << "EXT=\n";
-    WriteMatrix(std::cerr, EXT);
-    std::cerr << "fct_PolyInt m step 2\n";
-    T max_norm = 0;
-    size_t n_vert = EXT.rows();
-    std::cerr << "n_vert=" << n_vert << "\n";
-    MyVector<T> shift_u_T = UniversalVectorConversion<T,Tint>(data.shift_u);
-    MyMatrix<T> trans_u_T = UniversalMatrixConversion<T,Tint>(data.trans_u);
-    std::cerr << "fct_PolyInt m step 3\n";
-    int n_col = trans_u_T.cols();
-    MyVector<T> V(n_col);
-    size_t n_greater = 0;
-    T k_T = k;
-    for (size_t i_vert=0; i_vert<n_vert; i_vert++) {
-      T val0 = EXT(i_vert,0);
-      if (val0 > 0) {
-        for (int i=0; i<n_col; i++)
-          V(i) = EXT(i_vert,i + 1) / val0;
-        MyVector<T> x_T = shift_u_T + trans_u_T * V;
-        T scal_T = x_T.dot(Vtot.G_T * x_T);
-        std::cerr << "i_vert=" << i_vert << "/" << n_vert << " scal=" << scal_T << "\n";
-        if (scal_T > k_T)
-          n_greater++;
-        if (scal_T > max_norm)
-          max_norm = scal_T;
-      } else {
-        for (int i=0; i<n_col; i++)
-          V(i) = EXT(i_vert,i + 1);
-        std::cerr << "Finding an infinite ray V=";
-        WriteVector(std::cerr, V);
-        Tint prod = 1;
-        for (int j=0; j<10; j++) {
-          MyVector<T> x_T = shift_u_T + (prod - 1) * trans_u_T * V;
-          prod *= 2;
-          T scal_T = x_T.dot(Vtot.G_T * x_T);
-          std::cerr << "Finding an infinite ray x=";
-          WriteVector(std::cerr, x_T);
-          std::cerr << "scal_T=" << scal_T << "\n";
-        }
-        max_norm = k + 1;
-      }
-    }
-    std::cerr << "k=" << k << " max_norm=" << max_norm << " n_greater=" << n_greater << "\n";
-    if (max_norm < k_T)
-      return;
-    std::cerr << "fct_PolyInt m step 4\n";
-    size_t n_interior = 0;
-    auto f_insert=[&](const MyVector<Tint>& V) -> bool {
-      MyVector<Tint> x = data.shift_u + data.trans_u * V;
-      Tint scal = x.dot(Vtot.G * x);
-      if (scal == k) {
-        list_root.push_back(x);
-      }
-      n_interior++;
-      return true;
-    };
-    //    Kernel_GetListIntegralPoint<T,Tint,decltype(f_insert)>(FAC, EXT, f_insert);
-    Kernel_GetListIntegralPoint_LP<T,Tint,decltype(f_insert)>(FAC, f_insert);
-    std::cerr << "n_interior=" << n_interior << " |list_root|=" << list_root.size() << "\n";
-  };
-  */
   //
   int TheRank = 0;
   if (ListRoot.size() > 0) {
@@ -1303,8 +1248,8 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
       break;
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
-    std::cerr << "CHOICE a=" << StringVectorGAP(a) << "\n";
     const Tint& k = pair.second;
+    std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k << "\n";
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
     if (list_root_cand.size() > 0) {
       for (auto & eRoot : list_root_cand) {
