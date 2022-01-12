@@ -90,7 +90,7 @@ template<typename Tint>
 std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
 {
   Tint TheEn = En_Quantity(M);
-  std::cerr << "TheEn=" << TheEn << "\n";
+  //  std::cerr << "TheEn=" << TheEn << "\n";
   Tint limit = 2 * TheEn;
   std::vector<Tint> root_lengths;
   bool is_even = true;
@@ -101,16 +101,16 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
     if (res != 0)
       is_even = false;
   }
-  std::cerr << "limit=" << limit << " is_even=" << is_even << "\n";
+  //  std::cerr << "limit=" << limit << " is_even=" << is_even << "\n";
   auto is_correct=[&](Tint k) -> bool {
     if (is_even) {
       Tint res2 = ResInt(k,two);
       if (res2 != 0)
         return false;
     }
-    std::cerr << "k=" << k << "\n";
+    //    std::cerr << "k=" << k << "\n";
     Tint res = ResInt(limit, k);
-    std::cerr << "res=" << res << "\n";
+    //    std::cerr << "res=" << res << "\n";
     return res == 0;
   };
   //
@@ -123,7 +123,10 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint>& M)
       break;
     k++;
   }
-  std::cerr << "Before returning root_lengths\n";
+  std::cerr << "root_lengths =";
+  for (auto & eN : root_lengths)
+    std::cerr << " " << eN;
+  std::cerr << "\n";
   return root_lengths;
 }
 
@@ -164,9 +167,6 @@ struct VinbergTot {
   MyMatrix<T> G_T;
   MyVector<Tint> v0;
   MyVector<Tint> V_i;
-  MyVector<Tint> Vtrans;
-  MyMatrix<Tint> Mbas;
-  //  MyMatrix<Tint> MbasInv_T;
   //
   MyMatrix<Tint> Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
   MyMatrix<T> Morth_T; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
@@ -322,48 +322,29 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   int n=G.rows();
   // Computing the complement of the space.
   MyMatrix<T> G_T = UniversalMatrixConversion<T,Tint>(G);
-  MyVector<Tint> V = G * v0;
+  MyVector<Tint> V_i = G * v0;
   std::vector<Tint> vectV(n);
   for (int i=0; i<n; i++)
-    vectV[i] = V(i);
+    vectV[i] = V_i(i);
   GCD_int<Tint> eGCDinfo = ComputeGCD_information(vectV);
   std::vector<int> ListZer(n-1);
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
-  MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V);
+  MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V_i);
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
   std::cerr << "W=\n";
-  for (auto & eVect : W) {
+  for (auto & eVect : W)
     WriteVector(std::cerr, eVect);
-  }
   // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
   std::cerr << "eDet=" << eDet << "\n";
-  // We want to find a vector v such that V_i = (det) v + Morth Z^{n-1}
-  auto GetVect = [&]() -> MyVector<Tint> {
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<2; j++) {
-        int eps = -1 + 2 * j;
-        MyVector<Tint> Vwork = V;
-        Vwork(i) -= eps;
-        std::optional<MyVector<Tint>> opt = SolutionMat(Morth, Vwork);
-        if (opt) {
-          MyVector<Tint> Vret = ZeroVector<Tint>(n);
-          Vret(i) = eps;
-          return Vret;
-        }
-      }
-    }
-    std::cerr << "Failed to find the right vector\n";
-    throw TerminalException{1};
-  };
-  MyVector<Tint> Vtrans = GetVect();
-  MyMatrix<Tint> Mbas = ConcatenateMatVec_Tr(Morth, Vtrans);
+  std::cerr << "Morth=\n";
+  WriteMatrix(std::cerr, Morth);
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
@@ -376,8 +357,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (auto & eVal : root_lengths)
     std::cerr << " " << eVal;
   std::cerr << "\n";
-  //  return {G, G_T, v0, V, Vtrans, Mbas, MbasInv_T, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
-  return {G, G_T, v0, V, Vtrans, Mbas, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
+  return {G, G_T, v0, V_i, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
 

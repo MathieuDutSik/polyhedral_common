@@ -6401,14 +6401,9 @@ void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T** A, T *x, dd_row
 template<typename T>
 void dd_CopyBmatrix(dd_colrange d_size, T** Ts, T** TCOPY)
 {
-  dd_rowrange i;
-  dd_colrange j;
-
-  for (i=0; i < d_size; i++) {
-    for (j=0; j < d_size; j++) {
+  for (dd_rowrange i=0; i < d_size; i++)
+    for (dd_colrange j=0; j < d_size; j++)
       TCOPY[i][j] = Ts[i][j];
-    }
-  }
 }
 
 
@@ -6442,12 +6437,10 @@ void dd_PermuteCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_ro
 template<typename T>
 void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d, dd_rowindex roworder)
 {
- /* copy the rows of A whose roworder is positive.  roworder[i] is the row index of the copied row. */
-  dd_rowrange i;
-
-  for (i = 1; i<= m; i++) {
-    if (roworder[i]>0) dd_CopyArow(Acopy[roworder[i]-1],A[i-1],d);
-  }
+  /* copy the rows of A whose roworder is positive.  roworder[i] is the row index of the copied row. */
+  for (dd_rowrange i = 1; i<= m; i++)
+    if (roworder[i]>0)
+      dd_CopyArow(Acopy[roworder[i]-1],A[i-1],d);
 }
 
 
@@ -6509,22 +6502,22 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows, dd_colset ignored
   roworder[M->rowsize] = 0;
 
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder.data(),
-		      PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
-      if (localdebug && chosen)
-        fprintf(stdout,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
-      if (chosen) {
-        set_addelem(NopivotRow, r);
-        set_addelem(*rowbasis, r);
-        set_addelem(ColSelected, s);
-        set_addelem(*colbasis, s);
-        rank++;
-        //        std::cout << "dd_GaussianColumnPivot call 8\n";
-        dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp.data());
-      } else {
-        stop=true;
-      }
-      if (rank==M->colsize) stop = true;
+    dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder.data(),
+                    PriorityRow,M->rowsize, NopivotRow, ColSelected, &r, &s, &chosen);
+    if (localdebug && chosen)
+      fprintf(stdout,"Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n", r, s);
+    if (chosen) {
+      set_addelem(NopivotRow, r);
+      set_addelem(*rowbasis, r);
+      set_addelem(ColSelected, s);
+      set_addelem(*colbasis, s);
+      rank++;
+      //        std::cout << "dd_GaussianColumnPivot call 8\n";
+      dd_GaussianColumnPivot(M->colsize, M->matrix, B, r, s, Rtemp.data());
+    } else {
+      stop=true;
+    }
+    if (rank==M->colsize) stop = true;
   } while (!stop);
   dd_FreeBmatrix(M->colsize,B);
   set_free(ColSelected);
@@ -6554,22 +6547,22 @@ void dd_FindBasis(dd_conedata<T> *cone, long *rank)
   set_copy(NopivotRow,cone->NonequalitySet);
   dd_SetToIdentity(cone->d, cone->B);
   do {   /* Find a set of rows for a basis */
-      dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
-		      cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
-      if (localdebug && chosen)
-        fprintf(stdout,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
-      if (chosen) {
-        set_addelem(cone->InitialHalfspaces, r);
-        set_addelem(NopivotRow, r);
-        set_addelem(ColSelected, s);
-        cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
-        (*rank)++;
-        //        std::cout << "dd_GaussianColumnPivot call 9\n";
-        dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp.data());
-      } else {
-        stop=true;
-      }
-      if (*rank==cone->d) stop = true;
+    dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
+                    cone->EqualitySet,cone->m, NopivotRow, ColSelected, &r, &s, &chosen);
+    if (localdebug && chosen)
+      fprintf(stdout,"Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n", r, s);
+    if (chosen) {
+      set_addelem(cone->InitialHalfspaces, r);
+      set_addelem(NopivotRow, r);
+      set_addelem(ColSelected, s);
+      cone->InitialRayIndex[s]=r;    /* cone->InitialRayIndex[s] stores the corr. row index */
+      (*rank)++;
+      //        std::cout << "dd_GaussianColumnPivot call 9\n";
+      dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp.data());
+    } else {
+      stop=true;
+    }
+    if (*rank==cone->d) stop = true;
   } while (!stop);
   set_free(ColSelected);
   set_free(NopivotRow);
@@ -6603,16 +6596,13 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found)
      dd_ColumnReduce(cone);
      dd_FindBasis(cone, &rank);
   }
-  if (!set_subset(cone->EqualitySet,cone->InitialHalfspaces)) {
-    if (localdebug) {
+  if (!set_subset(cone->EqualitySet,cone->InitialHalfspaces))
+    if (localdebug)
       fprintf(stdout,"Equality set is dependent. Equality Set and an initial basis:\n");
-    };
-  }
   *found = true;
   set_free(CandidateRows);
-  if (cone->parent->InitBasisAtBottom==true) {
+  if (cone->parent->InitBasisAtBottom==true)
     cone->HalfspaceOrder=roworder_save;
-  }
   if (cone->HalfspaceOrder==dd_MaxCutoff||
       cone->HalfspaceOrder==dd_MinCutoff||
       cone->HalfspaceOrder==dd_MixCutoff) {

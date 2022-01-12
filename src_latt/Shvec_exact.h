@@ -394,6 +394,7 @@ int computeIt_polytope(const T_shvec_request<T>& request, const T&bound, const M
     std::cerr << "Error in the size of FAC\n";
     throw TerminalException{1};
   }
+  std::cerr << "Beginning of computeIt_polytope\n";
   auto f_set_bound=[&](const T& eQuot, const T& eSum, [[maybe_unused]] const MyMatrix<T>&q, const MyVector<Tint>& x, const int& i, Tint& upper, Tint& lower) -> void {
     upper = Infinitesimal_Floor<T,Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<T,Tint>(eQuot, eSum);
