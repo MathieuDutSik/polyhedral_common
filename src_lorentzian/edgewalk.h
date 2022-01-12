@@ -313,7 +313,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
   T c0 = - u1_norm / k1_norm;
   T cS = 1 / k1_norm;
   //  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
-  T hinp = -c0 / cS;
+  T hinp = - c0 / cS;
   T h;
   if (cS > 0) {
     h = UniversalCeilScalarInteger<T,T>(hinp);

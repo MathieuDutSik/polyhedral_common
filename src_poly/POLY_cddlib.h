@@ -206,7 +206,7 @@ inline void set_delelem(set_type set, long elem)
     i=(elem-1)/SETBITS+1;
     j=(elem-1)%SETBITS;
     change=one << j;  /* put 1 in jth position */
-    set[i]=(set[i] | change) ^ change;
+    set[i] = (set[i] | change) ^ change;
   }
 }
 
@@ -215,7 +215,7 @@ inline void set_int(set_type set,set_type set1,set_type set2)
 {
   long forlim=set_blocks(set[0])-1;
   for (long i=1; i<=forlim; i++)
-    set[i]=(set1[i] & set2[i]);
+    set[i] = (set1[i] & set2[i]);
 }
 
 inline void set_uni(set_type set,set_type set1,set_type set2)
@@ -231,24 +231,24 @@ inline void set_diff(set_type set,set_type set1,set_type set2)
 {
   long forlim=set_blocks(set[0])-1;
   for (long i=1;i<=forlim;i++)
-    set[i]=set1[i] & (~set2[i]);
+    set[i] = set1[i] & (~set2[i]);
 }
 
 inline void set_compl(set_type set,set_type set1)
 /* set[] will be set to the complement of set1[] */
 {
-	long  i,j,l,forlim;
-	unsigned long change;
-	unsigned long one=1U;
+  long  i,j,l,forlim;
+  unsigned long change;
+  unsigned long one=1U;
 
-	forlim=set_blocks(set[0])-1;
-	for (i=1;i<=forlim;i++)
-		set[i]= ~set1[i];
-	l=(set[0]-1)%SETBITS; /* the position of the last elem in the last block */
-    	for (j=l+1; j<=(long)SETBITS-1; j++) {
-		change=one << j;
-		set[forlim]=(set[forlim] | change) ^ change;
-    	}
+  forlim=set_blocks(set[0])-1;
+  for (i=1;i<=forlim;i++)
+    set[i]= ~set1[i];
+  l=(set[0]-1)%SETBITS; /* the position of the last elem in the last block */
+  for (j=l+1; j<=(long)SETBITS-1; j++) {
+    change=one << j;
+    set[forlim]=(set[forlim] | change) ^ change;
+  }
 }
 
 inline bool set_subset(set_type set1,set_type set2)
@@ -271,11 +271,11 @@ inline bool set_member(long elem, set_type set)
   unsigned long testset;
   unsigned long one=1U;
   if (elem<=(long)set[0]) {
-      i=(elem-1)/SETBITS+1;
-      j=(elem-1)%SETBITS;
-      testset=set[i] | (one<<j);   /* add elem to set[i] */
-      if (testset==set[i])
-        reply=true;
+    i=(elem-1)/SETBITS+1;
+    j=(elem-1)%SETBITS;
+    testset=set[i] | (one<<j);   /* add elem to set[i] */
+    if (testset==set[i])
+      reply=true;
   }
   return reply;
 }
@@ -284,14 +284,13 @@ inline bool set_member(long elem, set_type set)
    to optimize for speed.*/
 inline long set_card(set_type set)
 {
-    unsigned long block;
-    long car=0;
-    set_card_lut_t* p;
-    p=(set_card_lut_t *)&set[1];
-    for (block=0; block<LUTBLOCKS(set); block++) {
-      car += set_card_lut[p[block]];
-    }
-    return car;
+  unsigned long block;
+  long car=0;
+  set_card_lut_t* p;
+  p=(set_card_lut_t *)&set[1];
+  for (block=0; block<LUTBLOCKS(set); block++)
+    car += set_card_lut[p[block]];
+  return car;
 }
 
 
@@ -1093,23 +1092,24 @@ dd_matrixdata<T> *dd_CreateShallowMatrix(dd_rowrange m_size,dd_colrange d_size)
 
 
 template<typename T>
-dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
+dd_polyhedradata<T>* dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d)
 {
   dd_rowrange i;
   dd_polyhedradata<T> *poly=nullptr;
 
   poly=new dd_polyhedradata<T>;
-  poly->child       =nullptr; /* this links the homogenized cone data */
-  poly->m           =m;
-  poly->d           =d;
-  poly->n           =-1;  /* the size of output is not known */
-  poly->m_alloc     =m+2; /* the allocated row size of matrix A */
-  poly->d_alloc     =d;   /* the allocated col size of matrix A */
-  poly->ldim		=0;   /* initialize the linearity dimension */
+  poly->child       = nullptr; /* this links the homogenized cone data */
+  poly->c           = nullptr; /* Added to avoid some ambiguity */
+  poly->m           = m;
+  poly->d           = d;
+  poly->n           = -1;  /* the size of output is not known */
+  poly->m_alloc     = m+2; /* the allocated row size of matrix A */
+  poly->d_alloc     = d;   /* the allocated col size of matrix A */
+  poly->ldim        = 0;   /* initialize the linearity dimension */
   dd_AllocateAmatrix(poly->m_alloc,poly->d_alloc,&(poly->A));
   dd_AllocateArow(d,&(poly->c));           /* cost vector */
-  poly->representation       =dd_Inequality;
-  poly->homogeneous =false;
+  poly->representation = dd_Inequality;
+  poly->homogeneous = false;
 
   poly->EqualityIndex = new int[m+2];
     /* size increased to m+2 in 092b because it is used by the child cone,
@@ -1997,42 +1997,14 @@ void dd_SetLinearity(dd_matrixdata<T> *M, char *line)
 }
 
 template<typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err)
+dd_polyhedradata<T>* dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err)
 {
   dd_rowrange i;
   dd_colrange j;
 
-  *err=dd_NoError;
+  *err = dd_NoError;
   if (M->rowsize<0 || M->colsize<0) {
-    *err=dd_NegativeMatrixSize;
-    return nullptr;
-  }
-  dd_polyhedradata<T>* poly = dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
-  poly->representation=M->representation;
-  poly->homogeneous=true;
-
-  for (i = 1; i <= M->rowsize; i++)
-    {
-      if (set_member(i, M->linset))
-	poly->EqualityIndex[i]=1;
-      for (j = 1; j <= M->colsize; j++) {
-	poly->A[i-1][j-1] = M->matrix[i-1][j-1];
-	if (j==1 && M->matrix[i-1][j-1] != 0) poly->homogeneous = false;
-      }
-    }
-  dd_DoubleDescription(poly,err);
-  return poly;
-}
-
-template<typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder, dd_ErrorType *err)
-{
-  dd_rowrange i;
-  dd_colrange j;
-
-  *err=dd_NoError;
-  if (M->rowsize<0 || M->colsize<0) {
-    *err=dd_NegativeMatrixSize;
+    *err = dd_NegativeMatrixSize;
     return nullptr;
   }
   dd_polyhedradata<T>* poly = dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
@@ -2040,12 +2012,38 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType hord
   poly->homogeneous=true;
 
   for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, M->linset)) {
+    if (set_member(i, M->linset))
       poly->EqualityIndex[i]=1;
-    }
     for (j = 1; j <= M->colsize; j++) {
       poly->A[i-1][j-1] = M->matrix[i-1][j-1];
       if (j==1 && M->matrix[i-1][j-1] != 0) poly->homogeneous = false;
+    }
+  }
+  dd_DoubleDescription(poly,err);
+  return poly;
+}
+
+template<typename T>
+dd_polyhedradata<T>* dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder, dd_ErrorType *err)
+{
+  dd_rowrange i;
+  dd_colrange j;
+
+  *err = dd_NoError;
+  if (M->rowsize<0 || M->colsize<0) {
+    *err = dd_NegativeMatrixSize;
+    return nullptr;
+  }
+  dd_polyhedradata<T>* poly = dd_CreatePolyhedraData<T>(M->rowsize, M->colsize);
+  poly->representation=M->representation;
+  poly->homogeneous=true;
+
+  for (i = 1; i <= M->rowsize; i++) {
+    if (set_member(i, M->linset))
+      poly->EqualityIndex[i] = 1;
+    for (j = 1; j <= M->colsize; j++) {
+      poly->A[i-1][j-1] = M->matrix[i-1][j-1];
+      if (j == 1 && M->matrix[i-1][j-1] != 0) poly->homogeneous = false;
     }
   }
   dd_DoubleDescription2(poly, horder, err);
@@ -6368,8 +6366,9 @@ void dd_FreePolyhedra(dd_polyhedradata<T> *poly)
   dd_bigrange i;
 
   if ((poly)->child != nullptr) dd_FreeDDMemory(poly);
-  dd_FreeAmatrix((poly)->m_alloc, poly->A);
-  dd_FreeArow((poly)->c);
+  dd_FreeAmatrix(poly->m_alloc, poly->A);
+  if (poly->c != nullptr)
+    dd_FreeArow(poly->c);
   delete [] poly->EqualityIndex;
   if (poly->AincGenerated) {
     for (i=1; i<=poly->m1; i++) {
@@ -7800,11 +7799,10 @@ std::vector<int> RedundancyReductionClarksonBlocks(MyMatrix<T> const&TheEXT, std
 template<typename T>
 MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
 {
-  dd_polyhedradata<T> *poly;
   dd_ErrorType err;
   int nbCol=TheEXT.cols();
   dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
-  poly=dd_DDMatrix2Poly(M, &err);
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
   MyMatrix<T> TheFAC=FAC_from_poly(poly, nbCol);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
@@ -7815,10 +7813,9 @@ MyMatrix<T> DualDescription(MyMatrix<T> const&TheEXT)
 template<typename T>
 vectface DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
-  dd_polyhedradata<T> *poly;
   dd_ErrorType err;
   dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
-  poly=dd_DDMatrix2Poly(M, &err);
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
   vectface ListIncd=ListIncd_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
