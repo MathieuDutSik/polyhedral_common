@@ -208,88 +208,6 @@ struct VinbergTot {
 
 
 template<typename Tint>
-std::vector<MyVector<Tint>> GetIntegerPoints_V1(const MyMatrix<Tint>& m)
-{
-  std::cerr << "GetIntegerPoints m=\n";
-  WriteMatrix(std::cerr, m);
-  Tint det = DeterminantMat(m);
-  std::cerr << "det(m)=" << det << "\n";
-  size_t n_rows = m.rows();
-  size_t n_cols = m.cols();
-  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
-  MyVector<Tint> negative = ZeroVector<Tint>(n_cols);
-  MyVector<Tint> positive = ZeroVector<Tint>(n_cols);
-  for (size_t i_col=0; i_col<n_cols; i_col++) {
-    for (size_t i_row=0; i_row<n_rows; i_row++) {
-      Tint val = m(i_row,i_col);
-      if (val < 0)
-        negative(i_col) += val;
-      if (val > 0)
-        positive(i_col) += val;
-    }
-  }
-  std::cerr << "negative =";
-  for (size_t i_col=0; i_col<n_cols; i_col++)
-    std::cerr << " " << negative(i_col);
-  std::cerr << "\n";
-  std::cerr << "positive =";
-  for (size_t i_col=0; i_col<n_cols; i_col++)
-    std::cerr << " " << positive(i_col);
-  std::cerr << "\n";
-  std::vector<int> ListSize(n_cols);
-  for (size_t i_col=0; i_col<n_cols; i_col++) {
-    int val1 = UniversalScalarConversion<int,Tint>(negative(i_col));
-    int val2 = UniversalScalarConversion<int,Tint>(positive(i_col));
-    int len = val2 + 1 - val1;
-    ListSize[i_col] = len;
-  }
-  std::cerr << "We have ListSizes\n";
-  using Tfield=typename overlying_field<Tint>::field_type;
-  MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield,Tint>(m);
-  MyMatrix<Tfield> Minv_field = Inverse(M_field);
-  std::cerr << "We have Minv_field\n";
-  FractionMatrix<Tfield> FrMat = RemoveFractionMatrixPlusCoeff(Minv_field);
-  std::cerr << "We have FrMat\n";
-  Tint eDen = UniversalScalarConversion<Tint,Tfield>(FrMat.TheMult);
-  std::cerr << "We have eDen=" << eDen << "\n";
-  if (eDen < 0) {
-    std::cerr << "We should have eDen > 0. eDen=" << eDen << "\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<Tint> Comat = UniversalMatrixConversion<Tint,Tfield>(FrMat.TheMat);
-  std::cerr << "We have |Comat|=" << Comat.rows() << " / " << Comat.cols() << "\n";
-  WriteMatrix(std::cerr, Comat);
-  auto ParallelepipedContains=[&](const MyVector<Tint>& V) -> bool {
-    std::cerr << "ParallelepipedContains, begin\n";
-    MyVector<Tint> Q = V.transpose() * Comat;
-    std::cerr << "ParallelepipedContains, we have Q\n";
-    for (size_t i_col=0; i_col<n_cols; i_col++) {
-      if (Q(i_col) < 0)
-        return false;
-      if (Q(i_col) >= eDen)
-        return false;
-    }
-    return true;
-  };
-  std::vector<MyVector<Tint>> ListPoint;
-  BlockIterationMultiple BlIter(ListSize);
-  for (const auto& eVect : BlIter) {
-    MyVector<Tint> ePoint(n_cols);
-    std::cerr << "ePoint =";
-    for (size_t i_col=0; i_col<n_cols; i_col++) {
-      ePoint(i_col) = negative(i_col) + eVect[i_col];
-      std::cerr << " " << ePoint(i_col);
-    }
-    std::cerr << "\n";
-    if (ParallelepipedContains(ePoint))
-      ListPoint.push_back(ePoint);
-  }
-  std::cerr << "GetIntegerPoints |ListRet|=" << ListPoint.size() << "\n";
-  return ListPoint;
-}
-
-
-template<typename Tint>
 std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint>& m)
 {
   return ComputeTranslationClasses<Tint,Tint>(m);
@@ -358,14 +276,27 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
+  std::cerr << "Morth=\n";
+  WriteMatrix(std::cerr, Morth);
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
   MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V_i);
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
+  std::cerr << "M2_tr=\n";
+  WriteMatrixGAP(std::cerr, M2_tr);
+  std::cerr << "Det(M2_tr)=" << DeterminantMat(M2_tr) << "\n";
+  std::cerr << "Before GetIntegerPoints\n";
   std::vector<MyVector<Tint>> W = GetIntegerPoints(M2_tr);
-  //  std::cerr << "W=\n";
-  //  for (auto & eVect : W)
-  //    WriteVector(std::cerr, eVect);
+  std::cerr << "|W|=" << W.size() << "\n";
+  std::cerr << "W=[";
+  bool IsFirst=true;
+  for (auto & eVect : W) {
+    if (!IsFirst)
+      std::cerr << ",";
+    IsFirst=false;
+    std::cerr << StringVectorGAP(eVect);
+  }
+  std::cerr << "]";
   // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
@@ -379,6 +310,8 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
+  //  std::cerr << "GM_iGorth=\n";
+  //  WriteMatrix(std::cerr, GM_iGorth);
   //  std::vector<Tint> root_lengths = Get_root_lengths(G);
   std::cerr << "s.root_lengths =";
   for (auto & eVal : root_lengths)
@@ -1365,10 +1298,12 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
   IterateRootDecompositions<T,Tint> iter(Vtot);
   std::cerr << "FindRoots, step 3\n";
   while (true) {
+    std::cerr << "|ListRoot|=" << ListRoot.size() << "\n";
     if (f_exit(ListRoot, FACfeasible))
       break;
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
+    std::cerr << "CHOICE a=" << StringVectorGAP(a) << "\n";
     const Tint& k = pair.second;
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
     if (list_root_cand.size() > 0) {
