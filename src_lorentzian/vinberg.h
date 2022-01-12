@@ -50,16 +50,42 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     WriteVector(std::cerr, eV);
     std::cerr << "norm=" << norm << "\n";
   }
+  LLLreduction<T,Tint> RecLLL = LLLreducedBasis<T,Tint>(GramMat);
+  std::cerr << "GramMatRed=\n";
+  WriteMatrix(std::cerr, RecLLL.GramMatRed);
+  std::cerr << "Pmat=\n";
+  WriteMatrix(std::cerr, RecLLL.Pmat);
+  const MyMatrix<Tint>& Pmat = RecLLL.Pmat;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  /*
+    We have GramMatRed = Pmat * GramMat * Pmat^T
+    G[x - eV] = norm
+    [x - eV] G [x - eV]^T = norm
+    [x - eV] Inv(Pmat) G_red Inv(Pmat)^T [x - eV] = norm
+    G_red[x Inv(Pmat) - eV Inv(Pmat)] = norm
+    So we resolve
+    G_red[y - eV_img] = norm
+    with y = x Inv(Pmat)   and   eV_img = eV Inv(Pmat)
+    and so x = y Pmat
+   */
+  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
+  const MyMatrix<T>& GramMatRed = RecLLL.GramMatRed;
+
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  T_shvec_request<T> request = initShvecReq<T>(GramMat, eV, norm, mode);
+  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
   //
-  auto f_insert=[&](const MyVector<Tint>& V, const T& min) -> bool {
+  size_t n_iter = 0;
+  auto f_insert=[&](const MyVector<Tint>& V_y, const T& min) -> bool {
+    n_iter++;
     if (min == norm) {
-      f_ins(V);
+      MyVector<Tint> V_x = Pmat.transpose() * V_y;
+      f_ins(V_x);
     }
     return true;
   };
   (void)computeIt<T,Tint,decltype(f_insert)>(request, norm, f_insert);
+  std::cerr << "n_iter=" << n_iter << "\n";
 }
 
 //
