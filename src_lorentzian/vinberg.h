@@ -744,8 +744,12 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
   };
   */
   //
-  MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
-  if (RankMat(RootMat) == Vtot.G.rows()) {
+  int TheRank = 0;
+  if (ListRoot.size() > 0) {
+    MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
+    TheRank = RankMat(RootMat);
+  }
+  if (TheRank == Vtot.G.rows()) {
     fct_CVP_Poly();
   } else {
     fct_CVP();
