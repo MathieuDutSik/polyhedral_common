@@ -572,7 +572,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
       U(j,i) = U_block(i,j);
 #ifdef DEBUG_VINBERG
   for (size_t i=0; i<dim; i++) {
-    MyVector<Tint> Ucol = GetMatrixColumn(U, i);
+    MyVector<Tint> Ucol = GetMatrixCol(U, i);
     MyVector<Tint> G_M_Ucol = Vtot.G * Vtot.Morth * Ucol;
     T mult = T(2) / T(k);
     MyVector<T> TwoOk_G_M_Ucol_T = mult * UniversalVectorConversion<T,Tint>(G_M_Ucol);
@@ -683,7 +683,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       T scal = eFAC.dot(v_T);
       FAC(i_root,0) = scal;
       for (size_t i=1; i<dim; i++) {
-        v_T = UniversalVectorConversion<T,Tint>(GetMatrixColumn(data.trans_u,i-1));
+        v_T = UniversalVectorConversion<T,Tint>(GetMatrixCol(data.trans_u,i-1));
         T scal = eFAC.dot(v_T);
         FAC(i_root,i) = scal;
       }
