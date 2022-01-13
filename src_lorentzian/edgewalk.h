@@ -1354,6 +1354,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 template<typename T, typename Tint>
 MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
 {
+  std::cerr << "Beginning of get_simple_cone\n";
   std::cerr << "G=\n";
   WriteMatrix(std::cerr, G);
   T norm = V.dot(G*V);
@@ -1451,7 +1452,12 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
   WriteMatrix(std::cerr, EXT);
   std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
   size_t siz = list_red.size();
-  std::cerr << "dim-1 =" << (dim-1) << " |list_red|=" << siz << "\n";
+  size_t dim_o = dim-1;
+  std::cerr << "dim-1 =" << dim_o << " |list_red|=" << siz << "\n";
+  if (dim_o != siz) {
+    std::cerr << "We have dim_o=" << dim_o << " siz=" << siz << "\n";
+    throw TerminalException{1};
+  }
   MyMatrix<Tint> MatRoot(siz, dim);
   for (size_t i=0; i<siz; i++) {
     size_t pos = list_idx[list_red[i]];
@@ -1523,16 +1529,18 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
   FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, OptionInitialVertex, FileInitialVertex);
-  std::cerr << "Initial vertex is\n";
   T norm = eVert.gen.dot(G * eVert.gen);
+  std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
+  std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";
   std::vector<MyVector<Tint>> l_root;
   for (int i=0; i<eVert.MatRoot.rows(); i++) {
     MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
     l_root.push_back(eLine);
   }
   MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_root).first;
+  std::cerr << "We have CoxMat\n";
   std::string symb = coxdyn_matrix_to_string(CoxMat);
-  std::cerr << "eVert.gen=" << StringVectorGAP(eVert.gen) << " norm=" << norm << " symb=" << symb << "\n";
+  std::cerr << "symb=" << symb << "\n";
   std::cerr << "l_roots=\n";
   WriteMatrix(std::cerr, eVert.MatRoot);
   //

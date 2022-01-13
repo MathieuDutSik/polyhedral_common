@@ -53,31 +53,36 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     std::cerr << "GramMat=\n";
     WriteMatrix(std::cerr, GramMat);
     std::cerr << "det=" << DeterminantMat(GramMat) << "\n";
-    std::cerr << "eV=\n";
-    WriteVector(std::cerr, eV);
+    std::cerr << "eV="; WriteVector(std::cerr, eV);
     std::cerr << "norm=" << norm << "\n";
   }
   LLLreduction<T,Tint> RecLLL = LLLreducedBasis<T,Tint>(GramMat);
-  //  std::cerr << "GramMatRed=\n";
-  //  WriteMatrix(std::cerr, RecLLL.GramMatRed);
-  //  std::cerr << "Pmat=\n";
-  //  WriteMatrix(std::cerr, RecLLL.Pmat);
+  const MyMatrix<T>& GramMatRed = RecLLL.GramMatRed;
   const MyMatrix<Tint>& Pmat = RecLLL.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   /*
     We have GramMatRed = Pmat * GramMat * Pmat^T
     G[x - eV] = norm
     [x - eV] G [x - eV]^T = norm
-    [x - eV] Inv(Pmat) G_red Inv(Pmat)^T [x - eV] = norm
+    [x - eV] Inv(Pmat) G_red Inv(Pmat)^T [x - eV]^T = norm
     G_red[x Inv(Pmat) - eV Inv(Pmat)] = norm
     So we resolve
     G_red[y - eV_img] = norm
     with y = x Inv(Pmat)   and   eV_img = eV Inv(Pmat)
     and so x = y Pmat
    */
+  //  std::cerr << "GramMatRed=\n";
+  //  WriteMatrix(std::cerr, RecLLL.GramMatRed);
+  //  std::cerr << "Pmat=\n";
+  //  WriteMatrix(std::cerr, RecLLL.Pmat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  const MyMatrix<T>& GramMatRed = RecLLL.GramMatRed;
+  MyMatrix<T> Gprod = Pmat_T * GramMat * Pmat_T.transpose();
+  //  std::cerr << "GramMatRed=\n";
+  //  WriteMatrix(std::cerr, GramMatRed);
+  //  std::cerr << "Gprod=\n";
+  //  WriteMatrix(std::cerr, Gprod);
+
 
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
   T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
@@ -87,6 +92,15 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     n_iter++;
     if (min == norm) {
       MyVector<Tint> V_x = Pmat.transpose() * V_y;
+      MyVector<T> Vred = eV_img + UniversalVectorConversion<T,Tint>(V_y);
+      T norm_red = Vred.dot(GramMatRed * Vred);
+      MyVector<T> Vtot = eV + UniversalVectorConversion<T,Tint>(V_x);
+      T norm_tot = Vtot.dot(GramMat * Vtot);
+      std::cerr << "ComputeSphericalSolutions norm_red=" << norm_red << " norm_tot=" << norm_tot << " min=" << min << "\n";
+      if (norm_red != norm_tot || norm_tot != min) {
+        std::cerr << "different norms\n";
+        throw TerminalException{1};
+      }
       f_ins(V_x);
     }
     return true;
@@ -438,9 +452,9 @@ template<typename T, typename Tint, typename Fins_root>
 void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_ins_root)
 {
   size_t n_sol = 0;
-  std::cerr << "shift_u=" << StringVectorGAP(data.shift_u) << "\n";
-  std::cerr << "data.trans_u=";
-  WriteMatrixGAP(std::cerr, data.trans_u);
+  //  std::cerr << "shift_u=" << StringVectorGAP(data.shift_u) << "\n";
+  //  std::cerr << "data.trans_u=";
+  //  WriteMatrixGAP(std::cerr, data.trans_u);
 
   auto f_ins=[&](const MyVector<Tint>& u) -> void {
     MyVector<Tint> x = data.shift_u + data.trans_u * u;
@@ -468,7 +482,6 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
   We want to find integer vectors such that (a+v, a+v) = k
   with v in the Morth space and one vector a.
   We want to also impose the condition that    2(a+v) G / k    \in Z^n
-  Thus the equations that we have are
   ----
   We write v = M w with w \in Z^{n-1}
   2 a^t G Mw + w^t {M^t G M} w = k - (a,a)
@@ -479,13 +492,13 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
   So, we have w = w0 + U z
   Putting it all together we get
   2a^T G M (w0 + U z) + (w0^T + z^T U^T) M^T GM (w0 + U z) = k - (a,a)
-  z^T {U^T M^T G M U} z + 2 { a^T G M U + w0^T M^T G M U } z = k - (a,a) - w0^T M^T G M w0
-  z^T {U^T M^T G M U} z + 2 { U^T M^T G (a + M w0) }^T z = k - (a,a) - w0^T M^T G M w0
+  z^T {U^T M^T G M U} z + 2 { a^T G M U + w0^T M^T G M U } z = k - (a,a) - w0^T M^T G M w0 - 2a^T G M w0
+  z^T {U^T M^T G M U} z + 2 { U^T M^T G (a + M w0) }^T z = k - (a + M w0,a + M w0)
   Write Gs = U^T M^T G M U    and Vs = Gs^{-1} Ws and Ws = U^T M^T G (a + M w0)
   And so we finally get the equation
-  z^T Gs z + 2 Vs^T Gs z = k - (a,a) - w0^T M^T G M w0
+  z^T Gs z + 2 Vs^T Gs z = k - (a + M w0,a + M w0)
   or
-  (z + Vs)^T Gs (z + Vs) = k - (a,a) - w0^T M^T G M w0 + Vs Gs Vs
+  (z + Vs)^T Gs (z + Vs) = k - (a + M w0,a + M w0) + Vs Gs Vs
   ---
   Also we have x = a + Mw
                  = a + M (w0 + Uz)
@@ -527,11 +540,24 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
     return {{}, {}, 0, {}, {}, false};
-  MyVector<Tint> res = *opt;
+  MyVector<Tint> res = *opt; // The solution res is of dimension 2n-1
   //
   MyVector<Tint> w0(n-1);
   for (size_t i=0; i<n-1; i++)
     w0(i) = res(i);
+#ifdef DEBUG_VINBERG
+  MyVector<T> w0_T = UniversalVectorConversion<T,Tint>(w0);
+  MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
+  MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Vtot.Morth);
+  MyVector<T> v_T = a_T + Morth_T * w0_T;
+  T mult = T(2) / T(k);
+  MyVector<T> vv_T = mult * Vtot.G_T * v_T;
+  if (!IsIntegerVector(vv_T)) {
+    std::cerr << "vv_T should be integral\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "w0=" << StringVectorGAP(w0) << "\n";
+#endif
   MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
   size_t dim = U_block.rows();
 #ifdef DEBUG_VINBERG
@@ -544,6 +570,20 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   for (size_t i=0; i<dim; i++)
     for (size_t j=0; j<n-1; j++)
       U(j,i) = U_block(i,j);
+#ifdef DEBUG_VINBERG
+  for (size_t i=0; i<dim; i++) {
+    MyVector<Tint> Ucol = GetMatrixColumn(U, i);
+    MyVector<Tint> G_M_Ucol = Vtot.G * Vtot.Morth * Ucol;
+    T mult = T(2) / T(k);
+    MyVector<T> TwoOk_G_M_Ucol_T = mult * UniversalVectorConversion<T,Tint>(G_M_Ucol);
+    if (!IsIntegerVector(TwoOk_G_M_Ucol_T)) {
+      std::cerr << "The vector should be integral\n";
+      throw TerminalException{1};
+    }
+  }
+  std::cerr << "U=\n";
+  WriteMatrix(std::cerr, U);
+#endif
   //
   MyMatrix<Tint> Gs = U.transpose() * Vtot.Morth.transpose() * Vtot.G * Vtot.Morth * U;
   MyMatrix<Tint> Ws = U.transpose() * Vtot.Morth.transpose() * Vtot.G * ( a + Vtot.Morth * w0);
@@ -551,11 +591,11 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
   MyMatrix<T> InvGs_T = Inverse(Gs_T);
   MyVector<T> Vs = InvGs_T * UniversalVectorConversion<T,Tint>(Ws);
   MyVector<Tint> Mw0 = Vtot.Morth * w0;
-  Tint term1 = k - a.dot(Vtot.G * a) - Mw0.dot(Vtot.G * Mw0);
+  MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
+  Tint term1 = k - apMw0.dot(Vtot.G * apMw0);
   T term2 = Vs.dot(Gs_T * Vs);
   T normi = T(term1) + term2;
   //
-  MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   MyMatrix<Tint> MU = Vtot.Morth * U;
   return {Gs_T, Vs, normi, apMw0, MU, true};
 }
@@ -605,7 +645,23 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       list_GV.push_back(e_gv);
     }
     auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
-      std::cerr << "Inserting a vector V\n";
+      Tint norm = V.dot(Vtot.G * V);
+      MyVector<Tint> eDiff = V - a;
+      std::optional<MyVector<Tint>> opt = SolutionIntMat(Vtot.Morth, eDiff);
+      std::cerr << "Inserting a vector V=" << V << " norm=" << norm << " k=" << k << "\n";
+      size_t n_error = 0;
+      if (norm != k) {
+        std::cerr << "We should have norm = k\n";
+        n_error++;
+      }
+      if (!opt) {
+        std::cerr << "Solution is not in subspace\n";
+        n_error++;
+      }
+      if (n_error > 0) {
+        std::cerr << "n_error=" << n_error << "\n";
+        throw TerminalException{1};
+      }
       for (auto & e_gv : list_GV) {
         T scal = V.dot(e_gv);
         if (scal > 0)
