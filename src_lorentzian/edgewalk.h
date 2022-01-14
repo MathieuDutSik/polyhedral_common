@@ -1484,15 +1484,15 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
     return {RemoveFractionVector(gen), Mroot};
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
-  if (OptionInitialVertex == "vinberg_orig") {
-    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
-    std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
-    return {RemoveFractionVector(UniversalVectorConversion<T,Tint>(epair.first)), MatrixFromVectorFamily(epair.second)};
-  }
   if (OptionInitialVertex == "vinberg") {
-    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(G, l_norms);
-    std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair = FindOneInitialRay(Vtot);
-    MyVector<T> V = UniversalVectorConversion<T,Tint>(epair.first);
+    ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite<T,Tint>(G);
+    /*
+      We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
+     */
+    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
+    MyVector<Tint> eVect = FindOneInitialRay(Vtot).first;
+    MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
+    MyVector<T> V = UniversalVectorConversion<T,Tint>(eVectRet);
     MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, V);
     return {RemoveFractionVector(V), MatRoot};
   }

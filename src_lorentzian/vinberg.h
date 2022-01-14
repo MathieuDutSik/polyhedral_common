@@ -1307,16 +1307,20 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
 
   IterateRootDecompositions<T,Tint> iter(Vtot);
   std::cerr << "FindRoots, step 3\n";
+  bool need_consideration = true;
   while (true) {
     std::cerr << "|ListRoot|=" << ListRoot.size() << "\n";
-    if (f_exit(ListRoot, FACfeasible))
-      break;
+    if (need_consideration)
+      if (f_exit(ListRoot, FACfeasible))
+        break;
+    need_consideration = false;
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
     std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k << "\n";
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
     if (list_root_cand.size() > 0) {
+      need_consideration = true;
       for (auto & eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);
       }
