@@ -9,6 +9,7 @@
 #include "POLY_lrslib.h"
 #include "coxeter_dynkin.h"
 #include "Temp_ShortVectorUndefinite.h"
+#include "Indefinite_LLL.h"
 #include "Namelist.h"
 
 #define DEBUG_VINBERG
@@ -362,8 +363,16 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
   T CritNorm = 0;
   bool StrictIneq = true;
   bool NeedNonZero = true;
-  MyVector<Tint> eVect=GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
-  return eVect;
+  /*
+    ResRed.B is an integral matrix that reduces it
+    Mred = B * M * B^T
+    We find a short vector v for Mred.
+    Thus v B is a short vector for M
+   */
+  ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite<T,Tint>(G);
+  MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
+  MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
+  return eVectRet;
 }
 
 
