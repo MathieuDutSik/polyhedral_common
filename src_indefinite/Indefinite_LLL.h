@@ -129,6 +129,8 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   };
   auto get_random_int_matrix=[&]() -> MyMatrix<Tint> {
     std::vector<int> LPos(n);
+    for (int i=0; i<n; i++)
+      LPos[i] = i;
     for (int iter=0; iter<4*n; iter++) {
       int i = rand() % n;
       int j = rand() % n;
@@ -150,6 +152,8 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   size_t limit_iter = 2 * n;
   while(true) {
     MyMatrix<Tint> RandUnit = get_random_int_matrix();
+    //    std::cerr << "RandUnit=\n";
+    //    WriteMatrix(std::cerr, RandUnit);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T,Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
@@ -160,6 +164,7 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
       return {std::move(B), std::move(Mwork)};
     }
     T norm = get_norm(eRes.Mred);
+    //    std::cerr << "norm=" << norm << "\n";
     if (norm >= norm_work) {
       iter_no_improv++;
       if (limit_iter == iter_no_improv)

@@ -370,7 +370,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
     Thus v B is a short vector for M
    */
   ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite<T,Tint>(G);
-  MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint,T>(G, CritNorm, StrictIneq, NeedNonZero);
+  MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint,T>(ResRed.Mred, CritNorm, StrictIneq, NeedNonZero);
   MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
   return eVectRet;
 }
