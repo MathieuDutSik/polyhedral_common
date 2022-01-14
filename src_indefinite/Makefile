@@ -1,6 +1,6 @@
 #PROGRAM		= IndefiniteLLL IndefiniteReduction
-PROGRAM		= IndefiniteLLL
-#PROGRAM		= IndefiniteReduction
+#PROGRAM		= IndefiniteLLL
+PROGRAM		= IndefiniteReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

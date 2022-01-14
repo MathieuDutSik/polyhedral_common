@@ -149,7 +149,8 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   int n = M.rows();
   ResultIndefiniteLLL<T,Tint> eRes = Indefinite_LLL<T,Tint>(M);
   std::cerr << "We have computed eRes\n";
-  if (eRes.success) {
+  bool early_term = false;
+  if (eRes.success && early_term) {
     return {std::move(eRes.B), std::move(eRes.Mred)};
   }
   MyMatrix<Tint> B = eRes.B;
@@ -186,13 +187,13 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   size_t limit_iter = 2 * n;
   while(true) {
     MyMatrix<Tint> RandUnit = get_random_int_matrix();
-    std::cerr << "RandUnit=\n";
-    WriteMatrix(std::cerr, RandUnit);
+    //    std::cerr << "RandUnit=\n";
+    //    WriteMatrix(std::cerr, RandUnit);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T,Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
     ResultIndefiniteLLL<T,Tint> eRes = Indefinite_LLL<T,Tint>(Mwork);
-    if (eRes.success) {
+    if (eRes.success && early_term) {
       B = eRes.B * B;
       Mwork = eRes.Mred;
       return {std::move(B), std::move(Mwork)};
@@ -205,7 +206,7 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
         return {std::move(B), std::move(Mwork)};
     } else {
       iter_no_improv = 0;
-      norm = norm_work;
+      norm_work = norm;
       B = eRes.B * B;
       Mwork = eRes.Mred;
     }

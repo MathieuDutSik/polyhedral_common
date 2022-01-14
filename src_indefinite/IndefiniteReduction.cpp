@@ -21,6 +21,16 @@ int main(int argc, char* argv[])
     //
     auto print_result=[&](std::ostream & os) -> void {
       ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite<T,Tint>(M);
+      MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(ResRed.B);
+      MyMatrix<T> M_Control = B_T * M * B_T.transpose();
+      if (T_abs(DeterminantMat(B_T)) != 1) {
+        std::cerr << "B_T should have determinant 1 or -1\n";
+        throw TerminalException{1};
+      }
+      if (M_Control != ResRed.Mred) {
+        std::cerr << "M_Control is not what it should be\n";
+        throw TerminalException{1};
+      }
       std::cerr << "B=\n";
       WriteMatrix(std::cerr, ResRed.B);
       std::cerr << "Mred=\n";
