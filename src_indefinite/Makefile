@@ -1,9 +1,5 @@
-#PROGRAM		= VIN_FindSpecificDistance
-#PROGRAM		= VIN_ComputeDomain TEST_Anisotropic
-#PROGRAM		= TEST_Anisotropic
-PROGRAM		= IndefiniteLLL
-#PROGRAM		= VIN_ComputeDomain
-#PROGRAM		=
+#PROGRAM		= IndefiniteLLL
+PROGRAM		= IndefiniteLLL IndefiniteReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

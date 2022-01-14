@@ -103,7 +103,75 @@ ResultIndefiniteLLL<T,Tint> Indefinite_LLL(MyMatrix<T> const& M)
   return {true, B, get_matrix(), {}};
 }
 
+template<typename T, typename Tint>
+struct ResultReductionIndefinite {
+  MyMatrix<Tint> B;
+  MyMatrix<T> Mred;
+};
 
+
+template<typename T, typename Tint>
+ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& M)
+{
+  int n = M.rows();
+  ResultIndefiniteLLL<T,Tint> eRes = Indefinite_LLL<T,Tint>(M);
+  if (eRes.success) {
+    return {std::move(eRes.B), std::move(eRes.Mred)};
+  }
+  MyMatrix<Tint> B = eRes.B;
+  MyMatrix<T> Mwork = eRes.Mred;
+  auto get_norm=[&](MyMatrix<T> const& mat) -> T {
+    T sum = 0;
+    for (int i=0; i<n; i++)
+      for (int j=0; j<n; j++)
+        sum += T_abs(mat(i,j));
+    return sum;
+  };
+  auto get_random_int_matrix=[&]() -> MyMatrix<Tint> {
+    std::vector<int> LPos(n);
+    for (int iter=0; iter<4*n; iter++) {
+      int i = rand() % n;
+      int j = rand() % n;
+      if (i != j)
+        std::swap(LPos[i], LPos[j]);
+    }
+    std::vector<int> LDiag(n);
+    for (int i=0; i<n; i++) {
+      int val = rand() % 2;
+      LDiag[i] = -1 + 2 * val;
+    }
+    MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n,n);
+    for (int i=0; i<n; i++)
+      Unit(i, LPos[i]) = LDiag[i];
+    return Unit;
+  };
+  T norm_work = get_norm(Mwork);
+  size_t iter_no_improv = 0;
+  size_t limit_iter = 2 * n;
+  while(true) {
+    MyMatrix<Tint> RandUnit = get_random_int_matrix();
+    MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T,Tint>(RandUnit);
+    B = RandUnit * B;
+    Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
+    ResultIndefiniteLLL<T,Tint> eRes = Indefinite_LLL<T,Tint>(Mwork);
+    if (eRes.success) {
+      B = eRes.B * B;
+      Mwork = eRes.Mred;
+      return {std::move(B), std::move(Mwork)};
+    }
+    T norm = get_norm(eRes.Mred);
+    if (norm >= norm_work) {
+      iter_no_improv++;
+      if (limit_iter == iter_no_improv)
+        return {std::move(B), std::move(Mwork)};
+    } else {
+      iter_no_improv = 0;
+      norm = norm_work;
+      B = eRes.B * B;
+      Mwork = eRes.Mred;
+    }
+  }
+}
 
 
 
