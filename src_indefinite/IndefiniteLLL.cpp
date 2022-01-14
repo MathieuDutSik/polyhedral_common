@@ -22,15 +22,16 @@ int main(int argc, char* argv[])
     auto print_result=[&](std::ostream & os) -> void {
       ResultIndefiniteLLL<T,Tint> ResLLL = Indefinite_LLL<T,Tint>(M);
       if (ResLLL.success) {
-        os << "return rec(B:=[";
-        bool IsFirst = true;
-        for (auto & eV : ResLLL.B) {
-          if (!IsFirst)
-            os << ",\n";
-          IsFirst = false;
-          WriteVectorGAP(os, eV);
-        }
-        os << "]);";
+        std::cerr << "B_T=\n";
+        WriteMatrix(std::cerr, ResLLL.B);
+        std::cerr << "Mred=\n";
+        WriteMatrix(std::cerr, ResLLL.Mred);
+
+        os << "return rec(B:=";
+        WriteMatrixGAP(os, ResLLL.B);
+        os << ", Mred:=";
+        WriteMatrixGAP(os, ResLLL.Mred);
+        os << ");";
       } else {
         os << "return rec(Xisotrop:=";
         WriteVectorGAP(os, ResLLL.Xisotrop);
