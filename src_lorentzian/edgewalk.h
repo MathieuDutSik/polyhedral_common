@@ -1472,6 +1472,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
+  std::cerr << "Beginning of get_initial_vertex\n";
   if (OptionInitialVertex == "File") {
     if (!IsExistingFile(FileInitialVertex)) {
       std::cerr << "The file FileInitialVertex=" << FileInitialVertex << " is missing\n";
@@ -1525,6 +1526,7 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
+  std::cerr << "We have l_norms\n";
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");

@@ -3,6 +3,8 @@
 
 #include "MAT_Matrix.h"
 
+//#define DEBUG_INDEFINITE_LLL
+
 template<typename T>
 struct ResultGramSchmidt_Indefinite {
   bool success; // true means we have a basis. False that we have an isotropic vector
@@ -26,23 +28,33 @@ ResultGramSchmidt_Indefinite<T> GramSchmidtOrthonormalization(MyMatrix<T> const&
   std::vector<PairInf> l_inf;
   std::vector<MyVector<T>> Bstar;
   std::vector<T> Bstar_norms;
+#ifdef DEBUG_INDEFINITE_LLL
+  T det1 = DeterminantMat(M);
+  T det2 = 1;
+#endif
   for (int i=0; i<n; i++) {
     MyVector<T> Bistar = UniversalVectorConversion<T,Tint>(GetMatrixRow(B, i));
     for (int j=0; j<i; j++) {
       T muij = (Bistar.dot(l_inf[j].Bistar_M)) / (l_inf[j].Bistar_norm);
       mu(i,j) = muij;
-      Bistar -= muij * Bistar;
+      Bistar -= muij * Bstar[j];
     }
     MyVector<T> Bistar_M = M * Bistar;
     T scal = Bistar_M.dot(Bistar);
     if (scal == 0) {
       return {false, {}, {}, {}, Bistar};
     }
+#ifdef DEBUG_INDEFINITE_LLL
+    det2 = det2 * scal;
+#endif
     PairInf epair{std::move(Bistar_M), scal};
     Bstar.push_back(Bistar);
     Bstar_norms.push_back(scal);
     l_inf.push_back(epair);
   }
+#ifdef DEBUG_INDEFINITE_LLL
+  std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
+#endif
   return {true, Bstar, Bstar_norms, mu, {}};
 }
 
@@ -74,16 +86,33 @@ ResultIndefiniteLLL<T,Tint> Indefinite_LLL(MyMatrix<T> const& M)
     MyMatrix<T> Mred = B_T * M * B_T.transpose();
     return Mred;
   };
+#ifdef DEBUG_INDEFINITE_LLL
+  T det = DeterminantMat(M);
+#endif
   int k = 1;
   while(true) {
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << "Passing in Indefinite_LLL det=" << det << " k=" << k << "\n";
+#endif
     ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B);
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << " Bstar_norms =";
+    for (auto & eN : ResGS.Bstar_norms)
+      std::cerr << " " << eN;
+    std::cerr << "\n";
+#endif
     if (!ResGS.success) {
       return {false, B, get_matrix(), ResGS.Xisotrop};
     }
     for (int i=n-1; i >=0; i--) {
       for (int j=0; j<i; j++) {
-        Tint q = UniversalNearestScalarInteger<Tint,T>(ResGS.mu(i,j));
+        T val = ResGS.mu(i,j);
+        //        double val_d = UniversalScalarConversion<double,T>(val);
+        Tint q = UniversalNearestScalarInteger<Tint,T>(val);
+        //        std::cerr << " ResGS.mu=" << ResGS.mu(i,j) << " val_d=" << val_d << " q=" << q << "\n";
+        //        std::cerr << "i=" << i << " B.row(i)=" << GetMatrixRow(B, i) << " B.row(j)=" << GetMatrixRow(B,j) << "\n";
         B.row(i) -= q * B.row(j);
+        //        std::cerr << "   q=" << q << " B.row(i)=" << GetMatrixRow(B,i) << "\n";
       }
     }
     T mu = ResGS.mu(k, k-1);
@@ -91,6 +120,9 @@ ResultIndefiniteLLL<T,Tint> Indefinite_LLL(MyMatrix<T> const& M)
     T sum1 = T_abs(sum1_pre);
     T sum2 = c * T_abs(ResGS.Bstar_norms[k-1]);
     if (sum1 < sum2) {
+#ifdef DEBUG_INDEFINITE_LLL
+      std::cerr << "Swapping k=" << k << " and " << (k-1) << "\n";
+#endif
       for (int i=0; i<n; i++)
         std::swap(B(k,i), B(k-1,i));
       k = std::max(k-1, 1);
@@ -113,8 +145,10 @@ struct ResultReductionIndefinite {
 template<typename T, typename Tint>
 ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& M)
 {
+  std::cerr << "Beginning of ComputeReductionIndefinite\n";
   int n = M.rows();
   ResultIndefiniteLLL<T,Tint> eRes = Indefinite_LLL<T,Tint>(M);
+  std::cerr << "We have computed eRes\n";
   if (eRes.success) {
     return {std::move(eRes.B), std::move(eRes.Mred)};
   }
@@ -152,8 +186,8 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   size_t limit_iter = 2 * n;
   while(true) {
     MyMatrix<Tint> RandUnit = get_random_int_matrix();
-    //    std::cerr << "RandUnit=\n";
-    //    WriteMatrix(std::cerr, RandUnit);
+    std::cerr << "RandUnit=\n";
+    WriteMatrix(std::cerr, RandUnit);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T,Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
@@ -164,7 +198,7 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
       return {std::move(B), std::move(Mwork)};
     }
     T norm = get_norm(eRes.Mred);
-    //    std::cerr << "norm=" << norm << "\n";
+    std::cerr << "norm=" << norm << " iter_no_improv=" << iter_no_improv << "\n";
     if (norm >= norm_work) {
       iter_no_improv++;
       if (limit_iter == iter_no_improv)
