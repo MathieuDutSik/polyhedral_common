@@ -530,10 +530,12 @@ template<typename T>
 T_shvec_request<T> initShvecReq(const MyMatrix<T>& gram_matrix, const MyVector<T>& coset, const T& bound, int mode)
 {
   int dim = gram_matrix.rows();
+  /*
   if (dim < 2) {
     std::cerr << "dim=" << dim << " while it should be at least 2\n";
     throw TerminalException{1};
   }
+  */
   T_shvec_request<T> request;
   request.dim = dim;
   request.coset = coset;

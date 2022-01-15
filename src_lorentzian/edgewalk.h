@@ -1377,7 +1377,10 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
   for (auto & e_norm : l_norms) {
     std::cerr << "e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
+    std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
+    std::cerr << "We have Latt_i_Orth\n";
     MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
@@ -1425,13 +1428,12 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
     while (true) {
       for (int i=0; i<dimSpace; i++)
         w(i) = rand() % tot_spr - spr;
-      std::cerr << "w=" << w << "\n";
       if (is_corr(w))
         return w;
     }
   };
   MyVector<Tint> selVect = get_random_vect();
-  std::cerr << "selVect=" << StringVectorGAP(selVect) << "\n";
+  std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
   int n_root = l_roots.size() / 2;
   MyMatrix<T> EXT(n_root,1+dimSpace);
   std::vector<size_t> list_idx(n_root);
@@ -1451,8 +1453,8 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
   WriteMatrix(std::cerr, EXT);
   std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
   size_t siz = list_red.size();
-  std::cerr << "dimSpace =" << dimSpace << " |list_red|=" << siz << "\n";
-  if (dimSpace != siz) {
+  if (size_t(dimSpace) != siz) {
+    std::cerr << "dimSpace =" << dimSpace << " |list_red|=" << siz << "\n";
     std::cerr << "We have dimSpace=" << dimSpace << " siz=" << siz << "\n";
     throw TerminalException{1};
   }
@@ -1499,20 +1501,22 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
      */
     MyMatrix<Tint> Basis = ComplementToBasis(Vnsp);
-    std::vector<MyVector<Tint>> l_ui = get_simple_cone_from_lattice(G, l_norms, Basis);
+    MyMatrix<Tint> Basis_NSP = Basis * NSP_tint;
+    std::vector<MyVector<Tint>> l_ui = get_simple_cone_from_lattice(G, l_norms, Basis_NSP);
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
       T CritNorm = 0;
       bool StrictIneq = true;
       bool NeedNonZero = true;
-      MyVector<Tint> eVect_i = GetShortVector_unlimited_float<Tint,T>(Gprod, CritNorm, StrictIneq, NeedNonZero);
-      MyVector<T> eVect = UniversalVectorConversion<T,Tint>(eVect_i);
-      T scal = V.dot(G * eVect);
+      MyVector<Tint> eVect_A = GetShortVector_unlimited_float<Tint,T>(Gprod, CritNorm, StrictIneq, NeedNonZero);
+      MyVector<T> eVect_B = UniversalVectorConversion<T,Tint>(eVect_A);
+      MyVector<T> eVect_C = Pplane.transpose() * eVect_B;
+      T scal = V.dot(G * eVect_C);
       if (scal < 0) { // This is because of the sign convention
-        return eVect;
+        return eVect_C;
       } else {
-        return -eVect;
+        return -eVect_C;
       }
     };
     MyVector<T> kP = get_kP();
