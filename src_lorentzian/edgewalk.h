@@ -416,6 +416,25 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 
 
 
+template<typename T, typename Tint>
+MyMatrix<T> Get_Pplane(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_ui)
+{
+  int n = G.rows();
+  size_t n_root = l_ui.size();
+  MyMatrix<T> EquaPplane(n_root,n);
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
+    MyVector<T> eP = G * eV;
+    AssignMatrixRow(EquaPplane, i_root, eP);
+  }
+  MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
+  if (Pplane.rows() != 2) {
+    std::cerr << "The dimension should be exactly 2\n";
+    throw TerminalException{1};
+  }
+  return Pplane;
+}
+
 
 /*
   We take the notations as in EDGEWALK paper.
@@ -459,7 +478,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::cerr << "n_root=" << n_root << "\n";
   MyMatrix<T> Space(n_root,n);
   MyMatrix<T> EquaRvect(n_root+1,n);
-  MyMatrix<T> EquaPplane(n_root,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
     MyVector<T> eP = G * eV;
@@ -468,22 +486,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       std::cerr << "The scalar product should be 0\n";
       throw TerminalException{1};
     }
-    for (int i=0; i<n; i++) {
-      Space(i_root,i) = eV(i);
-      EquaRvect(i_root,i) = eP(i);
-      EquaPplane(i_root,i) = eP(i);
-    }
+    AssignMatrixRow(Space, i_root, eV);
+    AssignMatrixRow(EquaRvect, i_root, eP);
   }
-  MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
-  std::cerr << "Plane P=\n";
-  WriteMatrix(std::cerr, Pplane);
+  MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
+  //  std::cerr << "Plane P=\n";
+  //  WriteMatrix(std::cerr, Pplane);
   //  std::cerr << "Space=\n";
   //  WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
   std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
-  for (int i=0; i<n; i++)
-    EquaRvect(n_root,i) = eP(i);
+  AssignMatrixRow(EquaRvect, n_root, eP);
   MyMatrix<T> NSP = NullspaceTrMat(EquaRvect);
   if (NSP.rows() != 1) {
     std::cerr << "|NSP|=" << NSP.rows() << "/" << NSP.cols() << "\n";
@@ -1352,32 +1366,17 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 template<typename T, typename Tint>
-MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
+std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyMatrix<Tint> const& NSP_tint)
 {
   std::cerr << "Beginning of get_simple_cone\n";
-  std::cerr << "G=\n";
-  WriteMatrix(std::cerr, G);
-  T norm = V.dot(G*V);
-  std::cerr << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
-  if (norm >= 0) {
-    std::cerr << "We need a vector of negative norm in order to get on the orthogonal\n";
-    std::cerr << "a positive definite lattice\n";
-    throw TerminalException{1};
-  }
-  int dim = G.rows();
-  MyVector<T> eProd = G * V;
-  MyMatrix<T> eProdB(1,dim);
-  AssignMatrixRow(eProdB, 0, eProd);
-  MyMatrix<T> NSP = NullspaceIntTrMat(eProdB);
-  MyMatrix<Tint> NSP_tint = UniversalMatrixConversion<Tint,T>(NSP);
+  int dimSpace = NSP_tint.rows();
+  MyMatrix<T> NSP = UniversalMatrixConversion<T,Tint>(NSP_tint);
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint,T>(G);
-  std::vector<Tint> l_norm = Get_root_lengths(G_int);
   std::vector<MyVector<Tint>> l_roots;
-  MyVector<T> zeroVect = ZeroVector<T>(dim-1);
-  for (auto & e_norm : l_norm) {
+  MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
+  for (auto & e_norm : l_norms) {
     std::cerr << "e_norm=" << e_norm << "\n";
-    T e_norm_t = UniversalScalarConversion<T,Tint>(e_norm);
-    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm_t);
+    MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
     MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
@@ -1395,7 +1394,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
       std::cerr << "G_P should be positive definite\n";
       throw TerminalException{1};
     }
-    std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm_t);
+    std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
     for (auto & e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
       std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, e_root);
@@ -1420,11 +1419,11 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
     return true;
   };
   auto get_random_vect=[&]() -> MyVector<Tint> {
-    MyVector<Tint> w(dim-1);
+    MyVector<Tint> w(dimSpace);
     size_t spr = 10;
     size_t tot_spr = 2 * spr + 1;
     while (true) {
-      for (int i=0; i<dim-1; i++)
+      for (int i=0; i<dimSpace; i++)
         w(i) = rand() % tot_spr - spr;
       std::cerr << "w=" << w << "\n";
       if (is_corr(w))
@@ -1434,7 +1433,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
   MyVector<Tint> selVect = get_random_vect();
   std::cerr << "selVect=" << StringVectorGAP(selVect) << "\n";
   int n_root = l_roots.size() / 2;
-  MyMatrix<T> EXT(n_root,dim);
+  MyMatrix<T> EXT(n_root,1+dimSpace);
   std::vector<size_t> list_idx(n_root);
   size_t pos=0;
   for (size_t i=0; i<l_roots.size(); i++) {
@@ -1443,8 +1442,8 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
       list_idx[pos] = i;
       MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_roots[i]);
       EXT(pos,0);
-      for (int i=1; i<dim; i++)
-        EXT(pos,i) = eV(i-1);
+      for (int i=0; i<dimSpace; i++)
+        EXT(pos,i+1) = eV(i);
       pos++;
     }
   }
@@ -1452,20 +1451,76 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, MyVector<T> const& V)
   WriteMatrix(std::cerr, EXT);
   std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
   size_t siz = list_red.size();
-  size_t dim_o = dim-1;
-  std::cerr << "dim-1 =" << dim_o << " |list_red|=" << siz << "\n";
-  if (dim_o != siz) {
-    std::cerr << "We have dim_o=" << dim_o << " siz=" << siz << "\n";
+  std::cerr << "dimSpace =" << dimSpace << " |list_red|=" << siz << "\n";
+  if (dimSpace != siz) {
+    std::cerr << "We have dimSpace=" << dimSpace << " siz=" << siz << "\n";
     throw TerminalException{1};
   }
-  MyMatrix<Tint> MatRoot(siz, dim);
+  std::vector<MyVector<Tint>> l_ui(siz);
   for (size_t i=0; i<siz; i++) {
     size_t pos = list_idx[list_red[i]];
     MyVector<Tint> v = NSP_tint.transpose() * l_roots[pos];
-    AssignMatrixRow(MatRoot, i, v);
+    l_ui[i] = v;
   }
-  return MatRoot;
+  return l_ui;
 }
+
+
+
+template<typename T, typename Tint>
+MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& V)
+{
+  T norm = V.dot(G*V);
+  std::cerr << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
+  if (norm > 0) {
+    std::cerr << "We need a vector of negative norm or zero norm in order to build a system of simple roots\n";
+    throw TerminalException{1};
+  }
+  int dim = G.rows();
+  MyVector<T> eProd = G * V;
+  MyMatrix<T> eProdB(1,dim);
+  AssignMatrixRow(eProdB, 0, eProd);
+  MyMatrix<T> NSP = NullspaceIntTrMat(eProdB);
+  MyMatrix<Tint> NSP_tint = UniversalMatrixConversion<Tint,T>(NSP);
+  if (norm < 0) {
+    // ordinary point case
+    std::vector<MyVector<Tint>> l_vect = get_simple_cone_from_lattice(G, l_norms, NSP_tint);
+    return MatrixFromVectorFamily(l_vect);
+  } else {
+    // ideal point case
+    MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
+    std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, V_i);
+    if (!opt) {
+      std::cerr << "The vector V does not below to NSP which contradicts it being isotrop\n";
+      throw TerminalException{1};
+    }
+    MyVector<Tint> const& Vnsp = *opt;
+    /*
+      We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
+     */
+    MyMatrix<Tint> Basis = ComplementToBasis(Vnsp);
+    std::vector<MyVector<Tint>> l_ui = get_simple_cone_from_lattice(G, l_norms, Basis);
+    MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
+    auto get_kP=[&]() -> MyVector<T> {
+      MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
+      T CritNorm = 0;
+      bool StrictIneq = true;
+      bool NeedNonZero = true;
+      MyVector<Tint> eVect_i = GetShortVector_unlimited_float<Tint,T>(Gprod, CritNorm, StrictIneq, NeedNonZero);
+      MyVector<T> eVect = UniversalVectorConversion<T,Tint>(eVect_i);
+      T scal = V.dot(G * eVect);
+      if (scal < 0) { // This is because of the sign convention
+        return eVect;
+      } else {
+        return -eVect;
+      }
+    };
+    MyVector<T> kP = get_kP();
+    std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_ui, l_norms, V, kP);
+    return MatrixFromVectorFamily(l_vect);
+  }
+}
+
 
 
 
@@ -1490,10 +1545,10 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
       We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
      */
     VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
-    MyVector<Tint> eVect = FindOneInitialRay(Vtot).first;
+    MyVector<Tint> eVect = FindOneInitialRay(Vtot);
     MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
     MyVector<T> V = UniversalVectorConversion<T,Tint>(eVectRet);
-    MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, V);
+    MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, V);
     return {RemoveFractionVector(V), MatRoot};
   }
 #endif

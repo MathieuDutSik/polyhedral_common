@@ -874,7 +874,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
       for (size_t i_col=0; i_col<n_col; i_col++)
         V(i_col) = out[i_col+1];
       Tint scal = V.dot(Vtot.G * V);
-      if (scal < 0) {
+      if (scal <= 0) {
         opt = V;
         return false;
       }
@@ -1360,29 +1360,25 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 
 
 template<typename T, typename Tint>
-std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
+MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
 {
-  std::pair<MyVector<Tint>, std::vector<MyVector<Tint>>> epair;
+  MyVector<Tint> v;
   int dim = Vtot.G.rows();
   auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
     if (RankMat(FACfeasible) != dim)
       return false;
     std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
     if (opt) {
-      MyVector<Tint> v = *opt;
-      std::vector<MyVector<Tint>> l_roots;
-      for (auto & root : ListRoot) {
-        Tint scal = v.dot(Vtot.G * root);
-        if (scal == 0)
-          l_roots.push_back(root);
-      }
-      epair = {v, l_roots};
+      // We cannot use the roots in order to get a cone.
+      // This is because while we got a vertex, we might need more roots
+      // in order to get a cone
+      v = *opt;
       return true;
     }
     return false;
   };
   FindRoots_Kernel(Vtot, f_exit);
-  return epair;
+  return v;
 }
 
 FullNamelist NAMELIST_GetStandard_VINBERG()
