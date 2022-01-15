@@ -436,6 +436,23 @@ MyMatrix<T> Get_Pplane(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& 
 }
 
 
+
+template<typename T>
+MyMatrix<T> GetLatticeProjection(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& Latt)
+{
+  int n = G.rows();
+  int dim = Latt.rows();
+  MyMatrix<T> ProjP = GetProjectionMatrix(G, Subspace);
+  MyMatrix<T> ProjFamily(dim,n);
+  for (int i=0; i<dim; i++) {
+    MyVector<T> eVect = GetMatrixRow(Latt, i);
+    MyVector<T> eVectProj = ProjP * eVect;
+    AssignMatrixRow(ProjFamily, i, eVectProj);
+  }
+  return GetZbasis(ProjFamily);
+}
+
+
 /*
   We take the notations as in EDGEWALK paper.
   ---The dimension is n+1
@@ -585,7 +602,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //  WriteMatrix(std::cerr, G_Pplane);
   //  std::cerr << "G=\n";
   //  WriteMatrix(std::cerr, G);
-  MyMatrix<T> ProjP = GetProjectionMatrix(G, Pplane);
   struct SingCompAnisotropic {
     MyMatrix<T> Latt;
     MyMatrix<T> Basis_ProjP_LN;
@@ -602,13 +618,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::map<T,std::optional<std::vector<MyVector<Tint>>>> map_res_norm;
   };
   auto get_basis_projp_ln=[&](MyMatrix<T> const& Latt) -> MyMatrix<T> {
-    MyMatrix<T> ProjFamily(n,n);
-    for (int i=0; i<n; i++) {
-      MyVector<T> eVect = GetMatrixRow(Latt, i);
-      MyVector<T> eVectProj = ProjP * eVect;
-      AssignMatrixRow(ProjFamily, i, eVectProj);
-    }
-    MyMatrix<T> BasisProj = GetZbasis(ProjFamily);
+    MyMatrix<T> BasisProj = GetLatticeProjection(G, Pplane, Latt);
     if (BasisProj.rows() != 2) {
       std::cerr << "The BasisProj should be of rank 2\n";
       throw TerminalException{1};
@@ -1374,15 +1384,23 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint,T>(G);
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
+  std::cerr << "NSP=\n";
+  WriteMatrix(std::cerr, NSP);
   for (auto & e_norm : l_norms) {
-    std::cerr << "e_norm=" << e_norm << "\n";
+    std::cerr << "---------------------- e_norm=" << e_norm << " ----------------------\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
-    std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+    std::cerr << "Latt=\n";
+    WriteMatrix(std::cerr, Latt);
+    //    std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
+    //    std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
-    std::cerr << "We have Latt_i_Orth\n";
+    std::cerr << "Latt_i_Orth=\n";
+    WriteMatrix(std::cerr, Latt_i_Orth);
+    //    std::cerr << "We have Latt_i_Orth\n";
     MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
+    std::cerr << "G_P=\n";
+    WriteMatrix(std::cerr, G_P);
     DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
     if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
       std::cerr << "G_P=\n";
@@ -1409,6 +1427,11 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
       }
     }
     std::cerr << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
+  }
+  if (l_roots.size() < size_t(2*dimSpace)) {
+    std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
+    std::cerr << "while |l_roots|=" << l_roots.size() << "\n";
+    throw TerminalException{1};
   }
   std::cerr << "l_roots=\n";
   for (auto & e_root : l_roots)
@@ -1455,7 +1478,7 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
   size_t siz = list_red.size();
   if (size_t(dimSpace) != siz) {
     std::cerr << "dimSpace =" << dimSpace << " |list_red|=" << siz << "\n";
-    std::cerr << "We have dimSpace=" << dimSpace << " siz=" << siz << "\n";
+    std::cerr << "and they should be equal\n";
     throw TerminalException{1};
   }
   std::vector<MyVector<Tint>> l_ui(siz);
@@ -1501,6 +1524,8 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
      */
     MyMatrix<Tint> Basis = ComplementToBasis(Vnsp);
+    MyMatrix<Tint> Basis_p_Vnsp = ConcatenateMatVec(Basis, Vnsp);
+    std::cerr << "Det(Basis_p_Vnsp)=" << DeterminantMat(Basis_p_Vnsp) << "\n";
     MyMatrix<Tint> Basis_NSP = Basis * NSP_tint;
     std::vector<MyVector<Tint>> l_ui = get_simple_cone_from_lattice(G, l_norms, Basis_NSP);
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
