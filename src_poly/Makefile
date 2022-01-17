@@ -30,6 +30,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism \
                   GRP_LinPolytope_Canonic \
                   GRP_OrbitSplittingPerfect \
 		  POLY_ComputeEngelSymbol \
+		  POLY_GetFullRankFacetSet \
 		  POLY_FaceLatticeDirect
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

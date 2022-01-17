@@ -1,3 +1,4 @@
+#include "rational.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "GRP_GroupFct.h"
