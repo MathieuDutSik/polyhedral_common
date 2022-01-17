@@ -1,3 +1,4 @@
+#include "rational.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
