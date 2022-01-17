@@ -51,7 +51,6 @@ template<typename T>
 LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const& InequalitySet, MyVector<T> const& ToBeMinimized)
 {
   std::cerr << "Begin CDD_LinearProgramming_External\n";
-  static_assert(is_mpq_class<T>::value, "Requires T to be mpq_class");
   std::string eStr=random_string(20);
   std::string FileIne="/tmp/LP_" + eStr + ".ine";
   std::string FileLps="/tmp/LP_" + eStr + ".lps";
