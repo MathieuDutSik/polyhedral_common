@@ -436,21 +436,40 @@ MyMatrix<T> Get_Pplane(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& 
 }
 
 
-
 template<typename T>
-MyMatrix<T> GetLatticeProjection(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& Latt)
-{
-  int n = G.rows();
-  int dim = Latt.rows();
-  MyMatrix<T> ProjP = GetProjectionMatrix(G, Subspace);
-  MyMatrix<T> ProjFamily(dim,n);
-  for (int i=0; i<dim; i++) {
-    MyVector<T> eVect = GetMatrixRow(Latt, i);
-    MyVector<T> eVectProj = ProjP * eVect;
-    AssignMatrixRow(ProjFamily, i, eVectProj);
+struct LatticeProjectionFramework {
+  MyMatrix<T> ProjP;
+  MyMatrix<T> BasisProj;
+  MyMatrix<T> ProjFamily;
+  MyVector<T> Latt;
+  LatticeProjectionFramework(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& Latt) : Latt(Latt)
+  {
+    int n = G.rows();
+    int dim = Latt.rows();
+    ProjP = GetProjectionMatrix(G, Subspace);
+    ProjFamily = MyMatrix<T>(dim,n);
+    for (int i=0; i<dim; i++) {
+      MyVector<T> eVect = GetMatrixRow(Latt, i);
+      MyVector<T> eVectProj = ProjP * eVect;
+      AssignMatrixRow(ProjFamily, i, eVectProj);
+    }
+    BasisProj = GetZbasis(ProjFamily);
   }
-  return GetZbasis(ProjFamily);
-}
+  std::optional<MyVector<T>> GetOnePreimage(MyVector<T> const& V)
+  {
+    std::optional<MyVector<T>> opt = SolutionIntMat(ProjFamily, V);
+    if (!opt)
+      return {};
+    MyVector<T> const& eSol = *opt;
+    MyVector<T> preImage = Latt.transpose() * eSol;
+    return preImage;
+  }
+};
+
+
+
+
+
 
 
 /*
@@ -618,7 +637,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::map<T,std::optional<std::vector<MyVector<Tint>>>> map_res_norm;
   };
   auto get_basis_projp_ln=[&](MyMatrix<T> const& Latt) -> MyMatrix<T> {
-    MyMatrix<T> BasisProj = GetLatticeProjection(G, Pplane, Latt);
+    LatticeProjectionFramework<T> ProjFram(G, Pplane, Latt);
+    MyMatrix<T> BasisProj = ProjFram.BasisProj;
     if (BasisProj.rows() != 2) {
       std::cerr << "The BasisProj should be of rank 2\n";
       throw TerminalException{1};
@@ -936,7 +956,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::vector<MyVector<T>> l_gens;
   for (size_t i=0; i<2; i++) {
     std::cerr << "i=" << i << "\n";
-    // a x + by correspond to the ray (u0, u1) = (-b, a)
+    // a x + b y correspond to the ray (u0, u1) = (-b, a)
     MyVector<T> U(2);
     U(0) = -Factor(i,1);
     U(1) =  Factor(i,0);
@@ -1376,6 +1396,65 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 template<typename T, typename Tint>
+std::vector<MyVector<Tint>> GetFacetOneDomain(std::vector<MyVector<Tint>> const& l_vect)
+{
+  int dimSpace = l_vect[0].size();
+  if (l_vect.size() < size_t(2*dimSpace)) {
+    std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
+    std::cerr << "while |l_vect|=" << l_vect.size() << "\n";
+    throw TerminalException{1};
+  }
+  auto is_corr=[&](MyVector<Tint> const& w) -> bool {
+    for (auto & e_root : l_vect) {
+      Tint scal = e_root.dot(w);
+      if (scal == 0)
+        return false;
+    }
+    return true;
+  };
+  auto get_random_vect=[&]() -> MyVector<Tint> {
+    MyVector<Tint> w(dimSpace);
+    size_t spr = 10;
+    size_t tot_spr = 2 * spr + 1;
+    while (true) {
+      for (int i=0; i<dimSpace; i++)
+        w(i) = rand() % tot_spr - spr;
+      if (is_corr(w))
+        return w;
+    }
+  };
+  MyVector<Tint> selVect = get_random_vect();
+  std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
+  int n_vect = l_vect.size() / 2;
+  MyMatrix<T> EXT(n_vect,1+dimSpace);
+  std::vector<size_t> list_idx(n_vect);
+  size_t pos=0;
+  for (size_t i=0; i<l_vect.size(); i++) {
+    Tint scal = selVect.dot(l_vect[i]);
+    if (scal > 0) {
+      list_idx[pos] = i;
+      MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_vect[i]);
+      EXT(pos,0);
+      for (int i=0; i<dimSpace; i++)
+        EXT(pos,i+1) = eV(i);
+      pos++;
+    }
+  }
+  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
+  size_t siz = list_red.size();
+  std::vector<MyVector<Tint>> l_ui(siz);
+  for (size_t i=0; i<siz; i++) {
+    size_t pos = list_idx[list_red[i]];
+    l_ui[i] = l_vect[pos];
+  }
+  return l_ui;
+}
+
+
+
+
+
+template<typename T, typename Tint>
 std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyMatrix<Tint> const& NSP_tint)
 {
   std::cerr << "Beginning of get_simple_cone\n";
@@ -1428,64 +1507,16 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
     }
     std::cerr << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
   }
-  if (l_roots.size() < size_t(2*dimSpace)) {
-    std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
-    std::cerr << "while |l_roots|=" << l_roots.size() << "\n";
-    throw TerminalException{1};
-  }
-  std::cerr << "l_roots=\n";
-  for (auto & e_root : l_roots)
-    std::cerr << " " << StringVectorGAP(e_root) << "\n";
-  auto is_corr=[&](MyVector<Tint> const& w) -> bool {
-    for (auto & e_root : l_roots) {
-      Tint scal = e_root.dot(w);
-      if (scal == 0)
-        return false;
-    }
-    return true;
-  };
-  auto get_random_vect=[&]() -> MyVector<Tint> {
-    MyVector<Tint> w(dimSpace);
-    size_t spr = 10;
-    size_t tot_spr = 2 * spr + 1;
-    while (true) {
-      for (int i=0; i<dimSpace; i++)
-        w(i) = rand() % tot_spr - spr;
-      if (is_corr(w))
-        return w;
-    }
-  };
-  MyVector<Tint> selVect = get_random_vect();
-  std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
-  int n_root = l_roots.size() / 2;
-  MyMatrix<T> EXT(n_root,1+dimSpace);
-  std::vector<size_t> list_idx(n_root);
-  size_t pos=0;
-  for (size_t i=0; i<l_roots.size(); i++) {
-    Tint scal = selVect.dot(l_roots[i]);
-    if (scal > 0) {
-      list_idx[pos] = i;
-      MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_roots[i]);
-      EXT(pos,0);
-      for (int i=0; i<dimSpace; i++)
-        EXT(pos,i+1) = eV(i);
-      pos++;
-    }
-  }
-  std::cerr << "EXT=\n";
-  WriteMatrix(std::cerr, EXT);
-  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
-  size_t siz = list_red.size();
-  if (size_t(dimSpace) != siz) {
-    std::cerr << "dimSpace =" << dimSpace << " |list_red|=" << siz << "\n";
+  std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain<T,Tint>(l_roots);
+  if (facet_one_cone.size() != size_t(dimSpace)) {
+    std::cerr << "dimSpace =" << dimSpace << " |facet_one_cone|=" << facet_one_cone.size() << "\n";
     std::cerr << "and they should be equal\n";
     throw TerminalException{1};
   }
-  std::vector<MyVector<Tint>> l_ui(siz);
-  for (size_t i=0; i<siz; i++) {
-    size_t pos = list_idx[list_red[i]];
-    MyVector<Tint> v = NSP_tint.transpose() * l_roots[pos];
-    l_ui[i] = v;
+  std::vector<MyVector<Tint>> l_ui;
+  for (auto & e_root : l_roots) {
+    MyVector<Tint> v = NSP_tint.transpose() * e_root;
+    l_ui.push_back(v);
   }
   return l_ui;
 }
