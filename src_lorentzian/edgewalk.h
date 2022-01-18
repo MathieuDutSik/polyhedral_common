@@ -29,6 +29,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
+  ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
@@ -751,8 +752,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::cerr << "         --------------- Looking for an isotropic vector ------------\n";
   // So, no candidates were found. We need to find isotropic vectors.
   const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
-  std::cerr << "We have Gred=\n";
-  WriteMatrix(std::cerr, Gred);
+  //  std::cerr << "We have Gred=\n";
+  //  WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
   std::cerr << "We have Factor_opt\n";
   if (!Factor_opt) {
@@ -1244,20 +1245,7 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     std::cerr << "G_P=\n";
     WriteMatrix(std::cerr, G_P);
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
-    if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
-      std::cerr << "G_P=\n";
-      WriteMatrix(std::cerr, G_P);
-      std::cerr << "NSP=\n";
-      WriteMatrix(std::cerr, NSP);
-      std::cerr << "Latt=\n";
-      WriteMatrix(std::cerr, Latt);
-      std::cerr << "Latt_i_Orth=\n";
-      WriteMatrix(std::cerr, Latt_i_Orth);
-      std::cerr << "nZero = " << DiagInfo.nbZero << " nMinus=" << DiagInfo.nbMinus << "\n";
-      std::cerr << "G_P should be positive definite\n";
-      throw TerminalException{1};
-    }
+    CheckPositiveDefinite(G_P);
     std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
     for (auto & e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
@@ -1290,6 +1278,9 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
 template<typename T, typename Tint>
 MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& V)
 {
+  std::cerr << "------------------------------ get_simple_cone --------------------------\n";
+  std::cerr << "G=\n";
+  WriteMatrixGAP(std::cerr, G);
   T norm = V.dot(G*V);
   std::cerr << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
   if (norm > 0) {
@@ -1341,18 +1332,14 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       //      std::cerr << "Latt=\n";
       //      WriteMatrix(std::cerr, Latt);
       LatticeProjectionFramework<T> fr(G, Subspace, Latt);
-      std::cerr << "We have fr\n";
+      //      std::cerr << "We have fr\n";
       MapIdxFr[e_norm] = pos;
       ListFr.push_back(fr);
       //      std::cerr << "We have MapFr assigned\n";
       //
       MyMatrix<T> const& RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
-      DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
-      if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
-        std::cerr << "G_P should be positive definite\n";
-        throw TerminalException{1};
-      }
+      CheckPositiveDefinite(G_P);
       std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
       for (auto & e_v : l_v) {
         MyVector<T> e_vt = UniversalVectorConversion<T,Tint>(e_v);
@@ -1383,6 +1370,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
           T const& e_norm = list_norm[i];
           MyVector<T> const& e_vect_big = list_vect_big[i];
           size_t idx = MapIdxFr[e_norm];
+          std::cerr << "e_norm=" << e_norm << " idx=" << idx << "\n";
           LatticeProjectionFramework<T> const& fr = ListFr[idx];
           std::optional<MyVector<T>> opt = fr.GetOnePreimage(e_vect_big);
           if (!opt) {
@@ -1401,8 +1389,8 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     std::cerr << "get_simple_cone, step 5\n";
     std::vector<MyVector<Tint>> l_ui;
     for (auto & e_vt : facet_one_cone) {
-      std::cerr << "e_vt=" << StringVectorGAP(e_vt) << "\n";
       MyVector<Tint> e_vi = get_one_root(e_vt);
+      std::cerr << "e_vt=" << StringVectorGAP(e_vt) << " e_vi=" << StringVectorGAP(e_vi) << "\n";
       l_ui.push_back(e_vi);
     }
     std::cerr << "get_simple_cone, step 5\n";
@@ -1434,7 +1422,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
 
 
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   std::cerr << "Beginning of get_initial_vertex\n";
   if (OptionInitialVertex == "File") {
@@ -1449,7 +1437,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite<T,Tint>(G);
+    ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
     /*
       We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
      */
@@ -1489,12 +1477,13 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   }
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
+  bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::cerr << "We have l_norms\n";
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   T norm = eVert.gen.dot(G * eVert.gen);
   std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
   std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";

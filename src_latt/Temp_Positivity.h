@@ -243,6 +243,23 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const& SymMat)
   return {RMat, RedMat, nbZero, nbPlus, nbMinus};
 }
 
+
+template<typename T>
+void CheckPositiveDefinite(MyMatrix<T> const& SymMat)
+{
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
+  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
+    std::cerr << "SymMat should be positive definite\n";
+    std::cerr << "SymMat=\n";
+    WriteMatrix(std::cerr, SymMat);
+    std::cerr << "nZero = " << DiagInfo.nbZero << " nMinus=" << DiagInfo.nbMinus << "\n";
+    throw TerminalException{1};
+  }
+}
+
+
+
+
 template<typename T>
 std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const& SymMat)
 {

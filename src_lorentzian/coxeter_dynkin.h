@@ -1491,18 +1491,26 @@ struct Possible_Extension {
 template<typename T, typename Tint>
 std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool only_spherical)
 {
+  std::cerr << "------------------------------------ ComputePossibleExtension ---------------------------------\n";
   DiagramSelector DS;
   DS.OnlySimplyLaced = false;
   DS.OnlyLorentzianAdmissible = true;
   DS.OnlySpherical = only_spherical;
   //
   std::cerr << "ComputePossibleExtensions, step 1\n";
+  std::cerr << "G=\n";
+  WriteMatrix(std::cerr, G);
+  std::cerr << "l_root=\n";
+  for (auto & e_root : l_root)
+    std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";
+
+  
   std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
   std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
-  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
-  //  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int n_root = l_root.size();
@@ -1531,21 +1539,21 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   };
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    //    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" <<  StringVectorGAP( e_vect) << "\n";
     MyVector<T> l_scal(n_root);
     for (int i=0; i<n_root; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
-      //      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
-      //      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
+      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
+      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
       if (!opt) {
-        //        std::cerr << "   Failed to match\n";
+        std::cerr << "   Failed to match\n";
         return;
       }
       T scal = - *opt;
-      //      std::cerr << "     scal=" << scal << "\n";
+      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
     std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);

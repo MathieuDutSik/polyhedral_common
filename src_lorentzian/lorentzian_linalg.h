@@ -145,6 +145,7 @@ MyMatrix<T> Get_Pplane(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& 
   MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
   if (Pplane.rows() != 2) {
     std::cerr << "The dimension should be exactly 2\n";
+    std::cerr << "We have |Pplane|=" << Pplane.rows() << "\n";
     throw TerminalException{1};
   }
   return Pplane;

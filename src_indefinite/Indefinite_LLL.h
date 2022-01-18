@@ -213,6 +213,17 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
   }
 }
 
-
+template<typename T, typename Tint>
+ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite_opt(MyMatrix<T> const& M, bool const& ApplyReduction)
+{
+  if (ApplyReduction) {
+    return ComputeReductionIndefinite<T,Tint>(M);
+  } else {
+    int n = M.rows();
+    MyMatrix<Tint> B = IdentityMat<Tint>(n);
+    MyMatrix<T> Mred = M;
+    return {B, Mred};
+  }
+}
 
 #endif
