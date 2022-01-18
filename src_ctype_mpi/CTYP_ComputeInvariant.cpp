@@ -1,3 +1,4 @@
+#include "rational.h"
 #include "NumberTheory.h"
 #include "Permlib_specific.h"
 #include "CtypeMPI_types.h"
