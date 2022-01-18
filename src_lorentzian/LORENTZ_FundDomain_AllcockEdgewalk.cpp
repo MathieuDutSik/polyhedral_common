@@ -1,4 +1,5 @@
-#include "NumberTheoryBoost.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "Permutation.h"
 #include "Group.h"
 
