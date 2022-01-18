@@ -1499,7 +1499,8 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   //
   std::cerr << "ComputePossibleExtensions, step 1\n";
   std::cerr << "G=\n";
-  WriteMatrix(std::cerr, G);
+  WriteMatrixGAP(std::cerr, G);
+  std::cerr << "\n";
   std::cerr << "l_root=\n";
   for (auto & e_root : l_root)
     std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";

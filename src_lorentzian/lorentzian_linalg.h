@@ -214,8 +214,8 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   };
   auto get_random_vect=[&]() -> MyVector<T> {
     MyVector<T> w(dimSpace);
-    size_t spr = 10;
-    size_t tot_spr = 2 * spr + 1;
+    int spr = 10;
+    int tot_spr = 2 * spr + 1;
     while (true) {
       for (int i=0; i<dimSpace; i++)
         w(i) = rand() % tot_spr - spr;
@@ -247,6 +247,12 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
     size_t pos = list_idx[list_red[i]];
     l_ui[i] = l_vect[pos];
   }
+  std::cerr << "l_ui=\n";
+  WriteMatrixGAP(std::cerr, MatrixFromVectorFamily(l_ui));
+  std::cerr << "\n";
+
+
+  
   return l_ui;
 }
 

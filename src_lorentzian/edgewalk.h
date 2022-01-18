@@ -1266,7 +1266,7 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
     throw TerminalException{1};
   }
   std::vector<MyVector<Tint>> l_ui;
-  for (auto & e_root : l_roots) {
+  for (auto & e_root : facet_one_cone) {
     MyVector<Tint> v = NSP_tint.transpose() * e_root;
     l_ui.push_back(v);
   }
@@ -1281,6 +1281,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
   std::cerr << "------------------------------ get_simple_cone --------------------------\n";
   std::cerr << "G=\n";
   WriteMatrixGAP(std::cerr, G);
+  std::cerr << "\n";
   T norm = V.dot(G*V);
   std::cerr << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
   if (norm > 0) {
