@@ -170,6 +170,7 @@ struct LatticeProjectionFramework {
     }
     BasisProj = GetZbasis(ProjFamily);
   }
+  LatticeProjectionFramework() {}
   std::optional<MyVector<T>> GetOnePreimage(MyVector<T> const& V) const
   {
     std::optional<MyVector<T>> opt = SolutionIntMat(ProjFamily, V);
@@ -183,25 +184,26 @@ struct LatticeProjectionFramework {
 
 
 
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> GetFacetOneDomain(std::vector<MyVector<Tint>> const& l_vect)
+template<typename T>
+std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vect)
 {
+  using Tfield = typename overlying_field<T>::field_type;
   int dimSpace = l_vect[0].size();
   if (l_vect.size() < size_t(2*dimSpace)) {
     std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
     std::cerr << "while |l_vect|=" << l_vect.size() << "\n";
     throw TerminalException{1};
   }
-  auto is_corr=[&](MyVector<Tint> const& w) -> bool {
+  auto is_corr=[&](MyVector<T> const& w) -> bool {
     for (auto & e_root : l_vect) {
-      Tint scal = e_root.dot(w);
+      T scal = e_root.dot(w);
       if (scal == 0)
         return false;
     }
     return true;
   };
-  auto get_random_vect=[&]() -> MyVector<Tint> {
-    MyVector<Tint> w(dimSpace);
+  auto get_random_vect=[&]() -> MyVector<T> {
+    MyVector<T> w(dimSpace);
     size_t spr = 10;
     size_t tot_spr = 2 * spr + 1;
     while (true) {
@@ -211,26 +213,26 @@ std::vector<MyVector<Tint>> GetFacetOneDomain(std::vector<MyVector<Tint>> const&
         return w;
     }
   };
-  MyVector<Tint> selVect = get_random_vect();
+  MyVector<T> selVect = get_random_vect();
   std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
   int n_vect = l_vect.size() / 2;
-  MyMatrix<T> EXT(n_vect,1+dimSpace);
+  MyMatrix<Tfield> EXT(n_vect,1+dimSpace);
   std::vector<size_t> list_idx(n_vect);
   size_t pos=0;
   for (size_t i=0; i<l_vect.size(); i++) {
-    Tint scal = selVect.dot(l_vect[i]);
+    T scal = selVect.dot(l_vect[i]);
     if (scal > 0) {
       list_idx[pos] = i;
-      MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_vect[i]);
+      MyVector<T> const& eV = l_vect[i];
       EXT(pos,0);
       for (int i=0; i<dimSpace; i++)
-        EXT(pos,i+1) = eV(i);
+        EXT(pos,i+1) = UniversalScalarConversion<Tfield,T>(eV(i));
       pos++;
     }
   }
   std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
   size_t siz = list_red.size();
-  std::vector<MyVector<Tint>> l_ui(siz);
+  std::vector<MyVector<T>> l_ui(siz);
   for (size_t i=0; i<siz; i++) {
     size_t pos = list_idx[list_red[i]];
     l_ui[i] = l_vect[pos];

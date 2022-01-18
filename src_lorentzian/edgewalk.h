@@ -900,7 +900,7 @@ struct ResultEdgewalk {
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> get_complete_finite_root_set(ResultEdgewalk<T,Tint> const& re)
+std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const& re)
 {
   for (auto & eGen : re.l_gen_isom_cox) {
     std::cerr << "eGen=\n";
@@ -980,7 +980,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
   std::vector<T> l_norms = get_list_norms(G, re);
   std::vector<MyVector<Tint>> l_simple_root;
   if (ComputeAllSimpleRoots)
-    l_simple_root = get_complete_finite_root_set(re);
+    l_simple_root = compute_full_root_orbit(re);
   if (OutFormat == "GAP") {
     os << "return rec(l_norms:=";
     WriteStdVectorGAP(os, l_norms);
@@ -1271,7 +1271,7 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
     }
     std::cerr << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
   }
-  std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain<T,Tint>(l_roots);
+  std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain(l_roots);
   if (facet_one_cone.size() != size_t(dimSpace)) {
     std::cerr << "dimSpace =" << dimSpace << " |facet_one_cone|=" << facet_one_cone.size() << "\n";
     std::cerr << "and they should be equal\n";
@@ -1319,10 +1319,66 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
      */
     MyMatrix<Tint> Basis = ComplementToBasis(Vnsp);
-    MyMatrix<Tint> Basis_p_Vnsp = ConcatenateMatVec(Basis, Vnsp);
-    std::cerr << "Det(Basis_p_Vnsp)=" << DeterminantMat(Basis_p_Vnsp) << "\n";
+    //    MyMatrix<Tint> Basis_p_Vnsp = ConcatenateMatVec(Basis, Vnsp);
+    //    std::cerr << "Det(Basis_p_Vnsp)=" << DeterminantMat(Basis_p_Vnsp) << "\n";
     MyMatrix<Tint> Basis_NSP = Basis * NSP_tint;
-    std::vector<MyVector<Tint>> l_ui = get_simple_cone_from_lattice(G, l_norms, Basis_NSP);
+    MyMatrix<T> Subspace = UniversalMatrixConversion<T,Tint>(Basis_NSP);
+    std::map<T, LatticeProjectionFramework<T>> MapFr;
+    MyVector<T> zeroVect = ZeroVector<T>(Subspace.rows());
+    std::vector<MyVector<T>> list_vect;
+    std::vector<T> list_norm;
+    for (auto & e_norm : l_norms) {
+      MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+      LatticeProjectionFramework<T> fr(G, Subspace, Latt);
+      MapFr[e_norm] = fr;
+      //
+      MyMatrix<T> const& RelBasis = fr.BasisProj;
+      MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
+      DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G_P);
+      if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
+        std::cerr << "G_P should be positive definite\n";
+        throw TerminalException{1};
+      }
+      std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
+      for (auto & e_v : l_v) {
+        MyVector<T> e_vt = UniversalVectorConversion<T,Tint>(e_v);
+        MyVector<T> e_vect = RelBasis.transpose() * e_vt;
+        std::optional<MyVector<T>> opt = SolutionMat(Subspace, e_vect);
+        if (opt) {
+          list_vect.push_back(*opt);
+          list_norm.push_back(e_norm);
+        } else {
+          std::cerr << "Failed to find the solution in the subspace\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+    auto get_one_root=[&](MyVector<T> const& e_vect) -> MyVector<Tint> {
+      size_t len = list_vect.size();
+      for (size_t i=0; i<len; i++) {
+        MyVector<T> const& f_vect = list_vect[i];
+        if (f_vect == e_vect) {
+          T const& e_norm = list_norm[i];
+          LatticeProjectionFramework<T> const& fr = MapFr[e_norm];
+          std::optional<MyVector<T>> opt = fr.GetOnePreimage(e_vect);
+          if (!opt) {
+            std::cerr << "Failed to find the Preimage\n";
+            throw TerminalException{1};
+          }
+          MyVector<T> const& V = *opt;
+          MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(V);
+          return V_i;
+        }
+      }
+      std::cerr << "Failed to find the vector in the list\n";
+      throw TerminalException{1};
+    };
+    std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect);
+    std::vector<MyVector<Tint>> l_ui;
+    for (auto & e_vt : facet_one_cone) {
+      MyVector<Tint> e_vi = get_one_root(e_vt);
+      l_ui.push_back(e_vi);
+    }
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
