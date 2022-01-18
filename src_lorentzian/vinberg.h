@@ -345,7 +345,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   MyMatrix<T> Gorth_T = UniversalMatrixConversion<T,Tint>(Gorth);
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
-  MyMatrix<T> GM_iGorth = G_T * UniversalMatrixConversion<T,Tint>(Morth) * GorthInv;
+  MyMatrix<T> GM_iGorth = G_T * Morth_T * GorthInv;
   //  std::cerr << "GM_iGorth=\n";
   //  WriteMatrix(std::cerr, GM_iGorth);
   //  std::vector<Tint> root_lengths = Get_root_lengths(G);
@@ -546,6 +546,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
         Bmat(n-1 + i, j) = 0;
     }
   }
+  std::cerr << "Calling SolutionIntMat with Bmat / m2_Ga\n";
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
     return {{}, {}, 0, {}, {}, false};
@@ -656,7 +657,11 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
       Tint norm = V.dot(Vtot.G * V);
       MyVector<Tint> eDiff = V - a;
-      std::optional<MyVector<Tint>> opt = SolutionIntMat(Vtot.Morth, eDiff);
+      std::cerr << "SolutionIntMat with Morth / eDiff\n";
+      std::cerr << "Vtot.Morth=\n";
+      WriteMatrix(std::cerr, Vtot.Morth);
+      std::cerr << "eDiff=" << StringVectorGAP(eDiff) << "\n";
+      std::optional<MyVector<Tint>> opt = SolutionIntMat(TransposedMat(Vtot.Morth), eDiff);
       std::cerr << "Inserting a vector V=" << V << " norm=" << norm << " k=" << k << "\n";
       size_t n_error = 0;
       if (norm != k) {

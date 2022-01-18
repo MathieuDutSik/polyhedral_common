@@ -156,21 +156,28 @@ struct LatticeProjectionFramework {
   MyMatrix<T> ProjP;
   MyMatrix<T> BasisProj;
   MyMatrix<T> ProjFamily;
-  MyVector<T> Latt;
-  LatticeProjectionFramework(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& Latt) : Latt(Latt)
+  MyMatrix<T> Latt;
+  LatticeProjectionFramework(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& _Latt) : Latt(_Latt)
   {
+    //    std::cerr << "LatticeProjectionFramework, step 1\n";
     int n = G.rows();
     int dim = Latt.rows();
+    //    std::cerr << "n=" << n << " dim=" << dim << "\n";
+    //    std::cerr << "|Subspace|=" << Subspace.rows() << " / " << Subspace.cols() << "\n";
+    //    std::cerr << "LatticeProjectionFramework, step 2\n";
     ProjP = GetProjectionMatrix(G, Subspace);
+    //    std::cerr << "LatticeProjectionFramework, step 3\n";
     ProjFamily = MyMatrix<T>(dim,n);
+    //    std::cerr << "LatticeProjectionFramework, step 4\n";
     for (int i=0; i<dim; i++) {
       MyVector<T> eVect = GetMatrixRow(Latt, i);
       MyVector<T> eVectProj = ProjP * eVect;
       AssignMatrixRow(ProjFamily, i, eVectProj);
     }
+    //    std::cerr << "LatticeProjectionFramework, step 5\n";
     BasisProj = GetZbasis(ProjFamily);
+    //    std::cerr << "LatticeProjectionFramework, step 6\n";
   }
-  LatticeProjectionFramework() {}
   std::optional<MyVector<T>> GetOnePreimage(MyVector<T> const& V) const
   {
     std::optional<MyVector<T>> opt = SolutionIntMat(ProjFamily, V);
@@ -188,7 +195,9 @@ template<typename T>
 std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vect)
 {
   using Tfield = typename overlying_field<T>::field_type;
+  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   int dimSpace = l_vect[0].size();
+  std::cerr << "dimSpace=" << dimSpace << "\n";
   if (l_vect.size() < size_t(2*dimSpace)) {
     std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
     std::cerr << "while |l_vect|=" << l_vect.size() << "\n";

@@ -1307,6 +1307,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     std::vector<MyVector<Tint>> l_vect = get_simple_cone_from_lattice(G, l_norms, NSP_tint);
     return MatrixFromVectorFamily(l_vect);
   } else {
+    std::cerr << "get_simple_cone, step 1\n";
     // ideal point case
     MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
     std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, V_i);
@@ -1315,6 +1316,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       throw TerminalException{1};
     }
     MyVector<Tint> const& Vnsp = *opt;
+    std::cerr << "get_simple_cone, step 2\n";
     /*
       We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
      */
@@ -1323,14 +1325,26 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     //    std::cerr << "Det(Basis_p_Vnsp)=" << DeterminantMat(Basis_p_Vnsp) << "\n";
     MyMatrix<Tint> Basis_NSP = Basis * NSP_tint;
     MyMatrix<T> Subspace = UniversalMatrixConversion<T,Tint>(Basis_NSP);
-    std::map<T, LatticeProjectionFramework<T>> MapFr;
+    std::cerr << "Subspace=\n";
+    WriteMatrix(std::cerr, Subspace);
+    std::map<T, size_t> MapIdxFr;
+    std::vector<LatticeProjectionFramework<T>> ListFr;
     MyVector<T> zeroVect = ZeroVector<T>(Subspace.rows());
     std::vector<MyVector<T>> list_vect;
+    std::vector<MyVector<T>> list_vect_big;
     std::vector<T> list_norm;
+    std::cerr << "get_simple_cone, step 3\n";
+    size_t pos = 0;
     for (auto & e_norm : l_norms) {
+      std::cerr << "e_norm=" << e_norm << "\n";
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+      //      std::cerr << "Latt=\n";
+      //      WriteMatrix(std::cerr, Latt);
       LatticeProjectionFramework<T> fr(G, Subspace, Latt);
-      MapFr[e_norm] = fr;
+      std::cerr << "We have fr\n";
+      MapIdxFr[e_norm] = pos;
+      ListFr.push_back(fr);
+      //      std::cerr << "We have MapFr assigned\n";
       //
       MyMatrix<T> const& RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
@@ -1346,21 +1360,31 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
         std::optional<MyVector<T>> opt = SolutionMat(Subspace, e_vect);
         if (opt) {
           list_vect.push_back(*opt);
+          list_vect_big.push_back(e_vect);
           list_norm.push_back(e_norm);
         } else {
           std::cerr << "Failed to find the solution in the subspace\n";
           throw TerminalException{1};
         }
       }
+      pos++;
     }
+    std::cerr << "|list_vect|=" << list_vect.size() << "\n";
+    for (size_t i=0; i<list_vect.size(); i++)
+      std::cerr << "i=" << i << " e_vect=" << StringVectorGAP(list_vect[i]) << " norm=" << list_norm[i] << "\n";
+    std::cerr << "get_simple_cone, step 4\n";
     auto get_one_root=[&](MyVector<T> const& e_vect) -> MyVector<Tint> {
+      std::cerr << "Beginning of get_one_root\n";
+      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
       size_t len = list_vect.size();
       for (size_t i=0; i<len; i++) {
         MyVector<T> const& f_vect = list_vect[i];
         if (f_vect == e_vect) {
           T const& e_norm = list_norm[i];
-          LatticeProjectionFramework<T> const& fr = MapFr[e_norm];
-          std::optional<MyVector<T>> opt = fr.GetOnePreimage(e_vect);
+          MyVector<T> const& e_vect_big = list_vect_big[i];
+          size_t idx = MapIdxFr[e_norm];
+          LatticeProjectionFramework<T> const& fr = ListFr[idx];
+          std::optional<MyVector<T>> opt = fr.GetOnePreimage(e_vect_big);
           if (!opt) {
             std::cerr << "Failed to find the Preimage\n";
             throw TerminalException{1};
@@ -1374,11 +1398,14 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       throw TerminalException{1};
     };
     std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect);
+    std::cerr << "get_simple_cone, step 5\n";
     std::vector<MyVector<Tint>> l_ui;
     for (auto & e_vt : facet_one_cone) {
+      std::cerr << "e_vt=" << StringVectorGAP(e_vt) << "\n";
       MyVector<Tint> e_vi = get_one_root(e_vt);
       l_ui.push_back(e_vi);
     }
+    std::cerr << "get_simple_cone, step 5\n";
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
@@ -1396,7 +1423,9 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       }
     };
     MyVector<T> kP = get_kP();
+    std::cerr << "get_simple_cone, step 7\n";
     std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_ui, l_norms, V, kP);
+    std::cerr << "get_simple_cone, step 8\n";
     return MatrixFromVectorFamily(l_vect);
   }
 }
