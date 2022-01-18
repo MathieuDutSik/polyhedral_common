@@ -6,6 +6,7 @@
 #include "two_dim_lorentzian.h"
 #include "coxeter_dynkin.h"
 #include "vinberg.h"
+#include "lorentzian_linalg.h"
 #include "Namelist.h"
 #include "Temp_Positivity.h"
 #include "POLY_lrslib.h"
@@ -39,31 +40,6 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
 
 
 
-template<typename T>
-size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
-{
-  int n = Latt.rows();
-  auto is_preserving=[&](MyMatrix<T> const& h) -> bool {
-    for (int i=0; i<n; i++) {
-      MyVector<T> eV = GetMatrixRow(Latt, i);
-      MyVector<T> eVimg = h.transpose() * eV;
-      std::optional<MyVector<T>> opt = SolutionIntMat(Latt, eVimg);
-      if (!opt)
-        return false;
-    }
-    return true;
-  };
-  size_t ord = 1;
-  MyMatrix<T> h = g;
-  while(true) {
-    if (is_preserving(h))
-      break;
-    ord++;
-    h = h * g;
-  }
-  return ord;
-}
-
 
 
 
@@ -83,16 +59,6 @@ struct FundDomainVertex {
   MyMatrix<Tint> MatRoot;
 };
 
-
-
-/*
-  Direct copy. We have some memory hack
- */
-template<typename T, typename Tint>
-FundDomainVertex<T,Tint> DirectExplicitCopyHack(FundDomainVertex<T,Tint> const& x)
-{
-  return {UniversalVectorConversion<T,T>(x.gen), UniversalMatrixConversion<Tint,Tint>(x.MatRoot)};
-}
 
 template<typename T, typename Tint>
 void WriteFundDomainVertex(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert, std::ostream & os, std::string const& OutFormat)
@@ -244,99 +210,6 @@ RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& 
 
 
 
-/*
-  We are looking forthe smallest solution c>0 for the equation
-  u + c k in Latt
-  By selecting an adequate basis for Latt we can reduce the problem to
-  u + ck = a1 v1 + a2 v2
-  with a1, a2 in Z and v1, v2 in Latt.
-  We write u = u1 v1 + x2 u2   and   k = k1 v1 + k2 v2
-  This gets us
-  u1 + ck1 = a1
-  u2 + ck2 = a2
-  The right way to solve the equation is to compute kG = gcd(k1, k2) and a basis of the kernel.
-  We thus remap the equation to
-  u1 + c k1 = a1
-  u2        = a2
-  solvability condition becomes u2 in Z.
-  c0 = -u1 / k1
-  cS = 1/k1
-  Solution is c = c0 + h cS
-  k = - c0 / cS
- */
-template<typename T>
-std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
-{
-  std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr, RemoveFractionVector(k));
-  std::vector<MyVector<T>> l_v = {u,k};
-  MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
-  MyMatrix<T> IntBasis = IntersectionLattice_VectorSpace(Latt, eIndep);
-  //  std::cerr << "IntBasis=\n";
-  //  WriteMatrix(std::cerr, IntBasis);
-  std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
-  if (!opt_u) {
-    std::cerr << "We failed to find a solution for u\n";
-    throw TerminalException{1};
-  }
-  MyVector<T> sol_u = *opt_u;
-  T u1 = sol_u(0);
-  T u2 = sol_u(1);
-  //  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
-  std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
-  if (!opt_k) {
-    std::cerr << "We failed to find a solution for k\n";
-    throw TerminalException{1};
-  }
-  MyVector<T> sol_k = *opt_k;
-  T k1 = sol_k(0);
-  T k2 = sol_k(1);
-  //  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
-  //  std::cerr << "u=";
-  //  WriteVector(std::cerr, u);
-  //  std::cerr << "k=";
-  //  WriteVector(std::cerr, k);
-  //
-  GCD_int<T> ep = ComputePairGcd(k1, k2);
-  T u1_norm = ep.Pmat(0,0) * u1 + ep.Pmat(1,0) * u2;
-  T u2_norm = ep.Pmat(0,1) * u1 + ep.Pmat(1,1) * u2;
-  T k1_norm = ep.Pmat(0,0) * k1 + ep.Pmat(1,0) * k2;
-  T k2_norm = ep.Pmat(0,1) * k1 + ep.Pmat(1,1) * k2;
-  //  std::cerr << "norm : u1=" << u1_norm << " u2=" << u2_norm << "\n";
-  //  std::cerr << "norm : k1=" << k1_norm << " k2=" << k2_norm << "\n";
-  if (k2_norm != 0) {
-    std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
-    throw TerminalException{1};
-  }
-  if (!IsInteger(u2_norm)) // No solution then
-    return {};
-  //
-  T c0 = - u1_norm / k1_norm;
-  T cS = 1 / k1_norm;
-  //  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
-  T hinp = - c0 / cS;
-  T h;
-  if (cS > 0) {
-    h = UniversalCeilScalarInteger<T,T>(hinp);
-    //    std::cerr << "1 : hinp=" << hinp << " h=" << h << "\n";
-    if (hinp == h)
-      h += 1;
-  } else {
-    h = UniversalFloorScalarInteger<T,T>(hinp);
-    //    std::cerr << "2 : hinp=" << hinp << " h=" << h << "\n";
-    if (hinp == h)
-      h -= 1;
-  }
-  T c = c0 + h * cS;
-  //  std::cerr << "h=" << h << " c=" << c << "\n";
-  if (c <= 0) {
-    std::cerr << "We should have c>0\n";
-    throw TerminalException{1};
-  }
-  return u + c * k;
-}
-
-
-
 
 
 /*
@@ -413,58 +286,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::cerr << "DetermineRootsCuspidalCase, step 5\n";
   return l_ui_ret;
 }
-
-
-
-template<typename T, typename Tint>
-MyMatrix<T> Get_Pplane(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_ui)
-{
-  int n = G.rows();
-  size_t n_root = l_ui.size();
-  MyMatrix<T> EquaPplane(n_root,n);
-  for (size_t i_root=0; i_root<n_root; i_root++) {
-    MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
-    MyVector<T> eP = G * eV;
-    AssignMatrixRow(EquaPplane, i_root, eP);
-  }
-  MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
-  if (Pplane.rows() != 2) {
-    std::cerr << "The dimension should be exactly 2\n";
-    throw TerminalException{1};
-  }
-  return Pplane;
-}
-
-
-template<typename T>
-struct LatticeProjectionFramework {
-  MyMatrix<T> ProjP;
-  MyMatrix<T> BasisProj;
-  MyMatrix<T> ProjFamily;
-  MyVector<T> Latt;
-  LatticeProjectionFramework(MyMatrix<T> const& G, MyMatrix<T> const& Subspace, MyMatrix<T> const& Latt) : Latt(Latt)
-  {
-    int n = G.rows();
-    int dim = Latt.rows();
-    ProjP = GetProjectionMatrix(G, Subspace);
-    ProjFamily = MyMatrix<T>(dim,n);
-    for (int i=0; i<dim; i++) {
-      MyVector<T> eVect = GetMatrixRow(Latt, i);
-      MyVector<T> eVectProj = ProjP * eVect;
-      AssignMatrixRow(ProjFamily, i, eVectProj);
-    }
-    BasisProj = GetZbasis(ProjFamily);
-  }
-  std::optional<MyVector<T>> GetOnePreimage(MyVector<T> const& V)
-  {
-    std::optional<MyVector<T>> opt = SolutionIntMat(ProjFamily, V);
-    if (!opt)
-      return {};
-    MyVector<T> const& eSol = *opt;
-    MyVector<T> preImage = Latt.transpose() * eSol;
-    return preImage;
-  }
-};
 
 
 
@@ -1391,63 +1212,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
   return {l_gen_isom_cox, l_orbit_pair_vertices};
-}
-
-
-
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> GetFacetOneDomain(std::vector<MyVector<Tint>> const& l_vect)
-{
-  int dimSpace = l_vect[0].size();
-  if (l_vect.size() < size_t(2*dimSpace)) {
-    std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
-    std::cerr << "while |l_vect|=" << l_vect.size() << "\n";
-    throw TerminalException{1};
-  }
-  auto is_corr=[&](MyVector<Tint> const& w) -> bool {
-    for (auto & e_root : l_vect) {
-      Tint scal = e_root.dot(w);
-      if (scal == 0)
-        return false;
-    }
-    return true;
-  };
-  auto get_random_vect=[&]() -> MyVector<Tint> {
-    MyVector<Tint> w(dimSpace);
-    size_t spr = 10;
-    size_t tot_spr = 2 * spr + 1;
-    while (true) {
-      for (int i=0; i<dimSpace; i++)
-        w(i) = rand() % tot_spr - spr;
-      if (is_corr(w))
-        return w;
-    }
-  };
-  MyVector<Tint> selVect = get_random_vect();
-  std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
-  int n_vect = l_vect.size() / 2;
-  MyMatrix<T> EXT(n_vect,1+dimSpace);
-  std::vector<size_t> list_idx(n_vect);
-  size_t pos=0;
-  for (size_t i=0; i<l_vect.size(); i++) {
-    Tint scal = selVect.dot(l_vect[i]);
-    if (scal > 0) {
-      list_idx[pos] = i;
-      MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_vect[i]);
-      EXT(pos,0);
-      for (int i=0; i<dimSpace; i++)
-        EXT(pos,i+1) = eV(i);
-      pos++;
-    }
-  }
-  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
-  size_t siz = list_red.size();
-  std::vector<MyVector<Tint>> l_ui(siz);
-  for (size_t i=0; i<siz; i++) {
-    size_t pos = list_idx[list_red[i]];
-    l_ui[i] = l_vect[pos];
-  }
-  return l_ui;
 }
 
 
