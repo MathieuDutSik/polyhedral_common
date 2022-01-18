@@ -1329,9 +1329,10 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     for (auto & e_norm : l_norms) {
       std::cerr << "e_norm=" << e_norm << "\n";
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+      MyMatrix<T> Latt_inter_NSP = IntersectionLattice(Latt, NSP);
       //      std::cerr << "Latt=\n";
       //      WriteMatrix(std::cerr, Latt);
-      LatticeProjectionFramework<T> fr(G, Subspace, Latt);
+      LatticeProjectionFramework<T> fr(G, Subspace, Latt_inter_NSP);
       //      std::cerr << "We have fr\n";
       MapIdxFr[e_norm] = pos;
       ListFr.push_back(fr);
