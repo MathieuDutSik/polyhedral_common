@@ -247,10 +247,11 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
     size_t pos = list_idx[list_red[i]];
     l_ui[i] = l_vect[pos];
   }
+  /*
   std::cerr << "l_ui=\n";
   WriteMatrixGAP(std::cerr, MatrixFromVectorFamily(l_ui));
   std::cerr << "\n";
-
+  */
 
   
   return l_ui;
