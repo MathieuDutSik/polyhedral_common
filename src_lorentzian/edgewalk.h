@@ -433,8 +433,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T res_norm = e_extension.res_norm;
     map_max_resnorm[norm] = std::max(map_max_resnorm[norm], res_norm);
   }
-  for (auto & kv : map_max_resnorm)
-    std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
+  //  for (auto & kv : map_max_resnorm)
+  //    std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
   //
   // Determine if the plane P is isotropic and if not compute the set of test vectors
   //
@@ -471,10 +471,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       for (int i=0; i<n; i++)
         BasisProj(0,i) = -BasisProj(0,i);
     }
-    MyVector<T> Basis0 = GetMatrixRow(BasisProj, 0);
-    std::cerr << "Basis0=" << StringVectorGAP(Basis0) << "\n";
-    MyVector<T> Basis1 = GetMatrixRow(BasisProj, 1);
-    std::cerr << "Basis1=" << StringVectorGAP(Basis1) << "\n";
+    //    MyVector<T> Basis0 = GetMatrixRow(BasisProj, 0);
+    //    std::cerr << "Basis0=" << StringVectorGAP(Basis0) << "\n";
+    //    MyVector<T> Basis1 = GetMatrixRow(BasisProj, 1);
+    //    std::cerr << "Basis1=" << StringVectorGAP(Basis1) << "\n";
     return BasisProj;
   };
   auto get_r0work=[&](MyMatrix<T> const& Basis_ProjP_LN, MyVector<T> const& r0) -> MyVector<Tint> {
@@ -489,7 +489,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
-    std::cerr << "get_sing_comp_anisotropic, e_norm=" << e_norm << "\n";
+    //    std::cerr << "get_sing_comp_anisotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     //    std::cerr << "Basis_ProjP_LN=\n";
@@ -499,14 +499,14 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T res_norm = map_max_resnorm[e_norm];
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
     T r0_norm = eval_quad(Gwork, r0_work);
-    std::cerr << "r0_norm=" << r0_norm << "\n";
+    //    std::cerr << "r0_norm=" << r0_norm << "\n";
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
-    std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
+    //    std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
     MyVector<Tint> l_B = Canonical(Gwork, r0_norm, r0_work, l_A);
-    std::cerr << "l_B=" << StringVectorGAP(l_B) << "\n";
-    std::cerr << "get_sing_comp_anisotropic, step 2\n";
+    //    std::cerr << "l_B=" << StringVectorGAP(l_B) << "\n";
+    //    std::cerr << "get_sing_comp_anisotropic, step 2\n";
     std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic<T,Tint>(Gwork, res_norm, r0_work, l_B);
-    std::cerr << "get_sing_comp_anisotropic, step 3\n";
+    //    std::cerr << "get_sing_comp_anisotropic, step 3\n";
     if (!opt) { // No solution, this definitely can happen
       return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
@@ -518,9 +518,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     //    std::cerr << "Basis_P_inter_LN=\n";
     //    WriteMatrix(std::cerr, Basis_P_inter_LN);
     MyMatrix<T> Expr_t = ExpressVectorsInIndependentFamilt(Basis_P_inter_LN, Basis_ProjP_LN);
-    std::cerr << "Expr_t=\n";
-    WriteMatrix(std::cerr, Expr_t);
-    std::cerr << "get_sing_comp_anisotropic, step 4\n";
+    //    std::cerr << "Expr_t=\n";
+    //    WriteMatrix(std::cerr, Expr_t);
+    //    std::cerr << "get_sing_comp_anisotropic, step 4\n";
     if (!IsIntegralMatrix(Expr_t)) {
       std::cerr << "The matrix should be integral\n";
       throw TerminalException{1};
@@ -529,7 +529,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     size_t order = GetMatrixExponentSublattice(P, Expr_i);
     std::cerr << "order=" << order << "\n";
     std::vector<MyMatrix<Tint>> l_vect2;
-    std::cerr << "get_sing_comp_anisotropic, step 5\n";
+    //    std::cerr << "get_sing_comp_anisotropic, step 5\n";
     for (auto & e_vect1 : l_vect1) {
       T norm1 = eval_quad(Gwork, e_vect1);
       size_t ord = 1;
@@ -538,7 +538,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         if (norm2 > res_norm)
           break;
         MyVector<Tint> e_vect2 = ord * e_vect1;
-        std::cerr << "norm2=" << norm2 << " e_vect2=" << StringVectorGAP(e_vect2) << "\n";
+        //        std::cerr << "norm2=" << norm2 << " e_vect2=" << StringVectorGAP(e_vect2) << "\n";
         l_vect2.push_back(e_vect2);
         ord++;
       }
@@ -546,7 +546,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "|l_vect2|=" << l_vect2.size() << "\n";
     std::vector<MyVector<Tint>> l_vect3;
     MyMatrix<Tint> TheMat = IdentityMat<Tint>(2);
-    std::cerr << "get_sing_comp_anisotropic, step 6\n";
+    //    std::cerr << "get_sing_comp_anisotropic, step 6\n";
     for (size_t i=0; i<order; i++) {
       for (auto & e_vect2 : l_vect2) {
         MyVector<Tint> e_vect3 = TheMat.transpose() * e_vect2;
@@ -555,7 +555,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       TheMat = TheMat * P;
     }
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
-    std::cerr << "get_sing_comp_anisotropic, step 7\n";
+    //    std::cerr << "get_sing_comp_anisotropic, step 7\n";
     return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {

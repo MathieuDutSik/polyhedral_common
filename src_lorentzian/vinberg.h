@@ -413,7 +413,7 @@ private:
       Tint val = - Vtot.v0.dot(Vtot.G * V2);
       double k_d = sqrt(UniversalScalarConversion<double,Tint>(val));
       double val_d = UniversalScalarConversion<double,Tint>(val) / k_d;
-      std::cerr << "IterateRootDecompositions k=" << k << " val=" << val << " k_d=" << k_d << " candidates.at(k)=" << candidates.at(k) << " V2=" << V2 << "\n";
+      //      std::cerr << "IterateRootDecompositions k=" << k << " val=" << val << " k_d=" << k_d << " candidates.at(k)=" << candidates.at(k) << " V2=" << V2 << "\n";
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -435,10 +435,10 @@ public:
   std::pair<MyVector<Tint>, Tint> get_cand() {
     Tint k = get_k();
     size_t val = candidates[k];
-    std::cerr << "IterateRootDecomposition, k=" << k << " val=" << val << "\n";
+    //    std::cerr << "IterateRootDecomposition, k=" << k << " val=" << val << "\n";
     candidates[k] = val + 1;
     MyVector<Tint> V = cand_a(val);
-    std::cerr << "IterateRootDecomposition, cand_a(candidates[k])=" << V << "\n";
+    //    std::cerr << "IterateRootDecomposition, cand_a(candidates[k])=" << V << "\n";
     return {V, k};
   }
 };
@@ -521,7 +521,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T,Tint>& data, Fins_root f_i
 template<typename T, typename Tint>
 DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot, const MyVector<Tint>& a, const Tint& k)
 {
-  std::cerr << "Get_DataMapping k=" << k << "\n";
+  //  std::cerr << "Get_DataMapping k=" << k << "\n";
   if (k == 1 || k == 2) { // No need for some complex linear algebra work, returning directly
     MyVector<T> a_T = UniversalVectorConversion<T,Tint>(a);
     MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
@@ -546,7 +546,7 @@ DataMappingVinbergProblem<T,Tint> Get_DataMapping(const VinbergTot<T,Tint>& Vtot
         Bmat(n-1 + i, j) = 0;
     }
   }
-  std::cerr << "Calling SolutionIntMat with Bmat / m2_Ga\n";
+  //  std::cerr << "Calling SolutionIntMat with Bmat / m2_Ga\n";
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
     return {{}, {}, 0, {}, {}, false};
@@ -642,7 +642,7 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
   std::vector<MyVector<Tint>> list_root;
   DataMappingVinbergProblem<T,Tint> data = Get_DataMapping(Vtot, a, k);
   if (!data.is_feasible) {
-    std::cerr << "Conclude that no solution is feasible\n";
+    //    std::cerr << "Conclude that no solution is feasible\n";
     return {};
   }
 
@@ -657,10 +657,10 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
     auto f_ins_root=[&](const MyVector<Tint>& V) -> void {
       Tint norm = V.dot(Vtot.G * V);
       MyVector<Tint> eDiff = V - a;
-      std::cerr << "SolutionIntMat with Morth / eDiff\n";
-      std::cerr << "Vtot.Morth=\n";
-      WriteMatrix(std::cerr, Vtot.Morth);
-      std::cerr << "eDiff=" << StringVectorGAP(eDiff) << "\n";
+      //      std::cerr << "SolutionIntMat with Morth / eDiff\n";
+      //      std::cerr << "Vtot.Morth=\n";
+      //      WriteMatrix(std::cerr, Vtot.Morth);
+      //      std::cerr << "eDiff=" << StringVectorGAP(eDiff) << "\n";
       std::optional<MyVector<Tint>> opt = SolutionIntMat(TransposedMat(Vtot.Morth), eDiff);
       std::cerr << "Inserting a vector V=" << V << " norm=" << norm << " k=" << k << "\n";
       size_t n_error = 0;
