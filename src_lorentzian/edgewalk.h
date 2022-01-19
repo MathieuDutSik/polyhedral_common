@@ -1422,37 +1422,56 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
 
 
 
+template<typename T, typename Tint>
+MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction)
+{
+  ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
+  /*
+    We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
+  */
+  VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
+  MyVector<Tint> eVect = FindOneInitialRay(Vtot);
+  MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
+  MyVector<T> V = UniversalVectorConversion<T,Tint>(eVectRet);
+  return V;
+}
+
+
+
 
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   std::cerr << "Beginning of get_initial_vertex\n";
-  if (OptionInitialVertex == "File") {
+  if (OptionInitialVertex == "FileVertex") {
     if (!IsExistingFile(FileInitialVertex)) {
       std::cerr << "The file FileInitialVertex=" << FileInitialVertex << " is missing\n";
       throw TerminalException{1};
     }
     std::ifstream is(FileInitialVertex);
     MyVector<T> gen = ReadVector<T>(is);
-    MyMatrix<Tint> Mroot = ReadMatrix<Tint>(is);
-    return {RemoveFractionVector(gen), Mroot};
+    MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, gen);
+    return {RemoveFractionVector(gen), MatRoot};
+  }
+  if (OptionInitialVertex == "FileVertexRoots") {
+    if (!IsExistingFile(FileInitialVertex)) {
+      std::cerr << "The file FileInitialVertex=" << FileInitialVertex << " is missing\n";
+      throw TerminalException{1};
+    }
+    std::ifstream is(FileInitialVertex);
+    MyVector<T> gen = ReadVector<T>(is);
+    MyMatrix<Tint> MatRoot = ReadMatrix<Tint>(is);
+    return {RemoveFractionVector(gen), MatRoot};
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
-    /*
-      We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
-     */
-    VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
-    MyVector<Tint> eVect = FindOneInitialRay(Vtot);
-    MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
-    MyVector<T> V = UniversalVectorConversion<T,Tint>(eVectRet);
+    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction);
     MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, V);
     return {RemoveFractionVector(V), MatRoot};
   }
 #endif
   std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
-  std::cerr << "OptionInitialVertex=" << OptionInitialVertex << " but allowed values are File\n";
+  std::cerr << "OptionInitialVertex=" << OptionInitialVertex << " but allowed values are FileVertex or FileVertexRoots\n";
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   std::cerr << "and vinberg has also been allowed\n";
 #else
