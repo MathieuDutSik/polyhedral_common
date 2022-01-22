@@ -21,9 +21,8 @@
 
  */
 
-//#define CHECK_TWO_DIM_LORENTZIAN
-//#define DEBUG_TWO_DIM_LORENTZIAN
-//#undef DEBUG_TWO_DIM_LORENTZIAN
+#define CHECK_TWO_DIM_LORENTZIAN
+#define DEBUG_TWO_DIM_LORENTZIAN
 
 
 template<typename T, typename Tint>
@@ -239,9 +238,11 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   };
   MyVector<Tint> r1 = pair_opt->first;
   MyVector<Tint> l1 = pair_opt->second;
+  std::cerr << "Anisotropic r1=" << StringVectorGAP(r1) << " / " << StringVectorGAP(l1) << "\n";
   std::vector<MyVector<Tint>> list_r{r1};
   MyVector<Tint> r = r1;
   MyVector<Tint> l = l1;
+  std::cerr << "First : Anisotropic r=" << StringVectorGAP(r) << " / " << StringVectorGAP(l) << "\n";
   std::vector<T> A_vect = get_char_mat(r, l);
   while(true) {
     std::pair<MyVector<Tint>,MyVector<Tint>> pair = Promised(G, M, r, l);
@@ -249,6 +250,7 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
     std::cerr << "Finding |r|=" << eval_quad(G, r) << "\n";
     l = pair.second;
     l = Canonical(G, M, r, l);
+    std::cerr << "Now : Anisotropic r=" << StringVectorGAP(r) << " / " << StringVectorGAP(l) << "\n";
     std::cerr << "After canonical\n";
     if (A_vect == get_char_mat(r,l)) { // Concluding step
       std::cerr << "Exiting case\n";

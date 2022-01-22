@@ -334,7 +334,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   int n = G.rows();
   size_t n_root = l_ui.size();
   std::cerr << "n_root=" << n_root << "\n";
-  MyMatrix<T> Space(n_root,n);
   MyMatrix<T> EquaRvect(n_root+1,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
@@ -344,13 +343,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       std::cerr << "The scalar product should be 0\n";
       throw TerminalException{1};
     }
-    AssignMatrixRow(Space, i_root, eV);
     AssignMatrixRow(EquaRvect, i_root, eP);
   }
   MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
   std::cerr << "Plane P=[" << StringVectorGAP(GetMatrixRow(Pplane,0)) << ", " << StringVectorGAP(GetMatrixRow(Pplane,1)) << "]\n";
-  //  std::cerr << "Space=\n";
-  //  WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
   std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
@@ -425,13 +421,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   bool only_spherical = true;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
-  std::map<T,T> map_max_resnorm;
-  // For each norm, there is a corresponding maximum possible norms and specific enumeration.
-  for (auto & e_extension : l_extension) {
-    T norm = e_extension.e_norm;
-    T res_norm = e_extension.res_norm;
-    map_max_resnorm[norm] = std::max(map_max_resnorm[norm], res_norm);
-  }
+
   //  for (auto & kv : map_max_resnorm)
   //    std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
   //
@@ -444,6 +434,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //  WriteMatrix(std::cerr, G);
   struct SingCompAnisotropic {
     MyMatrix<T> Latt;
+    MyVector<Tint> r0_work;
     MyMatrix<T> Basis_ProjP_LN;
     MyMatrix<T> Basis_P_inter_LN;
     MyMatrix<T> Gwork;
@@ -488,17 +479,24 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
-    //    std::cerr << "get_sing_comp_anisotropic, e_norm=" << e_norm << "\n";
+    std::cerr << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm << " ------------------------\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
+    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     //    std::cerr << "Basis_ProjP_LN=\n";
     //    WriteMatrix(std::cerr, Basis_ProjP_LN);
     MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, Pplane);
     MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
-    T res_norm = map_max_resnorm[e_norm];
+    std::cerr << "Gwork=" << StringMatrixGAP(Gwork) << "\n";
+    // The residual norm is res_norm = N - u_{N,Delta}^2
+    // u_{N,Delta} belongs to a positive definite lattice.
+    // Therefore res_norm <= N
+    // Thus we compute all the vectors up to norm res_norm because
+    // res_norm is always realizable with the vector 2 2 2 ..... 2
+    T res_norm = e_norm;
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
     T r0_norm = eval_quad(Gwork, r0_work);
-    //    std::cerr << "r0_norm=" << r0_norm << "\n";
+    std::cerr << "r0_norm=" << r0_norm << " e_norm=" << e_norm << "\n";
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
     //    std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
     MyVector<Tint> l_B = Canonical(Gwork, r0_norm, r0_work, l_A);
@@ -507,17 +505,30 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic<T,Tint>(Gwork, res_norm, r0_work, l_B);
     //    std::cerr << "get_sing_comp_anisotropic, step 3\n";
     if (!opt) { // No solution, this definitely can happen
-      return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
+      return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
     const std::vector<MyVector<Tint>>& l_vect1 = opt->second;
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
-    const MyMatrix<Tint>& P = opt->first;
+    const MyMatrix<Tint>& TransformSma = opt->first;
+    /*
+      Transformation rule
+     */
+    MyMatrix<T> TransformBig_red = IdentityMat<T>(n);
+    for (int i=0; i<2; i++)
+      for (int j=0; j<2; j++)
+        TransformBig_red(i,j) = UniversalScalarConversion<T,Tint>(TransformSma(i,j));
+    MyMatrix<T> l_ui_MatT = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_ui));
+    MyMatrix<T> ReductionBasis = Concatenate(Basis_ProjP_LN, l_ui_MatT);
+    MyMatrix<T> TransformBig = Inverse(ReductionBasis) * TransformBig_red * ReductionBasis;
+    std::cerr << "TransformBig=" << StringMatrixGAP(TransformBig) << "\n";
+
+    std::cerr << "TransformSma=" << StringMatrixGAP(TransformSma) << "\n";
     //    std::cerr << "Basis_ProjP_LN=\n";
     //    WriteMatrix(std::cerr, Basis_ProjP_LN);
     //    std::cerr << "Basis_P_inter_LN=\n";
     //    WriteMatrix(std::cerr, Basis_P_inter_LN);
     MyMatrix<T> Expr_t = ExpressVectorsInIndependentFamilt(Basis_P_inter_LN, Basis_ProjP_LN);
-    //    std::cerr << "Expr_t=\n";
+    std::cerr << "Expr_t=" << StringMatrixGAP(Expr_t) << "\n";
     //    WriteMatrix(std::cerr, Expr_t);
     //    std::cerr << "get_sing_comp_anisotropic, step 4\n";
     if (!IsIntegralMatrix(Expr_t)) {
@@ -525,7 +536,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       throw TerminalException{1};
     }
     MyMatrix<Tint> Expr_i = UniversalMatrixConversion<Tint,T>(Expr_t);
-    size_t order = GetMatrixExponentSublattice(P, Expr_i);
+    size_t order = GetMatrixExponentSublattice_TrivClass(TransformSma, Expr_i);
     std::cerr << "order=" << order << "\n";
     std::vector<MyMatrix<Tint>> l_vect2;
     //    std::cerr << "get_sing_comp_anisotropic, step 5\n";
@@ -551,11 +562,11 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         MyVector<Tint> e_vect3 = TheMat.transpose() * e_vect2;
         l_vect3.push_back(e_vect3);
       }
-      TheMat = TheMat * P;
+      TheMat = TheMat * TransformSma;
     }
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
     //    std::cerr << "get_sing_comp_anisotropic, step 7\n";
-    return {Latt, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
+    return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
@@ -580,21 +591,22 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
     if (opt) {
       is_isotropic = true;
+      std::cerr << "Case is_isotropic = true\n";
       for (auto & u_norm : l_norms)
         map_isotropic[u_norm] = get_sing_comp_isotropic(u_norm);
     } else {
       is_isotropic = false;
+      std::cerr << "Case is_isotropic = false\n";
       for (auto & u_norm : l_norms)
         map_anisotropic[u_norm] = get_sing_comp_anisotropic(u_norm);
     }
   }
-  std::cerr << "is_isotropic=" << is_isotropic << "\n";
   std::cerr << "Edgewalk Procedure, step 7\n";
   // Evaluation of fun
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
+    std::cerr << "Beginning of get_next_anisotropic\n";
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
-    std::cerr << "gna, step 1 e_norm=" << e_norm << " res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
       std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";

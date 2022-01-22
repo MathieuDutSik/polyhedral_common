@@ -38,6 +38,62 @@ size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt
 
 
 /*
+  Given a lattice L and a matrix g, find the smallest exponent m such that g^m preserves L
+  and acts trivially on the set of translation classes.
+ */
+template<typename T>
+size_t GetMatrixExponentSublattice_TrivClass(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
+{
+  // First compute the power that preserves the lattice L
+  int n = Latt.rows();
+  auto is_preserving=[&](MyMatrix<T> const& h) -> bool {
+    for (int i=0; i<n; i++) {
+      MyVector<T> eV = GetMatrixRow(Latt, i);
+      MyVector<T> eVimg = h.transpose() * eV;
+      std::optional<MyVector<T>> opt = SolutionIntMat(Latt, eVimg);
+      if (!opt)
+        return false;
+    }
+    return true;
+  };
+  size_t ord1 = 1;
+  MyMatrix<T> h = g;
+  while(true) {
+    if (is_preserving(h))
+      break;
+    ord1++;
+    h = h * g;
+  }
+  // Now computing the power of the action on he classes
+  std::vector<MyVector<T>> ListTrans = ComputeTranslationClasses<T,T>(Latt);
+  size_t n_class = ListTrans.size();
+  std::vector<size_t> cl_h = GetActionOnClasses(ListTrans, h, Latt);
+  auto is_identity=[&](std::vector<size_t> const& cl_k) -> bool {
+    for (size_t i=0; i<n_class; i++)
+      if (cl_k[i] != i)
+        return false;
+    return true;
+  };
+  std::vector<size_t> cl_pow = cl_h;
+  size_t ord2 = 1;
+  while(true) {
+    if (is_preserving(h))
+      break;
+    ord2++;
+    std::vector<size_t> W(n_class);
+    for (size_t i=0; i<n_class; i++)
+      W[i] = cl_pow[cl_h[i]];
+    cl_pow = W;
+  }
+  // Now combining the info
+  size_t ord = ord1 * ord2;
+  return ord;
+}
+
+
+
+
+/*
   We are looking forthe smallest solution c>0 for the equation
   u + c k in Latt
   By selecting an adequate basis for Latt we can reduce the problem to
@@ -252,8 +308,6 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   WriteMatrixGAP(std::cerr, MatrixFromVectorFamily(l_ui));
   std::cerr << "\n";
   */
-
-  
   return l_ui;
 }
 

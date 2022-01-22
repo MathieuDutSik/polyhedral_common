@@ -321,8 +321,6 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
     W.push_back(eW_out);
   }
 
-
-  
   std::cerr << "|W|=" << W.size() << "\n";
   std::cerr << "W=[";
   bool IsFirst=true;
