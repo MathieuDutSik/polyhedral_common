@@ -348,8 +348,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     AssignMatrixRow(EquaRvect, i_root, eP);
   }
   MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
-  //  std::cerr << "Plane P=\n";
-  //  WriteMatrix(std::cerr, Pplane);
+  std::cerr << "Plane P=[" << StringVectorGAP(GetMatrixRow(Pplane,0)) << ", " << StringVectorGAP(GetMatrixRow(Pplane,1)) << "]\n";
   //  std::cerr << "Space=\n";
   //  WriteMatrix(std::cerr, Space);
   MyVector<T> eP = G * k;
@@ -595,18 +594,17 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
-    //    std::cerr << "gna, step 1 res_norm=" << poss.res_norm << "\n";
+    std::cerr << "gna, step 1 e_norm=" << e_norm << " res_norm=" << poss.res_norm << "\n";
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      //      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
+      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
       if (val == poss.res_norm) {
-        //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=\n";
-        //        WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
+        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=[" << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 0)) << ", " << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 1)) << "]\n";
         MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
-        //        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
+        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          //          std::cerr << "get_next_anisotropic, step 4\n";
+          std::cerr << "get_next_anisotropic, step 4\n";
           if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
@@ -691,15 +689,16 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //
   //
   for (auto & e_extension : l_extension) {
-    std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " ----------\n";
     T e_norm = e_extension.e_norm;
+    T res_norm = e_extension.res_norm;
+    std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " norm=" << e_norm << " res_norm=" << res_norm << " ----------\n";
 
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
     std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<Tint> alpha = *opt_v;
-      std::cerr << "alpha="; WriteVector(std::cerr, alpha);
+      std::cerr << "alpha=" << StringVectorGAP(alpha) << "\n";
       auto f_ins=[&]() -> void {
         std::vector<MyVector<Tint>> l_roots = l_ui;
         l_roots.push_back(alpha);
@@ -731,7 +730,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
             MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
             FundDomainVertex<T,Tint> fund_v{k_new,MatRoot};
             std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
-            RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, e_extension.res_norm, e_norm, fund_v);
+            RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, res_norm, e_norm, fund_v);
             l_candidates.push_back(eCand);
           }
         }
@@ -1431,10 +1430,11 @@ MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bo
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
   VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
-  MyVector<Tint> eVect = FindOneInitialRay(Vtot);
-  MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
-  MyVector<T> V = UniversalVectorConversion<T,Tint>(eVectRet);
-  return V;
+  MyVector<Tint> V1 = FindOneInitialRay(Vtot);
+  MyVector<Tint> V2 = ResRed.B.transpose() * V1;
+  MyVector<Tint> V3 = RemoveFractionVector(V2);
+  MyVector<T> V4 = UniversalVectorConversion<T,Tint>(V3);
+  return V4;
 }
 
 

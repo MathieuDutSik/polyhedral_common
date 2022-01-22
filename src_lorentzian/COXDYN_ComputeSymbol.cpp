@@ -22,13 +22,17 @@ int main(int argc, char* argv[])
       MyVector<T> eLine = GetMatrixRow(MatRoot, i);
       l_root.push_back(eLine);
     }
-    MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_root).first;
+    std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+    const MyMatrix<T> & CoxMat = ep.first;
+    const MyMatrix<T> & ScalMat = ep.second;
     //    std::cerr << "CoxMat=\n";
     //    WriteMatrix(std::cerr, CoxMat);
     std::string symb = coxdyn_matrix_to_string(CoxMat);
     auto prt=[&](std::ostream & os) -> void {
       os << "return rec(CoxMat:=";
       WriteMatrixGAP(os, CoxMat);
+      os << ", ScalMat:=";
+      WriteMatrixGAP(os, ScalMat);
       os << ", symb:=\"" << symb << "\");\n";
     };
     if (argc == 3) {

@@ -1558,7 +1558,7 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       l_scal(i) = scal;
     }
     std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" << StringVectorGAP(e_vect) << "\n";
-    //    std::cerr << "Scalar products found : l_scal ="; WriteVector(std::cerr, l_scal);
+    std::cerr << "Scalar products found : l_scal =" << StringVectorGAP(l_scal) << "\n";
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
