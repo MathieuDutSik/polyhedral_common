@@ -24,7 +24,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListStringValues1["FileLorMat"] = "the lorentzian matrix used";
-  ListStringValues1["OptionInitialVertex"] = "vinberg or File and if File selected use FileVertDomain as initial vertex";
+  ListStringValues1["OptionInitialVertex"] = "vinberg or FileVertex or FileVertexRoots and if FileVertex or FileVertexRoots selected use FileVertDomain as initial vertex";
   ListStringValues1["FileInitialVertex"] = "unset put the name of the file used for the initial vertex";
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
@@ -263,7 +263,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
             });
 
   for (auto & x : l_candidates) {
-    std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v="; WriteVector(std::cerr, x.v);
+    std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
   }
   std::cerr << "DetermineRootsCuspidalCase, step 4\n";
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
@@ -1174,6 +1174,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       for (auto & root : l_ui)
         std::cerr << " " << StringVectorGAP(root);
       std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
+      std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
       std::cerr << "MatRoot=\n";
       WriteMatrix(std::cerr, fVert.MatRoot);
       std::cerr << "DBG=" << StringVectorGAP(fVert.gen) << " l_roots =";

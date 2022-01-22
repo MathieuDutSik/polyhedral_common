@@ -794,10 +794,10 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
           return {};
       return IrrCoxDyn<T>{"tildeC",n_vert-1,0}; // This is tilde{Cn}
     }
-    if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4, tilde{F4}, and I2(4) are possible
+    if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4, tilde{F4}, and B2 are possible
       if (n_vert == 2) {
         T param = 4;
-        return IrrCoxDyn<T>{"I", 2, param}; // It is I2(4)
+        return IrrCoxDyn<T>{"B", 2, 0}; // It is I2(4)
       }
       if (n_higher_edge != 1)
         return {}; // There are other edges, excluded.
@@ -1540,24 +1540,24 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   };
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry=[&](MyVector<T> const& e_vect, T const& e_norm) -> void {
-    std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" <<  StringVectorGAP( e_vect) << "\n";
+    //    std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" <<  StringVectorGAP( e_vect) << "\n";
     MyVector<T> l_scal(n_root);
     for (int i=0; i<n_root; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i,i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
-      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
-      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
+      //      std::cerr << "i=" << i << " cos_square=" << cos_square << " CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << " scal_square=" << scal_square << "\n";
+      //      std::cerr << "i=" << i << " scal_square=" << scal_square << "\n";
       if (!opt) {
-        std::cerr << "   Failed to match\n";
+        //        std::cerr << "   Failed to match\n";
         return;
       }
       T scal = - *opt;
-      std::cerr << "     scal=" << scal << "\n";
+      //      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
-    std::cerr << "---------------- e_norm=" << e_norm << " e_vect="; WriteVector(std::cerr, e_vect);
+    std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" << StringVectorGAP(e_vect) << "\n";
     //    std::cerr << "Scalar products found : l_scal ="; WriteVector(std::cerr, l_scal);
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
