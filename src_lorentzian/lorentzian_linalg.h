@@ -77,7 +77,7 @@ size_t GetMatrixExponentSublattice_TrivClass(MyMatrix<T> const& g, MyMatrix<T> c
   std::vector<size_t> cl_pow = cl_h;
   size_t ord2 = 1;
   while(true) {
-    if (is_preserving(h))
+    if (is_identity(cl_pow))
       break;
     ord2++;
     std::vector<size_t> W(n_class);

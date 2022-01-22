@@ -510,6 +510,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     const std::vector<MyVector<Tint>>& l_vect1 = opt->second;
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
     const MyMatrix<Tint>& TransformSma = opt->first;
+    MyMatrix<T> TransformSma_T = UniversalMatrixConversion<T,Tint>(TransformSma);
     /*
       Transformation rule
      */
@@ -535,8 +536,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       std::cerr << "The matrix should be integral\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> Expr_i = UniversalMatrixConversion<Tint,T>(Expr_t);
-    size_t order = GetMatrixExponentSublattice_TrivClass(TransformSma, Expr_i);
+    //    MyMatrix<Tint> Expr_i = UniversalMatrixConversion<Tint,T>(Expr_t);
+    size_t order = GetMatrixExponentSublattice_TrivClass(TransformSma_T, Expr_t);
     std::cerr << "order=" << order << "\n";
     std::vector<MyMatrix<Tint>> l_vect2;
     //    std::cerr << "get_sing_comp_anisotropic, step 5\n";
