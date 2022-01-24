@@ -249,7 +249,7 @@ struct LatticeProjectionFramework {
 
 
 template<typename T>
-std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vect)
+std::vector<size_t> GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const& l_vect)
 {
   using Tfield = typename overlying_field<T>::field_type;
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
@@ -270,11 +270,12 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   };
   auto get_random_vect=[&]() -> MyVector<T> {
     MyVector<T> w(dimSpace);
-    int spr = 10;
+    int spr = 1000;
     int tot_spr = 2 * spr + 1;
     while (true) {
       for (int i=0; i<dimSpace; i++)
         w(i) = rand() % tot_spr - spr;
+      std::cerr << "get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
       if (is_corr(w))
         return w;
     }
@@ -298,21 +299,30 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   }
   std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
   size_t siz = list_red.size();
-  std::vector<MyVector<T>> l_ui(siz);
+  std::vector<size_t> l_idx(siz);
   for (size_t i=0; i<siz; i++) {
     size_t pos = list_idx[list_red[i]];
-    l_ui[i] = l_vect[pos];
+    l_idx[i] = pos;
   }
-  /*
-  std::cerr << "l_ui=\n";
-  WriteMatrixGAP(std::cerr, MatrixFromVectorFamily(l_ui));
-  std::cerr << "\n";
-  */
-  return l_ui;
+  return l_idx;
 }
 
 
-
+template<typename T>
+std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vect)
+{
+  size_t n_vect = l_vect.size();
+  MyMatrix<T> Mvect = MatrixFromVectorFamily(l_vect);
+  MyMatrix<T> MvectRed = ColumnReduction(Mvect);
+  std::vector<MyVector<T>> l_vect_red(n_vect);
+  for (size_t i=0; i<n_vect; i++)
+    l_vect_red[i] = GetMatrixRow(MvectRed, i);
+  std::vector<size_t> l_idx = GetFacetOneDomain_ListIdx(l_vect_red);
+  std::vector<MyVector<T>> l_vect_ret;
+  for (auto & idx : l_idx)
+    l_vect_ret.push_back(l_vect[idx]);
+  return l_vect_ret;
+}
 
 
 

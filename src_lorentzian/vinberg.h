@@ -11,6 +11,7 @@
 #include "Temp_ShortVectorUndefinite.h"
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
+#include "lorentzian_linalg.h"
 
 #define DEBUG_VINBERG
 
@@ -93,6 +94,7 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
     n_iter++;
     if (min == norm) {
       MyVector<Tint> V_x = Pmat.transpose() * V_y;
+#ifdef DEBUG_VINBERG
       MyVector<T> Vred = eV_img + UniversalVectorConversion<T,Tint>(V_y);
       T norm_red = Vred.dot(GramMatRed * Vred);
       MyVector<T> Vtot = eV + UniversalVectorConversion<T,Tint>(V_x);
@@ -102,6 +104,7 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
         std::cerr << "different norms\n";
         throw TerminalException{1};
       }
+#endif
       f_ins(V_x);
     }
     return true;
@@ -1126,13 +1129,29 @@ void Print_DataReflectionGroup(const DataReflectionGroup<T,Tint>& data, const st
 
 
 
-
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
+{
+  std::vector<MyVector<Tint>> V1_roots;
+  size_t n = Vtot.G.rows();
+  MyVector<Tint> a = ZeroVector<Tint>(n);
+  std::cerr << "FundCone, step 1.1\n";
+  for (auto & k : Vtot.root_lengths) {
+    std::cerr << " k=" << k << "\n";
+    std::vector<MyVector<Tint>> list_root_cand = FindRoot_no_filter<T,Tint>(Vtot, a, k);
+    for (const MyVector<Tint>& root_cand : list_root_cand)
+      V1_roots.push_back(root_cand);
+    std::cerr << "k=" << k << " |V1_roots|=" << V1_roots.size() << " |list_root_cand|=" << list_root_cand.size() << "\n";
+  }
+  std::cerr << "|V1_roots|=" << V1_roots.size() << "\n";
+  return GetFacetOneDomain(V1_roots);
+}
 
 
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
+std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T,Tint>& Vtot)
 {
   //
   // First building the initial set of roots
