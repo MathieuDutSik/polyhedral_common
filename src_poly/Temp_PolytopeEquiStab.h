@@ -223,16 +223,16 @@ std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsomorphismFromCano
   std::vector<Tidx> ListIdx(nbRow);
   for (size_t idx=0; idx<nbRow; idx++)
     ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
-  std::cerr << "IsomorphismFromCanonicReord : CanonicReord1=" << CanonicReord1 << "\n";
-  std::cerr << "IsomorphismFromCanonicReord : CanonicReord2=" << CanonicReord2 << "\n";
-  std::cerr << "IsomorphismFromCanonicReord : ListIdx=" << ListIdx << "\n";
+  //  std::cerr << "IsomorphismFromCanonicReord : CanonicReord1=" << CanonicReord1 << "\n";
+  //  std::cerr << "IsomorphismFromCanonicReord : CanonicReord2=" << CanonicReord2 << "\n";
+  //  std::cerr << "IsomorphismFromCanonicReord : ListIdx=" << ListIdx << "\n";
 
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT1, CanonicReord1);
   MyMatrix<Tfield> Basis2 = GetBasisFromOrdering<T,Tfield,Tidx>(EXT2, CanonicReord2);
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
-  std::cerr << "P=\n";
-  WriteMatrix(std::cerr, P);
+  //  std::cerr << "P=\n";
+  //  WriteMatrix(std::cerr, P);
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
   if (!test) // We fail the polytope equivalence

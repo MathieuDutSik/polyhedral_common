@@ -21,8 +21,8 @@
 
  */
 
-#define CHECK_TWO_DIM_LORENTZIAN
-#define DEBUG_TWO_DIM_LORENTZIAN
+//#define CHECK_TWO_DIM_LORENTZIAN
+//#define DEBUG_TWO_DIM_LORENTZIAN
 
 
 template<typename T, typename Tint>
@@ -232,28 +232,40 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> pair_opt = NotPromised(G, M, r0, l0);
   if (!pair_opt)
     return {};
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "We pass the NotPromised stage\n";
+#endif
   auto get_char_mat=[&](const MyVector<Tint>& v1, const MyVector<Tint>& v2) -> std::vector<T> {
     return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };
   MyVector<Tint> r1 = pair_opt->first;
   MyVector<Tint> l1 = pair_opt->second;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "Anisotropic r1=" << StringVectorGAP(r1) << " / " << StringVectorGAP(l1) << "\n";
+#endif
   std::vector<MyVector<Tint>> list_r{r1};
   MyVector<Tint> r = r1;
   MyVector<Tint> l = l1;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "First : Anisotropic r=" << StringVectorGAP(r) << " / " << StringVectorGAP(l) << "\n";
+#endif
   std::vector<T> A_vect = get_char_mat(r, l);
   while(true) {
     std::pair<MyVector<Tint>,MyVector<Tint>> pair = Promised(G, M, r, l);
     r = pair.first;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "Finding |r|=" << eval_quad(G, r) << "\n";
+#endif
     l = pair.second;
     l = Canonical(G, M, r, l);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "Now : Anisotropic r=" << StringVectorGAP(r) << " / " << StringVectorGAP(l) << "\n";
     std::cerr << "After canonical\n";
+#endif
     if (A_vect == get_char_mat(r,l)) { // Concluding step
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
       std::cerr << "Exiting case\n";
+#endif
       MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily<Tint>({r1, l1});
       MyMatrix<T> M1_T = UniversalMatrixConversion<T,Tint>(M1_Tint);
       MyMatrix<Tint> M_Tint = MatrixFromVectorFamily<Tint>({r, l});
@@ -261,7 +273,9 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
       MyMatrix<T> gMat_T = Inverse(M1_T) * M_T;
       MyMatrix<Tint> gMat_Tint = UniversalMatrixConversion<Tint,T>(gMat_T);
       std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>> pair{gMat_Tint, list_r};
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
       std::cerr << "Before returning pair\n";
+#endif
       return pair;
     }
     list_r.push_back(r);
@@ -395,8 +409,10 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const& G)
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const& F, T const& M)
 {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "EnumerateVectorFixedNorm_Factorization M=" << M << " F=\n";
   WriteMatrix(std::cerr, F);
+#endif
   MyVector<T> v1(2);
   v1(0) = F(0,0);
   v1(1) = F(0,1);
@@ -408,7 +424,9 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
   FractionVector<T> Fr2 = RemoveFractionVectorPlusCoeff(v2);
   //
   T M_scal = M * Fr1.TheMult * Fr2.TheMult;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "M_scal=" << M_scal << "\n";
+#endif
   if (!IsInteger(M_scal))
     return {};
   MyMatrix<T> A(2,2);
@@ -416,28 +434,40 @@ std::vector<MyVector<Tint>> EnumerateVectorFixedNorm_Factorization(MyMatrix<T> c
   A(0,1) = Fr1.TheVect(1);
   A(1,0) = Fr2.TheVect(0);
   A(1,1) = Fr2.TheVect(1);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "EnumerateVectorFixedNorm_Factorization A=\n";
   WriteMatrix(std::cerr, A);
+#endif
   MyMatrix<T> Ainv = Inverse(A);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "EnumerateVectorFixedNorm_Factorization Ainv=\n";
   WriteMatrix(std::cerr, Ainv);
+#endif
   MyVector<T> v(2);
   std::vector<MyVector<Tint>> l_sol;
   std::vector<T> list_div = GetAllFactors(T_abs(M_scal));
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "|list_div|=" << list_div.size() << "\n";
+#endif
   for (auto & e_div : list_div) {
     v(0) = e_div;
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "v=" << StringVectorGAP(v) << "  e_sol=" << StringVectorGAP(e_sol) << "\n";
+#endif
     if (IsIntegralVector(e_sol)) {
       MyVector<Tint> e_sol_i = UniversalVectorConversion<Tint,T>(e_sol);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
       std::cerr << "  e_sol_i=" << StringVectorGAP(e_sol_i) << "\n";
+#endif
       l_sol.push_back( e_sol_i);
       l_sol.push_back(-e_sol_i);
     }
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "|l_sol|=" << l_sol.size() << "\n";
+#endif
   return l_sol;
 }
 
@@ -510,7 +540,9 @@ std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> Anisotropic
   MyVector<Tint> r = GetPositiveVector<T,Tint>(G);
   MyVector<Tint> l_A = GetTwoComplement(r);
   MyVector<Tint> l_B = Canonical(G, M, r, l_A);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
+#endif
   return Anisotropic(G, M, r, l_B);
 }
 
@@ -542,7 +574,9 @@ std::optional<MyVector<Tint>> get_first_next_vector_isotropic(MyMatrix<T> const&
       e_sol = e_v;
     }
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "n_match=" << n_match << "\n";
+#endif
   return e_sol;
 }
 
@@ -550,23 +584,33 @@ template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
   T M = eval_quad(G, r0);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "M=" << M << " SearchNorm=" << SearchNorm << " r0=" << StringVectorGAP(r0) << " G=\n";
   WriteMatrix(std::cerr, G);
+#endif
   MyVector<Tint> l_A = GetTwoComplement(r0);
   MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
   std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>> opt = Anisotropic(G, M, r0, l_B);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "We have opt\n";
+#endif
   if (!opt)
     return {};
   std::vector<MyVector<Tint>> const& l_vect = opt->second;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+#endif
   for (auto & e_v : l_vect) {
     T norm = eval_quad(G, e_v);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "norm=" << norm << " SearchNorm=" << SearchNorm << " e_v=" << StringVectorGAP(e_v) << "\n";
+#endif
     if (norm == SearchNorm)
       return e_v;
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "returning missing\n";
+#endif
   return {};
 }
 
@@ -577,19 +621,27 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(MyMatrix<T> cons
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const& G, MyVector<Tint> const& r0, T const& SearchNorm)
 {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "SearchNorm=" << SearchNorm << "\n";
+#endif
   if (SearchNorm <= 0)
     return {};
   T lower_bnd = GetLowerBoundMinimum(G);
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "lower_bnd=" << lower_bnd << "\n";
+#endif
   if (SearchNorm < lower_bnd) // no solution possible
     return {};
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
   if (opt) {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
     std::cerr << "get_first_next_vector : isotropic\n";
+#endif
     return get_first_next_vector_isotropic(G, r0, SearchNorm, *opt);
   }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "get_first_next_vector : anisotropic\n";
+#endif
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 

@@ -1498,16 +1498,15 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   DS.OnlySpherical = only_spherical;
   //
   std::cerr << "ComputePossibleExtensions, step 1\n";
-  std::cerr << "G=\n";
-  WriteMatrixGAP(std::cerr, G);
-  std::cerr << "\n";
-  std::cerr << "l_root=\n";
-  for (auto & e_root : l_root)
-    std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";
+  //  std::cerr << "G=\n";
+  //  WriteMatrixGAP(std::cerr, G);
+  //  std::cerr << "\n";
+  //  std::cerr << "l_root=\n";
+  //  for (auto & e_root : l_root)
+  //    std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";
 
   
   std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
-  std::cerr << "ComputePossibleExtensions, step 2\n";
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
   MyMatrix<T> ScalMatInv = Inverse(ScalMat);
