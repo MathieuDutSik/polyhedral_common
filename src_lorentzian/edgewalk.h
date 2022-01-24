@@ -229,7 +229,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
-  std::cerr << "DetermineRootsCuspidalCase, step 2\n";
   std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
   for (auto & e_extension : l_extension) {
     std::cerr << "res_norm=" << e_extension.res_norm << "\n";
@@ -248,7 +247,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     }
   }
   std::cerr << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
-  std::cerr << "DetermineRootsCuspidalCase, step 3\n";
   /* std::sort is sorting from the highest to the smallest
    */
   std::sort(l_candidates.begin(), l_candidates.end(),
@@ -265,7 +263,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   for (auto & x : l_candidates) {
     std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
   }
-  std::cerr << "DetermineRootsCuspidalCase, step 4\n";
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
   auto is_approved=[&](MyVector<Tint> const& cand) -> bool {
     MyVector<T> G_cand_T = G * UniversalVectorConversion<T,Tint>(cand);
@@ -284,7 +281,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
       l_ui_ret.push_back(eV_i);
     }
   }
-  std::cerr << "DetermineRootsCuspidalCase, step 5\n";
+  std::cerr << "DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size() << "\n";
   return l_ui_ret;
 }
 
@@ -346,7 +343,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     AssignMatrixRow(EquaRvect, i_root, eP);
   }
   MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
-  std::cerr << "Plane P=[" << StringVectorGAP(GetMatrixRow(Pplane,0)) << ", " << StringVectorGAP(GetMatrixRow(Pplane,1)) << "]\n";
+  //  std::cerr << "Plane P=[" << StringVectorGAP(GetMatrixRow(Pplane,0)) << ", " << StringVectorGAP(GetMatrixRow(Pplane,1)) << "]\n";
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
   std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
@@ -481,13 +478,13 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
     std::cerr << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm << " ------------------------\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
+    //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     //    std::cerr << "Basis_ProjP_LN=\n";
     //    WriteMatrix(std::cerr, Basis_ProjP_LN);
     MyMatrix<T> Basis_P_inter_LN = IntersectionLattice_VectorSpace(Latt, Pplane);
     MyMatrix<T> Gwork = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
-    std::cerr << "Gwork=" << StringMatrixGAP(Gwork) << "\n";
+    //    std::cerr << "Gwork=" << StringMatrixGAP(Gwork) << "\n";
     // The residual norm is res_norm = N - u_{N,Delta}^2
     // u_{N,Delta} belongs to a positive definite lattice.
     // Therefore res_norm <= N
@@ -496,7 +493,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     T res_norm = e_norm;
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
     T r0_norm = eval_quad(Gwork, r0_work);
-    std::cerr << "r0_norm=" << r0_norm << " e_norm=" << e_norm << "\n";
+    //    std::cerr << "r0_norm=" << r0_norm << " e_norm=" << e_norm << "\n";
     MyVector<Tint> l_A = GetTwoComplement(r0_work);
     //    std::cerr << "l_A=" << StringVectorGAP(l_A) << " res_norm=" << res_norm << "\n";
     MyVector<Tint> l_B = Canonical(Gwork, r0_norm, r0_work, l_A);
@@ -521,15 +518,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     MyMatrix<T> l_ui_MatT = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_ui));
     MyMatrix<T> ReductionBasis = Concatenate(Basis_ProjP_LN, l_ui_MatT);
     MyMatrix<T> TransformBig = Inverse(ReductionBasis) * TransformBig_red * ReductionBasis;
-    std::cerr << "TransformBig=" << StringMatrixGAP(TransformBig) << "\n";
+    //    std::cerr << "TransformBig=" << StringMatrixGAP(TransformBig) << "\n";
 
-    std::cerr << "TransformSma=" << StringMatrixGAP(TransformSma) << "\n";
+    //    std::cerr << "TransformSma=" << StringMatrixGAP(TransformSma) << "\n";
     //    std::cerr << "Basis_ProjP_LN=\n";
     //    WriteMatrix(std::cerr, Basis_ProjP_LN);
     //    std::cerr << "Basis_P_inter_LN=\n";
     //    WriteMatrix(std::cerr, Basis_P_inter_LN);
     MyMatrix<T> Expr_t = ExpressVectorsInIndependentFamilt(Basis_P_inter_LN, Basis_ProjP_LN);
-    std::cerr << "Expr_t=" << StringMatrixGAP(Expr_t) << "\n";
+    //    std::cerr << "Expr_t=" << StringMatrixGAP(Expr_t) << "\n";
     //    WriteMatrix(std::cerr, Expr_t);
     //    std::cerr << "get_sing_comp_anisotropic, step 4\n";
     if (!IsIntegralMatrix(Expr_t)) {
@@ -557,7 +554,6 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     std::cerr << "|l_vect2|=" << l_vect2.size() << "\n";
     std::vector<MyVector<Tint>> l_vect3;
     MyMatrix<Tint> TheMat = IdentityMat<Tint>(2);
-    //    std::cerr << "get_sing_comp_anisotropic, step 6\n";
     for (size_t i=0; i<order; i++) {
       for (auto & e_vect2 : l_vect2) {
         MyVector<Tint> e_vect3 = TheMat.transpose() * e_vect2;
@@ -566,13 +562,12 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       TheMat = TheMat * TransformSma;
     }
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
-    //    std::cerr << "get_sing_comp_anisotropic, step 7\n";
     return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
+    //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
     MyMatrix<T> GP_LN = Basis_ProjP_LN * G * Basis_ProjP_LN.transpose();
     MyVector<Tint> r0_work = get_r0work(Basis_ProjP_LN, r0);
@@ -610,14 +605,14 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
     for (auto & e_vect : e_comp.l_vect) {
       T val = eval_quad(e_comp.Gwork, e_vect);
-      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
+      //      std::cerr << "gna, step 2 e_vect=" << StringVectorGAP(e_vect) << " val=" << val << "\n";
       if (val == poss.res_norm) {
-        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=[" << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 0)) << ", " << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 1)) << "]\n";
+        //        std::cerr << "e_vect=" << StringVectorGAP(e_vect) << " Basis_ProjP_LN=[" << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 0)) << ", " << StringVectorGAP(GetMatrixRow(e_comp.Basis_ProjP_LN, 1)) << "]\n";
         MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
-        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
+        //        std::cerr << "gna, step 3 v_T=" << StringVectorGAP(v_T) << "\n";
         if (IsIntegerVector(v_T)) {
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
-          std::cerr << "get_next_anisotropic, step 4\n";
+          //          std::cerr << "get_next_anisotropic, step 4\n";
           if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
@@ -757,8 +752,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
       std::cerr << "e_cand sign=" << e_cand.sign << " quant1=" << e_cand.quant1 << " quant2=" << e_cand.quant2 << " e_norm=" << e_cand.e_norm << " fund_v=" << StringVectorGAP(e_cand.fund_v.gen) << " alpha=" << StringVectorGAP(e_cand.alpha) << "\n";
     RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
     std::cerr << "fund_v=" << StringVectorGAP(best_cand.fund_v.gen) << "\n";
-    std::cerr << "MatRoot=\n";
-    WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
+    //    std::cerr << "MatRoot=\n";
+    //    WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
     return best_cand.fund_v;
   }
   std::cerr << "         --------------- Looking for an isotropic vector ------------\n";
@@ -921,7 +916,7 @@ std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const
   }
   std::unordered_set<MyVector<Tint>> TotalList;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
-    std::cerr << "f_insert call with v=" << StringVectorGAP(v) << "\n";
+    //    std::cerr << "f_insert call with v=" << StringVectorGAP(v) << "\n";
     if (TotalList.count(v) != 0)
       return;
     std::unordered_set<MyVector<Tint>> s_v;
@@ -937,7 +932,7 @@ std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const
     size_t pos=0;
     while(true) {
       size_t len = l_v.size();
-      std::cerr << "pos=" << pos << " len=" << len << "\n";
+      //      std::cerr << "pos=" << pos << " len=" << len << "\n";
       if (pos == len)
         break;
       for (size_t i=pos; i<len; i++) {
@@ -1187,12 +1182,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         std::cerr << " " << StringVectorGAP(root);
       std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
       std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
-      std::cerr << "MatRoot=\n";
-      WriteMatrix(std::cerr, fVert.MatRoot);
-      std::cerr << "DBG=" << StringVectorGAP(fVert.gen) << " l_roots =";
-      for (size_t i_root=0; i_root<size_t(fVert.MatRoot.rows()); i_root++)
-        std::cerr << " " << StringVectorGAP(GetMatrixRow(fVert.MatRoot, i_root));
-      std::cerr << "\n";
+      //      std::cerr << "MatRoot=\n";
+      //      WriteMatrix(std::cerr, fVert.MatRoot);
+      //      std::cerr << "DBG=" << StringVectorGAP(fVert.gen) << " l_roots =";
+      //      for (size_t i_root=0; i_root<size_t(fVert.MatRoot.rows()); i_root++)
+      //        std::cerr << " " << StringVectorGAP(GetMatrixRow(fVert.MatRoot, i_root));
+      //      std::cerr << "\n";
       //
       StatusEntry entry{false,true};
       func_insert_pair_vertices(theVert, entry, theVert, fVert);

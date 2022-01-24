@@ -1511,15 +1511,14 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
   MyMatrix<T> ScalMatInv = Inverse(ScalMat);
-  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
-  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
-  std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
+  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  //  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+  //  std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int n_root = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, DS);
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
-  std::cerr << "ComputePossibleExtensions, step 4\n";
   T val2 = 0;
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
@@ -1559,13 +1558,13 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       l_scal(i) = scal;
     }
     std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" << StringVectorGAP(e_vect) << "\n";
-    std::cerr << "Scalar products found : l_scal = " << StringVectorGAP(l_scal) << "\n";
+    //    std::cerr << "Scalar products found : l_scal = " << StringVectorGAP(l_scal) << "\n";
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
      */
     MyVector<T> w = ScalMatInv * l_scal;
-    std::cerr << "w = " << StringVectorGAP(w) << "\n";
+    //    std::cerr << "w = " << StringVectorGAP(w) << "\n";
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
     std::cerr << "  eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
