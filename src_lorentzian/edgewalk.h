@@ -231,17 +231,17 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
   std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
   for (auto & e_extension : l_extension) {
-    std::cerr << "res_norm=" << e_extension.res_norm << "\n";
+    //    std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
       std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
-      std::cerr << "We have opt_v\n";
+      //      std::cerr << "We have opt_v\n";
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
-        std::cerr << "Proposed v_T =";
+        //        std::cerr << "Proposed v_T =";
         WriteVector(std::cerr, v_T);
         RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
-        std::cerr << "We have e_cand\n";
+        //        std::cerr << "We have e_cand\n";
         l_candidates.push_back(e_cand);
       }
     }
@@ -703,9 +703,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
 
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
-    std::cerr << "We have opt_v\n";
+    //    std::cerr << "We have opt_v\n";
     if (opt_v) {
-      MyVector<Tint> alpha = *opt_v;
+      MyVector<Tint> const& alpha = *opt_v;
       std::cerr << "alpha=" << StringVectorGAP(alpha) << "\n";
       auto f_ins=[&]() -> void {
         std::vector<MyVector<Tint>> l_roots = l_ui;
@@ -720,7 +720,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
         MyVector<T> gen = GetMatrixRow(NSP, 0);
         std::cerr << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
         T scal = gen.dot(G * k);
-        std::cerr << "We have scal\n";
+        //        std::cerr << "We have scal\n";
         auto get_gen=[&]() -> std::optional<MyVector<T>> {
           if (scal < 0) { // The sign convention means that two vectors in the same cone have negative scalar product.
             return gen;
@@ -737,7 +737,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
           if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
             MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
             FundDomainVertex<T,Tint> fund_v{k_new,MatRoot};
-            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
+            //            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
             RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, res_norm, e_norm, fund_v);
             l_candidates.push_back(eCand);
           }
@@ -748,10 +748,12 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   }
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
   if (l_candidates.size() > 0) {
+    /*
     for (auto e_cand : l_candidates)
       std::cerr << "e_cand sign=" << e_cand.sign << " quant1=" << e_cand.quant1 << " quant2=" << e_cand.quant2 << " e_norm=" << e_cand.e_norm << " fund_v=" << StringVectorGAP(e_cand.fund_v.gen) << " alpha=" << StringVectorGAP(e_cand.alpha) << "\n";
+    */
     RootCandidate<T,Tint> best_cand = get_best_candidate(l_candidates);
-    std::cerr << "fund_v=" << StringVectorGAP(best_cand.fund_v.gen) << "\n";
+    //    std::cerr << "fund_v=" << StringVectorGAP(best_cand.fund_v.gen) << "\n";
     //    std::cerr << "MatRoot=\n";
     //    WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
     return best_cand.fund_v;
@@ -762,14 +764,14 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   //  std::cerr << "We have Gred=\n";
   //  WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
-  std::cerr << "We have Factor_opt\n";
+  //  std::cerr << "We have Factor_opt\n";
   if (!Factor_opt) {
     std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
     throw TerminalException{1};
   }
-  MyMatrix<T> Factor = *Factor_opt;
-  std::cerr << "We have Factor=\n";
-  WriteMatrix(std::cerr, Factor);
+  MyMatrix<T> const& Factor = *Factor_opt;
+  //  std::cerr << "We have Factor=\n";
+  //  WriteMatrix(std::cerr, Factor);
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);
@@ -784,38 +786,38 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   };
   std::vector<MyVector<T>> l_gens;
   for (size_t i=0; i<2; i++) {
-    std::cerr << "i=" << i << "\n";
+    //    std::cerr << "i=" << i << "\n";
     // a x + b y correspond to the ray (u0, u1) = (-b, a)
     MyVector<T> U(2);
     U(0) = -Factor(i,1);
     U(1) =  Factor(i,0);
-    std::cerr << "U=" << StringVectorGAP(U) << "\n";
+    //    std::cerr << "U=" << StringVectorGAP(U) << "\n";
     T sum = U.dot(Gred * U);
-    std::cerr << "sum=" << sum << "\n";
+    //    std::cerr << "sum=" << sum << "\n";
     MyVector<T> gen = Pplane.transpose() * U;
     //    std::cerr << "k="; WriteVectorGAP(std::cerr, k); std::cerr << "\n";
     //    std::cerr << "r0="; WriteVectorGAP(std::cerr, r0); std::cerr << "\n";
     //    std::cerr << "gen="; WriteVectorGAP(std::cerr, gen); std::cerr << "\n";
     T sum_B = gen.dot(G * gen);
-    std::cerr << "sum_B=" << sum_B << "\n";
-    std::cerr << "gen="; WriteVector(std::cerr, gen);
+    //    std::cerr << "sum_B=" << sum_B << "\n";
+    //    std::cerr << "gen=" << StringVectorGAP(gen) << "\n";
     if (!IsVectorMultiple(gen, k)) {
       MyVector<T> can_gen = get_can_gen(gen);
-      std::cerr << "can_gen="; WriteVector(std::cerr, can_gen);
-      std::cerr << "RemoveFraction(can_gen)="; WriteVector(std::cerr, RemoveFractionVector(can_gen));
+      //      std::cerr << "can_gen=" << StringVectorGAP(can_gen) << "\n";
+      //      std::cerr << "RemoveFraction(can_gen)=" << StringVectorGAP(RemoveFractionVector(can_gen)) << "\n";
       T scal = v_disc_t.dot(G * can_gen);
-      std::cerr << "scal=" << scal << "\n";
+      //      std::cerr << "scal=" << scal << "\n";
       if (scal < 0) // Convention is negative scalar in Lorentzian theory (see end of sect 2 of edgewalk paper)
         l_gens.push_back(can_gen);
     }
   }
-  std::cerr << "|l_gens|=" << l_gens.size() << "\n";
+  //  std::cerr << "|l_gens|=" << l_gens.size() << "\n";
   if (l_gens.size() != 1) {
     std::cerr << "We should have just one vector in order to conclude. Rethink needed\n";
     throw TerminalException{1};
   }
   const MyVector<T> & k_new = l_gens[0];
-  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
+  //  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
