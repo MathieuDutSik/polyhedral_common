@@ -289,6 +289,23 @@ public:
     }
 #endif
   }
+  template<typename Tidx>
+  void RowColumnReordering(std::vector<Tidx> const& V)
+  {
+    size_t nb = weightmatrix_get_nb<is_symmetric>(nbRow);
+    std::vector<Tidx_value> TheMatImg(nb);
+    for (size_t iRow=0; iRow<nbRow; iRow++) {
+      Tidx iRowImg = V[iRow];
+      size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
+      for (size_t iCol=0; iCol<last_idx; iCol++) {
+        Tidx iColImg = V[iCol];
+        size_t pos = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
+        size_t posImg = weightmatrix_idx<is_symmetric>(nbRow, iRowImg, iColImg);
+        TheMatImg[posImg] = TheMat[pos];
+      }
+    }
+    TheMat = TheMatImg;
+  }
   Tidx_value ReorderingSetWeight_specificPosition(Tidx_value specificPosition)
   {
     Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();

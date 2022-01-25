@@ -82,7 +82,7 @@ void WriteFundDomainVertex(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const&
     WriteMatrixGAP(os, Mroot);
     return;
   }
-  std::cerr << "Failed to find a matching entry for WritePairVertices\n";
+  std::cerr << "Failed to find a matching entry for WriteFundDomainVertex\n";
   std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
   throw TerminalException{1};
 }
@@ -827,59 +827,46 @@ using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_
 
 
 
-template<typename T, typename Tint>
-void WritePairVertices(MyMatrix<T> const& G,
-                       FundDomainVertex<T,Tint> const& evert1, FundDomainVertex<T,Tint> const& evert2,
-                       std::ostream & os, std::string const& OutFormat)
-{
-  if (OutFormat == "GAP") {
-    os << "rec(vert1:=";
-    WriteFundDomainVertex(G, evert1, os, OutFormat);
-    os << ", vert2:=";
-    WriteFundDomainVertex(G, evert2, os, OutFormat);
-    os << ")";
-    return;
-  }
-  if (OutFormat == "TXT") {
-    os << "vert1=\n";
-    WriteFundDomainVertex(G, evert1, os, OutFormat);
-    os << "vert2=\n";
-    WriteFundDomainVertex(G, evert2, os, OutFormat);
-    return;
-  }
-  std::cerr << "Failed to find a matching entry for WritePairVertices\n";
-  std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
-  throw TerminalException{1};
-}
+
+template<typename T, typename Tint, typename Tgroup>
+struct FundDomainVertex_FullInfo {
+  FundDomainVertex<T,Tint> vert;
+  pair_char<T> e_pair_char;
+  size_t hash;
+  Tgroup GRP;
+};
 
 
 
 
 
 
-template<typename T, typename Tint>
-pair_char<T> gen_pair_char(MyMatrix<T> const& G,
-                           FundDomainVertex<T,Tint> const& evert1, FundDomainVertex<T,Tint> const& evert2)
+template<typename T, typename Tint, typename Tgroup>
+FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert)
 {
   std::unordered_map<MyVector<Tint>,int> map_v;
-  size_t len1 = evert1.MatRoot.rows();
+  size_t len1 = vert.MatRoot.rows();
   for (size_t i=0; i<len1; i++) {
     MyVector<Tint> eV = GetMatrixRow(evert1.MatRoot, i);
-    map_v[eV]++;
+    map_v[eV] = 1;
   }
-  size_t len2 = evert2.MatRoot.rows();
-  for (size_t i=0; i<len2; i++) {
-    MyVector<Tint> eV = GetMatrixRow(evert2.MatRoot, i);
-    map_v[eV]++;
+  T norm = vert.gen.dot(G * vert.gen);
+  if (norm < 0) {
+    MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
+    map_v[eV] = 2;
+  } else {
+    
   }
-  //  std::cerr << "|evert1.l_roots|=" << evert1.l_roots.size() << "  |evert2.l_roots|=" << evert2.l_roots.size() << "\n";
+
+
+  
   std::vector<MyVector<Tint>> l_vect;
   std::vector<T> Vdiag;
   for (auto & kv : map_v) {
     l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
   }
-  l_vect.push_back(UniversalVectorConversion<Tint,T>(RemoveFractionVector(evert1.gen)));
+  l_vect.push_back(
   l_vect.push_back(UniversalVectorConversion<Tint,T>(RemoveFractionVector(evert2.gen)));
   T insVal = 10;
   Vdiag.push_back(insVal);
@@ -904,19 +891,13 @@ pair_char<T> gen_pair_char(MyMatrix<T> const& G,
 template<typename T, typename Tint>
 struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
-  std::vector<FundDomainVertex<T,Tint>> l_orbit_pair_vertices;
+  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices;
 };
 
 
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const& re)
 {
-  /*
-  for (auto & eGen : re.l_gen_isom_cox) {
-    std::cerr << "eGen=\n";
-    WriteMatrix(std::cerr, eGen);
-  }
-  */
   std::unordered_set<MyVector<Tint>> TotalList;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
     //    std::cerr << "f_insert call with v=" << StringVectorGAP(v) << "\n";
@@ -947,7 +928,7 @@ std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const
       pos=len;
     }
   };
-  for (auto & fdv : re.l_orbit_pair_vertices) {
+  for (auto & fdv : re.l_orbit_vertices) {
     size_t len = fdv.MatRoot.rows();
     for (size_t i=0; i<len; i++) {
       MyVector<Tint> e_root = GetMatrixRow(fdv.MatRoot, i);
@@ -976,7 +957,7 @@ std::vector<T> get_list_norms(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const
       set_norms.insert(norm);
     }
   };
-  for (auto & evert : re.l_orbit_pair_vertices)
+  for (auto & evert : re.l_orbit_vertices)
     proc_vertex(evert);
   std::vector<T> l_norms;
   for (auto & v : set_norms)
@@ -999,15 +980,13 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
     os << ", ListVertices:=[";
     bool IsFirst = true;
-    size_t len = re.l_orbit_pair_vertices.size() / 2;
+    size_t len = re.l_orbit_vertices.size();
     for (size_t i=0; i<len; i++) {
-      os << "\n";
       if (!IsFirst)
-        os << ",";
+        os << ",\n";
       IsFirst = false;
-      const FundDomainVertex<T,Tint> & evert1 = re.l_orbit_pair_vertices[2*i];
-      const FundDomainVertex<T,Tint> & evert2 = re.l_orbit_pair_vertices[2*i+1];
-      WritePairVertices(G, evert1, evert2, os, OutFormat);
+      const FundDomainVertex<T,Tint> & evert = re.l_orbit_vertices[ i ];
+      WriteFundDomainVertex(G, evert, os, OutFormat);
     }
     os << "]";
     if (ComputeAllSimpleRoots) {
@@ -1040,12 +1019,8 @@ template<typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
-  struct StatusEntry {
-    bool stat1;
-    bool stat2;
-  };
-  std::vector<StatusEntry> l_entry;
-  std::vector<FundDomainVertex<T,Tint>> l_orbit_pair_vertices;
+  std::vector<int> l_status;
+  std::vector<FundDomainVertex_FullInfo<T,Tint>> l_orbit_vertices;
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
   auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
     if (eP == IdMat)
@@ -1061,110 +1036,43 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
-  auto func_insert_pair_vertices=[&](FundDomainVertex<T,Tint> const& theVert, StatusEntry const& entry, FundDomainVertex<T,Tint> evert1, FundDomainVertex<T,Tint> evert2) -> void {
-    //    theVert.l_roots.clear();
-    //    std::cerr << "1 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    //    std::cerr << "Before computing v_pair_char\n";
-    pair_char<T> v_pair_char = gen_pair_char(G, evert1, evert2);
-    //    std::cerr << "2 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-
+  auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> void {
     size_t len = l_orbit_pair_vertices.size() / 2;
     for (size_t i=0; i<len; i++) {
-      //      std::cerr <<  "Before LinPolytopeIntegralWMat_Isomorphism\n";
-      //      std::cerr << "Before computing u_pair_char\n";
-      const FundDomainVertex<T,Tint>& hvert1 = l_orbit_pair_vertices[2*i];
-      const FundDomainVertex<T,Tint>& hvert2 = l_orbit_pair_vertices[2*i+1];
-      pair_char<T> u_pair_char = gen_pair_char(G, hvert1, hvert2);
-      //      std::cerr << "3 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(u_pair_char, v_pair_char);
-      //      std::cerr << "4 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-      //      std::cerr <<  "After  LinPolytopeIntegralWMat_Isomorphism\n";
-      if (equiv_opt) {
-        std::cerr << "Find some isomorphism\n";
-        /*
-        std::cerr << "u : vert1=" << StringVectorGAP(hvert1.gen) << " vert2=" << StringVectorGAP(hvert2.gen) << "\n";
-        std::cerr << "v : vert1=" << StringVectorGAP(evert1.gen) << " vert2=" << StringVectorGAP(evert2.gen) << "\n";
-        std::cerr << "u : EXT=\n";
-        WriteMatrix(std::cerr, u_pair_char.first);
-        std::cerr << "u : WMat=\n";
-        PrintWeightedMatrix(std::cerr, u_pair_char.second);
-        //
-        std::cerr << "v : EXT=\n";
-        WriteMatrix(std::cerr, v_pair_char.first);
-        std::cerr << "u : WMat=\n";
-        PrintWeightedMatrix(std::cerr, v_pair_char.second);
-        */
-        f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
-        return;
+      if (vertFull.hash == l_orbit_vertices[i].hash) {
+        const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
+        std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
+        if (equiv_opt) {
+          std::cerr << "Find some isomorphism\n";
+          f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
+          return;
+        }
       }
     }
-    //    std::cerr << "ipass=" << ipass << "\n";
-    //    v_pair.vert1.l_roots.clear();
     std::cerr << "Failed to find some isomorphism\n";
-    //    std::cerr << "5 : func_insert_pair_vertices |theVert.l_roots|=" << theVert.MatRoot.rows() << "\n";
-    l_entry.push_back(entry);
-    //    std::cerr << "Before the automorphism insertions\n";
-    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(v_pair_char))
+    l_status.push_back(1);
+    l_orbit_vertices.push_back(vertFull1);
+    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
-    l_orbit_pair_vertices.push_back(evert1);
-    l_orbit_pair_vertices.push_back(evert2);
   };
   size_t iVERT = 0;
-  // We have to do a copy of the Vert since when the vector is extended the previous entries arfe desttroyed when a new
+  // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
   // See for details https://stackoverflow.com/questions/6438086/iterator-invalidation-rules-for-c-containers
   // Which writes: "vector: all iterators and references before the point of insertion are unaffected, unless
   // the new container size is greater than the previous capacity (in which case all iterators and references are
   // invalidated) [23.2.4.3/1]
   // Took 1 week to fully debug that problem.
-  auto insert_edges_from_vertex=[&](FundDomainVertex<T,Tint> theVert) -> void {
+  auto insert_adjacent_vertices=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull) -> void {
+    const FundDomainVertex<T,Tint>& theVert = vertFull.vert;
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     size_t n_root = theVert.MatRoot.rows();
-    /*
-    MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, theVert.l_roots).first;
-    std::cerr << "CoxMat=\n";
-    WriteMatrix(std::cerr, CoxMat);
-    std::string symb = coxdyn_matrix_to_string(CoxMat);
-    std::cerr << "Coxeter diagram of the vertex k=" << symb << "\n";
-    */
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
-    //    std::cerr << "FAC=\n";
-    //    WriteMatrix(std::cerr, FAC);
     MyMatrix<T> FACred = ColumnReduction(FAC);
-    //    std::cerr << "FACred=\n";
-    //    WriteMatrix(std::cerr, FACred);
-    //    std::cerr << "RankMat(FAC)=" << RankMat(FAC) << " RankMat(FACred)=" << RankMat(FACred) << "\n";
     vectface vf = lrs::DualDescription_temp_incd(FACred);
-    std::cerr << "|vf|=" << vf.size() << "\n";
-    /*
-    for (auto & eIncd : vf) {
-      TestFacetness(FACred, eIncd);
-      MyVector<T> eFAC = RemoveFractionVector(FindFacetInequality(FACred, eIncd));
-      std::cerr << "vf eIncd=" << StringFace(eIncd) << " eFAC=" << eFAC << "\n";
-    }
-    */
-    // Doing the std::sort(vf.begin(), vf.end()) seems science fiction right now.
-    std::vector<Face> vf_ugly;
-    for (auto & eFAC : vf)
-      vf_ugly.push_back(eFAC);
-    std::sort(vf_ugly.begin(), vf_ugly.end(),
-              [&](Face const& x, Face const& y) -> bool {
-                for (size_t i_root=0; i_root<n_root; i_root++) {
-                  if (x[i_root] == 1 && y[i_root] == 0)
-                    return true;
-                  if (x[i_root] == 0 && y[i_root] == 1)
-                    return false;
-                }
-                return false;
-              });
-    size_t pos=0;
-    for (auto & eFAC : vf_ugly) {
-      std::cerr << "pos=" << pos << " eFAC=" << StringFace(eFAC) << "\n";
-      pos++;
-    }
-
+    //
     size_t iFAC = 0;
-    for (auto & eFAC : vf_ugly) {
+    for (auto & eFAC : vf) {
       Face fFAC = eFAC;
       size_t i_disc = std::numeric_limits<size_t>::max();
       std::cerr << "\n";
@@ -1181,21 +1089,15 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       MyVector<Tint> v_disc = GetMatrixRow(theVert.MatRoot, i_disc);
       std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
-      T norm = fVert.gen.dot(G * fVert.gen);
-      std::cerr << "Result of EdgewalkProcedure\n";
-      std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
-      for (auto & root : l_ui)
-        std::cerr << " " << StringVectorGAP(root);
-      std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
-      std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
-      //      std::cerr << "MatRoot=\n";
-      //      WriteMatrix(std::cerr, fVert.MatRoot);
-      //      std::cerr << "DBG=" << StringVectorGAP(fVert.gen) << " l_roots =";
-      //      for (size_t i_root=0; i_root<size_t(fVert.MatRoot.rows()); i_root++)
-      //        std::cerr << " " << StringVectorGAP(GetMatrixRow(fVert.MatRoot, i_root));
-      //      std::cerr << "\n";
-      //
-      StatusEntry entry{false,true};
+      {
+        T norm = fVert.gen.dot(G * fVert.gen);
+        std::cerr << "Result of EdgewalkProcedure\n";
+        std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
+        for (auto & root : l_ui)
+          std::cerr << " " << StringVectorGAP(root);
+        std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
+        std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
+      }
       func_insert_pair_vertices(theVert, entry, theVert, fVert);
       iFAC++;
     }
@@ -1203,20 +1105,16 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
     //    throw TerminalException{1};
   };
-  insert_edges_from_vertex(eVert);
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info(G, eVert);
+  func_insert_vertex(eVert);
   while(true) {
     bool IsFinished = true;
-    size_t len = l_entry.size();
+    size_t len = l_status.size();
     for (size_t i=0; i<len; i++) {
-      if (l_entry[i].stat1) {
-        l_entry[i].stat1 = false;
-        insert_edges_from_vertex(l_orbit_pair_vertices[2*i]);
+      if (l_status[i] == 1) {
         IsFinished = false;
-      }
-      if (l_entry[i].stat2) {
-        l_entry[i].stat2 = false;
-        insert_edges_from_vertex(l_orbit_pair_vertices[2*i+1]);
-        IsFinished = false;
+        l_status[i] = 0;
+        insert_adjacent_vertices(l_orbit_vertices[i]);
       }
     }
     if (IsFinished)
@@ -1226,7 +1124,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
-  return {l_gen_isom_cox, l_orbit_pair_vertices};
+  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
+  for (auto & eVertFull : l_orbit_vertices)
+    l_orbit_vertices_ret.push_back(eVertFull.vert);
+  return {l_gen_isom_cox, l_orbit_vertices_ret};
 }
 
 
