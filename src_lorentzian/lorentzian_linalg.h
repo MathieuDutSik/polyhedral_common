@@ -116,7 +116,7 @@ size_t GetMatrixExponentSublattice_TrivClass(MyMatrix<T> const& g, MyMatrix<T> c
 template<typename T>
 std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector<T> const& u, MyVector<T> const& k)
 {
-  std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr, RemoveFractionVector(k));
+  //  std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr, RemoveFractionVector(k));
   std::vector<MyVector<T>> l_v = {u,k};
   MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
   MyMatrix<T> IntBasis = IntersectionLattice_VectorSpace(Latt, eIndep);

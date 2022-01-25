@@ -299,9 +299,6 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   ---P is the real plane orthogonal to U.
   ---pi_U and pi_P are the corresponding projectors
   ---How is (1/2) P defined and correspond to k (typo correction)
-  ---
-
-
  */
 template<typename T, typename Tint>
 FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
@@ -600,7 +597,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> con
   std::cerr << "Edgewalk Procedure, step 7\n";
   // Evaluation of fun
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
-    std::cerr << "Beginning of get_next_anisotropic\n";
+    //    std::cerr << "Beginning of get_next_anisotropic\n";
     T const& e_norm = poss.e_norm;
     SingCompAnisotropic const& e_comp = map_anisotropic[e_norm];
     for (auto & e_vect : e_comp.l_vect) {
@@ -902,6 +899,8 @@ pair_char<T> gen_pair_char(MyMatrix<T> const& G,
 
 
 
+
+
 template<typename T, typename Tint>
 struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
@@ -912,10 +911,12 @@ struct ResultEdgewalk {
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const& re)
 {
+  /*
   for (auto & eGen : re.l_gen_isom_cox) {
     std::cerr << "eGen=\n";
     WriteMatrix(std::cerr, eGen);
   }
+  */
   std::unordered_set<MyVector<Tint>> TotalList;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
     //    std::cerr << "f_insert call with v=" << StringVectorGAP(v) << "\n";
@@ -1030,6 +1031,9 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
   std::cerr << "OutFormat=" << OutFormat << " but allowed values are GAP and TXT\n";
   throw TerminalException{1};
 }
+
+
+
 
 
 template<typename T, typename Tint, typename Tgroup>
