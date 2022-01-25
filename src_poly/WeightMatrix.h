@@ -371,6 +371,26 @@ public:
     }
     return WeightMatrix<true,T,Tidx_value>(2*nbRow, RET_TheMat, RET_ListWeight);
   }
+  friend bool operator==(WeightMatrix<is_symmetric,T,Tidx_value> const& obj1, WeightMatrix<is_symmetric,T,Tidx_value> const& obj2)
+  {
+    if (obj1.nbRow != obj2.nbRow)
+      return false;
+    if (obj1.ListWeight != obj2.ListWeight)
+      return false;
+    if (obj1.TheMat != obj2.TheMat)
+      return false;
+    return true;
+  }
+  friend bool operator!=(WeightMatrix<is_symmetric,T,Tidx_value> const& obj1, WeightMatrix<is_symmetric,T,Tidx_value> const& obj2)
+  {
+    if (obj1.nbRow != obj2.nbRow)
+      return true;
+    if (obj1.ListWeight != obj2.ListWeight)
+      return true;
+    if (obj1.TheMat != obj2.TheMat)
+      return true;
+    return false;
+  }
 private:
   size_t nbRow;
   std::vector<T> ListWeight;
