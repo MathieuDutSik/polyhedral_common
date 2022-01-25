@@ -3,6 +3,7 @@
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
+PROGRAM		= TEST_LinPolytope_WMatCanonic
 #PROGRAM		= SHORT_SplitVectorFamily
 #PROGRAM		= SHORT_EnumerateCyclicCases
 #PROGRAM		= SHORT_GetShortestVector
@@ -31,7 +32,7 @@
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
+#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= POLY_GetFullRankFacetSet
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

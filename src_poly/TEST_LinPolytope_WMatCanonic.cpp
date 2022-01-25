@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     //
     using Tint = mpz_class;
     using Tidx_value = uint16_t;
-    using Tgr=GraphBitset;
+    using Tgr = GraphBitset;
     using Tidx = int;
     const bool use_scheme = true;
     //
@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
     int nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    auto get_canonicalized_wmat=[&](MyMatrix<Tint> const& EXT) -> WeightMatrix<true, Tint, Tidx_value> {
-      WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix(EXT);
+    auto get_canonicalized_wmat=[](MyMatrix<Tint> const& EXT) -> WeightMatrix<true, Tint, Tidx_value> {
+      WeightMatrix<true, Tint, Tidx_value> WMat = GetWeightMatrix<Tint,Tidx_value>(EXT);
       WMat.ReorderingSetWeight();
-      std::vector<Tidx> ListIdx = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(WMat).first;
+      std::vector<Tidx> ListIdx = GetGroupCanonicalizationVector_Kernel<Tint,Tgr,Tidx,Tidx_value>(WMat).first;
       WMat.RowColumnReordering(ListIdx);
       return WMat;
     };
@@ -57,16 +57,13 @@ int main(int argc, char *argv[])
       std::cerr << "------------------------------------------------------------\n";
       if (WMat1 != WMat1) {
         std::cerr << "The reordering of the column matrix failed\n";
-        std::cerr << "EXT_Can=\n";
-        WriteMatrix(std::cerr, EXT_can);
-        std::cerr << "EXT2_Can=\n";
-        WriteMatrix(std::cerr, EXT2_can);
         throw TerminalException{1};
       }
     }
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
 }
