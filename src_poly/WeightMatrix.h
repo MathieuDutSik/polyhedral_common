@@ -1042,6 +1042,21 @@ std::vector<Tidx> GetCanonicalizationVector_KernelBis(size_t const& nbRow, std::
 }
 
 
+
+template<typename Tgr, typename Tidx, typename TidxIn>
+std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const& nbRow, Tgr const& eGR)
+{
+#ifdef USE_BLISS
+  std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+#ifdef USE_TRACES
+  std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
+#endif
+  return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+}
+
+
+
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
@@ -1060,48 +1075,38 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_va
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
     using TidxIn = uint8_t;
-#ifdef USE_BLISS
-    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-#ifdef USE_TRACES
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+    return GetCanonicalizationVector_Kernel_idxin<Tgr,Tidx,TidxIn>(nbRow, eGR);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max())) {
     using TidxIn = uint16_t;
-#ifdef USE_BLISS
-    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-#ifdef USE_TRACES
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+    return GetCanonicalizationVector_Kernel_idxin<Tgr,Tidx,TidxIn>(nbRow, eGR);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max())) {
     using TidxIn = uint32_t;
-#ifdef USE_BLISS
-    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-#ifdef USE_TRACES
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-#endif
-    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+    return GetCanonicalizationVector_Kernel_idxin<Tgr,Tidx,TidxIn>(nbRow, eGR);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max())) {
     using TidxIn = uint64_t;
-# ifdef USE_BLISS
-    std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-# endif
-# ifdef USE_TRACES
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr,TidxIn>(eGR);
-# endif
-    return GetCanonicalizationVector_KernelBis<Tidx,TidxIn>(nbRow, cl);
+    return GetCanonicalizationVector_Kernel_idxin<Tgr,Tidx,TidxIn>(nbRow, eGR);
   }
 #endif
   std::cerr << "Failed to find matching numeric in GetCanonicalizationVector_Kernel\n";
   throw TerminalException{1};
+}
+
+
+template<typename Tgr, typename Tidx, typename TidxC>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Kernel_tidxc(size_t const& nbRow, Tgr const& eGR)
+{
+#ifdef USE_BLISS
+  std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
+#endif
+  std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
+  return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
 
@@ -1123,48 +1128,20 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicaliz
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
-#ifdef USE_BLISS
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr,Tidx,TidxC>(nbRow, eGR);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
-#ifdef USE_BLISS
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr,Tidx,TidxC>(nbRow, eGR);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
-#ifdef USE_BLISS
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-#endif
-    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr,Tidx,TidxC>(nbRow, eGR);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
-# ifdef USE_BLISS
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = BLISS_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-# endif
-# ifdef USE_TRACES
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair = TRACES_GetCanonicalOrdering_ListGenerators<Tgr,TidxC,Tidx>(eGR, nbRow);
-# endif
-    std::vector<Tidx> MapVectRev2 = GetCanonicalizationVector_KernelBis<Tidx,TidxC>(nbRow, ePair.first);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr,Tidx,TidxC>(nbRow, eGR);
   }
 #endif
   std::cerr << "Failed to find matching numeric in GetGroupCanonicalizationVector_Kernel\n";
