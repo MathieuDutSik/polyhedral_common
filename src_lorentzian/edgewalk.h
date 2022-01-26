@@ -1171,6 +1171,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     }
     s_gen_isom_cox.insert(eP);
   };
+  size_t nbDone = 0;
   auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> void {
     size_t len = l_orbit_vertices.size();
     for (size_t i=0; i<len; i++) {
@@ -1191,13 +1192,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "MatV/WMat=\n";
     WriteMatrix(std::cerr, epair.first);
     PrintWeightedMatrix(std::cerr, epair.second);
-    std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism\n";
+    std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
-    std::cerr << "Before insert |l_status|=" << l_status.size() << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
-    std::cerr << "After the move operator\n";
+    std::cerr << "Exiting the func_insert_vertex\n";
   };
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
@@ -1232,6 +1232,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     size_t len = l_status.size();
     for (size_t i=0; i<len; i++) {
       if (l_status[i] == 1) {
+        nbDone++;
         IsFinished = false;
         l_status[i] = 0;
         // We need to do a direct copy in that case.
