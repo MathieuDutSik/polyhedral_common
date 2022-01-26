@@ -40,6 +40,27 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
 }
 
 
+FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism()
+{
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  ListStringValues1["FileLorMat1"] = "the lorentzian matrix used";
+  ListStringValues1["FileLorMat2"] = "the lorentzian matrix used";
+  ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
+  ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
+  ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
+  SingleBlock BlockPROC;
+  BlockPROC.ListStringValues = ListStringValues1;
+  BlockPROC.ListBoolValues = ListBoolValues1;
+  ListBlock["PROC"]=BlockPROC;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
+
+
 
 
 
@@ -1150,29 +1171,13 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 
 
 
-template<typename T, typename Tint, typename Tgroup>
-ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
+template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
+void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom)
 {
-  std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
   std::vector<int> l_status;
   std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> l_orbit_vertices;
-  MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
-  auto f_insert_gen=[&](MyMatrix<Tint> const& eP) -> void {
-    if (eP == IdMat)
-      return;
-    MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
-    MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
-    if (G_img != G) {
-      std::cerr << "G="; WriteMatrix(std::cerr, G);
-      std::cerr << "eP_T="; WriteMatrix(std::cerr, eP_T);
-      std::cerr << "G_img="; WriteMatrix(std::cerr, G_img);
-      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
-      throw TerminalException{1};
-    }
-    s_gen_isom_cox.insert(eP);
-  };
   size_t nbDone = 0;
-  auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> void {
+  auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> bool {
     size_t len = l_orbit_vertices.size();
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
@@ -1180,8 +1185,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
         if (equiv_opt) {
           std::cerr << "Find some isomorphism\n";
-          f_insert_gen(UniversalMatrixConversion<Tint,T>(*equiv_opt));
-          return;
+          return f_isom(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         }
       }
     }
@@ -1193,16 +1197,23 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     WriteMatrix(std::cerr, epair.first);
     PrintWeightedMatrix(std::cerr, epair.second);
     std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
-    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char))
-      f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
+    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {
+      bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen));
+      if (test)
+        return true;
+    }
+    bool test = f_vertex(vertFull);
+    if (test)
+      return true;
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
     std::cerr << "Exiting the func_insert_vertex\n";
+    return false;
   };
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
   // Took 1 week to fully debug that problem.
-  auto insert_adjacent_vertices=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> void {
+  auto insert_adjacent_vertices=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
     const FundDomainVertex<T,Tint>& theVert = vertFull.vert;
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
@@ -1221,12 +1232,17 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
       }
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(G, l_norms, fVert);
-      func_insert_vertex(fVertFull);
+      bool test = func_insert_vertex(fVertFull);
+      if (test)
+        return true;
     }
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
+    return false;
   };
   FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(G, l_norms, eVert);
-  func_insert_vertex(eVertFull);
+  bool test = func_insert_vertex(eVertFull);
+  if (test)
+    return;
   while(true) {
     bool IsFinished = true;
     size_t len = l_status.size();
@@ -1246,21 +1262,52 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         //
         // The original problem originally took one week to debug.
         FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
-        insert_adjacent_vertices(VertFullCp);
+        bool test = insert_adjacent_vertices(VertFullCp);
+        if (test)
+          return;
       }
     }
     if (IsFinished)
       break;
   }
   std::cerr << "Exiting from the infinite loop of enumeration of vertex pairs\n";
+}
+
+template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
+ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
+{
+  std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
+  MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
+  auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
+    if (eP == IdMat)
+      return;
+    MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
+    MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
+    if (G_img != G) {
+      std::cerr << "G="; WriteMatrix(std::cerr, G);
+      std::cerr << "eP_T="; WriteMatrix(std::cerr, eP_T);
+      std::cerr << "G_img="; WriteMatrix(std::cerr, G_img);
+      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
+      throw TerminalException{1};
+    }
+    s_gen_isom_cox.insert(eP);
+    return false;
+  };
+  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
+  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
+    l_orbit_vertices_ret.push_back(vertFull.vert);
+    return false;
+  };
+  LORENTZ_RunEdgewalkAlgorithm_Kernel(G, l_norms, eVert, f_vertex, f_isom);
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
-  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
-  for (auto & eVertFull : l_orbit_vertices)
-    l_orbit_vertices_ret.push_back(eVertFull.vert);
-  return {l_gen_isom_cox, l_orbit_vertices_ret};
+  return {std::move(l_gen_isom_cox), std::move(l_orbit_vertices_ret)};
 }
+
+
+
+
 
 
 
@@ -1529,13 +1576,9 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
 }
 
 
-
-template<typename T, typename Tint, typename Tgroup>
-void MainFunctionEdgewalk(FullNamelist const& eFull)
+template<typename T>
+void TestLorentzianity(MyMatrix<T> const& G)
 {
-  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
-  std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
-  MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
   if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
     std::cerr << "G=\n";
@@ -1544,6 +1587,16 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
     std::cerr << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
     throw TerminalException{1};
   }
+}
+
+
+template<typename T, typename Tint, typename Tgroup>
+void MainFunctionEdgewalk(FullNamelist const& eFull)
+{
+  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
+  std::string FileLorMat=BlockPROC.ListStringValues.at("FileLorMat");
+  MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
+  TestLorentzianity(G);
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
   bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
@@ -1582,6 +1635,67 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
       PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
     }
   }
+
+}
+
+
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
+{
+  SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
+  std::string FileLorMat1=BlockPROC.ListStringValues.at("FileLorMat1");
+  std::string FileLorMat2=BlockPROC.ListStringValues.at("FileLorMat2");
+  MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat);
+  MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat);
+  TestLorentzianity(G1);
+  TestLorentzianity(G2);
+  //
+  auto print_result=[&](std::optional<MyMatrix<Tint>> const& opt) -> void {
+    std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
+    auto print_result_isomorphism=[&](std::ostream& os) -> void {
+      if (OutFormat == "GAP") {
+        if (opt) {
+          os << "return ";
+          PrintMatrixGAP(os, *opt);
+          os << ";\n";
+        } else {
+          os << "return fail;\n";
+        }
+      }
+      std::cerr << "We fil to have a matching format. OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
+    };
+    std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
+    if (FileOut == "stderr") {
+      print_result_isomorphism(std::cerr);
+    } else {
+      if (FileOut == "stdout") {
+        print_result_isomorphism(std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        print_result_isomorphism(os);
+      }
+    }
+  };
+  //
+  std::string OptionNorms="all";
+  bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
+  std::vector<T> l_norms1 = get_initial_list_norms<T,Tint>(G1, OptionNorms);
+  std::vector<T> l_norms2 = get_initial_list_norms<T,Tint>(G2, OptionNorms);
+  if (l_norms1 != l_norms2) {
+    print_result( {} );
+    return;
+  }
+  std::cerr << "We have l_norms\n";
+  //
+  std::string OptionInitialVertex="vinberg";
+  std::string FileInitialVertex="irrelevant";
+  FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
+  //
+  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
 
 }
 
