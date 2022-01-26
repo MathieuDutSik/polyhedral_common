@@ -1295,15 +1295,7 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T,Tint>& Vtot)
 }
 
 
-// We compute here a polyhedral domain in which we expect to find
-// possibly roots.
-//
-// The computed domain lies inside of the cone and it comes before the
-// business of Vinberg of selecting the level at which the roots will
-// be found.
-//
-// All tricks are allowed in that search. We only want to restrict the
-// search space
+// We need this code because ListRoot can be empty
 template<typename T, typename Tint>
 MyMatrix<T> GetInitial_FACfeasible(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
@@ -1335,7 +1327,6 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
   std::cerr << "FindRoots, step 3\n";
   bool need_consideration = true;
   while (true) {
-    std::cerr << "|ListRoot|=" << ListRoot.size() << "\n";
     if (need_consideration)
       if (f_exit(ListRoot, FACfeasible))
         break;
@@ -1343,7 +1334,7 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
     const std::pair<MyVector<Tint>,Tint> pair = iter.get_cand();
     const MyVector<Tint>& a = pair.first;
     const Tint& k = pair.second;
-    std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k << "\n";
+    std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k << " |ListRoot|=" << ListRoot.size() << "\n";
     std::vector<MyVector<Tint>> list_root_cand = FindRoot_filter<T,Tint>(Vtot, a, k, ListRoot, FACfeasible);
     if (list_root_cand.size() > 0) {
       need_consideration = true;
@@ -1391,8 +1382,25 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
   MyVector<Tint> v;
   int dim = Vtot.G.rows();
   auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
-    if (RankMat(FACfeasible) != dim)
+    int TheRank = RankMat(FACfeasible);
+    if (TheRank < dim - 1)
       return false;
+    if (TheRank == dim - 1) {
+      MyMatrix<T> NSP = NullspaceTrMat(FACfeasible);
+      if (NSP.rows() != 1) {
+        std::cerr << "The rank should be exactly 1\n";
+        throw TerminalException{1};
+      }
+      MyVector<T> v1 = GetMatrixRow(NSP, 0);
+      MyVector<T> v2 = RemoveFractionVector(v1);
+      MyVector<Tint> v3 = UniversalVectorConversion<Tint,T>(v2);
+      Tint norm = v3.dot(Vtot.G * v3);
+      if (norm <= 0) {
+        v = v3;
+        return true;
+      }
+      return false;
+    }
     std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
     if (opt) {
       // We cannot use the roots in order to get a cone.
