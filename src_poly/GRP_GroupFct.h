@@ -654,11 +654,10 @@ vectface OrbitFace(const Face& f, const std::vector<Telt>& LGen)
   return vf;
 }
 
-template<typename Tgroup>
-vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
+template<typename Tgroup, typename F>
+void OrbitSplittingSet_Kernel(vectface const& PreListTotal, Tgroup const& TheGRP, F f)
 {
   using Telt = typename Tgroup::Telt;
-  vectface TheReturn(TheGRP.n_act());
   std::unordered_set<Face> ListTotal;
   for (auto eFace : PreListTotal)
     ListTotal.insert(eFace);
@@ -669,7 +668,6 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
     if (iter == ListTotal.end())
       break;
     Face eSet=*iter;
-    TheReturn.push_back(eSet);
     std::unordered_set<Face> Additional{eSet};
     ListTotal.erase(eSet);
     std::unordered_set<Face> SingleOrbit;
@@ -702,9 +700,64 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
 	break;
       Additional = std::move(NewElts);
     }
+    f(eSet, SingleOrbit);
   }
+}
+
+
+
+template<typename Tgroup>
+vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
+{
+  vectface TheReturn(TheGRP.n_act());
+  auto f=[&](Face const& eSet, [[maybe_unused]] std::unordered_set<Face> const& SingleOrbit) -> void {
+    TheReturn.push_back(eSet);
+  };
+  OrbitSplittingSet_Kernel(PreListTotal, TheGRP, f);
   return TheReturn;
 }
+
+template<typename Tgroup>
+vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup const& TheGRP)
+{
+  using Tidx = typename Tgroup::Telt::Tidx;
+  Tidx len = TheGRP.n_act();
+  vectface TheReturn(len);
+  Face TheMin;
+  bool HasMin = false;
+  auto f=[&]([[maybe_unused]] Face const& eSet, std::unordered_set<Face> const& SingleOrbit) -> void {
+    vectface orbit(len);
+    Face minF;
+    bool IsFirst = true;
+    for (auto & uSet : SingleOrbit) {
+      orbit.push_back(uSet);
+      if (IsFirst) {
+        minF = uSet;
+        IsFirst = false;
+      } else {
+        if (uSet < minF)
+          minF = uSet;
+      }
+    }
+    // Now doing the comparison with existing data
+    if (HasMin) {
+      TheReturn = std::move(orbit);
+      TheMin = minF;
+      HasMin = false;
+    } else {
+      if (minF < TheMin) {
+        TheReturn = std::move(orbit);
+        TheMin = minF;
+      }
+    }
+  };
+  OrbitSplittingSet_Kernel(PreListTotal, TheGRP, f);
+  return TheReturn;
+}
+
+
+
+
 
 
 // Test if f1 is a subset of f2

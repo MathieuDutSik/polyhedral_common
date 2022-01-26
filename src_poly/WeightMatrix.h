@@ -301,7 +301,7 @@ public:
         Tidx iColImg = V[iCol];
         size_t pos = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
         size_t posImg = weightmatrix_idx<is_symmetric>(nbRow, iRowImg, iColImg);
-        TheMatImg[posImg] = TheMat[pos];
+        TheMatImg[pos] = TheMat[posImg];
       }
     }
     TheMat = TheMatImg;

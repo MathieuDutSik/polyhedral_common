@@ -15,26 +15,31 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
-    using Tint = mpz_class;
+    using T = mpq_class;
+    /*
+      We need to have T a field since otherwise, the rescaling will rescale the weights
+      and so the comparison will fail because of that.
+     */
+    static_assert(is_ring_field<T>::value, "Requires T to be a field");
     using Tidx_value = uint16_t;
     using Tgr = GraphBitset;
     using Tidx = int;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt,Tint>;
-    using Twmat = WeightMatrix<true, Tint, Tidx_value>;
+    using Twmat = WeightMatrix<true, T, Tidx_value>;
     //
     std::ifstream is(argv[1]);
-    MyMatrix<Tint> EXT=ReadMatrix<Tint>(is);
+    MyMatrix<T> EXT=ReadMatrix<T>(is);
     int nbCol=EXT.cols();
     int nbRow=EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    auto get_canonicalized_wmat=[](MyMatrix<Tint> const& EXT) -> std::pair<Twmat,Tgroup> {
+    auto get_canonicalized_wmat=[](MyMatrix<T> const& EXT) -> std::pair<Twmat,Tgroup> {
       size_t n_row = EXT.rows();
-      Twmat WMat = GetWeightMatrix<Tint,Tidx_value>(EXT);
+      Twmat WMat = GetWeightMatrix<T,Tidx_value>(EXT);
       WMat.ReorderingSetWeight();
-      std::pair<std::vector<Tidx>,std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<Tint,Tgr,Tidx,Tidx_value>(WMat);
+      std::pair<std::vector<Tidx>,std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<T,Tgr,Tidx,Tidx_value>(WMat);
       const std::vector<Tidx>& ListIdx = epair.first;
       const std::vector<std::vector<Tidx>>& ListGen = epair.second;
       WMat.RowColumnReordering(ListIdx);
@@ -59,13 +64,13 @@ int main(int argc, char *argv[])
     std::pair<Twmat,Tgroup> Pair1 = get_canonicalized_wmat(EXT);
     std::cerr << "------------------------------------------------------------\n";
     //
-    auto get_random_equivalent=[](MyMatrix<Tint> const& eMat) -> MyMatrix<Tint> {
+    auto get_random_equivalent=[](MyMatrix<T> const& eMat) -> MyMatrix<T> {
       int nbRow = eMat.rows();
       int n = eMat.cols();
       std::vector<int> ePerm = RandomPermutation<int>(nbRow);
-      MyMatrix<Tint> eUnimod = RandomUnimodularMatrix<Tint>(n);
-      MyMatrix<Tint> eProd = eMat * eUnimod;
-      MyMatrix<Tint> RetMat(nbRow, n);
+      MyMatrix<T> eUnimod = RandomUnimodularMatrix<T>(n);
+      MyMatrix<T> eProd = eMat * eUnimod;
+      MyMatrix<T> RetMat(nbRow, n);
       for (int iRow=0; iRow<nbRow; iRow++) {
         int jRow = ePerm[iRow];
         RetMat.row(iRow) = eProd.row(jRow);
@@ -76,11 +81,15 @@ int main(int argc, char *argv[])
     int n_iter = 10;
     for (int i_iter=0; i_iter<n_iter; i_iter++) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
-      MyMatrix<Tint> EXT2 = get_random_equivalent(EXT);
+      MyMatrix<T> EXT2 = get_random_equivalent(EXT);
       std::pair<Twmat,Tgroup> Pair2 = get_canonicalized_wmat(EXT2);
       std::cerr << "------------------------------------------------------------\n";
       if (Pair1.first != Pair2.first) {
         std::cerr << "The reordering of the column of the matrix failed\n";
+        std::cerr << "Pair1.first=\n";
+        PrintWeightedMatrix(std::cerr, Pair1.first);
+        std::cerr << "Pair2.first=\n";
+        PrintWeightedMatrix(std::cerr, Pair2.first);
         throw TerminalException{1};
       }
       if (Pair1.second != Pair2.second) {
