@@ -906,7 +906,6 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
   using Telt = typename Tgroup::Telt;
   using Telt_idx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
-  using Twmat = WeightMatrix<true, std::vector<T>, Tidx_value>;
   std::vector<MyMatrix<T>> ListMat{G};
   struct ret_type {
     pair_char<T> e_pair_char;
@@ -1195,10 +1194,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   };
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
-  // See for details https://stackoverflow.com/questions/6438086/iterator-invalidation-rules-for-c-containers
-  // Which writes: "vector: all iterators and references before the point of insertion are unaffected, unless
-  // the new container size is greater than the previous capacity (in which case all iterators and references are
-  // invalidated) [23.2.4.3/1]
   // Took 1 week to fully debug that problem.
   auto insert_adjacent_vertices=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> void {
     const FundDomainVertex<T,Tint>& theVert = vertFull.vert;
@@ -1232,6 +1227,16 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       if (l_status[i] == 1) {
         IsFinished = false;
         l_status[i] = 0;
+        // We need to do a direct copy in that case.
+        // This is because we are working with a std::vector, which contains a T* array.
+        // That array got deallocated and reallocated. This invalidates the const& reference.
+        //
+        // See for details https://stackoverflow.com/questions/6438086/iterator-invalidation-rules-for-c-containers
+        // Which writes: "vector: all iterators and references before the point of insertion are unaffected, unless
+        // the new container size is greater than the previous capacity (in which case all iterators and references are
+        // invalidated) [23.2.4.3/1]
+        //
+        // The original problem originally took one week to debug.
         FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
         insert_adjacent_vertices(VertFullCp);
       }
