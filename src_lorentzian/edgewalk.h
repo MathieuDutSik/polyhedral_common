@@ -289,6 +289,31 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 
 
 
+template<typename Tint>
+struct AdjacencyDirection {
+  std::vector<MyVector<Tint>> const& l_ui;
+  MyVector<Tint> const& v_disc;
+};
+
+template<typename Tint>
+AdjacencyDirection<Tint> GetAdjacencyDirection(MyMatrix<Tint> const& MatRoot, Face const& f)
+{
+  size_t n_root = MatRoot.rows();
+  size_t i_disc = std::numeric_limits<size_t>::max();
+  std::vector<MyVector<Tint>> l_ui;
+  for (size_t i_root=0; i_root<n_root; i_root++) {
+    if (f[i_root] == 1) {
+      MyVector<Tint> root = GetMatrixRow(MatRoot, i_root);
+      l_ui.push_back(root);
+    } else {
+      i_disc = i_root;
+    }
+  }
+  MyVector<Tint> v_disc = GetMatrixRow(MatRoot, i_disc);
+  return {l_ui, v_disc};
+}
+
+
 
 
 /*
@@ -301,8 +326,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   ---How is (1/2) P defined and correspond to k (typo correction)
  */
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, MyVector<T> const& k, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms, MyVector<Tint> const& v_disc)
+FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& k, AdjacencyDirection<Tint> const ad)
 {
+  const std::vector<MyVector<Tint>>& l_ui = ad.l_ui;
+  const MyVector<Tint>& v_disc = ad.v_disc;
   std::cerr << "-------------------------------------- EDGEWALK PROCEDURE ---------------------------------------------\n";
   std::cerr << "k=" << StringVectorGAP(k) << "\n";
   std::cerr << "l_norms =";
@@ -844,43 +871,60 @@ struct FundDomainVertex_FullInfo {
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert)
 {
+  //
+  // Put the stuff that can help for invariant first
   std::unordered_map<MyVector<Tint>,int> map_v;
   size_t len1 = vert.MatRoot.rows();
   for (size_t i=0; i<len1; i++) {
     MyVector<Tint> eV = GetMatrixRow(evert1.MatRoot, i);
     map_v[eV] = 1;
   }
-  T norm = vert.gen.dot(G * vert.gen);
-  if (norm < 0) {
-    MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
-    map_v[eV] = 2;
-  } else {
-    
-  }
-
-
-  
-  std::vector<MyVector<Tint>> l_vect;
-  std::vector<T> Vdiag;
-  for (auto & kv : map_v) {
-    l_vect.push_back(kv.first);
-    Vdiag.push_back(T(kv.second));
-  }
-  l_vect.push_back(
-  l_vect.push_back(UniversalVectorConversion<Tint,T>(RemoveFractionVector(evert2.gen)));
-  T insVal = 10;
-  Vdiag.push_back(insVal);
-  Vdiag.push_back(insVal);
-  //  std::cerr << "Vdiag=" << Vdiag << "\n";
-  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
-  MyMatrix<T> Gred = MatV * G * MatV.transpose();
-  //  std::cerr << "Gred=\n";
-  //  WriteMatrix(std::cerr, Gred);
-  std::vector<MyMatrix<T>> ListMat{G};
+  MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
+  map_v[gen_tint] = 2;
+  //
   using Tidx = uint32_t;
   using Tidx_value = uint16_t;
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
-  WMat.ReorderingSetWeight();
+  using Telt = typename Tgroup::Telt;
+  using Telt_idx = typename Telt::Tidx;
+  std::vector<MyMatrix<T>> ListMat{G};
+  auto get_canonicalized_record=[&](std::unordered_map<MyVector<Tint>,int> const& the_map) -> std::pair<WeightMatrix<true, std::vector<T>, Tidx_value>,Tgroup> {
+    std::vector<MyVector<Tint>> l_vect;
+    std::vector<T> Vdiag;
+    for (auto & kv : the_map) {
+      l_vect.push_back(kv.first);
+      Vdiag.push_back(T(kv.second));
+    }
+    MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
+    WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
+    WMat.ReorderingSetWeight();
+    std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+    const std::vector<Tidx>& ListIdx = epair.first;
+    const std::vector<std::vector<Tidx>>& ListGen = epair.second;
+    WMat.RowColumnReordering(ListIdx);
+    // There are two use case of computing the group
+    // ---For the computation of minimal adjacencies that would get us a full dimensional system
+    // ---For the computation of orbits of adjacent vertices
+    // So, in both cases, we need to reduce to the group for values 1.
+    std::vector<Telt> LGen;
+    for (auto & eGen : ListGen) {
+      std
+    }
+    Tgoup GRP(LGen);
+    return {std::move(WMat), std::move(GRP)};
+  };
+
+  T norm = vert.gen.dot(G * vert.gen);
+  if (norm == 0) {
+    // In isotropic case, we are unfortunately forced to do more complex stuff
+    // Those needs
+    auto erec = get_canonicalized_record(map_v);
+    // Add new vertices to
+  }
+  auto frec = get_canonicalized_record(map_v);
+  const auto& WMat = frec.first;
+  size_t seed = 1440;
+  size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
+  
   return {MatV,std::move(WMat)};
 }
 
@@ -1055,7 +1099,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
   };
-  size_t iVERT = 0;
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
   // See for details https://stackoverflow.com/questions/6438086/iterator-invalidation-rules-for-c-containers
@@ -1071,25 +1114,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     //
-    size_t iFAC = 0;
     for (auto & eFAC : vf) {
-      Face fFAC = eFAC;
-      size_t i_disc = std::numeric_limits<size_t>::max();
-      std::cerr << "\n";
-      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << "\n";
-      std::vector<MyVector<Tint>> l_ui;
-      for (size_t i_root=0; i_root<n_root; i_root++) {
-        if (fFAC[i_root] == 1) {
-          MyVector<Tint> root = GetMatrixRow(theVert.MatRoot, i_root);
-          l_ui.push_back(root);
-        } else {
-          i_disc = i_root;
-        }
-      }
-      MyVector<Tint> v_disc = GetMatrixRow(theVert.MatRoot, i_disc);
-      std::cerr << "iVERT=" << iVERT << " iFAC=" << iFAC << " n_root=" << n_root << " |eFAC|=" << eFAC.count() << " i_disc=" << i_disc << "\n";
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, theVert.gen, l_ui, l_norms, v_disc);
-      {
+      AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, theVert.gen, ad);
+      { // Output. Fairly important to see what is happening
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
         std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
@@ -1098,12 +1126,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
         std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
       }
-      func_insert_pair_vertices(theVert, entry, theVert, fVert);
-      iFAC++;
+      FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info(G, fVert);
+      func_insert_vertex(fVertFull);
     }
-    iVERT++;
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
-    //    throw TerminalException{1};
   };
   FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info(G, eVert);
   func_insert_vertex(eVert);
@@ -1256,7 +1282,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       //
       MyMatrix<T> const& RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
-      CheckPositiveDefinite(G_P);
+      //      CheckPositiveDefinite(G_P);
       std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
       for (auto & e_v : l_v) {
         MyVector<T> e_vt = UniversalVectorConversion<T,Tint>(e_v);
