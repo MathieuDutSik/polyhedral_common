@@ -1273,9 +1273,14 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
   std::cerr << "Exiting from the infinite loop of enumeration of vertex pairs\n";
 }
 
-template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
+template<typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
 {
+  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
+  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
+    l_orbit_vertices_ret.push_back(vertFull.vert);
+    return false;
+  };
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
@@ -1293,12 +1298,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     s_gen_isom_cox.insert(eP);
     return false;
   };
-  std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
-  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
-    l_orbit_vertices_ret.push_back(vertFull.vert);
-    return false;
-  };
-  LORENTZ_RunEdgewalkAlgorithm_Kernel(G, l_norms, eVert, f_vertex, f_isom);
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G, l_norms, eVert, f_vertex, f_isom);
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
@@ -1306,7 +1306,28 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 }
 
 
-
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& G2, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert1, FundDomainVertex<T,Tint> const& eVert2)
+{
+  std::optional<MyMatrix<Tint>> answer;
+  //
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(G1, l_norms, eVert2);
+  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> bool {
+    if (vertFull1.hash == vertFull2.hash) {
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
+      if (equiv_opt) {
+        answer = UniversalMatrixConversion<Tint,T>(*equiv_opt);
+        return true;
+      }
+    }
+    return false;
+  };
+  auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
+    return false;
+  };
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G1, l_norms, eVert1, f_vertex, f_isom);
+  return answer;
+}
 
 
 
@@ -1689,14 +1710,16 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
     print_result( {} );
     return;
   }
+  std::vector<T> l_norms = l_norms1;
   std::cerr << "We have l_norms\n";
   //
   std::string OptionInitialVertex="vinberg";
   std::string FileInitialVertex="irrelevant";
-  FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G1, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert2 = get_initial_vertex<T,Tint>(G2, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   //
-  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
-
+  std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism(G1, G2, l_norms, eVert1, eVert2);
+  print_result(opt);
 }
 
 
