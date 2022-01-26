@@ -880,6 +880,7 @@ struct FundDomainVertex_FullInfo {
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert)
 {
+  std::cerr << "gen_fund_domain_fund_info, beginning\n";
   //
   // Put the stuff that can help for invariant first
   std::unordered_map<MyVector<Tint>,int> map_v;
@@ -890,6 +891,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
   }
   MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
   map_v[gen_tint] = 2;
+  std::cerr << "Initial map_v built\n";
   //
   using Tidx = uint32_t;
   using Tidx_value = uint16_t;
@@ -979,28 +981,34 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
     return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
   };
   T norm = vert.gen.dot(G * vert.gen);
+  std::cerr << "norm=" << norm << "\n";
   if (norm == 0) {
     // In isotropic case, we are unfortunately forced to do more complex stuff
     // Those needs
     ret_type erec = get_canonicalized_record(map_v);
+    std::cerr << "We have erec\n";
     // Add new vertices to
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(erec.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
+    std::cerr << "We have vf\n";
     // Finding the minimal orbit and then
     vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
+    std::cerr << "We have vf_min\n";
     for (auto & eFAC : vf_min) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, vert.gen, ad);
       MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
       map_v[fVert_tint] = 3;
     }
+    std::cerr << "map_v has been extended\n";
   }
   ret_type frec = get_canonicalized_record(map_v);
   const auto& WMat = frec.e_pair_char.second;
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
+  std::cerr << "gen_fund_domain_fund_info, ending\n";
   return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1)};
 }
 
