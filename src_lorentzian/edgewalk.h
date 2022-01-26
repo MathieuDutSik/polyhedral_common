@@ -1185,6 +1185,13 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       }
     }
     std::cerr << "Failed to find some isomorphism\n";
+    const auto& epair = vertFull1.e_pair_char;
+    std::cerr << "MatV=" << StringMatrixGAP(epair.first) << "\n";
+    PrintWeightedMatrixGAP(std::cerr, epair.second);
+    std::cerr << "MatV/WMat=\n";
+    WriteMatrix(std::cerr, epair.first);
+    PrintWeightedMatrix(std::cerr, epair.second);
+    std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
     std::cerr << "Before insert |l_status|=" << l_status.size() << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
