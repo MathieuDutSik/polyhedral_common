@@ -1143,8 +1143,12 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T,Tint>& Vtot)
       V1_roots.push_back(root_cand);
     std::cerr << "k=" << k << " |V1_roots|=" << V1_roots.size() << " |list_root_cand|=" << list_root_cand.size() << "\n";
   }
-  std::cerr << "|V1_roots|=" << V1_roots.size() << "\n";
-  return GetFacetOneDomain(V1_roots);
+  std::cerr << "FundCone |V1_roots|=" << V1_roots.size() << "\n";
+  if (V1_roots.size() == 0) {
+    return {};
+  } else {
+    return GetFacetOneDomain(V1_roots);
+  }
 }
 
 
