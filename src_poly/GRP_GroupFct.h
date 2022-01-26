@@ -742,14 +742,20 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup 
     }
     //    std::cerr << "f : orbit and minF built\n";
     // Now doing the comparison with existing data
-    if (!HasMin) {
+    auto set_return=[&]() -> void {
       TheReturn = std::move(orbit);
       TheMin = minF;
+    };
+    if (!HasMin) {
+      set_return();
       HasMin = true;
     } else {
-      if (minF < TheMin) {
-        TheReturn = std::move(orbit);
-        TheMin = minF;
+      if (orbit.size() < TheReturn.size()) {
+        set_return();
+      } else {
+        if (minF < TheMin) {
+          set_return();
+        }
       }
     }
     //    std::cerr << "f : end\n";
