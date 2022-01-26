@@ -1202,7 +1202,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       if (test)
         return true;
     }
-    bool test = f_vertex(vertFull);
+    bool test = f_vertex(vertFull1);
     if (test)
       return true;
     l_status.push_back(1);
@@ -1285,7 +1285,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
-      return;
+      return false;
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
@@ -1669,8 +1669,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   SingleBlock BlockPROC=eFull.ListBlock.at("PROC");
   std::string FileLorMat1=BlockPROC.ListStringValues.at("FileLorMat1");
   std::string FileLorMat2=BlockPROC.ListStringValues.at("FileLorMat2");
-  MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat);
-  MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat);
+  MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat1);
+  MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat2);
   TestLorentzianity(G1);
   TestLorentzianity(G2);
   //
@@ -1680,7 +1680,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
       if (OutFormat == "GAP") {
         if (opt) {
           os << "return ";
-          PrintMatrixGAP(os, *opt);
+          WriteMatrixGAP(os, *opt);
           os << ";\n";
         } else {
           os << "return fail;\n";
@@ -1718,7 +1718,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G1, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   FundDomainVertex<T,Tint> eVert2 = get_initial_vertex<T,Tint>(G2, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   //
-  std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism(G1, G2, l_norms, eVert1, eVert2);
+  std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T,Tint,Tgroup>(G1, G2, l_norms, eVert1, eVert2);
   print_result(opt);
 }
 
