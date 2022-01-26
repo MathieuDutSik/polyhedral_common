@@ -209,6 +209,10 @@ public:
     TheMat = std::move(eMat.TheMat);
     return *this;
   }
+  WeightMatrix<is_symmetric,T,Tidx_value> DirectCopy() const
+  {
+    return WeightMatrix<is_symmetric,T,Tidx_value>(nbRow, TheMat, ListWeight);
+  }
   // The destructor
   ~WeightMatrix()
   {

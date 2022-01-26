@@ -50,7 +50,7 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T>& GramMat, con
 template<typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV, const T& norm, Fins f_ins)
 {
-  bool PrintInput=true;
+  bool PrintInput=false;
   if (PrintInput) {
     std::cerr << "GramMat=\n";
     WriteMatrix(std::cerr, GramMat);
@@ -99,7 +99,7 @@ void ComputeSphericalSolutions(const MyMatrix<T>& GramMat, const MyVector<T>& eV
       T norm_red = Vred.dot(GramMatRed * Vred);
       MyVector<T> Vtot = eV + UniversalVectorConversion<T,Tint>(V_x);
       T norm_tot = Vtot.dot(GramMat * Vtot);
-      std::cerr << "ComputeSphericalSolutions norm_red=" << norm_red << " norm_tot=" << norm_tot << " min=" << min << "\n";
+      //      std::cerr << "ComputeSphericalSolutions norm_red=" << norm_red << " norm_tot=" << norm_tot << " min=" << min << "\n";
       if (norm_red != norm_tot || norm_tot != min) {
         std::cerr << "different norms\n";
         throw TerminalException{1};
@@ -301,15 +301,15 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (int j=0; j<n-1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
-  std::cerr << "Morth=\n";
-  WriteMatrix(std::cerr, Morth);
+  //  std::cerr << "Morth=\n";
+  //  WriteMatrix(std::cerr, Morth);
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T,Tint>(Morth);
   MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V_i);
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
-  std::cerr << "M2_tr=\n";
-  WriteMatrixGAP(std::cerr, M2_tr);
-  std::cerr << "Det(M2_tr)=" << DeterminantMat(M2_tr) << "\n";
+  //  std::cerr << "M2_tr=\n";
+  //  WriteMatrixGAP(std::cerr, M2_tr);
+  //  std::cerr << "Det(M2_tr)=" << DeterminantMat(M2_tr) << "\n";
   std::cerr << "Before GetIntegerPoints\n";
   std::vector<MyVector<Tint>> W_in = GetIntegerPoints(M2_tr);
   std::vector<MyVector<Tint>> W;

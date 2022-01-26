@@ -671,18 +671,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> 
       return v1(0) * v2(1) - v1(1) * v2(0);
     };
     auto is_corr=[&](MyVector<Tint> const& x) -> bool {
-      std::cerr << "Testing adequateness of x=" << x << " norm=" << norm << "\n";
+      //      std::cerr << "Testing adequateness of x=" << x << " norm=" << norm << "\n";
       // In the isotropic case, there is no relevant test
       // See Right picture on Figure 8.1 of the edgewalk paper
       if (norm < 0) {
         T scal = eval_scal(e_comp.GP_LN, e_comp.r0_work, x);
         if (scal <= 0) {
-          std::cerr << "scal=" << scal << "\n";
+          //          std::cerr << "scal=" << scal << "\n";
           return false;
         }
       }
       Tint eDet = det(e_comp.r0_work, x);
-      std::cerr << "eDet=" << eDet << "\n";
+      //      std::cerr << "eDet=" << eDet << "\n";
       return eDet > 0;
     };
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
@@ -744,43 +744,40 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> 
     if (opt_v) {
       MyVector<Tint> const& alpha = *opt_v;
       std::cerr << "alpha=" << StringVectorGAP(alpha) << "\n";
-      auto f_ins=[&]() -> void {
-        std::vector<MyVector<Tint>> l_roots = l_ui;
-        l_roots.push_back(alpha);
-        MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
-        MyMatrix<T> EquaMat = Mat_root * G;
-        MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
-        if (NSP.rows() != 1) {
-          std::cerr << "We should have exactly one row\n";
-          return;
+      std::vector<MyVector<Tint>> l_roots = l_ui;
+      l_roots.push_back(alpha);
+      MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
+      MyMatrix<T> EquaMat = Mat_root * G;
+      MyMatrix<T> NSP = NullspaceTrMat(EquaMat);
+      if (NSP.rows() != 1) {
+        std::cerr << "We should have exactly one row\n";
+        throw TerminalException{1};
+      }
+      MyVector<T> gen = GetMatrixRow(NSP, 0);
+      std::cerr << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
+      T scal = gen.dot(G * k);
+      //        std::cerr << "We have scal\n";
+      auto get_gen=[&]() -> std::optional<MyVector<T>> {
+        if (scal < 0) { // The sign convention means that two vectors in the same cone have negative scalar product.
+          return gen;
         }
-        MyVector<T> gen = GetMatrixRow(NSP, 0);
-        std::cerr << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
-        T scal = gen.dot(G * k);
-        //        std::cerr << "We have scal\n";
-        auto get_gen=[&]() -> std::optional<MyVector<T>> {
-          if (scal < 0) { // The sign convention means that two vectors in the same cone have negative scalar product.
-            return gen;
-          }
-          if (scal > 0) {
-            return -gen;
-          }
-          return {};
-        };
-        std::optional<MyVector<T>> opt_k_new = get_gen();
-        if (opt_k_new) {
-          MyVector<T> k_new = RemoveFractionVector(*opt_k_new);
-          T scal = v_disc_t.dot(G * k_new);
-          if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
-            MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
-            FundDomainVertex<T,Tint> fund_v{k_new,MatRoot};
-            //            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
-            RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, res_norm, e_norm, fund_v);
-            l_candidates.push_back(eCand);
-          }
+        if (scal > 0) {
+          return -gen;
         }
+        return {};
       };
-      f_ins();
+      std::optional<MyVector<T>> opt_k_new = get_gen();
+      if (opt_k_new) {
+        MyVector<T> k_new = RemoveFractionVector(*opt_k_new);
+        T scal = v_disc_t.dot(G * k_new);
+        if (scal < 0) { // The convention in Lorentzian is negative scalar (see end of Sect 2 of edgewalk paper)
+          MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
+          FundDomainVertex<T,Tint> fund_v{k_new,MatRoot};
+          //            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
+          RootCandidate<T,Tint> eCand = gen_possible_extension(G, k, alpha, res_norm, e_norm, fund_v);
+          l_candidates.push_back(eCand);
+        }
+      }
     }
   }
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
@@ -875,6 +872,17 @@ struct FundDomainVertex_FullInfo {
   size_t hash;
   Tgroup GRP1;
 };
+
+
+template<typename T, typename Tint, typename Tgroup>
+FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,Tint,Tgroup> const& fdfi)
+{
+  return {fdfi.vert, {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()}, fdfi.hash, fdfi.GRP1};
+}
+
+
+
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -1180,8 +1188,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "Failed to find some isomorphism\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char))
       f_insert_gen(UniversalMatrixConversion<Tint,T>(eGen));
+    std::cerr << "Before insert |l_status|=" << l_status.size() << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
+    std::cerr << "After the move operator\n";
   };
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
@@ -1222,7 +1232,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       if (l_status[i] == 1) {
         IsFinished = false;
         l_status[i] = 0;
-        insert_adjacent_vertices(l_orbit_vertices[i]);
+        FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
+        insert_adjacent_vertices(VertFullCp);
       }
     }
     if (IsFinished)
@@ -1251,23 +1262,23 @@ std::vector<MyVector<Tint>> get_simple_cone_from_lattice(MyMatrix<T> const& G, s
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint,T>(G);
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
-  std::cerr << "NSP=\n";
-  WriteMatrix(std::cerr, NSP);
+  //  std::cerr << "NSP=\n";
+  //  WriteMatrix(std::cerr, NSP);
   for (auto & e_norm : l_norms) {
     std::cerr << "---------------------- e_norm=" << e_norm << " ----------------------\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
-    std::cerr << "Latt=\n";
-    WriteMatrix(std::cerr, Latt);
+    //    std::cerr << "Latt=\n";
+    //    WriteMatrix(std::cerr, Latt);
     //    std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
     //    std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
-    std::cerr << "Latt_i_Orth=\n";
-    WriteMatrix(std::cerr, Latt_i_Orth);
+    //    std::cerr << "Latt_i_Orth=\n";
+    //    WriteMatrix(std::cerr, Latt_i_Orth);
     //    std::cerr << "We have Latt_i_Orth\n";
     MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
-    std::cerr << "G_P=\n";
-    WriteMatrix(std::cerr, G_P);
+    //    std::cerr << "G_P=\n";
+    //    WriteMatrix(std::cerr, G_P);
     CheckPositiveDefinite(G_P);
     std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
     for (auto & e_v : l_v) {
