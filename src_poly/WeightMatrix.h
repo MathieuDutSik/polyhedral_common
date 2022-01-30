@@ -688,12 +688,21 @@ WeightMatrix<is_symmetric, T, Tidx_value> WeightedMatrixFromMyMatrix(MyMatrix<Ti
 {
   size_t nbRow = M.rows();
   WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
+  size_t nbEnt = 0;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       Tidx_value eVal = M(iRow,jRow);
+      if (size_t(eVal) > nbEnt)
+        nbEnt = size_t(eVal);
       WMat.intDirectAssign(iRow, jRow, eVal);
     }
   }
+  nbEnt++;
+  std::vector<T> ListWeight;
+  T eVal_T;
+  for (size_t iEnt=0; iEnt<nbEnt; iEnt++)
+    ListWeight.push_back(eVal_T);
+  WMat.SetWeight(ListWeight);
   return WMat;
 }
 
@@ -1155,6 +1164,8 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_va
 }
 
 
+
+
 template<typename Tgr, typename Tidx, typename TidxC>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> GetGroupCanonicalizationVector_Kernel_tidxc(size_t const& nbRow, Tgr const& eGR)
 {
@@ -1228,6 +1239,9 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(WeightMatrix<tru
     throw TerminalException{1};
   }
   Tgr eGR=GetGraphFromWeightedMatrix<T,Tgr>(WMat);
+  GRAPH_PrintOutputGAP(std::cerr, eGR);
+
+  
 #ifdef USE_BLISS
   std::vector<std::vector<Tidx>> ListGen = BLISS_GetListGenerators<Tgr,Tidx>(eGR, nbRow);
 #endif
@@ -1249,6 +1263,26 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
   for (auto & eList : ListGen)
     LGen.emplace_back(std::move(Telt(eList)));
   return Tgroup(LGen, nbRow);
+}
+
+template<typename T, typename Tgroup, typename Tidx_value>
+bool CheckStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const& WMat, Tgroup const& g)
+{
+  size_t n_row = WMat.rows();
+  for (auto & eGen : g.GeneratorsOfGroup()) {
+    for (size_t i_row=0; i_row<n_row; i_row++) {
+      size_t i_rowImg = eGen.at(i_row);
+      for (size_t j_row=0; j_row<n_row; j_row++) {
+        size_t j_rowImg = eGen.at(j_row);
+        Tidx_value val1 = WMat.GetValue(i_row, j_row);
+        Tidx_value val2 = WMat.GetValue(i_rowImg, j_rowImg);
+        if (val1 != val2) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 
