@@ -142,8 +142,41 @@ struct FiniteMatrixGroup {
   std::vector<Telt> ListPermGen;
 };
 
-
-
+template<typename T, typename Telt>
+void CheckerPairReord(std::vector<T> const& V1, Telt const& g1, std::vector<T> const& V2, Telt const& g2)
+{
+  size_t len = V1.size();
+  std::vector<T> V1reord(len);
+  for (size_t i=0; i<len; i++) {
+    size_t pos = g1.at(i);
+    V1reord[i] = V1[pos];
+  }
+  std::vector<T> V2reord(len);
+  for (size_t i=0; i<len; i++) {
+    size_t pos = g2.at(i);
+    V2reord[i] = V2[pos];
+  }
+  for (size_t i=1; i<len; i++) {
+    if (!(V1reord[i-1] < V1reord[i])) {
+      std::cerr << "V1reord is not increasing at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+    if (!(V2reord[i-1] < V2reord[i])) {
+      std::cerr << "V2reord is not increasing at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+  }
+  if (V1reord != V2reord) {
+    std::cerr << "V1reord is not identical to V2reord\n";
+    throw TerminalException{1};
+  }
+  /*
+  std::cerr << "Passed the CheckerPairReord\n";
+  std::cerr << "V1reord=\n";
+  for (auto& eV : V1reord)
+    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+  */
+}
 
 // The space must be defining a finite index subgroup of T^n
 template<typename T, typename Tgroup>
@@ -245,6 +278,9 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       std::cerr << "We have ListImage\n";
 #endif
       Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
+#ifdef DEBUG_MATRIX_GROUP
+      CheckerPairReord(O, ePermS, ListImage, ePermB);
+#endif
       Telt ePermGenSelect=ePermSinv * ePermB;
 
 #ifdef DEBUG_MATRIX_GROUP_GEN
@@ -255,8 +291,20 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	v[nbRow+iO]=nbRow+jO;
       }
       Telt eNewPerm(std::move(v));
-#ifdef DEBUG_MATRIX_GROUP_GEN
-      std::cerr << "We have eNewPerm\n";
+#ifdef DEBUG_MATRIX_GROUP
+      for (int iO=0; iO<Osiz; iO++) {
+        MyVector<T> eVect = O[iO];
+        MyVector<T> eVectImg1 = TheAction(eVect, eMatrGen);
+        size_t pos = eNewPerm.at(iO + nbRow_tidx) - nbRow_tidx;
+        MyVector<T> eVectImg2 = O[pos];
+        if (eVectImg1 != eVectImg2) {
+          std::cerr << "Inconsistency\n";
+          std::cerr << "iGen=" << iGen << " iO=" << iO << "\n";
+          std::cerr << "eVectImg1=" << StringVectorGAP(eVectImg1) << "\n";
+          std::cerr << "eVectImg2=" << StringVectorGAP(eVectImg2) << "\n";
+          throw TerminalException{1};
+        }
+      }
 #endif
       ListPermGenProv.emplace_back(std::move(eNewPerm));
     }
@@ -608,8 +656,6 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     return {n, GRPmatr.EXTfaithAct, ListMatrGen, ListPermGen};
   };
 
-
-  
   while(true) {
     std::optional<MyVector<T>> test1=IsEquiv(eElt);
     std::optional<MyVector<T>> test2=IsStabilizing(GRPwork);
@@ -734,7 +780,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinPolytopeIntegral_Automorphism_Subs
   using Telt=typename Tgroup::Telt;
   int dim=GRP.EXTfaithAct.cols();
   MyMatrix<T> eBasis=GetZbasis(GRP.EXTfaithAct);
-  MyMatrix<T> EXTbas=GRP.EXTfaithAct*Inverse(eBasis);
+  MyMatrix<T> EXTbas=GRP.EXTfaithAct * Inverse(eBasis);
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto & eGen : GRP.ListPermGen) {
     MyMatrix<T> TheMat=FindTransformation(EXTbas, EXTbas, eGen);

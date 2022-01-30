@@ -27,9 +27,9 @@ std::optional<MyMatrix<T>> FindTransformationGeneral(MyMatrix<T> const& EXT1, My
     eMat1.row(iRow)=EXT1.row(iRow1);
     eMat2.row(iRow)=EXT2.row(iRow2);
   }
-  MyMatrix<T> eMat1inv=Inverse(eMat1);
-  MyMatrix<T> RetMat=eMat1inv*eMat2;
-  MyMatrix<T> CheckMat=EXT1*RetMat;
+  MyMatrix<T> eMat1inv = Inverse(eMat1);
+  MyMatrix<T> RetMat = eMat1inv * eMat2;
+  MyMatrix<T> CheckMat = EXT1 * RetMat;
   for (int iRow1=0; iRow1<nbRow; iRow1++) {
     int iRow2=ePerm.at(iRow1);
     for (int iCol=0; iCol<nbCol; iCol++)
