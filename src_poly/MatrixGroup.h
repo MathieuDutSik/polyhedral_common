@@ -152,27 +152,23 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n=GRPmatr.n;
-  MyMatrix<T> ModSpace=TheMod*IdentityMat<T>(n);
+  MyMatrix<T> ModSpace=TheMod * IdentityMat<T>(n);
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "TheMod=" << TheMod << "\n";
   std::cerr << "n=" << n << "\n";
-  std::cerr << "TheSpace=\n";
-  WriteMatrix(std::cerr, TheSpace);
+  //  std::cerr << "TheSpace=\n";
+  //  WriteMatrix(std::cerr, TheSpace);
 #endif
   MyMatrix<T> TheSpaceMod=Concatenate(TheSpace, ModSpace);
   auto VectorMod=[&](MyVector<T> const& V) -> MyVector<T> {
     MyVector<T> Vret(n);
-    for (int i=0; i<n; i++) {
-      T q=QuoInt(V(i), TheMod);
-      T nVal=V(i) - q*TheMod;
-      //      std::cerr << "i=" << i << " V(i)=" << V(i) << " nVal=" << nVal << "\n";
-      Vret(i)=nVal;
-    }
+    for (int i=0; i<n; i++)
+      Vret(i)=ResInt(V(i), TheMod);
     return Vret;
   };
   CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpaceMod);
   std::function<MyVector<T>(MyVector<T> const&,MyMatrix<T> const&)> TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=ProductVectorMatrix(eClass, eElt);
+    MyVector<T> eVect=eElt.transpose() * eClass;
     return VectorMod(eVect);
   };
   auto IsStabilizing=[&](FiniteMatrixGroup<T,Telt> const& TheGRP) -> std::optional<MyVector<T>> {
@@ -182,7 +178,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       std::cerr << "i=" << i << " |ListMatrGen|=" << TheGRP.ListMatrGen.size() << "\n";
 #endif
       for (auto & eGen : TheGRP.ListMatrGen) {
-	MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
+	MyVector<T> eVectG=eGen.transpose() * eVect;
         std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpaceMod, eVectG);
 	bool test=CanTestSolutionIntMat(eCan, eVectG);
 	if (test != eRes.has_value()) {
@@ -237,19 +233,14 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       MyMatrix<T> eMatrGen=GRPret.ListMatrGen[iGen];
       Telt ePermGen=GRPret.ListPermGen[iGen];
       std::vector<Tidx> v(siz);
-      for (Tidx i=0; i<nbRow_tidx; i++) {
-	Tidx j=ePermGen.at(i);
-	v[i]=j;
-      }
+      for (Tidx i=0; i<nbRow_tidx; i++)
+	v[i]=ePermGen.at(i);
 #ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have initialized the first part\n";
 #endif
       std::vector<MyVector<T>> ListImage(Osiz);
-      for (int iV=0; iV<Osiz; iV++) {
-	MyVector<T> eV=O[iV];
-	MyVector<T> fV=TheAction(eV, eMatrGen);
-	ListImage[iV]=fV;
-      }
+      for (int iV=0; iV<Osiz; iV++)
+	ListImage[iV] = TheAction(O[iV], eMatrGen);
 #ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have ListImage\n";
 #endif
@@ -281,11 +272,15 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     }
     Tgroup eStab=GRPwork.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "  |eStab|=" << eStab.size() << "\n";
+    std::cerr << "  |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
     std::vector<MyMatrix<T>> ListMatrGen;
     std::vector<Telt> ListPermGen;
     std::vector<Telt> LGen = eStab.GeneratorsOfGroup();
+#ifdef DEBUG_MATRIX_GROUP
+    Tgroup GRPlgen(LGen, siz);
+    std::cerr << "|GRPlgen|=" << GRPlgen.size() << "\n";
+#endif
     Tidx nbRow_tidx = nbRow;
     for (auto & eGen : LGen) {
       std::vector<Tidx> v(nbRow);
@@ -298,6 +293,8 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     }
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "All generators have been created\n";
+    Tgroup GRPtest(ListPermGen, nbRow_tidx);
+    std::cerr << "|GRPtest|=" << GRPtest.size() << "\n";
 #endif
     GRPret={n, GRPmatr.EXTfaithAct, ListMatrGen, ListPermGen};
 #ifdef DEBUG_MATRIX_GROUP
@@ -353,7 +350,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_Stabilizer(FiniteMatrixGr
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
       for (auto & eGen : TheGRP.ListMatrGen) {
-	MyVector<T> eVectG=ProductVectorMatrix(eVect, eGen);
+	MyVector<T> eVectG=eGen.transpose() * eVect;
         std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace, eVectG);
 	if (!eRes) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -433,7 +430,7 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
     return Vret;
   };
   auto TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=ProductVectorMatrix(eClass, eElt);
+    MyVector<T> eVect=eElt.transpose() * eClass;
     return VectorMod(eVect);
   };
   auto IsEquiv=[&](MyMatrix<T> const& eEquiv) -> std::optional<MyVector<T>> {
@@ -698,7 +695,7 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename 
   auto IsEquivalence=[&](MyMatrix<T> const& eEquiv) -> bool {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace1, i);
-      MyVector<T> eVectG=ProductVectorMatrix(eVect, eEquiv);
+      MyVector<T> eVectG=eEquiv.transpose() * eVect;
       std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2, eVectG);
       if (!eRes)
 	return false;

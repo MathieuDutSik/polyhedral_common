@@ -3,29 +3,22 @@
 
 
 
-template<typename T>
-struct resultFT {
-  bool test;
-  MyMatrix<T> eMat;
-};
-
-
 
 
 
 template<typename T, typename Telt>
-resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
+std::optional<MyMatrix<T>> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, Telt const& ePerm)
 {
   if (EXT1.cols() != EXT2.cols() )
-    return {false, {}};
+    return {};
   if (EXT1.rows() != EXT2.rows() )
-    return {false, {}};
+    return {};
   int nbCol=EXT1.cols();
   int nbRow=EXT1.rows();
   SelectionRowCol<T> eSelect=TMat_SelectRowCol(EXT1);
   int eRank=eSelect.TheRank;
   if (eRank != nbCol)
-    return {false, {}};
+    return {};
   MyMatrix<T> eMat1(nbCol, nbCol);
   MyMatrix<T> eMat2(nbCol, nbCol);
   for (int iRow=0; iRow<nbCol; iRow++) {
@@ -41,9 +34,9 @@ resultFT<T> FindTransformationGeneral(MyMatrix<T> const& EXT1, MyMatrix<T> const
     int iRow2=ePerm.at(iRow1);
     for (int iCol=0; iCol<nbCol; iCol++)
       if (CheckMat(iRow1,iCol) != EXT2(iRow2,iCol))
-	return {false, {}};
+	return {};
   }
-  return {true, RetMat};
+  return RetMat;
 }
 
 
@@ -57,12 +50,12 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
     std::cerr << "ePerm should be of the same size as EXT1\n";
     throw TerminalException{1};
   }
-  resultFT<T> eRes=FindTransformationGeneral(EXT1, EXT2, ePerm);
-  if (!eRes.test) {
+  std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT1, EXT2, ePerm);
+  if (!opt) {
     std::cerr << "FindTransformationGeneral fails\n";
     throw TerminalException{1};
   }
-  return eRes.eMat;
+  return *opt;
 }
 
 
@@ -73,8 +66,8 @@ bool IsSymmetryGroupOfPolytope(MyMatrix<T> const& EXT, Tgroup const& GRP)
   MyMatrix<T> EXTred=ColumnReduction(EXT);
   std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
   for (auto const& eGen : ListGen) {
-    resultFT<T> resFT=FindTransformationGeneral(EXTred, EXTred, eGen);
-    if (!resFT.test)
+    std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXTred, EXTred, eGen);
+    if (!opt)
       return false;
   }
   return true;

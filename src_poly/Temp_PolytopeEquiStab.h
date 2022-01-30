@@ -1579,6 +1579,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(std::pair<MyMatrix
 {
   using Tgr=GraphBitset;
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
+  std::cerr << "|GRP1|=" << GRP1.size() << " RankMat(ep.first)=" << RankMat(ep.first) << "\n";
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1);
   std::vector<MyMatrix<T>> ListGenMat;
   for (auto & eGen : GRPfull.GeneratorsOfGroup()) {

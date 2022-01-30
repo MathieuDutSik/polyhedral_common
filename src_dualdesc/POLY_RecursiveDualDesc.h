@@ -126,8 +126,8 @@ template<typename T, typename Tgroup>
 void CheckGroupPolytope(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& step)
 {
   for (auto & eGen : GRP.GeneratorsOfGroup()) {
-    resultFT<T> eRes = FindTransformationGeneral(EXT, EXT, eGen);
-    if (!eRes.test) {
+    std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT, EXT, eGen);
+    if (!opt) {
       std::cerr << "Error in CheckGroupPolytope at step " << step << "\n";
       throw TerminalException{1};
     }
