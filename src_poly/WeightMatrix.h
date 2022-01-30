@@ -688,7 +688,6 @@ WeightMatrix<is_symmetric, T, Tidx_value> WeightedMatrixFromMyMatrix(MyMatrix<Ti
 {
   size_t nbRow = M.rows();
   WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
-  Tidx_value eVal;
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       Tidx_value eVal = M(iRow,jRow);

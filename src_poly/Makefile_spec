@@ -3,7 +3,8 @@
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
-PROGRAM		= TEST_LinPolytope_WMatCanonic
+#PROGRAM		= TEST_LinPolytope_WMatCanonic
+PROGRAM		= TEST_LinPolytopeIntegral_Automorphism
 #PROGRAM		= SHORT_SplitVectorFamily
 #PROGRAM		= SHORT_EnumerateCyclicCases
 #PROGRAM		= SHORT_GetShortestVector

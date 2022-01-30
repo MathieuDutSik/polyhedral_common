@@ -175,7 +175,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     MyVector<T> eVect=ProductVectorMatrix(eClass, eElt);
     return VectorMod(eVect);
   };
-  auto IsStabilizing=[&](MyVector<T> &V, FiniteMatrixGroup<T,Telt> const& TheGRP) -> bool {
+  auto IsStabilizing=[&](FiniteMatrixGroup<T,Telt> const& TheGRP) -> std::optional<MyVector<T>> {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
 #ifdef DEBUG_MATRIX_GROUP
@@ -190,18 +190,16 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	  throw TerminalException{1};
 	}
 	if (!eRes) {
-	  V=VectorMod(eVect);
+	  MyVector<T> V=VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
-	  std::cerr << "eVect=\n";
-	  WriteVector(std::cerr, eVect);
-	  std::cerr << "V=\n";
-	  WriteVector(std::cerr, V);
+	  std::cerr << "eVect=" << StringVectorGAP(eVect) << "\n";
+	  std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #endif
-	  return false;
+	  return V;
 	}
       }
     }
-    return true;
+    return {};
   };
   FiniteMatrixGroup<T,Telt> GRPret=GRPmatr;
   std::vector<MyVector<T>> ListVect;
@@ -210,22 +208,17 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "|G(EXT)|=" << Tgroup(GRPmatr.ListPermGen, nbRow).size() << "\n";
 #endif
-
-  /*  for (int i=0; i<nbRow; i++) {
-    MyVector<T> eLine=GetMatrixRow(GRPmatr.EXTfaithAct, i);
-    ListVect.push_back(eLine);
-    }*/
   while(true) {
-    MyVector<T> V;
-    bool test=IsStabilizing(V, GRPret);
+    std::optional<MyVector<T>> opt = IsStabilizing(GRPret);
+    if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "test=" << test << "\n";
+      std::cerr << "Exiting the loop\n";
 #endif
-    if (test)
       break;
+    }
+    const MyVector<T>& V = *opt;
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "V=\n";
-    WriteVector(std::cerr, V);
+    std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #endif
     std::vector<MyVector<T>> O=OrbitComputation(GRPret.ListMatrGen, V, TheAction);
     int Osiz=O.size();
@@ -248,7 +241,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	Tidx j=ePermGen.at(i);
 	v[i]=j;
       }
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have initialized the first part\n";
 #endif
       std::vector<MyVector<T>> ListImage(Osiz);
@@ -257,13 +250,13 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	MyVector<T> fV=TheAction(eV, eMatrGen);
 	ListImage[iV]=fV;
       }
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have ListImage\n";
 #endif
       Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
       Telt ePermGenSelect=ePermSinv * ePermB;
 
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have ePermGenSelect\n";
 #endif
       for (int iO=0; iO<Osiz; iO++) {
@@ -271,7 +264,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	v[nbRow+iO]=nbRow+jO;
       }
       Telt eNewPerm(std::move(v));
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have eNewPerm\n";
 #endif
       ListPermGenProv.emplace_back(std::move(eNewPerm));
@@ -288,7 +281,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     }
     Tgroup eStab=GRPwork.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "|eStab|=" << eStab.size() << "\n";
+    std::cerr << "  |eStab|=" << eStab.size() << "\n";
 #endif
     std::vector<MyMatrix<T>> ListMatrGen;
     std::vector<Telt> ListPermGen;

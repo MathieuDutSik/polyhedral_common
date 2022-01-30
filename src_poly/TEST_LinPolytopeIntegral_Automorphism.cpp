@@ -25,14 +25,16 @@ int main(int argc, char *argv[])
     //
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT=ReadMatrix<T>(is);
-    MyMatrix<T> WMat_EXT=ReadMatrix<T>(is);
+    MyMatrix<Tidx_value> WMat_EXT=ReadMatrix<Tidx_value>(is);
     //
-    using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_t>>;
+    using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,Tidx_value>>;
     //
     pair_char ep{EXT, WeightedMatrixFromMyMatrix<true,std::vector<T>,Tidx_value>(WMat_EXT)};
-    Tgroup GRP = LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(ep))
-    std::cerr << "We have GRP\n";
-    std::cerr << GRP << "\n";
+    std::vector<MyMatrix<T>> LGen = LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,Tidx_value>(ep);
+    std::cerr << "We have LGen\n";
+    std::cerr << "|LGen|=" << LGen.size() << "\n";
+    //    Tgroup GRP = LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,Tidx_value>(ep))
+    //    std::cerr << GRP << "\n";
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
