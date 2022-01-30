@@ -657,12 +657,12 @@ void PrintWeightedMatrixNoWeight(std::ostream &os, WeightMatrix<is_symmetric,T,T
   }
 }
 
-template<typename T, typename Tidx_value>
-WeightMatrix<false, T, Tidx_value> ReadWeightedMatrix(std::istream &is)
+template<bool is_symmetric, typename T, typename Tidx_value>
+WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is)
 {
   size_t nbRow;
   is >> nbRow;
-  WeightMatrix<false, T, Tidx_value> WMat(nbRow);
+  WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
   size_t nbEnt=0;
   Tidx_value eVal;
   for (size_t iRow=0; iRow<nbRow; iRow++)
@@ -682,6 +682,25 @@ WeightMatrix<false, T, Tidx_value> ReadWeightedMatrix(std::istream &is)
   WMat.SetWeight(ListWeight);
   return WMat;
 }
+
+template<bool is_symmetric, typename T, typename Tidx_value>
+WeightMatrix<is_symmetric, T, Tidx_value> WeightedMatrixFromMyMatrix(MyMatrix<Tidx_value> const& M)
+{
+  size_t nbRow = M.rows();
+  WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
+  Tidx_value eVal;
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    for (size_t jRow=0; jRow<nbRow; jRow++) {
+      Tidx_value eVal = M(iRow,jRow);
+      WMat.intDirectAssign(iRow, jRow, eVal);
+    }
+  }
+  return WMat;
+}
+
+
+
+
 
 
 //
