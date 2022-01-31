@@ -222,8 +222,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	if (!eRes) {
 	  MyVector<T> V=VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
-          std::cerr << "i=" << i << "\n";
-	  std::cerr << "eVect=" << StringVectorGAP(eVect) << "\n";
+          std::cerr << "i=" << i << "  eVect=" << StringVectorGAP(eVect) << "\n";
 	  std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #endif
 	  return V;
@@ -281,7 +280,7 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 #ifdef DEBUG_MATRIX_GROUP
       CheckerPairReord(O, ePermS, ListImage, ePermB);
 #endif
-      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
+      //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
       // By the construction and above check we have
       // V1reord[i] = V1[g1.at(i)]
       // V2reord[i] = V2[g2.at(i)]
@@ -499,11 +498,8 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       if (!eRes) {
 	MyVector<T> V = VectorMod(eVect);
 #ifdef DEBUG_MATRIX_GROUP
-        std::cerr << "   i=" << i << "\n";
-        std::cerr << "   Found vector eVect=";
-        WriteVector(std::cerr, eVect);
-        std::cerr << "   Found vector V=";
-        WriteVector(std::cerr, V);
+        std::cerr << "   i=" << i << " eVect=" << StringVectorGAP(eVect) << "\n";
+        std::cerr << "   V=" << StringVectorGAP(V) << "\n";
         std::cerr << "   eEquiv=\n";
         WriteMatrix(std::cerr, eEquiv);
 #endif

@@ -694,9 +694,8 @@ WeightMatrix<is_symmetric, T, Tidx_value> WeightedMatrixFromMyMatrix(MyMatrix<in
   for (size_t iRow=0; iRow<nbRow; iRow++) {
     for (size_t jRow=0; jRow<nbRow; jRow++) {
       Tidx_value eVal = M(iRow,jRow);
-      //      std::cerr << "iRow=" << iRow << " jRow=" << jRow << " eVal=" << eVal << "\n";
       if (size_t(eVal) > nbEnt) {
-        std::cerr << "nbEnt=" << nbEnt << " eVal=" << eVal << " size_t(eVal)=" << size_t(eVal) << "\n";
+        //        std::cerr << "nbEnt=" << nbEnt << " eVal=" << eVal << " size_t(eVal)=" << size_t(eVal) << "\n";
         nbEnt = size_t(eVal);
       }
       WMat.intDirectAssign(iRow, jRow, eVal);
