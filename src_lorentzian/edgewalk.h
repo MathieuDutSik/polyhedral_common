@@ -259,10 +259,8 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
       //      std::cerr << "We have opt_v\n";
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
-        //        std::cerr << "Proposed v_T =";
-        WriteVector(std::cerr, v_T);
+        //        std::cerr << "Proposed v_T=" << StringVectorGAP(v_T) << "\n";
         RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
-        //        std::cerr << "We have e_cand\n";
         l_candidates.push_back(e_cand);
       }
     }
@@ -1144,7 +1142,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
       const FundDomainVertex<T,Tint> & evert = re.l_orbit_vertices[ i ];
       WriteFundDomainVertex(G, evert, os, OutFormat);
     }
-    os << "]";
+    os << "], n_orbit_vertices:=" << len;
     if (ComputeAllSimpleRoots) {
       os << ", ListSimpleRoots:=[";
       size_t n_simple = l_simple_root.size();
@@ -1181,6 +1179,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     size_t len = l_orbit_vertices.size();
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
+      std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
         if (equiv_opt) {

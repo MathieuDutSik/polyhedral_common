@@ -127,7 +127,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
     std::cerr << "We failed to find a solution for u\n";
     throw TerminalException{1};
   }
-  MyVector<T> sol_u = *opt_u;
+  const MyVector<T>& sol_u = *opt_u;
   T u1 = sol_u(0);
   T u2 = sol_u(1);
   //  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
@@ -136,7 +136,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const& Latt, MyVector
     std::cerr << "We failed to find a solution for k\n";
     throw TerminalException{1};
   }
-  MyVector<T> sol_k = *opt_k;
+  const MyVector<T>& sol_k = *opt_k;
   T k1 = sol_k(0);
   T k2 = sol_k(1);
   //  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
