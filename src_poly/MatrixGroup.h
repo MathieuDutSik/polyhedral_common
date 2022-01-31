@@ -105,29 +105,25 @@ private:
 template<typename T1, typename T2, typename F>
 std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, const F& f)
 {
-  std::vector<int> ListStatus;
   std::vector<T2> TheOrbit;
   std::unordered_set<T2> TheSet;
   auto fInsert=[&](T2 const& u) -> void {
     if (TheSet.count(u) == 1)
       return;
     TheOrbit.push_back(u);
-    ListStatus.push_back(0);
     TheSet.insert(u);
   };
   fInsert(a);
   size_t pos = 0;
   while(true) {
-    size_t len=ListStatus.size();
+    size_t len=TheOrbit.size();
     if (pos == len)
       break;
-    for (size_t i=pos; i<len; i++) {
-      ListStatus[i]=1;
+    for (size_t i=pos; i<len; i++)
       for (auto & eGen : ListGen) {
         T2 u=f(TheOrbit[i],eGen);
         fInsert(u);
       }
-    }
     pos = len;
   }
   return TheOrbit;
