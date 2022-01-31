@@ -18,14 +18,14 @@ int main(int argc, char *argv[])
     //
     using T=mpq_class;
     using Tint = mpz_class;
-    using Tidx = uint16_t;
-    using Tidx_value = uint8_t;
+    using Tidx = uint32_t;
+    using Tidx_value = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt,Tint>;
     //
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT=ReadMatrix<T>(is);
-    MyMatrix<Tidx_value> WMat_EXT=ReadMatrix<Tidx_value>(is);
+    MyMatrix<int> WMat_EXT=ReadMatrix<int>(is);
     //
     using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,Tidx_value>>;
     //
