@@ -288,7 +288,9 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       // V2[i] = V1[g1 * g2^{-1}(i)]
       Telt ePermGenSelect=ePermBinv * ePermS;
       //Telt ePermGenSelect=ePermB * ePermSinv;
+#ifdef DEBUG_MATRIX_GROUP
       std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
+#endif
       //
 
 #ifdef DEBUG_MATRIX_GROUP_GEN
@@ -567,18 +569,6 @@ ResultTestModEquivalence<T, typename Tgroup::Telt> LinearSpace_ModEquivalence(Fi
       for (size_t iO=0; iO<O.size(); iO++)
         std::cerr << " " << ePermGenSelect.at(iO);
       std::cerr << "\n";
-#endif
-#ifdef DEBUG_MATRIX_GROUP
-      auto prt=[&](std::string str, Telt u) -> void {
-        std::cerr << str << " =";
-        for (Tidx i=0; i<Tidx(Osiz); i++)
-          std::cerr << " " << u.at(i);
-        std::cerr << "\n";
-      };
-      prt("ePermB * ePermSinv", ePermB * ePermSinv);
-      prt("ePermS * (~ePermB)", ePermS * (~ePermB));
-      prt("ePermSinv * ePermB", ePermSinv * ePermB);
-      prt("(~ePermB) * ePermS", (~ePermB) * ePermS);
 #endif
 
       for (int iO=0; iO<Osiz; iO++) {
