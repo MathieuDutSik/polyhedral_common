@@ -107,29 +107,28 @@ std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, co
 {
   std::vector<int> ListStatus;
   std::vector<T2> TheOrbit;
+  std::unordered_set<T2> TheSet;
   auto fInsert=[&](T2 const& u) -> void {
-    int len=ListStatus.size();
-    for (int i=0; i<len; i++)
-      if (TheOrbit[i] == u)
-	return;
+    if (TheSet.count(u) == 1)
+      return;
     TheOrbit.push_back(u);
     ListStatus.push_back(0);
+    TheSet.insert(u);
   };
   fInsert(a);
+  size_t pos = 0;
   while(true) {
-    bool IsFinished=true;
-    int len=ListStatus.size();
-    for (int i=0; i<len; i++)
-      if (ListStatus[i] == 0) {
-	IsFinished=false;
-	ListStatus[i]=1;
-	for (auto & eGen : ListGen) {
-	  T2 u=f(TheOrbit[i],eGen);
-	  fInsert(u);
-	}
-      }
-    if (IsFinished)
+    size_t len=ListStatus.size();
+    if (pos == len)
       break;
+    for (size_t i=pos; i<len; i++) {
+      ListStatus[i]=1;
+      for (auto & eGen : ListGen) {
+        T2 u=f(TheOrbit[i],eGen);
+        fInsert(u);
+      }
+    }
+    pos = len;
   }
   return TheOrbit;
 }
@@ -239,7 +238,14 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
   //  std::cerr << "|G(EXT)|=" << Tgroup(GRPmatr.ListPermGen, nbRow).size() << "\n";
 #endif
   while(true) {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     std::optional<MyVector<T>> opt = IsStabilizing(GRPret);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "|IsStabilizing|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "Exiting the loop\n";
@@ -248,16 +254,31 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
     }
     const MyVector<T>& V = *opt;
     std::vector<MyVector<T>> O=OrbitComputation(GRPret.ListMatrGen, V, TheAction);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "|OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
     int Osiz=O.size();
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "Osiz=" << Osiz << "\n";
 #endif
     int siz=nbRow + Osiz;
     Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+    std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
     Telt ePermSinv=~ePermS;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+    std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
     std::vector<Telt> ListPermGenProv;
     int nbGen=GRPret.ListMatrGen.size();
     for (int iGen=0; iGen<nbGen; iGen++) {
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
+#endif
       MyMatrix<T> eMatrGen=GRPret.ListMatrGen[iGen];
       Telt ePermGen=GRPret.ListPermGen[iGen];
 #ifdef DEBUG_MATRIX_GROUP
@@ -266,17 +287,47 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       std::vector<Tidx> v(siz);
       for (Tidx i=0; i<nbRow_tidx; i++)
 	v[i]=ePermGen.at(i);
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
+      std::cerr << "|v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have initialized the first part\n";
 #endif
       std::vector<MyVector<T>> ListImage(Osiz);
-      for (int iV=0; iV<Osiz; iV++)
-	ListImage[iV] = TheAction(O[iV], eMatrGen);
+      MyMatrix<T> Omat = MatrixFromVectorFamily(O);
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_2_2 = std::chrono::system_clock::now();
+      std::cerr << "|Omat|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2_2 - timeB_2).count() << "\n";
+#endif
+      MyMatrix<T> Oprod = Omat * eMatrGen;
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_2_3 = std::chrono::system_clock::now();
+      std::cerr << "|Oprod|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2_3 - timeB_2_2).count() << "\n";
+#endif
+      for (int i=0; i<Osiz; i++)
+        ListImage[i] = VectorMod(GetMatrixRow(Oprod, i));
+      // That code below is shorter and it has the same speed as the above.
+      // We keep the more complicate because it shows where most of the runtime is: In computing Oprod.
+      //      for (int iV=0; iV<Osiz; iV++)
+      //	ListImage[iV] = TheAction(O[iV], eMatrGen);
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
+      std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2_3).count() << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_GEN
       std::cerr << "We have ListImage\n";
 #endif
       Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_4 = std::chrono::system_clock::now();
+      std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
+#endif
       Telt ePermBinv = ~ePermB;
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_5 = std::chrono::system_clock::now();
+      std::cerr << "|ePermBinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 - timeB_4).count() << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP
       CheckerPairReord(O, ePermS, ListImage, ePermB);
 #endif
@@ -287,6 +338,10 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       // We have V1reord = V2reord which gets us
       // V2[i] = V1[g1 * g2^{-1}(i)]
       Telt ePermGenSelect=ePermBinv * ePermS;
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_6 = std::chrono::system_clock::now();
+      std::cerr << "|ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
+#endif
       //Telt ePermGenSelect=ePermB * ePermSinv;
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
@@ -300,6 +355,10 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
 	int jO=ePermGenSelect.at(iO);
 	v[nbRow+iO]=nbRow+jO;
       }
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_7 = std::chrono::system_clock::now();
+      std::cerr << "|v 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
+#endif
       Telt eNewPerm(std::move(v));
 #ifdef DEBUG_MATRIX_GROUP
       for (int iO=0; iO<Osiz; iO++) {
@@ -317,6 +376,10 @@ FiniteMatrixGroup<T,typename Tgroup::Telt> LinearSpace_ModStabilizer(FiniteMatri
       }
 #endif
       ListPermGenProv.emplace_back(std::move(eNewPerm));
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> timeB_8 = std::chrono::system_clock::now();
+      std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 - timeB_7).count() << "\n";
+#endif
     }
     Tgroup GRPwork(ListPermGenProv, siz);
 #ifdef DEBUG_MATRIX_GROUP
