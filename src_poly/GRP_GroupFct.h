@@ -725,11 +725,13 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup 
   vectface TheReturn(len);
   Face TheMin;
   bool HasMin = false;
+  std::cerr << "OrbitSizes =";
   auto f=[&]([[maybe_unused]] Face const& eSet, std::unordered_set<Face> const& SingleOrbit) -> void {
     //    std::cerr << "f : begin\n";
     vectface orbit(len);
     Face minF;
     bool IsFirst = true;
+    std::cerr << " " << SingleOrbit.size();
     for (auto & uSet : SingleOrbit) {
       orbit.push_back(uSet);
       if (IsFirst) {
@@ -753,14 +755,17 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup 
       if (orbit.size() < TheReturn.size()) {
         set_return();
       } else {
-        if (minF < TheMin) {
-          set_return();
+        if (orbit.size() == TheReturn.size()) {
+          if (minF < TheMin) {
+            set_return();
+          }
         }
       }
     }
     //    std::cerr << "f : end\n";
   };
   OrbitSplittingSet_Kernel(PreListTotal, TheGRP, f);
+  std::cerr << " -- ";
   return TheReturn;
 }
 

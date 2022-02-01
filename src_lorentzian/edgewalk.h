@@ -1012,15 +1012,15 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
     // In isotropic case, we are unfortunately forced to do more complex stuff
     // Those needs
     ret_type erec = get_canonicalized_record(map_v);
-    std::cerr << "We have erec\n";
+    //    std::cerr << "We have erec\n";
     // Add new vertices to
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(erec.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
-    std::cerr << "We have vf\n";
+    //    std::cerr << "We have vf\n";
     // Finding the minimal orbit and then
     vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
-    std::cerr << "We have vf_min\n";
+    std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
     for (auto & eFAC : vf_min) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, vert.gen, ad);
@@ -1034,7 +1034,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
-  std::cerr << "gen_fund_domain_fund_info, ending\n";
+  std::cerr << "gen_fund_domain_fund_info gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << frec.GRP1.size() << "\n";
   return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1)};
 }
 
