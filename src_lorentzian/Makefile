@@ -28,7 +28,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full -fstack-check -fno-stack-clash-protection -fsanitize=leak -fsanitize-recover -fbounds-check
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address
-CC		= g++ -std=c++17 -Wall -g -O1
+CC		= g++ -std=c++17 -Wall -g -O3
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=memory
@@ -43,7 +43,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_indefi
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)  -I$(LIBSHORT_INCDIR) $(NAUTY_INCLUDE) $(GLPK_INCLUDE) $(PERMUTALIB_INCLUDE) $(CDDLIB_INCLUDE) $(MPREAL_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
-CDEFS           = -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
+#CDEFS           = -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
+CDEFS           =
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 

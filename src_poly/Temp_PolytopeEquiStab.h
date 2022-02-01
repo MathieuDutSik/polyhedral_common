@@ -1596,6 +1596,7 @@ template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
 std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep,
                                                                std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& fp)
 {
+  //#define DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
@@ -1603,6 +1604,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
     return {};
   if (ep.second.GetWeight() != fp.second.GetWeight())
     return {};
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
   std::cerr << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
   std::cerr << "ep.first=\n";
@@ -1613,6 +1615,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   PrintWeightedMatrix(std::cerr, ep.second);
   std::cerr << "fp.second=\n";
   PrintWeightedMatrix(std::cerr, fp.second);
+#endif
 
   //  std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
@@ -1622,24 +1625,36 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   //  std::cerr << "Before IsomorphismFromCanonicReord\n";
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord);
   if (!IsoInfo) {
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "We failed to find IsoInfo\n";
+#endif
     return {};
   }
   Telt ePerm(IsoInfo->first);
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "ePerm=" << ePerm << "\n";
   std::cerr << "det(eMat)=" << DeterminantMat(IsoInfo->second) << "  eMat=" << StringMatrixGAP(IsoInfo->second) << "\n";
+#endif
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "|GRP1|=" << GRP1.size() << "\n";
+#endif
   for (auto & eGen : GRP1.GeneratorsOfGroup()) {
     MyMatrix<T> eGen_T = FindTransformation(ep.first, ep.first, eGen);
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "det(eGen_T)=" << DeterminantMat(eGen_T) << " eGen_T=" << StringMatrixGAP(eGen_T) << "\n";
+#endif
   }
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
   if (eRes) {
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "Found one isomorphism\n";
+#endif
     return *eRes;
   }
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "eRes is unassigned\n";
+#endif
   return {};
 }
 
