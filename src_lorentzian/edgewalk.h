@@ -1180,6 +1180,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
       std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
+      std::cerr << "    hash1=" << vertFull1.hash << " hash2=" << vertFull2.hash << "\n";
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
         if (equiv_opt) {
@@ -1190,10 +1191,12 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     }
     std::cerr << "Failed to find some isomorphism\n";
     const auto& epair = vertFull1.e_pair_char;
-    std::cerr << "MatV=" << StringMatrixGAP(epair.first) << "\n";
+    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
     PrintWeightedMatrixGAP(std::cerr, epair.second);
-    std::cerr << "MatV/WMat=\n";
+    std::cerr << "\n";
+    std::cerr << "MatV=\n";
     WriteMatrix(std::cerr, epair.first);
+    std::cerr << "WMat=\n";
     PrintWeightedMatrix(std::cerr, epair.second);
     std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {

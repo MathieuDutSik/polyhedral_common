@@ -784,8 +784,9 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(FiniteMatrixGroup<T,typename 
   std::cerr << "LFact1 = " << LFact1 << "\n";
   std::cerr << "LFact2 = " << LFact2 << "\n";
 #endif
-  if (LFact1 != LFact2)
+  if (LFact1 != LFact2) {
     return {};
+  }
   std::vector<T> eList=FactorsInt(LFact1);
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "eList =";
@@ -929,8 +930,32 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T>
   MyMatrix<T> eBasis2=GetZbasis(EXT2_T);
   MyMatrix<T> EXTbas1=EXT1_T*Inverse(eBasis1);
   MyMatrix<T> EXTbas2=EXT2_T*Inverse(eBasis2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "EXT1_T=\n";
+  WriteMatrix(std::cerr, EXT1_T);
+  std::cerr << "EXT2_T=\n";
+  WriteMatrix(std::cerr, EXT2_T);
+  if (EXT1_T.rows() == EXT1_T.cols()) {
+    std::cerr << "det(EXT1_T)=" << DeterminantMat(EXT1_T) << "\n";
+  }
+  if (EXT2_T.rows() == EXT2_T.cols()) {
+    std::cerr << "det(EXT2_T)=" << DeterminantMat(EXT2_T) << "\n";
+  }
+  std::cerr << "eBasis1=\n";
+  WriteMatrix(std::cerr, eBasis1);
+  std::cerr << "eBasis2=\n";
+  WriteMatrix(std::cerr, eBasis2);
+  std::cerr << "EXTbas1=\n";
+  WriteMatrix(std::cerr, EXTbas1);
+  std::cerr << "EXTbas2=\n";
+  WriteMatrix(std::cerr, EXTbas2);
+#endif
   //
   MyMatrix<T> TheMatEquiv=FindTransformation(EXTbas1, EXTbas2, eEquiv);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "TheMatEquiv=\n";
+  WriteMatrix(std::cerr, TheMatEquiv);
+#endif
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto & eGen : GRP2.ListPermGen) {
     MyMatrix<T> TheMat=FindTransformation(EXTbas2, EXTbas2, eGen);
@@ -939,10 +964,19 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T>
   FiniteMatrixGroup<T,Telt> GRPspace{dim, EXTbas2, ListMatrGen, GRP2.ListPermGen};
   MyMatrix<T> eLatt1=Inverse(eBasis1)*TheMatEquiv;
   MyMatrix<T> eLatt2=Inverse(eBasis2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "eLatt1=\n";
+  WriteMatrix(std::cerr, eLatt1);
+  std::cerr << "eLatt2=\n";
+  WriteMatrix(std::cerr, eLatt2);
+#endif
   FractionMatrix<T> eRec1=RemoveFractionMatrixPlusCoeff(eLatt1);
   FractionMatrix<T> eRec2=RemoveFractionMatrixPlusCoeff(eLatt2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "eRec1.TheMult=" << eRec1.TheMult << " eRec2.TheMult=" << eRec2.TheMult << "\n";
+#endif
   if (eRec1.TheMult != eRec2.TheMult)
-    return {};
+      return {};
   std::optional<MyMatrix<T>> eSpaceEquiv=LinearSpace_Equivalence<T,Tgroup>(GRPspace, eRec1.TheMat, eRec2.TheMat);
   if (!eSpaceEquiv)
     return {};
@@ -955,6 +989,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T>
 }
 
 
+// GRP1 is a group of automorphism preserving EXT1_T
+// ePerm is a transformation mapping EXT1 to EXT2.
+// We are searching for a transformation h in GRP1 such that
+// h * ePerm is an integral transformation.
 template<typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(MyMatrix<T> const& EXT1_T, MyMatrix<T> const& EXT2_T, Tgroup const& GRP1, typename Tgroup::Telt const& ePerm)
 {
