@@ -1190,7 +1190,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       }
     }
     std::cerr << "Failed to find some isomorphism\n";
-    const auto& epair = vertFull1.e_pair_char;
+    //    const auto& epair = vertFull1.e_pair_char;
     //    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
     //    PrintWeightedMatrixGAP(std::cerr, epair.second);
     //    std::cerr << "\n";
@@ -1221,8 +1221,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
+    vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1);
     //
-    for (auto & eFAC : vf) {
+    for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, theVert.gen, ad);
       { // Output. Fairly important to see what is happening
