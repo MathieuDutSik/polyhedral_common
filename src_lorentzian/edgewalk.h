@@ -1191,13 +1191,13 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     }
     std::cerr << "Failed to find some isomorphism\n";
     const auto& epair = vertFull1.e_pair_char;
-    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
-    PrintWeightedMatrixGAP(std::cerr, epair.second);
-    std::cerr << "\n";
-    std::cerr << "MatV=\n";
-    WriteMatrix(std::cerr, epair.first);
-    std::cerr << "WMat=\n";
-    PrintWeightedMatrix(std::cerr, epair.second);
+    //    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
+    //    PrintWeightedMatrixGAP(std::cerr, epair.second);
+    //    std::cerr << "\n";
+    //    std::cerr << "MatV=\n";
+    //    WriteMatrix(std::cerr, epair.first);
+    //    std::cerr << "WMat=\n";
+    //    PrintWeightedMatrix(std::cerr, epair.second);
     std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {
       bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen));
