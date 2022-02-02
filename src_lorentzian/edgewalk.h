@@ -446,7 +446,8 @@ AdjacencyDirection<Tint> GetAdjacencyDirection(MyMatrix<Tint> const& MatRoot, Fa
   ---How is (1/2) P defined and correspond to k (typo correction)
  */
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& k, AdjacencyDirection<Tint> const ad)
+FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
+                                           MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& k, AdjacencyDirection<Tint> const ad)
 {
   const std::vector<MyVector<Tint>>& l_ui = ad.l_ui;
   const MyVector<Tint>& v_disc = ad.v_disc;
@@ -992,7 +993,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,
 
 
 template<typename T, typename Tint, typename Tgroup>
-FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert)
+FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert)
 {
   std::cerr << "gen_fund_domain_fund_info, beginning\n";
   //
@@ -1110,7 +1111,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(MyMatrix<T> c
     std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
     for (auto & eFAC : vf_min) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, vert.gen, ad);
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(cusp_bank, G, l_norms, vert.gen, ad);
       MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
       map_v[fVert_tint] = 3;
     }
@@ -1261,6 +1262,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
 void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom)
 {
+  CuspidalBank<T,Tint> cusp_bank;
   std::vector<int> l_status;
   std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> l_orbit_vertices;
   size_t nbDone = 0;
@@ -1314,7 +1316,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //
     for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(G, l_norms, theVert.gen, ad);
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(cusp_bank, G, l_norms, theVert.gen, ad);
       { // Output. Fairly important to see what is happening
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
@@ -1323,7 +1325,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
         std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
       }
-      FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(G, l_norms, fVert);
+      FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert);
       bool test = func_insert_vertex(fVertFull);
       if (test)
         return true;
@@ -1331,7 +1333,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
     return false;
   };
-  FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(G, l_norms, eVert);
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, eVert);
   bool test = func_insert_vertex(eVertFull);
   if (test)
     return;
