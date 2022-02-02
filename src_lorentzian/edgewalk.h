@@ -445,7 +445,7 @@ AdjacencyDirection<Tint> GetAdjacencyDirection(MyMatrix<Tint> const& MatRoot, Fa
   ---pi_U and pi_P are the corresponding projectors
   ---How is (1/2) P defined and correspond to k (typo correction)
  */
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
                                            MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& k, AdjacencyDirection<Tint> const ad)
 {
@@ -961,7 +961,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   const MyVector<T> & k_new = l_gens[0];
   //  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
   CuspidalRequest<T,Tint> eReq{l_ui, k_new, k};
-  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_norms, eReq);
+  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase_Memoized<T,Tint,Tgroup>(cusp_bank, G, l_norms, eReq);
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
 
@@ -1111,7 +1111,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
     std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
     for (auto & eFAC : vf_min) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(cusp_bank, G, l_norms, vert.gen, ad);
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, vert.gen, ad);
       MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
       map_v[fVert_tint] = 3;
     }
@@ -1316,7 +1316,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //
     for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure(cusp_bank, G, l_norms, theVert.gen, ad);
+      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, theVert.gen, ad);
       { // Output. Fairly important to see what is happening
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
