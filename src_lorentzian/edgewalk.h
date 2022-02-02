@@ -230,7 +230,44 @@ template<typename T, typename Tint>
 struct CuspidalRequest_FullInfo {
   CuspidalRequest<T,Tint> eRequest;
   pair_char<T> e_pair;
+  size_t hash;
 };
+
+
+template<typename T, typename Tint>
+CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> const& G, CuspidalRequest<T,Tint> const& eReq)
+{
+  std::unordered_map<MyVector<Tint>,int> map_v;
+  std::vector<MyVector<Tint>> l_vect;
+  std::vector<T> Vdiag;
+  for (auto & eV : eReq.l_ui) {
+    l_vect.push_back(eV);
+    Vdiag.push_back(1);
+  }
+  MyVector<Tint> k_tint = UniversalVectorConversion<Tint,T>(eReq.k);
+  l_vect.push_back(k_tint);
+  Vdiag.push_back(2);
+  MyVector<Tint> kp_tint = UniversalVectorConversion<Tint,T>(eReq.kP);
+  l_vect.push_back(kp_tint);
+  Vdiag.push_back(3);
+  //
+  using Tidx = uint32_t;
+  using Tidx_value = uint16_t;
+  using Tgr = GraphListAdj;
+  std::vector<MyMatrix<T>> ListMat{G};
+  //
+  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
+  WMat.ReorderingSetWeight();
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+  const std::vector<Tidx>& ListIdx = epair.first;
+  WMat.RowColumnReordering(ListIdx);
+  size_t seed = 1440;
+  size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
+  pair_char<T> e_pair{std::move(MatV), std::move(WMat)};
+  return {eReq, std::move(e_pair), hash};
+}
+
 
 
 
