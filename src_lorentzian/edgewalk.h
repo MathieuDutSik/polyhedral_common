@@ -235,6 +235,12 @@ struct CuspidalRequest_FullInfo {
 
 
 template<typename T, typename Tint>
+struct CuspidalBank {
+  std::vector<CuspidalRequest_FullInfo<T,Tint>> l_request;
+  std::vector<std::vector<MyVector<Tint>>> l_answer;
+};
+
+template<typename T, typename Tint>
 CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> const& G, CuspidalRequest<T,Tint> const& eReq)
 {
   std::unordered_map<MyVector<Tint>,int> map_v;
@@ -267,8 +273,6 @@ CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> cons
   pair_char<T> e_pair{std::move(MatV), std::move(WMat)};
   return {eReq, std::move(e_pair), hash};
 }
-
-
 
 
 
@@ -356,6 +360,37 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::cerr << "DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size() << "\n";
   return l_ui_ret;
 }
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, CuspidalRequest<T,Tint> const& eReq)
+{
+  CuspidalRequest_FullInfo<T,Tint> eReq_full = gen_cuspidal_request_full_info(G, eReq);
+  size_t len = cusp_bank.l_request.size();
+  for (size_t i=0; i<len; i++) {
+    const CuspidalRequest_FullInfo<T,Tint>& fReq_full = cusp_bank.l_request[i];
+    if (fReq_full.hash == eReq_full.hash) {
+      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(fReq_full.e_pair, eReq_full.e_pair);
+      if (equiv_opt) {
+        MyMatrix<Tint> eEquiv = UniversalMatrixConversion<Tint,T>(*equiv_opt);
+        std::vector<MyVector<Tint>> l_ui_ret;
+        for (auto & eV : cusp_bank.l_answer[i]) {
+          MyVector<Tint> Vret = eEquiv.transpose() * eV;
+          l_ui_ret.push_back(Vret);
+        }
+        std::cerr << "DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
+        return l_ui_ret;
+      }
+    }
+  }
+  std::cerr << "DetermineRootsCuspidalCase_Memoized, failed to find some isomorphism\n";
+  std::vector<MyVector<Tint>> l_ui_ret = DetermineRootsCuspidalCase(G, l_norms, eReq);
+  cusp_bank.l_request.emplace_back(std::move(eReq_full));
+  cusp_bank.l_answer.push_back(l_ui_ret);
+  return l_ui_ret;
+}
+
 
 
 
