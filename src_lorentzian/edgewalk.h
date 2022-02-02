@@ -226,7 +226,11 @@ struct CuspidalRequest {
 };
 
 
-
+template<typename T, typename Tint>
+struct CuspidalRequest_FullInfo {
+  CuspidalRequest<T,Tint> eRequest;
+  pair_char<T> e_pair;
+};
 
 
 
@@ -240,9 +244,11 @@ struct CuspidalRequest {
   Now if we write a vector as u + ck then we get N(u + ck) = N(u)
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<T> const& l_norms, std::vector<MyVector<Tint>> const& l_ui,
-                                                       MyVector<T> const& k, MyVector<T> const& kP)
+std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<T> const& l_norms, CuspidalRequest<T,Tint> const& eReq)
 {
+  std::vector<MyVector<Tint>> const& l_ui = eReq.l_ui;
+  MyVector<T> const& k = eReq.k;
+  MyVector<T> const& kP = eReq.kP;
   struct RootCandidateCuspidal {
     int sign; // 0 for 0, 1 for positive, -1 for negative
     T quant; // this is (kP.v_{N,\Delta'})^2 / N
@@ -881,7 +887,8 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> 
   }
   const MyVector<T> & k_new = l_gens[0];
   //  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
-  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_norms, l_ui, k_new, k);
+  CuspidalRequest<T,Tint> eReq{l_ui, k_new, k};
+  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_norms, eReq);
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
 
@@ -1542,7 +1549,8 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     };
     MyVector<T> kP = get_kP();
     std::cerr << "get_simple_cone, step 7\n";
-    std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_norms, l_ui, V, kP);
+    CuspidalRequest<T,Tint> eReq{l_ui, V, kP};
+    std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_norms, eReq);
     std::cerr << "get_simple_cone, step 8\n";
     return MatrixFromVectorFamily(l_vect);
   }
