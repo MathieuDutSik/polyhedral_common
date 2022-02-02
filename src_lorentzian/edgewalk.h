@@ -212,23 +212,20 @@ RootCandidate<T,Tint> get_best_candidate(std::vector<RootCandidate<T,Tint>> cons
 }
 
 
+
+
+template<typename T>
+using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_t>>;
+
+
 template<typename T, typename Tint>
-struct RootCandidateCuspidal {
-  int sign; // 0 for 0, 1 for positive, -1 for negative
-  T quant; // this is (kP.v_{N,\Delta'})^2 / N
-  T e_norm;
-  MyVector<Tint> v;
+struct CuspidalRequest {
+  std::vector<MyVector<Tint>> l_ui;
+  MyVector<T> k;
+  MyVector<T> kP;
 };
 
 
-template<typename T, typename Tint>
-RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& G, MyVector<T> const& kP, MyVector<T> const& v_T, T const& e_norm)
-{
-  MyVector<Tint> v = UniversalVectorConversion<Tint,T>(v_T);
-  T scal = - kP.dot(G * v_T);
-  T quant = (scal * scal) / e_norm;
-  return {get_sign_sing(scal), quant, e_norm, v};
-}
 
 
 
@@ -243,14 +240,27 @@ RootCandidateCuspidal<T,Tint> gen_possible_cuspidalextension(MyMatrix<T> const& 
   Now if we write a vector as u + ck then we get N(u + ck) = N(u)
  */
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_ui, std::vector<T> const& l_norms,
+std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<T> const& l_norms, std::vector<MyVector<Tint>> const& l_ui,
                                                        MyVector<T> const& k, MyVector<T> const& kP)
 {
-  std::cerr << "DetermineRootsCuspidalCase, step 1\n";
+  struct RootCandidateCuspidal {
+    int sign; // 0 for 0, 1 for positive, -1 for negative
+    T quant; // this is (kP.v_{N,\Delta'})^2 / N
+    T e_norm;
+    MyVector<Tint> v;
+  };
+  auto gen_possible_cuspidalextension=[&](MyVector<T> const& v_T, T const& e_norm) -> RootCandidateCuspidal {
+    MyVector<Tint> v = UniversalVectorConversion<Tint,T>(v_T);
+    T scal = - kP.dot(G * v_T);
+    T quant = (scal * scal) / e_norm;
+    return {get_sign_sing(scal), quant, e_norm, v};
+  };
+
+  std::cerr << "DetermineRootsCuspidalCase, beginning\n";
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
-  std::vector<RootCandidateCuspidal<T,Tint>> l_candidates;
+  std::vector<RootCandidateCuspidal> l_candidates;
   for (auto & e_extension : l_extension) {
     //    std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
@@ -260,7 +270,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
         //        std::cerr << "Proposed v_T=" << StringVectorGAP(v_T) << "\n";
-        RootCandidateCuspidal<T,Tint> e_cand = gen_possible_cuspidalextension<T,Tint>(G, kP, v_T, e_extension.e_norm);
+        RootCandidateCuspidal e_cand = gen_possible_cuspidalextension(v_T, e_extension.e_norm);
         l_candidates.push_back(e_cand);
       }
     }
@@ -269,7 +279,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   /* std::sort is sorting from the highest to the smallest
    */
   std::sort(l_candidates.begin(), l_candidates.end(),
-            [&](RootCandidateCuspidal<T,Tint> const& x, RootCandidateCuspidal<T,Tint> const& y) -> bool {
+            [&](RootCandidateCuspidal const& x, RootCandidateCuspidal const& y) -> bool {
               // We want x > y if -k.alpha(x) / sqrt(Nx) < -k.alpha(y) / sqrt(Ny) or if equality if
               // Nx < Ny
               int sign = get_sign_pair_stdpair<T>({x.sign, x.quant}, {y.sign, y.quant});
@@ -871,15 +881,13 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(MyMatrix<T> const& G, std::vector<T> 
   }
   const MyVector<T> & k_new = l_gens[0];
   //  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
-  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_ui, l_norms, k_new, k);
+  std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase(G, l_norms, l_ui, k_new, k);
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
 
 
 
 
-template<typename T>
-using pair_char = std::pair<MyMatrix<T>,WeightMatrix<true,std::vector<T>,uint16_t>>;
 
 
 
@@ -1534,7 +1542,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     };
     MyVector<T> kP = get_kP();
     std::cerr << "get_simple_cone, step 7\n";
-    std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_ui, l_norms, V, kP);
+    std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_norms, l_ui, V, kP);
     std::cerr << "get_simple_cone, step 8\n";
     return MatrixFromVectorFamily(l_vect);
   }
