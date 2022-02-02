@@ -1128,7 +1128,9 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
   if (ComputeAllSimpleRoots)
     l_simple_root = compute_full_root_orbit(re);
   if (OutFormat == "GAP") {
-    os << "return rec(l_norms:=";
+    os << "return rec(LorMat:=";
+    WriteMatrixGAP(os, G);
+    os << ", l_norms:=";
     WriteStdVectorGAP(os, l_norms);
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
