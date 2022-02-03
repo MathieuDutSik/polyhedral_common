@@ -1280,7 +1280,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
       std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
-      std::cerr << "    hash1=" << vertFull1.hash << " hash2=" << vertFull2.hash << "\n";
+      //      std::cerr << "    hash1=" << vertFull1.hash << " hash2=" << vertFull2.hash << "\n";
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
         if (equiv_opt) {
@@ -1323,6 +1323,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1);
     //
+    std::cerr << "nbDone=" << nbDone << " |vf_orb|=" << vf_orb.size() << " |GRP1|=" << vertFull.GRP1.size() << "\n";
     for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, theVert.gen, ad);
