@@ -250,12 +250,13 @@ CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> cons
     l_vect.push_back(eV);
     Vdiag.push_back(1);
   }
-  MyVector<Tint> k_tint = UniversalVectorConversion<Tint,T>(eReq.k);
+  MyVector<Tint> k_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(eReq.k));
   l_vect.push_back(k_tint);
   Vdiag.push_back(2);
-  MyVector<Tint> kp_tint = UniversalVectorConversion<Tint,T>(eReq.kP);
+  MyVector<Tint> kp_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(eReq.kP));
   l_vect.push_back(kp_tint);
   Vdiag.push_back(3);
+  size_t n_row = Vdiag.size();
   //
   using Tidx = uint32_t;
   using Tidx_value = uint16_t;
@@ -268,9 +269,17 @@ CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> cons
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
   const std::vector<Tidx>& ListIdx = epair.first;
   WMat.RowColumnReordering(ListIdx);
+  //
+  std::vector<MyVector<Tint>> l_vect_reord(n_row);
+  for (size_t i=0; i<n_row; i++) {
+    size_t j = ListIdx[i];
+    l_vect_reord[i] = l_vect[j];
+  }
+  MyMatrix<T> MatV_reord = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect_reord));
+  //
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
-  pair_char<T> e_pair{std::move(MatV), std::move(WMat)};
+  pair_char<T> e_pair{std::move(MatV_reord), std::move(WMat)};
   return {eReq, std::move(e_pair), hash};
 }
 
