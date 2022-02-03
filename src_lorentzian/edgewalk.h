@@ -296,6 +296,9 @@ CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> cons
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std::vector<T> const& l_norms, CuspidalRequest<T,Tint> const& eReq)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   std::vector<MyVector<Tint>> const& l_ui = eReq.l_ui;
   MyVector<T> const& k = eReq.k;
   MyVector<T> const& kP = eReq.kP;
@@ -315,6 +318,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::cerr << "DetermineRootsCuspidalCase, beginning\n";
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Timing |ComputePossibleExtensions|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
   std::vector<RootCandidateCuspidal> l_candidates;
   for (auto & e_extension : l_extension) {
@@ -332,6 +339,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     }
   }
   std::cerr << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "Timing |l_candidates|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
   /* std::sort is sorting from the highest to the smallest
    */
   std::sort(l_candidates.begin(), l_candidates.end(),
@@ -344,6 +355,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
                 return sign > 0; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)   correspond to 1 in the above.
               return x.e_norm < y.e_norm;
             });
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "Timing |sort|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
 
   for (auto & x : l_candidates) {
     std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
@@ -367,6 +382,10 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     }
   }
   std::cerr << "DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size() << "\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "Timing |l_ui_ret|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
   return l_ui_ret;
 }
 
@@ -375,7 +394,14 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, CuspidalRequest<T,Tint> const& eReq)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   CuspidalRequest_FullInfo<T,Tint> eReq_full = gen_cuspidal_request_full_info(G, eReq);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Timing |gen_cuspidal_request_full_info|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   size_t len = cusp_bank.l_request.size();
   for (size_t i=0; i<len; i++) {
     const CuspidalRequest_FullInfo<T,Tint>& fReq_full = cusp_bank.l_request[i];
@@ -389,14 +415,26 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
           l_ui_ret.push_back(Vret);
         }
         std::cerr << "DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
+#ifdef TIMINGS
+        std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+        std::cerr << "Timing |query(succ)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
         return l_ui_ret;
       }
     }
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "Timing |query(fail)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
   std::cerr << "DetermineRootsCuspidalCase_Memoized, failed to find some isomorphism\n";
   std::vector<MyVector<Tint>> l_ui_ret = DetermineRootsCuspidalCase(G, l_norms, eReq);
   cusp_bank.l_request.emplace_back(std::move(eReq_full));
   cusp_bank.l_answer.push_back(l_ui_ret);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "Timing |l_ui_ret|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
   return l_ui_ret;
 }
 
@@ -458,6 +496,9 @@ template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
                                            MyMatrix<T> const& G, std::vector<T> const& l_norms, MyVector<T> const& k, AdjacencyDirection<Tint> const ad)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   const std::vector<MyVector<Tint>>& l_ui = ad.l_ui;
   const MyVector<Tint>& v_disc = ad.v_disc;
   std::cerr << "-------------------------------------- EDGEWALK PROCEDURE ---------------------------------------------\n";
@@ -565,6 +606,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     r0 = -k; // Follows Right part of Figure 8.1
   }
   std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Timing |paperwork|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   //
   // Computing the extension and the maximum norms from that.
   //
@@ -572,6 +617,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   bool only_spherical = true;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
   std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "Timing |l_extension|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
 
   //  for (auto & kv : map_max_resnorm)
   //    std::cerr << "kv : norm=" << kv.first << " max(res_norm)=" << kv.second << "\n";
@@ -630,6 +679,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> timeA_1 = std::chrono::system_clock::now();
+#endif
     std::cerr << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm << " ------------------------\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
@@ -716,9 +768,16 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       TheMat = TheMat * TransformSma;
     }
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> timeA_2 = std::chrono::system_clock::now();
+    std::cerr << "Timing |get_sing_comp_anisotropic|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeA_2 - timeA_1).count() << "\n";
+#endif
     return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic=[&](T const& e_norm) -> SingCompIsotropic {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
+#endif
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
@@ -731,6 +790,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       throw TerminalException{1};
     }
     MyMatrix<T> Factor_GP_LN = *opt_factor;
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
+    std::cerr << "Timing |get_sing_comp_isotropic|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
+#endif
     return {Latt, Basis_ProjP_LN, GP_LN, Factor_GP_LN, r0_work, {}};
   };
   bool is_isotropic;
@@ -897,6 +960,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       }
     }
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "Timing |l_candidates|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
   if (l_candidates.size() > 0) {
     /*
@@ -915,6 +982,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   //  std::cerr << "We have Gred=\n";
   //  WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "Timing |Factor_opt|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
   //  std::cerr << "We have Factor_opt\n";
   if (!Factor_opt) {
     std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
@@ -970,6 +1041,10 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   const MyVector<T> & k_new = l_gens[0];
   //  std::cerr << "k_new=" << StringVectorGAP(RemoveFractionVector(k_new)) << "\n";
   CuspidalRequest<T,Tint> eReq{l_ui, k_new, k};
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
+  std::cerr << "Timing |CuspidalRequest|=" << std::chrono::duration_cast<std::chrono::microseconds>(time6 - time5).count() << "\n";
+#endif
   std::vector<MyVector<Tint>> l_roots_ret = DetermineRootsCuspidalCase_Memoized<T,Tint,Tgroup>(cusp_bank, G, l_norms, eReq);
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
@@ -1004,6 +1079,9 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   std::cerr << "gen_fund_domain_fund_info, beginning\n";
   //
   // Put the stuff that can help for invariant first
@@ -1132,6 +1210,10 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
   std::cerr << "gen_fund_domain_fund_info gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << frec.GRP1.size() << "\n";
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "Timing |gen_fund_domain_fund_info|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1)};
 }
 
@@ -1277,6 +1359,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
   size_t nbDone = 0;
   auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> bool {
     size_t len = l_orbit_vertices.size();
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
       std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
@@ -1285,10 +1370,18 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
         if (equiv_opt) {
           std::cerr << "Find some isomorphism\n";
+#ifdef TIMINGS
+          std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+          std::cerr << "Timing |func_insert_vertex(find iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
           return f_isom(UniversalMatrixConversion<Tint,T>(*equiv_opt));
         }
       }
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "Timing |func_insert_vertex(no iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
     std::cerr << "Failed to find some isomorphism\n";
     //    const auto& epair = vertFull1.e_pair_char;
     //    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
@@ -1304,24 +1397,39 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       if (test)
         return true;
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "Timing |Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
     bool test = f_vertex(vertFull1);
     if (test)
       return true;
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
     std::cerr << "Exiting the func_insert_vertex\n";
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+    std::cerr << "Timing |func_insert_vertex(end)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
     return false;
   };
   // We have to do a copy of the Vert since when the vector is extended the previous entries are desttroyed when a new
   // array is built. This would then invalidates a const& theVert reference.
   // Took 1 week to fully debug that problem.
   auto insert_adjacent_vertices=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
     const FundDomainVertex<T,Tint>& theVert = vertFull.vert;
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1);
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "Timing |vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
     //
     std::cerr << "nbDone=" << nbDone << " |vf_orb|=" << vf_orb.size() << " |GRP1|=" << vertFull.GRP1.size() << "\n";
     for (auto & eFAC : vf_orb) {
@@ -1340,6 +1448,10 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       if (test)
         return true;
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "Timing |process vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
     return false;
   };
