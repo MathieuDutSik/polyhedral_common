@@ -325,6 +325,42 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
 }
 
 
+/*
+  We should compute the image of Subspace1 into Subspace2 using the eEquiv.
+  Afterwards, we can assume that eEquiv = Id.
+  We select another vector v1 in the complement of Subspace1, such that {Subspace1, v1}
+  is a Z-basis on Z^n.
+  We hus want to find the vector v2 such that G2[v2] = G1[v1] and V_{1i} G1 v1 = V_{2i} G2 v2
+  The linear equation V_{1i} G1 v1 = V_{2i} G2 v2 has a solution set v2 = v2_0 + alpha w2_0
+  because G2 is non-degenerate.
+  Then we have the quadratic equation G2[v2] and two possible solutions.
+  ----
+  The question is that it is possible that there are 3 possibilities:
+  (a) No Solution
+  (b) 1 solution
+  (c) two solutions
+  We can have integer solutions or rational solutions or maybe irrational solutions.
+  Are irrational solutions possible? I would think that this is not possible.
+  ----
+  If we have a rational solutions, then we can use the usual scheme
+  for passing from rational to integral.
+ */
+template<typename T>
+std::vector<MyMatrix<T>> FindIsomorphismExtensions(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2, MyMatrix<T> const& eEauiv)
+{
+  int dim = G1.rows();
+  if (Subspace1.rows() != dim-1 || Subspace2.rows() != dim-1) {
+    std::cerr << "Subspace1 and Subspace2 are not of the right dimension\n";
+    throw TerminalException{1};
+  }
+  std::vector<MyMatrix<T>> ListSolutions;
+  return ListSolutions;
+}
+
+
+
+
+
 
 
 #endif
