@@ -6,14 +6,16 @@
 int main(int argc, char *argv[])
 {
   try {
-    if (argc != 1 && argc != 2) {
+    if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "CheckPerfectInput [perfectinput]\n";
-      std::cerr << "CheckPerfectInput < stdin\n";
+      std::cerr << "CheckPerfectInput sizCheck [perfectinput]\n";
+      std::cerr << "CheckPerfectInput sizCheck < stdin\n";
       throw TerminalException{1};
     }
     using T=mpq_class;
+    int n;
+    sscanf(argv[1], "%d", &n);
     //
     auto check_stream=[](std::istream& is) -> void {
       MyMatrix<T> G = ReadMatrix<T>(is);
@@ -33,9 +35,12 @@ int main(int argc, char *argv[])
 
       size_t n_facet;
       is >> n_facet;
-
-      for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
-        std::cerr << "i_facet=" << i_facet << " / " << n_facet << "\n";
+      size_t n_facet_work = n_facet;
+      if (n != -1)
+        n_facet_work = n;
+      //
+      for (size_t i_facet=0; i_facet<n_facet_work; i_facet++) {
+        std::cerr << "i_facet=" << i_facet << " / " << n_facet << " / " << n_facet_work << "\n";
         T val;
         is >> val;
         std::vector<size_t> V = Convert_T_To_Set(val);
@@ -52,10 +57,10 @@ int main(int argc, char *argv[])
     };
 
 
-    if (argc == 1) {
+    if (argc == 2) {
       check_stream(std::cin);
     } else {
-      std::string eFileName=argv[1];
+      std::string eFileName=argv[2];
       std::ifstream is(eFileName);
       check_stream(is);
     }
