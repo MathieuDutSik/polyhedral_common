@@ -7,6 +7,47 @@
 #include "Basic_string.h"
 
 
+template<typename T>
+std::vector<size_t> Convert_T_To_Set(T const& val)
+{
+  size_t pos = 0;
+  std::vector<size_t> V;
+  T valWork = val;
+  while(true) {
+    if (valWork == 0)
+      break;
+    T res = ResInt(valWork, 2);
+    if (res == 1) {
+      V.push_back(pos);
+    }
+    valWork = (valWork - res) / 2;
+    pos++;
+  }
+  return V;
+}
+
+template<typename T>
+T Convert_Set_To_T(std::vector<size_t> const& V)
+{
+  T ThePow = 1;
+  size_t pos = 0;
+  T retval = 0;
+  for (auto & eV : V) {
+    while(true) {
+      if (pos == eV)
+        break;
+      ThePow *= 2;
+      pos++;
+    }
+    retval += ThePow;
+  }
+  return retval;
+}
+
+
+
+
+
 
 template<typename T>
 vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCommand)

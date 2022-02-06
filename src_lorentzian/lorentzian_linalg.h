@@ -353,7 +353,21 @@ std::vector<MyMatrix<T>> FindIsomorphismExtensions(MyMatrix<T> const& G1, MyMatr
     std::cerr << "Subspace1 and Subspace2 are not of the right dimension\n";
     throw TerminalException{1};
   }
+  MyMatrix<T> Compl1 = SubspaceCompletion(Subspace1);
+  if (NSP.rows() != 1) {
+    std::cerr << "NSP should be of dimension 1\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> eVect1 = GetMatrixRow(Compl1,0);
+
+
+  
   std::vector<MyMatrix<T>> ListSolutions;
+  
+
+
+
+  
   return ListSolutions;
 }
 
