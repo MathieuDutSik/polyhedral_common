@@ -14,10 +14,11 @@ int main(int argc, char *argv[])
       throw TerminalException{1};
     }
     using T=mpq_class;
-    int n;
-    sscanf(argv[1], "%d", &n);
+    int n_limit;
+    sscanf(argv[1], "%d", &n_limit);
+    std::cerr << "n_limit=" << n_limit << "\n";
     //
-    auto check_stream=[](std::istream& is) -> void {
+    auto check_stream=[&n_limit](std::istream& is) -> void {
       MyMatrix<T> G = ReadMatrix<T>(is);
       int n = G.rows();
       MyMatrix<T> SHV = ReadMatrix<T>(is);
@@ -36,8 +37,9 @@ int main(int argc, char *argv[])
       size_t n_facet;
       is >> n_facet;
       size_t n_facet_work = n_facet;
-      if (n != -1)
-        n_facet_work = n;
+      if (n_limit != -1)
+        n_facet_work = n_limit;
+      std::cerr << "n_facet_work=" << n_facet_work << "\n";
       //
       for (size_t i_facet=0; i_facet<n_facet_work; i_facet++) {
         std::cerr << "i_facet=" << i_facet << " / " << n_facet << " / " << n_facet_work << "\n";
