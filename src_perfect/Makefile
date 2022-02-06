@@ -1,4 +1,5 @@
-PROGRAM		= InitialQuadPerfectMatrix
+#PROGRAM		= InitialQuadPerfectMatrix
+PROGRAM		= CheckPerfectInput
 #PROGRAM		= ComputePerfect InitialQuadPerfectMatrix
 
 
