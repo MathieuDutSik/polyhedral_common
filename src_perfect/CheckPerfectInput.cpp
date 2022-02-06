@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
       is >> n_facet;
 
       for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
-        std::cerr << "i_facet=" << i_facet " / " << n_facet << "\n";
+        std::cerr << "i_facet=" << i_facet << " / " << n_facet << "\n";
         T val;
         is >> val;
         std::vector<size_t> V = Convert_T_To_Set(val);
