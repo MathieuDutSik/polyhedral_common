@@ -6,16 +6,15 @@
 int main(int argc, char *argv[])
 {
   try {
-    if (argc != 1 || argc != 2) {
+    if (argc != 1 && argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CheckPerfectInput [perfectinput]\n";
       std::cerr << "CheckPerfectInput < stdin\n";
-      return -1;
+      throw TerminalException{1};
     }
     using T=mpq_class;
     //
-
     auto check_stream=[](std::istream& is) -> void {
       MyMatrix<T> G = ReadMatrix<T>(is);
       int n = G.rows();
@@ -36,6 +35,7 @@ int main(int argc, char *argv[])
       is >> n_facet;
 
       for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
+        std::cerr << "i_facet=" << i_facet " / " << n_facet << "\n";
         T val;
         is >> val;
         std::vector<size_t> V = Convert_T_To_Set(val);
