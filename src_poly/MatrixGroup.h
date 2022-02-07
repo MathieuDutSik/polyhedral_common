@@ -461,7 +461,6 @@ MyMatrix<T> MatrixIntegral_GetInvariantSpace(int const& n, std::vector<MyMatrix<
   T TheDet = 1;
   while(true) {
     std::vector<MyVector<T>> ConcatSpace;
-    insert_matrix(TheSpace);
     for (auto & eGen : LGenTot) {
       MyMatrix<T> TheSpaceImg = TheSpace * eGen;
       for (int i=0; i<n; i++)
