@@ -344,9 +344,20 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   ----
   If we have a rational solutions, then we can use the usual scheme
   for passing from rational to integral.
+  ----
+  Actually things are quite beautiful in the case of Subspace1 the orthogonal of an
+  isotropic case.
+  We select a vector eVect1 outside of Subspace1 and look for its image eVect2
+  We thus have G1[eVect1] = G2[eVect2]
+  and the equalities V1(i) * G1 * eVect1 = V2(i) * G2 * eVect2
+  This gets us a solution space of eVect2 = V0 + t V1
+  and the vector V1 is isotropic.
+  This gets us
+  G1[eVect1] = G2[eVect2] = G2[V0] + 2t V0.dot.V1
+  and thus the equation system has an unique solution, which all turn out to be unexpected.
  */
 template<typename T>
-std::vector<MyMatrix<T>> FindIsomorphismExtensions(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2, MyMatrix<T> const& eEauiv)
+MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2)
 {
   int dim = G1.rows();
   if (Subspace1.rows() != dim-1 || Subspace2.rows() != dim-1) {
@@ -354,21 +365,57 @@ std::vector<MyMatrix<T>> FindIsomorphismExtensions(MyMatrix<T> const& G1, MyMatr
     throw TerminalException{1};
   }
   MyMatrix<T> Compl1 = SubspaceCompletion(Subspace1);
+  if (Compl1.rows() != 1) {
+    std::cerr << "Compl1 should be of dimension 1\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> eVect1 = GetMatrixRow(Compl1,0);
+  T eNorm = eVect1.dot(G1 * eVect1);
+  MyMatrix<T> eProd1 = Subspace1 * G1;
+  MyMatrix<T> eProd2 = Subspace2 * G2;
+  MyVector<T> Vscal = Subspace1 * G1 * eVect1;
+  std::optional<MyVector<T>> opt = SolutionMat(TransposedMat(eProd2), Vscal);
+  if (!opt) {
+    std::cerr << "ExtendOrthogonalIsotropicIsomorphism : The solutioning failed\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> const& V0 = *opt;
+  MyMatrix<T> NSP = NullspaceTrMat(eProd2);
   if (NSP.rows() != 1) {
     std::cerr << "NSP should be of dimension 1\n";
     throw TerminalException{1};
   }
-  MyVector<T> eVect1 = GetMatrixRow(Compl1,0);
-
-
-  
-  std::vector<MyMatrix<T>> ListSolutions;
-  
-
-
-
-  
-  return ListSolutions;
+  MyVector<T> V1 = GetMatrixRow(NSP,0);
+  T eNorm_V1 = V1.dot(G2 * V1);
+  if (eNorm_V1 != 0) {
+    std::cerr << "The orthogonal space of Subspace2 should be an isotropic vector\n";
+    throw TerminalException{1};
+  }
+  // Expanding we get eVect2 = V0 + t V1
+  // This gets us eNorm = G2[eVect2] = G2[V0] + 2 t V0.G2.V1
+  // or scal0 = t scal1
+  T scal0 = eNorm - V0.dot(G2 * V0);
+  T scal1 = 2 * V0.dot(G2 * V1);
+  if (scal1 == 0) {
+    std::cerr << "The coefficient scal1 should be non-zero\n";
+    throw TerminalException{1};
+  }
+  T t = scal0 / scal1;
+  MyVector<T> eVect2 = V0 + t * V1;
+  //
+  MyMatrix<T> eVect1_mat = MatrixFromVectorFamily({eVect1});
+  MyMatrix<T> eVect2_mat = MatrixFromVectorFamily({eVect1});
+  MyMatrix<T> Trans1 = Concatenate(Subspace1, eVect1_mat);
+  MyMatrix<T> Trans2 = Concatenate(Subspace2, eVect2_mat);
+  MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+  MyMatrix<T> G1_tr = eEquiv * G1 * eEquiv.transpose();
+  if (G1_tr != G2) {
+    std::cerr << "G1 has not been transposed into G2\n";
+    throw TerminalException{1};
+  }
+#endif
+  return eEquiv;
 }
 
 
