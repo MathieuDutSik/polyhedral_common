@@ -448,6 +448,35 @@ T LinearSpace_GetDivisor(MyMatrix<T> const& TheSpace)
   }
 }
 
+template<typename T>
+MyMatrix<T> MatrixIntegral_GetInvariantSpace(int const& n, std::vector<MyMatrix<T>> const& LGen)
+{
+  std::vector<MyMatrix<T>> LGenTot;
+  for (auto & eGen : LGen) {
+    LGenTot.push_back(eGen);
+    LGenTot.push_back(Inverse(eGen));
+  }
+  LGenTot.push_back(IdentityMat<T>(n));
+  MyMatrix<T> TheSpace = IdentityMat<T>(n);
+  T TheDet = 1;
+  while(true) {
+    std::vector<MyVector<T>> ConcatSpace;
+    insert_matrix(TheSpace);
+    for (auto & eGen : LGenTot) {
+      MyMatrix<T> TheSpaceImg = TheSpace * eGen;
+      for (int i=0; i<n; i++)
+        ConcatSpace.push_back(GetMatrixRow(TheSpaceImg,i));
+    }
+    MyMatrix<T> NewSpace = GetZbasis(MatrixFromVectorFamily(ConcatSpace));
+    T NewDet = T_abs(DeterminantMat(NewSpace));
+    if (NewDet == TheDet)
+      return TheSpace;
+    TheSpace = NewSpace;
+    TheDet = NewDet;
+  }
+}
+
+
 
 
 template<typename T, typename Tgroup>
@@ -913,6 +942,10 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, Tgroup c
   FiniteMatrixGroup<T,Telt> GRPfinal=LinPolytopeIntegral_Automorphism_Subspaces<T,Tgroup>(GRPfin);
   return Tgroup(GRPfinal.ListPermGen, nbVert);
 }
+
+
+
+
 
 
 
