@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
       fprintf(stderr,"graph file %s was not found\n",argv[1]);
       return -1;
     }
-  fscanf(FileMat, "%d", &dimension);
+  (void)fscanf(FileMat, "%d", &dimension);
 
   if ((GramInt = (int**)malloc(dimension*sizeof(int*))) == 0)
     exit (EXIT_FAILURE);
