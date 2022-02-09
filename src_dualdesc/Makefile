@@ -26,7 +26,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
 #CC		= g++ -std=c++17 -Wall -O3 -ggdb
 #CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
-CC		= g++ -std=c++17 -Wall -O3 -g
+CC		= g++ -std=c++17 -Wall -O3 -g -ftemplate-backtrace-limit=0
 #CC		= g++ -std=c++17 -Wall -O3 -g -pg
 #CC		= clang++ -Weverything -std=c++17
 #CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
