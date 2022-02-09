@@ -15,14 +15,8 @@ typedef boost::dynamic_bitset<> Face;
 
 namespace cbased_cdd {
 
-//
-// Removal of equation using mpq_class
-//
-
-
-
-template<typename T, typename F>
-vectface DualDescription_incd_T(MyMatrix<T> const& TheEXT, F f)
+template<typename T, typename Fset>
+vectface DualDescription_incd_T(MyMatrix<T> const& TheEXT, Fset fset)
 {
   dd_ErrorType err;
   size_t nbCol=TheEXT.cols();
@@ -42,7 +36,7 @@ vectface DualDescription_incd_T(MyMatrix<T> const& TheEXT, F f)
   for (i = 0; i < m_input; i++) {
     for (j = 0; j < d_input; j++) {
       T val_T = TheEXT(i, j);
-      mpq_set(M->matrix[i][j], f(val_T));
+      fset(M->matrix[i][j], val_T);
     }
   }
   M->representation = dd_Generator;
@@ -74,24 +68,23 @@ vectface DualDescription_incd_T(MyMatrix<T> const& TheEXT, F f)
   return ListIncd;
 }
 
-vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT, F f)
+vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT)
 {
-  auto f=[](mpq_class const& val) -> mpq_t {
-    return val.get_mpq_t();
+  auto fset=[](mpq_t & ptr, mpq_class const& val) -> void {
+    mpq_set(ptr, val.get_mpq_t());
   };
-  return DualDescription_incd_T(TheEXT, f);
+  return DualDescription_incd_T(TheEXT, fset);
 }
 
 #ifdef INCLUDE_NUMBER_THEORY_BOOST_GMP_INT
 
-vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT)
+vectface DualDescription_incd_boost_mpq_rational(MyMatrix<boost::multiprecision::mpq_rational> const& TheEXT)
 {
-  auto f=[](mpq_class const& val) -> mpq_t {
-    return val.backend().data();
+  auto fset=[](mpq_t & ptr, boost::multiprecision::mpq_rational const& val) -> void {
+    mpq_set(ptr, val.backend().data());
   };
-  return DualDescription_incd_T(TheEXT, f);
+  return DualDescription_incd_T(TheEXT, fset);
 }
-
 
 #endif
 

@@ -87,16 +87,22 @@ dd_MatrixPtr MyMatrix_PolyFile2Matrix_T(MyMatrix<T> const&TheEXT)
 
 
 template<typename T>
-inline typename std::enable_if<std::is_same<T,mpq_class>::value,vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
+inline typename std::enable_if<is_mpq_class<T>::value,vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
-  return DualDescription_incd_mpq(TheEXT);
+  return DualDescription_incd_mpq_class(TheEXT);
 }
 
 template<typename T>
-inline typename std::enable_if<(not std::is_same<T,mpq_class>::value),vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
+inline typename std::enable_if<is_boost_mpq_rational<T>::value,vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
+{
+  return DualDescription_incd_boost_mpq_rational(TheEXT);
+}
+
+template<typename T>
+inline typename std::enable_if<(not is_mpq_class<T>::value) && (not is_boost_mpq_rational<T>::value),vectface>::type DualDescription_incd(MyMatrix<T> const&TheEXT)
 {
   MyMatrix<mpq_class> EXT_mpq = UniversalMatrixConversion<mpq_class,T>(TheEXT);
-  return DualDescription_incd_mpq(EXT_mpq);
+  return DualDescription_incd_mpq_class(EXT_mpq);
 }
 
 

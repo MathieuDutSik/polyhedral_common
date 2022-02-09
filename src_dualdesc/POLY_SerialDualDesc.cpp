@@ -1,6 +1,7 @@
 //#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryCommon.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
