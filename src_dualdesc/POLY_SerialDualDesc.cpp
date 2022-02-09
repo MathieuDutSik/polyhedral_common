@@ -1,4 +1,6 @@
-#include "NumberTheory.h"
+//#include "NumberTheory.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
@@ -31,7 +33,8 @@ int main(int argc, char *argv[])
     std::string eFileName=argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    using T = mpq_class;
+    //    using T = mpq_class;
+    using T = boost::multiprecision::cpp_rational;
     MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
     //
     auto process=[&]() -> void {
