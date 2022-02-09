@@ -1,10 +1,10 @@
 #ifndef TEMP_SHORT_VECTOR_Undefinite_H
 #define TEMP_SHORT_VECTOR_Undefinite_H
 
+#include "TypeConversion.h"
 #include "mpreal_related.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
-#include "TypeConversion.h"
 #include "Temp_Positivity.h"
 
 template<typename Tint, typename T, typename Tfloat>

@@ -20,9 +20,15 @@ namespace cbased_cdd {
 //
 
 
-dd_MatrixPtr MyMatrix_PolyFile2Matrix_mpq(MyMatrix<mpq_class> const& TheEXT)
+
+template<typename T, typename F>
+vectface DualDescription_incd_T(MyMatrix<T> const& TheEXT, F f)
 {
-  using T = mpq_class;
+  dd_ErrorType err;
+  size_t nbCol=TheEXT.cols();
+  size_t nbRow=TheEXT.rows();
+  vectface ListIncd(nbRow);
+  dd_set_global_constants();
   dd_MatrixPtr M=nullptr;
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
@@ -33,31 +39,19 @@ dd_MatrixPtr MyMatrix_PolyFile2Matrix_mpq(MyMatrix<mpq_class> const& TheEXT)
   M=dd_CreateMatrix(m_input, d_input);
   M->representation=rep;
 
-  for (i = 0; i < m_input; i++)
+  for (i = 0; i < m_input; i++) {
     for (j = 0; j < d_input; j++) {
       T val_T = TheEXT(i, j);
-      mpq_set(M->matrix[i][j], val_T.get_mpq_t());
+      mpq_set(M->matrix[i][j], f(val_T));
     }
-  return M;
-}
-
-
-
-vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
-{
-  dd_ErrorType err;
-  size_t nbCol=TheEXT.cols();
-  size_t nbRow=TheEXT.rows();
-  vectface ListIncd(nbRow);
-  dd_set_global_constants();
-  dd_MatrixPtr M=MyMatrix_PolyFile2Matrix_mpq(TheEXT);
+  }
   M->representation = dd_Generator;
   //
   dd_polyhedradata* poly = dd_DDMatrix2Poly(M, &err);
   //
   dd_raydata* RayPtr = poly->child->FirstRay;
-  std::vector<mpq_class> V(nbCol);
-  mpq_class eScal;
+  std::vector<T> V(nbCol);
+  T eScal;
   auto isincd=[&](size_t iRow) -> bool {
     eScal=0;
     for (size_t iCol=0; iCol<nbCol; iCol++)
@@ -67,7 +61,7 @@ vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
       for (size_t iCol=0; iCol<nbCol; iCol++) {
-        mpq_class eVal(RayPtr->Ray[iCol]);
+        T eVal(RayPtr->Ray[iCol]);
         V[iCol] = eVal;
       }
       ListIncd.InsertFaceRef(isincd);
@@ -79,5 +73,26 @@ vectface DualDescription_incd_mpq(MyMatrix<mpq_class> const& TheEXT)
   dd_free_global_constants();
   return ListIncd;
 }
+
+vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT, F f)
+{
+  auto f=[](mpq_class const& val) -> mpq_t {
+    return val.get_mpq_t();
+  };
+  return DualDescription_incd_T(TheEXT, f);
+}
+
+#ifdef INCLUDE_NUMBER_THEORY_BOOST_GMP_INT
+
+vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT)
+{
+  auto f=[](mpq_class const& val) -> mpq_t {
+    return val.backend().data();
+  };
+  return DualDescription_incd_T(TheEXT, f);
+}
+
+
+#endif
 
 }
