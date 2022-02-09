@@ -1,4 +1,6 @@
 #include "rational.h"
+//#include "mpreal_related.h"
+#include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "SHORT_ShortestConfig.h"
@@ -18,11 +20,11 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
-    using T=mpq_class;
+    using T = mpq_class;
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tint = int;
     using Tgroup = permutalib::Group<Telt,mpz_class>;
-    using Tint=int;
     int NPROC;
     sscanf(argv[1], "%d", &NPROC);
     //

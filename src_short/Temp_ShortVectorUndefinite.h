@@ -1,14 +1,15 @@
 #ifndef TEMP_SHORT_VECTOR_Undefinite_H
 #define TEMP_SHORT_VECTOR_Undefinite_H
 
-#include "mpreal_related.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
 #include "TypeConversion.h"
 #include "Temp_Positivity.h"
 
+
+
 template<typename Tint, typename T, typename Tfloat>
-MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero, bool &result)
+std::optional<MyVector<Tint>> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero)
 {
   int n=M.rows();
   MyMatrix<Tfloat> M_f(n, n);
@@ -36,13 +37,9 @@ MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T con
   std::cerr << "ListEigVect=\n";
   WriteMatrix(std::cerr, ListEigVect);*/
 
-  
   if (nbNeg == 0) {
-    MyVector<Tint> eVect(n);
-    result=false;
-    return eVect;
+    return {};
   }
-  result=true;
   int eMult=1;
   while(true) {
     //    std::cerr << "eMult=" << eMult << "\n";
@@ -86,7 +83,6 @@ MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T con
 	  std::cerr << "    We DO NOT have norm <= CritNorm\n";
 	  }*/
 	if ( (!StrictIneq && norm <= CritNorm) || norm < CritNorm) {
-	  result=true;
 	  return eVect;
 	}
       }
@@ -102,22 +98,25 @@ MyVector<Tint> GetShortVector_unlimited_float_kernel(MyMatrix<T> const& M, T con
 template<typename Tint, typename T>
 MyVector<Tint> GetShortVector_unlimited_float(MyMatrix<T> const& M, T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero)
 {
-  bool result;
-  MyVector<Tint> eVect;
   //  std::cerr << "Before call to GetShortVector_unlimited_float_kernel\n";
-  eVect=GetShortVector_unlimited_float_kernel<Tint,T,double>(M, CritNorm, StrictIneq, NeedNonZero, result);
+  std::optional<MyVector<Tint>> opt=GetShortVector_unlimited_float_kernel<Tint,T,double>(M, CritNorm, StrictIneq, NeedNonZero);
   //  std::cerr << " After call to GetShortVector_unlimited_float_kernel\n";
-  if (result)
-    return eVect;
+  if (opt)
+    return *opt;
+#ifdef USE_MPREAL
   int theprec = 20;
   while(true) {
     std::cerr << "theprec=" << theprec << "\n";
     mpfr::mpreal::set_default_prec(theprec);
-    eVect=GetShortVector_unlimited_float_kernel<Tint,T,mpfr::mpreal>(M, CritNorm, StrictIneq, NeedNonZero, result);
-    if (result)
-      return eVect;
+    std::optional<MyVector<Tint>> opt = GetShortVector_unlimited_float_kernel<Tint,T,mpfr::mpreal>(M, CritNorm, StrictIneq, NeedNonZero);
+    if (optt)
+      return *opt;
     theprec += 8;
   }
+#else
+  std::cerr << "mpreal might be needed after all\n";
+  throw TerminalException{1};
+#endif
 }
 
 
