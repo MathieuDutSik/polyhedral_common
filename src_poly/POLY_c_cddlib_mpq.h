@@ -1,10 +1,9 @@
 #define GMPRATIONAL
 
 #include "gmpxx.h"
-
-#include <vector>
+#include <boost/multiprecision/gmp.hpp>
 #include "Boost_bitset_kernel.h"
-#include "MAT_Matrix.h"
+#include "MatrixTypes.h"
 
 namespace cbased_cdd {
 

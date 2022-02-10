@@ -1,6 +1,7 @@
 #define GMPRATIONAL
 
 #include "gmpxx.h"
+#include <boost/multiprecision/gmp.hpp>
 #include "setoper.h"
 #include "cdd.h"
 #include <vector>
@@ -76,8 +77,6 @@ vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const& TheEXT)
   return DualDescription_incd_T(TheEXT, fset);
 }
 
-#ifdef INCLUDE_NUMBER_THEORY_BOOST_GMP_INT
-
 vectface DualDescription_incd_boost_mpq_rational(MyMatrix<boost::multiprecision::mpq_rational> const& TheEXT)
 {
   auto fset=[](mpq_t & ptr, boost::multiprecision::mpq_rational const& val) -> void {
@@ -85,7 +84,5 @@ vectface DualDescription_incd_boost_mpq_rational(MyMatrix<boost::multiprecision:
   };
   return DualDescription_incd_T(TheEXT, fset);
 }
-
-#endif
 
 }
