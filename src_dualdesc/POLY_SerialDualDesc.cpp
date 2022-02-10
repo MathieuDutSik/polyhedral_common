@@ -1,6 +1,6 @@
-//#include "NumberTheory.h"
-#include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryBoostCppInt.h"
+//#include "NumberTheory.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryCommon.h"
 #include "Permutation.h"
