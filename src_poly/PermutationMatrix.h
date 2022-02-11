@@ -1,11 +1,12 @@
-#ifndef DEFINE_PERMUTALIB_PERMUTATION_H
-#define DEFINE_PERMUTALIB_PERMUTATION_H
+#ifndef DEFINE_PERMUTALIB_PERMUTATION_MATRIX_H
+#define DEFINE_PERMUTALIB_PERMUTATION_MATRIX_H
 
 #include <vector>
 #include <stdlib.h>
 #include <string>
 #include <iostream>
 #include "exception.h"
+#include "MAT_Matrix.h"
 #include "Face_basic.h"
 #include "hash_fct.h"
 
@@ -36,7 +37,7 @@ public:
     }
 #endif
     ListVal = std::vector<Tidx>(siz);
-    for (Tidx i=0; i<n; i++)
+    for (Tidx i=0; i<siz; i++)
       ListVal[i]=i;
     M = IdentityMat<T>(dim);
   }
@@ -154,6 +155,10 @@ public:
   {
     return ListVal;
   }
+  const MyMatrix<T>& getMatrix() const
+  {
+    return M;
+  }
   Tidx operator[](Tidx const& i) const
   {
     return ListVal[i];
@@ -198,7 +203,7 @@ bool operator!=(PermutationMatrix<Tidx,T> const& v1, PermutationMatrix<Tidx,T> c
 
 
 template<typename Tidx, typename T>
-bool operator<(PermutationMatrix<Tidx> const& v1, PermutationMatrix<Tidx> const& v2)
+bool operator<(PermutationMatrix<Tidx,T> const& v1, PermutationMatrix<Tidx,T> const& v2)
 {
   Tidx siz1=v1.size();
   Tidx siz2=v2.size();
@@ -213,7 +218,7 @@ bool operator<(PermutationMatrix<Tidx> const& v1, PermutationMatrix<Tidx> const&
 }
 
 template<typename Tidx, typename T>
-PermutationMatrix<Tidx,T> operator~(PermutationMatrix<Tidx> const& ePermMatr)
+PermutationMatrix<Tidx,T> operator~(PermutationMatrix<Tidx,T> const& ePermMatr)
 {
   Tidx siz = ePermMatr.size();
   const std::vector<Tidx>& LVal = ePermMatr.getListVal();
@@ -273,7 +278,7 @@ void operator*=(PermutationMatrix<Tidx,T> & v1, PermutationMatrix<Tidx,T> const&
 
 
 template<typename Tidx, typename T>
-PermutationMatrix<Tidx> Conjugation(PermutationMatrix<Tidx,T> const& v1, PermutationMatrix<Tidx,T> const& v2)
+PermutationMatrix<Tidx,T> Conjugation(PermutationMatrix<Tidx,T> const& v1, PermutationMatrix<Tidx,T> const& v2)
 {
   Tidx siz=v1.size();
 #ifdef PERMUTALIB_BLOCKING_SANITY_CHECK
@@ -340,7 +345,7 @@ PermutationMatrix<Tidx,T> Inverse(PermutationMatrix<Tidx,T> const& ePermMatr)
 template<typename Tidx, typename T>
 std::string GapStyleStringShift(PermutationMatrix<Tidx,T> const& ePermMatr, int const& eShift)
 {
-  Tidx n=ePerm.size();
+  Tidx n=ePermMatr.size();
   Face ListStat(n);
   std::string eRet;
 
@@ -357,7 +362,7 @@ std::string GapStyleStringShift(PermutationMatrix<Tidx,T> const& ePermMatr, int 
 	IsFirst=false;
 	ePart += std::to_string(eCurr + eShift);
 	ListStat[eCurr] = 1;
-	Tidx eNext = ePerm.at(eCurr);
+	Tidx eNext = ePermMatr.at(eCurr);
 	len++;
 	if (eNext == eFirst)
 	  break;

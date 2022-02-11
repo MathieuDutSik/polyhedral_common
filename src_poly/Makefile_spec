@@ -4,7 +4,7 @@
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
 #PROGRAM		= TEST_LinPolytope_WMatCanonic
-PROGRAM		= TEST_LinPolytopeIntegral_Automorphism
+#PROGRAM		= TEST_LinPolytopeIntegral_Automorphism
 #PROGRAM		= SHORT_SplitVectorFamily
 #PROGRAM		= SHORT_EnumerateCyclicCases
 #PROGRAM		= SHORT_GetShortestVector
@@ -35,6 +35,7 @@ PROGRAM		= TEST_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= POLY_GetFullRankFacetSet
+PROGRAM		= TEST_PermMatrTest_PolyStabilizer
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
