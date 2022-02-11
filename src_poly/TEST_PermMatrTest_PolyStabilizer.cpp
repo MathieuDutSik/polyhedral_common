@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
       std::cerr << "GRP_PermMatrTest_Automorphism [MatrFile] [FaceFile]\n";
       return -1;
     }
-    using T = mpz_class;
+    using T = mpq_class;
     using Tidx = int32_t;
     using Tint = mpz_class;
     const bool use_scheme1 = true;
@@ -38,7 +38,8 @@ int main(int argc, char *argv[])
       Telt2 elt2(ePerm.getListVal(), eMatr);
       ListPermMatr.push_back(elt2);
     }
-    Tgroup2 GRP2(ListPermMatr, M.rows());
+    Telt2 elt2(M.rows(), M.cols());
+    Tgroup2 GRP2(ListPermMatr, elt2);
     Tgroup2 stab=GRP2.Stabilizer_OnSets(f);
     //
     size_t pos=0;

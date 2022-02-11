@@ -256,7 +256,7 @@ PermutationMatrix<Tidx,T> operator*(PermutationMatrix<Tidx,T> const& v1, Permuta
   }
   //  return SingleSidedPerm<Tidx>(vVal);
   MyMatrix<T> Mprod = v1.M * v2.M;
-  return SingleSidedPerm<Tidx>(std::move(vVal), std::move(Mprod));
+  return PermutationMatrix<Tidx,T>(std::move(vVal), std::move(Mprod));
 }
 
 
@@ -295,7 +295,7 @@ PermutationMatrix<Tidx,T> Conjugation(PermutationMatrix<Tidx,T> const& v1, Permu
     v[i2]=j2;
   }
   MyMatrix<T> Mret = Inverse(v2.M) * v1.M * v2.M;
-  return SingleSidedPerm<Tidx>(std::move(v), std::move(Mret));
+  return PermutationMatrix<Tidx,T>(std::move(v), std::move(Mret));
 }
 
 
@@ -326,7 +326,7 @@ PermutationMatrix<Tidx,T> LeftQuotient(PermutationMatrix<Tidx,T> const& a, Permu
   for (Tidx i=0; i<siz; i++)
     ListVal[Val_A[i]] = Val_B[i];
   MyMatrix<T> Mret = Inverse(a.M) * b.M;
-  return SingleSidedPerm<Tidx>(std::move(ListVal), std::move(Mret));
+  return PermutationMatrix<Tidx,T>(std::move(ListVal), std::move(Mret));
 }
 
 
