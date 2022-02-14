@@ -44,6 +44,7 @@ std::vector<int> PermutationOrbit(Telt const& ePerm)
 }
 
 
+
 template<typename Telt>
 void WritePermutationGAP(std::ostream&os, Telt const& ePerm)
 {
@@ -119,6 +120,8 @@ Tgroup ReadGroup(std::istream &is)
   return Tgroup(ListGen, n);
 }
 
+
+
 template<typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
 {
@@ -136,6 +139,7 @@ void WriteGroup(std::ostream &os, Tgroup const& TheGRP)
     os << "\n";
   }
 }
+
 
 
 template<typename Tgroup>
@@ -158,6 +162,8 @@ void WriteGroupMakeUp(std::ostream &os, Tgroup const& TheGRP)
   os << "nbGen=" << nbGen << "\n";
   os << "size=" << TheGRP.size() << "\n";
 }
+
+
 
 template<typename Tgroup>
 void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
@@ -193,13 +199,11 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 // group combinatorial algorithms
 //
 
-
 template<typename Tgroup>
 std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const& gList)
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  std::vector<int> eListReturn;
   Tidx n=TheGRP.n_act();
   std::vector<int> rList = gList;
   auto LGen = TheGRP.GeneratorsOfGroup();
@@ -215,7 +219,7 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
         }
       }
     }
-    std::size_t eSum=0;
+    Tidx eSum=0;
     for (Tidx i=0; i<n; i++)
       eSum += rList[i];
     if (eSum == eSumPrev)
@@ -223,6 +227,7 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
   }
   return rList;
 }
+
 
 
 template<typename Tgroup>
@@ -239,6 +244,8 @@ std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
     rListB[i] = 1 - rListB[i];
   return rListB;
 }
+
+
 
 template<typename Tgroup>
 Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
@@ -266,6 +273,7 @@ Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
 }
 
 
+
 template<typename Tgroup>
 Face OrbitUnion(Tgroup const& GRP, Face const& gList)
 {
@@ -280,11 +288,6 @@ Face OrbitUnion(Tgroup const& GRP, Face const& gList)
     rListB[i] = 1 - rListB[i];
   return rListB;
 }
-
-
-
-
-
 
 //
 // Several building of new groups.
@@ -316,6 +319,7 @@ Telt ReduceElementAction(Telt const& eElt, Face const& eList)
   }
   return Telt(std::move(v));
 }
+
 
 
 template<typename Tgroup>
@@ -351,6 +355,7 @@ Tgroup ReducedGroupAction(Tgroup const& TheGRP, Face const& eList)
 }
 
 
+
 template<typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
 {
@@ -372,7 +377,6 @@ Tgroup ConjugateGroup(Tgroup const& TheGRP, typename Tgroup::Telt const& ePerm)
   return Tgroup(ListGen, n);
 }
 
-
 //
 // Some enumeration code
 //
@@ -388,6 +392,7 @@ void GROUP_FuncInsertInSet(Tgroup const& TheGRP, Face const& eList, vectface &Li
   }
   ListListSet.push_back(eList);
 }
+
 
 
 template<typename Tgroup>
@@ -409,11 +414,9 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const& TheGRP,
   ListInv.push_back(eInv);
 }
 
-
 //
 // Some combinatorial algorithms using only the generators of the group.
 //
-
 
 template<typename Telt>
 std::vector<int> ComputeFullOrbitPoint(const size_t& n, const std::vector<Telt>& ListGen, int const& ePoint)
@@ -437,6 +440,8 @@ std::vector<int> ComputeFullOrbitPoint(const size_t& n, const std::vector<Telt>&
   }
   return eList;
 }
+
+
 
 template<typename Telt>
 vectface DecomposeOrbitPoint_Kernel(const std::vector<Telt>& LGen, Face const& eList)
@@ -465,6 +470,8 @@ vectface DecomposeOrbitPoint_Kernel(const std::vector<Telt>& LGen, Face const& e
   return ListOrb;
 }
 
+
+
 template<typename Tgroup>
 vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
 {
@@ -472,6 +479,8 @@ vectface DecomposeOrbitPoint(Tgroup const& TheGRP, Face const& eList)
   std::vector<Telt> LGen = TheGRP.GeneratorsOfGroup();
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
+
+
 
 template<typename Tgroup>
 vectface DecomposeOrbitPoint_Full(Tgroup const& TheGRP)
@@ -486,6 +495,7 @@ vectface DecomposeOrbitPoint_Full(Tgroup const& TheGRP)
 }
 
 
+
 template<typename Telt>
 vectface DecomposeOrbitPoint_KernelFull(const size_t& n, const std::vector<Telt>& LGen)
 {
@@ -494,8 +504,6 @@ vectface DecomposeOrbitPoint_KernelFull(const size_t& n, const std::vector<Telt>
     eList[i] = 1;
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
-
-
 
 
 
@@ -552,6 +560,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(std::vector<Tobj> const& PreListTota
 }
 
 
+
 template<typename Telt, typename Tobj, typename Tact>
 std::vector<std::pair<Tobj,Telt>> OrbitWithRepresentative(const Telt& id, std::vector<Telt> const& ListGen, Tobj const& x, Tact act)
 {
@@ -576,9 +585,6 @@ std::vector<std::pair<Tobj,Telt>> OrbitWithRepresentative(const Telt& id, std::v
   }
   return ListObj;
 }
-
-
-
 
 
 
@@ -611,10 +617,6 @@ void OnFace_inplace(Face & fSet, Face const& eSet, Telt const& eElt)
     pos = eSet.find_next(pos);
   }
 }
-
-
-
-
 
 
 
@@ -653,6 +655,8 @@ vectface OrbitFace(const Face& f, const std::vector<Telt>& LGen)
   }
   return vf;
 }
+
+
 
 template<typename Tgroup, typename F>
 void OrbitSplittingSet_Kernel(vectface const& PreListTotal, Tgroup const& TheGRP, F f)
@@ -717,6 +721,8 @@ vectface OrbitSplittingSet(vectface const& PreListTotal, Tgroup const& TheGRP)
   return TheReturn;
 }
 
+
+
 template<typename Tgroup>
 vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup const& TheGRP)
 {
@@ -768,9 +774,6 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const& PreListTotal, Tgroup 
   std::cerr << " -- ";
   return TheReturn;
 }
-
-
-
 
 
 
