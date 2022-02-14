@@ -2,6 +2,10 @@
 #define INCLUDE_PERM_FCT_H
 
 
+#include "GRAPH_bliss.h"
+#include "GRAPH_traces.h"
+
+
 
 template<typename T, typename Tidx>
 std::vector<Tidx> SortingPerm(std::vector<T> const & ListV)

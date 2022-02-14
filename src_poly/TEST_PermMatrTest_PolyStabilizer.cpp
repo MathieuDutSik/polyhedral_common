@@ -1,7 +1,4 @@
-#include "Permutation.h"
-#include "Group.h"
-#include "GRP_GroupFct.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "NumberTheory.h"
 
 
 
