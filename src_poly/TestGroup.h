@@ -39,7 +39,7 @@ void TestPolytopeFace(MyMatrix<T> const& M, Face const& f)
   }
   //
   auto get_group_A=[&](std::vector<MyMatrix<T>> const LMat, std::vector<Telt1> const& LElt, Face const& f) -> Tgroup1 {
-    std::vector<MyMatrix<T>> LStabMatrGen = StabilizerMatrixPermSubset<Telt1,MyMatrix<T>,mpz_class>(LMat, LElt, id_matr, f);
+    std::vector<MyMatrix<T>> LStabMatrGen = permutalib::StabilizerMatrixPermSubset<Telt1,MyMatrix<T>,mpz_class>(LMat, LElt, id_matr, f);
     std::vector<Telt1> LStabPermGen;
     for (auto & eGen : LStabMatrGen) {
       std::vector<Tidx> eList(n_vert);
