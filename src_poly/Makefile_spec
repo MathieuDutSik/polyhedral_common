@@ -35,7 +35,7 @@
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= POLY_GetFullRankFacetSet
-PROGRAM		= TEST_PermMatrTest_PolyStabilizer
+PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

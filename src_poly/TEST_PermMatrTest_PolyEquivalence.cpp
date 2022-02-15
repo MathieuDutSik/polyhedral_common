@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         MyMatrix<T> M = ReadMatrixFile<T>(MatrFile);
         std::string FaceFile = argv[3];
         Face f = ReadFaceFile(FaceFile);
-        TestPolytopeFace_Stabilizer(M, f);
+        TestPolytopeFace_Equivalence(M, f);
         return;
       }
       if (option == "random") {
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         sscanf(argv[3], "%d", &k);
         for (int iter=0; iter<100; iter++) {
           Face f = RandomKFace(M.rows(), k);
-          TestPolytopeFace_Stabilizer(M, f);
+          TestPolytopeFace_Equivalence(M, f);
         }
         return;
       }
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
           MyMatrix<T> M = ReadMatrix<T>(is);
           for (int iter=0; iter<100; iter++) {
             Face f = RandomKFace(M.rows(), k);
-            TestPolytopeFace_Stabilizer(M, f);
+            TestPolytopeFace_Equivalence(M, f);
           }
         }
         return;

@@ -8,7 +8,7 @@
 
 
 template<typename T>
-void TestPolytopeFace(MyMatrix<T> const& M, Face const& f)
+void TestPolytopeFace_Stabilizer(MyMatrix<T> const& M, Face const& f)
 {
   using Tidx = int32_t;
   using Tint = mpz_class;
@@ -103,6 +103,97 @@ void TestPolytopeFace(MyMatrix<T> const& M, Face const& f)
     std::cerr << "The groups are not equal. Please debug\n";
     throw TerminalException{1};
   }
+}
+
+
+
+
+
+template<typename T>
+void TestPolytopeFace_Equivalence(MyMatrix<T> const& M, Face const& f1)
+{
+  using Tidx = int32_t;
+  using Tint = mpz_class;
+  const bool use_scheme1 = true;
+  using Telt1   = permutalib::SingleSidedPerm<Tidx>;
+  using Tgroup1 = permutalib::Group<Telt1,Tint>;
+  //
+  std::cerr << "---------------------------------------- TestPolytopeFace -------------------------------------\n";
+  int n_vert = M.rows();
+  MyMatrix<T> id_matr = IdentityMat<T>(M.cols());
+  std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
+  Tgroup1 GRP1 = LinPolytope_Automorphism<T,use_scheme1,Tgroup1>(M);
+  Telt1 elt1 = GRP1.rand();
+  Face f2 = permutalib::OnSets(f1, elt1);
+  std::cerr << "We have |GRP1|=" << GRP1.size() << "  n_vert=" << n_vert << "\n";
+  Face fo = OrbitUnion(GRP1, f1);
+  std::cerr << "|f1|=" << f1.size() << " / " << f1.count() << "    |fo|=" << fo.size() << " / " << fo.count() << "\n";
+  std::vector<int> o_v;
+  for (int i=0; i<n_vert; i++)
+    if (fo[i] == 1)
+      o_v.push_back(i);
+  std::vector<int> o_v_rev(n_vert,-1);
+  for (size_t pos=0; pos<o_v.size(); pos++) {
+    int val = o_v[pos];
+    o_v_rev[val] = pos;
+  }
+  std::unordered_map<MyVector<T>, int> map;
+  for (int i_vert=0; i_vert<n_vert; i_vert++) {
+    MyVector<T> V = GetMatrixRow(M, i_vert);
+    map[V] = i_vert;
+  }
+  //  std::cerr << "We have map\n";
+  //
+  auto test_representation=[&](std::vector<MyMatrix<T>> const LMat, std::vector<Telt1> const& LElt, Face const& f1_i, Face const& f2_i) -> void {
+    //    std::cerr << "Before computation of LStabMatrGen\n";
+    std::optional<MyMatrix<T>> opt = permutalib::RepresentativeActionMatrixPermSubset<Telt1,MyMatrix<T>,mpz_class>(LMat, LElt, id_matr, f1_i, f2_i);
+    if (!opt) {
+      std::cerr << "Failed to find an equivalence\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> const& eEquiv = *opt;
+    //
+    std::vector<Tidx> eList(n_vert);
+    for (int i_vert=0; i_vert<n_vert; i_vert++) {
+      MyVector<T> V = GetMatrixRow(M, i_vert);
+      MyVector<T> Vimg = eEquiv.transpose() * V;
+      eList[i_vert] = map[Vimg];
+    }
+    Telt1 elt1(eList);
+    Face f1_img = permutalib::OnSets(f1_i, elt1);
+    if (f1_img != f2) {
+      std::cerr << "The obtained permuttion is not an equivalence\n";
+      throw TerminalException{1};
+    }
+  };
+  //
+  //
+  std::vector<MyMatrix<T>> ListMatrGens;
+  std::vector<Telt1> ListPermGens_A = GRP1.GeneratorsOfGroup();
+  std::vector<Telt1> ListPermGens_B;
+  for (auto & ePerm : ListPermGens_A) {
+    MyMatrix<T> eMatr = FindTransformation(M, M, ePerm);
+    ListMatrGens.push_back(eMatr);
+    std::vector<Tidx> eList(o_v.size());
+    for (size_t i=0; i<o_v.size(); i++) {
+      Tidx val1 = o_v[i];
+      Tidx val2 = OnPoints(val1, ePerm);
+      Tidx val3 = o_v_rev[val2];
+      eList[i] = val3;
+    }
+    Telt1 elt_B(eList);
+    ListPermGens_B.push_back(elt_B);
+  }
+  std::cerr << "We have ListMatrGens, ListPermGens_B\n";
+  Face f1_B(o_v.size());
+  Face f2_B(o_v.size());
+  for (size_t pos=0; pos<o_v.size(); pos++) {
+    f1_B[pos] = f1[o_v[pos]];
+    f2_B[pos] = f2[o_v[pos]];
+  }
+
+  test_representation(ListMatrGens, ListPermGens_A, f1, f2);
+  test_representation(ListMatrGens, ListPermGens_B, f1_B, f2_B);
 }
 
 
