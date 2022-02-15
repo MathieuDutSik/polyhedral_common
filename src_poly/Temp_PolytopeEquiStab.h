@@ -1616,14 +1616,25 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   std::cerr << "fp.second=\n";
   PrintWeightedMatrix(std::cerr, fp.second);
 #endif
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
 
   //  std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(ep.second).first;
   //  std::cerr << "Before fCanonicReord\n";
   std::vector<Tidx> fCanonicReord = GetGroupCanonicalizationVector_Kernel<Tval,Tgr,Tidx,Tidx_value>(fp.second).first;
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|GetGroupCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
   using Tfield = typename overlying_field<T>::field_type;
   //  std::cerr << "Before IsomorphismFromCanonicReord\n";
   std::optional<std::pair<std::vector<Tidx>,MyMatrix<Tfield>>> IsoInfo = IsomorphismFromCanonicReord<T,Tfield,Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|IsomorphismFromCanonicReord|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
   if (!IsoInfo) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "We failed to find IsoInfo\n";
@@ -1636,16 +1647,22 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   std::cerr << "det(eMat)=" << DeterminantMat(IsoInfo->second) << "  eMat=" << StringMatrixGAP(IsoInfo->second) << "\n";
 #endif
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|GetStabilizerWeightMatrix|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "|GRP1|=" << GRP1.size() << "\n";
-#endif
   for (auto & eGen : GRP1.GeneratorsOfGroup()) {
     MyMatrix<T> eGen_T = FindTransformation(ep.first, ep.first, eGen);
-#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "det(eGen_T)=" << DeterminantMat(eGen_T) << " eGen_T=" << StringMatrixGAP(eGen_T) << "\n";
-#endif
   }
+#endif
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
+  std::cerr << "|LinPolytopeIntegral_Isomorphism_Method8|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+#endif
   if (eRes) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
     std::cerr << "Found one isomorphism\n";

@@ -405,6 +405,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
   size_t len = cusp_bank.l_request.size();
   for (size_t i=0; i<len; i++) {
     const CuspidalRequest_FullInfo<T,Tint>& fReq_full = cusp_bank.l_request[i];
+    std::cerr << "i=" << i << "/" << len << " hash: eReq=" << eReq_full.hash << " fReq=" << fReq_full.hash << "\n";
     if (fReq_full.hash == eReq_full.hash) {
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(fReq_full.e_pair, eReq_full.e_pair);
       if (equiv_opt) {
@@ -1309,13 +1310,17 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
   if (OutFormat == "GAP") {
     os << "return rec(LorMat:=";
     WriteMatrixGAP(os, G);
+    std::cerr << "We write G\n";
     os << ", l_norms:=";
     WriteStdVectorGAP(os, l_norms);
+    std::cerr << "We write l_norms\n";
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
+    std::cerr << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
     os << ", ListVertices:=[";
     bool IsFirst = true;
     size_t len = re.l_orbit_vertices.size();
+    std::cerr << "We have |l_orbit_vertices|=" << len << "\n";
     for (size_t i=0; i<len; i++) {
       if (!IsFirst)
         os << ",\n";
@@ -1327,6 +1332,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     if (ComputeAllSimpleRoots) {
       os << ", ListSimpleRoots:=[";
       size_t n_simple = l_simple_root.size();
+      std::cerr << "We have n_simple=" << n_simple << "\n";
       for (size_t i=0; i<n_simple; i++) {
         if (i>0)
           os << ",";
@@ -1863,17 +1869,21 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
   bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
+  std::cerr << "OutFormat=" << OutFormat << " FileOut=" << FileOut << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
   if (FileOut == "stderr") {
+    std::cerr << "PrintResultEdgewalk to stderr\n";
     PrintResultEdgewalk(G, re, std::cerr, OutFormat, ComputeAllSimpleRoots);
   } else {
     if (FileOut == "stdout") {
+      std::cerr << "PrintResultEdgewalk to stdout\n";
       PrintResultEdgewalk(G, re, std::cout, OutFormat, ComputeAllSimpleRoots);
     } else {
+      std::cerr << "PrintResultEdgewalk to FileOut\n";
       std::ofstream os(FileOut);
       PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
     }
   }
-
+  std::cerr << "We are after the PrintResultEdgewalk\n";
 }
 
 
