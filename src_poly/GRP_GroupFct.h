@@ -199,6 +199,15 @@ void WriteGroupGAP(std::ostream &os, Tgroup const& TheGRP)
 // group combinatorial algorithms
 //
 
+void f_print(std::vector<int> const& V, std::string const& estr)
+{
+  std::cerr << estr << " =";
+  for (auto & val : V)
+    std::cerr << " " << val;
+  std::cerr << "\n";
+};
+
+
 template<typename Tgroup>
 std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const& gList)
 {
@@ -206,11 +215,16 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
   using Tidx = typename Telt::Tidx;
   Tidx n=TheGRP.n_act();
   std::vector<int> rList = gList;
-  auto LGen = TheGRP.GeneratorsOfGroup();
-  while(true) {
-    Tidx eSumPrev = 0;
+  auto f_sum=[&]() -> Tidx {
+    Tidx eSum = 0;
     for (Tidx i=0; i<n; i++)
-      eSumPrev += rList[i];
+      eSum += rList[i];
+    return eSum;
+  };
+  auto LGen = TheGRP.GeneratorsOfGroup();
+  Tidx eSum = f_sum();
+  f_print(rList, "input(rList)");
+  while(true) {
     for (Tidx i=0; i<n; i++) {
       if (rList[i] == 0) {
         for (auto & eGen : LGen) {
@@ -219,12 +233,13 @@ std::vector<int> OrbitIntersection(Tgroup const& TheGRP, std::vector<int> const&
         }
       }
     }
-    Tidx eSum=0;
-    for (Tidx i=0; i<n; i++)
-      eSum += rList[i];
-    if (eSum == eSumPrev)
+    f_print(rList, "iter(rList)");
+    Tidx eSumNew = f_sum();
+    if (eSum == eSumNew)
       break;
+    eSum = eSumNew;
   }
+  f_print(rList, "returning(rList)");
   return rList;
 }
 
@@ -239,6 +254,8 @@ std::vector<int> OrbitUnion(Tgroup const& TheGRP, std::vector<int> const& gList)
   std::vector<int> gListB(n);
   for (Tidx i=0; i<n; i++)
     gListB[i] = 1 - gList[i];
+  f_print(gList, "OrbitUnion(gList)");
+  f_print(gListB, "OrbitUnion(gListB)");
   std::vector<int> rListB = OrbitIntersection(TheGRP, gListB);
   for (Tidx i=0; i<n; i++)
     rListB[i] = 1 - rListB[i];
@@ -255,8 +272,8 @@ Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
   std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
   Tidx n = GRP.n_act();
   Face rList = gList;
+  size_t eSum = rList.count();
   while(true) {
-    size_t eSumPrev = rList.count();
     for (Tidx i=0; i<n; i++) {
       if (rList[i] == 0) {
         for (auto & eGen : LGen) {
@@ -265,9 +282,10 @@ Face OrbitIntersection(Tgroup const& GRP, Face const& gList)
         }
       }
     }
-    size_t eSum = rList.count();
-    if (eSum == eSumPrev)
+    size_t eSumNew = rList.count();
+    if (eSum == eSumNew)
       break;
+    eSum = eSumNew;
   }
   return rList;
 }
