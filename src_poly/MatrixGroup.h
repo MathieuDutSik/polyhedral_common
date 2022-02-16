@@ -1,6 +1,7 @@
 #ifndef INCLUDE_MATRIX_GROUP_H
 #define INCLUDE_MATRIX_GROUP_H
 
+#include "Group.h"
 #include "factorizations.h"
 #include "MAT_MatrixInt.h"
 #include "GRP_GroupFct.h"
@@ -524,8 +525,6 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePer
 template<typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace, T const& TheMod)
 {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   using Treturn = typename Thelper::Treturn;
   int n=helper.n;
   MyMatrix<T> ModSpace=TheMod * IdentityMat<T>(n);
@@ -613,8 +612,6 @@ using ResultTestModEquivalence = std::pair<std::vector<MyMatrix<T>>, MyMatrix<T>
 template<typename T, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2, T const& TheMod)
 {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   using Treturn = typename Thelper::Treturn;
   int n=TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
@@ -726,7 +723,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 template<typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace)
 {
-  using Telt=typename Tgroup::Telt;
   int n=helper.n;
 #ifdef DEBUG_MATRIX_GROUP
   //  std::cerr << "TheSpace=\n";
@@ -783,7 +779,6 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of LinearSpace_Equivalence\n";
 #endif
-  using Telt=typename Tgroup::Telt;
   int n=TheSpace1.rows();
   T LFact1=LinearSpace_GetDivisor(TheSpace1);
   T LFact2=LinearSpace_GetDivisor(TheSpace2);
