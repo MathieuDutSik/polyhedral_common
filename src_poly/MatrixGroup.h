@@ -361,7 +361,8 @@ ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutation
 
 
 template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace)
+std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
+                                                   Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -592,7 +593,7 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     Face eFace = GetFace(eret.nbRow, O, TheSpaceMod);
 
 
-    ListMatrRet = MatrixIntegral_Stabilizer(GRPwork, helper, eFace);
+    ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPwork, helper, eFace);
   }
   return ListMatrRet;
 }
@@ -614,7 +615,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Treturn = Thelper::Treturn;
+  using Treturn = typename Thelper::Treturn;
   int n=TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "------------------------------------------------------\n";
@@ -821,7 +822,7 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
     for (int j=0; j<i; j++)
       TheMod *= eList[j];
     MyMatrix<T> TheSpace1Img=TheSpace1*eElt;
-    std::optional<ResultTestModEquivalence<T>> opt = LinearSpace_ModEquivalence<T,Tgroup,decltype(helper)>(ListMatrWork, helper, TheSpace1Img, TheSpace2, TheMod);
+    std::optional<ResultTestModEquivalence<T>> opt = LinearSpace_ModEquivalence<T,Tgroup,Thelper>(ListMatrWork, helper, TheSpace1Img, TheSpace2, TheMod);
     if (!opt)
       return {};
     eElt = eElt * (opt->second);
