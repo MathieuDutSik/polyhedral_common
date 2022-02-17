@@ -417,7 +417,7 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] 
 
 
 template<typename T, typename Telt>
-std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O)
+std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -429,6 +429,10 @@ std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::ve
 #endif
   int siz=Osiz;
   Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
+  auto TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
+    MyVector<T> eVect=eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod);
+  };
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -599,7 +603,7 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     std::cerr << "|OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-    Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
+    Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
 
 
     Tgroup GRPwork(eret.ListPermGens, eret.nbRow);
@@ -695,7 +699,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
 
 
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.nbRow);
 
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
@@ -723,7 +727,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
     } else {
       MyVector<T> const& V = *test2;
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.nbRow);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
       ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPperm, helper, eFace2);

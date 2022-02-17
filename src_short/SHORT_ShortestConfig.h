@@ -513,20 +513,18 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const& M1, My
 }
 
 template<typename T, typename Tint, typename Tgroup>
-FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint> const& M)
+std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const& M)
 {
   using Telt=typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
   ShortIso<T,Tint> eRec1=SHORT_GetInformation<T,Tint>(M);
-  int n=M.cols();
   WeightMatrix<true, T, Tidx_value> WMat=T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat, eRec1.SHVdisc);
   Tgroup GRP=GetStabilizerWeightMatrix<T,Tgr,Tgroup,Tidx_value>(WMat);
   std::cerr << "|GRP| = " << GRP.size() << "\n";
   MyMatrix<Tint> Mneg=-M;
   MyMatrix<Tint> Mtot=Concatenate(M, Mneg);
   std::vector<MyMatrix<Tint>> ListMatrGen;
-  std::vector<Telt> ListPermGen;
   MyMatrix<T> SHV_T=UniversalMatrixConversion<T,Tint>(eRec1.SHVdisc);
   std::vector<Telt> LGen=GRP.GeneratorsOfGroup();
   for (auto const& eGen : LGen) {
@@ -537,13 +535,10 @@ FiniteMatrixGroup<Tint, typename Tgroup::Telt> SHORT_GetStabilizer(MyMatrix<Tint
       throw TerminalException{1};
     };
     MyMatrix<Tint> MatEquiv_i=UniversalMatrixConversion<Tint,T>(MatEquiv_T);
-    MyMatrix<Tint> MtotImg=Mtot * MatEquiv_i;
-    Telt ePerm=GetPermutationOnVectors<Tint,Telt>(Mtot, MtotImg);
     ListMatrGen.push_back(MatEquiv_i);
-    ListPermGen.push_back(ePerm);
   }
   std::cerr << "Exiting SHORT_GetStabilizer\n";
-  return {n, std::move(Mtot), std::move(ListMatrGen), std::move(ListPermGen)};
+  return ListMatrGen;
 }
 
 template<typename T>
@@ -563,7 +558,7 @@ int GetPositionAntipodal(std::vector<MyVector<T>> const& ListVect, MyVector<T> c
 
 
 int KissingNumberUpperBound(int const& n)
-{  
+{
   std::vector<int> ListVal={-1, 2,6,12,24,45,78,135,240,366,554,870,1357,2069,3183,4866,7355};
   if (n <= 16) {
     return ListVal[n];
@@ -613,14 +608,13 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const& eSHV)
 template<typename T, typename Tint, typename Tgroup>
 ReplyRealizability<T,Tint> SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const& Minput, std::string const& TheMethod)
 {
-  using Telt=typename Tgroup::Telt;
   SHVreduced<Tint> RecLLL = SHORT_GetLLLreduction_Kernel(Minput);
   MyMatrix<Tint> M = RecLLL.SHVred;
   int n=M.cols();
-  FiniteMatrixGroup<Tint, Telt> eStab=SHORT_GetStabilizer<T,Tint,Tgroup>(M);
+  std::vector<MyMatrix<Tint>> ListMatrGen = SHORT_GetStabilizer<T,Tint,Tgroup>(M);
   std::vector<MyMatrix<T>> StdBasis=StandardSymmetricBasis<T>(n);
   std::vector<MyMatrix<T>> ListGen_T;
-  for (auto & eGen : eStab.ListMatrGen)
+  for (auto & eGen : ListMatrGen)
     ListGen_T.push_back(UniversalMatrixConversion<T,Tint>(eGen));
   std::cerr << "Before BasisInvariantForm\n";
   std::vector<MyMatrix<T>> ListMat=BasisInvariantForm(n, ListGen_T);
@@ -825,11 +819,10 @@ Tint SHORT_GetMaximumDeterminant(MyMatrix<Tint> const& M)
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::vector<MyMatrix<Tint>> const& ListSHVinp, std::string const& TheMethod)
 {
-  using Telt=typename Tgroup::Telt;
   Tint eMaxDet=SHORT_GetMaximumDeterminant(M);
   int n=M.cols();
   int nbVect=M.rows();
-  FiniteMatrixGroup<Tint,Telt> eStab=SHORT_GetStabilizer<T,Tint,Tgroup>(M);
+  std::vector<MyMatrix<Tint>> ListMatrGen = SHORT_GetStabilizer<T,Tint,Tgroup>(M);
   //
   // Building the set of inequalities
   //
@@ -868,7 +861,7 @@ std::vector<MyMatrix<Tint>> SHORT_SpannSimplicial(MyMatrix<Tint> const& M, std::
   // Breaking into orbits
   //
   std::vector<MyMatrix<Tint>> ListGen;
-  for (auto & eGen : eStab.ListMatrGen)
+  for (auto & eGen : ListMatrGen)
     ListGen.push_back(TransposedMat(eGen));
   std::function<MyVector<Tint>(MyVector<Tint> const&, MyMatrix<Tint> const&)> TheAct=[](MyVector<Tint> const& x, MyMatrix<Tint> const& M) -> MyVector<Tint> {
     return M*x;
