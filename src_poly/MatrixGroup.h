@@ -253,6 +253,9 @@ MyVector<T> VectorMod(MyVector<T> const& V, T const& TheMod)
 template<typename T, typename Telt>
 ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, FiniteMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   using Tidx = typename Telt::Tidx;
   int Osiz=O.size();
 #ifdef DEBUG_MATRIX_GROUP
@@ -267,13 +270,13 @@ ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutation
     return VectorMod(eVect, TheMod);
   };
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   Telt ePermSinv=~ePermS;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen=ListMatrGens.size();
@@ -300,7 +303,7 @@ ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutation
       ListImage[iV] = TheAction(O[iV], eMatrGen);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
-    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2_3).count() << "\n";
+    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
     Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
 #ifdef TIMINGS
@@ -356,13 +359,17 @@ ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutation
     std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 - timeB_7).count() << "\n";
 #endif
   }
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
   return {nbRow, ListPermGenProv};
 }
 
 
 
 template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
+std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer([[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
                                                    Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace)
 {
   using Telt=typename Tgroup::Telt;
@@ -387,7 +394,7 @@ std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGrou
 
 
 template<typename T, typename Tgroup>
-std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
+std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
                                                                Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace1, Face const& eFace2)
 {
   using Telt=typename Tgroup::Telt;
@@ -410,8 +417,11 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePer
 
 
 template<typename T, typename Telt>
-std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
+std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O)
 {
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
   using Tidx = typename Telt::Tidx;
   int Osiz=O.size();
 #ifdef DEBUG_MATRIX_GROUP
@@ -420,13 +430,13 @@ std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::ve
   int siz=Osiz;
   Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   Telt ePermSinv=~ePermS;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen=ListMatrGens.size();
@@ -450,7 +460,7 @@ std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::ve
       ListImage[iV] = TheAction(O[iV], eMatrGen);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
-    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2_3).count() << "\n";
+    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
     Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
 #ifdef TIMINGS
@@ -475,16 +485,20 @@ std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::ve
 #endif
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_8 = std::chrono::system_clock::now();
-    std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 - timeB_7).count() << "\n";
+    std::chrono::time_point<std::chrono::system_clock> timeB_7 = std::chrono::system_clock::now();
+    std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
 #endif
   }
-  return {0,ListMatrGens,ListPermGenProv};
+#ifdef TIMINGS
+  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
+  std::cerr << "|ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+  return {0,ListMatrGens,std::move(ListPermGenProv)};
 }
 
 template<typename T, typename Tgroup>
 std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGroup_General<T,typename Tgroup::Telt> const& eret,
-                                                   Tgroup const& GRPperm, GeneralMatrixGroupHelper<T,typename Tgroup::Telt> const& helper, Face const& eFace)
+                                                   [[maybe_unused]] Tgroup const& GRPperm, GeneralMatrixGroupHelper<T,typename Tgroup::Telt> const& helper, Face const& eFace)
 {
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
@@ -497,7 +511,7 @@ std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGrou
 
 template<typename T, typename Tgroup>
 std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePermutationGroup_General<T,typename Tgroup::Telt> const& eret,
-                                                               Tgroup const& GRPperm, GeneralMatrixGroupHelper<T, typename Tgroup::Telt> const& helper,
+                                                               [[maybe_unused]] Tgroup const& GRPperm, GeneralMatrixGroupHelper<T, typename Tgroup::Telt> const& helper,
                                                                Face const& eFace1, Face const& eFace2)
 {
   using Telt=typename Tgroup::Telt;
@@ -585,7 +599,7 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     std::cerr << "|OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-    Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+    Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
 
 
     Tgroup GRPwork(eret.ListPermGens, eret.nbRow);
@@ -681,7 +695,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
 
 
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
       Tgroup GRPperm(eret.ListPermGens, eret.nbRow);
 
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
@@ -709,7 +723,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
     } else {
       MyVector<T> const& V = *test2;
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O);
       Tgroup GRPperm(eret.ListPermGens, eret.nbRow);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
       ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPperm, helper, eFace2);
