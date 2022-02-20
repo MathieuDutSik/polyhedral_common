@@ -517,7 +517,30 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const& N)
 }
 
 
-
+template<typename T>
+bool is_infinite_order(MyMatrix<T> const& M, size_t const& max_finite_order)
+{
+  int n = M.rows();
+  auto is_identity=[&](MyMatrix<T> const& A) -> bool {
+    for (int i=0; i<n; i++)
+      for (int j=0; j<n; j++) {
+        if (i == j && A(i,j) != 1)
+          return false;
+        if (i != j && A(i,j) != 0)
+          return false;
+      }
+    return true;
+  };
+  MyMatrix<T> ThePow = M;
+  size_t expo = 1;
+  for (size_t u=0; u<=max_finite_order; u++) { // We go a little bit over the needed range
+    if (is_identity(ThePow))
+      return true;
+    ThePow *= M;
+    expo++;
+  }
+  return false;
+}
 
 
 

@@ -29,6 +29,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
+  ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can find 
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
   SingleBlock BlockPROC;
@@ -1231,6 +1232,7 @@ template<typename T, typename Tint>
 struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices;
+  bool is_reflective;
 };
 
 
@@ -1501,15 +1503,25 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 }
 
 template<typename T, typename Tint, typename Tgroup>
-ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert)
+ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective)
 {
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
     l_orbit_vertices_ret.push_back(vertFull.vert);
     return false;
   };
+  int dim = G.rows();
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
-  MyMatrix<Tint> IdMat = IdentityMat<Tint>(G.rows());
+  MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
+  size_t max_finite_order;
+  MyMatrix<Tint> InvariantBasis;
+  bool is_reflective = true;
+  if (EarlyTerminationIfNotReflective) {
+    T dim_T = dim;
+    std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
+    max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
+    InvariantBasis = IdentityMat<Tint>(dim);
+  }
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
       return false;
@@ -1522,6 +1534,25 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
+    if (EarlyTerminationIfNotReflective) {
+      bool test = is_infinite_order(eP, max_finite_order);
+      if (!test) {
+        is_reflective = false;
+        return true;
+      }
+      MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
+      if (!IsZeroMatrix(eDiff)) {
+        MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
+        InvariantBasis = NSP * InvariantBasis;
+        MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
+        MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
+        DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+        if (DiagInfo.nbMinus == 0) {
+          is_reflective = false;
+          return true;
+        }
+      }
+    }
     s_gen_isom_cox.insert(eP);
     return false;
   };
@@ -1529,7 +1560,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
-  return {std::move(l_gen_isom_cox), std::move(l_orbit_vertices_ret)};
+  return {std::move(l_gen_isom_cox), std::move(l_orbit_vertices_ret), is_reflective};
 }
 
 
@@ -1871,7 +1902,8 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::cerr << "l_roots=\n";
   WriteMatrix(std::cerr, eVert.MatRoot);
   //
-  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert);
+  bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
+  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
   bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
