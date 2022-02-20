@@ -438,6 +438,8 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const& N)
   auto is_prime=[](T const& x) -> bool {
     if (x == 1)
       return false;
+    if (x == 2)
+      return true;
     T div = 2;
     while (true) {
       T res = ResInt(x, div);
@@ -450,9 +452,12 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const& N)
     return true;
   };
   std::vector<T> ListPrime;
-  for (T val=2; val <= N+1; val++)
-    if (is_prime(val))
+  for (T val=2; val <= N+1; val++) {
+    bool test = is_prime(val);
+    std::cerr << "val=" << val << " test=" << test << "\n";
+    if (test)
       ListPrime.push_back(val);
+  }
   //
   struct pair {
     T fact;
@@ -472,12 +477,14 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const& N)
   };
   auto get_l_pair=[&](T const& eprime) -> std::vector<pair> {
     std::vector<pair> l_pair;
+    l_pair.push_back({1,0});
     int k = 1;
     while(true) {
       pair epair = get_pair(eprime, k);
       if (epair.dim_cost > N)
         break;
       l_pair.push_back(epair);
+      k++;
     }
     return l_pair;
   };
