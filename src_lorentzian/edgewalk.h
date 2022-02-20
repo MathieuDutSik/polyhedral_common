@@ -29,7 +29,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
-  ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can find 
+  ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can terminate by proving that it is not reflective
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
   SingleBlock BlockPROC;
@@ -1232,7 +1232,7 @@ template<typename T, typename Tint>
 struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices;
-  bool is_reflective;
+  std::optional<bool> is_reflective;
 };
 
 
@@ -1323,6 +1323,14 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
     std::cerr << "We write l_norms\n";
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
+    if (re.is_reflective) {
+      bool val = *re.is_reflective;
+      if (val) {
+        os << ", is_reflective:=true";
+      } else {
+        os << ", is_reflective:=false";
+      }
+    }
     std::cerr << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
     os << ", ListVertices:=[";
     bool IsFirst = true;
@@ -1515,8 +1523,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   size_t max_finite_order;
   MyMatrix<Tint> InvariantBasis;
-  bool is_reflective = true;
+  std::optional<bool> is_reflective;
   if (EarlyTerminationIfNotReflective) {
+    is_reflective = true;
     T dim_T = dim;
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
     max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
@@ -1543,6 +1552,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
       if (!IsZeroMatrix(eDiff)) {
         MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
+        if (NSP.rows() == 0) {
+          is_reflective = false;
+          return true;
+        }
         InvariantBasis = NSP * InvariantBasis;
         MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
         MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
