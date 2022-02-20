@@ -1505,14 +1505,13 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   //  for (auto & e_root : l_root)
   //    std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";
 
-  
   std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
   MyMatrix<T> ScalMatInv = Inverse(ScalMat);
-  //  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
-  //  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
-  //  std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
+  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+  std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
   int dim = G.rows();
   int n_root = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";

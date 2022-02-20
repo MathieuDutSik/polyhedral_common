@@ -1908,12 +1908,20 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
     MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
     l_root.push_back(eLine);
   }
-  MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_root).first;
-  std::cerr << "We have CoxMat\n";
-  std::string symb = coxdyn_matrix_to_string(CoxMat);
-  std::cerr << "symb=" << symb << "\n";
-  std::cerr << "l_roots=\n";
-  WriteMatrix(std::cerr, eVert.MatRoot);
+#ifdef PRINT_SYMBOL_INFORMATION
+  {
+    std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+    const MyMatrix<T> & CoxMat = ep.first;
+    const MyMatrix<T> & ScalMat = ep.second;
+    std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+    std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+    std::cerr << "We have CoxMat\n";
+    std::string symb = coxdyn_matrix_to_string(CoxMat);
+    std::cerr << "symb=" << symb << "\n";
+    std::cerr << "l_roots=\n";
+    WriteMatrix(std::cerr, eVert.MatRoot);
+  }
+#endif
   //
   bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
   ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective);
