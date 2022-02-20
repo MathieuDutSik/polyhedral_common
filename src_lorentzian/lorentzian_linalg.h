@@ -1,6 +1,12 @@
 #ifndef DEFINE_LORENTZIAN_LINALG_H
 #define DEFINE_LORENTZIAN_LINALG_H
 
+
+#include "POLY_cddlib.h"
+#include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
+#include "COMB_Combinatorics.h"
+
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
@@ -416,6 +422,91 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
   }
 #endif
   return eEquiv;
+}
+
+
+
+/*
+  For a dimension N, we want to find all the possible integers k such that there exist
+  an integer matrix A of order k. The solution is given in
+  https://en.wikipedia.org/wiki/Crystallographic_restriction_theorem
+  and involves the Psi function
+ */
+template<typename T>
+std::vector<T> GetIntegralMatricesPossibleOrders(T const& N)
+{
+  auto is_prime=[](T const& x) -> bool {
+    if (x == 1)
+      return false;
+    T div = 2;
+    while (true) {
+      T res = ResInt(x, div);
+      if (res == 0)
+        return false;
+      div += 1;
+      if (div * div > x)
+        break;
+    }
+    return true;
+  };
+  std::vector<T> ListPrime;
+  for (T val=2; val <= N+1; val++)
+    if (is_prime(val))
+      ListPrime.push_back(val);
+  //
+  struct pair {
+    T fact;
+    T dim_cost;
+  };
+  struct Desc {
+    T prime;
+    std::vector<pair> l_pair;
+  };
+  auto get_pair=[&](T const& eprime, int const& k) -> pair {
+    if (eprime == 2 && k == 1)
+      return {2, 0};
+    T pow1 = MyPow(eprime, k-1);
+    T fact = pow1 * eprime;
+    T dim_cost = pow1 * (eprime - 1);
+    return {fact, dim_cost};
+  };
+  auto get_l_pair=[&](T const& eprime) -> std::vector<pair> {
+    std::vector<pair> l_pair;
+    int k = 1;
+    while(true) {
+      pair epair = get_pair(eprime, k);
+      if (epair.dim_cost > N)
+        break;
+      l_pair.push_back(epair);
+    }
+    return l_pair;
+  };
+  std::vector<Desc> l_desc;
+  for (auto & ePrime : ListPrime)
+    l_desc.push_back({ePrime, get_l_pair(ePrime)});
+  size_t n_case = 1;
+  std::vector<int> VectSiz;
+  for (auto eDesc : l_desc) {
+    size_t len = eDesc.l_pair.size();
+    n_case *= len;
+    VectSiz.push_back(len);
+  }
+  std::cerr << "n_case=" << n_case << "\n";
+  std::vector<T> l_order;
+  for (auto & V : BlockIterationMultiple(VectSiz)) {
+    T tot_dim = 0;
+    T order = 1;
+    for (size_t iPrime=0; iPrime<ListPrime.size(); iPrime++) {
+      int pos = V[iPrime];
+      pair epair = l_desc[iPrime].l_pair[pos];
+      tot_dim += epair.dim_cost;
+      order *= epair.fact;
+    }
+    if (tot_dim <= N)
+      l_order.push_back(order);
+  }
+  std::sort(l_order.begin(), l_order.end());
+  return l_order;
 }
 
 

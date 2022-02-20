@@ -444,6 +444,11 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
 
 
 
+
+
+
+
+
 template<typename Tint>
 struct AdjacencyDirection {
   std::vector<MyVector<Tint>> l_ui;

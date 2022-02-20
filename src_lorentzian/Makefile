@@ -1,9 +1,10 @@
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock COXDYN_FindExtensions COXDYN_ComputeSymbol
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock COXDYN_FindExtensions COXDYN_ComputeSymbol
 #PROGRAM		= COXDYN_FindExtensions
 #PROGRAM		= COXDYN_ComputeSymbol
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
 #PROGRAM		= LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+PROGRAM		= LATT_GetIntegralMatricesPossibleOrders
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk COXDYN_FindExtensions
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg
@@ -28,8 +29,8 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full -fstack-check -fno-stack-clash-protection -fsanitize=leak -fsanitize-recover -fbounds-check
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address
-#CC		= g++ -std=c++17 -Wall -g -O3
-CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
+CC		= g++ -std=c++17 -Wall -g -O3
+#CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=memory
 #CC		= g++ -std=c++17 -Wall -g -fstack-check -fno-stack-clash-protection
