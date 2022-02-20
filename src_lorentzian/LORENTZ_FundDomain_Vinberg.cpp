@@ -21,8 +21,10 @@ int main(int argc, char* argv[])
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionVinberg<T,Tint>(eFull);
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
 }

@@ -34,8 +34,10 @@ int main(int argc, char* argv[])
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionEdgewalk<T,Tint,Tgroup>(eFull);
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();

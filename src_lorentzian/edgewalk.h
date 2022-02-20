@@ -1531,9 +1531,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 template<typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& G2, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert1, FundDomainVertex<T,Tint> const& eVert2)
 {
+  CuspidalBank<T,Tint> cusp_bank;
   std::optional<MyMatrix<Tint>> answer;
   //
-  FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(G1, l_norms, eVert2);
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G1, l_norms, eVert2);
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);

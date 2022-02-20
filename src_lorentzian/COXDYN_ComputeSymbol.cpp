@@ -42,8 +42,10 @@ int main(int argc, char* argv[])
       std::ofstream os(out);
       prt(os);
     }
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
 }

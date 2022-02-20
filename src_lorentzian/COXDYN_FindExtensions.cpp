@@ -63,8 +63,10 @@ int main(int argc, char* argv[])
     std::cerr << "input = " << str << " only_spherical=" << only_spherical << "\n";
     for (size_t i=0; i<len; i++)
       std::cerr << "i=" << i << " diag=" << LOut[i] << " v=" << StringVector(LVect[i]);
+    std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
 }

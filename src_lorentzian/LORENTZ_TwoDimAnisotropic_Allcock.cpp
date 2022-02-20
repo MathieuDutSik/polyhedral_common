@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
     std::cerr << "Normal end of the program\n";
   }
   catch (TerminalException const& e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
 }
