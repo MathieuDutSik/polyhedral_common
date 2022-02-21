@@ -370,7 +370,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
     std::cerr << "Subspace1 and Subspace2 are not of the right dimension\n";
     throw TerminalException{1};
   }
-  MyMatrix<T> Compl1 = SubspaceCompletion(Subspace1);
+  MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1);
   if (Compl1.rows() != 1) {
     std::cerr << "Compl1 should be of dimension 1\n";
     throw TerminalException{1};

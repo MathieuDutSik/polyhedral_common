@@ -1069,13 +1069,14 @@ struct FundDomainVertex_FullInfo {
   pair_char<T> e_pair_char;
   size_t hash;
   Tgroup GRP1;
+  Tgroup GRP1_integral;
 };
 
 
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,Tint,Tgroup> const& fdfi)
 {
-  return {fdfi.vert, {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()}, fdfi.hash, fdfi.GRP1};
+  return {fdfi.vert, {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()}, fdfi.hash, fdfi.GRP1, fdfi.GRP1_integral};
 }
 
 
@@ -1209,19 +1210,28 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
       MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
       map_v[fVert_tint] = 3;
     }
-    std::cerr << "map_v has been extended\n";
+    std::cerr << "map_v has been extended |map_v|=" << map_v.size() << "\n";
+    for (auto & kv : map_v)
+      std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
   }
   ret_type frec = get_canonicalized_record(map_v);
   const auto& WMat = frec.e_pair_char.second;
+  std::cerr << "frec.e_pair_char.first=\n";
+  WriteMatrix(std::cerr, frec.e_pair_char.first);
+  std::cerr << "RankMat = " << RankMat(frec.e_pair_char.first) << "\n";
+  std::cerr << "frec.e_pair_char.second=\n";
+  PrintWeightedMatrix(std::cerr, frec.e_pair_char.second);
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
   std::cerr << "gen_fund_domain_fund_info gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << frec.GRP1.size() << "\n";
+  for (auto & eGen : frec.GRP1.GeneratorsOfGroup())
+    std::cerr << "eGen=" << eGen << "\n";
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Timing |gen_fund_domain_fund_info|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1)};
+  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}};
 }
 
 
@@ -1374,6 +1384,8 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
 void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom)
 {
+  using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
   CuspidalBank<T,Tint> cusp_bank;
   std::vector<int> l_status;
   std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> l_orbit_vertices;
@@ -1413,11 +1425,19 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //    std::cerr << "WMat=\n";
     //    PrintWeightedMatrix(std::cerr, epair.second);
     std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
-    for (auto & eGen : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {
-      bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen));
+    std::vector<Telt> LGenIntegral;
+    for (auto & eGen_Mat : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {
+      bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen_Mat));
+      std::optional<std::vector<Tidx>> opt = RepresentVertexPermutationTest<Tint,T,Tidx>(vertFull1.vert.MatRoot, vertFull1.vert.MatRoot, eGen_Mat);
+      if (!opt) {
+        std::cerr << "Failed to find the representation\n";
+        throw TerminalException{1};
+      }
+      LGenIntegral.push_back(Telt(*opt));
       if (test)
         return true;
     }
+    vertFull1.GRP1_integral = Tgroup(LGenIntegral, vertFull1.vert.MatRoot.rows());
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
     std::cerr << "Timing |Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
@@ -1446,7 +1466,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
-    vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1);
+    vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1_integral);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "Timing |vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
