@@ -1554,6 +1554,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
       return false;
+    if (s_gen_isom_cox.count(eP) > 0)
+      return false;
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
@@ -1564,7 +1566,14 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       throw TerminalException{1};
     }
     if (EarlyTerminationIfNotReflective) {
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
       bool test = is_infinite_order(eP, max_finite_order);
+#ifdef TIMINGS
+      std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+      std::cerr << "Timing |is_finite_order|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
       if (!test) {
         is_reflective = false;
         return true;
@@ -1574,6 +1583,10 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
         if (NSP.rows() == 0) {
           is_reflective = false;
+#ifdef TIMINGS
+          std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+          std::cerr << "Timing |MatrixText 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
           return true;
         }
         InvariantBasis = NSP * InvariantBasis;
@@ -1582,10 +1595,18 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
         if (DiagInfo.nbMinus == 0) {
           is_reflective = false;
+#ifdef TIMINGS
+          std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+          std::cerr << "Timing |MatrixText 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
           return true;
         }
       }
     }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "Timing |MatrixText 3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
     s_gen_isom_cox.insert(eP);
     return false;
   };
