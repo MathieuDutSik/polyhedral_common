@@ -663,18 +663,13 @@ std::vector<MyVector<Tint>> FindRoot_filter(const VinbergTot<T,Tint>& Vtot, cons
       //      WriteMatrix(std::cerr, Vtot.Morth);
       //      std::cerr << "eDiff=" << StringVectorGAP(eDiff) << "\n";
       std::optional<MyVector<Tint>> opt = SolutionIntMat(TransposedMat(Vtot.Morth), eDiff);
-      std::cerr << "Inserting a vector V=" << V << " norm=" << norm << " k=" << k << "\n";
-      size_t n_error = 0;
+      //      std::cerr << "Inserting a vector V=" << V << " norm=" << norm << " k=" << k << "\n";
       if (norm != k) {
         std::cerr << "We should have norm = k\n";
-        n_error++;
+        throw TerminalException{1};
       }
       if (!opt) {
         std::cerr << "Solution is not in subspace\n";
-        n_error++;
-      }
-      if (n_error > 0) {
-        std::cerr << "n_error=" << n_error << "\n";
         throw TerminalException{1};
       }
       for (auto & e_gv : list_GV) {

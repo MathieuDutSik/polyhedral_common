@@ -162,7 +162,15 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const& M, Face const& f1)
     Telt1 elt1(eList);
     Face f1_img = permutalib::OnSets(f1_i, elt1);
     if (f1_img != f2) {
-      std::cerr << "The obtained permuttion is not an equivalence\n";
+      std::cerr << "  f1_i=" << f1_i << "\n";
+      std::cerr << "  f2_i=" << f2_i << "\n";
+      std::cerr << "f1_img=" << f1_img << "\n";
+      std::cerr << "eList=" << eList << "\n";
+      std::vector<Tidx> fList = eList;
+      std::sort(fList.begin(), fList.end());
+      std::cerr << "fList=" << fList << "\n";
+      std::cerr << "elt1=" << elt1 << "\n";
+      std::cerr << "The obtained permutation is not an equivalence\n";
       throw TerminalException{1};
     }
   };

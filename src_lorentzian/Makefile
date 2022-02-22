@@ -30,7 +30,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address
 CC		= g++ -std=c++17 -Wall -g -O3
-#CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
+#CC		= g++ -std=c++17 -Wall -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=memory
 #CC		= g++ -std=c++17 -Wall -g -fstack-check -fno-stack-clash-protection
