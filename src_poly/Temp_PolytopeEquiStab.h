@@ -353,9 +353,9 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const & EXT)
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
 #endif
   std::vector<Telt> LGen;
-  std::cerr << "nbRow=" << nbRow << " |ListGen|=" << ListGen.size() << "\n";
+  //  std::cerr << "nbRow=" << nbRow << " |ListGen|=" << ListGen.size() << "\n";
   for (auto & eList : ListGen) {
-    std::cerr << "|eList|=" << eList.size() << "\n";
+    //    std::cerr << "|eList|=" << eList.size() << "\n";
     LGen.push_back(Telt(eList));
   }
 #ifdef TIMINGS
