@@ -8,6 +8,7 @@
 #include "vinberg.h"
 #include "lorentzian_linalg.h"
 #include "Namelist.h"
+#include "Heuristic_fct.h"
 #include "Temp_Positivity.h"
 #include "POLY_lrslib.h"
 #include "POLY_cddlib.h"
@@ -32,6 +33,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can terminate by proving that it is not reflective
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
+  ListStringValues1["FileHeuristicIdealStabEquiv"]="unset";
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
   BlockPROC.ListBoolValues = ListBoolValues1;
@@ -1061,6 +1063,20 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
 
 
 
+template<typename Tint>
+TheHeuristic<Tint> GetHeuristicIdealStabEquiv()
+{
+  // Allowed returned values: "linalg", "orbmin"
+  // Allowed input values "groupsize", "size"
+  std::vector<std::string> ListString={
+    "1",
+    "1 groupsize > 500000 size > 100 linalg",
+    "orbmin"};
+  return HeuristicFromListString<Tint>(ListString);
+}
+
+
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -1070,22 +1086,19 @@ struct FundDomainVertex_FullInfo {
   size_t hash;
   Tgroup GRP1;
   Tgroup GRP1_integral;
+  std::string method;
 };
 
 
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,Tint,Tgroup> const& fdfi)
 {
-  return {fdfi.vert, {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()}, fdfi.hash, fdfi.GRP1, fdfi.GRP1_integral};
+  return {fdfi.vert, {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()}, fdfi.hash, fdfi.GRP1, fdfi.GRP1_integral, fdfi.method};
 }
 
 
-
-
-
-
 template<typename T, typename Tint, typename Tgroup>
-FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert)
+FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<T,Tint> & cusp_bank, MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& vert, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -1191,6 +1204,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
   };
   T norm = vert.gen.dot(G * vert.gen);
   std::cerr << "norm=" << norm << "\n";
+  std::string method = "extendedvectfamily";
   if (norm == 0) {
     // In isotropic case, we are unfortunately forced to do more complex stuff
     // Those needs
@@ -1199,20 +1213,28 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
     // Add new vertices to
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(erec.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
-    vectface vf = lrs::DualDescription_temp_incd(FACred);
-    //    std::cerr << "We have vf\n";
-    // Finding the minimal orbit and then
-    vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
-    std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
-    for (auto & eFAC : vf_min) {
-      AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
-      FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, vert.gen, ad);
-      MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
-      map_v[fVert_tint] = 3;
+    std::map<std::string, Tint> mapV;
+    mapV["groupsize"] = UniversalScalarConversion<Tint,typename Tgroup::Tint>(erec.GRP1.size());
+    mapV["size"] = vert.MatRoot.rows();
+    std::string choice = HeuristicEvaluation(mapV, HeuristicIdealStabEquiv);
+    if (choice == "orbmin") {
+      vectface vf = lrs::DualDescription_temp_incd(FACred);
+      //    std::cerr << "We have vf\n";
+      // Finding the minimal orbit and then
+      vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
+      std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
+      for (auto & eFAC : vf_min) {
+        AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
+        FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, vert.gen, ad);
+        MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
+        map_v[fVert_tint] = 3;
+      }
+      std::cerr << "map_v has been extended |map_v|=" << map_v.size() << "\n";
+      for (auto & kv : map_v)
+        std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
+    } else {
+      method = "isotropequivalence";
     }
-    std::cerr << "map_v has been extended |map_v|=" << map_v.size() << "\n";
-    for (auto & kv : map_v)
-      std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
   }
   ret_type frec = get_canonicalized_record(map_v);
   const auto& WMat = frec.e_pair_char.second;
@@ -1231,7 +1253,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Timing |gen_fund_domain_fund_info|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}};
+  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}, method};
 }
 
 
@@ -1382,7 +1404,7 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 
 
 template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
-void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom)
+void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -1484,7 +1506,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
         std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
       }
-      FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert);
+      FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
       bool test = func_insert_vertex(fVertFull);
       if (test)
         return true;
@@ -1496,7 +1518,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
     return false;
   };
-  FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, eVert);
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, eVert, HeuristicIdealStabEquiv);
   bool test = func_insert_vertex(eVertFull);
   if (test)
     return;
@@ -1531,7 +1553,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 }
 
 template<typename T, typename Tint, typename Tgroup>
-ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective)
+ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
 {
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
@@ -1610,7 +1632,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     s_gen_isom_cox.insert(eP);
     return false;
   };
-  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G, l_norms, eVert, f_vertex, f_isom);
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G, l_norms, eVert, f_vertex, f_isom, HeuristicIdealStabEquiv);
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
@@ -1619,12 +1641,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& G2, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert1, FundDomainVertex<T,Tint> const& eVert2)
+std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& G2, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert1, FundDomainVertex<T,Tint> const& eVert2, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
 {
   CuspidalBank<T,Tint> cusp_bank;
   std::optional<MyMatrix<Tint>> answer;
   //
-  FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G1, l_norms, eVert2);
+  FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G1, l_norms, eVert2, HeuristicIdealStabEquiv);
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
@@ -1638,7 +1660,7 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     return false;
   };
-  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G1, l_norms, eVert1, f_vertex, f_isom);
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G1, l_norms, eVert1, f_vertex, f_isom, HeuristicIdealStabEquiv);
   return answer;
 }
 
@@ -1965,7 +1987,10 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
 #endif
   //
   bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
-  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective);
+  std::string FileHeuristicIdealStabEquiv=BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
+  TheHeuristic<Tint> HeuristicIdealStabEquiv=GetHeuristicIdealStabEquiv<Tint>();
+  ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
+  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
   bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
@@ -2000,6 +2025,9 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat2);
   TestLorentzianity(G1);
   TestLorentzianity(G2);
+  std::string FileHeuristicIdealStabEquiv=BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
+  TheHeuristic<Tint> HeuristicIdealStabEquiv=GetHeuristicIdealStabEquiv<Tint>();
+  ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   auto print_result=[&](std::optional<MyMatrix<Tint>> const& opt) -> void {
     std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
@@ -2045,7 +2073,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G1, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   FundDomainVertex<T,Tint> eVert2 = get_initial_vertex<T,Tint>(G2, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
   //
-  std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T,Tint,Tgroup>(G1, G2, l_norms, eVert1, eVert2);
+  std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T,Tint,Tgroup>(G1, G2, l_norms, eVert1, eVert2, HeuristicIdealStabEquiv);
   print_result(opt);
 }
 
