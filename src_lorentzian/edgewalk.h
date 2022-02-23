@@ -1278,14 +1278,19 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         MyVector<T> V = GetMatrixRow(Subspace1, iRow);
         AssignMatrixRow(Subspace2, jRow, V);
       }
-      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+      std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+      if (!opt) {
+        std::cerr << "opt found to be missing\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> const& eGen1 = *opt;
       LGen1.push_back(eGen1);
     }
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2;
     for (auto & eGen1 : LGen1) {
-      MyMatrix<T> eGen2 = InvInvariantSpace * eGen1 * InvariantSpace;
+      MyMatrix<T> eGen2 = InvariantSpace * eGen1 * InvInvariantSpace;
       if (!IsIntegralMatrix(eGen2)) {
         std::cerr << "The matrix eGen2 should be integral\n";
         throw TerminalException{1};
@@ -1296,7 +1301,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
     std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
     std::vector<MyMatrix<T>> LGen4;
     for (auto & eGen3 : LGen3) {
-      MyMatrix<T> eGen4 = InvariantSpace * eGen3 * InvInvariantSpace;
+      MyMatrix<T> eGen4 = InvInvariantSpace * eGen3 * InvariantSpace;
       if (!IsIntegralMatrix(eGen4)) {
         std::cerr << "The matrix eGen4 should be integral\n";
         throw TerminalException{1};
@@ -1316,31 +1321,45 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  if (vertFull.method == "extendedvectfamily") {
-    return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
+  if (vertFull1.method != vertFull2.method) {
+    return {};
   }
-  if (vertFull.method == "isotropstabequiv") {
-    /*
-    int n = G.rows();
+  if (vertFull1.method == "extendedvectfamily") {
+    return LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
+  }
+  if (vertFull1.method == "isotropstabequiv") {
+    if (vertFull1.e_pair_char.first.rows() != vertFull2.e_pair_char.first.rows())
+      return {};
+    if (vertFull1.e_pair_char.second.GetWeight() != vertFull2.e_pair_char.second.GetWeight())
+      return {};
+    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull1.vert.MatRoot);
+    MyMatrix<T> Subspace2 = UniversalMatrixConversion<T,Tint>(vertFull2.vert.MatRoot);
+    std::optional<MyMatrix<T>> opt1 = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G1, Subspace2);
+    if (!opt1) {
+      std::cerr << "Failed at extending equivalence\n";
+      return {};
+    }
+    MyMatrix<T> const& EquivRat = *opt1;
+    //
+    int n = G1.rows();
     std::vector<MyMatrix<T>> LGen1;
-    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull.vert.MatRoot);
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
-    for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+    for (auto & eGen : vertFull1.GRP1.GeneratorsOfGroup()) {
       MyMatrix<T> Subspace2(nRow, Subspace1.cols());
       for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
         Tidx jRow = eGen.at(iRow);
         MyVector<T> V = GetMatrixRow(Subspace1, iRow);
         AssignMatrixRow(Subspace2, jRow, V);
       }
-      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
       LGen1.push_back(eGen1);
     }
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
-    MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+    MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2;
     for (auto & eGen1 : LGen1) {
-      MyMatrix<T> eGen2 = InvInvariantSpace * eGen1 * InvariantSpace;
+      MyMatrix<T> eGen2 = InvariantSpace * eGen1 * InvariantSpaceInv;
       if (!IsIntegralMatrix(eGen2)) {
         std::cerr << "The matrix eGen2 should be integral\n";
         throw TerminalException{1};
@@ -1348,18 +1367,22 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       LGen2.push_back(eGen2);
     }
     GeneralMatrixGroupHelper<T,Telt> helper{n};
-    std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
-    std::vector<MyMatrix<T>> LGen4;
-    for (auto & eGen3 : LGen3) {
-      MyMatrix<T> eGen4 = InvariantSpace * eGen3 * InvInvariantSpace;
-      if (!IsIntegralMatrix(eGen4)) {
-        std::cerr << "The matrix eGen4 should be integral\n";
-        throw TerminalException{1};
-      }
-      LGen4.push_back(eGen4);
+    //
+    MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
+    MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);
+
+    std::optional<MyMatrix<T>> opt2 = LinearSpace_Equivalence(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+    if (!opt2)
+      return {};
+    //
+    MyMatrix<T> const& eSpaceEquiv = *opt2;
+    MyMatrix<T> eMatFinal = InvariantSpaceInv * eSpaceEquiv * InvariantSpace;
+    MyMatrix<T> eProd = eMatFinal * EquivRat;
+    if (!IsIntegralMat(eProd)) {
+      std::cerr << "eProd should be integral\n";
+      throw TerminalException{1};
     }
-    return LGen4;
-    */
+    return eProd;
   }
   std::cerr << "Error in LORENTZ_TestEquivalence\n";
   throw TerminalException{1};

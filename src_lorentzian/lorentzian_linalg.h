@@ -363,7 +363,7 @@ std::vector<MyVector<T>> GetFacetOneDomain(std::vector<MyVector<T>> const& l_vec
   and thus the equation system has an unique solution, which all turn out to be unexpected.
  */
 template<typename T>
-MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2)
+MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2)
 {
   int dim = G1.rows();
   if (Subspace1.rows() != dim-1 || Subspace2.rows() != dim-1) {
@@ -417,7 +417,8 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
   MyMatrix<T> Trans2 = Concatenate(Subspace2, eVect2_mat);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
 #ifdef DEBUG_LORENTZIAN_LINALG
-  MyMatrix<T> G1_tr = eEquiv * G1 * eEquiv.transpose();
+  MyMatrix<T> InvEquiv = Inverse(eEquiv);
+  MyMatrix<T> G1_tr = InvEquiv * G1 * InvEquiv.transpose();
   if (G1_tr != G2) {
     std::cerr << "G1 has not been transposed into G2\n";
     throw TerminalException{1};
@@ -425,6 +426,27 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
 #endif
   return eEquiv;
 }
+
+
+/*
+  The vector of Subspace1 / Subspace2 are no longer assumed independent
+ */
+template<typename T>
+std::optional<MyMatrix<T>> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix<T> const& Subspace1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace2)
+{
+  int dim = G1.rows();
+  std::vector<int> ListRowSelect=TMat_SelectRowCol(Subspace1).ListRowSelect;
+  MyMatrix<T> Subspace1_red = SelectRow(Subspace1, ListRowSelect);
+  MyMatrix<T> Subspace2_red = SelectRow(Subspace2, ListRowSelect);
+  if (RankMat(Subspace2_red) != dim - 1) {
+    return {};
+  }
+  MyMatrix<T> eEquiv = ExtendOrthogonalIsotropicIsomorphism_Basis(G1, Subspace1_red, G2, Subspace2_red);
+  if (Subspace1 * eEquiv != Subspace2)
+    return {};
+  return eEquiv;
+}
+
 
 
 
