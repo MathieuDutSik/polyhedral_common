@@ -370,7 +370,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
     std::cerr << "Subspace1 and Subspace2 are not of the right dimension\n";
     throw TerminalException{1};
   }
-  MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1);
+  MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1, dim);
   if (Compl1.rows() != 1) {
     std::cerr << "Compl1 should be of dimension 1\n";
     throw TerminalException{1};
@@ -409,8 +409,10 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& G1, MyMatrix
   T t = scal0 / scal1;
   MyVector<T> eVect2 = V0 + t * V1;
   //
-  MyMatrix<T> eVect1_mat = MatrixFromVectorFamily({eVect1});
-  MyMatrix<T> eVect2_mat = MatrixFromVectorFamily({eVect1});
+  std::vector<MyVector<T>> LV1{eVect1};
+  std::vector<MyVector<T>> LV2{eVect2};
+  MyMatrix<T> eVect1_mat = MatrixFromVectorFamily(LV1);
+  MyMatrix<T> eVect2_mat = MatrixFromVectorFamily(LV2);
   MyMatrix<T> Trans1 = Concatenate(Subspace1, eVect1_mat);
   MyMatrix<T> Trans2 = Concatenate(Subspace2, eVect2_mat);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;

@@ -419,7 +419,7 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] 
 
 
 template<typename T, typename Telt>
-std::pair<std::vector<Telt>,int> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
+ResultGeneratePermutationGroup_General<T,Telt> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();

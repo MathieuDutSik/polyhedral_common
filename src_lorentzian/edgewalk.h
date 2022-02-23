@@ -1233,7 +1233,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
       for (auto & kv : map_v)
         std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
     } else {
-      method = "isotropequivalence";
+      method = "isotropstabequiv";
     }
   }
   ret_type frec = get_canonicalized_record(map_v);
@@ -1255,6 +1255,118 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
 #endif
   return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}, method};
 }
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  if (vertFull.method == "extendedvectfamily") {
+    return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
+  }
+  if (vertFull.method == "isotropstabequiv") {
+    int n = G.rows();
+    std::vector<MyMatrix<T>> LGen1;
+    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull.vert.MatRoot);
+    int nRow=Subspace1.rows();
+    Tidx nRow_tidx = nRow;
+    for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+      MyMatrix<T> Subspace2(nRow, Subspace1.cols());
+      for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
+        Tidx jRow = eGen.at(iRow);
+        MyVector<T> V = GetMatrixRow(Subspace1, iRow);
+        AssignMatrixRow(Subspace2, jRow, V);
+      }
+      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+      LGen1.push_back(eGen1);
+    }
+    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+    MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+    std::vector<MyMatrix<T>> LGen2;
+    for (auto & eGen1 : LGen1) {
+      MyMatrix<T> eGen2 = InvInvariantSpace * eGen1 * InvariantSpace;
+      if (!IsIntegralMatrix(eGen2)) {
+        std::cerr << "The matrix eGen2 should be integral\n";
+        throw TerminalException{1};
+      }
+      LGen2.push_back(eGen2);
+    }
+    GeneralMatrixGroupHelper<T,Telt> helper{n};
+    std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
+    std::vector<MyMatrix<T>> LGen4;
+    for (auto & eGen3 : LGen3) {
+      MyMatrix<T> eGen4 = InvariantSpace * eGen3 * InvInvariantSpace;
+      if (!IsIntegralMatrix(eGen4)) {
+        std::cerr << "The matrix eGen4 should be integral\n";
+        throw TerminalException{1};
+      }
+      LGen4.push_back(eGen4);
+    }
+    return LGen4;
+  }
+  std::cerr << "Error in LORENTZ_GetStabilizerGenerator\n";
+  throw TerminalException{1};
+}
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1,
+                                                   MyMatrix<T> const& G2, FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull2)
+{
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  if (vertFull.method == "extendedvectfamily") {
+    return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
+  }
+  if (vertFull.method == "isotropstabequiv") {
+    /*
+    int n = G.rows();
+    std::vector<MyMatrix<T>> LGen1;
+    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull.vert.MatRoot);
+    int nRow=Subspace1.rows();
+    Tidx nRow_tidx = nRow;
+    for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+      MyMatrix<T> Subspace2(nRow, Subspace1.cols());
+      for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
+        Tidx jRow = eGen.at(iRow);
+        MyVector<T> V = GetMatrixRow(Subspace1, iRow);
+        AssignMatrixRow(Subspace2, jRow, V);
+      }
+      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+      LGen1.push_back(eGen1);
+    }
+    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+    MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+    std::vector<MyMatrix<T>> LGen2;
+    for (auto & eGen1 : LGen1) {
+      MyMatrix<T> eGen2 = InvInvariantSpace * eGen1 * InvariantSpace;
+      if (!IsIntegralMatrix(eGen2)) {
+        std::cerr << "The matrix eGen2 should be integral\n";
+        throw TerminalException{1};
+      }
+      LGen2.push_back(eGen2);
+    }
+    GeneralMatrixGroupHelper<T,Telt> helper{n};
+    std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
+    std::vector<MyMatrix<T>> LGen4;
+    for (auto & eGen3 : LGen3) {
+      MyMatrix<T> eGen4 = InvariantSpace * eGen3 * InvInvariantSpace;
+      if (!IsIntegralMatrix(eGen4)) {
+        std::cerr << "The matrix eGen4 should be integral\n";
+        throw TerminalException{1};
+      }
+      LGen4.push_back(eGen4);
+    }
+    return LGen4;
+    */
+  }
+  std::cerr << "Error in LORENTZ_TestEquivalence\n";
+  throw TerminalException{1};
+}
+
+
+
 
 
 
@@ -1448,7 +1560,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //    PrintWeightedMatrix(std::cerr, epair.second);
     std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     std::vector<Telt> LGenIntegral;
-    for (auto & eGen_Mat : LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char)) {
+    for (auto & eGen_Mat : LORENTZ_GetStabilizerGenerator<T,Tint,Tgroup>(G, vertFull1)) {
       bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen_Mat));
       std::optional<std::vector<Tidx>> opt = RepresentVertexPermutationTest<Tint,T,Tidx>(vertFull1.vert.MatRoot, vertFull1.vert.MatRoot, eGen_Mat);
       if (!opt) {
