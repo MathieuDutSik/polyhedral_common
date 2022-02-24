@@ -1789,7 +1789,7 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<
   FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G1, l_norms, eVert2, HeuristicIdealStabEquiv);
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
-      std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
+      std::optional<MyMatrix<T>> equiv_opt = LORENTZ_TestEquivalence(G1, vertFull1, G2, vertFull2);
       if (equiv_opt) {
         answer = UniversalMatrixConversion<Tint,T>(*equiv_opt);
         return true;
