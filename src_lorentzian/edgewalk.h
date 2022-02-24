@@ -1352,7 +1352,12 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
         MyVector<T> V = GetMatrixRow(Subspace1, iRow);
         AssignMatrixRow(Subspace2, jRow, V);
       }
-      MyMatrix<T> eGen1 = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+      std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+      if (!opt) {
+        std::cerr << "opt should point to something\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> const& eGen1 = *opt;
       LGen1.push_back(eGen1);
     }
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
@@ -1371,14 +1376,14 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
     MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
     MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);
 
-    std::optional<MyMatrix<T>> opt2 = LinearSpace_Equivalence(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+    std::optional<MyMatrix<T>> opt2 = LinearSpace_Equivalence<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
     if (!opt2)
       return {};
     //
     MyMatrix<T> const& eSpaceEquiv = *opt2;
     MyMatrix<T> eMatFinal = InvariantSpaceInv * eSpaceEquiv * InvariantSpace;
     MyMatrix<T> eProd = eMatFinal * EquivRat;
-    if (!IsIntegralMat(eProd)) {
+    if (!IsIntegralMatrix(eProd)) {
       std::cerr << "eProd should be integral\n";
       throw TerminalException{1};
     }
@@ -1557,7 +1562,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
       //      std::cerr << "    hash1=" << vertFull1.hash << " hash2=" << vertFull2.hash << "\n";
       if (vertFull1.hash == vertFull2.hash) {
-        std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
+        std::optional<MyMatrix<T>> equiv_opt = LORENTZ_TestEquivalence<T,Tint,Tgroup>(G, vertFull1, G, vertFull2);
         if (equiv_opt) {
           std::cerr << "Find some isomorphism\n";
 #ifdef TIMINGS
