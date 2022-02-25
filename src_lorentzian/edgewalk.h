@@ -1070,7 +1070,7 @@ TheHeuristic<Tint> GetHeuristicIdealStabEquiv()
   // Allowed input values "groupsize", "size"
   std::vector<std::string> ListString={
     "1",
-    "1 groupsize > 500000 size > 100 linalg",
+    "1 groupsize > 500000 size > 100 orbmin",
     "orbmin"};
   return HeuristicFromListString<Tint>(ListString);
 }
