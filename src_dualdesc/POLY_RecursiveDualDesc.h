@@ -1227,6 +1227,7 @@ public:
       }
       is_opened = true;
       //
+      std::cerr << "Inserting orbits, n_orbit=" << n_orbit << "\n";
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         Face f = ff->getface(i_orbit);
         SingEnt eEnt = bb.foc.FaceToSingEnt(f);
@@ -1508,7 +1509,8 @@ vectface DUALDESC_AdjacencyDecomposition(
       }
       Tint GroupSizeComp = TheGRPrelevant.size();
       std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
-      std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
+      //      std::string MainPrefix = ePrefix + "Database_" + std::to_string(nbRow) + "_" + std::to_string(nbCol);
+      std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
       std::string ansChosenDatabase=HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
       std::cerr << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase << "\n";
       if (ansChosenDatabase == "canonic") {
