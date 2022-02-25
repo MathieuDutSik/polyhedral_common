@@ -33,7 +33,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can terminate by proving that it is not reflective
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
-  ListStringValues1["FileHeuristicIdealStabEquiv"]="unset";
+  ListStringValues1["FileHeuristicIdealStabEquiv"]="unset.heu";
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
   BlockPROC.ListBoolValues = ListBoolValues1;
