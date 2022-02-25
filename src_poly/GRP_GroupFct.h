@@ -98,7 +98,7 @@ Tgroup ReadGroup(std::istream &is)
   is >> n_i;
   is >> nbGen;
   Tidx n = Tidx(n_i);
-  std::cerr << "n=" << n << " nbGen=" << nbGen << "\n";
+  std::cerr << "n=" << n_i << " nbGen=" << nbGen << "\n";
   std::vector<Telt> ListGen;
   for (int iGen=0; iGen<nbGen; iGen++) {
     std::vector<Tidx> v(n);
