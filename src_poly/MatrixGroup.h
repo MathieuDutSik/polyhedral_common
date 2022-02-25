@@ -801,9 +801,9 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
   static_assert(is_ring_field<T>::value, "Requires T to be a field in LinearSpace_Equivalence");
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of LinearSpace_Equivalence\n";
-  std::cerr << "TheSpace1=\n";
+  std::cerr << "InSpace1=\n";
   WriteMatrix(std::cerr, InSpace1);
-  std::cerr << "TheSpace2=\n";
+  std::cerr << "InSpace2=\n";
   WriteMatrix(std::cerr, InSpace2);
   std::cerr << "Det(InSpace1)=" << DeterminantMat(InSpace1) << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
 #endif
@@ -854,7 +854,7 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
     T TheMod=1;
     for (int j=0; j<i; j++)
       TheMod *= eList[j];
-    MyMatrix<T> TheSpace1Img=TheSpace1*eElt;
+    MyMatrix<T> TheSpace1Img=TheSpace1 * eElt;
     std::optional<ResultTestModEquivalence<T>> opt = LinearSpace_ModEquivalence<T,Tgroup,Thelper>(ListMatrWork, helper, TheSpace1Img, TheSpace2, TheMod);
     if (!opt)
       return {};
