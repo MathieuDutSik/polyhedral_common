@@ -11,5 +11,6 @@ set -e
 (cd src_copos && make clean && make)
 (cd src_ctype_mpi && make clean && make)
 (cd src_perfect && make clean && make)
+(cd src_indefinite && make clean && make)
 (cd src_perfect_mpi && make clean && make)
 (cd src_lorentzian && make clean && make)

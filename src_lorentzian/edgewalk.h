@@ -1070,8 +1070,8 @@ TheHeuristic<Tint> GetHeuristicIdealStabEquiv()
   // Allowed input values "groupsize", "size"
   std::vector<std::string> ListString={
     "1",
-    "1 groupsize > 500000 size > 100 orbmin",
-    "orbmin"};
+    "1 groupsize > 500000 size > 100 linalg",
+    "linalg"};
   return HeuristicFromListString<Tint>(ListString);
 }
 
@@ -1262,6 +1262,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << "\n";
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
@@ -1321,6 +1322,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method << "\n";
   if (vertFull1.method != vertFull2.method) {
     return {};
   }
@@ -1334,12 +1336,18 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       return {};
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull1.vert.MatRoot);
     MyMatrix<T> Subspace2 = UniversalMatrixConversion<T,Tint>(vertFull2.vert.MatRoot);
+    std::cerr << "Subspace1=\n";
+    WriteMatrix(std::cerr, Subspace1);
+    std::cerr << "Subspace2=\n";
+    WriteMatrix(std::cerr, Subspace2);
     std::optional<MyMatrix<T>> opt1 = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G1, Subspace2);
     if (!opt1) {
       std::cerr << "Failed at extending equivalence\n";
       return {};
     }
     MyMatrix<T> const& EquivRat = *opt1;
+    std::cerr << "EquivRat=\n";
+    WriteMatrix(std::cerr, EquivRat);
     //
     int n = G1.rows();
     std::vector<MyMatrix<T>> LGen1;
@@ -1360,6 +1368,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       MyMatrix<T> const& eGen1 = *opt;
       LGen1.push_back(eGen1);
     }
+    std::cerr << "We have LGen1\n";
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2;
@@ -1371,12 +1380,15 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       }
       LGen2.push_back(eGen2);
     }
+    std::cerr << "We have LGen2\n";
     GeneralMatrixGroupHelper<T,Telt> helper{n};
     //
     MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
     MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);
+    std::cerr << "We have InvariantSpaceImg\n";
 
     std::optional<MyMatrix<T>> opt2 = LinearSpace_Equivalence<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+    std::cerr << "We have opt2\n";
     if (!opt2)
       return {};
     //

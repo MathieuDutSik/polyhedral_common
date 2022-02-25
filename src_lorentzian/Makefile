@@ -3,8 +3,8 @@
 #PROGRAM		= COXDYN_ComputeSymbol
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
 #PROGRAM		= LORENTZ_FundDomain_Vinberg
-#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism
+PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk COXDYN_FindExtensions
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LATT_GetIntegralMatricesPossibleOrders
@@ -47,6 +47,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DTIMINGS
+#CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DDEBUG_MATRIX_GROUP
 CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

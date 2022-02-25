@@ -54,6 +54,9 @@ T LinearSpace_GetDivisor(MyMatrix<T> const& TheSpace)
     if (IsOK)
       return eDiv;
     if (eDiv > TheDet) {
+      std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
+      std::cerr << "TheSpace=\n";
+      WriteMatrix(std::cerr, TheSpace);
       std::cerr << "Clear error in LinearSpace_GetDivisor\n";
       throw TerminalException{1};
     }
@@ -452,7 +455,7 @@ ResultGeneratePermutationGroup_General<T,Telt> MatrixIntegral_GeneratePermutatio
 #endif
     MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen << "\n";
+    std::cerr << "iGen=" << iGen << "/" << nbGen << "\n";
 #endif
     std::vector<Tidx> v(siz);
 #ifdef TIMINGS
@@ -793,12 +796,27 @@ std::vector<MyMatrix<T>> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const& 
 
 
 template<typename T, typename Tgroup, typename Thelper>
-std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2)
+std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& InSpace1, MyMatrix<T> const& InSpace2)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field in LinearSpace_Equivalence");
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of LinearSpace_Equivalence\n";
+  std::cerr << "TheSpace1=\n";
+  WriteMatrix(std::cerr, InSpace1);
+  std::cerr << "TheSpace2=\n";
+  WriteMatrix(std::cerr, InSpace2);
+  std::cerr << "Det(InSpace1)=" << DeterminantMat(InSpace1) << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
 #endif
+  FractionMatrix<T> eRec1=RemoveFractionMatrixPlusCoeff(InSpace1);
+  FractionMatrix<T> eRec2=RemoveFractionMatrixPlusCoeff(InSpace2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "eRec1.TheMult=" << eRec1.TheMult << " eRec2.TheMult=" << eRec2.TheMult << "\n";
+#endif
+  if (eRec1.TheMult != eRec2.TheMult)
+      return {};
+  MyMatrix<T> const& TheSpace1 = eRec1.TheMat;
+  MyMatrix<T> const& TheSpace2 = eRec2.TheMat;
+  //
   int n=TheSpace1.rows();
   T LFact1=LinearSpace_GetDivisor(TheSpace1);
   T LFact2=LinearSpace_GetDivisor(TheSpace2);
@@ -1001,14 +1019,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(MyMatrix<T>
   std::cerr << "eLatt2=\n";
   WriteMatrix(std::cerr, eLatt2);
 #endif
-  FractionMatrix<T> eRec1=RemoveFractionMatrixPlusCoeff(eLatt1);
-  FractionMatrix<T> eRec2=RemoveFractionMatrixPlusCoeff(eLatt2);
-#ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "eRec1.TheMult=" << eRec1.TheMult << " eRec2.TheMult=" << eRec2.TheMult << "\n";
-#endif
-  if (eRec1.TheMult != eRec2.TheMult)
-      return {};
-  std::optional<MyMatrix<T>> eSpaceEquiv=LinearSpace_Equivalence<T,Tgroup>(ListMatrGen, helper, eRec1.TheMat, eRec2.TheMat);
+  std::optional<MyMatrix<T>> eSpaceEquiv=LinearSpace_Equivalence<T,Tgroup>(ListMatrGen, helper, eLatt1, eLatt2);
   if (!eSpaceEquiv)
     return {};
   MyMatrix<T> eMatFinal=InvBasis1 * TheMatEquiv * (*eSpaceEquiv) * eBasis2;
