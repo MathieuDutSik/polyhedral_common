@@ -295,7 +295,7 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 
 
 template<typename T>
-std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
+std::pair<std::vector<size_t>,IrrCoxDyn<T>> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
 {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
@@ -308,7 +308,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
   T val_six = 6; // Shows up in G2
   size_t n_vert = M.rows();
   if (n_vert == 1) // Case of A1
-    return {0};
+    return { {0}, IrrCoxDyn<T>{"A",1,0} };
   auto error=[&]() -> void {
     std::cerr << "The diagram is not spherical or euclidean. Contrary to hypothesis\n";
     throw TerminalException{1};
@@ -374,7 +374,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       if (i != i_4)
         if (M(i, i_4) != 3)
           error();;
-    return {}; // This is \tilde{D4}. No extension vertices.
+    return { {}, IrrCoxDyn<T>{"tildeD", 4, 0} }; // This is \tilde{D4}. No extension vertices.
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 4\n";
@@ -394,7 +394,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       error();
     if (n_higher_edge != 0)
       error();
-    return {}; // This is tilde{An}. No extension possible
+    return { {}, IrrCoxDyn<T>{"tildeA", n_vert-1, 0} }; // This is tilde{An}. No extension possible
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 5\n";
@@ -406,7 +406,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
     if (n_vert <= 7) { // In that case all the vertices can potentially be used
       for (size_t i=0; i<n_vert; i++)
         AllExtens.push_back(i);
-      return AllExtens;
+      return { AllExtens, IrrCoxDyn<T>{"A",n_vert,0} };
     }
     auto append=[&](size_t e_vert, size_t e_lev) -> void {
       size_t evert1 = e_vert;
@@ -433,7 +433,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       append(list_deg1[0], 2);
       append(list_deg1[1], 2);
     }
-    return AllExtens;
+    return { AllExtens, IrrCoxDyn<T>{"A",n_vert,0} };
   }
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2)
@@ -451,7 +451,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       if (n_deg1 != 2)
         error();
     }
-    return {}; // For tilde{Dn} no extension is possible
+    return { {}, IrrCoxDyn<T>{"tildeD",n_vert-1, 0} }; // For tilde{Dn} no extension is possible
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6 |list_deg3|=" << list_deg3.size() << "\n";
@@ -464,12 +464,11 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       for (auto & eVert : list_deg1)
         if (list_isolated_adjacent[eVert] != val_four)
           error();
-      return {}; // No extension possible for tilde{Cn}
+      return { {}, IrrCoxDyn<T>{"tildeC",n_vert-1,0} }; // No extension possible for tilde{Cn}
     }
     if (multiplicity[val_four] == 1) { // Possibilities: Bn=Cn, F4, tilde{F4}, and I2(4) are possible
       if (n_vert == 2) {
-        T param = 4;
-        return {0,1}; // For I2(4), There is extension on both vertices
+        return { {0,1}, IrrCoxDyn<T>{"B", 2, 0} }; // For I2(4), There is extension on both vertices
       }
       if (n_higher_edge != 1)
         error(); // There are other edges, excluded.
@@ -489,17 +488,17 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       }
       if (n_sing == 2) {
         if (n_vert == 4) {
-          return list_deg1; // For F4 there are extension on both extremities.
+          return { list_deg1, IrrCoxDyn<T>{"F", 4,0} }; // For F4 there are extension on both extremities.
         }
         if (n_vert == 5) { // Only tilde{F4} is possible. So conclude from that
-          return {}; // No extension is possible here
+          return { {}, IrrCoxDyn<T>{"tildeF", 4, 0} }; // No extension is possible here
         }
       }
       if (n_four == 1 && n_sing == 1) {
         // Only possibility is to have 4 at one extremity. This is Bn = Cn
         // But this is complicated to cover all cases.
         if (n_vert <= 3) { // All vertices are possible then
-          return {0,1,2};
+          return { {0,1,2}, IrrCoxDyn<T>{"B",n_vert,0} };
         }
         std::vector<size_t> AllExtens;
         if (n_vert == 4) { // For B4, we can extend to tilde{F4}
@@ -508,7 +507,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
         AllExtens.push_back(e_vert_sing); // Extension to B(n+1)
         size_t e_adj = LLAdj[e_vert_sing][0];
         AllExtens.push_back(e_adj); // Extension to tilde(Bn)
-        return AllExtens;
+        return { AllExtens, IrrCoxDyn<T>{"B",n_vert,0} };
       }
       // No other possibilities
       error();
@@ -518,9 +517,9 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
 #endif
     if (multiplicity[val_five] == 1) { // Looking for H2, H3, H4
       if (n_vert == 2)
-        return {0,1}; // Extensions to H3 possible on both ends.
+        return { {0,1}, IrrCoxDyn<T>{"H", 2,0} }; // Extensions to H3 possible on both ends.
       if (n_vert > 5)
-        return {}; // No possibility
+        error(); // No possibility
       size_t n_sing=0;
       size_t n_five=0;
       size_t e_vert_sing;
@@ -534,27 +533,27 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       }
       if (n_sing == 1 && n_five == 1) { // It is H3 or H4 depending on the dimension
         if (n_vert == 3)
-          return {e_vert_sing}; // Extension to H4 is the only possibility
+          return { {e_vert_sing}, IrrCoxDyn<T>{"H", 3, 0} }; // Extension to H4 is the only possibility
         if (n_vert == 4)
-          return {}; // H4 cannot be extended.
+          return { {}, IrrCoxDyn<T>{"H", 4, 0} }; // H4 cannot be extended.
       }
-      return {};
+      error();
     }
     if (multiplicity[val_six] == 1) { // Looking for G2 or tilde{G2}
       if (n_higher_edge != 1)
         error(); // There are other edges, excluded.
       if (n_vert == 2)
-        return {0,1}; // Extension to tilde{G2} possible on both vertices
+        return { {0,1}, IrrCoxDyn<T>{"G", 2, 0} }; // Extension to tilde{G2} possible on both vertices
       if (n_vert == 3)
-        return {}; // tilde{G2} cannot be extended
+        return { {}, IrrCoxDyn<T>{"tildeG", 2, 0} }; // tilde{G2} cannot be extended
       error();
     }
     if (n_vert == 2) {
       T param = M(0,1);
       if (param == practical_infinity<T>()) {
-        return {}; // I1(infinity) cannot be extended
+        return { {}, IrrCoxDyn<T>{"tildeI", 1, param} }; // I1(infinity) cannot be extended
       }
-      return {}; // We have now param > 6 and no extension is possible for I2(param) in that case
+      return { {}, IrrCoxDyn<T>{"I", 2, param} }; // We have now param > 6 and no extension is possible for I2(param) in that case
     }
     error();
   }
@@ -574,7 +573,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       if (list_deg[eAdj] == 1)
         n_sing++;
     if (n_sing == 3) { // It is actualla tilde{B3}. No extension possible
-      return {};
+      return { {}, IrrCoxDyn<T>{"tildeB",3,0} };
     }
     if (n_sing != 2)
       error();
@@ -583,7 +582,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       if (list_isolated_adjacent[eVert] == val_four)
         has_edge_four = true;
     if (has_edge_four) {
-      return {}; // tilde{Bn} cannot be extended
+      return { {}, IrrCoxDyn<T>{"tildeB",n_vert-1,0} }; // tilde{Bn} cannot be extended
     }
     error();
   }
@@ -617,7 +616,7 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
     map_len[ep.first].push_back(ep.second);
   }
   if (map_len[1].size() == 3) { // It is D4
-    return {0,1,2,3}; // Possible extensions are to D5 from the 3 vertices of degree 1 and to tilde{D4} from the vertex of degree 3
+    return { {0,1,2,3}, IrrCoxDyn<T>{"D",4,0} }; // Possible extensions are to D5 from the 3 vertices of degree 1 and to tilde{D4} from the vertex of degree 3
   }
   std::vector<size_t> AllExtens;
   if (map_len[1].size() == 2) { // It is Dn with n >= 5
@@ -630,26 +629,26 @@ std::vector<size_t> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(co
       AllExtens.push_back(map_len[1][0]);
       AllExtens.push_back(map_len[1][1]);
     }
-    return AllExtens;
+    return { AllExtens, IrrCoxDyn<T>{"D",n_vert,0} };
   }
   if (map_len[1].size() == 1 && map_len[2].size() == 2) { // It is E6
-    return {map_len[1][0], map_len[2][0], map_len[2][1]}; // Extensions to E7 and to tilde{E6}
+    return { {map_len[1][0], map_len[2][0], map_len[2][1]}, IrrCoxDyn<T>{"E",6,0} }; // Extensions to E7 and to tilde{E6}
   }
   if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[3].size() == 1) { // It is E7
-    return {map_len[3][0], map_len[2][0]}; // Extensions to E8 and to tilde{E7}
+    return { {map_len[3][0], map_len[2][0]}, IrrCoxDyn<T>{"E",7,0} }; // Extensions to E8 and to tilde{E7}
   }
   if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[4].size() == 1) { // It is E8
-    return {map_len[4][0]}; // Extension to tilde{E8} is the only possibility
+    return { {map_len[4][0]}, IrrCoxDyn<T>{"E",8,0} }; // Extension to tilde{E8} is the only possibility
   }
   // In spherical, no other possibilities left
   if (map_len[2].size() == 3) { // It is tilde{E6}
-    return {}; // No extension is possible
+    return { {}, IrrCoxDyn<T>{"tildeE",6,0} }; // No extension is possible
   }
   if (map_len[1].size() == 1 && map_len[3].size() == 2) { // It is tilde{E7}
-    return {}; // No extension is possible
+    return { {}, IrrCoxDyn<T>{"tildeE",7,0} }; // No extension is possible
   }
   if (map_len[1].size() == 1 && map_len[2].size() == 1 && map_len[5].size() == 1) { // It is tilde{E8}
-    return {}; // No extension is possible
+    return { {}, IrrCoxDyn<T>{"tildeE",8,0} }; // No extension is possible
   }
   error(); // No other possibilities left
 }
@@ -1060,9 +1059,14 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
   std::optional<std::vector<IrrCoxDyn<T>>> opt = RecognizeSphericalEuclideanDiagram(M);
   if (opt) {
     const std::vector<IrrCoxDyn<T>> & l_irr = *opt;
-    std::string str = IrrCoxDyn_to_string(l_irr[0]);
-    for (size_t i=1; i<l_irr.size(); i++)
-      str += "+" + IrrCoxDyn_to_string(l_irr[i]);
+    std::vector<std::string> l_str;
+    for (auto & icd : l_irr)
+      l_str.push_back(IrrCoxDyn_to_string(icd));
+    std::sort(l_str.begin(), l_str.end());
+    //
+    std::string str = l_str[0];
+    for (size_t i=1; i<l_str.size(); i++)
+      str += "+" + l_str[i];
     return str;
   }
   std::cerr << "M=\n";
