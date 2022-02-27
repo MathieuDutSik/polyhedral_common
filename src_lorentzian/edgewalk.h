@@ -1262,7 +1262,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << "\n";
+  std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen) << "\n";
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
@@ -1303,7 +1303,9 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         GeneralMatrixGroupHelper<T,Telt> helper{n};
         return LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
       } else {
-        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G, Subspace1);
+        MyMatrix<T> eProd = Subspace1 * InvInvariantSpace;
+        MyMatrix<T> G_new = InvariantSpace * G * InvariantSpace.transpose();
+        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G_new, eProd);
         return LinearSpace_Stabilizer<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
       }
     };
@@ -1399,7 +1401,9 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
         GeneralMatrixGroupHelper<T,Telt> helper{n};
         return LinearSpace_Equivalence<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
       } else {
-        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G1, Subspace1);
+        MyMatrix<T> eProd = Subspace1 * InvariantSpaceInv;
+        MyMatrix<T> G1_new = InvariantSpace * G1 * InvariantSpace.transpose();
+        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G1_new, eProd);
         return LinearSpace_Equivalence<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
       }
     };
@@ -1614,7 +1618,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //    WriteMatrix(std::cerr, epair.first);
     //    std::cerr << "WMat=\n";
     //    PrintWeightedMatrix(std::cerr, epair.second);
-    std::cerr << "Before the LinPolytopeIntegralWMat_Automorphism nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
+    std::cerr << "Before the LORENTZ_GetStabilizerGenerator nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
     std::vector<Telt> LGenIntegral;
     for (auto & eGen_Mat : LORENTZ_GetStabilizerGenerator<T,Tint,Tgroup>(G, vertFull1)) {
       bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen_Mat));

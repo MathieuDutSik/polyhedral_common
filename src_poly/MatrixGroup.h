@@ -225,13 +225,29 @@ FiniteIsotropicMatrixGroupHelper<T,Telt> ComputeFiniteIsotropicMatrixGroupHelper
 template<typename T, typename Telt, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,Telt>::type GetPermutationForFiniteMatrixGroup(Thelper const& helper, MyMatrix<T> const& eMatr)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
+  std::cerr << "|ListV|=" << helper.ListV.size() << "\n";
+  for (auto & eV : helper.ListV) {
+    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+  }
+  std::cerr << "eMat=" << StringMatrixGAP(eMatr) << "\n";
+  //  MyMatrix<T> eProd = eMatr * helper.G * eMatr.transpose();
+  //  std::cerr << "eProd=" << StringMatrixGAP(eProd) << "\n";
+#endif
   using Tidx = typename Telt::Tidx;
   Tidx len = helper.EXTfaithful.rows();
   std::vector<Tidx> V(len);
   for (Tidx i=0; i<len; i++) {
     MyVector<T> Vimg = eMatr.transpose() * helper.ListV[i];
+#ifdef DEBUG_MATRIX_GROUP
+    std::cerr << "i=" << i << " Vimg=" << StringVectorGAP(Vimg) << "\n";
+#endif
     V[i] = helper.MapV.at(Vimg);
   }
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
+#endif
   return Telt(std::move(V));
 }
 
@@ -309,12 +325,18 @@ MyVector<T> VectorMod(MyVector<T> const& V, T const& TheMod)
 template<typename T, typename Telt>
 MyMatrix<T> RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of RepresentPermutationAsMatrix for FiniteMatrixGroupHelper\n";
+#endif
   return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
 }
 
 template<typename T, typename Telt>
 MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of RepresentPermutationAsMatrix for FiniteIsotropicMatrixGroupHelper\n";
+#endif
   MyMatrix<T> const& Subspace1 = helper.EXTfaithful;
   int n_rows = Subspace1.rows();
   int n_cols = Subspace1.cols();
@@ -337,6 +359,9 @@ MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt
 template<typename T, typename Telt, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thelper::Treturn>::type MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, Thelper const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -457,6 +482,9 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,std::vector<M
            [[maybe_unused]] typename Thelper::Treturn const& eret,
            Tgroup const& GRPperm, Thelper const& helper, Face const& eFace)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_Stabilizer\n";
+#endif
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
   Tgroup eStab=GRPperm.Stabilizer_OnSets(eFace);
@@ -483,6 +511,9 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,std::optional
            [[maybe_unused]] typename Thelper::Treturn const& eret,
            Tgroup const& GRPperm, Thelper const& helper, Face const& eFace1, Face const& eFace2)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_RepresentativeAction\n";
+#endif
   using Telt=typename Tgroup::Telt;
   std::optional<Telt> opt=GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
   if (!opt) {
@@ -507,6 +538,9 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
            std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] Thelper const& helper,
            std::vector<MyVector<T>> const& O, T const& TheMod)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup 2\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
@@ -593,6 +627,9 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::ve
            typename Thelper::Treturn const& eret,
            [[maybe_unused]] Tgroup const& GRPperm, Thelper const& helper, Face const& eFace)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_Stabilizer 2\n";
+#endif
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
@@ -608,6 +645,9 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::op
            [[maybe_unused]] Tgroup const& GRPperm, Thelper const& helper,
            Face const& eFace1, Face const& eFace2)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_Stabilizer 2\n";
+#endif
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
