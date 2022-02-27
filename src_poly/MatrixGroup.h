@@ -122,6 +122,7 @@ std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, co
   return TheOrbit;
 }
 
+//
 
 template<typename T, typename Telt>
 struct ResultGeneratePermutationGroup_Finite {
@@ -129,17 +130,6 @@ struct ResultGeneratePermutationGroup_Finite {
   int siz;
   std::vector<Telt> ListPermGens;
 };
-
-
-template<typename T, typename Telt>
-struct ResultGeneratePermutationGroup_General {
-  int nbRow;
-  int siz;
-  std::vector<MyMatrix<T>> ListMatrGens;
-  std::vector<Telt> ListPermGens;
-};
-
-
 
 template<typename T, typename Telt>
 struct FiniteMatrixGroupHelper {
@@ -150,12 +140,61 @@ struct FiniteMatrixGroupHelper {
   std::unordered_map<MyVector<T>,int> MapV;
 };
 
+//
+
+template<typename T, typename Telt>
+struct ResultGeneratePermutationGroup_FiniteIsotropic {
+  int nbRow;
+  int siz;
+  std::vector<Telt> ListPermGens;
+};
+
+template<typename T, typename Telt>
+struct FiniteIsotropicMatrixGroupHelper {
+  using Treturn = ResultGeneratePermutationGroup_FiniteIsotropic<T,Telt>;
+  int n;
+  MyMatrix<T> G;
+  MyMatrix<T> EXTfaithful;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>,int> MapV;
+};
+
+//
+
+template<typename T, typename Telt>
+struct ResultGeneratePermutationGroup_General {
+  int nbRow;
+  int siz;
+  std::vector<MyMatrix<T>> ListMatrGens;
+  std::vector<Telt> ListPermGens;
+};
+
 template<typename T, typename Telt>
 struct GeneralMatrixGroupHelper {
   using Treturn = ResultGeneratePermutationGroup_General<T,Telt>;
   int n;
 };
 
+//
+
+template <typename Thelper>
+struct has_determining_ext {
+  static const bool value = false;
+};
+
+template <typename T, typename Telt>
+struct has_determining_ext<FiniteMatrixGroupHelper<T,Telt>> {
+  static const bool value = true;
+};
+
+template <typename T, typename Telt>
+struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T,Telt>> {
+  static const bool value = true;
+};
+
+
+
+//
 
 template<typename T, typename Telt>
 FiniteMatrixGroupHelper<T,Telt> ComputeFiniteMatrixGroupHelper(MyMatrix<T> const& EXT)
@@ -254,9 +293,36 @@ MyVector<T> VectorMod(MyVector<T> const& V, T const& TheMod)
 
 
 
+template<typename T, typename Telt>
+MyMatrix<T> RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
+{
+  return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
+}
 
 template<typename T, typename Telt>
-ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, FiniteMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
+MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
+{
+  MyMatrix<T> const& Subspace1 = helper.EXTfaithful;
+  int n_rows = Subspace1.rows();
+  int n_cols = Subspace1.cols();
+  MyMatrix<T> Subspace2(n_rows, n_cols);
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    MyVector<T> V = GetMatrixRow(Subspace1, i_row);
+    int j_row = OnPoints(i_row, ePerm);
+    AssignMatrixRow(Subspace2, j_row, V);
+  }
+  std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(helper.G, Subspace1, helper.G, Subspace2);
+  if (!opt) {
+    std::cerr << "We should have opt well defined\n";
+    throw TerminalException{1};
+  }
+  return *opt;
+}
+
+
+
+template<typename T, typename Telt, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thelper::Treturn>::type MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, Thelper const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -373,9 +439,10 @@ ResultGeneratePermutationGroup_Finite<T,Telt> MatrixIntegral_GeneratePermutation
 
 
 
-template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer([[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
-                                                   Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace)
+template<typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,std::vector<MyMatrix<T>>>::type MatrixIntegral_Stabilizer(
+           [[maybe_unused]] typename Thelper::Treturn const& eret,
+           Tgroup const& GRPperm, Thelper const& helper, Face const& eFace)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -390,7 +457,7 @@ std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer([[maybe_unused]] ResultGenera
     for (Tidx i=0; i<nbRow_tidx; i++)
       v[i]=OnPoints(i, eGen);
     Telt ePerm(std::move(v));
-    MyMatrix<T> eMatr=FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
+    MyMatrix<T> eMatr=RepresentPermutationAsMatrix(helper, ePerm);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
   return ListMatrGen;
@@ -398,9 +465,10 @@ std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer([[maybe_unused]] ResultGenera
 
 
 
-template<typename T, typename Tgroup>
-std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
-                                                               Tgroup const& GRPperm, FiniteMatrixGroupHelper<T, typename Tgroup::Telt> const& helper, Face const& eFace1, Face const& eFace2)
+template<typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,std::optional<MyMatrix<T>>>::type MatrixIntegral_RepresentativeAction(
+           [[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
+           Tgroup const& GRPperm, Thelper const& helper, Face const& eFace1, Face const& eFace2)
 {
   using Telt=typename Tgroup::Telt;
   std::optional<Telt> opt=GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
@@ -410,7 +478,7 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] 
 #endif
     return {};
   }
-  MyMatrix<T> eMat=FindTransformation(helper.EXTfaithful, helper.EXTfaithful, *opt);
+  MyMatrix<T> eMat=RepresentPermutationAsMatrix(helper, *opt);
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "eMat=\n";
   WriteMatrix(std::cerr, eMat);
@@ -421,8 +489,10 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction([[maybe_unused]] 
 
 
 
-template<typename T, typename Telt>
-ResultGeneratePermutationGroup_General<T,Telt> MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] GeneralMatrixGroupHelper<T,Telt> const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
+template<typename T, typename Telt, typename Thelper>
+inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultGeneratePermutationGroup_General<T,Telt>>::type MatrixIntegral_GeneratePermutationGroup(
+           std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] Thelper const& helper,
+           std::vector<MyVector<T>> const& O, T const& TheMod)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -505,9 +575,10 @@ ResultGeneratePermutationGroup_General<T,Telt> MatrixIntegral_GeneratePermutatio
   return {0,siz,ListMatrGens,std::move(ListPermGenProv)};
 }
 
-template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGroup_General<T,typename Tgroup::Telt> const& eret,
-                                                   [[maybe_unused]] Tgroup const& GRPperm, GeneralMatrixGroupHelper<T,typename Tgroup::Telt> const& helper, Face const& eFace)
+template<typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::vector<MyMatrix<T>>>::type MatrixIntegral_Stabilizer(
+           typename Thelper::Treturn const& eret,
+           [[maybe_unused]] Tgroup const& GRPperm, Thelper const& helper, Face const& eFace)
 {
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
@@ -518,10 +589,11 @@ std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer(ResultGeneratePermutationGrou
 
 
 
-template<typename T, typename Tgroup>
-std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePermutationGroup_General<T,typename Tgroup::Telt> const& eret,
-                                                               [[maybe_unused]] Tgroup const& GRPperm, GeneralMatrixGroupHelper<T, typename Tgroup::Telt> const& helper,
-                                                               Face const& eFace1, Face const& eFace2)
+template<typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::optional<MyMatrix<T>>>::type MatrixIntegral_RepresentativeAction(
+           typename Thelper::Treturn const& eret,
+           [[maybe_unused]] Tgroup const& GRPperm, Thelper const& helper,
+           Face const& eFace1, Face const& eFace2)
 {
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
@@ -548,6 +620,7 @@ std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(ResultGeneratePer
 template<typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace, T const& TheMod)
 {
+  using Telt = typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
   int n=helper.n;
   MyMatrix<T> ModSpace=TheMod * IdentityMat<T>(n);
@@ -608,14 +681,14 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     std::cerr << "|OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-    Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+    Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
 
 
     Tgroup GRPwork(eret.ListPermGens, eret.siz);
     Face eFace = GetFace(eret.nbRow, O, TheSpaceMod);
 
 
-    ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPwork, helper, eFace);
+    ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPwork, helper, eFace);
   }
   return ListMatrRet;
 }
@@ -635,6 +708,7 @@ using ResultTestModEquivalence = std::pair<std::vector<MyMatrix<T>>, MyMatrix<T>
 template<typename T, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2, T const& TheMod)
 {
+  using Telt=typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
   int n=TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
@@ -704,7 +778,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
 
 
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
 
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
@@ -720,22 +794,22 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
-      std::optional<MyMatrix<T>> opt = MatrixIntegral_RepresentativeAction(eret, GRPperm, helper, eFace1, eFace2);
+      std::optional<MyMatrix<T>> opt = MatrixIntegral_RepresentativeAction<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace1, eFace2);
       if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "Exit while loop with proof that no equivalence exists\n";
 #endif
         return {};
       }
-      ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPperm, helper, eFace2);
+      ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
       eElt = eElt * (*opt);
     } else {
       MyVector<T> const& V = *test2;
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
-      ListMatrRet = MatrixIntegral_Stabilizer(eret, GRPperm, helper, eFace2);
+      ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
     }
   }
 }
