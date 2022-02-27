@@ -210,7 +210,20 @@ FiniteMatrixGroupHelper<T,Telt> ComputeFiniteMatrixGroupHelper(MyMatrix<T> const
 }
 
 template<typename T, typename Telt>
-Telt GetPermutationForFiniteMatrixGroup(FiniteMatrixGroupHelper<T,Telt> const& helper, MyMatrix<T> const& eMatr)
+FiniteIsotropicMatrixGroupHelper<T,Telt> ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const& G, MyMatrix<T> const& EXT)
+{
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>,int> MapV;
+  for (int i=0; i<EXT.rows(); i++) {
+    MyVector<T> V = GetMatrixRow(EXT,i);
+    ListV.push_back(V);
+    MapV[V] = i;
+  }
+  return {int(EXT.cols()), G, EXT, std::move(ListV), std::move(MapV)};
+}
+
+template<typename T, typename Telt, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,Telt>::type GetPermutationForFiniteMatrixGroup(Thelper const& helper, MyMatrix<T> const& eMatr)
 {
   using Tidx = typename Telt::Tidx;
   Tidx len = helper.EXTfaithful.rows();
@@ -356,7 +369,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
 #endif
     MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
-    Telt ePermGen=GetPermutationForFiniteMatrixGroup(helper, eMatrGen);
+    Telt ePermGen=GetPermutationForFiniteMatrixGroup<T,Telt,Thelper>(helper, eMatrGen);
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen << "\n";
 #endif
@@ -467,7 +480,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,std::vector<M
 
 template<typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,std::optional<MyMatrix<T>>>::type MatrixIntegral_RepresentativeAction(
-           [[maybe_unused]] ResultGeneratePermutationGroup_Finite<T,typename Tgroup::Telt> const& eret,
+           [[maybe_unused]] typename Thelper::Treturn const& eret,
            Tgroup const& GRPperm, Thelper const& helper, Face const& eFace1, Face const& eFace2)
 {
   using Telt=typename Tgroup::Telt;
@@ -1024,11 +1037,12 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const& EXT_T, Tgroup c
     MyMatrix<T> eMat=FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGen.push_back(eMat);
   }
-  FiniteMatrixGroupHelper<T,Telt> helper = ComputeFiniteMatrixGroupHelper<T,Telt>(EXT_T);
+  using Thelper = FiniteMatrixGroupHelper<T,Telt>;
+  Thelper helper = ComputeFiniteMatrixGroupHelper<T,Telt>(EXT_T);
   std::vector<MyMatrix<T>> ListMatr = LinPolytopeIntegral_Automorphism_Subspaces<T,Tgroup>(ListMatrGen, EXT_T);
   std::vector<Telt> ListPermGens;
   for (auto & eMatr : ListMatr)
-    ListPermGens.push_back(GetPermutationForFiniteMatrixGroup(helper, eMatr));
+    ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T,Telt,Thelper>(helper, eMatr));
   return Tgroup(ListPermGens, nbVert);
 }
 

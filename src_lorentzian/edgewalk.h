@@ -1266,7 +1266,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
-  if (vertFull.method == "isotropstabequiv") {
+  if (vertFull.method == "isotropstabequiv_V1" || vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull.vert.MatRoot);
@@ -1298,8 +1298,16 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
       }
       LGen2.push_back(eGen2);
     }
-    GeneralMatrixGroupHelper<T,Telt> helper{n};
-    std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
+    auto get_gen3=[&]() -> std::vector<MyMatrix<T>> {
+      if (vertFull.method == "isotropstabequiv_V1") {
+        GeneralMatrixGroupHelper<T,Telt> helper{n};
+        return LinearSpace_Stabilizer<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
+      } else {
+        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G, Subspace1);
+        return LinearSpace_Stabilizer<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
+      }
+    };
+    std::vector<MyMatrix<T>> LGen3 = get_gen3();
     std::vector<MyMatrix<T>> LGen4;
     for (auto & eGen3 : LGen3) {
       MyMatrix<T> eGen4 = InvInvariantSpace * eGen3 * InvariantSpace;
@@ -1329,7 +1337,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
   if (vertFull1.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull1.e_pair_char, vertFull2.e_pair_char);
   }
-  if (vertFull1.method == "isotropstabequiv") {
+  if (vertFull1.method == "isotropstabequiv_V1" || vertFull1.method == "isotropstabequiv") {
     if (vertFull1.e_pair_char.first.rows() != vertFull2.e_pair_char.first.rows())
       return {};
     if (vertFull1.e_pair_char.second.GetWeight() != vertFull2.e_pair_char.second.GetWeight())
@@ -1381,13 +1389,21 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       LGen2.push_back(eGen2);
     }
     std::cerr << "We have LGen2\n";
-    GeneralMatrixGroupHelper<T,Telt> helper{n};
     //
     MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
     MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);
     std::cerr << "We have InvariantSpaceImg\n";
 
-    std::optional<MyMatrix<T>> opt2 = LinearSpace_Equivalence<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+    auto get_opt2=[&]() -> std::optional<MyMatrix<T>> {
+      if (vertFull1.method == "isotropstabequiv_V1") {
+        GeneralMatrixGroupHelper<T,Telt> helper{n};
+        return LinearSpace_Equivalence<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+      } else {
+        FiniteIsotropicMatrixGroupHelper<T,Telt> helper = ComputeFiniteIsotropicMatrixGroupHelper<T,Telt>(G1, Subspace1);
+        return LinearSpace_Equivalence<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+      }
+    };
+    std::optional<MyMatrix<T>> opt2 = get_opt2();
     std::cerr << "We have opt2\n";
     if (!opt2)
       return {};
