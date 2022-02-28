@@ -864,7 +864,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 #endif
       Face eFace1 = GetFace(eret.nbRow, O, TheSpace1workMod);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
+#ifdef DEBUG_MATRIX_GROUP
       std::cerr << "nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1) << " eFace2=" << StringFace(eFace2) << "\n";
+#endif
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence. |eFace1| = |eFace2| = 0\n";
         std::cerr << "Clear bug\n";
