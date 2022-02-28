@@ -226,12 +226,11 @@ template<typename T, typename Telt, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,Telt>::type GetPermutationForFiniteMatrixGroup(Thelper const& helper, MyMatrix<T> const& eMatr)
 {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
-  std::cerr << "|ListV|=" << helper.ListV.size() << "\n";
-  for (auto & eV : helper.ListV) {
-    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-  }
-  std::cerr << "eMat=" << StringMatrixGAP(eMatr) << "\n";
+  //  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
+  //  std::cerr << "|ListV|=" << helper.ListV.size() << "\n";
+  //  for (auto & eV : helper.ListV)
+  //    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+  //  std::cerr << "eMat=" << StringMatrixGAP(eMatr) << "\n";
   //  MyMatrix<T> eProd = eMatr * helper.G * eMatr.transpose();
   //  std::cerr << "eProd=" << StringMatrixGAP(eProd) << "\n";
 #endif
@@ -241,12 +240,12 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,Telt>::type G
   for (Tidx i=0; i<len; i++) {
     MyVector<T> Vimg = eMatr.transpose() * helper.ListV[i];
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "i=" << i << " Vimg=" << StringVectorGAP(Vimg) << "\n";
+    //    std::cerr << "i=" << i << " Vimg=" << StringVectorGAP(Vimg) << "\n";
 #endif
     V[i] = helper.MapV.at(Vimg);
   }
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
+  //  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
 #endif
   return Telt(std::move(V));
 }
@@ -300,12 +299,15 @@ Face GetFace(int const& nbRow, std::vector<MyVector<T>> const& O, MyMatrix<T> co
 {
   size_t Osiz = O.size();
   size_t siz = nbRow + Osiz;
+  //  std::cerr << "GetFace : nbRow=" << nbRow << "\n";
   Face eFace(siz);
   for (size_t iO=0; iO<Osiz; iO++) {
-    MyVector<T> eVect=O[iO];
+    MyVector<T> const& eVect=O[iO];
     std::optional<MyVector<T>> eRes1=SolutionIntMat(TheSpace, eVect);
-    if (eRes1)
+    if (eRes1) {
+      //      std::cerr << "Setting true at iO=" << iO << "\n";
       eFace[nbRow + iO]=1;
+    }
   }
   return eFace;
 }
@@ -436,7 +438,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     std::cerr << "|ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
+    //    std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
 #endif
     for (int iO=0; iO<Osiz; iO++) {
       int jO=ePermGenSelect.at(iO);
@@ -471,6 +473,10 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "|ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+#endif
+#ifdef DEBUG_MATRIX_GROUP
+  permutalib::Group<Telt,mpz_class> GRPprov(ListPermGenProv, siz);
+  std::cerr << "|GRPprov|=" << GRPprov.size() << "\n";
 #endif
   return {nbRow, siz, ListPermGenProv};
 }
@@ -842,6 +848,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 #endif
       Face eFace1 = GetFace(eret.nbRow, O, TheSpace1workMod);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
+      std::cerr << "nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1) << " eFace2=" << StringFace(eFace2) << "\n";
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence. |eFace1| = |eFace2| = 0\n";
         std::cerr << "Clear bug\n";
@@ -854,8 +861,25 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 #endif
         return {};
       }
+      MyMatrix<T> const& M = *opt;
+#ifdef DEBUG_MATRIX_GROUP
+      Treturn fret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>({M}, helper, O, TheMod);
+      if (fret.ListPermGens.size() != 1) {
+        std::cerr << "ListPermGens does not have the right length\n";
+        throw TerminalException{1};
+      }
+      Telt ePerm = fret.ListPermGens[0];
+      Face eFace1_img = OnFace(eFace1, ePerm);
+      if (eFace1_img != eFace2) {
+        std::cerr << "eFace1 not maššed to eFace2\n";
+        std::cerr << "|eFace1|=" << eFace1.size() << "\n";
+        std::cerr << "nbRow=" << fret.nbRow << " siz=" << fret.siz << "\n";
+        std::cerr << "eFace1_img=" << StringFace(eFace1_img) << "\n";
+        throw TerminalException{1};
+      }
+#endif
       ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
-      eElt = eElt * (*opt);
+      eElt = eElt * M;
     } else {
       MyVector<T> const& V = *test2;
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);

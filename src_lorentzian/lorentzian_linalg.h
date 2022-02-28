@@ -423,6 +423,11 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(MyMatrix<T> const& G1, My
     std::cerr << "G1 has not been transposed into G2\n";
     throw TerminalException{1};
   }
+  MyMatrix<T> testProd = Subspace1 * eEquiv;
+  if (testProd != Subspace2) {
+    std::cerr << "Subspace1 is not mapped to Subspace2\n";
+    throw TerminalException{1};
+  }
 #endif
   return eEquiv;
 }

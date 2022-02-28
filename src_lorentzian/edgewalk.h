@@ -1334,7 +1334,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method << "\n";
-  std::cerr << "LORENTZ_TestEquivalence, gen1=" << StringVectorGAP(vertFull1.vert.gen) << " gen2=" << StringVectorGAP(vertFull2.vert.gen) << "\n";
+  std::cerr << "LORENTZ_TestEquivalence, gen1=" << StringVector(vertFull1.vert.gen) << " gen2=" << StringVector(vertFull2.vert.gen) << "\n";
   if (vertFull1.method != vertFull2.method) {
     return {};
   }
@@ -1348,23 +1348,25 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
       return {};
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull1.vert.MatRoot);
     MyMatrix<T> Subspace2 = UniversalMatrixConversion<T,Tint>(vertFull2.vert.MatRoot);
-    std::cerr << "Subspace1=\n";
-    WriteMatrix(std::cerr, Subspace1);
-    std::cerr << "Subspace2=\n";
-    WriteMatrix(std::cerr, Subspace2);
+    //    std::cerr << "Subspace1=\n";
+    //    WriteMatrix(std::cerr, Subspace1);
+    //    std::cerr << "Subspace2=\n";
+    //    WriteMatrix(std::cerr, Subspace2);
     std::optional<MyMatrix<T>> opt1 = ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G1, Subspace2);
     if (!opt1) {
       std::cerr << "Failed at extending equivalence\n";
       return {};
     }
     MyMatrix<T> const& EquivRat = *opt1;
-    std::cerr << "EquivRat=\n";
-    WriteMatrix(std::cerr, EquivRat);
+    std::cerr << "EquivRat=" << StringMatrixGAP_line(EquivRat) << "\n";
+    //    WriteMatrix(std::cerr, EquivRat);
     //
     int n = G1.rows();
     std::vector<MyMatrix<T>> LGen1;
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
+    std::cerr << "|GRP1|=" << vertFull1.GRP1.size() << "\n";
+    std::vector<std::string> LGenStr;
     for (auto & eGen : vertFull1.GRP1.GeneratorsOfGroup()) {
       MyMatrix<T> Subspace2(nRow, Subspace1.cols());
       for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
@@ -1378,11 +1380,20 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
         throw TerminalException{1};
       }
       MyMatrix<T> const& eGen1 = *opt;
-      LGen1.push_back(eGen1);
+      //      std::cerr << "eGen1=\n";
+      //      WriteMatrix(std::cerr, eGen1);
+      LGenStr.push_back(StringMatrixGAP_line(eGen1));
+      LGen1.emplace_back(std::move(eGen1));
     }
+    // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in GLn(Z)
+    std::cerr << "LGen1=" << StringVectorStringGAP(LGenStr) << "\n";
     std::cerr << "We have LGen1\n";
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
+    std::cerr << "InvariantSpace=\n";
+    WriteMatrix(std::cerr, InvariantSpace);
+    std::cerr << "InvariantSpaceInv=\n";
+    WriteMatrix(std::cerr, InvariantSpaceInv);
     std::vector<MyMatrix<T>> LGen2;
     for (auto & eGen1 : LGen1) {
       MyMatrix<T> eGen2 = InvariantSpace * eGen1 * InvariantSpaceInv;
@@ -1390,7 +1401,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
         std::cerr << "The matrix eGen2 should be integral\n";
         throw TerminalException{1};
       }
-      LGen2.push_back(eGen2);
+      LGen2.emplace_back(std::move(eGen2));
     }
     std::cerr << "We have LGen2\n";
     //
@@ -1611,7 +1622,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "Timing |func_insert_vertex(no iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-    std::cerr << "Failed to find some isomorphism\n";
+    std::cerr << "               Failed to find some isomorphism\n";
     //    const auto& epair = vertFull1.e_pair_char;
     //    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
     //    PrintWeightedMatrixGAP(std::cerr, epair.second);
