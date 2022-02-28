@@ -344,16 +344,17 @@ MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt
   int n_cols = Subspace1.cols();
   MyMatrix<T> Subspace2(n_rows, n_cols);
   for (int i_row=0; i_row<n_rows; i_row++) {
-    MyVector<T> V = GetMatrixRow(Subspace1, i_row);
     int j_row = OnPoints(i_row, ePerm);
-    AssignMatrixRow(Subspace2, j_row, V);
+    MyVector<T> V = GetMatrixRow(Subspace1, j_row);
+    AssignMatrixRow(Subspace2, i_row, V);
   }
   std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(helper.G, Subspace1, helper.G, Subspace2);
   if (!opt) {
     std::cerr << "We should have opt well defined\n";
     throw TerminalException{1};
   }
-  return *opt;
+  MyMatrix<T> const& M = *opt;
+  return M;
 }
 
 
@@ -838,6 +839,21 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
 
 
       Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
+#ifdef DEBUG_MATRIX_GROUP
+      if constexpr(has_determining_ext<Thelper>::value) {
+        for (size_t iGen=0; iGen<ListMatrRet.size(); iGen++) {
+          Telt ePerm = eret.ListPermGens[iGen];
+          std::cerr << "ePerm=" << ePerm;
+          MyMatrix<T> eMatr = ListMatrRet[iGen];
+          MyMatrix<T> M2 = RepresentPermutationAsMatrix(helper, ePerm);
+          if (eMatr != M2) {
+            std::cerr << " INCORRECT\n";
+          } else {
+            std::cerr << " correct\n";
+          }
+        }
+      }
+#endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
 
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
@@ -869,6 +885,17 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
         throw TerminalException{1};
       }
       Telt ePerm = fret.ListPermGens[0];
+      std::cerr << "ePerm=" << ePerm << "\n";
+      if constexpr(has_determining_ext<Thelper>::value) {
+        MyMatrix<T> M2 = RepresentPermutationAsMatrix(helper, ePerm);
+        if (M != M2) {
+          std::cerr << "The matrix is not the original one\n";
+          throw TerminalException{1};
+        }
+      }
+
+
+      
       Face eFace1_img = OnFace(eFace1, ePerm);
       if (eFace1_img != eFace2) {
         std::cerr << "eFace1 not maššed to eFace2\n";
