@@ -1233,6 +1233,7 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
       for (auto & kv : map_v)
         std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
     } else {
+      //      method = "isotropstabequiv_V1";
       method = "isotropstabequiv";
     }
   }
@@ -1333,6 +1334,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method << "\n";
+  std::cerr << "LORENTZ_TestEquivalence, gen1=" << StringVectorGAP(vertFull1.vert.gen) << " gen2=" << StringVectorGAP(vertFull2.vert.gen) << "\n";
   if (vertFull1.method != vertFull2.method) {
     return {};
   }

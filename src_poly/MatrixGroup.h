@@ -983,8 +983,12 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
       TheMod *= eList[j];
     MyMatrix<T> TheSpace1Img=TheSpace1 * eElt;
     std::optional<ResultTestModEquivalence<T>> opt = LinearSpace_ModEquivalence<T,Tgroup,Thelper>(ListMatrWork, helper, TheSpace1Img, TheSpace2, TheMod);
-    if (!opt)
+    if (!opt) {
+#ifdef DEBUG_MATRIX_GROUP
+      std::cerr << "LinearSpace_ModEquivalence failed so we exit here\n";
+#endif
       return {};
+    }
     eElt = eElt * (opt->second);
     ListMatrWork = opt->first;
   }
