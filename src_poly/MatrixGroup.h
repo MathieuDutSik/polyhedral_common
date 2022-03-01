@@ -746,7 +746,9 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
 
     Tgroup GRPwork(eret.ListPermGens, eret.siz);
     Face eFace = GetFace(eret.nbRow, O, TheSpaceMod);
-
+#ifdef MATRIX_GROUP_DIAGNOSTICS
+    std::cerr << "ModStabilizer TheMod=" << TheMod << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size() << " |eFace|=" << eFace.count() << "\n";
+#endif
 
     ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPwork, helper, eFace);
   }
@@ -872,6 +874,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
+#ifdef MATRIX_GROUP_DIAGNOSTICS
+      std::cerr << "ModEquivalence 1 TheMod=" << TheMod << " |O|=" << O.size() << " |GRPperm|=" << GRPperm.size() << " |eFace1|=" << eFace1.count() << " |eFace2|=" << eFace2.count() << "\n";
+#endif
       std::optional<MyMatrix<T>> opt = MatrixIntegral_RepresentativeAction<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace1, eFace2);
       if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -895,9 +900,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
           throw TerminalException{1};
         }
       }
-
-
-      
       Face eFace1_img = OnFace(eFace1, ePerm);
       if (eFace1_img != eFace2) {
         std::cerr << "eFace1 not maššed to eFace2\n";
@@ -915,6 +917,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
+#ifdef MATRIX_GROUP_DIAGNOSTICS
+      std::cerr << "ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size() << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count() << "\n";
+#endif
       ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
     }
   }
