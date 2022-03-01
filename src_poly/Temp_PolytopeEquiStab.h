@@ -1677,7 +1677,26 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(std::pair<MyMatri
   return {};
 }
 
-
-
+/*
+  The integral canonical form is needed for many application as it makes things faster.
+  What can we do:
+  ---We can find a canonical ordering of the vertices of the polytope.
+  ---From the ordering we can get from GetZbasis (or a variant of it).
+  ---That basis M is of determinant d, this gives us d classes.
+  ---The group Lin(P) acts on the different embeddings.
+  ---The group acts Lin(P) acts on all the embeddings.
+  ---Therefore, we can find the canonical set from the set.
+  ---From that, we can get the M + embedding. We can canonicalize it.
+  ---This gets us an integral transformation.
+  ---But this integral transformation does not belong to the group of isometries
+  ---Can we handle that? Maybe.
+ */
+template<typename T, typename Tgroup, typename Tval, typename Tidx_value>
+MyMatrix<T> LinPolytopeIntegralWMat_Canonic(std::pair<MyMatrix<T>, WeightMatrix<true,Tval,Tidx_value>> const& ep)
+{
+  std::cerr << "The code is incomplete\n";
+  throw TerminalException{1};
+  return ep.first;
+}
 
 #endif
