@@ -1283,6 +1283,9 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen) << "\n";
+  std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
+  std::cerr << "MatRoot=\n";
+  WriteMatrix(std::cerr, vertFull.vert.MatRoot);
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
@@ -1293,6 +1296,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
     for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+      std::cerr << "eGen=" << eGen << "\n";
       MyMatrix<T> Subspace2(nRow, Subspace1.cols());
       for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
         Tidx jRow = eGen.at(iRow);
@@ -1301,12 +1305,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
       }
       std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
       if (!opt) {
-        std::cerr << "G=\n";
-        WriteMatrix(std::cerr, G);
-        std::cerr << "eGen=" << eGen << "\n";
-        std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
-        std::cerr << "MatRoot=\n";
-        WriteMatrix(std::cerr, vertFull.vert.MatRoot);
         std::cerr << "opt found to be missing\n";
         throw TerminalException{1};
       }
