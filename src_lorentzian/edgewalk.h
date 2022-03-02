@@ -1607,8 +1607,8 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 
 
 
-template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom>
-void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
+template<typename T, typename Tint, typename Tgroup, typename Fvertex, typename Fisom, typename Fincrease>
+void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, Fvertex f_vertex, Fisom f_isom, Fincrease f_increase_nbdone, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
 {
   using Telt=typename Tgroup::Telt;
   using Tidx=typename Telt::Tidx;
@@ -1760,9 +1760,14 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         //
         // The original problem originally took one week to debug.
         FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
-        bool test = insert_adjacent_vertices(VertFullCp);
-        if (test) {
+        bool test1 = insert_adjacent_vertices(VertFullCp);
+        if (test1) {
           std::cerr << "Exiting after insert_adjacent_vertices\n";
+          return;
+        }
+        bool test2 = f_increase_nbdone();
+        if (test2) {
+          std::cerr << "Exiting after f_increase_nbdone\n";
           return;
         }
       }
@@ -1779,10 +1784,6 @@ template<typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective, TheHeuristic<Tint> const& HeuristicIdealStabEquiv, TheHeuristic<Tint> const& HeuristicTryTerminateDualDescription)
 {
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
-  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
-    l_orbit_vertices_ret.push_back(vertFull.vert);
-    return false;
-  };
   int dim = G.rows();
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
@@ -1797,6 +1798,13 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "max_finite_order=" << max_finite_order << "\n";
     InvariantBasis = IdentityMat<Tint>(dim);
   }
+  auto f_increase_nbdone=[&]() -> bool {
+    return false;
+  };
+  auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
+    l_orbit_vertices_ret.push_back(vertFull.vert);
+    return false;
+  };
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
       return false;
@@ -1866,7 +1874,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 #endif
     return false;
   };
-  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G, l_norms, eVert, f_vertex, f_isom, HeuristicIdealStabEquiv);
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom),decltype(f_increase_nbdone)>(G, l_norms, eVert, f_vertex, f_isom, f_increase_nbdone, HeuristicIdealStabEquiv);
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   for (auto & e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
@@ -1881,6 +1889,9 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<
   std::optional<MyMatrix<Tint>> answer;
   //
   FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull2 = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G1, l_norms, eVert2, HeuristicIdealStabEquiv);
+  auto f_increase_nbdone=[&]() -> bool {
+    return false;
+  };
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt = LORENTZ_TestEquivalence(G1, vertFull1, G2, vertFull2);
@@ -1894,7 +1905,7 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(MyMatrix<
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     return false;
   };
-  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G1, l_norms, eVert1, f_vertex, f_isom, HeuristicIdealStabEquiv);
+  LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom),decltype(f_increase_nbdone)>(G1, l_norms, eVert1, f_vertex, f_isom, f_increase_nbdone, HeuristicIdealStabEquiv);
   return answer;
 }
 
