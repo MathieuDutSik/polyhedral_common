@@ -1786,6 +1786,8 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
   int dim = G.rows();
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
+  std::unordered_set<MyVector<Tint>> s_simple_roots;
+
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   size_t max_finite_order;
   MyMatrix<Tint> InvariantBasis;
@@ -1798,12 +1800,23 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::cerr << "max_finite_order=" << max_finite_order << "\n";
     InvariantBasis = IdentityMat<Tint>(dim);
   }
-  auto f_increase_nbdone=[&]() -> bool {
+  int nonew_nbdone = 0;
+  auto f_try_terminate=[&]() -> bool {
     return false;
   };
+  auto f_increase_nbdone=[&]() -> bool {
+    nonew_nbdone++;
+    return f_try_terminate();
+  };
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
+    nonew_nbdone = 0;
     l_orbit_vertices_ret.push_back(vertFull.vert);
-    return false;
+    int n_rows = vertFull.vert.MatRoot.rows();
+    for (int i_row=0; i_row<n_rows; i_row++) {
+      MyVector<Tint> V = GetMatrixRow(vertFull.vert.MatRoot, i_row);
+      s_simple_roots.insert(V);
+    }
+    return f_try_terminate();
   };
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
