@@ -1,0 +1,56 @@
+#! /usr/bin/python3
+
+import os
+import sys
+
+
+if len(sys.argv) != 5:
+    print("The script is used as LOGS_FindRange [KeyLine] [Logs] n_line_bef n_line_aft\n")
+    os.sys.exit(1)
+
+keyline_file = sys.argv[1]
+log_file = sys.argv[2]
+n_line_bef = int(sys.argv[3])
+n_line_aft = int(sys.argv[4])
+
+ifile = open(keyline_file, 'r')
+KeyLines = ifile.readlines()
+ifile.close()
+if len(KeyLines) != 1:
+    print("|KeyLines|=", len(KeyLines))
+    print("KeyLines should have length eactly 1")
+    os.sys.exit(1)
+keyline = KeyLines[0]
+
+
+
+jfile = open(log_file, 'r')
+LogLines = jfile.readlines()
+jfile.close()
+
+l_match = []
+n_line = len(LogLines)
+for i_line in range(n_line):
+    eline = LogLines[i_line]
+    if eline == KeyLine:
+        l_match.append(i_line)
+
+if len(l_match) != 1:
+    print("|l_match|=", len(l_match))
+    print("Should be of length 1")
+    os.sys.exit(1)
+
+
+i_line = l_match[0]
+
+
+i_line_bef = i_line - n_line_buf
+i_line_aft = i_line - n_line_aft
+if i_line_bef < 0:
+    i_line_bef = 0
+if i_line_aft > n_line:
+    i_line_aft = n_line
+
+
+for i in range(i_line_bef,i_line_aft):
+    print(LogLines[i])
