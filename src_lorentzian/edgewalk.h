@@ -1472,8 +1472,8 @@ struct ResultEdgewalk {
 };
 
 
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const& re)
+template<typename Tint, typename Titer_root, typename Titer_isom>
+std::vector<MyVector<Tint>> compute_full_root_orbit_iter(Titer_root const& iter_root_begin, Titer_root const& iter_root_end, Titer_isom const& iter_isom_begin, Titer_isom const& iter_isom_end)
 {
   std::unordered_set<MyVector<Tint>> TotalList;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
@@ -1496,21 +1496,21 @@ std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const
       //      std::cerr << "pos=" << pos << " len=" << len << "\n";
       if (pos == len)
         break;
-      for (size_t i=pos; i<len; i++) {
-        for (auto & eGen : re.l_gen_isom_cox) {
-          MyVector<Tint> w_img = eGen.transpose() * l_v[i];
+      Titer_isom iter_isom = iter_isom_begin;
+      while (iter_isom != iter_isom_end) {
+        for (size_t i=pos; i<len; i++) {
+          MyVector<Tint> w_img = iter_isom->transpose() * l_v[i];
           f_ins(w_img);
         }
+        iter_isom++;
       }
       pos=len;
     }
   };
-  for (auto & fdv : re.l_orbit_vertices) {
-    size_t len = fdv.MatRoot.rows();
-    for (size_t i=0; i<len; i++) {
-      MyVector<Tint> e_root = GetMatrixRow(fdv.MatRoot, i);
-      f_insert(e_root);
-    }
+  Titer_root iter_root = iter_root_begin;
+  while (iter_root != iter_root_end) {
+    f_insert(*iter_root);
+    iter_root++;
   }
   std::vector<MyVector<Tint>> l_root;
   for (auto & v : TotalList)
@@ -1518,6 +1518,20 @@ std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const
   return l_root;
 }
 
+
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> compute_full_root_orbit(ResultEdgewalk<T,Tint> const& re)
+{
+  std::unordered_set<MyVector<Tint>> s_root;
+  for (auto & fdv : re.l_orbit_vertices) {
+    size_t len = fdv.MatRoot.rows();
+    for (size_t i=0; i<len; i++) {
+      MyVector<Tint> e_root = GetMatrixRow(fdv.MatRoot, i);
+      s_root.insert(e_root);
+    }
+  }
+  return compute_full_root_orbit_iter<Tint>(s_root.begin(), s_root.end(), re.l_gen_isom_cox.begin(), re.l_gen_isom_cox.end());
+}
 
 
 
