@@ -12,7 +12,9 @@ PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		= Test
 
-OBJECTS		= $(PROGRAM:%=%.o)
+SRCFILES	= POLY_c_cddlib_mpq.cpp
+OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
+LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= icpc -std=c++17 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++17
@@ -42,7 +44,7 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_indefinite -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_dualdesc -I../src_short -I.
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)  -I$(LIBSHORT_INCDIR) $(NAUTY_INCLUDE) $(GLPK_INCLUDE) $(PERMUTALIB_INCLUDE) $(CDDLIB_INCLUDE) $(MPREAL_INCLUDE)
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -I$(LIBSHORT_INCDIR) $(NAUTY_INCLUDE) $(PERMUTALIB_INCLUDE) $(GLPK_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -I$(LIBSHORT_INCDIR) $(NAUTY_INCLUDE) $(PERMUTALIB_INCLUDE) $(GLPK_INCLUDE) $(CDDLIB_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
@@ -57,7 +59,7 @@ CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 
 #LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(LIBSHORT_LINK) $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK) $(GLPK_LINK) $(CDDLIB_GMP_LINK)
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(LIBSHORT_LINK) $(BOOST_LINK) $(NAUTY_LINK) $(GLPK_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(LIBSHORT_LINK) $(BOOST_LINK) $(NAUTY_LINK) $(GLPK_LINK) $(CDDLIB_GMP_LINK)
 
 
 %.o: %.cpp
@@ -70,7 +72,7 @@ all:	$(PROGRAM)
 $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
-		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+		$(CC) $(LINKOBJECTS) $(DEBUGFLAG) $@.o $(LIBS) -o $@
 
 clean:;
 	rm -f *.o

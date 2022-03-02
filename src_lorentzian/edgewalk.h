@@ -1,6 +1,7 @@
 #ifndef INCLUDE_EDGEWALK_H
 #define INCLUDE_EDGEWALK_H
 
+#include "POLY_RecursiveDualDesc.h"
 #include "MatrixCanonicalForm.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "two_dim_lorentzian.h"
@@ -1082,10 +1083,9 @@ template<typename Tint>
 TheHeuristic<Tint> GetHeuristicTryTerminateDualDescription()
 {
   // Allowed returned values: "trydualdesc", "notry"
-  // Allowed input values: "increase_vertex_nonewroot", "increase_treat_nothingnew"
+  // Allowed input values: "increase_treat_nothingnew"
   std::vector<std::string> ListString={
-    "2",
-    "1 increase_vertex_nonewroot > 10 trydualdesc",
+    "1",
     "1 increase_treat_nothingnew > 10 trydualdesc",
     "notry"};
   return HeuristicFromListString<Tint>(ListString);
@@ -1797,6 +1797,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 template<typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective, TheHeuristic<Tint> const& HeuristicIdealStabEquiv, TheHeuristic<Tint> const& HeuristicTryTerminateDualDescription)
 {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
   int dim = G.rows();
   std::unordered_set<MyMatrix<Tint>> s_gen_isom_cox;
@@ -1815,12 +1817,51 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     InvariantBasis = IdentityMat<Tint>(dim);
   }
   int nonew_nbdone = 0;
+  size_t n_simple_roots = 0;
   auto f_try_terminate=[&]() -> bool {
+    std::vector<MyVector<Tint>> LVect = compute_full_root_orbit_iter<Tint>(s_simple_roots.begin(), s_simple_roots.end(), s_gen_isom_cox.begin(), s_gen_isom_cox.end());
+    size_t n_simple_roots_new = LVect.size();
+    if (n_simple_roots_new > n_simple_roots) {
+      n_simple_roots = n_simple_roots_new;
+      std::unordered_map<MyVector<Tint>,Tidx> MapVectRev;
+      for (Tidx i=0; i<Tidx(n_simple_roots); i++)
+        MapVectRev[LVect[i]] = i;
+      std::vector<Telt> LGenPerm;
+      for (auto & eGen : s_gen_isom_cox) {
+        std::vector<Tidx> v(n_simple_roots);
+        for (size_t i=0; i<n_simple_roots; i++) {
+          MyVector<Tint> Vimg = eGen.transpose() * LVect[i];
+          v[i] = MapVectRev[Vimg];
+        }
+        Telt eGenPerm(std::move(v));
+        LGenPerm.push_back(eGenPerm);
+      }
+      Tgroup GRP(LGenPerm, n_simple_roots);
+      MyMatrix<T> ListIneq = - UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(LVect)) * G;
+      vectface vf = DualDescriptionStandard(ListIneq, GRP);
+      bool AllRaysInside = true;
+      for (auto & eFace : vf) {
+        MyVector<T> V = FindFacetInequality(ListIneq, eFace);
+        T scal = V.dot(G * V);
+        if (scal > 0)
+          AllRaysInside = false;
+      }
+      return AllRaysInside;
+    }
+    return false;
+  };
+  auto f_maybe_terminate=[&]() -> bool {
+    std::map<std::string, Tint> mapV;
+    mapV["increase_treat_nothingnew"] = UniversalScalarConversion<Tint,int>(nonew_nbdone);
+    std::string choice = HeuristicEvaluation(mapV, HeuristicTryTerminateDualDescription);
+    if (choice == "") {
+      return f_try_terminate();
+    }
     return false;
   };
   auto f_increase_nbdone=[&]() -> bool {
     nonew_nbdone++;
-    return f_try_terminate();
+    return f_maybe_terminate();
   };
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
     nonew_nbdone = 0;
@@ -1830,7 +1871,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       MyVector<Tint> V = GetMatrixRow(vertFull.vert.MatRoot, i_row);
       s_simple_roots.insert(V);
     }
-    return f_try_terminate();
+    return f_maybe_terminate();
   };
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
     if (eP == IdMat)
