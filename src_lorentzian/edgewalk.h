@@ -1614,7 +1614,14 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
           std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
           std::cerr << "Timing |func_insert_vertex(find iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-          return f_isom(UniversalMatrixConversion<Tint,T>(*equiv_opt));
+          bool test = f_isom(UniversalMatrixConversion<Tint,T>(*equiv_opt));
+          if (test) {
+            std::cerr << "Exiting at f_isom in LORENTZ_TestEquivalence, return true\n";
+            return true;
+          } else {
+            std::cerr << "Exiting at f_isom in LORENTZ_TestEquivalence, return false\n";
+            return false;
+          }
         }
       }
     }
@@ -1635,14 +1642,16 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::vector<Telt> LGenIntegral;
     for (auto & eGen_Mat : LORENTZ_GetStabilizerGenerator<T,Tint,Tgroup>(G, vertFull1)) {
       bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen_Mat));
+      if (test) {
+        std::cerr << "Exiting at f_isom in func_insert_vertex\n";
+        return true;
+      }
       std::optional<std::vector<Tidx>> opt = RepresentVertexPermutationTest<Tint,T,Tidx>(vertFull1.vert.MatRoot, vertFull1.vert.MatRoot, eGen_Mat);
       if (!opt) {
         std::cerr << "Failed to find the representation\n";
         throw TerminalException{1};
       }
       LGenIntegral.push_back(Telt(*opt));
-      if (test)
-        return true;
     }
     vertFull1.GRP1_integral = Tgroup(LGenIntegral, vertFull1.vert.MatRoot.rows());
 #ifdef TIMINGS
@@ -1650,8 +1659,10 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::cerr << "Timing |Automorphism|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
     bool test = f_vertex(vertFull1);
-    if (test)
+    if (test) {
+      std::cerr << "Exiting at f_vertex in func_insert_vertex\n";
       return true;
+    }
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
     std::cerr << "Exiting the func_insert_vertex\n";
@@ -1693,8 +1704,10 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       }
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
       bool test = func_insert_vertex(fVertFull);
-      if (test)
+      if (test) {
+        std::cerr << "Exiting at func_insert_vertex in insert_adjacent_vertices\n";
         return true;
+      }
     }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -1705,8 +1718,10 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
   };
   FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, eVert, HeuristicIdealStabEquiv);
   bool test = func_insert_vertex(eVertFull);
-  if (test)
+  if (test) {
+    std::cerr << "Exiting at initial func_insert_vertex\n";
     return;
+  }
   while(true) {
     bool IsFinished = true;
     size_t len = l_status.size();
@@ -1727,12 +1742,16 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         // The original problem originally took one week to debug.
         FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
         bool test = insert_adjacent_vertices(VertFullCp);
-        if (test)
+        if (test) {
+          std::cerr << "Exiting after insert_adjacent_vertices\n";
           return;
+        }
       }
     }
-    if (IsFinished)
+    if (IsFinished) {
+      std::cerr << "Exiting because all orbits have been treated\n";
       break;
+    }
   }
   std::cerr << "Exiting from the infinite loop of enumeration of vertex pairs\n";
 }

@@ -32,7 +32,7 @@ l_match = []
 n_line = len(LogLines)
 for i_line in range(n_line):
     eline = LogLines[i_line]
-    if eline == KeyLine:
+    if eline == keyline:
         l_match.append(i_line)
 
 if len(l_match) != 1:
@@ -42,15 +42,17 @@ if len(l_match) != 1:
 
 
 i_line = l_match[0]
+print("i_line=", i_line)
 
-
-i_line_bef = i_line - n_line_buf
-i_line_aft = i_line - n_line_aft
+i_line_bef = i_line - n_line_bef
+i_line_aft = i_line + n_line_aft
 if i_line_bef < 0:
     i_line_bef = 0
 if i_line_aft > n_line:
     i_line_aft = n_line
 
-
+ret_blk_str = ""
 for i in range(i_line_bef,i_line_aft):
-    print(LogLines[i])
+    ret_blk_str += LogLines[i]
+
+print(ret_blk_str)
