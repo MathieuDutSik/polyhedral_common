@@ -34,6 +34,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"]=true;
   ListStringValues1["FileHeuristicIdealStabEquiv"]="unset.heu";
+  ListStringValues1["FileHeuristicTryTerminateDualDescription"]="unset.heu";
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
   BlockPROC.ListBoolValues = ListBoolValues1;
@@ -1077,6 +1078,24 @@ TheHeuristic<Tint> GetHeuristicIdealStabEquiv()
 
 
 
+template<typename Tint>
+TheHeuristic<Tint> GetHeuristicTryTerminateDualDescription()
+{
+  // Allowed returned values: "trydualdesc", "notry"
+  // Allowed input values: "increase_vertex_nonewroot", "increase_treat_nothingnew"
+  std::vector<std::string> ListString={
+    "2",
+    "1 increase_vertex_nonewroot > 10 trydualdesc",
+    "1 increase_treat_nothingnew > 10 trydualdesc",
+    "notry"};
+  return HeuristicFromListString<Tint>(ListString);
+}
+
+
+
+
+
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -1757,7 +1776,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 }
 
 template<typename T, typename Tint, typename Tgroup>
-ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective, TheHeuristic<Tint> const& HeuristicIdealStabEquiv)
+ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::vector<T> const& l_norms, FundDomainVertex<T,Tint> const& eVert, bool EarlyTerminationIfNotReflective, TheHeuristic<Tint> const& HeuristicIdealStabEquiv, TheHeuristic<Tint> const& HeuristicTryTerminateDualDescription)
 {
   std::vector<FundDomainVertex<T,Tint>> l_orbit_vertices_ret;
   auto f_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> const& vertFull) -> bool {
@@ -1775,6 +1794,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     T dim_T = dim;
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
     max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
+    std::cerr << "max_finite_order=" << max_finite_order << "\n";
     InvariantBasis = IdentityMat<Tint>(dim);
   }
   auto f_isom=[&](MyMatrix<Tint> const& eP) -> bool {
@@ -1782,6 +1802,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       return false;
     if (s_gen_isom_cox.count(eP) > 0)
       return false;
+    s_gen_isom_cox.insert(eP);
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
@@ -1801,6 +1822,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "Timing |is_finite_order|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
       if (!test) {
+        std::cerr << "f_isom, conclude not_reflective by matrix order\n";
         is_reflective = false;
         return true;
       }
@@ -1808,6 +1830,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       if (!IsZeroMatrix(eDiff)) {
         MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
         if (NSP.rows() == 0) {
+          std::cerr << "f_isom, conclude not_reflective by NSP.rows() == 0\n";
           is_reflective = false;
 #ifdef TIMINGS
           std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -1816,10 +1839,18 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
           return true;
         }
         InvariantBasis = NSP * InvariantBasis;
+        for (auto & eP : s_gen_isom_cox) {
+          MyMatrix<Tint> fDiff = InvariantBasis * eP - InvariantBasis;
+          if (!IsZeroMatrix(fDiff)) {
+            std::cerr << "The matrix fDiff should be integral\n";
+            throw TerminalException{1};
+          }
+        }
         MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
         MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
         DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
         if (DiagInfo.nbMinus == 0) {
+          std::cerr << "f_isom, conclude not_reflective by DiagInfo.nbMinus == 0\n";
           is_reflective = false;
 #ifdef TIMINGS
           std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
@@ -1833,7 +1864,6 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
     std::cerr << "Timing |MatrixText 3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
-    s_gen_isom_cox.insert(eP);
     return false;
   };
   LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom)>(G, l_norms, eVert, f_vertex, f_isom, HeuristicIdealStabEquiv);
@@ -2191,10 +2221,16 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
 #endif
   //
   bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
+  //
   std::string FileHeuristicIdealStabEquiv=BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv=GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
-  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv);
+  //
+  std::string FileHeuristicTryTerminateDualDescription=BlockPROC.ListStringValues.at("FileHeuristicTryTerminateDualDescription");
+  TheHeuristic<Tint> HeuristicTryTerminateDualDescription=GetHeuristicTryTerminateDualDescription<Tint>();
+  ReadHeuristicFileCond(FileHeuristicTryTerminateDualDescription, HeuristicTryTerminateDualDescription);
+  //
+  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv, HeuristicTryTerminateDualDescription);
   std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
   bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");

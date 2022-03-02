@@ -563,8 +563,10 @@ bool is_infinite_order(MyMatrix<T> const& M, size_t const& max_finite_order)
   MyMatrix<T> ThePow = M;
   size_t expo = 1;
   for (size_t u=0; u<=max_finite_order; u++) { // We go a little bit over the needed range
-    if (is_identity(ThePow))
+    if (is_identity(ThePow)) {
+      std::cerr << "is_infinite_order expo=" << expo << "\n";
       return true;
+    }
     ThePow *= M;
     expo++;
   }
