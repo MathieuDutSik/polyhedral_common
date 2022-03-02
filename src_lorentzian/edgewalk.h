@@ -1086,7 +1086,7 @@ TheHeuristic<Tint> GetHeuristicTryTerminateDualDescription()
   // Allowed input values: "increase_treat_nothingnew"
   std::vector<std::string> ListString={
     "1",
-    "1 increase_treat_nothingnew > 10 trydualdesc",
+    "1 increase_treat_nothingnew > 10 notry",
     "notry"};
   return HeuristicFromListString<Tint>(ListString);
 }
@@ -1301,6 +1301,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
       }
       std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
       if (!opt) {
+        std::cerr << "G=\n";
+        WriteMatrix(std::cerr, G);
+        std::cerr << "eGen=" << eGen << "\n";
+        std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
+        std::cerr << "MatRoot=\n";
+        WriteMatrix(std::cerr, vertFull.vert.MatRoot);
         std::cerr << "opt found to be missing\n";
         throw TerminalException{1};
       }
