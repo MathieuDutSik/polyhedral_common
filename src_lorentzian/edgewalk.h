@@ -1140,7 +1140,8 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
   using Telt = typename Tgroup::Telt;
   using Telt_idx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
-  std::vector<MyMatrix<T>> ListMat{G};
+  MyMatrix<T> Qmat = GetQmatrix_NotFullRank(UniversalMatrixConversion<T,Tint>(vert.MatRoot));
+  std::vector<MyMatrix<T>> ListMat{G, Qmat};
   struct ret_type {
     pair_char<T> e_pair_char;
     Tgroup GRP1;
@@ -1282,21 +1283,28 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  MyMatrix<Tint> const& MatRoot = vertFull.vert.MatRoot;
   std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen) << "\n";
   std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
   std::cerr << "MatRoot=\n";
-  WriteMatrix(std::cerr, vertFull.vert.MatRoot);
+  WriteMatrix(std::cerr, MatRoot);
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
   if (vertFull.method == "isotropstabequiv_V1" || vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
-    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(vertFull.vert.MatRoot);
+    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T,Tint>(MatRoot);
+    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
+    Tgroup GRPlin = LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
     for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
       std::cerr << "eGen=" << eGen << "\n";
+      bool test = GRPlin.isin(eGen);
+      std::cerr << "test=" << test << "\n";
+      MyMatrix<T> eGen_as_matr = FindTransformation(Subspace1red, Subspace1red, eGen);
+      std::cerr << "We have eGen_as_matr\n";
       MyMatrix<T> Subspace2(nRow, Subspace1.cols());
       for (Tidx iRow=0; iRow<nRow_tidx; iRow++) {
         Tidx jRow = eGen.at(iRow);
@@ -1333,6 +1341,13 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         return LinearSpace_Stabilizer<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
       }
     };
+    std::vector<MyVector<Tint>> ListV;
+    std::unordered_set<MyVector<Tint>> SetV;
+    for (int i=0; i<MatRoot.rows(); i++) {
+      MyVector<Tint> V = GetMatrixRow(MatRoot, i);
+      ListV.push_back(V);
+      SetV.insert(V);
+    }
     std::vector<MyMatrix<T>> LGen3 = get_gen3();
     std::vector<MyMatrix<T>> LGen4;
     for (auto & eGen3 : LGen3) {
@@ -1341,8 +1356,17 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         std::cerr << "The matrix eGen4 should be integral\n";
         throw TerminalException{1};
       }
+      MyMatrix<Tint> eGen4_i = UniversalMatrixConversion<Tint,T>(eGen4);
+      for (int i=0; i<MatRoot.rows(); i++) {
+        MyVector<Tint> Vimg = eGen4_i.transpose() * ListV[i];
+        if (SetV.count(Vimg) == 0) {
+          std::cerr << "The vertor at i=" << i << " is not mapped in MatRoot\n";
+          throw TerminalException{1};
+        }
+      }
       LGen4.push_back(eGen4);
     }
+    
     return LGen4;
   }
   std::cerr << "Error in LORENTZ_GetStabilizerGenerator\n";

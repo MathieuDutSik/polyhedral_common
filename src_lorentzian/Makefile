@@ -3,11 +3,12 @@
 #PROGRAM		= COXDYN_ComputeSymbol
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
 #PROGRAM		= LORENTZ_FundDomain_Vinberg
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk COXDYN_FindExtensions
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LATT_GetIntegralMatricesPossibleOrders
+PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
 
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		= Test
@@ -52,7 +53,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DDEBUG_MATRIX_GROUP -DDEBUG_LORENTZIAN_LINALG
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS
-CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS -DDEBUG_MATRIX_GROUP
+CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS -DDEBUG_MATRIX_GROUP -DDEBUG_LORENTZIAN_LINALG
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 

@@ -122,6 +122,10 @@ inline typename std::enable_if<is_ring_field<T>::value,MyMatrix<T>>::type GetQma
 }
 
 
+
+
+
+
 template<typename T>
 inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type GetQmatrix(MyMatrix<T> const& TheEXT)
 {
@@ -154,6 +158,26 @@ inline typename std::enable_if<(not is_ring_field<T>::value),MyMatrix<T>>::type 
   std::cerr << "|UniversalMatrixConversion2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
 #endif
   return RetMat;
+}
+
+
+template<typename T>
+MyMatrix<T> GetQmatrix_NotFullRank(MyMatrix<T> const& TheEXT)
+{
+  std::vector<int> eList = ColumnReductionSet(TheEXT);
+  int len = eList.size();
+  int n_cols = TheEXT.cols();
+  MyMatrix<T> TheEXT_red = SelectColumn(TheEXT, eList);
+  MyMatrix<T> Qmat_red = GetQmatrix(TheEXT_red);
+  MyMatrix<T> Qmat = ZeroMatrix<T>(n_cols, n_cols);
+  for (int i=0; i<len; i++) {
+    int i2 = eList[i];
+    for (int j=0; j<len; j++) {
+      int j2 = eList[j];
+      Qmat(i2,j2) = Qmat_red(i,j);
+    }
+  }
+  return Qmat;
 }
 
 
