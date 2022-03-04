@@ -1344,7 +1344,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         return LinearSpace_Stabilizer<T,Tgroup,FiniteIsotropicMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace);
       }
     };
-    /*
     std::vector<MyVector<Tint>> ListV;
     std::unordered_set<MyVector<Tint>> SetV;
     for (int i=0; i<MatRoot.rows(); i++) {
@@ -1352,7 +1351,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
       ListV.push_back(V);
       SetV.insert(V);
     }
-    */
     std::vector<MyMatrix<T>> LGen3 = get_gen3();
     std::vector<MyMatrix<T>> LGen4;
     for (auto & eGen3 : LGen3) {
@@ -1361,7 +1359,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
         std::cerr << "The matrix eGen4 should be integral\n";
         throw TerminalException{1};
       }
-      /*
       MyMatrix<Tint> eGen4_i = UniversalMatrixConversion<Tint,T>(eGen4);
       for (int i=0; i<MatRoot.rows(); i++) {
         MyVector<Tint> Vimg = eGen4_i.transpose() * ListV[i];
@@ -1370,10 +1367,8 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
           throw TerminalException{1};
         }
       }
-      */
       LGen4.emplace_back(std::move(eGen4));
     }
-    
     return LGen4;
   }
   std::cerr << "Error in LORENTZ_GetStabilizerGenerator\n";
@@ -2317,6 +2312,7 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::vector<MyVector<Tint>> l_root;
   for (int i=0; i<eVert.MatRoot.rows(); i++) {
     MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
+    std::cerr << StringVectorGAP(eLine) << "\n";
     l_root.push_back(eLine);
   }
 #ifdef PRINT_SYMBOL_INFORMATION

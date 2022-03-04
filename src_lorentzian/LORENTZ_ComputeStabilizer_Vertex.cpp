@@ -13,9 +13,11 @@ int main(int argc, char* argv[])
 {
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
   try {
-    if (argc != 3) {
+    if (argc != 3 && argc != 4) {
       std::cerr << "Program is used as\n";
       std::cerr << "LORENTZ_ComputeStabilizer_Vertex [G] [Vertex]\n";
+      std::cerr << "or\n";
+      std::cerr << "LORENTZ_ComputeStabilizer_Vertex [G] [Vertex] [outfile]\n";
       throw TerminalException{1};
     }
     std::string FileLorMat=argv[1];
@@ -50,9 +52,22 @@ int main(int argc, char* argv[])
     FundDomainVertex_FullInfo<T,Tint,Tgroup> vertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, vert, HeuristicIdealStabEquiv);
     //
     std::vector<MyMatrix<T>> l_mat = LORENTZ_GetStabilizerGenerator(G, vertFull);
-    for (size_t i_mat=0; i_mat<l_mat.size(); i_mat++) {
-      std::cerr << "i_mat=" << i_mat << "\n";
-      WriteMatrix(std::cerr, l_mat[i_mat]);
+    if (argc == 3) {
+      for (size_t i_mat=0; i_mat<l_mat.size(); i_mat++) {
+        std::cerr << "i_mat=" << i_mat << "\n";
+        WriteMatrix(std::cerr, l_mat[i_mat]);
+      }
+    }
+    if (argc == 4) {
+      std::string file = argv[3];
+      std::ofstream os(file);
+      os << "return [";
+      for (size_t i_mat=0; i_mat<l_mat.size(); i_mat++) {
+        if (i_mat>0)
+          os << ",\n";
+        os << StringMatrixGAP(l_mat[i_mat]);
+      }
+      os << "];\n";
     }
   }
   catch (TerminalException const& e) {
