@@ -87,6 +87,51 @@ struct FundDomainVertex {
 };
 
 template<typename T, typename Tint>
+bool operator==(FundDomainVertex<T,Tint> const& k1, FundDomainVertex<T,Tint> const& k2)
+{
+  MyVector<T> gen1 = RemoveFractionVector(k1.gen);
+  MyVector<T> gen2 = RemoveFractionVector(k2.gen);
+  if (g1 != g2)
+    return false;
+  if (k1.MatRoot.rows() != k2.MatRoot.rows())
+    return false;
+  std::set<MyVector<Tint>> set1;
+  for (int i=0; i<k1.MatRoot.rows(); i++) {
+    MyVector<Tint> V = GetMatrixRow(k1.MatRoot, i);
+    set1.insert(V);
+  }
+  std::set<MyVector<Tint>> set2;
+  for (int i=0; i<k2.MatRoot.rows(); i++) {
+    MyVector<Tint> V = GetMatrixRow(k2.MatRoot, i);
+    set2.insert(V);
+  }
+  return set1 == set2;
+}
+
+template<typename T, typename Tint>
+bool operator!=(FundDomainVertex<T,Tint> const& k1, FundDomainVertex<T,Tint> const& k2)
+{
+  MyVector<T> gen1 = RemoveFractionVector(k1.gen);
+  MyVector<T> gen2 = RemoveFractionVector(k2.gen);
+  if (g1 != g2)
+    return true;
+  if (k1.MatRoot.rows() != k2.MatRoot.rows())
+    return true;
+  std::set<MyVector<Tint>> set1;
+  for (int i=0; i<k1.MatRoot.rows(); i++) {
+    MyVector<Tint> V = GetMatrixRow(k1.MatRoot, i);
+    set1.insert(V);
+  }
+  std::set<MyVector<Tint>> set2;
+  for (int i=0; i<k2.MatRoot.rows(); i++) {
+    MyVector<Tint> V = GetMatrixRow(k2.MatRoot, i);
+    set2.insert(V);
+  }
+  return set1 != set2;
+}
+
+
+template<typename T, typename Tint>
 std::string StringFundDomainVertexGAP(FundDomainVertex<T,Tint> const& vert)
 {
   std::string ret = "ret(gen:=" + StringVectorGAP(vert.gen) + ", l_roots:=" + StringMatrixGAP(vert.MatRoot) + ")";
