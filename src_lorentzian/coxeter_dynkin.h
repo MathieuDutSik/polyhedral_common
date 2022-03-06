@@ -691,12 +691,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   T val_four = 4;
   T val_six = 6;
   T val_inf = practical_infinity<T>(); // For supporting I1(infinity)
-  std::vector<T> allowed_vals;
-  allowed_vals.push_back(val_single_edge);
-  allowed_vals.push_back(val_four);
-  allowed_vals.push_back(val_six);
-  if (!DS.OnlySpherical)
-    allowed_vals.push_back(val_inf);
   size_t n_vert = M.rows();
   std::vector<size_t> list_deg(n_vert);
   std::vector<size_t> list_n_higher(n_vert);
@@ -730,25 +724,20 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<std::vector<size_t>> list_extremal_AN;
   std::vector<size_t> list_middle_A3;
   std::vector<size_t> list_vertices_Bn; // This is for tilde{Bn}
-  std::vector<size_t> list_vertices_Dn; // This is for tilde{Dn}
+  std::vector<size_t> list_vertices_Dn; // This is for tilde{Dn}, Dn 
+  std::vector<size_t> VertToConn(n_vert);
+  size_t iConn = 0;
   for (auto &eConn : LConn) {
     size_t dim_res=eConn.size();
+    for (auto & eVert : eConn)
+      VertToConn[eVert] = iConn;
+    iConn++;
     MyMatrix<T> Mres(dim_res, dim_res);
     for (size_t i=0; i<dim_res; i++)
       for (size_t j=0; j<dim_res; j++)
         Mres(i,j) = M(eConn[i], eConn[j]);
     std::pair<ExtensionIrreducibleInfos,IrrCoxDyn<T>> epair = ComputeExtensionIrreducibleInfos(Mres);
     const IrrCoxDyn<T>& cd = epair.second;
-    // The diagrams that can be part of triple points are:
-    //   An, Dn, Bn
-    // The diagrams that cannot be part of triple points are:
-    //   En, tildeEn, tildeDn, tildeBn, tildeCn, F4, tildeF4, G2, tildeG2
-    if (cd.type == "A" || cd.type == "D" || cd.type == "B") {
-      for (auto & eVert : eConn) {
-        if (list_deg[eVert] <= 1) // Case 0 corresponds to A1
-          list_cand_for_triple_vertex.push_back(eVert);
-      }
-    }
     if (cd.type == "A" && cd.dim == 2) {
       list_extremal_A2.push_back(eConn);
       list_extremal_AN.push_back(eConn);
@@ -765,6 +754,11 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       if (cd.dim == 5)
         list_extremal_A5.push_back(LTerm);
       list_extremal_AN.push_back(LTerm);
+    }
+    if (cd.type == "A" && cd.dim == 3) {
+      for (auto & eVert : eConn)
+        if (list_deg[eVert] == 2)
+          list_middle_A3.push_back(eVert);
     }
     if (cd.type == "B") {
       if (cd.dim == 2) {
@@ -925,9 +919,40 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
-  
+  // Dn formed from A3 + Ak
+  for (auto & v1 : list_middle_A3) {
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v2 : LTerm) {
+        if (VertToConn[v1] != VertToConn[v2]) {
+          MyVector<T> V = V_basic;
+          V(v1) = val_single_edge;
+          V(v2) = val_single_edge;
+          test_vector_and_insert(V);
+        }
+      }
+    }
+  }
+  // Dn formed from Dk + Al with k+l = n-1 , k >= 4 , l >= 2
+  for (auto & v1 : list_vertices_Dn) {
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v2 : LTerm) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // Dn formed from D(n-2) + A1
+  for (auto & v1 : list_vertices_Dn) {
+    for (auto & v2 : list_isolated) {
+      MyVector<T> V = V_basic;
+      V(v1) = val_single_edge;
+      V(v2) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
 
-  
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
       MyVector<T> V = V_basic;
