@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     MyMatrix<T> G = ReadMatrix<T>(is);
     //
     std::vector<T> l_norms;
-    int n_norm;
+    int n_norms;
     is >> n_norms;
     for (int i=0; i<n_norms; i++) {
       T val;
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     //
     MyVector<T> k = ReadVector<T>(is);
     //
-    ReadVector<Tint> v_disc = ReadVector<Tint>(is);
+    MyVector<Tint> v_disc = ReadVector<Tint>(is);
     MyMatrix<Tint> Mat_l_ui = ReadMatrix<Tint>(is);
     std::vector<MyVector<Tint>> l_ui;
     for (int u=0; u<Mat_l_ui.rows(); u++) {

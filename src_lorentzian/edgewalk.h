@@ -91,7 +91,7 @@ bool operator==(FundDomainVertex<T,Tint> const& k1, FundDomainVertex<T,Tint> con
 {
   MyVector<T> gen1 = RemoveFractionVector(k1.gen);
   MyVector<T> gen2 = RemoveFractionVector(k2.gen);
-  if (g1 != g2)
+  if (gen1 != gen2)
     return false;
   if (k1.MatRoot.rows() != k2.MatRoot.rows())
     return false;
@@ -113,7 +113,7 @@ bool operator!=(FundDomainVertex<T,Tint> const& k1, FundDomainVertex<T,Tint> con
 {
   MyVector<T> gen1 = RemoveFractionVector(k1.gen);
   MyVector<T> gen2 = RemoveFractionVector(k2.gen);
-  if (g1 != g2)
+  if (gen1 != gen2)
     return true;
   if (k1.MatRoot.rows() != k2.MatRoot.rows())
     return true;
