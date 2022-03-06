@@ -715,24 +715,37 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     if (n_adj == 0)
       list_isolated.push_back(i);
   }
+  auto get_ladj={&](size_t const& i) -> std::vector<size_t> {
+    std::vector<size_t> V;
+    for (size_t j=0; j<dim; j++)
+      if (M(i,j) != val_comm)
+        V.push_back(j);
+    return V;
+  };
   size_t n_isolated = list_isolated.size();
-  std::vector<size_t> list_cand_for_triple_vertex; // Part of En, Dn, tilde or not
   std::vector<std::vector<size_t>> list_extremal_A2;
   std::vector<std::vector<size_t>> list_extremal_A3;
   std::vector<std::vector<size_t>> list_extremal_A4;
   std::vector<std::vector<size_t>> list_extremal_A5;
   std::vector<std::vector<size_t>> list_extremal_AN;
+  std::vector<size_t> list_vert_A2;
   std::vector<size_t> list_middle_A3;
   std::vector<size_t> list_expand_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
   std::vector<size_t> list_non_expand_Bn; // Only for n > 2. This is the vertex adjacent with weight 4 which cannot be extended to B(n+1)
   std::vector<size_t> list_expand_Dn; // For D4 this is the 3 vertices, For Dn (n > 4) this is the expanding vertex
   std::vector<size_t> list_non_expand_Dn; // Only for n > 4, this is the two vertices which cannot be expanded to D(n+1)
-  std::vector<size_t> VertToConn(n_vert);
+  std::vector<size_t> VertToConn(n_vert); // Mapping from vertices to connected component. Useful for sums like Ak + A3
+  std::vector<size_t> VertToLocDim(n_vert); // Mapping from vertices to connected component. Useful for sums like Ak + A3
+  std::vector<size_t> list_extm1_AN; // For An the vertices from which we can expand to D(n+1)
+  std::vector<size_t> list_extm2_AN; // Inspired by above, useful o get E6, E7, E8, tilde{{E8} from A5, A6, A7 and A8.
+  std::vector<size_t> list_extm3_AN; // Same as above, only useful to get tilde{E7} from A7
   size_t iConn = 0;
   for (auto &eConn : LConn) {
     size_t dim_res=eConn.size();
-    for (auto & eVert : eConn)
+    for (auto & eVert : eConn) {
       VertToConn[eVert] = iConn;
+      VertToLocDim[eVert] = dim_res;
+    }
     iConn++;
     MyMatrix<T> Mres(dim_res, dim_res);
     for (size_t i=0; i<dim_res; i++)
@@ -743,19 +756,60 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     if (cd.type == "A" && cd.dim == 2) {
       list_extremal_A2.push_back(eConn);
       list_extremal_AN.push_back(eConn);
+      for (auto & eVert : eConn)
+        list_vert_A2.push_back(eVert);
     }
     if (cd.type == "A" && 2 < cd.dim) {
-      std::vector<size_t> LTerm;
+      std::vector<size_t> Lext;
       for (auto & eVert : eConn)
         if (list_deg[eVert] == 1)
-          LTerm.push_back(eVert);
+          Lext.push_back(eVert);
       if (cd.dim == 3)
-        list_extremal_A3.push_back(LTerm);
+        list_extremal_A3.push_back(Lext);
       if (cd.dim == 4)
-        list_extremal_A4.push_back(LTerm);
+        list_extremal_A4.push_back(Lext);
       if (cd.dim == 5)
-        list_extremal_A5.push_back(LTerm);
-      list_extremal_AN.push_back(LTerm);
+        list_extremal_A5.push_back(Lext);
+      list_extremal_AN.push_back(Lext);
+      std::vector<size_t> Lextm1;
+      bool IsFirst = true;
+      for (auto & eVert : Lext) {
+        if (IsFirst || cd.dim > 3) {
+          size_t nVert = list_isolated_adjacent_index[eVert];
+          Lextm1.push_back(nVert);
+          list_extm1_AN.push_back(nVert);
+        }
+        IsFirst = false;
+      }
+      if (cd.dim > 4) {
+        std::vector<size_t> Lextm2;
+        bool IsFirst = true;
+        for (auto & eVert : Lextm1) {
+          std::vector<size_t> LAdj = get_ladj(eVert);
+          for (auto & fVert : LAdj) {
+            if (PositionVect(Lext, fVert) == -1) {
+              if (IsFirst || cd.dim > 5) {
+                Lextm2.push_back(fVert);
+                list_extm2_AN.push_back(fVert);
+              }
+              IsFirst = false;
+            }
+          }
+        }
+        if (cd.dim == 7) { // only that case makes sense for A7 and its extension to tilde{E7}
+          for (auto & eVert : Lextm2) {
+            std::vector<size_t> LAdj = get_ladj(eVert);
+            for (auto & fVert : LAdj) {
+              if (PositionVect(Lextm1, fVert) == -1) {
+                if (IsFirst) {
+                  list_extm3_AN.push_back(fVert);
+                }
+                IsFirst = false;
+              }
+            }
+          }
+        }
+      }
     }
     if (cd.type == "A" && cd.dim == 3) {
       for (auto & eVert : eConn)
@@ -961,7 +1015,54 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
-  // 
+  // E6 formed as A4 + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & v2 : list_extm1_AN) {
+      if (VertToLocDim[v2] == 4) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // E7 formed as A5 + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & v2 : list_extm1_AN) {
+      if (VertToLocDim[v2] == 5) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // E7 formed as A4 + A2
+  for (auto & v1 : list_vert_A2) {
+    for (auto & v2 : list_extm1_AN) {
+      if (VertToLocDim[v2] == 4) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // E7 formed as D5 + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & v2 : list_non_expand_Dn) {
+      if (VertToLocDim[v2] == 5) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+
+
+
+  
   if (!DS.OnlySpherical) {
     // tilde{G2} formed from A1+A1
     for (size_t i=0; i<n_isolated; i++) {
