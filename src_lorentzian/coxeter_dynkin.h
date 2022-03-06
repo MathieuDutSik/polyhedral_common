@@ -1102,7 +1102,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
     // tilde{C2} obtained from A1+A1
     SetCppIterator SCI_A1_A1(n_isolated,2);
-    for (auto & eV : SCI_Bk_Bl) {
+    for (auto & eV : SCI_A1_A1) {
       size_t v1 = list_isolated[eV[0]];
       size_t v2 = list_isolated[eV[1]];
       MyVector<T> V = V_basic;
@@ -1122,7 +1122,26 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
     // tilde{D6} obtained from A3 + A3
-    
+    size_t n_middle_A3 = list_middle_A3.size();
+    SetCppIterator SCI_A3_A3(n_middle_A3,2);
+    for (auto & eV : SCI_A3_A3) {
+      f_pair_single(list_middle_A3[eV[0]], list_middle_A3[eV[1]]);
+    }
+    // tilde{Dn} obtained from A3 + D(n-3)
+    for (auto & v1 : list_middle_A3) {
+      for (auto & v2 : list_expand_Dn)
+        f_pair_single(v1, v2);
+    }
+    // tilde{Dn} obtained from Dk + Dl with k+l = n , k >= 4, l >= 4
+    size_t n_expand_Dn = list_expand_Dn.size();
+    SetCppIterator SCI_exp_Dk_Dl(n_expand_Dn,2);
+    for (auto & eV : SCI_exp_Dk_Dl) {
+      size_t v1 = list_expand_Dn[eV[0]];
+      size_t v2 = list_expand_Dn[eV[1]];
+      if (VertToConn[v1] != VertToConn[v2])
+        f_pair_single(v1, v2);
+    }
+    // 
   }
   //
   // Considering the case of 3 edges.
