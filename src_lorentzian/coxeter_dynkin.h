@@ -15,6 +15,16 @@
 //#define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
 
+
+
+struct DiagramSelector {
+  bool OnlySimplyLaced;
+  bool OnlyLorentzianAdmissible;
+  bool OnlySpherical;
+};
+
+
+
 template<typename T>
 struct IrrCoxDyn {
   std::string type;
@@ -284,8 +294,19 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 }
 
 
+struct placeholder_1 {
+};
 
 
+// This is the data from an irreducible diagrams
+// that should allow us to determine all 
+struct ExtensionIrreducibleInfos {
+  ExtensionIrreducibleInfos() {
+  }
+  ExtensionIrreducibleInfos(placeholder_1 ph1, std::vector<size_t> const& elist) : list_sing(elist) {
+  }
+  std::vector<size_t> list_sing;
+};
 
 
 
@@ -295,7 +316,7 @@ MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 
 
 template<typename T>
-std::pair<std::vector<size_t>,IrrCoxDyn<T>> FindExtensionVerticesIrreducibleSphericalEuclideanDiagram(const MyMatrix<T>& M)
+std::pair<ExtensionIrreducibleInfos,IrrCoxDyn<T>> ComputeExtensionIrreducibleInfos(const MyMatrix<T>& M)
 {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
@@ -651,6 +672,194 @@ std::pair<std::vector<size_t>,IrrCoxDyn<T>> FindExtensionVerticesIrreducibleSphe
     return { {}, IrrCoxDyn<T>{"tildeE",8,0} }; // No extension is possible
   }
   error(); // No other possibilities left
+}
+
+template<typename T>
+std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, const DiagramSelector& DS)
+{
+  if (!DS.OnlyLorentzianAdmissible) {
+    std::cerr << "We work only with Lorentzian admissible lattices\n";
+    throw TerminalException{1};
+  }
+  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
+  std::vector<MyVector<T>> ListExtensions;
+#ifdef CHECK_EFFICIENT_ENUMERATION
+  std::set<MyVector<T>> SetExtensions;
+#endif
+  T val_comm = 2;
+  T val_single_edge = 3;
+  T val_four = 4;
+  T val_six = 6;
+  T val_inf = practical_infinity<T>(); // For supporting I1(infinity)
+  std::vector<T> allowed_vals;
+  allowed_vals.push_back(val_single_edge);
+  allowed_vals.push_back(val_four);
+  allowed_vals.push_back(val_six);
+  if (!DS.OnlySpherical)
+    allowed_vals.push_back(val_inf);
+  size_t dim = M.rows();
+  std::vector<size_t> list_deg(dim);
+  std::vector<size_t> list_n_higher(dim);
+  std::vector<size_t> list_isolated;
+  for (size_t i=0; i<dim; i++) {
+    size_t n_adj = 0;
+    size_t n_higher = 0;
+    for (size_t j=0; j<dim; j++) {
+      T val = M(i,j);
+      if (i != j && val != val_comm)
+        n_adj++;
+      if (i != j && val != val_comm && val != val_single_edge)
+        n_higher++;
+    }
+    list_deg[i] = n_adj;
+    list_n_higher[i] = n_higher;
+    if (n_adj == 0)
+      list_isolated.push_back(i);
+  }
+  size_t n_isolated = list_isolated.size();
+  std::vector<size_t> list_cand_for_triple_vertex; // Part of En, Dn, tilde or not
+  for (auto &eConn : LConn) {
+    size_t dim_res=eConn.size();
+    MyMatrix<T> Mres(dim_res, dim_res);
+    for (size_t i=0; i<dim_res; i++)
+      for (size_t j=0; j<dim_res; j++)
+        Mres(i,j) = M(eConn[i], eConn[j]);
+    std::pair<ExtensionIrreducibleInfos,IrrCoxDyn<T>> epair = ComputeExtensionIrreducibleInfos(Mres);
+    const IrrCoxDyn<T>& cd = epair.second;
+    // The diagrams that can be part of triple points are:
+    //   An, Dn, Bn
+    // The diagrams that cannot be part of triple points are:
+    //   En, tildeEn, tildeDn, tildeBn, tildeCn, F4, tildeF4, G2, tildeG2
+    if (cd.type == "A" || cd.type == "D" || cd.type == "B") {
+      for (auto & eVert : eConn) {
+        if (list_deg[eVert] <= 1) // Case 0 corresponds to A1
+          list_cand_for_triple_vertex.push_back(eVert);
+      }
+    }
+  }
+  // Consider the case of adding unconnected vector
+  MyVector<T> V_basic(dim);
+  for (size_t i=0; i<dim; i++)
+    V_basic(i) = val_comm;
+  auto test_vector_and_insert=[&](const MyVector<T>& V) -> void {
+#ifdef CHECK_EFFICIENT_ENUMERATION
+    MyMatrix<T> Mtest(dim+1,dim+1);
+    for (size_t i=0; i<dim; i++)
+      for (size_t j=0; j<dim; j++)
+        Mtest(i,j) = M(i,j);
+    for (size_t i=0; i<dim; i++) {
+      Mtest(i,dim) = V(i);
+      Mtest(dim,i) = V(i);
+    }
+    bool test = CheckDiagram(Mtest, DS);
+    if (!test) {
+      std::cerr << "The proposed diagram extension is not adequate. We want to avoid that\n";
+      throw TerminalException{1};
+    }
+    if (SetExtensions.count(V) != 0) {
+      std::cerr << "The diagram is already present. We want to avoid that\n";
+      throw TerminalException{1};
+    }
+    SetExtensions.insert(V);
+#endif
+    ListExtensions.push_back(V);
+  };
+  test_vector_and_insert(V_basic); // Adding just an A1, always works.
+  // Considering the case of just one edge
+  for (size_t i=0; i<dim; i++) {
+    MyVector<T> V = V_basic;
+    V(i) = val_single_edge;
+    test_vector_and_insert(V);
+    V(i) = val_four;
+    test_vector_and_insert(V);
+    V(i) = val_six; // This covers G2 and tilde{G2}
+    test_vector_and_insert(V);
+  }
+  // optimal
+  for (auto & eIsol : list_isolated) {
+    MyVector<T> V = V_basic;
+    if (!DS.OnlySpherical) {
+      V(eIsol) = val_inf;
+      test_vector_and_insert(V); // I1(infinity), always works.
+    }
+  }
+  // Considering the case of 2 edges
+  for (size_t i=0; i<dim; i++) {
+    for (size_t j=i+1; j<dim; j++) {
+      MyVector<T> V = V_basic;
+      V(i) = val_single_edge;
+      V(j) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
+  for (size_t i=0; i<dim; i++) {
+    for (size_t j=0; j<dim; j++) {
+      if (i != j) {
+        MyVector<T> V = V_basic;
+        V(i) = val_single_edge;
+        V(j) = val_four;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  if (!DS.OnlySpherical) { // Only tildeG2 and tilde{C2} are possible here
+    // optimal
+    for (size_t i=0; i<n_isolated; i++) {
+      for (size_t j=0; j<n_isolated; j++) {
+        if (i != j) {
+          MyVector<T> V = V_basic;
+          V(list_isolated[i]) = val_single_edge;
+          V(list_isolated[j]) = val_six;
+          test_vector_and_insert(V); // For tilde{G2}
+        }
+      }
+    }
+    // optimal
+    for (size_t i=0; i<n_isolated; i++) {
+      for (size_t j=i+1; j<n_isolated; j++) {
+        MyVector<T> V = V_basic;
+        V(list_isolated[i]) = val_four;
+        V(list_isolated[j]) = val_four;
+        test_vector_and_insert(V); // For tilde{C2}
+      }
+    }
+  }
+  // Considering the case of 3 edges. Considering first part with single edges
+  size_t n_cand_triple = list_cand_for_triple_vertex.size();
+  SetCppIterator SCI_A(n_cand_triple,3);
+  for (auto & eV : SCI_A) {
+    MyVector<T> V = V_basic;
+    for (auto & eVal : eV)
+      V(list_cand_for_triple_vertex[eVal]) = val_single_edge;
+    test_vector_and_insert(V);
+  }
+  if (!DS.OnlySpherical) { // Considering now the tilde{B3} cases
+    SetCppIterator SCI_B(n_isolated,3);
+    T val;
+    for (auto & eV : SCI_B) {
+      MyVector<T> V = V_basic;
+      for (int i=0; i<3; i++) {
+        for (int j=0; j<3; j++) {
+          val = val_single_edge;
+          if (i == j)
+            val = val_four;
+          V(list_isolated[eV[j]]) = val;
+        }
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // Considering the case of 4 edges. Only tilde{D4} is possible
+  if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
+    SetCppIterator SCI_B(n_isolated,4);
+    for (auto & eV : SCI_B) {
+      MyVector<T> V = V_basic;
+      for (auto & eVal : eV)
+        V(list_isolated[eVal]) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
+  return ListExtensions;
 }
 
 
@@ -1076,13 +1285,6 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
 }
 
 
-struct DiagramSelector {
-  bool OnlySimplyLaced;
-  bool OnlyLorentzianAdmissible;
-  bool OnlySpherical;
-};
-
-
 template<typename T>
 bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
 {
@@ -1221,7 +1423,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
       list_isolated.push_back(i);
   }
   size_t n_isolated = list_isolated.size();
-  std::vector<size_t> list_deg01_for_triple_vertex; // Part of En, Dn, tilde or not
+  std::vector<size_t> list_cand_for_triple_vertex; // Part of En, Dn, tilde or not
   for (auto &eConn : LConn) {
     size_t dim_res=eConn.size();
     MyMatrix<T> Mres(dim_res, dim_res);
@@ -1241,7 +1443,13 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
     if (cd.type == "A" || cd.type == "D" || cd.type == "B") {
       for (auto & eVert : eConn) {
         if (list_deg[eVert] <= 1) // Case 0 corresponds to A1
-          list_deg01_for_triple_vertex.push_back(eVert);
+          list_cand_for_triple_vertex.push_back(eVert);
+      }
+    }
+    if (cd.type == "A" && cd.dim == 3) {
+      for (auto & eVert : eConn) {
+        if (list_deg[eVert] == 2) // The middle vertex can match and get us tilde{D5}
+          list_cand_for_triple_vertex.push_back(eVert);
       }
     }
   }
@@ -1374,12 +1582,12 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T>& M, const Diagr
   std::cerr << "FindDiagramExtensions, step 6\n";
 #endif
   // Considering the case of 3 edges. Considering first part with single edges
-  size_t n_cand_triple = list_deg01_for_triple_vertex.size();
+  size_t n_cand_triple = list_cand_for_triple_vertex.size();
   SetCppIterator SCI_A(n_cand_triple,3);
   for (auto & eV : SCI_A) {
     MyVector<T> V = V_basic;
     for (auto & eVal : eV)
-      V(list_deg01_for_triple_vertex[eVal]) = val_single_edge;
+      V(list_cand_for_triple_vertex[eVal]) = val_single_edge;
     test_vector_and_insert(V);
   }
   if (!DS.OnlySpherical) { // Considering now the tilde{B3} cases

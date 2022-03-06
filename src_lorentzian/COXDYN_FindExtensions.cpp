@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     size_t len=LVect.size();
     std::cerr << "input = " << str << " only_spherical=" << only_spherical << "\n";
     for (size_t i=0; i<len; i++)
-      std::cerr << "i=" << i << " diag=" << LOut[i] << " v=" << StringVector(LVect[i]);
+      std::cerr << "i=" << i << " diag=" << LOut[i] << " v=" << StringVector(LVect[i]) << "\n";
     std::cerr << "Normal termination of the program\n";
   }
   catch (TerminalException const& e) {
