@@ -347,7 +347,7 @@ std::pair<ExtensionIrreducibleInfos,IrrCoxDyn<T>> ComputeExtensionIrreducibleInf
   for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
     std::vector<size_t> LAdj;
-    T e_isolated_adjacent = std::numeric_limits<T>::max();
+    T e_isolated_adjacent = 0;
     for (size_t j=0; j<n_vert; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm) {
@@ -697,17 +697,22 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   allowed_vals.push_back(val_six);
   if (!DS.OnlySpherical)
     allowed_vals.push_back(val_inf);
-  size_t dim = M.rows();
-  std::vector<size_t> list_deg(dim);
-  std::vector<size_t> list_n_higher(dim);
+  size_t n_vert = M.rows();
+  std::vector<size_t> list_deg(n_vert);
+  std::vector<size_t> list_n_higher(n_vert);
   std::vector<size_t> list_isolated;
-  for (size_t i=0; i<dim; i++) {
+  std::vector<T> list_isolated_adjacent_value(n_vert);
+  std::vector<size_t> list_isolated_adjacent_index(n_vert);
+  for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
     size_t n_higher = 0;
     for (size_t j=0; j<dim; j++) {
       T val = M(i,j);
-      if (i != j && val != val_comm)
+      if (i != j && val != val_comm) {
         n_adj++;
+        list_isolated_adjacent_value[i] = val;
+        list_isolated_adjacent_index[i] = j;
+      }
       if (i != j && val != val_comm && val != val_single_edge)
         n_higher++;
     }
@@ -718,6 +723,14 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   }
   size_t n_isolated = list_isolated.size();
   std::vector<size_t> list_cand_for_triple_vertex; // Part of En, Dn, tilde or not
+  std::vector<std::vector<size_t>> list_extremal_A2;
+  std::vector<std::vector<size_t>> list_extremal_A3;
+  std::vector<std::vector<size_t>> list_extremal_A4;
+  std::vector<std::vector<size_t>> list_extremal_A5;
+  std::vector<std::vector<size_t>> list_extremal_AN;
+  std::vector<size_t> list_middle_A3;
+  std::vector<size_t> list_vertices_Bn; // This is for tilde{Bn}
+  std::vector<size_t> list_vertices_Dn; // This is for tilde{Dn}
   for (auto &eConn : LConn) {
     size_t dim_res=eConn.size();
     MyMatrix<T> Mres(dim_res, dim_res);
@@ -736,7 +749,63 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           list_cand_for_triple_vertex.push_back(eVert);
       }
     }
+    if (cd.type == "A" && cd.dim == 2) {
+      list_extremal_A2.push_back(eConn);
+      list_extremal_AN.push_back(eConn);
+    }
+    if (cd.type == "A" && 2 < cd.dim) {
+      std::vector<size_t> LTerm;
+      for (auto & eVert : eConn)
+        if (list_deg[eVert] == 1)
+          LTerm.push_back(eVert);
+      if (cd.dim == 3)
+        list_extremal_A3.push_back(LTerm);
+      if (cd.dim == 4)
+        list_extremal_A4.push_back(LTerm);
+      if (cd.dim == 5)
+        list_extremal_A5.push_back(LTerm);
+      list_extremal_AN.push_back(LTerm);
+    }
+    if (cd.type == "B") {
+      if (cd.dim == 2) {
+        for (auto & eVert : eConn)
+          list_vertices_Bn.push_back(eVert);
+      } else {
+        for (auto & eVert : eConn) {
+          if (list_deg[eVert] == 1 && list_isolated_adjacent_value[eVert] == val_single_edge)
+            list_vertices_Bn.push_back(eVert);
+        }
+      }
+    }
+    if (cd.type == "D") {
+      if (cd.dim == 4) {
+        for (auto & eVert : eConn) {
+          if (list_deg[eVert] == 1)
+            list_vertices_Dn.push_back(eVert);
+        }
+      } else {
+        auto f=[&]() -> void {
+          for (auto & eVert : eConn) {
+            if (list_deg[eVert] == 3) {
+              for (auto & fVert : eConn) {
+                if (list_deg[fVert] == 1 && list_isolated_adjacent_index[fVert] != eVert) {
+                  list_vertices_Dn.push_back(fVert);
+                  return;
+                }
+              }
+            }
+          }
+          std::cerr << "We should never reach that stage\n";
+          throw TerminalException{1};
+        };
+        f();
+      }
+    }
   }
+  size_t n_A2 = list_extremal_A2.size();
+  size_t n_A3 = list_extremal_A3.size();
+  size_t n_A4 = list_extremal_A4.size();
+  size_t n_A5 = list_extremal_A5.size();
   // Consider the case of adding unconnected vector
   MyVector<T> V_basic(dim);
   for (size_t i=0; i<dim; i++)
@@ -803,37 +872,145 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
   }
   if (!DS.OnlySpherical) { // Only tildeG2 and tilde{C2} are possible here
-    // optimal
+    // optimal. We are looking for tilde{G2}
     for (size_t i=0; i<n_isolated; i++) {
       for (size_t j=0; j<n_isolated; j++) {
         if (i != j) {
           MyVector<T> V = V_basic;
           V(list_isolated[i]) = val_single_edge;
           V(list_isolated[j]) = val_six;
-          test_vector_and_insert(V); // For tilde{G2}
+          test_vector_and_insert(V);
         }
       }
     }
-    // optimal
+    // optimal. We are looking for tilde{C2}
     for (size_t i=0; i<n_isolated; i++) {
       for (size_t j=i+1; j<n_isolated; j++) {
         MyVector<T> V = V_basic;
         V(list_isolated[i]) = val_four;
         V(list_isolated[j]) = val_four;
-        test_vector_and_insert(V); // For tilde{C2}
+        test_vector_and_insert(V);
       }
     }
   }
   // Considering the case of 3 edges. Considering first part with single edges
-  size_t n_cand_triple = list_cand_for_triple_vertex.size();
-  SetCppIterator SCI_A(n_cand_triple,3);
-  for (auto & eV : SCI_A) {
-    MyVector<T> V = V_basic;
-    for (auto & eVal : eV)
-      V(list_cand_for_triple_vertex[eVal]) = val_single_edge;
-    test_vector_and_insert(V);
+  // optimal
+  // E6 formed from A2 + A2 + A1
+  for (size_t i_A2=0; i_A2<n_A2; i_A2++) {
+    std::vector<size_t> const& vA2_1 = list_extremal_A2[i_A2];
+    for (size_t j_A2=i_A2+1; j_A2<n_A2; j_A2++) {
+      std::vector<size_t> const& vA2_2 = list_extremal_A2[j_A2];
+      for (auto & v1 : vA2_1) {
+        for (auto & v2 : vA2_2) {
+          for (auto & v3 : list_isolated) {
+            MyVector<T> V = V_basic;
+            V[v1] = val_single_edge;
+            V[v2] = val_single_edge;
+            V[v3] = val_single_edge;
+            test_vector_and_insert(V);
+          }
+        }
+      }
+    }
   }
-  if (!DS.OnlySpherical) { // Considering now the tilde{B3} cases
+  // E7 formed from A3 + A2 + A1
+  for (auto & vA2 : list_extremal_A2) {
+    for (auto & vA3 : list_extremal_A3) {
+      for (auto & v1 : vA2) {
+        for (auto & v2 : vA3) {
+          for (auto & v3 : list_isolated) {
+            MyVector<T> V = V_basic;
+            V[v1] = val_single_edge;
+            V[v2] = val_single_edge;
+            V[v3] = val_single_edge;
+            test_vector_and_insert(V);
+          }
+        }
+      }
+    }
+  }
+  // E8 formed from A4 + A2 + A1
+  for (auto & vA2 : list_extremal_A2) {
+    for (auto & vA4 : list_extremal_A4) {
+      for (auto & v1 : vA2) {
+        for (auto & v2 : vA4) {
+          for (auto & v3 : list_isolated) {
+            MyVector<T> V = V_basic;
+            V[v1] = val_single_edge;
+            V[v2] = val_single_edge;
+            V[v3] = val_single_edge;
+            test_vector_and_insert(V);
+          }
+        }
+      }
+    }
+  }
+  // Dn formed from A(n-3) + A1 + A1
+  SetCppIterator SCI_A(n_isolated,3);
+  for (auto & eV : SCI_A) {
+    size_t v1 = list_isolated[eV[0]];
+    size_t v2 = list_isolated[eV[1]];
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v3 : LTerm) {
+        MyVector<T> V = V_basic;
+        V[v1] = val_single_edge;
+        V[v2] = val_single_edge;
+        V[v3] = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  if (!DS.OnlySpherical) { // Doing the tilde{E6}; tilde{E7} and tilde{E8}
+    // tilde{E6}
+    SetCppIterator SCI_A(n_A2,3);
+    for (auto & eV : SCI_A) {
+      for (auto & v1 : list_extremal_A2[eV[0]]) {
+        for (auto & v2 : list_extremal_A2[eV[1]]) {
+          for (auto & v3 : list_extremal_A2[eV[2]]) {
+            MyVector<T> V = V_basic;
+            V[v1] = val_single_edge;
+            V[v2] = val_single_edge;
+            V[v3] = val_single_edge;
+            test_vector_and_insert(V);
+          }
+        }
+      }
+    }
+    // tilde{E7}
+    for (size_t i_A3=0; i_A3<n_A3; i_A3++) {
+      std::vector<size_t> const& vA3_1 = list_extremal_A3[i_A3];
+      for (size_t j_A3=i_A3+1; j_A3<n_A3; j_A3++) {
+        std::vector<size_t> const& vA3_1 = list_extremal_A3[j_A3];
+        for (auto & v1 : vA3_1) {
+          for (auto & v2 : vA3_2) {
+            for (auto & v3 : list_isolated) {
+              MyVector<T> V = V_basic;
+              V[v1] = val_single_edge;
+              V[v2] = val_single_edge;
+              V[v3] = val_single_edge;
+              test_vector_and_insert(V);
+            }
+          }
+        }
+      }
+    }
+    // tilde{E8}
+    for (auto & vA2 : list_extremal_A2) {
+      for (auto & vA5 : list_extremal_A5) {
+        for (auto & v1 : vA2) {
+          for (auto & v2 : vA5) {
+            for (auto & v3 : list_isolated) {
+              MyVector<T> V = V_basic;
+              V[v1] = val_single_edge;
+              V[v2] = val_single_edge;
+              V[v3] = val_single_edge;
+              test_vector_and_insert(V);
+            }
+          }
+        }
+      }
+    }
+    // The tilde{B3} cases
     SetCppIterator SCI_B(n_isolated,3);
     T val;
     for (auto & eV : SCI_B) {
@@ -848,6 +1025,21 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
+    // The tilde{Bn} for n >= 4 cases
+    SetCppIterator SCI_B(n_isolated,2);
+    for (auto & eV : SCI_B) {
+      size_t v1 = list_isolated[eV[0]];
+      size_t v2 = list_isolated[eV[1]];
+      for (auto & v3 : list_vertices_Bn) {
+        MyVector<T> V = V_basic;
+        V[v1] = val_single_edge;
+        V[v2] = val_single_edge;
+        V[v3] = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+    // tilde{Dn} formed from D(n-2) + A1 + A1
+    
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
   if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
