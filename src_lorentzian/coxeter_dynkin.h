@@ -852,7 +852,13 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V); // I1(infinity), always works.
     }
   }
+  //
   // Considering the case of 2 edges
+  //
+  // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
+  
+
+  
   for (size_t i=0; i<dim; i++) {
     for (size_t j=i+1; j<dim; j++) {
       MyVector<T> V = V_basic;
@@ -871,8 +877,8 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
   }
-  if (!DS.OnlySpherical) { // Only tildeG2 and tilde{C2} are possible here
-    // optimal. We are looking for tilde{G2}
+  if (!DS.OnlySpherical) {
+    // tilde{G2} formed from A1+A1
     for (size_t i=0; i<n_isolated; i++) {
       for (size_t j=0; j<n_isolated; j++) {
         if (i != j) {
@@ -883,7 +889,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         }
       }
     }
-    // optimal. We are looking for tilde{C2}
+    // tilde{C2} formed from A1+A1
     for (size_t i=0; i<n_isolated; i++) {
       for (size_t j=i+1; j<n_isolated; j++) {
         MyVector<T> V = V_basic;
@@ -892,9 +898,11 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
+    // 
   }
-  // Considering the case of 3 edges. Considering first part with single edges
-  // optimal
+  //
+  // Considering the case of 3 edges.
+  //
   // E6 formed from A2 + A2 + A1
   for (size_t i_A2=0; i_A2<n_A2; i_A2++) {
     std::vector<size_t> const& vA2_1 = list_extremal_A2[i_A2];
@@ -945,8 +953,20 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
   }
-  // Dn formed from A(n-3) + A1 + A1
-  SetCppIterator SCI_A(n_isolated,3);
+  // D4 formed from A1 + A1 + A1
+  SetCppIterator SCI_D4(n_isolated,3);
+  for (auto & eV : SCI_D4) {
+    size_t v1 = list_isolated[eV[0]];
+    size_t v2 = list_isolated[eV[1]];
+    size_t v3 = list_isolated[eV[2]];
+    MyVector<T> V = V_basic;
+    V[v1] = val_single_edge;
+    V[v2] = val_single_edge;
+    V[v3] = val_single_edge;
+    test_vector_and_insert(V);
+  }
+  // Dn (for n > 4) formed from A(n-3) + A1 + A1
+  SetCppIterator SCI_A(n_isolated,2);
   for (auto & eV : SCI_A) {
     size_t v1 = list_isolated[eV[0]];
     size_t v2 = list_isolated[eV[1]];
@@ -1039,7 +1059,18 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
     // tilde{Dn} formed from D(n-2) + A1 + A1
-    
+    SetCppIterator SCI_tildeDn(n_isolated,2);
+    for (auto & eV : SCI_tildeDn) {
+      size_t v1 = list_isolated[eV[0]];
+      size_t v2 = list_isolated[eV[1]];
+      for (auto & v3 : list_vertices_Dn) {
+        MyVector<T> V = V_basic;
+        V[v1] = val_single_edge;
+        V[v2] = val_single_edge;
+        V[v3] = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
   if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
