@@ -134,7 +134,7 @@ bool operator!=(FundDomainVertex<T,Tint> const& k1, FundDomainVertex<T,Tint> con
 template<typename T, typename Tint>
 std::string StringFundDomainVertexGAP(FundDomainVertex<T,Tint> const& vert)
 {
-  std::string ret = "ret(gen:=" + StringVectorGAP(vert.gen) + ", l_roots:=" + StringMatrixGAP(vert.MatRoot) + ")";
+  std::string ret = "rec(gen:=" + StringVectorGAP(vert.gen) + ", l_roots:=" + StringMatrixGAP(vert.MatRoot) + ")";
   return ret;
 }
 
@@ -527,7 +527,7 @@ void PrintAdjacencyDirection(std::ostream & os, AdjacencyDirection<Tint> const& 
 template<typename Tint>
 std::string StringAdjacencyDirectionGAP(AdjacencyDirection<Tint> const& ad)
 {
-  std::string ret = "rec(v_disc:=" + StringVectorGAP(ad.v_disc) + ", l_ui=" + StringMatrixGAP(MatrixFromVectorFamily(ad.l_ui)) + ")";
+  std::string ret = "rec(v_disc:=" + StringVectorGAP(ad.v_disc) + ", l_ui:=" + StringMatrixGAP(MatrixFromVectorFamily(ad.l_ui)) + ")";
   return ret;
 }
 
@@ -1736,6 +1736,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
   CuspidalBank<T,Tint> cusp_bank;
   std::vector<int> l_status;
   std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> l_orbit_vertices;
+  std::cout << "return [\n";
   size_t nbDone = 0;
   auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> bool {
     size_t len = l_orbit_vertices.size();
@@ -1840,7 +1841,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
         PrintAdjacencyDirection(std::cerr, ad);
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
-        std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << " ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << " l_norms:=" << StringStdVectorGAP(l_norms) << ")";
+        std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << ", ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << ", l_norms:=" << StringStdVectorGAP(l_norms) << ")";
         std::cout << ",\n";
       }
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
