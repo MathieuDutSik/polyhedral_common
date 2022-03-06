@@ -86,6 +86,14 @@ struct FundDomainVertex {
   MyMatrix<Tint> MatRoot;
 };
 
+template<typename T, typename Tint>
+std::string StringFundDomainVertexGAP(FundDomainVertex<T,Tint> const& vert)
+{
+  std::string ret = "ret(gen:=" + StringVectorGAP(vert.gen) + ", l_roots:=" + StringMatrixGAP(vert.MatRoot) + ")";
+  return ret;
+}
+
+
 
 template<typename T, typename Tint>
 void WriteFundDomainVertex(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert, std::ostream & os, std::string const& OutFormat)
@@ -470,6 +478,14 @@ void PrintAdjacencyDirection(std::ostream & os, AdjacencyDirection<Tint> const& 
   os << "\n";
   os << "v_disc =" << StringVectorGAP(ad.v_disc) << "\n";
 }
+
+template<typename Tint>
+std::string StringAdjacencyDirectionGAP(AdjacencyDirection<Tint> const& ad)
+{
+  std::string ret = "rec(v_disc:=" + StringVectorGAP(ad.v_disc) + ", l_ui=" + StringMatrixGAP(MatrixFromVectorFamily(ad.l_ui)) + ")";
+  return ret;
+}
+
 
 
 
@@ -1648,6 +1664,22 @@ void PrintResultEdgewalk(MyMatrix<T> const& G, ResultEdgewalk<T,Tint> const& re,
 }
 
 
+template<typename T>
+std::string StringStdVectorGAP(std::vector<T> const& V)
+{
+  std::ostringstream os;
+  os << "[";
+  bool IsFirst = true;
+  for (auto & val : V) {
+    if (!IsFirst)
+      os << ",";
+    IsFirst=false;
+    os << val;
+  }
+  os << "]";
+  return os.str();
+}
+
 
 
 
@@ -1763,7 +1795,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
         PrintAdjacencyDirection(std::cerr, ad);
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
-        std::cerr << "rec(k1:=" << StringVectorGAP(theVert.gen) << ",  k2:=" << StringVectorGAP(fVert.gen) << "),\n";
+        std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << " ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << " l_norms:=" << StringStdVectorGAP(l_norms) << ")";
+        std::cout << ",\n";
       }
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
       bool test = func_insert_vertex(fVertFull);
