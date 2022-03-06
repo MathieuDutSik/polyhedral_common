@@ -730,6 +730,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<std::vector<size_t>> list_extremal_AN;
   std::vector<size_t> list_vert_A2;
   std::vector<size_t> list_middle_A3;
+  std::vector<size_t> list_ends_A3;
   std::vector<size_t> list_expand_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
   std::vector<size_t> list_non_expand_Bn; // Only for n > 2. This is the vertex adjacent with weight 4 which cannot be extended to B(n+1)
   std::vector<size_t> list_expand_Dn; // For D4 this is the 3 vertices, For Dn (n > 4) this is the expanding vertex
@@ -812,9 +813,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
     if (cd.type == "A" && cd.dim == 3) {
-      for (auto & eVert : eConn)
+      for (auto & eVert : eConn) {
         if (list_deg[eVert] == 2)
           list_middle_A3.push_back(eVert);
+        if (list_deg[eVert] == 1)
+          list_ends_A3.push_back(eVert);
+      }
     }
     if (cd.type == "B") {
       if (cd.dim == 2) {
@@ -962,106 +966,97 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
   }
+  auto f_pair_single=[&](size_t const& v1, size_t const& v2) -> void {
+    MyVector<T> V = V_basic;
+    V(v1) = val_single_edge;
+    V(v2) = val_single_edge;
+    test_vector_and_insert(V);
+  };
   // Bn formed from Bk + Al with k+l = n-1 , k>= 2 , l >= 2
   for (auto & v1 : list_expand_Bn) {
     for (auto & LTerm : list_extremal_AN) {
-      for (auto & v2 : LTerm) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      for (auto & v2 : LTerm)
+        f_pair_single(v1, v2);
     }
   }
   // Bn formed from B(n-2) + A1
   for (auto & v1 : list_expand_Bn) {
-    for (auto & v1 : list_isolated) {
-      MyVector<T> V = V_basic;
-      V(v1) = val_single_edge;
-      V(v2) = val_single_edge;
-      test_vector_and_insert(V);
-    }
+    for (auto & v1 : list_isolated)
+      f_pair_single(v1, v2);
   }
   // Dn formed from A3 + Ak
   for (auto & v1 : list_middle_A3) {
     for (auto & LTerm : list_extremal_AN) {
       for (auto & v2 : LTerm) {
-        if (VertToConn[v1] != VertToConn[v2]) {
-          MyVector<T> V = V_basic;
-          V(v1) = val_single_edge;
-          V(v2) = val_single_edge;
-          test_vector_and_insert(V);
-        }
+        if (VertToConn[v1] != VertToConn[v2])
+          f_pair_single(v1, v2);
       }
     }
   }
   // Dn formed from Dk + Al with k+l = n-1 , k >= 4 , l >= 2
   for (auto & v1 : list_expand_Dn) {
     for (auto & LTerm : list_extremal_AN) {
-      for (auto & v2 : LTerm) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      for (auto & v2 : LTerm)
+        f_pair_single(v1, v2);
     }
   }
   // Dn formed from D(n-2) + A1
   for (auto & v1 : list_expand_Dn) {
-    for (auto & v2 : list_isolated) {
-      MyVector<T> V = V_basic;
-      V(v1) = val_single_edge;
-      V(v2) = val_single_edge;
-      test_vector_and_insert(V);
-    }
+    for (auto & v2 : list_isolated)
+      f_pair_single(v1, v2);
   }
   // E6 formed as A4 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_extm1_AN) {
-      if (VertToLocDim[v2] == 4) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      if (VertToLocDim[v2] == 4)
+        f_pair_single(v1, v2);
     }
   }
   // E7 formed as A5 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_extm1_AN) {
-      if (VertToLocDim[v2] == 5) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      if (VertToLocDim[v2] == 5)
+        f_pair_single(v1, v2);
     }
   }
   // E7 formed as A4 + A2
   for (auto & v1 : list_vert_A2) {
     for (auto & v2 : list_extm1_AN) {
-      if (VertToLocDim[v2] == 4) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      if (VertToLocDim[v2] == 4)
+        f_pair_single(v1, v2);
     }
   }
   // E7 formed as D5 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_non_expand_Dn) {
-      if (VertToLocDim[v2] == 5) {
-        MyVector<T> V = V_basic;
-        V(v1) = val_single_edge;
-        V(v2) = val_single_edge;
-        test_vector_and_insert(V);
-      }
+      if (VertToLocDim[v2] == 5)
+        f_pair_single(v1, v2);
     }
   }
+  // E8 formed as A6 + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & v2 : list_extm1_AN) {
+      if (VertToLocDim[v2] == 6)
+        f_pair_single(v1, v2);
+    }
+  }
+  // E8 formed as A4 + A3
+  for (auto & v1 : list_extm1_AN) {
+    if (VertToLocDim[v1] == 4) {
+      for (auto & v2 : list_ends_A3)
+        f_pair_single(v1, v2);
+    }
+  }
+  // E8 formed as D5 + A2
+  for (auto & v1 : list_non_expand_Dn) {
+    if (VertToLocDim[v1] == 5) {
+      for (auto & v2 : list_vert_A2)
+        f_pair_single(v1, v2);
+    }
+  }
+  
 
-
-
+  
   
   if (!DS.OnlySpherical) {
     // tilde{G2} formed from A1+A1
