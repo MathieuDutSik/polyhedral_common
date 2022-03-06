@@ -1054,32 +1054,75 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         f_pair_single(v1, v2);
     }
   }
-  
-
-  
-  
+  // F4 formed as A2 + A1
+  for (auto & v1 : list_vert_A2) {
+    for (auto & v1 : list_isolated) {
+      MyVector<T> V = V_basic;
+      V(v1) = val_four;
+      V(v2) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
   if (!DS.OnlySpherical) {
+    // tilde{An} formed from An
+    for (auto & Lext : list_extremal_AN)
+      f_pair_single(Lext[0], Lext[1]);
+    // tilde{Bn} obtained from A3 + B(n-3)
+    for (auto & v1 : list_expand_Bn) {
+      for (auto & v2 : list_middle_A3)
+        f_pair_single(v1, v2);
+    }
+    // tilde{Bn} obtained from Dk + Bl with k+l = n , k >= 4 , l >= 2
+    for (auto & v1 : list_expand_Bn) {
+      for (auto & v2 : list_expand_Dn)
+        f_pair_single(v1, v2);
+    }
+    // tilde{Bn} obtained from D(n-1) + A1
+    for (auto & v1 : list_isolated) {
+      for (auto & v2 : list_expand_Dn) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+    // tilde{Cn} obtained from Bk + Bl with k+l = n , k >= 2 , l >= 2
+    size_t n_expand_Bn = list_expand_Bn.size();
+    SetCppIterator SCI_Bk_Bl(n_expand_Bn,2);
+    for (auto & eV : SCI_Bk_Bl) {
+      size_t v1 = list_expand_Bn[eV[0]];
+      size_t v2 = list_expand_Bn[eV[1]];
+      if (VertToConn[v1] != VertToConn[v2])
+        f_pair_single(v1, v2);
+    }
+    // tilde{Cn} obtained from C(n-1) + A1
+    for (auto & v1 : list_isolated) {
+      for (auto & v2 : list_expand_Bn)
+        f_pair_single(v1, v2);
+    }
+    // tilde{C2} obtained from A1+A1
+    SetCppIterator SCI_A1_A1(n_isolated,2);
+    for (auto & eV : SCI_Bk_Bl) {
+      size_t v1 = list_isolated[eV[0]];
+      size_t v2 = list_isolated[eV[1]];
+      MyVector<T> V = V_basic;
+      V(v1) = val_four;
+      V(v2) = val_four;
+      test_vector_and_insert(V);
+    }
     // tilde{G2} formed from A1+A1
-    for (size_t i=0; i<n_isolated; i++) {
-      for (size_t j=0; j<n_isolated; j++) {
-        if (i != j) {
+    for (auto & v1 : list_isolated) {
+      for (auto & v2 : list_isolated) {
+        if (VertToConn[v1] != VertToConn[v2]) {
           MyVector<T> V = V_basic;
-          V(list_isolated[i]) = val_single_edge;
-          V(list_isolated[j]) = val_six;
+          V(v1) = val_single_edge;
+          V(v2) = val_six;
           test_vector_and_insert(V);
         }
       }
     }
-    // tilde{C2} formed from A1+A1
-    for (size_t i=0; i<n_isolated; i++) {
-      for (size_t j=i+1; j<n_isolated; j++) {
-        MyVector<T> V = V_basic;
-        V(list_isolated[i]) = val_four;
-        V(list_isolated[j]) = val_four;
-        test_vector_and_insert(V);
-      }
-    }
-    // 
+    // tilde{D6} obtained from A3 + A3
+    
   }
   //
   // Considering the case of 3 edges.
