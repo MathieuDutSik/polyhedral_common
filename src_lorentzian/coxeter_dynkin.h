@@ -806,6 +806,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   size_t n_A3 = list_extremal_A3.size();
   size_t n_A4 = list_extremal_A4.size();
   size_t n_A5 = list_extremal_A5.size();
+  size_t n_AN = list_extremal_AN.size();
   // Consider the case of adding unconnected vector
   MyVector<T> V_basic(dim);
   for (size_t i=0; i<dim; i++)
@@ -833,8 +834,13 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
 #endif
     ListExtensions.push_back(V);
   };
+  //
+  // Case of 0 edge. Always valid
+  //
   test_vector_and_insert(V_basic); // Adding just an A1, always works.
+  //
   // Considering the case of just one edge
+  //
   for (size_t i=0; i<dim; i++) {
     MyVector<T> V = V_basic;
     V(i) = val_single_edge;
@@ -856,6 +862,69 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   // Considering the case of 2 edges
   //
   // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
+  SetCppIterator SCI_Ak_Al(n_AN,2);
+  for (auto & eV : SCI_Ak_Al) {
+    for (auto & v1 : list_extremal_AN[eV[0]]) {
+      for (auto & v2 : list_extremal_AN[eV[1]]) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // An formed from A(n-2) + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v2 : LTerm) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // A3 formed from A1+A1
+  SetCppIterator SCI_A3(n_isolated,2);
+  for (auto & eV : SCI_A3) {
+    size_t v1 = list_isolated[eV[0]];
+    size_t v2 = list_isolated[eV[1]];
+    MyVector<T> V = V_basic;
+    V(v1) = val_single_edge;
+    V(v2) = val_single_edge;
+    test_vector_and_insert(V);
+  }
+  // Bn formed from A(n-2) + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v2 : LTerm) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // Bn formed from Bk + Al with k+l = n-1 , k>= 2 , l >= 2
+  for (auto & v1 : list_vertices_Bn) {
+    for (auto & LTerm : list_extremal_AN) {
+      for (auto & v2 : LTerm) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
+  }
+  // Bn formed from B(n-2) + A1
+  for (auto & v1 : list_vertices_Bn) {
+    for (auto & v1 : list_isolated) {
+      MyVector<T> V = V_basic;
+      V(v1) = val_single_edge;
+      V(v2) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
   
 
   
@@ -912,9 +981,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         for (auto & v2 : vA2_2) {
           for (auto & v3 : list_isolated) {
             MyVector<T> V = V_basic;
-            V[v1] = val_single_edge;
-            V[v2] = val_single_edge;
-            V[v3] = val_single_edge;
+            V(v1) = val_single_edge;
+            V(v2) = val_single_edge;
+            V(v3) = val_single_edge;
             test_vector_and_insert(V);
           }
         }
@@ -928,9 +997,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         for (auto & v2 : vA3) {
           for (auto & v3 : list_isolated) {
             MyVector<T> V = V_basic;
-            V[v1] = val_single_edge;
-            V[v2] = val_single_edge;
-            V[v3] = val_single_edge;
+            V(v1) = val_single_edge;
+            V(v2) = val_single_edge;
+            V(v3) = val_single_edge;
             test_vector_and_insert(V);
           }
         }
@@ -944,9 +1013,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         for (auto & v2 : vA4) {
           for (auto & v3 : list_isolated) {
             MyVector<T> V = V_basic;
-            V[v1] = val_single_edge;
-            V[v2] = val_single_edge;
-            V[v3] = val_single_edge;
+            V(v1) = val_single_edge;
+            V(v2) = val_single_edge;
+            V(v3) = val_single_edge;
             test_vector_and_insert(V);
           }
         }
@@ -960,9 +1029,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     size_t v2 = list_isolated[eV[1]];
     size_t v3 = list_isolated[eV[2]];
     MyVector<T> V = V_basic;
-    V[v1] = val_single_edge;
-    V[v2] = val_single_edge;
-    V[v3] = val_single_edge;
+    V(v1) = val_single_edge;
+    V(v2) = val_single_edge;
+    V(v3) = val_single_edge;
     test_vector_and_insert(V);
   }
   // Dn (for n > 4) formed from A(n-3) + A1 + A1
@@ -973,9 +1042,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & LTerm : list_extremal_AN) {
       for (auto & v3 : LTerm) {
         MyVector<T> V = V_basic;
-        V[v1] = val_single_edge;
-        V[v2] = val_single_edge;
-        V[v3] = val_single_edge;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        V(v3) = val_single_edge;
         test_vector_and_insert(V);
       }
     }
@@ -988,9 +1057,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         for (auto & v2 : list_extremal_A2[eV[1]]) {
           for (auto & v3 : list_extremal_A2[eV[2]]) {
             MyVector<T> V = V_basic;
-            V[v1] = val_single_edge;
-            V[v2] = val_single_edge;
-            V[v3] = val_single_edge;
+            V(v1) = val_single_edge;
+            V(v2) = val_single_edge;
+            V(v3) = val_single_edge;
             test_vector_and_insert(V);
           }
         }
@@ -1005,9 +1074,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           for (auto & v2 : vA3_2) {
             for (auto & v3 : list_isolated) {
               MyVector<T> V = V_basic;
-              V[v1] = val_single_edge;
-              V[v2] = val_single_edge;
-              V[v3] = val_single_edge;
+              V(v1) = val_single_edge;
+              V(v2) = val_single_edge;
+              V(v3) = val_single_edge;
               test_vector_and_insert(V);
             }
           }
@@ -1021,9 +1090,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           for (auto & v2 : vA5) {
             for (auto & v3 : list_isolated) {
               MyVector<T> V = V_basic;
-              V[v1] = val_single_edge;
-              V[v2] = val_single_edge;
-              V[v3] = val_single_edge;
+              V(v1) = val_single_edge;
+              V(v2) = val_single_edge;
+              V(v3) = val_single_edge;
               test_vector_and_insert(V);
             }
           }
@@ -1052,9 +1121,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       size_t v2 = list_isolated[eV[1]];
       for (auto & v3 : list_vertices_Bn) {
         MyVector<T> V = V_basic;
-        V[v1] = val_single_edge;
-        V[v2] = val_single_edge;
-        V[v3] = val_single_edge;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        V(v3) = val_single_edge;
         test_vector_and_insert(V);
       }
     }
@@ -1065,9 +1134,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       size_t v2 = list_isolated[eV[1]];
       for (auto & v3 : list_vertices_Dn) {
         MyVector<T> V = V_basic;
-        V[v1] = val_single_edge;
-        V[v2] = val_single_edge;
-        V[v3] = val_single_edge;
+        V(v1) = val_single_edge;
+        V(v2) = val_single_edge;
+        V(v3) = val_single_edge;
         test_vector_and_insert(V);
       }
     }
