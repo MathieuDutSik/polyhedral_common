@@ -526,7 +526,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
         return {};
       return IrrCoxDyn<T>{"tildeB",3,0}; // It is tilde{B3}
     }
-    if (n_sing != 2)
+    if (n_sing != 2 || n_sing_simple != 2)
       return {};
     bool has_edge_four = false;
     for (auto & eVert : list_deg1)
@@ -1039,13 +1039,11 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   for (auto & v : list_dist3_extrem_E7)
     f_single(v);
   // G2 from A1
-  std::cerr << "Step 1.1\n";
   for (auto & v : list_isolated) {
     MyVector<T> V = V_basic;
     V(v) = val_six;
     test_vector_and_insert(V);
   }
-  std::cerr << "Step 1.2\n";
   // F4 from B3
   for (auto & v : list_non_expand_Bn) {
     if (VertToLocDim[v] == 3)
@@ -1119,7 +1117,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
-  std::cerr << "Step 2\n";
   //
   // Considering the case of 2 edges
   //
@@ -1135,6 +1132,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     V(v2) = val_single_edge;
     test_vector_and_insert(V);
   };
+  std::cerr << "Start f_pair\n";
   // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
   SetCppIterator SCI_Ak_Al(n_AN,2);
   for (auto & eV : SCI_Ak_Al) {
@@ -1180,17 +1178,20 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
   }
   // Bn formed from Bk + Al with k+l = n-1 , k>= 2 , l >= 2
+  std::cerr << "Step 0\n";
   for (auto & v1 : list_expand_Bn) {
     for (auto & LTerm : list_extremal_AN) {
       for (auto & v2 : LTerm)
         f_pair(v1, v2);
     }
   }
+  std::cerr << "Step 1\n";
   // Bn formed from B(n-2) + A1
   for (auto & v1 : list_expand_Bn) {
     for (auto & v2 : list_isolated)
       f_pair(v1, v2);
   }
+  std::cerr << "Step 2\n";
   // Dn formed from A3 + Ak
   for (auto & v1 : list_middle_A3) {
     for (auto & LTerm : list_extremal_AN) {
@@ -1198,6 +1199,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         if (VertToConn[v1] != VertToConn[v2])
           f_pair(v1, v2);
       }
+    }
+  }
+  // D5 formed from A3 + A1
+  for (auto & v1 : list_middle_A3) {
+    for (auto & v2 : list_isolated) {
+      f_pair(v1, v2);
     }
   }
   // Dn formed from Dk + Al with k+l = n-1 , k >= 4 , l >= 2
@@ -1219,6 +1226,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         f_pair(v1, v2);
     }
   }
+  std::cerr << "Step 3\n";
   // E7 formed as A5 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_extm1_AN) {
@@ -1270,10 +1278,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
+  std::cerr << "Step 4\n";
   if (!DS.OnlySpherical) {
     // tilde{An} formed from An
     for (auto & Lext : list_extremal_AN)
       f_pair(Lext[0], Lext[1]);
+    std::cerr << "Step 4.1\n";
     // tilde{Bn} obtained from A3 + B(n-3)
     for (auto & v1 : list_expand_Bn) {
       for (auto & v2 : list_middle_A3)
@@ -1293,6 +1303,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
+    std::cerr << "Step 4.2\n";
     // tilde{Cn} obtained from Bk + Bl with k+l = n , k >= 2 , l >= 2
     size_t n_expand_Bn = list_expand_Bn.size();
     SetCppIterator SCI_Bk_Bl(n_expand_Bn,2);
@@ -1302,11 +1313,17 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       if (VertToConn[v1] != VertToConn[v2])
         f_pair(v1, v2);
     }
+    std::cerr << "Step 4.2.1\n";
     // tilde{Cn} obtained from C(n-1) + A1
     for (auto & v1 : list_isolated) {
-      for (auto & v2 : list_expand_Bn)
-        f_pair(v1, v2);
+      for (auto & v2 : list_expand_Bn) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
     }
+    std::cerr << "Step 4.2.2\n";
     // tilde{C2} obtained from A1 + A1
     SetCppIterator SCI_A1_A1(n_isolated,2);
     for (auto & eV : SCI_A1_A1) {
@@ -1334,6 +1351,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & eV : SCI_A3_A3) {
       f_pair(list_middle_A3[eV[0]], list_middle_A3[eV[1]]);
     }
+    std::cerr << "Step 4.3\n";
     // tilde{Dn} obtained from A3 + D(n-3)
     for (auto & v1 : list_middle_A3) {
       for (auto & v2 : list_expand_Dn)
@@ -1369,6 +1387,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           f_pair(v1, v2);
       }
     }
+    std::cerr << "Step 4.3\n";
     // tilde{E8} from A7 + A1
     for (auto & v1 : list_extm1_AN) {
       if (VertToLocDim[v1] == 7) {
@@ -1411,6 +1430,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
+    std::cerr << "Step 4.4\n";
     // tilde{F4} from A2 + A2
     for (auto & v1 : list_vert_A2) {
       for (auto & v2 : list_vert_A2) {
@@ -1430,6 +1450,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
   }
+  std::cerr << "Step 5\n";
   //
   // Considering the case of 3 edges.
   //
@@ -2049,6 +2070,7 @@ template<typename T, typename Tint>
 std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool only_spherical)
 {
   std::cerr << "------------------------------------ ComputePossibleExtension ---------------------------------\n";
+  std::cerr << "only_spherical=" << only_spherical << "\n";
   DiagramSelector DS;
   DS.OnlySimplyLaced = false;
   DS.OnlyLorentzianAdmissible = true;
@@ -2072,8 +2094,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   int dim = G.rows();
   int n_root = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
-  std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, DS);
-  std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions_Efficient(CoxMat, DS);
+  std::vector<MyVector<T>> l_vect = FindDiagramExtensions_Efficient(CoxMat, DS);
+#ifdef CHECK_EFFICIENT_ENUMERATION
+  std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions(CoxMat, DS);
   if (l_vect.size() != l_vect_B.size()) {
     std::cerr << "The two enumeration codes return different results\n";
     std::set<MyVector<T>> s_vect;
@@ -2090,11 +2113,12 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     for (auto & eV : s_vect_B)
       if (s_vect.count(eV) == 0)
         std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-
+    std::cerr << "only_spherical = " << only_spherical << "\n";
     std::cerr << "|l_vect|=" << l_vect.size() << " |l_vect_B|=" << l_vect_B.size() << "\n";
     std::cerr << "|s_vect|=" << s_vect.size() << " |s_vect_B|=" << s_vect_B.size() << "\n";
     throw TerminalException{1};
   }
+#endif
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   T val2 = 0;
   T val3 = T(1) / T(4);
