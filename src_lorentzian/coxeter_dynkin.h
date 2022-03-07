@@ -987,7 +987,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     test_vector_and_insert(V);
   }
   // Bn obtained from B(n-1)
-  for (auto & v : list_non_expand_Bn)
+  for (auto & v : list_expand_Bn)
     f_single(v);
   // Dn from D(n-1)
   for (auto & v : list_expand_Dn)
