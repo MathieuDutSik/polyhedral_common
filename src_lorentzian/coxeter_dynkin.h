@@ -506,7 +506,7 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 7\n";
 #endif
   if (list_deg3.size() != 1) {
-    std::cerr << "We should hqve just one vertex of degree 3\n";
+    std::cerr << "We should have just one vertex of degree 3\n";
     throw TerminalException{1};
   }
   size_t eCent = list_deg3[0];
@@ -514,10 +514,16 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
   if (multiplicity[val_four] == 1) { // Possibility tilde{Bn}
     std::vector<size_t> const& LAdj = LLAdj[eCent];
     size_t n_sing = 0;
+    size_t n_sing_simple = 0;
     for (auto & eAdj : LAdj)
-      if (list_deg[eAdj] == 1)
+      if (list_deg[eAdj] == 1) {
         n_sing++;
+        if (list_isolated_adjacent[eAdj] == val_single_edge)
+          n_sing_simple++;
+      }
     if (n_sing == 3) { // All neighbors are single. Only one possibility
+      if (n_sing_simple != 2)
+        return {};
       return IrrCoxDyn<T>{"tildeB",3,0}; // It is tilde{B3}
     }
     if (n_sing != 2)
@@ -526,8 +532,9 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
     for (auto & eVert : list_deg1)
       if (list_isolated_adjacent[eVert] == val_four)
         has_edge_four = true;
-    if (has_edge_four)
+    if (has_edge_four) {
       return IrrCoxDyn<T>{"tildeB",n_vert-1,0}; // It is tilde{Bn}
+    }
     return {};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
