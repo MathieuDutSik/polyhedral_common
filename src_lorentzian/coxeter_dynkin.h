@@ -14,6 +14,7 @@
 
 //#define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
+#define CHECK_EFFICIENT_ENUMERATION
 
 
 
@@ -882,6 +883,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & v : Lext)
       f_single(v);
   }
+  // A2 obtained from A1
+  for (auto & v : list_isolated)
+    f_single(v);
   // Bn obtained from A(n-1)
   for (auto & Lext : list_extremal_AN) {
     for (auto & v : Lext) {
@@ -889,6 +893,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       V(v) = val_four;
       test_vector_and_insert(V);
     }
+  }
+  // B2 obtained from A1
+  for (auto & v : list_isolated) {
+    MyVector<T> V = V_basic;
+    V(v) = val_four;
+    test_vector_and_insert(V);
   }
   // Bn obtained from B(n-1)
   for (auto & v : list_non_expand_Bn)
@@ -2014,6 +2024,20 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   int n_root = l_root.size();
   std::cerr << "ComputePossibleExtensions, step 3\n";
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions(CoxMat, DS);
+  std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions_Efficient(CoxMat, DS);
+  if (l_vect.size() != l_vect_B.size()) {
+    std::cerr << "The two enumeration codes return different results\n";
+    std::cerr << "l_vect=\n";
+    for (auto & eV : l_vect) {
+      std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+    }
+    std::cerr << "l_vect_B=\n";
+    for (auto & eV : l_vect_B) {
+      std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+    }
+    std::cerr << "|l_vect|=" << l_vect.size() << " |l_vect_B|=" << l_vect_B.size() << "\n";
+    throw TerminalException{1};
+  }
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   T val2 = 0;
   T val3 = T(1) / T(4);
