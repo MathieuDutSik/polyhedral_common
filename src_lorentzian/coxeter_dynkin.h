@@ -942,6 +942,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       throw TerminalException{1};
     }
     if (SetExtensions.count(V) != 0) {
+      std::cerr << "V=" << StringVectorGAP(V) << "\n";
       std::cerr << "The diagram is already present. We want to avoid that\n";
       throw TerminalException{1};
     }
@@ -969,6 +970,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   // A2 obtained from A1
   for (auto & v : list_isolated)
     f_single(v);
+  std::cerr << "Step 1\n";
   // Bn obtained from A(n-1)
   for (auto & Lext : list_extremal_AN) {
     for (auto & v : Lext) {
@@ -1101,16 +1103,23 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
+  std::cerr << "Step 2\n";
   //
   // Considering the case of 2 edges
   //
-  // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
   auto f_pair=[&](size_t const& v1, size_t const& v2) -> void {
+#ifdef CHECK_EFFICIENT_ENUMERATION
+    if (v1 == v2) {
+      std::cerr << "We should have v1 != v2\n";
+      throw TerminalException{1};
+    }
+#endif
     MyVector<T> V = V_basic;
     V(v1) = val_single_edge;
     V(v2) = val_single_edge;
     test_vector_and_insert(V);
   };
+  // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
   SetCppIterator SCI_Ak_Al(n_AN,2);
   for (auto & eV : SCI_Ak_Al) {
     for (auto & v1 : list_extremal_AN[eV[0]]) {
@@ -1132,13 +1141,15 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     size_t v2 = list_isolated[eV[1]];
     f_pair(v1, v2);
   }
-  // B3 obtqined from A1 + A1
+  // B3 obtained from A1 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_isolated) {
-      MyVector<T> V = V_basic;
-      V(v1) = val_four;
-      V(v2) = val_single_edge;
-      test_vector_and_insert(V);
+      if (v1 != v2) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
     }
   }
   // Bn formed from A(n-2) + A1
