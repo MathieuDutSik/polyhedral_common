@@ -1443,7 +1443,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
     // tilde{F4} from tilde{B2} + A1
-    for (auto & v1 : list_non_expand_Dn) {
+    for (auto & v1 : list_non_expand_Bn) {
       if (VertToLocDim[v1] == 3) {
         for (auto & v2 : list_isolated)
           f_pair(v1, v2);
