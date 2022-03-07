@@ -697,13 +697,16 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<size_t> list_isolated;
   std::vector<T> list_isolated_adjacent_value(n_vert);
   std::vector<size_t> list_isolated_adjacent_index(n_vert);
+  std::vector<std::vector<size_t>> LLAdj;
   for (size_t i=0; i<n_vert; i++) {
     size_t n_adj = 0;
     size_t n_higher = 0;
+    std::vector<size_t> LAdj;
     for (size_t j=0; j<n_vert; j++) {
       T val = M(i,j);
       if (i != j && val != val_comm) {
         n_adj++;
+        LAdj.push_back(j);
         list_isolated_adjacent_value[i] = val;
         list_isolated_adjacent_index[i] = j;
       }
@@ -712,16 +715,10 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
     list_deg[i] = n_adj;
     list_n_higher[i] = n_higher;
+    LLAdj.push_back(LAdj);
     if (n_adj == 0)
       list_isolated.push_back(i);
   }
-  auto get_ladj=[&](size_t const& i) -> std::vector<size_t> {
-    std::vector<size_t> V;
-    for (size_t j=0; j<n_vert; j++)
-      if (M(i,j) != val_comm)
-        V.push_back(j);
-    return V;
-  };
   size_t n_isolated = list_isolated.size();
   std::vector<std::vector<size_t>> list_extremal_A2;
   std::vector<std::vector<size_t>> list_extremal_A3;
@@ -741,6 +738,8 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<size_t> list_extm1_AN; // For An the vertices from which we can expand to D(n+1)
   std::vector<size_t> list_extm2_AN; // Inspired by above, useful o get E6, E7, E8, tilde{{E8} from A5, A6, A7 and A8.
   std::vector<size_t> list_extm3_AN; // Same as above, only useful to get tilde{E7} from A7
+  std::vector<size_t> list_two_extrem_E6; // The two vertices of degree 1 of E6 diagram
+  std::vector<size_t> list_dist3_extrem_E7; // The two vertices of degree 1 of E7 diagram
   size_t iConn = 0;
   for (auto &eConn : LConn) {
     size_t dim_res=eConn.size();
@@ -790,8 +789,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         std::vector<size_t> Lextm2;
         bool IsFirst = true;
         for (auto & eVert : Lextm1) {
-          std::vector<size_t> LAdj = get_ladj(eVert);
-          for (auto & fVert : LAdj) {
+          for (auto & fVert : LLAdj[eVert]) {
             if (PositionVect(Lext, fVert) == -1) {
               if (IsFirst || cd.dim > 5) {
                 Lextm2.push_back(fVert);
@@ -864,6 +862,41 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           throw TerminalException{1};
         };
         f();
+      }
+    }
+    if (cd.type == "E") {
+      auto get_length=[&](size_t val1, size_t val2) -> std::pair<size_t,size_t> {
+        size_t len = 1;
+        size_t iter=0;
+        while(true) {
+          iter++;
+          std::vector<size_t> const& LVal = LLAdj[val2];
+          if (LVal.size() == 1)
+            break;
+          size_t NewPt = -1;
+          for (auto & eVal : LVal)
+            if (eVal != val1)
+              NewPt = eVal;
+          val1 = val2;
+          val2 = NewPt;
+          len++;
+        }
+        return {len,val2};
+      };
+      for (auto & eVert : eConn) {
+        if (list_deg[eVert] == 3) {
+          for (auto & fVert : LLAdj[eVert]) {
+            std::pair<size_t,size_t> ep = get_length(eCent, eAdj);
+            if (cd.dim == 6) {
+              if (ep.first == 2)
+                list_two_extrem_E6.push_back(ep.second);
+            }
+            if (cd.dim == 7) {
+              if (ep.first == 3)
+                list_dist3_extrem_E7.push_back(ep.second);
+            }
+          }
+        }
       }
     }
   }
@@ -1190,6 +1223,24 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
     // tilde{E8} from E6 + A2
+    for (auto & v1 : list_two_extrem_E6) {
+      for (auto & v2 : list_vert_A2)
+        f_pair_single(v1, v2);
+    }
+    // tilde{E8} from E6 + A2
+    for (auto & v1 : list_dist3_extrem_E7) {
+      for (auto & v2 : list_isolated)
+        f_pair_single(v1, v2);
+    }
+    // tilde{F4} from A3 + A1
+    for (auto & v1 : list_ends_A3) {
+      for (auto & v2 : list_isolated) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
+    }
     
   }
   //
