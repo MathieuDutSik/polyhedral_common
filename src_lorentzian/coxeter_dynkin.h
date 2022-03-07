@@ -938,6 +938,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
     bool test = CheckDiagram(Mtest, DS);
     if (!test) {
+      std::cerr << "V=" << StringVectorGAP(V) << "\n";
       std::cerr << "The proposed diagram extension is not adequate. We want to avoid that\n";
       throw TerminalException{1};
     }
@@ -1031,11 +1032,13 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   for (auto & v : list_dist3_extrem_E7)
     f_single(v);
   // G2 from A1
+  std::cerr << "Step 1.1\n";
   for (auto & v : list_isolated) {
     MyVector<T> V = V_basic;
     V(v) = val_six;
     test_vector_and_insert(V);
   }
+  std::cerr << "Step 1.2\n";
   // F4 from B3
   for (auto & v : list_non_expand_Bn) {
     if (VertToLocDim[v] == 3)
@@ -1084,7 +1087,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & v : list_vert_G2)
       f_single(v);
     // tilde{G2} for A2
-    for (auto & v : list_vert_G2) {
+    for (auto & v : list_vert_A2) {
       MyVector<T> V = V_basic;
       V(v) = val_six;
       test_vector_and_insert(V);
@@ -1418,6 +1421,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   // Considering the case of 3 edges.
   //
   auto f_triple=[&](size_t w1, size_t w2, size_t w3) -> void {
+#ifdef CHECK_EFFICIENT_ENUMERATION
+    if (w1 == w2 || w1 == w3 || w2 == w3) {
+      std::cerr << "We should have w1, w2, w3 all different\n";
+      throw TerminalException{1};
+    }
+#endif
     MyVector<T> V = V_basic;
     V(w1) = val_single_edge;
     V(w2) = val_single_edge;
