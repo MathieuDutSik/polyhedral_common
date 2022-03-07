@@ -1061,6 +1061,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     // tilde{Bn} from Bn
     for (auto & v : list_expand_m1_Bn)
       f_single(v);
+    // tilde{B3} from A3
+    for (auto & v : list_middle_A3) {
+      MyVector<T> V = V_basic;
+      V(v) = val_four;
+      test_vector_and_insert(V);
+    }
     // tilde{Cn} from Bn
     for (auto & v : list_expand_Bn) {
       MyVector<T> V = V_basic;
