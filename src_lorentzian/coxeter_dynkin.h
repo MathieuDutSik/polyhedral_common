@@ -580,6 +580,89 @@ std::optional<IrrCoxDyn<T>> RecognizeIrreducibleSphericalEuclideanDiagram(const 
 
 
 
+template<typename T>
+bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
+{
+  int n = M.rows();
+  T valInfinity = practical_infinity<T>();
+  for (int i=0; i<n; i++)
+    for (int j=i+1; j<n; j++) {
+      T val = M(i,j);
+      if (DS.OnlySimplyLaced)
+        if (val != 2 && val != 3)
+          return false;
+      if (DS.OnlyLorentzianAdmissible)
+        if (val != 2 && val != 3 && val != 4 && val != 6 && val != valInfinity)
+          return false;
+    }
+  std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
+  if (opt) {
+    if (DS.OnlySpherical) {
+      const IrrCoxDyn<T>& cd = *opt;
+      return IsDiagramSpherical(cd);
+    }
+    return true;
+  }
+  return false;
+}
+
+
+template<typename T>
+std::vector<std::vector<size_t>> GetIrreducibleComponents(const MyMatrix<T>& M)
+{
+  T val_comm = 2;
+  size_t dim = M.rows();
+  GraphBitset eG(dim);
+  //  std::cerr << "LEdge =";
+  for (size_t i=0; i<dim; i++) {
+    for (size_t j=i+1; j<dim; j++) {
+      if (M(i,j) != val_comm) {
+        eG.AddAdjacent(i,j);
+        eG.AddAdjacent(j,i);
+        //        std::cerr << " [" << i << "/" << j << "]";
+      }
+    }
+  }
+  //  std::cerr << "\n";
+  return ConnectedComponents_set(eG);
+}
+
+
+template<typename T>
+bool CheckDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
+{
+  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
+  //  std::cerr << "CheckDiagram M=\n";
+  //  WriteMatrix(std::cerr, M);
+  std::vector<IrrCoxDyn<T>> l_cd;
+  for (auto & eConn : LConn) {
+    size_t dim_res=eConn.size();
+    /*
+    std::cerr << "eConn =";
+    for (auto & val : eConn)
+      std::cerr << " " << val;
+      std::cerr << "\n";*/
+    MyMatrix<T> Mres(dim_res, dim_res);
+    for (size_t i=0; i<dim_res; i++)
+      for (size_t j=0; j<dim_res; j++)
+        Mres(i,j) = M(eConn[i], eConn[j]);
+    bool test = CheckIrreducibleDiagram(Mres, DS);
+    /*
+    std::cerr << "  test=" << test << " eConn=";
+    for (auto & v : eConn)
+      std::cerr << v << " ";
+    std::cerr << "Mres=\n";
+    WriteMatrix(std::cerr, Mres);*/
+    if (!test)
+      return false;
+  }
+  return true;
+}
+
+
+
+
+
 
 template<typename T>
 std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, const DiagramSelector& DS)
@@ -1049,6 +1132,15 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     size_t v2 = list_isolated[eV[1]];
     f_pair(v1, v2);
   }
+  // B3 obtqined from A1 + A1
+  for (auto & v1 : list_isolated) {
+    for (auto & v2 : list_isolated) {
+      MyVector<T> V = V_basic;
+      V(v1) = val_four;
+      V(v2) = val_single_edge;
+      test_vector_and_insert(V);
+    }
+  }
   // Bn formed from A(n-2) + A1
   for (auto & v1 : list_isolated) {
     for (auto & LTerm : list_extremal_AN) {
@@ -1469,25 +1561,6 @@ MyMatrix<T> IrrCoxDyn_to_matrix(IrrCoxDyn<T> const& cd)
 }
 
 
-template<typename T>
-std::vector<std::vector<size_t>> GetIrreducibleComponents(const MyMatrix<T>& M)
-{
-  T val_comm = 2;
-  size_t dim = M.rows();
-  GraphBitset eG(dim);
-  //  std::cerr << "LEdge =";
-  for (size_t i=0; i<dim; i++) {
-    for (size_t j=i+1; j<dim; j++) {
-      if (M(i,j) != val_comm) {
-        eG.AddAdjacent(i,j);
-        eG.AddAdjacent(j,i);
-        //        std::cerr << " [" << i << "/" << j << "]";
-      }
-    }
-  }
-  //  std::cerr << "\n";
-  return ConnectedComponents_set(eG);
-}
 
 template<typename T>
 std::optional<std::vector<IrrCoxDyn<T>>> RecognizeSphericalEuclideanDiagram(const MyMatrix<T>& M)
@@ -1581,63 +1654,6 @@ std::string coxdyn_matrix_to_string(MyMatrix<T> const& M)
 }
 
 
-template<typename T>
-bool CheckIrreducibleDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
-{
-  int n = M.rows();
-  T valInfinity = practical_infinity<T>();
-  for (int i=0; i<n; i++)
-    for (int j=i+1; j<n; j++) {
-      T val = M(i,j);
-      if (DS.OnlySimplyLaced)
-        if (val != 2 && val != 3)
-          return false;
-      if (DS.OnlyLorentzianAdmissible)
-        if (val != 2 && val != 3 && val != 4 && val != 6 && val != valInfinity)
-          return false;
-    }
-  std::optional<IrrCoxDyn<T>> opt = RecognizeIrreducibleSphericalEuclideanDiagram(M);
-  if (opt) {
-    if (DS.OnlySpherical) {
-      const IrrCoxDyn<T>& cd = *opt;
-      return IsDiagramSpherical(cd);
-    }
-    return true;
-  }
-  return false;
-}
-
-
-template<typename T>
-bool CheckDiagram(const MyMatrix<T>& M, DiagramSelector const& DS)
-{
-  std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
-  //  std::cerr << "CheckDiagram M=\n";
-  //  WriteMatrix(std::cerr, M);
-  std::vector<IrrCoxDyn<T>> l_cd;
-  for (auto & eConn : LConn) {
-    size_t dim_res=eConn.size();
-    /*
-    std::cerr << "eConn =";
-    for (auto & val : eConn)
-      std::cerr << " " << val;
-      std::cerr << "\n";*/
-    MyMatrix<T> Mres(dim_res, dim_res);
-    for (size_t i=0; i<dim_res; i++)
-      for (size_t j=0; j<dim_res; j++)
-        Mres(i,j) = M(eConn[i], eConn[j]);
-    bool test = CheckIrreducibleDiagram(Mres, DS);
-    /*
-    std::cerr << "  test=" << test << " eConn=";
-    for (auto & v : eConn)
-      std::cerr << v << " ";
-    std::cerr << "Mres=\n";
-    WriteMatrix(std::cerr, Mres);*/
-    if (!test)
-      return false;
-  }
-  return true;
-}
 
 
 template<typename T>
@@ -2027,15 +2043,23 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions_Efficient(CoxMat, DS);
   if (l_vect.size() != l_vect_B.size()) {
     std::cerr << "The two enumeration codes return different results\n";
-    std::cerr << "l_vect=\n";
-    for (auto & eV : l_vect) {
-      std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-    }
-    std::cerr << "l_vect_B=\n";
-    for (auto & eV : l_vect_B) {
-      std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-    }
+    std::set<MyVector<T>> s_vect;
+    for (auto & eV : l_vect)
+      s_vect.insert(eV);
+    std::set<MyVector<T>> s_vect_B;
+    for (auto & eV : l_vect_B)
+      s_vect_B.insert(eV);
+    std::cerr << "In s_vect but not in s_vect_B=\n";
+    for (auto & eV : s_vect)
+      if (s_vect_B.count(eV) == 0)
+        std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+    std::cerr << "In s_vect_B but not in s_vect=\n";
+    for (auto & eV : s_vect_B)
+      if (s_vect.count(eV) == 0)
+        std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+
     std::cerr << "|l_vect|=" << l_vect.size() << " |l_vect_B|=" << l_vect_B.size() << "\n";
+    std::cerr << "|s_vect|=" << s_vect.size() << " |s_vect_B|=" << s_vect_B.size() << "\n";
     throw TerminalException{1};
   }
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
