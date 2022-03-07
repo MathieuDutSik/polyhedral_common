@@ -727,6 +727,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<size_t> list_ends_A4;
   std::vector<size_t> list_ends_A5;
   std::vector<size_t> list_ends_F4;
+  std::vector<size_t> list_cent_D4;
   std::vector<size_t> list_expand_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
   std::vector<size_t> list_expand_m1_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
   std::vector<size_t> list_non_expand_Bn; // Only for n > 2. This is the vertex adjacent with weight 4 which cannot be extended to B(n+1)
@@ -860,6 +861,8 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         for (auto & eVert : eConn) {
           if (list_deg[eVert] == 1)
             list_expand_Dn.push_back(eVert);
+          if (list_deg[eVert] == 3)
+            list_cent_D4.push_back(eVert);
         }
       } else {
         auto f=[&]() -> void {
@@ -1073,6 +1076,9 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
     // tilde{Dn} from Dn
     for (auto & v : list_expand_m1_Dn)
+      f_single(v);
+    // tilde{D4} from D4
+    for (auto & v : list_cent_D4)
       f_single(v);
     // tilde{E6} from E6
     for (auto & v : list_dist1_extrem_E6)
@@ -1288,6 +1294,15 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & v1 : list_expand_Bn) {
       for (auto & v2 : list_middle_A3)
         f_pair(v1, v2);
+    }
+    // tilde{B4} from A3 + A1
+    for (auto & v1 : list_isolated) {
+      for (auto & v2 : list_middle_A3) {
+        MyVector<T> V = V_basic;
+        V(v1) = val_four;
+        V(v2) = val_single_edge;
+        test_vector_and_insert(V);
+      }
     }
     // tilde{Bn} obtained from Dk + Bl with k+l = n , k >= 4 , l >= 2
     for (auto & v1 : list_expand_Bn) {
