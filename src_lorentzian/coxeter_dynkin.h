@@ -1178,7 +1178,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       for (auto & v2 : list_expand_Bn)
         f_pair(v1, v2);
     }
-    // tilde{C2} obtained from A1+A1
+    // tilde{C2} obtained from A1 + A1
     SetCppIterator SCI_A1_A1(n_isolated,2);
     for (auto & eV : SCI_A1_A1) {
       size_t v1 = list_isolated[eV[0]];
@@ -1304,7 +1304,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   //
   // Considering the case of 3 edges.
   //
-  // E6 formed from A2 + A2 + A1
   auto f_triple=[&](size_t w1, size_t w2, size_t w3) -> void {
     MyVector<T> V = V_basic;
     V(w1) = val_single_edge;
@@ -1312,16 +1311,15 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     V(w3) = val_single_edge;
     test_vector_and_insert(V);
   };
-  for (size_t i_A2=0; i_A2<n_A2; i_A2++) {
-    std::vector<size_t> const& vA2_1 = list_extremal_A2[i_A2];
-    for (size_t j_A2=i_A2+1; j_A2<n_A2; j_A2++) {
-      std::vector<size_t> const& vA2_2 = list_extremal_A2[j_A2];
-      for (auto & v1 : vA2_1) {
-        for (auto & v2 : vA2_2) {
-          for (auto & v3 : list_isolated) {
-            f_triple(v1, v2, v3);
-          }
-        }
+  // E6 formed from A2 + A2 + A1
+  SetCppIterator SCI_A2_A2(n_A2,2);
+  for (auto & eV : SCI_A2_A2) {
+    std::vector<size_t> const& vA2_1 = list_extremal_A2[eV[0]];
+    std::vector<size_t> const& vA2_2 = list_extremal_A2[eV[1]];
+    for (auto & v1 : vA2_1) {
+      for (auto & v2 : vA2_2) {
+        for (auto & v3 : list_isolated)
+          f_triple(v1, v2, v3);
       }
     }
   }
@@ -1358,7 +1356,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
   }
   if (!DS.OnlySpherical) { // Doing the tilde{E6}; tilde{E7} and tilde{E8}
-    // tilde{E6} from A2+A2+A2
+    // tilde{E6} from A2 + A2 + A2
     SetCppIterator SCI_A(n_A2,3);
     for (auto & eV : SCI_A) {
       for (auto & v1 : list_extremal_A2[eV[0]]) {
@@ -1368,7 +1366,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         }
       }
     }
-    // tilde{E7} from A3+A3+A1
+    // tilde{E7} from A3 + A3 + A1
     SetCppIterator SCI_tildeE7(n_A3,2);
     for (auto & eV : SCI_tildeE7) {
       std::vector<size_t> const& vA3_1 = list_extremal_A3[eV[0]];
