@@ -730,8 +730,10 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   std::vector<size_t> list_ends_A3;
   std::vector<size_t> list_ends_A4;
   std::vector<size_t> list_expand_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
+  std::vector<size_t> list_expand_m1_Bn; // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
   std::vector<size_t> list_non_expand_Bn; // Only for n > 2. This is the vertex adjacent with weight 4 which cannot be extended to B(n+1)
   std::vector<size_t> list_expand_Dn; // For D4 this is the 3 vertices, For Dn (n > 4) this is the expanding vertex
+  std::vector<size_t> list_expand_m1_Dn; // For D4 this is the 3 vertices, For Dn (n > 4) this is the expanding vertex
   std::vector<size_t> list_non_expand_Dn; // Only for n > 4, this is the two vertices which cannot be expanded to D(n+1)
   std::vector<size_t> VertToConn(n_vert); // Mapping from vertices to connected component. Useful for sums like Ak + A3
   std::vector<size_t> VertToLocDim(n_vert); // Mapping from vertices to connected component. Useful for sums like Ak + A3
@@ -829,8 +831,10 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       } else {
         for (auto & eVert : eConn) {
           if (list_deg[eVert] == 1) {
-            if (list_isolated_adjacent_value[eVert] == val_single_edge)
+            if (list_isolated_adjacent_value[eVert] == val_single_edge) {
               list_expand_Bn.push_back(eVert);
+              list_expand_m1_Bn.push_back(list_isolated_adjacent_index[eVert]);
+            }
             if (list_isolated_adjacent_value[eVert] == val_four)
               list_non_expand_Bn.push_back(eVert);
           }
@@ -849,8 +853,10 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
             if (list_deg[eVert] == 3) {
               for (auto & fVert : eConn) {
                 if (list_deg[fVert] == 1) {
-                  if (list_isolated_adjacent_index[fVert] != eVert)
+                  if (list_isolated_adjacent_index[fVert] != eVert) {
                     list_expand_Dn.push_back(fVert);
+                    list_expand_m1_Dn.push_back(list_isolated_adjacent_index[fVert]);
+                  }
                   if (list_isolated_adjacent_index[fVert] == eVert)
                     list_non_expand_Dn.push_back(fVert);
                 }
@@ -939,6 +945,85 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   //
   // Considering the case of just one edge
   //
+  auto f_single=[&](size_t v) -> void {
+    MyVector<T> V = V_basic;
+    V(v) = val_single_edge;
+    test_vector_and_insert(V);
+  };
+  // An obtained from A(n-1)
+  for (auto & Lext : list_extremal_AN) {
+    for (auto & v : Lext)
+      f_single(v);
+  }
+  // Bn obtained from A(n-1)
+  for (auto & Lext : list_extremal_AN) {
+    for (auto & v : Lext) {
+      MyVector<T> V = V_basic;
+      V(v) = val_four;
+      test_vector_and_insert(V);
+    }
+  }
+  // Bn obtained from B(n-1)
+  for (auto & v : list_non_expand_Bn)
+    f_single(v);
+  // Dn from D(n-1)
+  for (auto & v : list_expand_Dn)
+    f_single(v);
+  // Dn from A(n-1)
+  for (auto & v : list_extm1_AN)
+    f_single(v);
+  // E6 obtained from A5
+  for (auto & v : list_extm2_AN) {
+    if (VertToConn[v] == 5)
+      f_single(v);
+  }
+  // E6 obtained from D5
+  for (auto & v : list_non_expand_Dn) {
+    if (VertToConn[v] == 5)
+      f_single(v);
+  }
+  // E7 obtained from A6
+  for (auto & v : list_extm2_AN) {
+    if (VertToConn[v] == 6)
+      f_single(v);
+  }
+  // E7 obtained from D6
+  for (auto & v : list_non_expand_Dn) {
+    if (VertToConn[v] == 6)
+      f_single(v);
+  }
+  // E7 obtained from E6
+  for (auto & v : list_two_extreme_E6)
+    f_single(v);
+  // E8 from A7
+  for (auto & v : list_extm2_AN) {
+    if (VertToConn[v] == 7)
+      f_single(v);
+  }
+  // E8 from D7
+  for (auto & v : list_non_expand_Dn) {
+    if (VertToConn[v] == 7)
+      f_single(v);
+  }
+  // E8 from E7
+  for (auto & v : list_dist3_extreme_E7)
+    f_single(v);
+  // G2 from A1
+  for (auto & v : list_isolated) {
+    MyVector<T> V = V_basic;
+    V(v) = val_six;
+    test_vector_and_insert(V);
+  }
+  // tilde{Bn} from Dn
+  for (auto & v : list_expand_Dn) {
+    MyVector<T> V = V_basic;
+    V(v) = val_four;
+    test_vector_and_insert(V);
+  }
+  // tilde{Bn} from Bn
+  
+  
+  
   for (size_t i=0; i<n_vert; i++) {
     MyVector<T> V = V_basic;
     V(i) = val_single_edge;
@@ -948,12 +1033,20 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     V(i) = val_six; // This covers G2 and tilde{G2}
     test_vector_and_insert(V);
   }
-  // optimal
-  for (auto & eIsol : list_isolated) {
-    MyVector<T> V = V_basic;
-    if (!DS.OnlySpherical) {
+  if (!DS.OnlySpherical) {
+    // F4 from B3
+    for (auto & v : list_non_expand_Bn) {
+      if (VertToLocDim[v] == 3)
+        f_single(v);
+    }
+    // 
+
+    
+    // I1(infinity) from A1
+    for (auto & vl : list_isolated) {
+      MyVector<T> V = V_basic;
       V(eIsol) = val_inf;
-      test_vector_and_insert(V); // I1(infinity), always works.
+      test_vector_and_insert(V);
     }
   }
   //
@@ -1241,7 +1334,24 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
-    
+    // tilde{F4} from A2 + A2
+    for (auto & v1 : list_vert_A2) {
+      for (auto & v2 : list_vert_A2) {
+        if (VertToConn[v1] != VertToConn[v2]) {
+          MyVector<T> V = V_basic;
+          V(v1) = val_four;
+          V(v2) = val_single_edge;
+          test_vector_and_insert(V);
+        }
+      }
+    }
+    // tilde{F4} from tilde{B2} + A1
+    for (auto & v1 : list_non_expand_Dn) {
+      if (VertToLocDim[v1] == 3) {
+        for (auto & v2 : list_isolated)
+          f_pair_single(v1, v2);
+      }
+    }
   }
   //
   // Considering the case of 3 edges.
