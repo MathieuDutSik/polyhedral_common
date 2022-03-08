@@ -919,6 +919,8 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
             if (cd.dim == 7) {
               if (ep.first == 3)
                 list_dist3_extrem_E7.push_back(ep.second);
+              if (ep.first == 2)
+                list_dist2_extrem_E7.push_back(ep.second);
             }
             if (cd.dim == 8) {
               if (ep.first == 4)
@@ -1184,20 +1186,17 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     }
   }
   // Bn formed from Bk + Al with k+l = n-1 , k>= 2 , l >= 2
-  std::cerr << "Step 0\n";
   for (auto & v1 : list_expand_Bn) {
     for (auto & LTerm : list_extremal_AN) {
       for (auto & v2 : LTerm)
         f_pair(v1, v2);
     }
   }
-  std::cerr << "Step 1\n";
   // Bn formed from B(n-2) + A1
   for (auto & v1 : list_expand_Bn) {
     for (auto & v2 : list_isolated)
       f_pair(v1, v2);
   }
-  std::cerr << "Step 2\n";
   // Dn formed from A3 + Ak
   for (auto & v1 : list_middle_A3) {
     for (auto & LTerm : list_extremal_AN) {
@@ -1232,7 +1231,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         f_pair(v1, v2);
     }
   }
-  std::cerr << "Step 3\n";
   // E7 formed as A5 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_extm1_AN) {
@@ -1284,12 +1282,10 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       test_vector_and_insert(V);
     }
   }
-  std::cerr << "Step 4\n";
   if (!DS.OnlySpherical) {
     // tilde{An} formed from An
     for (auto & Lext : list_extremal_AN)
       f_pair(Lext[0], Lext[1]);
-    std::cerr << "Step 4.1\n";
     // tilde{Bn} obtained from A3 + B(n-3)
     for (auto & v1 : list_expand_Bn) {
       for (auto & v2 : list_middle_A3)
@@ -1318,7 +1314,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
-    std::cerr << "Step 4.2\n";
     // tilde{Cn} obtained from Bk + Bl with k+l = n , k >= 2 , l >= 2
     size_t n_expand_Bn = list_expand_Bn.size();
     SetCppIterator SCI_Bk_Bl(n_expand_Bn,2);
@@ -1328,7 +1323,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       if (VertToConn[v1] != VertToConn[v2])
         f_pair(v1, v2);
     }
-    std::cerr << "Step 4.2.1\n";
     // tilde{Cn} obtained from C(n-1) + A1
     for (auto & v1 : list_isolated) {
       for (auto & v2 : list_expand_Bn) {
@@ -1338,7 +1332,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
-    std::cerr << "Step 4.2.2\n";
     // tilde{C2} obtained from A1 + A1
     SetCppIterator SCI_A1_A1(n_isolated,2);
     for (auto & eV : SCI_A1_A1) {
@@ -1366,7 +1359,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     for (auto & eV : SCI_A3_A3) {
       f_pair(list_middle_A3[eV[0]], list_middle_A3[eV[1]]);
     }
-    std::cerr << "Step 4.3\n";
     // tilde{Dn} obtained from A3 + D(n-3)
     for (auto & v1 : list_middle_A3) {
       for (auto & v2 : list_expand_Dn)
@@ -1402,7 +1394,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           f_pair(v1, v2);
       }
     }
-    std::cerr << "Step 4.3\n";
     // tilde{E8} from A7 + A1
     for (auto & v1 : list_extm1_AN) {
       if (VertToLocDim[v1] == 7) {
@@ -1445,7 +1436,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         test_vector_and_insert(V);
       }
     }
-    std::cerr << "Step 4.4\n";
     // tilde{F4} from A2 + A2
     for (auto & v1 : list_vert_A2) {
       for (auto & v2 : list_vert_A2) {
@@ -1465,7 +1455,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       }
     }
   }
-  std::cerr << "Step 5\n";
   //
   // Considering the case of 3 edges.
   //
@@ -1585,6 +1574,14 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
       size_t v1 = list_isolated[eV[0]];
       size_t v2 = list_isolated[eV[1]];
       for (auto & v3 : list_expand_Dn)
+        f_triple(v1, v2, v3);
+    }
+    // tilde{D5} formed from A3 + A1 + A1
+    SetCppIterator SCI_tildeD5(n_isolated,2);
+    for (auto & eV : SCI_tildeD5) {
+      size_t v1 = list_isolated[eV[0]];
+      size_t v2 = list_isolated[eV[1]];
+      for (auto & v3 : list_middle_A3)
         f_triple(v1, v2, v3);
     }
   }
