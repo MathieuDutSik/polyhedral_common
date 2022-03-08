@@ -1988,6 +1988,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     if (s_gen_isom_cox.count(eP) > 0)
       return false;
     s_gen_isom_cox.insert(eP);
+    std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),";
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
