@@ -1252,6 +1252,11 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
         f_pair(v1, v2);
     }
   }
+  // E8 from E6 + A1
+  for (auto & v1 : list_dist2_extrem_E6) {
+    for (auto & v2 : list_isolated)
+      f_pair(v1, v2);
+  }
   // E8 formed as A6 + A1
   for (auto & v1 : list_isolated) {
     for (auto & v2 : list_extm1_AN) {
