@@ -818,6 +818,7 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
           }
         }
         if (cd.dim == 7) { // only that case makes sense for A7 and its extension to tilde{E7}
+          bool IsFirst = true;
           for (auto & eVert : Lextm2) {
             for (auto & fVert : LLAdj[eVert]) {
               if (PositionVect(Lextm1, fVert) == -1) {
