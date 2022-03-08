@@ -1007,22 +1007,22 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     f_single(v);
   // E6 obtained from A5
   for (auto & v : list_extm2_AN) {
-    if (VertToConn[v] == 5)
+    if (VertToLocDim[v] == 5)
       f_single(v);
   }
   // E6 obtained from D5
   for (auto & v : list_non_expand_Dn) {
-    if (VertToConn[v] == 5)
+    if (VertToLocDim[v] == 5)
       f_single(v);
   }
   // E7 obtained from A6
   for (auto & v : list_extm2_AN) {
-    if (VertToConn[v] == 6)
+    if (VertToLocDim[v] == 6)
       f_single(v);
   }
   // E7 obtained from D6
   for (auto & v : list_non_expand_Dn) {
-    if (VertToConn[v] == 6)
+    if (VertToLocDim[v] == 6)
       f_single(v);
   }
   // E7 obtained from E6
@@ -1030,12 +1030,12 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     f_single(v);
   // E8 from A7
   for (auto & v : list_extm2_AN) {
-    if (VertToConn[v] == 7)
+    if (VertToLocDim[v] == 7)
       f_single(v);
   }
   // E8 from D7
   for (auto & v : list_non_expand_Dn) {
-    if (VertToConn[v] == 7)
+    if (VertToLocDim[v] == 7)
       f_single(v);
   }
   // E8 from E7
@@ -2121,13 +2121,26 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     for (auto & eV : l_vect_B)
       s_vect_B.insert(eV);
     std::cerr << "In s_vect but not in s_vect_B=\n";
+    auto prt=[&](MyVector<T> const& eV) -> void {
+      MyMatrix<T> CoxMatExp(n_root+1,n_root+1);
+      for (int i=0; i<n_root; i++)
+        for (int j=0; j<n_root; j++)
+          CoxMatExp(i,j) = CoxMat(i,j);
+      for (int i=0; i<n_root; i++) {
+        CoxMatExp(i,n_root) = eV(i);
+        CoxMatExp(n_root,i) = eV(i);
+      }
+      CoxMatExp(n_root,n_root) = 2;
+      std::string symb = coxdyn_matrix_to_string(CoxMatExp);
+      std::cerr << "V=" << StringVectorGAP(eV) << " symb=" << symb << "\n";
+    };
     for (auto & eV : s_vect)
       if (s_vect_B.count(eV) == 0)
-        std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+        prt(eV);
     std::cerr << "In s_vect_B but not in s_vect=\n";
     for (auto & eV : s_vect_B)
       if (s_vect.count(eV) == 0)
-        std::cerr << "V=" << StringVectorGAP(eV) << "\n";
+        prt(eV);
     std::cerr << "only_spherical = " << only_spherical << "\n";
     std::cerr << "|l_vect|=" << l_vect.size() << " |l_vect_B|=" << l_vect_B.size() << "\n";
     std::cerr << "|s_vect|=" << s_vect.size() << " |s_vect_B|=" << s_vect_B.size() << "\n";
