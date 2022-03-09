@@ -112,15 +112,23 @@ template<typename T>
 DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
 {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  //  std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
-  //  WriteMatrix(std::cerr, SymMat);
+#ifdef DEBUG_POSITIVITY
+  std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
+  WriteMatrix(std::cerr, SymMat);
+#endif
   int n=SymMat.rows();
+  if (n == 0) {
+    return { {}, {}, 0, 0, 0};
+  }
   std::vector<MyVector<T>> ListVect;
   for (int i=0; i<n; i++) {
     MyMatrix<T> BasisOrthogonal;
     if (i == 0) {
       BasisOrthogonal=IdentityMat<T>(n);
     } else {
+#ifdef DEBUG_POSITIVITY
+      std::cerr << "|ListVect|=" << ListVect.size() << "\n";
+#endif
       MyMatrix<T> TheBasis=MatrixFromVectorFamily(ListVect);
       MyMatrix<T> eProd=SymMat*TheBasis.transpose();
       BasisOrthogonal=NullspaceMat(eProd);
@@ -132,8 +140,10 @@ DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
   }
   MyMatrix<T> TheBasis=MatrixFromVectorFamily(ListVect);
   MyMatrix<T> RedMat=TheBasis*SymMat*TheBasis.transpose();
-  //  std::cerr << "RedMat=\n";
-  //  WriteMatrix(std::cerr, RedMat);
+#ifdef DEBUG_POSITIVITY
+  std::cerr << "RedMat=\n";
+  WriteMatrix(std::cerr, RedMat);
+#endif
   int nbPlus=0;
   int nbMinus=0;
   int nbZero=0;
@@ -143,7 +153,9 @@ DiagSymMat<T> DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const& SymMat)
     if (RedMat(i,i) < 0)
       nbMinus++;
   }
-  //  std::cerr << "nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
+#ifdef DEBUG_POSITIVITY
+  std::cerr << "nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
+#endif
   return {TheBasis, RedMat, nbZero, nbPlus, nbMinus};
 }
 

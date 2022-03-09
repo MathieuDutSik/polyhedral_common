@@ -323,7 +323,6 @@ MyVector<T> VectorMod(MyVector<T> const& V, T const& TheMod)
 }
 
 
-
 template<typename T, typename Telt>
 MyMatrix<T> RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
 {
@@ -332,6 +331,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T,Telt> const& 
 #endif
   return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
 }
+
 
 template<typename T, typename Telt>
 MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt> const& helper, Telt const& ePerm)
@@ -356,7 +356,6 @@ MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt
   MyMatrix<T> const& M = *opt;
   return M;
 }
-
 
 
 template<typename T, typename Telt, typename Thelper>
@@ -695,6 +694,15 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     MyVector<T> eVect=eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod);
   };
+  // This is the part of the enumeration where we have problems.
+  // We have too many vectors to consider whih sinks the algorithm.
+  // The difficulty of the work is that we have to deal with globally
+  // invariant sets of vectors. This is difficult to manipulate in practice.
+  // We could look at specific generators, but that is unlikely to
+  // radically change things.
+  //
+  // We could look at the quotient. (Z_d)^n / TheSpace and look for point stabilizers
+  // Maybe we can translate to classes easily and 
   auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& ListMatr) -> std::optional<MyVector<T>> {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);

@@ -2013,6 +2013,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         return true;
       }
       MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
+      std::cerr << "We have eDiff\n";
       if (!IsZeroMatrix(eDiff)) {
         MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
         if (NSP.rows() == 0) {
@@ -2034,7 +2035,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
         }
         MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
         MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
+        std::cerr << "We have Ginv\n";
         DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+        std::cerr << "We have DiagInfo\n";
         if (DiagInfo.nbMinus == 0) {
           std::cerr << "f_isom, conclude not_reflective by DiagInfo.nbMinus == 0\n";
           is_reflective = false;
@@ -2045,11 +2048,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
           return true;
         }
       }
-    }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-    std::cerr << "Timing |MatrixText 3|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+      std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+      std::cerr << "Timing |EarlyTerminationIfNotReflective|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time1).count() << "\n";
 #endif
+    }
     return false;
   };
   LORENTZ_RunEdgewalkAlgorithm_Kernel<T,Tint,Tgroup,decltype(f_vertex),decltype(f_isom),decltype(f_increase_nbdone)>(G, l_norms, eVert, f_vertex, f_isom, f_increase_nbdone, HeuristicIdealStabEquiv);
@@ -2268,7 +2271,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       std::cerr << "e_vt=" << StringVectorGAP(e_vt) << " e_vi=" << StringVectorGAP(e_vi) << "\n";
       l_ui.push_back(e_vi);
     }
-    std::cerr << "get_simple_cone, step 5\n";
+    std::cerr << "get_simple_cone, step 6\n";
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
