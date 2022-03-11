@@ -226,8 +226,14 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
       return DualDescExternalProgram(EXT, "lcdd_gmp");
     //
     eProg = "cdd_cbased"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
+    if (ansProg == eProg) {
+#ifdef USE_CDDLIB
       return cbased_cdd::DualDescription_incd(EXT);
+#else
+      std::cerr << "The code has been compiled without the CDDLIB library\n";
+      throw TerminalException{1};
+#endif
+    }
     //
     std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
     std::cerr << "List of authorized programs :";

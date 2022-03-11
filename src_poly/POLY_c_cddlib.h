@@ -1,6 +1,9 @@
 #ifndef INCLUDE_POLY_C_CDDLIB_H
 #define INCLUDE_POLY_C_CDDLIB_H
 
+# ifdef USE_CDDLIB
+
+
 #include <type_traits>
 #include "setoper.h"
 #include "cdd.h"
@@ -109,5 +112,5 @@ inline typename std::enable_if<(not is_mpq_class<T>::value) && (not is_boost_mpq
 }
 
 
-
+# endif
 #endif

@@ -1,5 +1,7 @@
 #define GMPRATIONAL
 
+#ifdef USE_CDDLIB
+
 #include "gmpxx.h"
 #include <boost/multiprecision/gmp.hpp>
 #include "setoper.h"
@@ -86,3 +88,4 @@ vectface DualDescription_incd_boost_mpq_rational(MyMatrix<boost::multiprecision:
 }
 
 }
+#endif
