@@ -8,8 +8,8 @@
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LATT_GetIntegralMatricesPossibleOrders
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_ComputeStabilizer_Vertex
-#PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= COXDYN_FindExtensionsCoxMat
 #PROGRAM		= LORENTZ_SingleEdgewalk
 
@@ -46,9 +46,9 @@ CC		= g++ -std=c++17 -Wall -g -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_indefinite -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_dualdesc -I../src_short -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_indefinite -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_dualdesc -I../src_short -I../src_dualdesc/permutalib/src_gap -I.
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)  -I$(LIBSHORT_INCDIR) $(NAUTY_INCLUDE) $(GLPK_INCLUDE) $(PERMUTALIB_INCLUDE) $(CDDLIB_INCLUDE) $(MPREAL_INCLUDE)
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(PERMUTALIB_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK

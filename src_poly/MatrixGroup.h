@@ -98,6 +98,9 @@ MyMatrix<T> MatrixIntegral_GetInvariantSpace(int const& n, std::vector<MyMatrix<
 template<typename T1, typename T2, typename F>
 std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, const F& f)
 {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Begin of OrbitComputation\n";
+#endif
   std::vector<T2> TheOrbit;
   std::unordered_set<T2> TheSet;
   auto fInsert=[&](T2 const& u) -> void {
@@ -118,7 +121,11 @@ std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, co
         fInsert(u);
       }
     pos = len;
+    std::cerr << "len=" << len << "\n";
   }
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "End of OrbitComputation\n";
+#endif
   return TheOrbit;
 }
 
@@ -382,12 +389,12 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
   };
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   Telt ePermSinv=~ePermS;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "Timing |ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen=ListMatrGens.size();
@@ -405,7 +412,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
       v[i]=ePermGen.at(i);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
-    std::cerr << "|v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
+    std::cerr << "Timing |v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
 #endif
     std::vector<MyVector<T>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -414,17 +421,17 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
       ListImage[iV] = TheAction(O[iV], eMatrGen);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
-    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
+    std::cerr << "Timing |ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
     Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_4 = std::chrono::system_clock::now();
-    std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
+    std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_5 = std::chrono::system_clock::now();
-    std::cerr << "|ePermBinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 - timeB_4).count() << "\n";
+    std::cerr << "Timing |ePermBinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 - timeB_4).count() << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
     // By the construction and above check we have
@@ -435,7 +442,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     Telt ePermGenSelect=ePermBinv * ePermS;
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_6 = std::chrono::system_clock::now();
-    std::cerr << "|ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
+    std::cerr << "Timing |ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
     //    std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
@@ -446,7 +453,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_7 = std::chrono::system_clock::now();
-    std::cerr << "|v 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
+    std::cerr << "Timing |v 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
 #endif
     Telt eNewPerm(std::move(v));
 #ifdef DEBUG_MATRIX_GROUP
@@ -467,12 +474,12 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     ListPermGenProv.emplace_back(std::move(eNewPerm));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_8 = std::chrono::system_clock::now();
-    std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 - timeB_7).count() << "\n";
+    std::cerr << "Timing |insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 - timeB_7).count() << "\n";
 #endif
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "Timing |ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   permutalib::Group<Telt,mpz_class> GRPprov(ListPermGenProv, siz);
@@ -563,12 +570,12 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
   };
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+  std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
   Telt ePermSinv=~ePermS;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "|ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+  std::cerr << "Timing |ePermSinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen=ListMatrGens.size();
@@ -583,7 +590,7 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
     std::vector<Tidx> v(siz);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
-    std::cerr << "|v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
+    std::cerr << "Timing |v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
 #endif
     std::vector<MyVector<T>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -592,17 +599,17 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
       ListImage[iV] = TheAction(O[iV], eMatrGen);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
-    std::cerr << "|ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
+    std::cerr << "Timing |ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
     Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_4 = std::chrono::system_clock::now();
-    std::cerr << "|SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
+    std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_5 = std::chrono::system_clock::now();
-    std::cerr << "|ePermBinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 - timeB_4).count() << "\n";
+    std::cerr << "Timing |ePermBinv|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 - timeB_4).count() << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
     // By the construction and above check we have
@@ -613,17 +620,17 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
     Telt ePermGenSelect=ePermBinv * ePermS;
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_6 = std::chrono::system_clock::now();
-    std::cerr << "|ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
+    std::cerr << "Timing |ePermGenSelect|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 - timeB_5).count() << "\n";
 #endif
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_7 = std::chrono::system_clock::now();
-    std::cerr << "|insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
+    std::cerr << "Timing |insert|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 - timeB_6).count() << "\n";
 #endif
   }
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "|ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
+  std::cerr << "Timing |ListPermGenProv|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
   return {0,siz,ListMatrGens,std::move(ListPermGenProv)};
 }
@@ -684,14 +691,18 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
   int n=helper.n;
   MyMatrix<T> ModSpace=TheMod * IdentityMat<T>(n);
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "TheMod=" << TheMod << "  n=" << n << "\n";
+  T TotSize = 1;
+  for (int i=0; i<n; i++)
+    TotSize *= TheMod;
+  std::cerr << "TheMod=" << TheMod << "  n=" << n << " TotSize=" << TotSize << "\n";
+
   //  std::cerr << "TheSpace=\n";
   //  WriteMatrix(std::cerr, TheSpace);
 #endif
   MyMatrix<T> TheSpaceMod=Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpaceMod);
   std::function<MyVector<T>(MyVector<T> const&,MyMatrix<T> const&)> TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=eElt.transpose() * eClass;
+    MyVector<T> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod);
   };
   // This is the part of the enumeration where we have problems.
@@ -734,7 +745,7 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-    std::cerr << "|IsStabilizing|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+    std::cerr << "Timing |IsStabilizing|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -743,10 +754,13 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
       break;
     }
     const MyVector<T>& V = *opt;
-    std::vector<MyVector<T>> O=OrbitComputation(ListMatrRet, V, TheAction);
+    std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+#ifdef DEBUG_MATRIX_GROUP
+    std::cerr << "Timing |O|=" << O.size() << "\n";
+#endif
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-    std::cerr << "|OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+    std::cerr << "Timing |OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
     Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
@@ -846,6 +860,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       WriteVector(std::cerr, V);
 #endif
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+#ifdef DEBUG_MATRIX_GROUP
+      std::cerr << "|O|=" << O.size() << "\n";
+#endif
 
 
       Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
@@ -922,6 +939,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
     } else {
       MyVector<T> const& V = *test2;
       std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+#ifdef DEBUG_MATRIX_GROUP
+      std::cerr << "|O|=" << O.size() << "\n";
+#endif
       Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);

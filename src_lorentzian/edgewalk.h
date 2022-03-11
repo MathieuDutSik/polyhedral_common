@@ -1355,6 +1355,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
+  std::cerr << "|GRP1|=" << vertFull.GRP1.size() << "\n";
   if (vertFull.method == "isotropstabequiv_V1" || vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
@@ -1364,7 +1365,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
     for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
-      std::cerr << "eGen=" << eGen << "\n";
+      //      std::cerr << "eGen=" << eGen << "\n";
       //      bool test = GRPlin.isin(eGen);
       //      std::cerr << "test=" << test << "\n";
       //      MyMatrix<T> eGen_as_matr = FindTransformation(Subspace1red, Subspace1red, eGen);
