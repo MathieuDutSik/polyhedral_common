@@ -1831,7 +1831,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::cerr << "Timing |vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
     //
-    std::cerr << "nbDone=" << nbDone << " |vf_orb|=" << vf_orb.size() << " |GRP1|=" << vertFull.GRP1.size() << "\n";
+    std::cerr << "nbDone=" << nbDone << " |vf_orb|=" << vf_orb.size() << " |GRP1|=" << vertFull.GRP1.size() << " |GRP1_int|=" << vertFull.GRP1_integral.size() << "\n";
     for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, theVert.gen, ad);
@@ -2016,6 +2016,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
       std::cerr << "We have eDiff\n";
       if (!IsZeroMatrix(eDiff)) {
         MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
+        std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
         if (NSP.rows() == 0) {
           std::cerr << "f_isom, conclude not_reflective by NSP.rows() == 0\n";
           is_reflective = false;
@@ -2025,17 +2026,23 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 #endif
           return true;
         }
+        std::cerr << "1 : |InvariantBasis|=" << InvariantBasis.rows() << " / " << InvariantBasis.cols() << "\n";
         InvariantBasis = NSP * InvariantBasis;
+        std::cerr << "2 : |InvariantBasis|=" << InvariantBasis.rows() << " / " << InvariantBasis.cols() << "\n";
         for (auto & eP : s_gen_isom_cox) {
           MyMatrix<Tint> fDiff = InvariantBasis * eP - InvariantBasis;
           if (!IsZeroMatrix(fDiff)) {
-            std::cerr << "The matrix fDiff should be integral\n";
+            std::cerr << "The matrix fDiff should be zero\n";
             throw TerminalException{1};
           }
         }
         MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
+        std::cerr << "3 : |InvariantBasis_T|=" << InvariantBasis_T.rows() << " / " << InvariantBasis_T.cols() << "\n";
+        std::cerr << "InvariantBasis_T=\n";
+        WriteMatrix(std::cerr, InvariantBasis_T);
         MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
-        std::cerr << "We have Ginv\n";
+        std::cerr << "Ginv=\n";
+        WriteMatrix(std::cerr, Ginv);
         DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
         std::cerr << "We have DiagInfo\n";
         if (DiagInfo.nbMinus == 0) {
