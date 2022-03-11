@@ -1737,7 +1737,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
   CuspidalBank<T,Tint> cusp_bank;
   std::vector<int> l_status;
   std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> l_orbit_vertices;
+#ifdef TRACK_INFOS_LOG
   std::cout << "return [\n";
+#endif
   size_t nbDone = 0;
   auto func_insert_vertex=[&](FundDomainVertex_FullInfo<T,Tint,Tgroup> & vertFull1) -> bool {
     size_t len = l_orbit_vertices.size();
@@ -1842,8 +1844,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
         PrintAdjacencyDirection(std::cerr, ad);
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
-        std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << ", ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << ", l_norms:=" << StringStdVectorGAP(l_norms) << ")";
-        std::cout << ",\n";
+#ifdef TRACK_INFOS_LOG
+        std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << ", ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << ", l_norms:=" << StringStdVectorGAP(l_norms) << "),\n";
+#endif
       }
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
       bool test = func_insert_vertex(fVertFull);
@@ -1989,7 +1992,9 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
     if (s_gen_isom_cox.count(eP) > 0)
       return false;
     s_gen_isom_cox.insert(eP);
+#ifdef TRACK_INFOS_LOG
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),";
+#endif
     MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
