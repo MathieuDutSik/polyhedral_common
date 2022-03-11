@@ -1,8 +1,18 @@
 #ifndef INCLUDE_WEIGHT_MATRIX_H
 #define INCLUDE_WEIGHT_MATRIX_H
 
+
+#undef USE_BLISS
+#define USE_TRACES
+
+#ifdef USE_BLISS
 #include "GRAPH_bliss.h"
+#endif
+
+#ifdef USE_TRACES
 #include "GRAPH_traces.h"
+#endif
+
 #include "MAT_Matrix.h"
 #include "Basic_string.h"
 #include "Basic_file.h"
@@ -11,10 +21,6 @@
 #include "MAT_MatrixInt.h"
 #include "Boost_bitset.h"
 #include "PERM_Fct.h"
-
-
-#undef USE_BLISS
-#define USE_TRACES
 
 //
 // The templatized functions
@@ -986,6 +992,7 @@ inline typename std::enable_if<(not use_pairs),void>::type GetGraphFromWeightedM
     }
 }
 
+#ifdef USE_BLISS
 
 template<typename T, typename Tidx_value>
 bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const& WMat)
@@ -1002,6 +1009,8 @@ bliss::Graph GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> c
   GetGraphFromWeightedMatrix_color_adj<T,decltype(f_color),decltype(f_adj),Tidx_value,use_pairs>(WMat, f_color, f_adj);
   return g;
 }
+
+#endif
 
 
 template<typename T, typename Tgr, typename Tidx_value>
