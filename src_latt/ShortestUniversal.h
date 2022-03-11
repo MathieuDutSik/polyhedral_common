@@ -2,8 +2,11 @@
 #define INCLUDE_SHORTEST_UNIVERSAL_H
 
 #include "CVP_NiemeierAlgo.h"
-#include "Shvec_double.h"
 #include "Shvec_exact.h"
+
+# ifdef USE_LIBSHORT
+# include "Shvec_double.h"
+# endif
 
 
 template<typename T, typename Tint>
@@ -32,8 +35,10 @@ resultCVP<T,Tint> CVPVallentinProgram_choice(MyMatrix<T> const& GramMat, MyVecto
   if (NameMeth == "SVexact")
     return CVPVallentinProgram_exact<T,Tint>(GramMat, eV);
   //
+# ifdef USE_LIBSHORT
   if (NameMeth == "SVdouble")
     return CVPVallentinProgram_double<T,Tint>(GramMat, eV);
+#endif
   //
   if (NameMeth == "CVP_N23_24A1")
     return CVP_N23_24A1<T,Tint>(eV);
