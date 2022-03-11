@@ -6,7 +6,7 @@
 #include "MAT_MatrixInt.h"
 #include "Basic_file.h"
 #include "Basic_string.h"
-#include "POLY_LinearProgramming_GLPK.h"
+//#include "POLY_LinearProgramming_GLPK.h"
 
 template<typename T>
 struct LpSolution {

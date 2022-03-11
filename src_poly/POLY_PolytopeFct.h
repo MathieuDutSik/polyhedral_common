@@ -5,6 +5,30 @@
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 
+
+struct GLPKoption {
+  bool UseDouble;
+  bool UseExact;
+  bool UseXcheck;
+};
+
+template<typename T>
+struct LpSolutionSimple {
+  bool PrimalDefined;
+  T OptimalValue;
+  int nbRow;
+  int nbCol;
+  MyVector<T> DirectSolution;
+  MyVector<T> DirectSolutionExt;
+  // Value 0 for not assigned.
+  // Value 1 for "B"
+  // Value 2 for "NF"
+  // Value 3 for "NL"
+  MyVector<int> RowStatus;
+  MyVector<int> ColumnStatus;
+};
+
+
 template<typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const& eMat, Face const& eList)
 {

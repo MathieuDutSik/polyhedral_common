@@ -2,28 +2,7 @@
 #define INCLUDE_POLY_LINEAR_PROGRAMMING_GLPK_H
 
 #include <glpk.h>
-
-template<typename T>
-struct LpSolutionSimple {
-  bool PrimalDefined;
-  T OptimalValue;
-  int nbRow;
-  int nbCol;
-  MyVector<T> DirectSolution;
-  MyVector<T> DirectSolutionExt;
-  // Value 0 for not assigned.
-  // Value 1 for "B"
-  // Value 2 for "NF"
-  // Value 3 for "NL"
-  MyVector<int> RowStatus;
-  MyVector<int> ColumnStatus;
-};
-
-struct GLPKoption {
-  bool UseDouble;
-  bool UseExact;
-  bool UseXcheck;
-};
+#include "POLY_PolytopeFct.h"
 
 /*
   GLPK does not return the unfeasibility proof as opposed to CDD.
