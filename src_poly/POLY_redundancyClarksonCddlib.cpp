@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     using T=mpq_class;
     MyMatrix<T> EXT=ReadMatrix<T>(is);
     //
+#ifdef USE_CDDLIB
     std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(EXT);
     //
     std::ofstream os(argv[2]);
@@ -31,6 +32,10 @@ int main(int argc, char *argv[])
       os << eVal;
     }
     os << "];\n";
+#else
+    std::cerr << "You need to compile this program with USE_CDDLIB\n";
+    throw TerminalException{1};
+#endif
   }
   catch (TerminalException const& e) {
     exit(e.eVal);
