@@ -51,16 +51,6 @@ RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
 ENV EIGEN_PATH /opt/eigen
 
 
-# downloading permlib
-RUN cd /opt && git clone https://github.com/MathieuDutSik/permlib_mod
-ENV PERMLIB_INCDIR /opt/permlib_mod/include
-
-
-# downloading permutalib
-RUN cd /opt && git clone https://github.com/MathieuDutSik/permutalib
-ENV PERMUTALIB_INCLUDE "-I/opt/permutalib/src_gap"
-
-
 # Threading Building Blocks
 RUN apt-get install -y libtbb-dev
 ENV TBB_INCDIR=/usr/include
