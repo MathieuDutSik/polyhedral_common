@@ -81,7 +81,7 @@ ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 
 # flint
-RUN apt-get install -y libflint-dev
+RUN apt-get install -y libflint-dev libntl-dev libmpfr-dev
 ENV FLINT_INCDIR /include
 ENV FLINT_LINK -lflint
 
@@ -119,7 +119,6 @@ ENV NETCDF_CXX_LINK "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX
 
 
 # LINBOX
-RUN apt-get install -y wget libflint-dev libntl-dev libmpfr-dev
 RUN wget https://raw.githubusercontent.com/linbox-team/linbox/master/linbox-auto-install.sh
 RUN chmod +x linbox-auto-install.sh
 RUN ./linbox-auto-install.sh --enable-openblas=yes
@@ -163,7 +162,6 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make al
 
 
 # mpfrc++
-RUN apt-get install -y libmpfr-dev
 ENV MPFR_INCDIR /usr/include
 ENV MPFR_LINK "-lmpfr"
 ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.8"
