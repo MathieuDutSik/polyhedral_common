@@ -301,15 +301,15 @@ void CheckerPairReord(std::vector<T> const& V1, Telt const& g1, std::vector<T> c
   */
 }
 
-template<typename T>
-Face GetFace(int const& nbRow, std::vector<MyVector<T>> const& O, MyMatrix<T> const& TheSpace)
+template<typename T, typename Tmod>
+Face GetFace(int const& nbRow, std::vector<MyVector<Tmod>> const& O, MyMatrix<T> const& TheSpace)
 {
   size_t Osiz = O.size();
   size_t siz = nbRow + Osiz;
   //  std::cerr << "GetFace : nbRow=" << nbRow << "\n";
   Face eFace(siz);
   for (size_t iO=0; iO<Osiz; iO++) {
-    MyVector<T> const& eVect=O[iO];
+    MyVector<T> const& eVect=UniversalVectorConversion<T,Tmod>(O[iO]);
     std::optional<MyVector<T>> eRes1=SolutionIntMat(TheSpace, eVect);
     if (eRes1) {
       //      std::cerr << "Setting true at iO=" << iO << "\n";
@@ -365,8 +365,8 @@ MyMatrix<T> RepresentPermutationAsMatrix(FiniteIsotropicMatrixGroupHelper<T,Telt
 }
 
 
-template<typename T, typename Telt, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thelper::Treturn>::type MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, Thelper const& helper, std::vector<MyVector<T>> const& O, T const& TheMod)
+template<typename T, typename Tmod, typename Telt, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thelper::Treturn>::type MatrixIntegral_GeneratePermutationGroup(std::vector<MyMatrix<T>> const& ListMatrGens, std::vector<MyMatrix<Tmod>> const& ListMatrGensMod, Thelper const& helper, std::vector<MyVector<Tmod>> const& O, T const& TheMod)
 {
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
@@ -382,10 +382,11 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
   int siz=nbRow + Osiz;
-  Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
-  auto TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod);
+  Telt ePermS=Telt(SortingPerm<MyVector<Tmod>,Tidx>(O));
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod,T>(TheMod);
+  auto TheAction=[&](MyVector<Tmod> const& eClass, MyMatrix<Tmod> const& eElt) -> MyVector<Tmod> {
+    MyVector<Tmod> eVect=eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -403,6 +404,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
 #endif
     MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
+    MyMatrix<Tmod> const& eMatrGenMod=ListMatrGensMod[iGen];
     Telt ePermGen=GetPermutationForFiniteMatrixGroup<T,Telt,Thelper>(helper, eMatrGen);
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen << "\n";
@@ -414,16 +416,16 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
     std::cerr << "Timing |v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
 #endif
-    std::vector<MyVector<T>> ListImage(Osiz);
+    std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
     // We keep the more complicate because it shows where most of the runtime is: In computing Oprod.
     for (int iV=0; iV<Osiz; iV++)
-      ListImage[iV] = TheAction(O[iV], eMatrGen);
+      ListImage[iV] = TheAction(O[iV], eMatrGenMod);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
     std::cerr << "Timing |ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
-    Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
+    Telt ePermB=Telt(SortingPerm<MyVector<Tmod>,Tidx>(ListImage));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_4 = std::chrono::system_clock::now();
     std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
@@ -458,10 +460,10 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,typename Thel
     Telt eNewPerm(std::move(v));
 #ifdef DEBUG_MATRIX_GROUP
     for (int iO=0; iO<Osiz; iO++) {
-      MyVector<T> eVect = O[iO];
-      MyVector<T> eVectImg1 = TheAction(eVect, eMatrGen);
+      MyVector<Tmod> eVect = O[iO];
+      MyVector<Tmod> eVectImg1 = TheAction(eVect, eMatrGenMod);
       size_t pos = eNewPerm.at(iO + nbRow_tidx) - nbRow_tidx;
-      MyVector<T> eVectImg2 = O[pos];
+      MyVector<Tmod> eVectImg2 = O[pos];
       if (eVectImg1 != eVectImg2) {
         std::cerr << "  Inconsistency\n";
         std::cerr << "  iGen=" << iGen << " iO=" << iO << "\n";
@@ -546,9 +548,10 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,std::optional
 
 
 
-template<typename T, typename Telt, typename Thelper>
+template<typename T, typename Tmod, typename Telt, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultGeneratePermutationGroup_General<T,Telt>>::type MatrixIntegral_GeneratePermutationGroup(
-           std::vector<MyMatrix<T>> const& ListMatrGens, [[maybe_unused]] Thelper const& helper,
+           std::vector<MyMatrix<T>> const& ListMatrGens, std::vector<MyMatrix<Tmod>> const& ListMatrGensMod,
+           [[maybe_unused]] Thelper const& helper,
            std::vector<MyVector<T>> const& O, T const& TheMod)
 {
 #ifdef DEBUG_MATRIX_GROUP
@@ -564,9 +567,10 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
 #endif
   int siz=Osiz;
   Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
-  auto TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod);
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod,T>(TheMod);
+  auto TheAction=[&](MyVector<Tmod> const& eClass, MyMatrix<Tmod> const& eElt) -> MyVector<Tmod> {
+    MyVector<Tmod> eVect=eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -584,6 +588,7 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
     std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
 #endif
     MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
+    MyMatrix<Tmod> const& eMatrGenMod=ListMatrGensMod[iGen];
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << "\n";
 #endif
@@ -592,16 +597,16 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
     std::chrono::time_point<std::chrono::system_clock> timeB_2 = std::chrono::system_clock::now();
     std::cerr << "Timing |v 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 - timeB_1).count() << "\n";
 #endif
-    std::vector<MyVector<T>> ListImage(Osiz);
+    std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
     // We keep the more complicate because it shows where most of the runtime is: In computing Oprod.
     for (int iV=0; iV<Osiz; iV++)
-      ListImage[iV] = TheAction(O[iV], eMatrGen);
+      ListImage[iV] = TheAction(O[iV], eMatrGenMod);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_3 = std::chrono::system_clock::now();
     std::cerr << "Timing |ListImage|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 - timeB_2).count() << "\n";
 #endif
-    Telt ePermB=Telt(SortingPerm<MyVector<T>,Tidx>(ListImage));
+    Telt ePermB=Telt(SortingPerm<MyVector<Tmod>,Tidx>(ListImage));
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_4 = std::chrono::system_clock::now();
     std::cerr << "Timing |SortingPerm|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 - timeB_3).count() << "\n";
@@ -659,7 +664,7 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::op
            Face const& eFace1, Face const& eFace2)
 {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of MatrixIntegral_Stabilizer 2\n";
+  std::cerr << "Beginning of MatrixIntegral_RepresentativeAction 2\n";
 #endif
   using Telt=typename Tgroup::Telt;
   using Tint=typename Tgroup::Tint;
@@ -675,6 +680,44 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::op
 
 
 
+template<typename T, typename Tmod>
+MyMatrix<Tmod> ModuloReductionMatrix(MyMatrix<T> const& M, T const& TheMod)
+{
+  int n_row = M.rows();
+  int n_col = M.cols();
+  MyMatrix<Tmod> RetMat(n_row, n_col);
+  for (int i=0; i<n_row; i++) {
+    for (int j=0; j<n_col; j++) {
+      T val = ResInt(M(i,j), TheMod);
+      RetMat(i,j) = UniversalScalarConversion<Tmod,T>(val);
+    }
+  }
+  return RetMat;
+}
+
+template<typename T, typename Tmod>
+std::vector<MyMatrix<Tmod>> ModuloReductionStdVectorMatrix(std::vector<MyMatrix<T>> const& ListM, T const& TheMod)
+{
+  std::vector<MyMatrix<Tmod>> ListRetMat;
+  for (auto & M : ListM)
+    ListRetMat.push_back(ModuloReductionMatrix<T,Tmod>(M, TheMod));
+  return ListRetMat;
+}
+
+
+template<typename T, typename Tmod>
+MyVector<Tmod> ModuloReductionVector(MyVector<T> const& V, T const& TheMod)
+{
+  int siz = V.size();
+  MyVector<Tmod> retV(siz);
+  for (int i=0; i<siz; i++) {
+    T val = ResInt(V(i), TheMod);
+    retV(i) = UniversalScalarConversion<Tmod,T>(val);
+  }
+  return retV;
+}
+
+
 
 
 
@@ -683,8 +726,8 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),std::op
 
 
 // The space must be defining a finite index subgroup of T^n
-template<typename T, typename Tgroup, typename Thelper>
-std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace, T const& TheMod)
+template<typename T, typename Tmod, typename Tgroup, typename Thelper>
+std::vector<MyMatrix<T>> LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace, T const& TheMod)
 {
   using Telt = typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
@@ -701,9 +744,10 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
 #endif
   MyMatrix<T> TheSpaceMod=Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpaceMod);
-  std::function<MyVector<T>(MyVector<T> const&,MyMatrix<T> const&)> TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect = eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod);
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod,T>(TheMod);
+  std::function<MyVector<Tmod>(MyVector<Tmod> const&,MyMatrix<Tmod> const&)> TheAction=[&](MyVector<Tmod> const& eClass, MyMatrix<Tmod> const& eElt) -> MyVector<Tmod> {
+    MyVector<Tmod> eVect = eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod_mod);
   };
   // This is the part of the enumeration where we have problems.
   // We have too many vectors to consider whih sinks the algorithm.
@@ -714,10 +758,10 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
   //
   // We could look at the quotient. (Z_d)^n / TheSpace and look for point stabilizers
   // Maybe we can translate to classes easily and 
-  auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& ListMatr) -> std::optional<MyVector<T>> {
+  auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& ListMatrInp) -> std::optional<MyVector<Tmod>> {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
-      for (auto & eGen : ListMatr) {
+      for (auto & eGen : ListMatrInp) {
 	MyVector<T> eVectG=eGen.transpose() * eVect;
         std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpaceMod, eVectG);
 	bool test=CanTestSolutionIntMat(eCan, eVectG);
@@ -726,23 +770,22 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
 	  throw TerminalException{1};
 	}
 	if (!eRes) {
-	  MyVector<T> V=VectorMod(eVect, TheMod);
 #ifdef DEBUG_MATRIX_GROUP
           std::cerr << "i=" << i << "  eVect=" << StringVectorGAP(eVect) << "\n";
-	  std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #endif
-	  return V;
+	  return ModuloReductionVector<T,Tmod>(eVect, TheMod);
 	}
       }
     }
     return {};
   };
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+  std::vector<MyMatrix<Tmod>> ListMatrRetMod = ModuloReductionStdVectorMatrix<T,Tmod>(ListMatrRet, TheMod);
   while(true) {
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-    std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
+    std::optional<MyVector<Tmod>> opt = IsStabilizing(ListMatrRet);
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "Timing |IsStabilizing|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -753,8 +796,8 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
 #endif
       break;
     }
-    const MyVector<T>& V = *opt;
-    std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+    const MyVector<Tmod>& V = *opt;
+    std::vector<MyVector<Tmod>> O = OrbitComputation(ListMatrRetMod, V, TheAction);
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "Timing |O|=" << O.size() << "\n";
 #endif
@@ -763,19 +806,40 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> cons
     std::cerr << "Timing |OrbitComputation|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
 
-    Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
+    Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Tmod,Telt,Thelper>(ListMatrRet, ListMatrRetMod, helper, O, TheMod);
 
 
     Tgroup GRPwork(eret.ListPermGens, eret.siz);
-    Face eFace = GetFace(eret.nbRow, O, TheSpaceMod);
+    Face eFace = GetFace<T,Tmod>(eret.nbRow, O, TheSpaceMod);
 #ifdef MATRIX_GROUP_DIAGNOSTICS
     std::cerr << "ModStabilizer TheMod=" << TheMod << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
 
     ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPwork, helper, eFace);
+    ListMatrRetMod = ModuloReductionStdVectorMatrix<T,Tmod>(ListMatrRet, TheMod);
   }
   return ListMatrRet;
 }
+
+
+template<typename T, typename Tgroup, typename Thelper>
+std::vector<MyMatrix<T>> LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace, T const& TheMod)
+{
+  T max_size = (TheMod-1) * (TheMod - 1) * TheSpace.rows();
+  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+    return LinearSpace_ModStabilizer_Tmod<T,uint8_t,Tgroup,Thelper>(ListMatr, helper, TheSpace, TheMod);
+  }
+  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+    return LinearSpace_ModStabilizer_Tmod<T,uint16_t,Tgroup,Thelper>(ListMatr, helper, TheSpace, TheMod);
+  }
+  if (max_size < T(std::numeric_limits<uint32_t>::max())) {
+    return LinearSpace_ModStabilizer_Tmod<T,uint32_t,Tgroup,Thelper>(ListMatr, helper, TheSpace, TheMod);
+  }
+  std::cerr << "Failed to find a matching arithmetic type. Quite unlikely objectively\n";
+  throw TerminalException{1};
+}
+
+
 
 
 template<typename T>
@@ -785,12 +849,10 @@ using ResultTestModEquivalence = std::pair<std::vector<MyMatrix<T>>, MyMatrix<T>
   We need a number of separate functions:
   ---The list of matrices has to be separated from the helper data like the EXTfaithful
   ---Function that creates the permutation representation given the ListMatrMat and the helper
-  ---A function for computing the 
-
-
+  ---A function for computing the
  */
-template<typename T, typename Tgroup, typename Thelper>
-std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2, T const& TheMod)
+template<typename T, typename Tmod, typename Tgroup, typename Thelper>
+std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2, T const& TheMod)
 {
   using Telt=typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
@@ -808,44 +870,44 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
   MyMatrix<T> TheSpace1Mod = Concatenate(TheSpace1, ModSpace);
   MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+  std::vector<MyMatrix<Tmod>> ListMatrRetMod = ModuloReductionStdVectorMatrix<T,Tmod>(ListMatrRet, TheMod);
   MyMatrix<T> eElt=IdentityMat<T>(n);
-  auto TheAction=[&](MyVector<T> const& eClass, MyMatrix<T> const& eElt) -> MyVector<T> {
-    MyVector<T> eVect=eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod);
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod,T>(TheMod);
+  auto TheAction=[&](MyVector<Tmod> const& eClass, MyMatrix<Tmod> const& eElt) -> MyVector<Tmod> {
+    MyVector<Tmod> eVect=eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod_mod);
   };
-  auto IsEquiv=[&](MyMatrix<T> const& eEquiv) -> std::optional<MyVector<T>> {
+  auto IsEquiv=[&](MyMatrix<T> const& eEquiv) -> std::optional<MyVector<Tmod>> {
     MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
     for (int i=0; i<n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
       std::optional<MyVector<T>> eRes = SolutionIntMat(TheSpace2Mod, eVect);
       if (!eRes) {
-	MyVector<T> V = VectorMod(eVect, TheMod);
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "   i=" << i << " eVect=" << StringVectorGAP(eVect) << "\n";
-        std::cerr << "   V=" << StringVectorGAP(V) << "\n";
         std::cerr << "   eEquiv=\n";
         WriteMatrix(std::cerr, eEquiv);
 #endif
-	return V;
+	return ModuloReductionVector<T,Tmod>(eVect, TheMod);
       }
     }
     return {};
   };
-  auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& ListMat) -> std::optional<MyVector<T>> {
+  auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& ListMat) -> std::optional<MyVector<Tmod>> {
     for (auto &eGen : ListMat) {
       MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i=0; i<n; i++) {
         MyVector<T> eVect=GetMatrixRow(TheSpace2img, i);
         std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2Mod, eVect);
         if (!eRes)
-          return VectorMod(eVect, TheMod);
+          return ModuloReductionVector<T,Tmod>(eVect, TheMod);
       }
     }
     return {};
   };
   while(true) {
-    std::optional<MyVector<T>> test1=IsEquiv(eElt);
-    std::optional<MyVector<T>> test2=IsStabilizing(ListMatrRet);
+    std::optional<MyVector<Tmod>> test1=IsEquiv(eElt);
+    std::optional<MyVector<Tmod>> test2=IsStabilizing(ListMatrRet);
     if (!test1 && !test2) {
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "eElt and GRPwork are correct. Exiting\n";
@@ -854,18 +916,18 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       return res;
     }
     if (test1) {
-      MyVector<T> const& V = *test1;
+      MyVector<Tmod> const& V = *test1;
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "V =";
       WriteVector(std::cerr, V);
 #endif
-      std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+      std::vector<MyVector<Tmod>> O = OrbitComputation(ListMatrRetMod, V, TheAction);
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "|O|=" << O.size() << "\n";
 #endif
 
 
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Tmod,Telt,Thelper>(ListMatrRet, ListMatrRetMod, helper, O, TheMod);
 #ifdef DEBUG_MATRIX_GROUP
       if constexpr(has_determining_ext<Thelper>::value) {
         for (size_t iGen=0; iGen<ListMatrRet.size(); iGen++) {
@@ -889,8 +951,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       std::cerr << "eElt=\n";
       WriteMatrix(std::cerr, eElt);
 #endif
-      Face eFace1 = GetFace(eret.nbRow, O, TheSpace1workMod);
-      Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
+      Face eFace1 = GetFace<T,Tmod>(eret.nbRow, O, TheSpace1workMod);
+      Face eFace2 = GetFace<T,Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1) << " eFace2=" << StringFace(eFace2) << "\n";
 #endif
@@ -911,7 +973,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       }
       MyMatrix<T> const& M = *opt;
 #ifdef DEBUG_MATRIX_GROUP
-      Treturn fret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>({M}, helper, O, TheMod);
+      MyMatrix<Tmod> Mmod = ModuloReductionMatrix<T,Tmod>(M, TheMod);
+      Treturn fret = MatrixIntegral_GeneratePermutationGroup<T,Tmod,Telt,Thelper>({M}, {Mmod}, helper, O, TheMod);
       if (fret.ListPermGens.size() != 1) {
         std::cerr << "ListPermGens does not have the right length\n";
         throw TerminalException{1};
@@ -935,25 +998,42 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vecto
       }
 #endif
       ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
+      ListMatrRetMod = ModuloReductionStdVectorMatrix<T,Tmod>(ListMatrRet, TheMod);
       eElt = eElt * M;
     } else {
-      MyVector<T> const& V = *test2;
-      std::vector<MyVector<T>> O = OrbitComputation(ListMatrRet, V, TheAction);
+      MyVector<Tmod> const& V = *test2;
+      std::vector<MyVector<Tmod>> O = OrbitComputation(ListMatrRetMod, V, TheAction);
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "|O|=" << O.size() << "\n";
 #endif
-      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Telt,Thelper>(ListMatrRet, helper, O, TheMod);
+      Treturn eret = MatrixIntegral_GeneratePermutationGroup<T,Tmod,Telt,Thelper>(ListMatrRet, ListMatrRetMod, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
-      Face eFace2 = GetFace(eret.nbRow, O, TheSpace2Mod);
+      Face eFace2 = GetFace<T,Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef MATRIX_GROUP_DIAGNOSTICS
       std::cerr << "ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size() << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count() << "\n";
 #endif
       ListMatrRet = MatrixIntegral_Stabilizer<T,Tgroup,Thelper>(eret, GRPperm, helper, eFace2);
+      ListMatrRetMod = ModuloReductionStdVectorMatrix<T,Tmod>(ListMatrRet, TheMod);
     }
   }
 }
 
-
+template<typename T, typename Tgroup, typename Thelper>
+std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const& ListMatr, Thelper const& helper, MyMatrix<T> const& TheSpace1, MyMatrix<T> const& TheSpace2, T const& TheMod)
+{
+  T max_size = (TheMod-1) * (TheMod - 1) * TheSpace1.rows();
+  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+    return LinearSpace_ModEquivalence_Tmod<T,uint8_t,Tgroup,Thelper>(ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+  }
+  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+    return LinearSpace_ModEquivalence_Tmod<T,uint16_t,Tgroup,Thelper>(ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+  }
+  if (max_size < T(std::numeric_limits<uint32_t>::max())) {
+    return LinearSpace_ModEquivalence_Tmod<T,uint32_t,Tgroup,Thelper>(ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+  }
+  std::cerr << "Failed to find a matching arithmetic type. Quite unlikely objectively\n";
+  throw TerminalException{1};
+}
 
 
 template<typename T, typename Tgroup, typename Thelper>
