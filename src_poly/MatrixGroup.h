@@ -552,7 +552,7 @@ template<typename T, typename Tmod, typename Telt, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultGeneratePermutationGroup_General<T,Telt>>::type MatrixIntegral_GeneratePermutationGroup(
            std::vector<MyMatrix<T>> const& ListMatrGens, std::vector<MyMatrix<Tmod>> const& ListMatrGensMod,
            [[maybe_unused]] Thelper const& helper,
-           std::vector<MyVector<T>> const& O, T const& TheMod)
+           std::vector<MyVector<Tmod>> const& O, T const& TheMod)
 {
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup 2\n";
@@ -566,7 +566,7 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
   std::cerr << "Osiz=" << Osiz << "\n";
 #endif
   int siz=Osiz;
-  Telt ePermS=Telt(SortingPerm<MyVector<T>,Tidx>(O));
+  Telt ePermS=Telt(SortingPerm<MyVector<Tmod>,Tidx>(O));
   Tmod TheMod_mod = UniversalScalarConversion<Tmod,T>(TheMod);
   auto TheAction=[&](MyVector<Tmod> const& eClass, MyMatrix<Tmod> const& eElt) -> MyVector<Tmod> {
     MyVector<Tmod> eVect=eElt.transpose() * eClass;
@@ -587,7 +587,7 @@ inline typename std::enable_if<(not has_determining_ext<Thelper>::value),ResultG
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
 #endif
-    MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
+    //    MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
     MyMatrix<Tmod> const& eMatrGenMod=ListMatrGensMod[iGen];
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << "\n";
