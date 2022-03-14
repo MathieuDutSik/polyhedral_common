@@ -10,6 +10,7 @@
 #include "COMB_Combinatorics.h"
 #include "MatrixGroup.h"
 #include "POLY_LinearProgramming.h"
+#include "POLY_LinearProgramming_GLPK.h"
 #include "Parallel_Classes.h"
 #include "POLY_PolytopeInt.h"
 #include "LatticeDefinitions.h"
