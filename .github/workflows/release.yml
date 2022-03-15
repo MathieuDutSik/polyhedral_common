@@ -73,6 +73,11 @@ jobs:
           ls basic_common_cpp
           echo "After ls basic_common_cpp"
 
+          wget https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+          tar -vxzf eigen-3.3.9.tar.gz
+          mv eigen-3.3.9 /home/runner/work/opt/eigen
+          echo "After eigen-3.3.9 set up"
+
           mkdir basic_common_cpp/ExternalLib/nauty/build
           cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
           echo "After nauty compilation"
