@@ -13,14 +13,15 @@ std::vector<size_t> Convert_T_To_Set(T const& val)
   size_t pos = 0;
   std::vector<size_t> V;
   T valWork = val;
+  T two = 2;
   while(true) {
     if (valWork == 0)
       break;
-    T res = ResInt(valWork, 2);
+    T res = ResInt(valWork, two);
     if (res == 1) {
       V.push_back(pos);
     }
-    valWork = (valWork - res) / 2;
+    valWork = (valWork - res) / two;
     pos++;
   }
   return V;
