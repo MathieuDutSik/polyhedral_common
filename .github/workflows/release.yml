@@ -65,7 +65,11 @@ jobs:
       - name: Build and release
         run: |
           ls
+          echo "After ls"
+          pwd
+          echo "After pwd"
           ls basic_common_cpp
+          echo "After ls basic_common_cpp"
           mkdir basic_common_cpp/ExternalLib/nauty/build
           cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install
           cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
