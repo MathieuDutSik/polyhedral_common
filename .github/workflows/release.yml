@@ -22,7 +22,7 @@ jobs:
       TBB_LINK: "-ltbb"
       GSL_INCDIR: /usr/include
       GSL_C_LINK: "-lgsl -lgslcblas"
-      GLPK_INCLUDE "-I/usr/include"
+      GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
       FLINT_LINK: "-lflint"
