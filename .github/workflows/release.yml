@@ -22,25 +22,18 @@ jobs:
       TBB_LINK: "-ltbb"
       GSL_INCDIR: /usr/include
       GSL_C_LINK: "-lgsl -lgslcblas"
-      GLPK_PATH: /usr
-      GLPK_INCLUDE "-I$GLPK_PATH/include"
-      GLPK_LINK: "-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
+      GLPK_INCLUDE "-I/usr/include"
+      GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
       FLINT_LINK: "-lflint"
-      CDDLIB_PATH: /opt/cddlib
-      CDDLIB_INCLUDE: "-I$CDDLIB_PATH/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
-      CDDLIB_GMP_LINK: "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
-      NETCDF_CXX_PATH: "/opt/netcdf-cxx4-4.3.1"
-      NETCDF_C_PATH: "/opt/netcdf-4.8.0"
-      NETCDF_CXX_ALLINC: "-I$NETCDF_CXX_PATH/include -I$NETCDF_C_PATH/include"
-      NETCDF_CXX_LINK: "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX_PATH/lib"
-      LINBOX_PATH: /opt/linbox
-      LINBOX_INCLUDE: "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
-      LINBOX_LINK: "-fopenmp -lntl -lmpfr -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+      CDDLIB_INCLUDE: "-I/opt/cddlib/include/cddlib"
+      CDDLIB_DOUBLE_LINK: "-L/opt/cddlib/lib  -lcdd -Wl,-rpath,/opt/cddlib/lib"
+      CDDLIB_GMP_LINK: "-L/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/opt/cddlib/lib"
+      NETCDF_CXX_ALLINC: "-I/opt/netcdf-cxx4-4.3.1/include -I/opt/netcdf-cxx4-4.3.1/include"
+      NETCDF_CXX_LINK: "-L/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/opt/netcdf-cxx4-4.3.1/lib"
       NAUTY_PATH: /opt/nauty
-      NAUTY_INCLUDE: "-I$NAUTY_PATH/include"
-      NAUTY_LINK: "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
+      NAUTY_INCLUDE: "-I/opt/nauty/include"
+      NAUTY_LINK: "-L/opt/nauty/lib -lnauty -Wl,-rpath,/opt/nauty/lib"
 
     steps:
       - name: Get the version
