@@ -66,7 +66,7 @@ jobs:
         run: |
           ls
           ls basic_common_cpp
-          cd basic_common_cpp/ExternalLib/nauty && mkdir build
+          mkdir basic_common_cpp/ExternalLib/nauty/build
           cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install
           cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
       - uses: papeloto/action-zip@v1
