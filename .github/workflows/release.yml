@@ -6,8 +6,8 @@ name: release-flow
 
 on:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+*"
+    branches:
+    - master
 
 jobs:
   build-linux:
@@ -73,13 +73,13 @@ jobs:
           cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
       - uses: papeloto/action-zip@v1
         with:
-          files: target/release/kmanb
-          dest: kmanb-linux.zip
+          files: target/release/LORENTZ_FundDomain_AllcockEdgewalk
+          dest: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: kmanb-linux.zip
-          asset_name: kmanb-linux-$VERSION.zip
+          file: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
+          asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-$VERSION.zip
           tag: ${{ github.ref }}
           overwrite: true
