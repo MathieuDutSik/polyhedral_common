@@ -80,7 +80,7 @@ jobs:
           pwd
           echo "After pwd"
 
-          cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
+          cd src_lorentzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
           echo "After compilation"
       - uses: papeloto/action-zip@v1
         with:
