@@ -17,7 +17,7 @@ jobs:
       GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
       BOOST_INCDIR: "/usr/include"
       BOOST_LINK: "-lboost_serialization"
-      EIGEN_PATH: /opt/eigen
+      EIGEN_PATH: /home/runner/work/opt/eigen
       TBB_INCDIR: /usr/include
       TBB_LINK: "-ltbb"
       GSL_INCDIR: /usr/include
@@ -26,14 +26,14 @@ jobs:
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
       FLINT_LINK: "-lflint"
-      CDDLIB_INCLUDE: "-I/opt/cddlib/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L/opt/cddlib/lib  -lcdd -Wl,-rpath,/opt/cddlib/lib"
-      CDDLIB_GMP_LINK: "-L/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/opt/cddlib/lib"
-      NETCDF_CXX_ALLINC: "-I/opt/netcdf-cxx4-4.3.1/include -I/opt/netcdf-cxx4-4.3.1/include"
-      NETCDF_CXX_LINK: "-L/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/opt/netcdf-cxx4-4.3.1/lib"
-      NAUTY_PATH: /opt/nauty
-      NAUTY_INCLUDE: "-I/opt/nauty/include"
-      NAUTY_LINK: "-L/opt/nauty/lib -lnauty -Wl,-rpath,/opt/nauty/lib"
+      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
+      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      NETCDF_CXX_ALLINC: "-I/home/runner/work/opt/netcdf-cxx4-4.3.1/include -I/home/runner/work/opt/netcdf-cxx4-4.3.1/include"
+      NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty -Wl,-rpath,/home/runner/work/opt/nauty/lib"
 
     steps:
       - name: Get the version
@@ -66,13 +66,22 @@ jobs:
         run: |
           ls
           echo "After ls"
+
           pwd
           echo "After pwd"
+
           ls basic_common_cpp
           echo "After ls basic_common_cpp"
+
           mkdir basic_common_cpp/ExternalLib/nauty/build
-          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install
+          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
+          echo "After nauty compilation"
+
+          pwd
+          echo "After pwd"
+
           cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
+          echo "After compilation"
       - uses: papeloto/action-zip@v1
         with:
           files: target/release/LORENTZ_FundDomain_AllcockEdgewalk
