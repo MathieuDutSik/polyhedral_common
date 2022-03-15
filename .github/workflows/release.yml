@@ -46,11 +46,11 @@ jobs:
           override: true
       - name: Install Dependencies
         run: |
-          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
-          sudo apt-get install -y wget emacs joe
+          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
+          sudo apt-get install -y wget
           sudo apt-get install -y g++-11 clang-12
           sudo apt-get install -y g++ gcc gfortran
-          sudo apt-get install -y git cmake
+          sudo apt-get install -y cmake
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
@@ -62,6 +62,7 @@ jobs:
 
       - name: Build and release
         run: |
+          ls
           cd basic_common_cpp/ExternalLib/nauty && mkdir build
           cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install
           cd src_lorenzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
