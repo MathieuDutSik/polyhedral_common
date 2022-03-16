@@ -1364,7 +1364,17 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
     //    Tgroup GRPlin = LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
     int nRow=Subspace1.rows();
     Tidx nRow_tidx = nRow;
+#ifdef TRACK_INFOS_LOG
+    std::string strListGen = "[";
+    bool IsFirst=true;
+#endif
     for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+#ifdef TRACK_INFOS_LOG
+      if (!IsFirst)
+        strListGen += ",";
+      IsFirst=false;
+      strListGen += std::to_string(eGen);
+#endif
       //      std::cerr << "eGen=" << eGen << "\n";
       //      bool test = GRPlin.isin(eGen);
       //      std::cerr << "test=" << test << "\n";
@@ -1384,6 +1394,11 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
       MyMatrix<T> const& eGen1 = *opt;
       LGen1.push_back(eGen1);
     }
+#ifdef TRACK_INFOS_LOG
+    strListGen += "]";
+    std::string strGroup = "Group(" + strListGen + ")";
+    std::cout << "rec(group:=" << strGroup << "),\n";
+#endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2;
