@@ -37,8 +37,8 @@ jobs:
 #      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty_shared -Wl,-rpath,/home/runner/work/opt/nauty/lib"
 
     steps:
-      - name: Get the version
-        id: get_version
+#      - name: Get the version
+#        id: get_version
 #        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
       - uses: actions/checkout@v2
         with:
