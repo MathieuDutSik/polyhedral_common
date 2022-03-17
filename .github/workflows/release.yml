@@ -89,7 +89,7 @@ jobs:
           echo "After compilation"
       - uses: papeloto/action-zip@v1
         with:
-          files: target/release/LORENTZ_FundDomain_AllcockEdgewalk
+          files: src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
           dest: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
