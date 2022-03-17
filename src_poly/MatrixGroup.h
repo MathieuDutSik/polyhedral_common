@@ -41,13 +41,14 @@ T LinearSpace_GetDivisor(MyMatrix<T> const& TheSpace)
   T TheDet=T_abs(DeterminantMat(TheSpace));
   T eDiv=1;
   int n=TheSpace.rows();
+  CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpace);
   while(true) {
     bool IsOK=true;
     for (int i=0; i<n; i++)
       if (IsOK) {
 	MyVector<T> eVect=ZeroVector<T>(n);
 	eVect(i)=eDiv;
-	bool test=SolutionIntMat(TheSpace, eVect).has_value();
+        bool test=CanTestSolutionIntMat(eCan, eVect);
 	if (!test)
 	  IsOK=false;
       }
@@ -308,11 +309,11 @@ Face GetFace(int const& nbRow, std::vector<MyVector<Tmod>> const& O, MyMatrix<T>
   size_t siz = nbRow + Osiz;
   //  std::cerr << "GetFace : nbRow=" << nbRow << "\n";
   Face eFace(siz);
+  CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpace);
   for (size_t iO=0; iO<Osiz; iO++) {
     MyVector<T> const& eVect=UniversalVectorConversion<T,Tmod>(O[iO]);
-    std::optional<MyVector<T>> eRes1=SolutionIntMat(TheSpace, eVect);
-    if (eRes1) {
-      //      std::cerr << "Setting true at iO=" << iO << "\n";
+    bool test=CanTestSolutionIntMat(eCan, eVect);
+    if (test) {
       eFace[nbRow + iO]=1;
     }
   }
@@ -763,13 +764,8 @@ std::vector<MyMatrix<T>> LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>>
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
       for (auto & eGen : ListMatrInp) {
 	MyVector<T> eVectG=eGen.transpose() * eVect;
-        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpaceMod, eVectG);
 	bool test=CanTestSolutionIntMat(eCan, eVectG);
-	if (test != eRes.has_value()) {
-	  std::cerr << "Inconsistency of result between two SolutionIntMat functions\n";
-	  throw TerminalException{1};
-	}
-	if (!eRes) {
+	if (!test) {
 #ifdef DEBUG_MATRIX_GROUP
           std::cerr << "i=" << i << "  eVect=" << StringVectorGAP(eVect) << "\n";
 #endif
@@ -877,12 +873,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(std::
     MyVector<Tmod> eVect=eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
+  CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpace2Mod);
   auto IsEquiv=[&](MyMatrix<T> const& eEquiv) -> std::optional<MyVector<Tmod>> {
     MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
     for (int i=0; i<n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
-      std::optional<MyVector<T>> eRes = SolutionIntMat(TheSpace2Mod, eVect);
-      if (!eRes) {
+      bool test=CanTestSolutionIntMat(eCan, eVect);
+      if (!test) {
 #ifdef DEBUG_MATRIX_GROUP
         std::cerr << "   i=" << i << " eVect=" << StringVectorGAP(eVect) << "\n";
         std::cerr << "   eEquiv=\n";
@@ -898,8 +895,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(std::
       MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i=0; i<n; i++) {
         MyVector<T> eVect=GetMatrixRow(TheSpace2img, i);
-        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2Mod, eVect);
-        if (!eRes)
+        bool test=CanTestSolutionIntMat(eCan, eVect);
+        if (!test)
           return ModuloReductionVector<T,Tmod>(eVect, TheMod);
       }
     }
@@ -1046,13 +1043,14 @@ std::vector<MyMatrix<T>> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const& 
   //  std::cerr << "\n";
   std::cerr << "det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
 #endif
+  CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpace);
   auto IsStabilizing=[&](std::vector<MyMatrix<T>> const& LMat) -> bool {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace, i);
       for (auto & eGen : LMat) {
 	MyVector<T> eVectG=eGen.transpose() * eVect;
-        std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace, eVectG);
-	if (!eRes) {
+        bool test=CanTestSolutionIntMat(eCan, eVectG);
+	if (!test) {
 	  return false;
 	}
       }
@@ -1127,12 +1125,13 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence(std::vector<MyMatrix<T>> cons
     std::cerr << " " << eVal;
   std::cerr << "\n";
 #endif
+  CanSolIntMat<T> eCan=ComputeCanonicalFormFastReduction(TheSpace2);
   auto IsEquivalence=[&](MyMatrix<T> const& eEquiv) -> bool {
     for (int i=0; i<n; i++) {
       MyVector<T> eVect=GetMatrixRow(TheSpace1, i);
       MyVector<T> eVectG=eEquiv.transpose() * eVect;
-      std::optional<MyVector<T>> eRes=SolutionIntMat(TheSpace2, eVectG);
-      if (!eRes)
+      bool test=CanTestSolutionIntMat(eCan, eVectG);
+      if (!test)
 	return false;
     }
     return true;
