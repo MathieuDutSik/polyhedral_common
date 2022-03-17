@@ -33,7 +33,7 @@ jobs:
       NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
       NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
-      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/nauty_static.a"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
 #      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty_shared -Wl,-rpath,/home/runner/work/opt/nauty/lib"
 
     steps:
