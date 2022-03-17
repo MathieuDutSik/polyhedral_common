@@ -96,6 +96,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
-          asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-$VERSION.zip
+          asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-FINAL.zip
           tag: ${{ github.ref }}
           overwrite: true
