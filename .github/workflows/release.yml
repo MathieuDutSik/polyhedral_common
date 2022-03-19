@@ -16,7 +16,8 @@ jobs:
       GMP_INCDIR: /usr/include
       GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
       BOOST_INCDIR: "/usr/include"
-      BOOST_LINK: "-lboost_serialization"
+#      BOOST_LINK: "-lboost_serialization"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
       EIGEN_PATH: /home/runner/work/opt/eigen
       TBB_INCDIR: /usr/include
       TBB_LINK: "-ltbb"
@@ -33,12 +34,13 @@ jobs:
       NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
       NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
-      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty -Wl,-rpath,/home/runner/work/opt/nauty/lib"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+#      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty_shared -Wl,-rpath,/home/runner/work/opt/nauty/lib"
 
     steps:
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+#      - name: Get the version
+#        id: get_version
+#        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -77,6 +79,7 @@ jobs:
           cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
           echo "After nauty compilation"
 
+          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
           wget https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
           tar -vxzf eigen-3.3.9.tar.gz
           mv eigen-3.3.9 /home/runner/work/opt/eigen
@@ -85,17 +88,17 @@ jobs:
           pwd
           echo "After pwd"
 
-          cd src_lorentzian && make && strip LORENTZ_FundDomain_AllcockEdgewalk
+          cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk
           echo "After compilation"
       - uses: papeloto/action-zip@v1
         with:
-          files: target/release/LORENTZ_FundDomain_AllcockEdgewalk
+          files: src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
           dest: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
-          asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-$VERSION.zip
+          asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-FINAL.zip
           tag: ${{ github.ref }}
           overwrite: true
