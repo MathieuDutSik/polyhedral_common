@@ -199,7 +199,7 @@ ResultReductionIndefinite<T,Tint> ComputeReductionIndefinite(MyMatrix<T> const& 
       return {std::move(B), std::move(Mwork)};
     }
     T norm = get_norm(eRes.Mred);
-    std::cerr << "norm=" << norm << " iter_no_improv=" << iter_no_improv << "\n";
+    std::cerr << "norm=" << norm << " norm_work=" << norm_work << " iter_no_improv=" << iter_no_improv << "\n";
     if (norm >= norm_work) {
       iter_no_improv++;
       if (limit_iter == iter_no_improv)

@@ -6,7 +6,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_RedundancyElimination.h"
 #include "POLY_PolytopeInt.h"
-#include "POLY_lrslib.h"
+#include "POLY_DirectDualDesc.h"
 #include "coxeter_dynkin.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Indefinite_LLL.h"
@@ -923,31 +923,46 @@ bool is_FundPoly_LRS(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<
     for (size_t i_col=0; i_col<n_col; i_col++)
       FAC(i_root, i_col) = e_gv(i_col);
   }
-  MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
   bool IsFiniteCovolume = true;
-  bool IsFirst = true;
   size_t n_iter = 0;
-  std::unordered_map<Tint,int> map;
-  auto f=[&](Tint* out) -> bool {
-    if (!IsFirst) {
-      n_iter++;
-      MyVector<Tint> V(n_col);
-      for (size_t i_col=0; i_col<n_col; i_col++)
-        V(i_col) = out[i_col+1];
-      Tint norm = V.dot(Vtot.G * V);
-      MyVector<Tint> Vred = RemoveFractionVector(V);
-      Tint norm_red = Vred.dot(Vtot.G * Vred);
-      std::cerr << "V=" << StringVectorGAP(Vred) << " norm=" << norm_red << "\n";
-      map[norm]++;
-      if (norm > 0) {
-        IsFiniteCovolume = false;
-        return false;
+  std::unordered_map<T,int> map;
+  if (Vtot.DualDescProg == "lrs_iterate") {
+    MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
+    bool IsFirst = true;
+    MyVector<Tint> V(n_col);
+    auto f=[&](Tint* out) -> bool {
+      if (!IsFirst) {
+        n_iter++;
+        for (size_t i_col=0; i_col<n_col; i_col++)
+          V(i_col) = out[i_col+1];
+        T norm = UniversalScalarConversion<T,Tint>(V.dot(Vtot.G * V));
+        map[norm]++;
+        if (norm > 0) {
+          IsFiniteCovolume = false;
+          return false;
+        }
       }
-    }
-    IsFirst=false;
-    return true;
-  };
-  lrs::Kernel_DualDescription_cond(FACwork, f);
+      IsFirst=false;
+      return true;
+    };
+    lrs::Kernel_DualDescription_cond(FACwork, f);
+  } else {
+    MyMatrix<T> FAC_T = UniversalMatrixConversion<T,Tint>(FAC);
+    vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
+    auto look_for_vector=[&]() -> void {
+      for (auto & eFace : ListIncd) {
+        n_iter++;
+        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+        T norm = V.dot(Vtot.G_T * V);
+        map[norm]++;
+        if (norm > 0) {
+          IsFiniteCovolume = false;
+          return;
+        }
+      }
+    };
+    look_for_vector();
+  }
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter << " |is_FundPoly_LRS|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
   std::cerr << "norm multiplicities =";
