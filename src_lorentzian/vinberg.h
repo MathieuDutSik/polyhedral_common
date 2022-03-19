@@ -1373,7 +1373,8 @@ void FindRoots_Kernel(const VinbergTot<T,Tint>& Vtot, F f_exit)
       for (auto & eRoot : ListRoot) {
         WriteVector(std::cerr, eRoot);
       }
-      std::cerr << "After insert |ListRoot|=" << ListRoot.size() << "\n";
+      int rnk = RankMat(MatrixFromVectorFamily(ListRoot));
+      std::cerr << "After insert |ListRoot|=" << ListRoot.size() << " rnk=" << rnk << " dim=" << Vtot.G.rows() << "\n";
       ListRoot = ReduceListRoot(ListRoot);
       std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
       FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
