@@ -215,6 +215,7 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& O
 
 template<typename T, typename Tint>
 struct VinbergTot {
+  std::string DualDescProg;
   MyMatrix<Tint> G;
   MyMatrix<T> G_T;
   MyVector<Tint> v0;
@@ -287,7 +288,7 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0, std::vector<Tint> const& root_lengths)
+VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0, std::vector<Tint> const& root_lengths, std::string const& DualDescProg)
 {
   int n=G.rows();
   // Computing the complement of the space.
@@ -354,7 +355,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (auto & eVal : root_lengths)
     std::cerr << " " << eVal;
   std::cerr << "\n";
-  return {G, G_T, v0, V_i, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
+  return {DualDescProg, G, G_T, v0, V_i, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
 
@@ -379,7 +380,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& root_lengths)
+VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& root_lengths, std::string const& DualDescProg)
 {
   MyVector<Tint> v0 = GetV0_vector<T,Tint>(G);
   std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
@@ -387,7 +388,7 @@ VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& r
   std::vector<Tint> root_lengths_i;
   for (auto & eN : root_lengths)
     root_lengths_i.push_back(UniversalScalarConversion<Tint,T>(eN));
-  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths_i);
+  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths_i, DualDescProg);
 }
 
 
@@ -864,26 +865,43 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
     for (size_t i_col=0; i_col<n_col; i_col++)
       FAC(i_root, i_col) = e_gv(i_col);
   }
-  MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
-  bool IsFirst = true;
   std::optional<MyVector<Tint>> opt;
   size_t n_iter = 0;
-  auto f=[&](Tint* out) -> bool {
-    if (!IsFirst) {
-      n_iter++;
-      MyVector<Tint> V(n_col);
-      for (size_t i_col=0; i_col<n_col; i_col++)
-        V(i_col) = out[i_col+1];
-      Tint scal = V.dot(Vtot.G * V);
-      if (scal <= 0) {
-        opt = V;
-        return false;
+  if (Vtot.DualDescProg == "lrs_iterate") {
+    MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
+    bool IsFirst = true;
+    MyVector<Tint> V(n_col);
+    auto f=[&](Tint* out) -> bool {
+      if (!IsFirst) {
+        n_iter++;
+        for (size_t i_col=0; i_col<n_col; i_col++)
+          V(i_col) = out[i_col+1];
+        Tint scal = V.dot(Vtot.G * V);
+        if (scal <= 0) {
+          opt = V;
+          return false;
+        }
       }
-    }
-    IsFirst=false;
-    return true;
-  };
-  lrs::Kernel_DualDescription_cond(FACwork, f);
+      IsFirst=false;
+      return true;
+    };
+    lrs::Kernel_DualDescription_cond(FACwork, f);
+  } else {
+    MyMatrix<T> FAC_T = UniversalMatrixConversion<T,Tint>(FAC);
+    vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
+    auto look_for_vector=[&]() -> void {
+      for (auto & eFace : ListIncd) {
+        n_iter++;
+        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+        T scal = V.dot(Vtot.G_T * V);
+        if (scal <= 0) {
+          opt = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
+          return;
+        }
+      }
+    };
+    look_for_vector();
+  }
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   bool test=opt.has_value();
   std::cerr << "has found vertex=" << test << " n_iter=" << n_iter << " |GetOneInteriorVertex|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
@@ -1422,6 +1440,7 @@ FullNamelist NAMELIST_GetStandard_VINBERG()
   ListStringValues1["FileLorMat"]="the lorentzian matrix used";
   ListStringValues1["FileV0"]="the file for the initial vector v0. Put compute if you want to compute it";
   ListStringValues1["OptionNorms"]="possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["DualDescProg"]="lrs_iterate";
   ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
   SingleBlock BlockPROC;
@@ -1448,6 +1467,7 @@ void MainFunctionVinberg(FullNamelist const& eFull)
   }
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
+  std::string DualDescProg=BlockPROC.ListStringValues.at("DualDescProg");
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::vector<Tint> root_lengths;
@@ -1467,7 +1487,7 @@ void MainFunctionVinberg(FullNamelist const& eFull)
   }
   std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
   //
-  VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G_i, v0, root_lengths);
+  VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G_i, v0, root_lengths, DualDescProg);
   std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
   DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G_i);
   //

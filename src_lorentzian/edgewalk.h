@@ -29,6 +29,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK()
   ListStringValues1["OptionInitialVertex"] = "vinberg or FileVertex or FileVertexRoots and if FileVertex or FileVertexRoots selected use FileVertDomain as initial vertex";
   ListStringValues1["FileInitialVertex"] = "unset put the name of the file used for the initial vertex";
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["DualDescProg"] = "lrs_iterate";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
   ListBoolValues1["EarlyTerminationIfNotReflective"]=false; // Sometimes we can terminate by proving that it is not reflective
@@ -54,6 +55,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism()
   ListStringValues1["FileLorMat1"] = "the lorentzian matrix used";
   ListStringValues1["FileLorMat2"] = "the lorentzian matrix used";
   ListStringValues1["OptionNorms"] = "possible option K3 (then just 2) or all where all norms are considered";
+  ListStringValues1["DualDescProg"] = "lrs_iterate";
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] = "stdout, or stderr or the filename of the file you want to write to";
   ListBoolValues1["ApplyReduction"]=true; // Normally, we want to ApplyReduction, this is for debug only
@@ -2411,13 +2413,13 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
 
 
 template<typename T, typename Tint>
-MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction)
+MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg)
 {
   ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
-  VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms);
+  VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms, DualDescProg);
   MyVector<Tint> V1 = FindOneInitialRay(Vtot);
   MyVector<Tint> V2 = ResRed.B.transpose() * V1;
   MyVector<Tint> V3 = RemoveFractionVector(V2);
@@ -2429,7 +2431,7 @@ MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bo
 
 
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   std::cerr << "Beginning of get_initial_vertex\n";
   if (OptionInitialVertex == "FileVertex") {
@@ -2454,7 +2456,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction);
+    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg);
     MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, V);
     return {RemoveFractionVector(V), MatRoot};
   }
@@ -2493,13 +2495,14 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   TestLorentzianity(G);
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
+  std::string DualDescProg=BlockPROC.ListStringValues.at("DualDescProg");
   bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::cerr << "We have l_norms\n";
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, OptionInitialVertex, FileInitialVertex);
   T norm = eVert.gen.dot(G * eVert.gen);
   std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
   std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";
@@ -2603,6 +2606,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   //
   std::string OptionNorms="all";
   bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
+  std::string DualDescProg=BlockPROC.ListStringValues.at("DualDescProg");
   std::vector<T> l_norms1 = get_initial_list_norms<T,Tint>(G1, OptionNorms);
   std::vector<T> l_norms2 = get_initial_list_norms<T,Tint>(G2, OptionNorms);
   if (l_norms1 != l_norms2) {
@@ -2614,8 +2618,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const& eFull)
   //
   std::string OptionInitialVertex="vinberg";
   std::string FileInitialVertex="irrelevant";
-  FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G1, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
-  FundDomainVertex<T,Tint> eVert2 = get_initial_vertex<T,Tint>(G2, l_norms, ApplyReduction, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert1 = get_initial_vertex<T,Tint>(G1, l_norms, ApplyReduction, DualDescProg, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert2 = get_initial_vertex<T,Tint>(G2, l_norms, ApplyReduction, DualDescProg, OptionInitialVertex, FileInitialVertex);
   //
   std::optional<MyMatrix<Tint>> opt = LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T,Tint,Tgroup>(G1, G2, l_norms, eVert1, eVert2, HeuristicIdealStabEquiv);
   print_result(opt);
