@@ -1493,7 +1493,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       TheGRPrelevant = GRP;
       std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       BankSymmCheck = true;
-      return DirectFacetOrbitComputation(EXT, GRP, ansProg, std::cerr);
+      return DirectFacetOrbitComputation(EXT, GRP, ansProg);
     } else {
       std::string ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
       std::cerr << "ansSymm=" << ansSymm << "\n";

@@ -384,7 +384,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       TheGRPrelevant=GRP;
       std::string ansProg=HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       ansSymm="no";
-      return DirectFacetOrbitComputation(EXTred, GRP, ansProg, MProc.GetO(TheId));
+      return DirectFacetOrbitComputation(EXTred, GRP, ansProg);
     } else {
       ComputeWMat();
       ansSymm=HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);

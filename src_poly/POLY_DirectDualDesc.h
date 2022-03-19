@@ -192,63 +192,67 @@ vectface DualDescExternalProgram(MyMatrix<T> const& EXT, std::string const& eCom
 
 
 
+template<typename T>
+vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const& EXT, std::string const& ansProg)
+{
+  std::string eProg;
+  std::vector<std::string> ListProg;
+  //
+  eProg = "cdd"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return cdd::DualDescription_incd(EXT);
+  //
+  eProg = "lrs"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescription_temp_incd(EXT);
+  //
+  eProg = "lrs_ring"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescription_temp_incd_reduction(EXT);
+  //
+  eProg = "glrs"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return DualDescExternalProgram(EXT, "glrs");
+  //
+  eProg = "ppl_ext"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return DualDescExternalProgram(EXT, "ppl_lcdd");
+  //
+  eProg = "cdd_ext"; ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return DualDescExternalProgram(EXT, "lcdd_gmp");
+  //
+  eProg = "cdd_cbased"; ListProg.push_back(eProg);
+  if (ansProg == eProg) {
+#ifdef USE_CDDLIB
+    return cbased_cdd::DualDescription_incd(EXT);
+#else
+    std::cerr << "The code has been compiled without the CDDLIB library\n";
+    throw TerminalException{1};
+#endif
+  }
+  //
+  std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
+  std::cerr << "List of authorized programs :";
+  bool IsFirst=true;
+  for (auto & eP : ListProg) {
+    if (!IsFirst)
+      std::cerr << " ,";
+    IsFirst=false;
+    std::cerr << " " << eP;
+  }
+  std::cerr << "\n";
+  throw TerminalException{1};
+}
+
+
 template<typename T, typename Tgroup>
-vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg, std::ostream& os)
+vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, std::string const& ansProg)
 {
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  std::string eProg;
-  //
-  auto compute_dd=[&]() -> vectface {
-    std::vector<std::string> ListProg;
-    eProg = "cdd"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return cdd::DualDescription_incd(EXT);
-    //
-    eProg = "lrs"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return lrs::DualDescription_temp_incd(EXT);
-    //
-    eProg = "lrs_ring"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return lrs::DualDescription_temp_incd_reduction(EXT);
-    //
-    eProg = "glrs"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "glrs");
-    //
-    eProg = "ppl_ext"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "ppl_lcdd");
-    //
-    eProg = "cdd_ext"; ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "lcdd_gmp");
-    //
-    eProg = "cdd_cbased"; ListProg.push_back(eProg);
-    if (ansProg == eProg) {
-#ifdef USE_CDDLIB
-      return cbased_cdd::DualDescription_incd(EXT);
-#else
-      std::cerr << "The code has been compiled without the CDDLIB library\n";
-      throw TerminalException{1};
-#endif
-    }
-    //
-    std::cerr << "ERROR: No right program found with ansProg=" << ansProg << " or incorrect output\n";
-    std::cerr << "List of authorized programs :";
-    bool IsFirst=true;
-    for (auto & eP : ListProg) {
-      if (!IsFirst)
-        std::cerr << " ,";
-      IsFirst=false;
-      std::cerr << " " << eP;
-    }
-    std::cerr << "\n";
-    throw TerminalException{1};
-  };
-  vectface ListIncd = compute_dd();
+  vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "|DualDescription|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << " |ListIncd|=" << ListIncd.size() << "\n";
@@ -265,6 +269,8 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const& EXT, Tgroup const& GRP, 
 #endif
   return TheOutput;
 }
+
+
 
 
 #endif
