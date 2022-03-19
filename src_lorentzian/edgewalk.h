@@ -372,31 +372,33 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
     T quant = (scal * scal) / e_norm;
     return {get_sign_sing(scal), quant, e_norm, v};
   };
-
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase, beginning\n";
+#endif
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Timing |ComputePossibleExtensions|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
+#endif
   std::vector<RootCandidateCuspidal> l_candidates;
   for (auto & e_extension : l_extension) {
-    //    std::cerr << "res_norm=" << e_extension.res_norm << "\n";
     if (e_extension.res_norm == 0) {
       MyMatrix<T> Latt = ComputeLattice_LN(G, e_extension.e_norm);
       std::optional<MyVector<T>> opt_v = ResolveLattEquation(Latt, e_extension.u_component, k);
-      //      std::cerr << "We have opt_v\n";
       if (opt_v) {
         const MyVector<T>& v_T = *opt_v;
-        //        std::cerr << "Proposed v_T=" << StringVectorGAP(v_T) << "\n";
         RootCandidateCuspidal e_cand = gen_possible_cuspidalextension(v_T, e_extension.e_norm);
         l_candidates.push_back(e_cand);
       }
     }
   }
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "Timing |l_candidates|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
@@ -417,10 +419,11 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "Timing |sort|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
-
+#ifdef DEBUG_EDGEWALK_GENERIC
   for (auto & x : l_candidates) {
     std::cerr << "x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
   }
+#endif
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
   auto is_approved=[&](MyVector<Tint> const& cand) -> bool {
     MyVector<T> G_cand_T = G * UniversalVectorConversion<T,Tint>(cand);
@@ -435,11 +438,15 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase(MyMatrix<T> const& G, std
   for (auto & eV : l_candidates) {
     MyVector<Tint> eV_i = eV.v;
     if (is_approved(eV_i)) {
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "Inserting eV_i="; WriteVector(std::cerr, eV_i);
+#endif
       l_ui_ret.push_back(eV_i);
     }
   }
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size() << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
   std::cerr << "Timing |l_ui_ret|=" << std::chrono::duration_cast<std::chrono::microseconds>(time5 - time4).count() << "\n";
@@ -463,7 +470,9 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
   size_t len = cusp_bank.l_request.size();
   for (size_t i=0; i<len; i++) {
     const CuspidalRequest_FullInfo<T,Tint>& fReq_full = cusp_bank.l_request[i];
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "i=" << i << "/" << len << " hash: eReq=" << eReq_full.hash << " fReq=" << fReq_full.hash << "\n";
+#endif
     if (fReq_full.hash == eReq_full.hash) {
       std::optional<MyMatrix<T>> equiv_opt = LinPolytopeIntegralWMat_Isomorphism<T,Tgroup,std::vector<T>,uint16_t>(fReq_full.e_pair, eReq_full.e_pair);
       if (equiv_opt) {
@@ -473,7 +482,9 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
           MyVector<Tint> Vret = eEquiv.transpose() * eV;
           l_ui_ret.push_back(Vret);
         }
+#ifdef DEBUG_EDGEWALK_GENERIC
         std::cerr << "DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
+#endif
 #ifdef TIMINGS
         std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
         std::cerr << "Timing |query(succ)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
@@ -486,7 +497,9 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(CuspidalBank<T,T
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "Timing |query(fail)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase_Memoized, failed to find some isomorphism\n";
+#endif
   std::vector<MyVector<Tint>> l_ui_ret = DetermineRootsCuspidalCase(G, l_norms, eReq);
   cusp_bank.l_request.emplace_back(std::move(eReq_full));
   cusp_bank.l_answer.push_back(l_ui_ret);
@@ -573,6 +586,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
 #endif
   const std::vector<MyVector<Tint>>& l_ui = ad.l_ui;
   const MyVector<Tint>& v_disc = ad.v_disc;
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "-------------------------------------- EDGEWALK PROCEDURE ---------------------------------------------\n";
   std::cerr << "k=" << StringVectorGAP(k) << "\n";
   std::cerr << "l_norms =";
@@ -585,6 +599,7 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   std::cerr << "\n";
   std::cerr << "v_disc=" << StringVectorGAP(v_disc) << "\n";
   std::cerr << "    Real work starts now\n";
+#endif
   //
   // Initial computation of linear algebra nature:
   // Find a basis (k,r0) of the plane P
@@ -597,7 +612,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   */
   int n = G.rows();
   size_t n_root = l_ui.size();
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "n_root=" << n_root << "\n";
+#endif
   MyMatrix<T> EquaRvect(n_root+1,n);
   for (size_t i_root=0; i_root<n_root; i_root++) {
     MyVector<T> eV = UniversalVectorConversion<T,Tint>(l_ui[i_root]);
@@ -613,7 +630,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   //  std::cerr << "Plane P=[" << StringVectorGAP(GetMatrixRow(Pplane,0)) << ", " << StringVectorGAP(GetMatrixRow(Pplane,1)) << "]\n";
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
+#endif
   AssignMatrixRow(EquaRvect, n_root, eP);
   MyMatrix<T> NSP = NullspaceTrMat(EquaRvect);
   if (NSP.rows() != 1) {
@@ -630,18 +649,24 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
    */
   MyVector<T> r0 = GetMatrixRow(NSP,0);
   T scal_r0 = r0.dot(G * v_disc_t);
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "scal_r0=" << scal_r0 << "\n";
+#endif
   if (scal_r0 > 0)
     r0 = -r0;
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2,n);
   if (norm < 0) { // the point is inner, the oriented basis is clear.
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ordinary case\n";
+#endif
     AssignMatrixRow(OrientedBasis, 0, r0);
     AssignMatrixRow(OrientedBasis, 1, k);
   } else { // Now the point is ideal
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ideal case\n";
+#endif
     /*
       The roots to be found are of positive norms.
       In general, we cannot think of which zone of positive norms to select from since
@@ -660,7 +685,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
           for (int u=-1; u<2; u += 2) {
             MyVector<T> v_pos_cand = k + u * alpha * v_bas;
             T norm = v_pos_cand.dot(G * v_pos_cand);
+#ifdef DEBUG_EDGEWALK_GENERIC
             std::cerr << "u=" << u << " alpha=" << alpha << " v_pos_cand=" << v_pos_cand << " norm=" << norm << "\n";
+#endif
             if (norm > 0)
               return v_pos_cand;
           }
@@ -677,7 +704,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     AssignMatrixRow(OrientedBasis, 1, k);
     r0 = -k; // Follows Right part of Figure 8.1
   }
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Timing |paperwork|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
@@ -688,7 +717,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   std::vector<RootCandidate<T,Tint>> l_candidates;
   bool only_spherical = true;
   std::vector<Possible_Extension<T>> l_extension = ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
+#endif
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
   std::cerr << "Timing |l_extension|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
@@ -728,7 +759,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       throw TerminalException{1};
     }
     MyMatrix<T> Expr = ExpressVectorsInIndependentFamilt(BasisProj, OrientedBasis);
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
+#endif
     if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
       for (int i=0; i<n; i++)
         BasisProj(0,i) = -BasisProj(0,i);
@@ -747,14 +780,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     }
     MyVector<T> r0_NSP = *opt_r0;
     MyVector<Tint> r0_work = UniversalVectorConversion<Tint,T>(RemoveFractionVector(r0_NSP));
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "r0_work=" << StringVectorGAP(r0_work) << "\n";
+#endif
     return r0_work;
   };
   auto get_sing_comp_anisotropic=[&](T const& e_norm) -> SingCompAnisotropic {
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeA_1 = std::chrono::system_clock::now();
 #endif
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm << " ------------------------\n";
+#endif
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
@@ -783,7 +820,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
     const std::vector<MyVector<Tint>>& l_vect1 = opt->second;
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
+#endif
     const MyMatrix<Tint>& TransformSma = opt->first;
     MyMatrix<T> TransformSma_T = UniversalMatrixConversion<T,Tint>(TransformSma);
     /*
@@ -813,7 +852,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     }
     //    MyMatrix<Tint> Expr_i = UniversalMatrixConversion<Tint,T>(Expr_t);
     size_t order = GetMatrixExponentSublattice_TrivClass(TransformSma_T, Expr_t);
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "order=" << order << "\n";
+#endif
     std::vector<MyMatrix<Tint>> l_vect2;
     //    std::cerr << "get_sing_comp_anisotropic, step 5\n";
     for (auto & e_vect1 : l_vect1) {
@@ -829,7 +870,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
         ord++;
       }
     }
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "|l_vect2|=" << l_vect2.size() << "\n";
+#endif
     std::vector<MyVector<Tint>> l_vect3;
     MyMatrix<Tint> TheMat = IdentityMat<Tint>(2);
     for (size_t i=0; i<order; i++) {
@@ -839,7 +882,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       }
       TheMat = TheMat * TransformSma;
     }
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
+#endif
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeA_2 = std::chrono::system_clock::now();
     std::cerr << "Timing |get_sing_comp_anisotropic|=" << std::chrono::duration_cast<std::chrono::microseconds>(timeA_2 - timeA_1).count() << "\n";
@@ -850,7 +895,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> timeB_1 = std::chrono::system_clock::now();
 #endif
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
+#endif
     MyMatrix<T> Latt = ComputeLattice_LN(G, e_norm);
     //    std::cerr << "Latt=" << StringMatrixGAP(Latt) << "\n";
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
@@ -876,17 +923,23 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
     if (opt) {
       is_isotropic = true;
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "Case is_isotropic = true\n";
+#endif
       for (auto & u_norm : l_norms)
         map_isotropic[u_norm] = get_sing_comp_isotropic(u_norm);
     } else {
       is_isotropic = false;
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "Case is_isotropic = false\n";
+#endif
       for (auto & u_norm : l_norms)
         map_anisotropic[u_norm] = get_sing_comp_anisotropic(u_norm);
     }
   }
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "Edgewalk Procedure, step 7\n";
+#endif
   // Evaluation of fun
   auto get_next_anisotropic=[&](Possible_Extension<T> const& poss) -> std::optional<MyVector<Tint>> {
     //    std::cerr << "Beginning of get_next_anisotropic\n";
@@ -904,13 +957,17 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
           //          std::cerr << "get_next_anisotropic, step 4\n";
           if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+#ifdef DEBUG_EDGEWALK_GENERIC
             std::cerr << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
+#endif
             return v_i;
           }
         }
       }
     }
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "No good vector found\n";
+#endif
     return {};
   };
   auto get_successive_list_cand=[&](SingCompIsotropic & e_comp, T const& res_norm) -> std::vector<MyVector<Tint>> {
@@ -937,11 +994,15 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
       //      std::cerr << "eDet=" << eDet << "\n";
       return eDet > 0;
     };
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "|l_vect1|=" << l_vect1.size() << "\n";
+#endif
     for (auto & e_vect1 : l_vect1)
       if (is_corr(e_vect1))
         l_vect2.push_back(e_vect1);
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "We found |l_vect2|=" << l_vect2.size() << "\n";
+#endif
     std::sort(l_vect2.begin(), l_vect2.end(),
               [&](MyVector<Tint> const& x, MyVector<Tint> const& y) -> bool {
                 return det(x, y) > 0;
@@ -953,22 +1014,32 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     T const& e_norm = poss.e_norm;
     SingCompIsotropic & e_comp = map_isotropic[e_norm];
     T const& res_norm = poss.res_norm;
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "get_next_isotropic with e_norm=" << e_norm << " res_norm=" << res_norm << "\n";
+#endif
     std::vector<MyVector<Tint>> l_vect = get_successive_list_cand(e_comp, res_norm);
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+#endif
     for (auto & e_vect : l_vect) {
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
+#endif
       //      std::cerr << "Before v_T computation\n";
       //      std::cerr << "u_component=" << StringVectorGAP(poss.u_component) << "\n";
       //      std::cerr << "Basis_ProjP_LN=";
       //      WriteMatrix(std::cerr, e_comp.Basis_ProjP_LN);
       MyVector<T> v_T = poss.u_component + e_comp.Basis_ProjP_LN.transpose() * UniversalVectorConversion<T,Tint>(e_vect);
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "After v_T computation v_T=" << StringVectorGAP(v_T) << "\n";
+#endif
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
         if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint,T>(v_T);
+#ifdef DEBUG_EDGEWALK_GENERIC
           std::cerr << "get_next_isotropic. Returning v_i=" << StringVectorGAP(v_i) << "\n";
+#endif
           return v_i;
         }
       }
@@ -988,14 +1059,18 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   for (auto & e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     T res_norm = e_extension.res_norm;
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "------ u_component=" << StringVectorGAP(e_extension.u_component) << " norm=" << e_norm << " res_norm=" << res_norm << " ----------\n";
+#endif
 
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
     //    std::cerr << "We have opt_v\n";
     if (opt_v) {
       MyVector<Tint> const& alpha = *opt_v;
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "alpha=" << StringVectorGAP(alpha) << "\n";
+#endif
       std::vector<MyVector<Tint>> l_roots = l_ui;
       l_roots.push_back(alpha);
       MyMatrix<T> Mat_root = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_roots));
@@ -1006,7 +1081,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
         throw TerminalException{1};
       }
       MyVector<T> gen = GetMatrixRow(NSP, 0);
+#ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
+#endif
       T scal = gen.dot(G * k);
       //        std::cerr << "We have scal\n";
       auto get_gen=[&]() -> std::optional<MyVector<T>> {
@@ -1036,7 +1113,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
   std::cerr << "Timing |l_candidates|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
 #endif
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
+#endif
   if (l_candidates.size() > 0) {
     /*
     for (auto e_cand : l_candidates)
@@ -1048,7 +1127,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
     //    WriteMatrix(std::cerr, best_cand.fund_v.MatRoot);
     return best_cand.fund_v;
   }
+#ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "         --------------- Looking for an isotropic vector ------------\n";
+#endif
   // So, no candidates were found. We need to find isotropic vectors.
   const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
   //  std::cerr << "We have Gred=\n";
@@ -1069,7 +1150,9 @@ FundDomainVertex<T,Tint> EdgewalkProcedure(CuspidalBank<T,Tint> & cusp_bank,
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen=[&](MyVector<T> const& v) -> MyVector<T> {
     T scal = k.dot(G * v);
+#ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "  scal=" << scal << "\n";
+#endif
     if (scal < 0) // The value should be negative because with the chosen convention, interior vectors have negative pairwise scalar products
       return v;
     if (scal > 0)
