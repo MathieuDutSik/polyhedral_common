@@ -2391,6 +2391,8 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       T CritNorm = 0;
       bool StrictIneq = true;
       bool NeedNonZero = true;
+      std::cerr << "Gprod=\n";
+      WriteMatrix(std::cerr, Gprod);
       MyVector<Tint> eVect_A = GetShortVector_unlimited_float<Tint,T>(Gprod, CritNorm, StrictIneq, NeedNonZero);
       MyVector<T> eVect_B = UniversalVectorConversion<T,Tint>(eVect_A);
       MyVector<T> eVect_C = Pplane.transpose() * eVect_B;
