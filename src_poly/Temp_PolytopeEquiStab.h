@@ -1603,17 +1603,23 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(std::pair<MyMatrix
 {
   using Tgr=GraphBitset;
   Tgroup GRP1 = GetStabilizerWeightMatrix<Tval,Tgr,Tgroup,Tidx_value>(ep.second);
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "|GRP1|=" << GRP1.size() << " RankMat(ep.first)=" << RankMat(ep.first) << " |ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << "\n";
   bool test = CheckStabilizerWeightMatrix(ep.second, GRP1);
   std::cerr << "test=" << test << "\n";
+#endif
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1);
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "We have GRPfull\n";
+#endif
   std::vector<MyMatrix<T>> ListGenMat;
   for (auto & eGen : GRPfull.GeneratorsOfGroup()) {
     MyMatrix<T> eMat_T = FindTransformation(ep.first, ep.first, eGen);
     ListGenMat.push_back(eMat_T);
   }
+#ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "We have ListGenMat\n";
+#endif
   return ListGenMat;
 }
 

@@ -883,7 +883,9 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
     vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, DualDescProg);
     LorentzianFinitenessGroupTester<T,Tint> group_tester(Vtot.G_T);
     std::unordered_map<size_t, std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>>> map;
+    size_t n_gen_ins = 0;
     auto f_insert_gen=[&](MyMatrix<T> const& eP) -> void {
+      n_gen_ins++;
       MyMatrix<Tint> eP_i = UniversalMatrixConversion<Tint,T>(eP);
       group_tester.GeneratorUpdate(eP_i);
       if (!group_tester.get_finiteness_status()) {
@@ -911,8 +913,9 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
       l_vert_gen.emplace_back(std::move(e_vert_gen));
     };
     auto inspect_listincd=[&]() -> void {
+      size_t n_face = ListIncd.size();
       for (auto & eFace : ListIncd) {
-        n_iter++;
+        std::cerr << "n_iter=" << n_iter << "/" << n_face << " n_gen_ins=" << n_gen_ins << " info=" << group_tester.get_infos() << "\n";
         MyVector<T> V = RemoveFractionVector(FindFacetInequality(FAC_T, eFace));
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
@@ -921,6 +924,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
         } else {
           f_insert_vertex(V, eFace);
         }
+        n_iter++;
       }
     };
     inspect_listincd();

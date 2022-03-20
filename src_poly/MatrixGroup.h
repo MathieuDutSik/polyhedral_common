@@ -122,7 +122,6 @@ std::vector<T2> OrbitComputation(std::vector<T1> const& ListGen, T2 const& a, co
         fInsert(u);
       }
     pos = len;
-    std::cerr << "len=" << len << "\n";
   }
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "End of OrbitComputation\n";

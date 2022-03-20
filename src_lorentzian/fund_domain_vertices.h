@@ -262,10 +262,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(MyMatrix<T> const& G, Fu
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   MyMatrix<Tint> const& MatRoot = vertFull.vert.MatRoot;
+#ifdef PRINT_DEBUG_STAB_EQUIV_INFO
   std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method=" << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen) << "\n";
   std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
   std::cerr << "MatRoot=\n";
   WriteMatrix(std::cerr, MatRoot);
+#endif
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,uint16_t>(vertFull.e_pair_char);
   }
@@ -373,8 +375,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(MyMatrix<T> const& G1, FundDo
 {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+#ifdef PRINT_DEBUG_STAB_EQUIV_INFO
   std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method << "\n";
   std::cerr << "LORENTZ_TestEquivalence, gen1=" << StringVector(vertFull1.vert.gen) << " gen2=" << StringVector(vertFull2.vert.gen) << "\n";
+#endif
   if (vertFull1.method != vertFull2.method) {
     return {};
   }

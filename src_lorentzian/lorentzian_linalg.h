@@ -633,6 +633,10 @@ struct LorentzianFinitenessGroupTester {
   {
     return is_finite;
   }
+  std::string get_infos() const
+  {
+    return std::string("dim=") + std::to_string(InvariantBasis.rows());
+  }
 private:
   MyMatrix<T> G;
   MyMatrix<Tint> InvariantBasis;
