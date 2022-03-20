@@ -635,7 +635,7 @@ struct LorentzianFinitenessGroupTester {
   }
   std::string get_infos() const
   {
-    return std::string("dim=") + std::to_string(InvariantBasis.rows());
+    return std::string("(dim=") + std::to_string(InvariantBasis.rows()) + "/" + std::to_string(G.rows()) + ")";
   }
 private:
   MyMatrix<T> G;

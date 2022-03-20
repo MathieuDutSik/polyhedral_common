@@ -885,6 +885,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
     std::unordered_map<size_t, std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>>> map;
     size_t n_gen_ins = 0;
     auto f_insert_gen=[&](MyMatrix<T> const& eP) -> void {
+      std::cerr << "eP=" << StringMatrixGAP(eP) << "\n";
       n_gen_ins++;
       MyMatrix<Tint> eP_i = UniversalMatrixConversion<Tint,T>(eP);
       group_tester.GeneratorUpdate(eP_i);
@@ -915,7 +916,7 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
     auto inspect_listincd=[&]() -> void {
       size_t n_face = ListIncd.size();
       for (auto & eFace : ListIncd) {
-        std::cerr << "n_iter=" << n_iter << "/" << n_face << " n_gen_ins=" << n_gen_ins << " info=" << group_tester.get_infos() << "\n";
+        std::cerr << "n_iter=" << n_iter << "/" << n_face << " n_gen_ins=" << n_gen_ins << " cnt=" << eFace.count() << " info=" << group_tester.get_infos() << "\n";
         MyVector<T> V = RemoveFractionVector(FindFacetInequality(FAC_T, eFace));
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
