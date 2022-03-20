@@ -145,7 +145,7 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && make al
 # nauty/traces
 ENV NAUTY_PATH /opt/nauty
 ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
-ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
+ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
