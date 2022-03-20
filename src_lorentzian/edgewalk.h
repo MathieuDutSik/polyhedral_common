@@ -2018,16 +2018,11 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
   std::unordered_set<MyVector<Tint>> s_simple_roots;
 
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
-  size_t max_finite_order;
-  MyMatrix<Tint> InvariantBasis;
   std::optional<bool> is_reflective;
+  std::optional<LorentzianFinitenessGroupTester<T,Tint>> group_tester;
   if (EarlyTerminationIfNotReflective) {
+    group_tester = LorentzianFinitenessGroupTester<T,Tint>(G);
     is_reflective = true;
-    T dim_T = dim;
-    std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
-    max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
-    std::cerr << "max_finite_order=" << max_finite_order << "\n";
-    InvariantBasis = IdentityMat<Tint>(dim);
   }
   int nonew_nbdone = 0;
   size_t n_simple_roots = 0;
@@ -2095,76 +2090,12 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
-    MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
-    MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
-    if (G_img != G) {
-      std::cerr << "G="; WriteMatrix(std::cerr, G);
-      std::cerr << "eP_T="; WriteMatrix(std::cerr, eP_T);
-      std::cerr << "G_img="; WriteMatrix(std::cerr, G_img);
-      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
-      throw TerminalException{1};
-    }
-    if (EarlyTerminationIfNotReflective) {
-#ifdef TIMINGS
-      std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
-#endif
-      bool test = is_infinite_order(eP, max_finite_order);
-#ifdef TIMINGS
-      std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-      std::cerr << "Timing |is_finite_order|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
-#endif
-      if (!test) {
-        std::cerr << "f_isom, conclude not_reflective by matrix order\n";
+    if (group_tester) {
+      group_tester->GeneratorUpdate(eP);
+      if (!group_tester->get_reflectivity_status()) {
         is_reflective = false;
         return true;
       }
-      MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
-      std::cerr << "We have eDiff\n";
-      if (!IsZeroMatrix(eDiff)) {
-        MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
-        std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
-        if (NSP.rows() == 0) {
-          std::cerr << "f_isom, conclude not_reflective by NSP.rows() == 0\n";
-          is_reflective = false;
-#ifdef TIMINGS
-          std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-          std::cerr << "Timing |MatrixText 1|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-          return true;
-        }
-        std::cerr << "1 : |InvariantBasis|=" << InvariantBasis.rows() << " / " << InvariantBasis.cols() << "\n";
-        InvariantBasis = NSP * InvariantBasis;
-        std::cerr << "2 : |InvariantBasis|=" << InvariantBasis.rows() << " / " << InvariantBasis.cols() << "\n";
-        for (auto & eP : s_gen_isom_cox) {
-          MyMatrix<Tint> fDiff = InvariantBasis * eP - InvariantBasis;
-          if (!IsZeroMatrix(fDiff)) {
-            std::cerr << "The matrix fDiff should be zero\n";
-            throw TerminalException{1};
-          }
-        }
-        MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
-        std::cerr << "3 : |InvariantBasis_T|=" << InvariantBasis_T.rows() << " / " << InvariantBasis_T.cols() << "\n";
-        std::cerr << "InvariantBasis_T=\n";
-        WriteMatrix(std::cerr, InvariantBasis_T);
-        MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
-        std::cerr << "Ginv=\n";
-        WriteMatrix(std::cerr, Ginv);
-        DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
-        std::cerr << "We have DiagInfo\n";
-        if (DiagInfo.nbMinus == 0) {
-          std::cerr << "f_isom, conclude not_reflective by DiagInfo.nbMinus == 0\n";
-          is_reflective = false;
-#ifdef TIMINGS
-          std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-          std::cerr << "Timing |MatrixText 2|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
-#endif
-          return true;
-        }
-      }
-#ifdef TIMINGS
-      std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-      std::cerr << "Timing |EarlyTerminationIfNotReflective|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time1).count() << "\n";
-#endif
     }
     return false;
   };

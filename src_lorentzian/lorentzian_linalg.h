@@ -575,5 +575,73 @@ bool is_infinite_order(MyMatrix<T> const& M, size_t const& max_finite_order)
 
 
 
+template<typename T, typename Tint>
+struct LorentzianFinitenessGroupTester {
+  LorentzianFinitenessGroupTester(MyMatrix<T> const& _G) : G(_G)
+  {
+    int dim = G.rows();
+    T dim_T = dim;
+    std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
+    max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
+    InvariantBasis = IdentityMat<Tint>(dim);
+    is_reflective = true;
+  }
+  void GeneratorUpdate(MyMatrix<Tint> const& eP)
+  {
+    MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
+    MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
+    if (G_img != G) {
+      std::cerr << "G="; WriteMatrix(std::cerr, G);
+      std::cerr << "eP_T="; WriteMatrix(std::cerr, eP_T);
+      std::cerr << "G_img="; WriteMatrix(std::cerr, G_img);
+      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
+      throw TerminalException{1};
+    }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+#endif
+    bool test = is_infinite_order(eP, max_finite_order);
+    if (!test) {
+      is_reflective = false;
+    }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
+    std::cerr << "Timing |is_finite_order|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
+#endif
+    MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
+    if (!IsZeroMatrix(eDiff)) {
+      MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
+      if (NSP.rows() == 0) {
+        is_reflective = false;
+        InvariantBasis = MyMatrix<Tint>(0,G.rows());
+      } else {
+        InvariantBasis = NSP * InvariantBasis;
+        MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T,Tint>(InvariantBasis);
+        MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
+        DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+        if (DiagInfo.nbMinus == 0) {
+          is_reflective = false;
+        }
+      }
+    }
+#ifdef TIMINGS
+    std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
+    std::cerr << "Timing |InvariantSpace|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
+#endif
+  }
+  bool get_reflectivity_status() const
+  {
+    return is_reflective;
+  }
+private:
+  MyMatrix<T> G;
+  MyMatrix<Tint> InvariantBasis;
+  size_t max_finite_order;
+  bool is_reflective;
+};
+
+
+
+
 
 #endif
