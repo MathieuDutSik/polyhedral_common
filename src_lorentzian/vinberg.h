@@ -1412,8 +1412,11 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
   int dim = Vtot.G.rows();
   auto f_exit=[&](std::vector<MyVector<Tint>> const& ListRoot, MyMatrix<T> const& FACfeasible) -> bool {
     int TheRank = RankMat(FACfeasible);
-    if (TheRank < dim - 1)
+    std::cerr << "f_exit begin TheRank=" << TheRank << " dim=" << dim << "\n";
+    if (TheRank < dim - 1) {
+      std::cerr << "Exiting false 1\n";
       return false;
+    }
     if (TheRank == dim - 1) {
       MyMatrix<T> NSP = NullspaceTrMat(FACfeasible);
       if (NSP.rows() != 1) {
@@ -1426,8 +1429,10 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
       Tint norm = v3.dot(Vtot.G * v3);
       if (norm <= 0) {
         v = v3;
+        std::cerr << "Exiting true 1\n";
         return true;
       }
+      std::cerr << "Exiting false 2\n";
       return false;
     }
     std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
@@ -1436,8 +1441,10 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
       // This is because while we got a vertex, we might need more roots
       // in order to get a cone
       v = *opt;
+      std::cerr << "Exiting true 2\n";
       return true;
     }
+    std::cerr << "Exiting false 3\n";
     return false;
   };
   FindRoots_Kernel(Vtot, f_exit);
