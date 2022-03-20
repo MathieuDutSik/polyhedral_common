@@ -1647,7 +1647,7 @@ ResultEdgewalk<T,Tint> LORENTZ_RunEdgewalkAlgorithm(MyMatrix<T> const& G, std::v
 #endif
     if (group_tester) {
       group_tester->GeneratorUpdate(eP);
-      if (!group_tester->get_reflectivity_status()) {
+      if (!group_tester->get_finiteness_status()) {
         is_reflective = false;
         return true;
       }
@@ -1900,7 +1900,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, bool const& EarlyTerminationIfNotReflective)
 {
   ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
@@ -1908,7 +1908,7 @@ MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bo
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
   VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms, DualDescProg, EarlyTerminationIfNotReflective);
-  MyVector<Tint> V1 = FindOneInitialRay(Vtot);
+  MyVector<Tint> V1 = FindOneInitialRay<T,Tint,Tgroup>(Vtot);
   MyVector<Tint> V2 = ResRed.B.transpose() * V1;
   MyVector<Tint> V3 = RemoveFractionVector(V2);
   MyVector<T> V4 = UniversalVectorConversion<T,Tint>(V3);
@@ -1918,7 +1918,7 @@ MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bo
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, bool const& EarlyTerminationIfNotReflective, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   std::cerr << "Beginning of get_initial_vertex\n";
@@ -1944,7 +1944,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective);
+    MyVector<T> V = GetOneVertex<T,Tint,Tgroup>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective);
     MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, V);
     return {RemoveFractionVector(V), MatRoot};
   }
@@ -1974,6 +1974,33 @@ void TestLorentzianity(MyMatrix<T> const& G)
 }
 
 
+
+template<typename T, typename Tint>
+void PrintVertexInformation(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& eVert)
+{
+  T norm = eVert.gen.dot(G * eVert.gen);
+  std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
+  std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";
+  std::vector<MyVector<Tint>> l_root;
+  for (int i=0; i<eVert.MatRoot.rows(); i++) {
+    MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
+    std::cerr << StringVectorGAP(eLine) << "\n";
+    l_root.push_back(eLine);
+  }
+  std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+  const MyMatrix<T> & CoxMat = ep.first;
+  const MyMatrix<T> & ScalMat = ep.second;
+  std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
+  std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
+  std::cerr << "We have CoxMat\n";
+  std::string symb = coxdyn_matrix_to_string(CoxMat);
+  std::cerr << "symb=" << symb << "\n";
+  std::cerr << "l_roots=\n";
+  WriteMatrix(std::cerr, eVert.MatRoot);
+}
+
+
+
 template<typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk(FullNamelist const& eFull)
 {
@@ -1989,33 +2016,6 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::cerr << "We have l_norms\n";
   //
-  std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
-  std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
-  T norm = eVert.gen.dot(G * eVert.gen);
-  std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
-  std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";
-  std::vector<MyVector<Tint>> l_root;
-  for (int i=0; i<eVert.MatRoot.rows(); i++) {
-    MyVector<Tint> eLine = GetMatrixRow(eVert.MatRoot, i);
-    std::cerr << StringVectorGAP(eLine) << "\n";
-    l_root.push_back(eLine);
-  }
-#ifdef PRINT_SYMBOL_INFORMATION
-  {
-    std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
-    const MyMatrix<T> & CoxMat = ep.first;
-    const MyMatrix<T> & ScalMat = ep.second;
-    std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
-    std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
-    std::cerr << "We have CoxMat\n";
-    std::string symb = coxdyn_matrix_to_string(CoxMat);
-    std::cerr << "symb=" << symb << "\n";
-    std::cerr << "l_roots=\n";
-    WriteMatrix(std::cerr, eVert.MatRoot);
-  }
-#endif
-  //
   std::string FileHeuristicIdealStabEquiv=BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv=GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
@@ -2024,23 +2024,40 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   TheHeuristic<Tint> HeuristicTryTerminateDualDescription=GetHeuristicTryTerminateDualDescription<Tint>();
   ReadHeuristicFileCond(FileHeuristicTryTerminateDualDescription, HeuristicTryTerminateDualDescription);
   //
-  ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv, HeuristicTryTerminateDualDescription);
-  std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
-  std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
-  bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
-  std::cerr << "OutFormat=" << OutFormat << " FileOut=" << FileOut << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
-  if (FileOut == "stderr") {
-    std::cerr << "PrintResultEdgewalk to stderr\n";
-    PrintResultEdgewalk(G, re, std::cerr, OutFormat, ComputeAllSimpleRoots);
-  } else {
-    if (FileOut == "stdout") {
-      std::cerr << "PrintResultEdgewalk to stdout\n";
-      PrintResultEdgewalk(G, re, std::cout, OutFormat, ComputeAllSimpleRoots);
+  auto print_result_edgewalk=[&](ResultEdgewalk<T,Tint> const& re) -> void {
+    std::string OutFormat=BlockPROC.ListStringValues.at("OutFormat");
+    std::string FileOut=BlockPROC.ListStringValues.at("FileOut");
+    bool ComputeAllSimpleRoots=BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
+    std::cerr << "OutFormat=" << OutFormat << " FileOut=" << FileOut << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
+    if (FileOut == "stderr") {
+      std::cerr << "PrintResultEdgewalk to stderr\n";
+      PrintResultEdgewalk(G, re, std::cerr, OutFormat, ComputeAllSimpleRoots);
     } else {
-      std::cerr << "PrintResultEdgewalk to FileOut\n";
-      std::ofstream os(FileOut);
-      PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
+      if (FileOut == "stdout") {
+        std::cerr << "PrintResultEdgewalk to stdout\n";
+        PrintResultEdgewalk(G, re, std::cout, OutFormat, ComputeAllSimpleRoots);
+      } else {
+        std::cerr << "PrintResultEdgewalk to FileOut\n";
+        std::ofstream os(FileOut);
+        PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
+      }
     }
+  };
+  //
+  std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
+  std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
+  try {
+    FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint,Tgroup>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
+#ifdef PRINT_SYMBOL_INFORMATION
+    PrintVertexInformation(G, eVert);
+#endif
+    //
+    ResultEdgewalk<T,Tint> re = LORENTZ_RunEdgewalkAlgorithm<T,Tint,Tgroup>(G, l_norms, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv, HeuristicTryTerminateDualDescription);
+    print_result_edgewalk(re);
+  }
+  catch (NonReflectivityException const& e) {
+    ResultEdgewalk<T,Tint> re{ {}, {}, false};
+    print_result_edgewalk(re);
   }
   std::cerr << "We are after the PrintResultEdgewalk\n";
 }

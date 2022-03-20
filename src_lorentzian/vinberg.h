@@ -12,6 +12,7 @@
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
 #include "lorentzian_linalg.h"
+#include "fund_domain_vertices.h"
 
 #define DEBUG_VINBERG
 
@@ -859,7 +860,7 @@ bool is_FundPoly(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vtot, const std::vector<MyVector<Tint>>& ListRoot)
 {
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
@@ -880,14 +881,45 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
       DualDescProg = "lrs_ring";
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T,Tint>(FAC);
     vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, DualDescProg);
+    LorentzianFinitenessGroupTester<T,Tint> group_tester(Vtot.G_T);
+    std::unordered_map<size_t, std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>>> map;
+    auto f_insert_gen=[&](MyMatrix<T> const& eP) -> void {
+      MyMatrix<Tint> eP_i = UniversalMatrixConversion<Tint,T>(eP);
+      group_tester.GeneratorUpdate(eP_i);
+      if (!group_tester.get_finiteness_status()) {
+        throw NonReflectivityException{};
+      }
+    };
+    auto f_insert_vertex=[&](MyVector<T> const& V, Face const& eFace) -> void {
+      std::vector<MyVector<Tint>> l_vect;
+      for (size_t i=0; i<n_root; i++) {
+        if (eFace[i] == 1)
+          l_vect.push_back(ListRoot[i]);
+      }
+      FundDomainVertex<T,Tint> vert{V, MatrixFromVectorFamily(l_vect)};
+      FundDomainVertex_FullInfo<T,Tint,Tgroup> e_vert_gen = get_fund_domain_full_info_noiso<T,Tint,Tgroup>(Vtot.G_T, vert);
+      std::vector<FundDomainVertex_FullInfo<T,Tint,Tgroup>> & l_vert_gen = map[e_vert_gen.hash];
+      for (auto & f_vert_gen : l_vert_gen) {
+        std::optional<MyMatrix<T>> opt = LORENTZ_TestEquivalence(Vtot.G_T, e_vert_gen, Vtot.G_T, f_vert_gen);
+        if (opt) {
+          f_insert_gen(*opt);
+          return;
+        }
+      }
+      for (auto & eGen : LORENTZ_GetStabilizerGenerator(Vtot.G_T, e_vert_gen))
+        f_insert_gen(eGen);
+      l_vert_gen.emplace_back(std::move(e_vert_gen));
+    };
     auto inspect_listincd=[&]() -> void {
       for (auto & eFace : ListIncd) {
         n_iter++;
-        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+        MyVector<T> V = RemoveFractionVector(FindFacetInequality(FAC_T, eFace));
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
-          opt = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
+          opt = UniversalVectorConversion<Tint,T>(V);
           return;
+        } else {
+          f_insert_vertex(V, eFace);
         }
       }
     };
@@ -1440,7 +1472,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T,Tint>& Vtot)
 
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
 {
   MyVector<Tint> v;
@@ -1470,7 +1502,7 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T,Tint>& Vtot)
       std::cerr << "Exiting false 2\n";
       return false;
     }
-    std::optional<MyVector<Tint>> opt = GetOneInteriorVertex(Vtot, ListRoot);
+    std::optional<MyVector<Tint>> opt = GetOneInteriorVertex<T,Tint,Tgroup>(Vtot, ListRoot);
     if (opt) {
       // We cannot use the roots in order to get a cone.
       // This is because while we got a vertex, we might need more roots

@@ -584,7 +584,7 @@ struct LorentzianFinitenessGroupTester {
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
     max_finite_order = UniversalScalarConversion<int,T>(V[V.size() - 1]);
     InvariantBasis = IdentityMat<Tint>(dim);
-    is_reflective = true;
+    is_finite = true;
   }
   void GeneratorUpdate(MyMatrix<Tint> const& eP)
   {
@@ -602,7 +602,7 @@ struct LorentzianFinitenessGroupTester {
 #endif
     bool test = is_infinite_order(eP, max_finite_order);
     if (!test) {
-      is_reflective = false;
+      is_finite = false;
     }
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
@@ -612,7 +612,7 @@ struct LorentzianFinitenessGroupTester {
     if (!IsZeroMatrix(eDiff)) {
       MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
       if (NSP.rows() == 0) {
-        is_reflective = false;
+        is_finite = false;
         InvariantBasis = MyMatrix<Tint>(0,G.rows());
       } else {
         InvariantBasis = NSP * InvariantBasis;
@@ -620,7 +620,7 @@ struct LorentzianFinitenessGroupTester {
         MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
         DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
         if (DiagInfo.nbMinus == 0) {
-          is_reflective = false;
+          is_finite = false;
         }
       }
     }
@@ -629,15 +629,15 @@ struct LorentzianFinitenessGroupTester {
     std::cerr << "Timing |InvariantSpace|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
   }
-  bool get_reflectivity_status() const
+  bool get_finiteness_status() const
   {
-    return is_reflective;
+    return is_finite;
   }
 private:
   MyMatrix<T> G;
   MyMatrix<Tint> InvariantBasis;
   size_t max_finite_order;
-  bool is_reflective;
+  bool is_finite;
 };
 
 

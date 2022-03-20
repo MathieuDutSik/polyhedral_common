@@ -2087,14 +2087,15 @@ struct Possible_Extension {
 template<typename T, typename Tint>
 std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& G, std::vector<MyVector<Tint>> const& l_root, std::vector<T> const& l_norm, bool only_spherical)
 {
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "------------------------------------ ComputePossibleExtension ---------------------------------\n";
   std::cerr << "only_spherical=" << only_spherical << "\n";
+#endif
   DiagramSelector DS;
   DS.OnlySimplyLaced = false;
   DS.OnlyLorentzianAdmissible = true;
   DS.OnlySpherical = only_spherical;
   //
-  std::cerr << "ComputePossibleExtensions, step 1\n";
   //  std::cerr << "G=\n";
   //  WriteMatrixGAP(std::cerr, G);
   //  std::cerr << "\n";
@@ -2106,12 +2107,13 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
   const MyMatrix<T> & CoxMat = ep.first;
   const MyMatrix<T> & ScalMat = ep.second;
   MyMatrix<T> ScalMatInv = Inverse(ScalMat);
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "ScalMat=\n"; WriteMatrix(std::cerr, ScalMat);
   std::cerr << "CoxMat=\n"; WriteMatrix(std::cerr, CoxMat);
   std::cerr << "Symbol of M=" << coxdyn_matrix_to_string(CoxMat) << "\n";
+#endif
   int dim = G.rows();
   int n_root = l_root.size();
-  std::cerr << "ComputePossibleExtensions, step 3\n";
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions_Efficient(CoxMat, DS);
 #ifdef CHECK_EFFICIENT_ENUMERATION
   std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions(CoxMat, DS);
@@ -2150,7 +2152,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     throw TerminalException{1};
   }
 #endif
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+#endif
   T val2 = 0;
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
@@ -2189,7 +2193,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       //      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
     std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" << StringVectorGAP(e_vect) << "\n";
+#endif
     //    std::cerr << "Scalar products found : l_scal = " << StringVectorGAP(l_scal) << "\n";
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
@@ -2199,7 +2205,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     //    std::cerr << "w = " << StringVectorGAP(w) << "\n";
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
     std::cerr << "  eNorm=" << eNorm << " res_norm=" << res_norm << "\n";
+#endif
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i=0; i<n_root; i++)
       u_component += w(i) * UniversalVectorConversion<T,Tint>(l_root[i]);
@@ -2225,7 +2233,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
     std::cerr << "  u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "ComputePossibleExtensions, step 5\n";
+#endif
   size_t len = l_norm.size();
   Face status_norm(len);
   for (auto & e_vect : l_vect) {
@@ -2252,7 +2262,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       if (status_norm[i_norm] == 1)
         get_entry(e_vect, l_norm[i_norm]);
   }
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "ComputePossibleExtensions, step 6 |l_extensions|=" << l_extensions.size() << "\n";
+#endif
   return l_extensions;
 }
 
