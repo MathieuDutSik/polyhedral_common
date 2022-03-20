@@ -213,9 +213,15 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const& G, std::string const& O
 //
 
 
+struct NonReflectivityException {
+};
+
+
 template<typename T, typename Tint>
 struct VinbergTot {
   std::string DualDescProg;
+  bool ReflectivityEarlyTermination;
+  //
   MyMatrix<Tint> G;
   MyMatrix<T> G_T;
   MyVector<Tint> v0;
@@ -288,7 +294,7 @@ std::vector<MyVector<Tint>> ReduceListRoot(const std::vector<MyVector<Tint>>& Li
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0, std::vector<Tint> const& root_lengths, std::string const& DualDescProg)
+VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& v0, std::vector<Tint> const& root_lengths, std::string const& DualDescProg, bool const& ReflectivityEarlyTermination)
 {
   int n=G.rows();
   // Computing the complement of the space.
@@ -355,7 +361,7 @@ VinbergTot<T,Tint> GetVinbergAux(const MyMatrix<Tint>& G, const MyVector<Tint>& 
   for (auto & eVal : root_lengths)
     std::cerr << " " << eVal;
   std::cerr << "\n";
-  return {DualDescProg, G, G_T, v0, V_i, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
+  return {DualDescProg, ReflectivityEarlyTermination, G, G_T, v0, V_i, Morth, Morth_T, eDet, Gorth, Gorth_T, GM_iGorth, W, root_lengths};
 }
 
 
@@ -380,7 +386,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T>& G)
 
 
 template<typename T, typename Tint>
-VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& root_lengths, std::string const& DualDescProg)
+VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& root_lengths, std::string const& DualDescProg, bool const& ReflectivityEarlyTermination)
 {
   MyVector<Tint> v0 = GetV0_vector<T,Tint>(G);
   std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
@@ -388,7 +394,7 @@ VinbergTot<T,Tint> GetVinbergFromG(const MyMatrix<T>& G, std::vector<T> const& r
   std::vector<Tint> root_lengths_i;
   for (auto & eN : root_lengths)
     root_lengths_i.push_back(UniversalScalarConversion<Tint,T>(eN));
-  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths_i, DualDescProg);
+  return GetVinbergAux<T,Tint>(G_i, v0, root_lengths_i, DualDescProg, ReflectivityEarlyTermination);
 }
 
 
@@ -867,29 +873,14 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
   }
   std::optional<MyVector<Tint>> opt;
   size_t n_iter = 0;
-  if (Vtot.DualDescProg == "lrs_iterate") {
-    MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
-    bool IsFirst = true;
-    MyVector<Tint> V(n_col);
-    auto f=[&](Tint* out) -> bool {
-      if (!IsFirst) {
-        n_iter++;
-        for (size_t i_col=0; i_col<n_col; i_col++)
-          V(i_col) = out[i_col+1];
-        Tint scal = V.dot(Vtot.G * V);
-        if (scal <= 0) {
-          opt = V;
-          return false;
-        }
-      }
-      IsFirst=false;
-      return true;
-    };
-    lrs::Kernel_DualDescription_cond(FACwork, f);
-  } else {
+  std::cerr << "DualDescProg=" << Vtot.DualDescProg << "\n";
+  if (Vtot.ReflectivityEarlyTermination) {
+    std::string DualDescProg = Vtot.DualDescProg;
+    if (DualDescProg == "lrs_iterate")
+      DualDescProg = "lrs_ring";
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T,Tint>(FAC);
-    vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
-    auto look_for_vector=[&]() -> void {
+    vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, DualDescProg);
+    auto inspect_listincd=[&]() -> void {
       for (auto & eFace : ListIncd) {
         n_iter++;
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
@@ -900,13 +891,57 @@ std::optional<MyVector<Tint>> GetOneInteriorVertex(const VinbergTot<T,Tint>& Vto
         }
       }
     };
-    look_for_vector();
+    inspect_listincd();
+  } else {
+    if (Vtot.DualDescProg == "lrs_iterate") {
+      MyMatrix<Tint> FACwork=lrs::FirstColumnZero(FAC);
+      bool IsFirst = true;
+      MyVector<Tint> V(n_col);
+      auto f=[&](Tint* out) -> bool {
+        if (!IsFirst) {
+          n_iter++;
+          for (size_t i_col=0; i_col<n_col; i_col++)
+            V(i_col) = out[i_col+1];
+          Tint scal = V.dot(Vtot.G * V);
+          if (scal <= 0) {
+            opt = V;
+            return false;
+          }
+        }
+        IsFirst=false;
+        return true;
+      };
+      lrs::Kernel_DualDescription_cond(FACwork, f);
+    } else {
+      MyMatrix<T> FAC_T = UniversalMatrixConversion<T,Tint>(FAC);
+      vectface ListIncd = DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
+      auto look_for_vector=[&]() -> void {
+        for (auto & eFace : ListIncd) {
+          n_iter++;
+          MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+          T scal = V.dot(Vtot.G_T * V);
+          if (scal <= 0) {
+            opt = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
+            return;
+          }
+        }
+      };
+      look_for_vector();
+    }
   }
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   bool test=opt.has_value();
   std::cerr << "has found vertex=" << test << " n_iter=" << n_iter << " |GetOneInteriorVertex|=" << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
   return opt;
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -1466,8 +1501,10 @@ FullNamelist NAMELIST_GetStandard_VINBERG()
   ListStringValues1["DualDescProg"]="lrs_iterate";
   ListStringValues1["OutFormat"]="GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"]="stdout, or stderr or the filename you want to write to";
+  ListBoolValues1["ReflectivityEarlyTermination"] = false;
   SingleBlock BlockPROC;
-  BlockPROC.ListStringValues=ListStringValues1;
+  BlockPROC.ListStringValues = ListStringValues1;
+  BlockPROC.ListBoolValues = ListBoolValues1;
   ListBlock["PROC"]=BlockPROC;
   // Merging all data
   return {ListBlock, "undefined"};
@@ -1489,8 +1526,9 @@ void MainFunctionVinberg(FullNamelist const& eFull)
     throw TerminalException{1};
   }
   //
-  std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
-  std::string DualDescProg=BlockPROC.ListStringValues.at("DualDescProg");
+  std::string OptionNorms = BlockPROC.ListStringValues.at("OptionNorms");
+  std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
+  bool ReflectivityEarlyTermination = BlockPROC.ListBoolValues.at("ReflectivityEarlyTermination");
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint,T>(G);
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::vector<Tint> root_lengths;
@@ -1510,7 +1548,7 @@ void MainFunctionVinberg(FullNamelist const& eFull)
   }
   std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
   //
-  VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G_i, v0, root_lengths, DualDescProg);
+  VinbergTot<T,Tint> Vtot = GetVinbergAux<T,Tint>(G_i, v0, root_lengths, DualDescProg, ReflectivityEarlyTermination);
   std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
   DataReflectionGroup<T,Tint> data = GetDataReflectionGroup<T,Tint>(ListRoot, G_i);
   //

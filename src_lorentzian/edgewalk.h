@@ -303,7 +303,7 @@ struct CuspidalBank {
 template<typename T, typename Tint>
 CuspidalRequest_FullInfo<T,Tint> gen_cuspidal_request_full_info(MyMatrix<T> const& G, CuspidalRequest<T,Tint> const& eReq)
 {
-  std::unordered_map<MyVector<Tint>,int> map_v;
+  std::unordered_map<MyVector<Tint>,uint8_t> map_v;
   std::vector<MyVector<Tint>> l_vect;
   std::vector<T> Vdiag;
   for (auto & eV : eReq.l_ui) {
@@ -1254,6 +1254,146 @@ struct FundDomainVertex_FullInfo {
   std::string method;
 };
 
+template<typename T, typename Tint, typename Tgroup>
+struct ret_type {
+  pair_char<T> e_pair_char;
+  Tgroup GRP1;
+  MyMatrix<Tint> MatRoot;
+};
+
+template<typename T, typename Tint>
+struct InitialComputation {
+  T norm;
+  std::unordered_map<MyVector<Tint>,uint8_t> map_v;
+  std::vector<MyMatrix<T>> ListMat;
+};
+
+
+template<typename T, typename Tint>
+InitialComputation<T,Tint> GetInitialComputation(MyMatrix<T> const& G, FundDomainVertex<T,Tint> const& vert)
+{
+  std::unordered_map<MyVector<Tint>,uint8_t> map_v;
+  size_t len = vert.MatRoot.rows();
+  for (size_t i=0; i<len; i++) {
+    MyVector<Tint> eV = GetMatrixRow(vert.MatRoot, i);
+    map_v[eV] = 1;
+  }
+  MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
+  map_v[gen_tint] = 2;
+  T norm = vert.gen.dot(G * vert.gen);
+  //
+  std::vector<MyMatrix<T>> ListMat{G};
+  if (norm == 0) {
+    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(UniversalMatrixConversion<T,Tint>(vert.MatRoot));
+    ListMat.emplace_back(std::move(Qmat));
+  }
+  return {norm, map_v, ListMat};
+}
+
+template<typename T, typename Tint, typename Tgroup>
+ret_type<T,Tint,Tgroup> get_canonicalized_record(std::vector<MyMatrix<T>> const& ListMat, std::unordered_map<MyVector<Tint>,uint8_t> const& the_map)
+{
+  using Tidx_value = uint16_t;
+  using Tidx = uint32_t;
+  using Telt = typename Tgroup::Telt;
+  using Telt_idx = typename Telt::Tidx;
+  using Tgr = GraphListAdj;
+  size_t n_row = the_map.size();
+  std::vector<MyVector<Tint>> l_vect;
+  std::vector<T> Vdiag;
+  size_t idx = 0;
+  std::vector<size_t> V;
+  for (auto & kv : the_map) {
+    l_vect.push_back(kv.first);
+    Vdiag.push_back(T(kv.second));
+    if (kv.second == 1)
+      V.push_back(idx);
+    idx++;
+  }
+  size_t n1 = V.size();
+  MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
+  WMat.ReorderingSetWeight();
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
+  const std::vector<Tidx>& ListIdx = epair.first;
+  const std::vector<std::vector<Tidx>>& ListGen = epair.second;
+  WMat.RowColumnReordering(ListIdx);
+  std::vector<Tidx> ListIdxRev(n_row);
+  for (size_t i1=0; i1<n_row; i1++)
+    ListIdxRev[ListIdx[i1]] = i1;
+  std::vector<MyVector<Tint>> l_vect_reord(n_row);
+  std::vector<T> Vdiag_reord(n_row);
+  std::vector<MyVector<Tint>> l_vect1;
+  std::vector<size_t> Map1;
+  std::vector<size_t> Map1_rev(n_row,std::numeric_limits<size_t>::max());
+  size_t pos = 0;
+  for (size_t i=0; i<n_row; i++) {
+    size_t j = ListIdx[i];
+    l_vect_reord[i] = l_vect[j];
+    Vdiag_reord[i] = Vdiag[j];
+    if (Vdiag[j] == 1) {
+      l_vect1.push_back(l_vect[j]);
+      Map1.push_back(i);
+      Map1_rev[i] = pos;
+      pos++;
+    }
+  }
+  MyMatrix<T> MatV_reord = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect_reord));
+  // There are two use case of computing the group
+  // ---For the computation of minimal adjacencies that would get us a full dimensional system
+  // ---For the computation of orbits of adjacent vertices
+  // So, in both cases, we need to reduce to the group for values 1.
+  std::vector<Telt> LGen;
+  std::vector<Telt> LGen1;
+  for (auto & eGen : ListGen) {
+    std::vector<Telt_idx> V(n_row);
+    for (size_t i1=0; i1<n_row; i1++) {
+      Tidx i2 = ListIdx[i1];
+      Tidx i3 = eGen[i2];
+      Tidx i4 = ListIdxRev[i3];
+      V[i1] = i4;
+    }
+    Telt ePerm(V);
+    LGen.push_back(ePerm);
+    //
+    std::vector<Telt_idx> V1(n1);
+    for (size_t i1=0; i1<n1; i1++) {
+      size_t i2 = Map1[i1];
+      size_t i3 = V[i2];
+      size_t i4 = Map1_rev[i3];
+      V1[i1] = i4;
+    }
+    Telt ePerm1(V1);
+    LGen1.push_back(ePerm1);
+  }
+  Tgroup GRP(LGen, n_row);
+  Tgroup GRP1(LGen1, n1);
+  MyMatrix<Tint> MatV_ret = MatrixFromVectorFamily(l_vect1);
+  pair_char<T> e_pair_char{std::move(MatV_reord), std::move(WMat)};
+  return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
+}
+
+template<typename T, typename Tint, typename Tgroup>
+FundDomainVertex_FullInfo<T,Tint,Tgroup> get_full_info(FundDomainVertex<T,Tint> const& vert, ret_type<T,Tint,Tgroup> & frec, std::string const& method)
+{
+  auto& WMat = frec.e_pair_char.second;
+  //  std::cerr << "frec.e_pair_char.first=\n";
+  //  WriteMatrix(std::cerr, frec.e_pair_char.first);
+  //  std::cerr << "RankMat = " << RankMat(frec.e_pair_char.first) << "\n";
+  //  std::cerr << "frec.e_pair_char.second=\n";
+  //  PrintWeightedMatrix(std::cerr, frec.e_pair_char.second);
+  size_t seed = 1440;
+  size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
+  FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
+  //  std::cerr << "gen_fund_domain_fund_info gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << frec.GRP1.size() << "\n";
+  //  for (auto & eGen : frec.GRP1.GeneratorsOfGroup())
+  //    std::cerr << "eGen=" << eGen << "\n";
+  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}, method};
+}
+
+
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T,Tint,Tgroup> DirectCopy(FundDomainVertex_FullInfo<T,Tint,Tgroup> const& fdfi)
@@ -1268,116 +1408,18 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
-  std::cerr << "gen_fund_domain_fund_info, beginning\n";
   //
   // Put the stuff that can help for invariant first
-  std::unordered_map<MyVector<Tint>,int> map_v;
-  size_t len = vert.MatRoot.rows();
-  for (size_t i=0; i<len; i++) {
-    MyVector<Tint> eV = GetMatrixRow(vert.MatRoot, i);
-    map_v[eV] = 1;
-  }
-  MyVector<Tint> gen_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(vert.gen));
-  map_v[gen_tint] = 2;
-  std::cerr << "Initial map_v built\n";
-  T norm = vert.gen.dot(G * vert.gen);
-  std::cerr << "norm=" << norm << "\n";
-  //
   using Tidx = uint32_t;
-  using Tidx_value = uint16_t;
   using Telt = typename Tgroup::Telt;
   using Telt_idx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
-  std::vector<MyMatrix<T>> ListMat{G};
-  if (norm == 0) {
-    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(UniversalMatrixConversion<T,Tint>(vert.MatRoot));
-    ListMat.emplace_back(std::move(Qmat));
-  }
-  struct ret_type {
-    pair_char<T> e_pair_char;
-    Tgroup GRP1;
-    MyMatrix<Tint> MatRoot;
-  };
-  auto get_canonicalized_record=[&](std::unordered_map<MyVector<Tint>,int> const& the_map) -> ret_type {
-    size_t n_row = the_map.size();
-    std::vector<MyVector<Tint>> l_vect;
-    std::vector<T> Vdiag;
-    size_t idx = 0;
-    std::vector<size_t> V;
-    for (auto & kv : the_map) {
-      l_vect.push_back(kv.first);
-      Vdiag.push_back(T(kv.second));
-      if (kv.second == 1)
-        V.push_back(idx);
-      idx++;
-    }
-    size_t n1 = V.size();
-    MyMatrix<T> MatV = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect));
-    WeightMatrix<true, std::vector<T>, Tidx_value> WMat = GetWeightMatrix_ListMat_Vdiag<T,Tidx,Tidx_value>(MatV, ListMat, Vdiag);
-    WMat.ReorderingSetWeight();
-    std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair = GetGroupCanonicalizationVector_Kernel<std::vector<T>,Tgr,Tidx,Tidx_value>(WMat);
-    const std::vector<Tidx>& ListIdx = epair.first;
-    const std::vector<std::vector<Tidx>>& ListGen = epair.second;
-    WMat.RowColumnReordering(ListIdx);
-    std::vector<Tidx> ListIdxRev(n_row);
-    for (size_t i1=0; i1<n_row; i1++)
-      ListIdxRev[ListIdx[i1]] = i1;
-    std::vector<MyVector<Tint>> l_vect_reord(n_row);
-    std::vector<T> Vdiag_reord(n_row);
-    std::vector<MyVector<Tint>> l_vect1;
-    std::vector<size_t> Map1;
-    std::vector<size_t> Map1_rev(n_row,std::numeric_limits<size_t>::max());
-    size_t pos = 0;
-    for (size_t i=0; i<n_row; i++) {
-      size_t j = ListIdx[i];
-      l_vect_reord[i] = l_vect[j];
-      Vdiag_reord[i] = Vdiag[j];
-      if (Vdiag[j] == 1) {
-        l_vect1.push_back(l_vect[j]);
-        Map1.push_back(i);
-        Map1_rev[i] = pos;
-        pos++;
-      }
-    }
-    MyMatrix<T> MatV_reord = UniversalMatrixConversion<T,Tint>(MatrixFromVectorFamily(l_vect_reord));
-    // There are two use case of computing the group
-    // ---For the computation of minimal adjacencies that would get us a full dimensional system
-    // ---For the computation of orbits of adjacent vertices
-    // So, in both cases, we need to reduce to the group for values 1.
-    std::vector<Telt> LGen;
-    std::vector<Telt> LGen1;
-    for (auto & eGen : ListGen) {
-      std::vector<Telt_idx> V(n_row);
-      for (size_t i1=0; i1<n_row; i1++) {
-        Tidx i2 = ListIdx[i1];
-        Tidx i3 = eGen[i2];
-        Tidx i4 = ListIdxRev[i3];
-        V[i1] = i4;
-      }
-      Telt ePerm(V);
-      LGen.push_back(ePerm);
-      //
-      std::vector<Telt_idx> V1(n1);
-      for (size_t i1=0; i1<n1; i1++) {
-        size_t i2 = Map1[i1];
-        size_t i3 = V[i2];
-        size_t i4 = Map1_rev[i3];
-        V1[i1] = i4;
-      }
-      Telt ePerm1(V1);
-      LGen1.push_back(ePerm1);
-    }
-    Tgroup GRP(LGen, n_row);
-    Tgroup GRP1(LGen1, n1);
-    MyMatrix<Tint> MatV_ret = MatrixFromVectorFamily(l_vect1);
-    pair_char<T> e_pair_char{std::move(MatV_reord), std::move(WMat)};
-    return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
-  };
+  InitialComputation<T,Tint> ic = GetInitialComputation(G, vert);
   std::string method = "extendedvectfamily";
-  if (norm == 0) {
+  if (ic.norm == 0) {
     // In isotropic case, we are unfortunately forced to do more complex stuff
     // Those needs
-    ret_type erec = get_canonicalized_record(map_v);
+    ret_type<T,Tint,Tgroup> erec = get_canonicalized_record<T,Tint,Tgroup>(ic.ListMat, ic.map_v);
     //    std::cerr << "We have erec\n";
     // Add new vertices to
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(erec.MatRoot);
@@ -1391,39 +1433,27 @@ FundDomainVertex_FullInfo<T,Tint,Tgroup> gen_fund_domain_fund_info(CuspidalBank<
       //    std::cerr << "We have vf\n";
       // Finding the minimal orbit and then
       vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
-      std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
+      //      std::cerr << "|vf_min|=" << vf_min.size() << " gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << erec.GRP1.size() << "\n";
       for (auto & eFAC : vf_min) {
         AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
         FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, vert.gen, ad);
         MyVector<Tint> fVert_tint = UniversalVectorConversion<Tint,T>(RemoveFractionVector(fVert.gen));
-        map_v[fVert_tint] = 3;
+        ic.map_v[fVert_tint] = 3;
       }
-      std::cerr << "map_v has been extended |map_v|=" << map_v.size() << "\n";
-      for (auto & kv : map_v)
-        std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
+      //      std::cerr << "map_v has been extended |map_v|=" << map_v.size() << "\n";
+      //      for (auto & kv : map_v)
+      //        std::cerr << "V=" << kv.first << " val=" << kv.second << "\n";
     } else {
       //      method = "isotropstabequiv_V1";
       method = "isotropstabequiv";
     }
   }
-  ret_type frec = get_canonicalized_record(map_v);
-  const auto& WMat = frec.e_pair_char.second;
-  std::cerr << "frec.e_pair_char.first=\n";
-  WriteMatrix(std::cerr, frec.e_pair_char.first);
-  std::cerr << "RankMat = " << RankMat(frec.e_pair_char.first) << "\n";
-  std::cerr << "frec.e_pair_char.second=\n";
-  PrintWeightedMatrix(std::cerr, frec.e_pair_char.second);
-  size_t seed = 1440;
-  size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
-  FundDomainVertex<T,Tint> new_vert{vert.gen, frec.MatRoot};
-  std::cerr << "gen_fund_domain_fund_info gen=" << StringVectorGAP(vert.gen) << " |GRP1|=" << frec.GRP1.size() << "\n";
-  for (auto & eGen : frec.GRP1.GeneratorsOfGroup())
-    std::cerr << "eGen=" << eGen << "\n";
+  ret_type<T,Tint,Tgroup> frec = get_canonicalized_record<T,Tint,Tgroup>(ic.ListMat, ic.map_v);
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
   std::cerr << "Timing |gen_fund_domain_fund_info|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
-  return {std::move(new_vert), std::move(frec.e_pair_char), hash, std::move(frec.GRP1), {}, method};
+  return get_full_info(vert, frec, method);
 }
 
 
@@ -2346,13 +2376,13 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
 
 
 template<typename T, typename Tint>
-MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg)
+MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, bool const& EarlyTerminationIfNotReflective)
 {
   ResultReductionIndefinite<T,Tint> ResRed = ComputeReductionIndefinite_opt<T,Tint>(G, ApplyReduction);
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
-  VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms, DualDescProg);
+  VinbergTot<T,Tint> Vtot = GetVinbergFromG<T,Tint>(ResRed.Mred, l_norms, DualDescProg, EarlyTerminationIfNotReflective);
   MyVector<Tint> V1 = FindOneInitialRay(Vtot);
   MyVector<Tint> V2 = ResRed.B.transpose() * V1;
   MyVector<Tint> V3 = RemoveFractionVector(V2);
@@ -2364,7 +2394,7 @@ MyVector<T> GetOneVertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bo
 
 
 template<typename T, typename Tint>
-FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
+FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T> const& l_norms, bool const& ApplyReduction, std::string const& DualDescProg, bool const& EarlyTerminationIfNotReflective, std::string const& OptionInitialVertex, std::string const& FileInitialVertex)
 {
   std::cerr << "Beginning of get_initial_vertex\n";
   if (OptionInitialVertex == "FileVertex") {
@@ -2389,7 +2419,7 @@ FundDomainVertex<T,Tint> get_initial_vertex(MyMatrix<T> const& G, std::vector<T>
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg);
+    MyVector<T> V = GetOneVertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective);
     MyMatrix<Tint> MatRoot = get_simple_cone<T,Tint>(G, l_norms, V);
     return {RemoveFractionVector(V), MatRoot};
   }
@@ -2429,13 +2459,14 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
   //
   std::string OptionNorms=BlockPROC.ListStringValues.at("OptionNorms");
   std::string DualDescProg=BlockPROC.ListStringValues.at("DualDescProg");
+  bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
   bool ApplyReduction=BlockPROC.ListBoolValues.at("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T,Tint>(G, OptionNorms);
   std::cerr << "We have l_norms\n";
   //
   std::string OptionInitialVertex=BlockPROC.ListStringValues.at("OptionInitialVertex");
   std::string FileInitialVertex=BlockPROC.ListStringValues.at("FileInitialVertex");
-  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T,Tint> eVert = get_initial_vertex<T,Tint>(G, l_norms, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
   T norm = eVert.gen.dot(G * eVert.gen);
   std::cerr << "Initial vertex is eVert=" << StringVectorGAP(eVert.gen) << " norm=" << norm << "\n";
   std::cerr << "|MatRoot|=" << eVert.MatRoot.rows() << "\n";
@@ -2459,8 +2490,6 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
     WriteMatrix(std::cerr, eVert.MatRoot);
   }
 #endif
-  //
-  bool EarlyTerminationIfNotReflective = BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
   //
   std::string FileHeuristicIdealStabEquiv=BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv=GetHeuristicIdealStabEquiv<Tint>();
