@@ -1163,14 +1163,14 @@ public:
   TbasicBank & bb;
 private:
   std::string MainPrefix;
+  std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF;
   /* TRICK 7: Using separate files for faces and status allow us to gain locality.
      The faces are written one by one while the access to status is random */
-  FileBool* fb; // This is for storing the status
-  FileFace* ff; // This is for storing the faces and the index of oribit
-  FileNumber* fn; // The number of orbits of the polytope 
+  std::optional<FileBool> fb; // This is for storing the status
+  std::optional<FileFace> ff; // This is for storing the faces and the index of orbit
+  std::optional<FileNumber> fn; // The number of orbits of the polytope 
   bool SavingTrigger;
   std::ostream& os;
-  bool is_opened;
   size_t delta;
   std::string strPresChar;
 public:
@@ -1182,26 +1182,22 @@ public:
     os << "Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone)
        << ") facet=(" << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone) << "," << bb.foc.nbUndone << ")\n\n";
   }
-  DatabaseOrbits(TbasicBank & bb, const std::string& _MainPrefix, const bool& _SavingTrigger, std::ostream& os) : CritSiz(bb.EXT.cols() - 2), bb(bb), MainPrefix(_MainPrefix), SavingTrigger(_SavingTrigger), os(os) {
-    strPresChar = "|EXT|=" + std::to_string(bb.nbRow) +"/" + std::to_string(bb.nbCol) + " |GRP|=" + std::to_string(bb.GRP.size());
+  DatabaseOrbits(TbasicBank & bb, const std::string& MainPrefix, const bool& _SavingTrigger, std::ostream& os) : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger), os(os) {
+    os << "MainPrefix=" << MainPrefix << "\n";
+    eFileEXT = MainPrefix + ".ext";
+    eFileGRP = MainPrefix + ".grp";
+    eFileNB = MainPrefix + ".nb";
+    eFileFB = MainPrefix + ".fb";
+    eFileFF = MainPrefix + ".ff";
+    strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" + std::to_string(bb.nbCol) + " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
-    fb = nullptr;
-    ff = nullptr;
-    fn = nullptr;
-    is_opened = false;
     if (SavingTrigger) {
-      std::string eFileEXT = MainPrefix + ".ext";
-      std::string eFileGRP = MainPrefix + ".grp";
-      std::string eFileNB = MainPrefix + ".nb";
-      std::string eFileFB = MainPrefix + ".fb";
-      std::string eFileFF = MainPrefix + ".ff";
-      os << "MainPrefix=" << MainPrefix << "\n";
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
         os << "Opening existing files (NB, FB, FF)\n";
-        fn = new FileNumber(eFileNB, false);
-        fb = new FileBool(eFileFB, n_orbit);
-        ff = new FileFace(eFileFF, bb.delta, n_orbit);
+        fn = FileNumber(eFileNB, false);
+        fb = FileBool(eFileFB, n_orbit);
+        ff = FileFace(eFileFF, bb.delta, n_orbit);
         n_orbit = fn->getval();
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
@@ -1217,13 +1213,12 @@ public:
         std::ofstream os_ext(eFileEXT);
         WriteMatrix(os_ext, bb.EXT);
         // Opening the files
-        fn = new FileNumber(eFileNB, true);
-        fb = new FileBool(eFileFB);
-        ff = new FileFace(eFileFF, bb.delta);
+        fn = FileNumber(eFileNB, true);
+        fb = FileBool(eFileFB);
+        ff = FileFace(eFileFF, bb.delta);
         n_orbit = 0;
         fn->setval(n_orbit);
       }
-      is_opened = true;
       //
       std::cerr << "Inserting orbits, n_orbit=" << n_orbit << "\n";
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
@@ -1243,37 +1238,18 @@ public:
        Note that the returning of the list of orbit does destroy the database and this gives a small window
        in which bad stuff can happen.
      */
-    if (is_opened) {
-      if (fn == nullptr || fb == nullptr || ff == nullptr) {
-        std::cerr << "Error: Some files are not opened\n";
-        std::cerr << "Not throwing exception because we are in a destructor\n";
-      }
-      delete fn; // which closes the files and save the data to disk
-      delete fb;
-      delete ff;
-    }
     os << "Clean closing of the DatabaseOrbits\n";
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
-      std::string eFileNB = MainPrefix + ".nb";
-      delete fn;
+      fn = {};
+      fb = {};
+      ff = {};
+      //
       RemoveFile(eFileNB);
-      //
-      std::string eFileFB = MainPrefix + ".fb";
-      delete fb;
       RemoveFile(eFileFB);
-      //
-      std::string eFileFF = MainPrefix + ".ff";
-      delete ff;
       RemoveFile(eFileFF);
-      //
-      is_opened = false;
-      //
-      std::string eFileEXT = MainPrefix + ".ext";
       RemoveFile(eFileEXT);
-      //
-      std::string eFileGRP = MainPrefix + ".grp";
       RemoveFile(eFileGRP);
     }
     return bb.FuncListOrbitIncidence();
