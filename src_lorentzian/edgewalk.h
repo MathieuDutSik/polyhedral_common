@@ -1808,11 +1808,12 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
   MyMatrix<T> NSP = NullspaceIntTrMat(eProdB);
   MyMatrix<Tint> NSP_tint = UniversalMatrixConversion<Tint,T>(NSP);
   if (norm < 0) {
+    std::cerr << "Ordinary case\n";
     // ordinary point case
     std::vector<MyVector<Tint>> l_vect = get_simple_cone_from_lattice(G, l_norms, NSP_tint);
     return MatrixFromVectorFamily(l_vect);
   } else {
-    std::cerr << "get_simple_cone, step 1\n";
+    std::cerr << "Ideal case\n";
     // ideal point case
     MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(RemoveFractionVector(V));
     std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, V_i);
@@ -1821,7 +1822,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       throw TerminalException{1};
     }
     MyVector<Tint> const& Vnsp = *opt;
-    std::cerr << "get_simple_cone, step 2\n";
+    std::cerr << "We have Vnsp\n";
     /*
       We need a more general code for finding complement of subspace, possibly using HermiteNormalForm
      */
@@ -1838,7 +1839,6 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     std::vector<MyVector<T>> list_vect;
     std::vector<MyVector<T>> list_vect_big;
     std::vector<T> list_norm;
-    std::cerr << "get_simple_cone, step 3\n";
     size_t pos = 0;
     for (auto & e_norm : l_norms) {
       std::cerr << "e_norm=" << e_norm << "\n";
@@ -1871,13 +1871,21 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       }
       pos++;
     }
-    std::cerr << "|list_vect|=" << list_vect.size() << "\n";
-    for (size_t i=0; i<list_vect.size(); i++)
-      std::cerr << "i=" << i << " e_vect=" << StringVectorGAP(list_vect[i]) << " norm=" << list_norm[i] << "\n";
-    std::cerr << "get_simple_cone, step 4\n";
+    if (list_vect.size() == 0) {
+      std::cerr << "The list of vectors is empty. Cannot be reflective. In any case, we cannot continue\n";
+      throw NonReflectivityException{};
+    }
+    int rnk = RankMat(MatrixFromVectorFamily(list_vect));
+    std::cerr << "|list_vect|=" << list_vect.size() << " Rank(list_vect)=" << rnk << "\n";
+    if (rnk < G.rows() - 2) {
+      std::cerr << "The list of roots is not of correct rank. Cannot be reflective. In any case, we cannot continue\n";
+      throw NonReflectivityException{};
+    }
+    //    for (size_t i=0; i<list_vect.size(); i++)
+    //      std::cerr << "i=" << i << " e_vect=" << StringVectorGAP(list_vect[i]) << " norm=" << list_norm[i] << "\n";
     auto get_one_root=[&](MyVector<T> const& e_vect) -> MyVector<Tint> {
-      std::cerr << "Beginning of get_one_root\n";
-      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
+      //      std::cerr << "Beginning of get_one_root\n";
+      //      std::cerr << "e_vect=" << StringVectorGAP(e_vect) << "\n";
       size_t len = list_vect.size();
       for (size_t i=0; i<len; i++) {
         MyVector<T> const& f_vect = list_vect[i];
@@ -1885,7 +1893,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
           T const& e_norm = list_norm[i];
           MyVector<T> const& e_vect_big = list_vect_big[i];
           size_t idx = MapIdxFr[e_norm];
-          std::cerr << "e_norm=" << e_norm << " idx=" << idx << "\n";
+          //          std::cerr << "e_norm=" << e_norm << " idx=" << idx << "\n";
           LatticeProjectionFramework<T> const& fr = ListFr[idx];
           std::optional<MyVector<T>> opt = fr.GetOnePreimage(e_vect_big);
           if (!opt) {
@@ -1901,15 +1909,16 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       throw TerminalException{1};
     };
     std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect);
-    std::cerr << "get_simple_cone, step 5\n";
+    std::cerr << "We have facet_one_cone\n";
     std::vector<MyVector<Tint>> l_ui;
     for (auto & e_vt : facet_one_cone) {
       MyVector<Tint> e_vi = get_one_root(e_vt);
-      std::cerr << "e_vt=" << StringVectorGAP(e_vt) << " e_vi=" << StringVectorGAP(e_vi) << "\n";
+      //      std::cerr << "e_vt=" << StringVectorGAP(e_vt) << " e_vi=" << StringVectorGAP(e_vi) << "\n";
       l_ui.push_back(e_vi);
     }
-    std::cerr << "get_simple_cone, step 6\n";
+    std::cerr << "We have l_ui\n";
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
+    std::cerr << "We have Pplane\n";
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
       T CritNorm = 0;
@@ -1928,7 +1937,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       }
     };
     MyVector<T> kP = get_kP();
-    std::cerr << "get_simple_cone, step 7\n";
+    std::cerr << "we have kP\n";
     CuspidalRequest<T,Tint> eReq{l_ui, V, kP};
     std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(G, l_norms, eReq);
     std::cerr << "get_simple_cone, step 8\n";
@@ -2094,6 +2103,10 @@ void MainFunctionEdgewalk(FullNamelist const& eFull)
     print_result_edgewalk(re);
   }
   catch (NonReflectivityException const& e) {
+    if (!EarlyTerminationIfNotReflective) {
+      std::cerr << "The program cannot go forward. Since we have EarlyTerminationIfNotReflective = F\n";
+      std::cerr << "this is actually a runtime error\n";
+    }
     ResultEdgewalk<T,Tint> re{ {}, {}, false};
     print_result_edgewalk(re);
   }

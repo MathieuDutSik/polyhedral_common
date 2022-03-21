@@ -10,6 +10,7 @@
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_ComputeStabilizer_Vertex
 #PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
 PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_ComputeRoots_Vertex
 #PROGRAM		= COXDYN_FindExtensionsCoxMat
 #PROGRAM		= LORENTZ_SingleEdgewalk
 

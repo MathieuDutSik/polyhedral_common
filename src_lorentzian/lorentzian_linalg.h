@@ -258,9 +258,9 @@ template<typename T>
 std::vector<size_t> GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const& l_vect)
 {
   using Tfield = typename overlying_field<T>::field_type;
-  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+  //  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   int dimSpace = l_vect[0].size();
-  std::cerr << "dimSpace=" << dimSpace << "\n";
+  //  std::cerr << "dimSpace=" << dimSpace << "\n";
   if (l_vect.size() < size_t(2*dimSpace)) {
     std::cerr << "Number of roots should be at least 2 * dimspace = " << (2 * dimSpace) << "\n";
     std::cerr << "while |l_vect|=" << l_vect.size() << "\n";
