@@ -984,7 +984,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
   // A2 obtained from A1
   for (auto & v : list_isolated)
     f_single(v);
-  std::cerr << "Step 1\n";
   // Bn obtained from A(n-1)
   for (auto & Lext : list_extremal_AN) {
     for (auto & v : Lext) {
@@ -1141,7 +1140,6 @@ std::vector<MyVector<T>> FindDiagramExtensions_Efficient(const MyMatrix<T>& M, c
     V(v2) = val_single_edge;
     test_vector_and_insert(V);
   };
-  std::cerr << "Start f_pair\n";
   // An formed from Ak + Al with k+l = n-1 , k >= 2 , l >= 2
   SetCppIterator SCI_Ak_Al(n_AN,2);
   for (auto & eV : SCI_Ak_Al) {
@@ -2230,7 +2228,9 @@ std::vector<Possible_Extension<T>> ComputePossibleExtensions(MyMatrix<T> const& 
       //      std::cerr << "Symbol of CoxMatExt=" << coxdyn_matrix_to_string(CoxMatExt) << "\n";
     }
 #endif
+#ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
     std::cerr << "  u_component="; WriteVectorGAP(std::cerr, u_component); std::cerr << "\n";
+#endif
     l_extensions.push_back({u_component, res_norm, e_norm});
   };
 #ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS

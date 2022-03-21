@@ -1403,22 +1403,28 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 #endif
     for (size_t i=0; i<len; i++) {
       const FundDomainVertex_FullInfo<T,Tint,Tgroup>& vertFull2 = l_orbit_vertices[ i ];
-      std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
+      //      std::cerr << "i=" << i << "/" << len << " vert1=" << StringVectorGAP(vertFull1.vert.gen) << " / " << StringVectorGAP(vertFull2.vert.gen) << "\n";
       //      std::cerr << "    hash1=" << vertFull1.hash << " hash2=" << vertFull2.hash << "\n";
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt = LORENTZ_TestEquivalence<T,Tint,Tgroup>(G, vertFull1, G, vertFull2);
         if (equiv_opt) {
+#ifdef DEBUG_ENUM_PROCESS
           std::cerr << "Find some isomorphism\n";
+#endif
 #ifdef TIMINGS
           std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
           std::cerr << "Timing |func_insert_vertex(find iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
           bool test = f_isom(UniversalMatrixConversion<Tint,T>(*equiv_opt));
           if (test) {
+#ifdef DEBUG_ENUM_PROCESS
             std::cerr << "Exiting at f_isom in LORENTZ_TestEquivalence, return true\n";
+#endif
             return true;
           } else {
+#ifdef DEBUG_ENUM_PROCESS
             std::cerr << "Exiting at f_isom in LORENTZ_TestEquivalence, return false\n";
+#endif
             return false;
           }
         }
@@ -1428,7 +1434,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
     std::cerr << "Timing |func_insert_vertex(no iso)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "               Failed to find some isomorphism\n";
+#endif
     //    const auto& epair = vertFull1.e_pair_char;
     //    std::cerr << "GAP : MatV=" << StringMatrixGAP(epair.first) << " WMat=\n";
     //    PrintWeightedMatrixGAP(std::cerr, epair.second);
@@ -1437,17 +1445,23 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     //    WriteMatrix(std::cerr, epair.first);
     //    std::cerr << "WMat=\n";
     //    PrintWeightedMatrix(std::cerr, epair.second);
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Before the LORENTZ_GetStabilizerGenerator nbDone=" << nbDone << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
+#endif
     std::vector<Telt> LGenIntegral;
     for (auto & eGen_Mat : LORENTZ_GetStabilizerGenerator<T,Tint,Tgroup>(G, vertFull1)) {
       bool test = f_isom(UniversalMatrixConversion<Tint,T>(eGen_Mat));
       if (test) {
+#ifdef DEBUG_ENUM_PROCESS
         std::cerr << "Exiting at f_isom in func_insert_vertex\n";
+#endif
         return true;
       }
       std::optional<std::vector<Tidx>> opt = RepresentVertexPermutationTest<Tint,T,Tidx>(vertFull1.vert.MatRoot, vertFull1.vert.MatRoot, eGen_Mat);
       if (!opt) {
+#ifdef DEBUG_ENUM_PROCESS
         std::cerr << "Failed to find the representation\n";
+#endif
         throw TerminalException{1};
       }
       LGenIntegral.push_back(Telt(*opt));
@@ -1459,12 +1473,16 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
 #endif
     bool test = f_vertex(vertFull1);
     if (test) {
+#ifdef DEBUG_ENUM_PROCESS
       std::cerr << "Exiting at f_vertex in func_insert_vertex\n";
+#endif
       return true;
     }
     l_status.push_back(1);
     l_orbit_vertices.emplace_back(std::move(vertFull1));
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Exiting the func_insert_vertex\n";
+#endif
 #ifdef TIMINGS
     std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
     std::cerr << "Timing |func_insert_vertex(end)|=" << std::chrono::duration_cast<std::chrono::microseconds>(time4 - time3).count() << "\n";
@@ -1479,7 +1497,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
 #endif
     const FundDomainVertex<T,Tint>& theVert = vertFull.vert;
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "insert_edges_from_vertex theVert=" << StringVectorGAP(RemoveFractionVector(theVert.gen)) << "\n";
+#endif
     MyMatrix<T> FAC = UniversalMatrixConversion<T,Tint>(theVert.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = lrs::DualDescription_temp_incd(FACred);
@@ -1489,16 +1509,20 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::cerr << "Timing |vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time2 - time1).count() << "\n";
 #endif
     //
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "nbDone=" << nbDone << " |vf_orb|=" << vf_orb.size() << " |GRP1|=" << vertFull.GRP1.size() << " |GRP1_int|=" << vertFull.GRP1_integral.size() << "\n";
+#endif
     for (auto & eFAC : vf_orb) {
       AdjacencyDirection<Tint> ad = GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T,Tint> fVert = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, theVert.gen, ad);
       { // Output. Fairly important to see what is happening
+#ifdef DEBUG_ENUM_PROCESS
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
         std::cerr << "k=" << StringVectorGAP(theVert.gen) << " l_ui=";
         PrintAdjacencyDirection(std::cerr, ad);
         std::cerr << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm << "\n";
+#endif
 #ifdef TRACK_INFOS_LOG
         std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert) << ", k2:=" << StringFundDomainVertexGAP(fVert) << ", ad:=" << StringAdjacencyDirectionGAP(ad) << ", G:=" << StringMatrixGAP(G) << ", l_norms:=" << StringStdVectorGAP(l_norms) << "),\n";
 #endif
@@ -1506,7 +1530,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
       FundDomainVertex_FullInfo<T,Tint,Tgroup> fVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, fVert, HeuristicIdealStabEquiv);
       bool test = func_insert_vertex(fVertFull);
       if (test) {
+#ifdef DEBUG_ENUM_PROCESS
         std::cerr << "Exiting at func_insert_vertex in insert_adjacent_vertices\n";
+#endif
         return true;
       }
     }
@@ -1514,13 +1540,17 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
     std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
     std::cerr << "Timing |process vf_orb|=" << std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2).count() << "\n";
 #endif
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
+#endif
     return false;
   };
   FundDomainVertex_FullInfo<T,Tint,Tgroup> eVertFull = gen_fund_domain_fund_info<T,Tint,Tgroup>(cusp_bank, G, l_norms, eVert, HeuristicIdealStabEquiv);
   bool test = func_insert_vertex(eVertFull);
   if (test) {
+#ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Exiting at initial func_insert_vertex\n";
+#endif
     return;
   }
   while(true) {
@@ -1544,22 +1574,30 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(MyMatrix<T> const& G, std::vector<T> co
         FundDomainVertex_FullInfo<T,Tint,Tgroup> VertFullCp = DirectCopy(l_orbit_vertices[i]);
         bool test1 = insert_adjacent_vertices(VertFullCp);
         if (test1) {
+#ifdef DEBUG_ENUM_PROCESS
           std::cerr << "Exiting after insert_adjacent_vertices\n";
+#endif
           return;
         }
         bool test2 = f_increase_nbdone();
         if (test2) {
+#ifdef DEBUG_ENUM_PROCESS
           std::cerr << "Exiting after f_increase_nbdone\n";
+#endif
           return;
         }
       }
     }
     if (IsFinished) {
+#ifdef DEBUG_ENUM_PROCESS
       std::cerr << "Exiting because all orbits have been treated\n";
+#endif
       break;
     }
   }
+#ifdef DEBUG_ENUM_PROCESS
   std::cerr << "Exiting from the infinite loop of enumeration of vertex pairs\n";
+#endif
 }
 
 template<typename T, typename Tint, typename Tgroup>
