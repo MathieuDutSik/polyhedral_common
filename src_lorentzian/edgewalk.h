@@ -1856,6 +1856,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
       //      CheckPositiveDefinite(G_P);
       std::vector<MyVector<Tint>> l_v = FindFixedNormVectors<T,Tint>(G_P, zeroVect, e_norm);
+      std::cerr << "|l_v|=" << l_v.size() << "\n";
       for (auto & e_v : l_v) {
         MyVector<T> e_vt = UniversalVectorConversion<T,Tint>(e_v);
         MyVector<T> e_vect = RelBasis.transpose() * e_vt;
@@ -1869,6 +1870,7 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
           throw TerminalException{1};
         }
       }
+      std::cerr << "Insertion done for all vectors\n";
       pos++;
     }
     if (list_vect.size() == 0) {
