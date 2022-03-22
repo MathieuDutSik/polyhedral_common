@@ -1922,18 +1922,15 @@ MyMatrix<Tint> get_simple_cone(MyMatrix<T> const& G, std::vector<T> const& l_nor
     auto get_kP=[&]() -> MyVector<T> {
       MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
       T CritNorm = 0;
-      bool StrictIneq = true;
-      bool NeedNonZero = true;
       std::cerr << "Gprod=\n";
       WriteMatrix(std::cerr, Gprod);
-      MyVector<Tint> eVect_A = GetShortVector_unlimited_float<Tint,T>(Gprod, CritNorm, StrictIneq, NeedNonZero);
-      MyVector<T> eVect_B = UniversalVectorConversion<T,Tint>(eVect_A);
-      MyVector<T> eVect_C = Pplane.transpose() * eVect_B;
-      T scal = V.dot(G * eVect_C);
+      MyVector<T> eVect_A = GetNegativeNormVector(Gprod);
+      MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
+      T scal = V.dot(G * eVect_B);
       if (scal < 0) { // This is because of the sign convention
-        return eVect_C;
+        return eVect_B;
       } else {
-        return -eVect_C;
+        return -eVect_B;
       }
     };
     MyVector<T> kP = get_kP();

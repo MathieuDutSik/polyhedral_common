@@ -257,6 +257,30 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const& SymMat)
 
 
 template<typename T>
+MyVector<T> GetNegativeNormVector(MyMatrix<T> const& SymMat)
+{
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
+  MyMatrix<T> const& Transform = DiagInfo.Transform;
+  MyMatrix<T> const& RedMat = DiagInfo.RedMat;
+  int n = SymMat.rows();
+  for (int i=0; i<n; i++) {
+    if (RedMat(i,i) < 0) {
+      MyVector<T> eVect = GetMatrixRow(Transform, i);
+      T norm = eVect.dot(SymMat * eVect);
+      if (norm != RedMat(i,i)) {
+        std::cerr << "We have a consistency error\n";
+        throw TerminalException{1};
+      }
+      return eVect;
+    }
+  }
+  std::cerr << "Failed to find a negative norm vector\n";
+  throw TerminalException{1};
+}
+
+
+
+template<typename T>
 void CheckPositiveDefinite(MyMatrix<T> const& SymMat)
 {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
