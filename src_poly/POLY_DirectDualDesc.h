@@ -1,10 +1,12 @@
-#ifndef INCLUDE_POLY_DIRECTDUALDESC_H
-#define INCLUDE_POLY_DIRECTDUALDESC_H
+#ifndef SRC_POLY_POLY_DIRECTDUALDESC_H_
+#define SRC_POLY_POLY_DIRECTDUALDESC_H_
 
 #include "Basic_string.h"
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
+#include <vector>
+#include <string>
 
 template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
   size_t pos = 0;
@@ -149,7 +151,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
           eScal = 0;
           for (size_t i = 1; i < DimEXT; i++)
             eScal += LVal[i] * EXT(i_row, i - 1);
-          f[i_row] = bool(eScal == 0);
+          f[i_row] = static_cast<bool>(eScal == 0);
         }
         ListFace.push_back(f);
 #endif
@@ -172,7 +174,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
           eScal = 0;
           for (size_t i = 1; i < DimEXT; i++)
             eScal += LVal[i] * EXT(i_row, i - 1);
-          f[i_row] = bool(eScal == 0);
+          f[i_row] = static_cast<bool>(eScal == 0);
         }
         ListFace.push_back(f);
 #endif
@@ -293,4 +295,4 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return TheOutput;
 }
 
-#endif
+#endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

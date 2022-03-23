@@ -1,8 +1,8 @@
-#ifndef INCLUDE_VINBERG_ALGO
-#define INCLUDE_VINBERG_ALGO
+#ifndef SRC_LORENTZIAN_VINBERG_H_
+#define SRC_LORENTZIAN_VINBERG_H_
 
 #include "Shvec_exact.h"
-//#include "MAT_MatrixInt.h"
+// #include "MAT_MatrixInt.h"
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
@@ -13,6 +13,13 @@
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"
 #include "lorentzian_linalg.h"
+#include <map>
+#include <set>
+#include <vector>
+#include <utility>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #define DEBUG_VINBERG
 
@@ -1603,4 +1610,4 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
   }
 }
 
-#endif
+#endif  // SRC_LORENTZIAN_VINBERG_H_

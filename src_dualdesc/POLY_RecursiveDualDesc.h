@@ -10,20 +10,20 @@
 #include "Temp_PolytopeEquiStab.h"
 
 #include "POLY_GAP.h"
-//#include "POLY_netcdf_file.h"
+// #include "POLY_netcdf_file.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
 #include <signal.h>
 
-//#define MURMUR_HASH
-//#define ROBIN_HOOD_HASH
+// #define MURMUR_HASH
+// #define ROBIN_HOOD_HASH
 #define SUBSET_HASH
 
-//#define UNORDERED_MAP
+// #define UNORDERED_MAP
 #define TSL_SPARSE_MAP
-//#define TSL_ROBIN_MAP
-//#define TSL_HOPSCOTCH_MAP
+// #define TSL_ROBIN_MAP
+// #define TSL_HOPSCOTCH_MAP
 
 #ifdef UNORDERED_MAP
 #include <unordered_map>

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_MATRIX_GROUP_H
-#define INCLUDE_MATRIX_GROUP_H
+#ifndef SRC_POLY_MATRIXGROUP_H_
+#define SRC_POLY_MATRIXGROUP_H_
 
 #include "GRP_GroupFct.h"
 #include "Group.h"
@@ -7,6 +7,9 @@
 #include "MatrixGroupBasic.h"
 #include "PERM_Fct.h"
 #include "factorizations.h"
+#include <utility>
+#include <limits>
+#include <vector>
 
 template <typename T> struct MatrixGroup {
   int n;
@@ -1508,4 +1511,4 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
       EXT1_T, EXT2_T, ListMatrGens, ePerm);
 }
 
-#endif
+#endif  // SRC_POLY_MATRIXGROUP_H_
