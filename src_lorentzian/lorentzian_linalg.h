@@ -16,7 +16,7 @@
   Given a lattice L and a matrix g, find the smallest exponent m such that g^m preserves L
  */
 template<typename T>
-size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
+std::pair<size_t,MyMatrix<T>> GetMatrixExponentSublattice_Kernel(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
 {
   int n = Latt.rows();
   auto is_preserving=[&](MyMatrix<T> const& h) -> bool {
@@ -37,11 +37,14 @@ size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt
     ord++;
     h = h * g;
   }
-  return ord;
+  return {ord,h};
 }
 
-
-
+template<typename T>
+size_t GetMatrixExponentSublattice(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
+{
+  return GetMatrixExponentSublattice_Kernel(g, Latt).first;
+}
 
 /*
   Given a lattice L and a matrix g, find the smallest exponent m such that g^m preserves L
@@ -51,25 +54,9 @@ template<typename T>
 size_t GetMatrixExponentSublattice_TrivClass(MyMatrix<T> const& g, MyMatrix<T> const& Latt)
 {
   // First compute the power that preserves the lattice L
-  int n = Latt.rows();
-  auto is_preserving=[&](MyMatrix<T> const& h) -> bool {
-    for (int i=0; i<n; i++) {
-      MyVector<T> eV = GetMatrixRow(Latt, i);
-      MyVector<T> eVimg = h.transpose() * eV;
-      std::optional<MyVector<T>> opt = SolutionIntMat(Latt, eVimg);
-      if (!opt)
-        return false;
-    }
-    return true;
-  };
-  size_t ord1 = 1;
-  MyMatrix<T> h = g;
-  while(true) {
-    if (is_preserving(h))
-      break;
-    ord1++;
-    h = h * g;
-  }
+  std::pair<size_t,MyMatrix<T>> epair = GetMatrixExponentSublattice_Kernel(g, Latt);
+  size_t const& ord1 = epair.first;
+  MyMatrix<T> const& h = epair.second;
   // Now computing the power of the action on he classes
   std::vector<MyVector<T>> ListTrans = ComputeTranslationClasses<T,T>(Latt);
   size_t n_class = ListTrans.size();
