@@ -410,6 +410,25 @@ LLLreduction<Tmat,Tint> LLLreducedBasis(MyMatrix<Tmat> const & GramMat)
   return {std::move(gram), std::move(H)};
 }
 
-
+/*
+  We reduced the inverse of GramMat using LLL so
+  P GramMat^{-1} P^T = Gred
+  Inverting we get
+  (P^T)^{-1} GramMat P^-1 = Gred^{-1}
+  Thus the result is the pair (Gred^{-1} , Q) with Q = (P^T)^{-1}
+  This means that in any code, we can substritute LLLreducedBasis with LLLreducedBasisDual
+  and it should work just as well.
+ */
+template<typename Tmat, typename Tint>
+LLLreduction<Tmat,Tint> LLLreducedBasisDual(MyMatrix<Tmat> const & GramMat)
+{
+  MyMatrix<Tmat> Ginv = Inverse(GramMat);
+  LLLreduction<Tmat,Tint> LLLrec = LLLreducedBasis(Ginv);
+  MyMatrix<Tmat> const& Gred = LLLrec.GramMatRed;
+  MyMatrix<Tint> const& P = LLLrec.Pmat;
+  MyMatrix<Tmat> GredInv = Inverse(Gred);
+  MyMatrix<Tint> Q = TransposedMat(Inverse(P));
+  return {GredInv, Q};
+}
 
 #endif
