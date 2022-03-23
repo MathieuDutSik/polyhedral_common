@@ -2,6 +2,7 @@
 #define INCLUDE_DATABANK_H
 
 #include <boost/asio.hpp>
+#include "basic_datafile.h"
 
 
 template<typename Tgroup_impl>
