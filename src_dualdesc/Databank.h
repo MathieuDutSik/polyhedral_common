@@ -86,6 +86,26 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
     ff.setface(i_orbit, ePair.ListFace[i_orbit]);
 }
 
+template <typename Tkey, typename Tval>
+void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> & ListEnt, bool const& Saving, std::string SavingPrefix)
+{
+  if (Saving) {
+    size_t iOrbit = 0;
+    while (true) {
+      std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
+      std::string eFileBank = Prefix + ".ext";
+      if (!IsExistingFile(eFileBank))
+        break;
+      std::cerr << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
+      std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
+      ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first),
+                                                 std::move(PairKV.second)));
+      iOrbit++;
+    }
+  }
+}
+
+
 // It is better to use std::unordered_map for the List of entries:
 // This makes the check of equality rarer and instead uses the hash
 // more strictly.
@@ -102,20 +122,7 @@ private:
 public:
   DataBank(const bool &_Saving, const std::string &_SavingPrefix)
       : Saving(_Saving), SavingPrefix(_SavingPrefix) {
-    if (Saving) {
-      size_t iOrbit = 0;
-      while (true) {
-        std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
-        std::string eFileBank = Prefix + ".ext";
-        if (!IsExistingFile(eFileBank))
-          break;
-        std::cerr << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
-        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
-        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first),
-                                                   std::move(PairKV.second)));
-        iOrbit++;
-      }
-    }
+    ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
   }
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
     // We have to face the situation that what we are trying to insert is
@@ -208,20 +215,7 @@ public:
   DataBankServer(const bool &_Saving, const std::string &_SavingPrefix,
                  const short unsigned int _port)
       : Saving(_Saving), SavingPrefix(_SavingPrefix), port(_port) {
-    if (Saving) {
-      size_t iOrbit = 0;
-      while (true) {
-        std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
-        std::string eFileBank = Prefix + ".ext";
-        if (!IsExistingFile(eFileBank))
-          break;
-        std::cerr << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
-        std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
-        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first),
-                                                   std::move(PairKV.second)));
-        iOrbit++;
-      }
-    }
+    ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
     //
     boost::asio::io_service io_service;
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
