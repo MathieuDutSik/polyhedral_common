@@ -351,41 +351,41 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
           for (int i = k + 1; k <= kmax; k++)
             mue(i, k - 1) /= mmue;
         } else {
-          //	  std::cerr << "Sec While loop, step 7.2.1\n";
+          //  std::cerr << "Sec While loop, step 7.2.1\n";
           Tfield q = B(k - 1) / BB;
-          //	  std::cerr << "Sec While loop, step 7.2.2\n";
+          //  std::cerr << "Sec While loop, step 7.2.2\n";
           mue(k, k - 1) = mmue * q;
-          //	  std::cerr << "Sec While loop, step 7.2.3\n";
+          //  std::cerr << "Sec While loop, step 7.2.3\n";
           B(k) *= q;
-          //	  std::cerr << "Sec While loop, step 7.2.4\n";
+          //  std::cerr << "Sec While loop, step 7.2.4\n";
           B(k - 1) = BB;
           for (int i = k + 1; i <= kmax; i++) {
-            //	    std::cerr << "Sec While loop, step 7.2.5.1\n";
+            //  std::cerr << "Sec While loop, step 7.2.5.1\n";
             Tfield q = mue(i, k);
-            //	    std::cerr << "Sec While loop, step 7.2.5.2\n";
+            //  std::cerr << "Sec While loop, step 7.2.5.2\n";
             mue(i, k) = mue(i, k - 1) - mmue * q;
-            //	    std::cerr << "Sec While loop, step 7.2.5.3\n";
+            //  std::cerr << "Sec While loop, step 7.2.5.3\n";
             mue(i, k - 1) = q + mue(k, k - 1) * mue(i, k);
-            //	    std::cerr << "Sec While loop, step 7.2.5.4\n";
+            //  std::cerr << "Sec While loop, step 7.2.5.4\n";
           }
-          //	  std::cerr << "Sec While loop, step 7.2.6\n";
+          //  std::cerr << "Sec While loop, step 7.2.6\n";
         }
       }
-      //      std::cerr << "Sec While loop, step 8\n";
+      //  std::cerr << "Sec While loop, step 8\n";
       if (k > 1)
         k--;
       RED(k - 1);
-      //      std::cerr << "Sec While loop, step 9\n";
+      //  std::cerr << "Sec While loop, step 9\n";
     }
-    //    std::cerr << "While loop, step 4\n";
+    //  std::cerr << "While loop, step 4\n";
     if (B(r + 1) == 0)
       r++;
-    //    std::cerr << "While loop, step 5 k=" << k << " r=" << r << "\n";
+    //  std::cerr << "While loop, step 5 k=" << k << " r=" << r << "\n";
     for (int l = k - 2; l >= r + 1; l--) {
-      //      std::cerr << "  While loop, step 5.1 l=" << l << "\n";
+      //  std::cerr << "  While loop, step 5.1 l=" << l << "\n";
       RED(l);
     }
-    //    std::cerr << "While loop, step 6\n";
+    //  std::cerr << "While loop, step 6\n";
     k++;
   }
   for (int i = 1; i < n; i++)
@@ -427,8 +427,8 @@ LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
   dimensional one), returns a smaller basis.
  */
 template <typename T, typename Tint> struct LLLbasis {
-  MyMatrix<T> LattRed; // The reduced basis
-  MyMatrix<Tint> Pmat; // The reducing matrix
+  MyMatrix<T> LattRed;  // The reduced basis
+  MyMatrix<Tint> Pmat;  // The reducing matrix
 };
 
 template <typename T, typename Tint>
@@ -446,4 +446,4 @@ LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
   return {LattRed, pair.Pmat};
 }
 
-#endif // SRC_LATT_LATTICEDEFINITIONS_H_
+#endif  // SRC_LATT_LATTICEDEFINITIONS_H_
