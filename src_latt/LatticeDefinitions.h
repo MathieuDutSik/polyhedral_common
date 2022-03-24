@@ -431,4 +431,36 @@ LLLreduction<Tmat,Tint> LLLreducedBasisDual(MyMatrix<Tmat> const & GramMat)
   return {GredInv, Q};
 }
 
+
+
+/*
+  For a family of vectors of an N-dimensional space (possibly in a higher dimensional one), returns a smaller basis.
+ */
+template<typename T, typename Tint>
+struct LLLbasis {
+  MyMatrix<T> LattRed; // The reduced basis
+  MyMatrix<Tint> Pmat; // The reducing matrix
+};
+
+
+
+
+template<typename T, typename Tint>
+LLLbasis<T,Tint> LLLbasisReduction(MyMatrix<T> const & Latt)
+{
+  //  std::cerr << "LLLbasisReduction, step 1\n";
+  //  std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
+  //  std::cerr << "Latt=\n";
+  //  WriteMatrix(std::cerr, Latt);
+  MyMatrix<T> GramMat = Latt * Latt.transpose();
+  //  std::cerr << "LLLbasisReduction, step 2\n";
+  LLLreduction<T,Tint> pair = LLLreducedBasis<T,Tint>(GramMat);
+  //  std::cerr << "LLLbasisReduction, step 3\n";
+  MyMatrix<T> LattRed = UniversalMatrixConversion<T,Tint>(pair.Pmat) * Latt;
+  //  std::cerr << "LLLbasisReduction, step 4\n";
+  return {LattRed, pair.Pmat};
+}
+
+
+
 #endif
