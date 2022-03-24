@@ -1,11 +1,11 @@
 #ifndef SRC_LATT_LATTICEDEFINITIONS_H_
 #define SRC_LATT_LATTICEDEFINITIONS_H_
 
-#include <vector>
-#include <utility>
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
 #include "MAT_Matrix.h"
+#include <utility>
+#include <vector>
 
 template <typename T, typename Tint> struct Tshortest {
   T eMin;
@@ -312,8 +312,6 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
         for (int i = r + 1; i <= j - 1; i++)
           ak(j) -= mue(j, i) * ak(i);
         mue(k, j) = ak(j) / B(j);
-        //	std::cerr << "j=" << j << " ak(j)=" << ak(j) << " B(j) = " <<
-        //B(j) << " mue(k,l)=" << mue(k,j) << "\n";
         B(k) -= mue(k, j) * ak(j);
       }
     }
@@ -347,8 +345,6 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
         for (int i = k + 1; k <= kmax; k++)
           std::swap(mue(i, k), mue(i, k - 1));
       } else {
-        //	std::cerr << "Sec While loop, step 7.2 B(k) = " << B(k) << "
-        //mmue=" << mmue << " k=" << k << "\n";
         if (B(k) == 0 && mmue != 0) {
           B(k - 1) = BB;
           mue(k, k - 1) = 1 / mmue;
@@ -363,8 +359,6 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
           B(k) *= q;
           //	  std::cerr << "Sec While loop, step 7.2.4\n";
           B(k - 1) = BB;
-          //	  std::cerr << "Sec While loop, step 7.2.5 kmax=" << kmax << "
-          //n=" << n << "\n";
           for (int i = k + 1; i <= kmax; i++) {
             //	    std::cerr << "Sec While loop, step 7.2.5.1\n";
             Tfield q = mue(i, k);

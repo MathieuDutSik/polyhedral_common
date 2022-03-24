@@ -1,15 +1,6 @@
 #ifndef SRC_LORENTZIAN_EDGEWALK_H_
 #define SRC_LORENTZIAN_EDGEWALK_H_
 
-#include <limits>
-#include <algorithm>
-#include <set>
-#include <unordered_set>
-#include <unordered_map>
-#include <map>
-#include <utility>
-#include <vector>
-#include <string>
 #include "Heuristic_fct.h"
 #include "LatticeDefinitions.h"
 #include "MatrixCanonicalForm.h"
@@ -22,8 +13,15 @@
 #include "lorentzian_linalg.h"
 #include "two_dim_lorentzian.h"
 #include "vinberg.h"
-//#include "POLY_lrslib.h"
-//#include "POLY_cddlib.h"
+#include <limits>
+#include <algorithm>
+#include <set>
+#include <unordered_set>
+#include <unordered_map>
+#include <map>
+#include <utility>
+#include <vector>
+#include <string>
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
