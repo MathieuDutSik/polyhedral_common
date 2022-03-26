@@ -4,6 +4,8 @@
 #include "Copositivity.h"
 #include "Temp_PerfectForm.h"
 #include "Temp_Tspace_General.h"
+#include <vector>
+#include <utility>
 
 template <typename T, typename Tint> struct TestStrictPositivity {
   bool result;

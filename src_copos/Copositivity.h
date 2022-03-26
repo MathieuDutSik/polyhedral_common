@@ -6,6 +6,10 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
 #include "Temp_Positivity.h"
+#include <string>
+#include <vector>
+#include <utility>
+#include <unordered_set>
 
 template <typename T>
 bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {

@@ -2,6 +2,9 @@
 #define INCLUDE_INDEFINITE_LLL_H
 
 #include "MAT_Matrix.h"
+#include <vector>
+#include <utility>
+#include <algorithm>
 
 //#define DEBUG_INDEFINITE_LLL
 

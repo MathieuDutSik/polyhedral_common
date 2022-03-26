@@ -5,6 +5,8 @@
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
+#include <string>
+#include <vector>
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,

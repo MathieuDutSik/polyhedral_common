@@ -6,6 +6,9 @@
 #include "MatrixGroup.h"
 #include "Namelist.h"
 #include "POLY_ThreadDualDescription.h"
+#include <map>
+#include <string>
+#include <vector>
 
 template <typename T, typename Tint> struct DataLattice {
   int n;

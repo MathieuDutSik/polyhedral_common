@@ -1,6 +1,10 @@
 #ifndef INCLUDE_POLY_GAP_H
 #define INCLUDE_POLY_GAP_H
 
+#include <string>
+#include <vector>
+#include <utility>
+
 namespace datagap {
 
 static const int int_scalar = 1;

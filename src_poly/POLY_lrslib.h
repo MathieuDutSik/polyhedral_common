@@ -26,6 +26,8 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
+#include <limits>
+#include <string>
 
 namespace lrs {
 // some #defines and global variables from the original lrs code

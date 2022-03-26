@@ -8,6 +8,11 @@
 #include "POLY_cddlib.h"
 #include "Temp_PolytopeEquiStab.h"
 #include <cstring>
+#include <string>
+#include <vector>
+#include <utility>
+#include <functional>
+#include <unordered_map>
 
 //#define DEBUG
 //#define TIMINGS

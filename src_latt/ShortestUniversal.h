@@ -7,6 +7,7 @@
 #ifdef USE_LIBSHORT
 #include "Shvec_double.h"
 #endif
+#include <string>
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,

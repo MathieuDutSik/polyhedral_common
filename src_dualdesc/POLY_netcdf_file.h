@@ -6,6 +6,11 @@
 #include "Group.h"
 #include "MAT_Matrix.h"
 #include <netcdf>
+#include <limits>
+#include <vector>
+#include <string>
+#include <utility>
+#include <algorithm>
 
 #undef SUPPORT_LONG_LONG
 

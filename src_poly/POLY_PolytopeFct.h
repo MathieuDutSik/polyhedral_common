@@ -4,6 +4,10 @@
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
+#include <unordered_set>
+#include <vector>
+#include <string>
+#include <utility>
 
 struct GLPKoption {
   bool UseDouble;

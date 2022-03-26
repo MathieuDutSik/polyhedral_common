@@ -1,6 +1,8 @@
 #ifndef INCLUDE_SOLUTION_QUAD_FORM_H
 #define INCLUDE_SOLUTION_QUAD_FORM_H
 
+#include <vector>
+
 /*
   We want to find one solution of the equation A[v + w] = X
   modulo n with n = p1 p2 .... pK

@@ -1,6 +1,10 @@
+#ifndef INCLUDE_TEMP_MPI_H_
+#define INCLUDE_TEMP_MPI_H_
+
 #include "GRP_GroupFct.h"
 #include "MPI_functions.h"
 #include "MPQ_Matrix.h"
+#include <vector>
 
 struct MPIworkingstructure {
   int Nproc;
@@ -123,3 +127,5 @@ void MPI_RECV_MyMatrix(MyMatrix<T> *eMat, int src, int tag, MPI_Comm comm) {
   for (i = 0; i < nbEnt; i++)
     eMat->ListElt[i] = eVect[i];
 }
+
+#endif

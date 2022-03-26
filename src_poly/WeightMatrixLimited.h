@@ -2,6 +2,11 @@
 #define INCLUDE_WEIGHT_MATRIX_LIMITED_H
 
 #include "GRP_GroupFct.h"
+#include <map>
+#include <unordered_map>
+#include <utility>
+#include <limits>
+#include <vector>
 
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
 public:

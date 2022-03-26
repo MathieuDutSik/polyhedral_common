@@ -5,6 +5,8 @@
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
 #include "POLY_LinearProgramming.h"
+#include <utility>
+#include <vector>
 
 #define CHECK_BASIC_CONSISTENCY
 //#define PRINT_DEBUG_INFO

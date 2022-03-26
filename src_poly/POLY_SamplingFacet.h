@@ -4,6 +4,10 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
+#include <string>
+#include <vector>
+#include <unordered_set>
+#include <limits>
 
 struct recSamplingOption {
   int critlevel;

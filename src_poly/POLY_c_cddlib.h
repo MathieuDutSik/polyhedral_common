@@ -5,9 +5,9 @@
 
 #include "cdd.h"
 #include "setoper.h"
-#include <type_traits>
-
 #include "POLY_c_cddlib_mpq.h"
+#include <type_traits>
+#include <vector>
 
 namespace cbased_cdd {
 

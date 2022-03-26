@@ -2,6 +2,10 @@
 #define INCLUDE_PARALLEL_CLASSES_H
 
 #include "ThreadManagement.h"
+#include <utility>
+#include <string>
+#include <vector>
+#include <set>
 
 //
 // Fundamental struct data types

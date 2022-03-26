@@ -5,6 +5,8 @@
 #include "ShortestUniversal.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
+#include <set>
+#include <vector>
 
 // Here we use SuperMat as an array because if we declare
 // it directly then we need to give a size and we do not

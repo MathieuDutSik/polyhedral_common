@@ -10,6 +10,8 @@
 #include <limits>
 #include <utility>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 template <typename T> struct MatrixGroup {
   int n;

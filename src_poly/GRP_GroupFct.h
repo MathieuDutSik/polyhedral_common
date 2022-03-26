@@ -8,6 +8,11 @@
 #include "NumberTheory.h"
 #include "Temp_common.h"
 #include "hash_functions.h"
+#include <string>
+#include <unordered_set>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 //
 // permutation functions

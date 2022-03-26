@@ -1,6 +1,8 @@
 #ifndef INCLUDE_NIEMEIER_N23_24A1
 #define INCLUDE_NIEMEIER_N23_24A1
 
+#include <vector>
+
 template <typename T> MyMatrix<T> Get_N23_eBasis() {
   T eDen = 1;
   std::vector<std::vector<T>> ListListNum = {

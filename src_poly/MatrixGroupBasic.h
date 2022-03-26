@@ -1,6 +1,8 @@
 #ifndef INCLUDE_MATRIX_GROUP_BASIC_H
 #define INCLUDE_MATRIX_GROUP_BASIC_H
 
+#include <vector>
+
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>> FindTransformationGeneral(MyMatrix<T> const &EXT1,
                                                      MyMatrix<T> const &EXT2,

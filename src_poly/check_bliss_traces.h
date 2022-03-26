@@ -3,6 +3,7 @@
 
 #include "GRAPH_bliss.h"
 #include "GRAPH_traces.h"
+#include <vector>
 
 template <typename Tgr, typename Tgroup>
 void PrintStabilizerGroupSizes(std::ostream &os, Tgr const &eGR) {

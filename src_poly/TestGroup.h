@@ -5,6 +5,9 @@
 #include "MatrixGroup.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 template <typename T>
 void TestPolytopeFace_Stabilizer(MyMatrix<T> const &M, Face const &f) {

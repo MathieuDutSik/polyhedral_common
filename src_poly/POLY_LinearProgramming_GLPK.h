@@ -3,6 +3,8 @@
 
 #include "POLY_PolytopeFct.h"
 #include <glpk.h>
+#include <string>
+#include <vector>
 
 /*
   GLPK does not return the unfeasibility proof as opposed to CDD.

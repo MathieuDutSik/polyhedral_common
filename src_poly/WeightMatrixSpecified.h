@@ -37,6 +37,12 @@
 #define UNORD_SET_SPECIFIC tsl::hopscotch_set
 #endif
 
+#include <algorithm>
+#include <map>
+#include <limits>
+#include <utility>
+#include <vector>
+
 using SignVertex = std::vector<int>;
 
 template <typename T>

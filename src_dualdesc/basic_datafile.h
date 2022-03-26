@@ -3,6 +3,9 @@
 
 #include "Basic_file.h"
 #include "Boost_bitset.h"
+#include <vector>
+#include <string>
+#include <algorithm>
 
 struct FileNumber {
 private:

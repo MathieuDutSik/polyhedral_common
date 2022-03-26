@@ -15,6 +15,11 @@
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
 #include <signal.h>
+#include <string>
+#include <limits>
+#include <vector>
+#include <utility>
+#include <unordered_map>
 
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH

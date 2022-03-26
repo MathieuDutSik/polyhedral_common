@@ -6,7 +6,8 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_cddlib.h"
-//#include "POLY_LinearProgramming_GLPK.h"
+#include <string>
+#include <vector>
 
 template <typename T> struct LpSolution {
   std::string method;

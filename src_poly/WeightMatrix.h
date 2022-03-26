@@ -20,6 +20,12 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "PERM_Fct.h"
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
+#include <limits>
+#include <vector>
+#include <utility>
 
 //
 // The templatized functions

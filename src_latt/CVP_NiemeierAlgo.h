@@ -5,6 +5,7 @@
 #include "LatticeDefinitions.h"
 #include "NiemeierN23_24A1.h"
 #include "NumberTheory.h"
+#include <vector>
 
 //
 // We have eBasis*GramMat*TransposedMat(eBasis) = q0

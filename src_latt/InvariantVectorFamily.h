@@ -3,6 +3,8 @@
 
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
+#include <set>
+#include <vector>
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamily(

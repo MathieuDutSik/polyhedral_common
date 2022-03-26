@@ -3,6 +3,8 @@
 
 #include "COMB_Combinatorics.h"
 #include "POLY_LinearProgramming.h"
+#include <limits>
+#include <vector>
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,

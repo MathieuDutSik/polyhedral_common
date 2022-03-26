@@ -4,6 +4,7 @@
 #include "facet.h"
 //#include "tbb/tbb.h"
 #include "tbb/concurrent_vector.h"
+#include <string>
 
 /*
   The complicacy of this function is that we have to deal with the

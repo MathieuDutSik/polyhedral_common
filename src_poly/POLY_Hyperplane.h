@@ -4,6 +4,9 @@
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include <unordered_set>
+#include <string>
+#include <vector>
+#include <utility>
 
 //#define DEBUG_HYPERPLANE
 #define CHECK_HYPERPLANE

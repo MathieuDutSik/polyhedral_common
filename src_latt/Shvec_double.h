@@ -6,6 +6,7 @@
 
 #include <la_support.h>
 #include <shvec.h>
+#include <vector>
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const &eMat, T const &MaxNorm) {

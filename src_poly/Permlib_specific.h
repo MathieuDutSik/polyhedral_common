@@ -4,6 +4,11 @@
 #include "Boost_bitset.h"
 #include "hash_functions.h"
 #include <permlib/permlib_api.h>
+#include <set>
+#include <utility>
+#include <memory>
+#include <unordered_set>
+#include <vector>
 
 int OnPoints(int const &i, permlib::Permutation const &elt) {
   return elt.at(i);

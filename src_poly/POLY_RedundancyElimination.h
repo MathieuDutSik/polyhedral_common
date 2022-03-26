@@ -4,6 +4,10 @@
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_cddlib.h"
+#include <set>
+#include <utility>
+#include <vector>
+#include <algorithm>
 
 // Fairly expensive function. But useful for debugging
 template <typename T>

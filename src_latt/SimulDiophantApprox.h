@@ -2,6 +2,8 @@
 #define INCLUDE_SIMULTANEOUS_DIOPHANTINE_APPROX
 
 #include "LatticeDefinitions.h"
+#include <string>
+#include <utility>
 
 template <typename Tint> struct DiophantResult {
   MyVector<Tint> Numerators;
