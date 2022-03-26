@@ -32,105 +32,105 @@
 namespace lrs {
 // some #defines and global variables from the original lrs code
 namespace globals {
-const long POS = 1L;
-const long NEG = -1L;
-const long L_FALSE = 0L;
-const long L_TRUE = 1L;
-const long MAXIMIZE = 1L; /* maximize the lp  */
-const long MINIMIZE = 0L; /* maximize the lp  */
-const long GE = 1L;       /* constraint is >= */
-const long EQ = 0L;       /* constraint is linearity */
-const unsigned long dict_limit = 10;
+const int64_t POS = 1L;
+const int64_t NEG = -1L;
+const int64_t L_FALSE = 0L;
+const int64_t L_TRUE = 1L;
+const int64_t MAXIMIZE = 1L; /* maximize the lp  */
+const int64_t MINIMIZE = 0L; /* maximize the lp  */
+const int64_t GE = 1L;       /* constraint is >= */
+const int64_t EQ = 0L;       /* constraint is linearity */
+const uint64_t dict_limit = 10;
 } // namespace globals
 
 template <typename T> struct lrs_dic {
   T **A;
-  long m;        /* A has m+1 rows, row 0 is cost row            */
-  long m_A;      /* =m or m-d if nonnegative flag set            */
-  long d;        /* A has d+1 columns, col 0 is b-vector         */
-  long d_orig;   /* value of d as A was allocated  (E.G.)        */
-  long lexflag;  /* true if lexmin basis for this vertex         */
-  long depth;    /* depth of basis/vertex in reverse search tree */
-  long i, j;     /* last pivot row and column pivot indices      */
+  int64_t m;        /* A has m+1 rows, row 0 is cost row            */
+  int64_t m_A;      /* =m or m-d if nonnegative flag set            */
+  int64_t d;        /* A has d+1 columns, col 0 is b-vector         */
+  int64_t d_orig;   /* value of d as A was allocated  (E.G.)        */
+  int64_t lexflag;  /* true if lexmin basis for this vertex         */
+  int64_t depth;    /* depth of basis/vertex in reverse search tree */
+  int64_t i, j;     /* last pivot row and column pivot indices      */
   T det;         /* current determinant of basis                 */
-  long *B, *Row; /* basis, row location indices                  */
-  long *C, *Col; /* cobasis, column location indices             */
+  int64_t *B, *Row; /* basis, row location indices                  */
+  int64_t *C, *Col; /* cobasis, column location indices             */
   lrs_dic *prev, *next;
 };
 
 template <typename T> struct lrs_dat {
-  long unbounded; /* lp unbounded */
+  int64_t unbounded; /* lp unbounded */
 
-  long *inequality; /* indices of inequalities corr. to cobasic ind */
+  int64_t *inequality; /* indices of inequalities corr. to cobasic ind */
   /* initially holds order used to find starting  */
   /* basis, default: m,m-1,...,2,1                */
-  long *facet;     /* cobasic indices for restart in needed        */
-  long *redundcol; /* holds columns which are redundant            */
-  long *linearity; /* holds cobasic indices of input linearities   */
-  long *minratio;  /* used for lexicographic ratio test            */
-  long *temparray; /* for sorting indices, dimensioned to d        */
-  long inputd;     /* input dimension: n-1 for H-rep, n for V-rep  */
+  int64_t *facet;     /* cobasic indices for restart in needed        */
+  int64_t *redundcol; /* holds columns which are redundant            */
+  int64_t *linearity; /* holds cobasic indices of input linearities   */
+  int64_t *minratio;  /* used for lexicographic ratio test            */
+  int64_t *temparray; /* for sorting indices, dimensioned to d        */
+  int64_t inputd;     /* input dimension: n-1 for H-rep, n for V-rep  */
 
-  long m;      /* number of rows in input file                 */
-  long n;      /* number of columns in input file              */
-  long lastdv; /* index of last dec. variable after preproc    */
+  int64_t m;      /* number of rows in input file                 */
+  int64_t n;      /* number of columns in input file              */
+  int64_t lastdv; /* index of last dec. variable after preproc    */
   /* given by inputd-nredundcol                   */
-  long count[10]; /* count[0]=rays [1]=verts. [2]=base [3]=pivots */
+  int64_t count[10]; /* count[0]=rays [1]=verts. [2]=base [3]=pivots */
   /* count[4]=integer vertices                    */
-  long deepest;    /* max depth ever reached in search             */
-  long nredundcol; /* number of redundant columns                  */
-  long nlinearity; /* number of input linearities                  */
-  long totalnodes; /* count total number of tree nodes evaluated   */
-  long runs;       /* probes for estimate function                 */
-  long seed;       /* seed for random number generator             */
+  int64_t deepest;    /* max depth ever reached in search             */
+  int64_t nredundcol; /* number of redundant columns                  */
+  int64_t nlinearity; /* number of input linearities                  */
+  int64_t totalnodes; /* count total number of tree nodes evaluated   */
+  int64_t runs;       /* probes for estimate function                 */
+  int64_t seed;       /* seed for random number generator             */
   double cest[10]; /* ests: 0=rays,1=vert,2=bases,3=vol,4=int vert */
   /**** flags  **********                         */
-  long allbases;    /* globals::TRUE if all bases should be printed          */
-  long bound;       /* globals::TRUE if upper/lower bound on objective given */
-  long dualdeg;     /* globals::TRUE if start dictionary is dual degenerate  */
-  long frequency;   /* frequency to print cobasis indices           */
-  long geometric;   /* globals::TRUE if incident vertex prints after each ray */
-  long getvolume;   /* do volume calculation                        */
-  long givenstart;  /* globals::TRUE if a starting cobasis is given          */
-  long homogeneous; /* globals::TRUE if all entries in column one are zero   */
-  long hull;        /* do convex hull computation if globals::TRUE           */
-  long incidence;   /* print all tight inequalities (vertices/rays) */
-  long lponly;      /* true if only lp solution wanted              */
-  long maxdepth;    /* max depth to search to in treee              */
-  long maximize;    /* flag for LP maximization                     */
-  long maxoutput;   /* if positive, maximum number of output lines  */
-  long minimize;    /* flag for LP minimization                     */
-  long mindepth;    /* do not backtrack above mindepth              */
-  long nonnegative; /* globals::TRUE if last d constraints are nonnegativity */
-  long polytope;    /* globals::TRUE for facet computation of a polytope     */
-  long printcobasis; /* globals::TRUE if all cobasis should be printed        */
-  long printslack;   /* globals::TRUE if indices of slack inequal. printed    */
-  long truncate;     /* globals::TRUE: truncate tree when moving from opt vert*/
-  long verbose;      /* globals::FALSE for minimalist output                  */
-  long restart;      /* globals::TRUE if restarting from some cobasis         */
+  int64_t allbases;    /* globals::TRUE if all bases should be printed          */
+  int64_t bound;       /* globals::TRUE if upper/lower bound on objective given */
+  int64_t dualdeg;     /* globals::TRUE if start dictionary is dual degenerate  */
+  int64_t frequency;   /* frequency to print cobasis indices           */
+  int64_t geometric;   /* globals::TRUE if incident vertex prints after each ray */
+  int64_t getvolume;   /* do volume calculation                        */
+  int64_t givenstart;  /* globals::TRUE if a starting cobasis is given          */
+  int64_t homogeneous; /* globals::TRUE if all entries in column one are zero   */
+  int64_t hull;        /* do convex hull computation if globals::TRUE           */
+  int64_t incidence;   /* print all tight inequalities (vertices/rays) */
+  int64_t lponly;      /* true if only lp solution wanted              */
+  int64_t maxdepth;    /* max depth to search to in treee              */
+  int64_t maximize;    /* flag for LP maximization                     */
+  int64_t maxoutput;   /* if positive, maximum number of output lines  */
+  int64_t minimize;    /* flag for LP minimization                     */
+  int64_t mindepth;    /* do not backtrack above mindepth              */
+  int64_t nonnegative; /* globals::TRUE if last d constraints are nonnegativity */
+  int64_t polytope;    /* globals::TRUE for facet computation of a polytope     */
+  int64_t printcobasis; /* globals::TRUE if all cobasis should be printed        */
+  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed    */
+  int64_t truncate;     /* globals::TRUE: truncate tree when moving from opt vert*/
+  int64_t verbose;      /* globals::FALSE for minimalist output                  */
+  int64_t restart;      /* globals::TRUE if restarting from some cobasis         */
 
   /* Variables for saving/restoring cobasis,  db */
 
-  long id; /* numbered sequentially */
+  int64_t id; /* numbered sequentially */
 
-  long saved_count[3]; /* How often to print out current cobasis */
-  long *saved_C;
-  long saved_depth;
-  long saved_d;
+  int64_t saved_count[3]; /* How often to print out current cobasis */
+  int64_t *saved_C;
+  int64_t saved_depth;
+  int64_t saved_d;
 
-  long saved_flag; /* There is something in the saved cobasis */
+  int64_t saved_flag; /* There is something in the saved cobasis */
 
   /* Variables for cacheing dictionaries, db */
   lrs_dic<T> *Qhead, *Qtail;
 };
 
-template <typename T> inline void storesign(T &a, long const &sa) {
+template <typename T> inline void storesign(T &a, int64_t const &sa) {
   T eProd = a * sa;
   if (eProd < 0)
     a = -a;
 }
 
-template <typename T> inline long sign(T const &a) {
+template <typename T> inline int64_t sign(T const &a) {
   if (a < 0)
     return globals::NEG;
   if (a > 0)
@@ -147,14 +147,14 @@ template <typename T> inline int comprod(T Na, T Nb, T Nc, T Nd) {
 }
 
 template <typename T>
-long lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, long col)
+int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
 /* check if column indexed by col in this dictionary */
 /* contains output                                   */
 /* col=0 for vertex 1....d for ray/facet             */
 {
-  long j; /* cobasic index     */
+  int64_t j; /* cobasic index     */
   T **A = P->A;
-  long *Row = P->Row;
+  int64_t *Row = P->Row;
   //  std::cerr << "col=" << col << " A[0][col]=" << A[0][col] << "\n";
   if (col == 0) {
     //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 1\n";
@@ -191,7 +191,7 @@ long lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, long col)
 /***********************************/
 template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   lrs_dat<T> *Q;
-  long i;
+  int64_t i;
   Q = new lrs_dat<T>;
 
   /* initialize variables */
@@ -219,8 +219,8 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->hull = globals::L_FALSE;
   Q->incidence = globals::L_FALSE;
   Q->lponly = globals::L_FALSE;
-  Q->maxdepth = std::numeric_limits<long>::max();
-  Q->mindepth = std::numeric_limits<long>::min();
+  Q->maxdepth = std::numeric_limits<int64_t>::max();
+  Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->maxoutput = 0L;
   Q->nonnegative = globals::L_FALSE;
   Q->printcobasis = globals::L_FALSE;
@@ -238,12 +238,12 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   return Q;
 }
 
-void reorder1(long a[], long b[], long newone, long range)
+void reorder1(int64_t a[], int64_t b[], int64_t newone, int64_t range)
 /*reorder array a in increasing order with one misplaced element at index newone
  */
 /*elements of array b are updated to stay aligned with a */
 {
-  long temp;
+  int64_t temp;
   while (newone > 0 && a[newone] < a[newone - 1]) {
     temp = a[newone];
     a[newone] = a[newone - 1];
@@ -263,21 +263,21 @@ void reorder1(long a[], long b[], long newone, long range)
 }
 
 template <typename T>
-long lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
+int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
 /* gets first basis, globals::FALSE if none              */
 /* P may get changed if lin. space Lin found    */
 /* no_output is globals::TRUE supresses output headers   */
 {
-  long i, j, k;
+  int64_t i, j, k;
 
   /* assign local variables to structures */
 
   T **A;
-  long *B, *C, *Col;
-  long *inequality;
-  long *linearity;
-  long hull = Q->hull;
-  long m, d, lastdv, nlinearity, nredundcol;
+  int64_t *B, *C, *Col;
+  int64_t *inequality;
+  int64_t *linearity;
+  int64_t hull = Q->hull;
+  int64_t m, d, lastdv, nlinearity, nredundcol;
   m = (*D_p)->m;
   d = (*D_p)->d;
   lastdv = Q->lastdv;
@@ -420,16 +420,16 @@ long lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
 /*****************************************/
 
 template <typename T>
-long lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, long backtrack,
-                      unsigned long &dict_count)
+int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
+                      uint64_t &dict_count)
 /* gets next reverse search tree basis, globals::FALSE if none  */
 /* switches to estimator if maxdepth set               */
 /* backtrack globals::TRUE means backtrack from here            */
 {
   /* assign local variables to structures */
-  long i = 0L, j = 0L;
-  long m = (*D_p)->m;
-  long d = (*D_p)->d;
+  int64_t i = 0L, j = 0L;
+  int64_t m = (*D_p)->m;
+  int64_t d = (*D_p)->d;
 
   if (backtrack && (*D_p)->depth == 0) {
     //    std::cerr << "lrs_getnextbasis, exit case 1\n";
@@ -511,19 +511,19 @@ long lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, long backtrack,
 /* print out one line of output file */
 /*************************************/
 template <typename T>
-long lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
+int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
 /*Print out current vertex if it is lexmin and return it in output */
 /* return globals::FALSE if no output generated  */
 {
 
-  long i;
-  long ind;  /* output index                                  */
-  long ired; /* counts number of redundant columns            */
+  int64_t i;
+  int64_t ind;  /* output index                                  */
+  int64_t ired; /* counts number of redundant columns            */
              /* assign local variables to structures */
-  long *redundcol = Q->redundcol;
+  int64_t *redundcol = Q->redundcol;
 
-  long hull;
-  long lexflag;
+  int64_t hull;
+  int64_t lexflag;
 
   hull = Q->hull;
   lexflag = P->lexflag;
@@ -559,20 +559,20 @@ long lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
 }
 
 template <typename T>
-long lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, long col, long redcol, T *&output)
+int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol, T *&output)
 /*Print out solution in col and return it in output   */
 /*redcol =n for ray/facet 0..n-1 for linearity column */
 /*hull=1 implies facets will be recovered             */
 /* return globals::FALSE if no output generated in column col  */
 {
-  long i;
-  long ind;  /* output index                                  */
-  long ired; /* counts number of redundant columns            */
+  int64_t i;
+  int64_t ind;  /* output index                                  */
+  int64_t ired; /* counts number of redundant columns            */
              /* assign local variables to structures */
-  long *redundcol = Q->redundcol;
-  long *count = Q->count;
-  long hull = Q->hull;
-  long n = Q->n;
+  int64_t *redundcol = Q->redundcol;
+  int64_t *count = Q->count;
+  int64_t hull = Q->hull;
+  int64_t n = Q->n;
   if (redcol == n)
     ++count[0];
   i = 1;
@@ -598,15 +598,15 @@ long lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, long col, long redcol, T *&output)
 }
 
 template <typename T>
-void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, long i, long col, T &out) {
-  long row;
-  long m = P->m;
-  long d = P->d;
-  long lastdv = Q->lastdv;
+void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t i, int64_t col, T &out) {
+  int64_t row;
+  int64_t m = P->m;
+  int64_t d = P->d;
+  int64_t lastdv = Q->lastdv;
   T **A = P->A;
-  long *B = P->B;
-  long *Row = P->Row;
-  long j;
+  int64_t *B = P->B;
+  int64_t *Row = P->Row;
+  int64_t j;
   row = Row[i];
   if (Q->nonnegative) {
     for (j = lastdv + 1; j <= m; j++) {
@@ -626,22 +626,22 @@ void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, long i, long col, T &out) {
 }
 
 template <typename T>
-long lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q, long col) /*find lex min. ratio */
+int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col) /*find lex min. ratio */
 /* find min index ratio -aig/ais, ais<0 */
 /* if multiple, checks successive basis columns */
 /* recoded Dec 1997                     */
 {
-  long i, j, comp, ratiocol, basicindex, start, nstart, cindex, bindex;
-  long firstime; /*For ratio test, true on first pass,else false */
+  int64_t i, j, comp, ratiocol, basicindex, start, nstart, cindex, bindex;
+  int64_t firstime; /*For ratio test, true on first pass,else false */
   T Nmin, Dmin;
-  long degencount, ndegencount;
+  int64_t degencount, ndegencount;
   /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long *minratio = Q->minratio;
-  long m, d, lastdv;
+  int64_t *B = P->B;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t *minratio = Q->minratio;
+  int64_t m, d, lastdv;
 
   m = P->m;
   d = P->d;
@@ -711,19 +711,19 @@ long lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q, long col) /*find lex min. ratio */
 } /* end of ratio */
 
 template <typename T>
-long reverse(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long s)
+int64_t reverse(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t s)
 /*  find reverse indices  */
 /* globals::TRUE if B[*r] C[s] is a reverse lexicographic pivot */
 {
-  long i, j, row, col;
+  int64_t i, j, row, col;
 
   /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *C = P->C;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long d = P->d;
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t d = P->d;
 
   col = Col[s];
   if (A[0][col] >= 0)
@@ -752,16 +752,16 @@ long reverse(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long s)
 }
 
 template <typename T>
-long selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long *s)
+int64_t selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 /* select pivot indices using lexicographic rule   */
 /* returns globals::TRUE if pivot found else globals::FALSE          */
 /* pivot variables are B[*r] C[*s] in locations Row[*r] Col[*s] */
 {
-  long j, col;
+  int64_t j, col;
   /* assign local variables to structures */
   T **A = P->A;
-  long *Col = P->Col;
-  long d = P->d;
+  int64_t *Col = P->Col;
+  int64_t d = P->d;
 
   *r = 0;
   *s = d;
@@ -780,21 +780,21 @@ long selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long *s)
 }
 
 template <typename T>
-void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, long bas, long cob)
+void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
 /* Qpivot routine for array A              */
 /* indices bas, cob are for Basis B and CoBasis C    */
 /* corresponding to row Row[bas] and column       */
 /* Col[cob]   respectively                       */
 {
-  long r, s;
-  long i, j;
+  int64_t r, s;
+  int64_t i, j;
   T Ars;
   /* assign local variables to structures */
 
   T **A = P->A;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long d, m_A;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t d, m_A;
 
   d = P->d;
   m_A = P->m_A;
@@ -832,18 +832,18 @@ void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, long bas, long cob)
 }
 
 template <typename T>
-long primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* Do dual pivots to get primal feasibility */
 /* Note that cost row is all zero, so no ratio test needed for Dual Bland's rule
  */
 {
-  long primalinfeasible = globals::L_TRUE;
-  long i, j;
+  int64_t primalinfeasible = globals::L_TRUE;
+  int64_t i, j;
   /* assign local variables to structures */
   T **A = P->A;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long m, d, lastdv;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t m, d, lastdv;
   m = P->m;
   d = P->d;
   lastdv = Q->lastdv;
@@ -871,13 +871,13 @@ long primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
 } /* end of primalfeasible */
 
 template <typename T>
-long lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* Solve primal feasible lp by Dantzig`s rule and lexicographic ratio test */
 /* return globals::TRUE if bounded, globals::FALSE if unbounded */
 {
-  long i, j;
+  int64_t i, j;
   /* assign local variables to structures */
-  long d = P->d;
+  int64_t d = P->d;
 
   while (dan_selectpivot(P, Q, &i, &j)) {
     Q->count[3]++;
@@ -893,7 +893,7 @@ long lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
 }
 
 template <typename T>
-long getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, long order[])
+int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
 /* Pivot Ax<=b to standard form */
 /*Try to find a starting basis by pivoting in the variables x[1]..x[d]        */
 /*If there are any input linearities, these appear first in order[]           */
@@ -903,17 +903,17 @@ long getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, long order[])
 /*        (c) If some decision variable cobasic, it is a linearity,           */
 /*            and will be removed.                                            */
 {
-  long i, j, k;
+  int64_t i, j, k;
   /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *C = P->C;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long *linearity = Q->linearity;
-  long *redundcol = Q->redundcol;
-  long m, d, nlinearity;
-  long nredundcol = 0L; /* will be calculated here */
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t *linearity = Q->linearity;
+  int64_t *redundcol = Q->redundcol;
+  int64_t m, d, nlinearity;
+  int64_t nredundcol = 0L; /* will be calculated here */
   nlinearity = Q->nlinearity;
   m = P->m;
   d = P->d;
@@ -989,17 +989,17 @@ long getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, long order[])
 } /*  end of getabasis */
 
 template <typename T>
-long removecobasicindex(lrs_dic<T> *P, long k)
+int64_t removecobasicindex(lrs_dic<T> *P, int64_t k)
 /* remove the variable C[k] from the problem */
 /* used after detecting column dependency    */
 {
-  long i, j, cindex, deloc;
+  int64_t i, j, cindex, deloc;
   /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *C = P->C;
-  long *Col = P->Col;
-  long m, d;
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Col = P->Col;
+  int64_t m, d;
   m = P->m;
   d = P->d;
 
@@ -1032,13 +1032,13 @@ long removecobasicindex(lrs_dic<T> *P, long k)
   return globals::L_TRUE;
 }
 
-template <typename T> lrs_dic<T> *new_lrs_dic(long m, long d, long m_A) {
+template <typename T> lrs_dic<T> *new_lrs_dic(int64_t m, int64_t d, int64_t m_A) {
   lrs_dic<T> *p = new lrs_dic<T>;
 
-  p->B = new long[m + 1];
-  p->Row = new long[m + 1];
-  p->C = new long[d + 1];
-  p->Col = new long[d + 1];
+  p->B = new int64_t[m + 1];
+  p->Row = new int64_t[m + 1];
+  p->C = new int64_t[d + 1];
+  p->Col = new int64_t[d + 1];
 
   p->d_orig = d;
 
@@ -1055,8 +1055,8 @@ lrs_dic<T> *resize(lrs_dic<T> *P, lrs_dat<T> *Q)
 {
   lrs_dic<T> *P1; /* to hold new dictionary in case of resizing */
 
-  long i, j;
-  long m, d, m_A;
+  int64_t i, j;
+  int64_t m, d, m_A;
 
   m = P->m;
   d = P->d;
@@ -1102,27 +1102,27 @@ lrs_dic<T> *resize(lrs_dic<T> *P, lrs_dat<T> *Q)
 }
 
 template <typename T>
-long restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* facet contains a list of the inequalities in the cobasis for the restart */
 /* inequality contains the relabelled inequalities after initialization     */
 {
-  long i, j, k;
-  long *Cobasic; /* when restarting, Cobasic[j]=1 if j is in cobasis */
+  int64_t i, j, k;
+  int64_t *Cobasic; /* when restarting, Cobasic[j]=1 if j is in cobasis */
                  /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *C = P->C;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long *inequality = Q->inequality;
-  long *facet = Q->facet;
-  long nlinearity = Q->nlinearity;
-  long m, d, lastdv;
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t *inequality = Q->inequality;
+  int64_t *facet = Q->facet;
+  int64_t nlinearity = Q->nlinearity;
+  int64_t m, d, lastdv;
   m = P->m;
   d = P->d;
   lastdv = Q->lastdv;
 
-  Cobasic = new long[m + d + 2];
+  Cobasic = new int64_t[m + d + 2];
 
   /* set Cobasic flags */
   for (i = 0; i < m + d + 1; i++)
@@ -1150,7 +1150,7 @@ long restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
         /*da replies: modifying i only makes is larger, and so      */
         /*the second while loop will put it back where it was       */
         /*faster (and safer) as done below                          */
-        long ii = i;
+        int64_t ii = i;
         pivot(P, Q, ii, k);
         update(P, &ii, &k);
       } else {
@@ -1175,20 +1175,20 @@ long restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
 }
 
 template <typename T>
-long lexmin(lrs_dic<T> *P, lrs_dat<T> *Q, long col)
+int64_t lexmin(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col)
 /*test if basis is lex-min for vertex or ray, if so globals::TRUE */
 /* globals::FALSE if a_r,g=0, a_rs !=0, r > s          */
 {
   /*do lexmin test for vertex if col=0, otherwise for ray */
-  long r, s, i, j;
+  int64_t r, s, i, j;
   /* assign local variables to structures */
   T **A = P->A;
-  long *B = P->B;
-  long *C = P->C;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long m = P->m;
-  long d = P->d;
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t m = P->m;
+  int64_t d = P->d;
 
   for (i = Q->lastdv + 1; i <= m; i++) {
     r = Row[i];
@@ -1209,13 +1209,13 @@ long lexmin(lrs_dic<T> *P, lrs_dat<T> *Q, long col)
 }
 
 template <typename T>
-long ismin(lrs_dic<T> *P, long r, long s)
+int64_t ismin(lrs_dic<T> *P, int64_t r, int64_t s)
 /*test if A[r][s] is a min ratio for col s */
 {
-  long i;
+  int64_t i;
   /* assign local variables to structures */
   T **A = P->A;
-  long m_A = P->m_A;
+  int64_t m_A = P->m_A;
 
   for (i = 1; i <= m_A; i++)
     if (i != r && A[i][s] < 0 && comprod(A[i][0], A[r][s], A[i][s], A[r][0])) {
@@ -1226,19 +1226,19 @@ long ismin(lrs_dic<T> *P, long r, long s)
 }
 
 template <typename T>
-void update(lrs_dic<T> *P, long *i, long *j)
+void update(lrs_dic<T> *P, int64_t *i, int64_t *j)
 /*update the B,C arrays after a pivot */
 /*   involving B[bas] and C[cob]           */
 {
 
-  long leave, enter;
+  int64_t leave, enter;
   /* assign local variables to structures */
-  long *B = P->B;
-  long *C = P->C;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long m = P->m;
-  long d = P->d;
+  int64_t *B = P->B;
+  int64_t *C = P->C;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t m = P->m;
+  int64_t d = P->d;
 
   leave = B[*i];
   enter = C[*j];
@@ -1257,13 +1257,13 @@ void update(lrs_dic<T> *P, long *i, long *j)
 /* not thoroughly tested   2000/02/15                  */
 /*
 template<typename T>
-long lrs_degenerate(lrs_dic<T> * P)
+int64_t lrs_degenerate(lrs_dic<T> * P)
 {
-  long i;
-  long *B, *Row;
+  int64_t i;
+  int64_t *B, *Row;
   T** A = P->A;
-  long d = P->d;
-  long m = P->m;
+  int64_t d = P->d;
+  int64_t m = P->m;
   B = P->B;
   Row = P->Row;
   for (i = d + 1; i <= m; i++)
@@ -1276,10 +1276,10 @@ long lrs_degenerate(lrs_dic<T> * P)
 /*                 Miscellaneous                         */
 /******************************************************* */
 
-void reorder(long a[], long range)
+void reorder(int64_t a[], int64_t range)
 /*reorder array in increasing order with one misplaced element */
 {
-  long i, temp;
+  int64_t i, temp;
   for (i = 0; i < range - 1; i++)
     if (a[i] > a[i + 1]) {
       temp = a[i];
@@ -1296,19 +1296,19 @@ void reorder(long a[], long range)
 } /* end of reorder */
 
 template <typename T>
-long checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* Solve primal feasible lp by least subscript and lex min basis method */
 /* to check redundancy of a row in objective function                   */
 /* returns globals::TRUE if redundant, else globals::FALSE */
 {
   T Ns, Nt;
-  long i, j;
-  long r, s;
+  int64_t i, j;
+  int64_t r, s;
 
   /* assign local variables to structures */
   T **A = P->A;
-  long *Row, *Col;
-  long d = P->d;
+  int64_t *Row, *Col;
+  int64_t d = P->d;
 
   Row = P->Row;
   Col = P->Col;
@@ -1333,7 +1333,7 @@ long checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
 } /* end of checkredund  */
 
 template <typename T>
-long checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, long index)
+int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
 /* globals::TRUE if index is cobasic and nonredundant                         */
 /* globals::FALSE if basic, or degen. cobasic, where it will get pivoted out  */
 
@@ -1342,12 +1342,12 @@ long checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, long index)
   /* assign local variables to structures */
 
   T **A = P->A;
-  long *C, *Row, *Col;
-  long d = P->d;
-  long m = P->m;
-  long i = 0;
-  long j = 0;
-  long s;
+  int64_t *C, *Row, *Col;
+  int64_t d = P->d;
+  int64_t m = P->m;
+  int64_t i = 0;
+  int64_t j = 0;
+  int64_t s;
 
   C = P->C;
   Row = P->Row;
@@ -1377,19 +1377,19 @@ long checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, long index)
 }
 
 template <typename T>
-long checkindex(lrs_dic<T> *P, lrs_dat<T> *Q, long index)
+int64_t checkindex(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
 /* 0 if index is non-redundant inequality */
 /* 1 if index is redundant     inequality */
 /* 2 if index is input linearity          */
 /*NOTE: row is returned all zero if redundant!! */
 {
-  long i, j;
+  int64_t i, j;
 
   T **A = P->A;
-  long *Row = P->Row;
-  long *B = P->B;
-  long d = P->d;
-  long m = P->m;
+  int64_t *Row = P->Row;
+  int64_t *B = P->B;
+  int64_t d = P->d;
+  int64_t m = P->m;
 
   /* each slack index must be checked for redundancy */
   /* if in cobasis, it is pivoted out if degenerate */
@@ -1432,8 +1432,8 @@ long checkindex(lrs_dic<T> *P, lrs_dat<T> *Q, long index)
 /* From here mostly Bremner's handiwork */
 
 template <typename T>
-void cache_dict(lrs_dic<T> **D_p, lrs_dat<T> *global, long i, long j,
-                unsigned long &dict_count) {
+void cache_dict(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t i, int64_t j,
+                uint64_t &dict_count) {
   if (globals::dict_limit > 1) {
     (*D_p)->i = i;
     (*D_p)->j = j;
@@ -1444,10 +1444,10 @@ void cache_dict(lrs_dic<T> **D_p, lrs_dat<T> *global, long i, long j,
 }
 
 template <typename T> void copy_dict(lrs_dic<T> *dest, lrs_dic<T> *src) {
-  long m = src->m;
-  long m_A = src->m_A; /* number of rows in A */
-  long d = src->d;
-  long r, s;
+  int64_t m = src->m;
+  int64_t m_A = src->m_A; /* number of rows in A */
+  int64_t d = src->d;
+  int64_t r, s;
 
   for (r = 0; r <= m_A; r++)
     for (s = 0; s <= d; s++)
@@ -1483,8 +1483,8 @@ template <typename T> void copy_dict(lrs_dic<T> *dest, lrs_dic<T> *src) {
  * forward so that know that the old record has been overwritten.
  */
 template <typename T>
-void pushQ(lrs_dat<T> *global, long m, long d, long m_A,
-           unsigned long &dict_count) {
+void pushQ(lrs_dat<T> *global, int64_t m, int64_t d, int64_t m_A,
+           uint64_t &dict_count) {
   if ((global->Qtail->next) == global->Qhead) {
     if (dict_count < globals::dict_limit) {
       lrs_dic<T> *p;
@@ -1510,7 +1510,7 @@ void pushQ(lrs_dat<T> *global, long m, long d, long m_A,
 
 template <typename T> lrs_dic<T> *lrs_getdic(lrs_dat<T> *Q) {
   lrs_dic<T> *p;
-  long m;
+  int64_t m;
   m = Q->m;
   if (Q->nonnegative)
     m = m + Q->inputd;
@@ -1536,7 +1536,7 @@ template <typename T> void lrs_free_dic(lrs_dic<T> *P, lrs_dat<T> *Q) {
        need to be the same size. Well, it doesn't cost anything to be safe. db
      */
 
-    long m_A = P->m_A;
+    int64_t m_A = P->m_A;
 
     for (i = 0; i <= m_A; i++)
       delete[] P->A[i];
@@ -1568,7 +1568,7 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
 }
 
 template <typename T>
-long check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, long *i_p, long *j_p) {
+int64_t check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t *i_p, int64_t *j_p) {
   if (global->Qtail == global->Qhead)
     return 0;
   else {
@@ -1586,8 +1586,8 @@ long check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, long *i_p, long *j_p) {
 template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
 
   lrs_dic<T> *p;
-  long i, j;
-  long m, d, m_A;
+  int64_t i, j;
+  int64_t m, d, m_A;
   //  std::cerr << "Q->hull=" << Q->hull << "\n";
   if (Q->hull)        /* d=col dimension of A */
     Q->inputd = Q->n; /* extra column for hull */
@@ -1627,21 +1627,21 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
     for (j = 0; j <= d; j++)
       p->A[i][j] = 0;
 
-  Q->inequality = new long[m + 1];
+  Q->inequality = new int64_t[m + 1];
   for (i = 0; i <= m; i++)
     Q->inequality[i] = 0;
   if (Q->nlinearity == 0) /* linearity may already be allocated */
-    Q->linearity = new long[m + 1];
+    Q->linearity = new int64_t[m + 1];
   for (i = 0; i <= m; i++)
     Q->linearity[i] = 0;
 
-  Q->facet = new long[d + 1];
-  Q->redundcol = new long[d + 1];
-  Q->minratio = new long[m + 1];
-  Q->temparray = new long[d + 1];
+  Q->facet = new int64_t[d + 1];
+  Q->redundcol = new int64_t[d + 1];
+  Q->minratio = new int64_t[m + 1];
+  Q->temparray = new int64_t[d + 1];
 
   Q->inequality[0] = 2L;
-  Q->saved_C = new long[d + 1];
+  Q->saved_C = new int64_t[d + 1];
 
   Q->lastdv = d; /* last decision variable may be decreased */
                  /* if there are redundant columns          */
@@ -1691,8 +1691,8 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
 template <typename T> void save_basis(lrs_dic<T> *P, lrs_dat<T> *Q) {
   int i;
   /* assign local variables to structures */
-  long *C = P->C;
-  long d;
+  int64_t *C = P->C;
+  int64_t d;
   d = P->d;
   Q->saved_flag = 1;
   for (i = 0; i < 3; i++)
@@ -1704,18 +1704,18 @@ template <typename T> void save_basis(lrs_dic<T> *P, lrs_dat<T> *Q) {
 }
 
 template <typename T>
-void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, long row, T *num, long ineq)
+void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num, int64_t ineq)
 /* set row of dictionary using num and den arrays for rational input */
 /* ineq = 1 (globals::GE)   - ordinary row  */
 /*      = 0 (globals::EQ)   - linearity     */
 {
-  long i, j;
+  int64_t i, j;
 
   /* assign local variables to structures */
 
   T **A;
-  long hull;
-  long d;
+  int64_t hull;
+  int64_t d;
   hull = Q->hull;
   A = P->A;
   d = P->d;
@@ -1734,8 +1734,8 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, long row, T *num, long ineq)
 }
 
 template <typename T>
-void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, long max) {
-  long i;
+void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
+  int64_t i;
 
   if (max == globals::MAXIMIZE)
     Q->maximize = globals::L_TRUE;
@@ -1748,7 +1748,7 @@ void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, long max) {
 }
 
 template <typename T>
-long lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* user callable function to solve lp only */
 {
   T **Lin; /* holds input linearities if any are found             */
@@ -1761,19 +1761,19 @@ long lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
 } /* end of lrs_solve_lp */
 
 template <typename T>
-long dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long *s)
+int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 /* select pivot indices using dantzig simplex method             */
 /* largest coefficient with lexicographic rule to avoid cycling  */
 /* Bohdan Kaluzny's handiwork                                    */
 /* returns globals::TRUE if pivot found else globals::L_FALSE    */
 /* pivot variables are B[*r] C[*s] in locations Row[*r] Col[*s]  */
 {
-  long j, k, col;
+  int64_t j, k, col;
   T coeff;
   /* assign local variables to structures */
   T **A = P->A;
-  long *Col = P->Col;
-  long d = P->d;
+  int64_t *Col = P->Col;
+  int64_t d = P->d;
 
   *r = 0;
   *s = d;
@@ -1802,16 +1802,16 @@ long dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, long *r, long *s)
 }
 
 template <typename T>
-long phaseone(lrs_dic<T> *P, lrs_dat<T> *Q)
+int64_t phaseone(lrs_dic<T> *P, lrs_dat<T> *Q)
 /* Do a dual pivot to get primal feasibility (pivot in X_0)*/
 /* Bohdan Kaluzny's handiwork                                    */
 {
-  long i, j, k;
+  int64_t i, j, k;
   /* assign local variables to structures */
   T *A = P->A;
-  long *Row = P->Row;
-  long *Col = P->Col;
-  long m, d;
+  int64_t *Row = P->Row;
+  int64_t *Col = P->Col;
+  int64_t m, d;
   T b_vector;
   m = P->m;
   d = P->d;
@@ -1843,8 +1843,8 @@ template <typename T>
 void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   int j;
   int iRow, nbRow, nbCol;
-  long n;
-  long ineq;
+  int64_t n;
+  int64_t ineq;
   T *num;
   nbRow = EXT.rows();
   nbCol = EXT.cols();
@@ -1931,7 +1931,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   //  std::cerr << "Before call to initLRS in DualDescription_temp_incd\n";
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
-  unsigned long dict_count = 1;
+  uint64_t dict_count = 1;
   /*
   int nbCol=EXT.cols();
   int nbRow=EXT.rows();
@@ -1962,7 +1962,7 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   int col;
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
-  unsigned long dict_count = 1;
+  uint64_t dict_count = 1;
   do {
     bool is_finished = false;
     for (col = 0; col <= P->d; col++)
