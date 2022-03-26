@@ -1,5 +1,5 @@
-#ifndef INCLUDE_WEIGHT_MATRIX_SPECIFIED_H
-#define INCLUDE_WEIGHT_MATRIX_SPECIFIED_H
+#ifndef SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
+#define SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
 
 // The hash map do not seem to make much difference in the overall
 // performance.
@@ -1227,4 +1227,4 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
       nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3);
 }
 
-#endif
+#endif //  SRC_POLY_WEIGHTMATRIXSPECIFIED_H_

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_PARALLEL_CLASSES_H
-#define INCLUDE_PARALLEL_CLASSES_H
+#ifndef SRC_POLY_PARALLEL_CLASSES_H_
+#define SRC_POLY_PARALLEL_CLASSES_H_
 
 #include "ThreadManagement.h"
 #include <utility>
@@ -607,4 +607,4 @@ private:
   std::function<std::optional<Tequiv>(T const &, T const &)> TestEquivalence;
 };
 
-#endif
+#endif //  SRC_POLY_PARALLEL_CLASSES_H_

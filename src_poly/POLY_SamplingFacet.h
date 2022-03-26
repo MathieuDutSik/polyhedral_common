@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_SAMPLING_FACET_H
-#define INCLUDE_POLY_SAMPLING_FACET_H
+#ifndef SRC_POLY_POLY_SAMPLINGFACET_H_
+#define SRC_POLY_POLY_SAMPLINGFACET_H_
 
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeFct.h"
@@ -245,4 +245,4 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   return vf_ret;
 }
 
-#endif
+#endif //  SRC_POLY_POLY_SAMPLINGFACET_H_

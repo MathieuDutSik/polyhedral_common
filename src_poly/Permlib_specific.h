@@ -1,5 +1,5 @@
-#ifndef INCLUDE_PERMLIB_SPECIFIC_H
-#define INCLUDE_PERMLIB_SPECIFIC_H
+#ifndef SRC_POLY_PERMLIB_SPECIFIC_H_
+#define SRC_POLY_PERMLIB_SPECIFIC_H_
 
 #include "Boost_bitset.h"
 #include "hash_functions.h"
@@ -445,4 +445,4 @@ bool IsSubgroup(TheGroupFormat<Tint> const &g1,
   return true;
 }
 
-#endif
+#endif //  SRC_POLY_PERMLIB_SPECIFIC_H_

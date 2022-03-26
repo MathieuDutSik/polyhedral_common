@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_C_CDDLIB_H
-#define INCLUDE_POLY_C_CDDLIB_H
+#ifndef SRC_POLY_POLY_C_CDDLIB_H_
+#define SRC_POLY_POLY_C_CDDLIB_H_
 
 #ifdef USE_CDDLIB
 
@@ -104,5 +104,5 @@ DualDescription_incd(MyMatrix<T> const &TheEXT) {
 
 } // namespace cbased_cdd
 
-#endif
-#endif
+#endif //  USE_CDDLIB
+#endif //  SRC_POLY_POLY_C_CDDLIB_H_

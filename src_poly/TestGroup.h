@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEST_GROUP_H
-#define INCLUDE_TEST_GROUP_H
+#ifndef SRC_POLY_TESTGROUP_H_
+#define SRC_POLY_TESTGROUP_H_
 
 #include "Group.h"
 #include "MatrixGroup.h"
@@ -246,4 +246,4 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
   test_representation(ListMatrGens, ListPermGens_B, ListPoint_B, f1_B, f2_B);
 }
 
-#endif
+#endif //  SRC_POLY_TESTGROUP_H_

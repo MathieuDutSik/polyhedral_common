@@ -1,5 +1,5 @@
-#ifndef INCLUDE_WEIGHT_MATRIX_LIMITED_H
-#define INCLUDE_WEIGHT_MATRIX_LIMITED_H
+#ifndef SRC_POLY_WEIGHTMATRIXLIMITED_H_
+#define SRC_POLY_WEIGHTMATRIXLIMITED_H_
 
 #include "GRP_GroupFct.h"
 #include <map>
@@ -613,4 +613,4 @@ private:
   std::vector<size_t> list_offdiag_elements;
 };
 
-#endif
+#endif //  SRC_POLY_WEIGHTMATRIXLIMITED_H_

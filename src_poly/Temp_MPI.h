@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEMP_MPI_H_
-#define INCLUDE_TEMP_MPI_H_
+#ifndef SRC_POLY_TEMP_MPI_H_
+#define SRC_POLY_TEMP_MPI_H_
 
 #include "GRP_GroupFct.h"
 #include "MPI_functions.h"
@@ -128,4 +128,4 @@ void MPI_RECV_MyMatrix(MyMatrix<T> *eMat, int src, int tag, MPI_Comm comm) {
     eMat->ListElt[i] = eVect[i];
 }
 
-#endif
+#endif //  SRC_POLY_TEMP_MPI_H_

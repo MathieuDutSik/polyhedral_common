@@ -1,5 +1,5 @@
-#ifndef TEMP_POLYTOPE_INT_INCLUDE
-#define TEMP_POLYTOPE_INT_INCLUDE
+#ifndef SRC_POLY_POLY_POLYTOPEINT_H_
+#define SRC_POLY_POLY_POLYTOPEINT_H_
 
 #include "COMB_Combinatorics.h"
 #include "POLY_LinearProgramming.h"
@@ -239,4 +239,4 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
   return ListPoint;
 }
 
-#endif
+#endif //  SRC_POLY_POLY_POLYTOPEINT_H_

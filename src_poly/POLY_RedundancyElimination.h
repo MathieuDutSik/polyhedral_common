@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_REDUNDANCY_ELIMINATION_H
-#define INCLUDE_POLY_REDUNDANCY_ELIMINATION_H
+#ifndef SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
+#define SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
 
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
@@ -481,4 +481,4 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   return status_ret;
 }
 
-#endif
+#endif //  SRC_POLY_POLY_REDUNDANCYELIMINATION_H_

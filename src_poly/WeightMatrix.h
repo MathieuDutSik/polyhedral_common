@@ -1,5 +1,5 @@
-#ifndef INCLUDE_WEIGHT_MATRIX_H
-#define INCLUDE_WEIGHT_MATRIX_H
+#ifndef SRC_POLY_WEIGHTMATRIX_H_
+#define SRC_POLY_WEIGHTMATRIX_H_
 
 #undef USE_BLISS
 #define USE_TRACES
@@ -1560,4 +1560,4 @@ WeightMatrixFromPairOrbits(Tgroup const &GRP) {
   return WMat;
 }
 
-#endif
+#endif //  SRC_POLY_WEIGHTMATRIX_H_

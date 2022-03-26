@@ -1,5 +1,6 @@
-#ifndef THREAD_MANAGEMENT_INCLUDE
-#define THREAD_MANAGEMENT_INCLUDE
+#ifndef SRC_POLY_THREADMANAGEMENT_H_
+#define SRC_POLY_THREADMANAGEMENT_H_
+
 #include "BasicThreadInclude.h"
 #include "facet.h"
 //#include "tbb/tbb.h"
@@ -145,4 +146,4 @@ private:
   int MaxNumThread;
 };
 
-#endif
+#endif //  SRC_POLY_THREADMANAGEMENT_H_

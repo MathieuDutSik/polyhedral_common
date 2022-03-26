@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_LRSLIB_H
-#define INCLUDE_POLY_LRSLIB_H
+#ifndef SRC_POLY_POLY_LRSLIB_H_
+#define SRC_POLY_POLY_LRSLIB_H_
 
 /* A templatized version of David Avis' lrs.
  * Code is mainly taken from lrslib.c
@@ -2122,4 +2122,4 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const &EXT) {
 }
 
 } // namespace lrs
-#endif
+#endif //  SRC_POLY_POLY_LRSLIB_H_

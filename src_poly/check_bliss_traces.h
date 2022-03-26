@@ -1,5 +1,5 @@
-#ifndef INCLUDE_CHECK_CLISS_TRACES
-#define INCLUDE_CHECK_CLISS_TRACES
+#ifndef SRC_POLY_CHECK_BLISS_TRACES_H_
+#define SRC_POLY_CHECK_BLISS_TRACES_H_
 
 #include "GRAPH_bliss.h"
 #include "GRAPH_traces.h"
@@ -21,4 +21,4 @@ void PrintStabilizerGroupSizes(std::ostream &os, Tgr const &eGR) {
      << " test2=" << test2 << "\n";
 }
 
-#endif
+#endif //  SRC_POLY_CHECK_BLISS_TRACES_H_
