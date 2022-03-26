@@ -1,25 +1,25 @@
 #include "NumberTheory.h"
 #include "POLY_LinearProgramming.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CDD_LinearProgramming [DATA_LP] [RESULT]\n";
       std::cerr << "\n";
-      std::cerr << "DATA_LP: The file containing the data on the problem considered\n";
+      std::cerr << "DATA_LP: The file containing the data on the problem "
+                   "considered\n";
       return -1;
     }
     //
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
-    using T=mpq_class;
-    MyMatrix<T> FAC=ReadMatrix<T>(is);
-    MyVector<T> eMinimize=ReadVector<T>(is);
+    using T = mpq_class;
+    MyMatrix<T> FAC = ReadMatrix<T>(is);
+    MyVector<T> eMinimize = ReadVector<T>(is);
     //
-    LpSolution<T> eSol=CDD_LinearProgramming(FAC, eMinimize);
+    LpSolution<T> eSol = CDD_LinearProgramming(FAC, eMinimize);
     //
     std::ofstream os(argv[2]);
     os << "return rec(FAC:=";
@@ -39,8 +39,7 @@ int main(int argc, char *argv[])
     WriteFaceGAP(os, eSol.eFace);
     os << ", rankDirectSol:=" << eSol.rankDirectSol << ");\n";
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

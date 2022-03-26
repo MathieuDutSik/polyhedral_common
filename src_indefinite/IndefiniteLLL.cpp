@@ -1,9 +1,7 @@
-#include "NumberTheory.h"
 #include "Indefinite_LLL.h"
+#include "NumberTheory.h"
 
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3 && argc != 2) {
       std::cerr << "IndefiniteLLL [FileI] [FileO]\n";
@@ -11,16 +9,16 @@ int main(int argc, char* argv[])
       std::cerr << "IndefiniteLLL [FileI]\n";
       throw TerminalException{1};
     }
-    using T=mpq_class;
-    using Tint=mpz_class;
+    using T = mpq_class;
+    using Tint = mpz_class;
 
     std::string FileI = argv[1];
     //
     MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
     std::cerr << "We have M\n";
     //
-    auto print_result=[&](std::ostream & os) -> void {
-      ResultIndefiniteLLL<T,Tint> ResLLL = Indefinite_LLL<T,Tint>(M);
+    auto print_result = [&](std::ostream &os) -> void {
+      ResultIndefiniteLLL<T, Tint> ResLLL = Indefinite_LLL<T, Tint>(M);
       if (ResLLL.success) {
         std::cerr << "B_T=\n";
         WriteMatrix(std::cerr, ResLLL.B);
@@ -45,8 +43,7 @@ int main(int argc, char* argv[])
       std::ofstream os(FileO);
       print_result(os);
     }
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

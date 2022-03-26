@@ -1,9 +1,8 @@
-#include "POLY_cdd_graph.h"
-#include "NumberTheory.h"
 #include "GRAPH_GraphicalFunctions.h"
+#include "NumberTheory.h"
+#include "POLY_cdd_graph.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -17,10 +16,10 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     std::ifstream is(argv[1]);
-    using T=mpq_class;
-    MyMatrix<T> EXT=ReadMatrixLrsCdd<T>(is);
-    int rnk=RankMat(EXT);
-    int nbCol=EXT.cols();
+    using T = mpq_class;
+    MyMatrix<T> EXT = ReadMatrixLrsCdd<T>(is);
+    int rnk = RankMat(EXT);
+    int nbCol = EXT.cols();
     if (rnk != nbCol) {
       std::cerr << "The polytope is not full dimensional\n";
       std::cerr << "rnk=" << rnk << " nbCol=" << nbCol << "\n";
@@ -40,8 +39,7 @@ int main(int argc, char *argv[])
     GRAPH_PrintOutputGAP(os3, eDDA.RidgeGraph);
     //
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

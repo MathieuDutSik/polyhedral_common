@@ -1,16 +1,15 @@
-#include "Permutation.h"
-#include "Group.h"
-#include "GRP_GroupFct.h"
 #include "GRP_DoubleCoset.h"
+#include "GRP_GroupFct.h"
+#include "Group.h"
+#include "Permutation.h"
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "TestEquivalenceSets [BigGRP] [SmaGRP] [ListFace] [FileOut2] [FileOut3]\n";
+      std::cerr << "TestEquivalenceSets [BigGRP] [SmaGRP] [ListFace] "
+                   "[FileOut2] [FileOut3]\n";
       std::cerr << "\n";
       std::cerr << "BigGRP     : The file containing the big group\n";
       std::cerr << "SmaGRP     : The file containing the small group\n";
@@ -23,17 +22,17 @@ int main(int argc, char *argv[])
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     std::cerr << "Reading input\n";
     //
     std::ifstream is1(argv[1]);
-    Tgroup BigGRP=ReadGroup<Tgroup>(is1);
+    Tgroup BigGRP = ReadGroup<Tgroup>(is1);
     //
     std::ifstream is2(argv[2]);
-    Tgroup SmaGRP=ReadGroup<Tgroup>(is2);
+    Tgroup SmaGRP = ReadGroup<Tgroup>(is2);
     //
     std::ifstream is3(argv[3]);
-    vectface ListFaceBig=ReadListFace(is3);
+    vectface ListFaceBig = ReadListFace(is3);
     std::cerr << "|ListFaceBig|=" << ListFaceBig.size() << "\n";
     //
     // Now the output
@@ -43,8 +42,7 @@ int main(int argc, char *argv[])
     OrbitSplittingPerfectFacet(BigGRP, SmaGRP, ListFaceBig, os2, os3);
     //
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

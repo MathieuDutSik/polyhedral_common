@@ -1,8 +1,7 @@
 #include "NumberTheory.h"
 #include "SimulDiophantApprox.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -18,21 +17,22 @@ int main(int argc, char *argv[])
     using Tint = mpz_class;
     //
     std::ifstream is(argv[1]);
-    MyVector<T> V=ReadVector<T>(is);
+    MyVector<T> V = ReadVector<T>(is);
     //
     std::string epsilon_str = argv[2];
     std::stringstream s(epsilon_str);
     T epsilon;
     s >> epsilon;
     //
-    DiophantResult<Tint> eRes = SimultaneousDiophantineApproximation<T,Tint>(V, epsilon);
+    DiophantResult<Tint> eRes =
+        SimultaneousDiophantineApproximation<T, Tint>(V, epsilon);
     //
-    std::cerr << "Proposed solution = " << GapStringDiophantineApprox(eRes) << "\n";
+    std::cerr << "Proposed solution = " << GapStringDiophantineApprox(eRes)
+              << "\n";
     T penalty = ComputeDiophantinePenalty(V, eRes);
     std::cerr << "penalty=" << penalty << "\n";
     //
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

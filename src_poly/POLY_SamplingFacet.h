@@ -1,9 +1,8 @@
 #ifndef INCLUDE_POLY_SAMPLING_FACET_H
 #define INCLUDE_POLY_SAMPLING_FACET_H
 
-
-#include "POLY_PolytopeFct.h"
 #include "POLY_LinearProgramming.h"
+#include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
 
 struct recSamplingOption {
@@ -13,37 +12,38 @@ struct recSamplingOption {
   std::string prog;
 };
 
-template<typename T>
-vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSamplingOption const& eOption, int & nbCall)
-{
-  int dim=RankMat(EXT);
-  int len=EXT.rows();
-  std::string prog=eOption.prog;
-  int critlevel=eOption.critlevel;
-  int maxnbcall=eOption.maxnbcall;
-  int maxnbsize=eOption.maxnbsize;
-  std::cerr << "critlevel=" << critlevel << " prog=" << prog << " maxnbcall=" << maxnbcall << "\n";
-  auto IsRecursive=[&]() -> bool {
+template <typename T>
+vectface Kernel_DUALDESC_SamplingFacetProcedure(
+    MyMatrix<T> const &EXT, recSamplingOption const &eOption, int &nbCall) {
+  int dim = RankMat(EXT);
+  int len = EXT.rows();
+  std::string prog = eOption.prog;
+  int critlevel = eOption.critlevel;
+  int maxnbcall = eOption.maxnbcall;
+  int maxnbsize = eOption.maxnbsize;
+  std::cerr << "critlevel=" << critlevel << " prog=" << prog
+            << " maxnbcall=" << maxnbcall << "\n";
+  auto IsRecursive = [&]() -> bool {
     if (len < critlevel)
       return false;
     if (dim < 15)
       return false;
     return true;
   };
-  bool DoRecur=IsRecursive();
+  bool DoRecur = IsRecursive();
   vectface ListFace(EXT.rows());
   std::vector<int> ListStatus;
-  auto FuncInsert=[&](Face const& eFace) -> void {
-    for (auto & fFace : ListFace) {
+  auto FuncInsert = [&](Face const &eFace) -> void {
+    for (auto &fFace : ListFace) {
       if (fFace.count() == eFace.count())
-	return;
+        return;
     }
     ListFace.push_back(eFace);
     ListStatus.push_back(0);
   };
   std::cerr << "dim=" << dim << "  len=" << len << "\n";
   if (!DoRecur) {
-    auto comp_dd=[&]() -> vectface {
+    auto comp_dd = [&]() -> vectface {
       if (prog == "lrs")
         return lrs::DualDescription_temp_incd(EXT);
       if (prog == "cdd")
@@ -52,43 +52,44 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSampl
       throw TerminalException{1};
     };
     vectface ListIncd = comp_dd();
-    for (auto & eFace : ListIncd)
+    for (auto &eFace : ListIncd)
       FuncInsert(eFace);
     std::cerr << "DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
     nbCall++;
     return ListFace;
   }
-  Face eInc=FindOneInitialVertex(EXT);
+  Face eInc = FindOneInitialVertex(EXT);
   FuncInsert(eInc);
-  while(true) {
-    int nbCases=ListFace.size();
-    bool IsFinished=true;
-    for (int iC=0; iC<nbCases; iC++)
+  while (true) {
+    int nbCases = ListFace.size();
+    bool IsFinished = true;
+    for (int iC = 0; iC < nbCases; iC++)
       if (ListStatus[iC] == 0) {
-	nbCall++;  // we liberally increase the value
-	IsFinished=false;
-	ListStatus[iC]=1;
-	Face eFace=ListFace[iC];
-	MyMatrix<T> EXTred=SelectRow(EXT, eFace);
-	vectface ListRidge=Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall);
-	for (auto & eRidge : ListRidge) {
-	  Face eFlip=ComputeFlipping(EXT, eFace, eRidge);
-	  FuncInsert(eFlip);
-	}
-	if (maxnbsize != -1) {
-	  int siz=ListFace.size();
-	  if (maxnbsize > siz) {
-	    std::cerr << "Ending by maxsize criterion\n";
-	    std::cerr << "siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
-	    return ListFace;
-	  }
-	}
-	if (maxnbcall != -1) {
-	  if (nbCall > maxnbcall) {
-	    std::cerr << "Ending by maxnbcall\n";
-	    return ListFace;
-	  }
-	}
+        nbCall++; // we liberally increase the value
+        IsFinished = false;
+        ListStatus[iC] = 1;
+        Face eFace = ListFace[iC];
+        MyMatrix<T> EXTred = SelectRow(EXT, eFace);
+        vectface ListRidge =
+            Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall);
+        for (auto &eRidge : ListRidge) {
+          Face eFlip = ComputeFlipping(EXT, eFace, eRidge);
+          FuncInsert(eFlip);
+        }
+        if (maxnbsize != -1) {
+          int siz = ListFace.size();
+          if (maxnbsize > siz) {
+            std::cerr << "Ending by maxsize criterion\n";
+            std::cerr << "siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+            return ListFace;
+          }
+        }
+        if (maxnbcall != -1) {
+          if (nbCall > maxnbcall) {
+            std::cerr << "Ending by maxnbcall\n";
+            return ListFace;
+          }
+        }
       }
     if (IsFinished)
       break;
@@ -97,25 +98,25 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, recSampl
   return ListFace;
 }
 
-
-template<typename T>
-vectface DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::vector<std::string> const& ListOpt)
-{
-  std::string prog="lrs";
-  int critlevel=50;
-  int maxnbcall=-1;
-  int maxnbsize=20;
-  for (auto & eOpt : ListOpt) {
-    std::vector<std::string> ListStrB=STRING_Split(eOpt, "_");
+template <typename T>
+vectface
+DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
+                                std::vector<std::string> const &ListOpt) {
+  std::string prog = "lrs";
+  int critlevel = 50;
+  int maxnbcall = -1;
+  int maxnbsize = 20;
+  for (auto &eOpt : ListOpt) {
+    std::vector<std::string> ListStrB = STRING_Split(eOpt, "_");
     if (ListStrB.size() == 2) {
       if (ListStrB[0] == "prog")
-	prog=ListStrB[1];
+        prog = ListStrB[1];
       if (ListStrB[0] == "critlevel")
-	std::istringstream(ListStrB[1]) >> critlevel;
+        std::istringstream(ListStrB[1]) >> critlevel;
       if (ListStrB[0] == "maxnbcall")
-	std::istringstream(ListStrB[1]) >> maxnbcall;
+        std::istringstream(ListStrB[1]) >> maxnbcall;
       if (ListStrB[0] == "maxnbsize")
-	std::istringstream(ListStrB[1]) >> maxnbsize;
+        std::istringstream(ListStrB[1]) >> maxnbsize;
     }
   }
   if (prog != "lrs" && prog != "cdd") {
@@ -124,29 +125,27 @@ vectface DUALDESC_SamplingFacetProcedure(MyMatrix<T> const& EXT, std::vector<std
     throw TerminalException{1};
   }
   recSamplingOption eOption;
-  eOption.maxnbcall=maxnbcall;
-  eOption.prog=prog;
-  eOption.critlevel=critlevel;
-  eOption.maxnbsize=maxnbsize;
-  int nbcall=0;
+  eOption.maxnbcall = maxnbcall;
+  eOption.prog = prog;
+  eOption.critlevel = critlevel;
+  eOption.maxnbsize = maxnbsize;
+  int nbcall = 0;
   return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbcall);
 }
 
-
-
-template<typename T>
-vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string const& ansSamp)
-{
+template <typename T>
+vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                          std::string const &ansSamp) {
   std::cerr << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
-  std::vector<std::string> ListStr=STRING_Split(ansSamp, ":");
-  std::string ansOpt=ListStr[0];
+  std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
+  std::string ansOpt = ListStr[0];
 
-  auto compute_samp=[&]() -> vectface {
+  auto compute_samp = [&]() -> vectface {
     if (ansOpt == "lp_cdd") {
       // So possible format is lp_cdd:iter_100
-      int iter=10;
+      int iter = 10;
       if (ListStr.size() > 1) {
-        std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
+        std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
         if (ListStrB.size() == 2 && ListStrB[0] == "iter")
           std::istringstream(ListStrB[1]) >> iter;
       }
@@ -154,15 +153,15 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string co
     }
     if (ansOpt == "sampling") {
       std::vector<std::string> ListOpt;
-      for (int i=1; i<int(ListStr.size()); i++)
+      for (int i = 1; i < int(ListStr.size()); i++)
         ListOpt.push_back(ListStr[i]);
       return DUALDESC_SamplingFacetProcedure(EXT, ListOpt);
     }
     if (ansOpt == "lrs_limited") {
-      int upperlimit=100;
+      int upperlimit = 100;
       // So possible format is lrs_limited:upperlimit_1000
       if (ListStr.size() > 1) {
-        std::vector<std::string> ListStrB=STRING_Split(ListStr[1], "_");
+        std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
         if (ListStrB.size() == 2 && ListStrB[0] == "upperlimit")
           std::istringstream(ListStrB[1]) >> upperlimit;
       }
@@ -180,10 +179,7 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const& EXT, std::string co
   return ListIncd;
 }
 
-
-template<typename T>
-vectface GetFullRankFacetSet(const MyMatrix<T>& EXT)
-{
+template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   // Heuristic first, should work in many cases
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t dim = EXTred.cols();
@@ -191,34 +187,35 @@ vectface GetFullRankFacetSet(const MyMatrix<T>& EXT)
   size_t nb = 10 * dim;
   vectface ListSets = FindVertices(EXTred, nb);
   std::unordered_set<Face> set_face;
-  for (auto & eFace : ListSets)
+  for (auto &eFace : ListSets)
     set_face.insert(eFace);
   size_t n_face = set_face.size();
   MyMatrix<T> FAC(n_face, dim);
-  size_t i_face=0;
-  for (auto & eFace : set_face) {
+  size_t i_face = 0;
+  for (auto &eFace : set_face) {
     MyVector<T> V = FindFacetInequality(EXT, eFace);
     AssignMatrixRow(FAC, i_face, V);
     i_face++;
   }
   size_t rnk = RankMat(FAC);
-  std::cerr << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows << " rnk=" << rnk << " dim=" << dim <<  "\n";
+  std::cerr << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows
+            << " rnk=" << rnk << " dim=" << dim << "\n";
   if (rnk == dim) {
     vectface vf(n_rows);
-    for (auto & eFace : set_face)
+    for (auto &eFace : set_face)
       vf.push_back(eFace);
     return vf;
   }
   // Otherwise we call recursively
   std::cerr << "Failing, so calling the recursive algo\n";
-  auto get_minincd=[&]() -> Face {
+  auto get_minincd = [&]() -> Face {
     size_t min_incd = std::numeric_limits<size_t>::max();
-    for (auto & eFace : set_face) {
+    for (auto &eFace : set_face) {
       size_t incd = eFace.count();
       if (incd < min_incd)
         min_incd = incd;
     }
-    for (auto & eFace : set_face) {
+    for (auto &eFace : set_face) {
       size_t incd = eFace.count();
       if (incd == min_incd)
         return eFace;
@@ -228,14 +225,15 @@ vectface GetFullRankFacetSet(const MyMatrix<T>& EXT)
   };
   Face eSet = get_minincd();
   MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXTred, eSet));
-  std::cerr << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols() << " rnk=" << RankMat(EXTsel) << "\n";
+  std::cerr << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
+            << " rnk=" << RankMat(EXTsel) << "\n";
   vectface ListRidge = GetFullRankFacetSet(EXTsel);
   std::cerr << "We have ListRidge\n";
   FlippingFramework<T> RPLlift(EXTred, eSet);
   std::cerr << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
-  for (auto & eRidge : ListRidge) {
+  for (auto &eRidge : ListRidge) {
     Face eFace = RPLlift.Flip(eRidge);
     vf_ret.push_back(eFace);
   }

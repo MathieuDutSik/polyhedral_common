@@ -9,10 +9,9 @@ extern "C" {
 /* Version July 11, 2005                                      */
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
 
-#define PANIC (panic(__FILE__,__LINE__))
+#define PANIC (panic(__FILE__, __LINE__))
 
-extern void panic (char *filename,
-		   int line);
+extern void panic(char *filename, int line);
 
 #ifdef __cplusplus
 }

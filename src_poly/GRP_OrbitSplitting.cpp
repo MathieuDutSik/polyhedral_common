@@ -1,10 +1,9 @@
+#include "GRP_DoubleCoset.h"
+#include "GRP_GroupFct.h"
+#include "Group.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
-#include "Group.h"
-#include "GRP_GroupFct.h"
-#include "GRP_DoubleCoset.h"
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -20,25 +19,25 @@ int main(int argc, char *argv[])
     using Tint = mpz_class;
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     std::cerr << "Reading input\n";
     //
     std::ifstream is1(argv[1]);
-    Tgroup BigGRP=ReadGroup<Tgroup>(is1);
+    Tgroup BigGRP = ReadGroup<Tgroup>(is1);
     //
     std::ifstream is2(argv[2]);
-    Tgroup SmaGRP=ReadGroup<Tgroup>(is2);
+    Tgroup SmaGRP = ReadGroup<Tgroup>(is2);
     //
     std::ifstream is3(argv[3]);
-    vectface ListFaceBig=ReadListFace(is3);
+    vectface ListFaceBig = ReadListFace(is3);
     std::cerr << "|ListFaceBig|=" << ListFaceBig.size() << "\n";
     //
-    vectface ListFaceSma=OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
+    vectface ListFaceSma =
+        OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
     std::cerr << "|ListFaceSma|=" << ListFaceSma.size() << "\n";
     //
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

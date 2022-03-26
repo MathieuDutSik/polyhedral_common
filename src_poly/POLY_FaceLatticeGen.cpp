@@ -1,15 +1,14 @@
-#include "NumberTheory.h"
-#include "Permutation.h"
 #include "Group.h"
+#include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
-int main(int argc, char *argv[])
-{
+#include "Permutation.h"
+int main(int argc, char *argv[]) {
   try {
-    using T=mpq_class;
+    using T = mpq_class;
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     //
     FullNamelist eFull = NAMELIST_GetStandard_FaceLattice();
     if (argc != 2) {
@@ -20,13 +19,12 @@ int main(int argc, char *argv[])
       NAMELIST_WriteNamelistFile(std::cerr, eFull);
       return -1;
     }
-    std::string FileNML=argv[1];
+    std::string FileNML = argv[1];
     NAMELIST_ReadNamelistFile(FileNML, eFull);
     //
-    MainFunctionFaceLattice<T,Tgroup>(eFull);
+    MainFunctionFaceLattice<T, Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

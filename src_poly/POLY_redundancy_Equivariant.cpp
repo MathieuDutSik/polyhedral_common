@@ -1,10 +1,9 @@
+#include "Group.h"
 #include "NumberTheory.h"
 #include "POLY_RedundancyElimination.h"
 #include "Permutation.h"
-#include "Group.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -17,15 +16,15 @@ int main(int argc, char *argv[])
       return -1;
     }
     //
-    using T=mpq_class;
-    using Tidx=uint32_t;
+    using T = mpq_class;
+    using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     //
     std::string FileIneq = argv[1];
     std::ifstream is1(FileIneq);
-    MyMatrix<T> EXT=ReadMatrix<T>(is1);
+    MyMatrix<T> EXT = ReadMatrix<T>(is1);
     std::cerr << "We have EXT\n";
     std::string FileGRP = argv[2];
     std::ifstream is2(FileGRP);
@@ -36,18 +35,17 @@ int main(int argc, char *argv[])
     //
     std::ofstream os(argv[3]);
     os << "return [";
-    size_t nbIrred=status.count();
-    boost::dynamic_bitset<>::size_type pos=status.find_first();
-    for (size_t i=0; i<nbIrred; i++) {
-      if (i>0)
+    size_t nbIrred = status.count();
+    boost::dynamic_bitset<>::size_type pos = status.find_first();
+    for (size_t i = 0; i < nbIrred; i++) {
+      if (i > 0)
         os << ",";
       int eVal = pos + 1;
       os << eVal;
       pos = status.find_next(pos);
     }
     os << "];\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

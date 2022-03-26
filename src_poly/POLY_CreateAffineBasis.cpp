@@ -1,7 +1,6 @@
-#include "NumberTheory.h"
 #include "MAT_MatrixInt.h"
-int main(int argc, char *argv[])
-{
+#include "NumberTheory.h"
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -14,22 +13,22 @@ int main(int argc, char *argv[])
     //
     std::cerr << "Reading input\n";
     //
-    using T=mpq_class;
+    using T = mpq_class;
     std::ifstream EXTfs(argv[1]);
-    MyMatrix<T> eMat=ReadMatrix<T>(EXTfs);
+    MyMatrix<T> eMat = ReadMatrix<T>(EXTfs);
     std::cerr << "After read matrix\n";
     //
-    AffineBasisResult eBasRes=ComputeAffineBasis<T>(eMat);
+    AffineBasisResult eBasRes = ComputeAffineBasis<T>(eMat);
     std::cerr << "result=" << eBasRes.result << "\n";
     if (eBasRes.result == true) {
-      int n=eBasRes.ListIdx.size();
+      int n = eBasRes.ListIdx.size();
       std::cerr << "ListIdx=";
-      for (int i=0; i<n; i++)
-	std::cerr << eBasRes.ListIdx[i] << " ";
+      for (int i = 0; i < n; i++)
+        std::cerr << eBasRes.ListIdx[i] << " ";
       std::cerr << "\n";
       //
-      MyMatrix<T> eBasis=SelectRow(eMat, eBasRes.ListIdx);
-      T eDet=DeterminantMat(eBasis);
+      MyMatrix<T> eBasis = SelectRow(eMat, eBasRes.ListIdx);
+      T eDet = DeterminantMat(eBasis);
       std::cerr << "eDet=" << eDet << "\n";
       std::ofstream BASfs(argv[2]);
       BASfs << "return ";
@@ -37,8 +36,7 @@ int main(int argc, char *argv[])
       BASfs << ";\n";
     }
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

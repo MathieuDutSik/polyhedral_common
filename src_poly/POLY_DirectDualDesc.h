@@ -5,8 +5,8 @@
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
-#include <vector>
 #include <string>
+#include <vector>
 
 template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
   size_t pos = 0;
@@ -295,4 +295,4 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return TheOutput;
 }
 
-#endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_
+#endif // SRC_POLY_POLY_DIRECTDUALDESC_H_

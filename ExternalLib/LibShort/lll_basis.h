@@ -30,10 +30,8 @@ extern "C" {
  * double **reduced_basis - a LLL-reduced basis of the lattice
  */
 
-extern void computeLLLReducedBasis(long dim,
-				   double **basis,
-				   double **reduced_basis,
-				   int check);
+extern void computeLLLReducedBasis(long dim, double **basis,
+                                   double **reduced_basis, int check);
 #ifdef __cplusplus
 }
 #endif

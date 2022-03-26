@@ -24,11 +24,10 @@ extern "C" {
  *   count only the number of vectors of L which length is bounded by a
  *   given constant
  * Additionally there are many options.
- * 
+ *
  * The algorithm used is based on the algorithm of Fincke and Pohst.
  * (see Henri Cohen --  A Course in Computational Algebraic Number Theory)
  */
-
 
 /*
  * internal epsilon
@@ -38,20 +37,16 @@ extern "C" {
 #define SHVEC_ELLIPSOID_EPSILON 0.0000001
 #define SHVEC_STEP_EPSILON 0.000001
 
-
-
 /*
  * modes
  * =====
  */
 
-#define SHVEC_MODE_BOUND             0
-#define SHVEC_MODE_SHORTEST_VECTORS  1
-#define SHVEC_MODE_MINIMUM           2
-#define SHVEC_MODE_THETA_SERIES      3
-#define SHVEC_MODE_VINBERG           4
-
-
+#define SHVEC_MODE_BOUND 0
+#define SHVEC_MODE_SHORTEST_VECTORS 1
+#define SHVEC_MODE_MINIMUM 2
+#define SHVEC_MODE_THETA_SERIES 3
+#define SHVEC_MODE_VINBERG 4
 
 /*
  * structures
@@ -75,7 +70,6 @@ struct internals_struct {
 
 typedef struct internals_struct internals;
 
-
 struct shvec_request_struct {
   int mode;
   double bound;
@@ -85,7 +79,6 @@ struct shvec_request_struct {
 };
 
 typedef struct shvec_request_struct *shvec_request;
-
 
 struct shvec_info_struct {
   struct shvec_request_struct request;
@@ -101,18 +94,14 @@ struct shvec_info_struct {
 
 typedef struct shvec_info_struct *shvec_info;
 
-
-
 /*
  * functions
  * ==========
  */
 
-extern void initShvecReq(int dim,
-			 double **gram_matrix,
-			 int (*cholesky_decomposition)(),
-			 int check,
-			 shvec_request request);
+extern void initShvecReq(int dim, double **gram_matrix,
+                         int (*cholesky_decomposition)(), int check,
+                         shvec_request request);
 
 extern void destroyShvecReq(shvec_request request);
 
@@ -120,8 +109,7 @@ extern void initShvecInfo(shvec_info info);
 
 extern void destroyShvecInfo(shvec_info info);
 
-extern void computeShvec(shvec_request request,
-			 shvec_info info);
+extern void computeShvec(shvec_request request, shvec_info info);
 
 #ifdef __cplusplus
 }

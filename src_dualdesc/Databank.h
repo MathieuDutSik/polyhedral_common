@@ -4,8 +4,8 @@
 #include "basic_datafile.h"
 #include <boost/asio.hpp>
 #include <string>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
 template <typename Tgroup_impl> struct PairStore {
   using Tgroup = Tgroup_impl;
@@ -87,8 +87,8 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
 }
 
 template <typename Tkey, typename Tval>
-void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> & ListEnt, bool const& Saving, std::string SavingPrefix)
-{
+void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
+                               bool const &Saving, std::string SavingPrefix) {
   if (Saving) {
     size_t iOrbit = 0;
     while (true) {
@@ -104,7 +104,6 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> & ListEnt, bool co
     }
   }
 }
-
 
 // It is better to use std::unordered_map for the List of entries:
 // This makes the check of equality rarer and instead uses the hash

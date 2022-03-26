@@ -1,27 +1,20 @@
 #ifndef MATRIC_CANONICAL_FORM_H
 #define MATRIC_CANONICAL_FORM_H
 
-
-
-#include "ShortestUniversal.h"
 #include "InvariantVectorFamily.h"
-#include "Temp_PolytopeEquiStab.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
+#include "ShortestUniversal.h"
+#include "Temp_PolytopeEquiStab.h"
 
-
-
-template<typename T,typename Tint>
-struct Canonic_PosDef {
+template <typename T, typename Tint> struct Canonic_PosDef {
   MyMatrix<Tint> Basis;
   MyMatrix<Tint> SHV;
   MyMatrix<T> Mat;
 };
 
-
-template<typename T,typename Tint>
-Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
-{
+template <typename T, typename Tint>
+Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -29,18 +22,25 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   //  WriteMatrix(std::cerr, inpMat);
 #ifdef TIMINGS
   std::cerr << "Begining of ComputeCanonicalForm\n";
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time1 =
+      std::chrono::system_clock::now();
 #endif
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "ExtractInvariantVectorFamilyZbasis : time2 - time1=" << std::chrono::duration_cast<std::chrono::milliseconds>(time2 - time1).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 =
+      std::chrono::system_clock::now();
+  std::cerr << "ExtractInvariantVectorFamilyZbasis : time2 - time1="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time2 -
+                                                                     time1)
+                   .count()
+            << "\n";
 #endif
-  int nbRow=SHV.rows();
-  int n=SHV.cols();
+  int nbRow = SHV.rows();
+  int n = SHV.cols();
 #ifdef DEBUG
   if (!CheckCentralSymmetry(SHV)) {
-    std::cerr << "The set of vector does not respect the central symmetry condition\n";
+    std::cerr << "The set of vector does not respect the central symmetry "
+                 "condition\n";
     throw TerminalException{1};
   }
 #endif
@@ -50,46 +50,74 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
   // Computing the scalar product matrix
   //
   using Tidx_value = int16_t;
-  WeightMatrix<true,T,Tidx_value> WMat = T_TranslateToMatrix_QM_SHV<T,Tint,Tidx_value>(inpMat, SHV);
+  WeightMatrix<true, T, Tidx_value> WMat =
+      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "WMat : time3 - time2=" << std::chrono::duration_cast<std::chrono::milliseconds>(time3 - time2).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 =
+      std::chrono::system_clock::now();
+  std::cerr << "WMat : time3 - time2="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time3 -
+                                                                     time2)
+                   .count()
+            << "\n";
 #endif
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "ReorderingSetWeight : time4 - time3=" << std::chrono::duration_cast<std::chrono::milliseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time4 =
+      std::chrono::system_clock::now();
+  std::cerr << "ReorderingSetWeight : time4 - time3="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time4 -
+                                                                     time3)
+                   .count()
+            << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  std::vector<int> CanonicOrd = GetCanonicalizationVector_Kernel<T,GraphBitset,int>(WMat);
+  std::vector<int> CanonicOrd =
+      GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::milliseconds>(time5 - time4).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time5 =
+      std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector_Kernel|="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time5 -
+                                                                     time4)
+                   .count()
+            << "\n";
 #endif
   //
   // Building the canonical basis
   //
-  MyMatrix<Tint> SHVcan_Tint(n,nbRow);
-  for (int iRowCan=0; iRowCan<nbRow; iRowCan++) {
+  MyMatrix<Tint> SHVcan_Tint(n, nbRow);
+  for (int iRowCan = 0; iRowCan < nbRow; iRowCan++) {
     int iRowNative = CanonicOrd[iRowCan];
     MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "SHVcan : time6 - time5=" << std::chrono::duration_cast<std::chrono::milliseconds>(time6 - time5).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time6 =
+      std::chrono::system_clock::now();
+  std::cerr << "SHVcan : time6 - time5="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time6 -
+                                                                     time5)
+                   .count()
+            << "\n";
 #endif
-  MyMatrix<Tint> BasisCan_Tint_pre = ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+  MyMatrix<Tint> BasisCan_Tint_pre =
+      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   //  std::cerr << "SHVcan_Tint=\n";
   //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "ReductionMatrix : time7 - time6=" << std::chrono::duration_cast<std::chrono::milliseconds>(time7 - time6).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time7 =
+      std::chrono::system_clock::now();
+  std::cerr << "ReductionMatrix : time7 - time6="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time7 -
+                                                                     time6)
+                   .count()
+            << "\n";
 #endif
-  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T,Tint>(BasisCan_Tint);
+  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
@@ -100,18 +128,20 @@ Canonic_PosDef<T,Tint> ComputeCanonicalForm(MyMatrix<T> const& inpMat)
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "Matrix products : time8 - time7=" << std::chrono::duration_cast<std::chrono::milliseconds>(time8 - time7).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time8 =
+      std::chrono::system_clock::now();
+  std::cerr << "Matrix products : time8 - time7="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time8 -
+                                                                     time7)
+                   .count()
+            << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
 
-
-
-
-template<typename T,typename Tint>
-Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const& ListMat)
-{
+template <typename T, typename Tint>
+Canonic_PosDef<T, Tint>
+ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -119,19 +149,26 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   //  WriteMatrix(std::cerr, inpMat);
 #ifdef TIMINGS
   std::cerr << "Begining of ComputeCanonicalForm\n";
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+  std::chrono::time_point<std::chrono::system_clock> time1 =
+      std::chrono::system_clock::now();
 #endif
   MyMatrix<T> inpMat = ListMat[0];
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "ExtractInvariantVectorFamilyZbasis : time2 - time1=" << std::chrono::duration_cast<std::chrono::milliseconds>(time2 - time1).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 =
+      std::chrono::system_clock::now();
+  std::cerr << "ExtractInvariantVectorFamilyZbasis : time2 - time1="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time2 -
+                                                                     time1)
+                   .count()
+            << "\n";
 #endif
-  int nbRow=SHV.rows();
-  int n=SHV.cols();
+  int nbRow = SHV.rows();
+  int n = SHV.cols();
 #ifdef DEBUG
   if (!CheckCentralSymmetry(SHV)) {
-    std::cerr << "The set of vector does not respect the central symmetry condition\n";
+    std::cerr << "The set of vector does not respect the central symmetry "
+                 "condition\n";
     throw TerminalException{1};
   }
 #endif
@@ -141,48 +178,79 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
   // Computing the scalar product matrix
   //
   using Tidx_value = int16_t;
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat = T_TranslateToMatrix_ListMat_SHV<T,Tint,Tidx_value>(ListMat, SHV);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
+      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 = std::chrono::system_clock::now();
-  std::cerr << "WMat : time3 - time2=" << std::chrono::duration_cast<std::chrono::milliseconds>(time3 - time2).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time3 =
+      std::chrono::system_clock::now();
+  std::cerr << "WMat : time3 - time2="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time3 -
+                                                                     time2)
+                   .count()
+            << "\n";
 #endif
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 = std::chrono::system_clock::now();
-  std::cerr << "ReorderingSetWeight : time4 - time3=" << std::chrono::duration_cast<std::chrono::milliseconds>(time4 - time3).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time4 =
+      std::chrono::system_clock::now();
+  std::cerr << "ReorderingSetWeight : time4 - time3="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time4 -
+                                                                     time3)
+                   .count()
+            << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMatSymm = WMat.GetSymmetricWeightMatrix();
-  std::vector<int> CanonicOrdSymm = GetCanonicalizationVector_Kernel<std::vector<T>,GraphBitset,int>(WMatSymm);
-  std::vector<int> CanonicOrd = GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMatSymm =
+      WMat.GetSymmetricWeightMatrix();
+  std::vector<int> CanonicOrdSymm =
+      GetCanonicalizationVector_Kernel<std::vector<T>, GraphBitset, int>(
+          WMatSymm);
+  std::vector<int> CanonicOrd =
+      GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 = std::chrono::system_clock::now();
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << std::chrono::duration_cast<std::chrono::milliseconds>(time5 - time4).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time5 =
+      std::chrono::system_clock::now();
+  std::cerr << "|GetCanonicalizationVector_Kernel|="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time5 -
+                                                                     time4)
+                   .count()
+            << "\n";
 #endif
   //
   // Building the canonical basis
   //
-  MyMatrix<Tint> SHVcan_Tint(n,nbRow);
-  for (int iRowCan=0; iRowCan<nbRow; iRowCan++) {
+  MyMatrix<Tint> SHVcan_Tint(n, nbRow);
+  for (int iRowCan = 0; iRowCan < nbRow; iRowCan++) {
     int iRowNative = CanonicOrd[iRowCan];
     MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 = std::chrono::system_clock::now();
-  std::cerr << "SHVcan : time6 - time5=" << std::chrono::duration_cast<std::chrono::milliseconds>(time6 - time5).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time6 =
+      std::chrono::system_clock::now();
+  std::cerr << "SHVcan : time6 - time5="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time6 -
+                                                                     time5)
+                   .count()
+            << "\n";
 #endif
-  MyMatrix<Tint> BasisCan_Tint_pre = ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+  MyMatrix<Tint> BasisCan_Tint_pre =
+      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   //  std::cerr << "SHVcan_Tint=\n";
   //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time7 = std::chrono::system_clock::now();
-  std::cerr << "ReductionMatrix : time7 - time6=" << std::chrono::duration_cast<std::chrono::milliseconds>(time7 - time6).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time7 =
+      std::chrono::system_clock::now();
+  std::cerr << "ReductionMatrix : time7 - time6="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time7 -
+                                                                     time6)
+                   .count()
+            << "\n";
 #endif
-  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T,Tint>(BasisCan_Tint);
+  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
@@ -193,34 +261,37 @@ Canonic_PosDef<T,Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> con
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time8 = std::chrono::system_clock::now();
-  std::cerr << "Matrix products : time8 - time7=" << std::chrono::duration_cast<std::chrono::milliseconds>(time8 - time7).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time8 =
+      std::chrono::system_clock::now();
+  std::cerr << "Matrix products : time8 - time7="
+            << std::chrono::duration_cast<std::chrono::milliseconds>(time8 -
+                                                                     time7)
+                   .count()
+            << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
 
-
-template<typename T,typename Tint>
-Canonic_PosDef<T,Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const& inpMat)
-{
+template <typename T, typename Tint>
+Canonic_PosDef<T, Tint>
+ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
   int n_tot = inpMat.rows();
   if (n_tot % 2 == 1) {
     std::cerr << "The dimension is odd\n";
     throw TerminalException{1};
   }
   int n = n_tot / 2;
-  MyMatrix<Tint> SympFormMat = ZeroMatrix<Tint>(2*n, 2*n);
-  for (int i=0; i<n; i++) {
-    SympFormMat(i,n+i) = 1;
-    SympFormMat(n+i,i) = -1;
+  MyMatrix<Tint> SympFormMat = ZeroMatrix<Tint>(2 * n, 2 * n);
+  for (int i = 0; i < n; i++) {
+    SympFormMat(i, n + i) = 1;
+    SympFormMat(n + i, i) = -1;
   }
-  Canonic_PosDef<T,Tint> CanPosDef = ComputeCanonicalFormMultiple<T,Tint>({inpMat, SympFormMat});
+  Canonic_PosDef<T, Tint> CanPosDef =
+      ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat});
   MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
-  MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T,Tint>(BasisSymp_Tint);
+  MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T, Tint>(BasisSymp_Tint);
   MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);
   return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }
-
-
 
 #endif

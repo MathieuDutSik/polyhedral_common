@@ -1,8 +1,7 @@
-#include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
+#include "NumberTheory.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3 && argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -15,17 +14,17 @@ int main(int argc, char *argv[])
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
-    using T=mpz_class;
+    using T = mpz_class;
     //    using T=long;
-    //using T=mpq_class;
+    // using T=mpq_class;
 
-    //using Tint=long;
-    using Tint=mpz_class;
+    // using Tint=long;
+    using Tint = mpz_class;
     //
     std::ifstream is(argv[1]);
-    MyMatrix<T> eMat=ReadMatrix<T>(is);
-    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T,Tint>(eMat);
-    auto do_print=[&](std::ostream & os) -> void {
+    MyMatrix<T> eMat = ReadMatrix<T>(is);
+    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
+    auto do_print = [&](std::ostream &os) -> void {
       os << "SHV=\n";
       WriteMatrix(os, SHV);
     };
@@ -37,8 +36,7 @@ int main(int argc, char *argv[])
       do_print(os);
     }
     std::cerr << "Normal termination of LATT_canonicalize\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
     exit(e.eVal);
   }

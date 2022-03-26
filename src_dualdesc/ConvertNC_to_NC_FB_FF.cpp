@@ -1,9 +1,8 @@
-#include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "Permutation.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -31,8 +30,8 @@ int main(int argc, char *argv[])
     using Tint = mpz_class;
     using Tidx = int16_t;
     using Telt = permutalib::DoubleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt,Tint>;
-    using Torbsize=uint16_t;
+    using Tgroup = permutalib::Group<Telt, Tint>;
+    using Torbsize = uint16_t;
     netCDF::NcFile dataFile;
     //
     dataFile.open(eFileNC, netCDF::NcFile::read);
@@ -41,8 +40,9 @@ int main(int argc, char *argv[])
     netCDF::NcDim eDim = dataFile.getDim("n_orbit");
     size_t n_orbit = eDim.getSize();
     std::vector<SingleEntryStatus<Tint>> ListOrb;
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-      SingleEntryStatus<Tint> eEnt = POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+      SingleEntryStatus<Tint> eEnt =
+          POLY_NC_ReadSingleEntryStatus<Tint>(dataFile, i_orbit);
       ListOrb.push_back(eEnt);
     }
     dataFile.close();
@@ -50,19 +50,19 @@ int main(int argc, char *argv[])
     //
     std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;
-    for (auto & kv : LFact) {
+    for (auto &kv : LFact) {
       n_factor *= (1 + kv.second);
     }
     size_t n_act = GRP.n_act();
     size_t n_bit_orbsize = get_matching_power(n_factor + 1);
-    std::vector<Tint> ListPossOrbsize = GetAllPossibilities<Tidx,Tint>(LFact);
+    std::vector<Tint> ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
     //
-    UNORD_MAP<Tint,Torbsize> OrbSize_Map;
-    auto GetOrbSizeIndex=[&](Tint const& orbSize) ->  Torbsize {
-      Torbsize & idx = OrbSize_Map[orbSize];
+    UNORD_MAP<Tint, Torbsize> OrbSize_Map;
+    auto GetOrbSizeIndex = [&](Tint const &orbSize) -> Torbsize {
+      Torbsize &idx = OrbSize_Map[orbSize];
       if (idx == 0) { // A rare case. The linear loop should be totally ok
-        auto set=[&]() -> int {
-          for (size_t u=0; u<ListPossOrbsize.size(); u++)
+        auto set = [&]() -> int {
+          for (size_t u = 0; u < ListPossOrbsize.size(); u++)
             if (ListPossOrbsize[u] == orbSize) {
               return u + 1;
             }
@@ -76,13 +76,13 @@ int main(int argc, char *argv[])
       Face face;
       Torbsize idx_orb;
     };
-    auto SingEntToFace=[&](SingEnt const& eEnt) -> Face {
+    auto SingEntToFace = [&](SingEnt const &eEnt) -> Face {
       Face f(n_act + n_bit_orbsize);
-      for (size_t i=0; i<n_act; i++)
+      for (size_t i = 0; i < n_act; i++)
         f[i] = eEnt.face[i];
       size_t work_idx = eEnt.idx_orb;
       size_t i_acc = n_act;
-      for (size_t i=0; i<n_bit_orbsize; i++) {
+      for (size_t i = 0; i < n_bit_orbsize; i++) {
         bool val = work_idx % 2;
         f[i_acc] = val;
         i_acc++;
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     POLY_NC_WriteGroup(dataFile, GRP, orbit_setup, orbit_status);
     POLY_NC_SetNbOrbit(dataFile);
     POLY_NC_WriteNbOrbit(dataFile, n_orbit);
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
       SingleEntryStatus<Tint> eEnt = ListOrb[i_orbit];
       Torbsize idx_orb = GetOrbSizeIndex(eEnt.OrbSize);
       SingEnt eEntS{eEnt.face, idx_orb};
@@ -109,8 +109,7 @@ int main(int argc, char *argv[])
       ff.setface(i_orbit, f);
     }
     //
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

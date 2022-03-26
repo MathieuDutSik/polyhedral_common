@@ -1,8 +1,7 @@
 #include "NumberTheory.h"
 #include "POLY_cddlib.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -15,23 +14,22 @@ int main(int argc, char *argv[])
     }
     //
     std::ifstream is(argv[1]);
-    using T=mpq_class;
-    MyMatrix<T> EXT=ReadMatrix<T>(is);
+    using T = mpq_class;
+    MyMatrix<T> EXT = ReadMatrix<T>(is);
     //
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(EXT);
     //
     std::ofstream os(argv[2]);
     os << "return [";
-    int nbIrred=ListIrred.size();
-    for (int i=0; i<nbIrred; i++) {
-      if (i>0)
+    int nbIrred = ListIrred.size();
+    for (int i = 0; i < nbIrred; i++) {
+      if (i > 0)
         os << ",";
       int eVal = ListIrred[i] + 1;
       os << eVal;
     }
     os << "];\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

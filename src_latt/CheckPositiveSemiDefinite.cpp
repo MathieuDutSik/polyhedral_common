@@ -1,8 +1,7 @@
 #include "NumberTheory.h"
 #include "Temp_Positivity.h"
-int main(int argc, char *argv[])
-{
-  using T=mpq_class;
+int main(int argc, char *argv[]) {
+  using T = mpq_class;
   try {
     if (argc != 2) {
       fprintf(stderr, "Number of argument is = %d\n", argc);
@@ -12,7 +11,7 @@ int main(int argc, char *argv[])
     }
     // reading the matrix
     std::ifstream INmat(argv[1]);
-    MyMatrix<T> TheMat=ReadMatrix<T>(INmat);
+    MyMatrix<T> TheMat = ReadMatrix<T>(INmat);
     // computing the kernel
     DiagSymMat<T> eDiag = DiagonalizeSymmetricMatrix(TheMat);
     if (eDiag.nbMinus > 0)
@@ -23,8 +22,7 @@ int main(int argc, char *argv[])
       else
         std::cout << "The matrix is positive definite\n";
     }
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
   std::cerr << "Normal termination of the program\n";
