@@ -7,8 +7,11 @@
 name: Lint Code Base
 
 on:
+  # Every sunday morning
   schedule:
     - cron: "0 0 * * 0"
+  # Manually triggered.
+  workflow_dispatch:
 jobs:
   run-lint:
     runs-on: ubuntu-latest
