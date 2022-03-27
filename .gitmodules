@@ -4,4 +4,6 @@
 	branch = master
 [submodule "permutalib"]
 	path = permutalib
-	url = https://github.com/MathieuDutSik/permutalib
+	url = https://github.com/MathieuDutSik/permutalib.git
+        branch = master
+
