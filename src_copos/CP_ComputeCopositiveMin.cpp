@@ -1,6 +1,6 @@
 #define PRINT_NBCONE
-#include "Copositivity.h"
 #include "NumberTheory.h"
+#include "Copositivity.h"
 
 int main(int argc, char *argv[]) {
   try {
