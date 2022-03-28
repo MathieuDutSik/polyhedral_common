@@ -146,12 +146,28 @@ private:
       }
     }
   }
-
+  void print_variables() const {
+    std::cerr << "list_diag_sizes =";
+    for (auto &val : list_diag_sizes)
+      std::cerr << " " << val;
+    std::cerr << "\n";
+    //
+    std::cerr << "list_offdiag_sizes =";
+    for (auto &val : list_offdiag_sizes)
+      std::cerr << " " << val;
+    std::cerr << "\n";
+    //
+    std::cerr << "list_offdiag_shifts =";
+    for (auto &val : list_offdiag_shifts)
+      std::cerr << " " << val;
+    std::cerr << "\n";
+    //
+    std::cerr << "|list_offdiag_idx|=" << list_offdiag_idx.size() << "\n";
+  }
 public:
   template <typename F1, typename F2>
   WeightMatrixLimited(size_t const &_nbRow, F1 f1, F2 f2, size_t max_offdiag)
       : nbRow(_nbRow) {
-    std::cerr << "WeightMatrixLimited(f1,f2) nbRow=" << nbRow << "\n";
     // Computing the diagional values
     list_diag_idx.resize(nbRow);
     std::unordered_map<T, size_t> unordmap_value;
@@ -168,25 +184,17 @@ public:
       size_t pos_val = idx - 1;
       list_diag_idx[iRow] = pos_val;
     }
-    std::cerr << "WeightMatrixLimited(f1,f2), |list_diag_weight|="
-              << list_diag_weight.size() << "\n";
     // Coding the reordering of the list_diag_weight
     reorder_entries(list_diag_weight, list_diag_idx);
-    std::cerr << "WeightMatrixLimited(f1,f2), after reorder_entries\n";
     // Computing the shift and sizes
     compute_shift_size(list_diag_sizes, list_diag_shift, list_diag_element,
                        list_diag_idx, list_diag_weight.size());
-    std::cerr << "WeightMatrixLimited(f1,f2), after compute_shift_size\n";
     // Computing the shift and sizes
     compute_list_revdiag_elements();
-    std::cerr
-        << "WeightMatrixLimited(f1,f2), after compute_list_revdiag_elements\n";
     // Computing the set of off diagonal entries that we are interested in.
     std::pair<size_t, std::vector<Tpair>> pair = get_list_selected(max_offdiag);
     const size_t &sel_size = pair.first;
     const std::vector<Tpair> &list_selected = pair.second;
-    std::cerr << "WeightMatrixLimited(f1,f2), |list_selected|="
-              << list_selected.size() << " sel_size=" << sel_size << "\n";
     // Computing the arrays themselves
     size_t n_offdiag_weight = 0;
     size_t shift_weight = 0;
@@ -205,19 +213,13 @@ public:
         }
         size_t pos_val = idx - 1;
         list_part_idx.push_back(pos_val);
-        std::cerr << "list_offdiag_idx at pos_val=" << pos_val << " val=" << val
-                  << "\n";
       };
       size_t i_wei = e_ent.first;
       size_t j_wei = e_ent.second;
-      std::cerr << "inserting i_wei=" << i_wei << " j_wei=" << j_wei << "\n";
       if (i_wei == j_wei) {
         size_t siz = list_diag_sizes[i_wei];
-        std::cerr << "siz=" << siz << "\n";
         size_t shift = list_diag_shift[i_wei];
         if constexpr (is_symmetric) {
-          std::cerr << "i_wei = j_wei, true |cases|=" << (siz * (siz - 1) / 2)
-                    << "\n";
           for (size_t i = 0; i < siz; i++) {
             size_t ipos = shift + i;
             size_t iRow = list_diag_element[ipos];
@@ -229,8 +231,6 @@ public:
             }
           }
         } else {
-          std::cerr << "i_wei = j_wei, false |cases|=" << (siz * (siz - 1))
-                    << "\n";
           for (size_t i = 0; i < siz; i++) {
             size_t ipos = shift + i;
             size_t iRow = list_diag_element[ipos];
@@ -249,8 +249,6 @@ public:
         size_t i_shift = list_diag_shift[i_wei];
         size_t j_siz = list_diag_sizes[j_wei];
         size_t j_shift = list_diag_shift[j_wei];
-        std::cerr << "i_siz=" << i_siz << " j_siz=" << j_siz << "\n";
-        std::cerr << "i_wei != j_wei, |cases|=" << (i_siz * j_siz) << "\n";
         for (size_t i = 0; i < i_siz; i++) {
           size_t ipos = i_shift + i;
           size_t iRow = list_diag_element[ipos];
@@ -262,15 +260,6 @@ public:
           }
         }
       }
-      std::cerr << "list_part_weight =";
-      for (auto &val : list_part_weight)
-        std::cerr << " " << val;
-      std::cerr << "\n";
-      //
-      std::cerr << "list_part_idx =";
-      for (auto &val : list_part_idx)
-        std::cerr << " " << val;
-      std::cerr << "\n";
       // reordering the weight
       reorder_entries(list_part_weight, list_part_idx);
       for (auto &val : list_part_idx)
@@ -278,45 +267,20 @@ public:
       shift_weight += list_part_weight.size();
       n_offdiag_weight += list_part_weight.size();
     }
-    //
-    std::cerr << "list_offdiag_idx =";
-    for (auto &val : list_offdiag_idx)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    std::cerr << "n_offdiag_weight=" << n_offdiag_weight << "\n";
     // Now computing shifting information
     compute_shift_size(list_offdiag_sizes, list_offdiag_shifts,
                        list_offdiag_elements, list_offdiag_idx,
                        n_offdiag_weight);
-    std::cerr << "list_diag_sizes =";
-    for (auto &val : list_diag_sizes)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    //
-    std::cerr << "list_offdiag_sizes =";
-    for (auto &val : list_offdiag_sizes)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    //
-    std::cerr << "list_offdiag_shifts =";
-    for (auto &val : list_offdiag_shifts)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    //
-    std::cerr << "|list_offdiag_idx|=" << list_offdiag_idx.size() << "\n";
+    print_variables();
   }
   template <typename Tgroup>
   WeightMatrixLimited(const Tgroup &GRP, const size_t &max_offdiag)
       : nbRow(GRP.n_act()) {
-    std::cerr << "nbRow=" << nbRow << " max_offdiag=" << max_offdiag << "\n";
     using Telt = typename Tgroup::Telt;
     using Tidx = typename Tgroup::Telt::Tidx;
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
-    std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf)\n";
     vectface vf = DecomposeOrbitPoint_KernelFull<Telt>(nbRow, LGen);
     size_t len = vf.size();
-    std::cerr << "After  DecomposeOrbitPoint_KernelFull (vf) len=" << len
-              << "\n";
     list_diag_weight.resize(len);
     for (size_t i = 0; i < len; i++)
       list_diag_weight[i] = i;
@@ -331,24 +295,17 @@ public:
     }
     compute_shift_size(list_diag_sizes, list_diag_shift, list_diag_element,
                        list_diag_idx, list_diag_weight.size());
-    std::cerr << "WeightMatrixLimited(GRP), after compute_shift_sizes\n";
     compute_list_revdiag_elements();
-    std::cerr
-        << "WeightMatrixLimited(GRP), after compute_list_revdiag_elements\n";
     // Selecting the groups.
     std::pair<size_t, std::vector<Tpair>> pair = get_list_selected(max_offdiag);
     const size_t &sel_size = pair.first;
     const std::vector<Tpair> &list_selected = pair.second;
     size_t n_offdiag_weight = list_selected.size();
-    std::cerr << "sel_size=" << sel_size
-              << " n_offdiag_weight=" << n_offdiag_weight << "\n";
     //
     size_t idx_weight = 0;
     list_offdiag_idx.resize(sel_size);
     size_t pos_offdiag = 0;
     auto f_insert = [&](const size_t &i_wei, const size_t &j_wei) -> void {
-      std::cerr << "i_wei=" << i_wei << " j_wei=" << j_wei
-                << " is_symmetric=" << is_symmetric << "\n";
       size_t siz = list_diag_sizes[i_wei];
       size_t shift = list_diag_shift[i_wei];
       size_t siz_B, shift_B;
@@ -402,9 +359,6 @@ public:
           }
         }
       }
-      std::cerr << "siz=" << siz << " shift=" << shift << "\n";
-      std::cerr << "siz_B=" << siz_B << " shift_B=" << shift_B << "\n";
-      std::cerr << "len=" << len << " pos=" << pos << "\n";
       std::vector<Telt> LGenMap;
       for (auto &eGen : LGen) {
         std::vector<Tidx> eList(len);
@@ -432,11 +386,7 @@ public:
         Telt eGB(eList);
         LGenMap.emplace_back(std::move(eGB));
       }
-      std::cerr << "Before DecomposeOrbitPoint_KernelFull (vf_b)\n";
       vectface vf_b = DecomposeOrbitPoint_KernelFull(len, LGenMap);
-      std::cerr
-          << "After  DecomposeOrbitPoint_KernelFull (vf_b) |list_offdiag_idx|="
-          << list_offdiag_idx.size() << "\n";
       size_t len_b = vf_b.size();
       for (size_t i_b = 0; i_b < len_b; i_b++) {
         Face f_b = vf_b[i_b];
@@ -458,20 +408,7 @@ public:
     compute_shift_size(list_offdiag_sizes, list_offdiag_shifts,
                        list_offdiag_elements, list_offdiag_idx,
                        list_offdiag_weight.size());
-    std::cerr << "list_offdiag_sizes =";
-    for (auto &val : list_offdiag_sizes)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    //
-    std::cerr << "list_offdiag_shifts =";
-    for (auto &val : list_offdiag_shifts)
-      std::cerr << " " << val;
-    std::cerr << "\n";
-    //
-    std::cerr << "list_offdiag_idx =";
-    for (auto &val : list_offdiag_idx)
-      std::cerr << " " << val;
-    std::cerr << "\n";
+    print_variables();
   }
   size_t get_hash(const Face &f) const {
     std::pair<int, std::vector<size_t>> pair = get_smallest_set(f);
@@ -481,16 +418,6 @@ public:
     size_t nbVert = eList.size();
     size_t nw_diag = list_diag_weight.size();
     size_t nw_offdiag = list_offdiag_weight.size();
-    std::cerr << "nw_diag=" << nw_diag << " nw_offdiag=" << nw_offdiag
-              << " |list_offdiag_shifts|=" << list_offdiag_shifts.size()
-              << "\n";
-    std::cerr << "mat_select_pair=\n";
-    for (size_t i = 0; i < nw_diag; i++) {
-      for (size_t j = 0; j < nw_diag; j++) {
-        std::cerr << " " << mat_select_pair[i + nw_diag * j];
-      }
-      std::cerr << "\n";
-    }
     std::vector<size_t> eInv(nw_diag + 2 * nw_offdiag, 0);
     for (auto &eVal : eList) {
       size_t iWeight = list_diag_idx[eVal];
@@ -503,25 +430,10 @@ public:
       size_t jWeight = list_diag_idx[fVal];
       size_t pos = mat_select_pair[iWeight + nw_diag * jWeight];
       if (pos != std::numeric_limits<size_t>::max()) {
-        std::cerr << "-------------------------------------------------\n";
-        std::cerr << "|list_offdiag_shifts|=" << list_offdiag_shifts.size()
-                  << " |list_offdiag_idx|=" << list_offdiag_idx.size()
-                  << " nw_diag=" << nw_diag << "\n";
-        std::cerr << "mat_select_pair W=\n";
-        for (size_t i = 0; i < nw_diag; i++) {
-          for (size_t j = 0; j < nw_diag; j++) {
-            std::cerr << " " << mat_select_pair[i + nw_diag * j];
-          }
-          std::cerr << "\n";
-        }
-        std::cerr << "iWeight=" << iWeight << " jWeight=" << jWeight
-                  << " pos=" << pos << " shift_index=" << shift_index << "\n";
         size_t i = list_revdiag_elements[eVal];
         size_t j = list_revdiag_elements[fVal];
-        std::cerr << "i=" << i << " j=" << j << "\n";
         size_t siz1 = list_diag_sizes[iWeight];
         size_t siz2 = list_diag_sizes[jWeight];
-        std::cerr << "siz1=" << siz1 << " siz2=" << siz2 << "\n";
         size_t pos_B;
         if (iWeight != jWeight) {
           pos_B = i + siz1 * j;
@@ -537,17 +449,11 @@ public:
             pos_B = i + siz2 * j; // false
           }
         }
-        std::cerr << "list_offdiag_shifts[pos]=" << list_offdiag_shifts[pos]
-                  << " list_offdiag_sizes[pos]=" << list_offdiag_sizes[pos]
-                  << " pos_B=" << pos_B
-                  << " sum=" << (list_offdiag_shifts[pos] + pos_B) << "\n";
         size_t pos_C = list_offdiag_shifts[pos] + pos_B;
         if (pos_C >= list_offdiag_idx.size()) {
-          std::cerr << "The pos_C=" << pos_C << " above last index\n";
           throw TerminalException{1};
         }
         size_t kWeight = list_offdiag_idx[pos_C];
-        std::cerr << "kWeight=" << kWeight << "\n";
         eInv[nw_diag + shift_index + kWeight]++;
       }
     };
