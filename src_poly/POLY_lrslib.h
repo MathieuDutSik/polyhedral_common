@@ -125,9 +125,15 @@ template <typename T> struct lrs_dat {
 };
 
 template <typename T> inline void storesign(T &a, int64_t const &sa) {
-  T eProd = a * sa;
-  if (eProd < 0)
-    a = -a;
+  if (a > 0) {
+    if (sa < 0)
+      a = -a;
+  } else {
+    if (a < 0) {
+      if (sa > 0)
+        a = -a;
+    }
+  }
 }
 
 template <typename T> inline int64_t sign(T const &a) {
