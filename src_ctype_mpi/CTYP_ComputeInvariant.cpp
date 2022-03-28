@@ -1,7 +1,6 @@
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
 #include "NumberTheory.h"
-#include "Permlib_specific.h"
 #include "rational.h"
 #include <boost/mpi.hpp>
 

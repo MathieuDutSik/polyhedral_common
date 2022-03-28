@@ -1,4 +1,3 @@
-#include "Permlib_specific.h"
 #include "QuadField.h"
 #include "Temp_PerfectForm.h"
 
