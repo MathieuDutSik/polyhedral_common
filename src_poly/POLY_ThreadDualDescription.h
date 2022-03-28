@@ -451,17 +451,6 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
               << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
           return eReply;
         };
-        GetRecord =
-            [&](Face const &eOrb,
-                std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
-          Tgroup TheStab = TheGRPrelevant.Stabilizer_OnSets(eOrb);
-          int siz = eOrb.count();
-          Tint eOrbitSize = TheGRPrelevant.size() / TheStab.size();
-          SimpleOrbitFacet<T, Tgroup> eOrbF{eOrb};
-          size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
-          SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
-          return {eOrbF, eInv};
-        };
       }
       if (ansGRP == "partition") {
         fEquiv =
@@ -496,6 +485,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           }
           return eReply;
         };
+      }
+      if (ansGRP == "partition" || ansGRP == "classic") {
         GetRecord =
             [&](Face const &eOrb,
                 std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
