@@ -37,12 +37,13 @@ RUN apt-get install -y git cmake
 # GMP
 RUN apt-get install -y libgmp-dev
 ENV GMP_INCDIR "/usr/include"
-ENV GMP_CXX_LINK "-lm -lgmp -lgmpxx"
+ENV GMP_CXX_LINK "-lgmp -lgmpxx"
 
 
 # BOOST
 RUN apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
 ENV BOOST_INCDIR "/usr/include"
+ENV BOOST_LINK "-lboost_serialization"
 
 
 # downloading eigen (no compiling needed)
