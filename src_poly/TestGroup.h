@@ -9,13 +9,18 @@
 #include <vector>
 #include <algorithm>
 
+// Off the normal track but ok. Just used for testing purposes.
+
+using Tidx = int32_t;
+using Tint = mpz_class;
+const bool use_scheme1 = true;
+using Telt1 = permutalib::SingleSidedPerm<Tidx>;
+using Tgroup1 = permutalib::Group<Telt1, Tint>;
+
+
+
 template <typename T>
 void TestPolytopeFace_Stabilizer(MyMatrix<T> const &M, Face const &f) {
-  using Tidx = int32_t;
-  using Tint = mpz_class;
-  const bool use_scheme1 = true;
-  using Telt1 = permutalib::SingleSidedPerm<Tidx>;
-  using Tgroup1 = permutalib::Group<Telt1, Tint>;
   //
   std::cerr << "---------------------------------------- TestPolytopeFace "
                "-------------------------------------\n";
@@ -122,12 +127,6 @@ bool IsEqual(Face const &f1, Face const &f2) {
 
 template <typename T>
 void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
-  using Tidx = int32_t;
-  using Tint = mpz_class;
-  const bool use_scheme1 = true;
-  using Telt1 = permutalib::SingleSidedPerm<Tidx>;
-  using Tgroup1 = permutalib::Group<Telt1, Tint>;
-  //
   std::cerr << "---------------------------------------- TestPolytopeFace "
                "-------------------------------------\n";
   int n_vert = M.rows();
