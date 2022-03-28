@@ -3,8 +3,11 @@
 #include "NumberTheory.h"
 #include "rational.h"
 #include <boost/mpi.hpp>
-
 #include <netcdf>
+
+#include "Permutation.h"
+#include "Group.h"
+
 
 //#define DEBUG_INFO
 
@@ -57,16 +60,16 @@ int main(int argc, char *argv[]) {
   size_t n = varCtypeI.getDim(2).getSize();
   size_t n_vect = varCtypeI.getDim(1).getSize();
   size_t n_ctype = varCtypeI.getDim(0).getSize();
-  netCDF::NcType eType = varCtypeI.getType();
+  netCDF::NcType ncType = varCtypeI.getType();
   auto NC_ReadMatrix = [&](int const &pos) -> TypeCtypeExch<Tint> {
     MyMatrix<Tint> M(n_vect, n);
-    if (eType == netCDF::NcType::nc_BYTE)
+    if (ncType == netCDF::NcType::nc_BYTE)
       NC_ReadMatrix_T<int8_t, Tint>(varCtypeI, M, n_vect, n, pos);
-    if (eType == netCDF::NcType::nc_SHORT)
+    if (ncType == netCDF::NcType::nc_SHORT)
       NC_ReadMatrix_T<int16_t, Tint>(varCtypeI, M, n_vect, n, pos);
-    if (eType == netCDF::NcType::nc_INT)
+    if (ncType == netCDF::NcType::nc_INT)
       NC_ReadMatrix_T<int32_t, Tint>(varCtypeI, M, n_vect, n, pos);
-    if (eType == netCDF::NcType::nc_INT64)
+    if (ncType == netCDF::NcType::nc_INT64)
       NC_ReadMatrix_T<int64_t, Tint>(varCtypeI, M, n_vect, n, pos);
     return {M};
   };
@@ -151,7 +154,9 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have nb_adjacent\n";
 #endif
     //
-    using Tgroup = TheGroupFormat<mpz_class>;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    //    using Tint = mpz_class; // This is defined above
+    using Tgroup = permutalib::Group<Telt, Tint>;
     StructuralInfo info = CTYP_GetStructuralInfo<Tint, Tgroup>(eType);
 #ifdef DEBUG_INFO
     std::cerr << "We have info\n";

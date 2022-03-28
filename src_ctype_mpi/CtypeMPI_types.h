@@ -1,4 +1,4 @@
-#ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+ #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
 #include "Boost_bitset.h"
@@ -382,6 +382,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
 #endif
   std::vector<triple> ListTriples;
   std::vector<int8_t> MappingVect(n_edgered * n_edgered, -1);
+  T eTwo = 2;
   auto get_position = [&](MyVector<T> const &eV, Tidx start_idx) -> Tidx {
     auto get_nature = [&](int8_t pos) -> bool {
       for (Tidx i_col = 0; i_col < n_cols; i_col++)
@@ -392,7 +393,6 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
     auto get_value = [&]() -> Tidx {
       int pos = -1;
       int e_pow = 1;
-      T eTwo = 2;
       for (int i = 0; i < n_cols; i++) {
         T res_T = ResInt(eV(i), eTwo);
         int res = UniversalScalarConversion<int, T>(res_T);
@@ -465,13 +465,13 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M) {
 #ifdef DEBUG
   std::vector<int> ListStatus(nbRow, 0);
 #endif
+  T eTwo = 2;
   for (int iRow = 0; iRow < nbRow; iRow++) {
 #ifdef PRINT_EXPRESS
     std::cerr << "iRow=" << iRow << "/" << nbRow << "\n";
 #endif
     int pos = -1;
     int e_pow = 1;
-    T eTwo = 2;
     for (int i = 0; i < n; i++) {
       T res_T = ResInt(M(iRow, i), eTwo);
       int res = UniversalScalarConversion<int, T>(res_T);
@@ -868,6 +868,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
   int n_vect = TheCtypeArr.eMat.rows();
   blk.IncrementSilent();
   int nb_free = 0;
+  T eTwo = 2;
   while (true) {
     std::vector<int> eVect = blk.GetVect();
     std::vector<MyVector<T>> ListVect;
@@ -876,7 +877,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
       T eSum = 0;
       for (int i = 0; i < n; i++)
         eSum += eV(i) * eVect[i];
-      T res = ResInt(eSum, 2);
+      T res = ResInt(eSum, eTwo);
       if (res == 0) {
         ListVect.push_back(eV);
       }
@@ -895,6 +896,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 template <typename T, typename Tgroup>
 StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
 #ifdef TIMINGS
   std::chrono::time_point<std::chrono::system_clock> time1 =
@@ -1107,7 +1109,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
             << "\n";
 #endif
 
-  std::vector<int> v(n_edge);
+  std::vector<Tidx> v(n_edge);
   std::vector<Telt> ListGenPerm;
   for (auto &eGen : ListGen) {
     for (int i_edge = 0; i_edge < n_edge; i_edge++)
