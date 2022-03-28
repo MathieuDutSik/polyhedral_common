@@ -14,7 +14,7 @@
  */
 
 template <typename T>
-std::option<MyVector<T>>
+std::optional<MyVector<T>>
 SearchSolutionEvenQuadForm(const MyMatrix<T> &A, const MyVector<T> &w,
                            const T &X, const std::vector<T> &l_prime) {
   int n = A.rows();
