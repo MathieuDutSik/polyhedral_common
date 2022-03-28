@@ -299,7 +299,6 @@ public:
     std::pair<size_t, std::vector<Tpair>> pair = get_list_selected(max_offdiag);
     const size_t &sel_size = pair.first;
     const std::vector<Tpair> &list_selected = pair.second;
-    size_t n_offdiag_weight = list_selected.size();
     //
     size_t idx_weight = 0;
     list_offdiag_idx.resize(sel_size);
