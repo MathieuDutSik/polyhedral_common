@@ -1,9 +1,7 @@
 #include "NumberTheory.h"
 #include "coxeter_dynkin.h"
 
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3 && argc != 4) {
       std::cerr << "COXDYN_ComputeSymbol [FileG] [FileRoot]\n";
@@ -18,17 +16,17 @@ int main(int argc, char* argv[])
     MyMatrix<T> G = ReadMatrixFile<T>(FileG);
     MyMatrix<T> MatRoot = ReadMatrixFile<T>(FileRoot);
     std::vector<MyVector<T>> l_root;
-    for (int i=0; i<MatRoot.rows(); i++) {
+    for (int i = 0; i < MatRoot.rows(); i++) {
       MyVector<T> eLine = GetMatrixRow(MatRoot, i);
       l_root.push_back(eLine);
     }
-    std::pair<MyMatrix<T>,MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
-    const MyMatrix<T> & CoxMat = ep.first;
-    const MyMatrix<T> & ScalMat = ep.second;
+    std::pair<MyMatrix<T>, MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
+    const MyMatrix<T> &CoxMat = ep.first;
+    const MyMatrix<T> &ScalMat = ep.second;
     //    std::cerr << "CoxMat=\n";
     //    WriteMatrix(std::cerr, CoxMat);
     std::string symb = coxdyn_matrix_to_string(CoxMat);
-    auto prt=[&](std::ostream & os) -> void {
+    auto prt = [&](std::ostream &os) -> void {
       os << "return rec(CoxMat:=";
       WriteMatrixGAP(os, CoxMat);
       os << ", ScalMat:=";
@@ -43,8 +41,7 @@ int main(int argc, char* argv[])
       prt(os);
     }
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }

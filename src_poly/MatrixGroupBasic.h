@@ -1,5 +1,5 @@
-#ifndef INCLUDE_MATRIX_GROUP_BASIC_H
-#define INCLUDE_MATRIX_GROUP_BASIC_H
+#ifndef SRC_POLY_MATRIXGROUPBASIC_H_
+#define SRC_POLY_MATRIXGROUPBASIC_H_
 
 #include <vector>
 
@@ -69,4 +69,4 @@ bool IsSymmetryGroupOfPolytope(MyMatrix<T> const &EXT, Tgroup const &GRP) {
   return true;
 }
 
-#endif
+#endif  // SRC_POLY_MATRIXGROUPBASIC_H_

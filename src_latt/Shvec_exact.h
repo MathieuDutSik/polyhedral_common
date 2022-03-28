@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEMPLATE_SHVEC_H
-#define INCLUDE_TEMPLATE_SHVEC_H
+#ifndef SRC_LATT_SHVEC_EXACT_H_
+#define SRC_LATT_SHVEC_EXACT_H_
 
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
@@ -642,4 +642,4 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
   return MatrixFromVectorFamily(info.short_vectors);
 }
 
-#endif
+#endif //  SRC_LATT_SHVEC_EXACT_H_

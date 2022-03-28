@@ -1,5 +1,5 @@
-#ifndef GSL_RELATED_INCLUDE
-#define GSL_RELATED_INCLUDE
+#ifndef SRC_LATT_GSL_RELATED_H_
+#define SRC_LATT_GSL_RELATED_H_
 
 #include "MAT_Matrix.h"
 #include <gsl/gsl_blas.h>
@@ -81,4 +81,4 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
   return eVec;
 }
 
-#endif
+#endif //  SRC_LATT_GSL_RELATED_H_

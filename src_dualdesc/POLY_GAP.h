@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_GAP_H
-#define INCLUDE_POLY_GAP_H
+#ifndef SRC_DUALDESC_POLY_GAP_H_
+#define SRC_DUALDESC_POLY_GAP_H_
 
 #include <string>
 #include <vector>
@@ -278,4 +278,4 @@ vectface ConvertGAPread_ListFace(DataGAP<T, Telt> const &data, int const &n) {
 }
 
 } // namespace datagap
-#endif
+#endif  // SRC_DUALDESC_POLY_GAP_H_

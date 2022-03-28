@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_LINEAR_PROGRAMMING_GLPK_H
-#define INCLUDE_POLY_LINEAR_PROGRAMMING_GLPK_H
+#ifndef SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
+#define SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
 
 #include "POLY_PolytopeFct.h"
 #include <glpk.h>
@@ -610,4 +610,4 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
       RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
 }
 
-#endif
+#endif //  SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_

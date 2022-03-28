@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_HEURISTICS_H
-#define INCLUDE_POLY_HEURISTICS_H
+#ifndef SRC_POLY_POLY_HEURISTICS_H_
+#define SRC_POLY_POLY_HEURISTICS_H_
 
 #include "Basic_file.h"
 #include "Heuristic_fct.h"
@@ -136,4 +136,4 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
   return AllArr;
 }
 
-#endif
+#endif  // SRC_POLY_POLY_HEURISTICS_H_

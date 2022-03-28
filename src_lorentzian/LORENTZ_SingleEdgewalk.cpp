@@ -1,17 +1,14 @@
+#include "Group.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "Permutation.h"
-#include "Group.h"
-
-
 
 #include "edgewalk.h"
 //#include "vinberg.h"
 
-
-int main(int argc, char* argv[])
-{
-  std::chrono::time_point<std::chrono::system_clock> time1 = std::chrono::system_clock::now();
+int main(int argc, char *argv[]) {
+  std::chrono::time_point<std::chrono::system_clock> time1 =
+      std::chrono::system_clock::now();
   try {
     if (argc != 2) {
       std::cerr << "Program is used as\n";
@@ -29,7 +26,7 @@ int main(int argc, char* argv[])
     //
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     //
     std::ifstream is(FileInput);
     // Reading the input
@@ -38,7 +35,7 @@ int main(int argc, char* argv[])
     std::vector<T> l_norms;
     int n_norms;
     is >> n_norms;
-    for (int i=0; i<n_norms; i++) {
+    for (int i = 0; i < n_norms; i++) {
       T val;
       is >> val;
       l_norms.push_back(val);
@@ -49,7 +46,7 @@ int main(int argc, char* argv[])
     MyVector<Tint> v_disc = ReadVector<Tint>(is);
     MyMatrix<Tint> Mat_l_ui = ReadMatrix<Tint>(is);
     std::vector<MyVector<Tint>> l_ui;
-    for (int u=0; u<Mat_l_ui.rows(); u++) {
+    for (int u = 0; u < Mat_l_ui.rows(); u++) {
       MyVector<Tint> V = GetMatrixRow(Mat_l_ui, u);
       l_ui.push_back(V);
     }
@@ -59,12 +56,13 @@ int main(int argc, char* argv[])
     //
     MyVector<T> gen_expect = ReadVector<T>(is);
     MyMatrix<Tint> MatRoot_expect = ReadMatrix<Tint>(is);
-    FundDomainVertex<T,Tint> vert_expect{gen_expect, MatRoot_expect};
+    FundDomainVertex<T, Tint> vert_expect{gen_expect, MatRoot_expect};
     //
     // Doing the edgewalk
     //
-    CuspidalBank<T,Tint> cusp_bank;
-    FundDomainVertex<T,Tint> vert_obtain = EdgewalkProcedure<T,Tint,Tgroup>(cusp_bank, G, l_norms, k, ad);
+    CuspidalBank<T, Tint> cusp_bank;
+    FundDomainVertex<T, Tint> vert_obtain =
+        EdgewalkProcedure<T, Tint, Tgroup>(cusp_bank, G, l_norms, k, ad);
     //
     // Testing equality
     //
@@ -74,11 +72,14 @@ int main(int argc, char* argv[])
     } else {
       std::cerr << "We obtain something different\n";
     }
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
-  std::chrono::time_point<std::chrono::system_clock> time2 = std::chrono::system_clock::now();
-  std::cerr << "runtime = " << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count() << "\n";
+  std::chrono::time_point<std::chrono::system_clock> time2 =
+      std::chrono::system_clock::now();
+  std::cerr
+      << "runtime = "
+      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
+      << "\n";
 }

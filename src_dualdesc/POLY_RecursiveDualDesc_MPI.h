@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_RECURSIVE_DUAL_DESC_MPI_H
-#define INCLUDE_POLY_RECURSIVE_DUAL_DESC_MPI_H
+#ifndef SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
+#define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 
 #include "POLY_RecursiveDualDesc.h"
 
@@ -252,4 +252,4 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   return ListRPL[0].FuncListOrbitIncidence();
 }
 
-#endif
+#endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_

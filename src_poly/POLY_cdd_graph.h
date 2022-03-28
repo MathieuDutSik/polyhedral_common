@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_CDD_GRAPH_H
-#define INCLUDE_POLY_CDD_GRAPH_H
+#ifndef SRC_POLY_POLY_CDD_GRAPH_H_
+#define SRC_POLY_POLY_CDD_GRAPH_H_
 
 #include "GRAPH_BitsetType.h"
 #include "POLY_cddlib.h"
@@ -65,4 +65,4 @@ DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT) {
 }
 } // namespace cdd
 
-#endif
+#endif //  SRC_POLY_POLY_CDD_GRAPH_H_

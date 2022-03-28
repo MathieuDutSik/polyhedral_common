@@ -1,5 +1,5 @@
-#ifndef LATTICE_DELAUNAY_INCLUDE
-#define LATTICE_DELAUNAY_INCLUDE
+#ifndef SRC_LATT_LATTICEDELAUNAY_H_
+#define SRC_LATT_LATTICEDELAUNAY_H_
 
 #include "FundamentalDelaunay.h"
 #include "GRP_DoubleCoset.h"
@@ -620,4 +620,4 @@ void TreatDelaunayEntry(FullNamelist const &eFull) {
   }
 }
 
-#endif
+#endif //  SRC_LATT_LATTICEDELAUNAY_H_

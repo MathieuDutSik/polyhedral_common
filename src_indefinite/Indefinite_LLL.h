@@ -1,5 +1,5 @@
-#ifndef INCLUDE_INDEFINITE_LLL_H
-#define INCLUDE_INDEFINITE_LLL_H
+#ifndef SRC_INDEFINITE_INDEFINITE_LLL_H_
+#define SRC_INDEFINITE_INDEFINITE_LLL_H_
 
 #include "MAT_Matrix.h"
 #include <vector>
@@ -222,4 +222,4 @@ ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
   }
 }
 
-#endif
+#endif //  SRC_INDEFINITE_INDEFINITE_LLL_H_

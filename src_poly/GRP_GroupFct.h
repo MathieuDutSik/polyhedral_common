@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEMP_GROUP_FCT_H
-#define INCLUDE_TEMP_GROUP_FCT_H
+#ifndef SRC_POLY_GRP_GROUPFCT_H_
+#define SRC_POLY_GRP_GROUPFCT_H_
 
 #include "Basic_file.h"
 #include "Basic_string.h"
@@ -791,4 +791,4 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
   return list_ret;
 }
 
-#endif
+#endif  // SRC_POLY_GRP_GROUPFCT_H_

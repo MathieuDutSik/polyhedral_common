@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_CDDLIB_H
-#define INCLUDE_POLY_CDDLIB_H
+#ifndef SRC_POLY_POLY_CDDLIB_H_
+#define SRC_POLY_POLY_CDDLIB_H_
 /* This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -8082,4 +8082,4 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
 
 } // namespace cdd
 
-#endif
+#endif //  SRC_POLY_POLY_CDDLIB_H_

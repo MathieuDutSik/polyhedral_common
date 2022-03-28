@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEMP_POLYTOPE_EQUI_STAB_H
-#define INCLUDE_TEMP_POLYTOPE_EQUI_STAB_H
+#ifndef SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
+#define SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 
 #include "MatrixGroup.h"
 #include "WeightMatrix.h"

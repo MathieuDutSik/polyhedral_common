@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_NETCDF_H
-#define INCLUDE_POLY_NETCDF_H
+#ifndef SRC_DUALDESC_POLY_NETCDF_FILE_H_
+#define SRC_DUALDESC_POLY_NETCDF_FILE_H_
 
 #include "Basic_file.h"
 #include "Boost_bitset.h"
@@ -618,4 +618,4 @@ void Write_EquivDualDesc(EquivariantDualDescription<T, Tgroup> const &eRec,
     POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
 }
 
-#endif
+#endif  // SRC_DUALDESC_POLY_NETCDF_FILE_H_

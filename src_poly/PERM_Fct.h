@@ -1,5 +1,5 @@
-#ifndef INCLUDE_PERM_FCT_H
-#define INCLUDE_PERM_FCT_H
+#ifndef SRC_POLY_PERM_FCT_H_
+#define SRC_POLY_PERM_FCT_H_
 
 #include <vector>
 #include <utility>
@@ -487,4 +487,4 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
   return true;
 }
 
-#endif
+#endif  // SRC_POLY_PERM_FCT_H_

@@ -13,15 +13,15 @@
 #include "lorentzian_linalg.h"
 #include "two_dim_lorentzian.h"
 #include "vinberg.h"
-#include <limits>
 #include <algorithm>
-#include <set>
-#include <unordered_set>
-#include <unordered_map>
+#include <limits>
 #include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
-#include <string>
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
@@ -43,9 +43,9 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   ListStringValues1["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
   ListBoolValues1["EarlyTerminationIfNotReflective"] =
-      false;  // Sometimes we can terminate by proving that it is not reflective
+      false; // Sometimes we can terminate by proving that it is not reflective
   ListBoolValues1["ApplyReduction"] =
-      true;  // Normally, we want to ApplyReduction, this is for debug only
+      true; // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ComputeAllSimpleRoots"] = true;
   ListStringValues1["FileHeuristicIdealStabEquiv"] = "unset.heu";
   ListStringValues1["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
@@ -71,7 +71,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
   ListStringValues1["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
   ListBoolValues1["ApplyReduction"] =
-      true;  // Normally, we want to ApplyReduction, this is for debug only
+      true; // Normally, we want to ApplyReduction, this is for debug only
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
   BlockPROC.ListBoolValues = ListBoolValues1;
@@ -107,9 +107,9 @@ SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
 }
 
 template <typename T, typename Tint> struct RootCandidate {
-  int sign;  // 0 for 0, 1 for positive, -1 for negative
-  T quant1;  // this is (k.alpha_{N,\Delta'})^2 / R_{N,\Delta'}
-  T quant2;  // this is (k.alpha_{N,\Delta'})^2 / N
+  int sign; // 0 for 0, 1 for positive, -1 for negative
+  T quant1; // this is (k.alpha_{N,\Delta'})^2 / R_{N,\Delta'}
+  T quant2; // this is (k.alpha_{N,\Delta'})^2 / N
   T e_norm;
   MyVector<Tint> alpha;
   FundDomainVertex<T, Tint> fund_v;
@@ -165,15 +165,15 @@ int get_sign_cand(RootCandidate<T, Tint> const &poss1,
   int sign1 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant1},
                                        {poss2.sign, poss2.quant1});
   if (sign1 != 0)
-    return sign1;  // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)
-                   // correspond to 1 in the above.
+    return sign1; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)
+                  // correspond to 1 in the above.
   int sign2 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant2},
                                        {poss2.sign, poss2.quant2});
   if (sign2 != 0)
-    return sign2;  // because -k.alpha1 / sqrt(N1)    <     -k.alpha2 / sqrt(N2)
-                   // correspond to 1 in the above.
+    return sign2; // because -k.alpha1 / sqrt(N1)    <     -k.alpha2 / sqrt(N2)
+                  // correspond to 1 in the above.
   int sign3 = get_sign_pair_t(poss1.e_norm, poss2.e_norm);
-  return sign3;  // because N1 < N2 corresponds to 1
+  return sign3; // because N1 < N2 corresponds to 1
 }
 
 template <typename T, typename Tint>
@@ -289,8 +289,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   MyVector<T> const &k = eReq.k;
   MyVector<T> const &kP = eReq.kP;
   struct RootCandidateCuspidal {
-    int sign;  // 0 for 0, 1 for positive, -1 for negative
-    T quant;   // this is (kP.v_{N,\Delta'})^2 / N
+    int sign; // 0 for 0, 1 for positive, -1 for negative
+    T quant;  // this is (kP.v_{N,\Delta'})^2 / N
     T e_norm;
     MyVector<Tint> v;
   };
@@ -360,8 +360,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
               //              ") y: (" << y.sign << "," << y.quant << ") sign="
               //              << sign << "\n";
               if (sign != 0)
-                return sign > 0;  // because -k.alpha1 / sqrt(R1)    < -k.alpha2
-                                  // / sqrt(R2)   correspond to 1 in the above.
+                return sign > 0; // because -k.alpha1 / sqrt(R1)    < -k.alpha2
+                                 // / sqrt(R2)   correspond to 1 in the above.
               return x.e_norm < y.e_norm;
             });
 #ifdef TIMINGS
@@ -637,13 +637,13 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2, n);
-  if (norm < 0) {  // the point is inner, the oriented basis is clear.
+  if (norm < 0) { // the point is inner, the oriented basis is clear.
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ordinary case\n";
 #endif
     AssignMatrixRow(OrientedBasis, 0, r0);
     AssignMatrixRow(OrientedBasis, 1, k);
-  } else {  // Now the point is ideal
+  } else { // Now the point is ideal
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ideal case\n";
 #endif
@@ -679,12 +679,12 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     MyVector<T> v_pos = get_positive_norm_vector();
     T scal = v_pos.dot(G * k);
     if (scal >
-        0) {  // The convention is that negative scalar product is for facets.
+        0) { // The convention is that negative scalar product is for facets.
       v_pos = -v_pos;
     }
     AssignMatrixRow(OrientedBasis, 0, v_pos);
     AssignMatrixRow(OrientedBasis, 1, k);
-    r0 = -k;  // Follows Right part of Figure 8.1
+    r0 = -k; // Follows Right part of Figure 8.1
   }
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
@@ -759,7 +759,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
 #endif
-    if (DeterminantMat(Expr) < 0) {  // Change to get positive determinant
+    if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
       for (int i = 0; i < n; i++)
         BasisProj(0, i) = -BasisProj(0, i);
     }
@@ -820,7 +820,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>> opt =
         Anisotropic<T, Tint>(Gwork, res_norm, r0_work, l_B);
     //    std::cerr << "get_sing_comp_anisotropic, step 3\n";
-    if (!opt) {  // No solution, this definitely can happen
+    if (!opt) { // No solution, this definitely can happen
       return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
     const std::vector<MyVector<Tint>> &l_vect1 = opt->second;
@@ -1134,8 +1134,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       T scal = gen.dot(G * k);
       //        std::cerr << "We have scal\n";
       auto get_gen = [&]() -> std::optional<MyVector<T>> {
-        if (scal < 0) {  // The sign convention means that two vectors in the
-                         // same cone have negative scalar product.
+        if (scal < 0) { // The sign convention means that two vectors in the
+                        // same cone have negative scalar product.
           return gen;
         }
         if (scal > 0) {
@@ -1147,8 +1147,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       if (opt_k_new) {
         MyVector<T> k_new = RemoveFractionVector(*opt_k_new);
         T scal = v_disc_t.dot(G * k_new);
-        if (scal < 0) {  // The convention in Lorentzian is negative scalar (see
-                         // end of Sect 2 of edgewalk paper)
+        if (scal < 0) { // The convention in Lorentzian is negative scalar (see
+                        // end of Sect 2 of edgewalk paper)
           MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(l_roots);
           FundDomainVertex<T, Tint> fund_v{k_new, MatRoot};
           //            std::cerr << "k_new=" << StringVectorGAP(k_new) << "\n";
@@ -1719,7 +1719,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T, Tint> fVert =
           EdgewalkProcedure<T, Tint, Tgroup>(cusp_bank, si, theVert.gen, ad);
-      {  // Output. Fairly important to see what is happening
+      { // Output. Fairly important to see what is happening
 #ifdef DEBUG_ENUM_PROCESS
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
@@ -2193,7 +2193,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       MyVector<T> eVect_A = GetNegativeNormVector(Gprod);
       MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
       T scal = V.dot(G * eVect_B);
-      if (scal < 0) {  // This is because of the sign convention
+      if (scal < 0) { // This is because of the sign convention
         return eVect_B;
       } else {
         return -eVect_B;
@@ -2470,4 +2470,4 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
   print_result(opt);
 }
 
-#endif  // SRC_LORENTZIAN_EDGEWALK_H_
+#endif // SRC_LORENTZIAN_EDGEWALK_H_

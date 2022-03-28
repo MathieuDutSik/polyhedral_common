@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TEMP_GROUP_DOUBLE_COSET_H
-#define INCLUDE_TEMP_GROUP_DOUBLE_COSET_H
+#ifndef SRC_POLY_GRP_DOUBLECOSET_H_
+#define SRC_POLY_GRP_DOUBLECOSET_H_
 
 #include "GRP_GroupFct.h"
 #include "WeightMatrix.h"
@@ -290,4 +290,4 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   os2 << nb_orbit_sma << "\n";
 }
 
-#endif
+#endif  // SRC_POLY_GRP_DOUBLECOSET_H_

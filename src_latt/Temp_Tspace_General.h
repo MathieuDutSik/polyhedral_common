@@ -1,5 +1,5 @@
-#ifndef TEMP_TSPACE_GENERAL_INCLUDE
-#define TEMP_TSPACE_GENERAL_INCLUDE
+#ifndef SRC_LATT_TEMP_TSPACE_GENERAL_H_
+#define SRC_LATT_TEMP_TSPACE_GENERAL_H_
 
 #include "POLY_PolytopeFct.h"
 #include "ShortestUniversal.h"
@@ -590,4 +590,4 @@ template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
   return ListMat;
 }
 
-#endif
+#endif  // SRC_LATT_TEMP_TSPACE_GENERAL_H_

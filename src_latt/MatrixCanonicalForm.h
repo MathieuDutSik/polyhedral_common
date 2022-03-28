@@ -1,5 +1,5 @@
-#ifndef MATRIC_CANONICAL_FORM_H
-#define MATRIC_CANONICAL_FORM_H
+#ifndef SRC_LATT_MATRIXCANONICALFORM_H_
+#define SRC_LATT_MATRIXCANONICALFORM_H_
 
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
@@ -295,4 +295,4 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
   return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }
 
-#endif
+#endif //  SRC_LATT_MATRIXCANONICALFORM_H_

@@ -1,5 +1,5 @@
-#ifndef POLY_PARALL_H
-#define POLY_PARALL_H
+#ifndef SRC_DUALDESC_POLY_PARALL_H_
+#define SRC_DUALDESC_POLY_PARALL_H_
 
 /* Let us try here to design a parallel enumeration structure.
    This is for the following enumerations:

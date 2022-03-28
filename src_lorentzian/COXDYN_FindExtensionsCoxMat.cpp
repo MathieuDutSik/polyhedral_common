@@ -1,13 +1,13 @@
 #include "NumberTheory.h"
 #include "coxeter_dynkin.h"
 
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 5) {
-      std::cerr << "COXDYN_FindExtensionsCoxMat [FileCoxMat] [opt_sph_eucl] [opt_lorentzian] [OutFile]\n";
-      std::cerr << "Used for debugging the enumeration of extensions of Coxeter-Dynkin diagrams\n";
+      std::cerr << "COXDYN_FindExtensionsCoxMat [FileCoxMat] [opt_sph_eucl] "
+                   "[opt_lorentzian] [OutFile]\n";
+      std::cerr << "Used for debugging the enumeration of extensions of "
+                   "Coxeter-Dynkin diagrams\n";
       throw TerminalException{1};
     }
     using T = mpq_class;
@@ -56,15 +56,14 @@ int main(int argc, char* argv[])
     std::vector<std::string> LOut;
     std::string symb = coxdyn_matrix_to_string(M);
     std::cerr << "symb=" << symb << "\n";
-    
+
     std::vector<MyVector<T>> LVect = FindDiagramExtensions(M, DS);
     MyMatrix<T> Mtot = MatrixFromVectorFamily(LVect);
     std::string OutFile = argv[4];
     std::ofstream os(OutFile);
     os << "return " << StringMatrixGAP(Mtot) << ";\n";
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }

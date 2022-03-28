@@ -1,5 +1,5 @@
-#ifndef INCLUDE_SIMULTANEOUS_DIOPHANTINE_APPROX
-#define INCLUDE_SIMULTANEOUS_DIOPHANTINE_APPROX
+#ifndef SRC_LATT_SIMULDIOPHANTAPPROX_H_
+#define SRC_LATT_SIMULDIOPHANTAPPROX_H_
 
 #include "LatticeDefinitions.h"
 #include <string>
@@ -85,4 +85,4 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
   }
 }
 
-#endif
+#endif //  SRC_LATT_SIMULDIOPHANTAPPROX_H_

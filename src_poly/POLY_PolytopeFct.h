@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_POLYTOPE_FCT_H
-#define INCLUDE_POLY_POLYTOPE_FCT_H
+#ifndef SRC_POLY_POLY_POLYTOPEFCT_H_
+#define SRC_POLY_POLY_POLYTOPEFCT_H_
 
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
@@ -612,4 +612,4 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
-#endif
+#endif //  SRC_POLY_POLY_POLYTOPEFCT_H_

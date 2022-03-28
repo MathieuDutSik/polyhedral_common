@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_LINEAR_PROGRAMMING_H
-#define INCLUDE_POLY_LINEAR_PROGRAMMING_H
+#ifndef SRC_POLY_POLY_LINEARPROGRAMMING_H_
+#define SRC_POLY_POLY_LINEARPROGRAMMING_H_
 
 #include "Basic_file.h"
 #include "Basic_string.h"
@@ -1049,4 +1049,4 @@ EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
   return {FinalSpace_Aff, ListIneqFinal};
 }
 
-#endif
+#endif //  SRC_POLY_POLY_LINEARPROGRAMMING_H_

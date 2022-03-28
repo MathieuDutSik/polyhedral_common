@@ -52,10 +52,7 @@ int main(int argc, char *argv[]) {
           for (int j = 0; j <= i; j++) {
             //	  std::cerr << "  j=" << j << "\n";
             MyVector<Tint> eVect2 = eMat.row(j);
-            //	  std::cerr << "eVect2.rows=" << eVect2.rows() << "
-            //eVect2.cols=" << eVect2.cols() << "\n"; 	  std::cerr << "  Step 1\n";
             T eScal = ScalarProductQuadForm<T, Tint>(eSymmMat, eVect1, eVect2);
-            //	  std::cerr << "  Step 2\n";
             OUTfs << " " << eScal;
           }
           OUTfs << "\n";

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_COXETER_DYNKIN_H
-#define INCLUDE_COXETER_DYNKIN_H
+#ifndef SRC_LORENTZIAN_COXETER_DYNKIN_H_
+#define SRC_LORENTZIAN_COXETER_DYNKIN_H_
 
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
@@ -2280,4 +2280,4 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   return l_extensions;
 }
 
-#endif
+#endif  // SRC_LORENTZIAN_COXETER_DYNKIN_H_

@@ -15,11 +15,11 @@
 #include "lorentzian_linalg.h"
 #include <map>
 #include <set>
-#include <vector>
-#include <utility>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #define DEBUG_VINBERG
 
@@ -1610,4 +1610,4 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
   }
 }
 
-#endif  // SRC_LORENTZIAN_VINBERG_H_
+#endif // SRC_LORENTZIAN_VINBERG_H_

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_SHORTEST_UNIVERSAL_H
-#define INCLUDE_SHORTEST_UNIVERSAL_H
+#ifndef SRC_LATT_SHORTESTUNIVERSAL_H_
+#define SRC_LATT_SHORTESTUNIVERSAL_H_
 
 #include "CVP_NiemeierAlgo.h"
 #include "Shvec_exact.h"
@@ -67,4 +67,4 @@ Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat) {
   return SelectShortestVector(eMat, TheSHVall);
 }
 
-#endif
+#endif //  SRC_LATT_SHORTESTUNIVERSAL_H_

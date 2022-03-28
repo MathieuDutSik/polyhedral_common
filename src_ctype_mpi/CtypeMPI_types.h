@@ -1,5 +1,5 @@
-#ifndef INCLUDE_CTYPE_FUNCTIONALITY
-#define INCLUDE_CTYPE_FUNCTIONALITY
+#ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+#define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
@@ -1307,4 +1307,4 @@ TypeIndex ParseStringToTypeIndex(std::string const &str) {
   return {iProc, idxMatrixF, iAdj};
 }
 
-#endif
+#endif  // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_

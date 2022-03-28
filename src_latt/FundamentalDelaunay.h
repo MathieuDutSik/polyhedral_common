@@ -1,5 +1,5 @@
-#ifndef DELAUNAY_FUNCTION_INCLUDE
-#define DELAUNAY_FUNCTION_INCLUDE
+#ifndef SRC_LATT_FUNDAMENTALDELAUNAY_H_
+#define SRC_LATT_FUNDAMENTALDELAUNAY_H_
 
 #include "CVP_NiemeierAlgo.h"
 #include "POLY_LinearProgramming.h"
@@ -322,4 +322,4 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   return {Mat1, Mat2};
 }
 
-#endif
+#endif //  SRC_LATT_FUNDAMENTALDELAUNAY_H_

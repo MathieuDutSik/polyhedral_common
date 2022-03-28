@@ -1,5 +1,5 @@
-#ifndef INCLUDE_CVP_NIEMEIER_ALGORITHM
-#define INCLUDE_CVP_NIEMEIER_ALGORITHM
+#ifndef SRC_LATT_CVP_NIEMEIERALGO_H_
+#define SRC_LATT_CVP_NIEMEIERALGO_H_
 
 #include "COMB_Combinatorics.h"
 #include "LatticeDefinitions.h"
@@ -486,4 +486,4 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
   return {NearestNorm, MatNearest};
 }
 
-#endif
+#endif //  SRC_LATT_CVP_NIEMEIERALGO_H_

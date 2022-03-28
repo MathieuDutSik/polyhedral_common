@@ -1,5 +1,5 @@
-#ifndef STRICT_POSITIVITY_INCLUDE
-#define STRICT_POSITIVITY_INCLUDE
+#ifndef SRC_COPOS_STRICTPOSITIVITY_H_
+#define SRC_COPOS_STRICTPOSITIVITY_H_
 
 #include "Copositivity.h"
 #include "Temp_PerfectForm.h"
@@ -178,4 +178,4 @@ void WriteStrictPositivityResult(
   }
 }
 
-#endif
+#endif  // SRC_COPOS_STRICTPOSITIVITY_H_

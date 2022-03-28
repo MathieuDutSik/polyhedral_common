@@ -1,12 +1,11 @@
 #include "NumberTheory.h"
 #include "coxeter_dynkin.h"
 
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
-      std::cerr << "COXDYN_FindExtensions [strin] [opt_sph_eucl] [opt_lorentzian]\n";
+      std::cerr
+          << "COXDYN_FindExtensions [strin] [opt_sph_eucl] [opt_lorentzian]\n";
       throw TerminalException{1};
     }
     using T = mpq_class;
@@ -54,18 +53,19 @@ int main(int argc, char* argv[])
     MyMatrix<T> M = string_to_coxdyn_matrix<T>(str);
     std::vector<std::string> LOut;
     std::vector<MyVector<T>> LVect = FindDiagramExtensions(M, DS);
-    for (auto & eV : LVect) {
+    for (auto &eV : LVect) {
       MyMatrix<T> Mext = ExtendMatrix(M, eV);
       std::string stro = coxdyn_matrix_to_string(Mext);
       LOut.push_back(stro);
     }
-    size_t len=LVect.size();
-    std::cerr << "input = " << str << " only_spherical=" << only_spherical << "\n";
-    for (size_t i=0; i<len; i++)
-      std::cerr << "i=" << i << " diag=" << LOut[i] << " v=" << StringVector(LVect[i]) << "\n";
+    size_t len = LVect.size();
+    std::cerr << "input = " << str << " only_spherical=" << only_spherical
+              << "\n";
+    for (size_t i = 0; i < len; i++)
+      std::cerr << "i=" << i << " diag=" << LOut[i]
+                << " v=" << StringVector(LVect[i]) << "\n";
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }

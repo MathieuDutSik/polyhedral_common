@@ -193,7 +193,6 @@ public:
     compute_list_revdiag_elements();
     // Computing the set of off diagonal entries that we are interested in.
     std::pair<size_t, std::vector<Tpair>> pair = get_list_selected(max_offdiag);
-    const size_t &sel_size = pair.first;
     const std::vector<Tpair> &list_selected = pair.second;
     // Computing the arrays themselves
     size_t n_offdiag_weight = 0;

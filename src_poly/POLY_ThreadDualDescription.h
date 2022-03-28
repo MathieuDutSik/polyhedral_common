@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_THREAD_DUAL_DESCRIPTION_H
-#define INCLUDE_POLY_THREAD_DUAL_DESCRIPTION_H
+#ifndef SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
+#define SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
 
 #include "Basic_file.h"
 #include "Basic_string.h"
@@ -853,4 +853,4 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   //
 }
 
-#endif
+#endif //  SRC_POLY_POLY_THREADDUALDESCRIPTION_H_

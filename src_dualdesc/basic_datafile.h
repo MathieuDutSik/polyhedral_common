@@ -1,5 +1,5 @@
-#ifndef INCLUDE_BASIC_DATAFILE_H
-#define INCLUDE_BASIC_DATAFILE_H
+#ifndef SRC_DUALDESC_BASIC_DATAFILE_H_
+#define SRC_DUALDESC_BASIC_DATAFILE_H_
 
 #include "Basic_file.h"
 #include "Boost_bitset.h"
@@ -251,4 +251,4 @@ public:
   }
 };
 
-#endif
+#endif //  SRC_DUALDESC_BASIC_DATAFILE_H_

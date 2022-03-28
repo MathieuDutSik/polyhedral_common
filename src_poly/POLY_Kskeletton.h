@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_KSKELETTON_H
-#define INCLUDE_POLY_KSKELETTON_H
+#ifndef SRC_POLY_POLY_KSKELETTON_H_
+#define SRC_POLY_POLY_KSKELETTON_H_
 
 #include "GRP_GroupFct.h"
 #include "MAT_Matrix.h"
@@ -697,4 +697,4 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   OutputFaces(TheOutput, OUTfile, OutFormat);
 }
 
-#endif
+#endif //  SRC_POLY_POLY_KSKELETTON_H_

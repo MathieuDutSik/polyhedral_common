@@ -1,5 +1,5 @@
-#ifndef COPOSITIVITY_INCLUDE
-#define COPOSITIVITY_INCLUDE
+#ifndef SRC_COPOS_COPOSITIVITY_H_
+#define SRC_COPOS_COPOSITIVITY_H_
 
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
@@ -1000,4 +1000,4 @@ T_CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
   return SelectShortestVector<T, Tint>(eSymmMat, SHV);
 }
 
-#endif
+#endif  // SRC_COPOS_COPOSITIVITY_H_

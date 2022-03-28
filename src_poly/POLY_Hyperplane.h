@@ -1,5 +1,5 @@
-#ifndef INCLUDE_POLY_HYPERPLANE_H
-#define INCLUDE_POLY_HYPERPLANE_H
+#ifndef SRC_POLY_POLY_HYPERPLANE_H_
+#define SRC_POLY_POLY_HYPERPLANE_H_
 
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
@@ -131,4 +131,4 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   return ListFace;
 }
 
-#endif
+#endif //  SRC_POLY_POLY_HYPERPLANE_H_

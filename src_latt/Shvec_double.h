@@ -1,5 +1,5 @@
-#ifndef SHVEC_DOUBLE_INCLUDE
-#define SHVEC_DOUBLE_INCLUDE
+#ifndef SRC_LATT_SHVEC_DOUBLE_H_
+#define SRC_LATT_SHVEC_DOUBLE_H_
 
 #include "LatticeDefinitions.h"
 #include "Temp_Positivity.h"
@@ -195,4 +195,4 @@ Tshortest<T,Tint> T_ShortestVector_double(MyMatrix<T> const& eMat)
 }
 */
 
-#endif
+#endif //  SRC_LATT_SHVEC_DOUBLE_H_

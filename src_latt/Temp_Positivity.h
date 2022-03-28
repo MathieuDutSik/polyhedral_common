@@ -1,5 +1,5 @@
-#ifndef TEMP_MATRIX_POSITIVITY_INCLUDE
-#define TEMP_MATRIX_POSITIVITY_INCLUDE
+#ifndef SRC_LATT_TEMP_POSITIVITY_H_
+#define SRC_LATT_TEMP_POSITIVITY_H_
 
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
@@ -281,4 +281,4 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
   return TheSet;
 }
 
-#endif
+#endif  // SRC_LATT_TEMP_POSITIVITY_H_

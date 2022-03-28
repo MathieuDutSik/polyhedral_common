@@ -1,5 +1,5 @@
-#ifndef DEFINE_INVARIANT_VECTOR_FAMILY_H
-#define DEFINE_INVARIANT_VECTOR_FAMILY_H
+#ifndef SRC_LATT_INVARIANTVECTORFAMILY_H_
+#define SRC_LATT_INVARIANTVECTORFAMILY_H_
 
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
@@ -152,4 +152,4 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
   return SHVret;
 }
 
-#endif
+#endif //  SRC_LATT_INVARIANTVECTORFAMILY_H_

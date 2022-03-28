@@ -1,5 +1,5 @@
-#ifndef INCLUDE_NIEMEIER_N23_24A1
-#define INCLUDE_NIEMEIER_N23_24A1
+#ifndef SRC_LATT_NIEMEIERN23_24A1_H_
+#define SRC_LATT_NIEMEIERN23_24A1_H_
 
 #include <vector>
 
@@ -146,4 +146,4 @@ template <typename T> MyMatrix<T> Get_N23_TotBasisQuotInv() {
   return RetMat;
 }
 
-#endif
+#endif //  SRC_LATT_NIEMEIERN23_24A1_H_
