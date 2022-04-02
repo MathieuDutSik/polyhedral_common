@@ -1469,13 +1469,18 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   std::vector<MyVector<Tint>> l_simple_root;
   if (ComputeAllSimpleRoots)
     l_simple_root = compute_full_root_orbit(re);
+  std::cerr << "We write G\n";
+  std::cerr << "We write l_norms\n";
+  std::cerr << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
+  size_t n_orbit_vertices = re.l_orbit_vertices.size();
+  std::cerr << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
+  size_t n_simple = l_simple_root.size();
+  std::cerr << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << " n_simple=" << n_simple << "\n";
   if (OutFormat == "GAP") {
     os << "return rec(LorMat:=";
     WriteMatrixGAP(os, G);
-    std::cerr << "We write G\n";
     os << ", l_norms:=";
     WriteStdVectorGAP(os, l_norms);
-    std::cerr << "We write l_norms\n";
     os << ", ListIsomCox:=";
     WriteVectorMatrixGAP(os, re.l_gen_isom_cox);
     if (re.is_reflective) {
@@ -1486,24 +1491,18 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
         os << ", is_reflective:=false";
       }
     }
-    std::cerr << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size()
-              << "\n";
     os << ", ListVertices:=[";
     bool IsFirst = true;
-    size_t len = re.l_orbit_vertices.size();
-    std::cerr << "We have |l_orbit_vertices|=" << len << "\n";
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < n_orbit_vertices; i++) {
       if (!IsFirst)
         os << ",\n";
       IsFirst = false;
       const FundDomainVertex<T, Tint> &evert = re.l_orbit_vertices[i];
       WriteFundDomainVertex(G, evert, os, OutFormat);
     }
-    os << "], n_orbit_vertices:=" << len;
+    os << "], n_orbit_vertices:=" << n_orbit_vertices;
     if (ComputeAllSimpleRoots) {
       os << ", ListSimpleRoots:=[";
-      size_t n_simple = l_simple_root.size();
-      std::cerr << "We have n_simple=" << n_simple << "\n";
       for (size_t i = 0; i < n_simple; i++) {
         if (i > 0)
           os << ",";
