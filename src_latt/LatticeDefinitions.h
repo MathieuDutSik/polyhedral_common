@@ -422,6 +422,14 @@ LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
   return {GredInv, Q};
 }
 
+// This is for debugging purposes
+template <typename Tmat, typename Tint>
+LLLreduction<Tmat, Tint> LLLnoreduction(MyMatrix<Tmat> const &GramMat) {
+  return {GramMat, IdentityMat<Tint>(GramMat.rows())};
+}
+
+
+
 /*
   For a family of vectors of an N-dimensional space (possibly in a higher
   dimensional one), returns a smaller basis.
