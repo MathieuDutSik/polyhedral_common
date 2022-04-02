@@ -697,28 +697,59 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     size_t n_root = ListRoot.size();
     size_t dim = Vtot.G.rows();
     MyMatrix<T> FAC(n_root, dim);
+    //
+    // inequalities are eFAC * (shift_u + trans_u * V)
+    // equalities are [x - V] G [x - V]^T = norm
+    // Now we write x = y P and this gets us
+    // [y - V_img] G_red [y - V_img]^T
+    //
+    //    LLLreduction<T, Tint> RecLLL = LLLnoreduction<T, Tint>(data.G);
+    LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(data.G);
+    MyMatrix<Tint> const& Pmat = RecLLL.Pmat;
+    MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+    MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+    MyVector<T> eV_img = PmatInv_T.transpose() * data.V;
+    MyMatrix<Tint> trans_P = data.trans_u * Pmat.transpose();
+    //    MyMatrix<Tint> trans_P = data.trans_u;
+    
+    
     for (size_t i_root = 0; i_root < n_root; i_root++) {
       MyVector<T> eFAC = GetMatrixRow(FACfeasible, i_root);
       MyVector<T> v_T = UniversalVectorConversion<T, Tint>(data.shift_u);
       T scal = eFAC.dot(v_T);
       FAC(i_root, 0) = scal;
-      for (size_t i = 1; i < dim; i++) {
-        v_T = UniversalVectorConversion<T, Tint>(
-            GetMatrixCol(data.trans_u, i - 1));
+      for (size_t i = 0; i < dim-1; i++) {
+        v_T = UniversalVectorConversion<T, Tint>(GetMatrixCol(trans_P, i));
         T scal = eFAC.dot(v_T);
-        FAC(i_root, i) = scal;
+        FAC(i_root, i + 1) = scal;
       }
     }
     //
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
     T_shvec_request<T> request =
-        initShvecReq<T>(data.G, data.V, data.norm, mode);
+      initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
+    //    initShvecReq<T>(data.G, data.V, data.norm, mode);
     //
     size_t n_pass = 0;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       n_pass++;
       if (min == data.norm) {
-        MyVector<Tint> x = data.shift_u + data.trans_u * V;
+        MyVector<Tint> x = data.shift_u + trans_P * V;
+        MyVector<T> x_T = UniversalVectorConversion<T,Tint>(x);
+        T norm = x_T.dot(Vtot.G_T * x_T);
+        T k_T = UniversalScalarConversion<T,Tint>(k);
+        if (norm != k_T) {
+          std::cerr << "norm=" << norm << " k=" << k << "\n";
+          throw TerminalException{1};
+        }
+        for (size_t i_root = 0; i_root < n_root; i_root++) {
+          MyVector<T> eFAC = GetMatrixRow(FACfeasible, i_root);
+          T scal = eFAC.dot(x_T);
+          if (scal < 0) {
+            std::cerr << "i_root=" << i_root << " scal=" << scal << "\n";
+            throw TerminalException{1};
+          }
+        }
         list_root.emplace_back(std::move(x));
       }
       return true;
@@ -880,106 +911,41 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   std::optional<MyVector<Tint>> opt;
   size_t n_iter = 0;
   std::cerr << "DualDescProg=" << Vtot.DualDescProg << "\n";
-  if (Vtot.ReflectivityEarlyTermination) {
-    std::string DualDescProg = Vtot.DualDescProg;
-    if (DualDescProg == "lrs_iterate")
-      DualDescProg = "lrs_ring";
+  if (Vtot.DualDescProg == "lrs_iterate") {
+    MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
+    bool IsFirst = true;
+    MyVector<Tint> V(n_col);
+    auto f = [&](Tint *out) -> bool {
+      if (!IsFirst) {
+        n_iter++;
+        for (size_t i_col = 0; i_col < n_col; i_col++)
+          V(i_col) = out[i_col + 1];
+        Tint scal = V.dot(Vtot.G * V);
+        if (scal <= 0) {
+          opt = V;
+          return false;
+        }
+      }
+      IsFirst = false;
+      return true;
+    };
+    lrs::Kernel_DualDescription_cond(FACwork, f);
+  } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
-        DirectFacetOrbitComputation_nogroup(FAC_T, DualDescProg);
-    LorentzianFinitenessGroupTester<T, Tint> group_tester(Vtot.G_T);
-    std::unordered_map<size_t,
-                       std::vector<FundDomainVertex_FullInfo<T, Tint, Tgroup>>>
-        map;
-    size_t n_gen_ins = 0;
-    auto f_insert_gen = [&](MyMatrix<T> const &eP) -> void {
-      std::cerr << "eP=" << StringMatrixGAP(eP) << "\n";
-      n_gen_ins++;
-      MyMatrix<Tint> eP_i = UniversalMatrixConversion<Tint, T>(eP);
-      group_tester.GeneratorUpdate(eP_i);
-      if (!group_tester.get_finiteness_status()) {
-        throw NonReflectivityException{};
-      }
-    };
-    auto f_insert_vertex = [&](MyVector<T> const &V,
-                               Face const &eFace) -> void {
-      std::vector<MyVector<Tint>> l_vect;
-      for (size_t i = 0; i < n_root; i++) {
-        if (eFace[i] == 1)
-          l_vect.push_back(ListRoot[i]);
-      }
-      FundDomainVertex<T, Tint> vert{V, MatrixFromVectorFamily(l_vect)};
-      FundDomainVertex_FullInfo<T, Tint, Tgroup> e_vert_gen =
-          get_fund_domain_full_info_noiso<T, Tint, Tgroup>(Vtot.G_T, vert);
-      std::vector<FundDomainVertex_FullInfo<T, Tint, Tgroup>> &l_vert_gen =
-          map[e_vert_gen.hash];
-      for (auto &f_vert_gen : l_vert_gen) {
-        std::optional<MyMatrix<T>> opt =
-            LORENTZ_TestEquivalence(Vtot.G_T, e_vert_gen, Vtot.G_T, f_vert_gen);
-        if (opt) {
-          f_insert_gen(*opt);
-          return;
-        }
-      }
-      for (auto &eGen : LORENTZ_GetStabilizerGenerator(Vtot.G_T, e_vert_gen))
-        f_insert_gen(eGen);
-      l_vert_gen.emplace_back(std::move(e_vert_gen));
-    };
-    auto inspect_listincd = [&]() -> void {
-      size_t n_face = ListIncd.size();
+      DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
+    auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
-        std::cerr << "n_iter=" << n_iter << "/" << n_face
-                  << " n_gen_ins=" << n_gen_ins << " cnt=" << eFace.count()
-                  << " info=" << group_tester.get_infos() << "\n";
-        MyVector<T> V = RemoveFractionVector(FindFacetInequality(FAC_T, eFace));
+        n_iter++;
+        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
-          opt = UniversalVectorConversion<Tint, T>(V);
+          opt = UniversalVectorConversion<Tint, T>(RemoveFractionVector(V));
           return;
-        } else {
-          f_insert_vertex(V, eFace);
         }
-        n_iter++;
       }
     };
-    inspect_listincd();
-  } else {
-    if (Vtot.DualDescProg == "lrs_iterate") {
-      MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
-      bool IsFirst = true;
-      MyVector<Tint> V(n_col);
-      auto f = [&](Tint *out) -> bool {
-        if (!IsFirst) {
-          n_iter++;
-          for (size_t i_col = 0; i_col < n_col; i_col++)
-            V(i_col) = out[i_col + 1];
-          Tint scal = V.dot(Vtot.G * V);
-          if (scal <= 0) {
-            opt = V;
-            return false;
-          }
-        }
-        IsFirst = false;
-        return true;
-      };
-      lrs::Kernel_DualDescription_cond(FACwork, f);
-    } else {
-      MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
-      vectface ListIncd =
-          DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
-      auto look_for_vector = [&]() -> void {
-        for (auto &eFace : ListIncd) {
-          n_iter++;
-          MyVector<T> V = FindFacetInequality(FAC_T, eFace);
-          T scal = V.dot(Vtot.G_T * V);
-          if (scal <= 0) {
-            opt = UniversalVectorConversion<Tint, T>(RemoveFractionVector(V));
-            return;
-          }
-        }
-      };
-      look_for_vector();
-    }
+    look_for_vector();
   }
   std::chrono::time_point<std::chrono::system_clock> time2 =
       std::chrono::system_clock::now();

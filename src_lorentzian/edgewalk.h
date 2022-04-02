@@ -1918,6 +1918,8 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
     if (group_tester) {
+      std::cerr << "Inserting new generator eP=" << StringMatrixGAP(eP) << "\n";
+
       group_tester->GeneratorUpdate(eP);
       if (!group_tester->get_finiteness_status()) {
         is_reflective = false;
