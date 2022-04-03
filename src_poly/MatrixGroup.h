@@ -7,6 +7,7 @@
 #include "MatrixGroupBasic.h"
 #include "PERM_Fct.h"
 #include "factorizations.h"
+#include "Timings.h"
 #include <limits>
 #include <utility>
 #include <vector>
@@ -146,6 +147,132 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   return *opt;
 }
 
+/*
+We want to find the vectors x in Z^n such that
+x TheSpace P = x TheSpace + u MOD
+ */
+template <typename T>
+MyMatrix<T> ComputeBasisInvariantSpace(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& TheSpace, T const& eMod)
+{
+  int n = TheSpace.rows();
+  int n_mat = ListMat.size();
+  MyMatrix<T> Equa(2 * n, n_mat * n);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyMatrix<T> const& eMat = ListMat[i_mat];
+    MyMatrix<T> eProd = TheSpace * eMat - TheSpace;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        Equa(i,j + i_mat * n) = eProd(i,j);
+        if (i == j) {
+          Equa(i + n, j + i_mat * n) = eMod;
+        } else {
+          Equa(i + n, j + i_mat * n) = 0;
+        }
+      }
+    }
+  }
+  MyMatrix<T> NSP = SolutionIntMat(Equa);
+  int n_row = NSP.rows();
+  MyMatrix<T> NSP_red(n,n);
+  for (int i=0; i<n_row; i++)
+    for (int j=0; j<n; j++)
+      NSP_red(i,j) = NSP(i,j);
+  return NSP_red * TheSpace;
+}
+
+
+template <typename T, typename Tmod>
+MyMatrix<Tmod> ModuloReductionMatrix(MyMatrix<T> const &M, T const &TheMod) {
+  int n_row = M.rows();
+  int n_col = M.cols();
+  MyMatrix<Tmod> RetMat(n_row, n_col);
+  for (int i = 0; i < n_row; i++) {
+    for (int j = 0; j < n_col; j++) {
+      T val = ResInt(M(i, j), TheMod);
+      RetMat(i, j) = UniversalScalarConversion<Tmod, T>(val);
+    }
+  }
+  return RetMat;
+}
+
+template <typename T, typename Tmod>
+std::vector<MyMatrix<Tmod>>
+ModuloReductionStdVectorMatrix(std::vector<MyMatrix<T>> const &ListM,
+                               T const &TheMod) {
+  std::vector<MyMatrix<Tmod>> ListRetMat;
+  for (auto &M : ListM)
+    ListRetMat.push_back(ModuloReductionMatrix<T, Tmod>(M, TheMod));
+  return ListRetMat;
+}
+
+template <typename T, typename Tmod>
+MyVector<Tmod> ModuloReductionVector(MyVector<T> const &V, T const &TheMod) {
+  int siz = V.size();
+  MyVector<Tmod> retV(siz);
+  for (int i = 0; i < siz; i++) {
+    T val = ResInt(V(i), TheMod);
+    retV(i) = UniversalScalarConversion<Tmod, T>(val);
+  }
+  return retV;
+}
+
+
+
+template<typename T, typename Tmod, typename Tgroup, typename Thelper>
+std::vector<MyVector<Tmod>> FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
+                                           MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<Tmod> const& a,
+                                           Thelper const& helper) {
+  using Telt = typename Tgroup::Telt;
+  int n = TheSpace.rows();
+  size_t n_limit = 30000; // The critical number for the computation
+  size_t pos = 0;
+  auto f_terminate=[&]([[maybe_unused]] MyVector<Tmod> const& a) -> bool {
+    pos++;
+    if (pos == n_limit)
+      return true;
+    return false;
+  };
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
+  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
+  std::vector<MyMatrix<Tmod>> ListMatrGenMod =
+    ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
+  auto f_prod = [&](MyVector<Tmod> const &eClass, MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
+    MyVector<Tmod> eVect = eElt.transpose() * eClass;
+    return VectorMod(eVect, TheMod_mod);
+  };
+
+
+  std::optional<std::vector<MyVector<Tmod>>> opt = OrbitComputation_limit(ListMatrGenMod, a, f_prod, f_terminate);
+  if (opt) {
+    return *opt;
+  }
+  std::vector<Telt> ListPermGen;
+  for (auto & eMatrGen : ListMatrGen) {
+    Telt ePermGen = GetPermutationForFiniteMatrixGroup(helper, eMatrGen);
+    ListPermGen.push_back(ePermGen);
+  }
+  size_t len = helper.EXTfaithful.rows();
+  Telt id_perm(len);
+  Tgroup GRP(ListPermGen, id_perm);
+  std::vector<Tgroup> ListGroup = GRP.GetAscendingChain();
+  size_t len_group = ListGroup.size();
+  for (size_t iGroup=0; iGroup<len_group; iGroup++) {
+    size_t jGroup = len_group - 1 - iGroup;
+    Tgroup fGRP = ListGroup[jGroup];
+    std::vector<MyMatrix<T>> LMatr;
+    for (auto & eGen : fGRP.GeneratorsOfGroup()) {
+      MyMatrix<T> eMat = RepresentPermutationAsMatrix(helper, eGen);
+      LMatr.push_back(eMat);
+    }
+    MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
+    
+  }
+  
+}
+
+
 
 
 //
@@ -272,72 +399,6 @@ GetPermutationForFiniteMatrixGroup(Thelper const &helper,
   return Telt(std::move(V));
 }
 
-template <typename T, typename Telt>
-void CheckerPairReord(std::vector<T> const &V1, Telt const &g1,
-                      std::vector<T> const &V2, Telt const &g2) {
-  size_t len = V1.size();
-  std::vector<T> V1reord(len);
-  std::vector<T> V2reord(len);
-  for (size_t i = 0; i < len; i++) {
-    size_t pos1 = g1.at(i);
-    V1reord[i] = V1[pos1];
-    size_t pos2 = g2.at(i);
-    V2reord[i] = V2[pos2];
-  }
-  for (size_t i = 1; i < len; i++) {
-    if (!(V1reord[i - 1] < V1reord[i])) {
-      std::cerr << "V1reord is not increasing at i=" << i << "\n";
-      throw TerminalException{1};
-    }
-    if (!(V2reord[i - 1] < V2reord[i])) {
-      std::cerr << "V2reord is not increasing at i=" << i << "\n";
-      throw TerminalException{1};
-    }
-  }
-  if (V1reord != V2reord) {
-    std::cerr << "V1reord is not identical to V2reord\n";
-    throw TerminalException{1};
-  }
-}
-
-
-
-/*
-We want to find the vectors x in Z^n such that
-x TheSpace P = x TheSpace + u MOD
- */
-template <typename T>
-MyMatrix<T> ComputeBasisInvariantSpace(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& TheSpace, T const& eMod)
-{
-  int n = TheSpace.rows();
-  int n_mat = ListMat.size();
-  MyMatrix<T> Equa(2 * n, n_mat * n);
-  for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    MyMatrix<T> const& eMat = ListMat[i_mat];
-    MyMatrix<T> eProd = TheSpace * eMat - TheSpace;
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        Equa(i,j + i_mat * n) = eProd(i,j);
-        if (i == j) {
-          Equa(i + n, j + i_mat * n) = eMod;
-        } else {
-          Equa(i + n, j + i_mat * n) = 0;
-        }
-      }
-    }
-  }
-  MyMatrix<T> NSP = SolutionIntMat(Equa);
-  int n_row = NSP.rows();
-  MyMatrix<T> NSP_red(n,n);
-  for (int i=0; i<n_row; i++)
-    for (int j=0; j<n; j++)
-      NSP_red(i,j) = NSP(i,j);
-  return NSP_red * TheSpace;
-}
-
-
-
-
 
 
 
@@ -419,8 +480,7 @@ MatrixIntegral_GeneratePermutationGroup(
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   using Tidx = typename Telt::Tidx;
   int Osiz = O.size();
@@ -438,30 +498,19 @@ MatrixIntegral_GeneratePermutationGroup(
     return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |SortingPerm|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "Timing |SortingPerm|=" << ms(time1, time2) << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |ePermSinv|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                     time2)
-                   .count()
-            << "\n";
+  SingletonTime time3;
+  std::cerr << "Timing |ePermSinv|=" << ms(time2, time3) << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_1 =
-        std::chrono::system_clock::now();
+    SingletonTime timeB_1;
 #endif
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
@@ -475,13 +524,8 @@ MatrixIntegral_GeneratePermutationGroup(
     for (Tidx i = 0; i < nbRow_tidx; i++)
       v[i] = ePermGen.at(i);
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |v 1|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 -
-                                                                       timeB_1)
-                     .count()
-              << "\n";
+    SingletonTime timeB_2;
+    std::cerr << "Timing |v 1|=" << ms(timeB_1,timeB_2) << "\n";
 #endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -490,33 +534,18 @@ MatrixIntegral_GeneratePermutationGroup(
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_3 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |ListImage|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_3 -
-                                                                       timeB_2)
-                     .count()
-              << "\n";
+    SingletonTime timeB_3;
+    std::cerr << "Timing |ListImage|=" << ms(timeB_2,timeB_3) << "\n";
 #endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_4 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |SortingPerm|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_4 -
-                                                                       timeB_3)
-                     .count()
-              << "\n";
+    SingletonTime timeB_4;
+    std::cerr << "Timing |SortingPerm|=" << ms(timeB_3,timeB_4) << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_5 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |ePermBinv|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_5 -
-                                                                       timeB_4)
-                     .count()
-              << "\n";
+    SingletonTime timeB_5;
+    std::cerr << "Timing |ePermBinv|=" << ms(timeB_4,timeB_5) << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
     // By the construction and above check we have
@@ -526,13 +555,8 @@ MatrixIntegral_GeneratePermutationGroup(
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_6 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |ePermGenSelect|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_6 -
-                                                                       timeB_5)
-                     .count()
-              << "\n";
+    SingletonTime timeB_6;
+    std::cerr << "Timing |ePermGenSelect|=" << ms(timeB_5,timeB_6) << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
     //    std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
@@ -542,13 +566,8 @@ MatrixIntegral_GeneratePermutationGroup(
       v[nbRow + iO] = nbRow + jO;
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_7 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |v 2|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_7 -
-                                                                       timeB_6)
-                     .count()
-              << "\n";
+    SingletonTime timeB_7;
+    std::cerr << "Timing |v 2|=" << ms(timeB_6,timeB_7) << "\n";
 #endif
     Telt eNewPerm(std::move(v));
 #ifdef DEBUG_MATRIX_GROUP
@@ -568,23 +587,13 @@ MatrixIntegral_GeneratePermutationGroup(
 #endif
     ListPermGenProv.emplace_back(std::move(eNewPerm));
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_8 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |insert|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_8 -
-                                                                       timeB_7)
-                     .count()
-              << "\n";
+    SingletonTime timeB_8;
+    std::cerr << "Timing |insert|=" << ms(timeB_7,timeB_8) << "\n";
 #endif
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |ListPermGenProv|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                     time3)
-                   .count()
-            << "\n";
+  SingletonTime time4;
+  std::cerr << "Timing |ListPermGenProv|=" << ms(time3,time4) << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
@@ -882,41 +891,6 @@ MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
   return opt;
 }
 
-template <typename T, typename Tmod>
-MyMatrix<Tmod> ModuloReductionMatrix(MyMatrix<T> const &M, T const &TheMod) {
-  int n_row = M.rows();
-  int n_col = M.cols();
-  MyMatrix<Tmod> RetMat(n_row, n_col);
-  for (int i = 0; i < n_row; i++) {
-    for (int j = 0; j < n_col; j++) {
-      T val = ResInt(M(i, j), TheMod);
-      RetMat(i, j) = UniversalScalarConversion<Tmod, T>(val);
-    }
-  }
-  return RetMat;
-}
-
-template <typename T, typename Tmod>
-std::vector<MyMatrix<Tmod>>
-ModuloReductionStdVectorMatrix(std::vector<MyMatrix<T>> const &ListM,
-                               T const &TheMod) {
-  std::vector<MyMatrix<Tmod>> ListRetMat;
-  for (auto &M : ListM)
-    ListRetMat.push_back(ModuloReductionMatrix<T, Tmod>(M, TheMod));
-  return ListRetMat;
-}
-
-template <typename T, typename Tmod>
-MyVector<Tmod> ModuloReductionVector(MyVector<T> const &V, T const &TheMod) {
-  int siz = V.size();
-  MyVector<Tmod> retV(siz);
-  for (int i = 0; i < siz; i++) {
-    T val = ResInt(V(i), TheMod);
-    retV(i) = UniversalScalarConversion<Tmod, T>(val);
-  }
-  return retV;
-}
-
 // The space must be defining a finite index subgroup of T^n
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>>
@@ -926,7 +900,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   using Telt = typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
   int n = helper.n;
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
 #ifdef DEBUG_MATRIX_GROUP
   T TotSize = 1;
   for (int i = 0; i < n; i++)
@@ -937,6 +910,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   //  std::cerr << "TheSpace=\n";
   //  WriteMatrix(std::cerr, TheSpace);
 #endif
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
