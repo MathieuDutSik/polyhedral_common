@@ -10,7 +10,6 @@
 #include <limits>
 #include <utility>
 #include <vector>
-#include <unordered_set>
 #include <unordered_map>
 
 template <typename T> struct MatrixGroup {
@@ -98,16 +97,18 @@ template <typename T1, typename T2, typename Fprod, typename Fterminate>
 std::optional<std::vector<T2>> OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
                                        const Fprod &f_prod, const Fterminate & f_terminate) {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Begin of OrbitComputation\n";
+  std::cerr << "Begin of OrbitComputation_limit\n";
 #endif
   std::vector<T2> TheOrbit;
-  std::unordered_set<T2> TheSet;
+  std::unordered_map<T2,uint8_t> map;
   auto fInsert = [&](T2 const &u) -> bool {
-    if (TheSet.count(u) == 1)
-      return false;
-    TheOrbit.push_back(u);
-    TheSet.insert(u);
-    return f_terminate(u);
+    uint8_t & pos = map[u];
+    if (pos == 0) {
+      pos = 1;
+      TheOrbit.push_back(u);
+      return f_terminate(u);
+    }
+    return false;
   };
   if (fInsert(a))
     return {};
@@ -125,7 +126,7 @@ std::optional<std::vector<T2>> OrbitComputation_limit(std::vector<T1> const &Lis
     pos = len;
   }
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "End of OrbitComputation\n";
+  std::cerr << "End of OrbitComputation_limit\n";
 #endif
   return TheOrbit;
 }
@@ -297,21 +298,50 @@ void CheckerPairReord(std::vector<T> const &V1, Telt const &g1,
     std::cerr << "V1reord is not identical to V2reord\n";
     throw TerminalException{1};
   }
-  /*
-  for (size_t i=0; i<len; i++) {
-    T eDiff = V1reord[i] - V2reord[i];
-    std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
-    //    std::cerr << "i=" << i << " v1=" << V1reord[i] << " v2=" << V2reord[i]
-  << "\n";
-  }
-  */
-  /*
-  std::cerr << "Passed the CheckerPairReord\n";
-  std::cerr << "V1reord=\n";
-  for (auto& eV : V1reord)
-    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-  */
 }
+
+
+
+/*
+We want to find the vectors x in Z^n such that
+x TheSpace P = x TheSpace + u MOD
+ */
+template <typename T>
+MyMatrix<T> ComputeBasisInvariantSpace(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& TheSpace, T const& eMod)
+{
+  int n = TheSpace.rows();
+  int n_mat = ListMat.size();
+  MyMatrix<T> Equa(2 * n, n_mat * n);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyMatrix<T> const& eMat = ListMat[i_mat];
+    MyMatrix<T> eProd = TheSpace * eMat - TheSpace;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        Equa(i,j + i_mat * n) = eProd(i,j);
+        if (i == j) {
+          Equa(i + n, j + i_mat * n) = eMod;
+        } else {
+          Equa(i + n, j + i_mat * n) = 0;
+        }
+      }
+    }
+  }
+  MyMatrix<T> NSP = SolutionIntMat(Equa);
+  int n_row = NSP.rows();
+  MyMatrix<T> NSP_red(n,n);
+  for (int i=0; i<n_row; i++)
+    for (int j=0; j<n; j++)
+      NSP_red(i,j) = NSP(i,j);
+  return NSP_red * TheSpace;
+}
+
+
+
+
+
+
+
+
 
 template <typename T, typename Tmod>
 Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
@@ -910,9 +940,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  std::function<MyVector<Tmod>(MyVector<Tmod> const &, MyMatrix<Tmod> const &)>
-      TheAction = [&](MyVector<Tmod> const &eClass,
-                      MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
+  auto TheAction = [&](MyVector<Tmod> const &eClass,
+                       MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
@@ -1114,10 +1143,6 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     }
     if (test1) {
       MyVector<Tmod> const &V = *test1;
-#ifdef DEBUG_MATRIX_GROUP
-      std::cerr << "V =";
-      WriteVector(std::cerr, V);
-#endif
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction);
 #ifdef DEBUG_MATRIX_GROUP
