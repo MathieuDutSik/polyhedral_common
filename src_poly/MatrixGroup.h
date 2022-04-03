@@ -558,6 +558,36 @@ MatrixIntegral_GeneratePermutationGroup(
   return {nbRow, siz, ListPermGenProv};
 }
 
+
+
+template <typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,
+                               std::vector<MyMatrix<T>>>::type
+MatrixIntegral_PreImageGroup([[maybe_unused]]
+                             typename Thelper::Treturn const &eret,
+                             Tgroup const& eGRP, Thelper const &helper) {
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Beginning of MatrixIntegral_PreImageGroup\n";
+#endif
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "  |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
+            << "\n";
+#endif
+  std::vector<MyMatrix<T>> ListMatrGen;
+  Tidx nbRow_tidx = helper.EXTfaithful.rows();
+  for (auto &eGen : eGRP.GeneratorsOfGroup()) {
+    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eGen);
+    ListMatrGen.emplace_back(std::move(eMatr));
+  }
+  return ListMatrGen;
+}
+
+
+
+
+
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
@@ -587,6 +617,11 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
   }
   return ListMatrGen;
 }
+
+
+
+
+
 
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
@@ -776,6 +811,11 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
           eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
   return LStabMatrGen;
 }
+
+
+
+
+
 
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
