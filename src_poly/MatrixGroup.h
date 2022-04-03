@@ -134,7 +134,7 @@ std::vector<T2> OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const 
 template <typename T1, typename T2, typename Fprod>
 std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
                                  const Fprod &f_prod) {
-  auto f_terminate=[&](T2 const& a) -> bool {
+  auto f_terminate=[&]([[maybe_unused]] T2 const& a) -> bool {
     return false;
   };
   return OrbitComputation_limit(ListGen, a, f_prod, f_terminate);
