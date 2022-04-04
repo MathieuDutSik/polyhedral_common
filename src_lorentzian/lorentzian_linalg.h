@@ -572,21 +572,15 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
       throw TerminalException{1};
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 =
-        std::chrono::system_clock::now();
+    SingletonTime time1;
 #endif
     bool test = is_infinite_order(eP, max_finite_order);
     if (!test) {
       is_finite = false;
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |is_finite_order|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                       time1)
-                     .count()
-              << "\n";
+    SingletonTime time2;
+    std::cerr << "Timing |is_finite_order|=" << ms(time1,time2) << "\n";
 #endif
     MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
     if (!IsZeroMatrix(eDiff)) {
@@ -606,13 +600,8 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
       }
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |InvariantSpace|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                       time2)
-                     .count()
-              << "\n";
+    SingletonTime time3;
+    std::cerr << "Timing |InvariantSpace|=" << ms(time2,time3) << "\n";
 #endif
   }
   bool get_finiteness_status() const { return is_finite; }

@@ -13,17 +13,12 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(
   T MaxNorm = MaximumDiagonal(eMat);
 #ifdef TIMINGS
   std::cerr << "Begining of ExtractInvariantVectorFamily\n";
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   MyMatrix<Tint> SHVall = T_ShortVector<T, Tint>(eMat, MaxNorm);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr
-      << "Time(T_ShortVector) = "
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+  SingletonTime time2;
+  std::cerr << "|T_ShortVector|=" << ms(time1,time2) << "\n";
 #endif
   //  std::cerr << "MaxNorm = " << MaxNorm << " eMat =\n";
   //  WriteMatrix(std::cerr, eMat);
@@ -40,12 +35,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(
       SetNorm.insert(eNorm);
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr
-      << "Time(Preparation) = "
-      << std::chrono::duration_cast<std::chrono::seconds>(time3 - time2).count()
-      << "\n";
+  SingletonTime time3;
+  std::cerr << "|Preparation|=" << ms(time2,time3) << "\n";
 #endif
   std::vector<MyVector<Tint>> ListVect;
   for (auto const &eNorm : SetNorm) {
@@ -116,17 +107,12 @@ template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
 #ifdef TIMINGS
   std::cerr << "Begining of ExtractInvariantVectorFamilyZbasis\n";
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr
-      << "Time(LLL) = "
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+  SingletonTime time2;
+  std::cerr << "|LLL|=" << ms(time1,time2) << "\n";
 #endif
   //  std::cerr << "recLLL.GramMatRed=\n";
   //  WriteMatrix(std::cerr, recLLL.GramMatRed);
@@ -142,12 +128,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
       ExtractInvariantVectorFamilyZbasis_Kernel<T, Tint>(eMatRed);
   MyMatrix<Tint> SHVret = SHVred * recLLL.Pmat;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr
-      << "|ExtractInvariantVectorFamilyZbasis_Kernel| = "
-      << std::chrono::duration_cast<std::chrono::seconds>(time3 - time2).count()
-      << "\n";
+  SingletonTime time3;
+  std::cerr << "|ExtractInvariantVectorFamilyZbasis_Kernel|=" << ms(time2,time3) << "\n";
 #endif
   return SHVret;
 }

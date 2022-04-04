@@ -8,6 +8,7 @@
 #include "POLY_Heuristics.h"
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "Timings.h"
 
 #include "POLY_GAP.h"
 // #include "POLY_netcdf_file.h"
@@ -1474,8 +1475,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // The computations themselves
   //
-  std::chrono::time_point<std::chrono::system_clock> start =
-      std::chrono::system_clock::now();
+  SingletonTime start;
   bool NeedSplit = false;
   // 3 scenarii
   // --- 1 : We have the full symmetry group and the computation was done with
@@ -1548,11 +1548,8 @@ vectface DUALDESC_AdjacencyDecomposition(
     }
   };
   vectface ListOrbitFaces = compute_split_or_not();
-  std::chrono::time_point<std::chrono::system_clock> end =
-      std::chrono::system_clock::now();
-  int elapsed_seconds =
-      std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  TheMap["time"] = elapsed_seconds;
+  SingletonTime end;
+  TheMap["time"] = s(start,end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
   std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank
             << " NeedSplit=" << NeedSplit << "\n";
