@@ -52,7 +52,7 @@ template <typename T> struct lrs_dic {
   int64_t lexflag;  /* true if lexmin basis for this vertex         */
   int64_t depth;    /* depth of basis/vertex in reverse search tree */
   int64_t i, j;     /* last pivot row and column pivot indices      */
-  T det;         /* current determinant of basis                 */
+  T det;            /* current determinant of basis                 */
   int64_t *B, *Row; /* basis, row location indices                  */
   int64_t *C, *Col; /* cobasis, column location indices             */
   lrs_dic *prev, *next;
@@ -83,31 +83,33 @@ template <typename T> struct lrs_dat {
   int64_t totalnodes; /* count total number of tree nodes evaluated   */
   int64_t runs;       /* probes for estimate function                 */
   int64_t seed;       /* seed for random number generator             */
-  double cest[10]; /* ests: 0=rays,1=vert,2=bases,3=vol,4=int vert */
+  double cest[10];    /* ests: 0=rays,1=vert,2=bases,3=vol,4=int vert */
   /**** flags  **********                         */
-  int64_t allbases;    /* globals::TRUE if all bases should be printed          */
-  int64_t bound;       /* globals::TRUE if upper/lower bound on objective given */
-  int64_t dualdeg;     /* globals::TRUE if start dictionary is dual degenerate  */
-  int64_t frequency;   /* frequency to print cobasis indices           */
-  int64_t geometric;   /* globals::TRUE if incident vertex prints after each ray */
+  int64_t allbases;  /* globals::TRUE if all bases should be printed          */
+  int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
+  int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
+  int64_t frequency; /* frequency to print cobasis indices           */
+  int64_t
+      geometric; /* globals::TRUE if incident vertex prints after each ray */
   int64_t getvolume;   /* do volume calculation                        */
-  int64_t givenstart;  /* globals::TRUE if a starting cobasis is given          */
-  int64_t homogeneous; /* globals::TRUE if all entries in column one are zero   */
-  int64_t hull;        /* do convex hull computation if globals::TRUE           */
-  int64_t incidence;   /* print all tight inequalities (vertices/rays) */
-  int64_t lponly;      /* true if only lp solution wanted              */
-  int64_t maxdepth;    /* max depth to search to in treee              */
-  int64_t maximize;    /* flag for LP maximization                     */
-  int64_t maxoutput;   /* if positive, maximum number of output lines  */
-  int64_t minimize;    /* flag for LP minimization                     */
-  int64_t mindepth;    /* do not backtrack above mindepth              */
-  int64_t nonnegative; /* globals::TRUE if last d constraints are nonnegativity */
-  int64_t polytope;    /* globals::TRUE for facet computation of a polytope     */
-  int64_t printcobasis; /* globals::TRUE if all cobasis should be printed        */
-  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed    */
-  int64_t truncate;     /* globals::TRUE: truncate tree when moving from opt vert*/
-  int64_t verbose;      /* globals::FALSE for minimalist output                  */
-  int64_t restart;      /* globals::TRUE if restarting from some cobasis         */
+  int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
+  int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
+  int64_t hull;      /* do convex hull computation if globals::TRUE           */
+  int64_t incidence; /* print all tight inequalities (vertices/rays) */
+  int64_t lponly;    /* true if only lp solution wanted              */
+  int64_t maxdepth;  /* max depth to search to in treee              */
+  int64_t maximize;  /* flag for LP maximization                     */
+  int64_t maxoutput; /* if positive, maximum number of output lines  */
+  int64_t minimize;  /* flag for LP minimization                     */
+  int64_t mindepth;  /* do not backtrack above mindepth              */
+  int64_t
+      nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
+  int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
+  int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
+  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed   */
+  int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
+  int64_t verbose;  /* globals::FALSE for minimalist output                  */
+  int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
 
   /* Variables for saving/restoring cobasis,  db */
 
@@ -427,7 +429,7 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
 
 template <typename T>
 int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
-                      uint64_t &dict_count)
+                         uint64_t &dict_count)
 /* gets next reverse search tree basis, globals::FALSE if none  */
 /* switches to estimator if maxdepth set               */
 /* backtrack globals::TRUE means backtrack from here            */
@@ -525,7 +527,7 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
   int64_t i;
   int64_t ind;  /* output index                                  */
   int64_t ired; /* counts number of redundant columns            */
-             /* assign local variables to structures */
+                /* assign local variables to structures */
   int64_t *redundcol = Q->redundcol;
 
   int64_t hull;
@@ -565,7 +567,8 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
 }
 
 template <typename T>
-int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol, T *&output)
+int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
+                   T *&output)
 /*Print out solution in col and return it in output   */
 /*redcol =n for ray/facet 0..n-1 for linearity column */
 /*hull=1 implies facets will be recovered             */
@@ -574,7 +577,7 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol, T 
   int64_t i;
   int64_t ind;  /* output index                                  */
   int64_t ired; /* counts number of redundant columns            */
-             /* assign local variables to structures */
+                /* assign local variables to structures */
   int64_t *redundcol = Q->redundcol;
   int64_t *count = Q->count;
   int64_t hull = Q->hull;
@@ -604,7 +607,8 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol, T 
 }
 
 template <typename T>
-void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t i, int64_t col, T &out) {
+void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t i, int64_t col,
+                   T &out) {
   int64_t row;
   int64_t m = P->m;
   int64_t d = P->d;
@@ -632,7 +636,8 @@ void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t i, int64_t col, T &out)
 }
 
 template <typename T>
-int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col) /*find lex min. ratio */
+int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
+                  int64_t col) /*find lex min. ratio */
 /* find min index ratio -aig/ais, ais<0 */
 /* if multiple, checks successive basis columns */
 /* recoded Dec 1997                     */
@@ -1038,7 +1043,8 @@ int64_t removecobasicindex(lrs_dic<T> *P, int64_t k)
   return globals::L_TRUE;
 }
 
-template <typename T> lrs_dic<T> *new_lrs_dic(int64_t m, int64_t d, int64_t m_A) {
+template <typename T>
+lrs_dic<T> *new_lrs_dic(int64_t m, int64_t d, int64_t m_A) {
   lrs_dic<T> *p = new lrs_dic<T>;
 
   p->B = new int64_t[m + 1];
@@ -1114,7 +1120,7 @@ int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
 {
   int64_t i, j, k;
   int64_t *Cobasic; /* when restarting, Cobasic[j]=1 if j is in cobasis */
-                 /* assign local variables to structures */
+                    /* assign local variables to structures */
   T **A = P->A;
   int64_t *B = P->B;
   int64_t *C = P->C;
@@ -1574,7 +1580,8 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
 }
 
 template <typename T>
-int64_t check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t *i_p, int64_t *j_p) {
+int64_t check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t *i_p,
+                    int64_t *j_p) {
   if (global->Qtail == global->Qhead)
     return 0;
   else {
@@ -1710,7 +1717,8 @@ template <typename T> void save_basis(lrs_dic<T> *P, lrs_dat<T> *Q) {
 }
 
 template <typename T>
-void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num, int64_t ineq)
+void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
+                    int64_t ineq)
 /* set row of dictionary using num and den arrays for rational input */
 /* ineq = 1 (globals::GE)   - ordinary row  */
 /*      = 0 (globals::EQ)   - linearity     */

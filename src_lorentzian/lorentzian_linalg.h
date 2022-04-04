@@ -5,6 +5,10 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
+#include <utility>
+#include <algorithm>
+#include <vector>
+#include <string>
 
 /*
   A few linear algebra stuff used for the lorentzian computations

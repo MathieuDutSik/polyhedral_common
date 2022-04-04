@@ -808,7 +808,7 @@ struct dd_setfamily {
   dd_SetVector set;
 };
 
-void dd_FreeSetFamily(dd_setfamily* F) {
+void dd_FreeSetFamily(dd_setfamily *F) {
   dd_bigrange i, f1;
 
   if (F != nullptr) {
@@ -935,7 +935,7 @@ template <typename T> struct dd_polyhedradata {
   /* dominant set of rows (those containing all rays). */
 };
 
-dd_setfamily* dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize) {
+dd_setfamily *dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize) {
   dd_bigrange i, f0, f1, s0, s1;
 
   if (fsize <= 0) {
@@ -955,7 +955,7 @@ dd_setfamily* dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize) {
     s1 = ssize;
   }
 
-  dd_setfamily* F = new dd_setfamily;
+  dd_setfamily *F = new dd_setfamily;
   F->set = new set_type[f1];
   for (i = 0; i < f1; i++)
     set_initialize(&(F->set[i]), s1);
@@ -2159,7 +2159,7 @@ bool dd_InputAdjacentQ(set_type &common, long &lastn, dd_polyhedradata<T> *poly,
 }
 
 template <typename T>
-dd_setfamily* dd_CopyIncidence(dd_polyhedradata<T> *poly) {
+dd_setfamily *dd_CopyIncidence(dd_polyhedradata<T> *poly) {
   dd_bigrange k;
   dd_rowrange i;
 
@@ -2167,7 +2167,7 @@ dd_setfamily* dd_CopyIncidence(dd_polyhedradata<T> *poly) {
     return nullptr;
   if (poly->AincGenerated == false)
     dd_ComputeAinc(poly);
-  dd_setfamily* F = dd_CreateSetFamily(poly->n, poly->m1);
+  dd_setfamily *F = dd_CreateSetFamily(poly->n, poly->m1);
   for (i = 1; i <= poly->m1; i++)
     for (k = 1; k <= poly->n; k++)
       if (set_member(k, poly->Ainc[i - 1]))
@@ -2176,24 +2176,24 @@ dd_setfamily* dd_CopyIncidence(dd_polyhedradata<T> *poly) {
 }
 
 template <typename T>
-dd_setfamily* dd_CopyInputIncidence(dd_polyhedradata<T> *poly) {
+dd_setfamily *dd_CopyInputIncidence(dd_polyhedradata<T> *poly) {
   dd_rowrange i;
 
   if (poly->child == nullptr || poly->child->CompStatus != dd_AllFound)
     return nullptr;
   if (poly->AincGenerated == false)
     dd_ComputeAinc(poly);
-  dd_setfamily* F = dd_CreateSetFamily(poly->m1, poly->n);
+  dd_setfamily *F = dd_CreateSetFamily(poly->m1, poly->n);
   for (i = 0; i < poly->m1; i++)
     set_copy(F->set[i], poly->Ainc[i]);
   return F;
 }
 
 template <typename T>
-dd_setfamily* dd_CopyAdjacency(dd_polyhedradata<T> *poly) {
+dd_setfamily *dd_CopyAdjacency(dd_polyhedradata<T> *poly) {
   dd_raydata<T> *RayPtr1;
   dd_raydata<T> *RayPtr2;
-  dd_setfamily* F = nullptr;
+  dd_setfamily *F = nullptr;
   long pos1, pos2;
   dd_bigrange lstart, k, n;
   set_type linset, allset;
@@ -2242,7 +2242,7 @@ _L99:;
 }
 
 template <typename T>
-dd_setfamily* dd_CopyInputAdjacency(dd_polyhedradata<T> *poly) {
+dd_setfamily *dd_CopyInputAdjacency(dd_polyhedradata<T> *poly) {
   dd_rowrange i, j;
   set_type common;
   long lastn = 0;
@@ -2250,7 +2250,7 @@ dd_setfamily* dd_CopyInputAdjacency(dd_polyhedradata<T> *poly) {
     return nullptr;
   if (poly->AincGenerated == false)
     dd_ComputeAinc(poly);
-  dd_setfamily* F = dd_CreateSetFamily(poly->m1, poly->m1);
+  dd_setfamily *F = dd_CreateSetFamily(poly->m1, poly->m1);
   for (i = 1; i <= poly->m1; i++)
     for (j = 1; j <= poly->m1; j++)
       if (i != j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j))
@@ -5265,7 +5265,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 }
 
 template <typename T>
-dd_setfamily* dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error) {
+dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error) {
   /* This is to generate the (facet) graph of a polyheron (H) V-represented by M
      using LPs. Since it does not use the representation conversion, it should
      work for a large scale problem.
@@ -5274,7 +5274,7 @@ dd_setfamily* dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error) {
   dd_colrange d;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
-  dd_setfamily* F = nullptr;
+  dd_setfamily *F = nullptr;
 
   m = M->rowsize;
   d = M->colsize;
@@ -5305,8 +5305,8 @@ _L999:
 }
 
 template <typename T>
-dd_setfamily* dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
-                                        dd_ErrorType *error) {
+dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
+                                      dd_ErrorType *error) {
   /* This is to generate the weak-adjacency (facet) graph of a polyheron (H)
      V-represented by M using LPs. Since it does not use the representation
      conversion, it should work for a large scale problem.
@@ -5315,7 +5315,7 @@ dd_setfamily* dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
   dd_colrange d;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
-  dd_setfamily* F = nullptr;
+  dd_setfamily *F = nullptr;
 
   m = M->rowsize;
   d = M->colsize;

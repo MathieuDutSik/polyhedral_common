@@ -1,6 +1,14 @@
 #ifndef SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 #define SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 
+#include <set>
+#include <unordered_map>
+#include <limits>
+#include <unordered_set>
+#include <string>
+#include <vector>
+#include <utility>
+
 template <typename T, typename Tint> struct FundDomainVertex {
   MyVector<T> gen;
   MyMatrix<Tint> MatRoot;

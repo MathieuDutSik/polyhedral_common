@@ -1,12 +1,11 @@
-#include "Temp_PerfectForm.h"
-#include "Permutation.h"
 #include "Group.h"
+#include "Permutation.h"
+#include "Temp_PerfectForm.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     Eigen::initParallel();
-    FullNamelist eFull=NAMELIST_GetStandard_COMPUTE_PERFECT();
+    FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_PERFECT();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -16,17 +15,16 @@ int main(int argc, char *argv[])
       return -1;
     }
     using Tidx = uint32_t;
-    using T=mpq_class;
-    using Tint=mpz_class;
+    using T = mpq_class;
+    using Tint = mpz_class;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt,Tint>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
     //
-    std::string eFileName=argv[1];
+    std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    TreatPerfectLatticesEntry<T,Tint,Tgroup>(eFull);
+    TreatPerfectLatticesEntry<T, Tint, Tgroup>(eFull);
     std::cerr << "Completion of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

@@ -1,6 +1,5 @@
 #include "MAT_Matrix.h"
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 2) {
       fprintf(stderr, "Number of argument is = %d\n", argc);
@@ -9,15 +8,15 @@ int main(int argc, char *argv[])
     }
     //
     std::string eFile = argv[1];
-    auto GetListDegree=[&]() -> std::vector<int> {
+    auto GetListDegree = [&]() -> std::vector<int> {
       std::ifstream is(eFile);
       int nbVert, eAdj;
       is >> nbVert;
       std::vector<int> ListDeg(nbVert);
-      for (int iVert=0; iVert<nbVert; iVert++) {
+      for (int iVert = 0; iVert < nbVert; iVert++) {
         int nbAdj;
         is >> nbAdj;
-        for (int iAdj=0; iAdj<nbAdj; iAdj++)
+        for (int iAdj = 0; iAdj < nbAdj; iAdj++)
           is >> eAdj;
         ListDeg[iVert] = nbAdj;
       }
@@ -25,24 +24,24 @@ int main(int argc, char *argv[])
     };
     //
     std::vector<int> ListDeg = GetListDegree();
-    int nnz=0;
-    for (auto & eVal : ListDeg)
+    int nnz = 0;
+    for (auto &eVal : ListDeg)
       nnz += eVal;
     //
-    using T2=Eigen::Triplet<double>;
+    using T2 = Eigen::Triplet<double>;
     std::ifstream is(eFile);
     int nbVert;
     is >> nbVert;
     std::vector<T2> tripletList_A(nnz);
     std::vector<T2> tripletList_D(nbVert);
-    int iNNZ=0;
-    for (int iVert=0; iVert<nbVert; iVert++) {
+    int iNNZ = 0;
+    for (int iVert = 0; iVert < nbVert; iVert++) {
       int nbAdj;
       is >> nbAdj;
-      for (int iAdj=0; iAdj<nbAdj; iAdj++) {
+      for (int iAdj = 0; iAdj < nbAdj; iAdj++) {
         int eAdj;
         is >> eAdj;
-        tripletList_A[iNNZ]=T2(iVert,eAdj,double(1));
+        tripletList_A[iNNZ] = T2(iVert, eAdj, double(1));
         iNNZ++;
       }
       tripletList_D[iVert] = T2(iVert, iVert, nbAdj);
@@ -54,11 +53,12 @@ int main(int argc, char *argv[])
     D.setFromTriplets(tripletList_D.begin(), tripletList_D.end());
     std::cerr << "We have D matrix\n";
     //
-    auto GetEigenvalues=[&](MySparseMatrix<double> const& SpMat) -> MyVector<double> {
+    auto GetEigenvalues =
+        [&](MySparseMatrix<double> const &SpMat) -> MyVector<double> {
       Eigen::SelfAdjointEigenSolver<MySparseMatrix<double>> eig(SpMat);
-      MyVector<double> ListEig=eig.eigenvalues();
+      MyVector<double> ListEig = eig.eigenvalues();
       MyVector<double> ListEigRev(nbVert);
-      for (int iVert=0; iVert<nbVert; iVert++)
+      for (int iVert = 0; iVert < nbVert; iVert++)
         ListEigRev(iVert) = ListEig(nbVert - 1 - iVert);
       return ListEigRev;
     };
@@ -73,14 +73,15 @@ int main(int argc, char *argv[])
     //
     double BestLowerBound = 0;
     std::string RealizingBound = "unset";
-    auto UpdateBounds=[&](double const& eBound, std::string const& RealBound) -> void {
+    auto UpdateBounds = [&](double const &eBound,
+                            std::string const &RealBound) -> void {
       if (eBound > BestLowerBound) {
         BestLowerBound = eBound;
         RealizingBound = RealBound;
       }
     };
     //
-    double LowerBoundHoffman = 1 + mu(0) / (- mu(n-1));
+    double LowerBoundHoffman = 1 + mu(0) / (-mu(n - 1));
     UpdateBounds(LowerBoundHoffman, "Hoffman bound");
     std::cerr << "Hoffman lower bound = " << LowerBoundHoffman << "\n";
     //
@@ -92,58 +93,67 @@ int main(int argc, char *argv[])
     UpdateBounds(LowerBoundKotolina1, "Kotolina1 bound");
     std::cerr << "Kotolina lower bound 1 = " << LowerBoundKotolina1 << "\n";
     //
-    double LowerBoundKotolina2 = 1 + mu(0) / (mu(0) - delta(n-1) + theta(n-1));
+    double LowerBoundKotolina2 =
+        1 + mu(0) / (mu(0) - delta(n - 1) + theta(n - 1));
     UpdateBounds(LowerBoundKotolina2, "Kotolina2 bound");
     std::cerr << "Kotolina lower bound 2 = " << LowerBoundKotolina2 << "\n";
     //
-    for (int m=1; m<=n; m++) {
+    for (int m = 1; m <= n; m++) {
       double sum1;
       double sum2;
       //
-      sum1=0;
-      sum2=0;
-      for (int i=1; i<=m; i++) {
+      sum1 = 0;
+      sum2 = 0;
+      for (int i = 1; i <= m; i++) {
         sum1 += mu(i - 1);
-        sum2 += mu(n+1-i - 1);
+        sum2 += mu(n + 1 - i - 1);
       }
       double UnifiedLower1 = 1 + sum1 / (-sum2);
-      UpdateBounds(UnifiedLower1, "Unified lower bound 1: m=" + std::to_string(m));
-      std::cerr << "Elphick Wocjan unified lower bound 1 = " << UnifiedLower1 << "\n";
+      UpdateBounds(UnifiedLower1,
+                   "Unified lower bound 1: m=" + std::to_string(m));
+      std::cerr << "Elphick Wocjan unified lower bound 1 = " << UnifiedLower1
+                << "\n";
       //
-      sum1=0;
-      sum2=0;
-      for (int i=1; i<=m; i++) {
+      sum1 = 0;
+      sum2 = 0;
+      for (int i = 1; i <= m; i++) {
         sum1 += mu(i - 1);
-        sum2 += theta(i-1) - mu(i-1);
+        sum2 += theta(i - 1) - mu(i - 1);
       }
       double UnifiedLower2 = 1 + sum1 / sum2;
-      UpdateBounds(UnifiedLower2, "Unified lower bound 2: m=" + std::to_string(m));
-      std::cerr << "Elphick Wocjan unified lower bound 2 = " << UnifiedLower2 << "\n";
+      UpdateBounds(UnifiedLower2,
+                   "Unified lower bound 2: m=" + std::to_string(m));
+      std::cerr << "Elphick Wocjan unified lower bound 2 = " << UnifiedLower2
+                << "\n";
       //
-      sum1=0;
-      sum2=0;
-      for (int i=1; i<=m; i++) {
+      sum1 = 0;
+      sum2 = 0;
+      for (int i = 1; i <= m; i++) {
         sum1 += mu(i - 1);
-        sum2 += mu(i - 1) - delta(i-1) + theta(i-1);
+        sum2 += mu(i - 1) - delta(i - 1) + theta(i - 1);
       }
       double UnifiedLower3 = 1 + sum1 / sum2;
-      UpdateBounds(UnifiedLower3, "Unified lower bound 3: m=" + std::to_string(m));
-      std::cerr << "Elphick Wocjan unified lower bound 3 = " << UnifiedLower3 << "\n";
+      UpdateBounds(UnifiedLower3,
+                   "Unified lower bound 3: m=" + std::to_string(m));
+      std::cerr << "Elphick Wocjan unified lower bound 3 = " << UnifiedLower3
+                << "\n";
       //
-      sum1=0;
-      sum2=0;
-      for (int i=1; i<=m; i++) {
+      sum1 = 0;
+      sum2 = 0;
+      for (int i = 1; i <= m; i++) {
         sum1 += mu(i - 1);
-        sum2 += mu(i - 1) - delta(n-i) + theta(n-i);
+        sum2 += mu(i - 1) - delta(n - i) + theta(n - i);
       }
       double UnifiedLower4 = 1 + sum1 / sum2;
-      UpdateBounds(UnifiedLower4, "Unified lower bound 4: m=" + std::to_string(m));
-      std::cerr << "Elphick Wocjan unified lower bound 4 = " << UnifiedLower4 << "\n";
+      UpdateBounds(UnifiedLower4,
+                   "Unified lower bound 4: m=" + std::to_string(m));
+      std::cerr << "Elphick Wocjan unified lower bound 4 = " << UnifiedLower4
+                << "\n";
     }
     //
-    double splus=0;
-    double sminus=0;
-    for (int i=0; i<n; i++) {
+    double splus = 0;
+    double sminus = 0;
+    for (int i = 0; i < n; i++) {
       if (mu(i) > 0)
         splus += mu(i) * mu(i);
       if (mu(i) < 0)
@@ -155,20 +165,21 @@ int main(int argc, char *argv[])
     //
     double nPlus = 0;
     double nMinus = 0;
-    for (int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
       if (mu(i) > 0)
         nPlus++;
       if (mu(i) < 0)
         nMinus++;
     }
-    double LowerBoundInertia = 1 + std::max(nMinus / nPlus , nPlus / nMinus);
+    double LowerBoundInertia = 1 + std::max(nMinus / nPlus, nPlus / nMinus);
     UpdateBounds(LowerBoundInertia, "Inertia lower bound");
-    std::cerr << "Elphick Wocjan inertial lower bound = " << LowerBoundInertia << "\n";
+    std::cerr << "Elphick Wocjan inertial lower bound = " << LowerBoundInertia
+              << "\n";
     //
-    std::cerr << "Realizing method=" << RealizingBound << " BestLowerBound=" << BestLowerBound << "\n";
+    std::cerr << "Realizing method=" << RealizingBound
+              << " BestLowerBound=" << BestLowerBound << "\n";
     std::cerr << "Normal termination of ComputeChromaticLowerBounds\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

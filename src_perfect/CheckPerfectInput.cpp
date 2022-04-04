@@ -1,9 +1,8 @@
-#include "Temp_PerfectForm.h"
-#include "Permutation.h"
 #include "Group.h"
+#include "Permutation.h"
+#include "Temp_PerfectForm.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -12,23 +11,23 @@ int main(int argc, char *argv[])
       std::cerr << "CheckPerfectInput sizCheck < stdin\n";
       throw TerminalException{1};
     }
-    using T=mpq_class;
+    using T = mpq_class;
     int n_limit;
     sscanf(argv[1], "%d", &n_limit);
     std::cerr << "n_limit=" << n_limit << "\n";
     //
-    auto check_stream=[&n_limit](std::istream& is) -> void {
+    auto check_stream = [&n_limit](std::istream &is) -> void {
       MyMatrix<T> G = ReadMatrix<T>(is);
       int n = G.rows();
       MyMatrix<T> SHV = ReadMatrix<T>(is);
       int n_SHV = SHV.rows();
-      int pDim = (n * (n+1)) / 2;
+      int pDim = (n * (n + 1)) / 2;
       MyMatrix<T> PerfectCone(n_SHV, pDim);
-      for (int i_SHV=0; i_SHV<n_SHV; i_SHV++) {
+      for (int i_SHV = 0; i_SHV < n_SHV; i_SHV++) {
         size_t pos = 0;
-        for (int i=0; i<n; i++)
-          for (int j=i; j<n; j++) {
-            PerfectCone(i_SHV, pos) = SHV(i_SHV,i) * SHV(i_SHV,j);
+        for (int i = 0; i < n; i++)
+          for (int j = i; j < n; j++) {
+            PerfectCone(i_SHV, pos) = SHV(i_SHV, i) * SHV(i_SHV, j);
             pos++;
           }
       }
@@ -40,8 +39,9 @@ int main(int argc, char *argv[])
         n_facet_work = n_limit;
       std::cerr << "n_facet_work=" << n_facet_work << "\n";
       //
-      for (size_t i_facet=0; i_facet<n_facet_work; i_facet++) {
-        std::cerr << "i_facet=" << i_facet << " / " << n_facet << " / " << n_facet_work << "\n";
+      for (size_t i_facet = 0; i_facet < n_facet_work; i_facet++) {
+        std::cerr << "i_facet=" << i_facet << " / " << n_facet << " / "
+                  << n_facet_work << "\n";
         T val;
         is >> val;
         std::vector<size_t> V = Convert_T_To_Set(val);
@@ -51,23 +51,21 @@ int main(int argc, char *argv[])
           throw TerminalException{1};
         }
         Face f(n_SHV);
-        for (auto & eV : V)
+        for (auto &eV : V)
           f[eV] = 1;
         TestFacetness(PerfectCone, f);
       }
     };
 
-
     if (argc == 2) {
       check_stream(std::cin);
     } else {
-      std::string eFileName=argv[2];
+      std::string eFileName = argv[2];
       std::ifstream is(eFileName);
       check_stream(is);
     }
     std::cerr << "Completion of the program\n";
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }

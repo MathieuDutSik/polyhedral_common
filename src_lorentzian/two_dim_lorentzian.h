@@ -1,6 +1,9 @@
 #ifndef INCLUDE_TWO_DIM_LORENTZIAN_H
 #define INCLUDE_TWO_DIM_LORENTZIAN_H
 
+#include <utility>
+#include <vector>
+
 /*
   We implement here algorithms from Section 8 in
   "AN ALTERNATIVE TO VINBERG’S ALGORITHM"

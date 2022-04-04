@@ -2,8 +2,7 @@
 #include "NumberTheory.h"
 #include "SHORT_ShortestConfig.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   try {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -16,11 +15,12 @@ int main(int argc, char *argv[])
       std::cerr << "[FileOut]  : The output file of the program\n";
       return -1;
     }
-    using Tint=int;
+    using Tint = int;
     //
-    std::string FileIn=argv[1];
-    std::vector<MyMatrix<Tint>> ListSHV=ReadListConfigurationShortestVector<Tint>(FileIn);
-    int nbShort=ListSHV.size();
+    std::string FileIn = argv[1];
+    std::vector<MyMatrix<Tint>> ListSHV =
+        ReadListConfigurationShortestVector<Tint>(FileIn);
+    int nbShort = ListSHV.size();
     //
     int N;
     sscanf(argv[2], "%d", &N);
@@ -28,23 +28,22 @@ int main(int argc, char *argv[])
     int mod;
     sscanf(argv[3], "%d", &mod);
     //
-    int nbOut=0;
-    for (int iShort=0; iShort<nbShort; iShort++) {
-      int res=iShort % N;
+    int nbOut = 0;
+    for (int iShort = 0; iShort < nbShort; iShort++) {
+      int res = iShort % N;
       if (res == mod)
-	nbOut++;
+        nbOut++;
     }
     //
-    std::string FileOut=argv[4];
+    std::string FileOut = argv[4];
     std::ofstream os(FileOut);
     os << nbOut << "\n";
-    for (int iShort=0; iShort<nbShort; iShort++) {
-      int res=iShort % N;
+    for (int iShort = 0; iShort < nbShort; iShort++) {
+      int res = iShort % N;
       if (res == mod)
-	WriteMatrix(os, ListSHV[iShort]);
+        WriteMatrix(os, ListSHV[iShort]);
     }
-  }
-  catch (TerminalException const& e) {
+  } catch (TerminalException const &e) {
     exit(e.eVal);
   }
 }

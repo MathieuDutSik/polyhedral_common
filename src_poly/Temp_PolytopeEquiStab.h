@@ -6,6 +6,11 @@
 #include "WeightMatrixLimited.h"
 #include "WeightMatrixSpecified.h"
 #include "Timings.h"
+#include <limits>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <utility>
 
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix

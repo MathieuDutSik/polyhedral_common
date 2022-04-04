@@ -5,6 +5,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
+#include <vector>
 
 template <typename T> T MinimumDiagonal(MyMatrix<T> const &eMat) {
   int n = eMat.rows();

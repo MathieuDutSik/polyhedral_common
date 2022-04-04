@@ -16,6 +16,7 @@
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
 #include <signal.h>
+#include <map>
 #include <string>
 #include <limits>
 #include <vector>

@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -705,20 +706,19 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     //
     //    LLLreduction<T, Tint> RecLLL = LLLnoreduction<T, Tint>(data.G);
     LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(data.G);
-    MyMatrix<Tint> const& Pmat = RecLLL.Pmat;
+    MyMatrix<Tint> const &Pmat = RecLLL.Pmat;
     MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
     MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
     MyVector<T> eV_img = PmatInv_T.transpose() * data.V;
     MyMatrix<Tint> trans_P = data.trans_u * Pmat.transpose();
     //    MyMatrix<Tint> trans_P = data.trans_u;
-    
-    
+
     for (size_t i_root = 0; i_root < n_root; i_root++) {
       MyVector<T> eFAC = GetMatrixRow(FACfeasible, i_root);
       MyVector<T> v_T = UniversalVectorConversion<T, Tint>(data.shift_u);
       T scal = eFAC.dot(v_T);
       FAC(i_root, 0) = scal;
-      for (size_t i = 0; i < dim-1; i++) {
+      for (size_t i = 0; i < dim - 1; i++) {
         v_T = UniversalVectorConversion<T, Tint>(GetMatrixCol(trans_P, i));
         T scal = eFAC.dot(v_T);
         FAC(i_root, i + 1) = scal;
@@ -727,7 +727,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     //
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
     T_shvec_request<T> request =
-      initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
+        initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
     //    initShvecReq<T>(data.G, data.V, data.norm, mode);
     //
     size_t n_pass = 0;
@@ -735,9 +735,9 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       n_pass++;
       if (min == data.norm) {
         MyVector<Tint> x = data.shift_u + trans_P * V;
-        MyVector<T> x_T = UniversalVectorConversion<T,Tint>(x);
+        MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);
         T norm = x_T.dot(Vtot.G_T * x_T);
-        T k_T = UniversalScalarConversion<T,Tint>(k);
+        T k_T = UniversalScalarConversion<T, Tint>(k);
         if (norm != k_T) {
           std::cerr << "norm=" << norm << " k=" << k << "\n";
           throw TerminalException{1};
@@ -773,8 +773,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   //
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr
-    << "|list_root|=" << list_root.size() << " |FindRoot_filter|=" << ms(time1,time2) << "\n";
+  std::cerr << "|list_root|=" << list_root.size()
+            << " |FindRoot_filter|=" << ms(time1, time2) << "\n";
 #endif
   return list_root;
 }
@@ -933,7 +933,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
-      DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
+        DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
         n_iter++;
@@ -950,9 +950,8 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
 #ifdef TIMINGS
   SingletonTime time2;
   bool test = opt.has_value();
-  std::cerr
-      << "has found vertex=" << test << " n_iter=" << n_iter
-      << " |GetOneInteriorVertex|=" << ms(time1,time2) << "\n";
+  std::cerr << "has found vertex=" << test << " n_iter=" << n_iter
+            << " |GetOneInteriorVertex|=" << ms(time1, time2) << "\n";
 #endif
   return opt;
 }
@@ -1014,9 +1013,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr
-      << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
-      << " |is_FundPoly_LRS|=" << ms(time1,time2) << "\n";
+  std::cerr << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
+            << " |is_FundPoly_LRS|=" << ms(time1, time2) << "\n";
 #endif
   std::cerr << "norm multiplicities =";
   for (auto &kv : map)
@@ -1057,7 +1055,7 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   int iret = system(eCommand.c_str());
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|system|=" << ms(time1,time2) << "\n";
+  std::cerr << "|system|=" << ms(time1, time2) << "\n";
 #endif
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
@@ -1078,8 +1076,8 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   }
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr
-    << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "  |coxiter|=" << ms(time2,time3) << "\n";
+  std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume
+            << "  |coxiter|=" << ms(time2, time3) << "\n";
 #endif
   return IsFiniteCovolume;
 }

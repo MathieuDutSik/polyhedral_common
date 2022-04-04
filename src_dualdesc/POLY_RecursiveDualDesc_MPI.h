@@ -2,9 +2,13 @@
 #define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 
 #include "POLY_RecursiveDualDesc.h"
-
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
+#include <string>
+#include <unordered_map>
+#include <limits>
+#include <vector>
+#include <utility>
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_DUALDESC_AdjacencyDecomposition(

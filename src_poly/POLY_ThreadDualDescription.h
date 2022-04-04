@@ -5,17 +5,17 @@
 #include "Basic_string.h"
 #include "GRP_DoubleCoset.h"
 #include "Namelist.h"
-
 #include "POLY_Heuristics.h"
-
 #include "Parallel_Classes.h"
 #include "ThreadManagement.h"
-
 #include "POLY_DirectDualDesc.h"
 #include "POLY_SamplingFacet.h"
-
 #include "MatrixGroup.h"
 #include "Temp_PolytopeEquiStab.h"
+#include <utility>
+#include <map>
+#include <vector>
+#include <string>
 
 //
 // PolyhedralInv

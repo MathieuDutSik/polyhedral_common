@@ -4,6 +4,13 @@
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "GRAPH_GraphicalFunctions.h"
+#include <limits>
+#include <map>
+#include <algorithm>
+#include <utility>
+#include <set>
+#include <string>
+#include <vector>
 
 /*
   The Coxeter Dynkin diagram are build in the following way:
