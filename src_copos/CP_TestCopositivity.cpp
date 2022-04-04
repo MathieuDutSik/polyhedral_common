@@ -1,6 +1,6 @@
 #define PRINT_SPLIT_CONE
-#include "Copositivity.h"
 #include "NumberTheory.h"
+#include "Copositivity.h"
 
 int main(int argc, char *argv[]) {
   try {

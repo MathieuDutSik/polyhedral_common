@@ -1,6 +1,6 @@
+#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "hash_functions.h"
 #include "rational.h"
 #include "sparse-map/include/tsl/sparse_map.h"
