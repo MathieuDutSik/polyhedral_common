@@ -653,9 +653,9 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     //    std::cerr << "Conclude that no solution is feasible\n";
     return {};
   }
-
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   auto fct_CVP = [&]() -> void {
     std::cerr << "Beginning of fct_CVP\n";
     std::vector<MyVector<Tint>> list_GV;
@@ -771,12 +771,11 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     fct_CVP();
   }
   //
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time2;
   std::cerr
-      << "|list_root|=" << list_root.size() << " |FindRoot_filter|="
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+    << "|list_root|=" << list_root.size() << " |FindRoot_filter|=" << ms(time1,time2) << "\n";
+#endif
   return list_root;
 }
 
@@ -898,8 +897,9 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyVector<Tint>>
 GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot) {
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   size_t n_root = ListRoot.size();
   size_t n_col = Vtot.G.rows();
   MyMatrix<Tint> FAC(n_root, n_col);
@@ -947,22 +947,22 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     };
     look_for_vector();
   }
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time2;
   bool test = opt.has_value();
   std::cerr
       << "has found vertex=" << test << " n_iter=" << n_iter
-      << " |GetOneInteriorVertex|="
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+      << " |GetOneInteriorVertex|=" << ms(time1,time2) << "\n";
+#endif
   return opt;
 }
 
 template <typename T, typename Tint>
 bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot) {
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   size_t n_root = ListRoot.size();
   size_t n_col = Vtot.G.rows();
   MyMatrix<Tint> FAC(n_root, n_col);
@@ -1012,13 +1012,12 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     };
     look_for_vector();
   }
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time2;
   std::cerr
       << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
-      << " |is_FundPoly_LRS|="
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+      << " |is_FundPoly_LRS|=" << ms(time1,time2) << "\n";
+#endif
   std::cerr << "norm multiplicities =";
   for (auto &kv : map)
     std::cerr << " [" << kv.first << "," << kv.second << "]";
@@ -1052,11 +1051,14 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   eCommand += " " + opt;
   eCommand += " < " + FileI + " > " + FileO;
   std::cerr << "eCommand=" << eCommand << "\n";
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   int iret = system(eCommand.c_str());
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time2;
+  std::cerr << "|system|=" << ms(time1,time2) << "\n";
+#endif
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
     throw TerminalException{1};
@@ -1074,10 +1076,11 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
       if (LStr1[1] == answer)
         IsFiniteCovolume = true;
   }
+#ifdef TIMINGS
+  SingletonTime time3;
   std::cerr
-      << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "  |coxiter|="
-      << std::chrono::duration_cast<std::chrono::seconds>(time2 - time1).count()
-      << "\n";
+    << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "  |coxiter|=" << ms(time2,time3) << "\n";
+#endif
   return IsFiniteCovolume;
 }
 

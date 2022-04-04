@@ -13,6 +13,7 @@
 #include "lorentzian_linalg.h"
 #include "two_dim_lorentzian.h"
 #include "vinberg.h"
+#include "Timings.h"
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -282,8 +283,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   std::vector<MyVector<Tint>> const &l_ui = eReq.l_ui;
   MyVector<T> const &k = eReq.k;
@@ -308,13 +308,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   std::vector<Possible_Extension<T>> l_extension =
       ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |ComputePossibleExtensions|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "Timing |ComputePossibleExtensions|=" << ms(time1,time2) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|="
@@ -339,13 +334,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
             << l_candidates.size() << "\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |l_candidates|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                     time2)
-                   .count()
-            << "\n";
+  SingletonTime time3;
+  std::cerr << "Timing |l_candidates|=" << ms(time2,time3) << "\n";
 #endif
   /* std::sort is sorting from the highest to the smallest
    */
@@ -365,13 +355,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
               return x.e_norm < y.e_norm;
             });
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |sort|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                     time3)
-                   .count()
-            << "\n";
+  SingletonTime time4;
+  std::cerr << "Timing |sort|=" << ms(time3,time4) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   for (auto &x : l_candidates) {
@@ -405,13 +390,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
             << l_ui_ret.size() << "\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |l_ui_ret|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time5 -
-                                                                     time4)
-                   .count()
-            << "\n";
+  SingletonTime time5;
+  std::cerr << "Timing |l_ui_ret|=" << ms(time4,time5) << "\n";
 #endif
   return l_ui_ret;
 }
@@ -422,20 +402,14 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
                                     SublattInfos<T> const &si,
                                     CuspidalRequest<T, Tint> const &eReq) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   MyMatrix<T> const &G = si.G;
   CuspidalRequest_FullInfo<T, Tint> eReq_full =
       gen_cuspidal_request_full_info(G, eReq);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |gen_cuspidal_request_full_info|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "Timing |gen_cuspidal_request_full_info|=" << ms(time1,time2) << "\n";
 #endif
   size_t len = cusp_bank.l_request.size();
   for (size_t i = 0; i < len; i++) {
@@ -461,26 +435,16 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
             << "DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
 #endif
 #ifdef TIMINGS
-        std::chrono::time_point<std::chrono::system_clock> time3 =
-            std::chrono::system_clock::now();
-        std::cerr << "Timing |query(succ)|="
-                  << std::chrono::duration_cast<std::chrono::microseconds>(
-                         time3 - time2)
-                         .count()
-                  << "\n";
+        SingletonTime time3;
+        std::cerr << "Timing |query(succ)|=" << ms(time2,time3) << "\n";
 #endif
         return l_ui_ret;
       }
     }
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |query(fail)|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                     time2)
-                   .count()
-            << "\n";
+  SingletonTime time3;
+  std::cerr << "Timing |query(fail)|=" << ms(time2,time3) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase_Memoized, failed to find some "
@@ -490,13 +454,8 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
   cusp_bank.l_request.emplace_back(std::move(eReq_full));
   cusp_bank.l_answer.push_back(l_ui_ret);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |l_ui_ret|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                     time3)
-                   .count()
-            << "\n";
+  SingletonTime time4;
+  std::cerr << "Timing |l_ui_ret|=" << ms(time3,time4) << "\n";
 #endif
   return l_ui_ret;
 }
@@ -558,8 +517,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   const std::vector<MyVector<Tint>> &l_ui = ad.l_ui;
   const MyVector<Tint> &v_disc = ad.v_disc;
@@ -690,13 +648,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   std::cerr << "r0=" << StringVectorGAP(r0) << "\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |paperwork|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "Timing |paperwork|=" << ms(time1,time2) << "\n";
 #endif
   //
   // Computing the extension and the maximum norms from that.
@@ -710,13 +663,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
             << "\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |l_extension|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                     time2)
-                   .count()
-            << "\n";
+  SingletonTime time3;
+  std::cerr << "Timing |l_extension|=" << ms(time2,time3) << "\n";
 #endif
 
   //  for (auto & kv : map_max_resnorm)
@@ -786,8 +734,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   };
   auto get_sing_comp_anisotropic = [&](T const &e_norm) -> SingCompAnisotropic {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeA_1 =
-        std::chrono::system_clock::now();
+    SingletonTime timeA_1;
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm
@@ -897,20 +844,14 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     std::cerr << "|l_vect3|=" << l_vect3.size() << "\n";
 #endif
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeA_2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |get_sing_comp_anisotropic|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeA_2 -
-                                                                       timeA_1)
-                     .count()
-              << "\n";
+    SingletonTime timeA_2;
+    std::cerr << "Timing |get_sing_comp_anisotropic|=" << ms(timeA_1,timeA_2) << "\n";
 #endif
     return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic = [&](T const &e_norm) -> SingCompIsotropic {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_1 =
-        std::chrono::system_clock::now();
+    SingletonTime timeB_1;
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
@@ -927,13 +868,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     }
     MyMatrix<T> Factor_GP_LN = *opt_factor;
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> timeB_2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |get_sing_comp_isotropic|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(timeB_2 -
-                                                                       timeB_1)
-                     .count()
-              << "\n";
+    SingletonTime timeB_2;
+    std::cerr << "Timing |get_sing_comp_isotropic|=" << ms(timeB_1,timeB_2) << "\n";
 #endif
     return {Latt, Basis_ProjP_LN, GP_LN, Factor_GP_LN, r0_work, {}};
   };
@@ -1160,13 +1096,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     }
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |l_candidates|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                     time3)
-                   .count()
-            << "\n";
+  SingletonTime time4;
+  std::cerr << "Timing |l_candidates|=" << ms(time3,time4) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size()
@@ -1196,13 +1127,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   //  WriteMatrix(std::cerr, Gred);
   std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time5 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |Factor_opt|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time5 -
-                                                                     time4)
-                   .count()
-            << "\n";
+  SingletonTime time5;
+  std::cerr << "Timing |Factor_opt|=" << ms(time4,time5) << "\n";
 #endif
   //  std::cerr << "We have Factor_opt\n";
   if (!Factor_opt) {
@@ -1273,13 +1199,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   //  "\n";
   CuspidalRequest<T, Tint> eReq{l_ui, k_new, k};
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time6 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |CuspidalRequest|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time6 -
-                                                                     time5)
-                   .count()
-            << "\n";
+  SingletonTime time6;
+  std::cerr << "Timing |CuspidalRequest|=" << ms(time5,time6) << "\n";
 #endif
   std::vector<MyVector<Tint>> l_roots_ret =
       DetermineRootsCuspidalCase_Memoized<T, Tint, Tgroup>(cusp_bank, si, eReq);
@@ -1311,8 +1232,7 @@ gen_fund_domain_fund_info(CuspidalBank<T, Tint> &cusp_bank,
                           TheHeuristic<Tint> const &HeuristicIdealStabEquiv) {
   MyMatrix<T> const &G = si.G;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   //
   // Put the stuff that can help for invariant first
@@ -1359,13 +1279,8 @@ gen_fund_domain_fund_info(CuspidalBank<T, Tint> &cusp_bank,
   ret_type<T, Tint, Tgroup> frec =
       get_canonicalized_record<T, Tint, Tgroup>(ic.ListMat, ic.map_v);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "Timing |gen_fund_domain_fund_info|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "Timing |gen_fund_domain_fund_info|=" << ms(time1,time2) << "\n";
 #endif
   return get_full_info(vert, frec, method);
 }
@@ -1558,8 +1473,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull1) -> bool {
     size_t len = l_orbit_vertices.size();
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 =
-        std::chrono::system_clock::now();
+    SingletonTime time1;
 #endif
     for (size_t i = 0; i < len; i++) {
       const FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull2 =
@@ -1577,13 +1491,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           std::cerr << "Find some isomorphism\n";
 #endif
 #ifdef TIMINGS
-          std::chrono::time_point<std::chrono::system_clock> time2 =
-              std::chrono::system_clock::now();
-          std::cerr << "Timing |func_insert_vertex(find iso)|="
-                    << std::chrono::duration_cast<std::chrono::microseconds>(
-                           time2 - time1)
-                           .count()
-                    << "\n";
+          SingletonTime time2;
+          std::cerr << "Timing |func_insert_vertex(find iso)|=" << ms(time1,time2) << "\n";
 #endif
           bool test = f_isom(UniversalMatrixConversion<Tint, T>(*equiv_opt));
           if (test) {
@@ -1603,13 +1512,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       }
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |func_insert_vertex(no iso)|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                       time1)
-                     .count()
-              << "\n";
+    SingletonTime time2;
+    std::cerr << "Timing |func_insert_vertex(no iso)|=" << ms(time1,time2) << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
     std::cerr << "               Failed to find some isomorphism\n";
@@ -1648,13 +1552,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     vertFull1.GRP1_integral =
         Tgroup(LGenIntegral, vertFull1.vert.MatRoot.rows());
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |Automorphism|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                       time2)
-                     .count()
-              << "\n";
+    SingletonTime time3;
+    std::cerr << "Timing |Automorphism|=" << ms(time2,time3) << "\n";
 #endif
     bool test = f_vertex(vertFull1);
     if (test) {
@@ -1669,13 +1568,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     std::cerr << "Exiting the func_insert_vertex\n";
 #endif
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time4 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |func_insert_vertex(end)|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                       time3)
-                     .count()
-              << "\n";
+    SingletonTime time4;
+    std::cerr << "Timing |func_insert_vertex(end)|=" << ms(time3,time4) << "\n";
 #endif
     return false;
   };
@@ -1686,8 +1580,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   auto insert_adjacent_vertices =
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull) -> bool {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 =
-        std::chrono::system_clock::now();
+    SingletonTime time1;
 #endif
     const FundDomainVertex<T, Tint> &theVert = vertFull.vert;
 #ifdef DEBUG_ENUM_PROCESS
@@ -1699,13 +1592,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     vectface vf = lrs::DualDescription_temp_incd(FACred);
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1_integral);
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |vf_orb|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                       time1)
-                     .count()
-              << "\n";
+    SingletonTime time2;
+    std::cerr << "Timing |vf_orb|=" << ms(time1,time2) << "\n";
 #endif
     //
 #ifdef DEBUG_ENUM_PROCESS
@@ -1748,13 +1636,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       }
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time3 =
-        std::chrono::system_clock::now();
-    std::cerr << "Timing |process vf_orb|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                       time2)
-                     .count()
-              << "\n";
+    SingletonTime time3;
+    std::cerr << "Timing |process vf_orb|=" << ms(time2,time3) << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
