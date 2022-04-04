@@ -228,8 +228,8 @@ long redund_main(int argc, char *argv[])
   debug = Q->debug;
 
   redineq = calloc((m + 1), sizeof(long));
-  Ain = lrs_alloc_mp_matrix(m,
-                            d); /* make a copy of A matrix for output later */
+  Ain =
+      lrs_alloc_mp_matrix(m, d); /* make a copy of A matrix for output later */
 
   for (i = 1; i <= m; i++) {
     for (j = 0; j <= d; j++)

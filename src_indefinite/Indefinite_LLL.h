@@ -2,9 +2,9 @@
 #define SRC_INDEFINITE_INDEFINITE_LLL_H_
 
 #include "MAT_Matrix.h"
-#include <vector>
-#include <utility>
 #include <algorithm>
+#include <utility>
+#include <vector>
 
 //#define DEBUG_INDEFINITE_LLL
 

@@ -162,8 +162,8 @@ long lrs_mp_init(long dec_digits, FILE *lrs_ifp,
 
 #define lrs_alloc_mp(a) (mpz_init(a))
 #define lrs_clear_mp(a) (mpz_clear(a))
-lrs_mp_vector lrs_alloc_mp_vector(
-    long n); /* allocate lrs_mp_vector for n+1 lrs_mp numbers         */
+lrs_mp_vector
+lrs_alloc_mp_vector(long n); /* allocate lrs_mp_vector for n+1 lrs_mp numbers */
 lrs_mp_matrix
 lrs_alloc_mp_matrix(long m,
                     long n); /* allocate lrs_mp_matrix for m+1 x n+1 lrs_mp   */
@@ -176,9 +176,8 @@ void lrs_clear_mp_matrix(lrs_mp_matrix p, long m,
 /* Core library functions - depend on mp implementation  */
 /******************************************************* */
 void atomp(const char s[], lrs_mp a); /* convert string to lrs_mp integer */
-long compare(lrs_mp a, lrs_mp b);     /* a ? b and returns -1,0,1 for <,=,>     */
-void linint(lrs_mp a, long ka, lrs_mp b,
-            long kb);            /* compute a*ka+b*kb --> a        */
+long compare(lrs_mp a, lrs_mp b); /* a ? b and returns -1,0,1 for <,=,>     */
+void linint(lrs_mp a, long ka, lrs_mp b, long kb); /* compute a*ka+b*kb --> a */
 void pmp(char name[], lrs_mp a); /* print the long precision integer a */
 void prat(char name[], lrs_mp Nt, lrs_mp Dt); /* reduce and print  Nt/Dt */
 void readmp(lrs_mp a); /* read an integer and convert to lrs_mp          */
@@ -208,7 +207,7 @@ long myrandom(long num,
               long nrange); /* return a random number in range 0..nrange-1    */
 void notimpl(char s[]);     /* bail out - help!                               */
 void rattodouble(lrs_mp a, lrs_mp b,
-                 double *x);          /* convert lrs_mp rational to double          */
+                 double *x); /* convert lrs_mp rational to double          */
 void reduceint(lrs_mp Na, lrs_mp Da); /* divide Na by Da and return it */
 void reducearray(lrs_mp_vector p,
                  long n); /* find gcd of p[0]..p[n-1] and divide through by */

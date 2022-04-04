@@ -8,6 +8,7 @@
 #include "PERM_Fct.h"
 #include "factorizations.h"
 #include "Timings.h"
+#include "MAT_MatrixMod.h"
 #include <limits>
 #include <utility>
 #include <vector>
@@ -17,19 +18,6 @@ template <typename T> struct MatrixGroup {
   int n;
   std::vector<MyMatrix<T>> ListGen;
 };
-
-template <typename T> bool IsIdentity(MyMatrix<T> const &M) {
-  int len = M.rows();
-  for (int i = 0; i < len; i++) {
-    for (int j = 0; j < len; j++) {
-      if (i == j && M(i, j) != 1)
-        return false;
-      if (i != j && M(i, j) != 0)
-        return false;
-    }
-  }
-  return true;
-}
 
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   T TheDet = T_abs(DeterminantMat(TheSpace));
@@ -147,104 +135,49 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   return *opt;
 }
 
-/*
-We want to find the vectors x in Z^n such that
-x TheSpace P = x TheSpace + u MOD
- */
-template <typename T>
-MyMatrix<T> ComputeBasisInvariantSpace(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& TheSpace, T const& eMod)
-{
-  int n = TheSpace.rows();
-  int n_mat = ListMat.size();
-  MyMatrix<T> Equa(2 * n, n_mat * n);
-  for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    MyMatrix<T> const& eMat = ListMat[i_mat];
-    MyMatrix<T> eProd = TheSpace * eMat - TheSpace;
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        Equa(i,j + i_mat * n) = eProd(i,j);
-        if (i == j) {
-          Equa(i + n, j + i_mat * n) = eMod;
-        } else {
-          Equa(i + n, j + i_mat * n) = 0;
-        }
-      }
-    }
-  }
-  MyMatrix<T> NSP = SolutionIntMat(Equa);
-  int n_row = NSP.rows();
-  MyMatrix<T> NSP_red(n,n);
-  for (int i=0; i<n_row; i++)
-    for (int j=0; j<n; j++)
-      NSP_red(i,j) = NSP(i,j);
-  return NSP_red * TheSpace;
-}
-
-
-template <typename T, typename Tmod>
-MyMatrix<Tmod> ModuloReductionMatrix(MyMatrix<T> const &M, T const &TheMod) {
-  int n_row = M.rows();
-  int n_col = M.cols();
-  MyMatrix<Tmod> RetMat(n_row, n_col);
-  for (int i = 0; i < n_row; i++) {
-    for (int j = 0; j < n_col; j++) {
-      T val = ResInt(M(i, j), TheMod);
-      RetMat(i, j) = UniversalScalarConversion<Tmod, T>(val);
-    }
-  }
-  return RetMat;
-}
-
-template <typename T, typename Tmod>
-std::vector<MyMatrix<Tmod>>
-ModuloReductionStdVectorMatrix(std::vector<MyMatrix<T>> const &ListM,
-                               T const &TheMod) {
-  std::vector<MyMatrix<Tmod>> ListRetMat;
-  for (auto &M : ListM)
-    ListRetMat.push_back(ModuloReductionMatrix<T, Tmod>(M, TheMod));
-  return ListRetMat;
-}
-
-template <typename T, typename Tmod>
-MyVector<Tmod> ModuloReductionVector(MyVector<T> const &V, T const &TheMod) {
-  int siz = V.size();
-  MyVector<Tmod> retV(siz);
-  for (int i = 0; i < siz; i++) {
-    T val = ResInt(V(i), TheMod);
-    retV(i) = UniversalScalarConversion<Tmod, T>(val);
-  }
-  return retV;
-}
 
 
 
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::vector<MyVector<Tmod>> FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
-                                           MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<Tmod> const& a,
-                                           Thelper const& helper) {
+                                              MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<T> const& a,
+                                              Thelper const& helper) {
   using Telt = typename Tgroup::Telt;
   int n = TheSpace.rows();
-  size_t n_limit = 30000; // The critical number for the computation
-  size_t pos = 0;
-  auto f_terminate=[&]([[maybe_unused]] MyVector<Tmod> const& a) -> bool {
-    pos++;
-    if (pos == n_limit)
-      return true;
-    return false;
+  std::vector<MyMatrix<Tmod>> ListMatrGenMod =
+    ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
+  auto test_adequateness=[&](MyVector<T> const& x) -> std::optional<std::vector<MyVector<Tmod>>> {
+    MyVector<Tmod> x_mod = ModuloReductionVector<T,Tmod>(x);
+    size_t n_limit = 30000; // The critical number for the computation
+    size_t pos = 0;
+    auto f_terminate=[&]([[maybe_unused]] MyVector<Tmod> const& a) -> bool {
+      pos++;
+      if (pos == n_limit)
+        return true;
+      return false;
+    };
+    Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
+    auto f_prod = [&](MyVector<Tmod> const &eClass, MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
+      MyVector<Tmod> eVect = eElt.transpose() * eClass;
+      return VectorMod(eVect, TheMod_mod);
+    };
+    return OrbitComputation_limit(ListMatrGenMod, x_mod, f_prod, f_terminate);
   };
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
-  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  std::vector<MyMatrix<Tmod>> ListMatrGenMod =
-    ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
-  auto f_prod = [&](MyVector<Tmod> const &eClass, MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
-    MyVector<Tmod> eVect = eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod_mod);
+  auto IsStabilized=[&](MyVector<T> const& V) -> bool {
+    for (auto & eMatrGen : ListMatrGen) {
+      MyVector<T> Vimg = eMatrGen.transpose() * V;
+      bool test = CanTestSolutionIntMat(eCan, Vimg);
+      if (!test) {
+        return false;
+      }
+    }
+    return true;
   };
 
-
-  std::optional<std::vector<MyVector<Tmod>>> opt = OrbitComputation_limit(ListMatrGenMod, a, f_prod, f_terminate);
+  std::optional<std::vector<MyVector<Tmod>>> opt = test_adequateness(a);
   if (opt) {
     return *opt;
   }
@@ -267,9 +200,18 @@ std::vector<MyVector<Tmod>> FindingSmallOrbit(std::vector<MyMatrix<T>> const& Li
       LMatr.push_back(eMat);
     }
     MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
-    
+    for (int i_row=0; i_row<InvBasis.rows(); i_row++) {
+      MyVector<T> V = GetMatrixRow(InvBasis, i_row);
+      if (!IsStabilized(V)) {
+        std::optional<std::vector<MyVector<Tmod>>> opt = test_adequateness(V);
+        if (opt) {
+          return *opt;
+        }
+      }
+    }
   }
-  
+  std::cerr << "If we reached that, then it means that we should allow for larger orbits\n";
+  throw TerminalException{1};
 }
 
 

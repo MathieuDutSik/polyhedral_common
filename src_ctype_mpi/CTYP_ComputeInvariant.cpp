@@ -5,9 +5,8 @@
 #include <boost/mpi.hpp>
 #include <netcdf>
 
-#include "Permutation.h"
 #include "Group.h"
-
+#include "Permutation.h"
 
 //#define DEBUG_INFO
 

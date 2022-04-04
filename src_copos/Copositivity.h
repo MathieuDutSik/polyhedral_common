@@ -7,9 +7,9 @@
 #include "POLY_LinearProgramming.h"
 #include "Temp_Positivity.h"
 #include <string>
-#include <vector>
-#include <utility>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 template <typename T>
 bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
@@ -1000,4 +1000,4 @@ T_CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
   return SelectShortestVector<T, Tint>(eSymmMat, SHV);
 }
 
-#endif  // SRC_COPOS_COPOSITIVITY_H_
+#endif // SRC_COPOS_COPOSITIVITY_H_

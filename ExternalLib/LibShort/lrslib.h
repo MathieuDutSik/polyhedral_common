@@ -212,8 +212,7 @@ long redund_main(
     int argc,
     char *argv[]); /* redund driver, argv[1]=input file, [2]=output file */
 
-lrs_dat *
-lrs_alloc_dat(char *name); /* allocate for lrs_dat structure "name"       */
+lrs_dat *lrs_alloc_dat(char *name); /* allocate for lrs_dat structure "name" */
 lrs_dic *
 lrs_alloc_dic(lrs_dat *Q); /* allocate for lrs_dic structure corr. to Q   */
 
@@ -232,10 +231,9 @@ long lrs_getfirstbasis(lrs_dic **P_p, lrs_dat *Q, lrs_mp_matrix *Lin,
 /* P may get changed if lin. space Lin found    */
 void lrs_getinput(lrs_dic *P, lrs_dat *Q, long *num, long *den, long m, long d);
 /* reads input matrix b A in lrs/cdd format */
-long lrs_getnextbasis(
-    lrs_dic **dict_p, lrs_dat *Q,
-    long prune); /* gets next lrs tree basis, FALSE if none      */
-                 /* backtrack if prune is TRUE                   */
+long lrs_getnextbasis(lrs_dic **dict_p, lrs_dat *Q,
+                      long prune); /* gets next lrs tree basis, FALSE if none */
+/* backtrack if prune is TRUE                   */
 
 long lrs_getsolution(lrs_dic *P, lrs_dat *Q, lrs_mp_vector output, long col);
 long lrs_getray(lrs_dic *P, lrs_dat *Q, long col, long comment,
@@ -249,8 +247,7 @@ long lrs_init(
 void lrs_printcobasis(
     lrs_dic *P, lrs_dat *Q,
     long col); /* print cobasis for column col(verted or ray)  */
-void lrs_printoutput(lrs_dat *Q,
-                     lrs_mp_vector output); /* print output array */
+void lrs_printoutput(lrs_dat *Q, lrs_mp_vector output); /* print output array */
 void lrs_printrow(char name[], lrs_dat *Q, lrs_mp_vector output, long rowd);
 /*print row of A matrix in output[0..rowd]      */
 void lrs_printsol(lrs_dic *P, lrs_dat *Q, long col,
@@ -279,8 +276,8 @@ long lexmin(lrs_dic *P, lrs_dat *Q,
             long col); /* test A to see if current basis is lexmin       */
 void pivot(lrs_dic *P, lrs_dat *Q, long bas,
            long cob); /* Qpivot routine for array A                     */
-long primalfeasible(
-    lrs_dic *P, lrs_dat *Q); /* Do dual pivots to get primal feasibility */
+long primalfeasible(lrs_dic *P,
+                    lrs_dat *Q); /* Do dual pivots to get primal feasibility */
 long ratio(lrs_dic *P, lrs_dat *Q, long col); /* find lex min. ratio */
 long removecobasicindex(lrs_dic *P, lrs_dat *Q,
                         long k); /* remove C[k] from problem */
@@ -290,9 +287,8 @@ long reverse(lrs_dic *P, lrs_dat *Q, long *r,
              long s); /* TRUE if B[*r] C[s] is a reverse lex-pos pivot  */
 long selectpivot(lrs_dic *P, lrs_dat *Q, long *r,
                  long *s); /* select pivot indices using lexicographic rule  */
-long dan_selectpivot(
-    lrs_dic *P, lrs_dat *Q, long *r,
-    long *s); /* select pivot indices using dantzig-lex rule    */
+long dan_selectpivot(lrs_dic *P, lrs_dat *Q, long *r,
+                     long *s); /* select pivot indices using dantzig-lex rule */
 void update(lrs_dic *P, lrs_dat *Q, long *i,
             long *j); /* update the B,C, LOC arrays after a pivot       */
 void updatevolume(lrs_dic *P,
@@ -312,7 +308,7 @@ void pimat(lrs_dic *P, long r, long s, lrs_mp Nt,
            char name[]); /* print the row r col s of A                     */
 
 long readfacets(lrs_dat *Q, long facet[]); /* read and check facet list */
-long readlinearity(lrs_dat *Q);            /* read and check linearity list            */
+long readlinearity(lrs_dat *Q); /* read and check linearity list            */
 void rescaledet(lrs_dic *P, lrs_dat *Q, lrs_mp Vnum,
                 lrs_mp Vden); /* rescale determinant to get its volume */
 void rescalevolume(lrs_dic *P, lrs_dat *Q, lrs_mp Vnum,
@@ -322,13 +318,12 @@ void rescalevolume(lrs_dic *P, lrs_dat *Q, lrs_mp Vnum,
 /* Routines for redundancy checking                */
 /***************************************************/
 
-long checkredund(
-    lrs_dic *P, lrs_dat *Q); /* solve primal lp to check redund of obj fun. */
+long checkredund(lrs_dic *P,
+                 lrs_dat *Q); /* solve primal lp to check redund of obj fun. */
 /* returns TRUE if redundant, else FALSE          */
 
-long checkcobasic(
-    lrs_dic *P, lrs_dat *Q,
-    long index); /* TRUE if index is cobasic and nondegenerate     */
+long checkcobasic(lrs_dic *P, lrs_dat *Q,
+                  long index); /* TRUE if index is cobasic and nondegenerate */
 /* FALSE if basic, or degen. cobasic, where it will get pivoted out  */
 
 long checkindex(lrs_dic *P, lrs_dat *Q,
