@@ -1,5 +1,7 @@
+// clang-format off
 #include "NumberTheory.h"
 #include "Copositivity.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   try {

@@ -1,5 +1,8 @@
+// clang-format off
 #include "NumberTheory.h"
 #include "StrictPositivity.h"
+// clang-format on
+
 int main(int argc, char *argv[]) {
   try {
     if (argc != 2 || argc != 3) {
