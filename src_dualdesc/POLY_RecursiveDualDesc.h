@@ -1551,7 +1551,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   SingletonTime end;
   TheMap["time"] = s(start,end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  std::cerr << "elapsed_seconds=" << elapsed_seconds << " ansBank=" << ansBank
+  std::cerr << "elapsed_seconds=" << s(start,end) << " ansBank=" << ansBank
             << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,

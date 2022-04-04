@@ -60,11 +60,13 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   std::unordered_set<Face> ListDone;
   std::unordered_set<Face> ListUndone;
   ListUndone.insert(GetSingleEntry());
+#ifdef USE_CDDLIB
   auto fInsert = [&](Face const &f) -> void {
     if (ListDone.count(f) != 0)
       return;
     ListUndone.insert(f);
   };
+#endif
   auto ProcessAdjacent = [&](Face const &eF) -> void {
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
@@ -87,10 +89,10 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
         cbased_cdd::RedundancyReductionClarkson(ListInequalities);
     //    std::vector<int> ListIrred =
     //    cdd::RedundancyReductionClarkson(ListInequalities);
-#ifdef DEBUG_HYPERPLANE
+# ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
-#endif
-#ifdef CHECK_HYPERPLANE
+# endif
+# ifdef CHECK_HYPERPLANE
     if (int(ListIrred.size()) < n) {
       std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
       std::cerr << "ListInequalities=\n";
@@ -99,13 +101,13 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
       std::cerr << "ListIrred is too small. It is a bug\n";
       throw TerminalException{1};
     }
-#endif
+# endif
     for (auto &idx : ListIrred) {
       Face newF = eF;
       newF[idx] = 1 - eF[idx];
-#ifdef DEBUG_HYPERPLANE
+# ifdef DEBUG_HYPERPLANE
       std::cerr << "idx=" << idx << " newF=" << StringFace(newF) << "\n";
-#endif
+# endif
       fInsert(newF);
     }
 #else

@@ -364,7 +364,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     PrintVertexParttionInfo(VP, status);
     std::cerr << "test=" << test << "\n";
 #endif
-    if (!test && dur_ref > 1000 && dur_ref > 10 * dur_vp)
+    if (!test)
       break;
   }
   return VP;

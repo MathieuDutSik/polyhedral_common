@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include "Timings.h"
 
 template <typename T, typename Tidx>
 std::vector<Tidx> SortingPerm(std::vector<T> const &ListV) {
