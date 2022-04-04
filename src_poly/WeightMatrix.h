@@ -130,8 +130,7 @@ public:
   template <typename F>
   WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 =
-        std::chrono::system_clock::now();
+    SingletonTime time1;
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
@@ -159,20 +158,14 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 =
-        std::chrono::system_clock::now();
-    std::cerr << "|WeightMatrix(nbRow,f)|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                       time1)
-                     .count()
-              << "\n";
+    SingletonTime time2;
+    std::cerr << "|WeightMatrix(nbRow,f)|=" << ms(time1,time2) << "\n";
 #endif
   }
   template <typename F1, typename F2>
   WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2) : nbRow(_nbRow) {
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time1 =
-        std::chrono::system_clock::now();
+    SingletonTime time1;
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
@@ -201,13 +194,8 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS
-    std::chrono::time_point<std::chrono::system_clock> time2 =
-        std::chrono::system_clock::now();
-    std::cerr << "|WeightMatrix(nbRow,f1,f2)|="
-              << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                       time1)
-                     .count()
-              << "\n";
+    SingletonTime time2;
+    std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << ms(time1,time2) << "\n";
 #endif
   }
   // no assign
@@ -999,8 +987,7 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),
                                Tgr>::type
 GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   const bool use_pairs = true;
   size_t nof_vertices =
@@ -1023,13 +1010,8 @@ GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
                                        Tidx_value, use_pairs>(WMat, f_color,
                                                               f_adj);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|GetGraphFromWeightedMatrix|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << ms(time1,time2) << "\n";
 #endif
   return eGR;
 }

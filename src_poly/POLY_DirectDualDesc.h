@@ -46,8 +46,7 @@ template <typename T>
 vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
                                  std::string const &eCommand) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
@@ -74,13 +73,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     os << "end\n";
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|FileWriting|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|FileWriting|=" << ms(time1,time2) << "\n";
 #endif
   //  std::cerr << "FileO=" << FileO << " created\n";
   //
@@ -90,13 +84,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   std::cerr << "order=" << order << "\n";
   int iret1 = system(order.c_str());
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  std::cerr << "|glrs/ppl/cdd|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time3 -
-                                                                     time2)
-                   .count()
-            << "\n";
+  SingletonTime time3;
+  std::cerr << "|glrs/ppl/cdd|=" << ms(time2,time3) << "\n";
 #endif
   std::cerr << "External program terminated\n";
   if (iret1 != 0) {
@@ -183,13 +172,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     }
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time4 =
-      std::chrono::system_clock::now();
-  std::cerr << "|FileRead|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time4 -
-                                                                     time3)
-                   .count()
-            << "\n";
+  SingletonTime time4;
+  std::cerr << "|FileRead|=" << ms(time3,time4) << "\n";
 #endif
   //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   RemoveFileIfExist(FileI);
@@ -263,17 +247,12 @@ template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                      std::string const &ansProg) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|DualDescription|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
+  SingletonTime time2;
+  std::cerr << "|DualDescription|=" << ms(time1,time2)
             << " |ListIncd|=" << ListIncd.size() << "\n";
 #endif
   if (ListIncd.size() == 0) {
@@ -282,15 +261,11 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time3 =
-      std::chrono::system_clock::now();
-  auto dur32 =
-      std::chrono::duration_cast<std::chrono::microseconds>(time3 - time2)
-          .count();
+  SingletonTime time3;
   std::cerr << "KEY=(OrbitSplitting," << EXT.rows() << "," << EXT.cols() << ","
             << GRP.size() << ","
             << "," << ansProg << "," << ListIncd.size() << ","
-            << TheOutput.size() << ") VALUE=" << dur32 << "\n";
+            << TheOutput.size() << ") VALUE=" << ms(time2,time3) << "\n";
 #endif
   return TheOutput;
 }

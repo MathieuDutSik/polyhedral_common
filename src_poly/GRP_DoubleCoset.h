@@ -217,8 +217,9 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       const vectface &eListBig,
                                       std::string const &method_split,
                                       std::ostream &os) {
-  std::chrono::time_point<std::chrono::system_clock> start =
-      std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   using Tidx_value = uint16_t;
   WeightMatrix<true, int, Tidx_value> WMat;
@@ -244,13 +245,12 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
       eListSma.append(ListListSet);
     }
   }
-  std::chrono::time_point<std::chrono::system_clock> end =
-      std::chrono::system_clock::now();
-  int elapsed_seconds =
-      std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  os << "OrbitSplitting elapsed_seconds=" << elapsed_seconds
+#ifdef TIMINGS
+  SingletonTime time2;
+  os << "OrbitSplitting elapsed_microseconds=" << ms(time1,time2)
      << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
      << "\n";
+#endif
   return eListSma;
 }
 

@@ -270,16 +270,14 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  using Ttime = std::chrono::time_point<std::chrono::system_clock>;
-  Ttime time_vp1 = std::chrono::system_clock::now();
+#ifdef TIMINGS
+  SingletonTime time1;
+#endif
   VertexPartition<Tidx> VP =
       ComputeInitialVertexPartition<T, Tidx>(nbRow, f1, f2, canonically);
-  Ttime time_vp2 = std::chrono::system_clock::now();
-  uint64_t dur_vp =
-      std::chrono::duration_cast<std::chrono::microseconds>(time_vp2 - time_vp1)
-          .count();
 #ifdef TIMINGS
-  std::cerr << "|ComputeInitialVertexPartition|=" << dur_vp << "\n";
+  SingletonTime time2;
+  std::cerr << "|ComputeInitialVertexPartition|=" << ms(time1,time2) << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_SPECIFIC
@@ -353,14 +351,13 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
 #ifdef DEBUG_SPECIFIC
     std::cerr << "iBlock=" << iBlock << "\n";
 #endif
-    Ttime time_ref1 = std::chrono::system_clock::now();
-    bool test = DoRefinement(iBlock);
-    Ttime time_ref2 = std::chrono::system_clock::now();
-    uint64_t dur_ref = std::chrono::duration_cast<std::chrono::microseconds>(
-                           time_ref2 - time_ref1)
-                           .count();
 #ifdef TIMINGS
-    std::cerr << "|DoRefinement|=" << dur_ref << "\n";
+    SingletonTime time_ref1;
+#endif
+    bool test = DoRefinement(iBlock);
+#ifdef TIMINGS
+    SingletonTime time_ref2;
+    std::cerr << "|DoRefinement|=" << ms(time_ref1,time_ref2) << "\n";
 #endif
 #ifdef DEBUG_SPECIFIC
     std::cerr << "After Dorefinement\n";
@@ -408,8 +405,7 @@ template <typename T>
 std::vector<int>
 GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t nbCase = WMVS.ListNbCase.size();
   std::vector<int> ListIdx(nbCase);
@@ -447,13 +443,8 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
     return false;
   });
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|GetOrdering_ListIdx|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|GetOrdering_ListIdx|=" << ms(time1,time2) << "\n";
 #endif
   return ListIdx;
 }
@@ -488,8 +479,7 @@ template <typename T, typename F1, typename F2>
 WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
                                                         F2 f2) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   UNORD_MAP_SPECIFIC<T, int> ValueMap_T;
   std::vector<T> ListWeight;
@@ -555,13 +545,8 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
     ListNbCase[iCase]++;
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|ComputeVertexSignature|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|ComputeVertexSignature|=" << ms(time1,time2) << "\n";
 #endif
   return {nbRow,
           nbWeight,
@@ -574,8 +559,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
 template <typename T>
 void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   // Building the permutation on the weights
   std::pair<std::vector<T>, std::vector<int>> rec_pair =
@@ -606,13 +590,8 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
   }
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|RenormalizeWMVS|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|RenormalizeWMVS|=" << ms(time1,time2) << "\n";
 #endif
 }
 
@@ -620,8 +599,7 @@ template <typename T, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2,
                          WeightMatrixVertexSignatures<T> const &WMVS) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
@@ -864,13 +842,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   }
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|GetDataTraces|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|GetDataTraces|=" << ms(time1,time2) << "\n";
 #endif
   return DT;
 }
@@ -1008,20 +981,14 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t max_globiter = 1000;
   VertexPartition<Tidx> VP =
       ComputeVertexPartition<T, Tidx>(nbRow, f1, f2, canonically, max_globiter);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|ComputeVertexPartition|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|ComputeVertexPartition|=" << ms(time1,time2) << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);

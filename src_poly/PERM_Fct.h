@@ -101,8 +101,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
                                     const std::vector<Tidx> &Vsubset,
                                     const std::vector<Tidx> &Vin) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t nbCol = EXT.cols();
   auto g1 = [&](size_t iRow) -> MyVector<T> {
@@ -115,13 +114,8 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
       FindMatrixTransformationTest<T, Tfield, Tidx>(Vsubset.size(), nbCol, g1,
                                                     g1, Vin);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|FindMatrixTransformationTest_Subset|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|FindMatrixTransformationTest_Subset|=" << ms(time1,time2) << "\n";
 #endif
   return test1;
 }
@@ -133,8 +127,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   if (Vsubset.size() < nbCol)
     return false;
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++)
@@ -144,13 +137,8 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   SelectionRowCol<Tfield> TheSol =
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|IsSubsetFullRank|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|IsSubsetFullRank|=" << ms(time1,time2) << "\n";
 #endif
   return TheSol.TheRank == nbCol;
 }
@@ -160,8 +148,7 @@ std::optional<std::vector<Tidx>>
 RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                MyMatrix<Tfield> const &P) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
@@ -180,13 +167,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
           UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!rec_eSum2.first) {
 #ifdef TIMINGS
-        std::chrono::time_point<std::chrono::system_clock> time2 =
-            std::chrono::system_clock::now();
-        std::cerr << "ESC1 |RepresentVertexPermutationTest|="
-                  << std::chrono::duration_cast<std::chrono::microseconds>(
-                         time2 - time1)
-                         .count()
-                  << "\n";
+        SingletonTime time2;
+        std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
 #endif
         return {}; // We fail because the image is not integral.
       }
@@ -195,13 +177,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     std::pair<bool, size_t> epair = Cont.GetIdx();
     if (!epair.first) {
 #ifdef TIMINGS
-      std::chrono::time_point<std::chrono::system_clock> time2 =
-          std::chrono::system_clock::now();
-      std::cerr << "ESC2 |RepresentVertexPermutationTest|="
-                << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                         time1)
-                       .count()
-                << "\n";
+      SingletonTime time2;
+      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
 #endif
       return {}; // We fail because the image does not belong to EXT2
     }
@@ -217,13 +194,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     throw TerminalException{1};
   }
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|RepresentVertexPermutationTest|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
 #endif
   return V;
 }
@@ -283,8 +255,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
                               const std::vector<Tidx> &Vsubset,
                               const std::vector<Tidx> &PartOrd) {
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time1 =
-      std::chrono::system_clock::now();
+  SingletonTime time1;
 #endif
   size_t nbRow = EXT.rows();
   size_t nbCol = EXT.cols();
@@ -320,13 +291,8 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
               return false;
             });
 #ifdef TIMINGS
-  std::chrono::time_point<std::chrono::system_clock> time2 =
-      std::chrono::system_clock::now();
-  std::cerr << "|ExtendPartialCanonicalization|="
-            << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                     time1)
-                   .count()
-            << "\n";
+  SingletonTime time2;
+  std::cerr << "|ExtendPartialCanonicalization|=" << ms(time1,time2) << "\n";
 #endif
   return ListIdx;
 }
