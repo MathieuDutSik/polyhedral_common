@@ -290,8 +290,8 @@ MyMatrix<T>
 RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T, Telt> const &helper,
                              Telt const &ePerm) {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of RepresentPermutationAsMatrix for "
-               "FiniteMatrixGroupHelper\n";
+  //  std::cerr << "Beginning of RepresentPermutationAsMatrix for "
+  //               "FiniteMatrixGroupHelper\n";
 #endif
   return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
 }
@@ -301,8 +301,8 @@ MyMatrix<T> RepresentPermutationAsMatrix(
     FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper,
     Telt const &ePerm) {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of RepresentPermutationAsMatrix for "
-               "FiniteIsotropicMatrixGroupHelper\n";
+  //  std::cerr << "Beginning of RepresentPermutationAsMatrix for "
+  //               "FiniteIsotropicMatrixGroupHelper\n";
 #endif
   MyMatrix<T> const &Subspace1 = helper.EXTfaithful;
   int n_rows = Subspace1.rows();
@@ -469,10 +469,6 @@ MatrixIntegral_PreImageSubgroup([[maybe_unused]]
 #endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-#ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "  |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
-            << "\n";
-#endif
   std::vector<MyMatrix<T>> ListMatrGen;
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   for (auto &eGen : eGRP.GeneratorsOfGroup()) {
@@ -726,7 +722,9 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   int n = TheSpace.rows();
   auto test_adequateness=[&](MyVector<T> const& x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T,Tmod>(x, TheMod);
-    size_t n_limit = 30000; // The critical number for the computation
+    MyVector<T> x_modT = UniversalVectorConversion<T,Tmod>(x_mod);
+    std::cerr << "x_mod = " << StringVectorGAP(x_modT) << "\n";
+    size_t n_limit = 60000; // The critical number for the computation
     size_t pos = 0;
     auto f_terminate=[&]([[maybe_unused]] MyVector<Tmod> const& a) -> bool {
       pos++;
@@ -770,23 +768,34 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   std::vector<Tgroup> ListGroup = GRP.GetAscendingChain();
   size_t len_group = ListGroup.size();
   for (size_t iGroup=0; iGroup<len_group; iGroup++) {
+    std::cerr << "iGroup=" << iGroup << " |eGRP|=" << ListGroup[iGroup].size() << "\n";
+  }
+  for (size_t iGroup=0; iGroup<len_group; iGroup++) {
     size_t jGroup = len_group - 1 - iGroup;
-    Tgroup fGRP = ListGroup[jGroup];
+    Tgroup const& fGRP = ListGroup[jGroup];
+    std::cerr << "iGroup=" << iGroup << " |fGRP|=" << fGRP.size() << "\n";
     std::vector<MyMatrix<T>> LMatr;
     for (auto & eGen : fGRP.GeneratorsOfGroup()) {
       MyMatrix<T> eMat = RepresentPermutationAsMatrix(helper, eGen);
       LMatr.push_back(eMat);
     }
+    std::cerr << "LMatr built |LMatr|=" << LMatr.size() << "\n";
     MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
+    std::cerr << "InvBasis built |InvBasis|=" << InvBasis.rows() << "\n";
+    size_t n_stabilized = 0;
     for (int i_row=0; i_row<InvBasis.rows(); i_row++) {
       MyVector<T> V = GetMatrixRow(InvBasis, i_row);
       if (!IsStabilized(V)) {
         std::optional<std::vector<MyVector<Tmod>>> opt = test_adequateness(V);
         if (opt) {
+          std::cerr << "|*opt|=" << opt->size() << "\n";
           return *opt;
         }
+      } else {
+        n_stabilized++;
       }
     }
+    std::cerr << "n_stabilized=" << n_stabilized << "\n";
   }
   std::cerr << "If we reached that, then it means that we should allow for larger orbits\n";
   throw TerminalException{1};
@@ -877,11 +886,13 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     }
     const MyVector<T> &V = *opt;
     std::vector<MyVector<Tmod>> O = FindingSmallOrbit<T,Tmod,Tgroup,Thelper>(ListMatrRet, ListMatrRetMod,
-                                                      TheSpace, TheMod, V, helper);
+                                                                             TheSpace, TheMod, V, helper);
+
+    //    MyVector<Tmod> V_mod = ModuloReductionVector<T,Tmod>(V, TheMod);
     //    std::vector<MyVector<Tmod>> O =
-    //        OrbitComputation(ListMatrRetMod, V, TheAction);
+    //      OrbitComputation(ListMatrRetMod, V_mod, TheAction);
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "Timing |O|=" << O.size() << "\n";
+    std::cerr << "Orbit size |O|=" << O.size() << "\n";
 #endif
 #ifdef TIMINGS
     SingletonTime time3;
