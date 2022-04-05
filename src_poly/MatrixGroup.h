@@ -895,10 +895,44 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   // This is the part of the enumeration where we have problems.
   // We have too many vectors to consider whih sinks the algorithm.
   // The difficulty of the work is that we have to deal with globally
-  // invariant sets of vectors. This is difficult to manipulate in practice.
-  // We could look at specific generators, but that is unlikely to
-  // radically change things.
+  // invariant sets of vectors. This is difficult to manipulate in
+  // practice.
   //
+  // Possible strategies:
+  // ---Using the subchains of subgroups. This could force finding
+  //    some subgroup. The strategy sometimes works. But it is
+  //    ultimately not sufficient for resolving the problem.
+  //
+  // ---Reposition the lattices so as to create an environment
+  //    where we can apply Plesken-Souvignier algorithm in order to
+  //    reduce the computational size.
+  //    It requires coding Intersection of subgroups, but that seems
+  //    feasible.
+  //
+  // ---Directly computing the orbit of sublattice does not appear
+  //    feasible since the equality test of sublattice is very high
+  //    and the orbit itself is very large.
+  //
+  // ---The dream would be to identify the critical orbits in order
+  //    to lift the computation. But that seems out of range.
+  //
+  // ---The subspaces themselves correspond to rather small sets.
+  //    Could this be used? It does not seem so since the thing that
+  //    is bad is the size of the group itself.
+  //
+  // ---Could we have some combination of strategies like in good old
+  //    time of GAP and the Delaunay polytopes? Yes, but we could do better
+  //    with each strategy registering prograssive improvement on the
+  //    problem until completely solved.
+  //
+  // For the iterative improvement strategy, what we would need is some
+  // encoding of the partial solution.
+  // ---For the stabilizer, we have two things:
+  //    ---Problem statement: helper + TheSpace
+  //    ---Partial oversolution: ListMatr
+  // ---For the equivalence, we have two things
+  //    ---TheMod, helper1, helper2, TheSpace2
+  //    ---ListMatr1, TheSpace1, MatrEquiv
   // We could look at the quotient. (Z_d)^n / TheSpace and look for point
   // stabilizers Maybe we can translate to classes easily and
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
