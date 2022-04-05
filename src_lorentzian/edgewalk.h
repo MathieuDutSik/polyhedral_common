@@ -2350,12 +2350,13 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
   //
   std::string OptionInitialVertex = "vinberg";
   std::string FileInitialVertex = "irrelevant";
+  bool EarlyTerminationIfNotReflective = false;
   FundDomainVertex<T, Tint> eVert1 =
-      get_initial_vertex<T, Tint>(si1, ApplyReduction, DualDescProg,
-                                  OptionInitialVertex, FileInitialVertex);
+    get_initial_vertex<T, Tint, Tgroup>(si1, ApplyReduction, DualDescProg,
+      EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
   FundDomainVertex<T, Tint> eVert2 =
-      get_initial_vertex<T, Tint>(si2, ApplyReduction, DualDescProg,
-                                  OptionInitialVertex, FileInitialVertex);
+    get_initial_vertex<T, Tint, Tgroup>(si2, ApplyReduction, DualDescProg,
+      EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
   //
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T, Tint, Tgroup>(

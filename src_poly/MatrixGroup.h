@@ -711,6 +711,51 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   return OrbitComputation(ListMatrGenMod, x_mod, f_prod);
 }
 
+
+template<typename T>
+std::vector<MyMatrix<T>> ComputeSpaceOrbit(std::vector<MyMatrix<T>> const& ListMatr, MyMatrix<T> const& TheSpace, T const& TheMod)
+{
+  int n = TheSpace.rows();
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  std::vector<MyMatrix<T>> ListSpace;
+  auto fInsert=[&](MyMatrix<T> const& eSpace) -> void {
+    MyMatrix<T> eSpaceMod = Concatenate(eSpace, ModSpace);
+    CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
+    auto IsEqual=[&](MyMatrix<T> const& fSpace) -> bool {
+      for (int i=0; i<n; i++) {
+        MyVector<T> V = GetMatrixRow(fSpace,i);
+        bool test = CanTestSolutionIntMat(eCan, V);
+        if (!test)
+          return false;
+      }
+      return true;
+    };
+    for (auto & fSpace : ListSpace)
+      if (IsEqual(fSpace))
+        return;
+    ListSpace.push_back(eSpace);
+  };
+  fInsert(TheSpace);
+  size_t pos=0;
+  while(true) {
+    size_t len = ListSpace.size();
+    if (pos == len)
+      break;
+    for (size_t idx=pos; idx<len; idx++) {
+      MyMatrix<T> eSpace = ListSpace[idx];
+      for (auto & eMatr : ListMatr) {
+        MyMatrix<T> eSpaceImg = eSpace * eMatr;
+        fInsert(eSpaceImg);
+      }
+    }
+    std::cerr << "pos=" << pos << " len=" << len << "\n";
+    pos = len;
+  }
+  return ListSpace;
+}
+
+
+
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                std::vector<MyVector<Tmod>>>::type
@@ -723,7 +768,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   auto test_adequateness=[&](MyVector<T> const& x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T,Tmod>(x, TheMod);
     MyVector<T> x_modT = UniversalVectorConversion<T,Tmod>(x_mod);
-    std::cerr << "x_mod = " << StringVectorGAP(x_modT) << "\n";
+    std::cerr << "x_mod = " << StringVectorGAP(x_modT) << " TheMod=" << TheMod << "\n";
     size_t n_limit = 60000; // The critical number for the computation
     size_t pos = 0;
     auto f_terminate=[&]([[maybe_unused]] MyVector<Tmod> const& a) -> bool {
@@ -767,22 +812,22 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   Tgroup GRP(ListPermGen, id_perm);
   std::vector<Tgroup> ListGroup = GRP.GetAscendingChain();
   size_t len_group = ListGroup.size();
+  std::cerr << "len_group=" << len_group << " |GRP|=" << GRP.size() << "\n";
   for (size_t iGroup=0; iGroup<len_group; iGroup++) {
-    std::cerr << "iGroup=" << iGroup << " |eGRP|=" << ListGroup[iGroup].size() << "\n";
+    //    std::cerr << "iGroup=" << iGroup << " |eGRP|=" << ListGroup[iGroup].size() << "\n";
   }
   for (size_t iGroup=0; iGroup<len_group; iGroup++) {
     size_t jGroup = len_group - 1 - iGroup;
     Tgroup const& fGRP = ListGroup[jGroup];
-    std::cerr << "iGroup=" << iGroup << " |fGRP|=" << fGRP.size() << "\n";
+    //    std::cerr << "iGroup=" << iGroup << " |fGRP|=" << fGRP.size() << "\n";
     std::vector<MyMatrix<T>> LMatr;
     for (auto & eGen : fGRP.GeneratorsOfGroup()) {
       MyMatrix<T> eMat = RepresentPermutationAsMatrix(helper, eGen);
       LMatr.push_back(eMat);
     }
-    std::cerr << "LMatr built |LMatr|=" << LMatr.size() << "\n";
+    //    std::cerr << "LMatr built |LMatr|=" << LMatr.size() << "\n";
     MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
-    std::cerr << "InvBasis built |InvBasis|=" << InvBasis.rows() << "\n";
-    size_t n_stabilized = 0;
+    //    std::cerr << "InvBasis built |InvBasis|=" << InvBasis.rows() << "\n";
     for (int i_row=0; i_row<InvBasis.rows(); i_row++) {
       MyVector<T> V = GetMatrixRow(InvBasis, i_row);
       if (!IsStabilized(V)) {
@@ -791,13 +836,21 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
           std::cerr << "|*opt|=" << opt->size() << "\n";
           return *opt;
         }
-      } else {
-        n_stabilized++;
+        std::cerr << "Too large size at i_row=" << i_row << "\n";
       }
     }
-    std::cerr << "n_stabilized=" << n_stabilized << "\n";
   }
+  std::cerr << "TheSpace=\n";
+  WriteMatrix(std::cerr, TheSpace);
+  std::cerr << "|GRP|=" << GRP.size() << " TheMod=" << TheMod << "\n";
   std::cerr << "If we reached that, then it means that we should allow for larger orbits\n";
+
+
+  std::vector<MyMatrix<T>> ListSpace = ComputeSpaceOrbit(ListMatrGen, TheSpace, TheMod);
+  std::cerr << "|ListSpace|=" << ListSpace.size() << "\n";
+
+
+  
   throw TerminalException{1};
 }
 

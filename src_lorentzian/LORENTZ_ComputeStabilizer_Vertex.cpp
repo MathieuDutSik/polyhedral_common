@@ -44,11 +44,13 @@ int main(int argc, char *argv[]) {
     //
     std::string OptionNorms = "all";
     std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
+    SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+    
     CuspidalBank<T, Tint> cusp_bank;
     TheHeuristic<Tint> HeuristicIdealStabEquiv =
         GetHeuristicIdealStabEquiv<Tint>();
     FundDomainVertex_FullInfo<T, Tint, Tgroup> vertFull =
-        gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, G, l_norms, vert,
+        gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, si, vert,
                                                    HeuristicIdealStabEquiv);
     //
     std::vector<MyMatrix<T>> l_mat =
