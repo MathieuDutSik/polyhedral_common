@@ -1386,6 +1386,16 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     l_simple_root = compute_full_root_orbit(re);
   std::cerr << "We write G\n";
   std::cerr << "We write l_norms\n";
+  if (re.is_reflective) {
+    bool val = *re.is_reflective;
+    if (val) {
+      os << "lattice found to be reflective\n";
+    } else {
+      os << "lattice found NOT to be reflective\n";
+    }
+  } else {
+    std::cerr << "No reflectivity computation\n";
+  }
   std::cerr << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
   size_t n_orbit_vertices = re.l_orbit_vertices.size();
   std::cerr << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
