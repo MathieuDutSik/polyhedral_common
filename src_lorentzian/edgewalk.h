@@ -1389,9 +1389,9 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   if (re.is_reflective) {
     bool val = *re.is_reflective;
     if (val) {
-      os << "lattice found to be reflective\n";
+      std::cerr << "lattice found to be reflective\n";
     } else {
-      os << "lattice found NOT to be reflective\n";
+      std::cerr << "lattice found NOT to be reflective\n";
     }
   } else {
     std::cerr << "No reflectivity computation\n";
