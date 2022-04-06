@@ -699,10 +699,10 @@ MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
   First level of optional is for termination or not.
   Second level is for whether we find an equivalence or not.
  */
-template<typename T, Fterminate>
+template<typename T, typename Fterminate>
 std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(std::vector<MyMatrix<T>> const& ListMatrGen, MyMatrix<T> const& eSpace1, MyMatrix<T> const& eSpace2, T const& TheMod, Fterminate const& f_terminate)
 {
-  int n = TheSpace.rows();
+  int n = eSpace1.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   using Tpair = std::pair<MyMatrix<T>,MyMatrix<T>>; // Space , Repr
   std::vector<Tpair> ListPair;
@@ -755,10 +755,10 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(std::vect
 
 
 
-template<typename T, Fterminate>
+template<typename T, typename Fterminate>
 std::optional<std::vector<MyMatrix<T>>> DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const& ListMatrGen, MyMatrix<T> const& eSpace, T const& TheMod, Fterminate const& f_terminate)
 {
-  int n = TheSpace.rows();
+  int n = eSpace.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   using Tpair = std::pair<MyMatrix<T>,MyMatrix<T>>; // Space , Repr
   std::vector<Tpair> ListPair;
@@ -950,18 +950,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
       }
     }
   }
-  std::cerr << "TheSpace=\n";
-  WriteMatrix(std::cerr, TheSpace);
-  std::cerr << "|GRP|=" << GRP.size() << " TheMod=" << TheMod << "\n";
-  std::cerr << "If we reached that, then it means that we should allow for larger orbits\n";
-
-
-  std::vector<MyMatrix<T>> ListSpace = ComputeSpaceOrbit(ListMatrGen, TheSpace, TheMod);
-  std::cerr << "|ListSpace|=" << ListSpace.size() << "\n";
-
-
-  
-  throw TerminalException{1};
+  return {};
 }
 
 
@@ -1082,14 +1071,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       break;
     }
     const MyVector<T> &V = *opt;
-    std::optional<std::vector<MyVector<Tmod>>> opt =
+    std::optional<std::vector<MyVector<Tmod>>> opt_fso =
       FindingSmallOrbit<T,Tmod,Tgroup,Thelper>(ListMatrRet, ListMatrRetMod,
                                                TheSpace, TheMod, V, helper);
-    if (!opt) {
+    if (!opt_fso) {
       std::cerr << "Failed to find some entry\n";
       throw TerminalException{1};
     }
-    std::vector<MyVector<Tmod>> const& O = *opt;
+    std::vector<MyVector<Tmod>> const& O = *opt_fso;
     //    MyVector<Tmod> V_mod = ModuloReductionVector<T,Tmod>(V, TheMod);
     //    std::vector<MyVector<Tmod>> O =
     //      OrbitComputation(ListMatrRetMod, V_mod, TheAction);
