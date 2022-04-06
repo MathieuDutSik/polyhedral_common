@@ -840,6 +840,35 @@ std::optional<std::vector<MyMatrix<T>>> DirectSpaceOrbit_Stabilizer(std::vector<
 }
 
 
+/*
+There are several challenges for this implementation.
+---We need an invariant vector family which we may obtain
+   from a positive definite forms.
+---We have already the one from the Lorentzian family or
+   from the Q_inv. But it is unlikely to be of full rank.
+---What would be the geometry of the space.
+---We need to find a positive definite quadratic form
+   ---We can find an invariant space and from that get
+      a positive definite form.
+   ---
+
+ */
+
+/*
+template <typename T, typename Tmod, typename Tgroup, typename Thelper>
+std::vector<MyMatrix<T>>
+PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
+                                      Thelper const &helper,
+                                      MyMatrix<T> const &TheSpace, T const &TheMod) {
+  
+}
+*/
+
+
+
+
+
+
 
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
@@ -952,13 +981,6 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
   }
   return {};
 }
-
-
-
-
-
-
-
 
 
 // The space must be defining a finite index subgroup of T^n

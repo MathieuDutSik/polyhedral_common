@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
     //
     std::ifstream is2(FileVertex);
     MyVector<T> gen = ReadVector<T>(is2);
+    T norm = gen.dot(G * gen);
+    std::cerr << "norm=" << norm << "\n";
     MyMatrix<Tint> MatRoot = ReadMatrix<Tint>(is2);
     std::cerr << "|MatRoot| = " << MatRoot.rows() << " / " << MatRoot.cols()
               << " rnk=" << RankMat(MatRoot) << "\n";
