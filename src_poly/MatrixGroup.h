@@ -846,12 +846,22 @@ There are several challenges for this implementation.
    from a positive definite forms.
 ---We have already the one from the Lorentzian family or
    from the Q_inv. But it is unlikely to be of full rank.
----What would be the geometry of the space.
----We need to find a positive definite quadratic form
-   ---We can find an invariant space and from that get
-      a positive definite form.
-   ---
-
+---If the configuration is of full rank we win. If not, it is
+   coming from an isotropic vector.
+---From the fact that the group of interest is finite, we know
+   that there exist a positive definite quadratic form that need
+   to be found.
+---From the Qinv, we can get a quadratic form preserving the
+   n-1 dimensional space. That partial quadratic form, then has to be
+   extended.
+   In essence we ask that any isometry preserving the n-1 dimensional
+   space also would preserve that one.
+   We need to obtain that form from computation not involving the
+   group.
+---It is likely we will get a two dimensional space of quadratic forms.
+---Finding the vectors is kind of equivalent to finding 
+---So, we would have to understand the geometry of stabilizing
+   elements.
  */
 
 /*
