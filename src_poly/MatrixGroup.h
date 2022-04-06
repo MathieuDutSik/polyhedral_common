@@ -694,9 +694,156 @@ MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
   return opt;
 }
 
+/*
+  Direct computation of orbits.
+  First level of optional is for termination or not.
+  Second level is for whether we find an equivalence or not.
+ */
+template<typename T, Fterminate>
+std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(std::vector<MyMatrix<T>> const& ListMatrGen, MyMatrix<T> const& eSpace1, MyMatrix<T> const& eSpace2, T const& TheMod, Fterminate const& f_terminate)
+{
+  int n = TheSpace.rows();
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  using Tpair = std::pair<MyMatrix<T>,MyMatrix<T>>; // Space , Repr
+  std::vector<Tpair> ListPair;
+  ListPair.push_back({eSpace1, IdentityMat<T>(n)});
+  if (f_terminate(eSpace1))
+    return {};
+  size_t pos=0;
+  while(true) {
+    size_t len = ListPair.size();
+    if (pos == len)
+      break;
+    for (size_t idx=pos; idx<len; idx++) {
+      Tpair const& ePair = ListPair[idx];
+      for (auto & eMatrGen : ListMatrGen) {
+        MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
+        MyMatrix<T> eReprImg = ePair.second * eMatrGen;
+        //
+        MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
+        CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
+        auto IsEqual=[&](MyMatrix<T> const& fSpace) -> bool {
+          for (int i=0; i<n; i++) {
+            MyVector<T> V = GetMatrixRow(fSpace,i);
+            bool test = CanTestSolutionIntMat(eCan, V);
+            if (!test)
+              return false;
+          }
+          return true;
+        };
+        if (IsEqual(eSpace2)) {
+          std::optional<MyMatrix<T>> opt = eReprImg;
+          return opt;
+        }
+        auto fInsert=[&](Tpair const& ePair) -> bool {
+          for (auto & fPair : ListPair)
+            if (IsEqual(fPair.first))
+              return false;
+          ListPair.push_back(ePair);
+          return f_terminate(ePair.first);
+        };
+        if (fInsert(eSpaceImg))
+          return {};
+      }
+    }
+    std::cerr << "pos=" << pos << " len=" << len << "\n";
+    pos = len;
+  }
+  std::optional<MyMatrix<T>> opt;
+  return opt;
+}
+
+
+
+template<typename T, Fterminate>
+std::optional<std::vector<MyMatrix<T>>> DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const& ListMatrGen, MyMatrix<T> const& eSpace, T const& TheMod, Fterminate const& f_terminate)
+{
+  int n = TheSpace.rows();
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  using Tpair = std::pair<MyMatrix<T>,MyMatrix<T>>; // Space , Repr
+  std::vector<Tpair> ListPair;
+  ListPair.push_back({eSpace, IdentityMat<T>(n)});
+  if (f_terminate(eSpace))
+    return {};
+  size_t pos=0;
+  while(true) {
+    size_t len = ListPair.size();
+    if (pos == len)
+      break;
+    for (size_t idx=pos; idx<len; idx++) {
+      Tpair const& ePair = ListPair[idx];
+      for (auto & eMatrGen : ListMatrGen) {
+        MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
+        MyMatrix<T> eReprImg = ePair.second * eMatrGen;
+        //
+        MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
+        CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
+        auto IsEqual=[&](MyMatrix<T> const& fSpace) -> bool {
+          for (int i=0; i<n; i++) {
+            MyVector<T> V = GetMatrixRow(fSpace,i);
+            bool test = CanTestSolutionIntMat(eCan, V);
+            if (!test)
+              return false;
+          }
+          return true;
+        };
+        auto fInsert=[&](Tpair const& ePair) -> bool {
+          for (auto & fPair : ListPair)
+            if (IsEqual(fPair.first))
+              return false;
+          ListPair.push_back(ePair);
+          return f_terminate(ePair.first);
+        };
+        if (fInsert(eSpaceImg))
+          return {};
+      }
+    }
+    std::cerr << "pos=" << pos << " len=" << len << "\n";
+    pos = len;
+  }
+  //
+  // Orbit is fine, now computing the stabilizer by using the Schreier lemma.
+  //
+  std::unordered_set<MyMatrix<T>> SetGen;
+  size_t nPair = ListPair.size();
+  for (size_t iPair=0; iPair<nPair; iPair++) {
+    Tpair const& ePair = ListPair[iPair];
+    for (auto & eMatrGen : ListMatrGen) {
+      MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
+      MyMatrix<T> eSpaceImgMod = Concatenate(eSpaceImg, ModSpace);
+      CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceImgMod);
+      auto f_equal=[&](MyMatrix<T> const& fSpace) -> bool {
+        for (int i=0; i<n; i++) {
+          MyVector<T> V = GetMatrixRow(fSpace,i);
+          bool test = CanTestSolutionIntMat(eCan, V);
+          if (!test)
+            return false;
+        }
+        return true;
+      };
+      auto f_insert=[&]() -> void {
+        for (size_t jPair=0; jPair<nPair; jPair++) {
+          if (f_equal(ListPair[jPair].first)) {
+            MyMatrix<T> eGenMatr_new = ePair.second * eMatrGen * Inverse(ListPair[jPair].second);
+            if (!IsIdentity(eGenMatr_new))
+              SetGen.insert(eGenMatr_new);
+          }
+        }
+      };
+      f_insert();
+    }
+  }
+  std::vector<MyMatrix<T>> ListGen;
+  for (auto & eGen : SetGen)
+    ListGen.push_back(eGen);
+  return ListGen;
+}
+
+
+
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
-                               std::vector<MyVector<Tmod>>>::type
+                               std::optional<std::vector<MyVector<Tmod>>>>::type
 FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
                   std::vector<MyMatrix<Tmod>> const& ListMatrGenMod,
                   MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<T> const& a,
@@ -712,53 +859,16 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
 }
 
 
-template<typename T>
-std::vector<MyMatrix<T>> ComputeSpaceOrbit(std::vector<MyMatrix<T>> const& ListMatr, MyMatrix<T> const& TheSpace, T const& TheMod)
-{
-  int n = TheSpace.rows();
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  std::vector<MyMatrix<T>> ListSpace;
-  auto fInsert=[&](MyMatrix<T> const& eSpace) -> void {
-    MyMatrix<T> eSpaceMod = Concatenate(eSpace, ModSpace);
-    CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
-    auto IsEqual=[&](MyMatrix<T> const& fSpace) -> bool {
-      for (int i=0; i<n; i++) {
-        MyVector<T> V = GetMatrixRow(fSpace,i);
-        bool test = CanTestSolutionIntMat(eCan, V);
-        if (!test)
-          return false;
-      }
-      return true;
-    };
-    for (auto & fSpace : ListSpace)
-      if (IsEqual(fSpace))
-        return;
-    ListSpace.push_back(eSpace);
-  };
-  fInsert(TheSpace);
-  size_t pos=0;
-  while(true) {
-    size_t len = ListSpace.size();
-    if (pos == len)
-      break;
-    for (size_t idx=pos; idx<len; idx++) {
-      MyMatrix<T> eSpace = ListSpace[idx];
-      for (auto & eMatr : ListMatr) {
-        MyMatrix<T> eSpaceImg = eSpace * eMatr;
-        fInsert(eSpaceImg);
-      }
-    }
-    std::cerr << "pos=" << pos << " len=" << len << "\n";
-    pos = len;
-  }
-  return ListSpace;
-}
+
+
+
+
 
 
 
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               std::vector<MyVector<Tmod>>>::type
+                               std::optional<std::vector<MyVector<Tmod>>>>::type
 FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
                   std::vector<MyMatrix<Tmod>> const& ListMatrGenMod,
                   MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<T> const& a,
@@ -972,9 +1082,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       break;
     }
     const MyVector<T> &V = *opt;
-    std::vector<MyVector<Tmod>> O = FindingSmallOrbit<T,Tmod,Tgroup,Thelper>(ListMatrRet, ListMatrRetMod,
-                                                                             TheSpace, TheMod, V, helper);
-
+    std::optional<std::vector<MyVector<Tmod>>> opt =
+      FindingSmallOrbit<T,Tmod,Tgroup,Thelper>(ListMatrRet, ListMatrRetMod,
+                                               TheSpace, TheMod, V, helper);
+    if (!opt) {
+      std::cerr << "Failed to find some entry\n";
+      throw TerminalException{1};
+    }
+    std::vector<MyVector<Tmod>> const& O = *opt;
     //    MyVector<Tmod> V_mod = ModuloReductionVector<T,Tmod>(V, TheMod);
     //    std::vector<MyVector<Tmod>> O =
     //      OrbitComputation(ListMatrRetMod, V_mod, TheAction);
