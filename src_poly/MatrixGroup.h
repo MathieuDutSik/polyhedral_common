@@ -858,10 +858,31 @@ There are several challenges for this implementation.
    space also would preserve that one.
    We need to obtain that form from computation not involving the
    group.
----It is likely we will get a two dimensional space of quadratic forms.
----Finding the vectors is kind of equivalent to finding 
----So, we would have to understand the geometry of stabilizing
-   elements.
+---If we limit ourselves to the case of just preserving v^{perp} then
+   we do not have finiteness. Let us take the form -x0^2 + x1^2 + x2^2
+   The space v^{perp} is of dimension 2 and the restricted quadratic
+   form is a_u^2, that is positive semidefinite but not definite. As a
+   conclusion the space of isometries is
+   (a_u,a_v) -> (a_u + C a_v, a_v).
+   It is an isometry for all C because v is isotropic. All those isometries
+   are extendible to full isometries of the 3-dim space by the known lemma.
+---Under this infinite group there is a single orbit of isotropic vectors
+   different from v.
+---Now we have the additional finiteness requirement. That additional
+   requirement is encapsulated into the preservation of the Qinv form.
+   The vector v of v^{perp} is preserved. The orthogonal H of v in v^{perp}
+   for Qinv is preserved as well.
+---Now, we need to find another isotropic vector. The previous argument
+   suggests that there is a single vector to be found.
+   We can work with H^{perp} for the Lorentzian scalar product. It is
+   a two dimensional space of signature (1,1). It has two isotropic
+   vectors in it.
+   One vector would be v, the other the one we are looking for.
+---From this we can build a full dimensional vector system and nice
+   quadratic form. And so with the Shortest vector problem, we can
+   get vectors.
+---From ListMatr, we can compute the space of invariant quadratic forms
+   and this can get us good efficient signatures.
  */
 
 /*
