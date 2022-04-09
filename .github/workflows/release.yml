@@ -5,10 +5,15 @@ name: release-flow
 # on: release
 
 on:
-  push:
-    branches:
-    - master
-
+  # Every day at 5 am.
+  schedule:
+    - cron: "0 5 * * *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+#  push:
+#    branches:
+#    - master
 jobs:
   build-linux:
     runs-on: ubuntu-latest
