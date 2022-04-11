@@ -1,13 +1,10 @@
-#ifndef TEMP_SPARSE_MATRIX_SOLVER_GAMPMATLAB
-#define TEMP_SPARSE_MATRIX_SOLVER_GAMPMATLAB
+#ifndef SRC_SPARSE_SOLVER_GAMPMATLAB_H_
+#define SRC_SPARSE_SOLVER_GAMPMATLAB_H_
 
 #include "MAT_Matrix.h"
 #include <vector>
 #include <string>
 #include <algorithm>
-
-//#define DEBUG
-#undef DEBUG
 
 template <typename T> T L1_Norm(MyVector<T> const &b) {
   T eNorm = 0;
@@ -220,7 +217,7 @@ Test Version: please do NOT distribute
     Out.exit = "Data b = 0";
     //    std::cerr << "Return AMP_yall1, case 1\n";
     return Out;
-  };
+  }
   MyVector<T> b1 = b / bmax;
   if (posrho)
     NewRecOpt.rho = NewRecOpt.rho / bmax;
@@ -272,7 +269,7 @@ template <typename T> bool check_orth(RecSparse<T> const &eRecSparse) {
   int n = eRecSparse.n;
   MyVector<T> s1(n);
   for (int i = 0; i < n; i++) {
-    int eVal = rand() % 100;
+    int eVal = rand_r() % 100;
     T eValT = eVal;
     s1(i) = eValT;
   }
@@ -451,7 +448,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
       T optim = std::max(dgap / std::abs(objp), rdnrm / sqrtm);
       if (rho == 0) {
         optim = std::max(optim, rpnrm / bnrm);
-      };
+      }
       Out.optim.push_back(optim);
       size_t siz = x.size();
       MyVector<T> xShift(siz);
@@ -584,8 +581,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
         if (rho > 0) {
           denom += rdmu * eScal;
         }
-        //	std::cerr << "denom=" << denom << "\n";
-        //	std::cerr << "eps=" << eps << "\n";
         stp = eScal / (denom + eps);
         Out.cntAt++;
       }
@@ -651,8 +646,8 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   eRecOpt.delta = 0;
   eRecOpt.mu = 0;
   eRecOpt.nu = 0;
-  eRecOpt.eps = 2.2204e-16; // The value of eps in matlab which is a default
-                            // value (CRAZY Matlab!)
+  eRecOpt.eps = 2.2204e-16;  // The value of eps in matlab which is a default
+                             // value (CRAZY Matlab!)
   eRecOpt.rho = 0;
   eRecOpt.tol = 1e-10;
   eRecOpt.gamma = 0;
@@ -670,4 +665,4 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   return eRecOut.x;
 }
 
-#endif
+#endif  // SRC_SPARSE_SOLVER_GAMPMATLAB_H_

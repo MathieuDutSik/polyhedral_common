@@ -1,5 +1,5 @@
-#ifndef PERFECT_ENUMERATION_H
-#define PERFECT_ENUMERATION_H
+#ifndef SRC_PERFECT_PERFECTENUMERATION_H_
+#define SRC_PERFECT_PERFECTENUMERATION_H_
 
 #include "Namelist.h"
 #include <map>
@@ -30,4 +30,4 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   return {ListBlock, "undefined"};
 }
 
-#endif
+#endif  // SRC_PERFECT_PERFECTENUMERATION_H_

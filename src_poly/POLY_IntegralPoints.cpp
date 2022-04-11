@@ -1,3 +1,4 @@
+// Copyright 2022 <Mathieu Dutour Sikiric>
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
 

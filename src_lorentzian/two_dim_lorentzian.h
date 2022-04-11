@@ -1,5 +1,5 @@
-#ifndef INCLUDE_TWO_DIM_LORENTZIAN_H
-#define INCLUDE_TWO_DIM_LORENTZIAN_H
+#ifndef SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
+#define SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
 
 #include <utility>
 #include <vector>
@@ -634,4 +634,4 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 
-#endif
+#endif  // SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_

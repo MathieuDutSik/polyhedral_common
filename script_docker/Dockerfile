@@ -15,7 +15,7 @@
 FROM ubuntu:21.04
 
 # Dockerfile maintainer (original author: Mathieu Dutour Sikiric)
-MAINTAINER Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+LABEL maintainer="mathieu.dutour@gmail.com"
 
 
 # For unclear reason, all ubuntu installs must start by the following

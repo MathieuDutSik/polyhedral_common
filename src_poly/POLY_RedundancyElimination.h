@@ -175,7 +175,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   MyVector<T> eVect(n_cols);
   auto SetRandomVector = [&]() -> void {
     for (int i_col = 0; i_col < n_cols; i_col++) {
-      int val = -N + rand() % (2 * N + 1);
+      int val = -N + rand_r() % (2 * N + 1);
       eVect(i_col) = val;
     }
   };
@@ -193,7 +193,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     };
     auto GetSmallestValue = [&](int const &h) -> int {
       bool FoundUpper = false;
-      T CurrUpper = -1; // specific value that will stay unused
+      T CurrUpper = -1;  // specific value that will stay unused
       int nbMatch = 0;
       int idxFound = -1;
       for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -309,8 +309,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   auto FastStatusDetermination = [&](int const &i_row) -> bool {
     MyVector<T> V = GetMatrixRow(EXT, i_row);
     if (!tool.is_in_span(V))
-      return false; // We cannot conclude because the vector does not belong to
-                    // the span.
+      // We cannot conclude because the vector does not belong to the span.
+      return false;
     std::vector<int> ListIRow;
     for (int j_row = 0; j_row < n_rows; j_row++)
       if (RedundancyStatus[j_row] == 1)
@@ -335,7 +335,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
           std::cerr << " " << fIdx;
         std::cerr << "\n";
 #endif
-        if (ePair.first) { // The facet is redundant
+        if (ePair.first) {
+          // The facet is redundant
           RedundancyStatus[eIdx] = 0;
           for (auto &fIdx : ePair.second)
             NewCand.insert(fIdx);
@@ -346,8 +347,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
       }
       WorkLIdx.clear();
       for (auto &eIdx : NewCand)
-        if (RedundancyStatus[eIdx] ==
-            -1) // Only those unconcluded need to be considered.
+        // Only those unconcluded need to be considered.
+        if (RedundancyStatus[eIdx] == -1) 
           WorkLIdx.push_back(eIdx);
 #ifdef DEBUG_REDUND
       if (WorkLIdx.size() == 0) {
@@ -361,7 +362,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     bool test = FastStatusDetermination(i_row);
     //    std::cerr << "FastStatusDetermination : i_row=" << i_row << " test="
     //    << test << "\n";
-    if (test) { // The heuristic works. Facet is redundant. We do conclude.
+    if (test) {  // The heuristic works. Facet is redundant. We do conclude.
       RedundancyStatus[i_row] = 0;
       return;
     }
@@ -481,4 +482,4 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   return status_ret;
 }
 
-#endif //  SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
+#endif  //  SRC_POLY_POLY_REDUNDANCYELIMINATION_H_

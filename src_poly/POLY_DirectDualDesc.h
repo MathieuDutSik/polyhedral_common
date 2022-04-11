@@ -74,7 +74,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|FileWriting|=" << ms(time1,time2) << "\n";
+  std::cerr << "|FileWriting|=" << ms(time1, time2) << "\n";
 #endif
   //  std::cerr << "FileO=" << FileO << " created\n";
   //
@@ -85,7 +85,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   int iret1 = system(order.c_str());
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "|glrs/ppl/cdd|=" << ms(time2,time3) << "\n";
+  std::cerr << "|glrs/ppl/cdd|=" << ms(time2, time3) << "\n";
 #endif
   std::cerr << "External program terminated\n";
   if (iret1 != 0) {
@@ -173,7 +173,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   }
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "|FileRead|=" << ms(time3,time4) << "\n";
+  std::cerr << "|FileRead|=" << ms(time3, time4) << "\n";
 #endif
   //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   RemoveFileIfExist(FileI);
@@ -252,7 +252,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|DualDescription|=" << ms(time1,time2)
+  std::cerr << "|DualDescription|=" << ms(time1, time2)
             << " |ListIncd|=" << ListIncd.size() << "\n";
 #endif
   if (ListIncd.size() == 0) {
@@ -262,12 +262,12 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "KEY=(OrbitSplitting," << EXT.rows() << "," << EXT.cols() << ","
-            << GRP.size() << ","
-            << "," << ansProg << "," << ListIncd.size() << ","
+  std::cerr << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
+            << GRP.size()
+            << "_" << ansProg << "_" << ListIncd.size() << "_"
             << TheOutput.size() << ") VALUE=" << ms(time2,time3) << "\n";
 #endif
   return TheOutput;
 }
 
-#endif // SRC_POLY_POLY_DIRECTDUALDESC_H_
+#endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

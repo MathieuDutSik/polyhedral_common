@@ -8,9 +8,6 @@
 #include <vector>
 #include <utility>
 
-//#define DEBUG_HYPERPLANE
-#define CHECK_HYPERPLANE
-
 // The list of region is described by a vector of + and -.
 // If it is + then the encoding is by a 1. Otherwise it is by a 0.
 template <typename T>
@@ -49,7 +46,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
     while (true) {
       MyVector<T> eV(n);
       for (int i = 0; i < n; i++) {
-        int eVal = rand() % 10;
+        int eVal = rand_r() % 10;
         eV(i) = eVal;
       }
       std::pair<bool, Face> ePair = try_vect(eV);
@@ -93,7 +90,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 # endif
 # ifdef CHECK_HYPERPLANE
-    if (int(ListIrred.size()) < n) {
+    if (static_cast<int>(ListIrred.size()) < n) {
       std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
       std::cerr << "ListInequalities=\n";
       WriteMatrix(std::cerr, ListInequalities);
@@ -133,4 +130,4 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   return ListFace;
 }
 
-#endif //  SRC_POLY_POLY_HYPERPLANE_H_
+#endif  //  SRC_POLY_POLY_HYPERPLANE_H_

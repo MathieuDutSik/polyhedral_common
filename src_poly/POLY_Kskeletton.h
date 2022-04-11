@@ -153,7 +153,7 @@ vectface SPAN_face_ExtremeRays_F(Face const &face_fac,
   };
   for (int iExt = 0; iExt < nbExt; iExt++)
     EXTincd[iExt] = get_stat(iExt);
-  int RankFace_fac = RankFace; // expressed from the facets
+  int RankFace_fac = RankFace;
   int RankFace_ext = nbCol - RankFace_fac;
   int RankFaceTarget_ext = RankFace_ext - 1;
   std::vector<size_t> EXTincd_face_vect;
@@ -218,10 +218,10 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(
     //    std::cerr << "|M|=" << M.rows() << " / " << M.cols() << " RankTarget="
     //    << RankTarget << "\n";
     if (M.rows() == RankTarget)
-      return false; // If it were to be a face, it would be a simplicial one. So
-                    // we remove it from consideration
+      return false;  // If it were to be a face, it would be a simplicial one.
+                     // So, we remove it from consideration
     if (M.rows() < RankTarget)
-      return false; // The number of rows cannot match the rank, so reject
+      return false;  // The number of rows cannot match the rank, so reject
     return RankMat(M) == RankTarget;
   };
   return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC,
@@ -532,7 +532,7 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const &TheGRP) {
   std::vector<std::vector<int>> RetList;
   for (auto eOrb : vvO) {
     boost::dynamic_bitset<>::size_type MinVal = eOrb.find_first();
-    std::vector<int> nList{int(MinVal)};
+    std::vector<int> nList{static_cast<int>(MinVal)};
     RetList.push_back(nList);
   }
   return RetList;
@@ -697,4 +697,4 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   OutputFaces(TheOutput, OUTfile, OutFormat);
 }
 
-#endif //  SRC_POLY_POLY_KSKELETTON_H_
+#endif  //  SRC_POLY_POLY_KSKELETTON_H_

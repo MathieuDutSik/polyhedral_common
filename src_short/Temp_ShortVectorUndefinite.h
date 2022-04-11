@@ -1,5 +1,5 @@
-#ifndef TEMP_SHORT_VECTOR_Undefinite_H
-#define TEMP_SHORT_VECTOR_Undefinite_H
+#ifndef SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_
+#define SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_
 
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
@@ -121,4 +121,4 @@ MyVector<Tint> GetShortVector_unlimited_float(MyMatrix<T> const &M,
 #endif
 }
 
-#endif
+#endif  // SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_

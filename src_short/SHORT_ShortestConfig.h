@@ -1,5 +1,5 @@
-#ifndef INCLUDE_SHORTEST_CONFIG
-#define INCLUDE_SHORTEST_CONFIG
+#ifndef SRC_SHORT_SHORT_SHORTESTCONFIG_H_
+#define SRC_SHORT_SHORT_SHORTESTCONFIG_H_
 
 #include "COMB_Combinatorics.h"
 #include "InvariantVectorFamily.h"
@@ -1203,4 +1203,4 @@ SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV) {
   return {std::move(ListRet), std::move(ListIdx)};
 }
 
-#endif
+#endif  // SRC_SHORT_SHORT_SHORTESTCONFIG_H_

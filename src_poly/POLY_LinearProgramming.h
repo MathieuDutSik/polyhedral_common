@@ -240,7 +240,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           std::cerr << "Obtained vertex solution is not valid\n";
           std::cerr << "Please debug. Before calling TerminalEnding\n";
           throw TerminalException{1};
-          //	TerminalEnding();
+          // TerminalEnding();
         }
         if (eSum == 0)
           eFace[iRow] = 1;
@@ -538,8 +538,8 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
   vectface ListFace(EXT.rows());
   while (true) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
-      int a = rand();
-      int b = rand();
+      int a = rand_r();
+      int b = rand_r();
       T eVal = a - b;
       eVect(iCol) = eVal;
     }
@@ -687,12 +687,8 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
       //      eSol.rankDirectSol << " TheDim=" << TheDim << "\n";
       if (eSol.PrimalDefined && eSol.DualDefined &&
           eSol.rankDirectSol == TheDim - 1) {
-        //	std::cerr << "We pass the first test\n";
         Face eFace = eSol.eFace;
-        //	std::cerr << "eFace=";
-        //	WriteFace(std::cerr, eFace);
         if (eFace[nbRow] == 0) {
-          //	  std::cerr << "We pass the second test\n";
           SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT);
           std::vector<int> ListColSelect = eSelect.ListColSelect;
           MyMatrix<T> EXTred = SelectColumn(EXT, ListColSelect);

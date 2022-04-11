@@ -102,11 +102,18 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     MapVertexBlock[iRow] = get_T_idx(val);
   }
   if (canonically) {
+    std::cerr << "canonically reordering\n";
     std::pair<std::vector<T>, std::vector<int>> rec_pair =
         GetReorderingInfoWeight(ListWeight);
     const std::vector<int> &g = rec_pair.second;
+    std::cerr << "|g|=" << g.size() << "\n";
+    std::cerr << "|MapVertexBlock|=" << MapVertexBlock.size() << "\n";
+    std::cerr << "nbRow=" << nbRow << "\n";
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      std::cerr << "iRow=" << iRow << "\n";
+      std::cerr << "MapVertexBlock[iRow]=" << MapVertexBlock[iRow] << "\n";
       int NewIdx = g[MapVertexBlock[iRow]];
+      std::cerr << "NewIdx=" << NewIdx << "\n";
       MapVertexBlock[iRow] = NewIdx;
     }
   }
@@ -1085,13 +1092,15 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       for (size_t u = 0; u < ListEnt.size(); u++)
         std::cerr << int(f_incorr[u]);
       std::cerr << "\n";
-
+      std::cerr << "|ListEnt|=" << ListEnt.size() << "\n";
       for (size_t u = 0; u < ListEnt.size(); u++) {
         size_t pos = ListEnt[u];
         if (f_incorr[u] == 0)
           f_covered[pos] = 1;
       }
+      std::cerr << "Before IsCorrect test IsCorrect=" << IsCorrect << "\n";
       if (IsCorrect) {
+        std::cerr << "Before fproc3\n";
         return fproc3(CurrentListIdx, ret1, LGen);
       }
     }

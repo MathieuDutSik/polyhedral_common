@@ -436,7 +436,7 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(
     }
   for (int i = 1; i <= m; i++) {
     std::vector<int> ind{0};
-    std::vector<double> val{double(0)};
+    std::vector<double> val{static_cast<double>(0)};
     if (i > 1) {
       for (auto &ePair : LLPairIneq[i - 2]) {
         ind.push_back(ePair.iCol + 1);
@@ -447,7 +447,7 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(
     glp_set_mat_row(prob, i, len, ind.data(), val.data());
   }
   glp_set_obj_dir(prob, GLP_MIN);
-  glp_set_obj_coef(prob, 0, double(0));
+  glp_set_obj_coef(prob, 0, static_cast<double>(0));
   for (int i = 1; i <= nbVar; i++) {
     double eVal = ToBeMinimized(i - 1);
     glp_set_obj_coef(prob, i, eVal);
@@ -458,7 +458,7 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(
   eSmcp.r_test = GLP_RT_STD;
   glp_simplex(prob, &eSmcp);
   if (glp_get_status(prob) != GLP_OPT) {
-    return {false, double(0), nbRow, nbCol, {}, {}, ColumnStatus, RowStatus};
+    return {false, static_cast<double>(0), nbRow, nbCol, {}, {}, ColumnStatus, RowStatus};
   }
 
   std::cerr << "DirectSolution, step 1\n";
@@ -610,4 +610,4 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
       RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
 }
 
-#endif //  SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
+#endif  //  SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_

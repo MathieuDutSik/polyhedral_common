@@ -161,20 +161,20 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
   boost::dynamic_bitset<>::size_type aRow = eList.find_first();
   std::vector<int> retList(nb);
   for (int i = 0; i < nb; i++) {
-    retList[i] = int(aRow);
+    retList[i] = static_cast<int>(aRow);
     aRow = eList.find_next(aRow);
   }
   return retList;
 }
 
 template <typename T> struct FlippingFramework {
-private:
+ private:
   MyMatrix<T> EXT_red;
   Face OneInc;
   std::vector<int> OneInc_V;
   std::vector<T> ListInvScal;
 
-public:
+ public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
       : OneInc(_OneInc) {
@@ -508,7 +508,7 @@ ComputeEngelPolyhedralSubordination(MyMatrix<T> const &EXT,
       std::vector<int> eList(nb);
       boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
       for (int i = 0; i < nb; i++) {
-        eList[i] = int(aRow);
+        eList[i] = static_cast<int>(aRow);
         aRow = eFace.find_next(aRow);
       }
       std::unordered_set<Face> ListSubFace;
@@ -612,4 +612,4 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
-#endif //  SRC_POLY_POLY_POLYTOPEFCT_H_
+#endif  //  SRC_POLY_POLY_POLYTOPEFCT_H_
