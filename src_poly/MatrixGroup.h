@@ -904,12 +904,12 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 template<typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
                                std::optional<std::vector<MyVector<Tmod>>>>::type
-FindingSmallOrbit(std::vector<MyMatrix<T>> const& ListMatrGen,
+FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const& ListMatrGen,
                   std::vector<MyMatrix<Tmod>> const& ListMatrGenMod,
-                  MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<T> const& a,
-                  Thelper const& helper) {
+                  [[maybe_unused]] MyMatrix<T> const& TheSpace, T const& TheMod, MyVector<T> const& x,
+                  [[maybe_unused]] Thelper const& helper) {
   // No determining EXT, hard to find clever ideas.
-  MyVector<Tmod> x_mod = ModuloReductionVector<T,Tmod>(a, TheMod);
+  MyVector<Tmod> x_mod = ModuloReductionVector<T,Tmod>(x, TheMod);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
   auto f_prod = [&](MyVector<Tmod> const &eClass, MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
