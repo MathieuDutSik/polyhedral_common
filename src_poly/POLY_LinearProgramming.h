@@ -538,8 +538,8 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
   vectface ListFace(EXT.rows());
   while (true) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
-      int a = rand_r();
-      int b = rand_r();
+      int a = rand();
+      int b = rand();
       T eVal = a - b;
       eVect(iCol) = eVal;
     }
