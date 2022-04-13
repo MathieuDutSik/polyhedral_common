@@ -583,18 +583,31 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
   auto f4 = [&](const std::vector<Tidx> &Vsubset, const std::vector<Tidx> &Vin,
                 const std::vector<std::vector<Tidx>> &ListBlocks)
       -> DataMapping<Tidx> {
+#ifdef DEBUG_TEMP_POLYTOPE_EQUI_STAB
+    std::cerr << "Before FindMatrixTransformationTest_Subset\n";
+#endif
     std::optional<MyMatrix<Tfield>> test1 =
         FindMatrixTransformationTest_Subset<T, Tfield, Tidx>(TheEXT, Vsubset,
                                                              Vin);
+#ifdef DEBUG_TEMP_POLYTOPE_EQUI_STAB
+    std::cerr << "After test1=" << test1.has_value() << "\n";
+#endif
     Face block_status(ListBlocks.size());
     if (!test1) {
+#ifdef DEBUG_TEMP_POLYTOPE_EQUI_STAB
+      std::cerr << "f4 exit false 1\n";
+#endif
       return {false, block_status, {}};
     }
     const MyMatrix<Tfield> &P = *test1;
     for (auto &eMat_F : ListMat_F) {
       MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
-      if (!TestEqualityMatrix(eProd, eMat_F))
+      if (!TestEqualityMatrix(eProd, eMat_F)) {
+#ifdef DEBUG_TEMP_POLYTOPE_EQUI_STAB
+        std::cerr << "f4 exit false 2\n";
+#endif
         return {false, block_status, {}};
+      }
     }
     return RepresentVertexPermutationTest_Blocks<T, Tfield, Tidx>(
         TheEXT, *test1, Vsubset, Vin, ListBlocks);

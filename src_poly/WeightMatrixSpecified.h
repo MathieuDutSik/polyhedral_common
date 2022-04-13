@@ -1011,13 +1011,13 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   size_t idx = 0;
   auto set_status_case = [&]() -> void {
     std::cerr << "set_status_case, begin\n";
-    std::cerr << "nbCase=" << nbCase << " |StatusCase|=" << StatusCase.size() << "\n";
+    //    std::cerr << "nbCase=" << nbCase << " |StatusCase|=" << StatusCase.size() << "\n";
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       StatusCase[iCase] = 0;
-    std::cerr << "idx=" << idx << " |ListIdx|=" << ListIdx.size() << "\n";
+    //    std::cerr << "idx=" << idx << " |ListIdx|=" << ListIdx.size() << "\n";
     for (size_t u = 0; u < idx; u++) {
       size_t pos = ListIdx[u];
-      std::cerr << "u=" << u << " pos=" << pos << " |f_covered|=" << f_covered.size() << "\n";
+      //      std::cerr << "u=" << u << " pos=" << pos << " |f_covered|=" << f_covered.size() << "\n";
       if (f_covered[pos] == 0)
         StatusCase[ListIdx[u]] = 1;
     }

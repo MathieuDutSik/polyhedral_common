@@ -67,7 +67,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   MyMatrix<Tfield> M1_field(eSelect.TheRank, nbCol);
   for (size_t iRow = 0; iRow < eSelect.TheRank; iRow++) {
     size_t jRow = eSelect.ListRowSelect[iRow];
-    MyVector<T> V = f1(jRow);
+    const MyVector<T>& V = f1(jRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       M1_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
@@ -75,7 +75,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   MyMatrix<Tfield> M2_field(eSelect.TheRank, nbCol);
   for (size_t iRow = 0; iRow < eSelect.TheRank; iRow++) {
     size_t jRow = eList[eSelect.ListRowSelect[iRow]];
-    MyVector<T> V = f2(jRow);
+    const MyVector<T>& V = f2(jRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       M2_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
@@ -105,8 +105,18 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
   SingletonTime time1;
 #endif
   size_t nbCol = EXT.cols();
-  auto g1 = [&](size_t iRow) -> MyVector<T> {
-    MyVector<T> V(nbCol);
+#ifdef DEBUG_PERM_FCT
+  std::cerr << "Vsubset =";
+  for (auto & eVal : Vsubset)
+    std::cerr << " " << int(eVal);
+  std::cerr << "\n";
+  std::cerr << "Vin =";
+  for (auto & eVal : Vin)
+    std::cerr << " " << int(eVal);
+  std::cerr << "\n";
+#endif
+  MyVector<T> V(nbCol);
+  auto g1 = [&](size_t iRow) -> const MyVector<T>& {
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       V(iCol) = EXT(Vsubset[iRow], iCol);
     return V;
@@ -376,7 +386,7 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
   Telt ePerm1 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow1));
   Telt ePerm2 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow2));
   Telt ePermRet = (~ePerm1) * ePerm2;
-#ifdef DEBUG
+#ifdef DEBUG_PERM_FCT
   for (size_t iVect = 0; iVect < nbVect; iVect++) {
     size_t jVect = ePermRet.at(iVect);
     if (EXTrow2[jVect] != EXTrow1[iVect]) {
