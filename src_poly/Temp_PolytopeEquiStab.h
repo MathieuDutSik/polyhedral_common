@@ -517,12 +517,18 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f) {
   using Tfield = typename overlying_field<T>::field_type;
-#ifdef DEBUG
+#ifdef SANITY_CHECK
   for (auto &eMat : ListMat) {
     if (!IsSymmetricMatrix(eMat)) {
       std::cerr << "The matrix eMat should be symmetric\n";
       throw TerminalException{1};
     }
+  }
+  int n_cols = TheEXT.cols();
+  int rnk = RankMat(TheEXT);
+  if (n_cols != rnk) {
+    std::cerr << "Error in FCT_ListMat_Vdiag n_cols=" << n_cols << " rnk=" << rnk << "\n";
+    throw TerminalException{1};
   }
 #endif
   size_t nbRow = TheEXT.rows();
