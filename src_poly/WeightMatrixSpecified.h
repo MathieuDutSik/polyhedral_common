@@ -287,7 +287,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
   std::cerr << "|ComputeInitialVertexPartition|=" << ms(time1,time2) << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::cerr << "After ComputeInitialVertexPartition\n";
   PrintVertexParttionInfo(VP, status);
 #endif
@@ -316,7 +316,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     // First looking at the diagonal
     bool test1 = RefineSpecificVertexPartition<T, Tidx>(VP, iBlock, iBlock, f1,
                                                         f2, canonically);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "iBlock=" << iBlock << " test1=" << test1 << "\n";
 #endif
     if (test1) {
@@ -324,7 +324,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
       size_t len2 = status.size();
       for (size_t i = len2; i < len1; i++)
         status.push_back(0);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
       std::cerr << "len1=" << len1 << " len2=" << len2 << "\n";
 #endif
       return true;
@@ -335,7 +335,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
       if (iBlock != jBlock) {
         bool test2 = RefineSpecificVertexPartition<T, Tidx>(
             VP, jBlock, iBlock, f1, f2, canonically);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
         std::cerr << "iBlock=" << iBlock << " jBlock=" << jBlock
                   << " test2=" << test2 << "\n";
 #endif
@@ -355,7 +355,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     int iBlock = GetPreferable_iBlock();
     if (iBlock == -1)
       break;
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "iBlock=" << iBlock << "\n";
 #endif
 #ifdef TIMINGS
@@ -366,7 +366,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     SingletonTime time_ref2;
     std::cerr << "|DoRefinement|=" << ms(time_ref1,time_ref2) << "\n";
 #endif
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "After Dorefinement\n";
     PrintVertexParttionInfo(VP, status);
     std::cerr << "test=" << test << "\n";
@@ -620,7 +620,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   size_t hS = Pairs_GetNeededN(nbMult);
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = nbVert * hS;
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::cerr << "nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow
             << " nbVert=" << nbVert << " nbVertTot=" << nbVertTot << "\n";
 #endif
@@ -769,14 +769,14 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     DT.ptn[pos] = 0;
   }
   //
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::vector<int> ListDegExpe1(nbVertTot, 0);
   std::vector<int> ListDegExpe2(nbVertTot, 0);
 #endif
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
     DT.sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     ListDegExpe1[iVert]++;
     ListDegExpe2[jVert]++;
 #endif
@@ -824,7 +824,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
         }
     }
   }
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   int sum_adj = 0;
   int nb_error = 0;
   for (size_t iVert = 0; iVert < nbVertTot; iVert++) {
@@ -984,7 +984,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
 #ifdef TIMINGS
@@ -999,7 +999,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     int idx = ListIdx[iCase];
     std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx
@@ -1010,13 +1010,18 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   std::vector<int> StatusCase(nbCase);
   size_t idx = 0;
   auto set_status_case = [&]() -> void {
+    std::cerr << "set_status_case, begin\n";
+    std::cerr << "nbCase=" << nbCase << " |StatusCase|=" << StatusCase.size() << "\n";
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       StatusCase[iCase] = 0;
+    std::cerr << "idx=" << idx << " |ListIdx|=" << ListIdx.size() << "\n";
     for (size_t u = 0; u < idx; u++) {
       size_t pos = ListIdx[u];
+      std::cerr << "u=" << u << " pos=" << pos << " |f_covered|=" << f_covered.size() << "\n";
       if (f_covered[pos] == 0)
         StatusCase[ListIdx[u]] = 1;
     }
+    std::cerr << "set_status_case, end\n";
   };
   auto sum_status_case = [&]() -> int {
     int sum = 0;
@@ -1028,12 +1033,12 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     int sum_prev = sum_status_case();
     while (true) {
       idx++;
+      if (idx == nbCase+1)
+        return false;
       set_status_case();
       int sum_new = sum_status_case();
       if (sum_new > sum_prev)
         return true;
-      if (idx == nbCase)
-        return false;
     }
   };
   while (true) {
@@ -1047,7 +1052,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
         CurrentListIdx.push_back(iRow);
     }
     size_t nbRow_res = CurrentListIdx.size();
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
 #endif
     //
@@ -1063,7 +1068,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       auto f2_res = [&](size_t jRow) -> T { return f2(CurrentListIdx[jRow]); };
       WeightMatrixVertexSignatures<T> WMVS_res =
           ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
       std::cerr << "WMVS_res=\n";
       PrintWMVS(std::cerr, WMVS_res);
 #endif
@@ -1084,9 +1089,10 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
             f_incorr[u] = 1;
           n_incorr += f_incorr[u];
         }
-        if (n_incorr == ListEnt.size() &&
-            n_incorr > 0) // All entries are incorrect. So, no need to continue
+        if (n_incorr == ListEnt.size() && n_incorr > 0) {
+          // All entries are incorrect. So, no need to continue
           break;
+        }
       }
       std::cerr << "f_incorr=";
       for (size_t u = 0; u < ListEnt.size(); u++)
@@ -1120,7 +1126,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
   using Tret1 = std::vector<std::vector<Tidx>>;
@@ -1132,7 +1138,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
                                                              f2_res);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : |ListGen|="
               << ListGen.size() << "\n";
 #endif
@@ -1141,7 +1147,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
   auto fproc3 = [&]([[maybe_unused]] const std::vector<Tidx> &Vsubset,
                     [[maybe_unused]] const Tret1 &ret1,
                     const std::vector<std::vector<Tidx>> &LGenFinal) -> Tret3 {
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : |LGenFinal|="
               << LGenFinal.size() << "\n";
 #endif
@@ -1172,7 +1178,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
   std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
 #endif
   using Tret1 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
@@ -1184,7 +1190,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
                                                             f2_res);
   };
   auto fproc2 = [&](const Tret1 &ePair) -> const Tret2 & {
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : |ListGen|="
               << ePair.second.size() << "\n";
 #endif
@@ -1192,7 +1198,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
   };
   auto fproc3 = [&](const std::vector<Tidx> &Vsubset, const Tret1 &ePair,
                     const std::vector<std::vector<Tidx>> &LGenFinal) -> Tret3 {
-#ifdef DEBUG_SPECIFIC
+#ifdef DEBUG_SPECIFIED
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : |LGenFinal|="
               << LGenFinal.size() << "\n";
 #endif
