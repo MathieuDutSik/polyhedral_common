@@ -55,15 +55,29 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   static_assert(is_ring_field<Tfield>::value,
                 "Requires Tfield to be a field in DivideVector");
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
-    MyVector<T> V = f1(iRow);
+    const MyVector<T>& V = f1(iRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       M(eRank, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
     }
   };
   SelectionRowCol<Tfield> eSelect =
       TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
-  if (eSelect.TheRank != nbCol)
+  if (eSelect.TheRank != nbCol) {
+#ifdef DEBUG_PERM_FCT
+    std::cerr << "FindMatrixTransformationTest, exit false 1\n";
+#endif
     return {};
+  }
+#ifdef DEBUG_PERM_FCT
+  std::cerr << "ListRowSelect =";
+  for (auto & eVal : eSelect.ListRowSelect)
+    std::cerr << " " << eVal;
+  std::cerr << "\n";
+  std::cerr << "Img(ListRowSelect) =";
+  for (auto & eVal : eSelect.ListRowSelect)
+    std::cerr << " " << eList[eVal];
+  std::cerr << "\n";
+#endif
   MyMatrix<Tfield> M1_field(eSelect.TheRank, nbCol);
   for (size_t iRow = 0; iRow < eSelect.TheRank; iRow++) {
     size_t jRow = eSelect.ListRowSelect[iRow];
@@ -80,19 +94,82 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
       M2_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
+#ifdef DEBUG_PERM_FCT
+  // Coef EqMat(0,1) = sum_j M1inv_field(0,j) * M2_field(j,1)
+  Tfield eSP = 0;
+  for (int j=0; j<int(nbCol); j++) {
+    eSP += M1inv_field(0,j) * M2_field(j,1);
+  }
+  std::cerr << "eSP=" << eSP << "\n";
+  std::cerr << "M1_field=\n";
+  WriteMatrix(std::cerr, M1_field);
+  std::cerr << "M1inv_field=\n";
+  WriteMatrix(std::cerr, M1inv_field);
+  std::cerr << "M2_field=\n";
+  WriteMatrix(std::cerr, M2_field);
+  std::cerr << "EqMat=\n";
+  WriteMatrix(std::cerr, EqMat);
+#endif
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     size_t iRowImg = eList[iRow];
+#ifdef DEBUG_PERM_FCT
+    std::cerr << "iRow=" << iRow << " iRowImg=" << iRowImg << "\n";
+#endif
+    // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
-    MyVector<T> V2 = f2(iRowImg);
+    const MyVector<T>& V2 = f2(iRowImg);
+#ifdef DEBUG_PERM_FCT
+    std::cerr << "V1      =";
+    WriteVector(std::cerr, V1);
+    std::cerr << "V2      =";
+    WriteVector(std::cerr, V2);
+    //
+    MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield,T>(V1);
+    std::cerr << "V1_T    =";
+    WriteVector(std::cerr, V1_T);
+    //
+    MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield,T>(V2);
+    std::cerr << "V2_T    =";
+    WriteVector(std::cerr, V2_T);
+    //
+    MyVector<Tfield> V1_img = EqMat.transpose() * V1_T;
+    std::cerr << "V1_img  =";
+    WriteVector(std::cerr, V1_img);
+    //
+    MyVector<Tfield> V1_expr = M1inv_field.transpose() * V1_T;
+    std::cerr << "V1_expr =";
+    WriteVector(std::cerr, V1_expr);
+    //
+    MyVector<Tfield> V1_imgB = M2_field.transpose() * V1_expr;
+    std::cerr << "V1_imgB =";
+    WriteVector(std::cerr, V1_imgB);
+    //
+    MyVector<Tfield> V1_imgC = M2_field.transpose() * M1inv_field.transpose() * V1_T;
+    std::cerr << "V1_imgC =";
+    WriteVector(std::cerr, V1_imgC);
+    //
+    MyMatrix<Tfield> eProd = M1inv_field * M2_field;
+    MyVector<Tfield> V1_imgD = eProd.transpose() * V1_T;
+    std::cerr << "V1_imgD =";
+    WriteVector(std::cerr, V1_imgD);
+#endif
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       Tfield eSum = -V2(iCol);
       for (size_t jRow = 0; jRow < nbCol; jRow++)
         eSum += EqMat(jRow, iCol) * V1(jRow);
-      if (eSum != 0)
+      if (eSum != 0) {
+#ifdef DEBUG_PERM_FCT
+        std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol << "\n";
+        std::cerr << "FindMatrixTransformationTest, exit false 2\n";
+#endif
         return {};
+      }
     }
   }
+#ifdef DEBUG_PERM_FCT
+  std::cerr << "FindMatrixTransformationTest, exit true\n";
+#endif
   return EqMat;
 }
 
