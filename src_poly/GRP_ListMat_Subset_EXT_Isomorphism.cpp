@@ -22,16 +22,23 @@ int main(int argc, char *argv[]) {
     std::ifstream is(argv[1]);
     int nbMat, len;
     is >> nbMat;
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 1 nbMat=" << nbMat << "\n";
     //
     std::vector<MyMatrix<T>> ListMat1;
     for (int iMat = 0; iMat < nbMat; iMat++) {
       MyMatrix<T> eMat = ReadMatrix<T>(is);
       ListMat1.push_back(eMat);
     }
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 2 |ListMat1|=" << ListMat1.size() << "\n";
     MyMatrix<T> EXT1 = ReadMatrix<T>(is);
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 3 |EXT1|=" << EXT1.rows() << " / " << EXT1.cols() << "\n";
+    for (auto & eMat1 : ListMat1) {
+      if (!IsSymmetricMatrix(eMat1)) {
+        std::cerr << "The matrix should be symmetric\n";
+        throw TerminalException{1};
+      }
+      if (eMat1.cols() != EXT1.cols()) {
+        std::cerr << "|eMat1|=" << eMat1.cols() << " |EXT1|=" << EXT1.cols() << "\n";
+        throw TerminalException{1};
+      }
+    }
     int n_row1 = EXT1.rows();
     is >> len;
     if (len != n_row1) {
@@ -44,19 +51,24 @@ int main(int argc, char *argv[]) {
       is >> val;
       Vdiag1[i] = val;
     }
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 4 |Vdiag1|=" << Vdiag1.size() << "\n";
     //
     is >> nbMat;
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 4.1 nbMat=" << nbMat << "\n";
     std::vector<MyMatrix<T>> ListMat2;
     for (int iMat = 0; iMat < nbMat; iMat++) {
       MyMatrix<T> eMat = ReadMatrix<T>(is);
-      std::cerr << "iMat=" << iMat << " |eMat|=" << eMat.rows() << " / " << eMat.cols() << "\n";
       ListMat2.push_back(eMat);
     }
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 5 |ListMat2|=" << ListMat2.size() << "\n";
     MyMatrix<T> EXT2 = ReadMatrix<T>(is);
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 6 |EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << "\n";
+    for (auto & eMat2 : ListMat2) {
+      if (!IsSymmetricMatrix(eMat2)) {
+        std::cerr << "The matrix should be symmetric\n";
+        throw TerminalException{1};
+      }
+      if (eMat2.cols() != EXT2.cols()) {
+        std::cerr << "|eMat2|=" << eMat2.cols() << " |EXT2|=" << EXT2.cols() << "\n";
+        throw TerminalException{1};
+      }
+    }
     int n_row2 = EXT2.rows();
     is >> len;
     if (len != n_row2) {
@@ -69,7 +81,6 @@ int main(int argc, char *argv[]) {
       is >> val;
       Vdiag2[i] = val;
     }
-    std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism, step 7 |Vdiag2|=" << Vdiag2.size() << "\n";
     //
     std::cerr << "Input read, now testing for equivalence\n";
     const bool use_scheme = true;
