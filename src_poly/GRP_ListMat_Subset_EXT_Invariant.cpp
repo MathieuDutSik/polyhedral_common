@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     //
     std::ifstream is(argv[1]);
-    int nbMat;
+    int nbMat, len;
     is >> nbMat;
     std::vector<MyMatrix<T>> ListMat;
     for (int iMat = 0; iMat < nbMat; iMat++) {
@@ -27,6 +27,11 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrix<T>(is);
     int n_rows = EXT.rows();
     std::cerr << "n_rows=" << n_rows << "\n";
+    is >> len;
+    if (len != n_rows) {
+      std::cerr << "We have n_rows=" << n_rows << " but len=" << len << "\n";
+      throw TerminalException{1};
+    }
     std::vector<T> Vdiag(n_rows);
     for (int i = 0; i < n_rows; i++) {
       T val;
