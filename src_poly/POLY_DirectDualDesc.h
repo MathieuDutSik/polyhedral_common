@@ -53,24 +53,34 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   size_t DimEXT = n_col + 1;
   std::string rndStr = random_string(20);
   std::string prefix = "/tmp/";
-  std::string FileO = prefix + "EXT_" + std::to_string(n_row) + "_" +
-                      std::to_string(n_col) + "_" + rndStr + ".ext";
-  std::string FileI = prefix + "INE_" + std::to_string(n_row) + "_" +
-                      std::to_string(n_col) + "_" + rndStr + ".ext";
-  std::string FileE = prefix + "INE_" + std::to_string(n_row) + "_" +
-                      std::to_string(n_col) + "_" + rndStr + ".err";
+  std::string suffix = std::to_string(n_row) + "_" +
+    std::to_string(n_col) + "_" + rndStr + ".ext";
+  std::string FileO = prefix + "EXT_" + suffix;
+  std::string FileI = prefix + "INE_" + suffix;
+  std::string FileE = prefix + "INE_" + suffix;
   {
     std::ofstream os(FileO);
-    os << "V-representation\n";
-    os << "begin\n";
-    os << n_row << " " << DimEXT << " integer\n";
-    for (size_t i_row = 0; i_row < n_row; i_row++) {
-      os << "0";
-      for (size_t i_col = 0; i_col < n_col; i_col++)
-        os << " " << EXT(i_row, i_col);
-      os << "\n";
+    if (eCommand == "normaliz") {
+      os << "amb_space " << n_col << "\n";
+      os << "cone " << n_row << "\n";
+      for (size_t i_row = 0; i_row < n_row; i_row++) {
+        for (size_t i_col = 0; i_col < n_col; i_col++)
+          os << " " << EXT(i_row, i_col);
+        os << "\n";
+      }
+      os << "SupportHyperplanes\n";
+    } else {
+      os << "V-representation\n";
+      os << "begin\n";
+      os << n_row << " " << DimEXT << " integer\n";
+      for (size_t i_row = 0; i_row < n_row; i_row++) {
+        os << "0";
+        for (size_t i_col = 0; i_col < n_col; i_col++)
+          os << " " << EXT(i_row, i_col);
+        os << "\n";
+      }
+      os << "end\n";
     }
-    os << "end\n";
   }
 #ifdef TIMINGS
   SingletonTime time2;
@@ -80,7 +90,12 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   //
   // Now calling the external program
   //
-  std::string order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
+  std::string order;
+  if (order == "normaliz") {
+    order = eCommand + " " + FileO;
+  } else {
+    order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
+  }
   std::cerr << "order=" << order << "\n";
   int iret1 = system(order.c_str());
 #ifdef TIMINGS
@@ -102,11 +117,17 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
   T eScal;
+  size_t shift;
+  if (eCommand == "normaliz") {
+    shift = 0;
+  } else {
+    shift = 1;
+  }
 #ifdef USE_ISINCD
   auto isincd = [&](size_t i_row) -> bool {
     eScal = 0;
-    for (size_t i = 1; i < DimEXT; i++)
-      eScal += LVal[i] * EXT(i_row, i - 1);
+    for (size_t i = shift; i < DimEXT; i++)
+      eScal += LVal[i] * EXT(i_row, i - shift);
     return eScal == 0;
   };
 #else
@@ -117,15 +138,19 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     ParseScalar_inplace<T>(str, LVal[pos_wrt]);
     pos_wrt++;
   };
-  if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp") {
+  // For this case we know at the beginning the number of inequalities 
+  if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp" || eCommand == "normaliz") {
     size_t headersize;
+    if (eCommand == "lcdd_gmp")
+      headersize = 4;
     if (eCommand == "ppl_lcdd")
       headersize = 3;
-    else
-      headersize = 4;
+    if (eCommand == "normaliz")
+      headersize = 2 + 5 + 6 + n_row + 1;
     while (std::getline(is, line)) {
       //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
       if (iLine == headersize - 1) {
+        // Determining the number of entries
         std::vector<std::string> LStr = STRING_Split(line, " ");
         iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
         //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
@@ -138,8 +163,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 #else
         for (size_t i_row = 0; i_row < n_row; i_row++) {
           eScal = 0;
-          for (size_t i = 1; i < DimEXT; i++)
-            eScal += LVal[i] * EXT(i_row, i - 1);
+          for (size_t i = shift; i < DimEXT; i++)
+            eScal += LVal[i] * EXT(i_row, i - shift);
           f[i_row] = static_cast<bool>(eScal == 0);
         }
         ListFace.push_back(f);
@@ -161,8 +186,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 #else
         for (size_t i_row = 0; i_row < n_row; i_row++) {
           eScal = 0;
-          for (size_t i = 1; i < DimEXT; i++)
-            eScal += LVal[i] * EXT(i_row, i - 1);
+          for (size_t i = shift; i < DimEXT; i++)
+            eScal += LVal[i] * EXT(i_row, i - shift);
           f[i_row] = static_cast<bool>(eScal == 0);
         }
         ListFace.push_back(f);
@@ -187,6 +212,17 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
                                              std::string const &ansProg) {
   std::string eProg;
   std::vector<std::string> ListProg;
+  //
+  eProg = "cdd_cbased";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg) {
+#ifdef USE_CDDLIB
+    return cbased_cdd::DualDescription_incd(EXT);
+#else
+    std::cerr << "The code has been compiled without the CDDLIB library\n";
+    throw TerminalException{1};
+#endif
+  }
   //
   eProg = "cdd";
   ListProg.push_back(eProg);
@@ -218,16 +254,10 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   if (ansProg == eProg)
     return DualDescExternalProgram(EXT, "lcdd_gmp");
   //
-  eProg = "cdd_cbased";
+  eProg = "normaliz";
   ListProg.push_back(eProg);
-  if (ansProg == eProg) {
-#ifdef USE_CDDLIB
-    return cbased_cdd::DualDescription_incd(EXT);
-#else
-    std::cerr << "The code has been compiled without the CDDLIB library\n";
-    throw TerminalException{1};
-#endif
-  }
+  if (ansProg == eProg)
+    return DualDescExternalProgram(EXT, "normaliz");
   //
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
