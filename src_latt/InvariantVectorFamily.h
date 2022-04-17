@@ -46,8 +46,9 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const& norm)
   SingletonTime time2;
   std::cerr << "|T_ShortVector|=" << ms(time1,time2) << "\n";
 #endif
-  MyMatrix<Tint> SHV1 = SHVall * recLLL.Pmat;
-  return Concatenation(SHV1, -SHV1);
+  MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
+  MyMatrix<Tint> SHV1_b = -SHV1_a;
+  return Concatenate(SHV1_a, SHV1_b);
 }
 
 
@@ -106,8 +107,8 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat, Fcorrect f_
       std::cerr << "Failed to find a relevant vector configuration\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm(eMat, norm);
-    SHVret = Concatenation(SHVret, SHV_f);
+    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm<T,Tint>(eMat, norm);
+    SHVret = Concatenate(SHVret, SHV_f);
     if (f_correct(SHVret))
       return SHVret;
     norm += incr;

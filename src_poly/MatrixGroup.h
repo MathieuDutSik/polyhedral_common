@@ -948,6 +948,7 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                                       Thelper const &helper,
                                       MyMatrix<T> const &TheSpace, T const &TheMod) {
   using Tint = typename underlying_ring<T>::ring_type;
+  using Tidx = typename Tgroup::Telt::Tidx;
   int n = helper.n;
   std::vector<MyMatrix<T>> BasisSymmMat = BasisInvariantForm(n, ListMatr);
   std::vector<MyMatrix<T>> ListPosDef = GetListQuadraticForms(helper);
