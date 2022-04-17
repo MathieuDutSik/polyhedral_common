@@ -119,7 +119,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
     // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
     const MyVector<T>& V2 = f2(iRowImg);
-#ifdef DEBUG_PERM_FCT
+#ifdef DEBUG_PERM_FCT_NOW_OK
     std::cerr << "V1      =";
     WriteVector(std::cerr, V1);
     std::cerr << "V2      =";
@@ -171,6 +171,29 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   std::cerr << "FindMatrixTransformationTest, exit true\n";
 #endif
   return EqMat;
+}
+
+std::optional<MyMatrix<T>>
+FindMatrixTransformationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
+                             std::vector<Tidx> const &eList) {
+  size_t nbRow1 = EXT1.rows();
+  size_t nbRow2 = EXT2.rows();
+  if (nbRow1 != nbRow2)
+    return {};
+  int nbCol = EXT1.cols();
+  MyVector<T> V1(nbCol);
+  MyVector<T> V2(nbCol);
+  auto f1=[&](size_t iRow) -> const MyVector<T>& {
+    for (int i=0; i<nbCol; i++)
+      V1(i) = EXT1(iRow,i);
+    return V1;
+  };
+  auto f2=[&](size_t iRow) -> const MyVector<T>& {
+    for (int i=0; i<nbCol; i++)
+      V2(i) = EXT2(iRow,i);
+    return V2;
+  };
+  return FindMatrixTransformationTest(nbRow1, nbCol, f1, f2, eList);
 }
 
 template <typename T, typename Tfield, typename Tidx>

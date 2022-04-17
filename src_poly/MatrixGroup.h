@@ -900,21 +900,39 @@ std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<
   MyMatrix<T> eProd2 = helper.G * PosDefSpace.transpose();;
   MyMatrix<T> Sign11space = NullspaceMat(eProd2);
   MyMatrix<T> G11 = Sign11space * helper.G * Sign11space.transpose();
-  std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G11);
-  if (!opt) {
-    std::cerr << "The matrix G11 does not have an isotropic factorization\n";
+  auto get_second_isotropic=[&]() -> MyVector<T> {
+    std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G11);
+    if (!opt) {
+      std::cerr << "The matrix G11 does not have an isotropic factorization\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> const& Factor = *opt;
+    for (int i=0; i<2; i++) {
+      MyVector<T> V(2);
+      V(0) = -Factor(i,1);
+      V(1) = Factor(i,0);
+      if (!IsVectorMultiple(V, helper.Visotrop)) {
+        MyVector<T> Vret = Sign11space.transpose() * V;
+        return Vret;
+      }
+    }
+    std::cerr << "Find the other vector\n";
     throw TerminalException{1};
-  }
+  };
+  MyVector<T> VisotropSecond = get_second_isotropic();
+
+  MyMatrix<T> PosDefMat1(n,n);
+  MyMatrix<T> PosDefMat2(n,n);
   
 
-
-  
+  return {PosDefMat1, PosDefMat2};
 }
 
 
 template<typename T, typename Telt>
-std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
-  
+std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteMatrixGroupHelper<T, Telt> const &helper) {
+  MyMatrix<T> Qinv = GetQmatrix(helper.EXTfaithful);
+  return {Qinv};
 }
 
 
@@ -925,10 +943,74 @@ std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<
 
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-std::vector<MyMatrix<T>>
+std::optional<std::vector<MyMatrix<T>>>
 PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                                       Thelper const &helper,
                                       MyMatrix<T> const &TheSpace, T const &TheMod) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  int n = helper.n;
+  std::vector<MyMatrix<T>> BasisSymmMat = BasisInvariantForm(n, ListMatr);
+  std::vector<MyMatrix<T>> ListPosDef = GetListQuadraticForms(helper);
+  std::vector<MyVector<T>> ListVect;
+  std::vector<T> Vdiag;
+  T idx = 0;
+  for (auto & ePosDef : ListPosDef) {
+    if (ePosDef.rows() > 1) {
+      MyMatrix<T> eNSP = NullspaceIntMat(ePosDef);
+      MyMatrix<Tint> eNSP_i = UniversalMatrixConversion<Tint,T>(eNSP);
+      CanSolIntMat<Tint> eCan = ComputeCanonicalFormFastReduction(eNSP);
+      MyMatrix<T> eGnsp = eNSP * ePosDef * eNSP.transpose();
+      std::vector<MyMatrix<Tint>> ListMatrRed;
+      for (auto & eMatr : ListMatr) {
+        MyMatrix<Tint> eMatr_i = UniversalMatrixConversion<Tint,T>(eMatr);
+        MyMatrix<Tint> eProd = eNSP_i * eMatr_i;
+        std::optional<MyMatrix<Tint>> opt = CanSolutionIntMatMat(eCan, eProd);
+        if (!opt) {
+          std::cerr << "The NSP space is not preserved\n";
+          throw TerminalException{1};
+        }
+        ListMatrRed.push_back(*opt);
+      }
+      MyMatrix<Tint> SHV_e = ExtractInvariantBreakingVectorFamily(eGnsp, ListMatrRed);
+      MyMatrix<Tint> SHVbreak = SHV_e * eNSP_i;
+      std::vector<T> Vdiag(SHV_e.rows(), idx);
+      // Getting a full dimensional family from the other vectors.
+      T jdx = 0;
+      for (auto & fPosDef : ListPosDef) {
+        if (idx != jdx) {
+          MyMatrix<T> fNSP = NullspaceIntMat(fPosDef);
+          MyMatrix<Tint> fNSP_i = UniversalMatrixConversion<Tint,T>(fNSP);
+          MyMatrix<T> fGnsp = fNSP * fPosDef * fNSP.transpose();
+          MyMatrix<Tint> SHV_f = ExtractInvariantVectorFamilyFullRank<T,Tint>(fGnsp);
+          MyMatrix<Tint> fProd = SHV_f * fNSP_i;
+          SHVbreak = Concatenation(SHVbreak, fProd);
+          std::vector<T> V(SHV_f.rows(), jdx);
+          Vdiag.insert(Vdiag.end(), V.begin(), V.end());
+        }
+        jdx++;
+      }
+      //
+      if (RankMat(SHVbreak) != n) {
+        std::cerr << "The matrix SHVbreak is not of full rank\n";
+        throw TerminalException{1};
+      }
+      //
+      std::vector<std::vector<Tidx>> ListListIdx =
+        GetListGenAutomorphism_ListMat_Vdiag(SHVbreak, BasisSymmMat, Vdiag);
+      std::vector<MyMatrix<T>> NewListMatr;
+      for (auto & eListIdx : ListListIdx) {
+        std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHVbreak, SHVbreak, eListIdx);
+        if (!opt) {
+          std::cerr << "Failed to represent the permutation\n";
+          throw TerminalException{1};
+        }
+        NewListMatr.push_back(*opt);
+      }
+    }
+    idx++;
+  }
+  std::cerr << "Failed to find a breaking invariant family\n";
+  throw TerminalException{1};
 }
 
 
