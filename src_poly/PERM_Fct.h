@@ -173,6 +173,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   return EqMat;
 }
 
+template <typename T, typename Tidx>
 std::optional<MyMatrix<T>>
 FindMatrixTransformationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
                              std::vector<Tidx> const &eList) {

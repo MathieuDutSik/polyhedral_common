@@ -59,7 +59,7 @@ T GetMaxNorm(MyMatrix<T> const &eMat) {
   return MaximumDiagonal(eMatRed);
 }
 
-template<typename T, typename Tint>
+template<typename T>
 T GetSmallestIncrement(MyMatrix<T> const &eMat) {
   std::vector<T> ListVal;
   int n = eMat.rows();
@@ -80,7 +80,7 @@ T GetSmallestIncrement(MyMatrix<T> const &eMat) {
 template<typename T, typename Tint>
 std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat) {
   T incr = GetSmallestIncrement(eMat);
-  T MaxNorm = GetMaxNorm(eMat);
+  T MaxNorm = GetMaxNorm<T,Tint>(eMat);
   std::set<T> AllowedNorms;
   T norm = incr;
   while(true) {
@@ -98,7 +98,7 @@ template <typename T, typename Tint, typename Fcorrect>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat, Fcorrect f_correct) {
   int n = eMat.rows();
   T incr = GetSmallestIncrement(eMat);
-  T MaxNorm = GetMaxNorm(eMat);
+  T MaxNorm = GetMaxNorm<T,Tint>(eMat);
   T norm = incr;
   MyMatrix<Tint> SHVret(0,n);
   while(true) {
@@ -130,7 +130,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat) {
       return true;
     return false;
   };
-  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
+  return ExtractInvariantVectorFamily<T,Tint,decltype(f_correct)>(eMat, f_correct);
 }
 
 template <typename T, typename Tint>
@@ -146,13 +146,12 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
       return true;
     return false;
   };
-  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
+  return ExtractInvariantVectorFamily<T,Tint,decltype(f_correct)>(eMat, f_correct);
 }
 
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const& ListMatr) {
-  int n = eMat.rows();
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     int n_row = M.rows();
     std::unordered_set<MyVector<Tint>> set;
@@ -170,19 +169,18 @@ MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(MyMatrix<T> const &eMat, std
     }
     return false;
   };
-  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
+  return ExtractInvariantVectorFamily<T,Tint,decltype(f_correct)>(eMat, f_correct);
 }
 
 
 
 template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
   int nbRow = M.rows();
-  int n = M.cols();
-  std::unordered_map<MyVector<T>,int> map;
+  std::unordered_map<MyVector<Tint>,int> map;
   for (int i=0; i<nbRow; i++) {
-    MyVector<T> V = GetMatrixRow(M, i);
+    MyVector<Tint> V = GetMatrixRow(M, i);
     if (!IsZeroVector(V)) {
-      MyVector<T> Vcan = SignCanonicalizeVector(V);
+      MyVector<Tint> Vcan = SignCanonicalizeVector(V);
       map[Vcan]++;
     }
   }

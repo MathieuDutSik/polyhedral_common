@@ -673,7 +673,7 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat, T const& SpecNorm
       }
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm,
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm,
                                                  f_insert);
   }
   return MatrixFromVectorFamilyDim(dim, ListVect);
