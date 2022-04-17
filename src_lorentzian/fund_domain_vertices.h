@@ -348,10 +348,11 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
                                       GeneralMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvInvariantSpace);
       } else {
+        MyVector<T> const& Visotrop = vertFull.vert.gen;
         MyMatrix<T> eProd = Subspace1 * InvInvariantSpace;
         MyMatrix<T> G_new = InvariantSpace * G * InvariantSpace.transpose();
         FiniteIsotropicMatrixGroupHelper<T, Telt> helper =
-            ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G_new, eProd);
+          ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G_new, eProd, Visotrop);
         return LinearSpace_Stabilizer<
             T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvInvariantSpace);

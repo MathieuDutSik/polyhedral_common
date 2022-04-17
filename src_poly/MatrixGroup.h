@@ -9,6 +9,7 @@
 #include "factorizations.h"
 #include "Timings.h"
 #include "MAT_MatrixMod.h"
+#include "two_dim_lorentzian.h"
 #include <limits>
 #include <utility>
 #include <vector>
@@ -169,6 +170,7 @@ template <typename T, typename Telt> struct FiniteIsotropicMatrixGroupHelper {
   int n;
   MyMatrix<T> G;
   MyMatrix<T> EXTfaithful;
+  MyVector<T> Visotrop;
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
 };
@@ -222,7 +224,8 @@ ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
 template <typename T, typename Telt>
 FiniteIsotropicMatrixGroupHelper<T, Telt>
 ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
-                                        MyMatrix<T> const &EXT) {
+                                        MyMatrix<T> const &EXT,
+                                        MyVector<T> const& Visotrop) {
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
   for (int i = 0; i < EXT.rows(); i++) {
@@ -230,7 +233,7 @@ ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
     ListV.push_back(V);
     MapV[V] = i;
   }
-  return {int(EXT.cols()), G, EXT, std::move(ListV), std::move(MapV)};
+  return {int(EXT.cols()), G, EXT, Visotrop, std::move(ListV), std::move(MapV)};
 }
 
 template <typename T, typename Telt, typename Thelper>
@@ -885,15 +888,48 @@ There are several challenges for this implementation.
    and this can get us good efficient signatures.
  */
 
-/*
+
+template<typename T, typename Telt>
+std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
+  std::vector<int> eSet = ColumnReductionSet(helper.EXTfaithful);
+  MyMatrix<T> EXTfaithful_red = SelectColumn(helper.EXTfaithful, eSet);
+  MyVector<T> Visotrop_red = SelectColumnVector(helper.Visotrop, eSet);
+  MyMatrix<T> Qinv = GetQmatrix(EXTfaithful_red);
+  MyMatrix<T> eProd1 = MatrixFromVectorFamily(Qinv * Visotrop_red);
+  MyMatrix<T> PosDefSpace = NullspaceMat(eProd1);
+  MyMatrix<T> eProd2 = helper.G * PosDefSpace.transpose();;
+  MyMatrix<T> Sign11space = NullspaceMat(eProd2);
+  MyMatrix<T> G11 = Sign11space * helper.G * Sign11space.transpose();
+  std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G11);
+  if (!opt) {
+    std::cerr << "The matrix G11 does not have an isotropic factorization\n";
+    throw TerminalException{1};
+  }
+  
+
+
+  
+}
+
+
+template<typename T, typename Telt>
+std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
+  
+}
+
+
+
+
+
+
+
+
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>>
 PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                                       Thelper const &helper,
                                       MyMatrix<T> const &TheSpace, T const &TheMod) {
-  
 }
-*/
 
 
 

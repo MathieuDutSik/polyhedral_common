@@ -6,74 +6,137 @@
 #include <set>
 #include <vector>
 
+
+/*
+  We are considering here the enumeration of configurations of vectors for
+  positive definite quadratic forms. There are many possible optimization
+  and choices.
+
+  The basis assumption of the code are the following:
+  --- If enumerating vectors at norm N, then the cost for vectors of norms
+  smaller than N is very small compared to the cost for the vectors of norm
+  exactly N. Therefore, it is ok, to redo many small enumeration until we get
+  the configuration of vector that we want.
+  --- The increment are usually monotonous like norm 2,3,4. So, going with
+  the increment given by GCD is probably a good heuristic.
+
+ */
+
+
+
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantVectorFamily(
-    MyMatrix<T> const &eMat,
-    std::function<bool(MyMatrix<Tint> const &)> const &fCorrect) {
-  T MaxNorm = MaximumDiagonal(eMat);
+MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const& norm) {
 #ifdef TIMINGS
   std::cerr << "Begining of ExtractInvariantVectorFamily\n";
   SingletonTime time1;
 #endif
-  MyMatrix<Tint> SHVall = T_ShortVector<T, Tint>(eMat, MaxNorm);
+  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
+  MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
+#ifdef TIMINGS
+  SingletonTime time2;
+  std::cerr << "|LLL|=" << ms(time1,time2) << "\n";
+#endif
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
+  //
+  //  std::cerr << "eMat=\n";
+  //  WriteMatrix(std::cerr, eMat);
+  MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
+  MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
 #ifdef TIMINGS
   SingletonTime time2;
   std::cerr << "|T_ShortVector|=" << ms(time1,time2) << "\n";
 #endif
-  //  std::cerr << "MaxNorm = " << MaxNorm << " eMat =\n";
-  //  WriteMatrix(std::cerr, eMat);
-  //  std::cerr << "|SHVall|=" << SHVall.rows() << "\n";
-  //  WriteMatrix(std::cerr, SHVall);
-  std::set<T> SetNorm;
-  int nbSHV = SHVall.rows();
-  std::vector<T> ListNorm(nbSHV);
-  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
-    MyVector<Tint> eRow = GetMatrixRow(SHVall, iSHV);
-    T eNorm = EvaluationQuadForm(eMat, eRow);
-    ListNorm[iSHV] = eNorm;
-    if (eNorm > 0)
-      SetNorm.insert(eNorm);
-  }
-#ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|Preparation|=" << ms(time2,time3) << "\n";
-#endif
-  std::vector<MyVector<Tint>> ListVect;
-  for (auto const &eNorm : SetNorm) {
-    //    std::cerr << "eNorm=" << eNorm << "\n";
-    for (int iSHV = 0; iSHV < nbSHV; iSHV++)
-      if (ListNorm[iSHV] == eNorm) {
-        MyVector<Tint> eRow = GetMatrixRow(SHVall, iSHV);
-        ListVect.push_back(eRow);
-        ListVect.push_back(-eRow);
-      }
-    MyMatrix<Tint> SHVret = MatrixFromVectorFamily(ListVect);
-    if (fCorrect(SHVret))
-      return SHVret;
-  }
-  std::cerr
-      << "ExtractInvariantVectorFamily : We should never reach that stage\n";
-  throw TerminalException{1};
+  MyMatrix<Tint> SHV1 = SHVall * recLLL.Pmat;
+  return Concatenation(SHV1, -SHV1);
 }
+
+
+template <typename T, typename Tint>
+T GetMaxNorm(MyMatrix<T> const &eMat) {
+  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
+  MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
+  return MaximumDiagonal(eMatRed);
+}
+
+template<typename T, typename Tint>
+T GetSmallestIncrement(MyMatrix<T> const &eMat) {
+  std::vector<T> ListVal;
+  int n = eMat.rows();
+  T eGcd = eMat(0,0);
+  for (int i=1; i<n; i++)
+    eGcd = GcdPair(eGcd, eMat(i,i));
+  for (int i=0; i<n; i++)
+    for (int j=i+1; j<n; j++) {
+      T val = 2 * eMat(i,j);
+      eGcd = GcdPair(eGcd, val);
+    }
+  return eGcd;
+}
+
+
+
+
+template<typename T, typename Tint>
+std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat) {
+  T incr = GetSmallestIncrement(eMat);
+  T MaxNorm = GetMaxNorm(eMat);
+  std::set<T> AllowedNorms;
+  T norm = incr;
+  while(true) {
+    if (norm > MaxNorm)
+      break;
+    AllowedNorms.insert(norm);
+    norm += incr;
+  }
+  return AllowedNorms;
+}
+
+
+
+template <typename T, typename Tint, typename Fcorrect>
+MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat, Fcorrect f_correct) {
+  int n = eMat.rows();
+  T incr = GetSmallestIncrement(eMat);
+  T MaxNorm = GetMaxNorm(eMat);
+  T norm = incr;
+  MyMatrix<Tint> SHVret(0,n);
+  while(true) {
+    if (norm > MaxNorm) {
+      std::cerr << "Failed to find a relevant vector configuration\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm(eMat, norm);
+    SHVret = Concatenation(SHVret, SHV_f);
+    if (f_correct(SHVret))
+      return SHVret;
+    norm += incr;
+  }
+}
+
+
+
+
+
+
+
+
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat) {
   int n = eMat.rows();
-  std::function<bool(MyMatrix<Tint> const &)> fCorrect =
-      [&](MyMatrix<Tint> const &M) -> bool {
+  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     if (RankMat(M) == n)
       return true;
     return false;
   };
-  return ExtractInvariantVectorFamily(eMat, fCorrect);
+  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint>
-ExtractInvariantVectorFamilyZbasis_Kernel(MyMatrix<T> const &eMat) {
+MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
   int n = eMat.rows();
-  std::function<bool(MyMatrix<Tint> const &)> fCorrect =
-      [&](MyMatrix<Tint> const &M) -> bool {
+  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     if (RankMat(M) < n)
       return false;
     //    std::cerr << "Before Int_IndexLattice computation\n";
@@ -83,55 +146,51 @@ ExtractInvariantVectorFamilyZbasis_Kernel(MyMatrix<T> const &eMat) {
       return true;
     return false;
   };
-  return ExtractInvariantVectorFamily(eMat, fCorrect);
+  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
 }
+
+
+template <typename T, typename Tint>
+MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const& ListMatr) {
+  int n = eMat.rows();
+  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
+    int n_row = M.rows();
+    std::unordered_set<MyVector<Tint>> set;
+    for (int i=0; i<n_row; i++) {
+      MyVector<Tint> V = GetMatrixRow(M, i);
+      set.insert(V);
+    }
+    for (auto & eMatr : ListMatr) {
+      MyMatrix<Tint> Mprod = M * eMatr;
+      for (int i=0; i<n_row; i++) {
+        MyVector<Tint> V = GetMatrixRow(Mprod, i);
+        if (set.count(V) == 0)
+          return true;
+      }
+    }
+    return false;
+  };
+  return ExtractInvariantVectorFamily<T,Tint,decltype(fCorrect)>(eMat, f_correct);
+}
+
+
 
 template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
   int nbRow = M.rows();
   int n = M.cols();
-  int res = nbRow % 2;
-  if (res == 1)
-    return false;
-  int nbPair = nbRow / 2;
-  for (int iPair = 0; iPair < nbPair; iPair++) {
-    for (int i = 0; i < n; i++) {
-      Tint eSum = M(2 * iPair, i) + M(2 * iPair + 1, i);
-      if (eSum != 0)
-        return false;
+  std::unordered_map<MyVector<T>,int> map;
+  for (int i=0; i<nbRow; i++) {
+    MyVector<T> V = GetMatrixRow(M, i);
+    if (!IsZeroVector(V)) {
+      MyVector<T> Vcan = SignCanonicalizeVector(V);
+      map[Vcan]++;
     }
   }
+  for (auto & kv : map) {
+    if (kv.second != 2)
+      return false;
+  }
   return true;
-}
-
-template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
-#ifdef TIMINGS
-  std::cerr << "Begining of ExtractInvariantVectorFamilyZbasis\n";
-  SingletonTime time1;
-#endif
-  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
-#ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|LLL|=" << ms(time1,time2) << "\n";
-#endif
-  //  std::cerr << "recLLL.GramMatRed=\n";
-  //  WriteMatrix(std::cerr, recLLL.GramMatRed);
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
-  //
-  //  std::cerr << "eMat=\n";
-  //  WriteMatrix(std::cerr, eMat);
-  MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
-  //  std::cerr << "eMatRed=\n";
-  //  WriteMatrix(std::cerr, eMatRed);
-  //
-  MyMatrix<Tint> SHVred =
-      ExtractInvariantVectorFamilyZbasis_Kernel<T, Tint>(eMatRed);
-  MyMatrix<Tint> SHVret = SHVred * recLLL.Pmat;
-#ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|ExtractInvariantVectorFamilyZbasis_Kernel|=" << ms(time2,time3) << "\n";
-#endif
-  return SHVret;
 }
 
 #endif //  SRC_LATT_INVARIANTVECTORFAMILY_H_

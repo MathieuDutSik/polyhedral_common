@@ -1095,18 +1095,6 @@ bool is_FundPoly(const VinbergTot<T, Tint> &Vtot,
   throw TerminalException{1};
 }
 
-template <typename T> MyVector<T> SignCanonicalizeVector(const MyVector<T> &V) {
-  int len = V.size();
-  for (int u = 0; u < len; u++) {
-    if (V(u) > 0)
-      return V;
-    if (V(u) < 0)
-      return -V;
-  }
-  std::cerr << "Error in SignCanonicalizeVector\n";
-  throw TerminalException{1};
-}
-
 template <typename T, typename Tint> struct DataReflectionGroup {
   std::vector<MyVector<Tint>> ListRoot;
   MyMatrix<Tint> G;

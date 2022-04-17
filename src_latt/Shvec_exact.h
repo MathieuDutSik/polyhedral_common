@@ -642,4 +642,42 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
   return MatrixFromVectorFamily(info.short_vectors);
 }
 
+
+template <typename T, typename Tint>
+MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat, T const& SpecNorm) {
+  int dim = GramMat.rows();
+  std::vector<MyVector<Tint>> ListVect;
+  if (dim == 1) {
+    int idx = 1;
+    while (true) {
+      T norm = idx * idx * GramMat(0, 0);
+      if (norm == SpecNorm) {
+        MyVector<Tint> V(1);
+        V(0) = idx;
+        ListVect.push_back(V);
+        break;
+      }
+      if (norm > SpecNorm)
+        break;
+      idx++;
+    }
+  } else {
+    int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
+    MyVector<T> cosetVect = ZeroVector<T>(dim);
+    T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, SpecNorm, mode);
+    request.central = true;
+    //
+    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
+      if (min == SpecNorm) {
+        ListVect.push_back(V);
+      }
+      return true;
+    };
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm,
+                                                 f_insert);
+  }
+  return MatrixFromVectorFamilyDim(dim, ListVect);
+}
+
+
 #endif //  SRC_LATT_SHVEC_EXACT_H_
