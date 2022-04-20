@@ -891,9 +891,21 @@ There are several challenges for this implementation.
 
 template<typename T, typename Telt>
 std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
-  std::vector<int> eSet = ColumnReductionSet(helper.EXTfaithful);
-  MyMatrix<T> EXTfaithful_red = SelectColumn(helper.EXTfaithful, eSet);
-  MyVector<T> Visotrop_red = SelectColumnVector(helper.Visotrop, eSet);
+  int n = helper.n;
+  int n_vect = helper.EXTfaithful.rows();
+  MyMatrix<T> BasisSp = RowReduction(helper.EXTfaithful);
+  std::optional<MyMatrix<T>> opt1 = ListSolutionMat(BasisSp, helper.EXTfaithful);
+  if (!opt1) {
+    std::cerr << "opt1 : Failed to solution the linear systems\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> const& EXTfaithful_red = *opt1;
+  std::optional<MyVector<T>> opt2 = SolutionMat(BasisSp, helper.Visotrop);
+  if (!opt2) {
+    std::cerr << "opt2 : Failed to solution the linear systems\n";
+    throw TerminalException{1};
+  }
+  MyVector<T> const& Visotrop_red = *opt2;
   MyMatrix<T> Qinv = GetQmatrix(EXTfaithful_red);
   MyMatrix<T> eProd1 = MatrixFromVectorFamily(Qinv * Visotrop_red);
   MyMatrix<T> PosDefSpace = NullspaceMat(eProd1);
@@ -901,16 +913,8 @@ std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<
   MyMatrix<T> Sign11space = NullspaceMat(eProd2);
   MyMatrix<T> G11 = Sign11space * helper.G * Sign11space.transpose();
   auto get_second_isotropic=[&]() -> MyVector<T> {
-    std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G11);
-    if (!opt) {
-      std::cerr << "The matrix G11 does not have an isotropic factorization\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<T> const& Factor = *opt;
-    for (int i=0; i<2; i++) {
-      MyVector<T> V(2);
-      V(0) = -Factor(i,1);
-      V(1) = Factor(i,0);
+    std::vector<MyVector<T>> LVect = GetBasisIsotropicVectors(G11);
+    for (auto & V : LVect) {
       if (!IsVectorMultiple(V, helper.Visotrop)) {
         MyVector<T> Vret = Sign11space.transpose() * V;
         return Vret;
@@ -921,9 +925,24 @@ std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<
   };
   MyVector<T> VisotropSecond = get_second_isotropic();
 
-  MyMatrix<T> PosDefMat1(n,n);
-  MyMatrix<T> PosDefMat2(n,n);
-  
+  MyMatrix<T> FullBasis(n,n);
+  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+    for (int i=0; i<n; i++)
+      FullBasis(i_vect, i) = BasisSp(i_vect, i);
+  }
+  for (int i=0; i<n; i++)
+    FullBasis(n-1, i) = VisotropSecond(i);
+  //
+  MyMatrix<T> prePosDefMat1 = ZeroMatrix<T>(n,n);
+  for (int i=0; i<n-1; i++)
+    for (int j=0; j<n-1; j++)
+      prePosDefMat1(i,j) = Qinv(i,j);
+  MyMatrix<T> prePosDefMat2 = ZeroMatrix<T>(n,n);
+  prePosDefMat2(n-1,n-1) = 1;
+  //
+  MyMatrix<T> InvFullBasis = Inverse(FullBasis);
+  MyMatrix<T> PosDefMat1 = InvFullBasis * prePosDefMat1 * InvFullBasis.transpose();
+  MyMatrix<T> PosDefMat2 = InvFullBasis * prePosDefMat2 * InvFullBasis.transpose();
 
   return {PosDefMat1, PosDefMat2};
 }

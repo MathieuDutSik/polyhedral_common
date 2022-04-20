@@ -402,6 +402,27 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const &G) {
   return F;
 }
 
+
+template <typename T>
+std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
+  std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
+  if (!opt) {
+    std::cerr << "We fail to find an isotropic factorization\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> const& Factor = *opt;
+  std::vector<MyVector<T>> LVect(2);
+  for (int i=0; i<2; i++) {
+    // a x + b y correspond to the isotrop vector (-b, a)
+    MyVector<T> U(2);
+    U(0) = -Factor(i, 1);
+    U(1) = Factor(i, 0);
+    LVect[i] = U;
+  }
+  return LVect;
+}
+
+
 /*
   F is the factorization with each row representing one term of the
   factorization. Q(x,y) = (a1 x + b1 y) (a2 x + b2 y)

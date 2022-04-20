@@ -1125,19 +1125,11 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
   //  std::cerr << "We have Gred=\n";
   //  WriteMatrix(std::cerr, Gred);
-  std::optional<MyMatrix<T>> Factor_opt = GetIsotropicFactorization(Gred);
+  std::vector<MyVector<T>> BasisIsotrop = GetBasisIsotropicVectors(Gred);
 #ifdef TIMINGS
   SingletonTime time5;
   std::cerr << "Timing |Factor_opt|=" << ms(time4,time5) << "\n";
 #endif
-  //  std::cerr << "We have Factor_opt\n";
-  if (!Factor_opt) {
-    std::cerr << "The matrix is not isotropic. Major rethink are needed\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<T> const &Factor = *Factor_opt;
-  //  std::cerr << "We have Factor=\n";
-  //  WriteMatrix(std::cerr, Factor);
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen = [&](MyVector<T> const &v) -> MyVector<T> {
     T scal = k.dot(G * v);
@@ -1157,12 +1149,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     throw TerminalException{1};
   };
   std::vector<MyVector<T>> l_gens;
-  for (size_t i = 0; i < 2; i++) {
-    //    std::cerr << "i=" << i << "\n";
-    // a x + b y correspond to the ray (u0, u1) = (-b, a)
-    MyVector<T> U(2);
-    U(0) = -Factor(i, 1);
-    U(1) = Factor(i, 0);
+  for (auto & U : BasisIsotrop) {
     //    std::cerr << "U=" << StringVectorGAP(U) << "\n";
     T sum = U.dot(Gred * U);
     //    std::cerr << "sum=" << sum << "\n";
