@@ -646,8 +646,8 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   eRecOpt.delta = 0;
   eRecOpt.mu = 0;
   eRecOpt.nu = 0;
-  eRecOpt.eps = 2.2204e-16;  // The value of eps in matlab which is a default
-                             // value (CRAZY Matlab!)
+  // The value of eps in matlab which is a default value (CRAZY Matlab!)
+  eRecOpt.eps = 2.2204e-16;
   eRecOpt.rho = 0;
   eRecOpt.tol = 1e-10;
   eRecOpt.gamma = 0;
@@ -664,5 +664,6 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   //
   return eRecOut.x;
 }
-
+// clang-format off
 #endif  // SRC_SPARSE_SOLVER_GAMPMATLAB_H_
+// clang-format on

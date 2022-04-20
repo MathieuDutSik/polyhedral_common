@@ -53,8 +53,6 @@ GetShortVector_unlimited_float_kernel(MyMatrix<T> const &M, T const &CritNorm,
       for (int j = 0; j < n; j++) {
         Tfloat eVal_f = eMult * ListEigVect(i, j);
         Tint eVal = UniversalNearestScalarInteger<Tint, Tfloat>(eVal_f);
-        //	std::cerr << "j=" << j << "  eVal_f=" << eVal_f << "  eVal=" <<
-        //eVal << "\n";
         if (eVal != 0)
           IsZero = false;
         eVect(j) = eVal;
