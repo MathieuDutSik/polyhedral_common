@@ -497,8 +497,9 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       } else {
         MyMatrix<T> eProd = Subspace1 * InvariantSpaceInv;
         MyMatrix<T> G1_new = InvariantSpace * G1 * InvariantSpace.transpose();
+        MyVector<T> const& Visotrop = vertFull1.vert.gen;
         FiniteIsotropicMatrixGroupHelper<T, Telt> helper =
-            ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G1_new, eProd);
+          ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G1_new, eProd, Visotrop);
         return LinearSpace_Equivalence<
             T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
