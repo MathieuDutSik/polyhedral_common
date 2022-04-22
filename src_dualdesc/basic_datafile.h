@@ -38,9 +38,8 @@ public:
     size_t val;
     size_t ret = std::fread(&val, sizeof(size_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileNumber: Number of read element different from count. "
-                   "Please correct\n";
-      std::cerr << "ret=" << ret << " file=" << file << "\n";
+      std::cerr << "FileNumber: Error in getval()\n";
+      std::cerr << "val=" << val << " ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
     return val;
@@ -88,8 +87,8 @@ public:
     uint8_t val;
     size_t ret = std::fread(&val, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileBool: Number of read elementr different from count. "
-                   "Please correct.\n";
+      std::cerr << "FileBool: Error in getbit(...)\n";
+      std::cerr << "pos=" << pos << " i_byte=" << i_byte << "\n";
       std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
@@ -110,8 +109,10 @@ public:
     std::fseek(fp, i_byte, SEEK_SET);
     size_t ret = std::fread(&val_u8, sizeof(uint8_t), 1, fp);
     if (ret != 1) {
-      std::cerr << "FileBool: Number of read element different from count. "
-                   "Please correct\n";
+      std::cerr << "FileBool: Error in setbit(...)\n";
+      std::cerr << "pos=" << pos << " val=" << val << "\n";
+      std::cerr << "curr_n_byte=" << curr_n_byte << " needed_n_byte=" << needed_n_byte << "\n";
+      std::cerr << "i_byte=" << i_byte << " i_pos=" << i_pos << "\n";
       std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
     }
