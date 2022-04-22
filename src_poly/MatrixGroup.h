@@ -964,8 +964,7 @@ std::vector<MyMatrix<T>> GetListQuadraticForms(FiniteMatrixGroupHelper<T, Telt> 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::optional<std::vector<MyMatrix<T>>>
 PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
-                                      Thelper const &helper,
-                                      MyMatrix<T> const &TheSpace, T const &TheMod) {
+                                      Thelper const &helper) {
   using Tint = typename underlying_ring<T>::ring_type;
   using Tidx = typename Tgroup::Telt::Tidx;
   int n = helper.n;
