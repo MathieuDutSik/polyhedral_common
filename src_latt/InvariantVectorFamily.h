@@ -34,7 +34,7 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const& norm)
   MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|LLL|=" << ms(time1,time2) << "\n";
+  std::cerr << "|LLL|=" << ms(time1, time2) << "\n";
 #endif
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   //
@@ -43,8 +43,8 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const& norm)
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
   MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|T_ShortVector|=" << ms(time1,time2) << "\n";
+  SingletonTime time3;
+  std::cerr << "|T_ShortVector|=" << ms(time2, time3) << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
   MyMatrix<Tint> SHV1_b = -SHV1_a;

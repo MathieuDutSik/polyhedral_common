@@ -9,6 +9,7 @@
 #include "factorizations.h"
 #include "Timings.h"
 #include "MAT_MatrixMod.h"
+#include "InvariantVectorFamily.h"
 #include "two_dim_lorentzian.h"
 #include <limits>
 #include <utility>
