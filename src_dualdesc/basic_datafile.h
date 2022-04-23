@@ -13,6 +13,11 @@ private:
   std::string file;
 
 public:
+  FileNumber(const FileNumber &) = delete;
+  FileNumber& operator=(const FileNumber &) = delete;
+  FileNumber(FileNumber &&) = delete;
+  FileNumber() = delete;
+
   FileNumber(std::string const &file, bool is_new) : file(file) {
     if (is_new) {
       if (IsExistingFile(file)) {
@@ -59,6 +64,11 @@ private:
   std::string file;
 
 public:
+  FileBool(const FileBool &) = delete;
+  FileBool& operator=(const FileBool &) = delete;
+  FileBool(FileBool &&) = delete;
+  FileBool() = delete;
+
   FileBool(std::string const &file) : file(file) {
     std::cerr << "FileBool, constructor 1 file=" << file << "\n";
     if (IsExistingFile(file)) {
@@ -80,7 +90,7 @@ public:
   }
 
   ~FileBool() {
-    std::cerr << "FileBool, destructor\n";
+    std::cerr << "FileBool, destructor file=" << file << " n_ent=" << n_ent << "\n";
     std::fclose(fp);
   }
 
@@ -153,6 +163,11 @@ private:
   }
 
 public:
+  FileFace(const FileFace &) = delete;
+  FileFace& operator=(const FileFace &) = delete;
+  FileFace(FileFace &&) = delete;
+  FileFace() = delete;
+
   FileFace(std::string const &file, size_t const &_siz) : file(file) {
     if (IsExistingFile(file)) {
       std::cerr << "FileFace: The file " << file << " should be missing\n";

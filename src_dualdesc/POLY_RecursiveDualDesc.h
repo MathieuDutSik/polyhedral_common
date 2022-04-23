@@ -1180,10 +1180,13 @@ private:
   /* TRICK 7: Using separate files for faces and status allow us to gain
      locality. The faces are written one by one while the access to status is
      random */
-  std::optional<FileBool> fb; // This is for storing the status
-  std::optional<FileFace>
-      ff; // This is for storing the faces and the index of orbit
-  std::optional<FileNumber> fn; // The number of orbits of the polytope
+  // This is for storing the number of orbits of the polytope
+  FileNumber* fn;
+  // This is for storing the status of the orbits
+  FileBool* fb;
+  // This is for storing the faces and the index of orbit
+  FileFace* ff;
+  bool is_opened;
   bool SavingTrigger;
   std::ostream &os;
   size_t delta;
@@ -1202,7 +1205,7 @@ public:
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
                  const bool &_SavingTrigger, std::ostream &os)
-      : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
+    : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
         os(os) {
     os << "MainPrefix=" << MainPrefix << "\n";
     eFileEXT = MainPrefix + ".ext";
@@ -1214,20 +1217,29 @@ public:
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
+    fn = nullptr;
+    fb = nullptr;
+    ff = nullptr;
+    is_opened = false;
     if (SavingTrigger) {
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
         os << "Opening existing files (NB, FB, FF)\n";
-        fn = FileNumber(eFileNB, false);
-        fb = FileBool(eFileFB, n_orbit);
-        ff = FileFace(eFileFF, bb.delta, n_orbit);
+        fn = new FileNumber(eFileNB, false);
+        std::cerr << "Init exist step 1\n";
         n_orbit = fn->getval();
+        std::cerr << "Init exist step 2\n";
+        fb = new FileBool(eFileFB, n_orbit);
+        std::cerr << "Init exist step 3\n";
+        ff = new FileFace(eFileFF, bb.delta, n_orbit);
+        std::cerr << "Init exist step 4\n";
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
              << " is not makeable\n";
           throw TerminalException{1};
         }
+        std::cerr << "Init new step 1\n";
         os << "Creating the files (NB, FB, FF)\n";
         // Writing Group
         os << "eFileGRP=" << eFileGRP << "\n";
@@ -1237,12 +1249,17 @@ public:
         std::ofstream os_ext(eFileEXT);
         WriteMatrix(os_ext, bb.EXT);
         // Opening the files
-        fn = FileNumber(eFileNB, true);
-        fb = FileBool(eFileFB);
-        ff = FileFace(eFileFF, bb.delta);
+        std::cerr << "Init new step 2\n";
+        fn = new FileNumber(eFileNB, true);
+        std::cerr << "Init new step 3\n";
+        fb = new FileBool(eFileFB);
+        std::cerr << "Init new step 4\n";
+        ff = new FileFace(eFileFF, bb.delta);
+        std::cerr << "Init new step 5\n";
         n_orbit = 0;
         fn->setval(n_orbit);
       }
+      is_opened = true;
       //
       std::cerr << "Inserting orbits, n_orbit=" << n_orbit << "\n";
       for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
@@ -1256,6 +1273,7 @@ public:
       }
       print_status();
     }
+    std::cerr << "Exiting DatabaseOrbit constructor\n";
   }
   ~DatabaseOrbits() {
     /* TRICK 5: The destructor does NOT destroy the database! This is because it
@@ -1263,13 +1281,23 @@ public:
        does destroy the database and this gives a small window in which bad
        stuff can happen.
      */
+    if (is_opened) {
+      if (fb == nullptr || fn == nullptr || ff == nullptr) {
+        std::cerr << "Error in fn / fb / fn\n";
+        throw TerminalException{1};
+      }
+      delete fb;
+      delete fn;
+      delete ff;
+    }
     os << "Clean closing of the DatabaseOrbits\n";
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
-      fn = {};
-      fb = {};
-      ff = {};
+      delete fb;
+      delete fn;
+      delete ff;
+      is_opened = false;
       //
       RemoveFile(eFileNB);
       RemoveFile(eFileFB);

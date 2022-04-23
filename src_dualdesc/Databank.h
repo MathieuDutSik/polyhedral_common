@@ -17,7 +17,7 @@ namespace boost::serialization {
 
 template <class Archive, typename Tgroup>
 inline void serialize(Archive &ar, PairStore<Tgroup> &pair,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("GRP", pair.GRP);
   ar &make_nvp("ListFace", pair.ListFace);
 }
@@ -195,7 +195,7 @@ namespace boost::serialization {
 
 template <class Archive, typename Tkey, typename Tval>
 inline void serialize(Archive &ar, TripleNKV<Tkey, Tval> &triple,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("nature", triple.nature);
   ar &make_nvp("eKey", triple.eKey);
   ar &make_nvp("eVal", triple.eVal);
