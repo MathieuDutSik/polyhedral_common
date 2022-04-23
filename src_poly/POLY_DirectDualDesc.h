@@ -53,13 +53,20 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   size_t DimEXT = n_col + 1;
   std::string rndStr = random_string(20);
   std::string prefix = "/tmp/";
-  std::string suffix = std::to_string(n_row) + "_" +
-    std::to_string(n_col) + "_" + rndStr + ".ext";
-  std::string FileO = prefix + "EXT_" + suffix;
-  std::string FileI = prefix + "INE_" + suffix;
-  std::string FileE = prefix + "INE_" + suffix;
+  std::string suffix = "DD_" + std::to_string(n_row) +
+    "_" + std::to_string(n_col) + "_" + rndStr;
+  std::string FileI, FileO, FileE;
+  if (eCommand == "normaliz") {
+    FileI = prefix + suffix + ".in";
+    FileO = prefix + suffix + ".out";
+    FileE = prefix + suffix + ".err";
+  } else {
+    FileI = prefix + suffix + ".ine";
+    FileO = prefix + suffix + ".ext";
+    FileE = prefix + suffix + ".err";
+  }
   {
-    std::ofstream os(FileO);
+    std::ofstream os(FileI);
     if (eCommand == "normaliz") {
       os << "amb_space " << n_col << "\n";
       os << "cone " << n_row << "\n";
@@ -92,9 +99,9 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   //
   std::string order;
   if (eCommand == "normaliz") {
-    order = eCommand + " " + FileO;
+    order = eCommand + " " + FileI;
   } else {
-    order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;
+    order = eCommand + " " + FileI + " > " + FileO + " 2> " + FileE;
   }
   std::cerr << "order=" << order << "\n";
   int iret1 = system(order.c_str());
@@ -105,15 +112,13 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   std::cerr << "External program terminated\n";
   if (iret1 != 0) {
     std::cerr << "The program has not terminated correctly\n";
-    std::cerr << "FileO=" << FileO << "\n";
+    std::cerr << "FileO = " << FileO << "\n";
     throw TerminalException{1};
   }
   //  std::cerr << "iret1=" << iret1 << "\n";
   vectface ListFace(n_row);
   //
-  std::ifstream is(FileI);
-  std::string line;
-  size_t iLine = 0;
+  std::ifstream is(FileO);
   size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
   T eScal;
@@ -138,7 +143,9 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     ParseScalar_inplace<T>(str, LVal[pos_wrt]);
     pos_wrt++;
   };
-  // For this case we know at the beginning the number of inequalities 
+  std::string line;
+  size_t iLine = 0;
+  // For this case we know at the beginning the number of inequalities
   if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp" || eCommand == "normaliz") {
     size_t headersize;
     if (eCommand == "lcdd_gmp")
@@ -146,14 +153,17 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     if (eCommand == "ppl_lcdd")
       headersize = 3;
     if (eCommand == "normaliz")
-      headersize = 2 + 5 + 6 + n_row + 1;
+      headersize = 2 + 5 + 6 + n_row + 6;
+    std::cerr << "headersize=" << headersize << "\n";
     while (std::getline(is, line)) {
-      //    std::cerr << "iLine=" << iLine << " line=" << line << "\n";
+      std::cerr << "iLine=" << iLine << " line=" << line << "\n";
       if (iLine == headersize - 1) {
+        std::cerr << "   Assigning iLineLimit\n";
         // Determining the number of entries
         std::vector<std::string> LStr = STRING_Split(line, " ");
+        std::cerr << "LStr[0]=" << LStr[0] << "\n";
         iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
-        //      std::cerr << "iLineLimit=" << iLineLimit << "\n";
+        std::cerr << "iLineLimit=" << iLineLimit << "\n";
       }
       if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
         STRING_Split_f(line, " ", f_read);
@@ -200,7 +210,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   SingletonTime time4;
   std::cerr << "|FileRead|=" << ms(time3, time4) << "\n";
 #endif
-  //  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+  //  throw TerminalException{1};
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
   RemoveFileIfExist(FileE);
