@@ -91,7 +91,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   // Now calling the external program
   //
   std::string order;
-  if (order == "normaliz") {
+  if (eCommand == "normaliz") {
     order = eCommand + " " + FileO;
   } else {
     order = eCommand + " " + FileO + " > " + FileI + " 2> " + FileE;

@@ -1226,20 +1226,15 @@ public:
       if (IsExistingFile(eFileEXT)) {
         os << "Opening existing files (NB, FB, FF)\n";
         fn = new FileNumber(eFileNB, false);
-        std::cerr << "Init exist step 1\n";
         n_orbit = fn->getval();
-        std::cerr << "Init exist step 2\n";
         fb = new FileBool(eFileFB, n_orbit);
-        std::cerr << "Init exist step 3\n";
         ff = new FileFace(eFileFF, bb.delta, n_orbit);
-        std::cerr << "Init exist step 4\n";
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
              << " is not makeable\n";
           throw TerminalException{1};
         }
-        std::cerr << "Init new step 1\n";
         os << "Creating the files (NB, FB, FF)\n";
         // Writing Group
         os << "eFileGRP=" << eFileGRP << "\n";
@@ -1249,13 +1244,9 @@ public:
         std::ofstream os_ext(eFileEXT);
         WriteMatrix(os_ext, bb.EXT);
         // Opening the files
-        std::cerr << "Init new step 2\n";
         fn = new FileNumber(eFileNB, true);
-        std::cerr << "Init new step 3\n";
         fb = new FileBool(eFileFB);
-        std::cerr << "Init new step 4\n";
         ff = new FileFace(eFileFF, bb.delta);
-        std::cerr << "Init new step 5\n";
         n_orbit = 0;
         fn->setval(n_orbit);
       }
@@ -1273,7 +1264,6 @@ public:
       }
       print_status();
     }
-    std::cerr << "Exiting DatabaseOrbit constructor\n";
   }
   ~DatabaseOrbits() {
     /* TRICK 5: The destructor does NOT destroy the database! This is because it
@@ -1282,10 +1272,6 @@ public:
        stuff can happen.
      */
     if (is_opened) {
-      if (fb == nullptr || fn == nullptr || ff == nullptr) {
-        std::cerr << "Error in fn / fb / fn\n";
-        throw TerminalException{1};
-      }
       delete fb;
       delete fn;
       delete ff;

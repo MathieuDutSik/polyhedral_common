@@ -53,7 +53,11 @@ public:
   void setval(size_t const &val) {
     size_t i_byte = 0;
     std::fseek(fp, i_byte, SEEK_SET);
-    std::fwrite(&val, sizeof(size_t), 1, fp);
+    size_t n_write = std::fwrite(&val, sizeof(size_t), 1, fp);
+    if (n_write != 1) {
+      std::cerr << "Error in setval(..), wrong number of written bytes\n";
+      throw TerminalException{1};
+    }
   }
 };
 
@@ -70,7 +74,6 @@ public:
   FileBool() = delete;
 
   FileBool(std::string const &file) : file(file) {
-    std::cerr << "FileBool, constructor 1 file=" << file << "\n";
     if (IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should be missing\n";
       throw TerminalException{1};
@@ -80,7 +83,6 @@ public:
   }
 
   FileBool(std::string const &file, size_t const &_n_ent) {
-    std::cerr << "FileBool, constructor 2 file=" << file << "\n";
     if (!IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should not be missing\n";
       throw TerminalException{1};
@@ -89,14 +91,10 @@ public:
     n_ent = _n_ent;
   }
 
-  ~FileBool() {
-    std::cerr << "FileBool, destructor file=" << file << " n_ent=" << n_ent << "\n";
-    std::fclose(fp);
-  }
+  ~FileBool() { std::fclose(fp); }
 
   // bool set/get
   bool getbit(size_t const &pos) {
-    std::cerr << "FileBool, getbit pos=" << pos << "\n";
     size_t i_byte = pos / 8;
     size_t i_pos = pos % 8;
     std::fseek(fp, i_byte, SEEK_SET);
@@ -112,13 +110,17 @@ public:
   }
 
   void setbit(size_t const &pos, bool const &val) {
-    std::cerr << "FileBool, setbit pos=" << pos << " val=" << val << "\n";
     size_t curr_n_byte = (n_ent + 7) / 8;
     size_t needed_n_byte = (pos + 1 + 7) / 8;
     std::fseek(fp, curr_n_byte, SEEK_SET);
     uint8_t val_u8 = 0;
     for (size_t u = curr_n_byte; u < needed_n_byte; u++) {
-      std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+      size_t n_write = std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+      if (n_write != 1) {
+        std::cerr << "Error in setbit(..), wrong number of written bytes\n";
+        throw TerminalException{1};
+      }
+
     }
     // Now doing the assignment.
     size_t i_byte = pos / 8;
@@ -233,15 +235,24 @@ public:
     size_t len = 0;
     if (needed_n_byte > curr_n_byte)
       len = needed_n_byte - curr_n_byte;
-    if (len <=
-        ZeroSize) { // We are in the standard case of appending some entries.
+    // We are in the standard case of appending some entries.
+    if (len <= ZeroSize) {
       if (len > 0) {
-        std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+        size_t n_write = std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+        if (n_write != len) {
+          std::cerr << "Error in setface(..), wrong number of written bytes\n";
+          throw TerminalException{1};
+        }
       }
     } else { // This case is rarer. It is for big jumps.
       uint8_t val_u8 = 0;
-      for (size_t u = curr_n_byte; u < needed_n_byte; u++)
-        std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+      for (size_t u = curr_n_byte; u < needed_n_byte; u++) {
+        size_t n_write = std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+        if (n_write != 1) {
+          std::cerr << "Error in setface(..), wrong number of written bytes\n";
+          throw TerminalException{1};
+        }
+      }
     }
     // Now doing the assignment.
     size_t start_byte = (pos * siz) / 8;
@@ -273,7 +284,11 @@ public:
     }
     // Writing it out
     std::fseek(fp, start_byte, SEEK_SET);
-    std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
+    size_t n_write = std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
+    if (n_write != len_rw) {
+      std::cerr << "Error in setface(..), wrong number of written bytes\n";
+      throw TerminalException{1};
+    }
     n_face = std::max(n_face, pos + 1);
   }
 };
