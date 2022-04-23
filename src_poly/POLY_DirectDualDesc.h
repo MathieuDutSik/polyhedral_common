@@ -119,7 +119,6 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   vectface ListFace(n_row);
   //
   std::ifstream is(FileO);
-  size_t iLineLimit = 0;
   std::vector<T> LVal(DimEXT);
   T eScal;
   size_t shift;
@@ -147,7 +146,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   size_t iLine = 0;
   // For this case we know at the beginning the number of inequalities
   if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp" || eCommand == "normaliz") {
-    size_t headersize;
+    size_t headersize, n_facet = 0, iLineLimit = 0;
     if (eCommand == "lcdd_gmp")
       headersize = 4;
     if (eCommand == "ppl_lcdd")
@@ -162,7 +161,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
         // Determining the number of entries
         std::vector<std::string> LStr = STRING_Split(line, " ");
         std::cerr << "LStr[0]=" << LStr[0] << "\n";
-        iLineLimit = headersize + ParseScalar<size_t>(LStr[0]);
+        n_facet = ParseScalar<size_t>(LStr[0]);
+        iLineLimit = headersize + n_facet;
         std::cerr << "iLineLimit=" << iLineLimit << "\n";
       }
       if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
@@ -181,6 +181,10 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 #endif
       }
       iLine++;
+    }
+    if (ListFace.size() != n_facet) {
+      std::cerr << "Consistency error |ListFace|=" << ListFace.size() << " n_facet=" << n_facet << "\n";
+      throw TerminalException{1};
     }
   }
   if (eCommand == "glrs") {
