@@ -31,9 +31,9 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    //    using T = mpq_class;
+    using T = mpq_class;
     //    using T = boost::multiprecision::cpp_rational;
-    using T = boost::multiprecision::mpq_rational;
+    //    using T = boost::multiprecision::mpq_rational;
     MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
     //
     auto process = [&]() -> void {
