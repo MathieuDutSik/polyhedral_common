@@ -145,14 +145,51 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   std::string line;
   size_t iLine = 0;
   // For this case we know at the beginning the number of inequalities
-  if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp" || eCommand == "normaliz") {
+  if (eCommand == "normaliz") {
+    bool has_n_facet = false;
+    size_t n_facet = 0, iLineLimit = 0;
+    while (std::getline(is, line)) {
+      std::cerr << "iLine=" << iLine << " line=" << line << "\n";
+      if (has_n_facet) {
+        if (iLine < iLineLimit) {
+          STRING_Split_f(line, " ", f_read);
+          pos_wrt = 0;
+#ifdef USE_ISINCD
+          ListFace.InsertFaceRef(isincd);
+#else
+          for (size_t i_row = 0; i_row < n_row; i_row++) {
+            eScal = 0;
+            for (size_t i = shift; i < DimEXT; i++)
+              eScal += LVal[i] * EXT(i_row, i - shift);
+            f[i_row] = static_cast<bool>(eScal == 0);
+          }
+          ListFace.push_back(f);
+#endif
+        } else {
+          break;
+        }
+      }
+      if (!has_n_facet) {
+        std::vector<std::string> LStr = STRING_Split(line, " support hyperplanes");
+        if (LStr.size() == 2) {
+          has_n_facet = true;
+          n_facet = ParseScalar<size_t>(LStr[0]);
+          iLineLimit = iLine + n_facet + 1;
+        }
+      }
+      iLine++;
+    }
+    if (ListFace.size() != n_facet) {
+      std::cerr << "Consistency error |ListFace|=" << ListFace.size() << " n_facet=" << n_facet << "\n";
+      throw TerminalException{1};
+    }
+  }
+  if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp") {
     size_t headersize, n_facet = 0, iLineLimit = 0;
     if (eCommand == "lcdd_gmp")
       headersize = 4;
     if (eCommand == "ppl_lcdd")
       headersize = 3;
-    if (eCommand == "normaliz")
-      headersize = 2 + 5 + 6 + n_row + 6;
     std::cerr << "headersize=" << headersize << "\n";
     while (std::getline(is, line)) {
       std::cerr << "iLine=" << iLine << " line=" << line << "\n";
