@@ -1082,7 +1082,7 @@ public:
     return {pos, f, FlippingFramework<T>(EXT, f), GRP,
             ReducedGroupAction(Stab, f)};
   }
-  void InsertListOrbitEntry(SingEnt const &eEnt, const size_t &i_orbit) {
+  void InsertListOrbitEntry(SingEnt const &eEnt, [[maybe_unused]] const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
   }
 
@@ -1587,21 +1587,21 @@ namespace boost::serialization {
 
 template <class Archive>
 inline void serialize(Archive &ar, message_facet &mesg,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("hash", mesg.e_hash);
   ar &make_nvp("vf", mesg.vf);
 }
 
 template <class Archive>
 inline void serialize(Archive &ar, message_query &mesg,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("hash", mesg.e_hash);
   ar &make_nvp("query", mesg.query);
 }
 
 template <class Archive, typename Tint>
 inline void serialize(Archive &ar, HashUndoneOrbitInfo<Tint> &mesg,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("hash", mesg.e_hash);
   ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
   ar &make_nvp("nbundone", mesg.erec.nbUndone);

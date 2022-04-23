@@ -60,6 +60,7 @@ private:
 
 public:
   FileBool(std::string const &file) : file(file) {
+    std::cerr << "FileBool, constructor 1 file=" << file << "\n";
     if (IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should be missing\n";
       throw TerminalException{1};
@@ -69,6 +70,7 @@ public:
   }
 
   FileBool(std::string const &file, size_t const &_n_ent) {
+    std::cerr << "FileBool, constructor 2 file=" << file << "\n";
     if (!IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should not be missing\n";
       throw TerminalException{1};
@@ -77,10 +79,14 @@ public:
     n_ent = _n_ent;
   }
 
-  ~FileBool() { std::fclose(fp); }
+  ~FileBool() {
+    std::cerr << "FileBool, destructor\n";
+    std::fclose(fp);
+  }
 
   // bool set/get
   bool getbit(size_t const &pos) {
+    std::cerr << "FileBool, getbit pos=" << pos << "\n";
     size_t i_byte = pos / 8;
     size_t i_pos = pos % 8;
     std::fseek(fp, i_byte, SEEK_SET);
@@ -96,6 +102,7 @@ public:
   }
 
   void setbit(size_t const &pos, bool const &val) {
+    std::cerr << "FileBool, setbit pos=" << pos << " val=" << val << "\n";
     size_t curr_n_byte = (n_ent + 7) / 8;
     size_t needed_n_byte = (pos + 1 + 7) / 8;
     std::fseek(fp, curr_n_byte, SEEK_SET);
@@ -119,7 +126,11 @@ public:
     std::fseek(fp, i_byte, SEEK_SET);
     val_u8 ^= static_cast<uint8_t>(-static_cast<uint8_t>(val) ^ val_u8) &
               kBitmask[i_pos];
-    std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+    size_t n_write = std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
+    if (n_write != 1) {
+      std::cerr << "Error in setbit, number of written elements different from 1\n";
+      throw TerminalException{1};
+    }
     n_ent = std::max(n_ent, pos + 1);
   }
 };
