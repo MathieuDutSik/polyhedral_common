@@ -137,12 +137,27 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 #else
   Face f(n_row);
 #endif
+  std::string line;
   size_t pos_wrt = 0;
   auto f_read = [&](const std::string &str) -> void {
     ParseScalar_inplace<T>(str, LVal[pos_wrt]);
     pos_wrt++;
   };
-  std::string line;
+  auto process_line = [&]() -> void {
+    STRING_Split_f(line, " ", f_read);
+    pos_wrt = 0;
+#ifdef USE_ISINCD
+    ListFace.InsertFaceRef(isincd);
+#else
+    for (size_t i_row = 0; i_row < n_row; i_row++) {
+      eScal = 0;
+      for (size_t i = shift; i < DimEXT; i++)
+        eScal += LVal[i] * EXT(i_row, i - shift);
+      f[i_row] = static_cast<bool>(eScal == 0);
+    }
+    ListFace.push_back(f);
+#endif
+  };
   size_t iLine = 0;
   // For this case we know at the beginning the number of inequalities
   if (eCommand == "normaliz") {
@@ -152,19 +167,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       std::cerr << "iLine=" << iLine << " line=" << line << "\n";
       if (has_n_facet) {
         if (iLine < iLineLimit) {
-          STRING_Split_f(line, " ", f_read);
-          pos_wrt = 0;
-#ifdef USE_ISINCD
-          ListFace.InsertFaceRef(isincd);
-#else
-          for (size_t i_row = 0; i_row < n_row; i_row++) {
-            eScal = 0;
-            for (size_t i = shift; i < DimEXT; i++)
-              eScal += LVal[i] * EXT(i_row, i - shift);
-            f[i_row] = static_cast<bool>(eScal == 0);
-          }
-          ListFace.push_back(f);
-#endif
+          process_line();
         } else {
           break;
         }
@@ -190,33 +193,15 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       headersize = 4;
     if (eCommand == "ppl_lcdd")
       headersize = 3;
-    std::cerr << "headersize=" << headersize << "\n";
     while (std::getline(is, line)) {
-      std::cerr << "iLine=" << iLine << " line=" << line << "\n";
       if (iLine == headersize - 1) {
-        std::cerr << "   Assigning iLineLimit\n";
         // Determining the number of entries
         std::vector<std::string> LStr = STRING_Split(line, " ");
-        std::cerr << "LStr[0]=" << LStr[0] << "\n";
         n_facet = ParseScalar<size_t>(LStr[0]);
         iLineLimit = headersize + n_facet;
-        std::cerr << "iLineLimit=" << iLineLimit << "\n";
       }
-      if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit)) {
-        STRING_Split_f(line, " ", f_read);
-        pos_wrt = 0;
-#ifdef USE_ISINCD
-        ListFace.InsertFaceRef(isincd);
-#else
-        for (size_t i_row = 0; i_row < n_row; i_row++) {
-          eScal = 0;
-          for (size_t i = shift; i < DimEXT; i++)
-            eScal += LVal[i] * EXT(i_row, i - shift);
-          f[i_row] = static_cast<bool>(eScal == 0);
-        }
-        ListFace.push_back(f);
-#endif
-      }
+      if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit))
+        process_line();
       iLine++;
     }
     if (ListFace.size() != n_facet) {
@@ -229,21 +214,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     while (std::getline(is, line)) {
       if (line == "end")
         break;
-      if (iLine >= headersize) {
-        STRING_Split_f(line, " ", f_read);
-        pos_wrt = 0;
-#ifdef USE_ISINCD
-        ListFace.InsertFaceRef(isincd);
-#else
-        for (size_t i_row = 0; i_row < n_row; i_row++) {
-          eScal = 0;
-          for (size_t i = shift; i < DimEXT; i++)
-            eScal += LVal[i] * EXT(i_row, i - shift);
-          f[i_row] = static_cast<bool>(eScal == 0);
-        }
-        ListFace.push_back(f);
-#endif
-      }
+      if (iLine >= headersize)
+        process_line();
       iLine++;
     }
   }
