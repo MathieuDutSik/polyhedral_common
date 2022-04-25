@@ -402,7 +402,6 @@ std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const &G) {
   return F;
 }
 
-
 template <typename T>
 std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
@@ -410,9 +409,9 @@ std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
     std::cerr << "We fail to find an isotropic factorization\n";
     throw TerminalException{1};
   }
-  MyMatrix<T> const& Factor = *opt;
+  MyMatrix<T> const &Factor = *opt;
   std::vector<MyVector<T>> LVect(2);
-  for (int i=0; i<2; i++) {
+  for (int i = 0; i < 2; i++) {
     // a x + b y correspond to the isotrop vector (-b, a)
     MyVector<T> U(2);
     U(0) = -Factor(i, 1);
@@ -421,7 +420,6 @@ std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
   }
   return LVect;
 }
-
 
 /*
   F is the factorization with each row representing one term of the
@@ -655,4 +653,4 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 
-#endif  // SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
+#endif // SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_

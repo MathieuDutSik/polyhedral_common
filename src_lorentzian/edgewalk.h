@@ -8,12 +8,12 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
+#include "Timings.h"
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"
 #include "lorentzian_linalg.h"
 #include "two_dim_lorentzian.h"
 #include "vinberg.h"
-#include "Timings.h"
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -309,7 +309,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
       ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |ComputePossibleExtensions|=" << ms(time1,time2) << "\n";
+  std::cerr << "Timing |ComputePossibleExtensions|=" << ms(time1, time2)
+            << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase : |l_extension|="
@@ -335,7 +336,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
 #endif
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |l_candidates|=" << ms(time2,time3) << "\n";
+  std::cerr << "Timing |l_candidates|=" << ms(time2, time3) << "\n";
 #endif
   /* std::sort is sorting from the highest to the smallest
    */
@@ -356,7 +357,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
             });
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |sort|=" << ms(time3,time4) << "\n";
+  std::cerr << "Timing |sort|=" << ms(time3, time4) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   for (auto &x : l_candidates) {
@@ -391,7 +392,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
 #endif
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |l_ui_ret|=" << ms(time4,time5) << "\n";
+  std::cerr << "Timing |l_ui_ret|=" << ms(time4, time5) << "\n";
 #endif
   return l_ui_ret;
 }
@@ -409,7 +410,8 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
       gen_cuspidal_request_full_info(G, eReq);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |gen_cuspidal_request_full_info|=" << ms(time1,time2) << "\n";
+  std::cerr << "Timing |gen_cuspidal_request_full_info|=" << ms(time1, time2)
+            << "\n";
 #endif
   size_t len = cusp_bank.l_request.size();
   for (size_t i = 0; i < len; i++) {
@@ -436,7 +438,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
 #endif
 #ifdef TIMINGS
         SingletonTime time3;
-        std::cerr << "Timing |query(succ)|=" << ms(time2,time3) << "\n";
+        std::cerr << "Timing |query(succ)|=" << ms(time2, time3) << "\n";
 #endif
         return l_ui_ret;
       }
@@ -444,7 +446,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
   }
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |query(fail)|=" << ms(time2,time3) << "\n";
+  std::cerr << "Timing |query(fail)|=" << ms(time2, time3) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "DetermineRootsCuspidalCase_Memoized, failed to find some "
@@ -455,7 +457,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
   cusp_bank.l_answer.push_back(l_ui_ret);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |l_ui_ret|=" << ms(time3,time4) << "\n";
+  std::cerr << "Timing |l_ui_ret|=" << ms(time3, time4) << "\n";
 #endif
   return l_ui_ret;
 }
@@ -649,7 +651,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #endif
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |paperwork|=" << ms(time1,time2) << "\n";
+  std::cerr << "Timing |paperwork|=" << ms(time1, time2) << "\n";
 #endif
   //
   // Computing the extension and the maximum norms from that.
@@ -664,7 +666,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #endif
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |l_extension|=" << ms(time2,time3) << "\n";
+  std::cerr << "Timing |l_extension|=" << ms(time2, time3) << "\n";
 #endif
 
   //  for (auto & kv : map_max_resnorm)
@@ -845,7 +847,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #endif
 #ifdef TIMINGS
     SingletonTime timeA_2;
-    std::cerr << "Timing |get_sing_comp_anisotropic|=" << ms(timeA_1,timeA_2) << "\n";
+    std::cerr << "Timing |get_sing_comp_anisotropic|=" << ms(timeA_1, timeA_2)
+              << "\n";
 #endif
     return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
@@ -869,7 +872,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     MyMatrix<T> Factor_GP_LN = *opt_factor;
 #ifdef TIMINGS
     SingletonTime timeB_2;
-    std::cerr << "Timing |get_sing_comp_isotropic|=" << ms(timeB_1,timeB_2) << "\n";
+    std::cerr << "Timing |get_sing_comp_isotropic|=" << ms(timeB_1, timeB_2)
+              << "\n";
 #endif
     return {Latt, Basis_ProjP_LN, GP_LN, Factor_GP_LN, r0_work, {}};
   };
@@ -1097,7 +1101,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   }
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |l_candidates|=" << ms(time3,time4) << "\n";
+  std::cerr << "Timing |l_candidates|=" << ms(time3, time4) << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size()
@@ -1128,7 +1132,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   std::vector<MyVector<T>> BasisIsotrop = GetBasisIsotropicVectors(Gred);
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |Factor_opt|=" << ms(time4,time5) << "\n";
+  std::cerr << "Timing |Factor_opt|=" << ms(time4, time5) << "\n";
 #endif
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen = [&](MyVector<T> const &v) -> MyVector<T> {
@@ -1149,7 +1153,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     throw TerminalException{1};
   };
   std::vector<MyVector<T>> l_gens;
-  for (auto & U : BasisIsotrop) {
+  for (auto &U : BasisIsotrop) {
     //    std::cerr << "U=" << StringVectorGAP(U) << "\n";
     T sum = U.dot(Gred * U);
     //    std::cerr << "sum=" << sum << "\n";
@@ -1187,7 +1191,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   CuspidalRequest<T, Tint> eReq{l_ui, k_new, k};
 #ifdef TIMINGS
   SingletonTime time6;
-  std::cerr << "Timing |CuspidalRequest|=" << ms(time5,time6) << "\n";
+  std::cerr << "Timing |CuspidalRequest|=" << ms(time5, time6) << "\n";
 #endif
   std::vector<MyVector<Tint>> l_roots_ret =
       DetermineRootsCuspidalCase_Memoized<T, Tint, Tgroup>(cusp_bank, si, eReq);
@@ -1267,7 +1271,8 @@ gen_fund_domain_fund_info(CuspidalBank<T, Tint> &cusp_bank,
       get_canonicalized_record<T, Tint, Tgroup>(ic.ListMat, ic.map_v);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |gen_fund_domain_fund_info|=" << ms(time1,time2) << "\n";
+  std::cerr << "Timing |gen_fund_domain_fund_info|=" << ms(time1, time2)
+            << "\n";
 #endif
   return get_full_info(vert, frec, method);
 }
@@ -1387,7 +1392,8 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   size_t n_orbit_vertices = re.l_orbit_vertices.size();
   std::cerr << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
   size_t n_simple = l_simple_root.size();
-  std::cerr << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << " n_simple=" << n_simple << "\n";
+  std::cerr << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots
+            << " n_simple=" << n_simple << "\n";
   if (OutFormat == "GAP") {
     os << "return rec(LorMat:=";
     WriteMatrixGAP(os, G);
@@ -1489,7 +1495,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #endif
 #ifdef TIMINGS
           SingletonTime time2;
-          std::cerr << "Timing |func_insert_vertex(find iso)|=" << ms(time1,time2) << "\n";
+          std::cerr << "Timing |func_insert_vertex(find iso)|="
+                    << ms(time1, time2) << "\n";
 #endif
           bool test = f_isom(UniversalMatrixConversion<Tint, T>(*equiv_opt));
           if (test) {
@@ -1510,7 +1517,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "Timing |func_insert_vertex(no iso)|=" << ms(time1,time2) << "\n";
+    std::cerr << "Timing |func_insert_vertex(no iso)|=" << ms(time1, time2)
+              << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
     std::cerr << "               Failed to find some isomorphism\n";
@@ -1550,7 +1558,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         Tgroup(LGenIntegral, vertFull1.vert.MatRoot.rows());
 #ifdef TIMINGS
     SingletonTime time3;
-    std::cerr << "Timing |Automorphism|=" << ms(time2,time3) << "\n";
+    std::cerr << "Timing |Automorphism|=" << ms(time2, time3) << "\n";
 #endif
     bool test = f_vertex(vertFull1);
     if (test) {
@@ -1566,7 +1574,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #endif
 #ifdef TIMINGS
     SingletonTime time4;
-    std::cerr << "Timing |func_insert_vertex(end)|=" << ms(time3,time4) << "\n";
+    std::cerr << "Timing |func_insert_vertex(end)|=" << ms(time3, time4)
+              << "\n";
 #endif
     return false;
   };
@@ -1590,7 +1599,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1_integral);
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "Timing |vf_orb|=" << ms(time1,time2) << "\n";
+    std::cerr << "Timing |vf_orb|=" << ms(time1, time2) << "\n";
 #endif
     //
 #ifdef DEBUG_ENUM_PROCESS
@@ -1634,7 +1643,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     }
 #ifdef TIMINGS
     SingletonTime time3;
-    std::cerr << "Timing |process vf_orb|=" << ms(time2,time3) << "\n";
+    std::cerr << "Timing |process vf_orb|=" << ms(time2, time3) << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
     std::cerr << "Exiting from the insert_edges_from_vertex\n";
@@ -2338,12 +2347,12 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
   std::string OptionInitialVertex = "vinberg";
   std::string FileInitialVertex = "irrelevant";
   bool EarlyTerminationIfNotReflective = false;
-  FundDomainVertex<T, Tint> eVert1 =
-    get_initial_vertex<T, Tint, Tgroup>(si1, ApplyReduction, DualDescProg,
-      EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
-  FundDomainVertex<T, Tint> eVert2 =
-    get_initial_vertex<T, Tint, Tgroup>(si2, ApplyReduction, DualDescProg,
-      EarlyTerminationIfNotReflective, OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T, Tint> eVert1 = get_initial_vertex<T, Tint, Tgroup>(
+      si1, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
+      OptionInitialVertex, FileInitialVertex);
+  FundDomainVertex<T, Tint> eVert2 = get_initial_vertex<T, Tint, Tgroup>(
+      si2, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
+      OptionInitialVertex, FileInitialVertex);
   //
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T, Tint, Tgroup>(

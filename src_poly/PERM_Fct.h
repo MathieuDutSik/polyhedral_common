@@ -1,10 +1,10 @@
 #ifndef SRC_POLY_PERM_FCT_H_
 #define SRC_POLY_PERM_FCT_H_
 
-#include <vector>
-#include <utility>
-#include <algorithm>
 #include "Timings.h"
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 template <typename T, typename Tidx>
 std::vector<Tidx> SortingPerm(std::vector<T> const &ListV) {
@@ -55,7 +55,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   static_assert(is_ring_field<Tfield>::value,
                 "Requires Tfield to be a field in DivideVector");
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
-    const MyVector<T>& V = f1(iRow);
+    const MyVector<T> &V = f1(iRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       M(eRank, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
     }
@@ -70,18 +70,18 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   }
 #ifdef DEBUG_PERM_FCT
   std::cerr << "ListRowSelect =";
-  for (auto & eVal : eSelect.ListRowSelect)
+  for (auto &eVal : eSelect.ListRowSelect)
     std::cerr << " " << eVal;
   std::cerr << "\n";
   std::cerr << "Img(ListRowSelect) =";
-  for (auto & eVal : eSelect.ListRowSelect)
+  for (auto &eVal : eSelect.ListRowSelect)
     std::cerr << " " << eList[eVal];
   std::cerr << "\n";
 #endif
   MyMatrix<Tfield> M1_field(eSelect.TheRank, nbCol);
   for (size_t iRow = 0; iRow < eSelect.TheRank; iRow++) {
     size_t jRow = eSelect.ListRowSelect[iRow];
-    const MyVector<T>& V = f1(jRow);
+    const MyVector<T> &V = f1(jRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       M1_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
@@ -89,7 +89,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
   MyMatrix<Tfield> M2_field(eSelect.TheRank, nbCol);
   for (size_t iRow = 0; iRow < eSelect.TheRank; iRow++) {
     size_t jRow = eList[eSelect.ListRowSelect[iRow]];
-    const MyVector<T>& V = f2(jRow);
+    const MyVector<T> &V = f2(jRow);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       M2_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
@@ -97,8 +97,8 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
 #ifdef DEBUG_PERM_FCT
   // Coef EqMat(0,1) = sum_j M1inv_field(0,j) * M2_field(j,1)
   Tfield eSP = 0;
-  for (int j=0; j<int(nbCol); j++) {
-    eSP += M1inv_field(0,j) * M2_field(j,1);
+  for (int j = 0; j < int(nbCol); j++) {
+    eSP += M1inv_field(0, j) * M2_field(j, 1);
   }
   std::cerr << "eSP=" << eSP << "\n";
   std::cerr << "M1_field=\n";
@@ -118,18 +118,18 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
 #endif
     // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
-    const MyVector<T>& V2 = f2(iRowImg);
+    const MyVector<T> &V2 = f2(iRowImg);
 #ifdef DEBUG_PERM_FCT_NOW_OK
     std::cerr << "V1      =";
     WriteVector(std::cerr, V1);
     std::cerr << "V2      =";
     WriteVector(std::cerr, V2);
     //
-    MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield,T>(V1);
+    MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield, T>(V1);
     std::cerr << "V1_T    =";
     WriteVector(std::cerr, V1_T);
     //
-    MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield,T>(V2);
+    MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield, T>(V2);
     std::cerr << "V2_T    =";
     WriteVector(std::cerr, V2_T);
     //
@@ -145,7 +145,8 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
     std::cerr << "V1_imgB =";
     WriteVector(std::cerr, V1_imgB);
     //
-    MyVector<Tfield> V1_imgC = M2_field.transpose() * M1inv_field.transpose() * V1_T;
+    MyVector<Tfield> V1_imgC =
+        M2_field.transpose() * M1inv_field.transpose() * V1_T;
     std::cerr << "V1_imgC =";
     WriteVector(std::cerr, V1_imgC);
     //
@@ -160,7 +161,8 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
         eSum += EqMat(jRow, iCol) * V1(jRow);
       if (eSum != 0) {
 #ifdef DEBUG_PERM_FCT
-        std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol << "\n";
+        std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
+                  << "\n";
         std::cerr << "FindMatrixTransformationTest, exit false 2\n";
 #endif
         return {};
@@ -175,7 +177,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
 
 template <typename T, typename Tidx>
 std::optional<MyMatrix<T>>
-FindMatrixTransformationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
+FindMatrixTransformationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                              std::vector<Tidx> const &eList) {
   size_t nbRow1 = EXT1.rows();
   size_t nbRow2 = EXT2.rows();
@@ -184,14 +186,14 @@ FindMatrixTransformationTest(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2,
   int nbCol = EXT1.cols();
   MyVector<T> V1(nbCol);
   MyVector<T> V2(nbCol);
-  auto f1=[&](size_t iRow) -> const MyVector<T>& {
-    for (int i=0; i<nbCol; i++)
-      V1(i) = EXT1(iRow,i);
+  auto f1 = [&](size_t iRow) -> const MyVector<T> & {
+    for (int i = 0; i < nbCol; i++)
+      V1(i) = EXT1(iRow, i);
     return V1;
   };
-  auto f2=[&](size_t iRow) -> const MyVector<T>& {
-    for (int i=0; i<nbCol; i++)
-      V2(i) = EXT2(iRow,i);
+  auto f2 = [&](size_t iRow) -> const MyVector<T> & {
+    for (int i = 0; i < nbCol; i++)
+      V2(i) = EXT2(iRow, i);
     return V2;
   };
   return FindMatrixTransformationTest(nbRow1, nbCol, f1, f2, eList);
@@ -208,16 +210,16 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
   size_t nbCol = EXT.cols();
 #ifdef DEBUG_PERM_FCT
   std::cerr << "Vsubset =";
-  for (auto & eVal : Vsubset)
+  for (auto &eVal : Vsubset)
     std::cerr << " " << int(eVal);
   std::cerr << "\n";
   std::cerr << "Vin =";
-  for (auto & eVal : Vin)
+  for (auto &eVal : Vin)
     std::cerr << " " << int(eVal);
   std::cerr << "\n";
 #endif
   MyVector<T> V(nbCol);
-  auto g1 = [&](size_t iRow) -> const MyVector<T>& {
+  auto g1 = [&](size_t iRow) -> const MyVector<T> & {
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       V(iCol) = EXT(Vsubset[iRow], iCol);
     return V;
@@ -227,7 +229,8 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
                                                     g1, Vin);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|FindMatrixTransformationTest_Subset|=" << ms(time1,time2) << "\n";
+  std::cerr << "|FindMatrixTransformationTest_Subset|=" << ms(time1, time2)
+            << "\n";
 #endif
   return test1;
 }
@@ -250,7 +253,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|IsSubsetFullRank|=" << ms(time1,time2) << "\n";
+  std::cerr << "|IsSubsetFullRank|=" << ms(time1, time2) << "\n";
 #endif
   return TheSol.TheRank == nbCol;
 }
@@ -280,7 +283,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       if (!rec_eSum2.first) {
 #ifdef TIMINGS
         SingletonTime time2;
-        std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
+        std::cerr << "ESC1 |RepresentVertexPermutationTest|="
+                  << ms(time1, time2) << "\n";
 #endif
         return {}; // We fail because the image is not integral.
       }
@@ -290,7 +294,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     if (!epair.first) {
 #ifdef TIMINGS
       SingletonTime time2;
-      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
+      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << ms(time1, time2)
+                << "\n";
 #endif
       return {}; // We fail because the image does not belong to EXT2
     }
@@ -307,7 +312,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|RepresentVertexPermutationTest|=" << ms(time1,time2) << "\n";
+  std::cerr << "|RepresentVertexPermutationTest|=" << ms(time1, time2) << "\n";
 #endif
   return V;
 }
@@ -404,7 +409,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
             });
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|ExtendPartialCanonicalization|=" << ms(time1,time2) << "\n";
+  std::cerr << "|ExtendPartialCanonicalization|=" << ms(time1, time2) << "\n";
 #endif
   return ListIdx;
 }
@@ -565,4 +570,4 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
   return true;
 }
 
-#endif  // SRC_POLY_PERM_FCT_H_
+#endif // SRC_POLY_PERM_FCT_H_

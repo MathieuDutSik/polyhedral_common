@@ -1,4 +1,4 @@
- #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+#ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
 #include "Boost_bitset.h"
@@ -8,11 +8,11 @@
 #include "POLY_cddlib.h"
 #include "Temp_PolytopeEquiStab.h"
 #include <cstring>
-#include <string>
-#include <vector>
-#include <utility>
 #include <functional>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 //#define DEBUG
 //#define TIMINGS
@@ -806,13 +806,13 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 
 #ifdef TIMINGS
   SingletonTime time8;
-  std::cerr << "|ExpressMatrixForCType|=" << ms(time1,time2) << "\n";
-  std::cerr << "|CTYP_GetListTriple|=" << ms(time2,time3) << "\n";
-  std::cerr << "|Insert inequalities|=" << ms(time3,time4) << "\n";
-  std::cerr << "|Criterion Ineq Drop|=" << ms(time4,time5) << "\n";
-  std::cerr << "|ListInformations|=" << ms(time5,time6) << "\n";
-  std::cerr << "|RedundancyReductionClarkson|=" << ms(time6,time7) << "\n";
-  std::cerr << "|Flip + Canonic|=" << ms(time7,time8) << "\n";
+  std::cerr << "|ExpressMatrixForCType|=" << ms(time1, time2) << "\n";
+  std::cerr << "|CTYP_GetListTriple|=" << ms(time2, time3) << "\n";
+  std::cerr << "|Insert inequalities|=" << ms(time3, time4) << "\n";
+  std::cerr << "|Criterion Ineq Drop|=" << ms(time4, time5) << "\n";
+  std::cerr << "|ListInformations|=" << ms(time5, time6) << "\n";
+  std::cerr << "|RedundancyReductionClarkson|=" << ms(time6, time7) << "\n";
+  std::cerr << "|Flip + Canonic|=" << ms(time7, time8) << "\n";
 #endif
   return ListCtype;
 }
@@ -870,7 +870,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   int n_edge = TheCtype.rows();
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|ExpressMatrixForCType|=" << ms(time1,time2) < "\n";
+  std::cerr << "|ExpressMatrixForCType|=" << ms(time1, time2) < "\n";
 #endif
 
   std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple =
@@ -878,7 +878,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   int nb_triple = PairTriple.first.size();
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "|CTYP_GetListTriple|=" << ms(time2,time3) << "\n";
+  std::cerr << "|CTYP_GetListTriple|=" << ms(time2, time3) << "\n";
 #endif
 
   int8_t n = TheCtype.cols();
@@ -919,7 +919,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   int nb_ineq = Tot_map.size();
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "|Insert inequalities|=" << ms(time3,time4) << "\n";
+  std::cerr << "|Insert inequalities|=" << ms(time3, time4) << "\n";
 #endif
 
   int n_edgered = n_edge / 2;
@@ -1026,20 +1026,21 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "|Criterion Ineq Drop|=" << ms(time4,time5) << "\n";
+  std::cerr << "|Criterion Ineq Drop|=" << ms(time4, time5) << "\n";
 #endif
 
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
 #ifdef TIMINGS
   SingletonTime time6;
-  std::cerr << "|GetNumberFreeVectors|=" << ms(time5,time6) << "\n";
+  std::cerr << "|GetNumberFreeVectors|=" << ms(time5, time6) << "\n";
 #endif
 
   std::vector<std::vector<unsigned int>> ListGen =
       LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat);
 #ifdef TIMINGS
   SingletonTime time7;
-  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << ms(time6,time7) << "\n";
+  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << ms(time6, time7)
+            << "\n";
 #endif
 
   std::vector<Tidx> v(n_edge);
@@ -1055,7 +1056,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 
 #ifdef TIMINGS
   SingletonTime time8;
-  std::cerr << "|NumberAutomorphism|=" << ms(time7,time8) << "\n";
+  std::cerr << "|NumberAutomorphism|=" << ms(time7, time8) << "\n";
 #endif
   return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
 }
@@ -1237,4 +1238,4 @@ TypeIndex ParseStringToTypeIndex(std::string const &str) {
   return {iProc, idxMatrixF, iAdj};
 }
 
-#endif  // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+#endif // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_

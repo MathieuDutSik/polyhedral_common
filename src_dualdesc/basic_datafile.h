@@ -3,9 +3,9 @@
 
 #include "Basic_file.h"
 #include "Boost_bitset.h"
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <string>
+#include <vector>
 
 struct FileNumber {
 private:
@@ -14,7 +14,7 @@ private:
 
 public:
   FileNumber(const FileNumber &) = delete;
-  FileNumber& operator=(const FileNumber &) = delete;
+  FileNumber &operator=(const FileNumber &) = delete;
   FileNumber(FileNumber &&) = delete;
   FileNumber() = delete;
 
@@ -69,7 +69,7 @@ private:
 
 public:
   FileBool(const FileBool &) = delete;
-  FileBool& operator=(const FileBool &) = delete;
+  FileBool &operator=(const FileBool &) = delete;
   FileBool(FileBool &&) = delete;
   FileBool() = delete;
 
@@ -120,7 +120,6 @@ public:
         std::cerr << "Error in setbit(..), wrong number of written bytes\n";
         throw TerminalException{1};
       }
-
     }
     // Now doing the assignment.
     size_t i_byte = pos / 8;
@@ -130,7 +129,8 @@ public:
     if (ret != 1) {
       std::cerr << "FileBool: Error in setbit(...)\n";
       std::cerr << "pos=" << pos << " val=" << val << "\n";
-      std::cerr << "curr_n_byte=" << curr_n_byte << " needed_n_byte=" << needed_n_byte << "\n";
+      std::cerr << "curr_n_byte=" << curr_n_byte
+                << " needed_n_byte=" << needed_n_byte << "\n";
       std::cerr << "i_byte=" << i_byte << " i_pos=" << i_pos << "\n";
       std::cerr << "ret=" << ret << " file=" << file << "\n";
       throw TerminalException{1};
@@ -140,7 +140,8 @@ public:
               kBitmask[i_pos];
     size_t n_write = std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);
     if (n_write != 1) {
-      std::cerr << "Error in setbit, number of written elements different from 1\n";
+      std::cerr
+          << "Error in setbit, number of written elements different from 1\n";
       throw TerminalException{1};
     }
     n_ent = std::max(n_ent, pos + 1);
@@ -166,7 +167,7 @@ private:
 
 public:
   FileFace(const FileFace &) = delete;
-  FileFace& operator=(const FileFace &) = delete;
+  FileFace &operator=(const FileFace &) = delete;
   FileFace(FileFace &&) = delete;
   FileFace() = delete;
 
@@ -238,7 +239,8 @@ public:
     // We are in the standard case of appending some entries.
     if (len <= ZeroSize) {
       if (len > 0) {
-        size_t n_write = std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+        size_t n_write =
+            std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
         if (n_write != len) {
           std::cerr << "Error in setface(..), wrong number of written bytes\n";
           throw TerminalException{1};
@@ -284,7 +286,8 @@ public:
     }
     // Writing it out
     std::fseek(fp, start_byte, SEEK_SET);
-    size_t n_write = std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
+    size_t n_write =
+        std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
     if (n_write != len_rw) {
       std::cerr << "Error in setface(..), wrong number of written bytes\n";
       throw TerminalException{1};

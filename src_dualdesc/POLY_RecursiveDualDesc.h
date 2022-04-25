@@ -15,13 +15,13 @@
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
-#include <signal.h>
-#include <map>
-#include <string>
 #include <limits>
-#include <vector>
-#include <utility>
+#include <map>
+#include <signal.h>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH
@@ -1082,7 +1082,8 @@ public:
     return {pos, f, FlippingFramework<T>(EXT, f), GRP,
             ReducedGroupAction(Stab, f)};
   }
-  void InsertListOrbitEntry(SingEnt const &eEnt, [[maybe_unused]] const size_t &i_orbit) {
+  void InsertListOrbitEntry(SingEnt const &eEnt,
+                            [[maybe_unused]] const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
   }
 
@@ -1181,11 +1182,11 @@ private:
      locality. The faces are written one by one while the access to status is
      random */
   // This is for storing the number of orbits of the polytope
-  FileNumber* fn;
+  FileNumber *fn;
   // This is for storing the status of the orbits
-  FileBool* fb;
+  FileBool *fb;
   // This is for storing the faces and the index of orbit
-  FileFace* ff;
+  FileFace *ff;
   bool is_opened;
   bool SavingTrigger;
   std::ostream &os;
@@ -1205,7 +1206,7 @@ public:
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
                  const bool &_SavingTrigger, std::ostream &os)
-    : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
+      : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
         os(os) {
     os << "MainPrefix=" << MainPrefix << "\n";
     eFileEXT = MainPrefix + ".ext";
@@ -1564,9 +1565,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   };
   vectface ListOrbitFaces = compute_split_or_not();
   SingletonTime end;
-  TheMap["time"] = s(start,end);
+  TheMap["time"] = s(start, end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  std::cerr << "elapsed_seconds=" << s(start,end) << " ansBank=" << ansBank
+  std::cerr << "elapsed_seconds=" << s(start, end) << " ansBank=" << ansBank
             << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,

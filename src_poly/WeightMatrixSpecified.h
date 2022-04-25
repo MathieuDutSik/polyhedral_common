@@ -38,8 +38,8 @@
 #endif
 
 #include <algorithm>
-#include <map>
 #include <limits>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -284,7 +284,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
       ComputeInitialVertexPartition<T, Tidx>(nbRow, f1, f2, canonically);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|ComputeInitialVertexPartition|=" << ms(time1,time2) << "\n";
+  std::cerr << "|ComputeInitialVertexPartition|=" << ms(time1, time2) << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_SPECIFIED
@@ -364,7 +364,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     bool test = DoRefinement(iBlock);
 #ifdef TIMINGS
     SingletonTime time_ref2;
-    std::cerr << "|DoRefinement|=" << ms(time_ref1,time_ref2) << "\n";
+    std::cerr << "|DoRefinement|=" << ms(time_ref1, time_ref2) << "\n";
 #endif
 #ifdef DEBUG_SPECIFIED
     std::cerr << "After Dorefinement\n";
@@ -451,7 +451,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
   });
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|GetOrdering_ListIdx|=" << ms(time1,time2) << "\n";
+  std::cerr << "|GetOrdering_ListIdx|=" << ms(time1, time2) << "\n";
 #endif
   return ListIdx;
 }
@@ -553,7 +553,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|ComputeVertexSignature|=" << ms(time1,time2) << "\n";
+  std::cerr << "|ComputeVertexSignature|=" << ms(time1, time2) << "\n";
 #endif
   return {nbRow,
           nbWeight,
@@ -598,7 +598,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|RenormalizeWMVS|=" << ms(time1,time2) << "\n";
+  std::cerr << "|RenormalizeWMVS|=" << ms(time1, time2) << "\n";
 #endif
 }
 
@@ -850,7 +850,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
 #endif
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|GetDataTraces|=" << ms(time1,time2) << "\n";
+  std::cerr << "|GetDataTraces|=" << ms(time1, time2) << "\n";
 #endif
   return DT;
 }
@@ -995,7 +995,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       ComputeVertexPartition<T, Tidx>(nbRow, f1, f2, canonically, max_globiter);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|ComputeVertexPartition|=" << ms(time1,time2) << "\n";
+  std::cerr << "|ComputeVertexPartition|=" << ms(time1, time2) << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
@@ -1011,13 +1011,15 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   size_t idx = 0;
   auto set_status_case = [&]() -> void {
     std::cerr << "set_status_case, begin\n";
-    //    std::cerr << "nbCase=" << nbCase << " |StatusCase|=" << StatusCase.size() << "\n";
+    //    std::cerr << "nbCase=" << nbCase << " |StatusCase|=" <<
+    //    StatusCase.size() << "\n";
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       StatusCase[iCase] = 0;
     //    std::cerr << "idx=" << idx << " |ListIdx|=" << ListIdx.size() << "\n";
     for (size_t u = 0; u < idx; u++) {
       size_t pos = ListIdx[u];
-      //      std::cerr << "u=" << u << " pos=" << pos << " |f_covered|=" << f_covered.size() << "\n";
+      //      std::cerr << "u=" << u << " pos=" << pos << " |f_covered|=" <<
+      //      f_covered.size() << "\n";
       if (f_covered[pos] == 0)
         StatusCase[ListIdx[u]] = 1;
     }
@@ -1033,7 +1035,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     int sum_prev = sum_status_case();
     while (true) {
       idx++;
-      if (idx == nbCase+1)
+      if (idx == nbCase + 1)
         return false;
       set_status_case();
       int sum_new = sum_status_case();

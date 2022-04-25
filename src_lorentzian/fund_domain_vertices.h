@@ -1,13 +1,13 @@
 #ifndef SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 #define SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 
-#include <set>
-#include <unordered_map>
 #include <limits>
-#include <unordered_set>
+#include <set>
 #include <string>
-#include <vector>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 template <typename T, typename Tint> struct FundDomainVertex {
   MyVector<T> gen;
@@ -348,11 +348,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
                                       GeneralMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvInvariantSpace);
       } else {
-        MyVector<T> const& Visotrop = vertFull.vert.gen;
+        MyVector<T> const &Visotrop = vertFull.vert.gen;
         MyMatrix<T> eProd = Subspace1 * InvInvariantSpace;
         MyMatrix<T> G_new = InvariantSpace * G * InvariantSpace.transpose();
         FiniteIsotropicMatrixGroupHelper<T, Telt> helper =
-          ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G_new, eProd, Visotrop);
+            ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G_new, eProd,
+                                                             Visotrop);
         return LinearSpace_Stabilizer<
             T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvInvariantSpace);
@@ -497,9 +498,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       } else {
         MyMatrix<T> eProd = Subspace1 * InvariantSpaceInv;
         MyMatrix<T> G1_new = InvariantSpace * G1 * InvariantSpace.transpose();
-        MyVector<T> const& Visotrop = vertFull1.vert.gen;
+        MyVector<T> const &Visotrop = vertFull1.vert.gen;
         FiniteIsotropicMatrixGroupHelper<T, Telt> helper =
-          ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G1_new, eProd, Visotrop);
+            ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G1_new, eProd,
+                                                             Visotrop);
         return LinearSpace_Equivalence<
             T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
             LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
@@ -523,4 +525,4 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
   throw TerminalException{1};
 }
 
-#endif  // SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
+#endif // SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_

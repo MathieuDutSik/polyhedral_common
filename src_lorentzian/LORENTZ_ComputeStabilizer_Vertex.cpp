@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     std::string OptionNorms = "all";
     std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
     SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
-    
+
     CuspidalBank<T, Tint> cusp_bank;
     TheHeuristic<Tint> HeuristicIdealStabEquiv =
         GetHeuristicIdealStabEquiv<Tint>();

@@ -29,13 +29,14 @@ int main(int argc, char *argv[]) {
       ListMat1.push_back(eMat);
     }
     MyMatrix<T> EXT1 = ReadMatrix<T>(is);
-    for (auto & eMat1 : ListMat1) {
+    for (auto &eMat1 : ListMat1) {
       if (!IsSymmetricMatrix(eMat1)) {
         std::cerr << "The matrix should be symmetric\n";
         throw TerminalException{1};
       }
       if (eMat1.cols() != EXT1.cols()) {
-        std::cerr << "|eMat1|=" << eMat1.cols() << " |EXT1|=" << EXT1.cols() << "\n";
+        std::cerr << "|eMat1|=" << eMat1.cols() << " |EXT1|=" << EXT1.cols()
+                  << "\n";
         throw TerminalException{1};
       }
     }
@@ -59,13 +60,14 @@ int main(int argc, char *argv[]) {
       ListMat2.push_back(eMat);
     }
     MyMatrix<T> EXT2 = ReadMatrix<T>(is);
-    for (auto & eMat2 : ListMat2) {
+    for (auto &eMat2 : ListMat2) {
       if (!IsSymmetricMatrix(eMat2)) {
         std::cerr << "The matrix should be symmetric\n";
         throw TerminalException{1};
       }
       if (eMat2.cols() != EXT2.cols()) {
-        std::cerr << "|eMat2|=" << eMat2.cols() << " |EXT2|=" << EXT2.cols() << "\n";
+        std::cerr << "|eMat2|=" << eMat2.cols() << " |EXT2|=" << EXT2.cols()
+                  << "\n";
         throw TerminalException{1};
       }
     }
@@ -88,7 +90,7 @@ int main(int argc, char *argv[]) {
         TestEquivalence_ListMat_Vdiag<T, Tidx, use_scheme>(
             EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
     //
-    auto prt=[&](std::ostream & os) -> void {
+    auto prt = [&](std::ostream &os) -> void {
       if (!PairTest) {
         os << "return false;\n";
       } else {

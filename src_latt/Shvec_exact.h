@@ -642,9 +642,9 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
   return MatrixFromVectorFamily(info.short_vectors);
 }
 
-
 template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat, T const& SpecNorm) {
+MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
+                                   T const &SpecNorm) {
   int dim = GramMat.rows();
   std::vector<MyVector<Tint>> ListVect;
   if (dim == 1) {
@@ -664,7 +664,8 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat, T const& SpecNorm
   } else {
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
     MyVector<T> cosetVect = ZeroVector<T>(dim);
-    T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, SpecNorm, mode);
+    T_shvec_request<T> request =
+        initShvecReq(GramMat, cosetVect, SpecNorm, mode);
     request.central = true;
     //
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
@@ -673,11 +674,9 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat, T const& SpecNorm
       }
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm,
-                                                 f_insert);
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm, f_insert);
   }
   return MatrixFromVectorFamilyDim(dim, ListVect);
 }
-
 
 #endif //  SRC_LATT_SHVEC_EXACT_H_

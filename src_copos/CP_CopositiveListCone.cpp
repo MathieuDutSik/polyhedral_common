@@ -42,17 +42,11 @@ int main(int argc, char *argv[]) {
       for (int iCone = 0; iCone < CopoRes.nbCone; iCone++) {
         OUTfs << "iCone=" << iCone << "/" << CopoRes.nbCone << " Basis\n";
         MyMatrix<Tint> eMat = CopoRes.ListBasis[iCone];
-        //      std::cerr << "eMat.rows=" << eMat.rows() << " eMat.cols=" <<
-        //      eMat.cols() << "\n";
         WriteMatrix(OUTfs, eMat);
         OUTfs << "Pairwise scalar products:\n";
         for (int i = 0; i < n; i++) {
-          //	std::cerr << "i=" << i << "\n";
           MyVector<Tint> eVect1 = eMat.row(i);
-          //	std::cerr << "eVect1.rows=" << eVect1.rows() << " eVect1.cols="
-          //<< eVect1.cols() << "\n";
           for (int j = 0; j <= i; j++) {
-            //	  std::cerr << "  j=" << j << "\n";
             MyVector<Tint> eVect2 = eMat.row(j);
             T eScal = ScalarProductQuadForm<T, Tint>(eSymmMat, eVect1, eVect2);
             OUTfs << " " << eScal;

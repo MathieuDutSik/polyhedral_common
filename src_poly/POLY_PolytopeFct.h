@@ -4,10 +4,10 @@
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
-#include <unordered_set>
-#include <vector>
 #include <string>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 struct GLPKoption {
   bool UseDouble;
@@ -168,13 +168,13 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
 }
 
 template <typename T> struct FlippingFramework {
- private:
+private:
   MyMatrix<T> EXT_red;
   Face OneInc;
   std::vector<int> OneInc_V;
   std::vector<T> ListInvScal;
 
- public:
+public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
       : OneInc(_OneInc) {
@@ -612,4 +612,4 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
-#endif  //  SRC_POLY_POLY_POLYTOPEFCT_H_
+#endif //  SRC_POLY_POLY_POLYTOPEFCT_H_

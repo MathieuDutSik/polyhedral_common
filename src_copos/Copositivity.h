@@ -36,7 +36,8 @@ template <typename T> struct CopositivityInfoReduction {
   std::vector<int> IdxColumn;
 };
 
-//#define DEBUG_UNDER_POS_COND
+
+// #define DEBUG_UNDER_POS_COND
 
 // Given C >0 a >=0 and b>0 find the maximum
 // value of x>=0 such that a x + b x^2 <= C
@@ -57,9 +58,7 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
 #endif
   double delta = a2_doubl * a2_doubl + 4 * C2_doubl;
   double x1 = 0.5 * (-a2_doubl + sqrt(delta));
-  double eD1 = floor(x1);
-  long int eD2 = lround(eD1);
-  int eReturn = eD2;
+  int eReturn = UniversalScalarConversion<int,double>(x1);
   auto f = [&](int const &x) -> bool {
     T eDiff = C2 - a2 * x - x * x;
     if (eDiff >= 0)

@@ -3,10 +3,10 @@
 
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
-#include <unordered_set>
 #include <string>
-#include <vector>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 // The list of region is described by a vector of + and -.
 // If it is + then the encoding is by a 1. Otherwise it is by a 0.
@@ -86,10 +86,10 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
         cbased_cdd::RedundancyReductionClarkson(ListInequalities);
     //    std::vector<int> ListIrred =
     //    cdd::RedundancyReductionClarkson(ListInequalities);
-# ifdef DEBUG_HYPERPLANE
+#ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
-# endif
-# ifdef CHECK_HYPERPLANE
+#endif
+#ifdef CHECK_HYPERPLANE
     if (static_cast<int>(ListIrred.size()) < n) {
       std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
       std::cerr << "ListInequalities=\n";
@@ -98,13 +98,13 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
       std::cerr << "ListIrred is too small. It is a bug\n";
       throw TerminalException{1};
     }
-# endif
+#endif
     for (auto &idx : ListIrred) {
       Face newF = eF;
       newF[idx] = 1 - eF[idx];
-# ifdef DEBUG_HYPERPLANE
+#ifdef DEBUG_HYPERPLANE
       std::cerr << "idx=" << idx << " newF=" << StringFace(newF) << "\n";
-# endif
+#endif
       fInsert(newF);
     }
 #else
@@ -130,4 +130,4 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   return ListFace;
 }
 
-#endif  //  SRC_POLY_POLY_HYPERPLANE_H_
+#endif //  SRC_POLY_POLY_HYPERPLANE_H_

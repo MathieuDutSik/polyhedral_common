@@ -5,10 +5,10 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
-#include <utility>
 #include <algorithm>
-#include <vector>
 #include <string>
+#include <utility>
+#include <vector>
 
 /*
   A few linear algebra stuff used for the lorentzian computations
@@ -584,7 +584,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "Timing |is_finite_order|=" << ms(time1,time2) << "\n";
+    std::cerr << "Timing |is_finite_order|=" << ms(time1, time2) << "\n";
 #endif
     MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
     if (!IsZeroMatrix(eDiff)) {
@@ -605,7 +605,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     }
 #ifdef TIMINGS
     SingletonTime time3;
-    std::cerr << "Timing |InvariantSpace|=" << ms(time2,time3) << "\n";
+    std::cerr << "Timing |InvariantSpace|=" << ms(time2, time3) << "\n";
 #endif
   }
   bool get_finiteness_status() const { return is_finite; }
@@ -621,4 +621,4 @@ private:
   bool is_finite;
 };
 
-#endif  // SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
+#endif // SRC_LORENTZIAN_LORENTZIAN_LINALG_H_

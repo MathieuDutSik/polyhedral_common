@@ -53,8 +53,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   size_t DimEXT = n_col + 1;
   std::string rndStr = random_string(20);
   std::string prefix = "/tmp/";
-  std::string suffix = "DD_" + std::to_string(n_row) +
-    "_" + std::to_string(n_col) + "_" + rndStr;
+  std::string suffix = "DD_" + std::to_string(n_row) + "_" +
+                       std::to_string(n_col) + "_" + rndStr;
   std::string FileI, FileO, FileE;
   if (eCommand == "normaliz") {
     FileI = prefix + suffix + ".in";
@@ -173,7 +173,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
         }
       }
       if (!has_n_facet) {
-        std::vector<std::string> LStr = STRING_Split(line, " support hyperplanes");
+        std::vector<std::string> LStr =
+            STRING_Split(line, " support hyperplanes");
         if (LStr.size() == 2) {
           has_n_facet = true;
           n_facet = ParseScalar<size_t>(LStr[0]);
@@ -183,7 +184,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       iLine++;
     }
     if (ListFace.size() != n_facet) {
-      std::cerr << "Consistency error |ListFace|=" << ListFace.size() << " n_facet=" << n_facet << "\n";
+      std::cerr << "Consistency error |ListFace|=" << ListFace.size()
+                << " n_facet=" << n_facet << "\n";
       throw TerminalException{1};
     }
   }
@@ -205,7 +207,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       iLine++;
     }
     if (ListFace.size() != n_facet) {
-      std::cerr << "Consistency error |ListFace|=" << ListFace.size() << " n_facet=" << n_facet << "\n";
+      std::cerr << "Consistency error |ListFace|=" << ListFace.size()
+                << " n_facet=" << n_facet << "\n";
       throw TerminalException{1};
     }
   }
@@ -317,11 +320,10 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef TIMINGS
   SingletonTime time3;
   std::cerr << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
-            << GRP.size()
-            << "_" << ansProg << "_" << ListIncd.size() << "_"
-            << TheOutput.size() << ") VALUE=" << ms(time2,time3) << "\n";
+            << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
+            << TheOutput.size() << ") VALUE=" << ms(time2, time3) << "\n";
 #endif
   return TheOutput;
 }
 
-#endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_
+#endif // SRC_POLY_POLY_DIRECTDUALDESC_H_
