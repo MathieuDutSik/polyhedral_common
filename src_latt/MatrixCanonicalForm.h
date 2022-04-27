@@ -131,10 +131,11 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   SingletonTime time8;
   std::cerr << "|Matrix products|=" << ms(time7, time8) << "\n";
 #endif
+#ifdef DEBUG_CANONIC
   WeightMatrix<true, T, Tidx_value> WMat_B =
     T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(RetMat, TransposedMat(SHVcan_Tint));
   WMat_B.ReorderingSetWeight();
-  //  bool test = Wmat_B == 
+#endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
 
