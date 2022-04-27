@@ -64,8 +64,8 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
   return {EXT_ret, BoundingFac_ret};
 }
 
-#undef DEBUG_REDUND
-#undef UNSET_OUTPUT
+//#undef DEBUG_REDUND
+//#undef UNSET_OUTPUT
 
 template <typename T>
 std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {

@@ -314,8 +314,6 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
   return true;
 }
 
-#undef DEBUG_FLIP
-//#define DEBUG_FLIP
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,

@@ -12,8 +12,6 @@ template <typename T, typename Tint> struct Tshortest {
   MyMatrix<Tint> SHV;
 };
 
-#undef DEBUG
-
 template <typename T, typename Tint>
 Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const &eMat,
                                         MyMatrix<Tint> const &SHV) {

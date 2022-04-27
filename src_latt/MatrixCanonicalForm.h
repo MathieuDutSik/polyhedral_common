@@ -52,7 +52,15 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   SingletonTime time3;
   std::cerr << "|WMat|=" << ms(time2, time3) << "\n";
 #endif
+#ifdef DEBUG
+  std::cerr << "Original WMat=\n";
+  PrintWeightedMatrix(std::cerr, WMat);
+#endif
   WMat.ReorderingSetWeight();
+#ifdef DEBUG
+  std::cerr << "Weight reordering WMat=\n";
+  PrintWeightedMatrix(std::cerr, WMat);
+#endif
 #ifdef TIMINGS
   SingletonTime time4;
   std::cerr << "|ReorderingSetWeight|=" << ms(time3, time4) << "\n";
@@ -101,7 +109,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS
   SingletonTime time8;
-  std::cerr << "|Matrix products|=" << ms(time7,time8à << "\n";
+  std::cerr << "|Matrix products|=" << ms(time7, time8) << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
