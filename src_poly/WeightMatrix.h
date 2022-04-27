@@ -161,6 +161,7 @@ public:
     SingletonTime time2;
     std::cerr << "|WeightMatrix(nbRow,f)|=" << ms(time1,time2) << "\n";
 #endif
+    weight_ordered = false;
   }
   template <typename F1, typename F2>
   WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2) : nbRow(_nbRow) {
@@ -197,6 +198,7 @@ public:
     SingletonTime time2;
     std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << ms(time1,time2) << "\n";
 #endif
+    weight_ordered = false;
   }
   // no assign
   WeightMatrix &
@@ -207,17 +209,18 @@ public:
   // https://en.cppreference.com/w/cpp/language/move_constructor )
   WeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> &&eMat)
       : nbRow(eMat.nbRow), ListWeight(std::move(eMat.ListWeight)),
-        TheMat(std::move(eMat.TheMat)) {}
+        TheMat(std::move(eMat.TheMat)), weight_ordered(eMat.weight_ordered) {}
   // move assignment (see
   // https://en.cppreference.com/w/cpp/language/move_assignment )
   WeightMatrix &operator=(WeightMatrix<is_symmetric, T, Tidx_value> &&eMat) {
     nbRow = eMat.nbRow;
     ListWeight = std::move(eMat.ListWeight);
     TheMat = std::move(eMat.TheMat);
+    weight_ordered = eMat.weight_ordered;
     return *this;
   }
   WeightMatrix<is_symmetric, T, Tidx_value> DirectCopy() const {
-    return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, TheMat, ListWeight);
+    return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, TheMat, ListWeight, weight_ordered);
   }
   // The destructor
   ~WeightMatrix() {}
@@ -273,6 +276,7 @@ public:
       idx++;
     }
     ReorderingOfWeights(g);
+    weight_ordered = true;
 #ifdef DEBUG
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
@@ -313,6 +317,7 @@ public:
       idx++;
     }
     ReorderingOfWeights(g);
+    weight_ordered = true;
 #ifdef DEBUG
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
@@ -361,12 +366,17 @@ public:
         iVal++;
       }
     }
+    bool weight_ordered = false;
     return WeightMatrix<true, T, Tidx_value>(2 * nbRow, RET_TheMat,
-                                             RET_ListWeight);
+                                             RET_ListWeight, weight_ordered);
   }
   friend bool
   operator==(WeightMatrix<is_symmetric, T, Tidx_value> const &obj1,
              WeightMatrix<is_symmetric, T, Tidx_value> const &obj2) {
+    if (!obj1.weight_ordered || !obj2.weight_ordered) {
+      std::cerr << "We need to have ordered_weight matrix in order for == to be used\n";
+      throw TerminalException{1};
+    }
     if (obj1.nbRow != obj2.nbRow)
       return false;
     if (obj1.ListWeight != obj2.ListWeight)
@@ -378,6 +388,10 @@ public:
   friend bool
   operator!=(WeightMatrix<is_symmetric, T, Tidx_value> const &obj1,
              WeightMatrix<is_symmetric, T, Tidx_value> const &obj2) {
+    if (!obj1.weight_ordered || !obj2.weight_ordered) {
+      std::cerr << "We need to have ordered_weight matrix in order for != to be used\n";
+      throw TerminalException{1};
+    }
     if (obj1.nbRow != obj2.nbRow)
       return true;
     if (obj1.ListWeight != obj2.ListWeight)
@@ -391,6 +405,7 @@ private:
   size_t nbRow;
   std::vector<T> ListWeight;
   std::vector<Tidx_value> TheMat;
+  bool weight_ordered;
 };
 
 //

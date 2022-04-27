@@ -1625,6 +1625,7 @@ T_TranslateToMatrix_QM_SHV(MyMatrix<T> const &qMat, MyMatrix<Tint> const &SHV) {
         value2 = idxWeight;
         INP_ListWeight.push_back(-eScal);
       }
+      std::cerr << "eScal=" << eScal << "\n";
       Tidx_value pos1 = value1 - 1;
       Tidx_value pos2 = value2 - 1;
       set_entry(2 * iPair, 2 * jPair, pos1);

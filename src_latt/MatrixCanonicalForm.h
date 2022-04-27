@@ -33,7 +33,8 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
+  std::cerr << "nbRow=" << nbRow << " n=" << n << "\n";
   if (!CheckCentralSymmetry(SHV)) {
     std::cerr << "The set of vector does not respect the central symmetry "
                  "condition\n";
@@ -52,12 +53,12 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   SingletonTime time3;
   std::cerr << "|WMat|=" << ms(time2, time3) << "\n";
 #endif
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
   std::cerr << "Original WMat=\n";
   PrintWeightedMatrix(std::cerr, WMat);
 #endif
   WMat.ReorderingSetWeight();
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
   std::cerr << "Weight reordering WMat=\n";
   PrintWeightedMatrix(std::cerr, WMat);
 #endif
@@ -70,6 +71,12 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   //
   std::vector<int> CanonicOrd =
       GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat);
+#ifdef DEBUG_CANONIC
+  std::cerr << "CanonicOrd=";
+  for (auto & eV : CanonicOrd)
+    std::cerr << " " << eV;
+  std::cerr << "\n";
+#endif
 #ifdef TIMINGS
   SingletonTime time5;
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << ms(time4, time5)
@@ -88,9 +95,22 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   SingletonTime time6;
   std::cerr << "|SHVcan|=" << ms(time5, time6) << "\n";
 #endif
+#ifdef DEBUG_CANONIC
+  std::cerr << "SHVred=\n";
+  std::pair<MyMatrix<Tint>,MyMatrix<Tint>> pair_calc =
+    ComputeRowHermiteNormalForm(SHVcan_Tint);
+  MyMatrix<Tint> PrtMat = pair_calc.second;
+  MyMatrix<Tint> eDiff = Inverse(pair_calc.first) * pair_calc.second - SHVcan_Tint;
+  WriteMatrix(std::cerr, PrtMat);
+  if (!IsZeroMatrix(eDiff)) {
+    std::cerr << "The matrix eDiff should be zero\n";
+    throw TerminalException{1};
+  }
+#endif
   MyMatrix<Tint> BasisCan_Tint_pre =
-      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+    ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
+  //  MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   //  std::cerr << "SHVcan_Tint=\n";
   //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef TIMINGS
@@ -98,7 +118,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   std::cerr << "|ReductionMatrix|=" << ms(time6, time7) << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
   if (eDet_abs != 1) {
@@ -106,13 +126,23 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
+  MyMatrix<T> RetMat = BasisCan_T * inpMat * BasisCan_T.transpose();
 #ifdef TIMINGS
   SingletonTime time8;
   std::cerr << "|Matrix products|=" << ms(time7, time8) << "\n";
 #endif
+  WeightMatrix<true, T, Tidx_value> WMat_B =
+    T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(RetMat, TransposedMat(SHVcan_Tint));
+  WMat_B.ReorderingSetWeight();
+  //  bool test = Wmat_B == 
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
+
+
+
+
+
+
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>
@@ -135,7 +165,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
   if (!CheckCentralSymmetry(SHV)) {
     std::cerr << "The set of vector does not respect the central symmetry "
                  "condition\n";
@@ -197,7 +227,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   std::cerr << "|ReductionMatrix|=" << ms(time6, time7) << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-#ifdef DEBUG
+#ifdef DEBUG_CANONIC
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
   if (eDet_abs != 1) {

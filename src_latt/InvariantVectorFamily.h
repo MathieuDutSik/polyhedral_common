@@ -46,8 +46,16 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
   std::cerr << "|T_ShortVector|=" << ms(time2, time3) << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
-  MyMatrix<Tint> SHV1_b = -SHV1_a;
-  return Concatenate(SHV1_a, SHV1_b);
+  int nbRow=SHV1_a.rows();
+  int n=SHV1_a.cols();
+  MyMatrix<Tint> SHVret(2*nbRow,n);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int i=0; i<n; i++)
+      SHVret(2*iRow,i) = SHV1_a(iRow,i);
+    for (int i=0; i<n; i++)
+      SHVret(2*iRow+1,i) = -SHV1_a(iRow,i);
+  }
+  return SHVret;
 }
 
 template <typename T, typename Tint> T GetMaxNorm(MyMatrix<T> const &eMat) {
