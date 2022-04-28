@@ -11,9 +11,6 @@ on:
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
-#  push:
-#    branches:
-#    - master
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -21,7 +18,6 @@ jobs:
       GMP_INCDIR: /usr/include
       GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
       BOOST_INCDIR: "/usr/include"
-#      BOOST_LINK: "-lboost_serialization"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
       EIGEN_PATH: /home/runner/work/opt/eigen
       TBB_INCDIR: /usr/include
@@ -99,7 +95,7 @@ jobs:
           cd src_latt && make
           echo "After compilation of lattice code"
 
-      - name: Build test code
+      - name: Loading the gap which we use as scripting
         run: |
           wget https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
           tar -vxzf gap-4.11.1.tar.gz
