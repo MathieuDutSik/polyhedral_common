@@ -102,6 +102,6 @@ jobs:
           cd gap-4.11.1 && ./configure && make
           ln -s gap-4.11.1/bin/gap.sh
 
-      - uses: testing canonical forms
+      - name: testing canonical forms
         run: |
           gap.sh Exmpl_Bench/Canonicalizations/TestCanonicalization.g
