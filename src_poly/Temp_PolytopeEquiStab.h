@@ -1633,8 +1633,9 @@ T_TranslateToMatrix_QM_SHV(MyMatrix<T> const &qMat, MyMatrix<Tint> const &SHV) {
       set_entry(2 * iPair + 1, 2 * jPair + 1, pos1);
     }
   }
+  bool weight_ordered = false;
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat,
-                                           INP_ListWeight);
+                                           INP_ListWeight, weight_ordered);
 }
 
 template <typename T, typename Tgroup, typename Tval, typename Tidx_value>
