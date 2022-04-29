@@ -888,7 +888,8 @@ GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const &TheEXT,
   /* This cannot be simplified be a classic constructor
      WeightMatrix(nbRow,f1,f2)
      because we also need to compute the positionZero and the ArrSigns. */
-  WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight);
+  bool weight_ordered = false;
+  WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight, weight_ordered);
 #ifdef DEBUG
   std::cerr << "Before positionZero=" << positionZero << "\n";
 #endif
@@ -961,8 +962,9 @@ GetSimpleWeightMatrixAntipodal(MyMatrix<T> const &TheEXT,
   SingletonTime time2;
   std::cerr << "|GetSimpleWeightMatrixAntipodal|=" << ms(time1, time2) << "\n";
 #endif
+  bool weight_ordered = false;
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat,
-                                           INP_ListWeight);
+                                           INP_ListWeight, weight_ordered);
 }
 
 template <typename T, typename Tidx_value>
