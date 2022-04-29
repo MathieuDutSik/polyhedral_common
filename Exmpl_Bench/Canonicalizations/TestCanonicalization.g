@@ -43,15 +43,16 @@ end;
 
 
 
-
-for eMat in ListMat
+for iMat in [1..Length(ListMat)]
 do
+    eMat:=ListMat[iMat];
     TheCan:=GetCanonicalForm(eMat);
     n:=Length(eMat);
     GRP:=GeneralLinearGroup(n, Integers);
     LGen:=GeneratorsOfGroup(GRP);
     for iter in [1..10]
     do
+        Print("iMat=", iMat, " |eMat|=", Length(eMat), " iter=", iter, "\n");
         len:=Random([1..2*n]);
         eP:=IdentityMat(n);
         for i in [1..len]
