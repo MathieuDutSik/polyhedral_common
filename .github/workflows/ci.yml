@@ -109,4 +109,4 @@ jobs:
           ls
 
           # Running the test
-          gap.sh Exmpl_Bench/Canonicalizations/TestCanonicalization.g
+          ./gap.sh Exmpl_Bench/Canonicalizations/TestCanonicalization.g
