@@ -5,6 +5,10 @@ name: Some CI of the code.
 # on: release
 
 on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
   # Every day at 5 am.
   schedule:
     - cron: "0 5 * * *"
@@ -95,13 +99,11 @@ jobs:
           cd src_latt && make
           echo "After compilation of lattice code"
 
-      - name: Loading the gap which we use as scripting
-        run: |
+          # Downloading and compiling gap
           wget https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
           tar -vxzf gap-4.11.1.tar.gz
           cd gap-4.11.1 && ./configure && make
           ln -s gap-4.11.1/bin/gap.sh
 
-      - name: testing canonical forms
-        run: |
+          # Running the test
           gap.sh Exmpl_Bench/Canonicalizations/TestCanonicalization.g
