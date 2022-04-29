@@ -125,8 +125,9 @@ public:
   }
   WeightMatrix(size_t const &INP_nbRow,
                std::vector<Tidx_value> const &INP_TheMat,
-               std::vector<T> const &INP_ListWeight)
-      : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat) {}
+               std::vector<T> const &INP_ListWeight,
+               bool const& INP_weight_ordered)
+    : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat), weight_ordered(INP_weight_ordered) {}
   template <typename F>
   WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
 #ifdef TIMINGS
