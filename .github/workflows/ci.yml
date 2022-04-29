@@ -95,7 +95,7 @@ jobs:
           echo "After nauty compilation"
 
           mkdir basic_common_cpp/ExternalLib/bliss/build
-          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH .. && make all install && cd ../../../..
+          cd basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH .. && make all install && cd ../../../..
           pwd
           echo "After bliss compilation"
 
