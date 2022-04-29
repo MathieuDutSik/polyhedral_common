@@ -10,7 +10,7 @@ G_D5:=[ [ 2, 1, 1, 1, 0 ], [ 1, 2, 1, 1, -1 ], [ 1, 1, 2, 1, -1 ], [ 1, 1, 1, 2,
 
 
 
-ListMat:=[G_A4, G_A5, G_E6, G_D4, D_D5];
+ListMat:=[G_A4, G_A5, G_E6, G_D4, G_D5];
 
 
 GetCanonicalForm:=function(eMat)
