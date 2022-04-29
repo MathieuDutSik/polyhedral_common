@@ -102,7 +102,7 @@ jobs:
           # Downloading and compiling gap
           wget https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
           tar -vxzf gap-4.11.1.tar.gz
-          cd gap-4.11.1 && ./configure && make
+          cd gap-4.11.1 && ./configure && make && cd ..
           pwd
           ls gap-4.11.1
           ln -s gap-4.11.1/bin/gap.sh .
