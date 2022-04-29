@@ -69,4 +69,5 @@ do
     od;
 od;
 # No exit case
-GAP_EXIT_CODE(0);
+#GAP_EXIT_CODE(0);
+GAP_EXIT_CODE(1);
