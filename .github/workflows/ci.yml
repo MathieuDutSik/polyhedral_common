@@ -93,10 +93,10 @@ jobs:
           pwd
           echo "After pwd"
 
-          cd src_lorentzian && make
+          cd src_lorentzian && make && cd ..
           echo "After compilation of Lorentzian code"
 
-          cd src_latt && make
+          cd src_latt && make && cd ..
           echo "After compilation of lattice code"
 
           # Downloading and compiling gap
