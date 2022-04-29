@@ -44,9 +44,9 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
-      LIBSHORT_PATH: /home/mathieu/opt/libshort
-      LIBSHORT_INCDIR: /home/mathieu/opt/libshort/include
-      LIBSHORT_LINK: "-L/home/mathieu/opt/libshort/lib -lshort -Wl,-rpath,/home/mathieu/opt/libshort/lib"
+      LIBSHORT_PATH: /home/runner/opt/libshort
+      LIBSHORT_INCDIR: /home/runner/opt/libshort/include
+      LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
 
@@ -106,7 +106,7 @@ jobs:
 
 
           # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
-          wget https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
           tar -xzf eigen-3.3.9.tar.gz
           mv eigen-3.3.9 /home/runner/work/opt/eigen
           pwd
@@ -121,7 +121,7 @@ jobs:
           echo "After compilation of lattice code"
 
           # Downloading and compiling gap
-          wget https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
+          wget -q https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
           tar -xzf gap-4.11.1.tar.gz
           cd gap-4.11.1 && ./configure && make && cd ..
           pwd
