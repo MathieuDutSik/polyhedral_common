@@ -70,7 +70,6 @@ jobs:
           sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y libcurl4-gnutls-dev
           sudo apt-get install -y libntl-dev libmpfr-dev
           sudo apt-get install -y openmpi-bin libopenmpi-dev
 
