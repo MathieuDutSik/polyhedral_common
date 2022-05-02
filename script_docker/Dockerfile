@@ -93,7 +93,7 @@ RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default
 
 
 # downloading netcdf functionality and compiling it
-RUN apt-get install -y libcurl4-gnutls-dev
+# RUN apt-get install -y libcurl4-gnutls-dev
 RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-c-4.8.0.tar.gz
 RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.5.3.tar.gz
 RUN wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx4-4.3.1.tar.gz
