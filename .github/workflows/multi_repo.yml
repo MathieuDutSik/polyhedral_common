@@ -1,0 +1,56 @@
+name: Some CI of the code.
+
+# https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
+# model taken from https://github.com/mockersf/kmanb/releases
+# on: release
+
+on:
+  # Every day at 3 am.
+  schedule:
+    - cron: "0 3 * * *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      # Just one check for
+      GMP_INCDIR: /usr/include
+
+    steps:
+      - name: Checkout polyhedral common
+        uses: actions/checkout@v3
+        with:
+          path: polyhedral_common
+
+      - name: Checkout basic common cpp
+        uses: actions/checkout@v3
+        with:
+          repository: MathieuDutSik/basic_common_cpp
+          path: basic_common_cpp
+
+      - name: Checkout permutalib
+        uses: actions/checkout@v3
+        with:
+          repository: MathieuDutSik/permutalib
+          path: permutalib
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: list contents of reportery
+        run: |
+          ls
+          echo "ls operation"
+
+          ls polyhedral_common
+          echo "ls polyhedral_common"
+
+          ls basic_common_cpp
+          echo "ls basic_common_cpp"
+
+          ls permutalib
+          echo "ls permutalib"
