@@ -81,4 +81,6 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
   return eVec;
 }
 
-#endif //  SRC_LATT_GSL_RELATED_H_
+// clang-format off
+#endif  // SRC_LATT_GSL_RELATED_H_
+// clang-format on

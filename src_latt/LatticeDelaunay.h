@@ -620,4 +620,6 @@ void TreatDelaunayEntry(FullNamelist const &eFull) {
   }
 }
 
-#endif //  SRC_LATT_LATTICEDELAUNAY_H_
+// clang-format off
+#endif  // SRC_LATT_LATTICEDELAUNAY_H_
+// clang-format on

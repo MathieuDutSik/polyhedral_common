@@ -195,4 +195,6 @@ Tshortest<T,Tint> T_ShortestVector_double(MyMatrix<T> const& eMat)
 }
 */
 
-#endif //  SRC_LATT_SHVEC_DOUBLE_H_
+// clang-format off
+#endif  // SRC_LATT_SHVEC_DOUBLE_H_
+// clang-format on

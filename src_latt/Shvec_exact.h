@@ -679,4 +679,6 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
   return MatrixFromVectorFamilyDim(dim, ListVect);
 }
 
-#endif //  SRC_LATT_SHVEC_EXACT_H_
+// clang-format off
+#endif  // SRC_LATT_SHVEC_EXACT_H_
+// clang-format on

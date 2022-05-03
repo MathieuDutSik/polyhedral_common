@@ -85,4 +85,6 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
   }
 }
 
-#endif //  SRC_LATT_SIMULDIOPHANTAPPROX_H_
+// clang-format off
+#endif  // SRC_LATT_SIMULDIOPHANTAPPROX_H_
+// clang-format on

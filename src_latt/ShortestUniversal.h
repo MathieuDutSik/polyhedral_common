@@ -67,4 +67,6 @@ Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat) {
   return SelectShortestVector(eMat, TheSHVall);
 }
 
-#endif //  SRC_LATT_SHORTESTUNIVERSAL_H_
+// clang-format off
+#endif  // SRC_LATT_SHORTESTUNIVERSAL_H_
+// clang-format on

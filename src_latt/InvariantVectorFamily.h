@@ -185,4 +185,6 @@ template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
   return true;
 }
 
-#endif //  SRC_LATT_INVARIANTVECTORFAMILY_H_
+// clang-format off
+#endif  // SRC_LATT_INVARIANTVECTORFAMILY_H_
+// clang-format on

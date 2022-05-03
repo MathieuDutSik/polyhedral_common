@@ -146,4 +146,6 @@ template <typename T> MyMatrix<T> Get_N23_TotBasisQuotInv() {
   return RetMat;
 }
 
-#endif //  SRC_LATT_NIEMEIERN23_24A1_H_
+// clang-format off
+#endif  // SRC_LATT_NIEMEIERN23_24A1_H_
+// clang-format on

@@ -322,4 +322,6 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   return {Mat1, Mat2};
 }
 
-#endif //  SRC_LATT_FUNDAMENTALDELAUNAY_H_
+// clang-format off
+#endif  // SRC_LATT_FUNDAMENTALDELAUNAY_H_
+// clang-format on

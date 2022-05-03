@@ -266,4 +266,6 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
   return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }
 
-#endif //  SRC_LATT_MATRIXCANONICALFORM_H_
+// clang-format off
+#endif  // SRC_LATT_MATRIXCANONICALFORM_H_
+// clang-format on

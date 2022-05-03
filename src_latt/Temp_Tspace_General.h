@@ -590,4 +590,6 @@ template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
   return ListMat;
 }
 
+// clang-format off
 #endif  // SRC_LATT_TEMP_TSPACE_GENERAL_H_
+// clang-format on

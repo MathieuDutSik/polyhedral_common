@@ -282,4 +282,6 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
   return TheSet;
 }
 
+// clang-format off
 #endif  // SRC_LATT_TEMP_POSITIVITY_H_
+// clang-format on

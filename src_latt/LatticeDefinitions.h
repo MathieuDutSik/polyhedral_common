@@ -450,4 +450,6 @@ LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
   return {LattRed, pair.Pmat};
 }
 
-#endif //  SRC_LATT_LATTICEDEFINITIONS_H_
+// clang-format off
+#endif  // SRC_LATT_LATTICEDEFINITIONS_H_
+// clang-format on

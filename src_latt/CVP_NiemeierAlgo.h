@@ -486,4 +486,6 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
   return {NearestNorm, MatNearest};
 }
 
-#endif //  SRC_LATT_CVP_NIEMEIERALGO_H_
+// clang-format off
+#endif  // SRC_LATT_CVP_NIEMEIERALGO_H_
+// clang-format on
