@@ -357,19 +357,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           SHV[iRow] = eVect;
         }
         std::vector<MyVector<Tint>> SetSHV = VectorAsSet(SHV);
-        //	std::cerr << " Before ListVectTot equality test\n";
         bool testEqua = SetSHV == ListVectTot;
-        //	std::cerr << "testEqua=" << testEqua << "\n";
         if (testEqua) {
           eRes.eCase = 6;
           eRes.reply = true;
           eRes.replyCone = true;
-          //	  std::cerr << "return 6, step 1\n";
-          //	  std::cerr << "return 6, step 2\n";
           eRes.SHV = RecSHV.SHV;
-          //	  std::cerr << "return 6, step 3\n";
           eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
-          //	  std::cerr << "return 6, step 4\n";
           eRes.eMat = eMatSec;
           std::cerr << "RETURN case 6\n";
           return eRes;
@@ -429,13 +423,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           WriteVector(std::cerr, eVect3);
           TheFamilyVect.insert(eVect3);
         } else {
-          //	  std::cerr << "Before call to GetShortVector\n";
           bool NeedNonZero = true;
           bool StrictIneq = true;
           MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint, T>(
               eMatSec, CritNorm, StrictIneq, NeedNonZero);
-          //	  MyVector<Tint> eVect=GetShortVector<T,Tint>(eMatSec,CritNorm);
-          //	  std::cerr << "After call to GetShortVector\n";
           if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
@@ -1063,12 +1054,7 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const &n,
       int LastVal = eCand[iDim - 1];
       for (int i = LastVal; i <= MaxVal; i++) {
         std::vector<int> NewCand = ConcatenateVect(eCand, {i});
-        /*	std::cerr << "  NewCand=";
-        for (auto & eVal : NewCand)
-          std::cerr << " " << eVal;
-          std::cerr << "\n";*/
         if (IsMinimal(NewCand)) {
-          //	  std::cerr << " isminimal\n";
           NewListCand.push_back(NewCand);
         }
       }
@@ -1150,13 +1136,11 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
           int sum_i = UniversalScalarConversion<int, T>(sum);
           Vtest(i) = sum_i;
         }
-        //	std::cerr << "Before CyclicCanonicalization_SymN_fact\n";
         MyVector<int> VtestCan = CyclicCanonicalization_SymN_fact(Vtest, ord);
-        //	std::cerr << "After CyclicCanonicalization_SymN_fact\n";
         if (!IsCorrectClass(VtestCan))
           return false;
       }
-    };
+    }
   }
   return true;
 }
