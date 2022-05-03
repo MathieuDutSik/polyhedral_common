@@ -756,9 +756,9 @@ public:
         subset_index.push_back(Tidx(i));
     } else {
       n_bit_hash = n_ent_bit;
-      double frac = double(n_act - 1) / double(n_ent_bit - 1);
+      double frac = static_cast<double>(n_act - 1) / static_cast<double>(n_ent_bit - 1);
       for (size_t i = 0; i < n_ent_bit; i++) {
-        Tidx pos = Tidx(round(frac * double(i)));
+        Tidx pos = Tidx(round(frac * static_cast<double>(i)));
         if (pos < 0)
           pos = 0;
         if (pos >= n_act)
@@ -1639,9 +1639,9 @@ std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
       subset_index[pos_wrt] = i;
     }
   } else {
-    double frac = double(n_act - 1) / double(n_ent_bit - 1);
+    double frac = static_cast<double>(n_act - 1) / static_cast<double>(n_ent_bit - 1);
     for (size_t i = 0; i < n_ent_bit; i++) {
-      size_t pos = size_t(round(frac * double(i)));
+      size_t pos = size_t(round(frac * static_cast<double>(i)));
       if (pos < 0)
         pos = 0;
       if (pos >= n_act)

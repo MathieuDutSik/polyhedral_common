@@ -20,12 +20,12 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "PERM_Fct.h"
-#include <map>
-#include <unordered_set>
-#include <unordered_map>
 #include <limits>
-#include <vector>
+#include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 //
 // The templatized functions
@@ -126,8 +126,9 @@ public:
   WeightMatrix(size_t const &INP_nbRow,
                std::vector<Tidx_value> const &INP_TheMat,
                std::vector<T> const &INP_ListWeight,
-               bool const& INP_weight_ordered)
-    : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat), weight_ordered(INP_weight_ordered) {}
+               bool const &INP_weight_ordered)
+      : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat),
+        weight_ordered(INP_weight_ordered) {}
   template <typename F>
   WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
 #ifdef TIMINGS
@@ -160,7 +161,7 @@ public:
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "|WeightMatrix(nbRow,f)|=" << ms(time1,time2) << "\n";
+    std::cerr << "|WeightMatrix(nbRow,f)|=" << ms(time1, time2) << "\n";
 #endif
     weight_ordered = false;
   }
@@ -197,7 +198,7 @@ public:
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << ms(time1,time2) << "\n";
+    std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << ms(time1, time2) << "\n";
 #endif
     weight_ordered = false;
   }
@@ -221,7 +222,8 @@ public:
     return *this;
   }
   WeightMatrix<is_symmetric, T, Tidx_value> DirectCopy() const {
-    return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, TheMat, ListWeight, weight_ordered);
+    return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, TheMat, ListWeight,
+                                                     weight_ordered);
   }
   // The destructor
   ~WeightMatrix() {}
@@ -375,7 +377,8 @@ public:
   operator==(WeightMatrix<is_symmetric, T, Tidx_value> const &obj1,
              WeightMatrix<is_symmetric, T, Tidx_value> const &obj2) {
     if (!obj1.weight_ordered || !obj2.weight_ordered) {
-      std::cerr << "We need to have ordered_weight matrix in order for == to be used\n";
+      std::cerr << "We need to have ordered_weight matrix in order for == to "
+                   "be used\n";
       throw TerminalException{1};
     }
     if (obj1.nbRow != obj2.nbRow)
@@ -390,7 +393,8 @@ public:
   operator!=(WeightMatrix<is_symmetric, T, Tidx_value> const &obj1,
              WeightMatrix<is_symmetric, T, Tidx_value> const &obj2) {
     if (!obj1.weight_ordered || !obj2.weight_ordered) {
-      std::cerr << "We need to have ordered_weight matrix in order for != to be used\n";
+      std::cerr << "We need to have ordered_weight matrix in order for != to "
+                   "be used\n";
       throw TerminalException{1};
     }
     if (obj1.nbRow != obj2.nbRow)
@@ -1027,7 +1031,7 @@ GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
                                                               f_adj);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << ms(time1,time2) << "\n";
+  std::cerr << "|GetGraphFromWeightedMatrix|=" << ms(time1, time2) << "\n";
 #endif
   return eGR;
 }

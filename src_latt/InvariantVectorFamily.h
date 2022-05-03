@@ -46,14 +46,14 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
   std::cerr << "|T_ShortVector|=" << ms(time2, time3) << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
-  int nbRow=SHV1_a.rows();
-  int n=SHV1_a.cols();
-  MyMatrix<Tint> SHVret(2*nbRow,n);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int i=0; i<n; i++)
-      SHVret(2*iRow,i) = SHV1_a(iRow,i);
-    for (int i=0; i<n; i++)
-      SHVret(2*iRow+1,i) = -SHV1_a(iRow,i);
+  int nbRow = SHV1_a.rows();
+  int n = SHV1_a.cols();
+  MyMatrix<Tint> SHVret(2 * nbRow, n);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int i = 0; i < n; i++)
+      SHVret(2 * iRow, i) = SHV1_a(iRow, i);
+    for (int i = 0; i < n; i++)
+      SHVret(2 * iRow + 1, i) = -SHV1_a(iRow, i);
   }
   return SHVret;
 }

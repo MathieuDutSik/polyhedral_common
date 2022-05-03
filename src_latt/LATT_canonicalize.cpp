@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     }
     //    using T = mpz_class;
     //    using T=long;
-    using T=mpq_class;
+    using T = mpq_class;
 
     // using Tint=long;
     using Tint = mpz_class;
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> eMat = ReadMatrix<T>(is);
     Canonic_PosDef<T, Tint> RetF = ComputeCanonicalForm<T, Tint>(eMat);
     //
-    auto prt=[&](std::ostream & os) -> void {
+    auto prt = [&](std::ostream &os) -> void {
       if (opt == 1) {
         WriteMatrix(os, RetF.Mat);
       }
