@@ -791,4 +791,6 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
   return list_ret;
 }
 
+// clang-format off
 #endif  // SRC_POLY_GRP_GROUPFCT_H_
+// clang-format on

@@ -1211,4 +1211,6 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
       nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3);
 }
 
-#endif //  SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
+// clang-format off
+#endif  // SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
+// clang-format on

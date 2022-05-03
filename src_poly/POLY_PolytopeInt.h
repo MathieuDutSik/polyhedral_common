@@ -239,4 +239,6 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
   return ListPoint;
 }
 
-#endif  //  SRC_POLY_POLY_POLYTOPEINT_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_POLYTOPEINT_H_
+// clang-format on

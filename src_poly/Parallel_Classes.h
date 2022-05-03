@@ -607,4 +607,6 @@ private:
   std::function<std::optional<Tequiv>(T const &, T const &)> TestEquivalence;
 };
 
-#endif //  SRC_POLY_PARALLEL_CLASSES_H_
+// clang-format off
+#endif  // SRC_POLY_PARALLEL_CLASSES_H_
+// clang-format on

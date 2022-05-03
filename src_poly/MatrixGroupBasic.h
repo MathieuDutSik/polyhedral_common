@@ -69,4 +69,6 @@ bool IsSymmetryGroupOfPolytope(MyMatrix<T> const &EXT, Tgroup const &GRP) {
   return true;
 }
 
+// clang-format off
 #endif  // SRC_POLY_MATRIXGROUPBASIC_H_
+// clang-format on

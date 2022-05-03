@@ -482,4 +482,6 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   return status_ret;
 }
 
-#endif  //  SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
+// clang-format on

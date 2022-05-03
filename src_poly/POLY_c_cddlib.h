@@ -102,7 +102,8 @@ DualDescription_incd(MyMatrix<T> const &TheEXT) {
   return DualDescription_incd_mpq_class(EXT_mpq);
 }
 
-} // namespace cbased_cdd
-
-#endif //  USE_CDDLIB
-#endif //  SRC_POLY_POLY_C_CDDLIB_H_
+// clang-format off
+}  // namespace cbased_cdd
+#endif  // USE_CDDLIB
+#endif  // SRC_POLY_POLY_C_CDDLIB_H_
+// clang-format on

@@ -243,4 +243,6 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
   test_representation(ListMatrGens, ListPermGens_B, ListPoint_B, f1_B, f2_B);
 }
 
-#endif //  SRC_POLY_TESTGROUP_H_
+// clang-format off
+#endif  // SRC_POLY_TESTGROUP_H_
+// clang-format on

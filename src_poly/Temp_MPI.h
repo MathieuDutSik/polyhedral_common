@@ -128,4 +128,6 @@ void MPI_RECV_MyMatrix(MyMatrix<T> *eMat, int src, int tag, MPI_Comm comm) {
     eMat->ListElt[i] = eVect[i];
 }
 
-#endif //  SRC_POLY_TEMP_MPI_H_
+// clang-format off
+#endif  // SRC_POLY_TEMP_MPI_H_
+// clang-format on

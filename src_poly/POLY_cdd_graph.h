@@ -65,4 +65,6 @@ DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT) {
 }
 } // namespace cdd
 
-#endif //  SRC_POLY_POLY_CDD_GRAPH_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_CDD_GRAPH_H_
+// clang-format on

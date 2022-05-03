@@ -245,4 +245,6 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   return vf_ret;
 }
 
-#endif //  SRC_POLY_POLY_SAMPLINGFACET_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_SAMPLINGFACET_H_
+// clang-format on

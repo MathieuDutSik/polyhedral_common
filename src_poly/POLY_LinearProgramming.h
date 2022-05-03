@@ -1045,4 +1045,6 @@ EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
   return {FinalSpace_Aff, ListIneqFinal};
 }
 
-#endif //  SRC_POLY_POLY_LINEARPROGRAMMING_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_LINEARPROGRAMMING_H_
+// clang-format on

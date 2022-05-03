@@ -697,4 +697,6 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   OutputFaces(TheOutput, OUTfile, OutFormat);
 }
 
-#endif  //  SRC_POLY_POLY_KSKELETTON_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_KSKELETTON_H_
+// clang-format on

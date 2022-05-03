@@ -610,4 +610,6 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
       RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
 }
 
-#endif  //  SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
+// clang-format on

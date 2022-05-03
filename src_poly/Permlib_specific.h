@@ -445,4 +445,6 @@ bool IsSubgroup(TheGroupFormat<Tint> const &g1,
   return true;
 }
 
-#endif //  SRC_POLY_PERMLIB_SPECIFIC_H_
+// clang-format off
+#endif  // SRC_POLY_PERMLIB_SPECIFIC_H_
+// clang-format on

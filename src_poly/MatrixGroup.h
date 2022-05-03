@@ -1850,4 +1850,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
       EXT1_T, EXT2_T, ListMatrGens, ePerm);
 }
 
+// clang-format off
 #endif // SRC_POLY_MATRIXGROUP_H_
+// clang-format on

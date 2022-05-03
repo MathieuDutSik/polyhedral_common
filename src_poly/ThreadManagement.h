@@ -146,4 +146,6 @@ private:
   int MaxNumThread;
 };
 
-#endif //  SRC_POLY_THREADMANAGEMENT_H_
+// clang-format off
+#endif  // SRC_POLY_THREADMANAGEMENT_H_
+// clang-format on

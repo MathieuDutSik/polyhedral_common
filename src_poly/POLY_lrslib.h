@@ -2135,5 +2135,7 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const &EXT) {
   return ListIncd;
 }
 
-} // namespace lrs
-#endif //  SRC_POLY_POLY_LRSLIB_H_
+// clang-format off
+}  // namespace lrs
+#endif  // SRC_POLY_POLY_LRSLIB_H_
+// clang-format on

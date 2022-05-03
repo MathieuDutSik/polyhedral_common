@@ -130,4 +130,6 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   return ListFace;
 }
 
-#endif //  SRC_POLY_POLY_HYPERPLANE_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_HYPERPLANE_H_
+// clang-format on

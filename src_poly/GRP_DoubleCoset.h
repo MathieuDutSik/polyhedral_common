@@ -290,4 +290,6 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   os2 << nb_orbit_sma << "\n";
 }
 
+// clang-format off
 #endif  // SRC_POLY_GRP_DOUBLECOSET_H_
+// clang-format on

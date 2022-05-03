@@ -21,4 +21,6 @@ void PrintStabilizerGroupSizes(std::ostream &os, Tgr const &eGR) {
      << " test2=" << test2 << "\n";
 }
 
-#endif //  SRC_POLY_CHECK_BLISS_TRACES_H_
+// clang-format off
+#endif  // SRC_POLY_CHECK_BLISS_TRACES_H_
+// clang-format on

@@ -1790,4 +1790,6 @@ MyMatrix<T> LinPolytopeIntegralWMat_Canonic(
   return ep.first;
 }
 
+// clang-format off
 #endif
+// clang-format on

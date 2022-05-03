@@ -14,4 +14,6 @@ vectface DualDescription_incd_boost_mpq_rational(
     MyMatrix<boost::multiprecision::mpq_rational> const &TheEXT);
 } // namespace cbased_cdd
 
-#endif //  SRC_POLY_POLY_C_CDDLIB_MPQ_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_C_CDDLIB_MPQ_H_
+// clang-format on

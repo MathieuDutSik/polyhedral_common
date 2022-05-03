@@ -844,4 +844,6 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   //
 }
 
-#endif //  SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
+// clang-format on

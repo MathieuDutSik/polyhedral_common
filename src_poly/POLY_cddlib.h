@@ -8078,6 +8078,8 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   return ListIncd;
 }
 
-} // namespace cdd
 
-#endif //  SRC_POLY_POLY_CDDLIB_H_
+// clang-format off
+}  // namespace cdd
+#endif  // SRC_POLY_POLY_CDDLIB_H_
+// clang-format on

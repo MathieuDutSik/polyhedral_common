@@ -136,4 +136,6 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
   return AllArr;
 }
 
+// clang-format off
 #endif  // SRC_POLY_POLY_HEURISTICS_H_
+// clang-format on

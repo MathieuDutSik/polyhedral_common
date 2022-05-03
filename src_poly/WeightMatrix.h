@@ -1558,4 +1558,6 @@ WeightMatrixFromPairOrbits(Tgroup const &GRP) {
   return WMat;
 }
 
-#endif //  SRC_POLY_WEIGHTMATRIX_H_
+// clang-format off
+#endif  // SRC_POLY_WEIGHTMATRIX_H_
+// clang-format on

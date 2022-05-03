@@ -570,4 +570,6 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
   return true;
 }
 
+// clang-format off
 #endif // SRC_POLY_PERM_FCT_H_
+// clang-format on

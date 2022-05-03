@@ -517,4 +517,7 @@ private:
   std::vector<size_t> list_offdiag_elements;
 };
 
-#endif //  SRC_POLY_WEIGHTMATRIXLIMITED_H_
+// clang-format off
+#endif  // SRC_POLY_WEIGHTMATRIXLIMITED_H_
+// clang-format on
+

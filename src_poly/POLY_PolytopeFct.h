@@ -612,4 +612,6 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
-#endif //  SRC_POLY_POLY_POLYTOPEFCT_H_
+// clang-format off
+#endif  // SRC_POLY_POLY_POLYTOPEFCT_H_
+// clang-format on
