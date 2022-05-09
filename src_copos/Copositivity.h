@@ -58,7 +58,7 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
 #endif
   double delta = a2_doubl * a2_doubl + 4 * C2_doubl;
   double x1 = 0.5 * (-a2_doubl + sqrt(delta));
-  int eReturn = UniversalScalarConversion<int,double>(x1);
+  int eReturn = UniversalScalarConversion<int, double>(x1);
   auto f = [&](int const &x) -> bool {
     T eDiff = C2 - a2 * x - x * x;
     if (eDiff >= 0)
@@ -945,8 +945,7 @@ CopositivityEnumResult<Tint>
 EnumerateCopositiveShortVector(MyMatrix<T> const &eSymmMat,
                                MyMatrix<Tint> const &InitialBasis,
                                RequestCopositivity<T> const &CopoReq) {
-//#define FULL_DEBUG
-#ifdef FULL_DEBUG
+#ifdef DEBUG_ENUMERATE_COPOSITIVE
   CopositivityEnumResult<Tint> res1 =
       EnumerateCopositiveShortVector_V1(eSymmMat, InitialBasis, CopoReq);
   CopositivityEnumResult<Tint> res2 =
@@ -999,4 +998,6 @@ T_CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
   return SelectShortestVector<T, Tint>(eSymmMat, SHV);
 }
 
-#endif // SRC_COPOS_COPOSITIVITY_H_
+// clang-format off
+#endif  // SRC_COPOS_COPOSITIVITY_H_
+// clang-format on

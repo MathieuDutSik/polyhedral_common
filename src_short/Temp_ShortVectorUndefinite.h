@@ -119,4 +119,6 @@ MyVector<Tint> GetShortVector_unlimited_float(MyMatrix<T> const &M,
 #endif
 }
 
+// clang-format off
 #endif  // SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_
+// clang-format on

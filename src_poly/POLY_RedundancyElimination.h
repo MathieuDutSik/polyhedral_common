@@ -193,7 +193,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     };
     auto GetSmallestValue = [&](int const &h) -> int {
       bool FoundUpper = false;
-      T CurrUpper = -1;  // specific value that will stay unused
+      // CurrUpper : specific value that will stay unused
+      T CurrUpper = -1;
       int nbMatch = 0;
       int idxFound = -1;
       for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -340,7 +341,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
           RedundancyStatus[eIdx] = 0;
           for (auto &fIdx : ePair.second)
             NewCand.insert(fIdx);
-        } else { // The facet is irredundant. Mission accomplished.
+        } else {
+          // The facet is irredundant. Mission accomplished.
           SetIRowIrredundant(eIdx);
           return;
         }
@@ -362,7 +364,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     bool test = FastStatusDetermination(i_row);
     //    std::cerr << "FastStatusDetermination : i_row=" << i_row << " test="
     //    << test << "\n";
-    if (test) {  // The heuristic works. Facet is redundant. We do conclude.
+    if (test) {
+      // The heuristic works. Facet is redundant. We do conclude.
       RedundancyStatus[i_row] = 0;
       return;
     }

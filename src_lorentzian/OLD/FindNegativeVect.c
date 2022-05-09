@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
           Sum += GramInt[i][j] * CURRENT[i] * CURRENT[j];
       if (Sum < 0)
         break;
-      /*	  fprintf(stderr, "ScalarMult=%d Sum=%d\n", ScalarMult, Sum);*/
       ScalarMult++;
     }
     fprintf(FileRes, "return rec(pos_semidef:=false, eVect:=[");

@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
       break;
     nbAccess++;
   }
-  double AvgTimeAccess =
-      ((double)MaxRunTimeSecond) * ((double)1000000) / ((double)nbAccess);
+  double AvgTimeAccess = static_cast<double>(MaxRunTimeSecond) *
+    (static_cast<double>(1000000) / static_cast<double>(nbAccess) );
   std::cerr << "nbAccess=" << nbAccess << " AvgTimeAccess=" << AvgTimeAccess
             << "\n";
 }

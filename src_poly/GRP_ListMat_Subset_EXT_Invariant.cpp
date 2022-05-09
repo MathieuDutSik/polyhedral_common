@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrix<T>(is);
     for (auto & eMat : ListMat) {
       if (!IsSymmetricMatrix(eMat)) {
-	std::cerr << "The matrix eMat should be symmetric\n";
+        std::cerr << "The matrix eMat should be symmetric\n";
         throw TerminalException{1};
       }
       if (eMat.cols() != EXT.cols()) {

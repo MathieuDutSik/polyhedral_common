@@ -54,4 +54,6 @@
 
  */
 
-#endif
+// clang-format off
+#endif  // SRC_DUALDESC_POLY_PARALL_H_
+// clang-format on

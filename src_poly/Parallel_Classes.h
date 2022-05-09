@@ -380,12 +380,9 @@ public:
     //    os << "nbEntry=" << nbEntry << "\n";
     for (int iEntry = iEntryStart; iEntry < nbEntry; iEntry++) {
       if (ListInv[iEntry] == eRec.xInv) {
-        //	os << "IsPresentNoLock, ListInv[iEntry]=" << ListInv[iEntry] <<
-        //"\n";
         T fEnt = GetRepresentative(iEntry);
         std::optional<Tequiv> eEquiv = TestEquivalence(fEnt, eRec.x);
         if (eEquiv) {
-          //	  os << "Before exit IsPresentNoLock. Find Isomorphism\n";
           return {iEntry, *eEquiv, nbEntry};
         }
       }
