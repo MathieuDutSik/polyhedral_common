@@ -1,4 +1,4 @@
-name: Some CI of the code.
+name: CI of Matrix canonicalization + CUT8 + Reflective
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: Some CI of the code.
 on:
   # Every day at 5 am.
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 0 * * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -107,14 +107,6 @@ jobs:
           pwd
           echo "After eigen-3.3.9 set up"
 
-          cd src_lorentzian && make && cd ..
-          pwd
-          echo "After compilation of Lorentzian code"
-
-          cd src_latt && make && cd ..
-          pwd
-          echo "After compilation of lattice code"
-
           # Downloading and compiling gap
           wget -q https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
           tar -xzf gap-4.11.1.tar.gz
@@ -122,5 +114,39 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
+      - name: Test canonicalization
+        run: |
+          cd src_latt && make && cd ..
+          pwd
+          echo "After compilation of lattice code"
+
           # Running the test
           ./gap.sh < Exmpl_Bench/Canonicalizations/TestCanonicalization.g
+
+      - name: Test reflectivity
+        run: |
+          cd src_lorentzian && make && cd ..
+          pwd
+          echo "After compilation of Lorentzian code"
+
+          cd Exmpl_Bench/Reflective
+          ../../gap.sh < TestReflectivity.g
+          cd ../..
+
+      - name: Test dual description
+        run: |
+          cd src_dualdesc && make && cd ..
+          pwd
+          echo "After compilation of dual desc code"
+
+          cd Exmpl_Bench/CUT_K8_serial
+          pwd
+          echo "We are in test directory"
+
+          mkdir -p Saving_Bank Saving_Polyhedral
+          echo "Saving directories created"
+
+          ../../rc_dualdesc/POLY_SerialDualDesc CUT_K8.nml 2>&1
+          echo "Computation has finished"
+
+          ../../gap.sh < TestOutput.g
