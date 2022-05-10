@@ -73,7 +73,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "iCase=" << iCase << " / " << nbCase << " NProc=" << NProc
                 << " iProc=" << iProc << " res=" << res << "\n";
       if (res == iProc) {
-        //	std::cerr << "Treating the case, step 1\n";
         std::vector<int> eCase = ListCases[iCase];
         MyMatrix<Tfield> eFrame(n + 1, n);
         for (int i = 0; i < n; i++)
@@ -85,26 +84,16 @@ int main(int argc, char *argv[]) {
               eVal = 0;
             eFrame(i, j) = eVal;
           }
-        //	std::cerr << "Treating the case, step 2\n";
         for (int i = 0; i < n; i++)
           eFrame(n, i) = Tfield(eCase[i]) / Tfield(d);
-        //	std::cerr << "Treating the case, step 3\n";
-        //	std::cerr << "eFrame : \n";
-        //	WriteMatrix(std::cerr, eFrame);
         MyMatrix<Tfield> eBasis = GetZbasis(eFrame);
-        //	std::cerr << "Treating the case, step 4\n";
-        //	std::cerr << "eBasis : \n";
-        //	WriteMatrix(std::cerr, eBasis);
         MyMatrix<Tfield> eBasisInv = Inverse(eBasis);
-        //	std::cerr << "Treating the case, step 5\n";
         MyMatrix<int> SHV = UniversalMatrixConversion<int, Tfield>(eBasisInv);
         std::cerr << "SHV : \n";
         WriteMatrix(std::cerr, SHV);
-        //	std::cerr << "Treating the case, step 6\n";
         ReplyRealizability<Tfield, Tint> eRes =
             SHORT_TestRealizabilityShortestFamily<Tfield, Tint, Tgroup>(
                 SHV, TheMethod);
-        //	std::cerr << "Treating the case, step 7\n";
         if (eRes.reply) {
           if (IsFirst == false)
             os << ",\n";

@@ -2,10 +2,10 @@
 #define SRC_POLY_WEIGHTMATRIXLIMITED_H_
 
 #include "GRP_GroupFct.h"
+#include <limits>
 #include <map>
 #include <unordered_map>
 #include <utility>
-#include <limits>
 #include <vector>
 
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
@@ -164,6 +164,7 @@ private:
     //
     std::cerr << "|list_offdiag_idx|=" << list_offdiag_idx.size() << "\n";
   }
+
 public:
   template <typename F1, typename F2>
   WeightMatrixLimited(size_t const &_nbRow, F1 f1, F2 f2, size_t max_offdiag)
@@ -520,4 +521,3 @@ private:
 // clang-format off
 #endif  // SRC_POLY_WEIGHTMATRIXLIMITED_H_
 // clang-format on
-

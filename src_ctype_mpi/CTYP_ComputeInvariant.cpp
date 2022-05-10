@@ -8,8 +8,6 @@
 #include "Group.h"
 #include "Permutation.h"
 
-//#define DEBUG_INFO
-
 template <typename T, typename Tint>
 void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
                      size_t const &n_vect, size_t const &n, int const &pos) {

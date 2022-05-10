@@ -5,8 +5,6 @@
 
 #include <netcdf>
 
-//#define DEBUG_INFO
-
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   int irank_i;

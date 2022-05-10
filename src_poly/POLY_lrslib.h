@@ -378,7 +378,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
         lrs_getray(*D_p, Q, Col[0], (*D_p)->C[0] + i - hull,
                    Lin[i]); /* adjust index for deletions */
       if (!removecobasicindex(*D_p, 0)) {
-        //	    std::cerr << "Exit case 2\n";
         return globals::L_FALSE;
       }
     }
@@ -392,7 +391,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   if (Q->maximize || Q->minimize) {
     Q->unbounded = !lrs_solvelp(*D_p, Q);
     if (Q->lponly) {
-      //	std::cerr << "Exit case 4\n";
       return globals::L_TRUE;
     } else { /* check to see if objective is dual degenerate */
       j = 1;
@@ -454,14 +452,15 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
     //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
     if ((*D_p)->depth >= Q->maxdepth) {
       backtrack = globals::L_TRUE;
-      if (Q->maxdepth == 0) { /* estimate only */
-        //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
+      if (Q->maxdepth == 0) {
+        /* estimate only */
         return globals::L_FALSE;
       }
     }
-    if (Q->truncate &&
-        (*D_p)->A[0][0] < 0) /* truncate when moving from opt. vertex */
+    if (Q->truncate && (*D_p)->A[0][0] < 0) {
+      /* truncate when moving from opt. vertex */
       backtrack = globals::L_TRUE;
+    }
 
     //      PrintP(*D_p, "Before backtrack test");
     if (backtrack) { /* go back to prev. dictionary, restore i,j */
@@ -488,7 +487,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       backtrack = globals::L_TRUE;
     else {
       cache_dict(D_p, Q, i, j, dict_count);
-      //	  PrintP(*D_p, "After cache_dict");
       /* Note that the next two lines must come _after_ the
          call to cache_dict */
 
@@ -497,17 +495,13 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
         Q->deepest++;
 
       pivot(*D_p, Q, i, j);
-      //	  PrintP(*D_p, "After pivot");
       update(*D_p, &i, &j);
-      //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
       Q->count[2]++;
       Q->totalnodes++;
 
       save_basis(*D_p, Q);
-      //	  PrintP(*D_p, "After save_basis");
-      //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
       return globals::L_TRUE;
     }
   } /* end of main while loop for getnextbasis */
@@ -867,8 +861,6 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
     if (i <= m) {
       j = 0; /*find a positive entry for in row */
       while (j < d && A[Row[i]][Col[j]] <= 0) {
-        //	    std::cerr << "j=" << j << " A[R][C]=" << A[Row[i]][Col[j]]
-        //<< "\n";
         j++;
       }
       if (j >= d)
@@ -975,12 +967,12 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
   /* Remove linearities from cobasis for rest of computation */
   /* This is done in order so indexing is not screwed up */
 
-  for (i = 0; i < nlinearity; i++) { /* find cobasic index */
+  for (i = 0; i < nlinearity; i++) {
+    /* find cobasic index */
     k = 0;
     while (k < d && C[k] != linearity[i] + d)
       k++;
     if (k >= d) {
-      //	  std::cerr << "Error removing linearity\n";
       return globals::L_FALSE;
     }
     if (!removecobasicindex(P, k))

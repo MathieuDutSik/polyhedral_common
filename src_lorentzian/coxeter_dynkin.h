@@ -2327,4 +2327,6 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   return l_extensions;
 }
 
+// clang-format off
 #endif  // SRC_LORENTZIAN_COXETER_DYNKIN_H_
+// clang-format on

@@ -178,4 +178,6 @@ void WriteStrictPositivityResult(
   }
 }
 
-#endif // SRC_COPOS_STRICTPOSITIVITY_H_
+// clang-format off
+#endif  // SRC_COPOS_STRICTPOSITIVITY_H_
+// clang-format on

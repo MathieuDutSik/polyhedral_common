@@ -1187,4 +1187,6 @@ SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV) {
   return {std::move(ListRet), std::move(ListIdx)};
 }
 
+// clang-format off
 #endif  // SRC_SHORT_SHORT_SHORTESTCONFIG_H_
+// clang-format on
