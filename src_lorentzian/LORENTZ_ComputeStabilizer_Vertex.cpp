@@ -40,23 +40,31 @@ int main(int argc, char *argv[]) {
     std::cerr << "|MatRoot| = " << MatRoot.rows() << " / " << MatRoot.cols()
               << " rnk=" << RankMat(MatRoot) << "\n";
     FundDomainVertex<T, Tint> vert{RemoveFractionVector(gen), MatRoot};
+    std::cerr << "We have vert\n";
     MyMatrix<Tint> MatRootRed = ColumnReduction(MatRoot);
+    std::cerr << "We have MatRootRed\n";
     Tgroup GRP = LinPolytope_Automorphism<Tint, false, Tgroup>(MatRootRed);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     std::string OptionNorms = "all";
     std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
+    std::cerr << "We have l_norms\n";
     SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+    std::cerr << "We have si\n";
 
     CuspidalBank<T, Tint> cusp_bank;
     TheHeuristic<Tint> HeuristicIdealStabEquiv =
         GetHeuristicIdealStabEquiv<Tint>();
+    std::cerr << "We have HeuristicIdealStabEquiv\n";
     FundDomainVertex_FullInfo<T, Tint, Tgroup> vertFull =
         gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, si, vert,
                                                    HeuristicIdealStabEquiv);
+    std::cerr << "We have vertFull\n";
     //
+    std::cerr << "Before LORENTZ_GetStabilizerGenerator\n";
     std::vector<MyMatrix<T>> l_mat =
         LORENTZ_GetStabilizerGenerator(G, vertFull);
+    std::cerr << "After LORENTZ_GetStabilizerGenerator\n";
     if (argc == 3) {
       for (size_t i_mat = 0; i_mat < l_mat.size(); i_mat++) {
         std::cerr << "i_mat=" << i_mat << "\n";

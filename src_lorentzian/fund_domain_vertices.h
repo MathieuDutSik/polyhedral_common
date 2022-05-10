@@ -271,7 +271,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   MyMatrix<Tint> const &MatRoot = vertFull.vert.MatRoot;
-#ifdef PRINT_DEBUG_STAB_EQUIV_INFO
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method="
             << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen)
             << "\n";
@@ -283,12 +283,30 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     return LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
                                                 uint16_t>(vertFull.e_pair_char);
   }
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "|GRP1|=" << vertFull.GRP1.size() << "\n";
+#endif
   if (vertFull.method == "isotropstabequiv_V1" ||
       vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
+    MyMatrix<T> Subspace1_proj = ColumnReduction(Subspace1);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "Subspace1_proj=\n";
+    WriteMatrix(std::cerr, Subspace1_proj);
+#endif
+    std::vector<MyMatrix<T>> LGen1_B;
+    for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+      MyMatrix<T> eGen_M = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
+      LGen1_B.push_back(eGen_M);
+    }
+    std::vector<MyMatrix<T>> LGen1_C = LinPolytopeIntegral_Automorphism_Subspaces<T,Tgroup>(LGen1_B, Subspace1_proj);
+    std::vector<Telt> LGen1_D;
+    for (auto & eGen : LGen1_C) {
+      MyMatrix<T> Subspace1_projImg = Subspace1_proj * eGen;
+      Telt ePerm = GetPermutationOnVectors<T,Telt>(Subspace1_proj, Subspace1_projImg);
+    }
     //    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
     //    Tgroup GRPlin =
     //    LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
@@ -298,7 +316,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     std::string strListGen = "[";
     bool IsFirst = true;
 #endif
-    for (auto &eGen : vertFull.GRP1.GeneratorsOfGroup()) {
+    for (auto &eGen : LGen1_D) {
 #ifdef TRACK_INFOS_LOG
       if (!IsFirst)
         strListGen += ",";
@@ -318,10 +336,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       }
       std::optional<MyMatrix<T>> opt =
           ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
       if (!opt) {
         std::cerr << "opt found to be missing\n";
         throw TerminalException{1};
       }
+#endif
       MyMatrix<T> const &eGen1 = *opt;
       LGen1.push_back(eGen1);
     }
@@ -335,10 +355,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     std::vector<MyMatrix<T>> LGen2;
     for (auto &eGen1 : LGen1) {
       MyMatrix<T> eGen2 = InvariantSpace * eGen1 * InvInvariantSpace;
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
       if (!IsIntegralMatrix(eGen2)) {
         std::cerr << "The matrix eGen2 should be integral\n";
         throw TerminalException{1};
       }
+#endif
       LGen2.emplace_back(std::move(eGen2));
     }
     auto get_gen3 = [&]() -> std::vector<MyMatrix<T>> {
@@ -359,6 +381,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
             LGen2, helper, InvInvariantSpace);
       }
     };
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
     std::vector<MyVector<Tint>> ListV;
     std::unordered_set<MyVector<Tint>> SetV;
     for (int i = 0; i < MatRoot.rows(); i++) {
@@ -366,10 +389,11 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       ListV.push_back(V);
       SetV.insert(V);
     }
-    std::vector<MyMatrix<T>> LGen3 = get_gen3();
+#endif
     std::vector<MyMatrix<T>> LGen4;
-    for (auto &eGen3 : LGen3) {
+    for (auto &eGen3 : get_gen3()) {
       MyMatrix<T> eGen4 = InvInvariantSpace * eGen3 * InvariantSpace;
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
       if (!IsIntegralMatrix(eGen4)) {
         std::cerr << "The matrix eGen4 should be integral\n";
         throw TerminalException{1};
@@ -382,6 +406,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
           throw TerminalException{1};
         }
       }
+#endif
       LGen4.emplace_back(std::move(eGen4));
     }
     return LGen4;
@@ -436,14 +461,18 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       return {};
     }
     MyMatrix<T> const &EquivRat = *opt1;
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "EquivRat=" << StringMatrixGAP_line(EquivRat) << "\n";
+#endif
     //    WriteMatrix(std::cerr, EquivRat);
     //
     int n = G1.rows();
     std::vector<MyMatrix<T>> LGen1;
     int nRow = Subspace1.rows();
     Tidx nRow_tidx = nRow;
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "|GRP1|=" << vertFull1.GRP1.size() << "\n";
+#endif
     std::vector<std::string> LGenStr;
     for (auto &eGen : vertFull1.GRP1.GeneratorsOfGroup()) {
       MyMatrix<T> Subspace2(nRow, Subspace1.cols());
@@ -454,10 +483,12 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       }
       std::optional<MyMatrix<T>> opt =
           ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
       if (!opt) {
         std::cerr << "opt should point to something\n";
         throw TerminalException{1};
       }
+#endif
       MyMatrix<T> const &eGen1 = *opt;
       //      std::cerr << "eGen1=\n";
       //      WriteMatrix(std::cerr, eGen1);
@@ -466,28 +497,38 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     }
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in
     // GLn(Z)
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "LGen1=" << StringVectorStringGAP(LGenStr) << "\n";
     std::cerr << "We have LGen1\n";
+#endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "InvariantSpace=\n";
     WriteMatrix(std::cerr, InvariantSpace);
     std::cerr << "InvariantSpaceInv=\n";
     WriteMatrix(std::cerr, InvariantSpaceInv);
+#endif
     std::vector<MyMatrix<T>> LGen2;
     for (auto &eGen1 : LGen1) {
       MyMatrix<T> eGen2 = InvariantSpace * eGen1 * InvariantSpaceInv;
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
       if (!IsIntegralMatrix(eGen2)) {
         std::cerr << "The matrix eGen2 should be integral\n";
         throw TerminalException{1};
       }
+#endif
       LGen2.emplace_back(std::move(eGen2));
     }
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "We have LGen2\n";
+#endif
     //
     MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
     MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "We have InvariantSpaceImg\n";
+#endif
 
     auto get_opt2 = [&]() -> std::optional<MyMatrix<T>> {
       if (vertFull1.method == "isotropstabequiv_V1") {
@@ -508,17 +549,21 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       }
     };
     std::optional<MyMatrix<T>> opt2 = get_opt2();
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "We have opt2\n";
+#endif
     if (!opt2)
       return {};
     //
     MyMatrix<T> const &eSpaceEquiv = *opt2;
     MyMatrix<T> eMatFinal = InvariantSpaceInv * eSpaceEquiv * InvariantSpace;
     MyMatrix<T> eProd = eMatFinal * EquivRat;
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
     if (!IsIntegralMatrix(eProd)) {
       std::cerr << "eProd should be integral\n";
       throw TerminalException{1};
     }
+#endif
     return eProd;
   }
   std::cerr << "Error in LORENTZ_TestEquivalence\n";
