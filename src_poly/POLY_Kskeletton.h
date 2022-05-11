@@ -217,11 +217,15 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(
   auto f_filt = [&](MyMatrix<T> const &M, int const &RankTarget) -> bool {
     //    std::cerr << "|M|=" << M.rows() << " / " << M.cols() << " RankTarget="
     //    << RankTarget << "\n";
-    if (M.rows() == RankTarget)
-      return false;  // If it were to be a face, it would be a simplicial one.
-                     // So, we remove it from consideration
-    if (M.rows() < RankTarget)
-      return false;  // The number of rows cannot match the rank, so reject
+    if (M.rows() == RankTarget) {
+      // If it were to be a face, it would be a simplicial one.
+      // So, we remove it from consideration
+      return false;
+    }
+    if (M.rows() < RankTarget) {
+      // The number of rows cannot match the rank, so reject
+      return false;
+    }
     return RankMat(M) == RankTarget;
   };
   return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC,

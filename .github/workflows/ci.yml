@@ -45,6 +45,13 @@ jobs:
       LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
+      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
+      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
+      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+
+
+
 
 
     steps:
@@ -72,6 +79,8 @@ jobs:
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt-get install -y libntl-dev libmpfr-dev
           sudo apt-get install -y openmpi-bin libopenmpi-dev
+          sudo apt-get install -y autoconf autotools-dev libtool
+          sudo apt-get install -y texlive-latex-base # needed for the manual of cddlib to be compiled
 
       - name: Build test code
         run: |
@@ -98,7 +107,10 @@ jobs:
           pwd
           echo "After libshort compilation"
 
-
+          git clone https://github.com/cddlib/cddlib
+          cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
+          pwd
+          echo "After cddlib compilation"
 
           # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
           wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz

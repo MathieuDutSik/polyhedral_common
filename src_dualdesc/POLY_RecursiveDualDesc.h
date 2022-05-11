@@ -1922,4 +1922,6 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
       TheBank, EXTred, GRP, AllArr, DD_Prefix);
 }
 
-#endif
+// clang-format off
+#endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_H_
+// clang-format on

@@ -458,7 +458,8 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(
   eSmcp.r_test = GLP_RT_STD;
   glp_simplex(prob, &eSmcp);
   if (glp_get_status(prob) != GLP_OPT) {
-    return {false, static_cast<double>(0), nbRow, nbCol, {}, {}, ColumnStatus, RowStatus};
+    return {false, static_cast<double>(0), nbRow,    nbCol, {},
+            {},    ColumnStatus,           RowStatus};
   }
 
   std::cerr << "DirectSolution, step 1\n";

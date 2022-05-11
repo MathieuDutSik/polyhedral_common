@@ -2,10 +2,10 @@
 #define SRC_POLY_PARALLEL_CLASSES_H_
 
 #include "ThreadManagement.h"
-#include <utility>
-#include <string>
-#include <vector>
 #include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 //
 // Fundamental struct data types

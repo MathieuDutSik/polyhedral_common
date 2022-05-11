@@ -3,11 +3,11 @@
 
 #include "Boost_bitset.h"
 #include "hash_functions.h"
+#include <memory>
 #include <permlib/permlib_api.h>
 #include <set>
-#include <utility>
-#include <memory>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 int OnPoints(int const &i, permlib::Permutation const &elt) {

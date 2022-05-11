@@ -150,7 +150,8 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
       size_t len = size_t(
           UniversalScalarConversion<int, Tint>(1 + ListUpp[i] - ListLow[i]));
       size_t new_nb_pos = nb_pos * len;
-      if (new_nb_pos < nb_pos) {  // Case of going overflow
+      if (new_nb_pos < nb_pos) {
+        // Case of going overflow
         return std::numeric_limits<size_t>::max();
       }
       nb_pos = new_nb_pos;
@@ -170,8 +171,9 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
   //
   // Setting up the initial entries
   //
-  size_t crit_siz = 10000;  // This empirical value is obtained from an analysis
-                            // of a number of cases.
+  // size_crit : This empirical value is obtained from an analysis
+  // of a number of cases.
+  size_t crit_siz = 10000;
   MyVector<Tint> ePoint(dim);
   set_bound(ePoint, 0);
   std::cerr << "ListBound =";

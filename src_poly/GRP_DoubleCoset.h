@@ -247,7 +247,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  os << "OrbitSplitting elapsed_microseconds=" << ms(time1,time2)
+  os << "OrbitSplitting elapsed_microseconds=" << ms(time1, time2)
      << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
      << "\n";
 #endif

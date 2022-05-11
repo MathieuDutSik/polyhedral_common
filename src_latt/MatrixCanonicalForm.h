@@ -73,7 +73,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
       GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat);
 #ifdef DEBUG_CANONIC
   std::cerr << "CanonicOrd=";
-  for (auto & eV : CanonicOrd)
+  for (auto &eV : CanonicOrd)
     std::cerr << " " << eV;
   std::cerr << "\n";
 #endif
@@ -97,10 +97,11 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 #endif
 #ifdef DEBUG_CANONIC
   std::cerr << "SHVred=\n";
-  std::pair<MyMatrix<Tint>,MyMatrix<Tint>> pair_calc =
-    ComputeRowHermiteNormalForm(SHVcan_Tint);
+  std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pair_calc =
+      ComputeRowHermiteNormalForm(SHVcan_Tint);
   MyMatrix<Tint> PrtMat = pair_calc.second;
-  MyMatrix<Tint> eDiff = Inverse(pair_calc.first) * pair_calc.second - SHVcan_Tint;
+  MyMatrix<Tint> eDiff =
+      Inverse(pair_calc.first) * pair_calc.second - SHVcan_Tint;
   WriteMatrix(std::cerr, PrtMat);
   if (!IsZeroMatrix(eDiff)) {
     std::cerr << "The matrix eDiff should be zero\n";
@@ -108,7 +109,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   }
 #endif
   MyMatrix<Tint> BasisCan_Tint_pre =
-    ComputeRowHermiteNormalForm(SHVcan_Tint).first;
+      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   //  MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
   //  std::cerr << "SHVcan_Tint=\n";
@@ -133,17 +134,12 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 #endif
 #ifdef DEBUG_CANONIC
   WeightMatrix<true, T, Tidx_value> WMat_B =
-    T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(RetMat, TransposedMat(SHVcan_Tint));
+      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(
+          RetMat, TransposedMat(SHVcan_Tint));
   WMat_B.ReorderingSetWeight();
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
-
-
-
-
-
-
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>

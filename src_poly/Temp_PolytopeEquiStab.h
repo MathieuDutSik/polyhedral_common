@@ -889,7 +889,8 @@ GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const &TheEXT,
      WeightMatrix(nbRow,f1,f2)
      because we also need to compute the positionZero and the ArrSigns. */
   bool weight_ordered = false;
-  WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight, weight_ordered);
+  WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight,
+                                         weight_ordered);
 #ifdef DEBUG
   std::cerr << "Before positionZero=" << positionZero << "\n";
 #endif

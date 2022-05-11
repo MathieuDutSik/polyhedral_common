@@ -4,8 +4,8 @@
 #include "Basic_file.h"
 #include "Heuristic_fct.h"
 #include "Namelist.h"
-#include <vector>
 #include <string>
+#include <vector>
 
 //
 // Heuristic business
