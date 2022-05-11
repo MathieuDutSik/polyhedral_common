@@ -264,6 +264,43 @@ DirectCopy(FundDomainVertex_FullInfo<T, Tint, Tgroup> const &fdfi) {
           fdfi.method};
 }
 
+
+template<typename T, typename Tint>
+MyMatrix<T> ComputeSpanningSpace(MyMatrix<T> const& M)
+{
+  MyMatrix<T> Orth = NullspaceIntTrMat(M);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "Orth=\n";
+  WriteMatrix(std::cerr, Orth);
+#endif
+  MyMatrix<T> TheSpann_pre = NullspaceIntTrMat(Orth);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "TheSpann_pre\n";
+  WriteMatrix(std::cerr, TheSpann_pre);
+#endif
+  MyMatrix<T> TheSpann = LLLbasisReduction<T, Tint>(TheSpann_pre).LattRed;
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "TheSpann\n";
+  WriteMatrix(std::cerr, TheSpann);
+#endif
+  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpann);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "We have eCan\n";
+#endif
+  std::optional<MyMatrix<T>> opt = CanSolutionIntMatMat(eCan, M);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "We have opt\n";
+#endif
+#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+  if (!opt) {
+    std::cerr << "opt should have been assigned\n";
+    throw TerminalException{1};
+  }
+#endif
+  return *opt;
+}
+
+
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     MyMatrix<T> const &G,
@@ -291,7 +328,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
-    MyMatrix<T> Subspace1_proj = ColumnReduction(Subspace1);
+    MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "Subspace1_proj=\n";
     WriteMatrix(std::cerr, Subspace1_proj);
@@ -301,12 +338,22 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       MyMatrix<T> eGen_M = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
       LGen1_B.push_back(eGen_M);
     }
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "We have LGen1_B\n";
+#endif
     std::vector<MyMatrix<T>> LGen1_C = LinPolytopeIntegral_Automorphism_Subspaces<T,Tgroup>(LGen1_B, Subspace1_proj);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "We have LGen1_C\n";
+#endif
     std::vector<Telt> LGen1_D;
     for (auto & eGen : LGen1_C) {
       MyMatrix<T> Subspace1_projImg = Subspace1_proj * eGen;
       Telt ePerm = GetPermutationOnVectors<T,Telt>(Subspace1_proj, Subspace1_projImg);
+      LGen1_D.push_back(ePerm);
     }
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "We have LGen1_D\n";
+#endif
     //    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
     //    Tgroup GRPlin =
     //    LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
