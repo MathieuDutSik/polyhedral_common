@@ -221,6 +221,9 @@ template <typename T, typename Tint>
 CuspidalRequest_FullInfo<T, Tint>
 gen_cuspidal_request_full_info(MyMatrix<T> const &G,
                                CuspidalRequest<T, Tint> const &eReq) {
+#ifdef DEBUG_EDGEWALK_GENERIC
+  std::cerr << "gen_cuspidal_request_full_info, step 1\n";
+#endif
   std::unordered_map<MyVector<Tint>, uint8_t> map_v;
   std::vector<MyVector<Tint>> l_vect;
   std::vector<T> Vdiag;
@@ -245,12 +248,21 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
   //
   MyMatrix<T> MatV =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect));
+#ifdef DEBUG_EDGEWALK_GENERIC
+  std::cerr << "gen_cuspidal_request_full_info, step 2\n";
+#endif
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
+#ifdef DEBUG_EDGEWALK_GENERIC
+  std::cerr << "gen_cuspidal_request_full_info, step 3\n";
+#endif
   WMat.ReorderingSetWeight();
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
                                             Tidx_value>(WMat);
+#ifdef DEBUG_EDGEWALK_GENERIC
+  std::cerr << "gen_cuspidal_request_full_info, step 4\n";
+#endif
   const std::vector<Tidx> &ListIdx = epair.first;
   WMat.RowColumnReordering(ListIdx);
   //
@@ -265,6 +277,9 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   pair_char<T> e_pair{std::move(MatV_reord), std::move(WMat)};
+#ifdef DEBUG_EDGEWALK_GENERIC
+  std::cerr << "gen_cuspidal_request_full_info, step 5\n";
+#endif
   return {eReq, std::move(e_pair), hash};
 }
 

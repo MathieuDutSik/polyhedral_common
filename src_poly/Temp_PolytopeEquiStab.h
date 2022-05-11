@@ -512,7 +512,10 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
 // The Lorentzian case that cause us so much trouble.
 //
 
-// ListMat is assumed to be symmetric
+// ---ListMat is assumed to be symmetric
+// ---Note that TheEXT does not have to be of full rank.
+//    It makes perfect sense to compute some group
+//    and get it only as permutation group.
 template <typename T, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                           std::vector<MyMatrix<T>> const &ListMat,
@@ -524,13 +527,6 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
       std::cerr << "The matrix eMat should be symmetric\n";
       throw TerminalException{1};
     }
-  }
-  int n_cols = TheEXT.cols();
-  int rnk = RankMat(TheEXT);
-  if (n_cols != rnk) {
-    std::cerr << "Error in FCT_ListMat_Vdiag n_cols=" << n_cols
-              << " rnk=" << rnk << "\n";
-    throw TerminalException{1};
   }
 #endif
   size_t nbRow = TheEXT.rows();
