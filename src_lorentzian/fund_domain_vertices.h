@@ -141,6 +141,7 @@ template <typename T, typename Tint, typename Tgroup>
 ret_type<T, Tint, Tgroup> get_canonicalized_record(
     std::vector<MyMatrix<T>> const &ListMat,
     std::unordered_map<MyVector<Tint>, uint8_t> const &the_map) {
+  std::cerr << "Beginning of get_canonicalized_record\n";
   using Tidx_value = uint16_t;
   using Tidx = uint32_t;
   using Telt = typename Tgroup::Telt;
@@ -152,6 +153,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t idx = 0;
   std::vector<size_t> V;
   for (auto &kv : the_map) {
+    std::cerr << "kv=" << kv.first << " / " << kv.second << "\n";
     l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
     if (kv.second == 1)
@@ -167,6 +169,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
                                             Tidx_value>(WMat);
+  std::cerr << "We have epair\n";
   const std::vector<Tidx> &ListIdx = epair.first;
   const std::vector<std::vector<Tidx>> &ListGen = epair.second;
   WMat.RowColumnReordering(ListIdx);
@@ -197,32 +200,39 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   // dimensional system
   // ---For the computation of orbits of adjacent vertices
   // So, in both cases, we need to reduce to the group for values 1.
-  std::vector<Telt> LGen;
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
-    std::vector<Telt_idx> V(n_row);
+    std::vector<Telt_idx> Vloc(n_row);
     for (size_t i1 = 0; i1 < n_row; i1++) {
       Tidx i2 = ListIdx[i1];
       Tidx i3 = eGen[i2];
       Tidx i4 = ListIdxRev[i3];
-      V[i1] = i4;
+      Vloc[i1] = i4;
     }
-    Telt ePerm(V);
-    LGen.push_back(ePerm);
     //
     std::vector<Telt_idx> V1(n1);
     for (size_t i1 = 0; i1 < n1; i1++) {
       size_t i2 = Map1[i1];
-      size_t i3 = V[i2];
+      size_t i3 = Vloc[i2];
       size_t i4 = Map1_rev[i3];
       V1[i1] = i4;
     }
     Telt ePerm1(V1);
     LGen1.push_back(ePerm1);
   }
-  Tgroup GRP(LGen, n_row);
   Tgroup GRP1(LGen1, n1);
   MyMatrix<Tint> MatV_ret = MatrixFromVectorFamily(l_vect1);
+  std::cerr << "We have MatV_ret\n";
+  MyMatrix<T> MatV_ret_red = UniversalMatrixConversion<T,Tint>(ColumnReduction(MatV_ret));
+  std::cerr << "We have MatV_ret_red\n";
+  for (auto & eGen : GRP1.GeneratorsOfGroup()) {
+    std::cerr << "Treating generator eGen=" << eGen << "\n";
+    MyMatrix<T> eMat = RepresentVertexPermutation(MatV_ret_red, MatV_ret_red, eGen);
+    std::cerr << "get_canonicalized_record eMat=\n";
+    WriteMatrix(std::cerr, eMat);
+  }
+
+  
   pair_char<T> e_pair_char{std::move(MatV_reord), std::move(WMat)};
   return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
 }
@@ -252,6 +262,7 @@ get_full_info(FundDomainVertex<T, Tint> const &vert,
           method};
 }
 
+/*
 template <typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T, Tint, Tgroup>
 get_fund_domain_full_info_noiso(MyMatrix<T> const &G,
@@ -262,6 +273,7 @@ get_fund_domain_full_info_noiso(MyMatrix<T> const &G,
       get_canonicalized_record<T, Tint, Tgroup>(ic.ListMat, ic.map_v);
   return get_full_info(vert, frec, method);
 }
+*/
 
 template <typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T, Tint, Tgroup>

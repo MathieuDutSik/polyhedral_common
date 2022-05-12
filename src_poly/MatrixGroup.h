@@ -365,10 +365,12 @@ MatrixIntegral_GeneratePermutationGroup(
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
     Telt ePermGen =
         GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatrGen);
+    /*
     std::cerr << "siz=" << siz << " nbRow_tidx=" << int(nbRow_tidx) << "\n";
     std::cerr << "ePermGen.size()=" << int(ePermGen.size()) << "\n";
     for (Tidx i = 0; i < nbRow_tidx; i++)
       std::cerr << "i=" << int(i) << " ePermGen.at(i)=" << int(ePermGen.at(i)) << "\n";
+    */
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen
               << "\n";

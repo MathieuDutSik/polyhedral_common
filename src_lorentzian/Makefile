@@ -36,8 +36,8 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=alignment -fsanitize-undefined-trap-on-error -fstack-protector-all  -fsanitize=pointer-compare -fsanitize-address-use-after-scope -fcf-protection=full -fstack-check -fno-stack-clash-protection -fsanitize=leak -fsanitize-recover -fbounds-check
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address
-CC		= g++ -std=c++17 -Wall -g -O3
-#CC		= g++ -std=c++17 -Wall -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
+#CC		= g++ -std=c++17 -Wall -g -O3
+CC		= g++ -std=c++17 -Wall -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=memory
 #CC		= g++ -std=c++17 -Wall -g -fstack-check -fno-stack-clash-protection
@@ -58,6 +58,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS -DDEBUG_MATRIX_GROUP -DDEBUG_LORENTZIAN_LINALG -DTIMINGS -DDEBUG_POSITIVITY -DTRACK_INFOS_LOG
+#CDEFS           =
 CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DDEBUG_LORENTZIAN_LINALG -DDEBUG_POSITIVITY -DTRACK_INFOS_LOG -DDEBUG_MATRIX_GROUP -DCHECK_LORENTZIAN_STAB_EQUIV -DDEBUG_LORENTZIAN_STAB_EQUIV -DTIMINGS -DDEBUG_EDGEWALK_GENERIC -DPERMUTALIB_BLOCKING_SANITY_CHECK
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
