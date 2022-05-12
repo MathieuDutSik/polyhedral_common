@@ -242,14 +242,17 @@ GetPermutationForFiniteMatrixGroup(Thelper const &helper,
   //  std::cerr << "eMat=" << StringMatrixGAP(eMatr) << "\n";
   //  MyMatrix<T> eProd = eMatr * helper.G * eMatr.transpose();
   //  std::cerr << "eProd=" << StringMatrixGAP(eProd) << "\n";
+  std::cerr << "eMatr=\n";
+  WriteMatrix(std::cerr, eMatr);
 #endif
   using Tidx = typename Telt::Tidx;
   Tidx len = helper.EXTfaithful.rows();
   std::vector<Tidx> V(len);
   for (Tidx i = 0; i < len; i++) {
-    MyVector<T> Vimg = eMatr.transpose() * helper.ListV[i];
+    MyVector<T> const& eV = helper.ListV[i];
+    MyVector<T> Vimg = eMatr.transpose() * eV;
 #ifdef DEBUG_MATRIX_GROUP
-    //    std::cerr << "i=" << i << " Vimg=" << StringVectorGAP(Vimg) << "\n";
+    std::cerr << "i=" << i << " V=" << StringVectorGAP(eV) << " Vimg=" << StringVectorGAP(Vimg) << "\n";
 #endif
     V[i] = helper.MapV.at(Vimg);
   }
@@ -362,6 +365,10 @@ MatrixIntegral_GeneratePermutationGroup(
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
     Telt ePermGen =
         GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatrGen);
+    std::cerr << "siz=" << siz << " nbRow_tidx=" << int(nbRow_tidx) << "\n";
+    std::cerr << "ePermGen.size()=" << int(ePermGen.size()) << "\n";
+    for (Tidx i = 0; i < nbRow_tidx; i++)
+      std::cerr << "i=" << int(i) << " ePermGen.at(i)=" << int(ePermGen.at(i)) << "\n";
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen
               << "\n";
@@ -1261,7 +1268,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     SingletonTime time3;
     std::cerr << "Timing |OrbitComputation|=" << ms(time2, time3) << "\n";
 #endif
-
     Treturn eret =
         MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
             ListMatrRet, ListMatrRetMod, helper, O, TheMod);

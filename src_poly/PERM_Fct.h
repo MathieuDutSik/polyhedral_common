@@ -40,12 +40,39 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv = Inverse(M1);
-  size_t nbRow = ListRowSelect.size();
-  std::vector<int> ListRowSelectImg(nbRow);
-  for (size_t iRow = 0; iRow < nbRow; iRow++)
+  size_t nbRow_s = ListRowSelect.size();
+  std::vector<int> ListRowSelectImg(nbRow_s);
+  for (size_t iRow = 0; iRow < nbRow_s; iRow++)
     ListRowSelectImg[iRow] = ePerm.at(iRow);
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
-  return M1inv * M2;
+  MyMatrix<T> RetMat = M1inv * M2;
+#ifdef SANITY_CHECK
+  int nbRow=EXT2.rows();
+  int nbCol=EXT2.cols();
+  MyMatrix<T> EXT1_img = EXT1 * RetMat;
+  MyMatrix<T> EXT2_perm(nbRow, nbCol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    int iRowImg = ePerm.at(iRow);
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      EXT2_perm(iRow,iCol) = EXT2(iRowImg,iCol);
+    }
+  }
+  if (!TestEqualityMatrix(EXT1_img, EXT2_perm)) {
+    std::cerr << "The matrices are not equal\n";
+    std::cerr << "EXT1_img=\n";
+    WriteMatrix(std::cerr, EXT1_img);
+    std::cerr << "EXT2_perm=\n";
+    WriteMatrix(std::cerr, EXT2_perm);
+    throw TerminalException{1};
+  }
+  if (RankMat(RetMat) != nbCol) {
+    std::cerr << "RetMat should be of full rank\n";
+    std::cerr << "RetMat=\n";
+    WriteMatrix(std::cerr, RetMat);
+    throw TerminalException{1};
+  }
+#endif
+  return RetMat;
 }
 
 template <typename T, typename Tfield, typename Tidx, typename F>
@@ -302,6 +329,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     V[i_row] = epair.second;
     f[epair.second] = 1;
   }
+#ifdef SANITY_CHECK
   int n_error = 0;
   for (size_t i_row = 0; i_row < n_rows; i_row++)
     if (f[i_row] == 0)
@@ -310,6 +338,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     std::cerr << "We found several errors. n_error=" << n_error << "\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef TIMINGS
   SingletonTime time2;
   std::cerr << "|RepresentVertexPermutationTest|=" << ms(time1, time2) << "\n";
@@ -492,7 +521,7 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
   Telt ePerm1 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow1));
   Telt ePerm2 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow2));
   Telt ePermRet = (~ePerm1) * ePerm2;
-#ifdef DEBUG_PERM_FCT
+#if defined DEBUG_PERM_FCT || defined SANITY_CHECK
   for (size_t iVect = 0; iVect < nbVect; iVect++) {
     size_t jVect = ePermRet.at(iVect);
     if (EXTrow2[jVect] != EXTrow1[iVect]) {

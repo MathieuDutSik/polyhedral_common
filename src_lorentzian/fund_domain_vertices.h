@@ -336,6 +336,8 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     std::vector<MyMatrix<T>> LGen1_B;
     for (auto & eGen : vertFull.GRP1.GeneratorsOfGroup()) {
       MyMatrix<T> eGen_M = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
+      std::cerr << "Gen_M=\n";
+      WriteMatrix(std::cerr, eGen_M);
       LGen1_B.push_back(eGen_M);
     }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
@@ -497,6 +499,8 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
         UniversalMatrixConversion<T, Tint>(vertFull1.vert.MatRoot);
     MyMatrix<T> Subspace2 =
         UniversalMatrixConversion<T, Tint>(vertFull2.vert.MatRoot);
+    MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
+    MyMatrix<T> Subspace2_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
     //    std::cerr << "Subspace1=\n";
     //    WriteMatrix(std::cerr, Subspace1);
     //    std::cerr << "Subspace2=\n";
