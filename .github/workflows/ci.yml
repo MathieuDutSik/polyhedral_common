@@ -28,6 +28,7 @@ jobs:
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
       FLINT_LINK: "-lflint"
+      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
       CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
       CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
       CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
@@ -45,10 +46,6 @@ jobs:
       LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
-      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
-      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
-      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
 
 
 

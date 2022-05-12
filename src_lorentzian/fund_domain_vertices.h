@@ -120,8 +120,18 @@ GetInitialComputation(MyMatrix<T> const &G,
   //
   std::vector<MyMatrix<T>> ListMat{G};
   if (norm == 0) {
-    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(
-        UniversalMatrixConversion<T, Tint>(vert.MatRoot));
+    MyMatrix<T> MatRoot_T = UniversalMatrixConversion<T, Tint>(vert.MatRoot);
+    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(MatRoot_T);
+    std::cerr << "Qmat=\n";
+    WriteMatrix(std::cerr, Qmat);
+    std::cerr << "MatRoot=\n";
+    WriteMatrix(std::cerr, MatRoot_T);
+    MyMatrix<T> Hmat1 = MatRoot_T * Qmat * MatRoot_T.transpose();
+    std::cerr << "Hmat1=\n";
+    WriteMatrix(std::cerr, Hmat1);
+    MyMatrix<T> Hmat2 = MatRoot_T * G * MatRoot_T.transpose();
+    std::cerr << "Hmat2=\n";
+    WriteMatrix(std::cerr, Hmat2);
     ListMat.emplace_back(std::move(Qmat));
   }
   return {norm, map_v, ListMat};
