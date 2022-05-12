@@ -153,7 +153,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t idx = 0;
   std::vector<size_t> V;
   for (auto &kv : the_map) {
-    std::cerr << "kv=" << kv.first << " / " << kv.second << "\n";
+    std::cerr << "kv=" << kv.first << " / " << static_cast<int>(kv.second) << "\n";
     l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
     if (kv.second == 1)
@@ -163,6 +163,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t n1 = V.size();
   MyMatrix<T> MatV =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect));
+  MyMatrix<T> MatV_red = ColumnReduction(MatV);
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
   WMat.ReorderingSetWeight();
@@ -174,8 +175,8 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   const std::vector<std::vector<Tidx>> &ListGen = epair.second;
   WMat.RowColumnReordering(ListIdx);
   std::vector<Tidx> ListIdxRev(n_row);
-  for (size_t i1 = 0; i1 < n_row; i1++)
-    ListIdxRev[ListIdx[i1]] = i1;
+  for (size_t i = 0; i < n_row; i++)
+    ListIdxRev[ListIdx[i]] = i;
   std::vector<MyVector<Tint>> l_vect_reord(n_row);
   std::vector<T> Vdiag_reord(n_row);
   std::vector<MyVector<Tint>> l_vect1;
@@ -202,6 +203,10 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   // So, in both cases, we need to reduce to the group for values 1.
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
+    MyMatrix<T> eEquivMat = RepresentVertexPermutation(MatV_red, MatV_red, eGen);
+    std::cerr << "get_canonicalized_record eGen=" << eGen << " eMat=\n";
+    WriteMatrix(std::cerr, eEquivMat);
+    //
     std::vector<Telt_idx> Vloc(n_row);
     for (size_t i1 = 0; i1 < n_row; i1++) {
       Tidx i2 = ListIdx[i1];
@@ -212,17 +217,23 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     //
     std::vector<Telt_idx> V1(n1);
     for (size_t i1 = 0; i1 < n1; i1++) {
+      std::cerr << "i1=" << static_cast<int>(i1) << "\n";
       size_t i2 = Map1[i1];
-      size_t i3 = Vloc[i2];
+      std::cerr << "i2=" << static_cast<int>(i2) << "\n";
+      size_t i3 = eGen[i2];
+      std::cerr << "i3=" << static_cast<int>(i3) << "\n";
       size_t i4 = Map1_rev[i3];
+      std::cerr << "i4=" << static_cast<int>(i4) << "\n";
       V1[i1] = i4;
     }
     Telt ePerm1(V1);
     LGen1.push_back(ePerm1);
   }
   Tgroup GRP1(LGen1, n1);
+  std::cerr << "GRP1 has been built\n";
   MyMatrix<Tint> MatV_ret = MatrixFromVectorFamily(l_vect1);
-  std::cerr << "We have MatV_ret\n";
+  std::cerr << "We have MatV_ret=\n";
+  WriteMatrix(std::cerr, MatV_ret);
   MyMatrix<T> MatV_ret_red = UniversalMatrixConversion<T,Tint>(ColumnReduction(MatV_ret));
   std::cerr << "We have MatV_ret_red\n";
   for (auto & eGen : GRP1.GeneratorsOfGroup()) {
@@ -231,8 +242,6 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     std::cerr << "get_canonicalized_record eMat=\n";
     WriteMatrix(std::cerr, eMat);
   }
-
-  
   pair_char<T> e_pair_char{std::move(MatV_reord), std::move(WMat)};
   return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
 }
@@ -335,7 +344,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
             << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen)
             << "\n";
   std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
-  std::cerr << "MatRoot=\n";
+  std::cerr << "LORENTZ_GetStabilizerGenerator MatRoot=\n";
   WriteMatrix(std::cerr, MatRoot);
 #endif
   if (vertFull.method == "extendedvectfamily") {
