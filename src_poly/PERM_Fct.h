@@ -37,8 +37,11 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
                                        MyMatrix<T> const &EXT2,
                                        Telt const &ePerm) {
   std::cerr << "Beginning of RepresentVertexPermutation\n";
+  std::cerr << "EXT1=\n";
+  WriteMatrix(std::cerr, EXT1);
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
+  std::cerr << "|ListRowSelect|=" << ListRowSelect.size() << " |EXT1|=" << EXT1.rows() << " / " << EXT1.cols() << "\n";
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv = Inverse(M1);
   size_t nbRow_s = ListRowSelect.size();
@@ -53,6 +56,8 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   int nbCol=EXT2.cols();
   MyMatrix<T> EXT1_img = EXT1 * RetMat;
   MyMatrix<T> EXT2_perm(nbRow, nbCol);
+  std::cerr << "EXT1_img=\n";
+  WriteMatrix(std::cerr, EXT1_img);
   for (int iRow=0; iRow<nbRow; iRow++) {
     int iRowImg = ePerm.at(iRow);
     for (int iCol=0; iCol<nbCol; iCol++) {
@@ -76,6 +81,38 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
 #endif
   return RetMat;
 }
+
+template<typename T, typename Tidx>
+std::optional<std::vector<Tidx>> FindPermutationalEquivalence(MyMatrix<T> const& M1, MyMatrix<T> const& M2)
+{
+  int n_rows = M1.rows();
+  if (n_rows != M2.rows()) {
+    return {};
+  }
+  Tidx n_rows_tidx = n_rows;
+  std::unordered_map<MyVector<T>,Tidx> map;
+  for (Tidx i=0; i<n_rows_tidx; i++) {
+    MyVector<T> V = GetMatrixRow(M1, i);
+    map[V] = i + 1;
+  }
+  std::vector<Tidx> eList(n_rows);
+  std::vector<Tidx> LMatch(n_rows, 0);
+  for (Tidx i=0; i<n_rows_tidx; i++) {
+    MyVector<T> V = GetMatrixRow(M2, i);
+    Tidx const& val = map[V];
+    if (val == 0)
+      return {};
+    eList[i] = val - 1;
+    LMatch[val-1]++;
+  }
+  for (Tidx i=0; i<n_rows_tidx; i++) {
+    if (LMatch[i] != 1) {
+      return {};
+    }
+  }
+  return eList;
+}
+
 
 template <typename T, typename Tfield, typename Tidx, typename F1, typename F2>
 std::optional<MyMatrix<Tfield>>
@@ -602,5 +639,5 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
 }
 
 // clang-format off
-#endif // SRC_POLY_PERM_FCT_H_
+#endif  // SRC_POLY_PERM_FCT_H_
 // clang-format on

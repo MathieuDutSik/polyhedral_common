@@ -161,9 +161,9 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     idx++;
   }
   size_t n1 = V.size();
-  MyMatrix<T> MatV =
+  MyMatrix<T> const MatV =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect));
-  MyMatrix<T> MatV_red = ColumnReduction(MatV);
+  MyMatrix<T> const MatV_red = ColumnReduction(MatV);
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
   WMat.ReorderingSetWeight();
@@ -206,13 +206,25 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   for (auto & eval : Map1_rev)
     std::cerr << " " << int(eval);
   std::cerr << "\n";
-  MyMatrix<T> MatV_reord =
+  MyMatrix<T> const MatV_reord =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect_reord));
   std::cerr << "MatV=\n";
   WriteMatrix(std::cerr, MatV);
+  std::cerr << "MatV_red=\n";
+  WriteMatrix(std::cerr, MatV_red);
+  MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
   std::cerr << "MatV_reord=\n";
   WriteMatrix(std::cerr, MatV_reord);
-  MyMatrix<T> MatV_reord_red = ColumnReduction(MatV_reord);
+  std::cerr << "MatV_reord_red=\n";
+  WriteMatrix(std::cerr, MatV_reord_red);
+
+  std::optional<std::vector<Tidx>> opt = FindPermutationalEquivalence<T,Tidx>(MatV_red, MatV_reord_red);
+  if (!opt) {
+    std::cerr << "Failed to find a row equivalence\n";
+  } else {
+    std::cerr << "Found row equivalence *opt=" << *opt << "\n";
+  }
+
   // There are two use case of computing the group
   // ---For the computation of minimal adjacencies that would get us a full
   // dimensional system
