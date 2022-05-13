@@ -232,6 +232,12 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     WriteMatrix(std::cerr, eEquivMat);
     std::cerr << "*opt_EquivMat=\n";
     WriteMatrix(std::cerr, *opt_EquivMat);
+    MyMatrix<T> eProd1 = MatV_red * eEquivMat;
+    std::cerr << "MatV_red * eEquivMat=\n";
+    WriteMatrix(std::cerr, eProd1);
+    MyMatrix<T> eProd2 = MatV_reord_red * eEquivMat;
+    std::cerr << "MatV_reord_red * eEquivMat=\n";
+    WriteMatrix(std::cerr, eProd2);
     //
     std::vector<Telt_idx> Vloc(n_row);
     for (size_t i1 = 0; i1 < n_row; i1++) {
@@ -243,8 +249,21 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     Telt eGenReord(Vloc);
     //
     MyMatrix<T> eEquivMatReord = RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
-    std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eMat=\n";
+    std::optional<MyMatrix<T>> opt_EquivMatReord = FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
+    if (!opt_EquivMatReord) {
+      std::cerr << "Failed to find an equivalence\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> eProd3 = MatV_red * eEquivMatReord;
+    std::cerr << "MatV_red * eEquivMatReord=\n";
+    WriteMatrix(std::cerr, eProd3);
+    MyMatrix<T> eProd4 = MatV_reord_red * eEquivMatReord;
+    std::cerr << "MatV_reord_red * eEquivMatReord=\n";
+    WriteMatrix(std::cerr, eProd4);
+    std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
+    std::cerr << "*opt_EquivMatReord=\n";
+    WriteMatrix(std::cerr, *opt_EquivMatReord);
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
       throw TerminalException{1};

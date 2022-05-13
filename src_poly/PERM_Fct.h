@@ -48,6 +48,7 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
   MyMatrix<T> RetMat = M1inv * M2;
 #ifdef SANITY_CHECK
+  std::cerr << "Doing sanity_checks in RepresentVertexPermutation\n";
   int nbRow=EXT2.rows();
   int nbCol=EXT2.cols();
   MyMatrix<T> EXT1_img = EXT1 * RetMat;
