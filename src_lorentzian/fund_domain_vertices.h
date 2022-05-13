@@ -208,12 +208,18 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::cerr << "\n";
   MyMatrix<T> MatV_reord =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect_reord));
+  std::cerr << "MatV=\n";
+  WriteMatrix(std::cerr, MatV);
+  std::cerr << "MatV_reord=\n";
+  WriteMatrix(std::cerr, MatV_reord);
   MyMatrix<T> MatV_reord_red = ColumnReduction(MatV_reord);
   // There are two use case of computing the group
   // ---For the computation of minimal adjacencies that would get us a full
   // dimensional system
   // ---For the computation of orbits of adjacent vertices
   // So, in both cases, we need to reduce to the group for values 1.
+  //
+  // 
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
     MyMatrix<T> eEquivMat = RepresentVertexPermutation(MatV_red, MatV_red, eGen);
