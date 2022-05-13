@@ -177,6 +177,8 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::vector<Tidx> ListIdxRev(n_row);
   for (size_t i = 0; i < n_row; i++)
     ListIdxRev[ListIdx[i]] = i;
+  std::cerr << "     ePermIdx=" << Telt(ListIdx) << "\n";
+  std::cerr << "inv(ePermIdx)=" << Telt(ListIdxRev) << "\n";
   std::vector<MyVector<Tint>> l_vect_reord(n_row);
   std::vector<T> Vdiag_reord(n_row);
   std::vector<MyVector<Tint>> l_vect1;
@@ -185,17 +187,28 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t pos = 0;
   for (size_t i = 0; i < n_row; i++) {
     size_t j = ListIdx[i];
-    l_vect_reord[i] = l_vect[j];
+    MyVector<Tint> const& eV = l_vect[j];
+    l_vect_reord[i] = eV;
     Vdiag_reord[i] = Vdiag[j];
     if (Vdiag[j] == 1) {
-      l_vect1.push_back(l_vect[j]);
+      l_vect1.push_back(eV);
       Map1.push_back(i);
       Map1_rev[i] = pos;
       pos++;
     }
+    std::cerr << "i=" << i << " evect=" << StringVectorGAP(eV) << " diag=" << Vdiag[j] << "\n";
   }
+  std::cerr << "Map1 =";
+  for (auto & eval : Map1)
+    std::cerr << " " << int(eval);
+  std::cerr << "\n";
+  std::cerr << "Map1_rev =";
+  for (auto & eval : Map1_rev)
+    std::cerr << " " << int(eval);
+  std::cerr << "\n";
   MyMatrix<T> MatV_reord =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect_reord));
+  MyMatrix<T> MatV_reord_red = ColumnReduction(MatV_reord);
   // There are two use case of computing the group
   // ---For the computation of minimal adjacencies that would get us a full
   // dimensional system
@@ -204,8 +217,15 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
     MyMatrix<T> eEquivMat = RepresentVertexPermutation(MatV_red, MatV_red, eGen);
-    std::cerr << "get_canonicalized_record eGen=" << eGen << " eMat=\n";
+    std::optional<MyMatrix<T>> opt_EquivMat = FindMatrixTransformationTest(MatV_red, MatV_red, eGen);
+    if (!opt_EquivMat) {
+      std::cerr << "Failed to find opt_EquivMat\n";
+      throw TerminalException{1};
+    }
+    std::cerr << "get_canonicalized_record eGen=" << Telt(eGen) << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
+    std::cerr << "*opt_EquivMat=\n";
+    WriteMatrix(std::cerr, *opt_EquivMat);
     //
     std::vector<Telt_idx> Vloc(n_row);
     for (size_t i1 = 0; i1 < n_row; i1++) {
@@ -214,16 +234,25 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       Tidx i4 = ListIdxRev[i3];
       Vloc[i1] = i4;
     }
+    Telt eGenReord(Vloc);
+    //
+    MyMatrix<T> eEquivMatReord = RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
+    std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eMat=\n";
+    WriteMatrix(std::cerr, eEquivMatReord);
+    if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
+      std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
+      throw TerminalException{1};
+    }
     //
     std::vector<Telt_idx> V1(n1);
     for (size_t i1 = 0; i1 < n1; i1++) {
       std::cerr << "i1=" << static_cast<int>(i1) << "\n";
       size_t i2 = Map1[i1];
-      std::cerr << "i2=" << static_cast<int>(i2) << "\n";
-      size_t i3 = eGen[i2];
-      std::cerr << "i3=" << static_cast<int>(i3) << "\n";
+      std::cerr << "  i2=" << static_cast<int>(i2) << "\n";
+      size_t i3 = Vloc[i2];
+      std::cerr << "  i3=" << static_cast<int>(i3) << "\n";
       size_t i4 = Map1_rev[i3];
-      std::cerr << "i4=" << static_cast<int>(i4) << "\n";
+      std::cerr << "  i4=" << static_cast<int>(i4) << "\n";
       V1[i1] = i4;
     }
     Telt ePerm1(V1);

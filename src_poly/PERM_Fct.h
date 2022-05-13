@@ -36,6 +36,7 @@ template <typename T, typename Telt>
 MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
                                        MyMatrix<T> const &EXT2,
                                        Telt const &ePerm) {
+  std::cerr << "Beginning of RepresentVertexPermutation\n";
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
@@ -75,9 +76,9 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   return RetMat;
 }
 
-template <typename T, typename Tfield, typename Tidx, typename F>
+template <typename T, typename Tfield, typename Tidx, typename F1, typename F2>
 std::optional<MyMatrix<Tfield>>
-FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
+FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
                              std::vector<Tidx> const &eList) {
   static_assert(is_ring_field<Tfield>::value,
                 "Requires Tfield to be a field in DivideVector");
@@ -91,7 +92,7 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
       TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
   if (eSelect.TheRank != nbCol) {
 #ifdef DEBUG_PERM_FCT
-    std::cerr << "FindMatrixTransformationTest, exit false 1\n";
+    std::cerr << "FindMatrixTransformationTest_Generic, exit false 1\n";
 #endif
     return {};
   }
@@ -190,14 +191,14 @@ FindMatrixTransformationTest(size_t nbRow, size_t nbCol, F f1, F f2,
 #ifdef DEBUG_PERM_FCT
         std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
                   << "\n";
-        std::cerr << "FindMatrixTransformationTest, exit false 2\n";
+        std::cerr << "FindMatrixTransformationTest_Generic, exit false 2\n";
 #endif
         return {};
       }
     }
   }
 #ifdef DEBUG_PERM_FCT
-  std::cerr << "FindMatrixTransformationTest, exit true\n";
+  std::cerr << "FindMatrixTransformationTest_Generic, exit true\n";
 #endif
   return EqMat;
 }
@@ -223,7 +224,7 @@ FindMatrixTransformationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       V2(i) = EXT2(iRow, i);
     return V2;
   };
-  return FindMatrixTransformationTest(nbRow1, nbCol, f1, f2, eList);
+  return FindMatrixTransformationTest_Generic<T,T,Tidx>(nbRow1, nbCol, f1, f2, eList);
 }
 
 template <typename T, typename Tfield, typename Tidx>
@@ -252,7 +253,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
     return V;
   };
   std::optional<MyMatrix<Tfield>> test1 =
-      FindMatrixTransformationTest<T, Tfield, Tidx>(Vsubset.size(), nbCol, g1,
+      FindMatrixTransformationTest_Generic<T, Tfield, Tidx>(Vsubset.size(), nbCol, g1,
                                                     g1, Vin);
 #ifdef TIMINGS
   SingletonTime time2;
