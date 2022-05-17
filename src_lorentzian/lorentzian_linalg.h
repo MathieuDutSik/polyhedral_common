@@ -621,4 +621,6 @@ private:
   bool is_finite;
 };
 
-#endif // SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
+// clang-format off
+#endif  // SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
+// clang-format on

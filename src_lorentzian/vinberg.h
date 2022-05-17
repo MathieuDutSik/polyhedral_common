@@ -1565,4 +1565,6 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
   }
 }
 
-#endif // SRC_LORENTZIAN_VINBERG_H_
+// clang-format off
+#endif  // SRC_LORENTZIAN_VINBERG_H_
+// clang-format off

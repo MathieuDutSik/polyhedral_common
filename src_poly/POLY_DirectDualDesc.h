@@ -327,5 +327,5 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 }
 
 // clang-format off
-#endif // SRC_POLY_POLY_DIRECTDUALDESC_H_
+#endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_
 // clang-format on

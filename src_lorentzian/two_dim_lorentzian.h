@@ -653,4 +653,6 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
 
-#endif // SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
+// clang-format off
+#endif  // SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
+// clang-format on

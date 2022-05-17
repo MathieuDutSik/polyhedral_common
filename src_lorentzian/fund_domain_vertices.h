@@ -364,7 +364,7 @@ DirectCopy(FundDomainVertex_FullInfo<T, Tint, Tgroup> const &fdfi) {
 
 
 template<typename T, typename Tint>
-MyMatrix<T> ComputeSpanningSpace(MyMatrix<T> const& M)
+std::pair<MyMatrix<T>,MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const& M)
 {
   MyMatrix<T> Orth = NullspaceIntTrMat(M);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
@@ -395,7 +395,23 @@ MyMatrix<T> ComputeSpanningSpace(MyMatrix<T> const& M)
     throw TerminalException{1};
   }
 #endif
-  return *opt;
+  return {TheSpann,*opt};
+}
+
+template<typename T, typename Telt>
+MyMatrix<T> MatrixRowAction(MyMatrix<T> const& M, Telt const& g)
+{
+  using Tidx = typename Telt::Tidx;
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> Mret(nbRow, nbCol);
+  Tidx nRow_tidx = nbRow;
+  for (Tidx iRow = 0; iRow < nRow_tidx; iRow++) {
+    Tidx jRow = g.at(iRow);
+    for (int iCol=0; iCol<nbCol; iCol++)
+      Mret(jRow,iCol) = M(iRow,iCol);
+  }
+  return Mret;
 }
 
 
@@ -404,7 +420,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     MyMatrix<T> const &G,
     FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull) {
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   MyMatrix<Tint> const &MatRoot = vertFull.vert.MatRoot;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method="
@@ -426,7 +441,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     int n = G.rows();
     std::vector<MyMatrix<T>> LGen1;
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
-    MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
+    MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1).second;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "Subspace1_proj=\n";
     WriteMatrix(std::cerr, Subspace1_proj);
@@ -457,8 +472,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     //    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
     //    Tgroup GRPlin =
     //    LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
-    int nRow = Subspace1.rows();
-    Tidx nRow_tidx = nRow;
 #ifdef TRACK_INFOS_LOG
     std::string strListGen = "[";
     bool IsFirst = true;
@@ -470,17 +483,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       IsFirst = false;
       strListGen += std::to_string(eGen);
 #endif
-      //      std::cerr << "eGen=" << eGen << "\n";
-      //      bool test = GRPlin.isin(eGen);
-      //      std::cerr << "test=" << test << "\n";
-      //      MyMatrix<T> eGen_as_matr = FindTransformation(Subspace1red,
-      //      Subspace1red, eGen); std::cerr << "We have eGen_as_matr\n";
-      MyMatrix<T> Subspace2(nRow, Subspace1.cols());
-      for (Tidx iRow = 0; iRow < nRow_tidx; iRow++) {
-        Tidx jRow = eGen.at(iRow);
-        MyVector<T> V = GetMatrixRow(Subspace1, iRow);
-        AssignMatrixRow(Subspace2, jRow, V);
-      }
+      MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1,eGen);
       std::optional<MyMatrix<T>> opt =
           ExtendOrthogonalIsotropicIsomorphism(G, Subspace1, G, Subspace2);
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
@@ -569,7 +572,6 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     MyMatrix<T> const &G2,
     FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull2) {
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
 #ifdef PRINT_DEBUG_STAB_EQUIV_INFO
   std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method
             << "\n";
@@ -597,8 +599,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
         UniversalMatrixConversion<T, Tint>(vertFull1.vert.MatRoot);
     MyMatrix<T> Subspace2 =
         UniversalMatrixConversion<T, Tint>(vertFull2.vert.MatRoot);
-    MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
-    MyMatrix<T> Subspace2_proj = ComputeSpanningSpace<T, Tint>(Subspace1);
+    std::pair<MyMatrix<T>,MyMatrix<T>> pair1 = ComputeSpanningSpace<T, Tint>(Subspace1);
+    std::pair<MyMatrix<T>,MyMatrix<T>> pair2 = ComputeSpanningSpace<T, Tint>(Subspace2);
+    MyMatrix<T> Subspace1_proj = pair1.second;
+    MyMatrix<T> Subspace2_proj = pair2.second;
     //    std::cerr << "Subspace1=\n";
     //    WriteMatrix(std::cerr, Subspace1);
     //    std::cerr << "Subspace2=\n";
@@ -617,19 +621,11 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     //
     int n = G1.rows();
     std::vector<MyMatrix<T>> LGen1;
-    int nRow = Subspace1.rows();
-    Tidx nRow_tidx = nRow;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "|GRP1|=" << vertFull1.GRP1.size() << "\n";
 #endif
-    std::vector<std::string> LGenStr;
     for (auto &eGen : vertFull1.GRP1.GeneratorsOfGroup()) {
-      MyMatrix<T> Subspace2(nRow, Subspace1.cols());
-      for (Tidx iRow = 0; iRow < nRow_tidx; iRow++) {
-        Tidx jRow = eGen.at(iRow);
-        MyVector<T> V = GetMatrixRow(Subspace1, iRow);
-        AssignMatrixRow(Subspace2, jRow, V);
-      }
+      MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1, eGen);
       std::optional<MyMatrix<T>> opt =
           ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
@@ -641,15 +637,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       MyMatrix<T> const &eGen1 = *opt;
       //      std::cerr << "eGen1=\n";
       //      WriteMatrix(std::cerr, eGen1);
-      LGenStr.push_back(StringMatrixGAP_line(eGen1));
       LGen1.emplace_back(std::move(eGen1));
     }
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in
     // GLn(Z)
-#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-    std::cerr << "LGen1=" << StringVectorStringGAP(LGenStr) << "\n";
-    std::cerr << "We have LGen1\n";
-#endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
@@ -719,4 +710,6 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
   throw TerminalException{1};
 }
 
-#endif // SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
+// clang-format off
+#endif  // SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
+// clang-format on

@@ -2375,4 +2375,6 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
   print_result(opt);
 }
 
-#endif // SRC_LORENTZIAN_EDGEWALK_H_
+// clang-format off
+#endif  // SRC_LORENTZIAN_EDGEWALK_H_
+// clang-format on

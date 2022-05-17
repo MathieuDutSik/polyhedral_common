@@ -1788,5 +1788,5 @@ MyMatrix<T> LinPolytopeIntegralWMat_Canonic(
 }
 
 // clang-format off
-#endif
+#endif  // SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 // clang-format on
