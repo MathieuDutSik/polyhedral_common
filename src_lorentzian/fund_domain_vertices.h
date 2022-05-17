@@ -141,7 +141,9 @@ template <typename T, typename Tint, typename Tgroup>
 ret_type<T, Tint, Tgroup> get_canonicalized_record(
     std::vector<MyMatrix<T>> const &ListMat,
     std::unordered_map<MyVector<Tint>, uint8_t> const &the_map) {
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "Beginning of get_canonicalized_record\n";
+#endif
   using Tidx_value = uint16_t;
   using Tidx = uint32_t;
   using Telt = typename Tgroup::Telt;
@@ -153,7 +155,9 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t idx = 0;
   std::vector<size_t> V;
   for (auto &kv : the_map) {
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "kv=" << kv.first << " / " << static_cast<int>(kv.second) << "\n";
+#endif
     l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
     if (kv.second == 1)
@@ -170,15 +174,16 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
                                             Tidx_value>(WMat);
-  std::cerr << "We have epair\n";
   const std::vector<Tidx> &ListIdx = epair.first;
   const std::vector<std::vector<Tidx>> &ListGen = epair.second;
   WMat.RowColumnReordering(ListIdx);
   std::vector<Tidx> ListIdxRev(n_row);
   for (size_t i = 0; i < n_row; i++)
     ListIdxRev[ListIdx[i]] = i;
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "     ePermIdx=" << Telt(ListIdx) << "\n";
   std::cerr << "inv(ePermIdx)=" << Telt(ListIdxRev) << "\n";
+#endif
   std::vector<MyVector<T>> l_vect_reord(n_row);
   std::vector<T> Vdiag_reord(n_row);
   std::vector<MyVector<Tint>> l_vect1;
@@ -196,8 +201,12 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       Map1_rev[i] = pos;
       pos++;
     }
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "i=" << i << " evect=" << StringVectorGAP(eV) << " diag=" << Vdiag[j] << "\n";
+#endif
   }
+  MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "Map1 =";
   for (auto & eval : Map1)
     std::cerr << " " << int(eval);
@@ -206,25 +215,16 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   for (auto & eval : Map1_rev)
     std::cerr << " " << int(eval);
   std::cerr << "\n";
-  MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
   std::cerr << "MatV=\n";
   WriteMatrix(std::cerr, MatV);
-  //  std::cerr << "MatV_red=\n";
-  //  WriteMatrix(std::cerr, MatV_red);
+  std::cerr << "MatV_red=\n";
+  WriteMatrix(std::cerr, MatV_red);
   MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
   std::cerr << "MatV_reord=\n";
   WriteMatrix(std::cerr, MatV_reord);
-  //  std::cerr << "MatV_reord_red=\n";
-  //  WriteMatrix(std::cerr, MatV_reord_red);
-
-  /*
-  std::optional<std::vector<Tidx>> opt = FindPermutationalEquivalence<T,Tidx>(MatV_red, MatV_reord_red);
-  if (!opt) {
-    std::cerr << "Failed to find a row equivalence\n";
-  } else {
-    std::cerr << "Found row equivalence *opt=" << *opt << "\n";
-  }
-  */
+  std::cerr << "MatV_reord_red=\n";
+  WriteMatrix(std::cerr, MatV_reord_red);
+#endif
 
   // There are two use case of computing the group
   // ---For the computation of minimal adjacencies that would get us a full
@@ -232,9 +232,9 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   // ---For the computation of orbits of adjacent vertices
   // So, in both cases, we need to reduce to the group for values 1.
   //
-  // 
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     MyMatrix<T> eEquivMat = RepresentVertexPermutation(MatV_red, MatV_red, eGen);
     std::optional<MyMatrix<T>> opt_EquivMat = FindMatrixTransformationTest(MatV_red, MatV_red, eGen);
     if (!opt_EquivMat) {
@@ -247,15 +247,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     }
     std::cerr << "get_canonicalized_record eGen=" << Telt(eGen) << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
-    //    std::cerr << "*opt_EquivMat=\n";
-    //    WriteMatrix(std::cerr, *opt_EquivMat);
-    //    MyMatrix<T> eProd1 = MatV_red * eEquivMat;
-    //    std::cerr << "MatV_red * eEquivMat=\n";
-    //    WriteMatrix(std::cerr, eProd1);
-    //    MyMatrix<T> eProd2 = MatV_reord_red * eEquivMat;
-    //    std::cerr << "MatV_reord_red * eEquivMat=\n";
-    //    WriteMatrix(std::cerr, eProd2);
-    //
+#endif
     //  l_vect_reord[i] = l_vect[ListIdx[i]]
     //  l_vect_reord[ListIdxRev[i]] = l_vect[i]
     //  l_vect_reord[ListIdxRev[eGen[i]]] = l_vect[eGen[i]]
@@ -270,15 +262,9 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       Tidx i4 = ListIdxRev[i3];
       Vloc[i1] = i4;
     }
+    //
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     Telt eGenReord(Vloc);
-    //
-    std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
-    if (opt) {
-      std::cerr << "Find some equivalence\n";
-    } else {
-      std::cerr << "Find that there is no equivalence\n";
-    }
-    //
     std::cerr << "Before computing eEquivMqtReord\n";
     MyMatrix<T> eEquivMatReord = RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
     std::cerr << "After computing eEquivMqtReord\n";
@@ -291,38 +277,27 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       std::cerr << "We found different matrices for eEquivMatReord by different algorithms\n";
       throw TerminalException{1};
     }
-    //    MyMatrix<T> eProd3 = MatV_red * eEquivMatReord;
-    //    std::cerr << "MatV_red * eEquivMatReord=\n";
-    //    WriteMatrix(std::cerr, eProd3);
-    //    MyMatrix<T> eProd4 = MatV_reord_red * eEquivMatReord;
-    //    std::cerr << "MatV_reord_red * eEquivMatReord=\n";
-    //    WriteMatrix(std::cerr, eProd4);
     std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
-    //    std::cerr << "*opt_EquivMatReord=\n";
-    //    WriteMatrix(std::cerr, *opt_EquivMatReord);
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
       throw TerminalException{1};
     }
+#endif
     //
     std::vector<Telt_idx> V1(n1);
     for (size_t i1 = 0; i1 < n1; i1++) {
-      std::cerr << "i1=" << static_cast<int>(i1) << "\n";
       size_t i2 = Map1[i1];
-      std::cerr << "  i2=" << static_cast<int>(i2) << "\n";
       size_t i3 = Vloc[i2];
-      std::cerr << "  i3=" << static_cast<int>(i3) << "\n";
       size_t i4 = Map1_rev[i3];
-      std::cerr << "  i4=" << static_cast<int>(i4) << "\n";
       V1[i1] = i4;
     }
     Telt ePerm1(V1);
     LGen1.push_back(ePerm1);
   }
   Tgroup GRP1(LGen1, n1);
-  std::cerr << "GRP1 has been built\n";
   MyMatrix<Tint> MatV_ret = MatrixFromVectorFamily(l_vect1);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "We have MatV_ret=\n";
   WriteMatrix(std::cerr, MatV_ret);
   MyMatrix<T> MatV_ret_red = UniversalMatrixConversion<T,Tint>(ColumnReduction(MatV_ret));
@@ -333,6 +308,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     std::cerr << "get_canonicalized_record eMat=\n";
     WriteMatrix(std::cerr, eMat);
   }
+#endif
   pair_char<T> e_pair_char{std::move(MatV_reord), std::move(WMat)};
   return {std::move(e_pair_char), std::move(GRP1), std::move(MatV_ret)};
 }
