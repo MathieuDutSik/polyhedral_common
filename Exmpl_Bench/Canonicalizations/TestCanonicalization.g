@@ -68,5 +68,5 @@ do
         fi;
     od;
 od;
-# No exit case
+# No error case
 GAP_EXIT_CODE(0);

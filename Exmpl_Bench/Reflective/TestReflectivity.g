@@ -36,6 +36,10 @@ TestReflectivity:=function(eRec)
     eProg:="../../src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk";
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
+    if IsExistingFile(FileOut)=false then
+        Print("The output file is not existing. That qualifies as a fail\n");
+        return false;
+    fi;
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileNml);
@@ -46,7 +50,7 @@ end;
 
 
 
-ListRec:=ReadAsFunction("ListReflect")();
+ListRec:=ReadAsFunction("ListReflect")();;
 
 
 for iRec in [1..Length(ListRec)]
@@ -58,5 +62,5 @@ do
         GAP_EXIT_CODE(1);
     fi;
 od;
-# No exit case
+# No error case
 GAP_EXIT_CODE(0);
