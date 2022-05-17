@@ -36,28 +36,28 @@ template <typename T, typename Telt>
 MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
                                        MyMatrix<T> const &EXT2,
                                        Telt const &ePerm) {
-  std::cerr << "Beginning of RepresentVertexPermutation\n";
-  std::cerr << "EXT1=\n";
-  WriteMatrix(std::cerr, EXT1);
+  //  std::cerr << "Beginning of RepresentVertexPermutation\n";
+  //  std::cerr << "EXT1=\n";
+  //  WriteMatrix(std::cerr, EXT1);
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
-  std::cerr << "|ListRowSelect|=" << ListRowSelect.size() << " |EXT1|=" << EXT1.rows() << " / " << EXT1.cols() << "\n";
+  //  std::cerr << "|ListRowSelect|=" << ListRowSelect.size() << " |EXT1|=" << EXT1.rows() << " / " << EXT1.cols() << "\n";
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv = Inverse(M1);
   size_t nbRow_s = ListRowSelect.size();
   std::vector<int> ListRowSelectImg(nbRow_s);
   for (size_t iRow = 0; iRow < nbRow_s; iRow++)
-    ListRowSelectImg[iRow] = ePerm.at(iRow);
+    ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
   MyMatrix<T> RetMat = M1inv * M2;
 #ifdef SANITY_CHECK
-  std::cerr << "Doing sanity_checks in RepresentVertexPermutation\n";
+  //  std::cerr << "Doing sanity_checks in RepresentVertexPermutation\n";
   int nbRow=EXT2.rows();
   int nbCol=EXT2.cols();
   MyMatrix<T> EXT1_img = EXT1 * RetMat;
   MyMatrix<T> EXT2_perm(nbRow, nbCol);
-  std::cerr << "EXT1_img=\n";
-  WriteMatrix(std::cerr, EXT1_img);
+  //  std::cerr << "EXT1_img=\n";
+  //  WriteMatrix(std::cerr, EXT1_img);
   for (int iRow=0; iRow<nbRow; iRow++) {
     int iRowImg = ePerm.at(iRow);
     for (int iCol=0; iCol<nbCol; iCol++) {
@@ -66,6 +66,10 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   }
   if (!TestEqualityMatrix(EXT1_img, EXT2_perm)) {
     std::cerr << "The matrices are not equal\n";
+    std::cerr << "EXT1=\n";
+    WriteMatrix(std::cerr, EXT1);
+    std::cerr << "EXT2=\n";
+    WriteMatrix(std::cerr, EXT2);
     std::cerr << "EXT1_img=\n";
     WriteMatrix(std::cerr, EXT1_img);
     std::cerr << "EXT2_perm=\n";
@@ -161,12 +165,6 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
 #ifdef DEBUG_PERM_FCT
-  // Coef EqMat(0,1) = sum_j M1inv_field(0,j) * M2_field(j,1)
-  Tfield eSP = 0;
-  for (int j = 0; j < int(nbCol); j++) {
-    eSP += M1inv_field(0, j) * M2_field(j, 1);
-  }
-  std::cerr << "eSP=" << eSP << "\n";
   std::cerr << "M1_field=\n";
   WriteMatrix(std::cerr, M1_field);
   std::cerr << "M1inv_field=\n";

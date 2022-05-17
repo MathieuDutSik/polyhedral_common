@@ -179,7 +179,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     ListIdxRev[ListIdx[i]] = i;
   std::cerr << "     ePermIdx=" << Telt(ListIdx) << "\n";
   std::cerr << "inv(ePermIdx)=" << Telt(ListIdxRev) << "\n";
-  std::vector<MyVector<Tint>> l_vect_reord(n_row);
+  std::vector<MyVector<T>> l_vect_reord(n_row);
   std::vector<T> Vdiag_reord(n_row);
   std::vector<MyVector<Tint>> l_vect1;
   std::vector<size_t> Map1;
@@ -188,7 +188,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   for (size_t i = 0; i < n_row; i++) {
     size_t j = ListIdx[i];
     MyVector<Tint> const& eV = l_vect[j];
-    l_vect_reord[i] = eV;
+    l_vect_reord[i] = UniversalVectorConversion<T, Tint>(eV);
     Vdiag_reord[i] = Vdiag[j];
     if (Vdiag[j] == 1) {
       l_vect1.push_back(eV);
@@ -206,24 +206,25 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   for (auto & eval : Map1_rev)
     std::cerr << " " << int(eval);
   std::cerr << "\n";
-  MyMatrix<T> const MatV_reord =
-      UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect_reord));
+  MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
   std::cerr << "MatV=\n";
   WriteMatrix(std::cerr, MatV);
-  std::cerr << "MatV_red=\n";
-  WriteMatrix(std::cerr, MatV_red);
+  //  std::cerr << "MatV_red=\n";
+  //  WriteMatrix(std::cerr, MatV_red);
   MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
   std::cerr << "MatV_reord=\n";
   WriteMatrix(std::cerr, MatV_reord);
-  std::cerr << "MatV_reord_red=\n";
-  WriteMatrix(std::cerr, MatV_reord_red);
+  //  std::cerr << "MatV_reord_red=\n";
+  //  WriteMatrix(std::cerr, MatV_reord_red);
 
+  /*
   std::optional<std::vector<Tidx>> opt = FindPermutationalEquivalence<T,Tidx>(MatV_red, MatV_reord_red);
   if (!opt) {
     std::cerr << "Failed to find a row equivalence\n";
   } else {
     std::cerr << "Found row equivalence *opt=" << *opt << "\n";
   }
+  */
 
   // There are two use case of computing the group
   // ---For the computation of minimal adjacencies that would get us a full
@@ -240,17 +241,28 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       std::cerr << "Failed to find opt_EquivMat\n";
       throw TerminalException{1};
     }
+    if (!TestEqualityMatrix(eEquivMat, *opt_EquivMat)) {
+      std::cerr << "We found different matrices for eEquivMqt by different algorithms\n";
+      throw TerminalException{1};
+    }
     std::cerr << "get_canonicalized_record eGen=" << Telt(eGen) << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
-    std::cerr << "*opt_EquivMat=\n";
-    WriteMatrix(std::cerr, *opt_EquivMat);
-    MyMatrix<T> eProd1 = MatV_red * eEquivMat;
-    std::cerr << "MatV_red * eEquivMat=\n";
-    WriteMatrix(std::cerr, eProd1);
-    MyMatrix<T> eProd2 = MatV_reord_red * eEquivMat;
-    std::cerr << "MatV_reord_red * eEquivMat=\n";
-    WriteMatrix(std::cerr, eProd2);
+    //    std::cerr << "*opt_EquivMat=\n";
+    //    WriteMatrix(std::cerr, *opt_EquivMat);
+    //    MyMatrix<T> eProd1 = MatV_red * eEquivMat;
+    //    std::cerr << "MatV_red * eEquivMat=\n";
+    //    WriteMatrix(std::cerr, eProd1);
+    //    MyMatrix<T> eProd2 = MatV_reord_red * eEquivMat;
+    //    std::cerr << "MatV_reord_red * eEquivMat=\n";
+    //    WriteMatrix(std::cerr, eProd2);
     //
+    //  l_vect_reord[i] = l_vect[ListIdx[i]]
+    //  l_vect_reord[ListIdxRev[i]] = l_vect[i]
+    //  l_vect_reord[ListIdxRev[eGen[i]]] = l_vect[eGen[i]]
+    //                                    = phi( l_vect[i] )
+    //                                    = phi( l_vect_reord[ListIdxRev[i]] )
+    //  which get us
+    //  phi( l_vect_reord[i] ) = l_vect_reord[ListIdxRev[eGen[ListIdx[i]]]]
     std::vector<Telt_idx> Vloc(n_row);
     for (size_t i1 = 0; i1 < n_row; i1++) {
       Tidx i2 = ListIdx[i1];
@@ -260,22 +272,35 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
     }
     Telt eGenReord(Vloc);
     //
+    std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
+    if (opt) {
+      std::cerr << "Find some equivalence\n";
+    } else {
+      std::cerr << "Find that there is no equivalence\n";
+    }
+    //
+    std::cerr << "Before computing eEquivMqtReord\n";
     MyMatrix<T> eEquivMatReord = RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
+    std::cerr << "After computing eEquivMqtReord\n";
     std::optional<MyMatrix<T>> opt_EquivMatReord = FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
     if (!opt_EquivMatReord) {
       std::cerr << "Failed to find an equivalence\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> eProd3 = MatV_red * eEquivMatReord;
-    std::cerr << "MatV_red * eEquivMatReord=\n";
-    WriteMatrix(std::cerr, eProd3);
-    MyMatrix<T> eProd4 = MatV_reord_red * eEquivMatReord;
-    std::cerr << "MatV_reord_red * eEquivMatReord=\n";
-    WriteMatrix(std::cerr, eProd4);
+    if (!TestEqualityMatrix(eEquivMatReord, *opt_EquivMatReord)) {
+      std::cerr << "We found different matrices for eEquivMatReord by different algorithms\n";
+      throw TerminalException{1};
+    }
+    //    MyMatrix<T> eProd3 = MatV_red * eEquivMatReord;
+    //    std::cerr << "MatV_red * eEquivMatReord=\n";
+    //    WriteMatrix(std::cerr, eProd3);
+    //    MyMatrix<T> eProd4 = MatV_reord_red * eEquivMatReord;
+    //    std::cerr << "MatV_reord_red * eEquivMatReord=\n";
+    //    WriteMatrix(std::cerr, eProd4);
     std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
-    std::cerr << "*opt_EquivMatReord=\n";
-    WriteMatrix(std::cerr, *opt_EquivMatReord);
+    //    std::cerr << "*opt_EquivMatReord=\n";
+    //    WriteMatrix(std::cerr, *opt_EquivMatReord);
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
       throw TerminalException{1};
