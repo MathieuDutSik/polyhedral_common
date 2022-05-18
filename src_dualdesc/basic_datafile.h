@@ -296,4 +296,6 @@ public:
   }
 };
 
-#endif //  SRC_DUALDESC_BASIC_DATAFILE_H_
+// clang-format off
+#endif  //  SRC_DUALDESC_BASIC_DATAFILE_H_
+// clang-format on

@@ -1,6 +1,6 @@
-#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
+#include "NumberTheory.h"
 #include <unordered_map>
 
 #include "hash_functions.h"
@@ -127,8 +127,9 @@ int main(int argc, char *argv[]) {
       break;
     nbAccess++;
   }
-  double AvgTimeAccess = static_cast<double>(MaxRunTimeSecond) *
-    (static_cast<double>(1000000) / static_cast<double>(nbAccess) );
+  double AvgTimeAccess =
+      static_cast<double>(MaxRunTimeSecond) *
+      (static_cast<double>(1000000) / static_cast<double>(nbAccess));
   std::cerr << "nbAccess=" << nbAccess << " AvgTimeAccess=" << AvgTimeAccess
             << "\n";
 }

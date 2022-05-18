@@ -4,11 +4,11 @@
 #include "POLY_RecursiveDualDesc.h"
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
+#include <limits>
 #include <string>
 #include <unordered_map>
-#include <limits>
-#include <vector>
 #include <utility>
+#include <vector>
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_DUALDESC_AdjacencyDecomposition(
@@ -256,4 +256,6 @@ vectface MPI_DUALDESC_AdjacencyDecomposition(
   return ListRPL[0].FuncListOrbitIncidence();
 }
 
+// clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
+// clang-format on

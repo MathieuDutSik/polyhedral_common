@@ -281,4 +281,6 @@ public:
   }
 };
 
-#endif // SRC_DUALDESC_DATABANK_H_
+// clang-format off
+#endif  // SRC_DUALDESC_DATABANK_H_
+// clang-format on

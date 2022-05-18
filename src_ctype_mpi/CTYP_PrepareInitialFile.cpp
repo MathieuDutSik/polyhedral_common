@@ -1,6 +1,6 @@
-#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
+#include "NumberTheory.h"
 #include "rational.h"
 #include <netcdf>
 

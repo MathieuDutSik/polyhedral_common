@@ -2,8 +2,8 @@
 #define SRC_DUALDESC_POLY_GAP_H_
 
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace datagap {
 

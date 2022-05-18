@@ -618,4 +618,6 @@ void Write_EquivDualDesc(EquivariantDualDescription<T, Tgroup> const &eRec,
     POLY_NC_WriteFace(dataFile, i_orbit, eRec.ListFace[i_orbit]);
 }
 
+// clang-format off
 #endif  // SRC_DUALDESC_POLY_NETCDF_FILE_H_
+// clang-format on
