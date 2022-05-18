@@ -212,7 +212,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
         UniversalMatrixConversion<Tint, T>(MatEquivRed_T);
     std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
     return MatEquiv_I;
-  };
+  }
   if (eIndex == 1) {
     std::cerr << "We should not reach that stage. If eIndex=1 then\n";
     std::cerr << "the basic algorithm should work\n";
@@ -237,7 +237,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
     std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
     return {true, MatEquiv_I};
-  };
+  }
   std::cerr << "Trying other strategies\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {

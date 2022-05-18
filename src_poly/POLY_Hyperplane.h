@@ -46,7 +46,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
     while (true) {
       MyVector<T> eV(n);
       for (int i = 0; i < n; i++) {
-        int eVal = rand() % 10;
+        int eVal = random() % 10;
         eV(i) = eVal;
       }
       std::pair<bool, Face> ePair = try_vect(eV);

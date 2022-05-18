@@ -13,10 +13,10 @@
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"
 #include "lorentzian_linalg.h"
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
-#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>

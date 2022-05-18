@@ -7,11 +7,11 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeFct.h"
 #include "Temp_PolytopeEquiStab.h"
+#include <limits>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
-#include <limits>
 
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.

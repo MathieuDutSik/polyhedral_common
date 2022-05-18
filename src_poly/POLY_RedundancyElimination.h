@@ -4,10 +4,10 @@
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_cddlib.h"
+#include <algorithm>
 #include <set>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 // Fairly expensive function. But useful for debugging
 template <typename T>
@@ -175,7 +175,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   MyVector<T> eVect(n_cols);
   auto SetRandomVector = [&]() -> void {
     for (int i_col = 0; i_col < n_cols; i_col++) {
-      int val = -N + rand() % (2 * N + 1);
+      int val = -N + random() % (2 * N + 1);
       eVect(i_col) = val;
     }
   };
@@ -350,7 +350,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
       WorkLIdx.clear();
       for (auto &eIdx : NewCand)
         // Only those unconcluded need to be considered.
-        if (RedundancyStatus[eIdx] == -1) 
+        if (RedundancyStatus[eIdx] == -1)
           WorkLIdx.push_back(eIdx);
 #ifdef DEBUG_REDUND
       if (WorkLIdx.size() == 0) {

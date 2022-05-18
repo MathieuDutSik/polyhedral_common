@@ -1434,7 +1434,7 @@ void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed) {
   long k, j, ovj;
   srand(seed);
   for (j = t; j > 1; j--) {
-    k = 1 + rand() % t;
+    k = 1 + random() % t;
     //    std::cerr << "j=" << j << " r=" << r << " u=" << u << " xk=" << xk <<
     //    " k=" << k << "\n"; std::cerr << "j=" << j << " k=" << k << "\n";
     ovj = OV[j];

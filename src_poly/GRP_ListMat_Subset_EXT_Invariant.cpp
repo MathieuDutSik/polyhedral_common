@@ -25,13 +25,14 @@ int main(int argc, char *argv[]) {
       ListMat.push_back(eMat);
     }
     MyMatrix<T> EXT = ReadMatrix<T>(is);
-    for (auto & eMat : ListMat) {
+    for (auto &eMat : ListMat) {
       if (!IsSymmetricMatrix(eMat)) {
         std::cerr << "The matrix eMat should be symmetric\n";
         throw TerminalException{1};
       }
       if (eMat.cols() != EXT.cols()) {
-        std::cerr << "|eMat|=" << eMat.cols() << " |EXT|=" << EXT.cols() << "\n";
+        std::cerr << "|eMat|=" << eMat.cols() << " |EXT|=" << EXT.cols()
+                  << "\n";
         throw TerminalException{1};
       }
     }

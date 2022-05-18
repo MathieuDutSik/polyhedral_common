@@ -538,8 +538,8 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
   vectface ListFace(EXT.rows());
   while (true) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
-      int a = rand();
-      int b = rand();
+      int a = random();
+      int b = random();
       T eVal = a - b;
       eVect(iCol) = eVal;
     }
@@ -663,7 +663,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
       int siz = 3; // quite enough for us
       int sizTot = 1 + 2 * siz;
       for (int iCol = 0; iCol < TheDim; iCol++) {
-        int a = rand() % sizTot;
+        int a = random() % sizTot;
         T eVal = a - siz;
         eMinimize(iCol) = eVal;
       }

@@ -4,12 +4,12 @@
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "GRAPH_GraphicalFunctions.h"
+#include <algorithm>
 #include <limits>
 #include <map>
-#include <algorithm>
-#include <utility>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 /*
@@ -764,9 +764,11 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   std::vector<size_t> list_ends_A5;
   std::vector<size_t> list_ends_F4;
   std::vector<size_t> list_cent_D4;
-  // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
+  // For B2 this is the two vertices, for Bn (n > 2) this is the expanding
+  // vertex
   std::vector<size_t> list_expand_Bn;
-  // For B2 this is the two vertices, for Bn (n > 2) this is the expanding vertex
+  // For B2 this is the two vertices, for Bn (n > 2) this is the expanding
+  // vertex
   std::vector<size_t> list_expand_m1_Bn;
   // Only for n > 2. This is the vertex adjacent with weight 4 which cannot
   // be extended to B(n+1)
@@ -783,7 +785,8 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   std::vector<size_t> VertToLocDim(n_vert);
   // For An the vertices from which we can expand to D(n+1)
   std::vector<size_t> list_extm1_AN;
-  // Inspired by above, useful to get E6, E7, E8, tilde{{E8} from A5, A6, A7 and A8.
+  // Inspired by above, useful to get E6, E7, E8, tilde{{E8} from A5, A6, A7 and
+  // A8.
   std::vector<size_t> list_extm2_AN;
   // Same as above, only useful to get tilde{E7} from A7
   std::vector<size_t> list_extm3_AN;

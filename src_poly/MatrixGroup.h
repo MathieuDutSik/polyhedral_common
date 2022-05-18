@@ -249,10 +249,11 @@ GetPermutationForFiniteMatrixGroup(Thelper const &helper,
   Tidx len = helper.EXTfaithful.rows();
   std::vector<Tidx> V(len);
   for (Tidx i = 0; i < len; i++) {
-    MyVector<T> const& eV = helper.ListV[i];
+    MyVector<T> const &eV = helper.ListV[i];
     MyVector<T> Vimg = eMatr.transpose() * eV;
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "i=" << i << " V=" << StringVectorGAP(eV) << " Vimg=" << StringVectorGAP(Vimg) << "\n";
+    std::cerr << "i=" << i << " V=" << StringVectorGAP(eV)
+              << " Vimg=" << StringVectorGAP(Vimg) << "\n";
 #endif
     V[i] = helper.MapV.at(Vimg);
   }
@@ -369,7 +370,8 @@ MatrixIntegral_GeneratePermutationGroup(
     std::cerr << "siz=" << siz << " nbRow_tidx=" << int(nbRow_tidx) << "\n";
     std::cerr << "ePermGen.size()=" << int(ePermGen.size()) << "\n";
     for (Tidx i = 0; i < nbRow_tidx; i++)
-      std::cerr << "i=" << int(i) << " ePermGen.at(i)=" << int(ePermGen.at(i)) << "\n";
+      std::cerr << "i=" << int(i) << " ePermGen.at(i)=" << int(ePermGen.at(i))
+    << "\n";
     */
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen
@@ -1101,7 +1103,8 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     //    std::cerr << "iGroup=" << iGroup << " |eGRP|=" <<
     //    ListGroup[iGroup].size() << "\n";
   }
-  auto try_basis=[&](MyMatrix<T> const& TheBasis) -> std::optional<std::vector<MyVector<Tmod>>> {
+  auto try_basis = [&](MyMatrix<T> const &TheBasis)
+      -> std::optional<std::vector<MyVector<Tmod>>> {
     for (int i_row = 0; i_row < TheBasis.rows(); i_row++) {
       MyVector<T> V = GetMatrixRow(TheBasis, i_row);
       if (!IsStabilized(V)) {

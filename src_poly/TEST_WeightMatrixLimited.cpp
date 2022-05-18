@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "  iter1=" << iter1 << " / " << n_iter1 << "\n";
         Face eFace(len);
         for (Tidx i = 0; i < len; i++) {
-          int eVal = Tidx(rand()) % 2;
+          int eVal = Tidx(random()) % 2;
           eFace[i] = eVal;
         }
         size_t hash1 = WMatLimited.get_hash(eFace);

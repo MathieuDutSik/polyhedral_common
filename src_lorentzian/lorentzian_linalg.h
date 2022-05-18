@@ -264,7 +264,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect) {
     int tot_spr = 2 * spr + 1;
     while (true) {
       for (int i = 0; i < dimSpace; i++)
-        w(i) = rand() % tot_spr - spr;
+        w(i) = random() % tot_spr - spr;
       std::cerr << "get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
       if (is_corr(w))
         return w;

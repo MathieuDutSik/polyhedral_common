@@ -161,14 +161,14 @@ ComputeReductionIndefinite(MyMatrix<T> const &M) {
     for (int i = 0; i < n; i++)
       LPos[i] = i;
     for (int iter = 0; iter < 4 * n; iter++) {
-      int i = rand() % n;
-      int j = rand() % n;
+      int i = random() % n;
+      int j = random() % n;
       if (i != j)
         std::swap(LPos[i], LPos[j]);
     }
     std::vector<int> LDiag(n);
     for (int i = 0; i < n; i++) {
-      int val = rand() % 2;
+      int val = random() % 2;
       LDiag[i] = -1 + 2 * val;
     }
     MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n, n);
