@@ -155,6 +155,9 @@ jobs:
           mkdir -p Saving_Bank Saving_Polyhedral
           echo "Saving directories created"
 
+          echo $PATH
+          echo "Printing the PATH"
+
           ../../src_dualdesc/POLY_SerialDualDesc CUT_K8.nml 2>&1
           echo "Computation has finished"
 
