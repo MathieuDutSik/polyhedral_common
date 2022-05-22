@@ -683,34 +683,16 @@ WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is) {
   return WMat;
 }
 
-// Ideally, we would like M to be MyMatrix<Tidx_value>
-// but with MyMatrix<uint8_t>
+
+
 template <bool is_symmetric, typename T, typename Tidx_value>
 WeightMatrix<is_symmetric, T, Tidx_value>
-WeightedMatrixFromMyMatrix(MyMatrix<int> const &M) {
+WeightedMatrixFromMyMatrix(MyMatrix<T> const &M) {
   size_t nbRow = M.rows();
-  WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
-  size_t nbEnt = 0;
-  for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    for (size_t jRow = 0; jRow < nbRow; jRow++) {
-      Tidx_value eVal = M(iRow, jRow);
-      if (size_t(eVal) > nbEnt) {
-        //        std::cerr << "nbEnt=" << nbEnt << " eVal=" << eVal << "
-        //        size_t(eVal)=" << size_t(eVal) << "\n";
-        nbEnt = size_t(eVal);
-      }
-      WMat.intDirectAssign(iRow, jRow, eVal);
-    }
-  }
-  nbEnt++;
-  std::cerr << "nbEnt=" << nbEnt << "\n";
-  std::vector<T> ListWeight;
-  T eVal_T;
-  for (size_t iEnt = 0; iEnt < nbEnt; iEnt++)
-    ListWeight.push_back(eVal_T);
-  WMat.SetWeight(ListWeight);
-  std::cerr << "|ListWeight|=" << ListWeight.size() << "\n";
-  return WMat;
+  auto f=[&](size_t iRow, size_t iCol) -> T {
+    return M(iRow, iCol);
+  };
+  return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, f);
 }
 
 //

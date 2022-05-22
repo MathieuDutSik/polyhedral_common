@@ -25,7 +25,16 @@ int main(int argc, char *argv[]) {
     //
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT = ReadMatrix<T>(is);
-    MyMatrix<int> WMat_EXT = ReadMatrix<int>(is);
+    MyMatrix<T> preWMat_EXT = ReadMatrix<int>(is);
+    int nbRow = WMat_EXT.rows();
+    int nbCol = WMat_EXT.cols();
+    MyMatrix<std::vector<T>> WMat_EXT(nbRow,nbCol);
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      for (int iCol=0; iCol<nbCol; iCol++) {
+        std::vector<T> val{preWMat_EXT(iRow,iCol)};
+        WMat_EXT(iRow,iCol) = val;
+      }
+    }
     //
     using pair_char =
         std::pair<MyMatrix<T>, WeightMatrix<true, std::vector<T>, Tidx_value>>;

@@ -1,4 +1,5 @@
-PROGRAM		= IndefiniteLLL IndefiniteReduction
+#PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
+PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= IndefiniteLLL
 #PROGRAM		= IndefiniteReduction
 
@@ -20,10 +21,10 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_dualdesc -I.
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 CTOTAL          = $(CLOCAL) $(CFLAGS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK)
 
 
 %.o: %.cpp

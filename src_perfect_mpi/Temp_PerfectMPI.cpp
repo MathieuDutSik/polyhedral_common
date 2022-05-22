@@ -78,7 +78,7 @@ static int tag_new_form = 37;
 
 int main() {
   using T = mpq_class;
-  using Tint = long;
+  using Tint = int32_t;
   //
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI();
   std::string eFileName = "perfectenum.nml";

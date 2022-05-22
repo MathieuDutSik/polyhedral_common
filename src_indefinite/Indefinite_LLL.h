@@ -2,6 +2,9 @@
 #define SRC_INDEFINITE_INDEFINITE_LLL_H_
 
 #include "MAT_Matrix.h"
+#include "GRAPH_GraphicalBasic.h"
+#include "GRAPH_BitsetType.h"
+#include "WeightMatrix.h"
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -208,6 +211,83 @@ ComputeReductionIndefinite(MyMatrix<T> const &M) {
   }
 }
 
+template<typename T>
+std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> const& M)
+{
+  using Tidx_value=uint16_t;
+  using Tidx=uint16_t;
+  using Tgr = GraphListAdj;
+  WeightMatrix<true, T, Tidx_value> WMat = WeightedMatrixFromMyMatrix<true, T, Tidx_value>(M);
+  WMat.ReorderingSetWeight();
+  std::vector<Tidx> CanonicOrd = GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat).first;
+  std::cerr << "We have CanonicOrd\n";
+  Tidx n = M.rows();
+  MyMatrix<T> Mreord(n,n);
+  for (Tidx i_row=0; i_row<n; i_row++) {
+    Tidx j_row = CanonicOrd[i_row];
+    for (Tidx i_col=0; i_col<n; i_col++) {
+      Tidx j_col = CanonicOrd[i_col];
+      Mreord(i_row, i_col) = M(j_row, j_col);
+    }
+  }
+  MyMatrix<T> Mtrans1 = ZeroMatrix<T>(n,n);
+  for (Tidx i_row=0; i_row<n; i_row++) {
+    Tidx j_row = CanonicOrd[i_row];
+    Mtrans1(j_row,i_row) = 1;
+  }
+  std::cerr << "We have Mtrans1, Mreord\n";
+
+  GraphBitset GR(n);
+  for (Tidx i_row=0; i_row<n; i_row++) {
+    for (Tidx i_col=0; i_col<n; i_col++) {
+      if (Mreord(i_row,i_col) != 0) {
+        GR.AddAdjacent(i_row,i_col);
+        GR.AddAdjacent(i_col,i_row);
+      }
+    }
+  }
+  MyMatrix<T> Mtrans2 = IdentityMat<T>(n);
+  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(GR);
+  std::cerr << "|LConn|=" << LConn.size() << "\n";
+  for (auto & eConn : LConn) {
+    size_t len = eConn.size();
+    std::vector<size_t> Status(len, 0);
+    std::vector<size_t> eConnRev(n, std::numeric_limits<size_t>::max());
+    for (size_t i=0; i<len; i++)
+      eConnRev[eConn[i]] = i;
+    Status[0] = 1;
+    while(true) {
+      size_t n_done = 0;
+      for (size_t i=0; i<len; i++)
+        if (Status[i] > 0)
+          n_done++;
+      if (n_done == len)
+        break;
+      for (size_t i=0; i<len; i++) {
+        if (Status[i] > 0) {
+          size_t iImg = eConn[i];
+          for (auto & eAdjImg : GR.Adjacency(iImg)) {
+            size_t eAdj = eConnRev[eAdjImg];
+            if (Status[eAdj] == 0) {
+              int sign = 1;
+              if (M(iImg,eAdjImg) < 0)
+                sign = -1;
+              Mtrans2(eAdjImg,eAdjImg) = sign * Mtrans2(iImg,iImg);
+              Status[eAdj]=1;
+            }
+          }
+        }
+      }
+    }
+  }
+  std::cerr << "We have Mtrans2\n";
+  MyMatrix<T> eP = Mtrans2 * Mtrans1;
+  MyMatrix<T> M_red = eP * M * eP.transpose();
+  return {eP, M_red};
+}
+
+
+
 template <typename T, typename Tint>
 ResultReductionIndefinite<T, Tint>
 ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
@@ -221,5 +301,11 @@ ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
     return {B, Mred};
   }
 }
+
+
+
+
+
+
 
 #endif //  SRC_INDEFINITE_INDEFINITE_LLL_H_
