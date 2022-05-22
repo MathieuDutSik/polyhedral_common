@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have M\n";
     //
     auto print_result = [&](std::ostream &os) -> void {
-      ResultReductionIndefinite<T, Tint> ResRed =
+      ResultReduction<T, Tint> ResRed =
           ComputeReductionIndefinitePermSign<T, Tint>(M);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();

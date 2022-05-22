@@ -8,6 +8,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     using T = mpq_class;
+    using Tint = mpz_class;
 
     std::string FileI = argv[1];
     //
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
     }
     int nbRow = M.rows();
     //
-    MyMatrix<T> Mcan = CanonicalizationPermutationSigns(M).second;
+    MyMatrix<T> Mcan = CanonicalizationPermutationSigns<T,Tint>(M).Mred;
     for (int iter=0; iter<50; iter++) {
       std::cerr << "iter=" << iter << "\n";
       std::vector<int> ePerm = RandomPermutation<int>(nbRow);
@@ -27,13 +28,15 @@ int main(int argc, char *argv[]) {
         eP(iRow,ePerm[iRow]) = 2 * (random() % 2) - 1;
       }
       MyMatrix<T> Mnew = eP * M * eP.transpose();
-      MyMatrix<T> Mnew_can = CanonicalizationPermutationSigns(Mnew).second;
+      MyMatrix<T> Mnew_can = CanonicalizationPermutationSigns<T,Tint>(Mnew).Mred;
       if (Mcan != Mnew_can) {
         std::cerr << "The matrices are not equal\n";
         std::cerr << "Mcan=\n";
         WriteMatrix(std::cerr, Mcan);
         std::cerr << "Mnew_can=\n";
         WriteMatrix(std::cerr, Mnew_can);
+        std::cerr << "This error is actually expected since if the matrix has many entries of the\n";
+        std::cerr << "Same absolute value (e.g. Hadamard matrix) then this method does not work\n";
         throw TerminalException{1};
       }
     }

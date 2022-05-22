@@ -314,7 +314,8 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const& M)
   //  std::cerr << "We have Mtrans2=\n";
   //  WriteMatrix(std::cerr, Mtrans2);
   MyMatrix<Tint> eP = Mtrans2 * Mtrans1;
-  MyMatrix<T> M_red = eP * M * eP.transpose();
+  MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
+  MyMatrix<T> M_red = eP_T * M * eP_T.transpose();
   return {std::move(eP), std::move(M_red)};
 }
 
@@ -322,8 +323,8 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const& M)
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 ComputeReductionIndefinitePermSign(MyMatrix<T> const &M) {
-  ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite(M);
-  ResultReduction<T, Tint> RRI_B = CanonicalizationPermutationSigns(RRI_A.Mred);
+  ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite<T,Tint>(M);
+  ResultReduction<T, Tint> RRI_B = CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
   return {std::move(eP), std::move(RRI_B.Mred)};
 }
@@ -332,7 +333,7 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M) {
 
 
 template <typename T, typename Tint>
-ResultReductionIndefinite<T, Tint>
+ResultReduction<T, Tint>
 ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
                                bool const &ApplyReduction) {
   if (ApplyReduction) {
