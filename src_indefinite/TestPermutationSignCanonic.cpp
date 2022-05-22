@@ -28,8 +28,12 @@ int main(int argc, char *argv[]) {
       }
       MyMatrix<T> Mnew = eP * M * eP.transpose();
       MyMatrix<T> Mnew_can = CanonicalizationPermutationSigns(Mnew).second;
-      if (Mnew != Mnew_can) {
+      if (Mcan != Mnew_can) {
         std::cerr << "The matrices are not equal\n";
+        std::cerr << "Mcan=\n";
+        WriteMatrix(std::cerr, Mcan);
+        std::cerr << "Mnew_can=\n";
+        WriteMatrix(std::cerr, Mnew_can);
         throw TerminalException{1};
       }
     }

@@ -217,25 +217,45 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
   using Tidx_value=uint16_t;
   using Tidx=uint16_t;
   using Tgr = GraphListAdj;
-  WeightMatrix<true, T, Tidx_value> WMat = WeightedMatrixFromMyMatrix<true, T, Tidx_value>(M);
+  Tidx n = M.rows();
+  MyMatrix<T> Mabs(n, n);
+  for (Tidx i_row=0; i_row<n; i_row++)
+    for (Tidx i_col=0; i_col<n; i_col++)
+      Mabs(i_row,i_col) = T_abs(M(i_row,i_col));
+  //  std::cerr << "M=" << M << "\n";
+  WeightMatrix<true, T, Tidx_value> WMat = WeightedMatrixFromMyMatrix<true, T, Tidx_value>(Mabs);
   WMat.ReorderingSetWeight();
   std::vector<Tidx> CanonicOrd = GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat).first;
-  std::cerr << "We have CanonicOrd\n";
-  Tidx n = M.rows();
+  //  std::cerr << "We have CanonicOrd\n";
+  //  for (Tidx i=0; i<n; i++)
+  //    std::cerr << "i=" << i << " val=" << CanonicOrd[i] << "\n";
   MyMatrix<T> Mreord(n,n);
+  MyMatrix<T> MreordAbs(n,n);
   for (Tidx i_row=0; i_row<n; i_row++) {
     Tidx j_row = CanonicOrd[i_row];
     for (Tidx i_col=0; i_col<n; i_col++) {
       Tidx j_col = CanonicOrd[i_col];
       Mreord(i_row, i_col) = M(j_row, j_col);
+      MreordAbs(i_row, i_col) = T_abs(M(j_row, j_col));
     }
   }
+  //  std::cerr << "Mreord=\n";
+  //  WriteMatrix(std::cerr, Mreord);
+  //  std::cerr << "MreordAbs=\n";
+  //  WriteMatrix(std::cerr, MreordAbs);
   MyMatrix<T> Mtrans1 = ZeroMatrix<T>(n,n);
   for (Tidx i_row=0; i_row<n; i_row++) {
     Tidx j_row = CanonicOrd[i_row];
-    Mtrans1(j_row,i_row) = 1;
+    Mtrans1(i_row,j_row) = 1;
   }
-  std::cerr << "We have Mtrans1, Mreord\n";
+  //  std::cerr << "We have Mtrans1, Mreord\n";
+  MyMatrix<T> eProd = Mtrans1 * M * Mtrans1.transpose();
+  if (eProd != Mreord) {
+    std::cerr << "The matrix product does not work as expected\n";
+    std::cerr << "eProd=\n";
+    WriteMatrix(std::cerr, eProd);
+    throw TerminalException{1};
+  }
 
   GraphBitset GR(n);
   for (Tidx i_row=0; i_row<n; i_row++) {
@@ -248,8 +268,14 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
   }
   MyMatrix<T> Mtrans2 = IdentityMat<T>(n);
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(GR);
-  std::cerr << "|LConn|=" << LConn.size() << "\n";
+  //  std::cerr << "|LConn|=" << LConn.size() << "\n";
   for (auto & eConn : LConn) {
+    /*
+    std::cerr << "eConn =";
+    for (auto & eVal : eConn)
+      std::cerr << " " << eVal;
+    std::cerr << "\n";
+    */
     size_t len = eConn.size();
     std::vector<size_t> Status(len, 0);
     std::vector<size_t> eConnRev(n, std::numeric_limits<size_t>::max());
@@ -270,7 +296,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
             size_t eAdj = eConnRev[eAdjImg];
             if (Status[eAdj] == 0) {
               int sign = 1;
-              if (M(iImg,eAdjImg) < 0)
+              if (Mreord(iImg,eAdjImg) < 0)
                 sign = -1;
               Mtrans2(eAdjImg,eAdjImg) = sign * Mtrans2(iImg,iImg);
               Status[eAdj]=1;
@@ -280,7 +306,8 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
       }
     }
   }
-  std::cerr << "We have Mtrans2\n";
+  //  std::cerr << "We have Mtrans2=\n";
+  //  WriteMatrix(std::cerr, Mtrans2);
   MyMatrix<T> eP = Mtrans2 * Mtrans1;
   MyMatrix<T> M_red = eP * M * eP.transpose();
   return {eP, M_red};
