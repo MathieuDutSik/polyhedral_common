@@ -1,5 +1,5 @@
-#PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
-PROGRAM		= TestPermutationSignCanonic
+PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
+#PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= IndefiniteLLL
 #PROGRAM		= IndefiniteReduction
 

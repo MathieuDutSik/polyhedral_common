@@ -134,13 +134,13 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   return {true, B, get_matrix(), {}};
 }
 
-template <typename T, typename Tint> struct ResultReductionIndefinite {
+template <typename T, typename Tint> struct ResultReduction {
   MyMatrix<Tint> B;
   MyMatrix<T> Mred;
 };
 
 template <typename T, typename Tint>
-ResultReductionIndefinite<T, Tint>
+ResultReduction<T, Tint>
 ComputeReductionIndefinite(MyMatrix<T> const &M) {
   std::cerr << "Beginning of ComputeReductionIndefinite\n";
   int n = M.rows();
@@ -211,8 +211,12 @@ ComputeReductionIndefinite(MyMatrix<T> const &M) {
   }
 }
 
-template<typename T>
-std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> const& M)
+
+
+
+
+template<typename T, typename Tint>
+ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const& M)
 {
   using Tidx_value=uint16_t;
   using Tidx=uint16_t;
@@ -243,13 +247,14 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
   //  WriteMatrix(std::cerr, Mreord);
   //  std::cerr << "MreordAbs=\n";
   //  WriteMatrix(std::cerr, MreordAbs);
-  MyMatrix<T> Mtrans1 = ZeroMatrix<T>(n,n);
+  MyMatrix<Tint> Mtrans1 = ZeroMatrix<Tint>(n,n);
   for (Tidx i_row=0; i_row<n; i_row++) {
     Tidx j_row = CanonicOrd[i_row];
     Mtrans1(i_row,j_row) = 1;
   }
   //  std::cerr << "We have Mtrans1, Mreord\n";
-  MyMatrix<T> eProd = Mtrans1 * M * Mtrans1.transpose();
+  MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T,Tint>(Mtrans1);
+  MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
     std::cerr << "The matrix product does not work as expected\n";
     std::cerr << "eProd=\n";
@@ -266,7 +271,7 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
       }
     }
   }
-  MyMatrix<T> Mtrans2 = IdentityMat<T>(n);
+  MyMatrix<Tint> Mtrans2 = IdentityMat<Tint>(n);
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(GR);
   //  std::cerr << "|LConn|=" << LConn.size() << "\n";
   for (auto & eConn : LConn) {
@@ -308,10 +313,21 @@ std::pair<MyMatrix<T>,MyMatrix<T>> CanonicalizationPermutationSigns(MyMatrix<T> 
   }
   //  std::cerr << "We have Mtrans2=\n";
   //  WriteMatrix(std::cerr, Mtrans2);
-  MyMatrix<T> eP = Mtrans2 * Mtrans1;
+  MyMatrix<Tint> eP = Mtrans2 * Mtrans1;
   MyMatrix<T> M_red = eP * M * eP.transpose();
-  return {eP, M_red};
+  return {std::move(eP), std::move(M_red)};
 }
+
+
+template <typename T, typename Tint>
+ResultReduction<T, Tint>
+ComputeReductionIndefinitePermSign(MyMatrix<T> const &M) {
+  ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite(M);
+  ResultReduction<T, Tint> RRI_B = CanonicalizationPermutationSigns(RRI_A.Mred);
+  MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
+  return {std::move(eP), std::move(RRI_B.Mred)};
+}
+
 
 
 
