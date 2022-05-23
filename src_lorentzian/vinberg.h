@@ -382,7 +382,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T> &G) {
     We find a short vector v for Mred.
     Thus v B is a short vector for M
    */
-  ResultReductionIndefinite<T, Tint> ResRed =
+  ResultReduction<T, Tint> ResRed =
       ComputeReductionIndefinite<T, Tint>(G);
   MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint, T>(
       ResRed.Mred, CritNorm, StrictIneq, NeedNonZero);
