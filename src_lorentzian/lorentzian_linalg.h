@@ -348,15 +348,34 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
+#ifdef SANITY_CHECK
+  auto terminate=[&](std::string const& msg) -> void {
+    std::cerr << "G1=\n";
+    WriteMatrix(std::cerr, G1);
+    std::cerr << "G2=\n";
+    WriteMatrix(std::cerr, G2);
+    std::cerr << "Subspace1=\n";
+    WriteMatrix(std::cerr, Subspace1);
+    std::cerr << "Subspace2=\n";
+    WriteMatrix(std::cerr, Subspace2);
+    std::cerr << "ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg << "\n";
+    throw TerminalException{1};
+  };
   if (Subspace1.rows() != dim - 1 || Subspace2.rows() != dim - 1) {
-    std::cerr << "Subspace1 and Subspace2 are not of the right dimension\n";
-    throw TerminalException{1};
+    terminate("Subspace1 and Subspace2 are not of the right dimension");
   }
+  MyMatrix<T> S1_G1_S1t = Subspace1 * G1 * Subspace1.transpose();
+  MyMatrix<T> S2_G2_S2t = Subspace2 * G2 * Subspace2.transpose();
+  if (S1_G1_S1t != S2_G2_S2t) {
+    terminate("The S1 / G1 / S2 / G2 are not coherent on input");
+  }
+#endif
   MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1, dim);
+#ifdef SANITY_CHECK
   if (Compl1.rows() != 1) {
-    std::cerr << "Compl1 should be of dimension 1\n";
-    throw TerminalException{1};
+    terminate("Compl1 should be of dimension 1");
   }
+#endif
   MyVector<T> eVect1 = GetMatrixRow(Compl1, 0);
   T eNorm = eVect1.dot(G1 * eVect1);
   MyMatrix<T> eProd1 = Subspace1 * G1;
@@ -364,22 +383,17 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyVector<T> Vscal = Subspace1 * G1 * eVect1;
   std::optional<MyVector<T>> opt = SolutionMat(TransposedMat(eProd2), Vscal);
   if (!opt) {
-    std::cerr
-        << "ExtendOrthogonalIsotropicIsomorphism : The solutioning failed\n";
-    throw TerminalException{1};
+    terminate("The solutioning failed");
   }
   MyVector<T> const &V0 = *opt;
   MyMatrix<T> NSP = NullspaceTrMat(eProd2);
   if (NSP.rows() != 1) {
-    std::cerr << "NSP should be of dimension 1\n";
-    throw TerminalException{1};
+    terminate("NSP should be of dimension 1");
   }
   MyVector<T> V1 = GetMatrixRow(NSP, 0);
   T eNorm_V1 = V1.dot(G2 * V1);
   if (eNorm_V1 != 0) {
-    std::cerr
-        << "The orthogonal space of Subspace2 should be an isotropic vector\n";
-    throw TerminalException{1};
+    terminate("The orthogonal space of Subspace2 should be an isotropic vector");
   }
   // Expanding we get eVect2 = V0 + t V1
   // This gets us eNorm = G2[eVect2] = G2[V0] + 2 t V0.G2.V1
@@ -387,8 +401,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   T scal0 = eNorm - V0.dot(G2 * V0);
   T scal1 = 2 * V0.dot(G2 * V1);
   if (scal1 == 0) {
-    std::cerr << "The coefficient scal1 should be non-zero\n";
-    throw TerminalException{1};
+    terminate("The coefficient scal1 should be non-zero");
   }
   T t = scal0 / scal1;
   MyVector<T> eVect2 = V0 + t * V1;
@@ -400,17 +413,15 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyMatrix<T> Trans1 = Concatenate(Subspace1, eVect1_mat);
   MyMatrix<T> Trans2 = Concatenate(Subspace2, eVect2_mat);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK
   MyMatrix<T> InvEquiv = Inverse(eEquiv);
   MyMatrix<T> G1_tr = InvEquiv * G1 * InvEquiv.transpose();
   if (G1_tr != G2) {
-    std::cerr << "G1 has not been transposed into G2\n";
-    throw TerminalException{1};
+    terminate("G1 has not been transposed into G2");
   }
   MyMatrix<T> testProd = Subspace1 * eEquiv;
   if (testProd != Subspace2) {
-    std::cerr << "Subspace1 is not mapped to Subspace2\n";
-    throw TerminalException{1};
+    terminate("Subspace1 is not mapped to Subspace2");
   }
 #endif
   return eEquiv;

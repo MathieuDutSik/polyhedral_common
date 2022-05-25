@@ -645,7 +645,7 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
     std::cerr << "eGenMatr=\n";
     WriteMatrix(std::cerr, eGenMatr);
 #endif
-    MyMatrix<T> RetMat = TheEquiv * eGenMatr * TheEquivInv;
+    MyMatrix<T> RetMat = TheEquivInv * eGenMatr * TheEquiv;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "RetMat=\n";
     WriteMatrix(std::cerr, RetMat);
@@ -698,6 +698,14 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       return {};
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(vertFull1.vert.MatRoot);
     MyMatrix<T> Subspace2 = UniversalMatrixConversion<T, Tint>(vertFull2.vert.MatRoot);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    MyMatrix<T> ScalMat1 = Subspace1 * G1 * Subspace1.transpose();
+    MyMatrix<T> ScalMat2 = Subspace2 * G2 * Subspace2.transpose();
+    std::cerr << "ScalMat1=\n";
+    WriteMatrix(std::cerr, ScalMat1);
+    std::cerr << "ScalMat2=\n";
+    WriteMatrix(std::cerr, ScalMat2);
+#endif
     std::optional<MyMatrix<T>> opt1 =
         ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
     if (!opt1) {
@@ -720,7 +728,8 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     //    MyMatrix<T> Subspace2_img = Subspace2 * EquivRatB;
     MyMatrix<T> Subspace2_img = EquivRatB * Subspace2;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-    std::cerr << "We have Subspace2_img\n";
+    std::cerr << "We have Subspace2_img=\n";
+    WriteMatrix(std::cerr, Subspace2_img);
 #endif
     std::optional<MyMatrix<T>> opt3 =
         ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2_img);
