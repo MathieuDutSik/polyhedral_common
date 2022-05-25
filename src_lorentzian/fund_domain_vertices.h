@@ -625,29 +625,37 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
   std::cerr << "Subspace2_proj=\n";
   WriteMatrix(std::cerr, Subspace2_proj);
 #endif
-  std::optional<std::vector<Tidx>> opt_eEquiv = RepresentVertexPermutationTest<T,T,Tidx>(Subspace1_proj, Subspace2_proj, EquivMat);
+  Tidx n_rows = Subspace1.rows();
+  // The matrices on input are canonicalized so the permutation are identity here.
+  Telt idRows(n_rows);
+  MyMatrix<T> TheEquiv = RepresentVertexPermutation(Subspace1_proj, Subspace2_proj, idRows);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "FindSubspaceEquivalence, We have opt_equiv\n";
-#endif
-  if (!opt_eEquiv) {
-    std::cerr << "Failed to find the equivalence. This is a bug\n";
-    throw TerminalException{1};
-  }
-  Telt eEquiv(*opt_eEquiv);
-#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "FindSubspaceEquivalence, We have eEquiv\n";
+  std::cerr << "FindSubspaceEquivalence, We have TheEquiv=\n";
+  WriteMatrix(std::cerr, TheEquiv);
 #endif
   std::vector<MyMatrix<T>> ListMatrGens2;
-  MyMatrix<T> EquivMatInv = Inverse(EquivMat);
+  MyMatrix<T> TheEquivInv = Inverse(TheEquiv);
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+  std::cerr << "TheEquivInv=\n";
+  WriteMatrix(std::cerr, TheEquivInv);
+#endif
   for (auto & eGenPerm : GRP.GeneratorsOfGroup()) {
     MyMatrix<T> eGenMatr = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGenPerm);
-    MyMatrix<T> RetMat = EquivMat * eGenMatr * EquivMatInv;
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "eGenMatr=\n";
+    WriteMatrix(std::cerr, eGenMatr);
+#endif
+    MyMatrix<T> RetMat = TheEquiv * eGenMatr * TheEquivInv;
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
+    std::cerr << "RetMat=\n";
+    WriteMatrix(std::cerr, RetMat);
+#endif
     ListMatrGens2.push_back(RetMat);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have ListMatrGens2\n";
 #endif
-  std::optional<MyMatrix<T>> opt = LinPolytopeIntegral_Isomorphism_Subspaces<T,Tgroup>(Subspace1_proj, Subspace2_proj, ListMatrGens2, eEquiv);
+  std::optional<MyMatrix<T>> opt = LinPolytopeIntegral_Isomorphism_Subspaces<T,Tgroup>(Subspace1_proj, Subspace2_proj, ListMatrGens2, idRows);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have opt\n";
 #endif

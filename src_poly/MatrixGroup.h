@@ -1804,6 +1804,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
 #endif
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   MyMatrix<T> eBasis1 = GetZbasis(EXT1_T);
   MyMatrix<T> eBasis2 = GetZbasis(EXT2_T);
   MyMatrix<T> InvBasis1 = Inverse(eBasis1);
@@ -1829,6 +1830,15 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   WriteMatrix(std::cerr, EXTbas1);
   std::cerr << "EXTbas2=\n";
   WriteMatrix(std::cerr, EXTbas2);
+#endif
+#ifdef SANITY_CHECK
+  for (auto & eMatGen2 : ListMatrGens2) {
+    std::optional<std::vector<Tidx>> opt_eList = RepresentVertexPermutationTest<T,T,Tidx>(EXT2_T, EXT2_T, eMatGen2);
+    if (!opt_eList) {
+      std::cerr << "We fail to represent the matrix as a permutation of the rows\n";
+      throw TerminalException{1};
+    }
+  }
 #endif
   //
   MyMatrix<T> TheMatEquiv = FindTransformation(EXTbas1, EXTbas2, eEquiv);
@@ -1860,10 +1870,12 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "We have eMatFinal=\n";
   WriteMatrix(std::cerr, eMatFinal);
 #endif
+#ifdef SANITY_CHECK
   if (!IsIntegralMatrix(eMatFinal)) {
     std::cerr << "eMatFinal should be integral\n";
     throw TerminalException{1};
   }
+#endif
   return eMatFinal;
 }
 
