@@ -1610,6 +1610,11 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
   WriteMatrix(std::cerr, InSpace1);
   std::cerr << "InSpace2=\n";
   WriteMatrix(std::cerr, InSpace2);
+  std::cerr << "|ListMatr|=" << ListMatr.size() << "\n";
+  for (auto & eMatr : ListMatr) {
+    std::cerr << "eMatr=\n";
+    WriteMatrix(std::cerr, eMatr);
+  }
   std::cerr << "Det(InSpace1)=" << DeterminantMat(InSpace1)
             << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
 #endif
@@ -1636,7 +1641,7 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
   }
   std::vector<T> eList = FactorsInt(LFact1);
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "eList =";
+  std::cerr << "|eList|=" << eList.size() << " eList =";
   for (auto &eVal : eList)
     std::cerr << " " << eVal;
   std::cerr << "\n";
@@ -1679,6 +1684,9 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
     std::cerr << "Error in LinearSpace_Equivalence\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Before returning from LinearSpace_Equivalence, retuning eElt\n";
+#endif
   return eElt;
 }
 
@@ -1848,6 +1856,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   if (!eSpaceEquiv)
     return {};
   MyMatrix<T> eMatFinal = InvBasis1 * TheMatEquiv * (*eSpaceEquiv) * eBasis2;
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "We have eMatFinal=\n";
+  WriteMatrix(std::cerr, eMatFinal);
+#endif
   if (!IsIntegralMatrix(eMatFinal)) {
     std::cerr << "eMatFinal should be integral\n";
     throw TerminalException{1};

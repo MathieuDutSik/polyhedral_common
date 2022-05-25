@@ -332,6 +332,24 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 #endif
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
+#ifdef SANITY_CHECK
+  size_t P_rows = P.rows();
+  size_t P_cols = P.cols();
+  if (P_rows != P_cols) {
+    std::cerr << "P should be rectangular\n";
+    throw TerminalException{1};
+  }
+  if (P_cols != n_cols) {
+    std::cerr << "P size does not match EXT1 size\n";
+    throw TerminalException{1};
+  }
+  size_t n_rows2 = EXT2.rows();
+  size_t n_cols2 = EXT2.cols();
+  if (n_rows != n_rows2 || n_cols != n_cols2) {
+    std::cerr << "EXT1 and EXT2 do not have the same size\n";
+    throw TerminalException{1};
+  }
+#endif
   MyMatrix<T> VectorContain(1, n_cols);
   ContainerMatrix<T> Cont(EXT2, VectorContain);
   //
