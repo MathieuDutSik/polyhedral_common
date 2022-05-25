@@ -594,7 +594,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
 
 
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1, MyMatrix<T> const& Subspace2, MyMatrix<T> const& EquivMat, Tgroup const& GRP)
+std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1, MyMatrix<T> const& Subspace2, Tgroup const& GRP)
 {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "---------------------------------------------------------------------------------\n";
@@ -614,11 +614,11 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
   WriteMatrix(std::cerr, Subspace1);
   std::cerr << "Subspace2=\n";
   WriteMatrix(std::cerr, Subspace2);
-  std::cerr << "EquivMat=\n";
-  WriteMatrix(std::cerr, EquivMat);
-  MyMatrix<T> Subspace1_prod = Subspace1 * EquivMat;
-  std::cerr << "Subspace1 * EquivMat=\n";
-  WriteMatrix(std::cerr, Subspace1_prod);
+  //  std::cerr << "EquivMat=\n";
+  //  WriteMatrix(std::cerr, EquivMat);
+  //  MyMatrix<T> Subspace1_prod = Subspace1 * EquivMat;
+  //  std::cerr << "Subspace1 * EquivMat=\n";
+  //  WriteMatrix(std::cerr, Subspace1_prod);
   std::cerr << "---\n";
   std::cerr << "Subspace1_proj=\n";
   WriteMatrix(std::cerr, Subspace1_proj);
@@ -712,8 +712,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       std::cerr << "opt1 : Failed at extending equivalence\n";
       return {};
     }
-    MyMatrix<T> const &EquivRat_pre = *opt1;
-    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T,Tint,Tgroup>(Subspace1, Subspace2, EquivRat_pre, vertFull1.GRP1);
+    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T,Tint,Tgroup>(Subspace1, Subspace2, vertFull1.GRP1);
     if (!opt2) {
       std::cerr << "opt2 : Failed at extending equivalence\n";
       return {};

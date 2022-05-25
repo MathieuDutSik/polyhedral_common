@@ -367,6 +367,10 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyMatrix<T> S1_G1_S1t = Subspace1 * G1 * Subspace1.transpose();
   MyMatrix<T> S2_G2_S2t = Subspace2 * G2 * Subspace2.transpose();
   if (S1_G1_S1t != S2_G2_S2t) {
+    std::cerr << "S1_G1_S1t=\n";
+    WriteMatrix(std::cerr, S1_G1_S1t);
+    std::cerr << "S2_G2_S2t=\n";
+    WriteMatrix(std::cerr, S2_G2_S2t);
     terminate("The S1 / G1 / S2 / G2 are not coherent on input");
   }
 #endif
@@ -382,36 +386,40 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyMatrix<T> eProd2 = Subspace2 * G2;
   MyVector<T> Vscal = Subspace1 * G1 * eVect1;
   std::optional<MyVector<T>> opt = SolutionMat(TransposedMat(eProd2), Vscal);
+#ifdef SANITY_CHECK
   if (!opt) {
     terminate("The solutioning failed");
   }
+#endif
   MyVector<T> const &V0 = *opt;
   MyMatrix<T> NSP = NullspaceTrMat(eProd2);
+#ifdef SANITY_CHECK
   if (NSP.rows() != 1) {
     terminate("NSP should be of dimension 1");
   }
+#endif
   MyVector<T> V1 = GetMatrixRow(NSP, 0);
   T eNorm_V1 = V1.dot(G2 * V1);
+#ifdef SANITY_CHECK
   if (eNorm_V1 != 0) {
     terminate("The orthogonal space of Subspace2 should be an isotropic vector");
   }
+#endif
   // Expanding we get eVect2 = V0 + t V1
   // This gets us eNorm = G2[eVect2] = G2[V0] + 2 t V0.G2.V1
   // or scal0 = t scal1
   T scal0 = eNorm - V0.dot(G2 * V0);
   T scal1 = 2 * V0.dot(G2 * V1);
+#ifdef SANITY_CHECK
   if (scal1 == 0) {
     terminate("The coefficient scal1 should be non-zero");
   }
+#endif
   T t = scal0 / scal1;
   MyVector<T> eVect2 = V0 + t * V1;
   //
-  std::vector<MyVector<T>> LV1{eVect1};
-  std::vector<MyVector<T>> LV2{eVect2};
-  MyMatrix<T> eVect1_mat = MatrixFromVectorFamily(LV1);
-  MyMatrix<T> eVect2_mat = MatrixFromVectorFamily(LV2);
-  MyMatrix<T> Trans1 = Concatenate(Subspace1, eVect1_mat);
-  MyMatrix<T> Trans2 = Concatenate(Subspace2, eVect2_mat);
+  MyMatrix<T> Trans1 = ConcatenateMatVec(Subspace1, eVect1);
+  MyMatrix<T> Trans2 = ConcatenateMatVec(Subspace2, eVect2);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
 #ifdef SANITY_CHECK
   MyMatrix<T> InvEquiv = Inverse(eEquiv);
