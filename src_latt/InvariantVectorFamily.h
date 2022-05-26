@@ -6,6 +6,8 @@
 #include "Timings.h"
 #include <set>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 /*
   We are considering here the enumeration of configurations of vectors for

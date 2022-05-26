@@ -51,7 +51,7 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
   MyVector<T> eVect(n);
   int siz2 = 2 * siz + 1;
   for (int i = 0; i < n; i++) {
-    int eVal = rand() % siz2;
+    int eVal = random() % siz2;
     eVect(i) = eVal - siz;
   }
   return eVect;
