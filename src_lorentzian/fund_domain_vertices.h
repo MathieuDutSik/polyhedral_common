@@ -156,7 +156,8 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::vector<size_t> V;
   for (auto &kv : the_map) {
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
-    std::cerr << "kv=" << kv.first << " / " << static_cast<int>(kv.second) << "\n";
+    std::cerr << "kv=" << kv.first << " / " << static_cast<int>(kv.second)
+              << "\n";
 #endif
     l_vect.push_back(kv.first);
     Vdiag.push_back(T(kv.second));
@@ -192,7 +193,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   size_t pos = 0;
   for (size_t i = 0; i < n_row; i++) {
     size_t j = ListIdx[i];
-    MyVector<Tint> const& eV = l_vect[j];
+    MyVector<Tint> const &eV = l_vect[j];
     l_vect_reord[i] = UniversalVectorConversion<T, Tint>(eV);
     Vdiag_reord[i] = Vdiag[j];
     if (Vdiag[j] == 1) {
@@ -202,17 +203,18 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       pos++;
     }
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
-    std::cerr << "i=" << i << " evect=" << StringVectorGAP(eV) << " diag=" << Vdiag[j] << "\n";
+    std::cerr << "i=" << i << " evect=" << StringVectorGAP(eV)
+              << " diag=" << Vdiag[j] << "\n";
 #endif
   }
   MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "Map1 =";
-  for (auto & eval : Map1)
+  for (auto &eval : Map1)
     std::cerr << " " << int(eval);
   std::cerr << "\n";
   std::cerr << "Map1_rev =";
-  for (auto & eval : Map1_rev)
+  for (auto &eval : Map1_rev)
     std::cerr << " " << int(eval);
   std::cerr << "\n";
   std::cerr << "MatV=\n";
@@ -235,17 +237,21 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
-    MyMatrix<T> eEquivMat = RepresentVertexPermutation(MatV_red, MatV_red, eGen);
-    std::optional<MyMatrix<T>> opt_EquivMat = FindMatrixTransformationTest(MatV_red, MatV_red, eGen);
+    MyMatrix<T> eEquivMat =
+        RepresentVertexPermutation(MatV_red, MatV_red, eGen);
+    std::optional<MyMatrix<T>> opt_EquivMat =
+        FindMatrixTransformationTest(MatV_red, MatV_red, eGen);
     if (!opt_EquivMat) {
       std::cerr << "Failed to find opt_EquivMat\n";
       throw TerminalException{1};
     }
     if (!TestEqualityMatrix(eEquivMat, *opt_EquivMat)) {
-      std::cerr << "We found different matrices for eEquivMqt by different algorithms\n";
+      std::cerr << "We found different matrices for eEquivMqt by different "
+                   "algorithms\n";
       throw TerminalException{1};
     }
-    std::cerr << "get_canonicalized_record eGen=" << Telt(eGen) << " eEquivMat=\n";
+    std::cerr << "get_canonicalized_record eGen=" << Telt(eGen)
+              << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
 #endif
     //  l_vect_reord[i] = l_vect[ListIdx[i]]
@@ -266,18 +272,22 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
     Telt eGenReord(Vloc);
     std::cerr << "Before computing eEquivMqtReord\n";
-    MyMatrix<T> eEquivMatReord = RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
+    MyMatrix<T> eEquivMatReord =
+        RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
     std::cerr << "After computing eEquivMqtReord\n";
-    std::optional<MyMatrix<T>> opt_EquivMatReord = FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
+    std::optional<MyMatrix<T>> opt_EquivMatReord =
+        FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
     if (!opt_EquivMatReord) {
       std::cerr << "Failed to find an equivalence\n";
       throw TerminalException{1};
     }
     if (!TestEqualityMatrix(eEquivMatReord, *opt_EquivMatReord)) {
-      std::cerr << "We found different matrices for eEquivMatReord by different algorithms\n";
+      std::cerr << "We found different matrices for eEquivMatReord by "
+                   "different algorithms\n";
       throw TerminalException{1};
     }
-    std::cerr << "get_canonicalized_record eGenReord=" << eGenReord << " eEquivMatReord=\n";
+    std::cerr << "get_canonicalized_record eGenReord=" << eGenReord
+              << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
@@ -300,11 +310,13 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "We have MatV_ret=\n";
   WriteMatrix(std::cerr, MatV_ret);
-  MyMatrix<T> MatV_ret_red = UniversalMatrixConversion<T,Tint>(ColumnReduction(MatV_ret));
+  MyMatrix<T> MatV_ret_red =
+      UniversalMatrixConversion<T, Tint>(ColumnReduction(MatV_ret));
   std::cerr << "We have MatV_ret_red\n";
-  for (auto & eGen : GRP1.GeneratorsOfGroup()) {
+  for (auto &eGen : GRP1.GeneratorsOfGroup()) {
     std::cerr << "Treating generator eGen=" << eGen << "\n";
-    MyMatrix<T> eMat = RepresentVertexPermutation(MatV_ret_red, MatV_ret_red, eGen);
+    MyMatrix<T> eMat =
+        RepresentVertexPermutation(MatV_ret_red, MatV_ret_red, eGen);
     std::cerr << "get_canonicalized_record eMat=\n";
     WriteMatrix(std::cerr, eMat);
   }
@@ -362,10 +374,8 @@ DirectCopy(FundDomainVertex_FullInfo<T, Tint, Tgroup> const &fdfi) {
           fdfi.method};
 }
 
-
-template<typename T, typename Tint>
-std::pair<MyMatrix<T>,MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const& M)
-{
+template <typename T, typename Tint>
+std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
   MyMatrix<T> Orth = NullspaceIntTrMat(M);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "Orth=\n";
@@ -395,12 +405,11 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const& M)
     throw TerminalException{1};
   }
 #endif
-  return {TheSpann,*opt};
+  return {TheSpann, *opt};
 }
 
-template<typename T, typename Telt>
-MyMatrix<T> MatrixRowAction(MyMatrix<T> const& M, Telt const& g)
-{
+template <typename T, typename Telt>
+MyMatrix<T> MatrixRowAction(MyMatrix<T> const &M, Telt const &g) {
   using Tidx = typename Telt::Tidx;
   int nbRow = M.rows();
   int nbCol = M.cols();
@@ -408,15 +417,14 @@ MyMatrix<T> MatrixRowAction(MyMatrix<T> const& M, Telt const& g)
   Tidx nRow_tidx = nbRow;
   for (Tidx iRow = 0; iRow < nRow_tidx; iRow++) {
     Tidx jRow = g.at(iRow);
-    for (int iCol=0; iCol<nbCol; iCol++)
-      Mret(jRow,iCol) = M(iRow,iCol);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      Mret(jRow, iCol) = M(iRow, iCol);
   }
   return Mret;
 }
 
-template<typename Telt>
-std::string StringListGen(std::vector<Telt> const& LGen)
-{
+template <typename Telt>
+std::string StringListGen(std::vector<Telt> const &LGen) {
   std::string strListGen = "[";
   bool IsFirst = true;
   for (auto &eGen : LGen) {
@@ -429,14 +437,16 @@ std::string StringListGen(std::vector<Telt> const& LGen)
   return "Group(" + strListGen + ")";
 }
 
-template<typename T, typename Telt>
-std::vector<MyMatrix<T>> MappingPermutationGenerators(MyMatrix<T> const& G1, MyMatrix<T> const& G2, MyMatrix<T> const& Subspace1, std::vector<Telt> const& LGen)
-{
+template <typename T, typename Telt>
+std::vector<MyMatrix<T>>
+MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
+                             MyMatrix<T> const &Subspace1,
+                             std::vector<Telt> const &LGen) {
   std::vector<MyMatrix<T>> LGen1;
   for (auto &eGen : LGen) {
     MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1, eGen);
     std::optional<MyMatrix<T>> opt =
-      ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+        ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
     if (!opt) {
       std::cerr << "We could not find the isotropy equivalence\n";
@@ -449,9 +459,10 @@ std::vector<MyMatrix<T>> MappingPermutationGenerators(MyMatrix<T> const& G1, MyM
   return LGen1;
 }
 
-template<typename T>
-std::vector<MyMatrix<T>> ConjugateListGeneratorsTestInt(MyMatrix<T> const& Pmat, std::vector<MyMatrix<T>> const& LGen)
-{
+template <typename T>
+std::vector<MyMatrix<T>>
+ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
+                               std::vector<MyMatrix<T>> const &LGen) {
   std::vector<MyMatrix<T>> LGen2;
   MyMatrix<T> PmatInv = Inverse(Pmat);
   for (auto &eGen1 : LGen) {
@@ -468,30 +479,34 @@ std::vector<MyMatrix<T>> ConjugateListGeneratorsTestInt(MyMatrix<T> const& Pmat,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<typename Tgroup::Telt> FindIntegralStabilizer(MyMatrix<T> const& Subspace1, Tgroup const& GRP)
-{
-  using Telt=typename Tgroup::Telt;
+std::vector<typename Tgroup::Telt>
+FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
+  using Telt = typename Tgroup::Telt;
   MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1).second;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "Subspace1_proj=\n";
   WriteMatrix(std::cerr, Subspace1_proj);
 #endif
   std::vector<MyMatrix<T>> LGen1_B;
-  for (auto & eGen : GRP.GeneratorsOfGroup()) {
-    MyMatrix<T> eGen_M = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
+  for (auto &eGen : GRP.GeneratorsOfGroup()) {
+    MyMatrix<T> eGen_M =
+        RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
     LGen1_B.push_back(eGen_M);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have LGen1_B\n";
 #endif
-  std::vector<MyMatrix<T>> LGen1_C = LinPolytopeIntegral_Automorphism_Subspaces<T,Tgroup>(LGen1_B, Subspace1_proj);
+  std::vector<MyMatrix<T>> LGen1_C =
+      LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(LGen1_B,
+                                                            Subspace1_proj);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have LGen1_C\n";
 #endif
   std::vector<Telt> LGen1_D;
-  for (auto & eGen : LGen1_C) {
+  for (auto &eGen : LGen1_C) {
     MyMatrix<T> Subspace1_projImg = Subspace1_proj * eGen;
-    Telt ePerm = GetPermutationOnVectors<T,Telt>(Subspace1_proj, Subspace1_projImg);
+    Telt ePerm =
+        GetPermutationOnVectors<T, Telt>(Subspace1_proj, Subspace1_projImg);
     LGen1_D.push_back(ePerm);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
@@ -499,8 +514,6 @@ std::vector<typename Tgroup::Telt> FindIntegralStabilizer(MyMatrix<T> const& Sub
 #endif
   return LGen1_D;
 }
-
-
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
@@ -527,18 +540,21 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
-    std::vector<Telt> LGen1_D = FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1);
+    std::vector<Telt> LGen1_D =
+        FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1);
     //    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
     //    Tgroup GRPlin =
     //    LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
 
-    std::vector<MyMatrix<T>> LGen1 = MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
+    std::vector<MyMatrix<T>> LGen1 =
+        MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(group:=" << StringListGen(LGen1_D) << "),\n";
 #endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
     MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
-    std::vector<MyMatrix<T>> LGen2 = ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
+    std::vector<MyMatrix<T>> LGen2 =
+        ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
     auto get_gen3 = [&]() -> std::vector<MyMatrix<T>> {
       if (vertFull.method == "isotropstabequiv_V1") {
         GeneralMatrixGroupHelper<T, Telt> helper{n};
@@ -591,19 +607,21 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
   throw TerminalException{1};
 }
 
-
-
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1, MyMatrix<T> const& Subspace2, Tgroup const& GRP)
-{
+std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const &Subspace1,
+                                                   MyMatrix<T> const &Subspace2,
+                                                   Tgroup const &GRP) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "---------------------------------------------------------------------------------\n";
+  std::cerr << "---------------------------------------------------------------"
+               "------------------\n";
   std::cerr << "FindSubspaceEquivalence, begin\n";
 #endif
-  using Telt=typename Tgroup::Telt;
-  using Tidx=typename Telt::Tidx;
-  std::pair<MyMatrix<T>,MyMatrix<T>> pair1 = ComputeSpanningSpace<T, Tint>(Subspace1);
-  std::pair<MyMatrix<T>,MyMatrix<T>> pair2 = ComputeSpanningSpace<T, Tint>(Subspace2);
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::pair<MyMatrix<T>, MyMatrix<T>> pair1 =
+      ComputeSpanningSpace<T, Tint>(Subspace1);
+  std::pair<MyMatrix<T>, MyMatrix<T>> pair2 =
+      ComputeSpanningSpace<T, Tint>(Subspace2);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have pair1/pair2\n";
 #endif
@@ -626,9 +644,11 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
   WriteMatrix(std::cerr, Subspace2_proj);
 #endif
   Tidx n_rows = Subspace1.rows();
-  // The matrices on input are canonicalized so the permutation are identity here.
+  // The matrices on input are canonicalized so the permutation are identity
+  // here.
   Telt idRows(n_rows);
-  MyMatrix<T> TheEquiv = RepresentVertexPermutation(Subspace1_proj, Subspace2_proj, idRows);
+  MyMatrix<T> TheEquiv =
+      RepresentVertexPermutation(Subspace1_proj, Subspace2_proj, idRows);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have TheEquiv=\n";
   WriteMatrix(std::cerr, TheEquiv);
@@ -639,8 +659,9 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
   std::cerr << "TheEquivInv=\n";
   WriteMatrix(std::cerr, TheEquivInv);
 #endif
-  for (auto & eGenPerm : GRP.GeneratorsOfGroup()) {
-    MyMatrix<T> eGenMatr = RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGenPerm);
+  for (auto &eGenPerm : GRP.GeneratorsOfGroup()) {
+    MyMatrix<T> eGenMatr =
+        RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGenPerm);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "eGenMatr=\n";
     WriteMatrix(std::cerr, eGenMatr);
@@ -655,7 +676,9 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const& Subspace1,
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have ListMatrGens2\n";
 #endif
-  std::optional<MyMatrix<T>> opt = LinPolytopeIntegral_Isomorphism_Subspaces<T,Tgroup>(Subspace1_proj, Subspace2_proj, ListMatrGens2, idRows);
+  std::optional<MyMatrix<T>> opt =
+      LinPolytopeIntegral_Isomorphism_Subspaces<T, Tgroup>(
+          Subspace1_proj, Subspace2_proj, ListMatrGens2, idRows);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have opt\n";
 #endif
@@ -696,8 +719,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     if (vertFull1.e_pair_char.second.GetWeight() !=
         vertFull2.e_pair_char.second.GetWeight())
       return {};
-    MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(vertFull1.vert.MatRoot);
-    MyMatrix<T> Subspace2 = UniversalMatrixConversion<T, Tint>(vertFull2.vert.MatRoot);
+    MyMatrix<T> Subspace1 =
+        UniversalMatrixConversion<T, Tint>(vertFull1.vert.MatRoot);
+    MyMatrix<T> Subspace2 =
+        UniversalMatrixConversion<T, Tint>(vertFull2.vert.MatRoot);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     MyMatrix<T> ScalMat1 = Subspace1 * G1 * Subspace1.transpose();
     MyMatrix<T> ScalMat2 = Subspace2 * G2 * Subspace2.transpose();
@@ -712,7 +737,8 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       std::cerr << "opt1 : Failed at extending equivalence\n";
       return {};
     }
-    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T,Tint,Tgroup>(Subspace1, Subspace2, vertFull1.GRP1);
+    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T, Tint, Tgroup>(
+        Subspace1, Subspace2, vertFull1.GRP1);
     if (!opt2) {
       std::cerr << "opt2 : Failed at extending equivalence\n";
       return {};
@@ -746,8 +772,10 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "|GRP1|=" << vertFull1.GRP1.size() << "\n";
 #endif
-    std::vector<Telt> LGen1_D = FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull1.GRP1);
-    std::vector<MyMatrix<T>> LGen1 = MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D);
+    std::vector<Telt> LGen1_D =
+        FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull1.GRP1);
+    std::vector<MyMatrix<T>> LGen1 =
+        MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D);
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in
     // GLn(Z)
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
@@ -758,7 +786,8 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     std::cerr << "InvariantSpaceInv=\n";
     WriteMatrix(std::cerr, InvariantSpaceInv);
 #endif
-    std::vector<MyMatrix<T>> LGen2 = ConjugateListGeneratorsTestInt(InvariantSpaceInv, LGen1);
+    std::vector<MyMatrix<T>> LGen2 =
+        ConjugateListGeneratorsTestInt(InvariantSpaceInv, LGen1);
     //
     MyMatrix<T> InvariantSpaceImg = InvariantSpace * EquivRat;
     MyMatrix<T> InvariantSpaceImgInv = Inverse(InvariantSpaceImg);

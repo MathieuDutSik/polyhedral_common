@@ -3,9 +3,9 @@
 
 #ifdef USE_CDDLIB
 
-#include "setoper.h"
-#include "cdd.h"
 #include "POLY_c_cddlib_mpq.h"
+#include "cdd.h"
+#include "setoper.h"
 #include <type_traits>
 #include <vector>
 

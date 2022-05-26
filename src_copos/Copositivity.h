@@ -36,7 +36,6 @@ template <typename T> struct CopositivityInfoReduction {
   std::vector<int> IdxColumn;
 };
 
-
 // #define DEBUG_UNDER_POS_COND
 
 // Given C >0 a >=0 and b>0 find the maximum

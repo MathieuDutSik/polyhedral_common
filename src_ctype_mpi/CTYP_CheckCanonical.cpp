@@ -1,5 +1,5 @@
-#include "NumberTheory.h"
 #include "MAT_Matrix.h"
+#include "NumberTheory.h"
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[]) {

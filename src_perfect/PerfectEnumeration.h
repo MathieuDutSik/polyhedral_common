@@ -30,4 +30,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   return {ListBlock, "undefined"};
 }
 
+// clang-format off
 #endif  // SRC_PERFECT_PERFECTENUMERATION_H_
+// clang-format on
