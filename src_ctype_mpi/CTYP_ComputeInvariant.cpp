@@ -1,6 +1,7 @@
-#include "NumberTheory.h"
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
+#include "NumberTheory.h"
 #include "rational.h"
 #include <boost/mpi.hpp>
 #include <netcdf>

@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #define PRINT_NBCONE
 // clang-format off
 #include "NumberTheory.h"

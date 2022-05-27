@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 template <typename T, typename Tidx>
 std::vector<Tidx> SortingPerm(std::vector<T> const &ListV) {

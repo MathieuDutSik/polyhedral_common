@@ -4,18 +4,18 @@
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "GRP_DoubleCoset.h"
-#include "Namelist.h"
-#include "POLY_Heuristics.h"
-#include "Parallel_Classes.h"
-#include "ThreadManagement.h"
-#include "POLY_DirectDualDesc.h"
-#include "POLY_SamplingFacet.h"
 #include "MatrixGroup.h"
+#include "Namelist.h"
+#include "POLY_DirectDualDesc.h"
+#include "POLY_Heuristics.h"
+#include "POLY_SamplingFacet.h"
+#include "Parallel_Classes.h"
 #include "Temp_PolytopeEquiStab.h"
-#include <utility>
+#include "ThreadManagement.h"
 #include <map>
-#include <vector>
 #include <string>
+#include <utility>
+#include <vector>
 
 //
 // PolyhedralInv

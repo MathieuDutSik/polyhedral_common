@@ -3,11 +3,11 @@
 
 #include "GRP_GroupFct.h"
 #include "WeightMatrix.h"
-#include <utility>
-#include <unordered_set>
-#include <vector>
 #include <limits>
 #include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 //
 // Double Coset Computation

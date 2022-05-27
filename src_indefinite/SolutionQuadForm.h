@@ -78,4 +78,7 @@ SearchSolutionEvenQuadForm(const MyMatrix<T> &A, const MyVector<T> &w,
   }
 }
 
-#endif
+// clang-format off
+#endif  // SRC_INDEFINITE_SOLUTIONQUADFORM_H_
+// clang-format on
+

@@ -5,12 +5,12 @@
 #include "Boost_bitset.h"
 #include "Group.h"
 #include "MAT_Matrix.h"
-#include <netcdf>
+#include <algorithm>
 #include <limits>
-#include <vector>
+#include <netcdf>
 #include <string>
 #include <utility>
-#include <algorithm>
+#include <vector>
 
 #undef SUPPORT_LONG_LONG
 

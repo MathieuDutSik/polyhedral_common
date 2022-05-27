@@ -1,7 +1,5 @@
 #include "LatticeDelaunay.h"
 
-
-
 int main(int argc, char *argv[]) {
   try {
     Eigen::initParallel();

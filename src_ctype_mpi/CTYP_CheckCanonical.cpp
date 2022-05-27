@@ -1,5 +1,6 @@
-#include "NumberTheory.h"
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "MAT_Matrix.h"
+#include "NumberTheory.h"
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[]) {
