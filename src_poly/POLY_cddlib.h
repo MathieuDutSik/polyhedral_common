@@ -5608,7 +5608,6 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
      the top of the matrix.    All implicit linearities will be returned by
      *impl_linset.
   */
-  dd_rowrange rank;
   dd_rowset linrows, ignoredrows, basisrows;
   dd_colset ignoredcols, basiscols;
   dd_rowrange i, k, m;
@@ -5628,7 +5627,7 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
   set_initialize(&ignoredrows, (*M)->rowsize);
   set_initialize(&ignoredcols, (*M)->colsize);
   set_compl(ignoredrows, (*M)->linset);
-  rank = dd_MatrixRank(*M, ignoredrows, ignoredcols, &basisrows, &basiscols);
+  (void)dd_MatrixRank(*M, ignoredrows, ignoredcols, &basisrows, &basiscols);
   set_diff(ignoredrows, (*M)->linset, basisrows);
   dd_MatrixRowsRemove2(M, ignoredrows, newpos);
 
@@ -5793,7 +5792,6 @@ bool dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL,
   dd_rowset S;
   dd_colset Tc, Lbasiscols;
   dd_rowrange i;
-  dd_colrange rank;
 
   *ImL = dd_ImplicitLinearityRows(M, err);
 
@@ -5813,9 +5811,7 @@ bool dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL,
   }
 
   set_initialize(&Tc, M->colsize); /* empty set */
-  rank = dd_MatrixRank(
-      M, S, Tc, Lbasis,
-      &Lbasiscols); /* the rank of the linearity submatrix of M.  */
+  (void)dd_MatrixRank(M, S, Tc, Lbasis, &Lbasiscols); /* the rank of the linearity submatrix of M.  */
 
   set_free(S);
   set_free(Tc);

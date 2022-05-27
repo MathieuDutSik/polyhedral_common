@@ -38,6 +38,7 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
       }
     if (IsOK)
       return eDiv;
+#ifdef SANITY_CHECK
     if (eDiv > TheDet) {
       std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
       std::cerr << "TheSpace=\n";
@@ -45,6 +46,7 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
       std::cerr << "Clear error in LinearSpace_GetDivisor\n";
       throw TerminalException{1};
     }
+#endif
     eDiv += 1;
   }
 }
@@ -126,10 +128,12 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   };
   std::optional<std::vector<T2>> opt =
       OrbitComputation_limit(ListGen, a, f_prod, f_terminate);
+#ifdef SANITY_CHECK
   if (!opt) {
     std::cerr << "The opt should have been assigned\n";
     throw TerminalException{1};
   }
+#endif
   return *opt;
 }
 
@@ -311,10 +315,12 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   }
   std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(
       helper.G, Subspace1, helper.G, Subspace2);
+#ifdef SANITY_CHECK
   if (!opt) {
     std::cerr << "We should have opt well defined\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<T> const &M = *opt;
   return M;
 }
@@ -427,7 +433,7 @@ MatrixIntegral_GeneratePermutationGroup(
     std::cerr << "Timing |v 2|=" << ms(timeB_6, timeB_7) << "\n";
 #endif
     Telt eNewPerm(std::move(v));
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef SANITY_CHECK
     for (int iO = 0; iO < Osiz; iO++) {
       MyVector<Tmod> eVect = O[iO];
       MyVector<Tmod> eVectImg1 = TheAction(eVect, eMatrGenMod);
@@ -883,16 +889,20 @@ GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
   MyMatrix<T> BasisSp = RowReduction(helper.EXTfaithful);
   std::optional<MyMatrix<T>> opt1 =
       ListSolutionMat(BasisSp, helper.EXTfaithful);
+#ifdef SANITY_CHECK
   if (!opt1) {
     std::cerr << "opt1 : Failed to solution the linear systems\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<T> const &EXTfaithful_red = *opt1;
   std::optional<MyVector<T>> opt2 = SolutionMat(BasisSp, helper.Visotrop);
+#ifdef SANITY_CHECK
   if (!opt2) {
     std::cerr << "opt2 : Failed to solution the linear systems\n";
     throw TerminalException{1};
   }
+#endif
   MyVector<T> const &Visotrop_red = *opt2;
   MyMatrix<T> Qinv = GetQmatrix(EXTfaithful_red);
   MyMatrix<T> eProd1 = MatrixFromVectorFamily(Qinv * Visotrop_red);
@@ -968,10 +978,12 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
         MyMatrix<Tint> eMatr_i = UniversalMatrixConversion<Tint, T>(eMatr);
         MyMatrix<Tint> eProd = eNSP_i * eMatr_i;
         std::optional<MyMatrix<Tint>> opt = CanSolutionIntMatMat(eCan, eProd);
+#ifdef SANITY_CHECK
         if (!opt) {
           std::cerr << "The NSP space is not preserved\n";
           throw TerminalException{1};
         }
+#endif
         ListMatrRed.push_back(*opt);
       }
       MyMatrix<Tint> SHV_e =
@@ -995,10 +1007,12 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
         jdx++;
       }
       //
+#ifdef SANITY_CHECK
       if (RankMat(SHVbreak) != n) {
         std::cerr << "The matrix SHVbreak is not of full rank\n";
         throw TerminalException{1};
       }
+#endif
       //
       std::vector<std::vector<Tidx>> ListListIdx =
           GetListGenAutomorphism_ListMat_Vdiag(SHVbreak, BasisSymmMat, Vdiag);
@@ -1006,10 +1020,12 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
       for (auto &eListIdx : ListListIdx) {
         std::optional<MyMatrix<T>> opt =
             FindMatrixTransformationTest(SHVbreak, SHVbreak, eListIdx);
+#ifdef SANITY_CHECK
         if (!opt) {
           std::cerr << "Failed to represent the permutation\n";
           throw TerminalException{1};
         }
+#endif
         NewListMatr.push_back(*opt);
       }
     }
@@ -1258,10 +1274,12 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     std::optional<std::vector<MyVector<Tmod>>> opt_fso =
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, ListMatrRetMod, TheSpace, TheMod, V, helper);
+#ifdef SANITY_CHECK
     if (!opt_fso) {
       std::cerr << "Failed to find some entry\n";
       throw TerminalException{1};
     }
+#endif
     std::vector<MyVector<Tmod>> const &O = *opt_fso;
     //    MyVector<Tmod> V_mod = ModuloReductionVector<T,Tmod>(V, TheMod);
     //    std::vector<MyVector<Tmod>> O =
@@ -1442,12 +1460,14 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       std::cerr << "nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1)
                 << " eFace2=" << StringFace(eFace2) << "\n";
 #endif
+#ifdef SANITY_CHECK
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr
             << "Error in LinearSpace_ModEquivalence. |eFace1| = |eFace2| = 0\n";
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
+#endif
 #ifdef MATRIX_GROUP_DIAGNOSTICS
       std::cerr << "ModEquivalence 1 TheMod=" << TheMod << " |O|=" << O.size()
                 << " |GRPperm|=" << GRPperm.size()
@@ -1590,10 +1610,12 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
     if (IsStabilizing(ListMatrRet))
       return ListMatrRet;
   }
+#ifdef SANITY_CHECK
   if (!IsStabilizing(ListMatrRet)) {
     std::cerr << "Error in LinearSpace_Stabilizer\n";
     throw TerminalException{1};
   }
+#endif
   return ListMatrRet;
 }
 
@@ -1680,10 +1702,12 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
     eElt = eElt * (opt->second);
     ListMatrWork = opt->first;
   }
+#ifdef SANITY_CHECK
   if (!IsEquivalence(eElt)) {
     std::cerr << "Error in LinearSpace_Equivalence\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Before returning from LinearSpace_Equivalence, retuning eElt\n";
 #endif
@@ -1703,10 +1727,12 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
   std::vector<MyMatrix<T>> ListMatrGens;
   for (auto &eGen : ListMatr) {
     MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK
     if (!IsIntegralMatrix(NewGen)) {
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
     }
+#endif
     ListMatrGens.push_back(NewGen);
   }
   FiniteMatrixGroupHelper<T, Telt> helper =
@@ -1718,10 +1744,12 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : LMat) {
     MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+#ifdef SANITY_CHECK
     if (!IsIntegralMatrix(NewGen)) {
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
     }
+#endif
     ListMatrGensB.push_back(NewGen);
   }
   return ListMatrGensB;
