@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_PERM_FCT_H_
 #define SRC_POLY_PERM_FCT_H_
 
@@ -529,7 +530,8 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
       std::pair<bool, T> rec_eSum2 =
           UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!rec_eSum2.first) {
-        return false; // We fail because the image is not integral.
+        // We fail because the image is not integral.
+        return false;
       }
       T Img_EXT1 = rec_eSum2.second;
       Vimg[i_col] = Img_EXT1;

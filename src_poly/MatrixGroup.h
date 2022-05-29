@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_MATRIXGROUP_H_
 #define SRC_POLY_MATRIXGROUP_H_
 
@@ -545,7 +546,7 @@ MatrixIntegral_RepresentativeAction([[maybe_unused]]
 
 template <typename T, typename Tmod, typename Telt, typename Thelper>
 inline typename std::enable_if<
-    (not has_determining_ext<Thelper>::value),
+    !has_determining_ext<Thelper>::value,
     ResultGeneratePermutationGroup_General<T, Telt>>::type
 MatrixIntegral_GeneratePermutationGroup(
     std::vector<MyMatrix<T>> const &ListMatrGens,
@@ -641,7 +642,7 @@ MatrixIntegral_GeneratePermutationGroup(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
+inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
 MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
                                 Tgroup const &eGRP, Thelper const &helper) {
@@ -654,7 +655,7 @@ MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
+inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
 MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
                           [[maybe_unused]] Tgroup const &GRPperm,
@@ -670,7 +671,7 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
+inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::optional<MyMatrix<T>>>::type
 MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
                                     [[maybe_unused]] Tgroup const &GRPperm,
@@ -1037,7 +1038,7 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 }
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-inline typename std::enable_if<(not has_determining_ext<Thelper>::value),
+inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::optional<std::vector<MyVector<Tmod>>>>::type
 FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
                   std::vector<MyMatrix<Tmod>> const &ListMatrGenMod,
@@ -1505,7 +1506,7 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       }
       Face eFace1_img = OnFace(eFace1, ePerm);
       if (eFace1_img != eFace2) {
-        std::cerr << "eFace1 not maššed to eFace2\n";
+        std::cerr << "eFace1 not mapped to eFace2\n";
         std::cerr << "|eFace1|=" << eFace1.size() << "\n";
         std::cerr << "nbRow=" << fret.nbRow << " siz=" << fret.siz << "\n";
         std::cerr << "eFace1_img=" << StringFace(eFace1_img) << "\n";

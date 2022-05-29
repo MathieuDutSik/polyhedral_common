@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
 

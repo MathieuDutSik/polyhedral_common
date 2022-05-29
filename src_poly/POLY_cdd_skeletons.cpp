@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "GRAPH_GraphicalFunctions.h"
 #include "NumberTheory.h"
 #include "POLY_cdd_graph.h"

@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "GRP_DoubleCoset.h"
 #include "GRP_GroupFct.h"
 #include "Group.h"

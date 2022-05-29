@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_POLY_DIRECTDUALDESC_H_
 #define SRC_POLY_POLY_DIRECTDUALDESC_H_
 
