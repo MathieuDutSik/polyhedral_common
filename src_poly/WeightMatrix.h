@@ -161,7 +161,7 @@ public:
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "|WeightMatrix(nbRow,f)|=" << ms(time1, time2) << "\n";
+    std::cerr << "Timing |WeightMatrix(nbRow,f)|=" << ms(time1, time2) << "\n";
 #endif
     weight_ordered = false;
   }
@@ -198,7 +198,7 @@ public:
     }
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "|WeightMatrix(nbRow,f1,f2)|=" << ms(time1, time2) << "\n";
+    std::cerr << "Timing |WeightMatrix(nbRow,f1,f2)|=" << ms(time1, time2) << "\n";
 #endif
     weight_ordered = false;
   }
@@ -1009,7 +1009,7 @@ GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
                                                               f_adj);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|GetGraphFromWeightedMatrix|=" << ms(time1, time2) << "\n";
+  std::cerr << "Timing |GetGraphFromWeightedMatrix|=" << ms(time1, time2) << "\n";
 #endif
   return eGR;
 }
