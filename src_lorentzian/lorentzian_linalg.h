@@ -349,7 +349,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
 #ifdef SANITY_CHECK
-  auto terminate=[&](std::string const& msg) -> void {
+  auto terminate = [&](std::string const &msg) -> void {
     std::cerr << "G1=\n";
     WriteMatrix(std::cerr, G1);
     std::cerr << "G2=\n";
@@ -402,7 +402,8 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   T eNorm_V1 = V1.dot(G2 * V1);
 #ifdef SANITY_CHECK
   if (eNorm_V1 != 0) {
-    terminate("The orthogonal space of Subspace2 should be an isotropic vector");
+    terminate(
+        "The orthogonal space of Subspace2 should be an isotropic vector");
   }
 #endif
   // Expanding we get eVect2 = V0 + t V1

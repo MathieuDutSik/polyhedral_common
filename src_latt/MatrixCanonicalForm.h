@@ -6,8 +6,8 @@
 #include "MatrixGroup.h"
 #include "ShortestUniversal.h"
 #include "Temp_PolytopeEquiStab.h"
-#include <vector>
 #include <utility>
+#include <vector>
 
 template <typename T, typename Tint> struct Canonic_PosDef {
   MyMatrix<Tint> Basis;

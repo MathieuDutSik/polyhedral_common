@@ -683,15 +683,11 @@ WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is) {
   return WMat;
 }
 
-
-
 template <bool is_symmetric, typename T, typename Tidx_value>
 WeightMatrix<is_symmetric, T, Tidx_value>
 WeightedMatrixFromMyMatrix(MyMatrix<T> const &M) {
   size_t nbRow = M.rows();
-  auto f=[&](size_t iRow, size_t iCol) -> T {
-    return M(iRow, iCol);
-  };
+  auto f = [&](size_t iRow, size_t iCol) -> T { return M(iRow, iCol); };
   return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, f);
 }
 

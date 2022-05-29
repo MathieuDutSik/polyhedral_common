@@ -5811,7 +5811,9 @@ bool dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL,
   }
 
   set_initialize(&Tc, M->colsize); /* empty set */
-  (void)dd_MatrixRank(M, S, Tc, Lbasis, &Lbasiscols); /* the rank of the linearity submatrix of M.  */
+  (void)dd_MatrixRank(
+      M, S, Tc, Lbasis,
+      &Lbasiscols); /* the rank of the linearity submatrix of M.  */
 
   set_free(S);
   set_free(Tc);
@@ -8073,7 +8075,6 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   dd_FreeMatrix(M);
   return ListIncd;
 }
-
 
 // clang-format off
 }  // namespace cdd

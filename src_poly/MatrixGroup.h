@@ -12,8 +12,8 @@
 #include "factorizations.h"
 #include "two_dim_lorentzian.h"
 #include <limits>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1634,7 +1634,7 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
   std::cerr << "InSpace2=\n";
   WriteMatrix(std::cerr, InSpace2);
   std::cerr << "|ListMatr|=" << ListMatr.size() << "\n";
-  for (auto & eMatr : ListMatr) {
+  for (auto &eMatr : ListMatr) {
     std::cerr << "eMatr=\n";
     WriteMatrix(std::cerr, eMatr);
   }
@@ -1861,10 +1861,12 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   WriteMatrix(std::cerr, EXTbas2);
 #endif
 #ifdef SANITY_CHECK
-  for (auto & eMatGen2 : ListMatrGens2) {
-    std::optional<std::vector<Tidx>> opt_eList = RepresentVertexPermutationTest<T,T,Tidx>(EXT2_T, EXT2_T, eMatGen2);
+  for (auto &eMatGen2 : ListMatrGens2) {
+    std::optional<std::vector<Tidx>> opt_eList =
+        RepresentVertexPermutationTest<T, T, Tidx>(EXT2_T, EXT2_T, eMatGen2);
     if (!opt_eList) {
-      std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: We fail to represent the matrix as a permutation of the rows\n";
+      std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: We fail to "
+                   "represent the matrix as a permutation of the rows\n";
       throw TerminalException{1};
     }
   }
@@ -1901,7 +1903,8 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
 #endif
 #ifdef SANITY_CHECK
   if (!IsIntegralMatrix(eMatFinal)) {
-    std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: eMatFinal should be integral\n";
+    std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: eMatFinal should "
+                 "be integral\n";
     throw TerminalException{1};
   }
 #endif

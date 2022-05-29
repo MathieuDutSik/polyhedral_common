@@ -106,7 +106,7 @@ template <typename T> struct lrs_dat {
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
   int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
-  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed   */
+  int64_t printslack; /* globals::TRUE if indices of slack inequal. printed   */
   int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
   int64_t verbose;  /* globals::FALSE for minimalist output                  */
   int64_t restart;  /* globals::TRUE if restarting from some cobasis         */

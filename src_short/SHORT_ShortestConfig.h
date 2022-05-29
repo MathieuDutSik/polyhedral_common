@@ -15,14 +15,12 @@
 #include "Temp_Positivity.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Temp_Tspace_General.h"
-#include <unordered_set>
 #include <algorithm>
-#include <string>
 #include <map>
-#include <vector>
+#include <string>
+#include <unordered_set>
 #include <utility>
-
-
+#include <vector>
 
 template <typename Tint>
 MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {

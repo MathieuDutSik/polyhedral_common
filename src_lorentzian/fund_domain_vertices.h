@@ -408,9 +408,6 @@ std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
   return {TheSpann, *opt};
 }
 
-
-
-
 template <typename T, typename Telt>
 MyMatrix<T> MatrixRowAction(MyMatrix<T> const &M, Telt const &g) {
   using Tidx = typename Telt::Tidx;
@@ -611,11 +608,10 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const &Subspace1,
-                                                   MyMatrix<T> const &G1,
-                                                   MyMatrix<T> const &Subspace2,
-                                                   MyMatrix<T> const &G2,
-                                                   Tgroup const &GRP) {
+std::optional<MyMatrix<T>>
+FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
+                        MyMatrix<T> const &Subspace2, MyMatrix<T> const &G2,
+                        Tgroup const &GRP) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "------------------------------------------------------------\n";
   std::cerr << "FindSubspaceEquivalence, begin\n";
@@ -691,7 +687,7 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const &Subspace1,
     std::cerr << "Found that there is no equivalence\n";
     return {};
   }
-  const MyMatrix<T>& TheEquivOut = *opt1;
+  const MyMatrix<T> &TheEquivOut = *opt1;
   // TheEquivOut is a transformation that maps Subspace1_proj to Subspace2_proj
   // but it may permutes the rows of Subspace2_proj and it it is an integral
   // transformation
@@ -706,13 +702,13 @@ std::optional<MyMatrix<T>> FindSubspaceEquivalence(MyMatrix<T> const &Subspace1,
   // but that does not make sense since Subspace1 can have thousands of roms.
 #endif
   MyMatrix<T> Subspace1_proj_img = Subspace1_proj * TheEquivOut;
-  std::unordered_map<MyVector<T>,int> map;
-  for (int iRow=0; iRow<Subspace2_proj.rows(); iRow++) {
+  std::unordered_map<MyVector<T>, int> map;
+  for (int iRow = 0; iRow < Subspace2_proj.rows(); iRow++) {
     MyVector<T> eV = GetMatrixRow(Subspace2_proj, iRow);
     map[eV] = iRow + 1;
   }
   MyMatrix<T> Subspace2_img(Subspace2.rows(), Subspace2.cols());
-  for (int iRow=0; iRow<Subspace2_proj.rows(); iRow++) {
+  for (int iRow = 0; iRow < Subspace2_proj.rows(); iRow++) {
     MyVector<T> eV = GetMatrixRow(Subspace1_proj_img, iRow);
     int pos = map[eV];
     if (pos == 0) {

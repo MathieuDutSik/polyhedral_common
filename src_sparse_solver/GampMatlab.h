@@ -2,9 +2,9 @@
 #define SRC_SPARSE_SOLVER_GAMPMATLAB_H_
 
 #include "MAT_Matrix.h"
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <string>
+#include <vector>
 
 template <typename T> T L1_Norm(MyVector<T> const &b) {
   T eNorm = 0;

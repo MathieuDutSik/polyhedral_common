@@ -5,9 +5,9 @@
 #include "Temp_Positivity.h"
 #include "Timings.h"
 #include <set>
-#include <vector>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 /*
   We are considering here the enumeration of configurations of vectors for

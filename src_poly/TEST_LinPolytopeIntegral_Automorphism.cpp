@@ -28,11 +28,11 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> preWMat_EXT = ReadMatrix<int>(is);
     int nbRow = WMat_EXT.rows();
     int nbCol = WMat_EXT.cols();
-    MyMatrix<std::vector<T>> WMat_EXT(nbRow,nbCol);
-    for (int iRow=0; iRow<nbRow; iRow++) {
-      for (int iCol=0; iCol<nbCol; iCol++) {
-        std::vector<T> val{preWMat_EXT(iRow,iCol)};
-        WMat_EXT(iRow,iCol) = val;
+    MyMatrix<std::vector<T>> WMat_EXT(nbRow, nbCol);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        std::vector<T> val{preWMat_EXT(iRow, iCol)};
+        WMat_EXT(iRow, iCol) = val;
       }
     }
     //
