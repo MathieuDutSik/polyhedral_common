@@ -123,6 +123,7 @@ GetInitialComputation(MyMatrix<T> const &G,
   if (norm == 0) {
     MyMatrix<T> MatRoot_T = UniversalMatrixConversion<T, Tint>(vert.MatRoot);
     MyMatrix<T> Qmat = GetQmatrix_NotFullRank(MatRoot_T);
+#ifdef DEBUG_QMAT
     std::cerr << "Qmat=\n";
     WriteMatrix(std::cerr, Qmat);
     std::cerr << "MatRoot=\n";
@@ -133,6 +134,7 @@ GetInitialComputation(MyMatrix<T> const &G,
     MyMatrix<T> Hmat2 = MatRoot_T * G * MatRoot_T.transpose();
     std::cerr << "Hmat2=\n";
     WriteMatrix(std::cerr, Hmat2);
+#endif
     ListMat.emplace_back(std::move(Qmat));
   }
   return {norm, map_v, ListMat};
@@ -685,7 +687,9 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
   std::cerr << "FindSubspaceEquivalence, We have opt1\n";
 #endif
   if (!opt1) {
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     std::cerr << "Found that there is no equivalence\n";
+#endif
     return {};
   }
   const MyMatrix<T> &TheEquivOut = *opt1;
@@ -768,13 +772,17 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     std::optional<MyMatrix<T>> opt1 =
         ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
     if (!opt1) {
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt1 : Failed at extending equivalence\n";
+#endif
       return {};
     }
     std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T, Tint, Tgroup>(
         Subspace1, G1, Subspace2, G2, vertFull1.GRP1);
     if (!opt2) {
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt2 : Failed at extending equivalence\n";
+#endif
       return {};
     }
     MyMatrix<T> const &EquivRat = *opt2;

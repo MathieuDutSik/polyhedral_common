@@ -1066,7 +1066,6 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   using Telt = typename Tgroup::Telt;
   int n = TheSpace.rows();
   size_t n_limit = 60000; // The critical number for the computation
-  std::cerr << " TheMod=" << TheMod << "\n";
   auto test_adequateness =
       [&](MyVector<T> const &x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);
