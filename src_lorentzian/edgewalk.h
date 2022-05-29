@@ -1477,7 +1477,6 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     Fvertex f_vertex, Fisom f_isom, Fincrease f_increase_nbdone,
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv) {
   MyMatrix<T> const &G = si.G;
-  std::vector<T> const &l_norms = si.l_norms;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   CuspidalBank<T, Tint> cusp_bank;
@@ -1637,6 +1636,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
                   << "\n";
 #endif
 #ifdef TRACK_INFOS_LOG
+        std::vector<T> const &l_norms = si.l_norms;
         std::cout << "rec(k1:=" << StringFundDomainVertexGAP(theVert)
                   << ", k2:=" << StringFundDomainVertexGAP(fVert)
                   << ", ad:=" << StringAdjacencyDirectionGAP(ad)

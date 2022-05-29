@@ -1833,7 +1833,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
 #endif
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   MyMatrix<T> eBasis1 = GetZbasis(EXT1_T);
   MyMatrix<T> eBasis2 = GetZbasis(EXT2_T);
   MyMatrix<T> InvBasis1 = Inverse(eBasis1);
@@ -1861,9 +1860,9 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   WriteMatrix(std::cerr, EXTbas2);
 #endif
 #ifdef SANITY_CHECK
-  for (auto &eMatGen2 : ListMatrGens2) {
-    std::optional<std::vector<Tidx>> opt_eList =
-        RepresentVertexPermutationTest<T, T, Tidx>(EXT2_T, EXT2_T, eMatGen2);
+  using Tidx = typename Telt::Tidx;
+  for (auto & eMatGen2 : ListMatrGens2) {
+    std::optional<std::vector<Tidx>> opt_eList = RepresentVertexPermutationTest<T, T, Tidx>(EXT2_T, EXT2_T, eMatGen2);
     if (!opt_eList) {
       std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: We fail to "
                    "represent the matrix as a permutation of the rows\n";
