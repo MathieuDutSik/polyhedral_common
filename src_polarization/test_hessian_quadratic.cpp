@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "generic_polarization.h"
 
 // The single-variable function for which derivatives are needed

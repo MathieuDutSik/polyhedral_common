@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
 #define SRC_LORENTZIAN_TWO_DIM_LORENTZIAN_H_
 

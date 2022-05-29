@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef INCLUDE_GENERIC_POLARIZATION
 #define INCLUDE_GENERIC_POLARIZATION
 

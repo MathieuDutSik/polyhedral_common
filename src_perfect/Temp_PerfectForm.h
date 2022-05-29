@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef TEMP_PERFECT_FORM_INCLUDE
 #define TEMP_PERFECT_FORM_INCLUDE
 

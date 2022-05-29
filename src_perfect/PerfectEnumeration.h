@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_PERFECT_PERFECTENUMERATION_H_
 #define SRC_PERFECT_PERFECTENUMERATION_H_
 

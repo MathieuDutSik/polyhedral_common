@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "QuadField.h"
 #include "Temp_PerfectForm.h"
 

@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 #define SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 

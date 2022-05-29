@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef PERFECT_MPI_TYPES
 #define PERFECT_MPI_TYPES
 
