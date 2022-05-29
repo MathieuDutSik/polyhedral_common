@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_LORENTZIAN_COXETER_DYNKIN_H_
 #define SRC_LORENTZIAN_COXETER_DYNKIN_H_
 
@@ -1583,7 +1584,8 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
         f_triple(v1, v2, v3);
     }
   }
-  if (!DS.OnlySpherical) { // Doing the tilde{E6}; tilde{E7} and tilde{E8}
+  if (!DS.OnlySpherical) {
+    // Doing the tilde{E6}; tilde{E7} and tilde{E8}
     // tilde{E6} from A2 + A2 + A2
     SetCppIterator SCI_A(n_A2, 3);
     for (auto &eV : SCI_A) {
@@ -1654,7 +1656,8 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
     }
   }
   // Considering the case of 4 edges. Only tilde{D4} is possible
-  if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
+  if (!DS.OnlySpherical) {
+    // Only tildeD4 is feasible, and it is not euclidean
     SetCppIterator SCI_B(n_isolated, 4);
     for (auto &eV : SCI_B) {
       MyVector<T> V = V_basic;
@@ -1821,7 +1824,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
   T val_single_edge = 3;
   T val_four = 4;
   T val_six = 6;
-  T val_inf = practical_infinity<T>(); // For supporting I1(infinity)
+  // For supporting I1(infinity) we need some infinity value
+  T val_inf = practical_infinity<T>();
   std::vector<T> allowed_vals;
   if (DS.OnlyLorentzianAdmissible) {
     allowed_vals.push_back(val_single_edge);
@@ -1855,8 +1859,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
       list_isolated.push_back(i);
   }
   size_t n_isolated = list_isolated.size();
-  std::vector<size_t>
-      list_cand_for_triple_vertex; // Part of En, Dn, tilde or not
+  // Part of En, Dn, tlde{Dn}
+  std::vector<size_t> list_cand_for_triple_vertex;
   for (auto &eConn : LConn) {
     size_t dim_res = eConn.size();
     MyMatrix<T> Mres(dim_res, dim_res);
@@ -1876,15 +1880,18 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
     //   En, tildeEn, tildeDn, tildeBn, tildeCn, F4, tildeF4, G2, tildeG2
     if (cd.type == "A" || cd.type == "D" || cd.type == "B") {
       for (auto &eVert : eConn) {
-        if (list_deg[eVert] <= 1) // Case 0 corresponds to A1
+        if (list_deg[eVert] <= 1) {
+          // Case 0 corresponds to A1
           list_cand_for_triple_vertex.push_back(eVert);
+        }
       }
     }
     if (cd.type == "A" && cd.dim == 3) {
       for (auto &eVert : eConn) {
-        if (list_deg[eVert] ==
-            2) // The middle vertex can match and get us tilde{D5}
+        if (list_deg[eVert] == 2) {
+          // The middle vertex can match and get us tilde{D5}
           list_cand_for_triple_vertex.push_back(eVert);
+        }
       }
     }
   }
@@ -1909,19 +1916,18 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
       Mtest(i, dim) = V(i);
       Mtest(dim, i) = V(i);
     }
-    //    std::cerr << "V=" << StringVectorGAP(V) << "\n";
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
 #endif
     n_diagram_considered++;
     bool test = CheckDiagram(Mtest, DS);
-    //    std::cerr << "test=" << test << "\n";
     if (test) {
       SetExtensions.insert(V);
       n_diagram_match++;
     }
   };
-  test_vector_and_insert(V_basic); // Adding just an A1, always works.
+  // Adding just an A1, always works.
+  test_vector_and_insert(V_basic);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 4\n";
 #endif
@@ -1979,14 +1985,16 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
         }
       }
     }
-    if (!DS.OnlySpherical) { // Only tildeG2 and tilde{C2} are possible here
+    if (!DS.OnlySpherical) {
+      // Only tildeG2 and tilde{C2} are possible here
       for (size_t i = 0; i < n_isolated; i++) {
         for (size_t j = 0; j < n_isolated; j++) {
           if (i != j) {
             MyVector<T> V = V_basic;
             V(list_isolated[i]) = val_single_edge;
             V(list_isolated[j]) = val_six;
-            test_vector_and_insert(V); // For tilde{G2}
+            // For tilde{G2}
+            test_vector_and_insert(V);
           }
         }
       }
@@ -1995,7 +2003,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
           MyVector<T> V = V_basic;
           V(list_isolated[i]) = val_four;
           V(list_isolated[j]) = val_four;
-          test_vector_and_insert(V); // For tilde{C2}
+          // For tilde{C2}
+          test_vector_and_insert(V);
         }
       }
     }
