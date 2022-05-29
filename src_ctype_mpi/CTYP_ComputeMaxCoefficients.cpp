@@ -69,7 +69,6 @@ int main(int argc, char *argv[]) {
       iProc++;
     }
     std::cerr << "MaxCoeff=" << MaxCoeff << "\n";
-
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }

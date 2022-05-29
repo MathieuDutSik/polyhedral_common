@@ -556,8 +556,8 @@ int main(int argc, char *argv[]) {
         last_timeoper = std::chrono::system_clock::now();
       }
       if (status1.MPI_TAG == tag_termination) {
-        StatusNeighbors[status1.MPI_SOURCE] =
-            1; // This is the termination message
+        StatusNeighbors[status1.MPI_SOURCE] = 1;
+        // This is the termination message
         // Below is just customary. We are not really interested in the received
         // value.
         int RecvInt;

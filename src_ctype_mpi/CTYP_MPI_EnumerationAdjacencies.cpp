@@ -10,9 +10,6 @@
 #include <unordered_map>
 namespace mpi = boost::mpi;
 
-//#define TIMINGS_HASH
-//#define ERR_LOG
-
 /*
   Possible parallel schemes:
   ---We have a single file in input that is read at the beginning
@@ -339,7 +336,8 @@ int main(int argc, char *argv[]) {
 #ifdef ERR_LOG
       std::cerr << "flag=" << flag << "\n";
 #endif
-      if (flag) { // that request has ended. Let's read it.
+      if (flag) {
+        // that request has ended. Let's read it.
         // As it turns out the MPI_Test does not set up the status1.MPI_ERROR
         // Thus the test should not be checked or it would led us to more
         // strange error that actually do not occur. See
@@ -590,8 +588,8 @@ int main(int argc, char *argv[]) {
         last_timeoper = std::chrono::system_clock::now();
       }
       if (status1.MPI_TAG == tag_termination) {
-        StatusNeighbors[status1.MPI_SOURCE] =
-            1; // This is the termination message
+        StatusNeighbors[status1.MPI_SOURCE] = 1;
+        // This is the termination message
         // Below is just customary. We are not really interested in the received
         // value.
         int RecvInt;

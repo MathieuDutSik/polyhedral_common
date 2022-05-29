@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "POLY_netcdf_file.h"
 
 void CreateFile(std::string const &eFile, Face f) {

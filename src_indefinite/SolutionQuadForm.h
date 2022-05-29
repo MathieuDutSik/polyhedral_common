@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_INDEFINITE_SOLUTIONQUADFORM_H_
 #define SRC_INDEFINITE_SOLUTIONQUADFORM_H_
 

@@ -3,7 +3,7 @@
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
 
 #include "ShortestUniversal.h"
-//#include "Shvec_double.h"
+// #include "Shvec_double.h"
 #include "Shvec_exact.h"
 
 [[noreturn]] void die_sv(std::string const &last_words) {

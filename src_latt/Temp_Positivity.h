@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_LATT_TEMP_POSITIVITY_H_
 #define SRC_LATT_TEMP_POSITIVITY_H_
 

@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"

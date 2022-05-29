@@ -6,8 +6,6 @@
 
 #include <netcdf>
 
-//#define DEBUG_INFO
-
 int main(int argc, char *argv[]) {
   //
   // Now reading the

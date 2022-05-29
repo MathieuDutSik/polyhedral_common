@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #define GMPRATIONAL
 
 #include "Boost_bitset_kernel.h"
