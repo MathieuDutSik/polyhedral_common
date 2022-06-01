@@ -3,11 +3,13 @@
 
 #ifdef USE_CDDLIB
 
+// clang-format off
+#include "setoper.h"
 #include "POLY_c_cddlib_mpq.h"
 #include "cdd.h"
-#include "setoper.h"
 #include <type_traits>
 #include <vector>
+// clang-format on
 
 namespace cbased_cdd {
 
