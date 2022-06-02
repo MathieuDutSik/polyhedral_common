@@ -5,10 +5,10 @@
 
 // clang-format off
 #include "setoper.h"
-#include "POLY_c_cddlib_mpq.h"
 #include "cdd.h"
 #include <type_traits>
 #include <vector>
+#include "POLY_c_cddlib_mpq.h"
 // clang-format on
 
 namespace cbased_cdd {
