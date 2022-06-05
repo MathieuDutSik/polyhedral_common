@@ -123,25 +123,6 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test canonicalization
-        run: |
-          cd src_latt && make && cd ..
-          pwd
-          echo "After compilation of lattice code"
-
-          # Running the test
-          ./gap.sh < Exmpl_Bench/Canonicalizations/TestCanonicalization.g
-
-      - name: Test reflectivity
-        run: |
-          cd src_lorentzian && make && cd ..
-          pwd
-          echo "After compilation of Lorentzian code"
-
-          cd Exmpl_Bench/Reflective
-          ../../gap.sh < TestReflectivity.g
-          cd ../..
-
       - name: Test dual description
         run: |
           cd src_dualdesc && make && cd ..
