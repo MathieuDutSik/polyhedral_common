@@ -1861,8 +1861,9 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
 #endif
 #ifdef SANITY_CHECK
   using Tidx = typename Telt::Tidx;
-  for (auto & eMatGen2 : ListMatrGens2) {
-    std::optional<std::vector<Tidx>> opt_eList = RepresentVertexPermutationTest<T, T, Tidx>(EXT2_T, EXT2_T, eMatGen2);
+  for (auto &eMatGen2 : ListMatrGens2) {
+    std::optional<std::vector<Tidx>> opt_eList =
+        RepresentVertexPermutationTest<T, T, Tidx>(EXT2_T, EXT2_T, eMatGen2);
     if (!opt_eList) {
       std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: We fail to "
                    "represent the matrix as a permutation of the rows\n";

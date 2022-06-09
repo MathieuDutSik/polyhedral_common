@@ -133,25 +133,25 @@ GetQmatrix(MyMatrix<T> const &TheEXT) {
   MyMatrix<Tfield> TheEXT_F = UniversalMatrixConversion<Tfield, T>(TheEXT);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |UniversalMatrixConversion1|=" << ms(time1, time2) << "\n";
+  timing("UniversalMatrixConversion1", time1, time2);
 #endif
 
   MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |Kernel_GetQmatrix|=" << ms(time2, time3) << "\n";
+  timing("Kernel_GetQmatrix", time2, time3);
 #endif
 
   MyMatrix<Tfield> Q_F_red = RemoveFractionMatrix(Q_F);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |RemoveFractionMatrix|=" << ms(time3, time4) << "\n";
+  timing("RemoveFractionMatrix", time3, time4);
 #endif
 
   MyMatrix<T> RetMat = UniversalMatrixConversion<T, Tfield>(Q_F_red);
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |UniversalMatrixConversion2|=" << ms(time4, time5) << "\n";
+  timing("UniversalMatrixConversion2", time4, time5);
 #endif
   return RetMat;
 }
@@ -354,8 +354,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |LinPolytope_Aut : ColumnReduction|=" << ms(time1, time2)
-            << "\n";
+  timing("LinPolytope_Aut : ColumnReduction", time1, time2);
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
@@ -371,7 +370,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
   Treturn ListGen = FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXTred, f);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |LinPolytope_Aut : FCT_EXT_Qinv|=" << ms(time2, time3) << "\n";
+  timing("LinPolytope_Aut : FCT_EXT_Qinv", time2, time3);
 #endif
   std::vector<Telt> LGen;
   //  std::cerr << "nbRow=" << nbRow << " |ListGen|=" << ListGen.size() << "\n";
@@ -381,7 +380,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
   }
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |LinPolytope_Aut : LGen|=" << ms(time3, time4) << "\n";
+  timing("LinPolytope_Aut : LGen", time3, time4);
 #endif
   return Tgroup(LGen, nbRow);
 }
@@ -413,7 +412,7 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT) {
       FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXT, f);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |FCT_EXT_Qinv|=" << ms(time1, time2) << "\n";
+  timing("FCT_EXT_Qinv", time1, time2);
 #endif
   return CanonicOrd;
 }
@@ -434,14 +433,14 @@ MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const &EXT) {
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |CanonicOrdering + EXTreord|=" << ms(time1, time2) << "\n";
+  timing("CanonicOrdering + EXTreord", time1, time2);
 #endif
 
   //  MyMatrix<T> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
   MyMatrix<T> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |CanonicalizeOrderedMatrix|=" << ms(time2, time3) << "\n";
+  timing("CanonicalizeOrderedMatrix", time2, time3);
 #endif
   return RedMat;
 }
@@ -647,21 +646,20 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
       GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetWeightMatrix_ListMatrix_Subset|=" << ms(time1, time2)
-            << "\n";
+  timing("GetWeightMatrix_ListMatrix_Subset", time1, time2);
 #endif
 
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |ReorderingSetWeight|=" << ms(time2, time3) << "\n";
+  timing("ReorderingSetWeight", time2, time3);
 #endif
 
   size_t e_hash =
       std::hash<WeightMatrix<true, std::vector<T>, Tidx_value>>()(WMat);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |hash|=" << ms(time3, time4) << "\n";
+  timing("hash", time3, time4);
 #endif
   return e_hash;
 }
@@ -693,8 +691,7 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
       FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetListGenAutomorphism_ListMat_Vdiag|=" << ms(time1, time2)
-            << "\n";
+  timing("GetListGenAutomorphism_ListMat_Vdiag", time1, time2);
 #endif
   return ListGen;
 }
@@ -727,7 +724,7 @@ Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
       FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |Canonicalization_ListMat_Vdiag|=" << ms(time1, time2) << "\n";
+  timing("Canonicalization_ListMat_Vdiag", time1, time2);
 #endif
   return CanonicReord;
 }
@@ -760,15 +757,14 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
                                                            Vdiag2);
 #ifdef TIMINGS
     SingletonTime time2;
-    std::cerr << "Timing |GetWeightMatrix_ListMatrix_Subset|=" << ms(time1, time2)
-              << "\n";
+    timing("GetWeightMatrix_ListMatrix_Subset", time1, time2);
 #endif
 
     WMat1.ReorderingSetWeight();
     WMat2.ReorderingSetWeight();
 #ifdef TIMINGS
     SingletonTime time3;
-    std::cerr << "Timing |ReorderingSetWeight|=" << ms(time2, time3) << "\n";
+    timing("ReorderingSetWeight", time2, time3);
 #endif
 
     std::optional<std::vector<Tidx>> PairTest =
@@ -776,7 +772,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
             WMat1, WMat2);
 #ifdef TIMINGS
     SingletonTime time4;
-    std::cerr << "Timing |TestEquivalence_ListMat_Vdiag|=" << ms(time3, time4) << "\n";
+    timing("TestEquivalence_ListMat_Vdiag", time3, time4);
 #endif
     return PairTest;
   }
@@ -896,8 +892,7 @@ GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const &TheEXT,
 #endif
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << ms(time1, time2)
-            << "\n";
+  timing("GetSimpleWeightMatrixAntipodal_AbsTrick", time1, time2);
 #endif
   return {positionZero, std::move(ArrSigns), std::move(WMat)};
 }
@@ -957,7 +952,7 @@ GetSimpleWeightMatrixAntipodal(MyMatrix<T> const &TheEXT,
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetSimpleWeightMatrixAntipodal|=" << ms(time1, time2) << "\n";
+  timing("GetSimpleWeightMatrixAntipodal", time1, time2);
 #endif
   bool weight_ordered = false;
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat,
@@ -1043,8 +1038,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
       GetSimpleWeightMatrixAntipodal_AbsTrick<Tint, Tidx_value>(EXT, Qmat);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << ms(time1, time2)
-            << "\n";
+  timing("GetSimpleWeightMatrixAntipodal_AbsTrick", time1, time2);
 #endif
 
   using Tidx = unsigned int;
@@ -1053,8 +1047,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
           WMatAbs.WMat);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |GetGroupCanonicalizationVector_Kernel|=" << ms(time2, time3)
-            << "\n";
+  timing("GetGroupCanonicalizationVector_Kernel", time2, time3);
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -1124,8 +1117,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
   std::vector<Tidx> const &CanonicOrd = ePair.first;
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |GetCanonicalizationVector_Kernel|=" << ms(time3, time4)
-            << "\n";
+  timing("GetCanonicalizationVector_Kernel", time3, time4);
 #endif
 
   size_t n_cols = EXT.cols();
@@ -1203,18 +1195,18 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
 #endif
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |EXTreord|=" << ms(time4, time5) << "\n";
+  timing("EXTreord", time4, time5);
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
 #ifdef TIMINGS
   SingletonTime time6;
-  std::cerr << "Timing |ComputeColHermiteNormalForm|=" << ms(time5, time6) << "\n";
+  timing("ComputeColHermiteNormalForm", time5, time6);
 #endif
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS
   SingletonTime time7;
-  std::cerr << "Timing |SignRenormalizationMatrix|=" << ms(time6, time7) << "\n";
+  timing("SignRenormalizationMatrix", time6, time7);
 #endif
   return RedMat;
 }
@@ -1231,7 +1223,7 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
   MyMatrix<Tint> Qmat = GetQmatrix(EXT);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetQmatrix|=" << ms(time1, time2) << "\n";
+  timing("GetQmatrix", time1, time2);
 #endif
 
   std::optional<MyMatrix<Tint>> eEquiv =
@@ -1241,15 +1233,14 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
   }
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|="
-            << ms(time2, time3) << "\n";
+  timing("LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick", time2, time3);
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
       GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |GetWeightMatrixAntipodal|=" << ms(time3, time4) << "\n";
+  timing("GetWeightMatrixAntipodal", time3, time4);
 #endif
   //  std::cerr << "After direct construction WMat=\n";
   //  PrintWeightedMatrix(std::cerr, WMat);
@@ -1257,15 +1248,14 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |ReorderingSetWeight|=" << ms(time4, time5) << "\n";
+  timing("ReorderingSetWeight", time4, time5);
 #endif
 
   std::vector<int> CanonicOrd =
       GetCanonicalizationVector_Kernel<Tint, GraphBitset, int>(WMat);
 #ifdef TIMINGS
   SingletonTime time6;
-  std::cerr << "Timing |GetCanonicalizationVector_Kernel|=" << ms(time5, time6)
-            << "\n";
+  timing("GetCanonicalizationVector_Kernel", time5, time6);
 #endif
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
@@ -1291,19 +1281,19 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
   }
 #ifdef TIMINGS
   SingletonTime time7;
-  std::cerr << "Timing |EXTreord 2|=" << ms(time6, time7) << "\n";
+  timing("EXTreord 2", time6, time7);
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
 #ifdef TIMINGS
   SingletonTime time8;
-  std::cerr << "Timing |ComputeColHermiteNormalForm 2|=" << ms(time7, time8) << "\n";
+  timing("ComputeColHermiteNormalForm 2", time7, time8);
 #endif
 
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS
   SingletonTime time9;
-  std::cerr << "Timing |SignRenormalizationMatrix|=" << ms(time8, time9) << "\n";
+  timing("SignRenormalizationMatrix", time8, time9);
 #endif
   return RedMat;
 }
@@ -1322,8 +1312,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
       GetSimpleWeightMatrixAntipodal_AbsTrick<Tint, Tidx_value>(EXT, Qmat);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << ms(time1, time2)
-            << "\n";
+  timing("GetSimpleWeightMatrixAntipodal_AbsTrick", time1, time2);
 #endif
   //  std::cerr << "WMatAbs.positionZero=" << WMatAbs.positionZero << "\n";
   //  std::cerr << "WMatAbs.WMat=\n";
@@ -1335,8 +1324,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
           WMatAbs.WMat);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |GetStabilizerWeightMatrix_Kernel|=" << ms(time2, time3)
-            << "\n";
+  timing("GetStabilizerWeightMatrix_Kernel", time2, time3);
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -1417,7 +1405,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
     return {};
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |Check Generators|=" << ms(time3, time4) << "\n";
+  timing("Check Generators", time3, time4);
 #endif
   //
   std::vector<unsigned int> AntipodalGen(2 * nbRow, 0);
@@ -1442,7 +1430,7 @@ LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT) {
   MyMatrix<Tint> Qmat = GetQmatrix(EXT);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetQmatrix|=" << ms(time1, time2) << "\n";
+  timing("GetQmatrix", time1, time2);
 #endif
 
   std::optional<std::vector<std::vector<unsigned int>>> eEquiv =
@@ -1452,23 +1440,21 @@ LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT) {
   }
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |LinPolytopeAntipodalIntegral_Automorphism_AbsTrick|="
-            << ms(time2, time3) << "\n";
+  timing("LinPolytopeAntipodalIntegral_Automorphism_AbsTrick", time2, time3);
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
       GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |GetWeightMatrixAntipodal|=" << ms(time3, time4) << "\n";
+  timing("GetWeightMatrixAntipodal", time3, time4);
 #endif
 
   std::vector<std::vector<Tidx>> ListGen =
       GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(WMat);
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |GetStabilizerWeightMatrix_Kernel|=" << ms(time4, time5)
-            << "\n";
+  timing("GetStabilizerWeightMatrix_Kernel", time4, time5);
 #endif
   return ListGen;
 }
@@ -1708,8 +1694,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
           .first;
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "Timing |GetGroupCanonicalizationVector_Kernel|=" << ms(time1, time2)
-            << "\n";
+  timing("GetGroupCanonicalizationVector_Kernel", time1, time2);
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   //  std::cerr << "Before IsomorphismFromCanonicReord\n";
@@ -1718,7 +1703,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
           ep.first, fp.first, eCanonicReord, fCanonicReord);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "Timing |IsomorphismFromCanonicReord|=" << ms(time2, time3) << "\n";
+  timing("IsomorphismFromCanonicReord", time2, time3);
 #endif
   if (!IsoInfo) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
@@ -1736,7 +1721,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
       GetStabilizerWeightMatrix<Tval, Tgr, Tgroup, Tidx_value>(ep.second);
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "Timing |GetStabilizerWeightMatrix|=" << ms(time3, time4) << "\n";
+  timing("GetStabilizerWeightMatrix", time3, time4);
 #endif
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   std::cerr << "|GRP1|=" << GRP1.size() << "\n";
@@ -1750,8 +1735,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
       LinPolytopeIntegral_Isomorphism_Method8(ep.first, fp.first, GRP1, ePerm);
 #ifdef TIMINGS
   SingletonTime time5;
-  std::cerr << "Timing |LinPolytopeIntegral_Isomorphism_Method8|=" << ms(time4, time5)
-            << "\n";
+  timing("LinPolytopeIntegral_Isomorphism_Method8", time4, time5);
 #endif
   if (eRes) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
