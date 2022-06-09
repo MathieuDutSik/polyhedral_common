@@ -1891,11 +1891,12 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "eLatt2=\n";
   WriteMatrix(std::cerr, eLatt2);
 #endif
-  std::optional<MyMatrix<T>> eSpaceEquiv =
+  std::optional<MyMatrix<T>> opt =
       LinearSpace_Equivalence<T, Tgroup>(ListMatrGen, helper, eLatt1, eLatt2);
-  if (!eSpaceEquiv)
+  if (!opt)
     return {};
-  MyMatrix<T> eMatFinal = InvBasis1 * TheMatEquiv * (*eSpaceEquiv) * eBasis2;
+  MyMatrix<T> const& eSpaceEquiv = *opt;
+  MyMatrix<T> eMatFinal = InvBasis1 * TheMatEquiv * eSpaceEquiv * eBasis2;
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "We have eMatFinal=\n";
   WriteMatrix(std::cerr, eMatFinal);
