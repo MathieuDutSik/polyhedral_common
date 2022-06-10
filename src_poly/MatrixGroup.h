@@ -89,7 +89,7 @@ struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt>> {
 //
 
 template <typename T, typename Telt>
-GeneralMatrixGroupHelper<T,Telt> TransformHelper(GeneralMatrixGroupHelper<T,Telt> const& helper, MyMatrix<T> const& Pmat)
+GeneralMatrixGroupHelper<T,Telt> TransformHelper(GeneralMatrixGroupHelper<T,Telt> const& helper, [[maybe_unused]] MyMatrix<T> const& Pmat)
 {
   return helper;
 }
@@ -1834,8 +1834,8 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
   MyMatrix<Tint> const& Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> InSpace1_B = Inspace1 * PmatInv_T;
-  MyMatrix<T> InSpace2_B = Inspace2 * PmatInv_T;
+  MyMatrix<T> InSpace1_B = InSpace1 * PmatInv_T;
+  MyMatrix<T> InSpace2_B = InSpace2 * PmatInv_T;
   MyMatrix<T> InSpace1_C = LLLbasisReduction<T,Tint>(InSpace1_B).LattRed;
   MyMatrix<T> InSpace2_C = LLLbasisReduction<T,Tint>(InSpace2_B).LattRed;
   Thelper helper_new = TransformHelper(helper, Pmat_T);
