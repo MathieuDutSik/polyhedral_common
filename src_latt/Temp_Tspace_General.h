@@ -107,11 +107,10 @@ template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
                                             T const &eProd) {
   std::vector<MyMatrix<T>> ListMat;
-  int nbMat, i, j;
+  int i, j;
   T eOne;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
-  nbMat = n * (n + 1);
   eOne = 1;
   for (i = 0; i < n; i++)
     for (j = 0; j < n; j++) {
