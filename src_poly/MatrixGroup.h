@@ -109,7 +109,7 @@ FiniteIsotropicMatrixGroupHelper<T,Telt> TransformHelper(FiniteIsotropicMatrixGr
     ListV_new.push_back(eV);
     MapV_new[eV] = i;
   }
-  return {std::move(G_new), std::move(EXTfaithful_new), std::move(Visotrop_new), std::move(ListV_new), std::move(MapV_new)};
+  return {helper.n, std::move(G_new), std::move(EXTfaithful_new), std::move(Visotrop_new), std::move(ListV_new), std::move(MapV_new)};
 }
 
 template <typename T, typename Telt>
@@ -125,7 +125,7 @@ FiniteMatrixGroupHelper<T,Telt> TransformHelper(FiniteMatrixGroupHelper<T,Telt> 
     ListV_new.push_back(eV);
     MapV_new[eV] = i;
   }
-  return {std::move(EXTfaithful_new), std::move(ListV_new), std::move(MapV_new)};
+  return {helper.n, std::move(EXTfaithful_new), std::move(ListV_new), std::move(MapV_new)};
 }
 
 //
