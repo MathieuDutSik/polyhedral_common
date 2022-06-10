@@ -1,34 +1,21 @@
 #PROGRAM		= POLY_ThreadedADM ComputeDelaunay
-PROGRAM		= TEST_LinPolytope_Isomorphism \
-                  TEST_LinPolytope_Automorphism \
-                  TEST_PermMatrTest_PolyEquivalence \
-                  TEST_PermMatrTest_PolyStabilizer \
-                  TEST_LinPolytope_Canonic \
-                  TEST_WeightMatrixLimited \
+PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
+                  TEST_PermMatrTest_PolyEquivalence TEST_PermMatrTest_PolyStabilizer \
+                  TEST_LinPolytope_Canonic TEST_WeightMatrixLimited \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons \
-		  POLY_redundancy \
-		  POLY_redundancyClarkson \
-		  POLY_redundancyClarksonBlocks \
+		  POLY_redundancy POLY_redundancyClarkson POLY_redundancyClarksonBlocks \
 		  POLY_IntegralPoints \
 		  TEST_PolytopeIntegralPoints \
-		  POLY_lcdd \
-		  POLY_FaceLatticeGen \
-		  POLY_lrs \
-		  POLY_lrs_set \
-		  POLY_lrs_set_reduction \
-		  POLY_lp_cdd \
+		  POLY_lcdd POLY_FaceLatticeGen \
+		  POLY_lrs POLY_lrs_set POLY_lrs_set_reduction POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_LinearProgram \
                   GRP_TestEquivalenceSets \
-                  GRP_OrbitSplitting \
-                  GRP_VectorSplitting \
-                  GRP_ListMat_Subset_EXT_Automorphism \
-                  GRP_ListMat_Subset_EXT_Isomorphism \
-                  GRP_ListMat_Subset_EXT_Invariant \
-                  GRP_LinPolytope_Automorphism \
-                  GRP_LinPolytope_Isomorphism \
-                  GRP_LinPolytopeIntegral_Isomorphism \
+                  GRP_OrbitSplitting GRP_VectorSplitting \
+                  GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
+                  GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Invariant \
+                  GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic \
                   GRP_OrbitSplittingPerfect \
 		  POLY_ComputeEngelSymbol \
