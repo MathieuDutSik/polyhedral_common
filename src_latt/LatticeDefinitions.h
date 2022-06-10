@@ -432,8 +432,8 @@ LLLreduction<Tmat, Tint> LLLnoreduction(MyMatrix<Tmat> const &GramMat) {
   dimensional one), returns a smaller basis.
  */
 template <typename T, typename Tint> struct LLLbasis {
-  MyMatrix<T> LattRed; //  The reduced basis
-  MyMatrix<Tint> Pmat; //  The reducing matrix
+  MyMatrix<T> LattRed;  // The reduced basis
+  MyMatrix<Tint> Pmat;  // The reducing matrix
 };
 
 template <typename T, typename Tint>

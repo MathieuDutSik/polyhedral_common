@@ -33,10 +33,19 @@ int main(int argc, char *argv[]) {
       std::ifstream is(GRP_file);
       int nbMat;
       is >> nbMat;
+      int n;
       for (int iMat = 0; iMat < nbMat; iMat++) {
         MyMatrix<T> eMatrGen = ReadMatrix<T>(is);
+        n = eMatrGen.rows();
         ListMatrGen.push_back(eMatrGen);
       }
+      GeneralMatrixGroupHelper<T,Telt> helper{n};
+      std::cerr << "|MG|=" << L1normMatrixGroup(helper, ListMatrGen) << "\n";
+      std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> pair = LLLMatrixGroupReduction<T,Tint>(helper, ListMatrGen);
+      std::vector<MyMatrix<T>> ListGenNew = pair.first;
+      std::cerr << "|MGnew|=" << L1normMatrixGroup(helper, ListGenNew) << "\n";
+      std::cerr << "Pmat=\n";
+      WriteMatrix(std::cerr, pair.second);
     }
     //
     MyMatrix<T> eLatt1;

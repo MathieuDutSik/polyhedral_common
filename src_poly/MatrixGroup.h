@@ -18,10 +18,116 @@
 #include <utility>
 #include <vector>
 
-template <typename T> struct MatrixGroup {
-  int n;
-  std::vector<MyMatrix<T>> ListGen;
+
+//
+
+template <typename T, typename Telt>
+struct ResultGeneratePermutationGroup_Finite {
+  int nbRow;
+  int siz;
+  std::vector<Telt> ListPermGens;
 };
+
+template <typename T, typename Telt> struct FiniteMatrixGroupHelper {
+  using Treturn = ResultGeneratePermutationGroup_Finite<T, Telt>;
+  int n;
+  MyMatrix<T> EXTfaithful;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, int> MapV;
+};
+
+//
+
+template <typename T, typename Telt>
+struct ResultGeneratePermutationGroup_FiniteIsotropic {
+  int nbRow;
+  int siz;
+  std::vector<Telt> ListPermGens;
+};
+
+template <typename T, typename Telt> struct FiniteIsotropicMatrixGroupHelper {
+  using Treturn = ResultGeneratePermutationGroup_FiniteIsotropic<T, Telt>;
+  int n;
+  MyMatrix<T> G;
+  MyMatrix<T> EXTfaithful;
+  MyVector<T> Visotrop;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, int> MapV;
+};
+
+//
+
+template <typename T, typename Telt>
+struct ResultGeneratePermutationGroup_General {
+  int nbRow;
+  int siz;
+  std::vector<MyMatrix<T>> ListMatrGens;
+  std::vector<Telt> ListPermGens;
+};
+
+template <typename T, typename Telt> struct GeneralMatrixGroupHelper {
+  using Treturn = ResultGeneratePermutationGroup_General<T, Telt>;
+  int n;
+};
+
+//
+
+template <typename Thelper> struct has_determining_ext {
+  static const bool value = false;
+};
+
+template <typename T, typename Telt>
+struct has_determining_ext<FiniteMatrixGroupHelper<T, Telt>> {
+  static const bool value = true;
+};
+
+template <typename T, typename Telt>
+struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt>> {
+  static const bool value = true;
+};
+
+//
+
+template<typename T, typename Thelper>
+T L1normMatrixGroup(Thelper const& helper, std::vector<MyMatrix<T>> const& ListMatr)
+{
+  int n = helper.n;
+  T sum = 0;
+  for (auto & eMat : ListMatr) {
+    for (int i=0; i<n; i++)
+      for (int j=0; j<n; j++)
+        sum += T_abs(eMat(i,j));
+  }
+  return sum;
+}
+
+
+template<typename T, typename Tint, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> LLLMatrixGroupReduction(Thelper const& helper, std::vector<MyMatrix<T>> const& ListMatr)
+{
+  int n = helper.n;
+  MyMatrix<T> PosDefMat = IdentityMat<T>(n);
+  for (auto & eMat : ListMatr) {
+    if (!IsIdentity(eMat)) {
+      MyMatrix<T> eProd = eMat * eMat.transpose();
+      PosDefMat += eProd;
+    }
+  }
+  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(PosDefMat);
+  MyMatrix<Tint> const& Pmat = pair.Pmat;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  std::vector<MyMatrix<T>> ListMatrNew;
+  for (auto & eMat : ListMatr) {
+    MyMatrix<T> eMatNew = Pmat_T * eMat * PmatInv_T;
+    ListMatrNew.emplace_back(std::move(eMatNew));
+  }
+  return {std::move(ListMatrNew), Pmat};
+}
+
+
+
+
 
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   T TheDet = T_abs(DeterminantMat(TheSpace));
@@ -138,75 +244,6 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
 #endif
   return *opt;
 }
-
-//
-
-template <typename T, typename Telt>
-struct ResultGeneratePermutationGroup_Finite {
-  int nbRow;
-  int siz;
-  std::vector<Telt> ListPermGens;
-};
-
-template <typename T, typename Telt> struct FiniteMatrixGroupHelper {
-  using Treturn = ResultGeneratePermutationGroup_Finite<T, Telt>;
-  int n;
-  MyMatrix<T> EXTfaithful;
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, int> MapV;
-};
-
-//
-
-template <typename T, typename Telt>
-struct ResultGeneratePermutationGroup_FiniteIsotropic {
-  int nbRow;
-  int siz;
-  std::vector<Telt> ListPermGens;
-};
-
-template <typename T, typename Telt> struct FiniteIsotropicMatrixGroupHelper {
-  using Treturn = ResultGeneratePermutationGroup_FiniteIsotropic<T, Telt>;
-  int n;
-  MyMatrix<T> G;
-  MyMatrix<T> EXTfaithful;
-  MyVector<T> Visotrop;
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, int> MapV;
-};
-
-//
-
-template <typename T, typename Telt>
-struct ResultGeneratePermutationGroup_General {
-  int nbRow;
-  int siz;
-  std::vector<MyMatrix<T>> ListMatrGens;
-  std::vector<Telt> ListPermGens;
-};
-
-template <typename T, typename Telt> struct GeneralMatrixGroupHelper {
-  using Treturn = ResultGeneratePermutationGroup_General<T, Telt>;
-  int n;
-};
-
-//
-
-template <typename Thelper> struct has_determining_ext {
-  static const bool value = false;
-};
-
-template <typename T, typename Telt>
-struct has_determining_ext<FiniteMatrixGroupHelper<T, Telt>> {
-  static const bool value = true;
-};
-
-template <typename T, typename Telt>
-struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt>> {
-  static const bool value = true;
-};
-
-//
 
 template <typename T, typename Telt>
 FiniteMatrixGroupHelper<T, Telt>
@@ -686,6 +723,9 @@ MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
   std::optional<MyMatrix<T>> opt =
       permutalib::RepresentativeActionMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
           eret.ListMatrGens, eret.ListPermGens, id_matr, eFace1, eFace2);
+#ifdef DEBUG_MATRIX_GROUP
+  std::cerr << "Ending of MatrixIntegral_RepresentativeAction 2\n";
+#endif
   return opt;
 }
 
