@@ -33,7 +33,8 @@
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant
-PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
+#PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
+PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= POLY_GetFullRankFacetSet
@@ -55,8 +56,8 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -O3
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
+CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
 #CC		= g++ -std=c++17 -Wall -g -O2 -fsanitize=address -fsanitize=undefined -fstack-protector-all
@@ -69,7 +70,9 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DTIMINGS -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DSYNCHRONIZED_DEBUG_GAP478 -DDEBUG -DDEBUG_ADD_GEN_SCH -DDEBUG_CHANGE_STAB_CHAIN -DDEBUG_EQUALITY -DDEBUG_INV_REP -DDEBUG_STABCHAIN
-CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_SPECIFIED -DSANITY_CHECK -DTIMINGS -DDEBUG_TEMP_POLYTOPE_EQUI_STAB -DDEBUG_PERM_FCT -DDEBUG_MATRIX_GROUP
+#CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_SPECIFIED -DSANITY_CHECK -DTIMINGS -DDEBUG_TEMP_POLYTOPE_EQUI_STAB -DDEBUG_PERM_FCT -DDEBUG_MATRIX_GROUP
+#CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_SPECIFIED -DSANITY_CHECK -DDEBUG_TEMP_POLYTOPE_EQUI_STAB -DDEBUG_PERM_FCT -DDEBUG_MATRIX_GROUP
+CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_SPECIFIED -DSANITY_CHECK -DDEBUG_TEMP_POLYTOPE_EQUI_STAB -DDEBUG_PERM_FCT -DDEBUG_MATRIX_GROUP -DDEBUG_REPRESENTATIVE_ACTION_MATRIX_PERM_SUBSET
 #CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_SPECIFIED -DSANITY_CHECK -DTIMINGS -DDEBUG_TEMP_POLYTOPE_EQUI_STAB -DDEBUG_PERM_FCT
 
 
