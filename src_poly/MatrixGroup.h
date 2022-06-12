@@ -726,7 +726,7 @@ inline typename std::enable_if<!has_determining_ext<Thelper>::value,
 MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
                                 Tgroup const &eGRP, Thelper const &helper) {
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Beginning of MatrixIntegral_Stabilizer 2\n";
+  std::cerr << "Beginning of MatrixIntegral_PreImageSubgroup\n";
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
   return permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
@@ -1440,6 +1440,7 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   int n = TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "------------------------------------------------------\n";
+  std::cerr << "NeedStabilizer=" << NeedStabilizer << "\n";
   std::cerr << "LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod << "\n";
   std::cerr << "TheSpace1=\n";
   WriteMatrix(std::cerr, TheSpace1);
@@ -1596,11 +1597,21 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
         throw TerminalException{1};
       }
 #endif
+      eElt = eElt * M;
+      if (!NeedStabilizer) {
+        std::optional<MyVector<Tmod>> test1 = IsEquiv(eElt);
+        if (!test1) {
+#ifdef DEBUG_MATRIX_GROUP
+          std::cerr << "eElt and GRPwork are correct. Exiting\n";
+#endif
+          ResultTestModEquivalence<T> res{ListMatrRet, eElt};
+          return res;
+        }
+      }
       ListMatrRet = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(
           eret, GRPperm, helper, eFace2);
       ListMatrRetMod =
           ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
-      eElt = eElt * M;
     } else {
       MyVector<Tmod> const &V = *test2;
       std::vector<MyVector<Tmod>> O =
