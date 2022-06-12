@@ -1432,7 +1432,7 @@ using ResultTestModEquivalence =
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>>
 LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
-                                Thelper const &helper,
+                                Thelper const &helper, bool const& NeedStabilizer,
                                 MyMatrix<T> const &TheSpace1,
                                 MyMatrix<T> const &TheSpace2, T const &TheMod) {
   using Telt = typename Tgroup::Telt;
@@ -1440,7 +1440,7 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   int n = TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "------------------------------------------------------\n";
-  std::cerr << "LinearSpace_ModEquivalence, TheMod=" << TheMod << "\n";
+  std::cerr << "LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod << "\n";
   std::cerr << "TheSpace1=\n";
   WriteMatrix(std::cerr, TheSpace1);
   std::cerr << "TheSpace2=\n";
@@ -1482,6 +1482,8 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   };
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListMat)
       -> std::optional<MyVector<Tmod>> {
+    if (!NeedStabilizer)
+      return {};
     for (auto &eGen : ListMat) {
       MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i = 0; i < n; i++) {
@@ -1546,7 +1548,7 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef SANITY_CHECK
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr
-            << "Error in LinearSpace_ModEquivalence. |eFace1| = |eFace2| = 0\n";
+            << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = |eFace2| = 0\n";
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
@@ -1627,20 +1629,21 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 template <typename T, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>>
 LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const &ListMatr,
-                           Thelper const &helper, MyMatrix<T> const &TheSpace1,
-                           MyMatrix<T> const &TheSpace2, T const &TheMod) {
+                           Thelper const &helper, bool const& NeedStabilizer,
+                           MyMatrix<T> const &TheSpace1, MyMatrix<T> const &TheSpace2,
+                           T const &TheMod) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace1.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint8_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod);
   }
   if (max_size < T(std::numeric_limits<uint16_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint16_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod);
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint32_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace1, TheSpace2, TheMod);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
@@ -1798,9 +1801,12 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
     for (int j = 0; j < i; j++)
       TheMod *= eList[j];
     MyMatrix<T> TheSpace1Img = TheSpace1 * eElt;
+    bool NeedStabilizer = true;
+    if (i == siz)
+      NeedStabilizer = false;
     std::optional<ResultTestModEquivalence<T>> opt =
         LinearSpace_ModEquivalence<T, Tgroup, Thelper>(
-            ListMatrWork, helper, TheSpace1Img, TheSpace2, TheMod);
+            ListMatrWork, helper, NeedStabilizer, TheSpace1Img, TheSpace2, TheMod);
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "LinearSpace_ModEquivalence failed so we exit here\n";
@@ -1808,7 +1814,8 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
       return {};
     }
     eElt = eElt * (opt->second);
-    ListMatrWork = opt->first;
+    if (NeedStabilizer)
+      ListMatrWork = opt->first;
   }
 #ifdef SANITY_CHECK
   if (!IsEquivalence(eElt)) {
