@@ -1,4 +1,4 @@
-name: CI of Matrix canonicalization + CUT8 + Reflective
+name: CI of dual description CUT8
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
