@@ -1455,7 +1455,6 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
 //    This means less things to store
 // ---We use the canonicalization approach which allows to treat smaller cases.
 // ---Serial mode. Should be faster indeed.
-// ---
 //
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
@@ -1467,6 +1466,14 @@ vectface DUALDESC_AdjacencyDecomposition(
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
+  }
+  if (AllArr.max_runtime > 0) {
+    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+    int runtime = std::chrono::duration_cast<std::chrono::seconds>(end - AllArr.start).count();
+    if (runtime > AllArr.max_runtime) {
+      std::cerr << "The maximum runtime has been elapsed. max_runtime = " << AllArr.max_runtime << "\n";
+      throw TerminalException{1};
+    }
   }
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -1683,6 +1690,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListBoolValues1["DeterministicRuntime"] = true;
   ListStringValues1["parallelization_method"] = "serial";
   ListIntValues1["port"] = 1234;
+  ListIntValues1["max_runtime"] = -1;
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues = ListStringValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -1870,6 +1878,9 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
   AllArr.Saving = DD_Saving;
+  //
+  int max_runtime = BlockDATA.ListIntValues.at("max_runtime");
+  AllArr.max_runtime = max_runtime;
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   auto get_vectface = [&]() -> vectface {

@@ -59,15 +59,17 @@ int main(int argc, char *argv[]) {
       //
       std::vector<std::string> ListLines = ReadFullFile(eFileLog);
       std::vector<std::string> LStrParse;
+      std::optional<std::vector<std::string>> opt;
       int nbLine = ListLines.size();
       for (int iLine = 0; iLine < nbLine; iLine++) {
         std::cerr << "iLine=" << iLine << " / " << nbLine << "\n";
         std::string eLine = ListLines[iLine];
         // Looking for number of adjacent matrices
-        LStrParse = STRING_ParseSingleLine(
+        opt = STRING_ParseSingleLine(
             eLine,
             {"Number of Adjacent for idxMatrixF=", " nbAdjacent=", " END"});
-        if (LStrParse.size() > 0) {
+        if (opt) {
+          LStrParse = *opt;
           int idxMatrixF = std::stoi(LStrParse[0]);
           int nbAdjacent = std::stoi(LStrParse[1]);
           TypeIndexRed eTyp{iProc, idxMatrixF};
@@ -78,10 +80,11 @@ int main(int argc, char *argv[]) {
           ListInfoMatrices[eTyp].nbAdjacent = nbAdjacent;
         }
         //
-        LStrParse = STRING_ParseSingleLine(
+        opt = STRING_ParseSingleLine(
             eLine, {"Inserting New perfect form",
                     " idxMatrixCurrent=", " Obtained from ", "END"});
-        if (LStrParse.size() > 0) {
+        if (opt) {
+          LStrParse = *opt;
           TypePerfectExch<Tint> ePerfect =
               ParseStringToPerfectExch<Tint>(LStrParse[0]);
           int idxMatrixCurrent = std::stoi(LStrParse[1]);
@@ -101,9 +104,10 @@ int main(int argc, char *argv[]) {
           ListInfoMatrices[eIndexRed2].ePerfect = ePerfect;
         }
         //
-        LStrParse = STRING_ParseSingleLine(
+        opt = STRING_ParseSingleLine(
             eLine, {"Reading existing matrix=", " idxMatrixCurrent=", "END"});
-        if (LStrParse.size() > 0) {
+        if (opt) {
+          LStrParse = *opt;
           TypePerfectExch<Tint> ePerfect =
               ParseStringToPerfectExch<Tint>(LStrParse[0]);
           int idxMatrix = std::stoi(LStrParse[1]);
@@ -114,8 +118,9 @@ int main(int argc, char *argv[]) {
           ListInfoMatrices[eIndexRed].ePerfect = ePerfect;
         }
         //
-        LStrParse = STRING_ParseSingleLine(eLine, {"Processed entry=", "END"});
-        if (LStrParse.size() > 0) {
+        opt = STRING_ParseSingleLine(eLine, {"Processed entry=", "END"});
+        if (opt) {
+          LStrParse = *opt;
           TypeIndex eIndex = ParseStringToTypeIndex(LStrParse[0]);
           TypeIndexRed eIndexRed{eIndex.iProc, eIndex.idxMatrix};
           auto iter = ListInfoMatrices.find(eIndexRed);

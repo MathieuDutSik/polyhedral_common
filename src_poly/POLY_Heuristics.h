@@ -123,6 +123,8 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> CheckDatabaseBank;
   TheHeuristic<T> ChosenDatabase;
   bool Saving;
+  std::chrono::time_point<std::chrono::system_clock> start;
+  int max_runtime;
 };
 
 template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
@@ -134,6 +136,9 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
   AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
   AllArr.CheckDatabaseBank = MethodCheckDatabaseBank<T>();
   AllArr.ChosenDatabase = MethodChosenDatabase<T>();
+  AllArr.Saving = false;
+  AllArr.start = std::chrono::system_clock::now();
+  AllArr.max_runtime = -1;
   return AllArr;
 }
 
