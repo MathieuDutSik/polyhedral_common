@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 2 || argc != 3) {
+    if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCompletePositivity [eMat]\n";

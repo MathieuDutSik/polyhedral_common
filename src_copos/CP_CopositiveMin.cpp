@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 3 || argc != 4) {
+    if (argc != 3 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_CopositiveMin [DATASYMM] [MaxNorm]\n";
