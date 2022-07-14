@@ -16,8 +16,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "DATASYMM: The input data of the symmetric matrix\n";
       std::cerr
-          << "It returns true if the matrix is copositive. If not in returns a "
-             "vector V with A[V] <0 and V with all coordinates non-negative\n";
+          << "It returns true if the matrix is copositive. If not it returns a "
+             "non-negative vector V with A[V] < 0\n";
       std::cerr << "\n";
       std::cerr << "If InitialBasis is not put in argument, then it is the "
                    "standard basis {e1, ...., en}\n";

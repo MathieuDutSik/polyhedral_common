@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "CP_CopositiveMin [DATASYMM] [MaxNorm] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr
-          << "DATASYMM: The input data of the copositive symmetric matrix A\n";
+          << "DATASYMM: The input data of the strict copositive symmetric matrix A\n";
       std::cerr << "It returns the list of integer vectors v in Z^n_{>= 0} "
                    "such that A[v] <= MaxNorm\n";
       std::cerr << "\n";
