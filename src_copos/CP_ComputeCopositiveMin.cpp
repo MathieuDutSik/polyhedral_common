@@ -7,17 +7,17 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 2 || argc != 3) {
+    if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_ComputeCopositiveMin [DATASYMM]\n";
       std::cerr << "or\n";
       std::cerr << "CP_ComputeCopositiveMin [DATASYMM] [InitialBasois]\n";
       std::cerr << "\n";
-      std::cerr << "DATASYMM: The input data of the symmetric matrix\n";
+      std::cerr << "DATASYMM: The input data of the strict copositive symmetric matrix A\n";
       std::cerr
-          << "It returns true if the matrix is copositive. If not in returns a "
-             "vector V with A[V] <0 and V with all coordinates non-negative\n";
+          << "Returns the copositive minimum min_{COP}(A) = min_{v in Z^n_{>=0}} A[v] "
+             "of A and a list of all v in Z^n_{>= 0} such that A[v] = min_{COP}(A) ";
       std::cerr << "\n";
       std::cerr << "If InitialBasis is not put in argument, then it is the "
                    "standard basis {e1, ...., en}\n";
