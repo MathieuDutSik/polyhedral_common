@@ -1481,8 +1481,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     throw TerminalException{1};
   }
   if (AllArr.max_runtime > 0) {
-    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
-    int runtime = std::chrono::duration_cast<std::chrono::seconds>(end - AllArr.start).count();
+    int runtime = si(AllArr.start);
     if (runtime > AllArr.max_runtime) {
       std::cerr << "The maximum runtime has been elapsed. max_runtime = " << AllArr.max_runtime << "\n";
       throw TerminalException{1};
