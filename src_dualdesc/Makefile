@@ -13,7 +13,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= icpc -std=c++17 -Wall -g -O2
 CC		= clang++ -g -Wall -Wextra -std=c++17
-#CC		= clang++ -g -Wall -Wextra -std=c++17 -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null
+#CC		= clang++ -g -Wall -Wextra -std=c++17 -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= clang++ -g -Wall -Wextra -std=c++17
 #CC		= clang++ -g -Wall -Wextra -std=c++17 -fsanitize=bounds -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins
 #CC		= clang++ -O2 -Wall -Wextra -std=c++17 -DDEBUG

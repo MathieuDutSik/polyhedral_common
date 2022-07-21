@@ -13,10 +13,12 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     //
-    //    using Tmat=mpq_class;
-    //    using Tint=mpz_class;
-    using Tmat = mpq_class;
-    using Tint = long;
+    using Tmat=mpq_class;
+    using Tint=mpz_class;
+    //    using Tmat = mpq_class;
+    //    using Tint = long;
+    //using Tmat = mpq_class;
+    //    using Tint = int64_t;
     //
     std::string FileIn = argv[1];
     std::string FileOut = argv[2];
