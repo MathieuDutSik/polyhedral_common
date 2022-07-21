@@ -71,6 +71,48 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   return HeuristicFromListString<T>(ListString);
 }
 
+
+template<typename T>
+FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
+  std::vector<std::string> ListString = {
+    "&PROBABILITY_DISTRIBUTIONS",
+    " ListName = \"distri1\" ",
+    " ListNmax = 100 ",
+    " ListNstart = 100",
+    " ListNature = \"dirac\"",
+    " ListDescription = \"1:100\"",
+    "/",
+    "",
+    "&THOMPSON_PRIOR",
+    " ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"",
+    " ListName = \"only_cdd\", \"only_ppl\"",
+    " ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"",
+    "/",
+    "",
+    "&KEY_COMPRESSION",
+    " ListKey = \"incidence\"",
+    " ListDescription = \"1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity\"",
+    "/",
+    "",
+    "&HEURISTIC_PRIOR",
+    " DefaultPrior = \"noprior:10\"",
+    " ListFullCond = \"incidence > 70\"",
+    " ListConclusion = \"only_ppl\"",
+    "/",
+    "",
+    "&IO",
+    " name = \"split\"",
+    " WriteLog = T",
+    " ProcessExistingDataIfExist = T",
+    " LogFileToProcess = \"input_logfile\"",
+    "/"};
+  FullNamelist eFull = NAMELIST_ThompsonSamplingRuntime();
+  NAMELIST_ReadListString(eFull, ListString);
+  return eFull;
+}
+
+
+
 template <typename T>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
                   TheHeuristic<T> &eHeu) {

@@ -1409,6 +1409,19 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
   return TheMap;
 }
 
+
+template <typename Tint, typename T, typename Tgroup>
+vectface DirectFacetOrbitComputation_ts(MyMatrix<T> const &EXT, Tgroup const &GRP,
+                                        std::map<std::string, Tint> const& TheMap,
+                                        ThompsonSamplingHeuristic<T> & ansprog_ts) {
+  std::string ansprog = ansprog_ts.get_eval();
+  vectface TheOutput = DirectFacetOrbitComputation(EXT, GRP, ansprog);
+  ansprog_ts.pop();
+  return TheOutput;
+}
+
+
+
 // Needs initial definition due to template crazyness
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
