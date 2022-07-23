@@ -354,7 +354,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   const int tag_termination = 38;
   const int expected_termination_message = 2047;
   // undone information for Balinski termination
-  const int tag_setup_databank = 39;
+  const int tag_requestinfo_balinski = 39;
+  const int expected_request_balinsk_message = 2049;
+  const int tag_balinski_info = 39;
   //
   // Reading the input
   //
@@ -365,7 +367,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
 
-
+  std::vector<std::optional<UndoneOrbitInfo<Tint>>> ListBalinski(n_proc);
 
   std::vector<boost::mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
@@ -390,29 +392,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::vector<vectface> ListFaceUnsent(n_proc, vectface(40));
   std::vector<int> StatusNeighbors(n_proc, 0);
 
-  auto SetMatrixAsDone = [&](TypePerfectExch<Tint> const &TheMat) -> void {
-    int pos = TheMat.incd - MinIncidenceRealized;
-    KeyData eKey = ListCasesNotDone[pos].at(TheMat);
-    ListCasesNotDone[pos].erase(TheMat);
-    ListCasesDone[TheMat] = eKey;
-  };
-  auto fSendMatrix = [&](PairExch<Tint> const &ePair, int const &u) -> void {
-    int res = IntegerDiscriminantInvariant(ePair.ePerfect.eMat, size);
-    ListRequest[u] = world.isend(res, tag_new_form, ePair);
-    RequestStatus[u] = 1;
-  };
   auto ClearUnsentAsPossible = [&]() -> void {
-    int pos = ListMatrixUnsent.size() - 1;
-    while (true) {
-      if (pos == -1)
-        break;
-      int idx = GetFreeIndex();
-      if (idx == -1)
-        break;
-      fSendMatrix(ListMatrixUnsent[pos], idx);
-      ListMatrixUnsent.pop_back();
-      pos--;
+    int idx = GetFreeIndex();
+    if (idx == -1)
+      break;
+    size_t max_siz = 0;
+    int chosen_iproc = -1;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      size_t siz = ListFaceUnsent[i_proc].size();
+      if (siz > max_siz) {
+        max_siz = siz;
+        chosen_iproc = i_proc;
+      }
     }
+    if (chosen_iproc == -1)
+      break;
+    vectface vf = std::move(ListFaceUnsent[chosen_iproc]);
+    ListFaceUnsent[chosen_iproc].clear();
+    ListRequest[idx] = world.isend(res, tag_new_facets, vf);
+    RequestStatus[idx] = 1;
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = IntegerDiscriminantInvariant(face) % n_proc;
@@ -420,7 +418,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       RPL.FuncInsert(face);
     } else {
       ListFaceUnsent[res].push_back(face);
-      ClearUnsentAsPossible();
     }
   };
   //
@@ -443,7 +440,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 
     boost::optional<boost::mpi::status> prob = world.iprobe();
     if (prob) {
-      if (prob->tag() == tag_new_form) {
+      if (prob->tag() == tag_new_facets) {
         StatusNeighbors[prob->source()] = 0;
         vectface l_recv_face(40);
         world.recv(prob->source(), prob->tag(), l_recv_face);
@@ -458,6 +455,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           std::cerr << "The recv_message is incorrect\n";
           throw TerminalException{1};
         }
+      }
+      if (prob->tag() == tag_requestinfo_balinski) {
+        int recv_message;
+        comm.recv(prob->source(), prob->tag(), recv_message);
+        if (recv_message != expected_request_balinsk_message) {
+          std::cerr << "The recv_message is incorrect\n";
+          throw TerminalException{1};
+        }
+        UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+        for (int i_proc=0; i_proc<n_proc; i_proc++) {
+        }
+      }
+      if (prob->tag() == tag_balinski_info) {
+        UndoneOrbitInfo<Tint> uoi
+        comm.recv(prob->source(), prob->tag(), recv_message);
+        ListBalinski[prob->source()] = uoi;
       }
     } else {
       if (!StopComputation) {
@@ -526,113 +539,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     RequestStatus.push_back(1);
     return len;
   };
-  // The infinite loop to do the enumeration
-  while (true) {
-    boost::optional<boost::mpi::status> prob = comm.iprobe();
-    if (prob) {
-      // We only do data reception processing is done afterwards
-      if (prob->tag() == tag_new_facets) {
-        message_facet e_mesg;
-        comm.recv(prob->source(), prob->tag(), e_mesg);
-        ListEntries_IN.push_back(e_mesg);
-      }
-      if (prob->tag() == tag_message_query) {
-        message_query e_mesg;
-        comm.recv(prob->source(), prob->tag(), e_mesg);
-        ListMesgQuery.push_back({prob->source(), e_mesg});
-      }
-      if (prob->tag() == tag_nbundone_balinski) {
-        HashUndoneOrbitInfo<Tint> e_mesg;
-        comm.recv(prob->source(), prob->tag(), e_mesg);
-        ListMesgUndone.push_back({prob->source(), e_mesg});
-      }
-      if (prob->tag() == tag_terminate_send_vf) {
-        message_facet e_mesg;
-        comm.recv(prob->source(), prob->tag(), e_mesg);
-        ListMesgPartDualDesc.push_back({prob->source(), std::move(e_mesg)});
-      }
-      if (prob->tag() == tag_setup_databank) {
-        SetupDatabank e_mesg;
-        comm.recv(prob->source(), prob->tag(), e_mesg);
-        ListSetupDatabank.push_back({prob->source(), std::move(e_mesg)});
-      }
-    } else {
-      // First clearing the buffers of facets
-      for (auto &eEntry_IN : ListEntries_IN) {
-        uint8_t pos = get_pos(eEntry_IN);
-        for (auto &eFace : eEntry_IN.vf)
-          ListRPL[pos].databank.FuncInsert(eFace);
-      }
-      ListEntries_IN.clear();
-      // Processing the message queries
-      for (auto &eMesgQuery : ListMesgQuery) {
-        uint8_t pos = get_pos(eMesgQuery.second);
-        if (eMesgQuery.second.query == 0) {
-          UndoneOrbitInfo<Tint> recundone =
-              ListRPL[pos].databank.GetTerminationInfo();
-          HashUndoneOrbitInfo<Tint> hashrecundone{eMesgQuery.second.e_hash,
-                                                  recundone};
-          size_t u = GetFreeIndex();
-          ListRequest[u] = comm.isend(0, tag_nbundone_balinski, hashrecundone);
-          RequestStatus[u] = 1;
-        }
-        if (eMesgQuery.second.query == 1) {
-          message_facet e_mesg{eMesgQuery.second.e_hash,
-                               ListRPL[pos].databank.FuncListOrbitIncidence()};
-          size_t u = GetFreeIndex();
-          ListRequest[u] = comm.isend(0, tag_terminate_send_vf, e_mesg);
-          RequestStatus[u] = 1;
-          remove_databank(eMesgQuery.second.e_hash, pos);
-        }
-      }
-      ListMesgQuery.clear();
-      // Update information regarding the undone status of orbits
-      for (auto &e_ent : ListMesgUndone) {
-        int jrank = e_ent.first;
-        uint8_t pos = get_pos(e_ent.second);
-        ListRPL[pos].list_undoneinfo[jrank] = e_ent.second.erec;
-      }
-      ListMesgUndone.clear();
-      // Create new databanks as required
-      for (auto &e_ent : ListSetupDatabank) {
-        int jrank = e_ent.first;
-        insert_databank(jrank, e_ent.second);
-      }
-      ListSetupDatabank.clear();
-      // Now treating the selected_block
-      if (ListRPL[selected_pos].did_something) {
-        ListRPL[selected_pos].did_something = false;
-        if (irank == 0) {
-          ListRPL[selected_pos].list_undoneinfo[0] =
-              ListRPL[selected_pos].databank.GetTerminationInfo();
-          if (MonotonicCheckStatusUndone(
-                  ListRPL[selected_pos].list_undoneinfo[0],
-                  ListRPL[selected_pos].databank.CritSiz)) {
-            UndoneOrbitInfo<Tint> undoneinfo =
-                CombineUndoneOrbitInfo(ListRPL[selected_pos].list_undoneinfo);
-            if (ComputeStatusUndone(undoneinfo)) {
-              if (selected_pos ==
-                  0) { // This is the main databank. Work is finished
-                break;
-              } else { // Not the main one, more work needed. Relocation to the
-                       // initiating processor
-              }
-            } else {
-              message_query mq{selected_hash, 0};
-              for (int jrank = 1; jrank < size; jrank++) {
-                size_t u = GetFreeIndex();
-                ListRequest[u] = comm.isend(0, tag_message_query, mq);
-                RequestStatus[u] = 1;
-              }
-            }
-          }
-        }
-      } else {
-        ListRPL[selected_pos].did_something = true;
-      }
-    }
-  }
-  return ListRPL[0].FuncListOrbitIncidence();
 }
 
 

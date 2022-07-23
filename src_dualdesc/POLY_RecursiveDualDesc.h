@@ -1453,6 +1453,9 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
       break;
     DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
     size_t SelectedOrbit = df.SelectedOrbit;
+    // Alternative way is to use CondTempDirectory. BUT
+    // For many we actually do not need to have such a construction.
+    // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
     vectface TheOutput =
