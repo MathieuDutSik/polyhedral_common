@@ -10,6 +10,7 @@
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Timings.h"
+#include "POLY_Kskeletton.h"
 
 #include "POLY_GAP.h"
 // #include "POLY_netcdf_file.h"
@@ -469,7 +470,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
           bool val_f = get_face_status({x.first + 1, eFace});
           if (!val_f) {
             Tgroup eStab_B = eStab.Stabilizer_OnSets(eFace);
-            Tint orb_size = Order(eStab) / Order(eStab_B);
+            Tint orb_size = eStab.size() / eStab_B.size();
             siz_false += orb_size;
             // If we cannot prove connectivity for just 1 facet, then
             // connectivity holds.
@@ -479,7 +480,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
         }
         return true;
       };
-      return insert_pfr(x, get_value);
+      return insert_pfr(x, get_value());
     }
   };
   pfr init_pfr{0, Face(n_rows)};
@@ -1191,6 +1192,7 @@ private:
   FileFace *ff;
   bool is_opened;
   bool SavingTrigger;
+  bool AdvancedTerminationCriterion;
   std::ostream &os;
   size_t delta;
   std::string strPresChar;
@@ -1207,8 +1209,9 @@ public:
        << "," << bb.foc.nbUndone << ")\n\n";
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
-                 const bool &_SavingTrigger, std::ostream &os)
+                 const bool &_SavingTrigger, const bool& _AdvancedTerminationCriterion, std::ostream &os)
       : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
+        AdvancedTerminationCriterion(_AdvancedTerminationCriterion),
         os(os) {
     os << "MainPrefix=" << MainPrefix << "\n";
     eFileEXT = MainPrefix + ".ext";
@@ -1370,6 +1373,8 @@ public:
         return true;
       }
     }
+    if (AdvancedTerminationCriterion)
+      return attempt_connectedness_scheme();
     return false;
   }
   UndoneOrbitInfo<Tint> GetTerminationInfo() const {
@@ -1437,7 +1442,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap) {
   using DataFacet = typename TbasicBank::DataFacet;
-  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, std::cerr);
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, std::cerr);
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp))
@@ -1703,6 +1708,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListStringValues1["parallelization_method"] = "serial";
   ListIntValues1["port"] = 1234;
   ListIntValues1["max_runtime"] = -1;
+  ListBoolValues1["AdvancedTerminationCriterion"] = false;
   SingleBlock BlockDATA;
   BlockDATA.ListStringValues = ListStringValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -1893,6 +1899,9 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   //
   int max_runtime = BlockDATA.ListIntValues.at("max_runtime");
   AllArr.max_runtime = max_runtime;
+  //
+  bool AdvancedTerminationCriterion = BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
+  AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   auto get_vectface = [&]() -> vectface {

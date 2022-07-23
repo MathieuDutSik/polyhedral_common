@@ -165,6 +165,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> CheckDatabaseBank;
   TheHeuristic<T> ChosenDatabase;
   bool Saving;
+  bool AdvancedTerminationCriterion;
   SingletonTime start;
   int max_runtime;
 };
@@ -179,6 +180,7 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
   AllArr.CheckDatabaseBank = MethodCheckDatabaseBank<T>();
   AllArr.ChosenDatabase = MethodChosenDatabase<T>();
   AllArr.Saving = false;
+  AllArr.AdvancedTerminationCriterion = false;
   AllArr.max_runtime = -1;
   return AllArr;
 }
