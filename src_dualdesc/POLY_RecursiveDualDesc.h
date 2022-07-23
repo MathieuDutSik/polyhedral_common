@@ -1607,50 +1607,6 @@ vectface DUALDESC_AdjacencyDecomposition(
   }
 }
 
-struct message_facet {
-  size_t e_hash;
-  vectface vf; // List of vectface by the DatabaseBank
-};
-
-struct message_query {
-  size_t e_hash;
-  uint8_t query;
-  // 0: for TerminationInfo
-  // 1: For destroying the databank and sending back the vectface
-};
-
-template <typename Tint> struct HashUndoneOrbitInfo {
-  size_t e_hash;
-  UndoneOrbitInfo<Tint> erec;
-};
-
-namespace boost::serialization {
-
-template <class Archive>
-inline void serialize(Archive &ar, message_facet &mesg,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("hash", mesg.e_hash);
-  ar &make_nvp("vf", mesg.vf);
-}
-
-template <class Archive>
-inline void serialize(Archive &ar, message_query &mesg,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("hash", mesg.e_hash);
-  ar &make_nvp("query", mesg.query);
-}
-
-template <class Archive, typename Tint>
-inline void serialize(Archive &ar, HashUndoneOrbitInfo<Tint> &mesg,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("hash", mesg.e_hash);
-  ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
-  ar &make_nvp("nbundone", mesg.erec.nbUndone);
-  ar &make_nvp("setundone", mesg.erec.eSetUndone);
-}
-
-} // namespace boost::serialization
-
 std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
   size_t n_ent_bit = 8 * sizeof(size_t); // The size of the selection
   size_t n_bit_hash = n_ent_bit;

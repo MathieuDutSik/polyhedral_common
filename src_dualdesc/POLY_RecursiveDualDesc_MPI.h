@@ -9,6 +9,55 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+struct message_facet {
+  size_t e_hash;
+  vectface vf; // List of vectface by the DatabaseBank
+};
+
+struct message_query {
+  size_t e_hash;
+  uint8_t query;
+  // 0: for TerminationInfo
+  // 1: For destroying the databank and sending back the vectface
+};
+
+template <typename Tint> struct HashUndoneOrbitInfo {
+  size_t e_hash;
+  UndoneOrbitInfo<Tint> erec;
+};
+
+namespace boost::serialization {
+
+template <class Archive>
+inline void serialize(Archive &ar, message_facet &mesg,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("hash", mesg.e_hash);
+  ar &make_nvp("vf", mesg.vf);
+}
+
+template <class Archive>
+inline void serialize(Archive &ar, message_query &mesg,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("hash", mesg.e_hash);
+  ar &make_nvp("query", mesg.query);
+}
+
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, HashUndoneOrbitInfo<Tint> &mesg,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("hash", mesg.e_hash);
+  ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
+  ar &make_nvp("nbundone", mesg.erec.nbUndone);
+  ar &make_nvp("setundone", mesg.erec.eSetUndone);
+}
+
+} // namespace boost::serialization
+
+
+
+
+
 /*
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_DUALDESC_AdjacencyDecomposition_General(
@@ -303,7 +352,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   const int tag_balinski_info = 38;
   // undone information for Balinski termination
   const int tag_termination = 38;
-  const int expected_recv_message = 2047;
+  const int expected_termination_message = 2047;
   // undone information for Balinski termination
   const int tag_setup_databank = 39;
   //
@@ -339,7 +388,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 
 
   std::vector<vectface> ListFaceUnsent(n_proc, vectface(40));
-
+  std::vector<int> StatusNeighbors(n_proc, 0);
 
   auto SetMatrixAsDone = [&](TypePerfectExch<Tint> const &TheMat) -> void {
     int pos = TheMat.incd - MinIncidenceRealized;
@@ -352,7 +401,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     ListRequest[u] = world.isend(res, tag_new_form, ePair);
     RequestStatus[u] = 1;
   };
-  std::vector<PairExch<Tint>> ListMatrixUnsent;
   auto ClearUnsentAsPossible = [&]() -> void {
     int pos = ListMatrixUnsent.size() - 1;
     while (true) {
@@ -389,42 +437,71 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // The infinite loop
   //
   while (true) {
+    bool SendTerminationCriterion = true;
+
+    bool StopComputation = MaxRunTimeSecond > 0 && si(start) > MaxRunTimeSecond;
+
     boost::optional<boost::mpi::status> prob = world.iprobe();
     if (prob) {
       if (prob->tag() == tag_new_form) {
+        StatusNeighbors[prob->source()] = 0;
         vectface l_recv_face(40);
         world.recv(prob->source(), prob->tag(), l_recv_face);
         for (auto & face : l_recv_face)
           RPL.FuncInsert(face);
       }
       if (prob->tag() == tag_termination) {
+        StatusNeighbors[prob->source()] = 1;
         int recv_message;
         comm.recv(prob->source(), prob->tag(), recv_message);
-        if (recv_message != expected_recv_message) {
+        if (recv_message != expected_termination_message) {
           std::cerr << "The recv_message is incorrect\n";
           throw TerminalException{1};
         }
       }
     } else {
-      DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-      size_t SelectedOrbit = df.SelectedOrbit;
-      std::string NewPrefix =
-        ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-      vectface TheOutput =
-        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
-      for (auto &eOrbB : TheOutput) {
-        Face eFlip = df.flip(eOrbB);
-        fInsertUnsent(eFlip);
+      if (!StopComputation) {
+        DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+        size_t SelectedOrbit = df.SelectedOrbit;
+        std::string NewPrefix =
+          ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+        vectface TheOutput =
+          DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+        for (auto &eOrbB : TheOutput) {
+          Face eFlip = df.flip(eOrbB);
+          fInsertUnsent(eFlip);
+        }
       }
     }
     os << "Before ClearUnsentAsPossible\n";
     ClearUnsentAsPossible();
     os << "After ClearUnsentAsPossible\n";
-    int elapsed_seconds = si(start);
-    if (MaxRunTimeSecond > 0 && elapsed_seconds > MaxRunTimeSecond) {
-      os << "Exiting because the max_runtime is reached\n";
-      break;
+    //
+    // Sending termination criterion
+    //
+    if (SendTerminationCriterion) {
+      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+        if (i_proc == irank) {
+          StatusNeighbors[irank] = 1;
+        } else {
+          int idx = GetFreeIndex();
+          if (idx == -1) {
+            std::cerr << "We should be able to have an entry\n";
+            throw TerminalException{1};
+          }
+          ListRequest[idx] = world.isend(i_proc, tag_termination, expected_termination_message);
+          RequestStatus[idx] = 1;
+        }
+      }
     }
+    //
+    // Termination criterion
+    //
+    int nb_finished = 0;
+    for (int i_proc = 0; i_proc < n_proc; i_proc++)
+      nb_finished += StatusNeighbors[i_pes];
+    if (nb_finished == n_proc)
+      break;
   }
 
   //  using DataFacet = typename TbasicBank::DataFacet;
