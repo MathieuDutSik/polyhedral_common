@@ -2,7 +2,7 @@
  EXTfile = "CutK8.ext"
  GRPfile = "CutK8.grp"
  OUTfile = "CutK8.orbitFacet"
- max_runtime = 600
+ max_runtime = -1
 /
 
 &HEURISTIC

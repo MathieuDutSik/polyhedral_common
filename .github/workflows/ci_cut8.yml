@@ -29,6 +29,7 @@ jobs:
       FLINT_INCDIR: "/include"
       FLINT_LINK: "-lflint"
       CDDLIB_PATH: "/home/runner/work/opt/cddlib"
+      PPL_PATH: "/home/runner/work/opt/ppl"
       CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
       CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
       CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
@@ -64,20 +65,21 @@ jobs:
           override: true
       - name: Install Dependencies
         run: |
-          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
-          sudo apt-get install -y wget
-          sudo apt-get install -y g++-11 clang-12
-          sudo apt-get install -y g++ gcc gfortran
-          sudo apt-get install -y cmake
-          sudo apt-get install -y libgmp-dev
-          sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-          sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
-          sudo apt-get install -y autoconf autotools-dev libtool
-          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y libntl-dev libmpfr-dev
-          sudo apt-get install -y openmpi-bin libopenmpi-dev
-          sudo apt-get install -y autoconf autotools-dev libtool
-          sudo apt-get install -y texlive-latex-base # needed for the manual of cddlib to be compiled
+          sudo apt install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
+          sudo apt install -y wget
+          sudo apt install -y g++-11 clang-12
+          sudo apt install -y g++ gcc gfortran ocaml
+          sudo apt install -y cmake
+          sudo apt install -y libgmp-dev
+          sudo apt install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
+          sudo apt install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
+          sudo apt install -y autoconf autotools-dev libtool
+          sudo apt install -y texlive-latex-base # needed for the CDD manual to be compiled
+          sudo apt install -y libntl-dev libmpfr-dev
+          sudo apt install -y openmpi-bin libopenmpi-dev
+          sudo apt install -y autoconf autotools-dev libtool
+          sudo apt install -y texlive-latex-base # needed for the manual of cddlib to be compiled
+          sudo apt install -y xz-utils
 
       - name: Build test code
         run: |
@@ -122,6 +124,13 @@ jobs:
           cd gap-4.11.1 && ./configure && make && cd ..
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
+
+          # Downloading and installing PPL
+          wget -q https://www.bugseng.com/products/ppl/download/ftp/releases/1.2/ppl-1.2.tar.xz
+          tar xf ppl-1.2.tar.xz
+          cd ppl-1.2
+          ./configure --prefix=$PPL_PATH && make && make install
+          ln -s $PPL_PATH/bin/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
 
       - name: Test dual description
         run: |
