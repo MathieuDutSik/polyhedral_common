@@ -379,7 +379,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   const int tag_balinski_info = 38;
   // undone information for Balinski termination
   const int tag_termination = 38;
-  const int expected_termination_message = 2047;
   // undone information for Balinski termination
   const int tag_requestinfo_balinski = 39;
   const int expected_request_balinsk_message = 2049;
@@ -392,6 +391,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::vector<std::optional<UndoneOrbitInfo<Tint>>> ListBalinski(n_proc);
   int MaxNumberFlyingMessage = 4 * n_proc;
 
+
+  //
+  // The parallel MPI classes
+  //
+  empty_message_management emm_termin(comm, 0, tag_termination);
+  
+  
   std::vector<boost::mpi::request> l_mpi_request(MaxNumberFlyingMessage);
   std::vector<int> l_mpi_status(MaxNumberFlyingMessage, 0);
   std::vector<vectface> l_mpi_vectface(MaxNumberFlyingMessage, vectface(n_vert));
@@ -449,7 +455,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_tot, mpi::minimum<size_t>());
-  if (n_orb_tot > 0) {
+  if (n_orb_tot == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp))
       fInsertUnsent(face);
@@ -472,12 +478,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
       if (prob->tag() == tag_termination) {
         StatusNeighbors[prob->source()] = 1;
-        int recv_message;
-        comm.recv(prob->source(), prob->tag(), recv_message);
-        if (recv_message != expected_termination_message) {
-          std::cerr << "The recv_message is incorrect\n";
-          throw TerminalException{1};
-        }
+        emm_termin.recv_message(prob->source());
       }
       if (prob->tag() == tag_requestinfo_balinski) {
         int recv_message;
@@ -542,8 +543,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             std::cerr << "We should be able to have an entry\n";
             throw TerminalException{1};
           }
-          l_mpi_request[idx] = comm.isend(i_proc, tag_termination, expected_termination_message);
-          l_mpi_status[idx] = 1;
+          emm_termin.send_message(i_proc);
         }
       }
     }
