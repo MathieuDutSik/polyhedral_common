@@ -45,28 +45,27 @@ struct request_status_list {
   request_status_list(size_t const& MaxNumberFlyingMessage) : MaxNumberFlyingMessage(MaxNumberFlyingMessage), l_mpi_request(MaxNumberFlyingMessage), l_mpi_status(MaxNumberFlyingMessage,0) {
   }
   boost::mpi::request& operator[](size_t const& pos) { l_mpi_status[pos]=1; return l_mpi_request[pos]; }
-};
-
-
-size_t GetFreeIndex(request_status_list & rsl) {
-  size_t len = rsl.l_mpi_request.size();
-  for (size_t i=0; i<len; i++) {
-    if (rsl.l_mpi_status[i] == 1) {
-      boost::optional<boost::mpi::status> stat = rsl.l_mpi_request[i].test();
-      if (stat) {
-        rsl.l_mpi_status[i] = 0;
+  size_t GetFreeIndex() {
+    size_t len = l_mpi_request.size();
+    for (size_t i=0; i<len; i++) {
+      if (l_mpi_status[i] == 1) {
+        boost::optional<boost::mpi::status> stat = l_mpi_request[i].test();
+        if (stat) {
+          l_mpi_status[i] = 0;
+        }
       }
     }
+    for (size_t i = 0; i < len; i++)
+      if (l_mpi_status[i] == 0)
+        return i;
+    if (MaxNumberFlyingMessage > 0)
+      return std::numeri_limits<size_t>::max();
+    l_mpi_request.push_back(boost::mpi::request());
+    l_mpi_status.push_back(1);
+    return len;
   }
-  for (size_t i = 0; i < len; i++)
-    if (rsl.l_mpi_status[i] == 0)
-      return i;
-  if (rsl.MaxNumberFlyingMessage > 0)
-    return std::numeri_limits<size_t>::max();
-  rsl.l_mpi_request.push_back(boost::mpi::request());
-  rsl.l_mpi_status.push_back(1);
-  return len;
-}
+};
+
 
 
 struct empty_message_management {
@@ -97,6 +96,51 @@ struct empty_message_management {
 
 
 };
+
+/* Managing exchanges at scale.
+   We can T = int, T_vector = std::vector<T>
+   or T = Face, T_vector = vectface
+ */
+template<typename T, typename T_vector>
+struct buffered_T_exchanges {
+  boost::mpi::communicator & comm;
+  request_status_list rsl;
+  int tag;
+  T_vector empty;
+  int n_proc;
+  std::vector<T_vector> l_message;
+  std::vector<T_vector> l_under_cons;
+  buffered_T_exchanges(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag, T_vector const& empty) : comm(comm), rsl(MaxFly), tag(tag), empty(empty), n_proc(comm.size()), l_message(n_proc, empty), l_under_cons(MaxFly, empty) {
+  }
+  void insert_entry(size_t const& pos, T const& x) {
+    l_message[pos].push_back(x);
+  }
+  T_vector recv_message(int source) {
+    T_vector vf = empty;
+    comm.recv(source, tag, vf);
+    return vf;
+  }
+  void clear_one_entry() {
+    int idx = rsl.GetFreeIndex();
+    if (idx == -1)
+      break;
+    size_t max_siz = 0;
+    int chosen_iproc = -1;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      size_t siz = ListFaceUnsent[i_proc].size();
+      if (siz > max_siz) {
+        max_siz = siz;
+        chosen_iproc = i_proc;
+      }
+    }
+    if (chosen_iproc == -1)
+      break;
+    l_under_cons[idx] = std::move(l_message[chosen_iproc]);
+    l_message[chosen_iproc].clear();
+    rsl[idx] = comm.isend(res, tag_new_facets, l_under_cons[idx]);
+  }
+}
+
 
 
 

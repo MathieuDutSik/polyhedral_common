@@ -373,15 +373,14 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // The types of exchanges
   //
-  const int tag_new_facets =
-      36; // New facets to be added, the most common request
+  // New facets to be added, the most common request
+  const int tag_new_facets = 36;
   // tag_balinski
   const int tag_balinski_info = 38;
   // undone information for Balinski termination
   const int tag_termination = 38;
   // undone information for Balinski termination
   const int tag_requestinfo_balinski = 39;
-  const int expected_request_balinsk_message = 2049;
   const int tag_balinski_info = 39;
   //
   // Reading the input
@@ -389,65 +388,24 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
 
   std::vector<std::optional<UndoneOrbitInfo<Tint>>> ListBalinski(n_proc);
-  int MaxNumberFlyingMessage = 4 * n_proc;
+  int MaxFly = 4 * n_proc;
 
 
   //
   // The parallel MPI classes
   //
   empty_message_management emm_termin(comm, 0, tag_termination);
-  
-  
-  std::vector<boost::mpi::request> l_mpi_request(MaxNumberFlyingMessage);
-  std::vector<int> l_mpi_status(MaxNumberFlyingMessage, 0);
-  std::vector<vectface> l_mpi_vectface(MaxNumberFlyingMessage, vectface(n_vert));
-  auto GetFreeIndex = [&]() -> int {
-    for (int u = 0; u < MaxNumberFlyingMessage; u++) {
-      if (l_mpi_status[u] == 0)
-        return u;
-      boost::optional<boost::mpi::status> stat = l_mpi_request[u].test();
-      if (stat) { // that request has ended. Let's read it.
-        if (stat->error() != 0) {
-          std::cerr << "something went wrong in the MPI" << std::endl;
-          throw TerminalException{1};
-        }
-        l_mpi_status[u] = 0;
-        return u;
-      }
-    }
-    return -1;
-  };
+  empty_message_management emm_balinski(comm, 0, tag_requestinfo_balinski);
+  buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets, vectface(n_vert));
 
 
-  std::vector<vectface> ListFaceUnsent(n_proc, vectface(n_vert));
   std::vector<int> StatusNeighbors(n_proc, 0);
-
-  auto ClearUnsentAsPossible = [&]() -> void {
-    int idx = GetFreeIndex();
-    if (idx == -1)
-      break;
-    size_t max_siz = 0;
-    int chosen_iproc = -1;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      size_t siz = ListFaceUnsent[i_proc].size();
-      if (siz > max_siz) {
-        max_siz = siz;
-        chosen_iproc = i_proc;
-      }
-    }
-    if (chosen_iproc == -1)
-      break;
-    l_mpi_vectface[idx] = std::move(ListFaceUnsent[chosen_iproc]);
-    ListFaceUnsent[chosen_iproc].clear();
-    l_mpi_request[idx] = comm.isend(res, tag_new_facets, l_mpi_vectface[idx]);
-    l_mpi_status[idx] = 1;
-  };
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = IntegerDiscriminantInvariant(face) % n_proc;
     if (res == irank) {
       RPL.FuncInsert(face);
     } else {
-      ListFaceUnsent[res].push_back(face);
+      bte_facet.insert_entry(res, face);
     }
   };
   //
@@ -471,8 +429,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (prob) {
       if (prob->tag() == tag_new_facets) {
         StatusNeighbors[prob->source()] = 0;
-        vectface l_recv_face(n_vert);
-        comm.recv(prob->source(), prob->tag(), l_recv_face);
+        vectface l_recv_face = bte_facet.recv_message(prob->source())
         for (auto & face : l_recv_face)
           RPL.FuncInsert(face);
       }
@@ -482,13 +439,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
       if (prob->tag() == tag_requestinfo_balinski) {
         int recv_message;
-        comm.recv(prob->source(), prob->tag(), recv_message);
-        if (recv_message != expected_request_balinsk_message) {
-          std::cerr << "The recv_message is incorrect\n";
-          throw TerminalException{1};
-        }
+        emm_balinski.recv_message(prob->source());
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-
       }
       if (prob->tag() == tag_balinski_info) {
         UndoneOrbitInfo<Tint> uoi
@@ -510,7 +462,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
     os << "Before ClearUnsentAsPossible\n";
-    ClearUnsentAsPossible();
+    bte_facet.clear_one_entry();
     os << "After ClearUnsentAsPossible\n";
     //
     // Determine Balinski stuff
@@ -538,11 +490,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         if (i_proc == irank) {
           StatusNeighbors[irank] = 1;
         } else {
-          int idx = GetFreeIndex();
-          if (idx == -1) {
-            std::cerr << "We should be able to have an entry\n";
-            throw TerminalException{1};
-          }
           emm_termin.send_message(i_proc);
         }
       }
