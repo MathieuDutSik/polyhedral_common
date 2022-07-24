@@ -252,7 +252,7 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
                              WeightMatrix<true, T, Tidx_value> const &WMat,
-                             Tgroup const &GRP) {
+                             Tgroup const &GRP, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
@@ -261,7 +261,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   if (RecAns.ListFace.size() == 0) {
     return vectface(0);
   }
-  std::cerr << "Finding a matching entry\n";
+  os << "Finding a matching entry\n";
   vectface ListReprTrans(EXT.rows());
   Telt ePerm = Telt(ePair.second);
   Face eFaceImg(EXT.rows());
@@ -272,7 +272,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   if (GRP.size() == RecAns.GRP.size())
     return ListReprTrans;
   Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
-  return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, std::cerr);
+  return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, os);
 }
 
 size_t get_matching_power(size_t const &val) {
@@ -785,7 +785,7 @@ public:
 #ifdef ROBIN_HOOD_HASH
       const uint64_t seed = UINT64_C(0xe17a1465);
       size_t hash = robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
-      std::cerr << "hash=" << hash << "\n";
+      os << "hash=" << hash << "\n";
       return hash;
 #endif
 #endif
@@ -1258,7 +1258,7 @@ public:
       }
       is_opened = true;
       //
-      std::cerr << "Inserting orbits, n_orbit=" << n_orbit << "\n";
+      os << "Inserting orbits, n_orbit=" << n_orbit << "\n";
       for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
         Face f = ff->getface(i_orbit);
         SingEnt eEnt = bb.foc.FaceToSingEnt(f);
@@ -1334,9 +1334,9 @@ public:
   size_t FuncNumberOrbit() const { return bb.foc.nbOrbit; }
   typename TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
     typename TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
-    std::cerr << strPresChar << " Considering orbit " << data.SelectedOrbit
-              << " |inc|=" << data.eInc.count()
-              << " |stab|=" << data.Stab.size() << "\n";
+    os << strPresChar << " Considering orbit " << data.SelectedOrbit
+       << " |inc|=" << data.eInc.count()
+       << " |stab|=" << data.Stab.size() << "\n";
     return data;
   }
   bool attempt_connectedness_scheme() const {
@@ -1440,9 +1440,9 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap) {
+    std::map<std::string, typename Tgroup::Tint> const &TheMap, std::ostream& os) {
   using DataFacet = typename TbasicBank::DataFacet;
-  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, std::cerr);
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp))
@@ -1460,7 +1460,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
     vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-            TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
+            TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
     for (auto &eOrbB : TheOutput) {
       Face eFlip = df.flip(eOrbB);
       RPL.FuncInsert(eFlip);
@@ -1481,7 +1481,7 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
     PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
-    std::string const &ePrefix) {
+    std::string const &ePrefix, std::ostream & os) {
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
   if (ExitEvent) {
@@ -1508,7 +1508,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   std::string ansBankCheck =
       HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
   if (ansBankCheck == "yes") {
-    vectface ListFace = getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP);
+    vectface ListFace = getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, os);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -1539,7 +1539,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     } else {
       std::string ansSymm =
           HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-      std::cerr << "ansSymm=" << ansSymm << "\n";
+      os << "ansSymm=" << ansSymm << "\n";
       if (ansSymm == "yes") {
         TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
             lwm.GetWMat());
@@ -1550,21 +1550,21 @@ vectface DUALDESC_AdjacencyDecomposition(
         BankSymmCheck = true;
       }
       Tint GroupSizeComp = TheGRPrelevant.size();
-      std::cerr << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
-                << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
+      os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
+         << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
       //      std::string MainPrefix = ePrefix + "Database_" +
       //      std::to_string(nbRow) + "_" + std::to_string(nbCol);
       std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
       std::string ansChosenDatabase =
           HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
-      std::cerr << "DUALDESC_ChosenDatabase : ChosenDatabase = "
-                << ansChosenDatabase << "\n";
+      os << "DUALDESC_ChosenDatabase : ChosenDatabase = "
+         << ansChosenDatabase << "\n";
       if (ansChosenDatabase == "canonic") {
         using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
         TbasicBank bb(EXT, TheGRPrelevant);
         return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                       Tidx_value, TbasicBank>(
-            TheBank, bb, AllArr, MainPrefix, TheMap);
+            TheBank, bb, AllArr, MainPrefix, TheMap, os);
       }
       if (ansChosenDatabase == "repr") {
         WeightMatrix<true, int, Tidx_value> WMat =
@@ -1586,7 +1586,7 @@ vectface DUALDESC_AdjacencyDecomposition(
         TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_stab, f_inv);
         return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                       Tidx_value, TbasicBank>(
-            TheBank, bb, AllArr, MainPrefix, TheMap);
+            TheBank, bb, AllArr, MainPrefix, TheMap, os);
       }
       std::cerr << "Failed to find a matching entry\n";
       throw TerminalException{1};
@@ -1596,15 +1596,14 @@ vectface DUALDESC_AdjacencyDecomposition(
   SingletonTime end;
   TheMap["time"] = s(start, end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  std::cerr << "elapsed_seconds=" << s(start, end) << " ansBank=" << ansBank
+  os << "elapsed_seconds=" << s(start, end) << " ansBank=" << ansBank
             << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,
                          BankSymmCheck, ListOrbitFaces);
   }
   if (NeedSplit) {
-    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces,
-                                   std::cerr);
+    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, os);
   } else {
     return ListOrbitFaces;
   }
@@ -1868,13 +1867,13 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(BANK_IsSaving, BANK_Prefix);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, DD_Prefix);
+          TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
     }
     if (parallelization_method == "bank_asio") {
       using Tbank = DataBankClient<Tkey, Tval>;
       Tbank TheBank(port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, DD_Prefix);
+          TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for parallelization_method\n";
     throw TerminalException{1};
@@ -1913,7 +1912,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Tbank = DataBank<Tkey, Tval>;
   Tbank TheBank(BANK_IsSaving, BANK_Prefix);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, GRP, AllArr, DD_Prefix);
+      TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
 }
 
 // clang-format off

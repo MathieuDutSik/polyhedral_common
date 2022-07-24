@@ -16,6 +16,24 @@ std::ofstream& get_standard_outstream(boost::mpi::communicator & comm) {
   return std::ofstream(eFile);
 }
 
+template<typename T>
+std::vector<T> mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
+  int i_rank = comm.rank();
+  std::vector<T> V;
+  if (i_rank == i_proc) {
+    boost::mpi::gather<T>(comm, x, V, i_proc);
+  } else {
+    boost::mpi::gather<T>(comm, x, i_proc);
+  }
+  return V;
+}
+
+template<typename T>
+std::vector<T> mpi_allgather(boost::mpi::communicator & comm, T const& x) {
+  std::vector<T> V;
+  boost::mpi::all_gather<T>(comm, x, V);
+  return V;
+}
 
 
 

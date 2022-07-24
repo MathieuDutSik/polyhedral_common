@@ -309,6 +309,32 @@ vectface MPI_DUALDESC_AdjacencyDecomposition_General(
 
 
 
+vectface mpi_gather(vectface const& vf, boost::mpi::communicator & comm, int i_proc) {
+  int i_rank = comm.rank();
+  size_t n_vert = vf.get_n();
+  size_t n_face = vf.size();
+  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  //
+  std::vector<size_t> l_n_face = mpi_gather(n_face, comm, i_proc);
+  std::vector<std::vector<uint8_t>> l_V = mpi_gather(V, comm, i_proc);
+  if (i_rank == i_proc) {
+    return vectface(n_vert, l_n_face, l_V);
+  } else {
+    return vectface(n_vert);
+  }
+}
+
+
+
+vectface mpi_allgather(vectface const& vf, boost::mpi::communicator & comm) {
+  size_t n_vert = vf.get_n();
+  size_t n_face = vf.size();
+  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  //
+  std::vector<size_t> l_n_face = mpi_allgather(comm, n_face, i_proc);
+  std::vector<std::vector<uint8_t>> l_V = mpi_allgather(V, comm, i_proc);
+  return vectface(n_vert, l_n_face, l_V);
+}
 
 
 
@@ -343,6 +369,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int n_proc = comm.size();
   std::ostream& os = get_standard_outstream(comm);
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, os);
+  int n_vert = bb.nbRow;
   //
   // The types of exchanges
   //
@@ -360,28 +387,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
-  int MaxNumberFlyingMessage =
-      BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
-  int MaxIncidenceTreating = BlDATA.ListIntValues.at("MaxIncidenceTreating");
-  int MaxStoredUnsentMatrices =
-      BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
 
   std::vector<std::optional<UndoneOrbitInfo<Tint>>> ListBalinski(n_proc);
+  int MaxNumberFlyingMessage = 4 * n_proc;
 
-  std::vector<boost::mpi::request> ListRequest(MaxNumberFlyingMessage);
-  std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
+  std::vector<boost::mpi::request> l_mpi_request(MaxNumberFlyingMessage);
+  std::vector<int> l_mpi_status(MaxNumberFlyingMessage, 0);
+  std::vector<vectface> l_mpi_vectface(MaxNumberFlyingMessage, vectface(n_vert));
   auto GetFreeIndex = [&]() -> int {
     for (int u = 0; u < MaxNumberFlyingMessage; u++) {
-      if (RequestStatus[u] == 0)
+      if (l_mpi_status[u] == 0)
         return u;
-      boost::optional<boost::mpi::status> stat = ListRequest[u].test();
+      boost::optional<boost::mpi::status> stat = l_mpi_request[u].test();
       if (stat) { // that request has ended. Let's read it.
         if (stat->error() != 0) {
           std::cerr << "something went wrong in the MPI" << std::endl;
           throw TerminalException{1};
         }
-        RequestStatus[u] = 0;
+        l_mpi_status[u] = 0;
         return u;
       }
     }
@@ -389,7 +413,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   };
 
 
-  std::vector<vectface> ListFaceUnsent(n_proc, vectface(40));
+  std::vector<vectface> ListFaceUnsent(n_proc, vectface(n_vert));
   std::vector<int> StatusNeighbors(n_proc, 0);
 
   auto ClearUnsentAsPossible = [&]() -> void {
@@ -407,10 +431,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     if (chosen_iproc == -1)
       break;
-    vectface vf = std::move(ListFaceUnsent[chosen_iproc]);
+    l_mpi_vectface[idx] = std::move(ListFaceUnsent[chosen_iproc]);
     ListFaceUnsent[chosen_iproc].clear();
-    ListRequest[idx] = world.isend(res, tag_new_facets, vf);
-    RequestStatus[idx] = 1;
+    l_mpi_request[idx] = comm.isend(res, tag_new_facets, l_mpi_vectface[idx]);
+    l_mpi_status[idx] = 1;
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = IntegerDiscriminantInvariant(face) % n_proc;
@@ -424,7 +448,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // Initial invocation of the synchronization code
   //
   size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
-  all_reduce(world, n_orb_loc, n_orb_tot, mpi::minimum<size_t>());
+  all_reduce(comm, n_orb_loc, n_orb_tot, mpi::minimum<size_t>());
   if (n_orb_tot > 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp))
@@ -435,15 +459,14 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   while (true) {
     bool SendTerminationCriterion = true;
-
     bool StopComputation = MaxRunTimeSecond > 0 && si(start) > MaxRunTimeSecond;
-
-    boost::optional<boost::mpi::status> prob = world.iprobe();
+    bool NeedComputeBalinski = false;
+    boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       if (prob->tag() == tag_new_facets) {
         StatusNeighbors[prob->source()] = 0;
-        vectface l_recv_face(40);
-        world.recv(prob->source(), prob->tag(), l_recv_face);
+        vectface l_recv_face(n_vert);
+        comm.recv(prob->source(), prob->tag(), l_recv_face);
         for (auto & face : l_recv_face)
           RPL.FuncInsert(face);
       }
@@ -464,8 +487,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           throw TerminalException{1};
         }
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-        for (int i_proc=0; i_proc<n_proc; i_proc++) {
-        }
+
       }
       if (prob->tag() == tag_balinski_info) {
         UndoneOrbitInfo<Tint> uoi
@@ -490,6 +512,24 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     ClearUnsentAsPossible();
     os << "After ClearUnsentAsPossible\n";
     //
+    // Determine Balinski stuff
+    //
+    if (NeedComputeBalinski) {
+      auto get_value=[&]() -> bool {
+        std::vector<UndoneOrbitInfo<Tint>> ListPart;
+        for (auto & eComp : ListBalinski) {
+          if (opt) {
+            ListPart.push_back(*opt);
+          } else {
+            return false;
+          }
+        }
+        UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListPart);
+        return ComputeStatusUndone(uoi, CritSiz);
+      };
+      SendTerminationCriterion = get_value();
+    }
+    //
     // Sending termination criterion
     //
     if (SendTerminationCriterion) {
@@ -502,8 +542,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             std::cerr << "We should be able to have an entry\n";
             throw TerminalException{1};
           }
-          ListRequest[idx] = world.isend(i_proc, tag_termination, expected_termination_message);
-          RequestStatus[idx] = 1;
+          l_mpi_request[idx] = comm.isend(i_proc, tag_termination, expected_termination_message);
+          l_mpi_status[idx] = 1;
         }
       }
     }
@@ -516,30 +556,15 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (nb_finished == n_proc)
       break;
   }
-
-  //  using DataFacet = typename TbasicBank::DataFacet;
-
-  // The MPI related stuff
-  std::vector<boost::mpi::request> ListRequest;
-  std::vector<int> RequestStatus;
-  auto GetFreeIndex = [&]() -> size_t {
-    size_t len = RequestStatus.size();
-    for (size_t i = 0; i < len; i++) {
-      if (RequestStatus[i] == 1) {
-        boost::optional<boost::mpi::status> stat = ListRequest[i].test();
-        if (stat) { // that request has ended. Let's read it.
-          RequestStatus[i] = 0;
-        }
-      }
-    }
-    for (size_t i = 0; i < len; i++)
-      if (RequestStatus[i] == 0)
-        return i;
-    ListRequest.push_back(boost::mpi::request());
-    RequestStatus.push_back(1);
-    return len;
-  };
+  return RPL.FuncListOrbitIncidence();
 }
+
+
+
+
+
+
+
 
 
 
