@@ -371,20 +371,27 @@ bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
   return false;
 }
 
+/*
+  This is the advanced termination criterion.
+  
+ */
 template <typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
-                                      const vectface &vf, Teval_recur f_recur) {
+                                      const vectface &vf, Teval_recur f_recur,
+                                      std::ostream & os) {
   using Tint = typename Tgroup::Tint;
   size_t n_rows = FAC.rows();
   size_t n_cols = FAC.cols();
   size_t n_vert = vf.size();
   MyMatrix<T> EXT(n_vert, n_cols);
+  os << "  EvaluationConnectednessCriterion : n_cols=" << n_cols << " n_rows=" << n_rows << " n_vert=" << n_vert << "\n";
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
     Face f = vf[i_vert];
     MyVector<T> eEXT = FindFacetInequality(FAC, f);
     for (size_t i_col = 0; i_col < n_cols; i_col++)
       EXT(i_vert, i_col) = eEXT(i_col);
   }
+  os << "We have EXT\n";
   auto rank_vertset = [&](const std::vector<size_t> &elist) -> size_t {
     auto f = [&](MyMatrix<T> &M, size_t eRank, size_t iRow) -> void {
       size_t pos = elist[iRow];
@@ -397,6 +404,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
   };
   using pfr = std::pair<size_t, Face>;
   auto evaluate_single_entry = [&](const pfr &x) -> bool {
+    os << "evaluate_single_entry pfr.first=" << x.first << " |pfr.second|=" << x.second.size() << " / " << x.second.count() << "\n";
     std::vector<size_t> f_v;
     for (size_t i = 0; i < n_rows; i++)
       if (x.second[i] == 1)
@@ -419,20 +427,36 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
       }
     }
     if (true) {
-      std::cerr << "x=(" << x.first << ",";
-      for (auto &eVal : f_v)
-        std::cerr << " " << eVal;
-      std::cerr << ") |list_vert|=" << list_vert.size()
-                << " |fint|=" << fint.count() << " |f|=" << f_v.size() << "\n";
+      os << "  x=(" << x.first << ",[";
+      bool IsFirst=true;
+      for (auto &eVal : f_v) {
+        if (!IsFirst)
+          os << " ";
+        IsFirst=false;
+        os << " " << eVal;
+      }
+      os << "]) |list_vert|=" << list_vert.size()
+         << " |fint|=" << fint.count() << " |f|=" << f_v.size() << "\n";
     }
-    if (fint.count() > f_v.size())
+    if (fint.count() > f_v.size()) {
+      os << "  Exit 1: linear programming check\n";
       return true; // This is the linear programming check
-    size_t n_rows_rel = n_rows - x.first;
-    if (list_vert.size() <= n_rows_rel - 2)
+    }
+    size_t n_cols_rel = n_cols - x.first;
+    if (list_vert.size() <= n_cols_rel - 2) {
+      os << "  Exit 2: pure Balinski case\n";
       return true; // This is the pure Balinski case
-    if (rank_vertset(list_vert) <= n_rows_rel - 2)
+    }
+    if (rank_vertset(list_vert) <= n_cols_rel - 2) {
+      os << "  |list_vert|=" << list_vert.size()
+         << " |rank_vertset|=" << rank_vertset(list_vert)
+         << " n_cols_rel=" << n_cols_rel
+         << "\n";
+      os << "  Exit 3: rank computation, a little subtler Balinski computation\n";
       return true; // This is the rank computation. A little advanced Balinski,
                    // see the paper
+    }
+    os << "  Exit 4: nothing works, exiting\n";
     return false;
   };
   std::unordered_map<Face, bool> map_face_status;
@@ -1345,7 +1369,9 @@ public:
     {
       typename TbasicBank::iterator iter = bb.begin_undone();
       while (iter != bb.end_undone()) {
-        for (auto &uFace : OrbitFace(*iter, LGen))
+        vectface vfo = OrbitFace(*iter, LGen);
+        os << "|vfo|=" << vfo.size() << "\n";
+        for (auto &uFace : vfo)
           vf.push_back(uFace);
         iter++;
       }
@@ -1354,13 +1380,14 @@ public:
     size_t iter = 0;
     auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
       iter++;
+      os << "f_recur iter=" << iter << "\n";
       if (iter == max_iter)
         return false;
       if (pfr.first > 1)
         return false;
       return true;
     };
-    return EvaluationConnectednessCriterion(bb.EXT, bb.GRP, vf, f_recur);
+    return EvaluationConnectednessCriterion(bb.EXT, bb.GRP, vf, f_recur, os);
   }
   bool GetTerminationStatus() const {
     if (bb.foc.nbOrbitDone > 0) {

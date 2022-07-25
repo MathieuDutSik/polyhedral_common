@@ -3,7 +3,7 @@
  GRPfile = "CutK8.grp"
  OUTfile = "CutK8.orbitFacet"
  max_runtime = -1
- AdvancedTerminationCriterion = F
+ AdvancedTerminationCriterion = T
 /
 
 &HEURISTIC
