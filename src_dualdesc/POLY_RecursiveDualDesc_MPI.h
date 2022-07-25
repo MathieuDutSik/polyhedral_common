@@ -327,6 +327,7 @@ vectface my_mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
 
 
 
+
 /*
   This is the code for the MPI parallelization.
   Since the first attempt (see above) was maybe too complicated.
@@ -351,7 +352,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap) {
   using DataFacet = typename TbasicBank::DataFacet;
-  //  using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
+  using Tint = typename TbasicBank::Tint;
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -359,6 +360,15 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::ofstream os(FileLog);
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, os);
   int n_vert = bb.nbRow;
+  int n_vert_div8 = (n_vert + 7) / 8;
+  std::vector<uint8_t> V_hash(n_vert_div8,0);
+  auto get_hash=[&](Face const& x) -> size_t {
+    for (int i_vert=0; i_vert<n_vert; i_vert++) {
+      setbit(V_hash, i_vert, x[i_vert]);
+    }
+    uint32_t seed = 0x1b873560;
+    return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
+  };
   //
   // The types of exchanges
   //
@@ -388,7 +398,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 
   std::vector<int> StatusNeighbors(n_proc, 0);
   auto fInsertUnsent = [&](Face const &face) -> void {
-    int res = IntegerDiscriminantInvariant(face) % n_proc;
+    int res = int(get_hash(face) % size_t(n_proc));
     if (res == i_rank) {
       RPL.FuncInsert(face);
     } else {
@@ -399,7 +409,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // Initial invocation of the synchronization code
   //
   size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
-  all_reduce(comm, n_orb_loc, n_orb_tot, mpi::minimum<size_t>());
+  all_reduce(comm, n_orb_loc, n_orb_tot, boost::mpi::maximum<size_t>());
   if (n_orb_tot == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp))
@@ -415,7 +425,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (prob) {
       if (prob->tag() == tag_new_facets) {
         StatusNeighbors[prob->source()] = 0;
-        vectface l_recv_face = bte_facet.recv_message(prob->source())
+        vectface l_recv_face = bte_facet.recv_message(prob->source());
         for (auto & face : l_recv_face)
           RPL.FuncInsert(face);
       }
@@ -461,7 +471,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (MaxRuntimeReached || SendTerminationCriterion) {
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
         if (i_proc == i_rank) {
-          StatusNeighbors[irank] = 1;
+          StatusNeighbors[i_rank] = 1;
         } else {
           emm_termin.send_message(i_proc);
         }
@@ -472,7 +482,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     int nb_finished = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
-      nb_finished += StatusNeighbors[i_pes];
+      nb_finished += StatusNeighbors[i_proc];
     if (nb_finished == n_proc)
       break;
   }
@@ -500,9 +510,9 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
-  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, TheMap);
+  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap);
   int i_proc_ret = 0;
-  vectface vf_tot = mpi_gather(comm, vf, );
+  vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
   if (comm.rank() == i_proc_ret)
     OutputFacets(vf_tot, AllArr.OUTfile, AllArr.OutFormat);
 }

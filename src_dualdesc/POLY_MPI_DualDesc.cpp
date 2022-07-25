@@ -16,7 +16,7 @@ void Process_eFull(FullNamelist const &eFull) {
   //    using Tidx_value = int16_t;
   using Tidx_value = int32_t;
   boost::mpi::communicator world;
-  MPI_MainFunctionDualDesc(world, eFull);
+  MPI_MainFunctionDualDesc<T, Tgroup, Tidx_value>(world, eFull);
 }
 
 int main(int argc, char *argv[]) {
