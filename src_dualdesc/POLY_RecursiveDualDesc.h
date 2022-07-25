@@ -13,6 +13,7 @@
 #include "POLY_Kskeletton.h"
 
 #include "POLY_GAP.h"
+#include "Balinski_basic.h"
 // #include "POLY_netcdf_file.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
@@ -325,55 +326,9 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   Face flip(const Face &f) const { return FF.Flip(f); }
 };
 
-template <typename Tint> struct UndoneOrbitInfo {
-  size_t nbOrbitDone;
-  Tint nbUndone;
-  Face eSetUndone;
-};
-
-template <typename Tint>
-UndoneOrbitInfo<Tint> get_default_undoneinfo(int n_rows) {
-  Face f(n_rows);
-  return {0, 0, f};
-}
-
-template <typename Tint>
-UndoneOrbitInfo<Tint>
-CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>> &LComb) {
-  size_t nbOrbitDone = LComb[0].nbOrbitDone;
-  Tint nbUndone = LComb[0].nbUndone;
-  Face f = LComb[0].eSetUndone;
-  for (size_t i = 1; i < LComb.size(); i++) {
-    nbOrbitDone += LComb[i].nbOrbitDone;
-    nbUndone += LComb[i].nbUndone;
-    f &= LComb[i].eSetUndone;
-  }
-  return {nbOrbitDone, nbUndone, f};
-}
-
-template <typename Tint>
-bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
-                         const Tint &CritSiz) {
-  if (eComb.nbOrbitDone > 0)
-    if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
-      return true;
-  return false;
-}
-
-// The condition on nbOrbitDone make the check more complex.
-// For parallel, we use this monotonic partial check as heuristic
-// about whether to do the major checks or not.
-template <typename Tint>
-bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
-                                const Tint &CritSiz) {
-  if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
-    return true;
-  return false;
-}
 
 /*
   This is the advanced termination criterion.
-  
  */
 template <typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,

@@ -4,6 +4,7 @@
 
 #include "POLY_RecursiveDualDesc.h"
 #include "MPI_functionality.h"
+#include "Balinski_basic.h"
 #include <limits>
 #include <string>
 #include <unordered_map>
@@ -22,10 +23,6 @@ struct message_query {
   // 1: For destroying the databank and sending back the vectface
 };
 
-template <typename Tint> struct StatusUndoneOrbitInfo {
-  bool status;
-  UndoneOrbitInfo<Tint> erec;
-};
 
 namespace boost::serialization {
 
@@ -41,15 +38,6 @@ inline void serialize(Archive &ar, message_query &mesg,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("hash", mesg.e_hash);
   ar &make_nvp("query", mesg.query);
-}
-
-template <class Archive, typename Tint>
-inline void serialize(Archive &ar, StatusUndoneOrbitInfo<Tint> &mesg,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("status", mesg.status);
-  ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
-  ar &make_nvp("nbundone", mesg.erec.nbUndone);
-  ar &make_nvp("setundone", mesg.erec.eSetUndone);
 }
 
 } // namespace boost::serialization
@@ -309,14 +297,14 @@ vectface MPI_DUALDESC_AdjacencyDecomposition_General(
 
 
 
-vectface mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
+vectface my_mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
   int i_rank = comm.rank();
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
   std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
   //
-  std::vector<size_t> l_n_face = mpi_gather(n_face, comm, i_proc);
-  std::vector<std::vector<uint8_t>> l_V = mpi_gather(V, comm, i_proc);
+  std::vector<size_t> l_n_face = my_mpi_gather(comm, n_face, i_proc);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
   if (i_rank == i_proc) {
     return vectface(n_vert, l_n_face, l_V);
   } else {
@@ -326,13 +314,13 @@ vectface mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_p
 
 
 
-vectface mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
+vectface my_mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
   std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
   //
-  std::vector<size_t> l_n_face = mpi_allgather(comm, n_face, i_proc);
-  std::vector<std::vector<uint8_t>> l_V = mpi_allgather(V, comm, i_proc);
+  std::vector<size_t> l_n_face = my_mpi_allgather(comm, n_face);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
   return vectface(n_vert, l_n_face, l_V);
 }
 
@@ -355,7 +343,7 @@ vectface mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
 
 
  */
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+template <typename Tbank, typename TbasicBank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     boost::mpi::communicator &comm,
     Tbank &TheBank, TbasicBank &bb,
@@ -367,7 +355,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::ostream& os = get_standard_outstream(comm);
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::ofstream os(FileLog);
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, os);
   int n_vert = bb.nbRow;
   //
@@ -375,8 +364,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // New facets to be added, the most common request
   const int tag_new_facets = 36;
-  // tag_balinski
-  const int tag_balinski_info = 38;
   // undone information for Balinski termination
   const int tag_termination = 38;
   // undone information for Balinski termination
@@ -385,9 +372,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
-  int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
-
-  std::vector<std::optional<UndoneOrbitInfo<Tint>>> ListBalinski(n_proc);
   int MaxFly = 4 * n_proc;
 
 
@@ -397,7 +381,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   empty_message_management emm_termin(comm, 0, tag_termination);
   buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets, vectface(n_vert));
   auto f_buffer_emptyness=[&]() -> bool {
-    return bret_facet.is_buffer_empty();
+    return bte_facet.is_buffer_empty();
   };
   Tint CritSiz = RPL.CritSiz;
   database_balinski_info dbi(comm, tag_balinski_request, tag_balinski_info, CritSiz);
@@ -426,7 +410,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   while (true) {
     bool SendTerminationCriterion = true;
-    bool MaxRuntimeReached = MaxRunTimeSecond > 0 && si(start) > MaxRunTimeSecond;
+    bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       if (prob->tag() == tag_new_facets) {
@@ -516,7 +500,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
-  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, TheMap);
+  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, TheMap);
   int i_proc_ret = 0;
   vectface vf_tot = mpi_gather(comm, vf, );
   if (comm.rank() == i_proc_ret)

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "Timings.h"
+#include "Balinski_basic.h"
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
@@ -15,15 +16,15 @@
 
 
 
-std::ofstream& get_standard_outstream(boost::mpi::communicator & comm) {
+std::ostream && get_standard_outstream(boost::mpi::communicator & comm) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string eFile = "err_" + std::to_string(i_rank) + "_" + std::to_string(n_proc);
-  return std::ofstream(eFile);
+  return std::move(std::ofstream(eFile));
 }
 
 template<typename T>
-std::vector<T> mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
+std::vector<T> my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
   int i_rank = comm.rank();
   std::vector<T> V;
   if (i_rank == i_proc) {
@@ -35,7 +36,7 @@ std::vector<T> mpi_gather(boost::mpi::communicator & comm, T const& x, int const
 }
 
 template<typename T>
-std::vector<T> mpi_allgather(boost::mpi::communicator & comm, T const& x) {
+std::vector<T> my_mpi_allgather(boost::mpi::communicator & comm, T const& x) {
   std::vector<T> V;
   boost::mpi::all_gather<T>(comm, x, V);
   return V;
@@ -93,7 +94,7 @@ struct empty_message_management {
   int tag;
   empty_message_management(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag) : comm(comm), rsl(MaxFly), tag(tag) {
     int expected_value_pre = random();
-    expected_value = boost::mpi::all_reduce(comm, expected_value_pre, mpi::minimum<int>());
+    expected_value = boost::mpi::all_reduce(comm, expected_value_pre, boost::mpi::minimum<int>());
   }
   void send_message(int dest) {
     size_t idx = rsl.GetFreeIndex();
@@ -111,8 +112,6 @@ struct empty_message_management {
       throw TerminalException{1};
     }
   }
-
-
 };
 
 
@@ -144,21 +143,21 @@ struct buffered_T_exchanges {
   void clear_one_entry() {
     int idx = rsl.GetFreeIndex();
     if (idx == -1)
-      break;
+      return;
     size_t max_siz = 0;
     int chosen_iproc = -1;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      size_t siz = ListFaceUnsent[i_proc].size();
+      size_t siz = l_message[i_proc].size();
       if (siz > max_siz) {
         max_siz = siz;
         chosen_iproc = i_proc;
       }
     }
     if (chosen_iproc == -1)
-      break;
+      return;
     l_under_cons[idx] = std::move(l_message[chosen_iproc]);
     l_message[chosen_iproc].clear();
-    rsl[idx] = comm.isend(res, tag_new_facets, l_under_cons[idx]);
+    rsl[idx] = comm.isend(chosen_iproc, tag, l_under_cons[idx]);
   }
   size_t get_unsent_size() const {
     size_t n_unsent = 0;
@@ -171,7 +170,7 @@ struct buffered_T_exchanges {
       return false;
     return get_unsent_size() == 0;
   }
-}
+};
 
 
 
@@ -203,7 +202,7 @@ struct database_balinski_info {
   }
   void reply_request(int source_dest, UndoneOrbitInfo<Tint> const& uoi, bool const& status) {
     int recv_message;
-    comm.recv(source, tag, recv_message);
+    comm.recv(source_dest, tag_request, recv_message);
     if (recv_message != expected_value) {
       std::cerr << "The recv_message is incorrect\n";
       throw TerminalException{1};
@@ -213,11 +212,11 @@ struct database_balinski_info {
     if (idx == std::numeric_limits<size_t>::max())
       return;
     StatusUndoneOrbitInfo<Tint> suoi{status, uoi};
-    rsl[idx] = comm.isend(res, tag_info, suoi);
+    rsl[idx] = comm.isend(source_dest, tag_info, suoi);
   }
-  void recv_message(int source) {
+  void recv_info(int source) {
     StatusUndoneOrbitInfo<Tint> suoi;
-    comm.recv(source, tag_info, recv_message);
+    comm.recv(source, tag_info, suoi);
     ListBalinski[source] = suoi.erec;
     ListStatus_Emptyness[source] = 1 + int(suoi.status);
   }
@@ -225,7 +224,7 @@ struct database_balinski_info {
     int idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
-    rsl[idx] = comm.isend(res, tag_request, expected_value);
+    rsl[idx] = comm.isend(dest, tag_request, expected_value);
   }
   template<typename F>
   void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f) {

@@ -5,7 +5,7 @@
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "POLY_RecursiveDualDesc.h"
+#include "POLY_RecursiveDualDesc_MPI.h"
 #include "Permutation.h"
 
 template <typename T, typename Tidx>
