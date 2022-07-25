@@ -391,7 +391,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
     for (size_t i_col = 0; i_col < n_cols; i_col++)
       EXT(i_vert, i_col) = eEXT(i_col);
   }
-  os << "We have EXT\n";
+  os << "  We have EXT\n";
   auto rank_vertset = [&](const std::vector<size_t> &elist) -> size_t {
     auto f = [&](MyMatrix<T> &M, size_t eRank, size_t iRow) -> void {
       size_t pos = elist[iRow];
@@ -404,7 +404,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
   };
   using pfr = std::pair<size_t, Face>;
   auto evaluate_single_entry = [&](const pfr &x) -> bool {
-    os << "evaluate_single_entry pfr.first=" << x.first << " |pfr.second|=" << x.second.size() << " / " << x.second.count() << "\n";
+    os << "  evaluate_single_entry pfr.first=" << x.first << " |pfr.second|=" << x.second.size() << " / " << x.second.count() << "\n";
     std::vector<size_t> f_v;
     for (size_t i = 0; i < n_rows; i++)
       if (x.second[i] == 1)
@@ -431,9 +431,9 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
       bool IsFirst=true;
       for (auto &eVal : f_v) {
         if (!IsFirst)
-          os << " ";
+          os << ",";
         IsFirst=false;
-        os << " " << eVal;
+        os << eVal;
       }
       os << "]) |list_vert|=" << list_vert.size()
          << " |fint|=" << fint.count() << " |f|=" << f_v.size() << "\n";
@@ -1366,11 +1366,17 @@ public:
   bool attempt_connectedness_scheme() const {
     vectface vf(bb.nbRow);
     std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
+    // We need an heuristic to avoid building too large orbits.
+    // A better system would have to balance out the cost of
+    // doing that check with respect to the dual description itsef.
+    size_t max_siz = 1000;
+    if (bb.foc.nbUndone > max_siz)
+      return false;
+    // Now explicit building of the set of vertices
     {
       typename TbasicBank::iterator iter = bb.begin_undone();
       while (iter != bb.end_undone()) {
         vectface vfo = OrbitFace(*iter, LGen);
-        os << "|vfo|=" << vfo.size() << "\n";
         for (auto &uFace : vfo)
           vf.push_back(uFace);
         iter++;
@@ -1380,7 +1386,7 @@ public:
     size_t iter = 0;
     auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
       iter++;
-      os << "f_recur iter=" << iter << "\n";
+      os << "  f_recur iter=" << iter << "\n";
       if (iter == max_iter)
         return false;
       if (pfr.first > 1)
