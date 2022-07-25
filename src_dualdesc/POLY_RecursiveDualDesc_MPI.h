@@ -309,7 +309,7 @@ vectface MPI_DUALDESC_AdjacencyDecomposition_General(
 
 
 
-vectface mpi_gather(vectface const& vf, boost::mpi::communicator & comm, int i_proc) {
+vectface mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
   int i_rank = comm.rank();
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
@@ -326,7 +326,7 @@ vectface mpi_gather(vectface const& vf, boost::mpi::communicator & comm, int i_p
 
 
 
-vectface mpi_allgather(vectface const& vf, boost::mpi::communicator & comm) {
+vectface mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
   std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
@@ -357,9 +357,9 @@ vectface mpi_allgather(vectface const& vf, boost::mpi::communicator & comm) {
  */
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
+    boost::mpi::communicator &comm,
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
-    boost::mpi::communicator &comm,
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap) {
   using DataFacet = typename TbasicBank::DataFacet;
@@ -495,6 +495,33 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   return RPL.FuncListOrbitIncidence();
 }
 
+
+
+
+template <typename T, typename Tgroup, typename Tidx_value>
+void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist const &eFull) {
+    using Tint = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tkey = MyMatrix<T>;
+  using Tval = PairStore<Tgroup>;
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull);
+  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull);
+  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull);
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  //
+  using Tbank = DataBankClient<Tkey, Tval>;
+  Tbank TheBank(AllArr.port);
+
+  using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
+  TbasicBank bb(EXTred, GRP);
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
+  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, TheMap);
+  int i_proc_ret = 0;
+  vectface vf_tot = mpi_gather(comm, vf, );
+  if (comm.rank() == i_proc_ret)
+    OutputFacets(vf_tot, AllArr.OUTfile, AllArr.OutFormat);
+}
 
 
 
