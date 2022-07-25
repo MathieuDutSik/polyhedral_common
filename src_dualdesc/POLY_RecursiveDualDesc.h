@@ -1798,22 +1798,10 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   return ReadMatrix<T>(EXTfs);
 }
 
-template <typename T, typename Tgroup, typename Tidx_value>
-void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
-  // Setting up the Control C event.
-  ExitEvent = false;
-  signal(SIGINT, signal_callback_handler);
-  //
-  using Tint = typename Tgroup::Tint;
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
-  bool BANK_IsSaving = BlockBANK.ListBoolValues.at("Saving");
-  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
-  using Tkey = MyMatrix<T>;
-  using Tval = PairStore<Tgroup>;
-  //
-  std::cerr << "Reading DATA\n";
+
+
+template<typename T, typename Tidx>
+MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
@@ -1826,14 +1814,39 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
               << size_t(std::numeric_limits<Tidx>::max()) << "\n";
     throw TerminalException{1};
   }
-  //
+  return EXT;
+}
+
+template<typename Tgroup>
+Tgroup Get_GRP_DualDesc(FullNamelist const &eFull) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
   std::cerr << "GRPfile=" << GRPfile << "\n";
   std::ifstream GRPfs(GRPfile);
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
+  return GRP;
+}
+
+
+
+template<typename Tint>
+PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull) {
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>();
+  std::cerr << "We have AllArr\n";
+  //
+  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
+  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  //
+  bool BANK_IsSaving = BlockBANK.ListBoolValues.at("Saving");
+  AllArr.BANK_IsSaving = BANK_IsSaving;
+  //
+  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
+  AllArr.BANK_Prefix = BANK_Prefix;
   //
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
+  AllArr.OUTfile = OUTfile;
   std::cerr << "OUTfile=" << OUTfile << "\n";
   //
   bool DeterministicRuntime =
@@ -1843,19 +1856,18 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
     srand_random_set();
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  AllArr.OutFormat = OutFormat;
   std::cerr << "OutFormat=" << OutFormat << "\n";
+  //
   int port_i = BlockDATA.ListIntValues.at("port");
   std::cerr << "port_i=" << port_i << "\n";
   short unsigned int port = port_i;
+  AllArr.port = port;
+  //
   std::string parallelization_method =
       BlockDATA.ListStringValues.at("parallelization_method");
+  AllArr.parallelization_method = parallelization_method;
   std::cerr << "parallelization_method=" << parallelization_method << "\n";
-  //
-  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
-  std::cerr << "We have BlockMETHOD\n";
-  //
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>();
-  std::cerr << "We have AllArr\n";
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
@@ -1883,8 +1895,10 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
   AllArr.Saving = DD_Saving;
+  //
+  std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
+  AllArr.DD_Prefix = DD_Prefix;
   //
   int max_runtime = BlockDATA.ListIntValues.at("max_runtime");
   AllArr.max_runtime = max_runtime;
@@ -1892,19 +1906,41 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   bool AdvancedTerminationCriterion = BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
+  return AllArr;
+}
+
+
+
+
+
+template <typename T, typename Tgroup, typename Tidx_value>
+void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
+  // Setting up the Control C event.
+  ExitEvent = false;
+  signal(SIGINT, signal_callback_handler);
+  //
+  using Tint = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tkey = MyMatrix<T>;
+  using Tval = PairStore<Tgroup>;
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull);
+  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull);
+  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull);
+  //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   auto get_vectface = [&]() -> vectface {
-    if (parallelization_method == "serial") {
+    if (AllArr.parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(BANK_IsSaving, BANK_Prefix);
+      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
+          TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
-    if (parallelization_method == "bank_asio") {
+    if (AllArr.parallelization_method == "bank_asio") {
       using Tbank = DataBankClient<Tkey, Tval>;
-      Tbank TheBank(port);
+      Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
+          TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for parallelization_method\n";
     throw TerminalException{1};
@@ -1912,7 +1948,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets(TheOutput, OUTfile, OutFormat);
+  OutputFacets(TheOutput, AllArr.OUTfile, AllArr.OutFormat);
 }
 
 template <typename T, typename Tgroup>

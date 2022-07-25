@@ -168,6 +168,13 @@ template <typename T> struct PolyHeuristicSerial {
   bool AdvancedTerminationCriterion;
   SingletonTime start;
   int max_runtime;
+  short unsigned int port;
+  bool BANK_IsSaving;
+  std::string BANK_Prefix;
+  std::string OutFormat;
+  std::string OUTfile;
+  std::string parallelization_method;
+  std::string DD_Prefix;
 };
 
 template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
