@@ -22,8 +22,8 @@ struct message_query {
   // 1: For destroying the databank and sending back the vectface
 };
 
-template <typename Tint> struct HashUndoneOrbitInfo {
-  size_t e_hash;
+template <typename Tint> struct StatusUndoneOrbitInfo {
+  bool status;
   UndoneOrbitInfo<Tint> erec;
 };
 
@@ -44,9 +44,9 @@ inline void serialize(Archive &ar, message_query &mesg,
 }
 
 template <class Archive, typename Tint>
-inline void serialize(Archive &ar, HashUndoneOrbitInfo<Tint> &mesg,
+inline void serialize(Archive &ar, StatusUndoneOrbitInfo<Tint> &mesg,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("hash", mesg.e_hash);
+  ar &make_nvp("hash", mesg.status);
   ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
   ar &make_nvp("nbundone", mesg.erec.nbUndone);
   ar &make_nvp("setundone", mesg.erec.eSetUndone);

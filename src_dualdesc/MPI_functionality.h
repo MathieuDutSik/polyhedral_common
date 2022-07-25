@@ -3,9 +3,15 @@
 #define SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 
 
+#include <string>
+#include <vector>
+#include "Timings.h"
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
+
+
+
 
 
 
@@ -109,6 +115,9 @@ struct empty_message_management {
 
 };
 
+
+
+
 /* Managing exchanges at scale.
    We can T = int, T_vector = std::vector<T>
    or T = Face, T_vector = vectface
@@ -157,7 +166,97 @@ struct buffered_T_exchanges {
       n_unsent += eEnt.size();
     return n_unsent;
   }
+  bool is_buffer_empty() {
+    if (!rsl.is_empty())
+      return false;
+    return get_unsent_size() == 0;
+  }
 }
+
+
+
+template<typename Tint>
+struct database_balinski_info {
+  boost::mpi::communicator & comm;
+  int tag_request;
+  int tag_info;
+  int n_proc;
+  int i_rank;
+  request_status_list rsl;
+  std::vector<UndoneOrbitInfo<Tint>> ListBalinski;
+  // 0: not assigned
+  // 1: Assigned but buffers are not free
+  // 2: Assigned and buffers are free
+  std::vector<int> ListStatus_Emptyness;
+  Tint CritSiz;
+  int expected_value;
+  database_balinski_info(boost::mpi::communicator & comm, int tag_request, int tag_info, Tint const& CritSiz) : comm(comm),
+    tag_request(tag_request), tag_info(tag_info), n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
+    ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), CritSiz(CritSiz), expected_value(47) {
+  }
+  bool get_status() {
+    for (int i_proc=0; i_proc<n_proc; i_proc++)
+      if (ListStatus_Emptyness[i_proc] != 2)
+        return false;
+    UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListBalinski);
+    return ComputeStatusUndone(uoi, CritSiz);
+  }
+  void reply_request(int source_dest, UndoneOrbitInfo<Tint> const& uoi, bool const& status) {
+    int recv_message;
+    comm.recv(source, tag, recv_message);
+    if (recv_message != expected_value) {
+      std::cerr << "The recv_message is incorrect\n";
+      throw TerminalException{1};
+    }
+    //
+    int idx = rsl.GetFreeIndex();
+    if (idx == std::numeric_limits<size_t>::max())
+      return;
+    StatusUndoneOrbitInfo<Tint> suoi{status, uoi};
+    rsl[idx] = comm.isend(res, tag_info, suoi);
+  }
+  void recv_message(int source) {
+    StatusUndoneOrbitInfo<Tint> suoi;
+    comm.recv(source, tag_info, recv_message);
+    ListBalinski[source] = suoi.erec;
+    ListStatus_Emptyness[source] = 1 + int(suoi.status);
+  }
+  void submit_request(int dest) {
+    int idx = rsl.GetFreeIndex();
+    if (idx == std::numeric_limits<size_t>::max())
+      return;
+    rsl[idx] = comm.isend(res, tag_request, expected_value);
+  }
+  template<typename F>
+  void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f) {
+    // First checking natively
+    ListBalinski[i_rank] = uoi;
+    if (ComputeStatusUndone(uoi, CritSiz))
+      return;
+    ListStatus_Emptyness[i_rank] = 1 + int(f());
+    // First checking for unassigned
+    for (int i_proc=0; i_proc<n_proc; i_proc++)
+      if (ListStatus_Emptyness[i_proc] == 0)
+        return submit_request(i_proc);
+    // First checking for non-empty buffer
+    for (int i_proc=0; i_proc<n_proc; i_proc++)
+      if (ListStatus_Emptyness[i_proc] == 1)
+        return submit_request(i_proc);
+    // Getting the highest value
+    Tint max_val = 0;
+    int chosen_idx = -1;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      Tint const& eval = ListBalinski[i_proc].nbUndone;
+      if (eval > max_val) {
+        max_val = eval;
+        chosen_idx = i_proc;
+      }
+    }
+    if (chosen_idx == -1)
+      return;
+    return submit_request(chosen_idx);
+  }
+};
 
 
 
