@@ -1373,21 +1373,19 @@ public:
     if (bb.foc.nbUndone > max_siz)
       return false;
     // Now explicit building of the set of vertices
-    {
-      typename TbasicBank::iterator iter = bb.begin_undone();
-      while (iter != bb.end_undone()) {
-        vectface vfo = OrbitFace(*iter, LGen);
-        for (auto &uFace : vfo)
-          vf.push_back(uFace);
-        iter++;
-      }
+    typename TbasicBank::iterator iterator = bb.begin_undone();
+    while (iterator != bb.end_undone()) {
+      vectface vfo = OrbitFace(*iterator, LGen);
+      for (auto &uFace : vfo)
+        vf.push_back(uFace);
+      iterator++;
     }
     size_t max_iter = 100;
-    size_t iter = 0;
+    size_t n_iter = 0;
     auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
-      iter++;
-      os << "  f_recur iter=" << iter << "\n";
-      if (iter == max_iter)
+      n_iter++;
+      os << "  f_recur n_iter=" << n_iter << "\n";
+      if (n_iter == max_iter)
         return false;
       if (pfr.first > 1)
         return false;

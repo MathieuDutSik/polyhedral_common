@@ -45,24 +45,36 @@ struct request_status_list {
   request_status_list(size_t const& MaxNumberFlyingMessage) : MaxNumberFlyingMessage(MaxNumberFlyingMessage), l_mpi_request(MaxNumberFlyingMessage), l_mpi_status(MaxNumberFlyingMessage,0) {
   }
   boost::mpi::request& operator[](size_t const& pos) { l_mpi_status[pos]=1; return l_mpi_request[pos]; }
-  size_t GetFreeIndex() {
+  size_t clear_and_get_nb_undone() {
     size_t len = l_mpi_request.size();
+    size_t nb_undone = 0;
     for (size_t i=0; i<len; i++) {
       if (l_mpi_status[i] == 1) {
         boost::optional<boost::mpi::status> stat = l_mpi_request[i].test();
         if (stat) {
           l_mpi_status[i] = 0;
+        } else {
+          nb_undone++;
         }
       }
     }
+    return nb_undone;
+  }
+  size_t GetFreeIndex() {
+    (void)clear_and_get_nb_undone();
+    size_t len = l_mpi_request.size();
     for (size_t i = 0; i < len; i++)
       if (l_mpi_status[i] == 0)
         return i;
     if (MaxNumberFlyingMessage > 0)
-      return std::numeri_limits<size_t>::max();
+      return std::numeric_limits<size_t>::max();
     l_mpi_request.push_back(boost::mpi::request());
     l_mpi_status.push_back(1);
     return len;
+  }
+  bool is_empty() {
+    size_t n_undone = clear_and_get_nb_undone();
+    return n_undone == 0;
   }
 };
 
@@ -138,6 +150,12 @@ struct buffered_T_exchanges {
     l_under_cons[idx] = std::move(l_message[chosen_iproc]);
     l_message[chosen_iproc].clear();
     rsl[idx] = comm.isend(res, tag_new_facets, l_under_cons[idx]);
+  }
+  size_t get_unsent_size() const {
+    size_t n_unsent = 0;
+    for (auto & eEnt : l_message)
+      n_unsent += eEnt.size();
+    return n_unsent;
   }
 }
 
