@@ -46,7 +46,7 @@ inline void serialize(Archive &ar, message_query &mesg,
 template <class Archive, typename Tint>
 inline void serialize(Archive &ar, StatusUndoneOrbitInfo<Tint> &mesg,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("hash", mesg.status);
+  ar &make_nvp("status", mesg.status);
   ar &make_nvp("nborbitdone", mesg.erec.nbOrbitDone);
   ar &make_nvp("nbundone", mesg.erec.nbUndone);
   ar &make_nvp("setundone", mesg.erec.eSetUndone);
@@ -365,7 +365,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   using DataFacet = typename TbasicBank::DataFacet;
   //  using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   SingletonTime start;
-  int irank = comm.rank();
+  int i_rank = comm.rank();
   int n_proc = comm.size();
   std::ostream& os = get_standard_outstream(comm);
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, os);
@@ -380,8 +380,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // undone information for Balinski termination
   const int tag_termination = 38;
   // undone information for Balinski termination
-  const int tag_requestinfo_balinski = 39;
-  const int tag_balinski_info = 39;
+  const int tag_balinski_request = 39;
+  const int tag_balinski_info = 40;
   //
   // Reading the input
   //
@@ -395,14 +395,17 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // The parallel MPI classes
   //
   empty_message_management emm_termin(comm, 0, tag_termination);
-  empty_message_management emm_balinski(comm, 0, tag_requestinfo_balinski);
   buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets, vectface(n_vert));
-
+  auto f_buffer_emptyness=[&]() -> bool {
+    return bret_facet.is_buffer_empty();
+  };
+  Tint CritSiz = RPL.CritSiz;
+  database_balinski_info dbi(comm, tag_balinski_request, tag_balinski_info, CritSiz);
 
   std::vector<int> StatusNeighbors(n_proc, 0);
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = IntegerDiscriminantInvariant(face) % n_proc;
-    if (res == irank) {
+    if (res == i_rank) {
       RPL.FuncInsert(face);
     } else {
       bte_facet.insert_entry(res, face);
@@ -423,8 +426,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   while (true) {
     bool SendTerminationCriterion = true;
-    bool StopComputation = MaxRunTimeSecond > 0 && si(start) > MaxRunTimeSecond;
-    bool NeedComputeBalinski = false;
+    bool MaxRuntimeReached = MaxRunTimeSecond > 0 && si(start) > MaxRunTimeSecond;
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       if (prob->tag() == tag_new_facets) {
@@ -437,22 +439,23 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         StatusNeighbors[prob->source()] = 1;
         emm_termin.recv_message(prob->source());
       }
-      if (prob->tag() == tag_requestinfo_balinski) {
-        int recv_message;
-        emm_balinski.recv_message(prob->source());
+      if (prob->tag() == tag_balinski_request) {
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+        dbi.reply_request(prob->source(), uoi, f_buffer_emptyness());
       }
       if (prob->tag() == tag_balinski_info) {
-        UndoneOrbitInfo<Tint> uoi
-        comm.recv(prob->source(), prob->tag(), recv_message);
-        ListBalinski[prob->source()] = uoi;
+        dbi.recv_info(prob->source());
       }
     } else {
-      if (!StopComputation) {
+      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+      if (ComputeStatusUndone(uoi, CritSiz)) {
+        dbi.submit_uoi(uoi, f_buffer_emptyness);
+      }
+      if (!MaxRuntimeReached && uoi.nbUndone > 0) {
         DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
         size_t SelectedOrbit = df.SelectedOrbit;
         std::string NewPrefix =
-          ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+          ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
         vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix);
         for (auto &eOrbB : TheOutput) {
@@ -467,27 +470,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     // Determine Balinski stuff
     //
-    if (NeedComputeBalinski) {
-      auto get_value=[&]() -> bool {
-        std::vector<UndoneOrbitInfo<Tint>> ListPart;
-        for (auto & eComp : ListBalinski) {
-          if (opt) {
-            ListPart.push_back(*opt);
-          } else {
-            return false;
-          }
-        }
-        UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListPart);
-        return ComputeStatusUndone(uoi, CritSiz);
-      };
-      SendTerminationCriterion = get_value();
-    }
+    SendTerminationCriterion = dbi.get_status();
     //
     // Sending termination criterion
     //
-    if (SendTerminationCriterion) {
+    if (MaxRuntimeReached || SendTerminationCriterion) {
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-        if (i_proc == irank) {
+        if (i_proc == i_rank) {
           StatusNeighbors[irank] = 1;
         } else {
           emm_termin.send_message(i_proc);
