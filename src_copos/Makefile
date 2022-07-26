@@ -1,6 +1,7 @@
 #PROGRAM		= CP_ComputeCopositiveMin CP_CopositiveListCone CP_TestCompletePositivity CP_CopositiveKernelMin CP_CopositiveMin CP_TestCopositivity
 #PROGRAM		= CP_TestCompletePositivity
-PROGRAM		= CP_CopositiveMin
+#PROGRAM		= CP_CopositiveMin
+PROGRAM		= CP_TestCopositivity
 
 
 OBJECTS		= $(PROGRAM:%=%.o)

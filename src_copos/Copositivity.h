@@ -362,6 +362,34 @@ template <typename Tint> struct SingleTestResult {
   MyVector<Tint> eVectResult1;
 };
 
+template <typename Tint>
+void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, SingleTestResult<Tint> const &eResult) {
+  if (OutFormat == "classic") {
+    if (eResult.test) {
+      os << "The matrix is indeed copositive\n";
+    } else {
+      os << "The matrix is not copositive\n";
+      os << "Nature of violation=" << eResult.strNature << "\n";
+      os << "V=";
+      WriteVector(os, eResult.eVectResult1);
+    }
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "rec(isCopositive:=" << GAP_logical(eResult.test);
+    if (!eResult.test) {
+      os << ", violation_nature:=\"" << eResult.strNature << "\"";
+      os << ", V:=" << StringVectorGAP(eResult.eVectResult1);
+    }
+    os << ")";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
+}
+
+
+
 template <typename Tint> struct CopositivityEnumResult {
   bool test;
   int nbCone;
