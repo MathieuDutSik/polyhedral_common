@@ -36,11 +36,12 @@ int main(int argc, char *argv[]) {
     //
     SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
     bool Saving = BlockPROC.ListBoolValues.at("Saving");
-    std::string SavingPrefix = BlockPROC.ListStringValues.at("SavingPrefix");
+    std::string SavingPrefix = BlockPROC.ListStringValues.at("Prefix");
     int port_i = BlockPROC.ListIntValues.at("port");
     std::cerr << "port_i=" << port_i << "\n";
     short unsigned int port = port_i;
     //
+    endpoint_bank = boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port);
     auto process_signal = [](int signum) {
       signal_callback_handler_bank<Tkey, Tval>(signum);
     };
