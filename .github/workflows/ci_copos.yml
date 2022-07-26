@@ -131,4 +131,5 @@ jobs:
 
           cd Exmpl_Bench/Copositivity
           ../../gap.sh < TestCompletePositivity.g
+          ../../gap.sh < TestCopos.g
           cd ../..
