@@ -6,14 +6,20 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 2 && argc != 3) {
+    if (argc == 1) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCompletePositivity [eMat]\n";
-      std::cerr << "or\n";
+      std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat]\n";
+      std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat] [OutFile]\n";
+      std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat] [OutFile] [InitialBasis]\n";
       std::cerr << "CP_TestCompletePositivity [eMat] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
+      std::cerr << "OutFormat: classic or GAP. Default value is classic\n";
+      std::cerr << "OutFile: if present, output goes to OutFile, otherwise to std::cerr\n";
+      std::cerr << "InitialBasis: IdentityMat if absent, otherwise the one in the named file\n";
+      std::cerr << "\n";
       std::cerr << "If completely positive, we return an expression of it "
                    "using integral vector\n";
       std::cerr << "If not completely positive, we return a copositive matrix "
@@ -27,13 +33,25 @@ int main(int argc, char *argv[]) {
     //
     MyMatrix<T> eSymmMat = ReadMatrixFile<T>(argv[1]);
     //
-    MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3)
-      InitialBasis = ReadMatrixFile<Tint>(argv[2]);
+    std::string OutFormat = "classic";
+    if (argc >= 3)
+      OutFormat = argv[2];
     //
-    TestStrictPositivity<T, Tint> StrictPos =
+    auto process=[&](std::ostream & os) -> void {
+      MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
+      if (argc >= 5)
+        InitialBasis = ReadMatrixFile<Tint>(argv[4]);
+      TestStrictPositivity<T, Tint> StrictPos =
         TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis);
-    WriteStrictPositivityResult(std::cerr, StrictPos);
+      WriteStrictPositivityResult(os, OutFormat, StrictPos);
+    };
+    if (argc >= 4) {
+      std::string file = argv[3];
+      std::ofstream os(file);
+      process(os);
+    } else {
+      process(std::cerr);
+    }
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {
     exit(e.eVal);

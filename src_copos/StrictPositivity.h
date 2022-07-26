@@ -158,25 +158,48 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 }
 
 template <typename T, typename Tint>
-void WriteStrictPositivityResult(
-    std::ostream &os, TestStrictPositivity<T, Tint> const &StrictPos) {
-  os << "result=" << StrictPos.result << "\n";
-  if (StrictPos.result) {
-    int n = StrictPos.RealizingFamily.cols();
-    int nbBlock = StrictPos.RealizingFamily.rows();
-    for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
-      T eVal = StrictPos.ListCoeff(iBlock);
-      os << "iB=" << iBlock << " val=" << eVal << " V=";
-      for (int i = 0; i < n; i++)
-        os << StrictPos.RealizingFamily(iBlock, i) << " ";
-      os << "\n";
+void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat, TestStrictPositivity<T, Tint> const &StrictPos) {
+  if (OutFormat == "classic") {
+    os << "result=" << StrictPos.result << "\n";
+    if (StrictPos.result) {
+      int n = StrictPos.RealizingFamily.cols();
+      int nbBlock = StrictPos.RealizingFamily.rows();
+      for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+        T eVal = StrictPos.ListCoeff(iBlock);
+        os << "iB=" << iBlock << " val=" << eVal << " V=";
+        for (int i = 0; i < n; i++)
+          os << StrictPos.RealizingFamily(iBlock, i) << " ";
+        os << "\n";
+      }
+    } else {
+      os << "Certificate of non strict completely positive matrix:\n";
+      os << "Following matrix has negative scalar product with eMat and is "
+        "copositive:\n";
+      WriteMatrix(os, StrictPos.CertificateNonStrictlyPositive);
     }
-  } else {
-    os << "Certificate of non strict completely positive matrix:\n";
-    os << "Following matrix has negative scalar product with eMat and is "
-          "copositive:\n";
-    WriteMatrix(os, StrictPos.CertificateNonStrictlyPositive);
+    return;
   }
+  if (OutFormat == "classic") {
+    os << "rec(result:=" << StrictPos.result;
+    if (StrictPos.result) {
+      int nbBlock = StrictPos.RealizingFamily.rows();
+      os << ", RealizingFamily:=[";
+      for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+        if (iBlock > 0)
+          os << ",\n";
+        T eVal = StrictPos.ListCoeff(iBlock);
+        MyVector<Tint> V = GetMatrixRow(StrictPos.RealizingFamily, iBlock);
+        os << "rec(val:=" << eVal << ", V:=" << StringVectorGAP(V) << ")";
+      }
+      os << "]";
+    } else {
+      os << ", Certificate:=" << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
+    }
+    os << ")";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for output\n";
+  throw TerminalException{1};
 }
 
 // clang-format off

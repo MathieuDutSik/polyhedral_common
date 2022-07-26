@@ -1,9 +1,5 @@
-PROGRAM		= CP_ComputeCopositiveMin \
-                  CP_CopositiveListCone \
-                  CP_TestCompletePositivity \
-                  CP_CopositiveKernelMin \
-                  CP_CopositiveMin \
-                  CP_TestCopositivity
+#PROGRAM		= CP_ComputeCopositiveMin CP_CopositiveListCone CP_TestCompletePositivity CP_CopositiveKernelMin CP_CopositiveMin CP_TestCopositivity
+PROGRAM		= CP_TestCompletePositivity
 
 
 OBJECTS		= $(PROGRAM:%=%.o)
