@@ -130,6 +130,7 @@ jobs:
           tar xf ppl-1.2.tar.xz
           cd ppl-1.2
           ./configure --prefix=$PPL_PATH && make && make install
+          mkdir -p /home/runner/.local/bin/
           ln -s $PPL_PATH/bin/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
 
       - name: Test dual description
