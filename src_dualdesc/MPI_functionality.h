@@ -16,13 +16,6 @@
 
 
 
-std::ostream && get_standard_outstream(boost::mpi::communicator & comm) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string eFile = "err_" + std::to_string(i_rank) + "_" + std::to_string(n_proc);
-  return std::move(std::ofstream(eFile));
-}
-
 template<typename T>
 std::vector<T> my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
   int i_rank = comm.rank();
@@ -140,8 +133,8 @@ struct buffered_T_exchanges {
     return vf;
   }
   void clear_one_entry() {
-    int idx = rsl.GetFreeIndex();
-    if (idx == -1)
+    size_t idx = rsl.GetFreeIndex();
+    if (idx == std::numeric_limits<size_t>::max())
       return;
     size_t max_siz = 0;
     int chosen_iproc = -1;
@@ -207,7 +200,7 @@ struct database_balinski_info {
       throw TerminalException{1};
     }
     //
-    int idx = rsl.GetFreeIndex();
+    size_t idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
     StatusUndoneOrbitInfo<Tint> suoi{status, uoi};
@@ -220,7 +213,7 @@ struct database_balinski_info {
     ListStatus_Emptyness[source] = 1 + int(suoi.status);
   }
   void submit_request(int dest) {
-    int idx = rsl.GetFreeIndex();
+    size_t idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
     rsl[idx] = comm.isend(dest, tag_request, expected_value);
