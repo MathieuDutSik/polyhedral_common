@@ -179,8 +179,8 @@ void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat,
     }
     return;
   }
-  if (OutFormat == "classic") {
-    os << "rec(result:=" << StrictPos.result;
+  if (OutFormat == "GAP") {
+    os << "return rec(result:=" << GAP_logical(StrictPos.result);
     if (StrictPos.result) {
       int nbBlock = StrictPos.RealizingFamily.rows();
       os << ", RealizingFamily:=[";
@@ -195,7 +195,7 @@ void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat,
     } else {
       os << ", Certificate:=" << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
     }
-    os << ")";
+    os << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching entry for output\n";

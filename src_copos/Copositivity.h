@@ -376,12 +376,12 @@ void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, Singl
     return;
   }
   if (OutFormat == "GAP") {
-    os << "rec(isCopositive:=" << GAP_logical(eResult.test);
+    os << "return rec(isCopositive:=" << GAP_logical(eResult.test);
     if (!eResult.test) {
       os << ", violation_nature:=\"" << eResult.strNature << "\"";
       os << ", V:=" << StringVectorGAP(eResult.eVectResult1);
     }
-    os << ")";
+    os << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching entry\n";
@@ -427,7 +427,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
     return;
   }
   if (OutFormat == "GAP") {
-    os << "rec(nbCone:=" << CopoRes.nbCone << ", isCopositive:=" << GAP_logical(CopoRes.test);
+    os << "return rec(nbCone:=" << CopoRes.nbCone << ", isCopositive:=" << GAP_logical(CopoRes.test);
     if (CopoRes.test) {
       os << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
       os << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
@@ -443,7 +443,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
       }
       os << "]";
     }
-    os << ")";
+    os << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching entry\n";
