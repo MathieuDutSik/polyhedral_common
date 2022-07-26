@@ -358,7 +358,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
-  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, os);
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
@@ -389,7 +389,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // The parallel MPI classes
   //
   empty_message_management emm_termin(comm, 0, tag_termination);
-  buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets, vectface(n_vert));
+  buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets);
   auto f_buffer_emptyness=[&]() -> bool {
     return bte_facet.is_buffer_empty();
   };

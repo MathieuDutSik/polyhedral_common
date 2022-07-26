@@ -126,17 +126,16 @@ struct buffered_T_exchanges {
   boost::mpi::communicator & comm;
   request_status_list rsl;
   int tag;
-  T_vector empty;
   int n_proc;
   std::vector<T_vector> l_message;
   std::vector<T_vector> l_under_cons;
-buffered_T_exchanges(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag, T_vector const& empty) : comm(comm), rsl(MaxFly), tag(tag), empty(std::move(empty)), n_proc(comm.size()), l_message(n_proc, empty), l_under_cons(MaxFly, empty) {
+  buffered_T_exchanges(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag) : comm(comm), rsl(MaxFly), tag(tag), n_proc(comm.size()), l_message(n_proc), l_under_cons(MaxFly) {
   }
   void insert_entry(size_t const& pos, T const& x) {
     l_message[pos].push_back(x);
   }
   T_vector recv_message(int source) {
-    T_vector vf = std::move(empty);
+    T_vector vf;
     comm.recv(source, tag, vf);
     return vf;
   }
