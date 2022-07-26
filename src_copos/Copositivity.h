@@ -371,6 +371,61 @@ template <typename Tint> struct CopositivityEnumResult {
 };
 
 template <typename T, typename Tint>
+void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat, MyMatrix<T> const& eSymmMat, CopositivityEnumResult<Tint> const &CopoRes) {
+  if (OutFormat == "classic") {
+    os << "nbCone=" << CopoRes.nbCone << "\n";
+    if (CopoRes.test == false) {
+      os << "Matrix is not Copositive\n";
+      os << "Nature=" << CopoRes.eResult.strNature << "\n";
+      os << "eVect1=";
+      WriteVector(std::cerr, CopoRes.eResult.eVectResult1);
+    } else {
+      int n = eSymmMat.rows();
+      os << "Matrix is Copositive\n";
+      int nbVect = CopoRes.TotalListVect.size();
+      os << "nbVect=" << nbVect << "\n";
+      for (int iVect = 0; iVect < nbVect; iVect++) {
+        MyVector<Tint> eVect = CopoRes.TotalListVect[iVect];
+        T eNorm = EvaluationQuadForm(eSymmMat, eVect);
+        os << "iVect=" << iVect << " eVect=[";
+        for (int i = 0; i < n; i++) {
+          if (i > 0)
+            std::cerr << ",";
+          os << eVect[i];
+        }
+        os << "] norm=" << eNorm << "\n";
+      }
+    }
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "rec(nbCone:=" << CopoRes.nbCone << ", isCopositive:=" << GAP_logical(CopoRes.test);
+    if (CopoRes.test) {
+      os << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
+      os << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
+    } else {
+      int nbVect = CopoRes.TotalListVect.size();
+      os << ", ListVect:=[";
+      for (int iVect = 0; iVect < nbVect; iVect++) {
+        if (iVect > 0)
+          os << ",\n";
+        MyVector<Tint> eVect = CopoRes.TotalListVect[iVect];
+        T eNorm = EvaluationQuadForm(eSymmMat, eVect);
+        os << "rec(vect:=" << StringVectorGAP(eVect) << ", norm:=" << eNorm << ")";
+      }
+      os << "]";
+    }
+    os << ")";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
+}
+
+
+
+
+template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
                                               MyMatrix<Tint> const &TheBasis) {
   int n = eSymmMat.rows();
