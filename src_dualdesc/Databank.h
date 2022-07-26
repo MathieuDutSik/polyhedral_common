@@ -250,8 +250,8 @@ public:
             ListEnt.find(eTriple.eKey);
         if (iter == ListEnt.end())
           send_data<Tval>(socket, Tval()); // If returning empty then it means
-                                           // nothing has been found.
-        send_data<Tval>(socket, iter->second);
+        else                                   // nothing has been found.
+          send_data<Tval>(socket, iter->second);
       }
       std::cerr << "------------------------------ " << n_iter
                 << " ------------------------------\n";
