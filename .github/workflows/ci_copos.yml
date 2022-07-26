@@ -130,5 +130,5 @@ jobs:
           echo "After compilation of copositivity code"
 
           cd Exmpl_Bench/Copositivity
-          ../../gap.sh < TestCopos.g
+          ../../gap.sh < TestCompletePositivity.g
           cd ../..
