@@ -4,6 +4,9 @@ name: CI of dual description CUT8
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
+# Scheduling syntax is available at
+# https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules
+
 on:
   # Every day at 5 am.
   schedule:
