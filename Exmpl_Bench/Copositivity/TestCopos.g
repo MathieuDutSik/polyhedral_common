@@ -4,26 +4,26 @@ Print("Beginning Test copositivity\n");
 
 case1:=rec(eMat:=[ [ 1, -1, 1, 0, 0, 1, -1 ], [ -1, 1, -1, 1, 0, 0, 1 ], [ 1, -1, 1, -1, 1, 0, 0 ], [ 0, 1, -1, 1, -1, 1, 0 ],
                    [ 0, 0, 1, -1, 1, -1, 1 ], [ 1, 0, 0, 1, -1, 1, -1 ], [ -1, 1, 0, 0, 1, -1, 1 ] ],
-           name:="Hoffman_Pereira", reply:=true);
+           name:="Hoffman_Pereira", reply:=true);;
 
 case2:=rec(eMat:=[ [ 1, -1, 1, 1, -1 ], [ -1, 1, -1, 1, 1 ], [ 1, -1, 1, -1, 1 ], [ 1, 1, -1, 1, -1 ], [ -1, 1, 1, -1, 1 ] ],
-           name:="Horn", reply:=true);
+           name:="Horn", reply:=true);;
 
 case3:=rec(eMat:=[ [ 1, -1, 1, 1, -1 ], [ -1, 1, -1, 1, 1 ], [ 1, -1, 1, -1, 1 ], [ 1, 1, -1, 1, -1 ], [ -1, 1, 1, -1, 1 - 1/100 ] ],
-           name:="Horn_perturb", reply:=false);
+           name:="Horn_perturb", reply:=false);;
 
 case4:=rec(eMat:=[ [ 3, 4, 3, -3, -2 ], [ 4, 2, 0, 1, -2 ], [ 3, 0, 3, -1, -2 ], [ -3, 1, -1, 5, 3 ], [ -2, -2, -2, 3, 3 ] ],
-           name:="Dannenberg1", reply:=true);
+           name:="Dannenberg1", reply:=true);;
 
 case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 100, -60 ], [ 120, -46, -60, 100 ] ],
-           name:="Dannenberg1", reply:=true);
+           name:="Dannenberg1", reply:=true);;
 
 
 
 
-TestReflectivity:=function(eCase)
+TestCopositivity:=function(eCase)
     local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
-    n:=Length(eRec.eMat);
+    n:=Length(eCase.eMat);
     FileIn:="Test.in";
     FileOut:="Test.out";
     #
@@ -33,7 +33,7 @@ TestReflectivity:=function(eCase)
     do
         for j in [1..n]
         do
-            AppendTo(output, " ", eRec.eMat[i][j]);
+            AppendTo(output, " ", eCase.eMat[i][j]);
         od;
         AppendTo(output, "\n");
     od;
@@ -49,7 +49,7 @@ TestReflectivity:=function(eCase)
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileOut);
-    return eCasec.reply = U.isCopositive;
+    return eCase.reply = U.isCopositive;
 end;
 
 
@@ -58,7 +58,7 @@ ListCase:=[case1, case2, case3, case4, case5];
 
 for eCase in ListCase
 do
-    test:=TestReflectivity(eCase);
+    test:=TestCopositivity(eCase);
     if test=false then
         # Error case
         GAP_EXIT_CODE(1);
