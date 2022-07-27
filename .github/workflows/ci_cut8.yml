@@ -137,7 +137,7 @@ jobs:
 
       - name: Test dual description
         run: |
-          cd src_dualdesc && make && make -f Makefile_CI && cd ..
+          cd src_dualdesc && make -f Makefile_CI && cd ..
           pwd
           echo "After compilation of dual desc code"
 
