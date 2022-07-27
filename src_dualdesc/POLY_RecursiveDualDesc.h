@@ -329,6 +329,26 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 
 /*
   This is the advanced termination criterion.
+  This combines a number of approaches:
+  ---Balinski theorem itself.
+  ---The linear programming check
+  ---The rank check by computing the rank of the set of missing vertices.
+  If too low then the same argument as Balinski theorem applies
+
+  If those fails, then we compute the faces and if we can prove the connectedness
+  for all the facets except at most 1 then the connectedness holds.
+
+  The technique can be applied recursively. This cause of course a potential
+  way to explode the runtime. Thus in order to avoid that we need a function
+  f_recur that does the check and returns false when this goes too deep.
+
+  We also use the canonical storing of the computed results in order to save
+  runtime.
+
+  References:
+  ---Balinski, M. L. (1961), "On the graph structure of convex polyhedra in n-space", Pacific Journal of Mathematics, 11 (2): 431–434,
+  ---Michel Deza, Mathieu Dutour Sikirić, Enumeration of the facets of cut polytopes over some highly symmetric graphs,
+     preprint at arxiv:1501.05407, International Transactions in Operational Research 23-5 (2016) 853--860
  */
 template <typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
@@ -348,6 +368,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
   }
   os << "  We have EXT\n";
   auto rank_vertset = [&](const std::vector<size_t> &elist) -> size_t {
+    // Computation of the rank of the set without computing the full set.
     auto f = [&](MyMatrix<T> &M, size_t eRank, size_t iRow) -> void {
       size_t pos = elist[iRow];
       for (size_t i_col = 0; i_col < n_cols; i_col++)
@@ -359,6 +380,10 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
   };
   using pfr = std::pair<size_t, Face>;
   auto evaluate_single_entry = [&](const pfr &x) -> bool {
+    // We test the connectedness using the known criterions:
+    // ---Balinski criterion
+    // ---Linear programming check
+    // ---Balinski with rank check
     os << "  evaluate_single_entry pfr.first=" << x.first << " |pfr.second|=" << x.second.size() << " / " << x.second.count() << "\n";
     std::vector<size_t> f_v;
     for (size_t i = 0; i < n_rows; i++)
@@ -395,7 +420,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
     }
     if (fint.count() > f_v.size()) {
       os << "  Exit 1: linear programming check\n";
-      return true; // This is the linear programming check
+      return true; // This is the linear programming check, See DD 2016.
     }
     size_t n_cols_rel = n_cols - x.first;
     if (list_vert.size() <= n_cols_rel - 2) {
@@ -409,7 +434,7 @@ bool EvaluationConnectednessCriterion(const MyMatrix<T> &FAC, const Tgroup &GRP,
          << "\n";
       os << "  Exit 3: rank computation, a little subtler Balinski computation\n";
       return true; // This is the rank computation. A little advanced Balinski,
-                   // see the paper
+                   // see the Balinski paper and adapt the proof.
     }
     os << "  Exit 4: nothing works, exiting\n";
     return false;
