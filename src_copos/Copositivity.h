@@ -363,8 +363,10 @@ template <typename Tint> struct SingleTestResult {
 };
 
 template <typename Tint>
-void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, SingleTestResult<Tint> const &eResult) {
+void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, std::pair<SingleTestResult<Tint>,size_t> const &eRes) {
+  SingleTestResult<Tint> const& eResult = eRes.first;
   if (OutFormat == "classic") {
+    os << "Total number of cones used in the computation nbCone=" << eRes.second << "\n";
     if (eResult.test) {
       os << "The matrix is indeed copositive\n";
     } else {
@@ -376,7 +378,7 @@ void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, Singl
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(isCopositive:=" << GAP_logical(eResult.test);
+    os << "return rec(nbCone:=" << eRes.second << ", isCopositive:=" << GAP_logical(eResult.test);
     if (!eResult.test) {
       os << ", violation_nature:=\"" << eResult.strNature << "\"";
       os << ", V:=" << StringVectorGAP(eResult.eVectResult1);
@@ -406,7 +408,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
       os << "Matrix is not Copositive\n";
       os << "Nature=" << CopoRes.eResult.strNature << "\n";
       os << "eVect1=";
-      WriteVector(std::cerr, CopoRes.eResult.eVectResult1);
+      WriteVector(os, CopoRes.eResult.eVectResult1);
     } else {
       int n = eSymmMat.rows();
       os << "Matrix is Copositive\n";
@@ -418,7 +420,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
         os << "iVect=" << iVect << " eVect=[";
         for (int i = 0; i < n; i++) {
           if (i > 0)
-            std::cerr << ",";
+            os << ",";
           os << eVect[i];
         }
         os << "] norm=" << eNorm << "\n";
@@ -966,10 +968,10 @@ EnumerateCopositiveShortVector_V2(MyMatrix<T> const &eSymmMat,
 }
 
 template <typename T, typename Tint>
-SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const &eSymmMat,
+std::pair<SingleTestResult<Tint>,size_t> TestCopositivity(MyMatrix<T> const &eSymmMat,
                                         MyMatrix<Tint> const &InitialBasis) {
   int n = eSymmMat.rows();
-  int nbCone = 0;
+  size_t nbCone = 0;
   std::function<bool(MyMatrix<int> const &, MyMatrix<T> const &)> fInsert =
       [&](MyMatrix<int> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> bool {
     for (int i = 0; i < n; i++)
@@ -988,9 +990,7 @@ SingleTestResult<Tint> TestCopositivity(MyMatrix<T> const &eSymmMat,
   };
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, fInsert, fSingleTest);
-  std::cerr << "Total number of cones used in the computation nbCone=" << nbCone
-            << "\n";
-  return eResult;
+  return {eResult, nbCone};
 }
 
 template <typename T, typename Tint>

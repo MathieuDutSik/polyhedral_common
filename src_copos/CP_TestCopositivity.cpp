@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#define PRINT_SPLIT_CONE
+//#define PRINT_SPLIT_CONE
 // clang-format off
 #include "NumberTheory.h"
 #include "Copositivity.h"
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
       if (argc >= 5)
         InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       //
-      SingleTestResult<Tint> eResult =
+      std::pair<SingleTestResult<Tint>,size_t> eResult =
         TestCopositivity<T, Tint>(eSymmMat, InitialBasis);
       //
       WriteSingleTestResult(os, OutFormat, eResult);
