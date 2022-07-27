@@ -45,6 +45,8 @@ jobs:
       LIBSHORT_PATH: /home/runner/opt/libshort
       LIBSHORT_INCDIR: /home/runner/opt/libshort/include
       LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
+      MPI_INCLUDE_CPP: "-I/usr/lib/x86-64-linux-gnu/openmpi/include"
+      MPI_LINK_CPP: "-lboost_mpi -lboost_serialization -lmpi -lmpi_cxx"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
 
@@ -135,7 +137,7 @@ jobs:
 
       - name: Test dual description
         run: |
-          cd src_dualdesc && make && cd ..
+          cd src_dualdesc && make -f Makefile_CI && cd ..
           pwd
           echo "After compilation of dual desc code"
 
