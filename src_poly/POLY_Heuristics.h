@@ -103,7 +103,7 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
     "&IO",
     " name = \"split\"",
     " WriteLog = T",
-    " ProcessExistingDataIfExist = T",
+    " ProcessExistingDataIfExist = F",
     " LogFileToProcess = \"input_logfile\"",
     "/"};
   FullNamelist eFull = NAMELIST_ThompsonSamplingRuntime();
