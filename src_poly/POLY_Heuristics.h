@@ -72,7 +72,6 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
 }
 
 
-template<typename T>
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> ListString = {
     "&PROBABILITY_DISTRIBUTIONS",
