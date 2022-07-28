@@ -21,6 +21,7 @@ void Process_eFull(FullNamelist const &eFull) {
 
 int main(int argc, char *argv[]) {
   try {
+      boost::mpi::environment env;
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
