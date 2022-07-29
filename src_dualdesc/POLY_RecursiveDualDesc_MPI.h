@@ -348,7 +348,7 @@ template <typename Tbank, typename TbasicBank, typename T, typename Tgroup, type
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     boost::mpi::communicator &comm,
     Tbank &TheBank, TbasicBank &bb,
-    PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap) {
   using DataFacet = typename TbasicBank::DataFacet;
