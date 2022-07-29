@@ -222,7 +222,7 @@ struct database_balinski_info {
   void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f) {
     // First checking natively
     ListBalinski[i_rank] = uoi;
-    if (ComputeStatusUndone(uoi, CritSiz))
+    if (!ComputeStatusUndone(uoi, CritSiz))
       return;
     ListStatus_Emptyness[i_rank] = 1 + int(f());
     // First checking for unassigned
