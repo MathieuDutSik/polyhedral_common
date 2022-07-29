@@ -12,7 +12,7 @@
 // Heuristic business
 //
 
-template <typename T> TheHeuristic<T> StandardHeuristicADM() {
+template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
   std::vector<std::string> ListString = {"4",
                                          "2 groupsize > 5000 level < 3 split",
                                          "1 incidence < 40 nosplit",
@@ -131,6 +131,26 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
   }
 }
 
+template <typename T>
+void SetThompsonSampling(FullNamelist const &eFull, std::string const &NamelistEnt,
+                         ThompsonSamplingHeuristic<T> & eTS) {
+  SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
+  std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
+  if (NamelistEntFile != "unset.ts") {
+    std::cerr << "NamelistEntFile=" << NamelistEntFile << "\n";
+    IsExistingFileDie(NamelistEntFile);
+    try {
+      FullNamelist eFullN = NAMELIST_ThompsonSamplingRuntime();
+      NAMELIST_ReadNamelistFile(NamelistEntFile, eFullN);
+      eTS = ThompsonSamplingHeuristic<T>(eFullN);
+    } catch (TerminalException const &e) {
+      std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
+                << "\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
 template <typename T> struct PolyHeuristic {
   TheHeuristic<T> Splitting;
   TheHeuristic<T> BankSave;
@@ -145,7 +165,7 @@ template <typename T> struct PolyHeuristic {
 
 template <typename T> PolyHeuristic<T> AllStandardHeuristic() {
   PolyHeuristic<T> AllArr;
-  AllArr.Splitting = StandardHeuristicADM<T>();
+  AllArr.Splitting = StandardHeuristicSplitting<T>();
   AllArr.BankSave = StandardHeuristicBankSave<T>();
   AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
   AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
@@ -159,7 +179,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> Splitting;
   TheHeuristic<T> BankSave;
   TheHeuristic<T> AdditionalSymmetry;
-  TheHeuristic<T> DualDescriptionProgram;
+  ThompsonSamplingHeuristic<T> DualDescriptionProgram;
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> CheckDatabaseBank;
   TheHeuristic<T> ChosenDatabase;
@@ -177,18 +197,29 @@ template <typename T> struct PolyHeuristicSerial {
 };
 
 template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
-  PolyHeuristicSerial<T> AllArr;
-  AllArr.Splitting = StandardHeuristicADM<T>();
-  AllArr.BankSave = StandardHeuristicBankSave<T>();
-  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
-  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
-  AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
-  AllArr.CheckDatabaseBank = MethodCheckDatabaseBank<T>();
-  AllArr.ChosenDatabase = MethodChosenDatabase<T>();
-  AllArr.Saving = false;
-  AllArr.AdvancedTerminationCriterion = false;
-  AllArr.max_runtime = -1;
-  return AllArr;
+  FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
+  bool Saving = false;
+  bool AdvancedTerminationCriterion = false;
+  int max_runtime = -1;
+  short unsigned int port = 1234;
+  bool BANK_IsSaving = false;
+  std::string BANK_Prefix = "/unset/";
+  std::string OutFormat = "GAP";
+  std::string OUTfile = "unset.out";
+  std::string parallelization_method = "serial";
+  std::string DD_Prefix = "/irrelevant/";
+  return {StandardHeuristicSplitting<T>(),
+          StandardHeuristicBankSave<T>(),
+          StandardHeuristicAdditionalSymmetry<T>(),
+          ThompsonSamplingHeuristic<T>(eFull),
+          MethodInitialFacetSet<T>(),
+          MethodCheckDatabaseBank<T>(),
+          MethodChosenDatabase<T>(),
+          Saving, AdvancedTerminationCriterion,
+          SingletonTime(), max_runtime,
+          port, BANK_IsSaving, BANK_Prefix,
+          OutFormat, OUTfile,
+          parallelization_method, DD_Prefix};
 }
 
 // clang-format off

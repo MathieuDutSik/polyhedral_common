@@ -1425,7 +1425,7 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
   return TheMap;
 }
 
-
+/*
 template <typename Tint, typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation_ts(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                         std::map<std::string, Tint> const& TheMap,
@@ -1435,21 +1435,21 @@ vectface DirectFacetOrbitComputation_ts(MyMatrix<T> const &EXT, Tgroup const &GR
   ansprog_ts.pop();
   return TheOutput;
 }
-
+*/
 
 
 // Needs initial definition due to template crazyness
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
     std::string const &ePrefix);
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank>
 vectface Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
-    PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap, std::ostream& os) {
   using DataFacet = typename TbasicBank::DataFacet;
@@ -1491,7 +1491,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
     std::string const &ePrefix, std::ostream & os) {
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
@@ -1543,10 +1543,12 @@ vectface DUALDESC_AdjacencyDecomposition(
   auto compute_split_or_not = [&]() -> vectface {
     if (ansSplit != "split") {
       TheGRPrelevant = GRP;
-      std::string ansProg =
-          HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       BankSymmCheck = true;
-      return DirectFacetOrbitComputation(EXT, GRP, ansProg);
+      //
+      std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+      vectface vf = DirectFacetOrbitComputation(EXT, GRP, ansProg);
+      AllArr.DualDescriptionProgram.pop(os);
+      return vf;
     } else {
       std::string ansSymm =
           HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
@@ -1687,7 +1689,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   std::map<std::string, std::string> ListStringValuesH;
   ListStringValuesH["SplittingHeuristicFile"] = "unset.heu";
   ListStringValuesH["AdditionalSymmetryHeuristicFile"] = "unset.heu";
-  ListStringValuesH["DualDescriptionHeuristicFile"] = "unset.heu";
+  ListStringValuesH["DualDescriptionThompsonFile"] = "unset.heu";
   ListStringValuesH["MethodInitialFacetSetFile"] = "unset.heu";
   ListStringValuesH["BankSaveHeuristicFile"] = "unset.heu";
   ListStringValuesH["CheckDatabaseBankFile"] = "unset.heu";
@@ -1857,9 +1859,9 @@ PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eF
   std::cerr << "AdditionalSymmetryHeuristicFile\n"
             << AllArr.AdditionalSymmetry << "\n";
   //
-  SetHeuristic(eFull, "DualDescriptionHeuristicFile",
-               AllArr.DualDescriptionProgram);
-  std::cerr << "DualDescriptionHeuristicFile\n"
+  SetThompsonSampling(eFull, "DualDescriptionThompsonFile",
+                      AllArr.DualDescriptionProgram);
+  std::cerr << "DualDescriptionThompsonFile\n"
             << AllArr.DualDescriptionProgram << "\n";
   //
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
