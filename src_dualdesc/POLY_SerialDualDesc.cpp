@@ -19,6 +19,7 @@ void Process_eFull(FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
@@ -57,4 +58,5 @@ int main(int argc, char *argv[]) {
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }
+  runtime(time1);
 }

@@ -2,8 +2,8 @@
 #PROGRAM		= DD_ConvertGAP_to_NC
 #PROGRAM		= POLY_CheckCanonicalGAP
 #PROGRAM		= POLY_NetcdfToGAP
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_MPI_DualDesc
+PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_MPI_DualDesc
 #PROGRAM		= POLY_RunTheBank
 #PROGRAM		= ConvertNC_to_NC_FB_FF
 #PROGRAM		= Test_face Test_bool
