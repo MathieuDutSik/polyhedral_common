@@ -357,10 +357,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  std::ofstream os(FileLog);
+  //  std::ofstream os(FileLog);
+  std::ostream& os = std::cerr;
   os << "Initial writing of the log\n";
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
+  os << "DirectFacetOrbitComputation, step 1\n";
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
@@ -390,13 +392,17 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // The parallel MPI classes
   //
+  os << "DirectFacetOrbitComputation, step 2\n";
   empty_message_management emm_termin(comm, 0, tag_termination);
+  os << "DirectFacetOrbitComputation, step 3\n";
   buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets);
+  os << "DirectFacetOrbitComputation, step 4\n";
   auto f_buffer_emptyness=[&]() -> bool {
     return bte_facet.is_buffer_empty();
   };
   Tint CritSiz = RPL.CritSiz;
   database_balinski_info dbi(comm, tag_balinski_request, tag_balinski_info, CritSiz);
+  os << "DirectFacetOrbitComputation, step 5\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
   auto fInsertUnsent = [&](Face const &face) -> void {
@@ -419,58 +425,80 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         fInsertUnsent(face);
     }
   }
+  os << "DirectFacetOrbitComputation, step 6\n";
   //
   // The infinite loop
   //
   while (true) {
+    os << "DirectFacetOrbitComputation, inf loop, step 1\n";
     bool SendTerminationCriterion = true;
     bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
+    os << "DirectFacetOrbitComputation, inf loop, step 2\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
+    os << "DirectFacetOrbitComputation, inf loop, step 3\n";
     if (prob) {
       if (prob->tag() == tag_new_facets) {
+        os << "DirectFacetOrbitComputation, inf loop, step 4\n";
         StatusNeighbors[prob->source()] = 0;
         vectface l_recv_face = bte_facet.recv_message(prob->source());
         for (auto & face : l_recv_face)
           RPL.FuncInsert(face);
+        os << "DirectFacetOrbitComputation, inf loop, step 5\n";
       }
       if (prob->tag() == tag_termination) {
+        os << "DirectFacetOrbitComputation, inf loop, step 6\n";
         StatusNeighbors[prob->source()] = 1;
         emm_termin.recv_message(prob->source());
+        os << "DirectFacetOrbitComputation, inf loop, step 7\n";
       }
       if (prob->tag() == tag_balinski_request) {
+        os << "DirectFacetOrbitComputation, inf loop, step 8\n";
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
         dbi.reply_request(prob->source(), uoi, f_buffer_emptyness());
+        os << "DirectFacetOrbitComputation, inf loop, step 9\n";
       }
       if (prob->tag() == tag_balinski_info) {
+        os << "DirectFacetOrbitComputation, inf loop, step 10\n";
         dbi.recv_info(prob->source());
+        os << "DirectFacetOrbitComputation, inf loop, step 11\n";
       }
     } else {
+      os << "DirectFacetOrbitComputation, inf loop, step 12\n";
       UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+      os << "DirectFacetOrbitComputation, inf loop, step 13\n";
       if (ComputeStatusUndone(uoi, CritSiz)) {
+        os << "DirectFacetOrbitComputation, inf loop, step 14\n";
         dbi.submit_uoi(uoi, f_buffer_emptyness);
+        os << "DirectFacetOrbitComputation, inf loop, step 15\n";
       }
       if (!MaxRuntimeReached && uoi.nbUndone > 0) {
+        os << "DirectFacetOrbitComputation, inf loop, step 15\n";
         DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+        os << "DirectFacetOrbitComputation, inf loop, step 16\n";
         size_t SelectedOrbit = df.SelectedOrbit;
         std::string NewPrefix =
           ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
+        os << "DirectFacetOrbitComputation, inf loop, step 17\n";
         vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+        os << "DirectFacetOrbitComputation, inf loop, step 18\n";
         for (auto &eOrbB : TheOutput) {
           Face eFlip = df.flip(eOrbB);
           fInsertUnsent(eFlip);
         }
+        os << "DirectFacetOrbitComputation, inf loop, step 19\n";
         RPL.FuncPutOrbitAsDone(SelectedOrbit);
         os << "Orbits " << i_rank << ": " << RPL.bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone << std::endl;
       }
     }
-    os << "Before ClearUnsentAsPossible\n";
+    os << "DirectFacetOrbitComputation, inf loop, step 20\n";
     bte_facet.clear_one_entry();
-    os << "After ClearUnsentAsPossible\n";
+    os << "DirectFacetOrbitComputation, inf loop, step 21\n";
     //
     // Determine Balinski stuff
     //
     SendTerminationCriterion = dbi.get_status();
+    os << "DirectFacetOrbitComputation, inf loop, step 22\n";
     //
     // Sending termination criterion
     //
@@ -479,18 +507,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         if (i_proc == i_rank) {
           StatusNeighbors[i_rank] = 1;
         } else {
+          os << "DirectFacetOrbitComputation, inf loop, step 23\n";
           emm_termin.send_message(i_proc);
+          os << "DirectFacetOrbitComputation, inf loop, step 24\n";
         }
       }
     }
     //
     // Termination criterion
     //
+    os << "DirectFacetOrbitComputation, inf loop, step 25\n";
     int nb_finished = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
       nb_finished += StatusNeighbors[i_proc];
     if (nb_finished == n_proc)
       break;
+    os << "DirectFacetOrbitComputation, inf loop, step 26\n";
   }
   return RPL.FuncListOrbitIncidence();
 }
