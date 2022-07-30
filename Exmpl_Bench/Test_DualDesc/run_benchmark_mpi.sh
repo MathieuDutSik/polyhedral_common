@@ -1,6 +1,7 @@
 #!/bin/bash
 
-rm -rf Saving_Bank && mkdir Saving_Bank
-rm -rf Saving_Polyhedral && mkdir Saving_Polyhedral
+rm -rf Saving_Bank*
+rm -rf Saving_Polyhedral*
 
-time (../../src_dualdesc/POLY_SerialDualDesc Main.nml 2>&1 | tee err2_polydualdesc)
+
+mpirun -np 2 ../../src_dualdesc/POLY_MPI_DualDesc

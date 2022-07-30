@@ -496,6 +496,29 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 
 
 
+template<typename T>
+void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> & AllArr) {
+  int n_proc = comm.size();
+  int i_rank = comm.rank();
+  std::string postfix = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+  auto update_string=[&](std::string & str_ref) -> void {
+    size_t len = str_ref.size();
+    std::string part1 = str_ref.substr(0,len-1);
+    std::string part2 = str_ref.substr(len-1,1);
+    if (part2 != "/") {
+      std::cerr << "str_ref=" << str_ref << "\n";
+      std::cerr << "Last character should be a /\n";
+      throw TerminalException{1};
+    }
+    str_ref = part1 + postfix + part2;
+    CreateDirectory(str_ref);
+  };
+  update_string(AllArr.BANK_Prefix);
+  update_string(AllArr.DD_Prefix);
+}
+
+
+
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist const &eFull) {
@@ -507,6 +530,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull);
   PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull);
+  Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   //
   using Tbank = DataBankClient<Tkey, Tval>;
