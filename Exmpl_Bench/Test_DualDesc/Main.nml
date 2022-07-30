@@ -1,6 +1,8 @@
 &DATA
- EXTfile = "Example_05_MET_K144.ext"
- GRPfile = "Example_05_MET_K144.grp"
+! EXTfile = "Example_05_MET_K144.ext"
+! GRPfile = "Example_05_MET_K144.grp"
+ EXTfile = "Example_07_CUT7.ext"
+ GRPfile = "Example_07_CUT7.grp"
  OUTfile = "Result"
  max_runtime = -1
  AdvancedTerminationCriterion = T

@@ -358,6 +358,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
+  os << "Initial writing of the log\n";
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   int n_vert = bb.nbRow;

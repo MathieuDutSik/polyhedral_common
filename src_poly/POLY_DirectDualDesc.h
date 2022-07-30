@@ -45,7 +45,7 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
 
 template <typename T>
 vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
-                                 std::string const &eCommand) {
+                                 std::string const &eCommand, std::ostream & os) {
 #ifdef TIMINGS
   SingletonTime time1;
 #endif
@@ -67,34 +67,34 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     FileE = prefix + suffix + ".err";
   }
   {
-    std::ofstream os(FileI);
+    std::ofstream osI(FileI);
     if (eCommand == "normaliz") {
-      os << "amb_space " << n_col << "\n";
-      os << "cone " << n_row << "\n";
+      osI << "amb_space " << n_col << "\n";
+      osI << "cone " << n_row << "\n";
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         for (size_t i_col = 0; i_col < n_col; i_col++)
-          os << " " << EXT(i_row, i_col);
-        os << "\n";
+          osI << " " << EXT(i_row, i_col);
+        osI << "\n";
       }
-      os << "SupportHyperplanes\n";
+      osI << "SupportHyperplanes\n";
     } else {
-      os << "V-representation\n";
-      os << "begin\n";
-      os << n_row << " " << DimEXT << " integer\n";
+      osI << "V-representation\n";
+      osI << "begin\n";
+      osI << n_row << " " << DimEXT << " integer\n";
       for (size_t i_row = 0; i_row < n_row; i_row++) {
-        os << "0";
+        osI << "0";
         for (size_t i_col = 0; i_col < n_col; i_col++)
-          os << " " << EXT(i_row, i_col);
-        os << "\n";
+          osI << " " << EXT(i_row, i_col);
+        osI << "\n";
       }
-      os << "end\n";
+      osI << "end\n";
     }
   }
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|FileWriting|=" << ms(time1, time2) << "\n";
+  os << "|FileWriting|=" << ms(time1, time2) << "\n";
 #endif
-  //  std::cerr << "FileO=" << FileO << " created\n";
+  //  os << "FileO=" << FileO << " created\n";
   //
   // Now calling the external program
   //
@@ -104,19 +104,19 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   } else {
     order = eCommand + " " + FileI + " > " + FileO + " 2> " + FileE;
   }
-  std::cerr << "order=" << order << "\n";
+  os << "order=" << order << "\n";
   int iret1 = system(order.c_str());
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "|glrs/ppl/cdd|=" << ms(time2, time3) << "\n";
+  os << "|glrs/ppl/cdd|=" << ms(time2, time3) << "\n";
 #endif
-  std::cerr << "External program terminated\n";
+  os << "External program terminated\n";
   if (iret1 != 0) {
-    std::cerr << "The program has not terminated correctly\n";
-    std::cerr << "FileO = " << FileO << "\n";
+    os << "The program has not terminated correctly\n";
+    os << "FileO = " << FileO << "\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "iret1=" << iret1 << "\n";
+  //  os << "iret1=" << iret1 << "\n";
   vectface ListFace(n_row);
   //
   std::ifstream is(FileO);
@@ -165,7 +165,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     bool has_n_facet = false;
     size_t n_facet = 0, iLineLimit = 0;
     while (std::getline(is, line)) {
-      std::cerr << "iLine=" << iLine << " line=" << line << "\n";
+      os << "iLine=" << iLine << " line=" << line << "\n";
       if (has_n_facet) {
         if (iLine < iLineLimit) {
           process_line();
@@ -185,8 +185,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       iLine++;
     }
     if (ListFace.size() != n_facet) {
-      std::cerr << "Consistency error |ListFace|=" << ListFace.size()
-                << " n_facet=" << n_facet << "\n";
+      os << "Consistency error |ListFace|=" << ListFace.size()
+         << " n_facet=" << n_facet << "\n";
       throw TerminalException{1};
     }
   }
@@ -208,8 +208,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
       iLine++;
     }
     if (ListFace.size() != n_facet) {
-      std::cerr << "Consistency error |ListFace|=" << ListFace.size()
-                << " n_facet=" << n_facet << "\n";
+      os << "Consistency error |ListFace|=" << ListFace.size()
+         << " n_facet=" << n_facet << "\n";
       throw TerminalException{1};
     }
   }
@@ -225,9 +225,9 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   }
 #ifdef TIMINGS
   SingletonTime time4;
-  std::cerr << "|FileRead|=" << ms(time3, time4) << "\n";
+  os << "|FileRead|=" << ms(time3, time4) << "\n";
 #endif
-  std::cerr << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+  os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   //  throw TerminalException{1};
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
@@ -237,7 +237,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 
 template <typename T>
 vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
-                                             std::string const &ansProg) {
+                                             std::string const &ansProg, std::ostream & os) {
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -270,22 +270,22 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   eProg = "glrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "glrs");
+    return DualDescExternalProgram(EXT, "glrs", os);
   //
   eProg = "ppl_ext";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "ppl_lcdd");
+    return DualDescExternalProgram(EXT, "ppl_lcdd", os);
   //
   eProg = "cdd_ext";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "lcdd_gmp");
+    return DualDescExternalProgram(EXT, "lcdd_gmp", os);
   //
   eProg = "normaliz";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "normaliz");
+    return DualDescExternalProgram(EXT, "normaliz", os);
   //
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
@@ -303,14 +303,14 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
 
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                     std::string const &ansProg) {
+                                     std::string const &ansProg, std::ostream & os) {
 #ifdef TIMINGS
   SingletonTime time1;
 #endif
-  vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg);
+  vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg, os);
 #ifdef TIMINGS
   SingletonTime time2;
-  std::cerr << "|DualDescription|=" << ms(time1, time2)
+  os << "|DualDescription|=" << ms(time1, time2)
             << " |ListIncd|=" << ListIncd.size() << "\n";
 #endif
   if (ListIncd.size() == 0) {
@@ -320,9 +320,9 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
   SingletonTime time3;
-  std::cerr << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
-            << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
-            << TheOutput.size() << ") VALUE=" << ms(time2, time3) << "\n";
+  os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
+     << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
+     << TheOutput.size() << ") VALUE=" << ms(time2, time3) << "\n";
 #endif
   return TheOutput;
 }
