@@ -357,9 +357,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  //  std::ofstream os(FileLog);
-  std::ostream& os = std::cerr;
+  std::ofstream os(FileLog);
+  os << std::unitbuf;
+  //  std::ostream& os = std::cerr;
   os << "Initial writing of the log\n";
+  os.flush();
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   os << "DirectFacetOrbitComputation, step 1\n";
@@ -407,6 +409,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::vector<int> StatusNeighbors(n_proc, 0);
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = int(get_hash(face) % size_t(n_proc));
+    os << "|face|=" << face.count() << " res=" << res << "\n";
     if (res == i_rank) {
       RPL.FuncInsert(face);
     } else {
@@ -416,11 +419,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Initial invocation of the synchronization code
   //
-  std::cerr << "Compute initital" << std::endl;
+  os << "Compute initital\n";
   size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_tot, boost::mpi::maximum<size_t>());
+  os << "n_orb_loc=" << n_orb_loc << " n_orb_tot=" << n_orb_tot << "\n";
   if (n_orb_tot == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+    os << "ansSamp=" << ansSamp << "\n";
     for (auto &face : RPL.ComputeInitialSet(ansSamp)) {
         fInsertUnsent(face);
     }
