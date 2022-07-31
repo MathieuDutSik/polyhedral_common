@@ -682,12 +682,12 @@ public:
 template <typename T, typename Tgroup>
 vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
                                                 const Tgroup &GRP,
-                                                const std::string &ansSamp) {
+                                                const std::string &ansSamp, std::ostream & os) {
   // We can do a little better by passing a lambda to the
   // DirectComputationInitialFacetSet but that is a little overkill right now
   size_t nbRow = EXT.rows();
   vectface list_face(nbRow);
-  for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp))
+  for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os))
     list_face.push_back(GRP.CanonicalImage(eFace));
   return list_face;
 }
@@ -852,8 +852,8 @@ public:
     InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
     return foc.SingEntToFace(face_can, idx_orb);
   }
-  vectface ComputeInitialSet(const std::string &ansSamp) {
-    return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp);
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream& os) {
+    return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     SingEnt eEnt = foc.RetrieveListOrbitEntry(i_orb);
@@ -1045,8 +1045,8 @@ public:
     //
     return foc.SingEntToFace(face_i, idx_orb);
   }
-  vectface ComputeInitialSet(const std::string &ansSamp) {
-    return DirectComputationInitialFacetSet(EXT, ansSamp);
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream & os) {
+    return DirectComputationInitialFacetSet(EXT, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
     SingEnt eEnt = foc.RetrieveListOrbitEntry(iOrb);
@@ -1311,8 +1311,8 @@ public:
       fn->setval(bb.foc.nbOrbit);
     }
   }
-  vectface ComputeInitialSet(const std::string &ansSamp) {
-    return bb.ComputeInitialSet(ansSamp);
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream& os) {
+    return bb.ComputeInitialSet(ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     bb.FuncPutOrbitAsDone(i_orb);
@@ -1444,7 +1444,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-    for (auto &face : RPL.ComputeInitialSet(ansSamp))
+    for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
       RPL.FuncInsert(face);
   }
   while (true) {
@@ -1771,11 +1771,11 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 
 
 template<typename T, typename Tidx>
-MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull) {
+MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream & os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
-  std::cerr << "EXTfile=" << EXTfile << "\n";
+  os << "EXTfile=" << EXTfile << "\n";
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT = ReadMatrix<T>(EXTfs);
   if (size_t(EXT.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
@@ -1788,11 +1788,11 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull) {
 }
 
 template<typename Tgroup>
-Tgroup Get_GRP_DualDesc(FullNamelist const &eFull) {
+Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream & os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
-  std::cerr << "GRPfile=" << GRPfile << "\n";
+  os << "GRPfile=" << GRPfile << "\n";
   std::ifstream GRPfs(GRPfile);
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
   return GRP;
@@ -1801,9 +1801,9 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull) {
 
 
 template<typename Tint>
-PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>();
-  std::cerr << "We have AllArr\n";
+PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull, std::ostream& os) {
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
+  os << "We have AllArr\n";
   //
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
@@ -1817,52 +1817,52 @@ PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eF
   //
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
   AllArr.OUTfile = OUTfile;
-  std::cerr << "OUTfile=" << OUTfile << "\n";
+  os << "OUTfile=" << OUTfile << "\n";
   //
   bool DeterministicRuntime =
       BlockDATA.ListBoolValues.at("DeterministicRuntime");
-  std::cerr << "DeterministicRuntime=" << DeterministicRuntime << "\n";
+  os << "DeterministicRuntime=" << DeterministicRuntime << "\n";
   if (!DeterministicRuntime)
     srand_random_set();
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   AllArr.OutFormat = OutFormat;
-  std::cerr << "OutFormat=" << OutFormat << "\n";
+  os << "OutFormat=" << OutFormat << "\n";
   //
   int port_i = BlockDATA.ListIntValues.at("port");
-  std::cerr << "port_i=" << port_i << "\n";
+  os << "port_i=" << port_i << "\n";
   short unsigned int port = port_i;
   AllArr.port = port;
   //
   std::string parallelization_method =
       BlockDATA.ListStringValues.at("parallelization_method");
   AllArr.parallelization_method = parallelization_method;
-  std::cerr << "parallelization_method=" << parallelization_method << "\n";
+  os << "parallelization_method=" << parallelization_method << "\n";
   //
-  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting);
-  std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
+  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   //
   SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
-               AllArr.AdditionalSymmetry);
-  std::cerr << "AdditionalSymmetryHeuristicFile\n"
-            << AllArr.AdditionalSymmetry << "\n";
+               AllArr.AdditionalSymmetry, os);
+  os << "AdditionalSymmetryHeuristicFile\n"
+     << AllArr.AdditionalSymmetry << "\n";
   //
   SetThompsonSampling(eFull, "DualDescriptionThompsonFile",
-                      AllArr.DualDescriptionProgram);
-  std::cerr << "DualDescriptionThompsonFile\n"
-            << AllArr.DualDescriptionProgram << "\n";
+                      AllArr.DualDescriptionProgram, os);
+  os << "DualDescriptionThompsonFile\n"
+     << AllArr.DualDescriptionProgram << "\n";
   //
-  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
-  std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, os);
+  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
   //
-  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
-  std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, os);
+  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
   //
-  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank);
-  std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank, os);
+  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
   //
-  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase);
-  std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase, os);
+  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   AllArr.Saving = DD_Saving;
@@ -1894,9 +1894,9 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = PairStore<Tgroup>;
-  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull);
-  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull);
-  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull);
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, std::cerr);
+  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
+  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull, std::cerr);
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   auto get_vectface = [&]() -> vectface {

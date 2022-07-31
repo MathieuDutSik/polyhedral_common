@@ -114,11 +114,11 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
 
 template <typename T>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  TheHeuristic<T> &eHeu) {
+                  TheHeuristic<T> &eHeu, std::ostream & os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
-    std::cerr << "NamelistEntFile=" << NamelistEntFile << "\n";
+    os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
     IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
@@ -133,16 +133,16 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
 
 template <typename T>
 void SetThompsonSampling(FullNamelist const &eFull, std::string const &NamelistEnt,
-                         ThompsonSamplingHeuristic<T> & eTS) {
+                         ThompsonSamplingHeuristic<T> & eTS, std::ostream & os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.ts") {
-    std::cerr << "NamelistEntFile=" << NamelistEntFile << "\n";
+    os << "NamelistEntFile for Thompson sampling=" << NamelistEntFile << "\n";
     IsExistingFileDie(NamelistEntFile);
     try {
       FullNamelist eFullN = NAMELIST_ThompsonSamplingRuntime();
       NAMELIST_ReadNamelistFile(NamelistEntFile, eFullN);
-      eTS = ThompsonSamplingHeuristic<T>(eFullN);
+      eTS = ThompsonSamplingHeuristic<T>(eFullN, os);
     } catch (TerminalException const &e) {
       std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
                 << "\n";
@@ -196,7 +196,7 @@ template <typename T> struct PolyHeuristicSerial {
   std::string DD_Prefix;
 };
 
-template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
+template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream & os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool Saving = false;
   bool AdvancedTerminationCriterion = false;
@@ -211,7 +211,7 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial() {
   return {StandardHeuristicSplitting<T>(),
           StandardHeuristicBankSave<T>(),
           StandardHeuristicAdditionalSymmetry<T>(),
-          ThompsonSamplingHeuristic<T>(eFull),
+          ThompsonSamplingHeuristic<T>(eFull, os),
           MethodInitialFacetSet<T>(),
           MethodCheckDatabaseBank<T>(),
           MethodChosenDatabase<T>(),

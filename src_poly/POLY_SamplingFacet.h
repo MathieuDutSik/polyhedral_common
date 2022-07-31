@@ -140,11 +140,10 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 
 template <typename T>
 vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                          std::string const &ansSamp) {
-  std::cerr << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
+                                          std::string const &ansSamp, std::ostream & os) {
+  os << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
-
   auto compute_samp = [&]() -> vectface {
     if (ansOpt == "lp_cdd") {
       // So possible format is lp_cdd:iter_100

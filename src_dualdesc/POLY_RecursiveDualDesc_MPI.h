@@ -350,18 +350,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap) {
+    std::map<std::string, typename Tgroup::Tint> const &TheMap, std::ostream& os) {
   using DataFacet = typename TbasicBank::DataFacet;
   using Tint = typename TbasicBank::Tint;
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  std::ofstream os(FileLog);
-  os << std::unitbuf;
-  //  std::ostream& os = std::cerr;
-  os << "Initial writing of the log\n";
-  os.flush();
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   os << "DirectFacetOrbitComputation, step 1\n";
@@ -426,8 +420,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   if (n_orb_tot == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
-    for (auto &face : RPL.ComputeInitialSet(ansSamp)) {
-        fInsertUnsent(face);
+    for (auto &face : RPL.ComputeInitialSet(ansSamp, os)) {
+      fInsertUnsent(face);
     }
   }
   os << "DirectFacetOrbitComputation, step 6\n";
@@ -560,14 +554,24 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist const &eFull) {
-    using Tint = typename Tgroup::Tint;
+  using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = PairStore<Tgroup>;
-  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull);
-  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull);
-  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull);
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  //
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::ofstream os(FileLog);
+  os << std::unitbuf;
+  //  std::ostream& os = std::cerr;
+  os << "Initial writing of the log\n";
+  os.flush();
+  //
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, os);
+  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
+  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull, os);
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   //
@@ -577,7 +581,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
-  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap);
+  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
   int i_proc_ret = 0;
   vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
   if (comm.rank() == i_proc_ret)
