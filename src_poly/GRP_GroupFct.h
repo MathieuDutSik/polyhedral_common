@@ -95,7 +95,6 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
   is >> n_i;
   is >> nbGen;
   Tidx n = Tidx(n_i);
-  std::cerr << "n=" << n_i << " nbGen=" << nbGen << "\n";
   std::vector<Telt> ListGen;
   for (int iGen = 0; iGen < nbGen; iGen++) {
     std::vector<Tidx> v(n);
@@ -104,6 +103,7 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
       is >> eVal_i;
       Tidx eVal = Tidx(eVal_i);
       if (eVal >= n) {
+        std::cerr << "n=" << n_i << " nbGen=" << nbGen << "\n";
         std::cerr << "Error in ReadGroup function at i=" << i << "/" << n_i
                   << "\n";
         std::cerr << "Number of elements acted on n=" << n << " iGen=" << iGen
@@ -115,7 +115,6 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
     }
     ListGen.emplace_back(std::move(Telt(std::move(v))));
   }
-  std::cerr << "We have read the generators\n";
   return Tgroup(ListGen, n);
 }
 

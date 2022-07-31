@@ -563,6 +563,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   int n_proc = comm.size();
   //
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::cerr << "We have moved. See the log in FileLog=" << FileLog << "\n";
   std::ofstream os(FileLog);
   os << std::unitbuf;
   //  std::ostream& os = std::cerr;

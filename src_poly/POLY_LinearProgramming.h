@@ -441,7 +441,6 @@ template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
   T eVal, prov;
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  std::cerr << "Polytopization nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   MyMatrix<T> nMat(nbRow, nbCol + 1);
   MyMatrix<T> eBasis(nbCol, nbCol);
   MyVector<T> eVect(nbCol + 1);
