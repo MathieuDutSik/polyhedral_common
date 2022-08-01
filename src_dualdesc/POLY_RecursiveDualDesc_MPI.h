@@ -357,6 +357,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  bool WeDidSomething = false;
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   os << "DirectFacetOrbitComputation, step 1\n";
   int n_vert = bb.nbRow;
@@ -437,6 +438,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
       for (auto & face : l_recv_face)
         RPL.FuncInsert(face);
+      WeDidSomething = true;
     }
     if (stat.tag() == tag_termination) {
       os << "RECV of tag_termination\n";
@@ -470,9 +472,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
     os << "process_database, EXIT\n";
+    WeDidSomething = true;
   };
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
+    WeDidSomething = false;
     bool SendTerminationCriterion = true;
     bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
@@ -486,13 +490,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         process_mpi_status(*prob);
       } else {
         os << "prob is empty, trying first the Balinski\n";
-        UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-        os << "We have uoi=" << uoi << "\n";
-        if (ComputeStatusUndone(uoi, CritSiz)) {
-          os << "Balinski matches our local expectation, trying globally\n";
-          dbi.submit_uoi(uoi, f_buffer_emptyness);
-          os << "We submitted our requests\n";
-        }
         process_database();
       }
     } else {
@@ -503,7 +500,16 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     os << "Before entry clearing\n";
     bte_facet.clear_one_entry();
-    os << "After entry clearing\n";
+    os << "WeDidSomething=" << WeDidSomething << "\n";
+    if (WeDidSomething) {
+      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+      os << "We have uoi=" << uoi << "\n";
+      if (ComputeStatusUndone(uoi, CritSiz)) {
+        os << "Balinski matches our local expectation, trying globally\n";
+        dbi.submit_uoi(uoi, f_buffer_emptyness);
+        os << "We submitted our requests\n";
+      }
+    }
     //
     // Determine Balinski stuff
     //
