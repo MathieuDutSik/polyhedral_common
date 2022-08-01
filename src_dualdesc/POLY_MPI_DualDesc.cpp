@@ -20,8 +20,9 @@ void Process_eFull(FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
+  SingletonTime start;
   try {
-      boost::mpi::environment env;
+    boost::mpi::environment env;
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -55,8 +56,9 @@ int main(int argc, char *argv[]) {
     };
     process();
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of the program runtime=" << si(start) << "\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Erroneous termination of the program runtime=" << si(start) << "\n";
     exit(e.eVal);
   }
 }

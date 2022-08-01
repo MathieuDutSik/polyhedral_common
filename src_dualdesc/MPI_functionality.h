@@ -179,17 +179,29 @@ struct database_balinski_info {
   // 1: Assigned but buffers are not free
   // 2: Assigned and buffers are free
   std::vector<int> ListStatus_Emptyness;
+  // 0: No message is in flight, free to send another one.
+  // 1: A message is in flight, please wait before sending another one.
+  std::vector<int> RequestNat;
   Tint CritSiz;
   int expected_value;
   database_balinski_info(boost::mpi::communicator & comm, int tag_request, int tag_info, Tint const& CritSiz) : comm(comm),
     tag_request(tag_request), tag_info(tag_info), n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
-    ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), CritSiz(CritSiz), expected_value(47) {
+    ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), RequestNat(n_proc,0), CritSiz(CritSiz),
+    expected_value(47) {
   }
-  bool get_status() {
+  bool get_status(std::ostream & os) const {
     for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] != 2)
+      if (ListStatus_Emptyness[i_proc] != 2) {
+        int val = ListStatus_Emptyness[i_proc];
+        os << "Returning false at i_proc=" << i_proc << " val=" << val;
+        if (val >= 1) {
+          os << " Balinski=" << ListBalinski[i_proc] << "\n";
+        }
+        os << "\n";
         return false;
+      }
     UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListBalinski);
+    os << "Merged uoi=" << uoi << "\n";
     return ComputeStatusUndone(uoi, CritSiz);
   }
   void reply_request(int source_dest, UndoneOrbitInfo<Tint> const& uoi, bool const& status) {
@@ -211,15 +223,17 @@ struct database_balinski_info {
     comm.recv(source, tag_info, suoi);
     ListBalinski[source] = suoi.erec;
     ListStatus_Emptyness[source] = 1 + int(suoi.status);
+    RequestNat[source] = 0;
   }
   void submit_request(int dest) {
     size_t idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
+    RequestNat[dest] = 1;
     rsl[idx] = comm.isend(dest, tag_request, expected_value);
   }
   template<typename F>
-  void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f) {
+  void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f, std::ostream & os) {
     // First checking natively
     ListBalinski[i_rank] = uoi;
     if (!ComputeStatusUndone(uoi, CritSiz))
@@ -227,12 +241,16 @@ struct database_balinski_info {
     ListStatus_Emptyness[i_rank] = 1 + int(f());
     // First checking for unassigned
     for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] == 0)
+      if (ListStatus_Emptyness[i_proc] == 0 && RequestNat[i_proc] == 0) {
+        os << "submit_request uoi (Case 0) at i_proc=" << i_proc << "\n";
         return submit_request(i_proc);
+      }
     // First checking for non-empty buffer
     for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] == 1)
+      if (ListStatus_Emptyness[i_proc] == 1 && RequestNat[i_proc] == 0) {
+        os << "submit_request uoi (Case 1) at i_proc=" << i_proc << "\n";
         return submit_request(i_proc);
+      }
     // Getting the highest value
     Tint max_val = 0;
     int chosen_idx = -1;
@@ -245,7 +263,10 @@ struct database_balinski_info {
     }
     if (chosen_idx == -1)
       return;
-    return submit_request(chosen_idx);
+    if (RequestNat[chosen_idx] == 0) {
+      os << "submit_request uoi (Case 3) at chosen_idx=" << chosen_idx << "\n";
+      return submit_request(chosen_idx);
+    }
   }
 };
 

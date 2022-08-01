@@ -357,8 +357,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  bool WeDidSomething = false;
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
+  Tint CritSiz = RPL.CritSiz;
+  bool WeDidSomething = false;
+  bool LocalBalinskiStatus = false;
+  UndoneOrbitInfo<Tint> uoi_local;
   os << "DirectFacetOrbitComputation, step 1\n";
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
@@ -397,7 +400,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   auto f_buffer_emptyness=[&]() -> bool {
     return bte_facet.is_buffer_empty();
   };
-  Tint CritSiz = RPL.CritSiz;
   database_balinski_info dbi(comm, tag_balinski_request, tag_balinski_info, CritSiz);
   os << "DirectFacetOrbitComputation, step 5\n";
 
@@ -430,29 +432,31 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // The infinite loop
   //
   auto process_mpi_status=[&](boost::mpi::status const& stat) -> void {
-    os << "process_mpi_status, begin tag=" << stat.tag() << " source=" << stat.source() << "\n";
-    if (stat.tag() == tag_new_facets) {
+    int e_tag = stat.tag();
+    int e_src = stat.source();
+    os << "process_mpi_status, begin tag=" << e_tag << " source=" << e_src << "\n";
+    if (e_tag == tag_new_facets) {
       os << "RECV of tag_new_facets\n";
-      StatusNeighbors[stat.source()] = 0;
-      vectface l_recv_face = bte_facet.recv_message(stat.source());
+      StatusNeighbors[e_src] = 0;
+      vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
       for (auto & face : l_recv_face)
         RPL.FuncInsert(face);
       WeDidSomething = true;
     }
-    if (stat.tag() == tag_termination) {
+    if (e_tag == tag_termination) {
       os << "RECV of tag_termination\n";
-      StatusNeighbors[stat.source()] = 1;
-      emm_termin.recv_message(stat.source());
+      StatusNeighbors[e_src] = 1;
+      emm_termin.recv_message(e_src);
     }
-    if (stat.tag() == tag_balinski_request) {
+    if (e_tag == tag_balinski_request) {
       os << "RECV of tag_balinski_request\n";
       UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-      dbi.reply_request(stat.source(), uoi, f_buffer_emptyness());
+      dbi.reply_request(e_src, uoi, f_buffer_emptyness());
     }
-    if (stat.tag() == tag_balinski_info) {
+    if (e_tag == tag_balinski_info) {
       os << "RECV of tag_balinski_info\n";
-      dbi.recv_info(stat.source());
+      dbi.recv_info(e_src);
     }
     os << "Exiting process_mpi_status\n";
   };
@@ -477,10 +481,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
     WeDidSomething = false;
-    bool SendTerminationCriterion = true;
+    bool HasReachedBalinskiConclusion = false;
     bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
-    os << "DirectFacetOrbitComputation, SendTerminationCriterion=" << SendTerminationCriterion << " MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
+    os << "DirectFacetOrbitComputation, HasRechedBalinskiConclusion=" << HasReachedBalinskiConclusion << " MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
     if (SomethingToDo) {
       os << "Case something to do\n";
       boost::optional<boost::mpi::status> prob = comm.iprobe();
@@ -502,23 +506,24 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     bte_facet.clear_one_entry();
     os << "WeDidSomething=" << WeDidSomething << "\n";
     if (WeDidSomething) {
-      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-      os << "We have uoi=" << uoi << "\n";
-      if (ComputeStatusUndone(uoi, CritSiz)) {
-        os << "Balinski matches our local expectation, trying globally\n";
-        dbi.submit_uoi(uoi, f_buffer_emptyness);
-        os << "We submitted our requests\n";
-      }
+      uoi_local = RPL.GetTerminationInfo();
+      LocalBalinskiStatus = ComputeStatusUndone(uoi_local, CritSiz);
+      os << "We have uoi_local=" << uoi_local << " LocalBalinskiStatus=" << LocalBalinskiStatus << "\n";
+    }
+    if (!HasReachedBalinskiConclusion && LocalBalinskiStatus) {
+      os << "Balinski matches our local expectation, trying globally\n";
+      dbi.submit_uoi(uoi_local, f_buffer_emptyness, os);
     }
     //
     // Determine Balinski stuff
     //
-    SendTerminationCriterion = dbi.get_status();
-    os << "Received termination criterion SendTerminationCriterion=" << SendTerminationCriterion << "\n";
+    HasReachedBalinskiConclusion = dbi.get_status(os);
+    os << "Received termination criterion HasReachedBalinskiConclusion=" << HasReachedBalinskiConclusion << "\n";
     //
     // Sending termination criterion
     //
-    if (MaxRuntimeReached || SendTerminationCriterion) {
+    if (MaxRuntimeReached || HasReachedBalinskiConclusion) {
+      os << "Sending messages for terminating the run\n";
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
         if (i_proc == i_rank) {
           StatusNeighbors[i_rank] = 1;
@@ -533,8 +538,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     // Termination criterion
     //
     int nb_finished = 0;
-    for (int i_proc = 0; i_proc < n_proc; i_proc++)
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      os << "i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
       nb_finished += StatusNeighbors[i_proc];
+    }
     os << "nb_finished=" << nb_finished << "\n";
     if (nb_finished == n_proc)
       break;
