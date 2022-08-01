@@ -1336,6 +1336,7 @@ public:
     return eSetReturn;
   }
   size_t FuncNumberOrbit() const { return bb.foc.nbOrbit; }
+  bool IsFinished() const { return bb.foc.nbOrbit == bb.foc.nbOrbitDone; }
   typename TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
     typename TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
     os << strPresChar << " Considering orbit " << data.SelectedOrbit

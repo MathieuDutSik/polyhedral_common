@@ -428,76 +428,88 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // The infinite loop
   //
+  auto process_mpi_status=[&](boost::mpi::status const& stat) -> void {
+    os << "process_mpi_status, begin tag=" << stat.tag() << " source=" << stat.source() << "\n";
+    if (stat.tag() == tag_new_facets) {
+      os << "Case of tag_new_facets\n";
+      StatusNeighbors[stat.source()] = 0;
+      vectface l_recv_face = bte_facet.recv_message(stat.source());
+      for (auto & face : l_recv_face)
+        RPL.FuncInsert(face);
+    }
+    if (stat.tag() == tag_termination) {
+      os << "Case of tag_termination\n";
+      StatusNeighbors[stat.source()] = 1;
+      emm_termin.recv_message(stat.source());
+    }
+    if (stat.tag() == tag_balinski_request) {
+      os << "Case of tag_balinski_request\n";
+      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
+      dbi.reply_request(stat.source(), uoi, f_buffer_emptyness());
+    }
+    if (stat.tag() == tag_balinski_info) {
+      os << "Case of tag_balinski_info\n";
+      dbi.recv_info(stat.source());
+    }
+    os << "Exiting process_mpi_status\n";
+  };
+  auto process_database=[&]() -> void {
+    os << "process_database, step 1\n";
+    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    os << "process_database, step 2\n";
+    size_t SelectedOrbit = df.SelectedOrbit;
+    std::string NewPrefix =
+      ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
+    os << "process_database, step 3\n";
+    vectface TheOutput =
+      DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+    os << "process_database, step 4\n";
+    for (auto &eOrbB : TheOutput) {
+      Face eFlip = df.flip(eOrbB);
+      fInsertUnsent(eFlip);
+    }
+    os << "process_database, step 5\n";
+    RPL.FuncPutOrbitAsDone(SelectedOrbit);
+    os << "process_database, step 6\n";
+  };
   while (true) {
-    os << "DirectFacetOrbitComputation, inf loop, step 1\n";
+    os << "DirectFacetOrbitComputation, inf loop, start\n";
     bool SendTerminationCriterion = true;
     bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
-    os << "DirectFacetOrbitComputation, inf loop, step 2\n";
-    boost::optional<boost::mpi::status> prob = comm.iprobe();
-    os << "DirectFacetOrbitComputation, inf loop, step 3\n";
-    if (prob) {
-      if (prob->tag() == tag_new_facets) {
-        os << "DirectFacetOrbitComputation, inf loop, step 4\n";
-        StatusNeighbors[prob->source()] = 0;
-        vectface l_recv_face = bte_facet.recv_message(prob->source());
-        for (auto & face : l_recv_face)
-          RPL.FuncInsert(face);
-        os << "DirectFacetOrbitComputation, inf loop, step 5\n";
-      }
-      if (prob->tag() == tag_termination) {
-        os << "DirectFacetOrbitComputation, inf loop, step 6\n";
-        StatusNeighbors[prob->source()] = 1;
-        emm_termin.recv_message(prob->source());
-        os << "DirectFacetOrbitComputation, inf loop, step 7\n";
-      }
-      if (prob->tag() == tag_balinski_request) {
-        os << "DirectFacetOrbitComputation, inf loop, step 8\n";
+    bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
+    os << "DirectFacetOrbitComputation, SendTerminationCriterion=" << SendTerminationCriterion << " MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
+    if (SomethingToDo) {
+      os << "Case something to do\n";
+      boost::optional<boost::mpi::status> prob = comm.iprobe();
+      os << "We have prob\n";
+      if (prob) {
+        os << "prob is not empty\n";
+        process_mpi_status(*prob);
+      } else {
+        os << "prob is empty, trying first the Balinski\n";
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-        dbi.reply_request(prob->source(), uoi, f_buffer_emptyness());
-        os << "DirectFacetOrbitComputation, inf loop, step 9\n";
-      }
-      if (prob->tag() == tag_balinski_info) {
-        os << "DirectFacetOrbitComputation, inf loop, step 10\n";
-        dbi.recv_info(prob->source());
-        os << "DirectFacetOrbitComputation, inf loop, step 11\n";
+        os << "We have uoi\n";
+        if (ComputeStatusUndone(uoi, CritSiz)) {
+          os << "Balinski matches our local expectation, trying globally\n";
+          dbi.submit_uoi(uoi, f_buffer_emptyness);
+          os << "We submitted our requests\n";
+        }
+        process_database();
       }
     } else {
-      os << "DirectFacetOrbitComputation, inf loop, step 12\n";
-      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-      os << "DirectFacetOrbitComputation, inf loop, step 13\n";
-      if (ComputeStatusUndone(uoi, CritSiz)) {
-        os << "DirectFacetOrbitComputation, inf loop, step 14\n";
-        dbi.submit_uoi(uoi, f_buffer_emptyness);
-        os << "DirectFacetOrbitComputation, inf loop, step 15\n";
-      }
-      if (!MaxRuntimeReached && uoi.nbUndone > 0) {
-        os << "DirectFacetOrbitComputation, inf loop, step 15\n";
-        DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-        os << "DirectFacetOrbitComputation, inf loop, step 16\n";
-        size_t SelectedOrbit = df.SelectedOrbit;
-        std::string NewPrefix =
-          ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
-        os << "DirectFacetOrbitComputation, inf loop, step 17\n";
-        vectface TheOutput =
-          DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
-        os << "DirectFacetOrbitComputation, inf loop, step 18\n";
-        for (auto &eOrbB : TheOutput) {
-          Face eFlip = df.flip(eOrbB);
-          fInsertUnsent(eFlip);
-        }
-        os << "DirectFacetOrbitComputation, inf loop, step 19\n";
-        RPL.FuncPutOrbitAsDone(SelectedOrbit);
-        os << "Orbits " << i_rank << ": " << RPL.bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone << std::endl;
-      }
+      os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
+      boost::mpi::status stat = comm.probe();
+      os << "We have stat\n";
+      process_mpi_status(stat);
     }
-    os << "DirectFacetOrbitComputation, inf loop, step 20\n";
+    os << "Before entry clearing\n";
     bte_facet.clear_one_entry();
-    os << "DirectFacetOrbitComputation, inf loop, step 21\n";
+    os << "After entry clearing\n";
     //
     // Determine Balinski stuff
     //
     SendTerminationCriterion = dbi.get_status();
-    os << "DirectFacetOrbitComputation, inf loop, step 22\n";
+    os << "Received termination criterion SendTerminationCriterion=" << SendTerminationCriterion << "\n";
     //
     // Sending termination criterion
     //
@@ -506,22 +518,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         if (i_proc == i_rank) {
           StatusNeighbors[i_rank] = 1;
         } else {
-          os << "DirectFacetOrbitComputation, inf loop, step 23\n";
+          os << "Before send_message at i_proc=" << i_proc << "\n";
           emm_termin.send_message(i_proc);
-          os << "DirectFacetOrbitComputation, inf loop, step 24\n";
+          os << "After send_message\n";
         }
       }
     }
     //
     // Termination criterion
     //
-    os << "DirectFacetOrbitComputation, inf loop, step 25\n";
     int nb_finished = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
       nb_finished += StatusNeighbors[i_proc];
+    os << "nb_finished=" << nb_finished << "\n";
     if (nb_finished == n_proc)
       break;
-    os << "DirectFacetOrbitComputation, inf loop, step 26\n";
+    os << "End of the while loop, continuing\n";
   }
   return RPL.FuncListOrbitIncidence();
 }
