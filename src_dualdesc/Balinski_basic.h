@@ -9,6 +9,15 @@ template <typename Tint> struct UndoneOrbitInfo {
 };
 
 template <typename Tint>
+std::ostream &operator<<(std::ostream &os, UndoneOrbitInfo<Tint> const& obj) {
+  os << "(nbOrbitDone=" << obj.nbOrbitDone;
+  os << ", nbUndone=" << obj.nbUndone;
+  os << ", eSetUndone=" << obj.eSetUndone.count() << "," << obj.eSetUndone.size() << ")";
+  return os;
+}
+
+
+template <typename Tint>
 UndoneOrbitInfo<Tint> get_default_undoneinfo(int n_rows) {
   Face f(n_rows);
   return {0, 0, f};

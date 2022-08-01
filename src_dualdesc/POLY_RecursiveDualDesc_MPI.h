@@ -431,46 +431,45 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   auto process_mpi_status=[&](boost::mpi::status const& stat) -> void {
     os << "process_mpi_status, begin tag=" << stat.tag() << " source=" << stat.source() << "\n";
     if (stat.tag() == tag_new_facets) {
-      os << "Case of tag_new_facets\n";
+      os << "RECV of tag_new_facets\n";
       StatusNeighbors[stat.source()] = 0;
       vectface l_recv_face = bte_facet.recv_message(stat.source());
+      os << "|l_recv_face|=" << l_recv_face.size() << "\n";
       for (auto & face : l_recv_face)
         RPL.FuncInsert(face);
     }
     if (stat.tag() == tag_termination) {
-      os << "Case of tag_termination\n";
+      os << "RECV of tag_termination\n";
       StatusNeighbors[stat.source()] = 1;
       emm_termin.recv_message(stat.source());
     }
     if (stat.tag() == tag_balinski_request) {
-      os << "Case of tag_balinski_request\n";
+      os << "RECV of tag_balinski_request\n";
       UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
       dbi.reply_request(stat.source(), uoi, f_buffer_emptyness());
     }
     if (stat.tag() == tag_balinski_info) {
-      os << "Case of tag_balinski_info\n";
+      os << "RECV of tag_balinski_info\n";
       dbi.recv_info(stat.source());
     }
     os << "Exiting process_mpi_status\n";
   };
   auto process_database=[&]() -> void {
-    os << "process_database, step 1\n";
+    os << "process_database, begin\n";
     DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-    os << "process_database, step 2\n";
+    os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
     std::string NewPrefix =
       ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
-    os << "process_database, step 3\n";
     vectface TheOutput =
       DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
-    os << "process_database, step 4\n";
+    os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
     for (auto &eOrbB : TheOutput) {
       Face eFlip = df.flip(eOrbB);
       fInsertUnsent(eFlip);
     }
-    os << "process_database, step 5\n";
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
-    os << "process_database, step 6\n";
+    os << "process_database, EXIT\n";
   };
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
@@ -488,7 +487,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       } else {
         os << "prob is empty, trying first the Balinski\n";
         UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-        os << "We have uoi\n";
+        os << "We have uoi=" << uoi << "\n";
         if (ComputeStatusUndone(uoi, CritSiz)) {
           os << "Balinski matches our local expectation, trying globally\n";
           dbi.submit_uoi(uoi, f_buffer_emptyness);
