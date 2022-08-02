@@ -547,6 +547,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       break;
     os << "End of the while loop, continuing\n";
   }
+  os << "We just exited the infinite loop\n";
   return RPL.FuncListOrbitIncidence();
 }
 
@@ -607,10 +608,13 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   TbasicBank bb(EXTred, GRP);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
   vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+  os << "We have vf\n";
   int i_proc_ret = 0;
   vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
+  os << "We have vf_tot\n";
   if (comm.rank() == i_proc_ret)
     OutputFacets(vf_tot, AllArr.OUTfile, AllArr.OutFormat);
+  os << "We have done our output\n";
 }
 
 

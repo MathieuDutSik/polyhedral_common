@@ -1,0 +1,27 @@
+&DATA
+! EXTfile = "Example_05_MET_K144.ext"
+! GRPfile = "Example_05_MET_K144.grp"
+ EXTfile = "Example_07_CUT7.ext"
+ GRPfile = "Example_07_CUT7.grp"
+ OUTfile = "Result"
+ max_runtime = -1
+ AdvancedTerminationCriterion = T
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "unset.heu"
+ DualDescriptionThompsonFile     = "DualDesc.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
+/
+
+&METHOD
+ Saving = T
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = T
+/
