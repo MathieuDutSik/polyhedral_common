@@ -132,8 +132,9 @@ struct buffered_T_exchanges {
     comm.recv(source, tag, vf);
     return vf;
   }
-  void clear_one_entry() {
+  void clear_one_entry(std::ostream & os) {
     size_t idx = rsl.GetFreeIndex();
+    os << "idx=" << idx << "\n";
     if (idx == std::numeric_limits<size_t>::max())
       return;
     size_t max_siz = 0;
@@ -145,6 +146,7 @@ struct buffered_T_exchanges {
         chosen_iproc = i_proc;
       }
     }
+    os << "max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
     if (chosen_iproc == -1)
       return;
     l_under_cons[idx] = std::move(l_message[chosen_iproc]);
@@ -158,8 +160,8 @@ struct buffered_T_exchanges {
     return n_unsent;
   }
   bool is_buffer_empty() {
-    if (!rsl.is_empty())
-      return false;
+    //    if (!rsl.is_empty())
+    //      return false;
     return get_unsent_size() == 0;
   }
 };
@@ -176,54 +178,49 @@ struct database_balinski_info {
   request_status_list rsl;
   std::vector<UndoneOrbitInfo<Tint>> ListBalinski;
   // 0: not assigned
-  // 1: Assigned but buffers are not free
-  // 2: Assigned and buffers are free
+  // 1: Assigned and buffers are free
   std::vector<int> ListStatus_Emptyness;
   // 0: No message is in flight, free to send another one.
   // 1: A message is in flight, please wait before sending another one.
   std::vector<int> RequestNat;
   Tint CritSiz;
   int expected_value;
-  database_balinski_info(boost::mpi::communicator & comm, int tag_request, int tag_info, Tint const& CritSiz) : comm(comm),
-    tag_request(tag_request), tag_info(tag_info), n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
-    ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), RequestNat(n_proc,0), CritSiz(CritSiz),
-    expected_value(47) {
+  std::vector<std::chrono::time_point<std::chrono::system_clock>> last_update;
+  std::chrono::time_point<std::chrono::system_clock> last_database_update_time;
+  Face ToBeAnswered;
+  database_balinski_info(boost::mpi::communicator & comm, int tag_request, int tag_info, Tint const& CritSiz) :
+    comm(comm), tag_request(tag_request), tag_info(tag_info), n_proc(comm.size()), i_rank(comm.rank()),
+    rsl(n_proc), ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), RequestNat(n_proc,0), CritSiz(CritSiz),
+    expected_value(47), last_update(n_proc, get_cpp_time(7, 1, 1974)),
+    last_database_update_time(get_cpp_time(6, 1, 1974)), ToBeAnswered(n_proc) {
   }
   bool get_status(std::ostream & os) const {
     for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] != 2) {
+      if (ListStatus_Emptyness[i_proc] == 0) {
         int val = ListStatus_Emptyness[i_proc];
-        os << "Returning false at i_proc=" << i_proc << " val=" << val;
-        if (val >= 1) {
-          os << " Balinski=" << ListBalinski[i_proc] << "\n";
-        }
-        os << "\n";
+        os << "Returning false at i_proc=" << i_proc << " val=" << val << "\n";
         return false;
       }
     UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListBalinski);
     os << "Merged uoi=" << uoi << "\n";
     return ComputeStatusUndone(uoi, CritSiz);
   }
-  void reply_request(int source_dest, UndoneOrbitInfo<Tint> const& uoi, bool const& status) {
+  void read_request(int source) {
     int recv_message;
-    comm.recv(source_dest, tag_request, recv_message);
+    comm.recv(source, tag_request, recv_message);
     if (recv_message != expected_value) {
       std::cerr << "The recv_message is incorrect\n";
       throw TerminalException{1};
     }
-    //
+    ToBeAnswered[source] = 1;
+  }
+  void submit_info(int dest, UndoneOrbitInfo<Tint> const& uoi) {
     size_t idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
-    StatusUndoneOrbitInfo<Tint> suoi{status, uoi};
-    rsl[idx] = comm.isend(source_dest, tag_info, suoi);
-  }
-  void recv_info(int source) {
-    StatusUndoneOrbitInfo<Tint> suoi;
-    comm.recv(source, tag_info, suoi);
-    ListBalinski[source] = suoi.erec;
-    ListStatus_Emptyness[source] = 1 + int(suoi.status);
-    RequestNat[source] = 0;
+    rsl[idx] = comm.isend(dest, tag_info, uoi);
+    last_update[dest] = last_database_update_time;
+    ToBeAnswered[dest] = 0;
   }
   void submit_request(int dest) {
     size_t idx = rsl.GetFreeIndex();
@@ -232,39 +229,58 @@ struct database_balinski_info {
     RequestNat[dest] = 1;
     rsl[idx] = comm.isend(dest, tag_request, expected_value);
   }
-  template<typename F>
-  void submit_uoi(UndoneOrbitInfo<Tint> const& uoi, F f, std::ostream & os) {
+  void recv_info(int source) {
+    UndoneOrbitInfo<Tint> uoi;
+    comm.recv(source, tag_info, uoi);
+    ListBalinski[source] = uoi;
+    ListStatus_Emptyness[source] = 1;
+    RequestNat[source] = 0;
+  }
+  void set_uoi_local(UndoneOrbitInfo<Tint> const& uoi_local) {
+    ListBalinski[i_rank] = uoi_local;
+    ListStatus_Emptyness[i_rank] = 1;
+    last_database_update_time = std::chrono::system_clock::now();
+  }
+  void flush(std::ostream & os) {
+    os << "Beginning of flush operation\n";
+    UndoneOrbitInfo<Tint> const& uoi_local = ListBalinski[i_rank];
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      if (i_proc != i_rank) {
+        bool test = last_database_update_time > last_update[i_proc];
+        int dur_i = std::chrono::duration_cast<std::chrono::seconds>(last_database_update_time - last_update[i_proc]).count();
+        os << "i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc] << " test=" << test << " dur_i=" << dur_i << "\n";
+        if (ToBeAnswered[i_proc] == 1 && test) {
+          os << "flush: Doing submit_info for i_proc=" << i_proc << "\n";
+          submit_info(i_proc, uoi_local);
+        }
+      }
+    }
+  }
+  void submit_request_uoi(std::ostream & os) {
     // First checking natively
-    ListBalinski[i_rank] = uoi;
-    if (!ComputeStatusUndone(uoi, CritSiz))
-      return;
-    ListStatus_Emptyness[i_rank] = 1 + int(f());
+    os << "Beginning of submit_uoi\n";
     // First checking for unassigned
     for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] == 0 && RequestNat[i_proc] == 0) {
-        os << "submit_request uoi (Case 0) at i_proc=" << i_proc << "\n";
-        return submit_request(i_proc);
-      }
-    // First checking for non-empty buffer
-    for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (ListStatus_Emptyness[i_proc] == 1 && RequestNat[i_proc] == 0) {
-        os << "submit_request uoi (Case 1) at i_proc=" << i_proc << "\n";
+      if (i_proc != i_rank && ListStatus_Emptyness[i_proc] == 0 && RequestNat[i_proc] == 0) {
+        os << "submit_request_uoi (Case 0) at i_proc=" << i_proc << "\n";
         return submit_request(i_proc);
       }
     // Getting the highest value
     Tint max_val = 0;
     int chosen_idx = -1;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      Tint const& eval = ListBalinski[i_proc].nbUndone;
-      if (eval > max_val) {
-        max_val = eval;
-        chosen_idx = i_proc;
+      if (i_proc != i_rank) {
+        Tint const& eval = ListBalinski[i_proc].nbUndone;
+        if (eval > max_val) {
+          max_val = eval;
+          chosen_idx = i_proc;
+        }
       }
     }
     if (chosen_idx == -1)
       return;
     if (RequestNat[chosen_idx] == 0) {
-      os << "submit_request uoi (Case 3) at chosen_idx=" << chosen_idx << "\n";
+      os << "submit_request_uoi (Case 1) at chosen_idx=" << chosen_idx << "\n";
       return submit_request(chosen_idx);
     }
   }

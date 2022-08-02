@@ -359,7 +359,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   Tint CritSiz = RPL.CritSiz;
-  bool WeDidSomething = false;
   bool LocalBalinskiStatus = false;
   UndoneOrbitInfo<Tint> uoi_local;
   os << "DirectFacetOrbitComputation, step 1\n";
@@ -397,9 +396,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "DirectFacetOrbitComputation, step 3\n";
   buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets);
   os << "DirectFacetOrbitComputation, step 4\n";
-  auto f_buffer_emptyness=[&]() -> bool {
-    return bte_facet.is_buffer_empty();
-  };
   database_balinski_info dbi(comm, tag_balinski_request, tag_balinski_info, CritSiz);
   os << "DirectFacetOrbitComputation, step 5\n";
 
@@ -431,31 +427,41 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // The infinite loop
   //
+  auto balinski_flush=[&]() -> void {
+    os << "Beginning of balinski_flush\n";
+    uoi_local = RPL.GetTerminationInfo();
+    LocalBalinskiStatus = ComputeStatusUndone(uoi_local, CritSiz);
+    os << "We have uoi_local=" << uoi_local << " LocalBalinskiStatus=" << LocalBalinskiStatus << "\n";
+    if (LocalBalinskiStatus) {
+      dbi.set_uoi_local(uoi_local);
+      os << "last_database_update has been set\n";
+    }
+  };
   auto process_mpi_status=[&](boost::mpi::status const& stat) -> void {
     int e_tag = stat.tag();
     int e_src = stat.source();
-    os << "process_mpi_status, begin tag=" << e_tag << " source=" << e_src << "\n";
     if (e_tag == tag_new_facets) {
-      os << "RECV of tag_new_facets\n";
+      os << "RECV of tag_new_facets from " << e_src << "\n";
       StatusNeighbors[e_src] = 0;
       vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
       for (auto & face : l_recv_face)
         RPL.FuncInsert(face);
-      WeDidSomething = true;
+      balinski_flush();
     }
     if (e_tag == tag_termination) {
-      os << "RECV of tag_termination\n";
+      os << "RECV of tag_termination from " << e_src << "\n";
       StatusNeighbors[e_src] = 1;
       emm_termin.recv_message(e_src);
     }
     if (e_tag == tag_balinski_request) {
-      os << "RECV of tag_balinski_request\n";
-      UndoneOrbitInfo<Tint> uoi = RPL.GetTerminationInfo();
-      dbi.reply_request(e_src, uoi, f_buffer_emptyness());
+      os << "RECV of tag_balinski_request from " << e_src << "\n";
+      dbi.read_request(e_src);
+      dbi.flush(os);
+      os << "dbi.flush of uoi_local=" << uoi_local << "\n";
     }
     if (e_tag == tag_balinski_info) {
-      os << "RECV of tag_balinski_info\n";
+      os << "RECV of tag_balinski_info from " << e_src << "\n";
       dbi.recv_info(e_src);
     }
     os << "Exiting process_mpi_status\n";
@@ -476,49 +482,50 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
     os << "process_database, EXIT\n";
-    WeDidSomething = true;
+    balinski_flush();
   };
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
-    WeDidSomething = false;
     bool HasReachedBalinskiConclusion = false;
     bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
     os << "DirectFacetOrbitComputation, HasRechedBalinskiConclusion=" << HasReachedBalinskiConclusion << " MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
-    if (SomethingToDo) {
-      os << "Case something to do\n";
-      boost::optional<boost::mpi::status> prob = comm.iprobe();
-      os << "We have prob\n";
-      if (prob) {
-        os << "prob is not empty\n";
-        process_mpi_status(*prob);
-      } else {
-        os << "prob is empty, trying first the Balinski\n";
-        process_database();
-      }
+    boost::optional<boost::mpi::status> prob = comm.iprobe();
+    if (prob) {
+      os << "prob is not empty\n";
+      process_mpi_status(*prob);
     } else {
-      os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
-      boost::mpi::status stat = comm.probe();
-      os << "We have stat\n";
-      process_mpi_status(stat);
+      if (SomethingToDo) {
+        os << "Case something to do\n";
+        process_database();
+      } else {
+        if (!bte_facet.is_buffer_empty()) {
+          os << "Calling clear_one_entry\n";
+          bte_facet.clear_one_entry(os);
+        } else {
+          os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
+          boost::mpi::status stat = comm.probe();
+          process_mpi_status(stat);
+        }
+      }
     }
-    os << "Before entry clearing\n";
-    bte_facet.clear_one_entry();
-    os << "WeDidSomething=" << WeDidSomething << "\n";
-    if (WeDidSomething) {
-      uoi_local = RPL.GetTerminationInfo();
-      LocalBalinskiStatus = ComputeStatusUndone(uoi_local, CritSiz);
-      os << "We have uoi_local=" << uoi_local << " LocalBalinskiStatus=" << LocalBalinskiStatus << "\n";
-    }
-    if (!HasReachedBalinskiConclusion && LocalBalinskiStatus) {
-      os << "Balinski matches our local expectation, trying globally\n";
-      dbi.submit_uoi(uoi_local, f_buffer_emptyness, os);
+    //
+    bool test_buffer = bte_facet.is_buffer_empty();
+    os << "LocalBalinskiStatus=" << LocalBalinskiStatus << " test_buffer=" << test_buffer << "\n";
+    if (LocalBalinskiStatus && test_buffer) {
+      os << "Trying our chance at terminating the run\n";
+      dbi.flush(os);
+      os << "dbi.flush has been called\n";
+      if (!HasReachedBalinskiConclusion) {
+        dbi.submit_request_uoi(os);
+        os << "dbi.submit_request_uoi has been called\n";
+      }
     }
     //
     // Determine Balinski stuff
     //
     HasReachedBalinskiConclusion = dbi.get_status(os);
-    os << "Received termination criterion HasReachedBalinskiConclusion=" << HasReachedBalinskiConclusion << "\n";
+    os << "Currently HasReachedBalinskiConclusion=" << HasReachedBalinskiConclusion << "\n";
     //
     // Sending termination criterion
     //
@@ -628,3 +635,4 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 // clang-format on
+

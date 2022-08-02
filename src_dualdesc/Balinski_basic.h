@@ -80,6 +80,14 @@ inline void serialize(Archive &ar, StatusUndoneOrbitInfo<Tint> &mesg,
   ar &make_nvp("setundone", mesg.erec.eSetUndone);
 }
 
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("nborbitdone", erec.nbOrbitDone);
+  ar &make_nvp("nbundone", erec.nbUndone);
+  ar &make_nvp("setundone", erec.eSetUndone);
+}
+
 } // namespace boost::serialization
 
 
