@@ -502,6 +502,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         if (!bte_facet.is_buffer_empty()) {
           os << "Calling clear_one_entry\n";
           bte_facet.clear_one_entry(os);
+          StatusNeighbors[i_rank] = 0;
         } else {
           os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
           boost::mpi::status stat = comm.probe();
@@ -529,7 +530,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     // Sending termination criterion
     //
-    if (MaxRuntimeReached || HasReachedBalinskiConclusion) {
+    if ((MaxRuntimeReached || HasReachedBalinskiConclusion) && test_buffer && StatusNeighbors[i_rank]==0) {
       os << "Sending messages for terminating the run\n";
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
         if (i_proc == i_rank) {
