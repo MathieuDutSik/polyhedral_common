@@ -55,7 +55,13 @@ int main(int argc, char *argv[]) {
     process();
     //
     std::cerr << "Normal termination of the program\n";
-  } catch (TerminalException const &e) {
+  }
+  catch (TerminalException const &e) {
+    std::cerr << "Something went wrong in the computation, please debug\n";
+    exit(e.eVal);
+  }
+  catch (RuntimeException const &e) {
+    std::cerr << "The maximum runtime has been reached, exiting the program\n";
     exit(e.eVal);
   }
   runtime(time1);

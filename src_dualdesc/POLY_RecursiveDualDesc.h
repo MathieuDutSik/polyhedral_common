@@ -14,7 +14,6 @@
 
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
-// #include "POLY_netcdf_file.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
@@ -1492,7 +1491,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     int runtime = si(AllArr.start);
     if (runtime > AllArr.max_runtime) {
       std::cerr << "The maximum runtime has been elapsed. max_runtime = " << AllArr.max_runtime << "\n";
-      throw TerminalException{1};
+      throw RuntimeException{1};
     }
   }
   int nbRow = EXT.rows();
