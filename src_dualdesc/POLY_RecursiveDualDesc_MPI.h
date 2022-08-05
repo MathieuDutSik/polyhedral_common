@@ -385,6 +385,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
+  size_t MaxBuffered = 10000 * n_proc;
   int MaxFly = 4 * n_proc;
 
 
@@ -497,11 +498,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     } else {
       if (SomethingToDo) {
         os << "Case something to do\n";
+        // we have to clear our buffers sometimes while running
+        // otherwise we will only do it in the very end
+        // which could lead to extremely large buffers
+        // and possibly treating orbits with unnecessary large incidence
+        if(bte_facet.get_unsent_size() >= MaxBuffered) {
+            os << "Calling clear_one_entry after reaching MaxBuffered\n";
+            bte_facet.clear_one_entry(os);
+            StatusNeighbors[i_rank] = 0;
+        }
+
         process_database();
       } else {
         if (!bte_facet.is_buffer_empty()) {
           os << "Calling clear_one_entry\n";
           bte_facet.clear_one_entry(os);
+          StatusNeighbors[i_rank] = 0;
         } else {
           os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
           boost::mpi::status stat = comm.probe();
@@ -529,7 +541,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     // Sending termination criterion
     //
-    if (MaxRuntimeReached || HasReachedBalinskiConclusion) {
+    if ((MaxRuntimeReached || HasReachedBalinskiConclusion) && StatusNeighbors[i_rank]==0) {
       os << "Sending messages for terminating the run\n";
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
         if (i_proc == i_rank) {
