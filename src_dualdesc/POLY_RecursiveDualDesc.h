@@ -1931,7 +1931,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   bool BANK_IsSaving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>();
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(std::cerr);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   std::cerr << "AdditionalSymmetryHeuristicFile\n"
             << AllArr.AdditionalSymmetry << "\n";
