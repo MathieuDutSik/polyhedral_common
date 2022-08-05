@@ -1,11 +1,8 @@
-#PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc ConvertNC_to_NC_FB_FF Test_face Test_bool
-#PROGRAM		= DD_ConvertGAP_to_NC
+PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank Test_face Test_bool
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_NetcdfToGAP
 #PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_MPI_DualDesc
+#PROGRAM		= POLY_MPI_DualDesc
 #PROGRAM		= POLY_RunTheBank
-#PROGRAM		= ConvertNC_to_NC_FB_FF
 #PROGRAM		= Test_face Test_bool
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

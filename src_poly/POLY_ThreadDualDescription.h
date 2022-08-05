@@ -819,15 +819,15 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
-  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting);
+  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, std::cerr);
   SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
-               AllArr.AdditionalSymmetry);
+               AllArr.AdditionalSymmetry, std::cerr);
   SetHeuristic(eFull, "DualDescriptionHeuristicFile",
-               AllArr.DualDescriptionProgram);
-  SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet);
-  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet);
-  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality);
-  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave);
+               AllArr.DualDescriptionProgram, std::cerr);
+  SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet, std::cerr);
+  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, std::cerr);
+  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality, std::cerr);
+  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, std::cerr);
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
