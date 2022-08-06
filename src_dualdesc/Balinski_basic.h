@@ -92,6 +92,22 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
 
 
 
+template<typename T>
+MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& vf) {
+  size_t n_cols = FAC.cols();
+  size_t n_vert = vf.size();
+  MyMatrix<T> EXT(n_vert, n_cols);
+  for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
+    Face f = vf[i_vert];
+    MyVector<T> eEXT = FindFacetInequality(FAC, f);
+    for (size_t i_col = 0; i_col < n_cols; i_col++)
+      EXT(i_vert, i_col) = eEXT(i_col);
+  }
+  return EXT;
+}
+
+
+
 /*
   This is the advanced termination criterion.
   This combines a number of approaches:
@@ -117,27 +133,19 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
  */
 template <typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgroup &GRP,
-                                             const vectface &vf, Teval_recur f_recur,
-                                             std::ostream & os) {
+                                             const MyMatrix<T> &EXT_undone, const vectface &vf_undone,
+                                             Teval_recur f_recur, std::ostream & os) {
   using Tint = typename Tgroup::Tint;
   size_t n_rows = FAC.rows();
   size_t n_cols = FAC.cols();
-  size_t n_vert = vf.size();
-  MyMatrix<T> EXT(n_vert, n_cols);
-  os << "  EvaluationConnectednessCriterion : n_cols=" << n_cols << " n_rows=" << n_rows << " n_vert=" << n_vert << "\n";
-  for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
-    Face f = vf[i_vert];
-    MyVector<T> eEXT = FindFacetInequality(FAC, f);
-    for (size_t i_col = 0; i_col < n_cols; i_col++)
-      EXT(i_vert, i_col) = eEXT(i_col);
-  }
+  size_t n_vert = vf_undone.size();
   os << "  We have EXT\n";
   auto rank_vertset = [&](const std::vector<size_t> &elist) -> size_t {
     // Computation of the rank of the set without computing the full set.
     auto f = [&](MyMatrix<T> &M, size_t eRank, size_t iRow) -> void {
       size_t pos = elist[iRow];
       for (size_t i_col = 0; i_col < n_cols; i_col++)
-        M(eRank, i_col) = EXT(pos, i_col);
+        M(eRank, i_col) = EXT_undone(pos, i_col);
     };
     SelectionRowCol<T> eSelect =
         TMat_SelectRowCol_Kernel<T>(elist.size(), n_cols, f);
@@ -165,7 +173,7 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
     for (size_t i = 0; i < n_rows; i++)
       fint[i] = 1;
     for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
-      Face e_vert = vf[i_vert];
+      Face e_vert = vf_undone[i_vert];
       if (is_vert_in_face(e_vert)) {
         list_vert.push_back(i_vert);
         fint &= e_vert;
@@ -232,10 +240,10 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
         return insert_pfr(x, false);
       // Looking at the facets and maybe we can so conclude
       Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
-      vectface vf = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
+      vectface vf_span = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
       auto get_value = [&]() -> bool {
         Tint siz_false = 0;
-        for (auto &eFace : vf) {
+        for (auto &eFace : vf_span) {
           bool val_f = get_face_status({x.first + 1, eFace});
           if (!val_f) {
             Tgroup eStab_B = eStab.Stabilizer_OnSets(eFace);
@@ -266,7 +274,7 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   using T = typename TbasicBank::T;
   using Tgroup = typename TbasicBank::Tgroup;
   using Telt = typename Tgroup::Telt;
-  vectface vf(bb.nbRow);
+  vectface vf_undone(bb.nbRow);
   std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
@@ -277,11 +285,13 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   // Now explicit building of the set of vertices
   typename TbasicBank::iterator iterator = bb.begin_undone();
   while (iterator != bb.end_undone()) {
-    vectface vfo = OrbitFace(*iterator, LGen);
-    for (auto &uFace : vfo)
-      vf.push_back(uFace);
+    vectface vf_orbit = OrbitFace(*iterator, LGen);
+    for (auto &uFace : vf_orbit)
+      vf_undone.push_back(uFace);
     iterator++;
   }
+  MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
+  //
   size_t max_iter = 100;
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
@@ -293,7 +303,7 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
       return false;
     return true;
   };
-  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, vf, f_recur, os);
+  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone, vf_undone, f_recur, os);
 }
 
 
