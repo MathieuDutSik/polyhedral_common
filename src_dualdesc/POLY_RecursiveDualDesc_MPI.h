@@ -474,14 +474,19 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     size_t SelectedOrbit = df.SelectedOrbit;
     std::string NewPrefix =
       ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
-    vectface TheOutput =
-      DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
-    os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
-    for (auto &eOrbB : TheOutput) {
-      Face eFlip = df.flip(eOrbB);
-      fInsertUnsent(eFlip);
+    try {
+      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
+      vectface TheOutput =
+        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+      os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
+      for (auto &eOrbB : TheOutput) {
+        Face eFlip = df.flip(eOrbB);
+        fInsertUnsent(eFlip);
+      }
+      RPL.FuncPutOrbitAsDone(SelectedOrbit);
+    } catch (RuntimeException const &e) {
+      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by runtime exhaustion\n";
     }
-    RPL.FuncPutOrbitAsDone(SelectedOrbit);
     os << "process_database, EXIT\n";
     balinski_flush();
   };
