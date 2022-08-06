@@ -286,8 +286,7 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   typename TbasicBank::iterator iterator = bb.begin_undone();
   while (iterator != bb.end_undone()) {
     vectface vf_orbit = OrbitFace(*iterator, LGen);
-    for (auto &uFace : vf_orbit)
-      vf_undone.push_back(uFace);
+    vf_undone.append(vf_orbit);
     iterator++;
   }
   MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
