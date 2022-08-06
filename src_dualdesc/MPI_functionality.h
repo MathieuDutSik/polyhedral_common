@@ -7,14 +7,16 @@
 #include <vector>
 #include "Timings.h"
 #include "Balinski_basic.h"
+#include "Boost_bitset_kernel.h"
+#include "MAT_Matrix.h"
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
 
 
-
-
-
+/*
+  For the vector, simple syntactic sugar
+ */
 
 template<typename T>
 std::vector<T> my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
@@ -34,6 +36,114 @@ std::vector<T> my_mpi_allgather(boost::mpi::communicator & comm, T const& x) {
   boost::mpi::all_gather<T>(comm, x, V);
   return V;
 }
+
+/*
+  For vectface, a little bit more advanced work
+ */
+
+vectface my_mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
+  int i_rank = comm.rank();
+  size_t n_vert = vf.get_n();
+  size_t n_face = vf.size();
+  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  //
+  std::vector<size_t> l_n_face = my_mpi_gather(comm, n_face, i_proc);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
+  if (i_rank == i_proc) {
+    return vectface(n_vert, l_n_face, l_V);
+  } else {
+    return vectface(n_vert);
+  }
+}
+
+vectface my_mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
+  size_t n_vert = vf.get_n();
+  size_t n_face = vf.size();
+  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  //
+  std::vector<size_t> l_n_face = my_mpi_allgather(comm, n_face);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
+  return vectface(n_vert, l_n_face, l_V);
+}
+
+
+/*
+  For MyMatrix<T>, a little bit more advanced work. We merge the rows together
+ */
+
+template<typename T>
+MyMatrix<T> MergeRows(int const& n_col, std::vector<int> const& l_n_rows, std::vector<std::vector<T>> const& l_V) {
+  int n_row = 0;
+  for (auto & eVal : l_n_rows)
+    n_row += eVal;
+  MyMatrix<T> Mret(n_row, n_col);
+  int pos = 0;
+  for (size_t i=0; i<l_n_rows.size(); i++) {
+    int const& n_rows = l_n_rows[i];
+    std::vector<T> const& V = l_V[i];
+    size_t posV = 0;
+    for (int i_row=0; i_row<n_rows; i_row++) {
+      for (int i_col=0; i_col<n_col; i_col++) {
+        Mret(pos, i_col) = V[posV];
+        posV++;
+      }
+      pos++;
+    }
+  }
+  return Mret;
+}
+
+
+template<typename T>
+MyMatrix<T> my_mpi_gather(boost::mpi::communicator & comm, MyMatrix<T> const& M, int i_proc) {
+  int i_rank = comm.rank();
+  int n_rows = M.rows();
+  int n_cols = M.cols();
+  std::vector<uint8_t> V(n_rows, n_cols);
+  size_t pos=0;
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    for (int i_col=0; i_col<n_cols; i_col++) {
+      V[pos] = M(i_row, i_col);
+      pos++;
+    }
+  }
+  //
+  std::vector<int> l_n_rows = my_mpi_gather(comm, n_rows, i_proc);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
+  if (i_rank == i_proc) {
+    return MergeRows(n_cols, l_n_rows, l_V);
+  } else {
+    return MyMatrix<T>(0, n_cols);
+  }
+}
+
+
+
+template<typename T>
+MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const& M) {
+  int n_rows = M.rows();
+  int n_cols = M.cols();
+  std::vector<uint8_t> V(n_rows, n_cols);
+  size_t pos=0;
+  for (int i_row=0; i_row<n_rows; i_row++) {
+    for (int i_col=0; i_col<n_cols; i_col++) {
+      V[pos] = M(i_row, i_col);
+      pos++;
+    }
+  }
+  //
+  std::vector<int> l_n_rows = my_mpi_allgather(comm, n_rows);
+  std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
+  return MergeRows(n_cols, l_n_rows, l_V);
+}
+
+
+
+
+
+
+
+
 
 
 

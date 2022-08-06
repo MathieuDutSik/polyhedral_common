@@ -297,35 +297,6 @@ vectface MPI_DUALDESC_AdjacencyDecomposition_General(
 
 
 
-vectface my_mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
-  int i_rank = comm.rank();
-  size_t n_vert = vf.get_n();
-  size_t n_face = vf.size();
-  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
-  //
-  std::vector<size_t> l_n_face = my_mpi_gather(comm, n_face, i_proc);
-  std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
-  if (i_rank == i_proc) {
-    return vectface(n_vert, l_n_face, l_V);
-  } else {
-    return vectface(n_vert);
-  }
-}
-
-
-
-vectface my_mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
-  size_t n_vert = vf.get_n();
-  size_t n_face = vf.size();
-  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
-  //
-  std::vector<size_t> l_n_face = my_mpi_allgather(comm, n_face);
-  std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
-  return vectface(n_vert, l_n_face, l_V);
-}
-
-
-
 
 
 /*
