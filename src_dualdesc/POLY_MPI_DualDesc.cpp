@@ -57,8 +57,13 @@ int main(int argc, char *argv[]) {
     process();
     //
     std::cerr << "Normal termination of the program runtime=" << si(start) << "\n";
-  } catch (TerminalException const &e) {
+  }
+  catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of the program runtime=" << si(start) << "\n";
+    exit(e.eVal);
+  }
+  catch (RuntimeException const &e) {
+    std::cerr << "Runtime termination of the program runtime=" << si(start) << "\n";
     exit(e.eVal);
   }
 }
