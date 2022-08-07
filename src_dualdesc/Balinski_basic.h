@@ -289,10 +289,11 @@ template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
                                              std::ostream & os) {
   using T = typename TbasicBank::T;
+  using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
-  size_t max_siz = 1000;
+  Tint max_siz = 1000;
   if (bb.foc.nbUndone > max_siz)
     return false;
   // Now explicit building of the set of vertices

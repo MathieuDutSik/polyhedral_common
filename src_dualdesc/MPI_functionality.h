@@ -138,12 +138,55 @@ MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const&
 }
 
 
+/*
+  For T, compute the sum of all the elements
+ */
+
+template<typename T>
+T my_mpi_allreduce_sum(boost::mpi::communicator & comm, T const& x) {
+  std::vector<T> V;
+  boost::mpi::all_gather<T>(comm, x, V);
+  T sum = V[0];
+  for (size_t i=1; i<V.size(); i++)
+    sum += V[i];
+  return sum;
+}
 
 
 
 
 
-
+template <typename TbasicBank>
+bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, TbasicBank const& bb,
+                                          std::ostream & os) {
+  using T = typename TbasicBank::T;
+  using Tint = typename TbasicBank::Tint;
+  // We need an heuristic to avoid building too large orbits.
+  // A better system would have to balance out the cost of
+  // doing that check with respect to the dual description itsef.
+  Tint max_siz = 1000;
+  Tint nbUndone_tot = my_mpi_allreduce_sum(comm, bb.foc.nbUndone);
+  if (nbUndone_tot > max_siz)
+    return false;
+  vectface vf_undone_loc = ComputeSetUndone(bb);
+  vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
+  //
+  MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(bb.EXT, vf_undone_loc);
+  MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
+  // Every processor is computing the adjacency stuff. Fairly inefficient but ok for the time being.
+  size_t max_iter = 100;
+  size_t n_iter = 0;
+  auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
+    n_iter++;
+    os << "  f_recur n_iter=" << n_iter << "\n";
+    if (n_iter == max_iter)
+      return false;
+    if (pfr.first > 1)
+      return false;
+    return true;
+  };
+  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone_tot, vf_undone_tot, f_recur, os);
+}
 
 
 
