@@ -19,7 +19,7 @@
  */
 
 template<typename T>
-std::vector<T> my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
+inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
   int i_rank = comm.rank();
   std::vector<T> V;
   if (i_rank == i_proc) {
@@ -31,7 +31,7 @@ std::vector<T> my_mpi_gather(boost::mpi::communicator & comm, T const& x, int co
 }
 
 template<typename T>
-std::vector<T> my_mpi_allgather(boost::mpi::communicator & comm, T const& x) {
+inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_mpi_allgather(boost::mpi::communicator & comm, T const& x) {
   std::vector<T> V;
   boost::mpi::all_gather<T>(comm, x, V);
   return V;
@@ -123,7 +123,7 @@ template<typename T>
 MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const& M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
-  std::vector<uint8_t> V(n_rows, n_cols);
+  std::vector<T> V(n_rows, n_cols);
   size_t pos=0;
   for (int i_row=0; i_row<n_rows; i_row++) {
     for (int i_col=0; i_col<n_cols; i_col++) {
@@ -133,7 +133,7 @@ MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const&
   }
   //
   std::vector<int> l_n_rows = my_mpi_allgather(comm, n_rows);
-  std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
+  std::vector<std::vector<T>> l_V = my_mpi_allgather(comm, V);
   return MergeRows(n_cols, l_n_rows, l_V);
 }
 
