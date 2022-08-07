@@ -92,6 +92,23 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
 
 
 
+template <typename TbasicBank>
+vectface ComputeSetUndone(TbasicBank const& bb) {
+  vectface vf_undone(bb.nbRow);
+  using Tgroup = typename TbasicBank::Tgroup;
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
+  typename TbasicBank::iterator iter = bb.begin_undone();
+  while (iter != bb.end_undone()) {
+    vectface vf_orbit = OrbitFace(*iter, LGen);
+    vf_undone.append(vf_orbit);
+    iter++;
+  }
+  return vf_undone;
+}
+
+
+
 template<typename T>
 MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& vf) {
   size_t n_cols = FAC.cols();
@@ -272,10 +289,6 @@ template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
                                              std::ostream & os) {
   using T = typename TbasicBank::T;
-  using Tgroup = typename TbasicBank::Tgroup;
-  using Telt = typename Tgroup::Telt;
-  vectface vf_undone(bb.nbRow);
-  std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
@@ -283,12 +296,7 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   if (bb.foc.nbUndone > max_siz)
     return false;
   // Now explicit building of the set of vertices
-  typename TbasicBank::iterator iterator = bb.begin_undone();
-  while (iterator != bb.end_undone()) {
-    vectface vf_orbit = OrbitFace(*iterator, LGen);
-    vf_undone.append(vf_orbit);
-    iterator++;
-  }
+  vectface vf_undone = ComputeSetUndone(bb);
   MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
   //
   size_t max_iter = 100;
