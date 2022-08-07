@@ -60,8 +60,6 @@ inline void serialize(Archive &ar, message_query &mesg,
   ---A termination check (from runtime or Ctrl-C) has to be handled.
   ---Computation of existing with a call to the serial code. Should be modelled
   on the C-type code.
-
-
  */
 template <typename Tbank, typename TbasicBank, typename T, typename Tgroup, typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
@@ -179,9 +177,42 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     os << "process_database, EXIT\n";
   };
+  auto get_maxruntimereached=[&]() -> bool {
+    return AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
+  };
+  auto send_termination_notice=[&]() -> void {
+    // This function should be passed only one time.
+    // It says to the receiving nodes: "You wil never ever received anything more from me"
+    os << "Sending messages for terminating the run\n";
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      if (i_proc == i_rank) {
+        StatusNeighbors[i_rank] = 1;
+      } else {
+        os << "Before send_message at i_proc=" << i_proc << "\n";
+        emm_termin.send_message(i_proc);
+        os << "After send_message\n";
+      }
+    }
+  };
+  auto test_exit_loop=[&]() -> bool {
+    int nb_finished = 0;
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      os << "i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
+      nb_finished += StatusNeighbors[i_proc];
+    }
+    os << "nb_finished=" << nb_finished << "\n";
+    return nb_finished == n_proc;
+  };
+  bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
-    bool MaxRuntimeReached = AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
+    bool MaxRuntimeReached = get_maxruntimereached();
+    if (MaxRuntimeReached && !HasSendTermination) {
+      if (bte_facet.get_unsent_size() == 0) {
+        HasSendTermination = true;
+        send_termination_notice();
+      }
+    }
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
     os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
@@ -205,37 +236,18 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           os << "Calling clear_one_entry\n";
           bte_facet.clear_one_entry(os);
         } else {
-          os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
-          boost::mpi::status stat = comm.probe();
-          process_mpi_status(stat);
-        }
-      }
-    }
-    //
-    // Sending termination criterion
-    //
-    if (MaxRuntimeReached && StatusNeighbors[i_rank] == 0) {
-      os << "Sending messages for terminating the run\n";
-      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-        if (i_proc == i_rank) {
-          StatusNeighbors[i_rank] = 1;
-        } else {
-          os << "Before send_message at i_proc=" << i_proc << "\n";
-          emm_termin.send_message(i_proc);
-          os << "After send_message\n";
+          if (!HasSendTermination) {
+            os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
+            boost::mpi::status stat = comm.probe();
+            process_mpi_status(stat);
+          }
         }
       }
     }
     //
     // Termination criterion
     //
-    int nb_finished = 0;
-    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-      os << "i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
-      nb_finished += StatusNeighbors[i_proc];
-    }
-    os << "nb_finished=" << nb_finished << "\n";
-    if (nb_finished == n_proc)
+    if (test_exit_loop())
       break;
     os << "End of the while loop, continuing\n";
   }
