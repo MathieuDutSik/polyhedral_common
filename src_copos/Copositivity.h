@@ -386,7 +386,7 @@ void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, std::
     os << ");\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "WriteSingleTestResult: Failed to find a matching entry\n";
   throw TerminalException{1};
 }
 
@@ -448,7 +448,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
     os << ");\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "WriteCopositivityEnumResult: Failed to find a matching entry\n";
   throw TerminalException{1};
 }
 

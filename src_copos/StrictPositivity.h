@@ -217,7 +217,7 @@ void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat,
     os << ");\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry for output\n";
+  std::cerr << "WriteStrictPositivityResult: Failed to find a matching entry for output\n";
   throw TerminalException{1};
 }
 

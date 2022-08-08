@@ -1399,7 +1399,8 @@ vectface DUALDESC_AdjacencyDecomposition(
                                                       Tidx_value, TbasicBank>(
             TheBank, bb, AllArr, MainPrefix, TheMap, os);
       }
-      std::cerr << "Failed to find a matching entry\n";
+      std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
+      std::cerr << "Authorized values: canonic, repr\n";
       throw TerminalException{1};
     }
   };
