@@ -88,6 +88,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     uint32_t seed = 0x1b873560;
     return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
   };
+  if (AllArr.max_runtime < 0) {
+    std::cerr << "The MPI version requires a strictly positive runtime\n";
+    throw TerminalException{1};
+  }
   //
   // The types of exchanges
   //
@@ -178,7 +182,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "process_database, EXIT\n";
   };
   auto get_maxruntimereached=[&]() -> bool {
-    return AllArr.max_runtime > 0 && si(start) > AllArr.max_runtime;
+    return si(start) > AllArr.max_runtime;
   };
   auto send_termination_notice=[&]() -> void {
     // This function should be passed only one time.
@@ -236,10 +240,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           os << "Calling clear_one_entry\n";
           bte_facet.clear_one_entry(os);
         } else {
-          if (!HasSendTermination) {
-            os << "Nothing to do, so we do a blocking wait (This avoids busy wait)\n";
-            boost::mpi::status stat = comm.probe();
-            process_mpi_status(stat);
+          os << "Nothing to do, entering the busy loop\n";
+          while (!get_maxruntimereached()) {
+            boost::optional<boost::mpi::status> prob = comm.iprobe();
+            if (prob) {
+              process_mpi_status(*prob);
+              break;
+            }
           }
         }
       }

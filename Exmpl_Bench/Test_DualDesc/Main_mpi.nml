@@ -4,7 +4,7 @@
  EXTfile = "Example_07_CUT7.ext"
  GRPfile = "Example_07_CUT7.grp"
  OUTfile = "Result"
- max_runtime = -1
+ max_runtime = 60
  AdvancedTerminationCriterion = T
 /
 
