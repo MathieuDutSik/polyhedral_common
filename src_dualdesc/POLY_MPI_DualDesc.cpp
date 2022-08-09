@@ -64,6 +64,5 @@ int main(int argc, char *argv[]) {
   }
   catch (RuntimeException const &e) {
     std::cerr << "Runtime termination of the program runtime=" << si(start) << "\n";
-    exit(0);
   }
 }
