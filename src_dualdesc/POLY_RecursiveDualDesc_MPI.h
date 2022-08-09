@@ -265,7 +265,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             process_mpi_status(stat);
           }
           */
-          while (!get_maxruntimereached()) {
+          
+          // do while, such that we also sleep after maxruntimereached
+          // to prevent log spam when other threads are still working
+          do {
             boost::optional<boost::mpi::status> prob = comm.iprobe();
             if (prob) {
               process_mpi_status(*prob);
@@ -273,7 +276,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             }
             int n_milliseconds = 1000;
             std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
-          }
+          } while (!get_maxruntimereached()); 
+
         }
       }
     }
@@ -342,6 +346,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, os);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull, os);
+  srand(time(NULL)+12345*i_rank);
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   //
