@@ -9,20 +9,20 @@
 #include "Permutation.h"
 
 template <typename T, typename Tidx>
-void Process_eFull(FullNamelist const &eFull) {
+void Process_eFull(boost::mpi::communicator & comm, FullNamelist const &eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint>;
   //    using Tidx_value = int16_t;
   using Tidx_value = int32_t;
-  boost::mpi::communicator world;
-  MPI_MainFunctionDualDesc<T, Tgroup, Tidx_value>(world, eFull);
+  MPI_MainFunctionDualDesc<T, Tgroup, Tidx_value>(comm, eFull);
 }
 
 int main(int argc, char *argv[]) {
+  boost::mpi::environment env;
+  boost::mpi::communicator world;
   SingletonTime start;
   try {
-    boost::mpi::environment env;
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -42,14 +42,14 @@ int main(int argc, char *argv[]) {
     //
     auto process = [&]() -> void {
       if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
-        return Process_eFull<T, uint8_t>(eFull);
+        return Process_eFull<T, uint8_t>(world, eFull);
       if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
-        return Process_eFull<T, uint16_t>(eFull);
+        return Process_eFull<T, uint16_t>(world, eFull);
       if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
-        return Process_eFull<T, uint32_t>(eFull);
+        return Process_eFull<T, uint32_t>(world, eFull);
 #if !defined __APPLE__
       if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
-        return Process_eFull<T, uint64_t>(eFull);
+        return Process_eFull<T, uint64_t>(world, eFull);
 #endif
       std::cerr << "Failed to find a numeric type that matches\n";
       throw TerminalException{1};
@@ -64,6 +64,6 @@ int main(int argc, char *argv[]) {
   }
   catch (RuntimeException const &e) {
     std::cerr << "Runtime termination of the program runtime=" << si(start) << "\n";
-    exit(e.eVal);
+    exit(0);
   }
 }
