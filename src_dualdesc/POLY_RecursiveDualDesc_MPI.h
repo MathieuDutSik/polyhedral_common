@@ -282,7 +282,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     if (get_nb_finished() == n_proc)
       break;
-    os << "End of the while loop, continuing\n";
+    os << "End of the while loop. From start=" << si(start) << "\n";
   }
   os << "We just exited the infinite loop\n";
   bool test_termination = EvaluationConnectednessCriterion_MPI(comm, bb, os);
@@ -295,7 +295,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     throw RuntimeException{1};
   }
 }
-
 
 
 template<typename T>

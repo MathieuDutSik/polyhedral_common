@@ -123,7 +123,7 @@ template<typename T>
 MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const& M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
-  std::vector<T> V(n_rows, n_cols);
+  std::vector<T> V(n_rows * n_cols);
   size_t pos=0;
   for (int i_row=0; i_row<n_rows; i_row++) {
     for (int i_col=0; i_col<n_cols; i_col++) {
@@ -159,21 +159,28 @@ T my_mpi_allreduce_sum(boost::mpi::communicator & comm, T const& x) {
 template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, TbasicBank const& bb,
                                           std::ostream & os) {
+  os << "EvaluationConnectednessCriterion_MPI, step 1\n";
   using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
   Tint max_siz = 1000;
+  os << "EvaluationConnectednessCriterion_MPI, step 2 nbUndone=" << bb.foc.nbUndone << "\n";
   Tint nbUndone_tot = my_mpi_allreduce_sum(comm, bb.foc.nbUndone);
+  os << "nbUndone_tot=" << nbUndone_tot << "\n";
   if (nbUndone_tot > max_siz)
     return false;
+  os << "EvaluationConnectednessCriterion_MPI, step 3\n";
   vectface vf_undone_loc = ComputeSetUndone(bb);
   vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
   //
+  os << "EvaluationConnectednessCriterion_MPI, step 4\n";
   MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(bb.EXT, vf_undone_loc);
+  os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
   MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
   // Every processor is computing the adjacency stuff. Fairly inefficient but ok for the time being.
+  os << "EvaluationConnectednessCriterion_MPI, step 5\n";
   size_t max_iter = 100;
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
@@ -185,6 +192,7 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, Tbasi
       return false;
     return true;
   };
+  os << "EvaluationConnectednessCriterion_MPI, step 6\n";
   return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone_tot, vf_undone_tot, f_recur, os);
 }
 
