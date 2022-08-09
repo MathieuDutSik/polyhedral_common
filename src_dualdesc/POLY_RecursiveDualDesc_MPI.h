@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 struct message_facet {
   size_t e_hash;
@@ -80,6 +82,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "DirectFacetOrbitComputation, step 1\n";
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
+  bool HasReachedRuntimeException = false;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
   auto get_hash=[&](Face const& x) -> size_t {
     for (int i_vert=0; i_vert<n_vert; i_vert++) {
@@ -177,11 +180,14 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
     } catch (RuntimeException const &e) {
+      HasReachedRuntimeException = true;
       os << "The computation of DUALDESC_AdjacencyDecomposition has ended by runtime exhaustion\n";
     }
     os << "process_database, EXIT\n";
   };
   auto get_maxruntimereached=[&]() -> bool {
+    if (HasReachedRuntimeException)
+      return true;
     return si(start) > AllArr.max_runtime;
   };
   auto send_termination_notice=[&]() -> void {
@@ -198,14 +204,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
   };
-  auto test_exit_loop=[&]() -> bool {
+  auto get_nb_finished=[&]() -> int {
     int nb_finished = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-      os << "i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
+      os << "get_nb_finished : i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
       nb_finished += StatusNeighbors[i_proc];
     }
     os << "nb_finished=" << nb_finished << "\n";
-    return nb_finished == n_proc;
+    return nb_finished;
+  };
+  auto get_nb_finished_oth=[&]() -> int {
+    int nb_finished_oth = 0;
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      if (i_proc != i_rank) {
+        os << "get_nb_finished_oth : i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
+        nb_finished_oth += StatusNeighbors[i_proc];
+      }
+    }
+    os << "nb_finished_oth=" << nb_finished_oth << "\n";
+    return nb_finished_oth;
   };
   bool HasSendTermination = false;
   while (true) {
@@ -240,13 +257,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           os << "Calling clear_one_entry\n";
           bte_facet.clear_one_entry(os);
         } else {
-          os << "Nothing to do, entering the busy loop\n";
+          int nb_finished_oth = get_nb_finished_oth();
+          os << "Nothing to do, entering the busy loop status=" << get_maxruntimereached() << " get_nb_finished_oth()=" << nb_finished_oth << "\n";
+          /*
+          if (!get_maxruntimereached() || nb_finished_oth < n_proc - 1) {
+            boost::mpi::status stat = comm.probe();
+            process_mpi_status(stat);
+          }
+          */
           while (!get_maxruntimereached()) {
             boost::optional<boost::mpi::status> prob = comm.iprobe();
             if (prob) {
               process_mpi_status(*prob);
               break;
             }
+            int n_milliseconds = 1000;
+            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
           }
         }
       }
@@ -254,7 +280,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     //
     // Termination criterion
     //
-    if (test_exit_loop())
+    if (get_nb_finished() == n_proc)
       break;
     os << "End of the while loop, continuing\n";
   }

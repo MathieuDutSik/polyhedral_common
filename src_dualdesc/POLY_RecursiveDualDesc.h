@@ -1293,6 +1293,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix, std::ostream & os) {
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
+  os << "Beginning of DUALDESC_AdjacencyDecomposition\n";
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
@@ -1409,14 +1410,18 @@ vectface DUALDESC_AdjacencyDecomposition(
   TheMap["time"] = s(start, end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
   os << "elapsed_seconds=" << s(start, end) << " ansBank=" << ansBank
-            << " NeedSplit=" << NeedSplit << "\n";
+     << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
+    os << "Before insert_entry_in_bank\n";
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,
                          BankSymmCheck, ListOrbitFaces);
   }
+  os << "Before return section\n";
   if (NeedSplit) {
+    os << "Before OrbitSplittingListOrbit\n";
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, os);
   } else {
+    os << "Returning ListOrbitFaces\n";
     return ListOrbitFaces;
   }
 }
