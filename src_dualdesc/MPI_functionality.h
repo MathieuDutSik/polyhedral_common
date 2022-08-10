@@ -165,6 +165,13 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, Tbasi
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
+  //
+  // We need to terminate the check if no orbit has been done.
+  size_t nbOrbitDone_tot = 0, nbOrbitDone_loc = bb.foc.nbOrbitDone;
+  all_reduce(comm, nbOrbitDone_loc, nbOrbitDone_tot, boost::mpi::maximum<size_t>());
+  if (nbOrbitDone_tot == 0)
+    return false;
+  // In order for the check not to be too expensive, we limit ourselves to 1000
   Tint max_siz = 1000;
   os << "EvaluationConnectednessCriterion_MPI, step 2 nbUndone=" << bb.foc.nbUndone << "\n";
   Tint nbUndone_tot = my_mpi_allreduce_sum(comm, bb.foc.nbUndone);

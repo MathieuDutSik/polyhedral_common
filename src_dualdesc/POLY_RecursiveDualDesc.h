@@ -1180,9 +1180,6 @@ public:
        << " |stab|=" << data.Stab.size() << "\n";
     return data;
   }
-  bool attempt_connectedness_scheme() const {
-    return EvaluationConnectednessCriterion_Serial(bb, os);
-  }
   bool GetTerminationStatus() const {
     if (bb.foc.nbOrbitDone > 0) {
       Face eSetUndone = ComputeIntersectionUndone();
@@ -1195,7 +1192,7 @@ public:
       }
     }
     if (AdvancedTerminationCriterion)
-      return attempt_connectedness_scheme();
+      return EvaluationConnectednessCriterion_Serial(bb, os);
     return false;
   }
   UndoneOrbitInfo<Tint> GetTerminationInfo() const {

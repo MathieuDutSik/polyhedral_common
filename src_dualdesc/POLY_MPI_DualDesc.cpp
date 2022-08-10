@@ -19,6 +19,12 @@ void Process_eFull(boost::mpi::communicator & comm, FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
+  // The construction is relatively subtle.
+  // ---We need to have the env and comm on top.
+  // ---This is because throwing an exception that goes
+  // outside of the lifetime of world creates a MPI_ABORT.
+  // ---We should also avoid using exit when terminating
+  // because it makes an unscheduled destruction of the communicator.
   boost::mpi::environment env;
   boost::mpi::communicator world;
   SingletonTime start;

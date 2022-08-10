@@ -294,7 +294,9 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
   Tint max_siz = 1000;
-  if (bb.foc.nbUndone > max_siz)
+  //  os << "nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit << "\n";
+  //  os << "nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" << bb.foc.TotalNumber << "\n";
+  if (bb.foc.nbOrbitDone == 0 || bb.foc.nbUndone > max_siz)
     return false;
   // Now explicit building of the set of vertices
   vectface vf_undone = ComputeSetUndone(bb);
