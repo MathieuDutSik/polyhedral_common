@@ -321,6 +321,10 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 ComputeReductionIndefinitePermSign(MyMatrix<T> const &M) {
+  if (M.rows() == 1) {
+    MyMatrix<Tint> eP = IdentityMat<Tint>(1);
+    return {std::move(eP), M};
+  }
   ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M);
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred);
