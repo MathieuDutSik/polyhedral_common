@@ -327,6 +327,19 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 
 
 
+template<typename Tidx>
+std::vector<size_t,size_t> get_delta(const std::map<Tidx, int> &LFact, const size_t &n_act) {
+  size_t n_factor = 1;
+  for (auto &kv : LFact) {
+    n_factor *= (1 + kv.second);
+  }
+  /* TRICK 4: We need to add 1 because of shift by 1 in the OrbSize_Map */
+  size_t n_bit_orbsize = get_matching_power(n_factor + 1);
+  size_t delta = n_bit_orbsize + n_act;
+  return {n_bit_orbsize, delta};
+}
+
+
 template <typename Tint, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
@@ -503,13 +516,9 @@ public:
     nbOrbitDone = 0;
     nbUndone = 0;
     nbOrbit = 0;
-    size_t n_factor = 1;
-    for (auto &kv : LFact) {
-      n_factor *= (1 + kv.second);
-    }
-    /* TRICK 4: We need to add 1 because of shift by 1 in the OrbSize_Map */
-    n_bit_orbsize = get_matching_power(n_factor + 1);
-    delta = n_bit_orbsize + n_act;
+    std::vector<size_t,size_t> ep = get_delta(LFact, n_act);
+    n_bit_orbsize = ep.first;
+    delta = ep.second;
     ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
     Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
