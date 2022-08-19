@@ -44,22 +44,25 @@ int main(int argc, char *argv[]) {
     std::vector<FileBool*> List_FB(NprocO, nullptr);
     std::vector<FileFace*> List_FF(NprocO, nullptr);
     for (int iProc=0; iProc<NprocO; iProc++) {
-      std::string MainPrefix = DatabaseO + "_todo";
-      std::string eFileFN = MainPrefix + ".nb";
-      std::string eFileFB = MainPrefix + ".fb";
-      std::string eFileFF = MainPrefix + ".ff";
+      std::string eDir = DatabaseO;
+      update_path_using_nproc_iproc(eDir, NprocO, iProc);
+      CreateDirectory(eDir);
+      std::string eFileFN = eDir + "database.nb";
+      std::string eFileFB = eDir + "database.fb";
+      std::string eFileFF = eDir + "database.ff";
       List_FN[iProc] = new FileNumber(eFileNB, true);
       List_FB[iProc] = new FileBool(eFileFB);
       List_FF[iProc] = new FileFace(eFileFF, delta);
     }
     //
-    // Now reading and preprocessing it
+    // Now reading process by process and remapping via hash.
     //
     for (int iProc=0; iProc<NprocI; iProc++) {
-      std::string MainPrefix = DatabaseI + "_todo";
-      std::string eFileFN = MainPrefix + ".nb";
-      std::string eFileFB = MainPrefix + ".fb";
-      std::string eFileFF = MainPrefix + ".ff";
+      std::string eDir = DatabaseI;
+      update_path_using_nproc_iproc(eDir, NprocI, iProc);
+      std::string eFileFN = eDir + "database.nb";
+      std::string eFileFB = eDir + "database.fb";
+      std::string eFileFF = eDir + "database.ff";
       FileNumber fn(eFileFN, false);
       size_t n_orbit = fn.getval();
       FileBool fb(eFileFB, n_orbit);
@@ -68,9 +71,16 @@ int main(int argc, char *argv[]) {
         Face f = ff.getface(pos);
         bool val = fb.getbit(pos);
         Face f_res(n_act);
+        for (Tidx u=0; u<n_act; u++)
+          f_res[u] = f[u];
+        size_t e_hash = mpi_get_hash(f_res);
+        size_t iProcO = e_hash % size_t(NprocO);
+        size_t & shift = List_shift[iProcO];
+        List_FB[iProcO]->setbit(shift, val);
+        List_FF[iProcO]->setface(shift, f);
+        shift++;
       }
     }
-
     //
     // Now writing the n_orbit to the fileNB
     //

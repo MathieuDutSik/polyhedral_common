@@ -49,6 +49,23 @@ inline void serialize(Archive &ar, message_query &mesg,
 
 
 
+size_t mpi_get_hash_kernel(Face const& x, std::vector<uint8_t> & V_hash) {
+  size_t n_vert = x.size();
+  for (int i_vert=0; i_vert<n_vert; i_vert++)
+    setbit(V_hash, i_vert, x[i_vert]);
+  uint32_t seed = 0x1b873560;
+  return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
+}
+
+size_t mpi_get_hash(Face const& x) {
+  size_t n_vert = x.size();
+  int n_vert_div8 = (n_vert + 7) / 8;
+  std::vector<uint8_t> V_hash(n_vert_div8,0);
+  return mpi_get_hash_kernel(x, V_hash);
+}
+
+
+
 /*
   This is the code for the MPI parallelization.
   Since the first attempt (see above) was maybe too complicated.
@@ -75,21 +92,17 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string lPrefix = ePrefix + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::string lPrefix = ePrefix + "database";
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
   Tint CritSiz = RPL.CritSiz;
   UndoneOrbitInfo<Tint> uoi_local;
   os << "DirectFacetOrbitComputation, step 1\n";
+  bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
-  bool HasReachedRuntimeException = false;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
   auto get_hash=[&](Face const& x) -> size_t {
-    for (int i_vert=0; i_vert<n_vert; i_vert++) {
-      setbit(V_hash, i_vert, x[i_vert]);
-    }
-    uint32_t seed = 0x1b873560;
-    return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
+    return mpi_get_hash_kernel(x, V_hash);
   };
   if (AllArr.max_runtime < 0) {
     std::cerr << "The MPI version requires a strictly positive runtime\n";
@@ -301,21 +314,26 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 }
 
 
+void update_path_using_nproc_iproc(std::string & str_ref, int const& n_proc, int const& i_rank) {
+  std::string postfix = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+  size_t len = str_ref.size();
+  std::string part1 = str_ref.substr(0,len-1);
+  std::string part2 = str_ref.substr(len-1,1);
+  if (part2 != "/") {
+    std::cerr << "str_ref=" << str_ref << "\n";
+    std::cerr << "Last character should be a /\n";
+    throw TerminalException{1};
+  }
+  str_ref = part1 + postfix + part2;
+}
+
+
 template<typename T>
 void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> & AllArr) {
   int n_proc = comm.size();
   int i_rank = comm.rank();
-  std::string postfix = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
   auto update_string=[&](std::string & str_ref) -> void {
-    size_t len = str_ref.size();
-    std::string part1 = str_ref.substr(0,len-1);
-    std::string part2 = str_ref.substr(len-1,1);
-    if (part2 != "/") {
-      std::cerr << "str_ref=" << str_ref << "\n";
-      std::cerr << "Last character should be a /\n";
-      throw TerminalException{1};
-    }
-    str_ref = part1 + postfix + part2;
+    update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
     CreateDirectory(str_ref);
   };
   update_string(AllArr.BANK_Prefix);
