@@ -328,7 +328,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 
 
 template<typename Tidx>
-std::vector<size_t,size_t> get_delta(const std::map<Tidx, int> &LFact, const size_t &n_act) {
+std::pair<size_t,size_t> get_delta(const std::map<Tidx, int> &LFact, const size_t &n_act) {
   size_t n_factor = 1;
   for (auto &kv : LFact) {
     n_factor *= (1 + kv.second);
@@ -516,7 +516,7 @@ public:
     nbOrbitDone = 0;
     nbUndone = 0;
     nbOrbit = 0;
-    std::vector<size_t,size_t> ep = get_delta(LFact, n_act);
+    std::pair<size_t,size_t> ep = get_delta(LFact, n_act);
     n_bit_orbsize = ep.first;
     delta = ep.second;
     ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);

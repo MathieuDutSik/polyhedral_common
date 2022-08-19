@@ -1,11 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "NumberTheoryBoostCppInt.h"
-#include "NumberTheoryBoostGmpInt.h"
-//#include "NumberTheory.h"
 #include "Group.h"
-#include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "POLY_RecursiveDualDesc_MPI.h"
 #include "Permutation.h"
 
 int main(int argc, char *argv[]) {
@@ -34,7 +31,7 @@ int main(int argc, char *argv[]) {
     Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
     std::map<Tidx,int> LFact = GRP.factor_size();
     Tidx n_act = GRP.n_act();
-    std::vector<size_t,size_t> ep = get_delta(LFact, n_act);
+    std::pair<size_t,size_t> ep = get_delta(LFact, n_act);
     size_t delta = ep.second;
     //
     // Now the streams
@@ -50,7 +47,7 @@ int main(int argc, char *argv[]) {
       std::string eFileFN = eDir + "database.nb";
       std::string eFileFB = eDir + "database.fb";
       std::string eFileFF = eDir + "database.ff";
-      List_FN[iProc] = new FileNumber(eFileNB, true);
+      List_FN[iProc] = new FileNumber(eFileFN, true);
       List_FB[iProc] = new FileBool(eFileFB);
       List_FF[iProc] = new FileFace(eFileFF, delta);
     }

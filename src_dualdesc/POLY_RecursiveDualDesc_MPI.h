@@ -49,9 +49,9 @@ inline void serialize(Archive &ar, message_query &mesg,
 
 
 
-size_t mpi_get_hash_kernel(Face const& x, std::vector<uint8_t> & V_hash) {
+size_t mpi_get_hash_kernel(Face const& x, int const& n_vert_div8, std::vector<uint8_t> & V_hash) {
   size_t n_vert = x.size();
-  for (int i_vert=0; i_vert<n_vert; i_vert++)
+  for (size_t i_vert=0; i_vert<n_vert; i_vert++)
     setbit(V_hash, i_vert, x[i_vert]);
   uint32_t seed = 0x1b873560;
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
@@ -61,7 +61,7 @@ size_t mpi_get_hash(Face const& x) {
   size_t n_vert = x.size();
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
-  return mpi_get_hash_kernel(x, V_hash);
+  return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
 }
 
 
@@ -102,7 +102,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8,0);
   auto get_hash=[&](Face const& x) -> size_t {
-    return mpi_get_hash_kernel(x, V_hash);
+    return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
   };
   if (AllArr.max_runtime < 0) {
     std::cerr << "The MPI version requires a strictly positive runtime\n";
