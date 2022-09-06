@@ -1296,6 +1296,7 @@ gen_fund_domain_fund_info(CuspidalBank<T, Tint> &cusp_bank,
 template <typename T, typename Tint> struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   std::vector<FundDomainVertex<T, Tint>> l_orbit_vertices;
+  LorentzianFinitenessGroupTester<T, Tint> group_tester;
   std::optional<bool> is_reflective;
 };
 
@@ -1425,6 +1426,14 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
         os << ", is_reflective:=false";
       }
     }
+    os << ", group_tester:=rec(InvariantBasis:=";
+    WriteMatrixGAP(os, re.group_tester.get_invariant_basis());
+    os << ", max_finite_order:=" << re.group_tester.get_max_finite_order();
+    DiagSymMat<T> DiagInfo = re.group_tester.get_diag_info();
+    os << ", nbZero:=" << DiagInfo.nbZero;
+    os << ", nbPlus:=" << DiagInfo.nbPlus;
+    os << ", nbMinus:=" << DiagInfo.nbMinus;
+    os << ", is_finite:=" << re.group_tester.get_finiteness_status() << ")";
     os << ", ListVertices:=[";
     bool IsFirst = true;
     for (size_t i = 0; i < n_orbit_vertices; i++) {
@@ -1744,9 +1753,8 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
 
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   std::optional<bool> is_reflective;
-  std::optional<LorentzianFinitenessGroupTester<T, Tint>> group_tester;
+  LorentzianFinitenessGroupTester<T, Tint> group_tester = LorentzianFinitenessGroupTester<T, Tint>(G);
   if (EarlyTerminationIfNotReflective) {
-    group_tester = LorentzianFinitenessGroupTester<T, Tint>(G);
     is_reflective = true;
   }
   int nonew_nbdone = 0;
@@ -1822,10 +1830,9 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
-    if (group_tester) {
-      std::cerr << "Inserting new generator eP=" << StringMatrixGAP(eP) << "\n";
-      group_tester->GeneratorUpdate(eP);
-      if (!group_tester->get_finiteness_status()) {
+    group_tester.GeneratorUpdate(eP);
+    if (is_reflective) {
+      if (!group_tester.get_finiteness_status()) {
         is_reflective = false;
         return true;
       }
@@ -1840,7 +1847,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   for (auto &e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
   return {std::move(l_gen_isom_cox), std::move(l_orbit_vertices_ret),
-          is_reflective};
+          group_tester, is_reflective};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2296,7 +2303,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
                    "EarlyTerminationIfNotReflective = F\n";
       std::cerr << "this is actually a runtime error\n";
     }
-    ResultEdgewalk<T, Tint> re{{}, {}, false};
+    ResultEdgewalk<T, Tint> re{{}, {}, LorentzianFinitenessGroupTester<T,Tint>(G), false};
     print_result_edgewalk(re);
   }
   std::cerr << "We are after the PrintResultEdgewalk\n";

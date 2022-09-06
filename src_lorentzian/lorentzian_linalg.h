@@ -615,10 +615,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
         InvariantBasis = MyMatrix<Tint>(0, G.rows());
       } else {
         InvariantBasis = NSP * InvariantBasis;
-        MyMatrix<T> InvariantBasis_T =
-            UniversalMatrixConversion<T, Tint>(InvariantBasis);
-        MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
-        DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+        DiagSymMat<T> DiagInfo = get_diag_info();
         if (DiagInfo.nbMinus == 0) {
           is_finite = false;
         }
@@ -629,6 +626,14 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     std::cerr << "Timing |InvariantSpace|=" << ms(time2, time3) << "\n";
 #endif
   }
+  DiagSymMat<T> get_diag_info() const {
+    MyMatrix<T> InvariantBasis_T = UniversalMatrixConversion<T, Tint>(InvariantBasis);
+    MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
+    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+    return DiagInfo;
+  }
+  size_t get_max_finite_order() const { return max_finite_order; }
+  MyMatrix<Tint> const& get_invariant_basis() const { return InvariantBasis; }
   bool get_finiteness_status() const { return is_finite; }
   std::string get_infos() const {
     return std::string("(dim=") + std::to_string(InvariantBasis.rows()) + "/" +
