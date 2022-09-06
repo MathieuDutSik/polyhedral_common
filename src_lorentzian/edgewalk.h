@@ -27,6 +27,22 @@
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
+template<typename F>
+void generic_print_to_file(std::string const& FileOut, F f)
+{
+  if (FileOut == "stderr") {
+    f(std::cerr);
+  } else {
+    if (FileOut == "stdout") {
+      f(std::cout);
+    } else {
+      std::ofstream os(FileOut);
+      f(os);
+    }
+  }
+}
+
+
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
@@ -2266,19 +2282,10 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
         BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
     std::cerr << "OutFormat=" << OutFormat << " FileOut=" << FileOut
               << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
-    if (FileOut == "stderr") {
-      std::cerr << "PrintResultEdgewalk to stderr\n";
-      PrintResultEdgewalk(G, re, std::cerr, OutFormat, ComputeAllSimpleRoots);
-    } else {
-      if (FileOut == "stdout") {
-        std::cerr << "PrintResultEdgewalk to stdout\n";
-        PrintResultEdgewalk(G, re, std::cout, OutFormat, ComputeAllSimpleRoots);
-      } else {
-        std::cerr << "PrintResultEdgewalk to FileOut\n";
-        std::ofstream os(FileOut);
-        PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
-      }
-    }
+    auto f_print=[&](std::ostream & os) -> void {
+      PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
+    };
+    generic_print_to_file(FileOut, f_print);
   };
   //
   std::string OptionInitialVertex =
@@ -2341,16 +2348,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
       throw TerminalException{1};
     };
     std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
-    if (FileOut == "stderr") {
-      print_result_isomorphism(std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        print_result_isomorphism(std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        print_result_isomorphism(os);
-      }
-    }
+    generic_print_to_file(FileOut, print_result_isomorphism);
   };
   //
   std::string OptionNorms = "all";
