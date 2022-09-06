@@ -28,18 +28,14 @@
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
 template<typename F>
-void generic_print_to_file(std::string const& FileOut, F f)
+void print_stderr_stdout_file(std::string const& FileOut, F f)
 {
-  if (FileOut == "stderr") {
-    f(std::cerr);
-  } else {
-    if (FileOut == "stdout") {
-      f(std::cout);
-    } else {
-      std::ofstream os(FileOut);
-      f(os);
-    }
-  }
+  if (FileOut == "stderr")
+    return f(std::cerr);
+  if (FileOut == "stdout")
+    return f(std::cout);
+  std::ofstream os(FileOut);
+  return f(os);
 }
 
 
@@ -2285,7 +2281,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
     auto f_print=[&](std::ostream & os) -> void {
       PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
     };
-    generic_print_to_file(FileOut, f_print);
+    print_stderr_stdout_file(FileOut, f_print);
   };
   //
   std::string OptionInitialVertex =
@@ -2348,7 +2344,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
       throw TerminalException{1};
     };
     std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
-    generic_print_to_file(FileOut, print_result_isomorphism);
+    print_stderr_stdout_file(FileOut, print_result_isomorphism);
   };
   //
   std::string OptionNorms = "all";
