@@ -93,16 +93,52 @@ jobs:
           echo "After pwd"
 
           cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk
-          echo "After compilation"
-      - uses: papeloto/action-zip@v1
+          echo "After compilation of LORENTZ_FundDomain_AllcockEdgewalk"
+
+          cd src_latt && make -f Makefile_target && strip sv_exact LATT_canonicalize
+          echo "After compilation of sv_exact and LATT_canonicalize"
+
+      - name: Make zip of LORENTZ_FundDomain_AllcockEdgewalk
+        uses: papeloto/action-zip@v1
         with:
           files: src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
           dest: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
-      - name: Upload binaries to release
+
+      - name: Make zip of sv_exact
+        uses: papeloto/action-zip@v1
+        with:
+          files: src_latt/sv_exact
+          dest: sv_exact-linux.zip
+
+      - name: Make zip of LATT_canonicalize
+        uses: papeloto/action-zip@v1
+        with:
+          files: src_latt/LATT_canonicalize
+          dest: LATT_canonicalize-linux.zip
+
+      - name: Upload LORENTZ_FundDomain_AllcockEdgewalk to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
           asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-FINAL.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+
+      - name: Upload sv_exact to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: sv_exact-linux.zip
+          asset_name: sv_exact-linux-FINAL.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+
+      - name: Upload LATT_canonicalize to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: LATT_canonicalize-linux.zip
+          asset_name: LATT_canonicalize-linux-FINAL.zip
           tag: ${{ github.ref }}
           overwrite: true
