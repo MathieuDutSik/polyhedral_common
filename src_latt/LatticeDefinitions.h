@@ -418,7 +418,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tint> const &P = LLLrec.Pmat;
   MyMatrix<Tmat> GredInv = Inverse(Gred);
   MyMatrix<Tint> Q = TransposedMat(Inverse(P));
-  return {GredInv, Q};
+  return {std::move(GredInv), std::move(Q)};
 }
 
 // This is for debugging purposes
