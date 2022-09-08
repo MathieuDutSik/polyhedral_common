@@ -43,7 +43,7 @@ jobs:
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
 
-steps:
+    steps:
 #      - name: Get the version
 #        id: get_version
 #        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
