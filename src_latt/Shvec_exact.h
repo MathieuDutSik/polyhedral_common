@@ -5,6 +5,7 @@
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
 #include "NumberTheory.h"
+#include "LatticeDefinitions.h"
 #include "POLY_LinearProgramming.h"
 #include <utility>
 #include <vector>
@@ -39,6 +40,71 @@ template <typename T, typename Tint> struct T_shvec_info {
   std::vector<MyVector<Tint>> short_vectors;
   T minimum;
 };
+
+template<typename Tint>
+struct cvp_reduction_info {
+  MyVector<Tint> shift;
+  MyMatrix<Tint> P;
+};
+
+template<typename T, typename Tint>
+std::pair<MyVector<Tint>, MyVector<T>> ReductionMod1vector(MyVector<T> const& V) {
+  int n = V.size();
+  MyVector<T> v_T(n);
+  MyVector<Tint> v_Tint(n);
+  for (int i=0; i<n; i++) {
+    T val = V(i);
+    Tint red_i = UniversalNearestScalarInteger<Tint,T>(val);
+    T red_T = UniversalScalarConversion<T,Tint>(red_i);
+    T val_red = val - red_T;
+    v_T(i) = val_red;
+    v_Tint(i) = red_i;
+  }
+  return {std::move(v_Tint),std::move(v_T)};
+}
+
+
+/*
+  We apply the P reduction
+  Gred = P G P^T
+  Q = P^{-1}
+  G = Q Gred Q^T
+  looking for G[x - coset] = bound
+  That is (x - coset) Q Gred Q^T (x- coset)^T = bound
+  Or (y - coset_red) Gred (y - coset_red)^T = bound
+  with coset_red = coset Q and y = x Q
+  coset_red = V_T + V_i
+  Thus we have if z = y - V_i
+  (z - V_T) Gred (z - v_T)^T = bound
+  So y = z + V_i
+  and x = (z + V_i) P
+ */
+template<typename T, typename Tint>
+std::pair<T_shvec_request<T>,cvp_reduction_info<Tint>> GetReducedShvecRequest(T_shvec_request<T> const& request) {
+  int dim = request.dim;
+  LLLreduction<T, Tint> eRec = LLLreducedBasisDual<T,Tint>(request.gram_matrix);
+  MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
+  MyMatrix<T> Q_T = UniversalMatrixConversion<T,Tint>(Q_i);
+  MyVector<T> cosetRed = Q_T.transpose() * request.coset;
+  std::pair<MyVector<Tint>, MyVector<T>> ePair = ReductionMod1vector<T,Tint>(cosetRed);
+  T_shvec_request<T> request_ret{dim, request.mode, request.bound, ePair.second, eRec.GramMatRed, request.central};
+  cvp_reduction_info<Tint> cvp_red{ePair.first, eRec.Pmat};
+  return {std::move(request_ret), std::move(cvp_red)};
+}
+
+template<typename T, typename Tint>
+T_shvec_info<T,Tint> ApplyReductionToShvecInfo(T_shvec_info<T,Tint> const& info, cvp_reduction_info<Tint> const& red_info) {
+  std::vector<MyVector<Tint>> short_vectors;
+  for (auto & z_vec : info.short_vectors) {
+    MyVector<Tint> x = red_info.P.transpose() * (z_vec + red_info.shift);
+    short_vectors.emplace_back(std::move(x));
+  }
+  return {std::move(short_vectors), info.minimum};
+}
+
+
+
+
 
 // We return
 // floor(sqrt(A) + epsilon + B)
@@ -527,7 +593,7 @@ T_shvec_request<T> initShvecReq(const MyMatrix<T> &gram_matrix,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
+T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request) {
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     return computeMinimum<T, Tint>(request);
   }
@@ -585,6 +651,17 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
   std::cerr << "T_compiteShvec: Failed to match an entry\n";
   throw TerminalException{1};
 }
+
+
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
+  std::pair<T_shvec_request<T>,cvp_reduction_info<Tint>> ePair = GetReducedShvecRequest<T,Tint>(request);
+  T_shvec_info<T, Tint> info1 = T_computeShvec_Kernel<T,Tint>(ePair.first);
+  T_shvec_info<T, Tint> info2 = ApplyReductionToShvecInfo(info1, ePair.second);
+  return info2;
+}
+
+
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
