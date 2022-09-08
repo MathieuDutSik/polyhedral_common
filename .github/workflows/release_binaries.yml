@@ -1,4 +1,4 @@
-name: release-flow
+name: release binaries
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -92,10 +92,10 @@ jobs:
           pwd
           echo "After pwd"
 
-          cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk
+          cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk && cd ..
           echo "After compilation of LORENTZ_FundDomain_AllcockEdgewalk"
 
-          cd src_latt && make -f Makefile_target && strip sv_exact LATT_canonicalize
+          cd src_latt && make -f Makefile_target && strip sv_exact LATT_canonicalize && cd ..
           echo "After compilation of sv_exact and LATT_canonicalize"
 
       - name: Make zip of LORENTZ_FundDomain_AllcockEdgewalk
