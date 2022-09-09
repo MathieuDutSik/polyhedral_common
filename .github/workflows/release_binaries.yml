@@ -18,8 +18,6 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     env:
-      GMP_INCDIR: /usr/include
-      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
       BOOST_INCDIR: "/usr/include"
 #      BOOST_LINK: "-lboost_serialization"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
@@ -42,6 +40,9 @@ jobs:
       NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
+      GMP_PATH: "/home/runner/work/opt/gmp-6.2.1
+      GMP_INCDIR: /home/runner/work/opt/gmp-6.2.1/include
+      GMP_CXX_LINK: "/home/runner/work/opt/gmp-6.2.1/lib/libgmpxx.a /home/runner/work/opt/gmp-6.2.1/lib/libgmp.a"
 
     steps:
 #      - name: Get the version
@@ -66,8 +67,6 @@ jobs:
           sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y libntl-dev libmpfr-dev
-          sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - name: Build and release
         run: |
@@ -90,8 +89,11 @@ jobs:
           mv eigen-3.3.9 /home/runner/work/opt/eigen
           echo "After eigen-3.3.9 set up"
 
-          pwd
-          echo "After pwd"
+          # We need to compile GMP in static
+          wget https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2
+          tar -vxjf gmp-6.2.1.tar.bz2
+          cd gmp-6.2.1 && ./configure --enable-shared=no --enable-static=yes --enable-cxx --prefix=$GMP_PATH && make && make install && cd ..
+          echo "After gmp-6.2.1 compilation"
 
           cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk && cd ..
           echo "After compilation of LORENTZ_FundDomain_AllcockEdgewalk"
