@@ -40,7 +40,7 @@ jobs:
       NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
-      GMP_PATH: "/home/runner/work/opt/gmp-6.2.1
+      GMP_PATH: /home/runner/work/opt/gmp-6.2.1
       GMP_INCDIR: /home/runner/work/opt/gmp-6.2.1/include
       GMP_CXX_LINK: "/home/runner/work/opt/gmp-6.2.1/lib/libgmpxx.a /home/runner/work/opt/gmp-6.2.1/lib/libgmp.a"
 
