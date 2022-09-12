@@ -1160,11 +1160,9 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
       break;
   };
 #ifdef DEBUG
-  mpz_class eHash2 = MD5_hash_mpz(strAssign);
+  Tint eHash2 = MD5_hash_T<Tint>(strAssign);
   std::cerr << "strAssign=" << strAssign << "\n";
   std::cerr << "eHash2=" << eHash2 << "\n";
-#endif
-#ifdef DEBUG
   std::string strWMat;
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int i_rowC = CanonicOrd[i_row];
@@ -1177,10 +1175,9 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
   for (auto &eVal : WMatAbs.WMat.GetWeight()) {
     strWMat += " " + std::to_string(eVal);
   }
-  mpz_class eHash3 = MD5_hash_mpz(strWMat);
+  Tint eHash3 = MD5_hash_T<Tint>(strWMat);
   std::cerr << "eHash3=" << eHash3 << "\n";
 #endif
-
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int j_row = CanonicOrd[i_row];
     int eSign = ListSigns[i_row];
