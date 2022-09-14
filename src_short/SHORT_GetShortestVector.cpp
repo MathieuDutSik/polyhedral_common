@@ -1,6 +1,9 @@
 //#include "mpreal_related.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "rational.h"
 #include "SHORT_ShortestConfig.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   try {
