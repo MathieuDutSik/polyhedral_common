@@ -6,7 +6,12 @@
 template<typename T, typename F>
 void DoProcessing(MyMatrix<T> const& M, MyVector<T> const& B, F f)
 {
-
+  MyMatrix<T> Mtr = TransposedMat(M);
+  std::option<MyVector<T>> opt = SolutionIntMat(Mtr, B);
+  if (!opt)
+    return;
+  MyMatrix<T> NSP = NullspaceIntMat(Mtr);
+  
 
 
   
@@ -22,10 +27,10 @@ int main(int argc, char *argv[]) {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_ZeroOneSolutions [FileIn] [epsilon]\n";
+      std::cerr << "LATT_ZeroOneSolutions [FileIn] [FileOut]\n";
       std::cerr << "\n";
-      std::cerr << "FileIn  : The vector file on on input\n";
-      std::cerr << "epsilon : The epsilon value on input\n";
+      std::cerr << "FileIn  : The input file in the same format as of Vedran Krcadinac\n";
+      std::cerr << "FileOut : The output fileepsilon value on input\n";
       return -1;
     }
     using T = mpq_class;
