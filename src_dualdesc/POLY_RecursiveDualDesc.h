@@ -1554,7 +1554,9 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
   return {std::move(ListBlock), "undefined"};
 }
 
-void OutputFacets(const vectface &TheOutput, const std::string &OUTfile,
+template<typename T, typename Tgroup>
+void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
+                  const vectface &TheOutput, const std::string &OUTfile,
                   const std::string &OutFormat) {
   if (OutFormat == "Magma") {
     std::ofstream os(OUTfile);
@@ -1578,6 +1580,26 @@ void OutputFacets(const vectface &TheOutput, const std::string &OUTfile,
       os << res << "\n";
     }
     return;
+  }
+  if (OutFormat == "BankEntry") {
+    // We are creating a bank entry for further works.
+    using Tidx_value = uint16_t;
+    WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T, Tidx_value>(EXT);
+    WMat.ReorderingSetWeight();
+    TripleCanonic<T, Tgroup> eTriple =
+        CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
+    size_t nbRow = EXT.rows();
+    vectface ListFaceO(nbRow);
+    Telt perm1 = Telt(eTriple.ListIdx);
+    Telt ePerm = ~perm1;
+    //
+    Face eFaceImg(nbRow);
+    for (auto &eFace : ListFace) {
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      ListFaceO.push_back(eFaceImg);
+    }
+    PairStore ePair{eTriple.GRP, std::move(ListFaceO)};
+    Write_BankEntry(Outfile, eTriple.EXT, ePair);
   }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
@@ -1758,7 +1780,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets(TheOutput, AllArr.OUTfile, AllArr.OutFormat);
+  OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat);
 }
 
 template <typename T, typename Tgroup>
