@@ -5,6 +5,7 @@
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#include "QuadField.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 
@@ -54,15 +55,15 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     std::string NumericalType = GetNumericalType(eFull);
-    if (Numericalype == "rational") {
+    if (NumericalType == "rational") {
       using T = mpq_class;
       //    using T = boost::multiprecision::cpp_rational;
       //    using T = boost::multiprecision::mpq_rational;
       Process<T>(eFull);
     }
-    if (Numericalype == "Qsqrt5") {
+    if (NumericalType == "Qsqrt5") {
       using Trat = mpq_class;
-      using T = QuadField<T,5>;
+      using T = QuadField<Trat,5>;
       Process<T>(eFull);
     }
     //

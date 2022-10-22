@@ -453,6 +453,26 @@ DataMapping<Tidx> RepresentVertexPermutationTest_Blocks(
   return {correct, std::move(block_status), std::move(eGen)};
 }
 
+template<typename T, typename Tidx>
+std::vector<Tidx> GetSortingVector(MyMatrix<T> const& Mop) {
+  size_t nbRow = Mop.rows();
+  size_t nbCol = Mop.cols();
+  std::vector<Tidx> ListIdx(nbRow);
+  for (size_t iRow = 0; iRow < nbRow; iRow++)
+    ListIdx[iRow] = iRow;
+  std::sort(ListIdx.begin(), ListIdx.end(),
+            [&](size_t iRow, size_t jRow) -> bool {
+              for (size_t iCol = 0; iCol < nbCol; iCol++) {
+                if (Mop(iRow, iCol) < Mop(jRow, iCol))
+                  return true;
+                if (Mop(iRow, iCol) > Mop(jRow, iCol))
+                  return false;
+              }
+              return false;
+            });
+  return ListIdx;
+}
+
 template <typename T, typename Tfield, typename Tidx>
 std::vector<Tidx>
 ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
@@ -461,7 +481,6 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
 #ifdef TIMINGS
   SingletonTime time1;
 #endif
-  size_t nbRow = EXT.rows();
   size_t nbCol = EXT.cols();
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
     size_t pos = Vsubset[PartOrd[iRow]];
@@ -478,22 +497,19 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
       M(iRow, iCol) = UniversalScalarConversion<Tfield, T>(EXT(pos, iCol));
   }
   MyMatrix<Tfield> Minv0 = Inverse(M);
-  MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
-  MyMatrix<T> Minv2 = UniversalMatrixConversion<T, Tfield>(Minv1);
-  MyMatrix<T> Mop = EXT * Minv2;
-  std::vector<Tidx> ListIdx(nbRow);
-  for (size_t iRow = 0; iRow < nbRow; iRow++)
-    ListIdx[iRow] = iRow;
-  std::sort(ListIdx.begin(), ListIdx.end(),
-            [&](size_t iRow, size_t jRow) -> bool {
-              for (size_t iCol = 0; iCol < nbCol; iCol++) {
-                if (Mop(iRow, iCol) < Mop(jRow, iCol))
-                  return true;
-                if (Mop(iRow, iCol) > Mop(jRow, iCol))
-                  return false;
-              }
-              return false;
-            });
+  auto get_listidx=[&]() -> std::vector<Tidx> {
+    if constexpr(is_implementation_of_Q<Tfield>::value) {
+      MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
+      MyMatrix<T> Minv2 = UniversalMatrixConversion<T, Tfield>(Minv1);
+      MyMatrix<T> Mop = EXT * Minv2;
+      return GetSortingVector<T,Tidx>(Mop);
+    } else {
+      MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield,T>(EXT);
+      MyMatrix<Tfield> Mop = EXT_field * Minv0;
+      return GetSortingVector<Tfield,Tidx>(Mop);
+    }
+  };
+  std::vector<Tidx> ListIdx = get_listidx();
 #ifdef TIMINGS
   SingletonTime time2;
   std::cerr << "|ExtendPartialCanonicalization|=" << ms(time1, time2) << "\n";
