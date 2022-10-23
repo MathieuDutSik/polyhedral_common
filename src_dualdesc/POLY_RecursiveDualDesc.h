@@ -166,7 +166,7 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
   }
   MyMatrix<T> RowRed = RowReduction(EXTcan);
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
+  MyMatrix<T> EXTretB = ScalarCanonicalizationMatrix(EXTret);
   //
   std::vector<Telt> LGen;
   for (auto &eGen : PairCanGrp.second) {
@@ -1558,6 +1558,7 @@ template<typename T, typename Tgroup>
 void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
                   const vectface &TheOutput, const std::string &OUTfile,
                   const std::string &OutFormat) {
+  using Telt = typename Tgroup::Telt;
   if (OutFormat == "Magma") {
     std::ofstream os(OUTfile);
     os << "return ";
@@ -1594,12 +1595,12 @@ void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
     Telt ePerm = ~perm1;
     //
     Face eFaceImg(nbRow);
-    for (auto &eFace : ListFace) {
+    for (auto &eFace : TheOutput) {
       OnFace_inplace(eFaceImg, eFace, ePerm);
       ListFaceO.push_back(eFaceImg);
     }
-    PairStore ePair{eTriple.GRP, std::move(ListFaceO)};
-    Write_BankEntry(Outfile, eTriple.EXT, ePair);
+    PairStore<Tgroup> ePair{eTriple.GRP, std::move(ListFaceO)};
+    Write_BankEntry(OUTfile, eTriple.EXT, ePair);
   }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
