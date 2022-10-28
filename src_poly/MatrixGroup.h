@@ -652,7 +652,7 @@ MatrixIntegral_GeneratePermutationGroup(
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
 #ifdef TIMINGS
-    Microsecond timeB;
+    MicrosecondTime timeB;
 #endif
     //    MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
