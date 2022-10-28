@@ -278,13 +278,12 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     throw TerminalException{1};
   }
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   VertexPartition<Tidx> VP =
       ComputeInitialVertexPartition<T, Tidx>(nbRow, f1, f2, canonically);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ComputeInitialVertexPartition|=" << ms(time1, time2) << "\n";
+  std::cerr << "|ComputeInitialVertexPartition|=" << time << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_SPECIFIED
@@ -359,12 +358,11 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     std::cerr << "iBlock=" << iBlock << "\n";
 #endif
 #ifdef TIMINGS
-    SingletonTime time_ref1;
+    MicrosecondTime time;
 #endif
     bool test = DoRefinement(iBlock);
 #ifdef TIMINGS
-    SingletonTime time_ref2;
-    std::cerr << "|DoRefinement|=" << ms(time_ref1, time_ref2) << "\n";
+    std::cerr << "|DoRefinement|=" << time << "\n";
 #endif
 #ifdef DEBUG_SPECIFIED
     std::cerr << "After Dorefinement\n";
@@ -412,7 +410,7 @@ template <typename T>
 std::vector<int>
 GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t nbCase = WMVS.ListNbCase.size();
   std::vector<int> ListIdx(nbCase);
@@ -450,8 +448,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
     return false;
   });
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|GetOrdering_ListIdx|=" << ms(time1, time2) << "\n";
+  std::cerr << "|GetOrdering_ListIdx|=" << time << "\n";
 #endif
   return ListIdx;
 }
@@ -486,7 +483,7 @@ template <typename T, typename F1, typename F2>
 WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
                                                         F2 f2) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   UNORD_MAP_SPECIFIC<T, int> ValueMap_T;
   std::vector<T> ListWeight;
@@ -552,8 +549,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
     ListNbCase[iCase]++;
   }
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ComputeVertexSignature|=" << ms(time1, time2) << "\n";
+  std::cerr << "|ComputeVertexSignature|=" << time << "\n";
 #endif
   return {nbRow,
           nbWeight,
@@ -566,7 +562,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
 template <typename T>
 void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   // Building the permutation on the weights
   std::pair<std::vector<T>, std::vector<int>> rec_pair =
@@ -597,8 +593,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
   }
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|RenormalizeWMVS|=" << ms(time1, time2) << "\n";
+  std::cerr << "|RenormalizeWMVS|=" << time << "\n";
 #endif
 }
 
@@ -606,7 +601,7 @@ template <typename T, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2,
                          WeightMatrixVertexSignatures<T> const &WMVS) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
@@ -849,8 +844,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   }
 #endif
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|GetDataTraces|=" << ms(time1, time2) << "\n";
+  std::cerr << "|GetDataTraces|=" << time << "\n";
 #endif
   return DT;
 }
@@ -988,14 +982,13 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t max_globiter = 1000;
   VertexPartition<Tidx> VP =
       ComputeVertexPartition<T, Tidx>(nbRow, f1, f2, canonically, max_globiter);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ComputeVertexPartition|=" << ms(time1, time2) << "\n";
+  std::cerr << "|ComputeVertexPartition|=" << time << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);

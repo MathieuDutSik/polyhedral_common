@@ -417,7 +417,7 @@ MatrixIntegral_GeneratePermutationGroup(
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
 #endif
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   using Tidx = typename Telt::Tidx;
   int Osiz = O.size();
@@ -435,19 +435,17 @@ MatrixIntegral_GeneratePermutationGroup(
     return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "Timing |SortingPerm|=" << ms(time1, time2) << "\n";
+  std::cerr << "Timing |SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "Timing |ePermSinv|=" << ms(time2, time3) << "\n";
+  std::cerr << "Timing |ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
 #ifdef TIMINGS
-    SingletonTime timeB_1;
+    MicrosecondTime timeB;
 #endif
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
@@ -468,8 +466,7 @@ MatrixIntegral_GeneratePermutationGroup(
     for (Tidx i = 0; i < nbRow_tidx; i++)
       v[i] = ePermGen.at(i);
 #ifdef TIMINGS
-    SingletonTime timeB_2;
-    std::cerr << "Timing |v 1|=" << ms(timeB_1, timeB_2) << "\n";
+    std::cerr << "Timing |v 1|=" << timeB << "\n";
 #endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -478,18 +475,15 @@ MatrixIntegral_GeneratePermutationGroup(
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
 #ifdef TIMINGS
-    SingletonTime timeB_3;
-    std::cerr << "Timing |ListImage|=" << ms(timeB_2, timeB_3) << "\n";
+    std::cerr << "Timing |ListImage|=" << timeB << "\n";
 #endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
 #ifdef TIMINGS
-    SingletonTime timeB_4;
-    std::cerr << "Timing |SortingPerm|=" << ms(timeB_3, timeB_4) << "\n";
+    std::cerr << "Timing |SortingPerm|=" << timeB << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
 #ifdef TIMINGS
-    SingletonTime timeB_5;
-    std::cerr << "Timing |ePermBinv|=" << ms(timeB_4, timeB_5) << "\n";
+    std::cerr << "Timing |ePermBinv|=" << timeB << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
     // By the construction and above check we have
@@ -499,8 +493,7 @@ MatrixIntegral_GeneratePermutationGroup(
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
 #ifdef TIMINGS
-    SingletonTime timeB_6;
-    std::cerr << "Timing |ePermGenSelect|=" << ms(timeB_5, timeB_6) << "\n";
+    std::cerr << "Timing |ePermGenSelect|=" << timeB << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
     //    std::cerr << "  ePermGenSelect=" << ePermGenSelect << "\n";
@@ -510,8 +503,7 @@ MatrixIntegral_GeneratePermutationGroup(
       v[nbRow + iO] = nbRow + jO;
     }
 #ifdef TIMINGS
-    SingletonTime timeB_7;
-    std::cerr << "Timing |v 2|=" << ms(timeB_6, timeB_7) << "\n";
+    std::cerr << "Timing |v 2|=" << timeB << "\n";
 #endif
     Telt eNewPerm(std::move(v));
 #ifdef SANITY_CHECK
@@ -531,13 +523,11 @@ MatrixIntegral_GeneratePermutationGroup(
 #endif
     ListPermGenProv.emplace_back(std::move(eNewPerm));
 #ifdef TIMINGS
-    SingletonTime timeB_8;
-    std::cerr << "Timing |insert|=" << ms(timeB_7, timeB_8) << "\n";
+    std::cerr << "Timing |insert|=" << timeB << "\n";
 #endif
   }
 #ifdef TIMINGS
-  SingletonTime time4;
-  std::cerr << "Timing |ListPermGenProv|=" << ms(time3, time4) << "\n";
+  std::cerr << "Timing |ListPermGenProv|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
@@ -636,7 +626,7 @@ MatrixIntegral_GeneratePermutationGroup(
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup 2\n";
 #endif
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   using Tidx = typename Telt::Tidx;
   int Osiz = O.size();
@@ -652,19 +642,17 @@ MatrixIntegral_GeneratePermutationGroup(
     return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "Timing |SortingPerm|=" << ms(time1, time2) << "\n";
+  std::cerr << "Timing |SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "Timing |ePermSinv|=" << ms(time2, time3) << "\n";
+  std::cerr << "Timing |ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
 #ifdef TIMINGS
-    SingletonTime timeB_1;
+    Microsecond timeB;
 #endif
     //    MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
     MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
@@ -673,8 +661,7 @@ MatrixIntegral_GeneratePermutationGroup(
 #endif
     std::vector<Tidx> v(siz);
 #ifdef TIMINGS
-    SingletonTime timeB_2;
-    std::cerr << "Timing |v 1|=" << ms(timeB_1, timeB_2) << "\n";
+    std::cerr << "Timing |v 1|=" << timeB << "\n";
 #endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -683,18 +670,15 @@ MatrixIntegral_GeneratePermutationGroup(
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
 #ifdef TIMINGS
-    SingletonTime timeB_3;
-    std::cerr << "Timing |ListImage|=" << ms(timeB_2, timeB_3) << "\n";
+    std::cerr << "Timing |ListImage|=" << timeB << "\n";
 #endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
 #ifdef TIMINGS
-    SingletonTime timeB_4;
-    std::cerr << "Timing |SortingPerm|=" << ms(timeB_3, timeB_4) << "\n";
+    std::cerr << "Timing |SortingPerm|=" << timeB << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
 #ifdef TIMINGS
-    SingletonTime timeB_5;
-    std::cerr << "Timing |ePermBinv|=" << ms(timeB_4, timeB_5) << "\n";
+    std::cerr << "Timing |ePermBinv|=" << timeB << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
     // By the construction and above check we have
@@ -704,18 +688,15 @@ MatrixIntegral_GeneratePermutationGroup(
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
 #ifdef TIMINGS
-    SingletonTime timeB_6;
-    std::cerr << "Timing |ePermGenSelect|=" << ms(timeB_5, timeB_6) << "\n";
+    std::cerr << "Timing |ePermGenSelect|=" << timeB << "\n";
 #endif
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
 #ifdef TIMINGS
-    SingletonTime timeB_7;
-    std::cerr << "Timing |insert|=" << ms(timeB_6, timeB_7) << "\n";
+    std::cerr << "Timing |insert|=" << timeB << "\n";
 #endif
   }
 #ifdef TIMINGS
-  SingletonTime time4;
-  std::cerr << "Timing |ListPermGenProv|=" << ms(time3, time4) << "\n";
+  std::cerr << "Timing |ListPermGenProv|=" << time << "\n";
 #endif
   return {0, siz, ListMatrGens, std::move(ListPermGenProv)};
 }
@@ -1340,12 +1321,11 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
   while (true) {
 #ifdef TIMINGS
-    SingletonTime time1;
+    MicrosecondTime time;
 #endif
     std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
 #ifdef TIMINGS
-    SingletonTime time2;
-    std::cerr << "Timing |IsStabilizing|=" << ms(time1, time2) << "\n";
+    std::cerr << "Timing |IsStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -1371,8 +1351,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     std::cerr << "Orbit size |O|=" << O.size() << "\n";
 #endif
 #ifdef TIMINGS
-    SingletonTime time3;
-    std::cerr << "Timing |OrbitComputation|=" << ms(time2, time3) << "\n";
+    std::cerr << "Timing |OrbitComputation|=" << time << "\n";
 #endif
     Treturn eret =
         MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(

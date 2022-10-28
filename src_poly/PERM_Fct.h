@@ -272,7 +272,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
                                     const std::vector<Tidx> &Vsubset,
                                     const std::vector<Tidx> &Vin) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t nbCol = EXT.cols();
 #ifdef DEBUG_PERM_FCT
@@ -295,9 +295,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
       FindMatrixTransformationTest_Generic<T, Tfield, Tidx>(Vsubset.size(),
                                                             nbCol, g1, g1, Vin);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|FindMatrixTransformationTest_Subset|=" << ms(time1, time2)
-            << "\n";
+  std::cerr << "|FindMatrixTransformationTest_Subset|=" << time << "\n";
 #endif
   return test1;
 }
@@ -309,7 +307,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   if (Vsubset.size() < nbCol)
     return false;
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++)
@@ -319,8 +317,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   SelectionRowCol<Tfield> TheSol =
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|IsSubsetFullRank|=" << ms(time1, time2) << "\n";
+  std::cerr << "|IsSubsetFullRank|=" << time << "\n";
 #endif
   return TheSol.TheRank == nbCol;
 }
@@ -330,7 +327,7 @@ std::optional<std::vector<Tidx>>
 RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                MyMatrix<Tfield> const &P) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
@@ -367,9 +364,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
           UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!rec_eSum2.first) {
 #ifdef TIMINGS
-        SingletonTime time2;
         std::cerr << "ESC1 |RepresentVertexPermutationTest|="
-                  << ms(time1, time2) << "\n";
+                  << time << "\n";
 #endif
         return {}; // We fail because the image is not integral.
       }
@@ -378,9 +374,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     std::pair<bool, size_t> epair = Cont.GetIdx();
     if (!epair.first) {
 #ifdef TIMINGS
-      SingletonTime time2;
-      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << ms(time1, time2)
-                << "\n";
+      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
       return {}; // We fail because the image does not belong to EXT2
     }
@@ -398,8 +392,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   }
 #endif
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|RepresentVertexPermutationTest|=" << ms(time1, time2) << "\n";
+  std::cerr << "|RepresentVertexPermutationTest|=" << time << "\n";
 #endif
   return V;
 }
@@ -479,7 +472,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
                               const std::vector<Tidx> &Vsubset,
                               const std::vector<Tidx> &PartOrd) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t nbCol = EXT.cols();
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
@@ -511,8 +504,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
   };
   std::vector<Tidx> ListIdx = get_listidx();
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ExtendPartialCanonicalization|=" << ms(time1, time2) << "\n";
+  std::cerr << "|ExtendPartialCanonicalization|=" << time << "\n";
 #endif
   return ListIdx;
 }
