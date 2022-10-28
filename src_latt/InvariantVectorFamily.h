@@ -30,13 +30,12 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
                                          T const &norm) {
 #ifdef TIMINGS
   std::cerr << "Begining of ExtractInvariantVectorFamily\n";
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
   MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|LLL|=" << ms(time1, time2) << "\n";
+  std::cerr << "|LLL|=" << time << "\n";
 #endif
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   //
@@ -45,8 +44,7 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
   MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|T_ShortVector|=" << ms(time2, time3) << "\n";
+  std::cerr << "|T_ShortVector|=" << time << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
   int nbRow = SHV1_a.rows();

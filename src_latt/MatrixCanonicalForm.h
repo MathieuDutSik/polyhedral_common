@@ -25,13 +25,11 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   //  WriteMatrix(std::cerr, inpMat);
 #ifdef TIMINGS
   std::cerr << "Begining of ComputeCanonicalForm\n";
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << ms(time1, time2)
-            << "\n";
+  std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
@@ -52,8 +50,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   WeightMatrix<true, T, Tidx_value> WMat =
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV);
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|WMat|=" << ms(time2, time3) << "\n";
+  std::cerr << "|WMat|=" << time << "\n";
 #endif
 #ifdef DEBUG_CANONIC
   std::cerr << "Original WMat=\n";
@@ -65,8 +62,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   PrintWeightedMatrix(std::cerr, WMat);
 #endif
 #ifdef TIMINGS
-  SingletonTime time4;
-  std::cerr << "|ReorderingSetWeight|=" << ms(time3, time4) << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << time << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
@@ -80,9 +76,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   std::cerr << "\n";
 #endif
 #ifdef TIMINGS
-  SingletonTime time5;
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << ms(time4, time5)
-            << "\n";
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   //
   // Building the canonical basis
@@ -94,8 +88,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS
-  SingletonTime time6;
-  std::cerr << "|SHVcan|=" << ms(time5, time6) << "\n";
+  std::cerr << "|SHVcan|=" << time << "\n";
 #endif
 #ifdef DEBUG_CANONIC
   std::cerr << "SHVred=\n";
@@ -117,8 +110,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   //  std::cerr << "SHVcan_Tint=\n";
   //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef TIMINGS
-  SingletonTime time7;
-  std::cerr << "|ReductionMatrix|=" << ms(time6, time7) << "\n";
+  std::cerr << "|ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG_CANONIC
@@ -131,8 +123,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * BasisCan_T.transpose();
 #ifdef TIMINGS
-  SingletonTime time8;
-  std::cerr << "|Matrix products|=" << ms(time7, time8) << "\n";
+  std::cerr << "|Matrix products|=" << time << "\n";
 #endif
 #ifdef DEBUG_CANONIC
   WeightMatrix<true, T, Tidx_value> WMat_B =
@@ -153,14 +144,12 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   //  WriteMatrix(std::cerr, inpMat);
 #ifdef TIMINGS
   std::cerr << "Begining of ComputeCanonicalForm\n";
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   MyMatrix<T> inpMat = ListMat[0];
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << ms(time1, time2)
-            << "\n";
+  std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
@@ -180,13 +169,11 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
       T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV);
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|WMat|=" << ms(time2, time3) << "\n";
+  std::cerr << "|WMat|=" << time << "\n";
 #endif
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS
-  SingletonTime time4;
-  std::cerr << "|ReorderingSetWeight|=" << ms(time3, time4) << "\n";
+  std::cerr << "|ReorderingSetWeight|=" << time << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
@@ -199,9 +186,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   std::vector<int> CanonicOrd =
       GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
 #ifdef TIMINGS
-  SingletonTime time5;
-  std::cerr << "|GetCanonicalizationVector_Kernel|=" << ms(time4, time5)
-            << "\n";
+  std::cerr << "|GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   //
   // Building the canonical basis
@@ -213,8 +198,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS
-  SingletonTime time6;
-  std::cerr << "|SHVcan|=" << ms(time5, time6) << "\n";
+  std::cerr << "|SHVcan|=" << time << "\n";
 #endif
   MyMatrix<Tint> BasisCan_Tint_pre =
       ComputeRowHermiteNormalForm(SHVcan_Tint).first;
@@ -222,8 +206,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   //  std::cerr << "SHVcan_Tint=\n";
   //  WriteMatrix(std::cerr, SHVcan_Tint);
 #ifdef TIMINGS
-  SingletonTime time7;
-  std::cerr << "|ReductionMatrix|=" << ms(time6, time7) << "\n";
+  std::cerr << "|ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG_CANONIC
@@ -236,8 +219,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS
-  SingletonTime time8;
-  std::cerr << "|Matrix products|=" << ms(time7, time8) << "\n";
+  std::cerr << "|Matrix products|=" << time << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }

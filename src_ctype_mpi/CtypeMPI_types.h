@@ -508,7 +508,7 @@ template <typename T>
 std::vector<TypeCtypeExch<T>>
 CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
@@ -517,7 +517,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
   int n_edge = TheCtype.rows();
 
 #ifdef TIMINGS
-  SingletonTime time2;
+  std::cerr << "|ExpressMatrixForCType|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
@@ -526,7 +526,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
       CTYP_GetListTriple(TheCtype);
 
 #ifdef TIMINGS
-  SingletonTime time3;
+  std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
@@ -620,7 +620,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
 #ifdef TIMINGS
-  SingletonTime time4;
+  std::cerr << "|Insert inequalities|=" << time << "\n";
 #endif
   int n_edgered = n_edge / 2;
 #ifdef PRINT_GET_ADJ
@@ -747,7 +747,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
 #ifdef TIMINGS
-  SingletonTime time5;
+  std::cerr << "|Criterion Ineq Drop|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
@@ -770,7 +770,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
 #ifdef TIMINGS
-  SingletonTime time6;
+  std::cerr << "|ListInformations|=" << time << "\n";
 #endif
   std::vector<int> ListIrred =
       cbased_cdd::RedundancyReductionClarkson(ListInequalities);
@@ -788,7 +788,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
 #ifdef TIMINGS
-  SingletonTime time7;
+  std::cerr << "|RedundancyReductionClarkson|=" << time << "\n";
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto &e_int : ListIrred) {
@@ -805,14 +805,7 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
 #ifdef TIMINGS
-  SingletonTime time8;
-  std::cerr << "|ExpressMatrixForCType|=" << ms(time1, time2) << "\n";
-  std::cerr << "|CTYP_GetListTriple|=" << ms(time2, time3) << "\n";
-  std::cerr << "|Insert inequalities|=" << ms(time3, time4) << "\n";
-  std::cerr << "|Criterion Ineq Drop|=" << ms(time4, time5) << "\n";
-  std::cerr << "|ListInformations|=" << ms(time5, time6) << "\n";
-  std::cerr << "|RedundancyReductionClarkson|=" << ms(time6, time7) << "\n";
-  std::cerr << "|Flip + Canonic|=" << ms(time7, time8) << "\n";
+  std::cerr << "|Flip + Canonic|=" << time << "\n";
 #endif
   return ListCtype;
 }
@@ -863,22 +856,20 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
 #ifdef TIMINGS
-  SingletonTime time1;
+  Microsecond time;
 #endif
 
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
   int n_edge = TheCtype.rows();
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|ExpressMatrixForCType|=" << ms(time1, time2) < "\n";
+  std::cerr << "|ExpressMatrixForCType|=" << time < "\n";
 #endif
 
   std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple =
       CTYP_GetListTriple(TheCtype);
   int nb_triple = PairTriple.first.size();
 #ifdef TIMINGS
-  SingletonTime time3;
-  std::cerr << "|CTYP_GetListTriple|=" << ms(time2, time3) << "\n";
+  std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
 #endif
 
   int8_t n = TheCtype.cols();
@@ -918,8 +909,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
   int nb_ineq = Tot_map.size();
 #ifdef TIMINGS
-  SingletonTime time4;
-  std::cerr << "|Insert inequalities|=" << ms(time3, time4) << "\n";
+  std::cerr << "|Insert inequalities|=" << time << "\n";
 #endif
 
   int n_edgered = n_edge / 2;
@@ -1025,22 +1015,18 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   }
 #endif
 #ifdef TIMINGS
-  SingletonTime time5;
-  std::cerr << "|Criterion Ineq Drop|=" << ms(time4, time5) << "\n";
+  std::cerr << "|Criterion Ineq Drop|=" << time << "\n";
 #endif
 
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
 #ifdef TIMINGS
-  SingletonTime time6;
-  std::cerr << "|GetNumberFreeVectors|=" << ms(time5, time6) << "\n";
+  std::cerr << "|GetNumberFreeVectors|=" << time << "\n";
 #endif
 
   std::vector<std::vector<unsigned int>> ListGen =
       LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat);
 #ifdef TIMINGS
-  SingletonTime time7;
-  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << ms(time6, time7)
-            << "\n";
+  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
 #endif
 
   std::vector<Tidx> v(n_edge);
@@ -1055,8 +1041,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   int nb_autom = UniversalScalarConversion<int, Tint>(e_size);
 
 #ifdef TIMINGS
-  SingletonTime time8;
-  std::cerr << "|NumberAutomorphism|=" << ms(time7, time8) << "\n";
+  std::cerr << "|NumberAutomorphism|=" << time << "\n";
 #endif
   return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
 }
