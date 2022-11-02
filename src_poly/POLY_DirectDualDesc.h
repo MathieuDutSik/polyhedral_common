@@ -264,25 +264,29 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   if (ansProg == eProg)
     return lrs::DualDescription_temp_incd_reduction(EXT);
   //
-  eProg = "glrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "glrs", os);
+  // The external programs are available only for rationl types
   //
-  eProg = "ppl_ext";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "ppl_lcdd", os);
-  //
-  eProg = "cdd_ext";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "lcdd_gmp", os);
-  //
-  eProg = "normaliz";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "normaliz", os);
+  if constexpr(is_implementation_of_Q<T>::value) {
+    eProg = "glrs";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "glrs", os);
+    //
+    eProg = "ppl_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "ppl_lcdd", os);
+    //
+    eProg = "cdd_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "lcdd_gmp", os);
+    //
+    eProg = "normaliz";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "normaliz", os);
+  }
   //
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
             << " or incorrect output\n";

@@ -1,7 +1,7 @@
 #PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank Test_face Test_bool
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_MPI_DualDesc
+PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_MPI_DualDesc
 #PROGRAM		= POLY_RunTheBank
 #PROGRAM		= Test_face Test_bool
 #PROGRAM		= POLY_DatabaseRestructuration
