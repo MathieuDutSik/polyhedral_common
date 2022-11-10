@@ -439,17 +439,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         fEquiv =
             [&](SimpleOrbitFacet<T, Tgroup> const &x,
                 SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
-          std::chrono::time_point<std::chrono::system_clock> startLoc, endLoc;
-          startLoc = std::chrono::system_clock::now();
+          SecondTime time;
           auto eReply =
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          endLoc = std::chrono::system_clock::now();
-          int elapsed_seconds =
-              std::chrono::duration_cast<std::chrono::seconds>(endLoc -
-                                                               startLoc)
-                  .count();
-          MProc.GetO(TheId)
-              << "CLASSIC: After the test time = " << elapsed_seconds << "\n";
+          MProc.GetO(TheId) << "CLASSIC: After the test time = " << time << "\n";
           return eReply;
         };
       }
@@ -458,31 +451,14 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
             [&TheGRPrelevant, &MProc, &TheId, &WMat](
                 SimpleOrbitFacet<T, Tgroup> const &x,
                 SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
-          std::chrono::time_point<std::chrono::system_clock> startloc, endloc;
-          startloc = std::chrono::system_clock::now();
-          auto eReply =
-              TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          endloc = std::chrono::system_clock::now();
-          int elapsed_seconds =
-              std::chrono::duration_cast<std::chrono::seconds>(endloc -
-                                                               startloc)
-                  .count();
-          MProc.GetO(TheId)
-              << "PARTITION: After the test time = " << elapsed_seconds << "\n";
-          if (elapsed_seconds > 60) {
+          SecondTime time;
+          auto eReply = TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
+          MProc.GetO(TheId) << "PARTITION: After the test time = " << time << "\n";
+          if (time.eval() > 60) {
             //
-            std::chrono::time_point<std::chrono::system_clock> start_C, end_C;
-            start_C = std::chrono::system_clock::now();
-            auto eReplyB =
-                TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
-            end_C = std::chrono::system_clock::now();
-            int elapsed_seconds_C =
-                std::chrono::duration_cast<std::chrono::seconds>(end_C -
-                                                                 start_C)
-                    .count();
-            MProc.GetO(TheId)
-                << "Second method (bliss) runtime = " << elapsed_seconds_C
-                << "\n";
+            SecondTime time;
+            auto eReplyB = TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
+            MProc.GetO(TheId) << "Second method (bliss) runtime = " << time << "\n";
           }
           return eReply;
         };

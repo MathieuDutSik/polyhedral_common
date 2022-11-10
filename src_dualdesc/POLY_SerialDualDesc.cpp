@@ -5,6 +5,7 @@
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#include "QuadField.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 
@@ -17,6 +18,26 @@ void Process_eFull(FullNamelist const &eFull) {
   using Tidx_value = int32_t;
   MainFunctionSerialDualDesc<T, Tgroup, Tidx_value>(eFull);
 }
+
+template <typename T>
+void Process(FullNamelist const &eFull) {
+  MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
+  //
+  if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
+    return Process_eFull<T, uint8_t>(eFull);
+  if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
+    return Process_eFull<T, uint16_t>(eFull);
+  if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
+    return Process_eFull<T, uint32_t>(eFull);
+#if !defined __APPLE__
+  if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
+    return Process_eFull<T, uint64_t>(eFull);
+#endif
+  std::cerr << "Failed to find a numeric type that matches\n";
+  throw TerminalException{1};
+}
+
+
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
@@ -33,26 +54,18 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    using T = mpq_class;
-    //    using T = boost::multiprecision::cpp_rational;
-    //    using T = boost::multiprecision::mpq_rational;
-    MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
-    //
-    auto process = [&]() -> void {
-      if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
-        return Process_eFull<T, uint8_t>(eFull);
-      if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
-        return Process_eFull<T, uint16_t>(eFull);
-      if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
-        return Process_eFull<T, uint32_t>(eFull);
-#if !defined __APPLE__
-      if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
-        return Process_eFull<T, uint64_t>(eFull);
-#endif
-      std::cerr << "Failed to find a numeric type that matches\n";
-      throw TerminalException{1};
-    };
-    process();
+    std::string NumericalType = GetNumericalType(eFull);
+    if (NumericalType == "rational") {
+      using T = mpq_class;
+      //    using T = boost::multiprecision::cpp_rational;
+      //    using T = boost::multiprecision::mpq_rational;
+      Process<T>(eFull);
+    }
+    if (NumericalType == "Qsqrt5") {
+      using Trat = mpq_class;
+      using T = QuadField<Trat,5>;
+      Process<T>(eFull);
+    }
     //
     std::cerr << "Normal termination of the program\n";
   }

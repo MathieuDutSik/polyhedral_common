@@ -2092,7 +2092,7 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const &EXT) {
   MyMatrix<Tring> EXTring(nbRow, nbCol);
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
-    MyVector<T> eRow2 = RemoveFractionVector(eRow1);
+    MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
     MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
     AssignMatrixRow(EXTring, iRow, eRow3);
   }

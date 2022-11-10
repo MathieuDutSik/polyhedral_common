@@ -132,7 +132,7 @@ public:
   template <typename F>
   WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
 #ifdef TIMINGS
-    SingletonTime time1;
+    MicrosecondTime time;
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
@@ -160,15 +160,14 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS
-    SingletonTime time2;
-    std::cerr << "Timing |WeightMatrix(nbRow,f)|=" << ms(time1, time2) << "\n";
+    std::cerr << "Timing |WeightMatrix(nbRow,f)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
   template <typename F1, typename F2>
   WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2) : nbRow(_nbRow) {
 #ifdef TIMINGS
-    SingletonTime time1;
+    MicrosecondTime time;
 #endif
     TheMat.resize(nbRow * nbRow);
     std::unordered_map<T, Tidx_value> ValueMap;
@@ -197,8 +196,7 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS
-    SingletonTime time2;
-    std::cerr << "Timing |WeightMatrix(nbRow,f1,f2)|=" << ms(time1, time2) << "\n";
+    std::cerr << "Timing |WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
@@ -985,7 +983,7 @@ inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),
                                Tgr>::type
 GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   const bool use_pairs = true;
   size_t nof_vertices =
@@ -1008,8 +1006,7 @@ GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
                                        Tidx_value, use_pairs>(WMat, f_color,
                                                               f_adj);
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "Timing |GetGraphFromWeightedMatrix|=" << ms(time1, time2) << "\n";
+  std::cerr << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
 #endif
   return eGR;
 }

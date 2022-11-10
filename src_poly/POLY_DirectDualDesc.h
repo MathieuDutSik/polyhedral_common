@@ -47,7 +47,7 @@ template <typename T>
 vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
                                  std::string const &eCommand, std::ostream & os) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
@@ -91,8 +91,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     }
   }
 #ifdef TIMINGS
-  SingletonTime time2;
-  os << "|FileWriting|=" << ms(time1, time2) << "\n";
+  os << "|FileWriting|=" << time << "\n";
 #endif
   //  os << "FileO=" << FileO << " created\n";
   //
@@ -107,8 +106,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   os << "order=" << order << "\n";
   int iret1 = system(order.c_str());
 #ifdef TIMINGS
-  SingletonTime time3;
-  os << "|glrs/ppl/cdd|=" << ms(time2, time3) << "\n";
+  os << "|glrs/ppl/cdd|=" << time << "\n";
 #endif
   os << "External program terminated\n";
   if (iret1 != 0) {
@@ -224,8 +222,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
     }
   }
 #ifdef TIMINGS
-  SingletonTime time4;
-  os << "|FileRead|=" << ms(time3, time4) << "\n";
+  os << "|FileRead|=" << time << "\n";
 #endif
   os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
   //  throw TerminalException{1};
@@ -267,25 +264,29 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   if (ansProg == eProg)
     return lrs::DualDescription_temp_incd_reduction(EXT);
   //
-  eProg = "glrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "glrs", os);
+  // The external programs are available only for rationl types
   //
-  eProg = "ppl_ext";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "ppl_lcdd", os);
-  //
-  eProg = "cdd_ext";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "lcdd_gmp", os);
-  //
-  eProg = "normaliz";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return DualDescExternalProgram(EXT, "normaliz", os);
+  if constexpr(is_implementation_of_Q<T>::value) {
+    eProg = "glrs";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "glrs", os);
+    //
+    eProg = "ppl_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "ppl_lcdd", os);
+    //
+    eProg = "cdd_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "lcdd_gmp", os);
+    //
+    eProg = "normaliz";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgram(EXT, "normaliz", os);
+  }
   //
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
@@ -305,13 +306,11 @@ template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                      std::string const &ansProg, std::ostream & os) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg, os);
 #ifdef TIMINGS
-  SingletonTime time2;
-  os << "|DualDescription|=" << ms(time1, time2)
-            << " |ListIncd|=" << ListIncd.size() << "\n";
+  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size() << "\n";
 #endif
   if (ListIncd.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
@@ -319,10 +318,9 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
-  SingletonTime time3;
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
-     << TheOutput.size() << ") VALUE=" << ms(time2, time3) << "\n";
+     << TheOutput.size() << ") VALUE=" << time << "\n";
 #endif
   return TheOutput;
 }

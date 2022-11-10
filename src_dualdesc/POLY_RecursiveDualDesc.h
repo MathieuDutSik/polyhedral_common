@@ -166,7 +166,7 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
   }
   MyMatrix<T> RowRed = RowReduction(EXTcan);
   MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  MyMatrix<T> EXTretB = RemoveFractionMatrix(EXTret);
+  MyMatrix<T> EXTretB = ScalarCanonicalizationMatrix(EXTret);
   //
   std::vector<Telt> LGen;
   for (auto &eGen : PairCanGrp.second) {
@@ -193,6 +193,44 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT) {
   return CanonicalizationPolytopePair<T, int, Tidx_value>(EXT, WMat).first;
 }
 
+template<typename T, typename Tgroup, typename Tidx_value>
+std::pair<MyMatrix<T>,PairStore<Tgroup>> GetCanonicalInformation(MyMatrix<T> const &EXT,
+                                                                 WeightMatrix<true, T, Tidx_value> const &WMat,
+                                                                 Tgroup const &TheGRPrelevant,
+                                                                 vectface const &ListFace) {
+  using Telt = typename Tgroup::Telt;
+  TripleCanonic<T, Tgroup> eTriple =
+    CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
+  bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
+  vectface ListFaceO(EXT.rows());
+  Telt perm1 = Telt(eTriple.ListIdx);
+  Telt ePerm = ~perm1;
+  if (!NeedRemapOrbit) {
+    // We needed to compute the full group, but it turned out to be the same
+    // as the input group.
+    Face eFaceImg(EXT.rows());
+    for (auto &eFace : ListFace) {
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      ListFaceO.push_back(eFaceImg);
+    }
+  } else {
+    // The full group is bigger than the input group. So we need to reduce.
+    UNORD_SET<Face> SetFace;
+    Face eFaceImg(EXT.rows());
+    for (auto &eFace : ListFace) {
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      Face eIncCan = eTriple.GRP.CanonicalImage(eFaceImg);
+      SetFace.insert(eIncCan);
+    }
+    for (auto &eInc : SetFace) {
+      ListFaceO.push_back(eInc);
+    }
+  }
+  PairStore<Tgroup> ePair{eTriple.GRP, std::move(ListFaceO)};
+  return {std::move(eTriple.EXT), std::move(ePair)};
+}
+
+
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
                           WeightMatrix<true, T, Tidx_value> const &WMat,
@@ -217,35 +255,8 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     bank.InsertEntry(std::move(ePair.first),
                      {std::move(GrpConj), std::move(ListFaceO)});
   } else {
-    TripleCanonic<T, Tgroup> eTriple =
-        CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
-    bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
-    vectface ListFaceO(EXT.rows());
-    Telt perm1 = Telt(eTriple.ListIdx);
-    Telt ePerm = ~perm1;
-    if (!NeedRemapOrbit) {
-      // We needed to compute the full group, but it turned out to be the same
-      // as the input group.
-      Face eFaceImg(EXT.rows());
-      for (auto &eFace : ListFace) {
-        OnFace_inplace(eFaceImg, eFace, ePerm);
-        ListFaceO.push_back(eFaceImg);
-      }
-    } else {
-      // The full group is bigger than the input group. So we need to reduce.
-      UNORD_SET<Face> SetFace;
-      Face eFaceImg(EXT.rows());
-      for (auto &eFace : ListFace) {
-        OnFace_inplace(eFaceImg, eFace, ePerm);
-        Face eIncCan = eTriple.GRP.CanonicalImage(eFaceImg);
-        SetFace.insert(eIncCan);
-      }
-      for (auto &eInc : SetFace) {
-        ListFaceO.push_back(eInc);
-      }
-    }
-    bank.InsertEntry(std::move(eTriple.EXT),
-                     {std::move(eTriple.GRP), std::move(ListFaceO)});
+    std::pair<MyMatrix<T>,PairStore<Tgroup>> eP = GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListFace);
+    bank.InsertEntry(std::move(eP.first), std::move(eP.second));
   }
 }
 
@@ -1508,6 +1519,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, int> ListIntValues1;
+  ListStringValues1["NumericalType"] = "rational";
   ListStringValues1["EXTfile"] = "unset.ext";
   ListStringValues1["GRPfile"] = "unset.grp";
   ListStringValues1["OUTfile"] = "unset.out";
@@ -1580,7 +1592,9 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
   return {std::move(ListBlock), "undefined"};
 }
 
-void OutputFacets(const vectface &TheOutput, const std::string &OUTfile,
+template<typename T, typename Tgroup>
+void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
+                  const vectface &TheOutput, const std::string &OUTfile,
                   const std::string &OutFormat) {
   if (OutFormat == "Magma") {
     std::ofstream os(OUTfile);
@@ -1605,6 +1619,14 @@ void OutputFacets(const vectface &TheOutput, const std::string &OUTfile,
     }
     return;
   }
+  if (OutFormat == "BankEntry") {
+    // We are creating a bank entry for further works.
+    using Tidx_value = uint16_t;
+    WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T, Tidx_value>(EXT);
+    WMat.ReorderingSetWeight();
+    std::pair<MyMatrix<T>,PairStore<Tgroup>> eP = GetCanonicalInformation(EXT, WMat, GRP, TheOutput);
+    Write_BankEntry(OUTfile, eP.first, eP.second);
+  }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
 }
@@ -1616,6 +1638,23 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   std::ifstream EXTfs(EXTfile);
   return ReadMatrix<T>(EXTfs);
 }
+
+std::string GetNumericalType(FullNamelist const &eFull) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  std::string NumericalType = BlockDATA.ListStringValues.at("NumericalType");
+  std::vector<std::string> Ltype{"rational", "Qsqrt5"};
+  if (PositionVect(Ltype, NumericalType) == -1) {
+    std::cerr << "NumericalType=" << NumericalType << "\n";
+    std::cerr << "Ltype =";
+    for (auto & e_type : Ltype)
+      std::cerr << " " << e_type;
+    std::cerr << "\n";
+    throw TerminalException{1};
+  }
+  return NumericalType;
+}
+
+
 
 
 
@@ -1767,7 +1806,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets(TheOutput, AllArr.OUTfile, AllArr.OutFormat);
+  OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat);
 }
 
 template <typename T, typename Tgroup>

@@ -655,7 +655,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     return {};
   }
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   auto fct_CVP = [&]() -> void {
     std::cerr << "Beginning of fct_CVP\n";
@@ -772,9 +772,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   }
   //
 #ifdef TIMINGS
-  SingletonTime time2;
   std::cerr << "|list_root|=" << list_root.size()
-            << " |FindRoot_filter|=" << ms(time1, time2) << "\n";
+            << " |FindRoot_filter|=" << time << "\n";
 #endif
   return list_root;
 }
@@ -898,7 +897,7 @@ std::optional<MyVector<Tint>>
 GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t n_root = ListRoot.size();
   size_t n_col = Vtot.G.rows();
@@ -948,10 +947,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     look_for_vector();
   }
 #ifdef TIMINGS
-  SingletonTime time2;
   bool test = opt.has_value();
   std::cerr << "has found vertex=" << test << " n_iter=" << n_iter
-            << " |GetOneInteriorVertex|=" << ms(time1, time2) << "\n";
+            << " |GetOneInteriorVertex|=" << time << "\n";
 #endif
   return opt;
 }
@@ -960,7 +958,7 @@ template <typename T, typename Tint>
 bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   size_t n_root = ListRoot.size();
   size_t n_col = Vtot.G.rows();
@@ -1012,9 +1010,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     look_for_vector();
   }
 #ifdef TIMINGS
-  SingletonTime time2;
   std::cerr << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
-            << " |is_FundPoly_LRS|=" << ms(time1, time2) << "\n";
+            << " |is_FundPoly_LRS|=" << time << "\n";
 #endif
   std::cerr << "norm multiplicities =";
   for (auto &kv : map)
@@ -1050,12 +1047,11 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   eCommand += " < " + FileI + " > " + FileO;
   std::cerr << "eCommand=" << eCommand << "\n";
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   int iret = system(eCommand.c_str());
 #ifdef TIMINGS
-  SingletonTime time2;
-  std::cerr << "|system|=" << ms(time1, time2) << "\n";
+  std::cerr << "|system|=" << time << "\n";
 #endif
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
@@ -1075,9 +1071,8 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
         IsFiniteCovolume = true;
   }
 #ifdef TIMINGS
-  SingletonTime time3;
   std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume
-            << "  |coxiter|=" << ms(time2, time3) << "\n";
+            << "  |coxiter|=" << time << "\n";
 #endif
   return IsFiniteCovolume;
 }

@@ -219,7 +219,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       std::string const &method_split,
                                       std::ostream &os) {
 #ifdef TIMINGS
-  SingletonTime time1;
+  MicrosecondTime time;
 #endif
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
   using Tidx_value = uint16_t;
@@ -247,8 +247,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     }
   }
 #ifdef TIMINGS
-  SingletonTime time2;
-  os << "OrbitSplitting elapsed_microseconds=" << ms(time1, time2)
+  os << "OrbitSplitting elapsed_microseconds=" << time
      << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
      << "\n";
 #endif
