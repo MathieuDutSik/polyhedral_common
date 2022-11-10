@@ -262,13 +262,19 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         // and possibly treating orbits with unnecessary large incidence
         if (bte_facet.get_unsent_size() >= MaxBuffered) {
           os << "Calling clear_one_entry after reaching MaxBuffered\n";
-          bte_facet.clear_one_entry(os);
+          if(!bte_facet.clear_one_entry(os)) {
+            int n_milliseconds = 1000;
+            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds)); 
+          }
         }
         process_database();
       } else {
         if (!bte_facet.is_buffer_empty()) {
           os << "Calling clear_one_entry\n";
-          bte_facet.clear_one_entry(os);
+          if(!bte_facet.clear_one_entry(os)) {
+            int n_milliseconds = 1000;
+            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds)); 
+          }
         } else {
           int nb_finished_oth = get_nb_finished_oth();
           os << "Nothing to do, entering the busy loop status=" << get_maxruntimereached() << " get_nb_finished_oth()=" << nb_finished_oth << "\n";

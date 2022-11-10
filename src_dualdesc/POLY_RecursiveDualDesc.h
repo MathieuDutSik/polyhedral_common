@@ -769,6 +769,24 @@ private:
       }
       return tmp;
     }
+    IteratorType &operator--() {
+      if(pos == 0) {
+        iter--;
+        pos = iter->second.size();
+      }
+      pos--;
+      return *this;
+    }
+    IteratorType operator--(int) {
+      IteratorType tmp = *this;
+      if(pos == 0) {
+        iter--;
+        pos = iter->second.size();
+      }
+      pos--;
+      return tmp;
+    }
+
     bool operator!=(const IteratorType &x) const {
       return pos != x.pos || iter != x.iter;
     }
@@ -1169,13 +1187,22 @@ public:
   Face ComputeIntersectionUndone() const {
     size_t n_row = bb.EXT.rows();
     Face eSetReturn(n_row);
+    
+    // don't do full computation if many orbit remaining
+    // for some polytopes only the last orbit sets eSetReturn = 0
+    // resulting in large slowdowns here
+    // alternative fix: enumerate in decending order
+    if(bb.foc.nbOrbit - bb.foc.nbOrbitDone > 1000)
+        return eSetReturn;
+
     for (size_t i_row = 0; i_row < n_row; i_row++)
       eSetReturn[i_row] = 1;
     typename TbasicBank::iterator iter = bb.begin_undone();
     while (iter != bb.end_undone()) {
       eSetReturn &= OrbitIntersection(bb.GRP, *iter);
-      if (eSetReturn.count() == 0)
-        return eSetReturn;
+      if (eSetReturn.count() == 0){
+          return eSetReturn;
+      }
       iter++;
     }
     return eSetReturn;
