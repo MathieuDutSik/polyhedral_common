@@ -300,11 +300,11 @@ struct buffered_T_exchanges {
     comm.recv(source, tag, vf);
     return vf;
   }
-  void clear_one_entry(std::ostream & os) {
+  bool clear_one_entry(std::ostream & os) {
     size_t idx = rsl.GetFreeIndex();
     os << "idx=" << idx << "\n";
     if (idx == std::numeric_limits<size_t>::max())
-      return;
+      return false;
     size_t max_siz = 0;
     int chosen_iproc = -1;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
@@ -316,10 +316,11 @@ struct buffered_T_exchanges {
     }
     os << "max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
     if (chosen_iproc == -1)
-      return;
+      return false;
     l_under_cons[idx] = std::move(l_message[chosen_iproc]);
     l_message[chosen_iproc].clear();
     rsl[idx] = comm.isend(chosen_iproc, tag, l_under_cons[idx]);
+    return true;
   }
   size_t get_unsent_size() const {
     size_t n_unsent = 0;
