@@ -1493,6 +1493,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, int> ListIntValues1;
   ListStringValues1["NumericalType"] = "rational";
+  ListStringValues1["FileAlgebraicField"] = "unset";
   ListStringValues1["EXTfile"] = "unset.ext";
   ListStringValues1["GRPfile"] = "unset.grp";
   ListStringValues1["OUTfile"] = "unset.out";
@@ -1615,7 +1616,7 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string NumericalType = BlockDATA.ListStringValues.at("NumericalType");
-  std::vector<std::string> Ltype{"rational", "Qsqrt5"};
+  std::vector<std::string> Ltype{"rational", "Qsqrt5", "RealAlgebraic"};
   if (PositionVect(Ltype, NumericalType) == -1) {
     std::cerr << "NumericalType=" << NumericalType << "\n";
     std::cerr << "Ltype =";
