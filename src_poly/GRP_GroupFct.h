@@ -149,6 +149,12 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
 }
 
 template <typename Tgroup>
+void WriteGroupFile(std::string const& eFile, Tgroup const &TheGRP) {
+  std::ofstream os(eFile);
+  WriteGroup(os, TheGRP);
+}
+
+template <typename Tgroup>
 void WriteGroupMakeUp(std::ostream &os, Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;

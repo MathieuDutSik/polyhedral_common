@@ -66,12 +66,10 @@ int main(int argc, char *argv[]) {
       Tgroup GRPred = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
       //
       std::string FileGRP_out = DirectoryOutput + "GRP_" + std::to_stinrg(iPolytope);
-      std::ofstream osGRP(FileGRP_out);
-      WriteGroup(osGRP, GRPred);
+      WriteGroupFile(FileGRP_out, GRPred);
       //
       std::string FileEXT_out = DirectoryOutput + "EXT_" + std::to_stinrg(iPolytope);
-      std::ofstream osEXT(FileEXT_out);
-      WriteMatrix(osEXT, EXTred);
+      WriteMatrixFile(FileEXT_out, EXTred);
       //
       iPolytope++;
     };
