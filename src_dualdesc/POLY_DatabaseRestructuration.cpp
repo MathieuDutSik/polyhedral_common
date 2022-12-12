@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     if (argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_DatabaseRestructuration FileGRP] [DatabaseInput] [NprocInput] [DatabaseOutput] [NprocOutput]\n";
+      std::cerr << "POLY_DatabaseRestructuration [FileGRP] [DatabaseInput] [NprocInput] [DatabaseOutput] [NprocOutput]\n";
       std::cerr << "Be careful when using it, it depends on so many aspects of the code\n";
       return -1;
     }

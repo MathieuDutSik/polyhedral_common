@@ -283,6 +283,25 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
 
 
 
+template <typename T, typename Tgroup>
+bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC, const Tgroup &GRP,
+                                                const MyMatrix<T> &EXT_undone, const vectface &vf_undone,
+                                                std::ostream & os) {
+  size_t max_iter = 100;
+  size_t n_iter = 0;
+  auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
+    n_iter++;
+    os << "  f_recur n_iter=" << n_iter << "\n";
+    if (n_iter == max_iter)
+      return false;
+    if (pfr.first > 1)
+      return false;
+    return true;
+  };
+  return EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone, vf_undone, f_recur, os);
+}
+
+
 
 
 template <typename TbasicBank>
@@ -302,18 +321,7 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
   vectface vf_undone = ComputeSetUndone(bb);
   MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
   //
-  size_t max_iter = 100;
-  size_t n_iter = 0;
-  auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
-    n_iter++;
-    os << "  f_recur n_iter=" << n_iter << "\n";
-    if (n_iter == max_iter)
-      return false;
-    if (pfr.first > 1)
-      return false;
-    return true;
-  };
-  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone, vf_undone, f_recur, os);
+  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP, EXT_undone, vf_undone, os);
 }
 
 
