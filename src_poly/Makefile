@@ -20,6 +20,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_OrbitSplittingPerfect \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet \
+		  POLY_IsomorphismReduction \
 		  POLY_FaceLatticeDirect
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

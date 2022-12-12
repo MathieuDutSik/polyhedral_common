@@ -1,6 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheory.h"
 #include "POLY_lrslib.h"
+#include "Group.h"
+#include "Permutation.h"
+#include "GRP_GroupFct.h"
+
 
 int main(int argc, char *argv[]) {
   try {
@@ -30,7 +34,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
     //
     std::string FileGRP = argv[3];
-    Tgroup GRP = ReadGRoupFile<Tgroup>(FileGRP);
+    Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
     //
     std::string FileOUT = argv[4];
     //

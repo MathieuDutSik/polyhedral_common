@@ -34,12 +34,13 @@
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
-PROGRAM		= GRP_LinearSpace_Equivalence
+#PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
+PROGRAM		= POLY_IsomorphismReduction
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
