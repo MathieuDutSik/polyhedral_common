@@ -119,6 +119,19 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
 }
 
 template <typename Tgroup>
+Tgroup ReadGroupFile(std::string const& file_name) {
+  if (!IsExistingFile(file_name)) {
+    std::cerr << "Error in ReadGroupFile\n";
+    std::cerr << "file_name=" << file_name << " does not appear to exist\n";
+    throw TerminalException{1};
+  }
+  std::ifstream is(file_name);
+  return ReadGroup<Tgroup>(is);
+}
+
+
+
+template <typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;

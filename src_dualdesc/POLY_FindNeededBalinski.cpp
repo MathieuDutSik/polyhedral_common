@@ -26,9 +26,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string FileEXT = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
     //
     std::string FileGRP = argv[2];
-    Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
+    Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     std::map<Tidx,int> LFact = GRP.factor_size();
     Tidx n_act = GRP.n_act();
