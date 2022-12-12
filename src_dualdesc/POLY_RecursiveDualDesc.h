@@ -1598,27 +1598,13 @@ void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
                   const vectface &TheOutput, const std::string &OUTfile,
                   const std::string &OutFormat) {
   if (OutFormat == "Magma") {
-    std::ofstream os(OUTfile);
-    os << "return ";
-    VectVectInt_Magma_Print(os, TheOutput);
-    os << ";\n";
-    return;
+    return VectVectInt_Magma_PrintFile(OUTfile, TheOutput);
   }
   if (OutFormat == "GAP") {
-    std::ofstream os(OUTfile);
-    os << "return ";
-    VectVectInt_Gap_Print(os, TheOutput);
-    os << ";\n";
-    return;
+    return VectVectInt_Gap_PrintFile(OUTfile, TheOutput);
   }
   if (OutFormat == "SetInt") {
-    std::ofstream os(OUTfile);
-    os << TheOutput.size() << "\n";
-    for (const Face &face : TheOutput) {
-      mpz_class res = getsetasint<mpz_class>(face);
-      os << res << "\n";
-    }
-    return;
+    return VectVectInt_SetInt_PrintFile<mpz_class>(OUTfile, TheOutput);
   }
   if (OutFormat == "BankEntry") {
     // We are creating a bank entry for further works.

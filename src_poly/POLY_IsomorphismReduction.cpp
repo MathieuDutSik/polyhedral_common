@@ -34,13 +34,30 @@ int main(int argc, char *argv[]) {
     //
     std::string FileOUT = argv[4];
     //
-    std::ifstream is(argv[1]);
-    MyMatrix<T> EXT = ReadMatrixLrsCdd<T>(is);
+    int n_ext = EXT.rows();
+    int n_col = EXT.cols(); 
+    vectface vf(n_ext);
+    int n_fac = FAC.rows();
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      Face f(n_ext);
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        T eSum = 0;
+        for (int i_col=0; i_col<n_col; i_col++)
+          eSum += EXT(i_ext,i_col) * FAC(i_fac,i_col);
+        if (eSum == 0)
+          f[i_ext] = 1;
+        else
+          f[i_ext] = 0;
+      }
+      vf.push_back(f);
+    }
     //
-    vectface ListFace = lrs::DualDescription_temp_incd_reduction(EXT);
-    std::cerr << "nbVert = " << ListFace.size() << "\n";
+    vectface vf_red = OrbitSplittingSet(vf, GRP);
+    //
+    VectVectInt_Gap_PrintFile(FileOUT, vf_red);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Something went wrong in the computation, please debug\n";
     exit(e.eVal);
   }
 }
