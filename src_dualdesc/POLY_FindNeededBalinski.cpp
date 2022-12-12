@@ -8,6 +8,8 @@
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
+    using T = mpq_class;
+    using Tgr = GraphListAdj;
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
@@ -45,16 +47,7 @@ int main(int argc, char *argv[]) {
     }
     //
     int MinIncd = ParseScalar<int>(argv[5]);
-    std::string DatabaseI = argv[6];
-    //
-    // Reading the group
-    //
-    std::ifstream GRPfs(FileGRP);
-    Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
-    std::map<Tidx,int> LFact = GRP.factor_size();
-    Tidx n_act = GRP.n_act();
-    std::pair<size_t,size_t> ep = get_delta(LFact, n_act);
-    size_t delta = ep.second;
+    std::string DirectoryOutput = argv[6];
     //
     // The function for outputting
     //
@@ -65,15 +58,15 @@ int main(int argc, char *argv[]) {
       WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T, Tidx_value>(EXT);
       Tgroup GRPred = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
       //
-      std::string FileGRP_out = DirectoryOutput + "GRP_" + std::to_stinrg(iPolytope);
+      std::string FileGRP_out = DirectoryOutput + "GRP_" + std::to_string(iPolytope);
       WriteGroupFile(FileGRP_out, GRPred);
       //
-      std::string FileEXT_out = DirectoryOutput + "EXT_" + std::to_stinrg(iPolytope);
+      std::string FileEXT_out = DirectoryOutput + "EXT_" + std::to_string(iPolytope);
       WriteMatrixFile(FileEXT_out, EXTred);
       //
       iPolytope++;
     };
-    auto f_process_database=[&](std::string const& eDir) -> void {
+    auto f_process_database=[&](std::string const& ePrefix) -> void {
       std::string eFileNB = ePrefix + ".nb";
       std::string eFileFB = ePrefix + ".fb";
       std::string eFileFF = ePrefix + ".ff";
@@ -89,7 +82,7 @@ int main(int argc, char *argv[]) {
           int eIncd = f.count();
           if (eIncd >= MinIncd) {
             vectface vf_orbit = OrbitFace(f, LGen);
-            MyMatrix<T> FAC_undone = GetVertexSet_from_vectface(bb.EXT, vf_orbit);
+            MyMatrix<T> FAC_undone = GetVertexSet_from_vectface(EXT, vf_orbit);
             bool test = EvaluationConnectednessCriterion_PreKernel(EXT, GRP, FAC_undone, vf_orbit, std::cerr);
             if (!test) {
               std::cerr << "i_orbit=" << i_orbit << " needs to be done eIncd=" << eIncd << "\n";
