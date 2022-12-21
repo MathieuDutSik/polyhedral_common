@@ -13,7 +13,7 @@
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
-#PROGRAM		= POLY_lrs
+PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -40,7 +40,7 @@
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
-PROGRAM		= POLY_IsomorphismReduction
+#PROGRAM		= POLY_IsomorphismReduction
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

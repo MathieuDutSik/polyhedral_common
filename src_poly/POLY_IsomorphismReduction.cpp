@@ -27,15 +27,20 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
+    std::cerr << "POLY_IsomorphismReduction, step 1\n";
     std::string FileEXT = argv[1];
+    std::cerr << "FileEXT=" << FileEXT << "\n";
     MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
     //
+    std::cerr << "POLY_IsomorphismReduction, step 2\n";
     std::string FileFAC = argv[2];
     MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
     //
+    std::cerr << "POLY_IsomorphismReduction, step 3\n";
     std::string FileGRP = argv[3];
     Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
     //
+    std::cerr << "POLY_IsomorphismReduction, step 4\n";
     std::string FileOUT = argv[4];
     //
     int n_ext = EXT.rows();
