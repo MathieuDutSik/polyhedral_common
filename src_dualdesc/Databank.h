@@ -4,6 +4,9 @@
 
 #include "basic_datafile.h"
 #include <boost/asio.hpp>
+#include <boost/mpi.hpp>
+#include <boost/mpi/communicator.hpp>
+#include <boost/mpi/environment.hpp>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -278,6 +281,25 @@ public:
     socket.connect(endpoint);
     send_data<TripleNKV<Tkey, Tval>>(socket, {'g', std::move(eKey), Tval()});
     return read_data<Tval>(socket);
+  }
+};
+
+template <typename Tkey, typename Tval> struct DataBankMpiClient {
+private:
+  boost::mpi::communicator & comm;
+  int dest_iproc;
+  int tag_mpi_bank_request;
+  int tag_mpi_bank_reception;
+public:
+  DataBankMpiClient(boost::mpi::communicator & comm) : comm(comm), dest_iproc(comm.size() - 1), tag_mpi_bank_request(241), tag_mpi_bank_reception(193)
+  {}
+  void InsertEntry(Tkey &&eKey, Tval &&eVal) {
+    comm.send(dest_iproc, tag_mpi_bank_request, eKey);
+  }
+  Tval GetDualDesc(const Tkey &eKey) const {
+    Tval val;
+    comm.recv(dest_iproc, tag_mpi_bank_reception, val);
+    return val;
   }
 };
 
