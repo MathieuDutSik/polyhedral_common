@@ -374,7 +374,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   //
-  using Tbank = DataBankClient<Tkey, Tval>;
+  using Tbank = DataBankAsioClient<Tkey, Tval>;
   Tbank TheBank(AllArr.port);
 
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;

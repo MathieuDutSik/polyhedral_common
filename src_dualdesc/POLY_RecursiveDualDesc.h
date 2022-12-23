@@ -1782,7 +1782,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     if (AllArr.parallelization_method == "bank_asio") {
-      using Tbank = DataBankClient<Tkey, Tval>;
+      using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);

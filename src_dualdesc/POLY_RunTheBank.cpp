@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       signal_callback_handler_bank<Tkey, Tval>(signum);
     };
     signal(SIGINT, process_signal);
-    DataBankServer<Tkey, Tval> BankServer(Saving, SavingPrefix, port);
+    DataBankAsioServer<Tkey, Tval> BankServer(Saving, SavingPrefix, port);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     exit(e.eVal);

@@ -204,7 +204,7 @@ inline void serialize(Archive &ar, TripleNKV<Tkey, Tval> &triple,
 
 } // namespace boost::serialization
 
-template <typename Tkey, typename Tval> struct DataBankServer {
+template <typename Tkey, typename Tval> struct DataBankAsioServer {
 private:
   std::unordered_map<Tkey, Tval> ListEnt;
   bool Saving;
@@ -212,7 +212,7 @@ private:
   short unsigned int port;
 
 public:
-  DataBankServer(const bool &_Saving, const std::string &_SavingPrefix,
+  DataBankAsioServer(const bool &_Saving, const std::string &_SavingPrefix,
                  const short unsigned int _port)
       : Saving(_Saving), SavingPrefix(_SavingPrefix), port(_port) {
     ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
@@ -260,13 +260,13 @@ public:
   }
 };
 
-template <typename Tkey, typename Tval> struct DataBankClient {
+template <typename Tkey, typename Tval> struct DataBankAsioClient {
 private:
   short unsigned int port;
   boost::asio::ip::tcp::endpoint endpoint;
 
 public:
-  DataBankClient(const short unsigned int &_port)
+  DataBankAsioClient(const short unsigned int &_port)
       : port(_port), endpoint(boost::asio::ip::tcp::v4(), port) {}
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
     send_data_atomic<TripleNKV<Tkey, Tval>>(
