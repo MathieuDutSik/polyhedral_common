@@ -11,6 +11,10 @@
 #include <unordered_map>
 #include <utility>
 
+static const int tag_mpi_bank_insert = 157;
+static const int tag_mpi_bank_request = 193;
+static const int tag_mpi_bank_reception = 241;
+
 template <typename Tgroup_impl> struct PairStore {
   using Tgroup = Tgroup_impl;
   Tgroup GRP;
@@ -195,6 +199,11 @@ template <typename Tkey, typename Tval> struct TripleNKV {
   Tval eVal;
 };
 
+template <typename Tkey, typename Tval> struct PairKV {
+  Tkey eKey;
+  Tval eVal;
+};
+
 namespace boost::serialization {
 
 template <class Archive, typename Tkey, typename Tval>
@@ -203,6 +212,13 @@ inline void serialize(Archive &ar, TripleNKV<Tkey, Tval> &triple,
   ar &make_nvp("nature", triple.nature);
   ar &make_nvp("eKey", triple.eKey);
   ar &make_nvp("eVal", triple.eVal);
+}
+
+template <class Archive, typename Tkey, typename Tval>
+inline void serialize(Archive &ar, PairKV<Tkey, Tval> &pair,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("eKey", pair.eKey);
+  ar &make_nvp("eVal", pair.eVal);
 }
 
 } // namespace boost::serialization
@@ -288,15 +304,15 @@ template <typename Tkey, typename Tval> struct DataBankMpiClient {
 private:
   boost::mpi::communicator & comm;
   int dest_iproc;
-  int tag_mpi_bank_request;
-  int tag_mpi_bank_reception;
 public:
-  DataBankMpiClient(boost::mpi::communicator & comm) : comm(comm), dest_iproc(comm.size() - 1), tag_mpi_bank_request(241), tag_mpi_bank_reception(193)
+  DataBankMpiClient(boost::mpi::communicator & comm) : comm(comm), dest_iproc(comm.size() - 1)
   {}
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
-    comm.send(dest_iproc, tag_mpi_bank_request, eKey);
+    PairKV<Tkey,Tval> pair{std::move(eKey), std::move(eVal)};
+    comm.send(dest_iproc, tag_mpi_bank_insert, pair);
   }
   Tval GetDualDesc(const Tkey &eKey) const {
+    comm.send(dest_iproc, tag_mpi_bank_request, eKey);
     Tval val;
     comm.recv(dest_iproc, tag_mpi_bank_reception, val);
     return val;
