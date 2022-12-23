@@ -264,7 +264,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           os << "Calling clear_one_entry after reaching MaxBuffered\n";
           if(!bte_facet.clear_one_entry(os)) {
             int n_milliseconds = 1000;
-            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
           }
         }
         process_database();
@@ -273,18 +273,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
           os << "Calling clear_one_entry\n";
           if(!bte_facet.clear_one_entry(os)) {
             int n_milliseconds = 1000;
-            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
           }
         } else {
           int nb_finished_oth = get_nb_finished_oth();
           os << "Nothing to do, entering the busy loop status=" << get_maxruntimereached() << " get_nb_finished_oth()=" << nb_finished_oth << "\n";
-          /*
-          if (!get_maxruntimereached() || nb_finished_oth < n_proc - 1) {
-            boost::mpi::status stat = comm.probe();
-            process_mpi_status(stat);
-          }
-          */
-          
           // do while, such that we also sleep after maxruntimereached
           // to prevent log spam when other threads are still working
           do {
@@ -295,7 +288,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             }
             int n_milliseconds = 1000;
             std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
-          } while (!get_maxruntimereached()); 
+          } while (!get_maxruntimereached());
 
         }
       }
@@ -347,8 +340,6 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
 }
 
 
-
-
 template <typename T, typename Tgroup, typename Tidx_value>
 void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist const &eFull) {
   using Tint = typename Tgroup::Tint;
@@ -391,14 +382,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
 }
 
 
-
-
-
-
-
-
-
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 // clang-format on
-
