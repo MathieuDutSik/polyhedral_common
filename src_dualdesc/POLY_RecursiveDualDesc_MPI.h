@@ -335,7 +335,8 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
     update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
     CreateDirectory(str_ref);
   };
-  update_string(AllArr.BANK_Prefix);
+  if (AllArr.parallelization_method == "serial")
+    update_string(AllArr.BANK_Prefix);
   update_string(AllArr.DD_Prefix);
 }
 
@@ -365,13 +366,31 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   //
-  using Tbank = DataBankAsioClient<Tkey, Tval>;
-  Tbank TheBank(AllArr.port);
-
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
-  vectface vf = MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+  //
+  auto get_vectface = [&]() -> vectface {
+    if (AllArr.parallelization_method == "serial") {
+      using Tbank = DataBank<Tkey, Tval>;
+      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
+      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+    }
+    if (AllArr.parallelization_method == "bank_asio") {
+      using Tbank = DataBankAsioClient<Tkey, Tval>;
+      Tbank TheBank(AllArr.port);
+      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+    }
+    if (AllArr.parallelization_method == "bank_asio") {
+      using Tbank = DataBankMpiClient<Tkey, Tval>;
+      Tbank TheBank(comm);
+      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+    }
+    std::cerr << "Failed to find a matching entry for parallelization_method\n";
+    std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
+    throw TerminalException{1};
+  };
+  vectface vf = get_vectface();
   os << "We have vf\n";
   int i_proc_ret = 0;
   vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);

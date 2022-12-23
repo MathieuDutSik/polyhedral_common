@@ -1788,6 +1788,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for parallelization_method\n";
+    std::cerr << "Allowed methods are serial, bank_asio\n";
     throw TerminalException{1};
   };
   vectface TheOutput = get_vectface();
