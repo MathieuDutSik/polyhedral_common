@@ -31,18 +31,18 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Temp_lrs rational [DATAIN]\n";
-      std::cerr << "Temp_lrs Qsqrt5 [DATAIN]\n";
+      std::cerr << "POLY_lrs rational [DATAIN]\n";
+      std::cerr << "POLY_lrs Qsqrt5 [DATAIN]\n";
       std::cerr << "or\n";
-      std::cerr << "Temp_lrs RealAlgebraic [DATAIN] [DATA_ALGEBRAIC_FIELD]\n";
+      std::cerr << "POLY_lrs RealAlgebraic [DATAIN] [DATA_ALGEBRAIC_FIELD]\n";
       std::cerr << "\n";
       std::cerr << "DATAIN : The polyhedral cone inequalities\n";
       std::cerr << "DATA_ALGEBRAIC_FIELD : The algebraic field used\n";
       return -1;
     }
     //
-    std::string eFile = argv[1];
-    std::string type = argv[2];
+    std::string eFile = argv[2];
+    std::string type = argv[1];
     auto call_lrs=[&]() -> void {
       if (type == "rational") {
         return process<mpq_class>(eFile);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         using T = RealField<idx_real_algebraic_field>;
         return process<T>(eFile);
       }
-      std::cerr << "Failed to find a matching field\n";
+      std::cerr << "Failed to find a matching field for type=" << type << "\n";
       throw TerminalException{1};
     };
     call_lrs();
