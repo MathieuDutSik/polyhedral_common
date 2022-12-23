@@ -262,7 +262,6 @@ public:
 
 template <typename Tkey, typename Tval> struct DataBankClient {
 private:
-  std::unordered_map<Tkey, Tval> ListEnt;
   short unsigned int port;
   boost::asio::ip::tcp::endpoint endpoint;
 
@@ -281,6 +280,8 @@ public:
     return read_data<Tval>(socket);
   }
 };
+
+
 
 // clang-format off
 #endif  // SRC_DUALDESC_DATABANK_H_
