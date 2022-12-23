@@ -385,7 +385,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
       Tbank TheBank(AllArr.port);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
-    if (AllArr.parallelization_method == "bank_asio") {
+    if (AllArr.parallelization_method == "bank_mpi") {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
       if (i_rank < n_proc-1) {
@@ -401,6 +401,10 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
     throw TerminalException{1};
   };
   vectface vf = get_vectface();
+  if (i_rank < n_proc-1) {
+    comm_local.barrier();
+    comm.send(n_proc-1, tag_mpi_bank_end, 42);
+  }
   os << "We have vf\n";
   int i_proc_ret = 0;
   vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
