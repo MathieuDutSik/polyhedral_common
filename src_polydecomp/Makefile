@@ -23,12 +23,11 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_POLYEDRAL_DECOMPOSITION
 #CDEFS           = -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_MATRIX_GROUP
 CFLAGS 		= -I$(GMP_INCDIR) -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)  -I$(LIBSHORT_INCDIR) $(MPI_INCLUDE_CPP) $(NAUTY_INCLUDE) $(GLPK_INCLUDE) $(CDDLIB_INCLUDE)
-# $(MPI_CXX_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(LIBSHORT_LINK) $(MPFR_LINK) $(NAUTY_LINK) $(GLPK_LINK) $(CDDLIB_GMP_LINK)
-# $(MPI_CXX_LINK) $(MPI_LINK_CPP)
+# $(MPI_LINK_CPP)
 
 
 %.o: %.cpp
