@@ -406,16 +406,16 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
     throw TerminalException{1};
   };
   vectface vf = get_vectface();
+  int i_proc_ret = 0;
   if (AllArr.bank_parallelization_method == "bank_mpi") {
     if (i_rank < n_proc-1) {
       comm_local.barrier();
-      if (i_rank == 0) {
+      if (i_rank == i_proc_ret) {
         comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);
       }
     }
   }
   os << "We have vf\n";
-  int i_proc_ret = 0;
   vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
   os << "We have vf_tot\n";
   if (comm.rank() == i_proc_ret)

@@ -226,61 +226,52 @@ inline void serialize(Archive &ar, PairKV<Tkey, Tval> &pair,
 
 } // namespace boost::serialization
 
-template <typename Tkey, typename Tval> struct DataBankAsioServer {
-private:
-  std::unordered_map<Tkey, Tval> ListEnt;
-  bool Saving;
-  std::string SavingPrefix;
-  short unsigned int port;
+// ASIO client and server
 
-public:
-  DataBankAsioServer(const bool &_Saving, const std::string &_SavingPrefix,
-                 const short unsigned int _port)
-      : Saving(_Saving), SavingPrefix(_SavingPrefix), port(_port) {
-    ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, std::cerr);
-    //
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
-    boost::asio::ip::tcp::acceptor acceptor(io_service, endpoint);
-    size_t n_iter = 0;
-    while (true) {
-      boost::asio::ip::tcp::socket socket = acceptor.accept();
-      TripleNKV<Tkey, Tval> eTriple = read_data<TripleNKV<Tkey, Tval>>(socket);
-      if (eTriple.nature == 'e') {
-        std::cerr << "Terminating the Databank process\n";
-        break;
-      }
-      if (eTriple.nature == 'i') {
-        if (ListEnt.count(eTriple.eKey) > 0) {
-          std::cerr << "The entry is already present\n";
-        } else {
-          if (Saving) {
-            size_t n_orbit = ListEnt.size();
-            std::string Prefix =
-                SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-            std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
-            Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
-          }
-          ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey),
-                                                     std::move(eTriple.eVal)));
-        }
-      }
-      if (eTriple.nature == 'g') {
-        std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size()
-                  << "\n";
-        typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-            ListEnt.find(eTriple.eKey);
-        if (iter == ListEnt.end())
-          send_data<Tval>(socket, Tval()); // If returning empty then it means
-        else                                   // nothing has been found.
-          send_data<Tval>(socket, iter->second);
-      }
-      std::cerr << "------------------------------ " << n_iter
-                << " ------------------------------\n";
-      n_iter++;
+template <typename Tkey, typename Tval>
+void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix, const short unsigned int port, std::ostream &os) {
+  std::unordered_map<Tkey, Tval> ListEnt;
+  ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, os);
+  //
+  boost::asio::io_service io_service;
+  boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
+  boost::asio::ip::tcp::acceptor acceptor(io_service, endpoint);
+  size_t n_iter = 0;
+  while (true) {
+    boost::asio::ip::tcp::socket socket = acceptor.accept();
+    TripleNKV<Tkey, Tval> eTriple = read_data<TripleNKV<Tkey, Tval>>(socket);
+    if (eTriple.nature == 'e') {
+      os << "Terminating the Databank process\n";
+      break;
     }
+    if (eTriple.nature == 'i') {
+      if (ListEnt.count(eTriple.eKey) > 0) {
+        os << "The entry is already present\n";
+      } else {
+        if (Saving) {
+          size_t n_orbit = ListEnt.size();
+          std::string Prefix =
+            SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+          os << "Insert entry to file Prefix=" << Prefix << "\n";
+          Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
+        }
+        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey),
+                                                   std::move(eTriple.eVal)));
+      }
+    }
+    if (eTriple.nature == 'g') {
+      os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
+      typename std::unordered_map<Tkey, Tval>::const_iterator iter =
+        ListEnt.find(eTriple.eKey);
+      if (iter == ListEnt.end())
+        send_data<Tval>(socket, Tval()); // If returning empty then it means
+      else                                   // nothing has been found.
+        send_data<Tval>(socket, iter->second);
+    }
+    os << "---------- " << n_iter << " -----------------------\n";
+    n_iter++;
   }
-};
+}
 
 template <typename Tkey, typename Tval> struct DataBankAsioClient {
 private:
@@ -302,6 +293,8 @@ public:
     return read_data<Tval>(socket);
   }
 };
+
+// MPI client and server
 
 template <typename Tkey, typename Tval> struct DataBankMpiClient {
 private:
