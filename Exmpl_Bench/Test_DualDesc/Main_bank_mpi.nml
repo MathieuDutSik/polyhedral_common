@@ -10,6 +10,7 @@
  GRPfile = "Example_09_CUT8.grp"
  OUTfile = "Result"
  max_runtime = 3600
+ ApplyStdUnitbuf = T
  AdvancedTerminationCriterion = T
 /
 

@@ -378,7 +378,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   auto get_vectface = [&]() -> vectface {
     if (AllArr.parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
+      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
     if (AllArr.parallelization_method == "bank_asio") {

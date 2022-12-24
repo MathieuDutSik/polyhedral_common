@@ -127,30 +127,31 @@ private:
   bool Saving;
   std::string SavingPrefix;
   Tval TrivElt;
+  std::ostream& os;
 
 public:
-  DataBank(const bool &_Saving, const std::string &_SavingPrefix)
-      : Saving(_Saving), SavingPrefix(_SavingPrefix) {
+  DataBank(const bool &_Saving, const std::string &_SavingPrefix, std::ostream& _os)
+    : Saving(_Saving), SavingPrefix(_SavingPrefix), os(_os) {
     ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
   }
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
     // We have to face the situation that what we are trying to insert is
     // already present This can happen because of badly aligned heuristics
     if (ListEnt.count(eKey) > 0) {
-      std::cerr << "Exiting because the key is already present\n";
+      os << "Exiting because the key is already present\n";
       return;
     }
     if (Saving) {
       size_t n_orbit = ListEnt.size();
       std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-      std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+      os << "Insert entry to file Prefix=" << Prefix << "\n";
       Write_BankEntry(Prefix, eKey, eVal);
     }
     ListEnt.emplace(
         std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
   }
   const Tval &GetDualDesc(const Tkey &eKey) const {
-    std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
+    os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     typename std::unordered_map<Tkey, Tval>::const_iterator iter =
         ListEnt.find(eKey);
     if (iter == ListEnt.end())

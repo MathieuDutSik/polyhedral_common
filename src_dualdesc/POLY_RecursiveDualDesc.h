@@ -1785,7 +1785,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   auto get_vectface = [&]() -> vectface {
     if (AllArr.parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
+      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
