@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 
+static const int val_mpi_bank_end = 2045;
 static const int tag_mpi_bank_end = 977;
 static const int tag_mpi_bank_insert = 983;
 static const int tag_mpi_bank_request = 991;
@@ -320,58 +321,57 @@ public:
   }
 };
 
-template <typename Tkey, typename Tval> struct DataBankMpiServer {
-private:
-  boost::mpi::communicator & comm;
+template <typename Tkey, typename Tval>
+void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, const std::string &SavingPrefix)
+{
   std::unordered_map<Tkey, Tval> ListEnt;
-  bool Saving;
-  std::string SavingPrefix;
-
-public:
-  DataBankMpiServer(boost::mpi::communicator & _comm, const bool &_Saving, const std::string &_SavingPrefix)
-    : comm(comm), Saving(_Saving), SavingPrefix(_SavingPrefix) {
-    ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
-    //
-    size_t n_iter = 0;
-    while(true) {
-      boost::mpi::status msg = comm.probe();
-      if (msg.tag() == tag_mpi_bank_end) {
-        std::cerr << "Terminating the DataBankMpiServer\n";
-        break;
+  ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
+  //
+  while(true) {
+    boost::mpi::status msg = comm.probe();
+    if (msg.tag() == tag_mpi_bank_end) {
+      int val_i;
+      comm.recv(msg.source(), msg.tag(), val_i);
+      if (val_i != val_mpi_bank_end) {
+        std::cerr << "Error in the received value\n";
+        std::cerr << "val_i=" << val_i << " val_mpi_bank_end=" << val_mpi_bank_end << "\n";
+        throw TerminalException{1};
       }
-      if (msg.tag() == tag_mpi_bank_insert) {
-        PairKV<Tkey,Tval> pair;
-        comm.recv(msg.source(), msg.tag(), pair);
-        if (ListEnt.count(pair.eKey) > 0) {
-          std::cerr << "The entry is already present\n";
-        } else {
-          if (Saving) {
-            size_t n_orbit = ListEnt.size();
-            std::string Prefix =
-                SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-            std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
-            Write_BankEntry(Prefix, pair.eKey, pair.eVal);
-          }
-          ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(pair.eKey),
-                                                     std::move(pair.eVal)));
+      std::cerr << "Terminating the DataBankMpiServer\n";
+      break;
+    }
+    if (msg.tag() == tag_mpi_bank_insert) {
+      PairKV<Tkey,Tval> pair;
+      comm.recv(msg.source(), msg.tag(), pair);
+      if (ListEnt.count(pair.eKey) > 0) {
+        std::cerr << "The entry is already present\n";
+      } else {
+        if (Saving) {
+          size_t n_orbit = ListEnt.size();
+          std::string Prefix =
+            SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+          std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+          Write_BankEntry(Prefix, pair.eKey, pair.eVal);
         }
+        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(pair.eKey),
+                                                   std::move(pair.eVal)));
       }
-      if (msg.tag() == tag_mpi_bank_request) {
-        std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size()
-                  << "\n";
-        Tkey key;
-        comm.recv(msg.source(), msg.tag(), key);
-        typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-            ListEnt.find(key);
-        if (iter == ListEnt.end()) {
-          comm.send(msg.source(), tag_mpi_bank_reception, Tval());
-        } else {
-          comm.send(msg.source(), tag_mpi_bank_reception, iter->second);
-        }
+    }
+    if (msg.tag() == tag_mpi_bank_request) {
+      std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size()
+                << "\n";
+      Tkey key;
+      comm.recv(msg.source(), msg.tag(), key);
+      typename std::unordered_map<Tkey, Tval>::const_iterator iter =
+        ListEnt.find(key);
+      if (iter == ListEnt.end()) {
+        comm.send(msg.source(), tag_mpi_bank_reception, Tval());
+      } else {
+        comm.send(msg.source(), tag_mpi_bank_reception, iter->second);
       }
     }
   }
-};
+}
 
 
 

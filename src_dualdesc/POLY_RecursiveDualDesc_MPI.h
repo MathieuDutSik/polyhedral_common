@@ -391,8 +391,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
       if (i_rank < n_proc-1) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
-        using TbankServer = DataBankMpiServer<Tkey, Tval>;
-        TbankServer TheServer(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
+        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
         return vectface();
       }
     }
@@ -401,9 +400,11 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
     throw TerminalException{1};
   };
   vectface vf = get_vectface();
-  if (i_rank < n_proc-1) {
-    comm_local.barrier();
-    comm.send(n_proc-1, tag_mpi_bank_end, 42);
+  if (AllArr.parallelization_method == "bank_mpi") {
+    if (i_rank < n_proc-1) {
+      comm_local.barrier();
+      comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);
+    }
   }
   os << "We have vf\n";
   int i_proc_ret = 0;
