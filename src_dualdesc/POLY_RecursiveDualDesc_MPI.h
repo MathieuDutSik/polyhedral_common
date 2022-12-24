@@ -409,7 +409,9 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   if (AllArr.bank_parallelization_method == "bank_mpi") {
     if (i_rank < n_proc-1) {
       comm_local.barrier();
-      comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);
+      if (i_rank == 0) {
+        comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);
+      }
     }
   }
   os << "We have vf\n";
