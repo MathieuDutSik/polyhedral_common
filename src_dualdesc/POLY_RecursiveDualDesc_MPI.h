@@ -335,7 +335,7 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
     update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
     CreateDirectory(str_ref);
   };
-  if (AllArr.parallelization_method == "serial")
+  if (AllArr.bank_parallelization_method == "serial")
     update_string(AllArr.BANK_Prefix);
   update_string(AllArr.DD_Prefix);
 }
@@ -376,17 +376,17 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
   //
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
-    if (AllArr.parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
-    if (AllArr.parallelization_method == "bank_mpi") {
+    if (AllArr.bank_parallelization_method == "bank_mpi") {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
       if (i_rank < n_proc-1) {
@@ -396,12 +396,12 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
         return vectface(n_rows);
       }
     }
-    std::cerr << "Failed to find a matching entry for parallelization_method\n";
+    std::cerr << "Failed to find a matching entry for bank_parallelization_method\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };
   vectface vf = get_vectface();
-  if (AllArr.parallelization_method == "bank_mpi") {
+  if (AllArr.bank_parallelization_method == "bank_mpi") {
     if (i_rank < n_proc-1) {
       comm_local.barrier();
       comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);

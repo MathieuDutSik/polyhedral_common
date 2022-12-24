@@ -192,7 +192,7 @@ template <typename T> struct PolyHeuristicSerial {
   std::string BANK_Prefix;
   std::string OutFormat;
   std::string OUTfile;
-  std::string parallelization_method;
+  std::string bank_parallelization_method;
   std::string DD_Prefix;
 };
 
@@ -206,7 +206,7 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ost
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";
   std::string OUTfile = "unset.out";
-  std::string parallelization_method = "serial";
+  std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
   return {StandardHeuristicSplitting<T>(),
           StandardHeuristicBankSave<T>(),
@@ -219,7 +219,7 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ost
           SingletonTime(), max_runtime,
           port, BANK_IsSaving, BANK_Prefix,
           OutFormat, OUTfile,
-          parallelization_method, DD_Prefix};
+          bank_parallelization_method, DD_Prefix};
 }
 
 // clang-format off

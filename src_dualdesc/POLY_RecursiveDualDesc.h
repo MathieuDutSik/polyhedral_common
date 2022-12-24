@@ -1527,7 +1527,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListStringValues1["OutFormat"] = "GAP";
   ListBoolValues1["DeterministicRuntime"] = true;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
-  ListStringValues1["parallelization_method"] = "serial";
+  ListStringValues1["bank_parallelization_method"] = "serial";
   ListIntValues1["port"] = 1234;
   ListIntValues1["max_runtime"] = -1;
   ListBoolValues1["AdvancedTerminationCriterion"] = false;
@@ -1717,10 +1717,10 @@ PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eF
   short unsigned int port = port_i;
   AllArr.port = port;
   //
-  std::string parallelization_method =
-      BlockDATA.ListStringValues.at("parallelization_method");
-  AllArr.parallelization_method = parallelization_method;
-  os << "parallelization_method=" << parallelization_method << "\n";
+  std::string bank_parallelization_method =
+      BlockDATA.ListStringValues.at("bank_parallelization_method");
+  AllArr.bank_parallelization_method = bank_parallelization_method;
+  os << "bank_parallelization_method=" << bank_parallelization_method << "\n";
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
   os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
@@ -1783,19 +1783,19 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
-    if (AllArr.parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
-    std::cerr << "Failed to find a matching entry for parallelization_method\n";
+    std::cerr << "Failed to find a matching entry for bank_parallelization_method\n";
     std::cerr << "Allowed methods are serial, bank_asio\n";
     throw TerminalException{1};
   };
