@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       std::ifstream is(GRP_file);
       int nbMat;
       is >> nbMat;
-      int n;
+      int n = -1;
       for (int iMat = 0; iMat < nbMat; iMat++) {
         MyMatrix<T> eMatrGen = ReadMatrix<T>(is);
         n = eMatrGen.rows();
