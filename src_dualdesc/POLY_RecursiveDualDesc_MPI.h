@@ -350,10 +350,10 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   using Tval = PairStore<Tgroup>;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  bool is_generator = true;
+  int pos_generator = 0;
   if (i_rank == n_proc-1)
-    is_generator = false;
-  boost::mpi::communicator comm_local = comm.split(is_generator? 0 : 1);
+    pos_generator = 1;
+  boost::mpi::communicator comm_local = comm.split(pos_generator);
   //
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::cerr << "We have moved. See the log in FileLog=" << FileLog << "\n";
@@ -369,6 +369,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   srand(time(NULL)+12345*i_rank);
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  size_t n_rows = EXTred.rows();
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
@@ -392,7 +393,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
         DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
-        return vectface();
+        return vectface(n_rows);
       }
     }
     std::cerr << "Failed to find a matching entry for parallelization_method\n";
