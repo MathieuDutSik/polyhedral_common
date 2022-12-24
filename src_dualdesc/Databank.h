@@ -322,7 +322,7 @@ public:
 };
 
 template <typename Tkey, typename Tval>
-void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, const std::string &SavingPrefix)
+void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, const std::string &SavingPrefix, std::ostream& os)
 {
   std::unordered_map<Tkey, Tval> ListEnt;
   ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix);
@@ -337,20 +337,21 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
         std::cerr << "val_i=" << val_i << " val_mpi_bank_end=" << val_mpi_bank_end << "\n";
         throw TerminalException{1};
       }
-      std::cerr << "Terminating the DataBankMpiServer\n";
+      os << "Terminating the DataBankMpiServer\n";
       break;
     }
     if (msg.tag() == tag_mpi_bank_insert) {
       PairKV<Tkey,Tval> pair;
       comm.recv(msg.source(), msg.tag(), pair);
       if (ListEnt.count(pair.eKey) > 0) {
-        std::cerr << "The entry is already present\n";
+        os << "The entry is already present\n";
+        os << "Not stopping but suboptimal. Maybe two threads computed the same thing. Otherwise bug.\n";
       } else {
         if (Saving) {
           size_t n_orbit = ListEnt.size();
           std::string Prefix =
             SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-          std::cerr << "Insert entry to file Prefix=" << Prefix << "\n";
+          os << "Insert entry to file Prefix=" << Prefix << "\n";
           Write_BankEntry(Prefix, pair.eKey, pair.eVal);
         }
         ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(pair.eKey),
@@ -358,8 +359,7 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
       }
     }
     if (msg.tag() == tag_mpi_bank_request) {
-      std::cerr << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size()
-                << "\n";
+      os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
       Tkey key;
       comm.recv(msg.source(), msg.tag(), key);
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =

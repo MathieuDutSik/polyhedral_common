@@ -1526,6 +1526,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListStringValues1["OUTfile"] = "unset.out";
   ListStringValues1["OutFormat"] = "GAP";
   ListBoolValues1["DeterministicRuntime"] = true;
+  ListBoolValues1["ApplyStdUnitbuf"] = false;
   ListStringValues1["parallelization_method"] = "serial";
   ListIntValues1["port"] = 1234;
   ListIntValues1["max_runtime"] = -1;
@@ -1661,6 +1662,13 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream & os) {
   }
   return EXT;
 }
+
+bool ApplyStdUnitbuf(FullNamelist const &eFull) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  bool result = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
+  return result;
+}
+
 
 template<typename Tgroup>
 Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream & os) {

@@ -358,8 +358,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::cerr << "We have moved. See the log in FileLog=" << FileLog << "\n";
   std::ofstream os(FileLog);
-  os << std::unitbuf;
-  //  std::ostream& os = std::cerr;
+  if (ApplyStdUnitbuf(eFull))
+    os << std::unitbuf;
   os << "Initial writing of the log\n";
   os.flush();
   //
@@ -392,7 +392,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
       if (i_rank < n_proc-1) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
-        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix);
+        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
         return vectface(n_rows);
       }
     }
