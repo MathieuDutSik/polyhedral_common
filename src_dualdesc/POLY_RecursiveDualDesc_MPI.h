@@ -332,11 +332,15 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
   int n_proc = comm.size();
   int i_rank = comm.rank();
   auto update_string=[&](std::string & str_ref) -> void {
-    update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
-    CreateDirectory(str_ref);
+    if (i_rank < n_proc-1 || AllArr.bank_parallelization_method != "bank_mpi") {
+      update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
+      CreateDirectory(str_ref);
+    }
   };
   if (AllArr.bank_parallelization_method == "serial")
     update_string(AllArr.BANK_Prefix);
+  else
+    CreateDirectory(AllArr.BANK_Prefix);
   update_string(AllArr.DD_Prefix);
 }
 
@@ -397,6 +401,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
       }
     }
     std::cerr << "Failed to find a matching entry for bank_parallelization_method\n";
+    std::cerr << "AllArr.bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };

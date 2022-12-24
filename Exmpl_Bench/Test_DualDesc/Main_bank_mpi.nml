@@ -11,6 +11,7 @@
  OUTfile = "Result"
  max_runtime = 3600
  ApplyStdUnitbuf = T
+ bank_parallelization_method = "bank_mpi"
  AdvancedTerminationCriterion = T
 /
 
