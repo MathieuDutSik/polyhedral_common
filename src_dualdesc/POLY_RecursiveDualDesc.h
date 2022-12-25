@@ -1831,7 +1831,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   using Tbank = DataBank<Tkey, Tval>;
-  Tbank TheBank(BANK_IsSaving, BANK_Prefix);
+  Tbank TheBank(BANK_IsSaving, BANK_Prefix, std::cerr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
 }
