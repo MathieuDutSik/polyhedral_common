@@ -1516,25 +1516,51 @@ size_t evaluate_subset_hash(const std::vector<Tidx> &subset_index,
 FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, int> ListIntValues1;
-  ListStringValues1["NumericalType"] = "rational";
-  ListStringValues1["FileAlgebraicField"] = "unset";
-  ListStringValues1["EXTfile"] = "unset.ext";
-  ListStringValues1["GRPfile"] = "unset.grp";
-  ListStringValues1["OUTfile"] = "unset.out";
-  ListStringValues1["OutFormat"] = "GAP";
-  ListBoolValues1["DeterministicRuntime"] = true;
-  ListBoolValues1["ApplyStdUnitbuf"] = false;
-  ListStringValues1["bank_parallelization_method"] = "serial";
-  ListIntValues1["port"] = 1234;
-  ListIntValues1["max_runtime"] = -1;
-  ListBoolValues1["AdvancedTerminationCriterion"] = false;
+  std::map<std::string, std::string> ListStringValues1_doc;
+  std::map<std::string, std::string> ListBoolValues1_doc;
+  std::map<std::string, std::string> ListIntValues1_doc;
+  ListStringValues1_doc["NumericalType"] = "Default: rational\n\
+The numerical type being used for the computation. Possible values:\n\
+rational: the rational type, what you want in 99.999\% of cases\n\
+Qsqrt5: coordinates in the field Q(sqrt(5))\n\
+RealAlgebraic: coordinate in a real algebraic field";
+  ListStringValues1_doc["FileAlgebraicField"] = "Default: unset\n\
+The file containing the description of the real algebraic field.\n\
+This is needed of RealAlgebraic is selected";
+  ListStringValues1_doc["EXTfile"] = "The file containing the coordinate of the output file";
+  ListStringValues1_doc["GRPfile"] = "The file containing the symmetry group used in the computation";
+  ListStringValues1_doc["OUTfile"] = "The file containing the output of the result";
+  ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+Magma: a file to be read in magma\n\
+GAP: a file encoding the incidence as list and made a file openable in GAP\n\
+SetInt: a file encoding the incidence as a single integer\n\
+BankEntry: a file encoding the dual description as a bank entry that can be used for the bank system";
+  ListBoolValues1_doc["DeterministicRuntime"] = "Default: F\n\
+There is some randomness in several algorithms. With DeterministicRuntime:\n\
+T: If you run again the program you will get exactly the same result which is good for debugging\n\
+F: Running again the program will get you something different";
+  ListBoolValues1_doc["ApplyStdUnitbuf"] = "Default: F\n\
+There is some logging being done in the running of the program. With AppluStdUnit\n\
+T: the output is done character by character which is slower but useful for debugging\n\
+F: the output is buffered which is typically faster";
+  ListStringValues1_doc["bank_parallelization_method"] = "Default: serial\n\
+The method used for parallelizing the banking system\n\
+serial: Every thread has its own banking system, which may be suboptimal since other thread may have the dual description you computed\n\
+bank_asio: a parallel bank used by several process\n\
+bank_mpi: a bank shared by all the mpi threads";
+  ListIntValues1_doc["port"] = "Default: 1234\n\
+The port used for the bank_asio";
+  ListIntValues1_doc["max_runtime"] = "Default: -1\n\
+The maximum runtime of the run in seconds.\n\
+If data is saved then you can rerun with the saved state\n\
+if max_runtime is negative then there is no maximum runtime";
+  ListBoolValues1_doc["AdvancedTerminationCriterion"] = "Default: F\n\
+This is about whether to used the advanced Balinski termination criterion";
   SingleBlock BlockDATA;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListIntValues = ListIntValues1;
+  BlockDATA.setListStringValues(ListStringValues1_doc);
+  BlockDATA.setListBoolValues(ListBoolValues1_doc);
+  BlockDATA.setListIntValues(ListIntValues1_doc);
   ListBlock["DATA"] = BlockDATA;
   // HEURISTIC
   std::map<std::string, std::string> ListStringValuesH;

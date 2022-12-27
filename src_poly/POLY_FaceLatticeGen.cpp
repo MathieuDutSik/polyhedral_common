@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_FaceLatticeGen [file.nml]\n";
       std::cerr << "with file.nml a namelist\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull);
+      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
       return -1;
     }
     std::string FileNML = argv[1];
