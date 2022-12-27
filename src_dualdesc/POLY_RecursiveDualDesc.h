@@ -1267,15 +1267,18 @@ private:
 
 template <typename Tint, typename T, typename Tgroup>
 std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
-                                              const Tgroup &GRP) {
+                                              const Tgroup &GRP,
+                                              PolyHeuristicSerial<typename Tgroup::Tint> & AllArr) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
   int delta = nbRow - nbCol;
+  int level = AllArr.dimEXT - nbCol;
   TheMap["groupsize"] = GRP.size();
   TheMap["incidence"] = nbRow;
   TheMap["rank"] = nbCol;
   TheMap["delta"] = delta;
+  TheMap["level"] = level;
   return TheMap;
 }
 
@@ -1355,7 +1358,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // Now computing the groups
   //
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP);
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP, AllArr);
   //
   // Checking if the entry is present in the map.
   //
@@ -1722,8 +1725,8 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream & os) {
 
 
 
-template<typename Tint>
-PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull, std::ostream& os) {
+template<typename T, typename Tint>
+PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull, MyMatrix<T> const& EXTred, std::ostream& os) {
   PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
   os << "We have AllArr\n";
   //
@@ -1798,6 +1801,8 @@ PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eF
   bool AdvancedTerminationCriterion = BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
+  AllArr.dimEXT = EXTred.cols();
+  //
   return AllArr;
 }
 
@@ -1818,9 +1823,9 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tval = PairStore<Tgroup>;
   MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
-  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull, std::cerr);
-  //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<T,Tint>(eFull, EXTred, std::cerr);
+  //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
