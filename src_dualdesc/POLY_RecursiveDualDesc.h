@@ -1546,7 +1546,8 @@ T: the output is done character by character which is slower but useful for debu
 F: the output is buffered which is typically faster";
   ListStringValues1_doc["bank_parallelization_method"] = "Default: serial\n\
 The method used for parallelizing the banking system\n\
-serial: Every thread has its own banking system, which may be suboptimal since other thread may have the dual description you computed\n\
+serial: Every thread has its own banking system, which may be suboptimal\n\
+  since other thread may have the dual description you computed\n\
 bank_asio: a parallel bank used by several process\n\
 bank_mpi: a bank shared by all the mpi threads";
   ListIntValues1_doc["port"] = "Default: 1234\n\
@@ -1563,40 +1564,52 @@ This is about whether to used the advanced Balinski termination criterion";
   BlockDATA.setListIntValues(ListIntValues1_doc);
   ListBlock["DATA"] = BlockDATA;
   // HEURISTIC
-  std::map<std::string, std::string> ListStringValuesH;
-  ListStringValuesH["SplittingHeuristicFile"] = "unset.heu";
-  ListStringValuesH["AdditionalSymmetryHeuristicFile"] = "unset.heu";
-  ListStringValuesH["DualDescriptionThompsonFile"] = "unset.heu";
-  ListStringValuesH["MethodInitialFacetSetFile"] = "unset.heu";
-  ListStringValuesH["BankSaveHeuristicFile"] = "unset.heu";
-  ListStringValuesH["CheckDatabaseBankFile"] = "unset.heu";
-  ListStringValuesH["ChosenDatabaseFile"] = "unset.heu";
+  std::map<std::string, std::string> ListStringValuesH_doc;
+  ListStringValuesH_doc["SplittingHeuristicFile"] = "Default: unset.heu\n\
+The splitting heuristic file.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["AdditionalSymmetryHeuristicFile"] = "Default: unset.heu\n\
+The additional symmetry heuristic file\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["DualDescriptionThompsonFile"] = "Default: unset.heu\n\
+The Thompson samspling heuristic file for choosing the dual description program.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["MethodInitialFacetSetFile"] = "Default: unset.heu\n\
+The heuristic for computing the initial set of facets.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["BankSaveHeuristicFile"] = "Default: unset.heu\n\
+The heuristic file whether to save computed data to the bank or not.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["CheckDatabaseBankFile"] = "Default: unset.heu\n\
+The heuristic file file for checking if entries are present in the bank.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["ChosenDatabaseFile"] = "Default: unset.heu\n\
+The heuristic for choosing between canonic or repr.\n\
+If set to unset.heu then basic heuristics are applied which should be fine for small case";
   SingleBlock BlockHEURIS;
-  BlockHEURIS.ListStringValues = ListStringValuesH;
+  BlockHEURIS.setListStringValues(ListStringValuesH_doc);
   ListBlock["HEURISTIC"] = BlockHEURIS;
   // METHOD
-  std::map<std::string, int> ListIntValues2;
-  std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, double> ListDoubleValues2;
-  std::map<std::string, std::string> ListStringValues2;
-  ListBoolValues2["Saving"] = false;
-  ListStringValues2["Prefix"] = "/irrelevant/";
+  std::map<std::string, std::string> ListBoolValues2_doc;
+  std::map<std::string, std::string> ListStringValues2_doc;
+  ListBoolValues2_doc["Saving"] = "Default: F\n\
+Whether to save the bank information to a disk for further reuse";
+  ListStringValues2_doc["Prefix"] = "Default: /irrelevant/\n\
+The directory in which the bank is saved. Put something significant if Saving = T";
   SingleBlock BlockMETHOD;
-  BlockMETHOD.ListIntValues = ListIntValues2;
-  BlockMETHOD.ListBoolValues = ListBoolValues2;
-  BlockMETHOD.ListDoubleValues = ListDoubleValues2;
-  BlockMETHOD.ListStringValues = ListStringValues2;
+  BlockMETHOD.setListBoolValues(ListBoolValues2_doc);
+  BlockMETHOD.setListStringValues(ListStringValues2_doc);
   ListBlock["METHOD"] = BlockMETHOD;
   // BANK
-  std::map<std::string, int> ListIntValues3;
-  std::map<std::string, bool> ListBoolValues3;
-  std::map<std::string, double> ListDoubleValues3;
-  std::map<std::string, std::string> ListStringValues3;
-  ListStringValues3["Prefix"] = "./unset/";
-  ListBoolValues3["Saving"] = false;
+  std::map<std::string, std::string> ListBoolValues3_doc;
+  std::map<std::string, std::string> ListStringValues3_doc;
+  ListBoolValues3_doc["Saving"] = "Default: F\n\
+Whether to track the computation on file or not";
+  ListStringValues3_doc["Prefix"] = "Default: /irrelevant/\n\
+The prefix in which data is saved. Put something significant if Saving = T";
   SingleBlock BlockBANK;
-  BlockBANK.ListBoolValues = ListBoolValues3;
-  BlockBANK.ListStringValues = ListStringValues3;
+  BlockBANK.setListBoolValues(ListBoolValues3_doc);
+  BlockBANK.setListStringValues(ListStringValues3_doc);
   ListBlock["BANK"] = BlockBANK;
   // Merging all data
   return {std::move(ListBlock), "undefined"};
