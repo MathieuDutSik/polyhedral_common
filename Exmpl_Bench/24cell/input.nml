@@ -1,0 +1,5 @@
+&DATA
+ EXTfile = "24cell.ext"
+ GRPfile = "24cell.grp"
+ OUTfile = "24cell.orbit"
+/
