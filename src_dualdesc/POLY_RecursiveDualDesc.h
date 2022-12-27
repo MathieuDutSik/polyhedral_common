@@ -1571,9 +1571,9 @@ If set to unset.heu then basic heuristics are applied which should be fine for s
   ListStringValuesH_doc["AdditionalSymmetryHeuristicFile"] = "Default: unset.heu\n\
 The additional symmetry heuristic file\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["DualDescriptionThompsonFile"] = "Default: unset.heu\n\
+  ListStringValuesH_doc["DualDescriptionThompsonFile"] = "Default: unset.ts\n\
 The Thompson samspling heuristic file for choosing the dual description program.\n\
-If set to unset.heu then basic heuristics are applied which should be fine for small case";
+If set to unset.ts then basic heuristics are applied which should be fine for small case";
   ListStringValuesH_doc["MethodInitialFacetSetFile"] = "Default: unset.heu\n\
 The heuristic for computing the initial set of facets.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
