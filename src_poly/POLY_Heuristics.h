@@ -3,7 +3,7 @@
 #define SRC_POLY_POLY_HEURISTICS_H_
 
 #include "Basic_file.h"
-#include "Heuristic_fct.h"
+#include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
 #include <string>
 #include <vector>
@@ -73,43 +73,61 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
 
 
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
-  std::vector<std::string> ListString = {
+  std::vector<std::string> lstr_proba = {
     "&PROBABILITY_DISTRIBUTIONS",
     " ListName = \"distri1\" ",
     " ListNmax = 100 ",
     " ListNstart = 100",
     " ListNature = \"dirac\"",
     " ListDescription = \"1:100\"",
-    "/",
-    "",
-    "&THOMPSON_PRIOR",
-    " ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"",
-    " ListName = \"only_cdd\", \"only_ppl\"",
-    " ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"",
-    "/",
-    "",
+    "/"};
+  //
+  std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
+  bool test = IsProgramInPath("ppl_lcdd");
+  if (test) {
+    lstr_thompson_prior.push_back(" ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"");
+    lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_ppl\"");
+    lstr_thompson_prior.push_back(" ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"");
+  } else {
+    lstr_thompson_prior.push_back(" ListAnswer = \"cdd\", \"lrs_ring\"");
+    lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_lrs\"");
+    lstr_thompson_prior.push_back(" ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"");
+  }
+  lstr_thompson_prior.push_back("/");
+  //
+  std::vector<std::string> lstr_key = {
     "&KEY_COMPRESSION",
     " ListKey = \"incidence\"",
     " ListDescription = \"1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity\"",
-    "/",
-    "",
+    "/"};
+  //
+  std::vector<std::string> lstr_heuristic_prior = {
     "&HEURISTIC_PRIOR",
     " DefaultPrior = \"noprior:10\"",
     " ListFullCond = \"incidence > 70\"",
     " ListConclusion = \"only_ppl\"",
-    "/",
-    "",
+    "/"};
+  //
+  std::vector<std::string> lstr_io = {
     "&IO",
     " name = \"split\"",
     " WriteLog = T",
     " ProcessExistingDataIfExist = F",
     " LogFileToProcess = \"input_logfile\"",
     "/"};
+  //
+  // Putting things together
+  //
+  std::vector<std::string> lstr = lstr_proba;
+  for (auto & e_lstr : {lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
+    lstr.push_back("");
+    for (auto & estr : e_lstr)
+      lstr.push_back(estr);
+  }
   FullNamelist eFull = NAMELIST_ThompsonSamplingRuntime();
-  NAMELIST_ReadListString(eFull, ListString);
+  NAMELIST_ReadListString(eFull, lstr);
   return eFull;
 }
-
 
 
 template <typename T>

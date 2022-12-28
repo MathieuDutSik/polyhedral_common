@@ -2,7 +2,7 @@
 #ifndef SRC_LORENTZIAN_EDGEWALK_H_
 #define SRC_LORENTZIAN_EDGEWALK_H_
 
-#include "Heuristic_fct.h"
+#include "Heuristic_ThompsonSampling.h"
 #include "LatticeDefinitions.h"
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
