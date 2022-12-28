@@ -104,9 +104,13 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_heuristic_prior = {
     "&HEURISTIC_PRIOR",
     " DefaultPrior = \"noprior:10\"",
-    " ListFullCond = \"incidence > 70\"",
-    " ListConclusion = \"only_ppl\"",
-    "/"};
+    " ListFullCond = \"incidence > 70\""};
+  if (test) {
+    lstr_heuristic_prior.push_back(" ListConclusion = \"only_ppl\"");
+  } else {
+    lstr_heuristic_prior.push_back(" ListConclusion = \"only_cdd\"");
+  }
+  lstr_heuristic_prior.push_back("/");
   //
   std::vector<std::string> lstr_io = {
     "&IO",
@@ -124,6 +128,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
     for (auto & estr : e_lstr)
       lstr.push_back(estr);
   }
+  std::cerr << "lstr=\n";
+  for (auto estr : lstr)
+    std::cerr << estr << "\n";
   FullNamelist eFull = NAMELIST_ThompsonSamplingRuntime();
   NAMELIST_ReadListString(eFull, lstr);
   return eFull;
