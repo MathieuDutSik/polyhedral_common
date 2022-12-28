@@ -94,7 +94,7 @@ RUN tar -vxzf ppl-1.2.tar.gz && cd ppl-1.2 && ./configure && make
 # Downloading PPL and compiling it
 RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
 RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
-RUN mkdir -p /bin && cd /bin && ln -s ../ppl-1.2/demos/ppl_lcdd/.libs/ppl_lcdd
+RUN cd /bin && ln -s /ppl-1.2/demos/ppl_lcdd/ppl_lcdd
 
 # downloading netcdf functionality and compiling it
 RUN apt-get install -y libcurl4-openssl-dev m4
@@ -169,5 +169,5 @@ ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
 # Compiling polyhedral functionality
-#RUN cd GIT/polyhedral_common && ./compile.sh
-RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh
+RUN cd GIT/polyhedral_common && ./compile.sh
+#RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh
