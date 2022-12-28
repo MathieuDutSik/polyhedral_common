@@ -87,10 +87,14 @@ ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
 ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
-# Downloading hdf5 and compiling it
+# PPL
+RUN wget https://www.bugseng.com/products/ppl/download/ftp/releases/1.2/ppl-1.2.tar.gz
+RUN tar -vxzf ppl-1.2.tar.gz && cd ppl-1.2 && ./configure && make
+
+# Downloading PPL and compiling it
 RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
 RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
-
+RUN mkdir -p /bin && cd /bin && ln -s ../ppl-1.2/demos/ppl_lcdd/.libs/ppl_lcdd
 
 # downloading netcdf functionality and compiling it
 RUN apt-get install -y libcurl4-openssl-dev m4

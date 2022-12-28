@@ -47,9 +47,14 @@ int main(int argc, char *argv[]) {
       if (type == "rational") {
         return process<mpq_class>(eFile);
       }
-      if (type == "quad5") {
+      if (type == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat,5>;
+        return process<T>(eFile);
+      }
+      if (type == "Qsqrt2") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat,2>;
         return process<T>(eFile);
       }
       if (type == "RealAlgebraic") {
@@ -70,6 +75,7 @@ int main(int argc, char *argv[]) {
         return process<T>(eFile);
       }
       std::cerr << "Failed to find a matching field for type=" << type << "\n";
+      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, RealAlgebraic\n";
       throw TerminalException{1};
     };
     call_lrs();

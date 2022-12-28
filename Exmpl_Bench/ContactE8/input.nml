@@ -1,0 +1,5 @@
+&DATA
+ EXTfile = "ContactE8.ext"
+ GRPfile = "ContactE8.grp"
+ OUTfile = "ContactE8.orbit"
+/
