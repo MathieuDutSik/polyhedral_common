@@ -1526,6 +1526,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
+Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic: coordinate in a real algebraic field";
   ListStringValues1_doc["FileAlgebraicField"] = "Default: unset\n\
 The file containing the description of the real algebraic field.\n\

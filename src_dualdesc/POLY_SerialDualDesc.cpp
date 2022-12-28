@@ -67,6 +67,11 @@ int main(int argc, char *argv[]) {
       using T = QuadField<Trat,5>;
       Process<T>(eFull);
     }
+    if (NumericalType == "Qsqrt2") {
+      using Trat = mpq_class;
+      using T = QuadField<Trat,2>;
+      Process<T>(eFull);
+    }
     if (NumericalType == "RealAlgebraic") {
       using T_rat = mpq_class;
       SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
