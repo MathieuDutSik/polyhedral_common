@@ -169,4 +169,5 @@ ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
 # Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common && ./compile.sh
+#RUN cd GIT/polyhedral_common && ./compile.sh
+RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh
