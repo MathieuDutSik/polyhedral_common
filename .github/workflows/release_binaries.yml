@@ -90,7 +90,8 @@ jobs:
           echo "After eigen-3.3.9 set up"
 
           # We need to compile GMP in static
-          wget --no-check-certificate https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2
+          # wget --no-check-certificate https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2
+          wget https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
           tar -vxjf gmp-6.2.1.tar.bz2
           cd gmp-6.2.1 && ./configure --enable-shared=no --enable-static=yes --enable-cxx --prefix=$GMP_PATH && make && make install && cd ..
           echo "After gmp-6.2.1 compilation"
