@@ -1963,6 +1963,20 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
 }
 
 template <typename T, typename F>
+void Kernel_DualDescription_DropFirst(MyMatrix<T> const &EXT, F const &f) {
+  bool IsFirst = true;
+  auto f_first=[&](T* out) -> void {
+    if (!IsFirst) {
+      f(out);
+    }
+    IsFirst = false;
+  };
+  Kernel_DualDescription(EXT, f_first);
+}
+
+
+
+template <typename T, typename F>
 void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;

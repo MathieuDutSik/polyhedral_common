@@ -7,7 +7,8 @@
 template<typename T>
 void process(std::string const& eFile, std::string const& choice) {
   std::ifstream is(eFile);
-  MyMatrix<T> EXT = ReadMatrixLrsCdd<T>(is);
+  MyMatrix<T> EXT_pre = ReadMatrixLrsCdd<T>(is);
+  MyMatrix<T> EXT = lrs::FirstColumnZero(EXT_pre);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   //
@@ -22,7 +23,7 @@ void process(std::string const& eFile, std::string const& choice) {
       std::cout << "\n";
       nVertices++;
     };
-    lrs::Kernel_DualDescription(EXT, fPrint);
+    lrs::Kernel_DualDescription_DropFirst(EXT, fPrint);
     std::cout << "end\n";
     std::cout << "*Total: nvertices=" << nVertices << "\n";
     return;
@@ -39,7 +40,7 @@ void process(std::string const& eFile, std::string const& choice) {
           VertexIncd[iRow] += 1;
       }
     };
-    lrs::Kernel_DualDescription(EXT, fUpdateIncd);
+    lrs::Kernel_DualDescription_DropFirst(EXT, fUpdateIncd);
     std::cout << "VertexIncd=[";
     for (int iRow=0; iRow<nbRow; iRow++) {
       if (iRow > 0)
@@ -54,8 +55,8 @@ void process(std::string const& eFile, std::string const& choice) {
     auto fIncrement = [&]([[maybe_unused]] T *out) -> void {
       nFacets++;
     };
-    lrs::Kernel_DualDescription(EXT, fIncrement);
-    std::cout << "nFacets" << nFacets << "\n";
+    lrs::Kernel_DualDescription_DropFirst(EXT, fIncrement);
+    std::cout << "nFacets=" << nFacets << "\n";
     return;
   }
   if (choice == "qhull_incidence") {
@@ -75,7 +76,7 @@ void process(std::string const& eFile, std::string const& choice) {
       }
       std::cout << "\n";
     };
-    lrs::Kernel_DualDescription(EXT, fPrintIncd);
+    lrs::Kernel_DualDescription_DropFirst(EXT, fPrintIncd);
     return;
   }
   std::cerr << "Failed to find a matching entry in POLY_lrs\n";
