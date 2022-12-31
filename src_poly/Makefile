@@ -8,7 +8,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_IntegralPoints \
 		  TEST_PolytopeIntegralPoints \
 		  POLY_lcdd POLY_FaceLatticeGen \
-		  POLY_lrs POLY_lrs_set POLY_lrs_set_reduction POLY_lp_cdd \
+		  POLY_lrs POLY_lrs_set_reduction POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_LinearProgram \
                   GRP_TestEquivalenceSets \

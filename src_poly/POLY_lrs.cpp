@@ -49,6 +49,35 @@ void process(std::string const& eFile, std::string const& choice) {
     std::cout << "]\n";
     return;
   }
+  if (choice == "number_facet") {
+    size_t nFacets = 0;
+    auto fIncrement = [&]([[maybe_unused]] T *out) -> void {
+      nFacets++;
+    };
+    lrs::Kernel_DualDescription(EXT, fIncrement);
+    std::cout << "nFacets" << nFacets << "\n";
+    return;
+  }
+  if (choice == "qhull_incidence") {
+    T eScal;
+    auto fPrintIncd = [&](T *out) -> void {
+      bool IsFirst = true;
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        eScal = 0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eScal += out[iCol] * EXT(iRow,iCol);
+        if (eScal == 0) {
+          if (!IsFirst)
+            std::cout << " ";
+          IsFirst = false;
+          std::cout << iRow;
+        }
+      }
+      std::cout << "\n";
+    };
+    lrs::Kernel_DualDescription(EXT, fPrintIncd);
+    return;
+  }
   std::cerr << "Failed to find a matching entry in POLY_lrs\n";
   throw TerminalException{1};
 }
@@ -72,6 +101,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "lrs: exact behavior as in lrs\n";
       std::cerr << "vertex_incidence: the incidence of the vertices is printed\n";
+      std::cerr << "number_facet: total number of facets\n";
+      std::cerr << "qhull_incidence: print the list of incidences\n";
       return -1;
     }
     //
