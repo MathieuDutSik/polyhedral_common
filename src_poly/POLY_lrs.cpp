@@ -79,6 +79,41 @@ void process(std::string const& eFile, std::string const& choice) {
     lrs::Kernel_DualDescription_DropFirst(EXT, fPrintIncd);
     return;
   }
+  if (choice == "structure_vertex_facets") {
+    std::vector<std::vector<size_t>> VertexIncd(nbRow);
+    std::vector<Face> ListFace;
+    size_t idx_facet = 0;
+    auto f_insert = [&](T *out) -> void {
+      std::cerr << "idx_facet=" << idx_facet << "\n";
+      std::vector<size_t> eIncd;
+      Face f(nbRow);
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        T eScal = 0;
+        for (int iCol=0; iCol<nbCol; iCol++)
+          eScal += out[iCol] * EXT(iRow,iCol);
+        if (eScal == 0) {
+          f[iRow] = 1;
+          VertexIncd[iRow].push_back(idx_facet);
+        }
+      }
+      ListFace.push_back(f);
+      idx_facet++;
+    };
+    lrs::Kernel_DualDescription_DropFirst(EXT, f_insert);
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      std::cout << "iRow=" << iRow << " |Contained Facet|=" << VertexIncd[iRow].size() << "\n";
+      std::map<size_t, size_t> map;
+      for (auto & idx_facet : VertexIncd[iRow]) {
+        size_t len = ListFace[idx_facet].count();
+        map[len]++;
+      }
+      std::cout << " |map(len(face)) =";
+      for (auto & kv : map)
+        std::cout << " (" << kv.first << "," << kv.second << ")";
+      std::cout << "\n";
+    }
+    return;
+  }
   std::cerr << "Failed to find a matching entry in POLY_lrs\n";
   throw TerminalException{1};
 }
@@ -104,6 +139,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "vertex_incidence: the incidence of the vertices is printed\n";
       std::cerr << "number_facet: total number of facets\n";
       std::cerr << "qhull_incidence: print the list of incidences\n";
+      std::cerr << "structure_vertex_facets: number of facets contained by vertices and the number of vertices of such facets\n";
       return -1;
     }
     //
