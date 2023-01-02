@@ -124,7 +124,7 @@ GetQmatrix(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T>
-inline typename std::enable_if<(not is_ring_field<T>::value), MyMatrix<T>>::type
+inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
 GetQmatrix(MyMatrix<T> const &TheEXT) {
   using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS

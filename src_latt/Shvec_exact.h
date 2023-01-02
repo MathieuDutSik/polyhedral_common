@@ -381,7 +381,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-inline typename std::enable_if<(not is_ring_field<T>::value), int>::type
+inline typename std::enable_if<!is_ring_field<T>::value, int>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef PRINT_DEBUG_INFO
@@ -427,7 +427,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 }
 
 template <typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<(not is_ring_field<T>::value), int>::type
+inline typename std::enable_if<!is_ring_field<T>::value, int>::type
 computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
   auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,

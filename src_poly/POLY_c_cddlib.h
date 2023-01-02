@@ -97,8 +97,8 @@ DualDescription_incd(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T>
-inline typename std::enable_if<(not is_mpq_class<T>::value) &&
-                                   (not is_boost_mpq_rational<T>::value),
+inline typename std::enable_if<!is_mpq_class<T>::value &&
+                               !is_boost_mpq_rational<T>::value,
                                vectface>::type
 DualDescription_incd(MyMatrix<T> const &TheEXT) {
   MyMatrix<mpq_class> EXT_mpq = UniversalMatrixConversion<mpq_class, T>(TheEXT);

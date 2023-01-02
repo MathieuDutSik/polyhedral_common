@@ -39,7 +39,7 @@ weightmatrix_get_nb(size_t nbRow) {
 }
 
 template <bool is_symmetric>
-inline typename std::enable_if<(not is_symmetric), size_t>::type
+inline typename std::enable_if<!is_symmetric, size_t>::type
 weightmatrix_get_nb(size_t nbRow) {
   return nbRow * nbRow;
 }
@@ -57,7 +57,7 @@ weightmatrix_last_idx([[maybe_unused]] size_t nbRow, size_t iRow) {
 // symmetric case. So, pragma statement is needed to avoid a warning being
 // thrown.
 template <bool is_symmetric>
-inline typename std::enable_if<(not is_symmetric), size_t>::type
+inline typename std::enable_if<!is_symmetric, size_t>::type
 weightmatrix_last_idx(size_t nbRow, [[maybe_unused]] size_t iRow) {
   return nbRow;
 }
@@ -76,7 +76,7 @@ weightmatrix_idx([[maybe_unused]] size_t nbRow, size_t iRow, size_t iCol) {
 }
 
 template <bool is_symmetric>
-inline typename std::enable_if<(not is_symmetric), size_t>::type
+inline typename std::enable_if<!is_symmetric, size_t>::type
 weightmatrix_idx(size_t nbRow, size_t iRow, size_t jRow) {
   return iRow + nbRow * jRow;
 }
@@ -106,7 +106,7 @@ GetSymmGenerateValue(int const &rVal) {
 }
 
 template <typename T>
-inline typename std::enable_if<(not is_vector<T>::value), T>::type
+inline typename std::enable_if<!is_vector<T>::value, T>::type
 GetSymmGenerateValue(int const &rVal) {
   T eVal = rVal;
   return eVal;
@@ -890,7 +890,7 @@ GetGraphFromWeightedMatrix_color_adj(
 }
 
 template <typename T, typename Tidx_value, bool use_pairs>
-inline typename std::enable_if<(not use_pairs), size_t>::type
+inline typename std::enable_if<!use_pairs, size_t>::type
 get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
@@ -907,7 +907,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
 
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
-inline typename std::enable_if<(not use_pairs), void>::type
+inline typename std::enable_if<!use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj) {
   size_t nbWei = WMat.GetWeightSize();
@@ -980,7 +980,7 @@ GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #endif
 
 template <typename T, typename Tgr, typename Tidx_value>
-inline typename std::enable_if<(not is_functional_graph_class<Tgr>::value),
+inline typename std::enable_if<!is_functional_graph_class<Tgr>::value,
                                Tgr>::type
 GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #ifdef TIMINGS
