@@ -1,5 +1,5 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-//#define PRINT_SPLIT_CONE
+// #define PRINT_SPLIT_CONE
 // clang-format off
 #include "NumberTheory.h"
 #include "Copositivity.h"
@@ -13,12 +13,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "CP_TestCopositivity [DATASYMM]\n";
       std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat]\n";
       std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat] [OutFile]\n";
-      std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat] [OutFile] [InitialBasis]\n";
+      std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat] [OutFile] "
+                   "[InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The input data of the symmetric matrix\n";
       std::cerr << "OutFormat: classic or GAP. Default is classic\n";
-      std::cerr << "OutFile: File to the utput. If absent then it goes to std::cerr\n";
-      std::cerr << "InitialBasis: If missing, the standard basis, otherwise the basis from the file\n";
+      std::cerr << "OutFile: File to the utput. If absent then it goes to "
+                   "std::cerr\n";
+      std::cerr << "InitialBasis: If missing, the standard basis, otherwise "
+                   "the basis from the file\n";
       std::cerr << "\n";
       std::cerr
           << "It returns true if the matrix is copositive. If not it returns a "
@@ -39,13 +42,13 @@ int main(int argc, char *argv[]) {
     if (argc >= 3)
       OutFormat = argv[2];
     //
-    auto process=[&](std::ostream & os) -> void {
+    auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
       if (argc >= 5)
         InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       //
-      std::pair<SingleTestResult<Tint>,size_t> eResult =
-        TestCopositivity<T, Tint>(eSymmMat, InitialBasis);
+      std::pair<SingleTestResult<Tint>, size_t> eResult =
+          TestCopositivity<T, Tint>(eSymmMat, InitialBasis);
       //
       WriteSingleTestResult(os, OutFormat, eResult);
     };

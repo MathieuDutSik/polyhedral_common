@@ -363,10 +363,13 @@ template <typename Tint> struct SingleTestResult {
 };
 
 template <typename Tint>
-void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, std::pair<SingleTestResult<Tint>,size_t> const &eRes) {
-  SingleTestResult<Tint> const& eResult = eRes.first;
+void WriteSingleTestResult(
+    std::ostream &os, std::string const &OutFormat,
+    std::pair<SingleTestResult<Tint>, size_t> const &eRes) {
+  SingleTestResult<Tint> const &eResult = eRes.first;
   if (OutFormat == "classic") {
-    os << "Total number of cones used in the computation nbCone=" << eRes.second << "\n";
+    os << "Total number of cones used in the computation nbCone=" << eRes.second
+       << "\n";
     if (eResult.test) {
       os << "The matrix is indeed copositive\n";
     } else {
@@ -378,7 +381,8 @@ void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, std::
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(nbCone:=" << eRes.second << ", isCopositive:=" << GAP_logical(eResult.test);
+    os << "return rec(nbCone:=" << eRes.second
+       << ", isCopositive:=" << GAP_logical(eResult.test);
     if (!eResult.test) {
       os << ", violation_nature:=\"" << eResult.strNature << "\"";
       os << ", V:=" << StringVectorGAP(eResult.eVectResult1);
@@ -390,8 +394,6 @@ void WriteSingleTestResult(std::ostream &os, std::string const& OutFormat, std::
   throw TerminalException{1};
 }
 
-
-
 template <typename Tint> struct CopositivityEnumResult {
   bool test;
   int nbCone;
@@ -401,7 +403,9 @@ template <typename Tint> struct CopositivityEnumResult {
 };
 
 template <typename T, typename Tint>
-void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat, MyMatrix<T> const& eSymmMat, CopositivityEnumResult<Tint> const &CopoRes) {
+void WriteCopositivityEnumResult(std::ostream &os, std::string const &OutFormat,
+                                 MyMatrix<T> const &eSymmMat,
+                                 CopositivityEnumResult<Tint> const &CopoRes) {
   if (OutFormat == "classic") {
     os << "nbCone=" << CopoRes.nbCone << "\n";
     if (CopoRes.test == false) {
@@ -429,7 +433,8 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(nbCone:=" << CopoRes.nbCone << ", isCopositive:=" << GAP_logical(CopoRes.test);
+    os << "return rec(nbCone:=" << CopoRes.nbCone
+       << ", isCopositive:=" << GAP_logical(CopoRes.test);
     if (CopoRes.test) {
       os << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
       os << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
@@ -441,7 +446,8 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
           os << ",\n";
         MyVector<Tint> eVect = CopoRes.TotalListVect[iVect];
         T eNorm = EvaluationQuadForm(eSymmMat, eVect);
-        os << "rec(vect:=" << StringVectorGAP(eVect) << ", norm:=" << eNorm << ")";
+        os << "rec(vect:=" << StringVectorGAP(eVect) << ", norm:=" << eNorm
+           << ")";
       }
       os << "]";
     }
@@ -451,9 +457,6 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const& OutFormat,
   std::cerr << "WriteCopositivityEnumResult: Failed to find a matching entry\n";
   throw TerminalException{1};
 }
-
-
-
 
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
@@ -968,8 +971,9 @@ EnumerateCopositiveShortVector_V2(MyMatrix<T> const &eSymmMat,
 }
 
 template <typename T, typename Tint>
-std::pair<SingleTestResult<Tint>,size_t> TestCopositivity(MyMatrix<T> const &eSymmMat,
-                                        MyMatrix<Tint> const &InitialBasis) {
+std::pair<SingleTestResult<Tint>, size_t>
+TestCopositivity(MyMatrix<T> const &eSymmMat,
+                 MyMatrix<Tint> const &InitialBasis) {
   int n = eSymmMat.rows();
   size_t nbCone = 0;
   std::function<bool(MyMatrix<int> const &, MyMatrix<T> const &)> fInsert =

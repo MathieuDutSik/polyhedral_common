@@ -1,19 +1,21 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Group.h"
-#include "Permutation.h"
 #include "MatrixGroup.h"
+#include "Permutation.h"
 
 int main(int argc, char *argv[]) {
   try {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinearSpace_Equivalence [GRP_file] [SPA1_file] [SPA2_file] [OUT_file]\n";
+      std::cerr << "GRP_LinearSpace_Equivalence [GRP_file] [SPA1_file] "
+                   "[SPA2_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA1_file   : The file containing the space1\n";
       std::cerr << "SPA2_file   : The file containing the space2\n";
-      std::cerr << "OUT_file    : The file containing the result to be read in GAP\n";
+      std::cerr
+          << "OUT_file    : The file containing the result to be read in GAP\n";
       return -1;
     }
     using T = mpq_class;
@@ -39,9 +41,10 @@ int main(int argc, char *argv[]) {
         n = eMatrGen.rows();
         ListMatrGen.push_back(eMatrGen);
       }
-      GeneralMatrixGroupHelper<T,Telt> helper{n};
+      GeneralMatrixGroupHelper<T, Telt> helper{n};
       std::cerr << "|MG|=" << L1normMatrixGroup(helper, ListMatrGen) << "\n";
-      std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> pair = LLLMatrixGroupReduction<T,Tint>(helper, ListMatrGen);
+      std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+          LLLMatrixGroupReduction<T, Tint>(helper, ListMatrGen);
       std::vector<MyMatrix<T>> ListGenNew = pair.first;
       std::cerr << "|MGnew|=" << L1normMatrixGroup(helper, ListGenNew) << "\n";
       std::cerr << "Pmat=\n";
@@ -61,9 +64,9 @@ int main(int argc, char *argv[]) {
     }
     //
     int n = eLatt2.rows();
-    GeneralMatrixGroupHelper<T,Telt> helper{n};
+    GeneralMatrixGroupHelper<T, Telt> helper{n};
     std::optional<MyMatrix<T>> opt =
-      LinearSpace_Equivalence<T, Tgroup>(ListMatrGen, helper, eLatt1, eLatt2);
+        LinearSpace_Equivalence<T, Tgroup>(ListMatrGen, helper, eLatt1, eLatt2);
     //
     {
       std::ofstream os(OUT_file);
@@ -71,7 +74,7 @@ int main(int argc, char *argv[]) {
       if (!opt) {
         os << "fail";
       } else {
-        MyMatrix<T> const& eEquiv = *opt;
+        MyMatrix<T> const &eEquiv = *opt;
         WriteMatrixGAP(os, eEquiv);
       }
       os << ";\n";

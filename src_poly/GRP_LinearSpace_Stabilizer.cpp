@@ -1,18 +1,20 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Group.h"
-#include "Permutation.h"
 #include "MatrixGroup.h"
+#include "Permutation.h"
 
 int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinearSpace_Equivalence [GRP_file] [SPA_file] [OUT_file]\n";
+      std::cerr
+          << "GRP_LinearSpace_Equivalence [GRP_file] [SPA_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA_file    : The file containing the space\n";
-      std::cerr << "OUT_file    : The file containing the result to be read in GAP\n";
+      std::cerr
+          << "OUT_file    : The file containing the result to be read in GAP\n";
       return -1;
     }
     using T = mpq_class;
@@ -44,9 +46,9 @@ int main(int argc, char *argv[]) {
     }
     //
     int n = eLatt.rows();
-    GeneralMatrixGroupHelper<T,Telt> helper{n};
+    GeneralMatrixGroupHelper<T, Telt> helper{n};
     std::vector<MyMatrix<T>> LGen =
-      LinearSpace_Stabilizer<T, Tgroup>(ListMatrGen, helper, eLatt);
+        LinearSpace_Stabilizer<T, Tgroup>(ListMatrGen, helper, eLatt);
     //
     {
       if (LGen.size() == 0)
@@ -54,7 +56,7 @@ int main(int argc, char *argv[]) {
       std::ofstream os(OUT_file);
       os << "return Group([";
       bool IsFirst = true;
-      for (auto & eGen : LGen) {
+      for (auto &eGen : LGen) {
         if (!IsFirst)
           os << ",\n";
         IsFirst = false;

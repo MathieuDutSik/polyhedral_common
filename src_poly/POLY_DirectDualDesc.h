@@ -45,7 +45,8 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
 
 template <typename T>
 vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
-                                 std::string const &eCommand, std::ostream & os) {
+                                 std::string const &eCommand,
+                                 std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -234,7 +235,8 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
 
 template <typename T>
 vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
-                                             std::string const &ansProg, std::ostream & os) {
+                                             std::string const &ansProg,
+                                             std::ostream &os) {
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -266,7 +268,7 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
-  if constexpr(is_implementation_of_Q<T>::value) {
+  if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
@@ -304,13 +306,15 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
 
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                     std::string const &ansProg, std::ostream & os) {
+                                     std::string const &ansProg,
+                                     std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
   vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg, os);
 #ifdef TIMINGS
-  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size() << "\n";
+  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
+     << "\n";
 #endif
   if (ListIncd.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";

@@ -364,8 +364,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
           UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!rec_eSum2.first) {
 #ifdef TIMINGS
-        std::cerr << "ESC1 |RepresentVertexPermutationTest|="
-                  << time << "\n";
+        std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
         return {}; // We fail because the image is not integral.
       }
@@ -446,8 +445,8 @@ DataMapping<Tidx> RepresentVertexPermutationTest_Blocks(
   return {correct, std::move(block_status), std::move(eGen)};
 }
 
-template<typename T, typename Tidx>
-std::vector<Tidx> GetSortingVector(MyMatrix<T> const& Mop) {
+template <typename T, typename Tidx>
+std::vector<Tidx> GetSortingVector(MyMatrix<T> const &Mop) {
   size_t nbRow = Mop.rows();
   size_t nbCol = Mop.cols();
   std::vector<Tidx> ListIdx(nbRow);
@@ -490,16 +489,16 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
       M(iRow, iCol) = UniversalScalarConversion<Tfield, T>(EXT(pos, iCol));
   }
   MyMatrix<Tfield> Minv0 = Inverse(M);
-  auto get_listidx=[&]() -> std::vector<Tidx> {
-    if constexpr(is_implementation_of_Q<Tfield>::value) {
+  auto get_listidx = [&]() -> std::vector<Tidx> {
+    if constexpr (is_implementation_of_Q<Tfield>::value) {
       MyMatrix<Tfield> Minv1 = RemoveFractionMatrix(Minv0);
       MyMatrix<T> Minv2 = UniversalMatrixConversion<T, Tfield>(Minv1);
       MyMatrix<T> Mop = EXT * Minv2;
-      return GetSortingVector<T,Tidx>(Mop);
+      return GetSortingVector<T, Tidx>(Mop);
     } else {
-      MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield,T>(EXT);
+      MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, T>(EXT);
       MyMatrix<Tfield> Mop = EXT_field * Minv0;
-      return GetSortingVector<Tfield,Tidx>(Mop);
+      return GetSortingVector<Tfield, Tidx>(Mop);
     }
   };
   std::vector<Tidx> ListIdx = get_listidx();

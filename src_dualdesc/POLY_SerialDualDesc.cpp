@@ -1,14 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-//#include "NumberTheory.h"
+// #include "NumberTheory.h"
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "QuadField.h"
 #include "NumberTheoryRealField.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
+#include "QuadField.h"
 
 template <typename T, typename Tidx>
 void Process_eFull(FullNamelist const &eFull) {
@@ -20,8 +20,7 @@ void Process_eFull(FullNamelist const &eFull) {
   MainFunctionSerialDualDesc<T, Tgroup, Tidx_value>(eFull);
 }
 
-template <typename T>
-void Process(FullNamelist const &eFull) {
+template <typename T> void Process(FullNamelist const &eFull) {
   MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
   //
   if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
@@ -37,8 +36,6 @@ void Process(FullNamelist const &eFull) {
   std::cerr << "Failed to find a numeric type that matches\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
@@ -64,20 +61,22 @@ int main(int argc, char *argv[]) {
     }
     if (NumericalType == "Qsqrt5") {
       using Trat = mpq_class;
-      using T = QuadField<Trat,5>;
+      using T = QuadField<Trat, 5>;
       Process<T>(eFull);
     }
     if (NumericalType == "Qsqrt2") {
       using Trat = mpq_class;
-      using T = QuadField<Trat,2>;
+      using T = QuadField<Trat, 2>;
       Process<T>(eFull);
     }
     if (NumericalType == "RealAlgebraic") {
       using T_rat = mpq_class;
       SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-      std::string FileAlgebraicField = BlockDATA.ListStringValues.at("FileAlgebraicField");
+      std::string FileAlgebraicField =
+          BlockDATA.ListStringValues.at("FileAlgebraicField");
       if (!IsExistingFile(FileAlgebraicField)) {
-        std::cerr << "FileAlgebraicField=" << FileAlgebraicField << " is missing\n";
+        std::cerr << "FileAlgebraicField=" << FileAlgebraicField
+                  << " is missing\n";
         throw TerminalException{1};
       }
       HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
@@ -88,12 +87,10 @@ int main(int argc, char *argv[]) {
     }
     //
     std::cerr << "Normal termination of the program\n";
-  }
-  catch (TerminalException const &e) {
+  } catch (TerminalException const &e) {
     std::cerr << "Something went wrong in the computation, please debug\n";
     exit(e.eVal);
-  }
-  catch (RuntimeException const &e) {
+  } catch (RuntimeException const &e) {
     std::cerr << "The maximum runtime has been reached, exiting the program\n";
     exit(e.eVal);
   }

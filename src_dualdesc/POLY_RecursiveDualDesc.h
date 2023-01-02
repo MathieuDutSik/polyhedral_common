@@ -7,15 +7,15 @@
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Heuristics.h"
+#include "POLY_Kskeletton.h"
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Timings.h"
-#include "POLY_Kskeletton.h"
 
-#include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
+#include "POLY_GAP.h"
 #include "basic_datafile.h"
 #include <limits>
 #include <map>
@@ -193,14 +193,13 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT) {
   return CanonicalizationPolytopePair<T, int, Tidx_value>(EXT, WMat).first;
 }
 
-template<typename T, typename Tgroup, typename Tidx_value>
-std::pair<MyMatrix<T>,PairStore<Tgroup>> GetCanonicalInformation(MyMatrix<T> const &EXT,
-                                                                 WeightMatrix<true, T, Tidx_value> const &WMat,
-                                                                 Tgroup const &TheGRPrelevant,
-                                                                 vectface const &ListFace) {
+template <typename T, typename Tgroup, typename Tidx_value>
+std::pair<MyMatrix<T>, PairStore<Tgroup>> GetCanonicalInformation(
+    MyMatrix<T> const &EXT, WeightMatrix<true, T, Tidx_value> const &WMat,
+    Tgroup const &TheGRPrelevant, vectface const &ListFace) {
   using Telt = typename Tgroup::Telt;
   TripleCanonic<T, Tgroup> eTriple =
-    CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
+      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
   vectface ListFaceO(EXT.rows());
   Telt perm1 = Telt(eTriple.ListIdx);
@@ -230,7 +229,6 @@ std::pair<MyMatrix<T>,PairStore<Tgroup>> GetCanonicalInformation(MyMatrix<T> con
   return {std::move(eTriple.EXT), std::move(ePair)};
 }
 
-
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
                           WeightMatrix<true, T, Tidx_value> const &WMat,
@@ -255,7 +253,8 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     bank.InsertEntry(std::move(ePair.first),
                      {std::move(GrpConj), std::move(ListFaceO)});
   } else {
-    std::pair<MyMatrix<T>,PairStore<Tgroup>> eP = GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListFace);
+    std::pair<MyMatrix<T>, PairStore<Tgroup>> eP =
+        GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListFace);
     bank.InsertEntry(std::move(eP.first), std::move(eP.second));
   }
 }
@@ -263,7 +262,7 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
                              WeightMatrix<true, T, Tidx_value> const &WMat,
-                             Tgroup const &GRP, std::ostream & os) {
+                             Tgroup const &GRP, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
@@ -336,10 +335,9 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   Face flip(const Face &f) const { return FF.Flip(f); }
 };
 
-
-
-template<typename Tidx>
-std::pair<size_t,size_t> get_delta(const std::map<Tidx, int> &LFact, const size_t &n_act) {
+template <typename Tidx>
+std::pair<size_t, size_t> get_delta(const std::map<Tidx, int> &LFact,
+                                    const size_t &n_act) {
   size_t n_factor = 1;
   for (auto &kv : LFact) {
     n_factor *= (1 + kv.second);
@@ -349,7 +347,6 @@ std::pair<size_t,size_t> get_delta(const std::map<Tidx, int> &LFact, const size_
   size_t delta = n_bit_orbsize + n_act;
   return {n_bit_orbsize, delta};
 }
-
 
 template <typename Tint, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
@@ -527,7 +524,7 @@ public:
     nbOrbitDone = 0;
     nbUndone = 0;
     nbOrbit = 0;
-    std::pair<size_t,size_t> ep = get_delta(LFact, n_act);
+    std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     n_bit_orbsize = ep.first;
     delta = ep.second;
     ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
@@ -538,7 +535,8 @@ public:
 template <typename T, typename Tgroup>
 vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
                                                 const Tgroup &GRP,
-                                                const std::string &ansSamp, std::ostream & os) {
+                                                const std::string &ansSamp,
+                                                std::ostream &os) {
   // We can do a little better by passing a lambda to the
   // DirectComputationInitialFacetSet but that is a little overkill right now
   size_t nbRow = EXT.rows();
@@ -708,7 +706,7 @@ public:
     InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
     return foc.SingEntToFace(face_can, idx_orb);
   }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream& os) {
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
@@ -781,7 +779,7 @@ private:
       return tmp;
     }
     IteratorType &operator--() {
-      if(pos == 0) {
+      if (pos == 0) {
         iter--;
         pos = iter->second.size();
       }
@@ -790,7 +788,7 @@ private:
     }
     IteratorType operator--(int) {
       IteratorType tmp = *this;
-      if(pos == 0) {
+      if (pos == 0) {
         iter--;
         pos = iter->second.size();
       }
@@ -919,7 +917,7 @@ public:
     //
     return foc.SingEntToFace(face_i, idx_orb);
   }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream & os) {
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet(EXT, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
@@ -1087,10 +1085,10 @@ public:
        << "," << bb.foc.nbUndone << ")\n\n";
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
-                 const bool &_SavingTrigger, const bool& _AdvancedTerminationCriterion, std::ostream &os)
+                 const bool &_SavingTrigger,
+                 const bool &_AdvancedTerminationCriterion, std::ostream &os)
       : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
-        AdvancedTerminationCriterion(_AdvancedTerminationCriterion),
-        os(os) {
+        AdvancedTerminationCriterion(_AdvancedTerminationCriterion), os(os) {
     os << "MainPrefix=" << MainPrefix << "\n";
     eFileEXT = MainPrefix + ".ext";
     eFileGRP = MainPrefix + ".grp";
@@ -1185,7 +1183,7 @@ public:
       fn->setval(bb.foc.nbOrbit);
     }
   }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream& os) {
+  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return bb.ComputeInitialSet(ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
@@ -1198,21 +1196,21 @@ public:
   Face ComputeIntersectionUndone() const {
     size_t n_row = bb.EXT.rows();
     Face eSetReturn(n_row);
-    
+
     // don't do full computation if many orbit remaining
     // for some polytopes only the last orbit sets eSetReturn = 0
     // resulting in large slowdowns here
     // alternative fix: enumerate in decending order
-    if(bb.foc.nbOrbit - bb.foc.nbOrbitDone > 1000)
-        return eSetReturn;
+    if (bb.foc.nbOrbit - bb.foc.nbOrbitDone > 1000)
+      return eSetReturn;
 
     for (size_t i_row = 0; i_row < n_row; i_row++)
       eSetReturn[i_row] = 1;
     typename TbasicBank::iterator iter = bb.begin_undone();
     while (iter != bb.end_undone()) {
       eSetReturn &= OrbitIntersection(bb.GRP, *iter);
-      if (eSetReturn.count() == 0){
-          return eSetReturn;
+      if (eSetReturn.count() == 0) {
+        return eSetReturn;
       }
       iter++;
     }
@@ -1223,8 +1221,8 @@ public:
   typename TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
     typename TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
     os << strPresChar << " Considering orbit " << data.SelectedOrbit
-       << " |inc|=" << data.eInc.count()
-       << " |stab|=" << data.Stab.size() << "\n";
+       << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size()
+       << "\n";
     return data;
   }
   bool GetTerminationStatus() const {
@@ -1266,9 +1264,9 @@ private:
 };
 
 template <typename Tint, typename T, typename Tgroup>
-std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
-                                              const Tgroup &GRP,
-                                              PolyHeuristicSerial<typename Tgroup::Tint> & AllArr) {
+std::map<std::string, Tint>
+ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
+                  PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
@@ -1282,23 +1280,24 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
   return TheMap;
 }
 
-
 // Needs initial definition due to template crazyness
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank>
 vectface Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
-    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap, std::ostream& os) {
+    std::map<std::string, typename Tgroup::Tint> const &TheMap,
+    std::ostream &os) {
   using DataFacet = typename TbasicBank::DataFacet;
-  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
+                                 AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
@@ -1336,8 +1335,8 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
-    std::string const &ePrefix, std::ostream & os) {
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+    std::string const &ePrefix, std::ostream &os) {
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
   os << "Beginning of DUALDESC_AdjacencyDecomposition\n";
@@ -1348,7 +1347,8 @@ vectface DUALDESC_AdjacencyDecomposition(
   if (AllArr.max_runtime > 0) {
     int runtime = si(AllArr.start);
     if (runtime > AllArr.max_runtime) {
-      std::cerr << "The maximum runtime has been elapsed. max_runtime = " << AllArr.max_runtime << "\n";
+      std::cerr << "The maximum runtime has been elapsed. max_runtime = "
+                << AllArr.max_runtime << "\n";
       throw RuntimeException{1};
     }
   }
@@ -1358,14 +1358,16 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // Now computing the groups
   //
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXT, GRP, AllArr);
+  std::map<std::string, Tint> TheMap =
+      ComputeInitialMap<Tint>(EXT, GRP, AllArr);
   //
   // Checking if the entry is present in the map.
   //
   std::string ansBankCheck =
       HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
   if (ansBankCheck == "yes") {
-    vectface ListFace = getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, os);
+    vectface ListFace =
+        getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, os);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -1416,8 +1418,8 @@ vectface DUALDESC_AdjacencyDecomposition(
       std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
       std::string ansChosenDatabase =
           HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
-      os << "DUALDESC_ChosenDatabase : ChosenDatabase = "
-         << ansChosenDatabase << "\n";
+      os << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase
+         << "\n";
       if (ansChosenDatabase == "canonic") {
         using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
         TbasicBank bb(EXT, TheGRPrelevant);
@@ -1531,9 +1533,12 @@ RealAlgebraic: coordinate in a real algebraic field";
   ListStringValues1_doc["FileAlgebraicField"] = "Default: unset\n\
 The file containing the description of the real algebraic field.\n\
 This is needed of RealAlgebraic is selected";
-  ListStringValues1_doc["EXTfile"] = "The file containing the coordinate of the output file";
-  ListStringValues1_doc["GRPfile"] = "The file containing the symmetry group used in the computation";
-  ListStringValues1_doc["OUTfile"] = "The file containing the output of the result";
+  ListStringValues1_doc["EXTfile"] =
+      "The file containing the coordinate of the output file";
+  ListStringValues1_doc["GRPfile"] =
+      "The file containing the symmetry group used in the computation";
+  ListStringValues1_doc["OUTfile"] =
+      "The file containing the output of the result";
   ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible values:\n\
 Magma: a file to be read in magma\n\
@@ -1572,7 +1577,8 @@ This is about whether to used the advanced Balinski termination criterion";
   ListStringValuesH_doc["SplittingHeuristicFile"] = "Default: unset.heu\n\
 The splitting heuristic file.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["AdditionalSymmetryHeuristicFile"] = "Default: unset.heu\n\
+  ListStringValuesH_doc["AdditionalSymmetryHeuristicFile"] =
+      "Default: unset.heu\n\
 The additional symmetry heuristic file\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
   ListStringValuesH_doc["DualDescriptionThompsonFile"] = "Default: unset.ts\n\
@@ -1637,8 +1643,8 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
   return {std::move(ListBlock), "undefined"};
 }
 
-template<typename T, typename Tgroup>
-void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
+template <typename T, typename Tgroup>
+void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
                   const vectface &TheOutput, const std::string &OUTfile,
                   const std::string &OutFormat) {
   if (OutFormat == "Magma") {
@@ -1653,9 +1659,11 @@ void OutputFacets(const MyMatrix<T>& EXT, Tgroup const& GRP,
   if (OutFormat == "BankEntry") {
     // We are creating a bank entry for further works.
     using Tidx_value = uint16_t;
-    WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T, Tidx_value>(EXT);
+    WeightMatrix<true, T, Tidx_value> WMat =
+        GetWeightMatrix<T, Tidx_value>(EXT);
     WMat.ReorderingSetWeight();
-    std::pair<MyMatrix<T>,PairStore<Tgroup>> eP = GetCanonicalInformation(EXT, WMat, GRP, TheOutput);
+    std::pair<MyMatrix<T>, PairStore<Tgroup>> eP =
+        GetCanonicalInformation(EXT, WMat, GRP, TheOutput);
     Write_BankEntry(OUTfile, eP.first, eP.second);
   }
   std::cerr << "No option has been chosen\n";
@@ -1677,7 +1685,7 @@ std::string GetNumericalType(FullNamelist const &eFull) {
   if (PositionVect(Ltype, NumericalType) == -1) {
     std::cerr << "NumericalType=" << NumericalType << "\n";
     std::cerr << "Ltype =";
-    for (auto & e_type : Ltype)
+    for (auto &e_type : Ltype)
       std::cerr << " " << e_type;
     std::cerr << "\n";
     throw TerminalException{1};
@@ -1685,12 +1693,8 @@ std::string GetNumericalType(FullNamelist const &eFull) {
   return NumericalType;
 }
 
-
-
-
-
-template<typename T, typename Tidx>
-MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream & os) {
+template <typename T, typename Tidx>
+MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
@@ -1712,9 +1716,8 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
   return result;
 }
 
-
-template<typename Tgroup>
-Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream & os) {
+template <typename Tgroup>
+Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
@@ -1724,10 +1727,10 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream & os) {
   return GRP;
 }
 
-
-
-template<typename T, typename Tint>
-PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eFull, MyMatrix<T> const& EXTred, std::ostream& os) {
+template <typename T, typename Tint>
+PolyHeuristicSerial<Tint>
+Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
+                                MyMatrix<T> const &EXTred, std::ostream &os) {
   PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
   os << "We have AllArr\n";
   //
@@ -1799,17 +1802,14 @@ PolyHeuristicSerial<Tint> Read_AllStandardHeuristicSerial(FullNamelist const &eF
   int max_runtime = BlockDATA.ListIntValues.at("max_runtime");
   AllArr.max_runtime = max_runtime;
   //
-  bool AdvancedTerminationCriterion = BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
+  bool AdvancedTerminationCriterion =
+      BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
   AllArr.dimEXT = EXTred.cols();
   //
   return AllArr;
 }
-
-
-
-
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
@@ -1822,10 +1822,11 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = PairStore<Tgroup>;
-  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, std::cerr);
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
-  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<T,Tint>(eFull, EXTred, std::cerr);
+  PolyHeuristicSerial<Tint> AllArr =
+      Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, std::cerr);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
@@ -1840,7 +1841,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
     }
-    std::cerr << "Failed to find a matching entry for bank_parallelization_method\n";
+    std::cerr
+        << "Failed to find a matching entry for bank_parallelization_method\n";
     std::cerr << "Allowed methods are serial, bank_asio\n";
     throw TerminalException{1};
   };
@@ -1859,7 +1861,8 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   bool BANK_IsSaving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(std::cerr);
+  PolyHeuristicSerial<Tint> AllArr =
+      AllStandardHeuristicSerial<Tint>(std::cerr);
   std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   std::cerr << "AdditionalSymmetryHeuristicFile\n"
             << AllArr.AdditionalSymmetry << "\n";

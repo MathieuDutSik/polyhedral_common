@@ -98,7 +98,8 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
 
 template <typename Tkey, typename Tval>
 void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
-                               bool const &Saving, std::string SavingPrefix, std::ostream& os) {
+                               bool const &Saving, std::string SavingPrefix,
+                               std::ostream &os) {
   if (Saving) {
     size_t iOrbit = 0;
     while (true) {
@@ -127,11 +128,12 @@ private:
   bool Saving;
   std::string SavingPrefix;
   Tval TrivElt;
-  std::ostream& os;
+  std::ostream &os;
 
 public:
-  DataBank(const bool &_Saving, const std::string &_SavingPrefix, std::ostream& _os)
-    : Saving(_Saving), SavingPrefix(_SavingPrefix), os(_os) {
+  DataBank(const bool &_Saving, const std::string &_SavingPrefix,
+           std::ostream &_os)
+      : Saving(_Saving), SavingPrefix(_SavingPrefix), os(_os) {
     ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, os);
   }
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
@@ -229,7 +231,8 @@ inline void serialize(Archive &ar, PairKV<Tkey, Tval> &pair,
 // ASIO client and server
 
 template <typename Tkey, typename Tval>
-void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix, const short unsigned int port, std::ostream &os) {
+void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
+                        const short unsigned int port, std::ostream &os) {
   std::unordered_map<Tkey, Tval> ListEnt;
   ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, os);
   //
@@ -251,7 +254,7 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix, con
         if (Saving) {
           size_t n_orbit = ListEnt.size();
           std::string Prefix =
-            SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+              SavingPrefix + "DualDesc" + std::to_string(n_orbit);
           os << "Insert entry to file Prefix=" << Prefix << "\n";
           Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
         }
@@ -262,10 +265,10 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix, con
     if (eTriple.nature == 'g') {
       os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-        ListEnt.find(eTriple.eKey);
+          ListEnt.find(eTriple.eKey);
       if (iter == ListEnt.end())
         send_data<Tval>(socket, Tval()); // If returning empty then it means
-      else                                   // nothing has been found.
+      else                               // nothing has been found.
         send_data<Tval>(socket, iter->second);
     }
     os << "---------- " << n_iter << " -----------------------\n";
@@ -298,13 +301,14 @@ public:
 
 template <typename Tkey, typename Tval> struct DataBankMpiClient {
 private:
-  boost::mpi::communicator & comm;
+  boost::mpi::communicator &comm;
   int dest_iproc;
+
 public:
-  DataBankMpiClient(boost::mpi::communicator & comm) : comm(comm), dest_iproc(comm.size() - 1)
-  {}
+  DataBankMpiClient(boost::mpi::communicator &comm)
+      : comm(comm), dest_iproc(comm.size() - 1) {}
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
-    PairKV<Tkey,Tval> pair{std::move(eKey), std::move(eVal)};
+    PairKV<Tkey, Tval> pair{std::move(eKey), std::move(eVal)};
     comm.send(dest_iproc, tag_mpi_bank_insert, pair);
   }
   Tval GetDualDesc(const Tkey &eKey) const {
@@ -316,12 +320,12 @@ public:
 };
 
 template <typename Tkey, typename Tval>
-void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, const std::string &SavingPrefix, std::ostream& os)
-{
+void DataBankMpiServer(boost::mpi::communicator &comm, const bool &Saving,
+                       const std::string &SavingPrefix, std::ostream &os) {
   std::unordered_map<Tkey, Tval> ListEnt;
   ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, os);
   //
-  while(true) {
+  while (true) {
     boost::mpi::status msg = comm.probe();
     if (msg.tag() == tag_mpi_bank_end) {
       os << "Receiving termination message\n";
@@ -329,7 +333,8 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
       comm.recv(msg.source(), msg.tag(), val_i);
       if (val_i != val_mpi_bank_end) {
         std::cerr << "Error in the received value\n";
-        std::cerr << "val_i=" << val_i << " val_mpi_bank_end=" << val_mpi_bank_end << "\n";
+        std::cerr << "val_i=" << val_i
+                  << " val_mpi_bank_end=" << val_mpi_bank_end << "\n";
         throw TerminalException{1};
       }
       os << "Terminating the DataBankMpiServer\n";
@@ -337,16 +342,17 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
     }
     if (msg.tag() == tag_mpi_bank_insert) {
       os << "Receiving insert (key,val) from " << msg.source() << "\n";
-      PairKV<Tkey,Tval> pair;
+      PairKV<Tkey, Tval> pair;
       comm.recv(msg.source(), msg.tag(), pair);
       if (ListEnt.count(pair.eKey) > 0) {
         os << "The entry is already present\n";
-        os << "Not stopping but suboptimal. Maybe two threads computed the same thing. Otherwise bug.\n";
+        os << "Not stopping but suboptimal. Maybe two threads computed the "
+              "same thing. Otherwise bug.\n";
       } else {
         if (Saving) {
           size_t n_orbit = ListEnt.size();
           std::string Prefix =
-            SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+              SavingPrefix + "DualDesc" + std::to_string(n_orbit);
           os << "Insert entry to file Prefix=" << Prefix << "\n";
           Write_BankEntry(Prefix, pair.eKey, pair.eVal);
         }
@@ -355,11 +361,12 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
       }
     }
     if (msg.tag() == tag_mpi_bank_request) {
-      os << "Receiving request key from " << msg.source() << " |ListEnt|=" << ListEnt.size() << "\n";
+      os << "Receiving request key from " << msg.source()
+         << " |ListEnt|=" << ListEnt.size() << "\n";
       Tkey key;
       comm.recv(msg.source(), msg.tag(), key);
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-        ListEnt.find(key);
+          ListEnt.find(key);
       if (iter == ListEnt.end()) {
         os << "Not found\n";
         comm.send(msg.source(), tag_mpi_bank_reception, Tval());
@@ -370,10 +377,6 @@ void DataBankMpiServer(boost::mpi::communicator & comm, const bool &Saving, cons
     }
   }
 }
-
-
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_DATABANK_H_

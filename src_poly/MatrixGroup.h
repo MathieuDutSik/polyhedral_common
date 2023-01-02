@@ -18,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-
 //
 
 template <typename T, typename Telt>
@@ -89,14 +88,16 @@ struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt>> {
 //
 
 template <typename T, typename Telt>
-GeneralMatrixGroupHelper<T,Telt> TransformHelper(GeneralMatrixGroupHelper<T,Telt> const& helper, [[maybe_unused]] MyMatrix<T> const& Pmat)
-{
+GeneralMatrixGroupHelper<T, Telt>
+TransformHelper(GeneralMatrixGroupHelper<T, Telt> const &helper,
+                [[maybe_unused]] MyMatrix<T> const &Pmat) {
   return helper;
 }
 
 template <typename T, typename Telt>
-FiniteIsotropicMatrixGroupHelper<T,Telt> TransformHelper(FiniteIsotropicMatrixGroupHelper<T,Telt> const& helper, MyMatrix<T> const& Pmat)
-{
+FiniteIsotropicMatrixGroupHelper<T, Telt>
+TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper,
+                MyMatrix<T> const &Pmat) {
   MyMatrix<T> PmatInv = Inverse(Pmat);
   MyMatrix<T> G_new = Pmat * helper.G * Pmat.transpose();
   MyMatrix<T> EXTfaithful_new = helper.EXTfaithful * PmatInv;
@@ -109,12 +110,18 @@ FiniteIsotropicMatrixGroupHelper<T,Telt> TransformHelper(FiniteIsotropicMatrixGr
     ListV_new.push_back(eV);
     MapV_new[eV] = i;
   }
-  return {helper.n, std::move(G_new), std::move(EXTfaithful_new), std::move(Visotrop_new), std::move(ListV_new), std::move(MapV_new)};
+  return {helper.n,
+          std::move(G_new),
+          std::move(EXTfaithful_new),
+          std::move(Visotrop_new),
+          std::move(ListV_new),
+          std::move(MapV_new)};
 }
 
 template <typename T, typename Telt>
-FiniteMatrixGroupHelper<T,Telt> TransformHelper(FiniteMatrixGroupHelper<T,Telt> const& helper, MyMatrix<T> const& Pmat)
-{
+FiniteMatrixGroupHelper<T, Telt>
+TransformHelper(FiniteMatrixGroupHelper<T, Telt> const &helper,
+                MyMatrix<T> const &Pmat) {
   MyMatrix<T> PmatInv = Inverse(Pmat);
   MyMatrix<T> EXTfaithful_new = helper.EXTfaithful * PmatInv;
   std::vector<MyVector<T>> ListV_new;
@@ -125,51 +132,48 @@ FiniteMatrixGroupHelper<T,Telt> TransformHelper(FiniteMatrixGroupHelper<T,Telt> 
     ListV_new.push_back(eV);
     MapV_new[eV] = i;
   }
-  return {helper.n, std::move(EXTfaithful_new), std::move(ListV_new), std::move(MapV_new)};
+  return {helper.n, std::move(EXTfaithful_new), std::move(ListV_new),
+          std::move(MapV_new)};
 }
 
 //
 
-template<typename T, typename Thelper>
-T L1normMatrixGroup(Thelper const& helper, std::vector<MyMatrix<T>> const& ListMatr)
-{
+template <typename T, typename Thelper>
+T L1normMatrixGroup(Thelper const &helper,
+                    std::vector<MyMatrix<T>> const &ListMatr) {
   int n = helper.n;
   T sum = 0;
-  for (auto & eMat : ListMatr) {
-    for (int i=0; i<n; i++)
-      for (int j=0; j<n; j++)
-        sum += T_abs(eMat(i,j));
+  for (auto &eMat : ListMatr) {
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+        sum += T_abs(eMat(i, j));
   }
   return sum;
 }
 
-
-template<typename T, typename Tint, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> LLLMatrixGroupReduction(Thelper const& helper, std::vector<MyMatrix<T>> const& ListMatr)
-{
+template <typename T, typename Tint, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>>
+LLLMatrixGroupReduction(Thelper const &helper,
+                        std::vector<MyMatrix<T>> const &ListMatr) {
   int n = helper.n;
   MyMatrix<T> PosDefMat = IdentityMat<T>(n);
-  for (auto & eMat : ListMatr) {
+  for (auto &eMat : ListMatr) {
     if (!IsIdentity(eMat)) {
       MyMatrix<T> eProd = eMat * eMat.transpose();
       PosDefMat += eProd;
     }
   }
   LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(PosDefMat);
-  MyMatrix<Tint> const& Pmat = pair.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<Tint> const &Pmat = pair.Pmat;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   std::vector<MyMatrix<T>> ListMatrNew;
-  for (auto & eMat : ListMatr) {
+  for (auto &eMat : ListMatr) {
     MyMatrix<T> eMatNew = Pmat_T * eMat * PmatInv_T;
     ListMatrNew.emplace_back(std::move(eMatNew));
   }
   return {std::move(ListMatrNew), Pmat};
 }
-
-
-
-
 
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   T TheDet = T_abs(DeterminantMat(TheSpace));
@@ -1409,11 +1413,10 @@ using ResultTestModEquivalence =
   ---A function for computing the
  */
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-std::optional<ResultTestModEquivalence<T>>
-LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
-                                Thelper const &helper, bool const& NeedStabilizer,
-                                MyMatrix<T> const &TheSpace1,
-                                MyMatrix<T> const &TheSpace2, T const &TheMod) {
+std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
+    std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
+    bool const &NeedStabilizer, MyMatrix<T> const &TheSpace1,
+    MyMatrix<T> const &TheSpace2, T const &TheMod) {
   using Telt = typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
   int n = TheSpace1.rows();
@@ -1527,8 +1530,8 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
 #ifdef SANITY_CHECK
       if (eFace1.count() == 0 && eFace2.count() == 0) {
-        std::cerr
-            << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = |eFace2| = 0\n";
+        std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
+                     "|eFace2| = 0\n";
         std::cerr << "Clear bug\n";
         throw TerminalException{1};
       }
@@ -1619,9 +1622,9 @@ LinearSpace_ModEquivalence_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 template <typename T, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>>
 LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const &ListMatr,
-                           Thelper const &helper, bool const& NeedStabilizer,
-                           MyMatrix<T> const &TheSpace1, MyMatrix<T> const &TheSpace2,
-                           T const &TheMod) {
+                           Thelper const &helper, bool const &NeedStabilizer,
+                           MyMatrix<T> const &TheSpace1,
+                           MyMatrix<T> const &TheSpace2, T const &TheMod) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace1.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint8_t, Tgroup, Thelper>(
@@ -1643,7 +1646,8 @@ LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const &ListMatr,
 template <typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>>
 LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
-                              Thelper const &helper, MyMatrix<T> const &TheSpace) {
+                              Thelper const &helper,
+                              MyMatrix<T> const &TheSpace) {
   int n = helper.n;
 #ifdef DEBUG_MATRIX_GROUP
   //  std::cerr << "TheSpace=\n";
@@ -1700,31 +1704,30 @@ std::vector<MyMatrix<T>>
 LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                        Thelper const &helper, MyMatrix<T> const &TheSpace) {
   using Tint = typename underlying_ring<T>::ring_type;
-  std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> pair = LLLMatrixGroupReduction<T,Tint,Thelper>(helper, ListMatr);
-  std::vector<MyMatrix<T>> const& ListMatrNew = pair.first;
-  MyMatrix<Tint> const& Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T,Tint>(TheSpace_B).LattRed;
+  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::vector<MyMatrix<T>> ListMatr_B =
-    LinearSpace_Stabilizer_Kernel<T,Tgroup,Thelper>(ListMatrNew, helper_new, TheSpace_C);
+      LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
+                                                        TheSpace_C);
   std::vector<MyMatrix<T>> ListMatr_C;
-  for (auto & eMatr_B : ListMatr_B) {
+  for (auto &eMatr_B : ListMatr_B) {
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
     ListMatr_C.push_back(eMatr_C);
   }
   return ListMatr_C;
 }
 
-
-
 template <typename T, typename Tgroup, typename Thelper>
-std::optional<MyMatrix<T>>
-LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
-                        Thelper const &helper, MyMatrix<T> const &InSpace1,
-                        MyMatrix<T> const &InSpace2) {
+std::optional<MyMatrix<T>> LinearSpace_Equivalence_Kernel(
+    std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
+    MyMatrix<T> const &InSpace1, MyMatrix<T> const &InSpace2) {
   static_assert(is_ring_field<T>::value,
                 "Requires T to be a field in LinearSpace_Equivalence_Kernel");
 #ifdef DEBUG_MATRIX_GROUP
@@ -1796,7 +1799,8 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
       NeedStabilizer = false;
     std::optional<ResultTestModEquivalence<T>> opt =
         LinearSpace_ModEquivalence<T, Tgroup, Thelper>(
-            ListMatrWork, helper, NeedStabilizer, TheSpace1Img, TheSpace2, TheMod);
+            ListMatrWork, helper, NeedStabilizer, TheSpace1Img, TheSpace2,
+            TheMod);
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
       std::cerr << "LinearSpace_ModEquivalence failed so we exit here\n";
@@ -1814,7 +1818,8 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  std::cerr << "Before returning from LinearSpace_Equivalence_Kernel, retuning eElt\n";
+  std::cerr << "Before returning from LinearSpace_Equivalence_Kernel, retuning "
+               "eElt\n";
 #endif
   return eElt;
 }
@@ -1824,27 +1829,28 @@ std::optional<MyMatrix<T>>
 LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
                         Thelper const &helper, MyMatrix<T> const &InSpace1,
                         MyMatrix<T> const &InSpace2) {
-  //  return LinearSpace_Equivalence_Kernel<T,Tgroup,Thelper>(ListMatr, helper, InSpace1, InSpace2);
+  //  return LinearSpace_Equivalence_Kernel<T,Tgroup,Thelper>(ListMatr, helper,
+  //  InSpace1, InSpace2);
   using Tint = typename underlying_ring<T>::ring_type;
-  std::pair<std::vector<MyMatrix<T>>,MyMatrix<Tint>> pair = LLLMatrixGroupReduction<T,Tint,Thelper>(helper, ListMatr);
-  std::vector<MyMatrix<T>> const& ListMatrNew = pair.first;
-  MyMatrix<Tint> const& Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> InSpace1_B = InSpace1 * PmatInv_T;
   MyMatrix<T> InSpace2_B = InSpace2 * PmatInv_T;
-  MyMatrix<T> InSpace1_C = LLLbasisReduction<T,Tint>(InSpace1_B).LattRed;
-  MyMatrix<T> InSpace2_C = LLLbasisReduction<T,Tint>(InSpace2_B).LattRed;
+  MyMatrix<T> InSpace1_C = LLLbasisReduction<T, Tint>(InSpace1_B).LattRed;
+  MyMatrix<T> InSpace2_C = LLLbasisReduction<T, Tint>(InSpace2_B).LattRed;
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::optional<MyMatrix<T>> opt =
-    LinearSpace_Equivalence_Kernel<T,Tgroup,Thelper>(ListMatrNew, helper_new, InSpace1_C, InSpace2_C);
+      LinearSpace_Equivalence_Kernel<T, Tgroup, Thelper>(
+          ListMatrNew, helper_new, InSpace1_C, InSpace2_C);
   if (!opt)
     return {};
   MyMatrix<T> RetMat = PmatInv_T * (*opt) * Pmat_T;
   return RetMat;
 }
-
-
 
 template <typename T, typename Tgroup>
 std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
@@ -2027,7 +2033,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
       LinearSpace_Equivalence<T, Tgroup>(ListMatrGen, helper, eLatt1, eLatt2);
   if (!opt)
     return {};
-  MyMatrix<T> const& eSpaceEquiv = *opt;
+  MyMatrix<T> const &eSpaceEquiv = *opt;
   MyMatrix<T> eMatFinal = InvBasis1 * TheMatEquiv * eSpaceEquiv * eBasis2;
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "We have eMatFinal=\n";

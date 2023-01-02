@@ -2,25 +2,14 @@
 #include "NumberTheory.h"
 #include "SimulDiophantApprox.h"
 
-
-template<typename T, typename F>
-void DoProcessing(MyMatrix<T> const& M, MyVector<T> const& B, F f)
-{
+template <typename T, typename F>
+void DoProcessing(MyMatrix<T> const &M, MyVector<T> const &B, F f) {
   MyMatrix<T> Mtr = TransposedMat(M);
   std::option<MyVector<T>> opt = SolutionIntMat(Mtr, B);
   if (!opt)
     return;
   MyMatrix<T> NSP = NullspaceIntMat(Mtr);
-  
-
-
-  
 }
-
-
-
-
-
 
 int main(int argc, char *argv[]) {
   try {
@@ -29,7 +18,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_ZeroOneSolutions [FileIn] [FileOut]\n";
       std::cerr << "\n";
-      std::cerr << "FileIn  : The input file in the same format as of Vedran Krcadinac\n";
+      std::cerr << "FileIn  : The input file in the same format as of Vedran "
+                   "Krcadinac\n";
       std::cerr << "FileOut : The output fileepsilon value on input\n";
       return -1;
     }
@@ -47,19 +37,18 @@ int main(int argc, char *argv[]) {
     is >> contVal;
     MyMatrix<T> M(nbRow, nbCol);
     MyVector<T> B(nbRow);
-    for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       T val;
-      for (int iCol=0; iCol<nbCol; iCol++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
         is >> val;
-        M(iRow,iCol) = val;
+        M(iRow, iCol) = val;
       }
       is >> val;
       B(iRow) = val;
     }
 
-
-    auto f=[&](Face f) -> void {
-      for (int iCol=0; iCol<nbCol; iCol++) {
+    auto f = [&](Face f) -> void {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
         int val = f[iCol];
         os << val;
       }

@@ -27,9 +27,8 @@
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
-template<typename F>
-void print_stderr_stdout_file(std::string const& FileOut, F f)
-{
+template <typename F>
+void print_stderr_stdout_file(std::string const &FileOut, F f) {
   if (FileOut == "stderr")
     return f(std::cerr);
   if (FileOut == "stdout")
@@ -37,7 +36,6 @@ void print_stderr_stdout_file(std::string const& FileOut, F f)
   std::ofstream os(FileOut);
   return f(os);
 }
-
 
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
@@ -1735,7 +1733,8 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
 
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   std::optional<bool> is_reflective;
-  LorentzianFinitenessGroupTester<T, Tint> group_tester = LorentzianFinitenessGroupTester<T, Tint>(G);
+  LorentzianFinitenessGroupTester<T, Tint> group_tester =
+      LorentzianFinitenessGroupTester<T, Tint>(G);
   if (EarlyTerminationIfNotReflective) {
     is_reflective = true;
   }
@@ -2248,7 +2247,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
         BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
     std::cerr << "OutFormat=" << OutFormat << " FileOut=" << FileOut
               << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
-    auto f_print=[&](std::ostream & os) -> void {
+    auto f_print = [&](std::ostream &os) -> void {
       PrintResultEdgewalk(G, re, os, OutFormat, ComputeAllSimpleRoots);
     };
     print_stderr_stdout_file(FileOut, f_print);
@@ -2276,7 +2275,8 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
                    "EarlyTerminationIfNotReflective = F\n";
       std::cerr << "this is actually a runtime error\n";
     }
-    ResultEdgewalk<T, Tint> re{{}, {}, LorentzianFinitenessGroupTester<T,Tint>(G), false};
+    ResultEdgewalk<T, Tint> re{
+        {}, {}, LorentzianFinitenessGroupTester<T, Tint>(G), false};
     print_result_edgewalk(re);
   }
   std::cerr << "We are after the PrintResultEdgewalk\n";

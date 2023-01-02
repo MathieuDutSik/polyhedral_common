@@ -177,7 +177,9 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 }
 
 template <typename T, typename Tint>
-void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat, TestStrictPositivity<T, Tint> const &StrictPos) {
+void WriteStrictPositivityResult(
+    std::ostream &os, std::string const &OutFormat,
+    TestStrictPositivity<T, Tint> const &StrictPos) {
   if (OutFormat == "classic") {
     os << "result=" << StrictPos.result << "\n";
     if (StrictPos.result) {
@@ -193,7 +195,7 @@ void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat,
     } else {
       os << "Certificate of non strict completely positive matrix:\n";
       os << "Following matrix has negative scalar product with eMat and is "
-        "copositive:\n";
+            "copositive:\n";
       WriteMatrix(os, StrictPos.CertificateNonStrictlyPositive);
     }
     return;
@@ -212,12 +214,14 @@ void WriteStrictPositivityResult(std::ostream &os, std::string const& OutFormat,
       }
       os << "]";
     } else {
-      os << ", Certificate:=" << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
+      os << ", Certificate:="
+         << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
     }
     os << ");\n";
     return;
   }
-  std::cerr << "WriteStrictPositivityResult: Failed to find a matching entry for output\n";
+  std::cerr << "WriteStrictPositivityResult: Failed to find a matching entry "
+               "for output\n";
   throw TerminalException{1};
 }
 

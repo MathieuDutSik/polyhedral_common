@@ -2,24 +2,23 @@
 #ifndef SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 #define SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 
-
-#include <string>
-#include <vector>
-#include "Timings.h"
 #include "Balinski_basic.h"
 #include "Boost_bitset_kernel.h"
 #include "MAT_Matrix.h"
+#include "Timings.h"
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
-
+#include <string>
+#include <vector>
 
 /*
   For the vector, simple syntactic sugar
  */
 
-template<typename T>
-inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_mpi_gather(boost::mpi::communicator & comm, T const& x, int const& i_proc) {
+template <typename T>
+inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
+my_mpi_gather(boost::mpi::communicator &comm, T const &x, int const &i_proc) {
   int i_rank = comm.rank();
   std::vector<T> V;
   if (i_rank == i_proc) {
@@ -30,8 +29,9 @@ inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_
   return V;
 }
 
-template<typename T>
-inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_mpi_allgather(boost::mpi::communicator & comm, T const& x) {
+template <typename T>
+inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
+my_mpi_allgather(boost::mpi::communicator &comm, T const &x) {
   std::vector<T> V;
   boost::mpi::all_gather<T>(comm, x, V);
   return V;
@@ -41,11 +41,12 @@ inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type my_
   For vectface, a little bit more advanced work
  */
 
-vectface my_mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int i_proc) {
+vectface my_mpi_gather(boost::mpi::communicator &comm, vectface const &vf,
+                       int i_proc) {
   int i_rank = comm.rank();
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
-  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  std::vector<uint8_t> const &V = vf.serial_get_std_vector_uint8_t();
   //
   std::vector<size_t> l_n_face = my_mpi_gather(comm, n_face, i_proc);
   std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
@@ -56,34 +57,34 @@ vectface my_mpi_gather(boost::mpi::communicator & comm, vectface const& vf, int 
   }
 }
 
-vectface my_mpi_allgather(boost::mpi::communicator & comm, vectface const& vf) {
+vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
   size_t n_vert = vf.get_n();
   size_t n_face = vf.size();
-  std::vector<uint8_t> const& V = vf.serial_get_std_vector_uint8_t();
+  std::vector<uint8_t> const &V = vf.serial_get_std_vector_uint8_t();
   //
   std::vector<size_t> l_n_face = my_mpi_allgather(comm, n_face);
   std::vector<std::vector<uint8_t>> l_V = my_mpi_allgather(comm, V);
   return vectface(n_vert, l_n_face, l_V);
 }
 
-
 /*
   For MyMatrix<T>, a little bit more advanced work. We merge the rows together
  */
 
-template<typename T>
-MyMatrix<T> MergeRows(int const& n_col, std::vector<int> const& l_n_rows, std::vector<std::vector<T>> const& l_V) {
+template <typename T>
+MyMatrix<T> MergeRows(int const &n_col, std::vector<int> const &l_n_rows,
+                      std::vector<std::vector<T>> const &l_V) {
   int n_row = 0;
-  for (auto & eVal : l_n_rows)
+  for (auto &eVal : l_n_rows)
     n_row += eVal;
   MyMatrix<T> Mret(n_row, n_col);
   int pos = 0;
-  for (size_t i=0; i<l_n_rows.size(); i++) {
-    int const& n_rows = l_n_rows[i];
-    std::vector<T> const& V = l_V[i];
+  for (size_t i = 0; i < l_n_rows.size(); i++) {
+    int const &n_rows = l_n_rows[i];
+    std::vector<T> const &V = l_V[i];
     size_t posV = 0;
-    for (int i_row=0; i_row<n_rows; i_row++) {
-      for (int i_col=0; i_col<n_col; i_col++) {
+    for (int i_row = 0; i_row < n_rows; i_row++) {
+      for (int i_col = 0; i_col < n_col; i_col++) {
         Mret(pos, i_col) = V[posV];
         posV++;
       }
@@ -93,16 +94,16 @@ MyMatrix<T> MergeRows(int const& n_col, std::vector<int> const& l_n_rows, std::v
   return Mret;
 }
 
-
-template<typename T>
-MyMatrix<T> my_mpi_gather(boost::mpi::communicator & comm, MyMatrix<T> const& M, int i_proc) {
+template <typename T>
+MyMatrix<T> my_mpi_gather(boost::mpi::communicator &comm, MyMatrix<T> const &M,
+                          int i_proc) {
   int i_rank = comm.rank();
   int n_rows = M.rows();
   int n_cols = M.cols();
   std::vector<uint8_t> V(n_rows, n_cols);
-  size_t pos=0;
-  for (int i_row=0; i_row<n_rows; i_row++) {
-    for (int i_col=0; i_col<n_cols; i_col++) {
+  size_t pos = 0;
+  for (int i_row = 0; i_row < n_rows; i_row++) {
+    for (int i_col = 0; i_col < n_cols; i_col++) {
       V[pos] = M(i_row, i_col);
       pos++;
     }
@@ -117,16 +118,15 @@ MyMatrix<T> my_mpi_gather(boost::mpi::communicator & comm, MyMatrix<T> const& M,
   }
 }
 
-
-
-template<typename T>
-MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const& M) {
+template <typename T>
+MyMatrix<T> my_mpi_allgather(boost::mpi::communicator &comm,
+                             MyMatrix<T> const &M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
   std::vector<T> V(n_rows * n_cols);
-  size_t pos=0;
-  for (int i_row=0; i_row<n_rows; i_row++) {
-    for (int i_col=0; i_col<n_cols; i_col++) {
+  size_t pos = 0;
+  for (int i_row = 0; i_row < n_rows; i_row++) {
+    for (int i_col = 0; i_col < n_cols; i_col++) {
       V[pos] = M(i_row, i_col);
       pos++;
     }
@@ -137,28 +137,24 @@ MyMatrix<T> my_mpi_allgather(boost::mpi::communicator & comm, MyMatrix<T> const&
   return MergeRows(n_cols, l_n_rows, l_V);
 }
 
-
 /*
   For T, compute the sum of all the elements
  */
 
-template<typename T>
-T my_mpi_allreduce_sum(boost::mpi::communicator & comm, T const& x) {
+template <typename T>
+T my_mpi_allreduce_sum(boost::mpi::communicator &comm, T const &x) {
   std::vector<T> V;
   boost::mpi::all_gather<T>(comm, x, V);
   T sum = V[0];
-  for (size_t i=1; i<V.size(); i++)
+  for (size_t i = 1; i < V.size(); i++)
     sum += V[i];
   return sum;
 }
 
-
-
-
-
 template <typename TbasicBank>
-bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, TbasicBank const& bb,
-                                          std::ostream & os) {
+bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
+                                          TbasicBank const &bb,
+                                          std::ostream &os) {
   os << "EvaluationConnectednessCriterion_MPI, step 1\n";
   using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
@@ -168,12 +164,14 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, Tbasi
   //
   // We need to terminate the check if no orbit has been done.
   size_t nbOrbitDone_tot = 0, nbOrbitDone_loc = bb.foc.nbOrbitDone;
-  all_reduce(comm, nbOrbitDone_loc, nbOrbitDone_tot, boost::mpi::maximum<size_t>());
+  all_reduce(comm, nbOrbitDone_loc, nbOrbitDone_tot,
+             boost::mpi::maximum<size_t>());
   if (nbOrbitDone_tot == 0)
     return false;
   // In order for the check not to be too expensive, we limit ourselves to 1000
   Tint max_siz = 1000;
-  os << "EvaluationConnectednessCriterion_MPI, step 2 nbUndone=" << bb.foc.nbUndone << "\n";
+  os << "EvaluationConnectednessCriterion_MPI, step 2 nbUndone="
+     << bb.foc.nbUndone << "\n";
   Tint nbUndone_tot = my_mpi_allreduce_sum(comm, bb.foc.nbUndone);
   os << "nbUndone_tot=" << nbUndone_tot << "\n";
   if (nbUndone_tot > max_siz)
@@ -183,10 +181,12 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, Tbasi
   vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
   //
   os << "EvaluationConnectednessCriterion_MPI, step 4\n";
-  MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(bb.EXT, vf_undone_loc);
+  MyMatrix<T> EXT_undone_loc =
+      GetVertexSet_from_vectface(bb.EXT, vf_undone_loc);
   os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
   MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
-  // Every processor is computing the adjacency stuff. Fairly inefficient but ok for the time being.
+  // Every processor is computing the adjacency stuff. Fairly inefficient but ok
+  // for the time being.
   os << "EvaluationConnectednessCriterion_MPI, step 5\n";
   size_t max_iter = 100;
   size_t n_iter = 0;
@@ -200,23 +200,26 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator & comm, Tbasi
     return true;
   };
   os << "EvaluationConnectednessCriterion_MPI, step 6\n";
-  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone_tot, vf_undone_tot, f_recur, os);
+  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone_tot,
+                                                 vf_undone_tot, f_recur, os);
 }
-
-
-
 
 struct request_status_list {
   size_t MaxNumberFlyingMessage;
   std::vector<boost::mpi::request> l_mpi_request;
   std::vector<int> l_mpi_status;
-  request_status_list(size_t const& MaxNumberFlyingMessage) : MaxNumberFlyingMessage(MaxNumberFlyingMessage), l_mpi_request(MaxNumberFlyingMessage), l_mpi_status(MaxNumberFlyingMessage,0) {
+  request_status_list(size_t const &MaxNumberFlyingMessage)
+      : MaxNumberFlyingMessage(MaxNumberFlyingMessage),
+        l_mpi_request(MaxNumberFlyingMessage),
+        l_mpi_status(MaxNumberFlyingMessage, 0) {}
+  boost::mpi::request &operator[](size_t const &pos) {
+    l_mpi_status[pos] = 1;
+    return l_mpi_request[pos];
   }
-  boost::mpi::request& operator[](size_t const& pos) { l_mpi_status[pos]=1; return l_mpi_request[pos]; }
   size_t clear_and_get_nb_undone() {
     size_t len = l_mpi_request.size();
     size_t nb_undone = 0;
-    for (size_t i=0; i<len; i++) {
+    for (size_t i = 0; i < len; i++) {
       if (l_mpi_status[i] == 1) {
         boost::optional<boost::mpi::status> stat = l_mpi_request[i].test();
         if (stat) {
@@ -246,16 +249,17 @@ struct request_status_list {
   }
 };
 
-
-
 struct empty_message_management {
-  boost::mpi::communicator & comm;
+  boost::mpi::communicator &comm;
   request_status_list rsl;
   int expected_value; // Random, but identical on all process.
   int tag;
-  empty_message_management(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag) : comm(comm), rsl(MaxFly), tag(tag) {
+  empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
+                           int const &tag)
+      : comm(comm), rsl(MaxFly), tag(tag) {
     int expected_value_pre = random();
-    expected_value = boost::mpi::all_reduce(comm, expected_value_pre, boost::mpi::minimum<int>());
+    expected_value = boost::mpi::all_reduce(comm, expected_value_pre,
+                                            boost::mpi::minimum<int>());
   }
   void send_message(int dest) {
     size_t idx = rsl.GetFreeIndex();
@@ -275,24 +279,22 @@ struct empty_message_management {
   }
 };
 
-
-
-
 /* Managing exchanges at scale.
    We can T = int, T_vector = std::vector<T>
    or T = Face, T_vector = vectface
  */
-template<typename T, typename T_vector>
-struct buffered_T_exchanges {
-  boost::mpi::communicator & comm;
+template <typename T, typename T_vector> struct buffered_T_exchanges {
+  boost::mpi::communicator &comm;
   request_status_list rsl;
   int tag;
   int n_proc;
   std::vector<T_vector> l_message;
   std::vector<T_vector> l_under_cons;
-  buffered_T_exchanges(boost::mpi::communicator & comm, size_t const& MaxFly, int const& tag) : comm(comm), rsl(MaxFly), tag(tag), n_proc(comm.size()), l_message(n_proc), l_under_cons(MaxFly) {
-  }
-  void insert_entry(size_t const& pos, T const& x) {
+  buffered_T_exchanges(boost::mpi::communicator &comm, size_t const &MaxFly,
+                       int const &tag)
+      : comm(comm), rsl(MaxFly), tag(tag), n_proc(comm.size()),
+        l_message(n_proc), l_under_cons(MaxFly) {}
+  void insert_entry(size_t const &pos, T const &x) {
     l_message[pos].push_back(x);
   }
   T_vector recv_message(int source) {
@@ -300,14 +302,14 @@ struct buffered_T_exchanges {
     comm.recv(source, tag, vf);
     return vf;
   }
-  bool clear_one_entry(std::ostream & os) {
+  bool clear_one_entry(std::ostream &os) {
     size_t idx = rsl.GetFreeIndex();
     os << "idx=" << idx << "\n";
     if (idx == std::numeric_limits<size_t>::max())
       return false;
     size_t max_siz = 0;
     int chosen_iproc = -1;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       size_t siz = l_message[i_proc].size();
       if (siz > max_siz) {
         max_siz = siz;
@@ -324,7 +326,7 @@ struct buffered_T_exchanges {
   }
   size_t get_unsent_size() const {
     size_t n_unsent = 0;
-    for (auto & eEnt : l_message)
+    for (auto &eEnt : l_message)
       n_unsent += eEnt.size();
     return n_unsent;
   }
@@ -335,11 +337,8 @@ struct buffered_T_exchanges {
   }
 };
 
-
-
-template<typename Tint>
-struct database_balinski_info {
-  boost::mpi::communicator & comm;
+template <typename Tint> struct database_balinski_info {
+  boost::mpi::communicator &comm;
   int tag_request;
   int tag_info;
   int n_proc;
@@ -357,14 +356,17 @@ struct database_balinski_info {
   std::vector<std::chrono::time_point<std::chrono::system_clock>> last_update;
   std::chrono::time_point<std::chrono::system_clock> last_database_update_time;
   Face ToBeAnswered;
-  database_balinski_info(boost::mpi::communicator & comm, int tag_request, int tag_info, Tint const& CritSiz) :
-    comm(comm), tag_request(tag_request), tag_info(tag_info), n_proc(comm.size()), i_rank(comm.rank()),
-    rsl(n_proc), ListBalinski(n_proc), ListStatus_Emptyness(n_proc,0), RequestNat(n_proc,0), CritSiz(CritSiz),
-    expected_value(47), last_update(n_proc, get_cpp_time(7, 1, 1974)),
-    last_database_update_time(get_cpp_time(6, 1, 1974)), ToBeAnswered(n_proc) {
-  }
-  bool get_status(std::ostream & os) const {
-    for (int i_proc=0; i_proc<n_proc; i_proc++)
+  database_balinski_info(boost::mpi::communicator &comm, int tag_request,
+                         int tag_info, Tint const &CritSiz)
+      : comm(comm), tag_request(tag_request), tag_info(tag_info),
+        n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
+        ListBalinski(n_proc), ListStatus_Emptyness(n_proc, 0),
+        RequestNat(n_proc, 0), CritSiz(CritSiz), expected_value(47),
+        last_update(n_proc, get_cpp_time(7, 1, 1974)),
+        last_database_update_time(get_cpp_time(6, 1, 1974)),
+        ToBeAnswered(n_proc) {}
+  bool get_status(std::ostream &os) const {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++)
       if (ListStatus_Emptyness[i_proc] == 0) {
         int val = ListStatus_Emptyness[i_proc];
         os << "Returning false at i_proc=" << i_proc << " val=" << val << "\n";
@@ -383,7 +385,7 @@ struct database_balinski_info {
     }
     ToBeAnswered[source] = 1;
   }
-  void submit_info(int dest, UndoneOrbitInfo<Tint> const& uoi) {
+  void submit_info(int dest, UndoneOrbitInfo<Tint> const &uoi) {
     size_t idx = rsl.GetFreeIndex();
     if (idx == std::numeric_limits<size_t>::max())
       return;
@@ -405,19 +407,22 @@ struct database_balinski_info {
     ListStatus_Emptyness[source] = 1;
     RequestNat[source] = 0;
   }
-  void set_uoi_local(UndoneOrbitInfo<Tint> const& uoi_local) {
+  void set_uoi_local(UndoneOrbitInfo<Tint> const &uoi_local) {
     ListBalinski[i_rank] = uoi_local;
     ListStatus_Emptyness[i_rank] = 1;
     last_database_update_time = std::chrono::system_clock::now();
   }
-  void flush(std::ostream & os) {
+  void flush(std::ostream &os) {
     os << "Beginning of flush operation\n";
-    UndoneOrbitInfo<Tint> const& uoi_local = ListBalinski[i_rank];
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    UndoneOrbitInfo<Tint> const &uoi_local = ListBalinski[i_rank];
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
         bool test = last_database_update_time > last_update[i_proc];
-        int dur_i = std::chrono::duration_cast<std::chrono::seconds>(last_database_update_time - last_update[i_proc]).count();
-        os << "i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc] << " test=" << test << " dur_i=" << dur_i << "\n";
+        int dur_i = std::chrono::duration_cast<std::chrono::seconds>(
+                        last_database_update_time - last_update[i_proc])
+                        .count();
+        os << "i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc]
+           << " test=" << test << " dur_i=" << dur_i << "\n";
         if (ToBeAnswered[i_proc] == 1 && test) {
           os << "flush: Doing submit_info for i_proc=" << i_proc << "\n";
           submit_info(i_proc, uoi_local);
@@ -425,21 +430,22 @@ struct database_balinski_info {
       }
     }
   }
-  void submit_request_uoi(std::ostream & os) {
+  void submit_request_uoi(std::ostream &os) {
     // First checking natively
     os << "Beginning of submit_uoi\n";
     // First checking for unassigned
-    for (int i_proc=0; i_proc<n_proc; i_proc++)
-      if (i_proc != i_rank && ListStatus_Emptyness[i_proc] == 0 && RequestNat[i_proc] == 0) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++)
+      if (i_proc != i_rank && ListStatus_Emptyness[i_proc] == 0 &&
+          RequestNat[i_proc] == 0) {
         os << "submit_request_uoi (Case 0) at i_proc=" << i_proc << "\n";
         return submit_request(i_proc);
       }
     // Getting the highest value
     Tint max_val = 0;
     int chosen_idx = -1;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
-        Tint const& eval = ListBalinski[i_proc].nbUndone;
+        Tint const &eval = ListBalinski[i_proc].nbUndone;
         if (eval > max_val) {
           max_val = eval;
           chosen_idx = i_proc;
@@ -454,12 +460,6 @@ struct database_balinski_info {
     }
   }
 };
-
-
-
-
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_

@@ -413,7 +413,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
 template <typename Tmat, typename Tint>
 LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tmat> Ginv = Inverse(GramMat);
-  LLLreduction<Tmat, Tint> LLLrec = LLLreducedBasis<Tmat,Tint>(Ginv);
+  LLLreduction<Tmat, Tint> LLLrec = LLLreducedBasis<Tmat, Tint>(Ginv);
   MyMatrix<Tmat> const &Gred = LLLrec.GramMatRed;
   MyMatrix<Tint> const &P = LLLrec.Pmat;
   MyMatrix<Tmat> GredInv = Inverse(Gred);
@@ -432,8 +432,8 @@ LLLreduction<Tmat, Tint> LLLnoreduction(MyMatrix<Tmat> const &GramMat) {
   dimensional one), returns a smaller basis.
  */
 template <typename T, typename Tint> struct LLLbasis {
-  MyMatrix<T> LattRed;  // The reduced basis
-  MyMatrix<Tint> Pmat;  // The reducing matrix
+  MyMatrix<T> LattRed; // The reduced basis
+  MyMatrix<Tint> Pmat; // The reducing matrix
 };
 
 template <typename T, typename Tint>

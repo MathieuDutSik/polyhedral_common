@@ -931,8 +931,8 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     lrs::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
-    vectface ListIncd =
-      DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg, std::cerr);
+    vectface ListIncd = DirectFacetOrbitComputation_nogroup(
+        FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
         n_iter++;
@@ -993,8 +993,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     lrs::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
-    vectface ListIncd =
-      DirectFacetOrbitComputation_nogroup(FAC_T, Vtot.DualDescProg, std::cerr);
+    vectface ListIncd = DirectFacetOrbitComputation_nogroup(
+        FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
         n_iter++;

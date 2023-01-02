@@ -118,8 +118,7 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
   return Tgroup(ListGen, n);
 }
 
-template <typename Tgroup>
-Tgroup ReadGroupFile(std::string const& file_name) {
+template <typename Tgroup> Tgroup ReadGroupFile(std::string const &file_name) {
   if (!IsExistingFile(file_name)) {
     std::cerr << "Error in ReadGroupFile\n";
     std::cerr << "file_name=" << file_name << " does not appear to exist\n";
@@ -128,8 +127,6 @@ Tgroup ReadGroupFile(std::string const& file_name) {
   std::ifstream is(file_name);
   return ReadGroup<Tgroup>(is);
 }
-
-
 
 template <typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
@@ -149,7 +146,7 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
 }
 
 template <typename Tgroup>
-void WriteGroupFile(std::string const& eFile, Tgroup const &TheGRP) {
+void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
   std::ofstream os(eFile);
   WriteGroup(os, TheGRP);
 }

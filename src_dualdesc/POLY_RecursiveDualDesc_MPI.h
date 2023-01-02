@@ -2,16 +2,16 @@
 #ifndef SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 #define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 
-#include "POLY_RecursiveDualDesc.h"
-#include "MPI_functionality.h"
 #include "Balinski_basic.h"
+#include "MPI_functionality.h"
+#include "POLY_RecursiveDualDesc.h"
+#include <chrono>
 #include <limits>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <thread>
-#include <chrono>
 
 struct message_facet {
   size_t e_hash;
@@ -24,7 +24,6 @@ struct message_query {
   // 0: for TerminationInfo
   // 1: For destroying the databank and sending back the vectface
 };
-
 
 namespace boost::serialization {
 
@@ -44,27 +43,21 @@ inline void serialize(Archive &ar, message_query &mesg,
 
 } // namespace boost::serialization
 
-
-
-
-
-
-size_t mpi_get_hash_kernel(Face const& x, int const& n_vert_div8, std::vector<uint8_t> & V_hash) {
+size_t mpi_get_hash_kernel(Face const &x, int const &n_vert_div8,
+                           std::vector<uint8_t> &V_hash) {
   size_t n_vert = x.size();
-  for (size_t i_vert=0; i_vert<n_vert; i_vert++)
+  for (size_t i_vert = 0; i_vert < n_vert; i_vert++)
     setbit(V_hash, i_vert, x[i_vert]);
   uint32_t seed = 0x1b873560;
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
 }
 
-size_t mpi_get_hash(Face const& x) {
+size_t mpi_get_hash(Face const &x) {
   size_t n_vert = x.size();
   int n_vert_div8 = (n_vert + 7) / 8;
-  std::vector<uint8_t> V_hash(n_vert_div8,0);
+  std::vector<uint8_t> V_hash(n_vert_div8, 0);
   return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
 }
-
-
 
 /*
   This is the code for the MPI parallelization.
@@ -75,33 +68,36 @@ size_t mpi_get_hash(Face const& x) {
      ---Compute the total number of existing entries with a mpi.allreduce.
      ---If zero, then all the process do sampling and insert into databases.
      ---If not zero, read it and start.
-  ---A needed signal of balinski termination has to be computed from time to time.
+  ---A needed signal of balinski termination has to be computed from time to
+  time.
   ---A termination check (from runtime or Ctrl-C) has to be handled.
   ---Computation of existing with a call to the serial code. Should be modelled
   on the C-type code.
  */
-template <typename Tbank, typename TbasicBank, typename T, typename Tgroup, typename Tidx_value>
+template <typename Tbank, typename TbasicBank, typename T, typename Tgroup,
+          typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
-    boost::mpi::communicator &comm,
-    Tbank &TheBank, TbasicBank &bb,
+    boost::mpi::communicator &comm, Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap, std::ostream& os) {
+    std::map<std::string, typename Tgroup::Tint> const &TheMap,
+    std::ostream &os) {
   using DataFacet = typename TbasicBank::DataFacet;
   using Tint = typename TbasicBank::Tint;
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string lPrefix = ePrefix + "database";
-  DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving, AllArr.AdvancedTerminationCriterion, os);
+  DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
+                                 AllArr.AdvancedTerminationCriterion, os);
   Tint CritSiz = RPL.CritSiz;
   UndoneOrbitInfo<Tint> uoi_local;
   os << "DirectFacetOrbitComputation, step 1\n";
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
-  std::vector<uint8_t> V_hash(n_vert_div8,0);
-  auto get_hash=[&](Face const& x) -> size_t {
+  std::vector<uint8_t> V_hash(n_vert_div8, 0);
+  auto get_hash = [&](Face const &x) -> size_t {
     return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
   };
   if (AllArr.max_runtime < 0) {
@@ -126,7 +122,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "DirectFacetOrbitComputation, step 2\n";
   empty_message_management emm_termin(comm, 0, tag_termination);
   os << "DirectFacetOrbitComputation, step 3\n";
-  buffered_T_exchanges<Face,vectface> bte_facet(comm, MaxFly, tag_new_facets);
+  buffered_T_exchanges<Face, vectface> bte_facet(comm, MaxFly, tag_new_facets);
   os << "DirectFacetOrbitComputation, step 4\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
@@ -157,7 +153,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // The infinite loop
   //
-  auto process_mpi_status=[&](boost::mpi::status const& stat) -> void {
+  auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_new_facets) {
@@ -165,7 +161,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       StatusNeighbors[e_src] = 0;
       vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
-      for (auto & face : l_recv_face)
+      for (auto &face : l_recv_face)
         RPL.FuncInsert(face);
     }
     if (e_tag == tag_termination) {
@@ -175,17 +171,18 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     os << "Exiting process_mpi_status\n";
   };
-  auto process_database=[&]() -> void {
+  auto process_database = [&]() -> void {
     os << "process_database, begin\n";
     DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
     os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
-    std::string NewPrefix =
-      ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" + std::to_string(SelectedOrbit) + "_";
+    std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
+                            std::to_string(SelectedOrbit) + "_";
     try {
       os << "Before call to DUALDESC_AdjacencyDecomposition\n";
       vectface TheOutput =
-        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+          DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+              TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
       os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
       for (auto &eOrbB : TheOutput) {
         Face eFlip = df.flip(eOrbB);
@@ -194,18 +191,20 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
     } catch (RuntimeException const &e) {
       HasReachedRuntimeException = true;
-      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by runtime exhaustion\n";
+      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
+            "runtime exhaustion\n";
     }
     os << "process_database, EXIT\n";
   };
-  auto get_maxruntimereached=[&]() -> bool {
+  auto get_maxruntimereached = [&]() -> bool {
     if (HasReachedRuntimeException)
       return true;
     return si(start) > AllArr.max_runtime;
   };
-  auto send_termination_notice=[&]() -> void {
+  auto send_termination_notice = [&]() -> void {
     // This function should be passed only one time.
-    // It says to the receiving nodes: "You wil never ever received anything more from me"
+    // It says to the receiving nodes: "You wil never ever received anything
+    // more from me"
     os << "Sending messages for terminating the run\n";
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc == i_rank) {
@@ -217,20 +216,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
   };
-  auto get_nb_finished=[&]() -> int {
+  auto get_nb_finished = [&]() -> int {
     int nb_finished = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-      os << "get_nb_finished : i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
+      os << "get_nb_finished : i_proc=" << i_proc
+         << " status=" << StatusNeighbors[i_proc] << "\n";
       nb_finished += StatusNeighbors[i_proc];
     }
     os << "nb_finished=" << nb_finished << "\n";
     return nb_finished;
   };
-  auto get_nb_finished_oth=[&]() -> int {
+  auto get_nb_finished_oth = [&]() -> int {
     int nb_finished_oth = 0;
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
-        os << "get_nb_finished_oth : i_proc=" << i_proc << " status=" << StatusNeighbors[i_proc] << "\n";
+        os << "get_nb_finished_oth : i_proc=" << i_proc
+           << " status=" << StatusNeighbors[i_proc] << "\n";
         nb_finished_oth += StatusNeighbors[i_proc];
       }
     }
@@ -248,7 +249,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
-    os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached << " SomethingToDo=" << SomethingToDo << "\n";
+    os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached
+       << " SomethingToDo=" << SomethingToDo << "\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
@@ -262,22 +264,26 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         // and possibly treating orbits with unnecessary large incidence
         if (bte_facet.get_unsent_size() >= MaxBuffered) {
           os << "Calling clear_one_entry after reaching MaxBuffered\n";
-          if(!bte_facet.clear_one_entry(os)) {
+          if (!bte_facet.clear_one_entry(os)) {
             int n_milliseconds = 1000;
-            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(n_milliseconds));
           }
         }
         process_database();
       } else {
         if (!bte_facet.is_buffer_empty()) {
           os << "Calling clear_one_entry\n";
-          if(!bte_facet.clear_one_entry(os)) {
+          if (!bte_facet.clear_one_entry(os)) {
             int n_milliseconds = 1000;
-            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(n_milliseconds));
           }
         } else {
           int nb_finished_oth = get_nb_finished_oth();
-          os << "Nothing to do, entering the busy loop status=" << get_maxruntimereached() << " get_nb_finished_oth()=" << nb_finished_oth << "\n";
+          os << "Nothing to do, entering the busy loop status="
+             << get_maxruntimereached()
+             << " get_nb_finished_oth()=" << nb_finished_oth << "\n";
           // do while, such that we also sleep after maxruntimereached
           // to prevent log spam when other threads are still working
           do {
@@ -287,9 +293,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
               break;
             }
             int n_milliseconds = 1000;
-            std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(n_milliseconds));
           } while (!get_maxruntimereached());
-
         }
       }
     }
@@ -312,12 +318,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   }
 }
 
-
-void update_path_using_nproc_iproc(std::string & str_ref, int const& n_proc, int const& i_rank) {
-  std::string postfix = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+void update_path_using_nproc_iproc(std::string &str_ref, int const &n_proc,
+                                   int const &i_rank) {
+  std::string postfix =
+      "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
   size_t len = str_ref.size();
-  std::string part1 = str_ref.substr(0,len-1);
-  std::string part2 = str_ref.substr(len-1,1);
+  std::string part1 = str_ref.substr(0, len - 1);
+  std::string part2 = str_ref.substr(len - 1, 1);
   if (part2 != "/") {
     std::cerr << "str_ref=" << str_ref << "\n";
     std::cerr << "Last character should be a /\n";
@@ -326,13 +333,14 @@ void update_path_using_nproc_iproc(std::string & str_ref, int const& n_proc, int
   str_ref = part1 + postfix + part2;
 }
 
-
-template<typename T>
-void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> & AllArr) {
+template <typename T>
+void Reset_Directories(boost::mpi::communicator &comm,
+                       PolyHeuristicSerial<T> &AllArr) {
   int n_proc = comm.size();
   int i_rank = comm.rank();
-  auto update_string=[&](std::string & str_ref) -> void {
-    if (i_rank < n_proc-1 || AllArr.bank_parallelization_method != "bank_mpi") {
+  auto update_string = [&](std::string &str_ref) -> void {
+    if (i_rank < n_proc - 1 ||
+        AllArr.bank_parallelization_method != "bank_mpi") {
       update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
       CreateDirectory(str_ref);
     }
@@ -344,9 +352,9 @@ void Reset_Directories(boost::mpi::communicator & comm, PolyHeuristicSerial<T> &
   update_string(AllArr.DD_Prefix);
 }
 
-
 template <typename T, typename Tgroup, typename Tidx_value>
-void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist const &eFull) {
+void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
+                              FullNamelist const &eFull) {
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -355,11 +363,12 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   int i_rank = comm.rank();
   int n_proc = comm.size();
   int pos_generator = 0;
-  if (i_rank == n_proc-1)
+  if (i_rank == n_proc - 1)
     pos_generator = 1;
   boost::mpi::communicator comm_local = comm.split(pos_generator);
   //
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::string FileLog =
+      "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::cerr << "We have moved. See the log in FileLog=" << FileLog << "\n";
   std::ofstream os(FileLog);
   if (ApplyStdUnitbuf(eFull))
@@ -367,10 +376,11 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
   os << "Initial writing of the log\n";
   os.flush();
   //
-  MyMatrix<T> EXT = Get_EXT_DualDesc<T,Tidx>(eFull, os);
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
-  PolyHeuristicSerial<Tint> AllArr = Read_AllStandardHeuristicSerial<Tint>(eFull, os);
-  srand(time(NULL)+12345*i_rank);
+  PolyHeuristicSerial<Tint> AllArr =
+      Read_AllStandardHeuristicSerial<Tint>(eFull, os);
+  srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t n_rows = EXTred.rows();
@@ -383,35 +393,44 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
-      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
+                                                        Tgroup, Tidx_value>(
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
-      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+      return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
+                                                        Tgroup, Tidx_value>(
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
     }
     if (AllArr.bank_parallelization_method == "bank_mpi") {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
-      if (i_rank < n_proc-1) {
-        return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T, Tgroup, Tidx_value>(comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+      if (i_rank < n_proc - 1) {
+        return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
+                                                          Tgroup, Tidx_value>(
+            comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
-        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
+        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving,
+                                      AllArr.BANK_Prefix, os);
         return vectface(n_rows);
       }
     }
-    std::cerr << "Failed to find a matching entry for bank_parallelization_method\n";
-    std::cerr << "AllArr.bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
+    std::cerr
+        << "Failed to find a matching entry for bank_parallelization_method\n";
+    std::cerr << "AllArr.bank_parallelization_method="
+              << AllArr.bank_parallelization_method << "\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };
   vectface vf = get_vectface();
   int i_proc_ret = 0;
   if (AllArr.bank_parallelization_method == "bank_mpi") {
-    if (i_rank < n_proc-1) {
+    if (i_rank < n_proc - 1) {
       comm_local.barrier();
       if (i_rank == i_proc_ret) {
-        comm.send(n_proc-1, tag_mpi_bank_end, val_mpi_bank_end);
+        comm.send(n_proc - 1, tag_mpi_bank_end, val_mpi_bank_end);
       }
     }
   }
@@ -422,7 +441,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator & comm, FullNamelist cons
     OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
   os << "We have done our output\n";
 }
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_

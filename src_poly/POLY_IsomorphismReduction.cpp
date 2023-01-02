@@ -1,10 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#include "GRP_GroupFct.h"
+#include "Group.h"
 #include "NumberTheory.h"
 #include "POLY_lrslib.h"
-#include "Group.h"
 #include "Permutation.h"
-#include "GRP_GroupFct.h"
-
 
 int main(int argc, char *argv[]) {
   try {
@@ -44,15 +43,15 @@ int main(int argc, char *argv[]) {
     std::string FileOUT = argv[4];
     //
     int n_ext = EXT.rows();
-    int n_col = EXT.cols(); 
+    int n_col = EXT.cols();
     vectface vf(n_ext);
     int n_fac = FAC.rows();
-    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       Face f(n_ext);
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         T eSum = 0;
-        for (int i_col=0; i_col<n_col; i_col++)
-          eSum += EXT(i_ext,i_col) * FAC(i_fac,i_col);
+        for (int i_col = 0; i_col < n_col; i_col++)
+          eSum += EXT(i_ext, i_col) * FAC(i_fac, i_col);
         if (eSum == 0)
           f[i_ext] = 1;
         else

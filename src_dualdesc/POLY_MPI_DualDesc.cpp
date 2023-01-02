@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-//#include "NumberTheory.h"
+// #include "NumberTheory.h"
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
@@ -9,7 +9,7 @@
 #include "Permutation.h"
 
 template <typename T, typename Tidx>
-void Process_eFull(boost::mpi::communicator & comm, FullNamelist const &eFull) {
+void Process_eFull(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint>;
@@ -62,13 +62,14 @@ int main(int argc, char *argv[]) {
     };
     process();
     //
-    std::cerr << "Normal termination of the program runtime=" << si(start) << "\n";
-  }
-  catch (TerminalException const &e) {
-    std::cerr << "Erroneous termination of the program runtime=" << si(start) << "\n";
+    std::cerr << "Normal termination of the program runtime=" << si(start)
+              << "\n";
+  } catch (TerminalException const &e) {
+    std::cerr << "Erroneous termination of the program runtime=" << si(start)
+              << "\n";
     exit(e.eVal);
-  }
-  catch (RuntimeException const &e) {
-    std::cerr << "Runtime termination of the program runtime=" << si(start) << "\n";
+  } catch (RuntimeException const &e) {
+    std::cerr << "Runtime termination of the program runtime=" << si(start)
+              << "\n";
   }
 }

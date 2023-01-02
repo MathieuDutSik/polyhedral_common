@@ -71,40 +71,40 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   return HeuristicFromListString<T>(ListString);
 }
 
-
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
-  std::vector<std::string> lstr_proba = {
-    "&PROBABILITY_DISTRIBUTIONS",
-    " ListName = \"distri1\" ",
-    " ListNmax = 100 ",
-    " ListNstart = 100",
-    " ListNature = \"dirac\"",
-    " ListDescription = \"1:100\"",
-    "/"};
+  std::vector<std::string> lstr_proba = {"&PROBABILITY_DISTRIBUTIONS",
+                                         " ListName = \"distri1\" ",
+                                         " ListNmax = 100 ",
+                                         " ListNstart = 100",
+                                         " ListNature = \"dirac\"",
+                                         " ListDescription = \"1:100\"",
+                                         "/"};
   //
   std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
   bool test = IsProgramInPath("ppl_lcdd");
   if (test) {
-    lstr_thompson_prior.push_back(" ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"");
+    lstr_thompson_prior.push_back(
+        " ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"");
     lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_ppl\"");
-    lstr_thompson_prior.push_back(" ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"");
+    lstr_thompson_prior.push_back(
+        " ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"");
   } else {
     lstr_thompson_prior.push_back(" ListAnswer = \"cdd\", \"lrs_ring\"");
     lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_lrs\"");
-    lstr_thompson_prior.push_back(" ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"");
+    lstr_thompson_prior.push_back(
+        " ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"");
   }
   lstr_thompson_prior.push_back("/");
   //
   std::vector<std::string> lstr_key = {
-    "&KEY_COMPRESSION",
-    " ListKey = \"incidence\"",
-    " ListDescription = \"1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity\"",
-    "/"};
+      "&KEY_COMPRESSION", " ListKey = \"incidence\"",
+      " ListDescription = "
+      "\"1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity\"",
+      "/"};
   //
   std::vector<std::string> lstr_heuristic_prior = {
-    "&HEURISTIC_PRIOR",
-    " DefaultPrior = \"noprior:10\"",
-    " ListFullCond = \"incidence > 70\""};
+      "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
+      " ListFullCond = \"incidence > 70\""};
   if (test) {
     lstr_heuristic_prior.push_back(" ListConclusion = \"only_ppl\"");
   } else {
@@ -112,20 +112,20 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   }
   lstr_heuristic_prior.push_back("/");
   //
-  std::vector<std::string> lstr_io = {
-    "&IO",
-    " name = \"split\"",
-    " WriteLog = T",
-    " ProcessExistingDataIfExist = F",
-    " LogFileToProcess = \"input_logfile\"",
-    "/"};
+  std::vector<std::string> lstr_io = {"&IO",
+                                      " name = \"split\"",
+                                      " WriteLog = T",
+                                      " ProcessExistingDataIfExist = F",
+                                      " LogFileToProcess = \"input_logfile\"",
+                                      "/"};
   //
   // Putting things together
   //
   std::vector<std::string> lstr = lstr_proba;
-  for (auto & e_lstr : {lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
+  for (auto &e_lstr :
+       {lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
     lstr.push_back("");
-    for (auto & estr : e_lstr)
+    for (auto &estr : e_lstr)
       lstr.push_back(estr);
   }
   std::cerr << "lstr=\n";
@@ -136,10 +136,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   return eFull;
 }
 
-
 template <typename T>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  TheHeuristic<T> &eHeu, std::ostream & os) {
+                  TheHeuristic<T> &eHeu, std::ostream &os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
@@ -157,8 +156,9 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
 }
 
 template <typename T>
-void SetThompsonSampling(FullNamelist const &eFull, std::string const &NamelistEnt,
-                         ThompsonSamplingHeuristic<T> & eTS, std::ostream & os) {
+void SetThompsonSampling(FullNamelist const &eFull,
+                         std::string const &NamelistEnt,
+                         ThompsonSamplingHeuristic<T> &eTS, std::ostream &os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.ts") {
@@ -222,7 +222,8 @@ template <typename T> struct PolyHeuristicSerial {
   size_t dimEXT;
 };
 
-template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream & os) {
+template <typename T>
+PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool Saving = false;
   bool AdvancedTerminationCriterion = false;
@@ -242,11 +243,17 @@ template <typename T> PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ost
           MethodInitialFacetSet<T>(),
           MethodCheckDatabaseBank<T>(),
           MethodChosenDatabase<T>(),
-          Saving, AdvancedTerminationCriterion,
-          SingletonTime(), max_runtime,
-          port, BANK_IsSaving, BANK_Prefix,
-          OutFormat, OUTfile,
-          bank_parallelization_method, DD_Prefix,
+          Saving,
+          AdvancedTerminationCriterion,
+          SingletonTime(),
+          max_runtime,
+          port,
+          BANK_IsSaving,
+          BANK_Prefix,
+          OutFormat,
+          OUTfile,
+          bank_parallelization_method,
+          DD_Prefix,
           dimEXT};
 }
 

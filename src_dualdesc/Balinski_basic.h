@@ -1,7 +1,6 @@
 #ifndef BALINSKI_BASIC_H
 #define BALINSKI_BASIC_H
 
-
 template <typename Tint> struct UndoneOrbitInfo {
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -9,22 +8,19 @@ template <typename Tint> struct UndoneOrbitInfo {
 };
 
 template <typename Tint>
-std::ostream &operator<<(std::ostream &os, UndoneOrbitInfo<Tint> const& obj) {
+std::ostream &operator<<(std::ostream &os, UndoneOrbitInfo<Tint> const &obj) {
   os << "(nbOrbitDone=" << obj.nbOrbitDone;
   os << ", nbUndone=" << obj.nbUndone;
-  os << ", eSetUndone=" << obj.eSetUndone.count() << "," << obj.eSetUndone.size() << ")";
+  os << ", eSetUndone=" << obj.eSetUndone.count() << ","
+     << obj.eSetUndone.size() << ")";
   return os;
 }
-
 
 template <typename Tint>
 UndoneOrbitInfo<Tint> get_default_undoneinfo(int n_rows) {
   Face f(n_rows);
   return {0, 0, f};
 }
-
-
-
 
 template <typename Tint>
 UndoneOrbitInfo<Tint>
@@ -49,7 +45,6 @@ bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
   return false;
 }
 
-
 // The condition on nbOrbitDone make the check more complex.
 // For parallel, we use this monotonic partial check as heuristic
 // about whether to do the major checks or not.
@@ -61,13 +56,10 @@ bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
   return false;
 }
 
-
-
 template <typename Tint> struct StatusUndoneOrbitInfo {
   bool status;
   UndoneOrbitInfo<Tint> erec;
 };
-
 
 namespace boost::serialization {
 
@@ -90,10 +82,7 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
 
 } // namespace boost::serialization
 
-
-
-template <typename TbasicBank>
-vectface ComputeSetUndone(TbasicBank const& bb) {
+template <typename TbasicBank> vectface ComputeSetUndone(TbasicBank const &bb) {
   vectface vf_undone(bb.nbRow);
   using Tgroup = typename TbasicBank::Tgroup;
   using Telt = typename Tgroup::Telt;
@@ -107,10 +96,9 @@ vectface ComputeSetUndone(TbasicBank const& bb) {
   return vf_undone;
 }
 
-
-
-template<typename T>
-MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& vf) {
+template <typename T>
+MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const &FAC,
+                                       vectface const &vf) {
   size_t n_cols = FAC.cols();
   size_t n_vert = vf.size();
   MyMatrix<T> EXT(n_vert, n_cols);
@@ -123,8 +111,6 @@ MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& v
   return EXT;
 }
 
-
-
 /*
   This is the advanced termination criterion.
   This combines a number of approaches:
@@ -133,8 +119,9 @@ MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& v
   ---The rank check by computing the rank of the set of missing vertices.
   If too low then the same argument as Balinski theorem applies
 
-  If those fails, then we compute the faces and if we can prove the connectedness
-  for all the facets except at most 1 then the connectedness holds.
+  If those fails, then we compute the faces and if we can prove the
+  connectedness for all the facets except at most 1 then the connectedness
+  holds.
 
   The technique can be applied recursively. This cause of course a potential
   way to explode the runtime. Thus in order to avoid that we need a function
@@ -144,14 +131,16 @@ MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const& FAC, vectface const& v
   runtime.
 
   References:
-  ---Balinski, M. L. (1961), "On the graph structure of convex polyhedra in n-space", Pacific Journal of Mathematics, 11 (2): 431–434,
-  ---Michel Deza, Mathieu Dutour Sikirić, Enumeration of the facets of cut polytopes over some highly symmetric graphs,
-     preprint at arxiv:1501.05407, International Transactions in Operational Research 23-5 (2016) 853--860
+  ---Balinski, M. L. (1961), "On the graph structure of convex polyhedra in
+  n-space", Pacific Journal of Mathematics, 11 (2): 431–434,
+  ---Michel Deza, Mathieu Dutour Sikirić, Enumeration of the facets of cut
+  polytopes over some highly symmetric graphs, preprint at arxiv:1501.05407,
+  International Transactions in Operational Research 23-5 (2016) 853--860
  */
 template <typename T, typename Tgroup, typename Teval_recur>
-bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgroup &GRP,
-                                             const MyMatrix<T> &EXT_undone, const vectface &vf_undone,
-                                             Teval_recur f_recur, std::ostream & os) {
+bool EvaluationConnectednessCriterion_Kernel(
+    const MyMatrix<T> &FAC, const Tgroup &GRP, const MyMatrix<T> &EXT_undone,
+    const vectface &vf_undone, Teval_recur f_recur, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   size_t n_rows = FAC.rows();
   size_t n_cols = FAC.cols();
@@ -174,7 +163,9 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
     // ---Balinski criterion
     // ---Linear programming check
     // ---Balinski with rank check
-    os << "  evaluate_single_entry pfr.first=" << x.first << " |pfr.second|=" << x.second.size() << " / " << x.second.count() << "\n";
+    os << "  evaluate_single_entry pfr.first=" << x.first
+       << " |pfr.second|=" << x.second.size() << " / " << x.second.count()
+       << "\n";
     std::vector<size_t> f_v;
     for (size_t i = 0; i < n_rows; i++)
       if (x.second[i] == 1)
@@ -198,15 +189,15 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
     }
     if (true) {
       os << "  x=(" << x.first << ",[";
-      bool IsFirst=true;
+      bool IsFirst = true;
       for (auto &eVal : f_v) {
         if (!IsFirst)
           os << ",";
-        IsFirst=false;
+        IsFirst = false;
         os << eVal;
       }
-      os << "]) |list_vert|=" << list_vert.size()
-         << " |fint|=" << fint.count() << " |f|=" << f_v.size() << "\n";
+      os << "]) |list_vert|=" << list_vert.size() << " |fint|=" << fint.count()
+         << " |f|=" << f_v.size() << "\n";
     }
     if (fint.count() > f_v.size()) {
       os << "  Exit 1: linear programming check\n";
@@ -220,9 +211,9 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
     if (rank_vertset(list_vert) <= n_cols_rel - 2) {
       os << "  |list_vert|=" << list_vert.size()
          << " |rank_vertset|=" << rank_vertset(list_vert)
-         << " n_cols_rel=" << n_cols_rel
-         << "\n";
-      os << "  Exit 3: rank computation, a little subtler Balinski computation\n";
+         << " n_cols_rel=" << n_cols_rel << "\n";
+      os << "  Exit 3: rank computation, a little subtler Balinski "
+            "computation\n";
       return true; // This is the rank computation. A little advanced Balinski,
                    // see the Balinski paper and adapt the proof.
     }
@@ -281,12 +272,12 @@ bool EvaluationConnectednessCriterion_Kernel(const MyMatrix<T> &FAC, const Tgrou
   return get_face_status(init_pfr);
 }
 
-
-
 template <typename T, typename Tgroup>
-bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC, const Tgroup &GRP,
-                                                const MyMatrix<T> &EXT_undone, const vectface &vf_undone,
-                                                std::ostream & os) {
+bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
+                                                const Tgroup &GRP,
+                                                const MyMatrix<T> &EXT_undone,
+                                                const vectface &vf_undone,
+                                                std::ostream &os) {
   size_t max_iter = 100;
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
@@ -298,32 +289,30 @@ bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC, const Tg
       return false;
     return true;
   };
-  return EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone, vf_undone, f_recur, os);
+  return EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone,
+                                                 vf_undone, f_recur, os);
 }
 
-
-
-
 template <typename TbasicBank>
-bool EvaluationConnectednessCriterion_Serial(TbasicBank const& bb,
-                                             std::ostream & os) {
+bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
+                                             std::ostream &os) {
   using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
   Tint max_siz = 1000;
-  //  os << "nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit << "\n";
-  //  os << "nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" << bb.foc.TotalNumber << "\n";
+  //  os << "nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit <<
+  //  "\n"; os << "nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" <<
+  //  bb.foc.TotalNumber << "\n";
   if (bb.foc.nbOrbitDone == 0 || bb.foc.nbUndone > max_siz)
     return false;
   // Now explicit building of the set of vertices
   vectface vf_undone = ComputeSetUndone(bb);
   MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
   //
-  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP, EXT_undone, vf_undone, os);
+  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP, EXT_undone,
+                                                    vf_undone, os);
 }
-
-
 
 #endif
