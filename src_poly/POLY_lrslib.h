@@ -2024,34 +2024,30 @@ vectface DualDescription_temp_incd(MyMatrix<T> const &EXT) {
   size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
-  bool IsFirst = true;
   T eScal;
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
   auto f = [&](T *out) -> void {
-    if (!IsFirst) {
 #ifdef USE_ISINCD
-      auto isincd = [&](size_t iRow) -> bool {
-        eScal = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTwork(iRow, iCol);
-        return eScal == 0;
-      };
-      ListIncd.InsertFace(isincd);
+    auto isincd = [&](size_t iRow) -> bool {
+      eScal = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTwork(iRow, iCol);
+      return eScal == 0;
+    };
+    ListIncd.InsertFace(isincd);
 #else
-      for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTwork(iRow, iCol);
-        face[iRow] = bool(eScal == 0);
-      }
-      ListIncd.push_back(face);
-#endif
+    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      eScal = 0;
+      for (size_t iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTwork(iRow, iCol);
+      face[iRow] = bool(eScal == 0);
     }
-    IsFirst = false;
+    ListIncd.push_back(face);
+#endif
   };
-  Kernel_DualDescription(EXTwork, f);
+  Kernel_DualDescription_DropFirst(EXTwork, f);
   return ListIncd;
 }
 
@@ -2111,34 +2107,30 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   vectface ListIncd(nbRow);
-  bool IsFirst = true;
   T eScal;
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
   auto f = [&](Tring *out) -> void {
-    if (!IsFirst) {
 #ifdef USE_ISINCD
-      auto isincd = [&](size_t iRow) -> bool {
-        eScal = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTring(iRow, iCol);
-        return eScal == 0;
-      };
-      ListIncd.InsertFace(isincd);
+    auto isincd = [&](size_t iRow) -> bool {
+      eScal = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTring(iRow, iCol);
+      return eScal == 0;
+    };
+    ListIncd.InsertFace(isincd);
 #else
-      for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTring(iRow, iCol);
-        face[iRow] = bool(eScal == 0);
-      }
-      ListIncd.push_back(face);
-#endif
+    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      eScal = 0;
+      for (size_t iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTring(iRow, iCol);
+      face[iRow] = bool(eScal == 0);
     }
-    IsFirst = false;
+    ListIncd.push_back(face);
+#endif
   };
-  Kernel_DualDescription(EXTring, f);
+  Kernel_DualDescription_DropFirst(EXTring, f);
   return ListIncd;
 }
 
