@@ -11,6 +11,8 @@
 #include <boost/mpi/environment.hpp>
 #include <string>
 #include <vector>
+#include <utility>
+#include <limits>
 
 /*
   For the vector, simple syntactic sugar

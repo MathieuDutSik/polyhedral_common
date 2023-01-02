@@ -7,6 +7,7 @@
 #include "Namelist.h"
 #include <string>
 #include <vector>
+#include <limits>
 
 //
 // Heuristic business

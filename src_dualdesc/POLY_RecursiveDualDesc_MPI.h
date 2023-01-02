@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <map>
 
 struct message_facet {
   size_t e_hash;

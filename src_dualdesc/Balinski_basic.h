@@ -2,6 +2,10 @@
 #ifndef BALINSKI_BASIC_H
 #define BALINSKI_BASIC_H
 
+#include <vector>
+#include <unordered_map>
+#include <utility>
+
 template <typename Tint> struct UndoneOrbitInfo {
   size_t nbOrbitDone;
   Tint nbUndone;

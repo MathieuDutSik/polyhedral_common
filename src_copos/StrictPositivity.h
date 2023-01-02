@@ -7,6 +7,7 @@
 #include "Temp_Tspace_General.h"
 #include <utility>
 #include <vector>
+#include <string>
 
 template <typename T, typename Tint> struct TestStrictPositivity {
   bool result;

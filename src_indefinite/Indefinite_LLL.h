@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <limits>
 
 //#define DEBUG_INDEFINITE_LLL
 
