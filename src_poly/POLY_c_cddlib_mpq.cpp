@@ -1,5 +1,5 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #define GMPRATIONAL
-
 #ifdef USE_CDDLIB
 
 #include "Boost_bitset_kernel.h"

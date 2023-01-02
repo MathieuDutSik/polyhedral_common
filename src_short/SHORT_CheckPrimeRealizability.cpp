@@ -1,4 +1,4 @@
-//#include "mpreal_related.h"
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheory.h"
 #include "SHORT_ShortestConfig.h"
 

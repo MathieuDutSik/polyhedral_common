@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Group.h"
 #include "NumberTheory.h"
 #include "Permutation.h"

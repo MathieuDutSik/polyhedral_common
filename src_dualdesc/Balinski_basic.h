@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef BALINSKI_BASIC_H
 #define BALINSKI_BASIC_H
 

@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_PERMLIB_SPECIFIC_H_
 #define SRC_POLY_PERMLIB_SPECIFIC_H_
 

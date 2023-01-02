@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 

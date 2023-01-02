@@ -1458,8 +1458,9 @@ bool dd_LexSmaller(T *v1, T *v2,
       if (v1[j - 1] < v2[j - 1])
         smaller = true;
       determined = true;
-    } else
+    } else {
       j++;
+    }
   } while (!(determined) && (j <= dmax));
   return smaller;
 }
@@ -1479,8 +1480,9 @@ bool dd_LexSmallerFrac(T *v1, T q1, T *v2, T q2,
         smaller = true;
       }
       determined = true;
-    } else
+    } else {
       j++;
+    }
   } while (!(determined) && (j <= dmax));
   return smaller;
 }
@@ -2203,8 +2205,9 @@ dd_setfamily *dd_CopyAdjacency(dd_polyhedradata<T> *poly) {
   if (poly->n == 0 && poly->homogeneous &&
       poly->representation == dd_Inequality) {
     n = 1; /* the origin (the unique vertex) should be output. */
-  } else
+  } else {
     n = poly->n;
+  }
   set_initialize(&linset, n);
   set_initialize(&allset, n);
   if (poly->child == nullptr || poly->child->CompStatus != dd_AllFound)
@@ -2495,12 +2498,14 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
     if (M->matrix[i][d - 1] > 0) {
       posrowindex[mpos] = i;
       mpos++;
-    } else if (M->matrix[i][d - 1] < 0) {
-      negrowindex[mneg] = i;
-      mneg++;
     } else {
-      zerorowindex[mzero] = i;
-      mzero++;
+      if (M->matrix[i][d - 1] < 0) {
+        negrowindex[mneg] = i;
+        mneg++;
+      } else {
+        zerorowindex[mzero] = i;
+        mzero++;
+      }
     }
   }
 
@@ -2652,8 +2657,10 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
       /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++)
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
-    } else if (set_member(i, S)) {
-      lp->A[i - 1][M->colsize] = -1;
+    } else {
+      if (set_member(i, S)) {
+        lp->A[i - 1][M->colsize] = -1;
+      }
     }
     for (j = 1; j <= M->colsize; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
@@ -2839,8 +2846,10 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                 *s = j;
                 set_emptyset(data->tieset);
                 set_addelem(data->tieset, j);
-              } else if (rat == minrat) {
-                set_addelem(data->tieset, j);
+              } else {
+                if (rat == minrat) {
+                  set_addelem(data->tieset, j);
+                }
               }
             } else { // ring case
               rat = -data->rcost[j - 1];
@@ -2850,8 +2859,10 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                 *s = j;
                 set_emptyset(data->tieset);
                 set_addelem(data->tieset, j);
-              } else if (dd_EqualFrac(rat, val, minrat, minrat_q)) {
-                set_addelem(data->tieset, j);
+              } else {
+                if (dd_EqualFrac(rat, val, minrat, minrat_q)) {
+                  set_addelem(data->tieset, j);
+                }
               }
             }
           }
@@ -2892,8 +2903,10 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                           *s = j;
                           set_emptyset(data->stieset);
                           set_addelem(data->stieset, j);
-                        } else if (rat == minrat) {
-                          set_addelem(data->stieset, j);
+                        } else {
+                          if (rat == minrat) {
+                            set_addelem(data->stieset, j);
+                          }
                         }
                       }
                     }
@@ -2907,8 +2920,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
             } while (!colselected && k <= d_size);
             *selected = true;
           }
-        } else
+        } else {
           *lps = dd_Inconsistent;
+        }
       }
     } /* end of while */
   }
@@ -3117,12 +3131,14 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
           *r = i;
           break;
         }
-      } else if (bflag[i] > 0) { /* i is nonbasic variable */
-        dd_TableauEntry(val, d_size, A, Ts, objrow, bflag[i]);
-        if (val > 0) {
-          colselected = true;
-          *s = bflag[i];
-          break;
+      } else {
+        if (bflag[i] > 0) { /* i is nonbasic variable */
+          dd_TableauEntry(val, d_size, A, Ts, objrow, bflag[i]);
+          if (val > 0) {
+            colselected = true;
+            *s = bflag[i];
+            break;
+          }
         }
       }
     }
@@ -3141,23 +3157,27 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
           }
         }
       }
-    } else if (colselected) {
-      for (i = 1; i <= m_size; i++) {
-        if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
-          dd_TableauEntry(val, d_size, A, Ts, i, *s);
-          if (val < 0) {
-            rowselected = true;
-            *r = i;
-            *selected = true;
-            break;
+    } else {
+      if (colselected) {
+        for (i = 1; i <= m_size; i++) {
+          if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
+            dd_TableauEntry(val, d_size, A, Ts, i, *s);
+            if (val < 0) {
+              rowselected = true;
+              *r = i;
+              *selected = true;
+              break;
+            }
           }
         }
       }
     }
     if (!rowselected) {
       *lps = dd_DualInconsistent;
-    } else if (!colselected) {
-      *lps = dd_Inconsistent;
+    } else {
+      if (!colselected) {
+        *lps = dd_Inconsistent;
+      }
     }
   }
 }
@@ -3299,12 +3319,14 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   set_compl(NopivotRow, NopivotRow); /* set NopivotRow to be the groundset */
 
   for (j = 2; j <= d_size; j++)
-    if (nbindex[j] > 0)
+    if (nbindex[j] > 0) {
       set_delelem(NopivotRow, nbindex[j]);
-    else if (nbindex[j] < 0) {
-      negcount++;
-      set_addelem(DependentCols, -nbindex[j]);
-      set_addelem(ColSelected, -nbindex[j]);
+    } else {
+      if (nbindex[j] < 0) {
+        negcount++;
+        set_addelem(DependentCols, -nbindex[j]);
+        set_addelem(ColSelected, -nbindex[j]);
+      }
     }
 
   set_uni(
@@ -5511,14 +5533,16 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
         answer = 1;
         if (localdebug)
           fprintf(stdout, "==> The matrix has no implicit linearity.\n");
-      } else if (lp->optvalue < 0) {
-        answer = -1;
-        if (localdebug)
-          fprintf(stdout, "==> The matrix defines the trivial system.\n");
       } else {
-        answer = 0;
-        if (localdebug)
-          fprintf(stdout, "==> The matrix has some implicit linearity.\n");
+        if (lp->optvalue < 0) {
+          answer = -1;
+          if (localdebug)
+            fprintf(stdout, "==> The matrix defines the trivial system.\n");
+        } else {
+          answer = 0;
+          if (localdebug)
+            fprintf(stdout, "==> The matrix has some implicit linearity.\n");
+        }
       }
     } else {
       answer = -2;
@@ -6008,11 +6032,13 @@ arithmetics.
           *LPScorrect = false;
           break;
         }
-      } else if (data->bflag[i] > 0) { /* i is nonbasic variable */
-        dd_TableauEntry(val, d_size, A, Ts, objrow, data->bflag[i]);
-        if (val > 0) {
-          *LPScorrect = false;
-          break;
+      } else {
+        if (data->bflag[i] > 0) { /* i is nonbasic variable */
+          dd_TableauEntry(val, d_size, A, Ts, objrow, data->bflag[i]);
+          if (val > 0) {
+            *LPScorrect = false;
+            break;
+          }
         }
       }
     };
@@ -6025,9 +6051,11 @@ arithmetics.
           *LPScorrect = false;
           break;
         }
-      } else if (val > 0) {
-        *LPScorrect = false;
-        break;
+      } else {
+        if (val > 0) {
+          *LPScorrect = false;
+          break;
+        }
       }
     };
     break;
@@ -6050,9 +6078,11 @@ arithmetics.
           *LPScorrect = false;
           break;
         }
-      } else if (val < 0) {
-        *LPScorrect = false;
-        break;
+      } else {
+        if (val < 0) {
+          *LPScorrect = false;
+          break;
+        }
       }
     };
     break;
@@ -6173,11 +6203,13 @@ void dd_CheckAdjacency(dd_conedata<T> *cone, dd_raydata<T> **RP1,
     set_free(Face);
     set_free(Face1);
     return;
-  } else if (cone->parent->NondegAssumed) {
-    *adjacent = true;
-    set_free(Face);
-    set_free(Face1);
-    return;
+  } else {
+    if (cone->parent->NondegAssumed) {
+      *adjacent = true;
+      set_free(Face);
+      set_free(Face1);
+      return;
+    }
   }
   TempRay = cone->FirstRay;
   while (TempRay != nullptr && *adjacent) {
@@ -6558,8 +6590,10 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
       if (Ptr2->FirstInfeasIndex > fii1) {
         Ptr2begin = Ptr2;
         ptr2found = true;
-      } else if (Ptr2 == RRend)
-        quit = true;
+      } else {
+        if (Ptr2 == RRend)
+          quit = true;
+      }
     }
     if (ptr2found) {
       quit = false;
@@ -6859,8 +6893,9 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
     roworder_save = cone->HalfspaceOrder;
     cone->HalfspaceOrder = dd_MaxIndex;
     cone->PreOrderedRun = false;
-  } else
+  } else {
     cone->PreOrderedRun = true;
+  }
   for (i = 1; i <= cone->m; i++)
     if (!set_member(i, cone->NonequalitySet))
       set_addelem(CandidateRows, i);
@@ -6886,8 +6921,9 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
       cone->HalfspaceOrder == dd_MinCutoff ||
       cone->HalfspaceOrder == dd_MixCutoff) {
     cone->PreOrderedRun = false;
-  } else
+  } else {
     cone->PreOrderedRun = true;
+  }
 }
 
 template <typename T>
@@ -7508,9 +7544,11 @@ dd_rowrange dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded) {
       if (minindex == 0) {
         minindex = i;
         v1 = v2;
-      } else if (dd_LexSmaller(v2, v1, cone->d)) {
-        minindex = i;
-        v1 = v2;
+      } else {
+        if (dd_LexSmaller(v2, v1, cone->d)) {
+          minindex = i;
+          v1 = v2;
+        }
       }
     }
   }
@@ -7531,9 +7569,11 @@ dd_rowrange dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded) {
       if (maxindex == 0) {
         maxindex = i;
         v1 = v2;
-      } else if (dd_LexLarger(v2, v1, cone->d)) {
-        maxindex = i;
-        v1 = v2;
+      } else {
+        if (dd_LexLarger(v2, v1, cone->d)) {
+          maxindex = i;
+          v1 = v2;
+        }
       }
     }
   }
@@ -7835,12 +7875,14 @@ bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
     set_free(R);
     set_free(S);
     dd_FreeMatrix(M);
-  } else if (poly->representation == dd_Generator && poly->m <= 0) {
-    *err = dd_EmptyVrepresentation;
-    poly->IsEmpty = true;
-    poly->child->CompStatus = dd_AllFound;
-    answer = true;
-    poly->child->Error = *err;
+  } else {
+    if (poly->representation == dd_Generator && poly->m <= 0) {
+      *err = dd_EmptyVrepresentation;
+      poly->IsEmpty = true;
+      poly->child->CompStatus = dd_AllFound;
+      answer = true;
+      poly->child->Error = *err;
+    }
   }
 
   return answer;

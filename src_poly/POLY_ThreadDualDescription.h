@@ -140,7 +140,9 @@ std::ostream &operator<<(std::ostream &os,
 // SimpleOrbitFacet
 //
 
-template <typename T, typename Tgroup> struct SimpleOrbitFacet { Face eRepr; };
+template <typename T, typename Tgroup> struct SimpleOrbitFacet {
+  Face eRepr;
+};
 
 template <typename T, typename Tgroup>
 std::ostream &operator<<(std::ostream &os,
@@ -442,7 +444,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           SecondTime time;
           auto eReply =
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          MProc.GetO(TheId) << "CLASSIC: After the test time = " << time << "\n";
+          MProc.GetO(TheId)
+              << "CLASSIC: After the test time = " << time << "\n";
           return eReply;
         };
       }
@@ -452,13 +455,17 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
                 SimpleOrbitFacet<T, Tgroup> const &x,
                 SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
           SecondTime time;
-          auto eReply = TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          MProc.GetO(TheId) << "PARTITION: After the test time = " << time << "\n";
+          auto eReply =
+              TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
+          MProc.GetO(TheId)
+              << "PARTITION: After the test time = " << time << "\n";
           if (time.eval() > 60) {
             //
             SecondTime time;
-            auto eReplyB = TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
-            MProc.GetO(TheId) << "Second method (bliss) runtime = " << time << "\n";
+            auto eReplyB =
+                TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
+            MProc.GetO(TheId)
+                << "Second method (bliss) runtime = " << time << "\n";
           }
           return eReply;
         };
@@ -800,9 +807,12 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
                AllArr.AdditionalSymmetry, std::cerr);
   SetHeuristic(eFull, "DualDescriptionHeuristicFile",
                AllArr.DualDescriptionProgram, std::cerr);
-  SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet, std::cerr);
-  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, std::cerr);
-  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality, std::cerr);
+  SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet,
+               std::cerr);
+  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet,
+               std::cerr);
+  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality,
+               std::cerr);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, std::cerr);
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");

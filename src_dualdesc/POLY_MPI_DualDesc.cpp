@@ -1,7 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-// #include "NumberTheory.h"
 #include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"

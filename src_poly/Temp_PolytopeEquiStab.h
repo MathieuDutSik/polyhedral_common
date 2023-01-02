@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 #define SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 
@@ -1202,7 +1203,8 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
     return *eEquiv;
   }
 #ifdef TIMINGS
-  std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time << "\n";
+  std::cerr << "|LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time
+            << "\n";
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
@@ -1607,7 +1609,7 @@ template <typename T, typename Tgroup, typename Tval, typename Tidx_value>
 std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &ep,
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &fp) {
-  //#define DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
+  // #define DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;

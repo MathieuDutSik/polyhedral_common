@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_POLY_C_CDDLIB_MPQ_H_
 #define SRC_POLY_POLY_C_CDDLIB_MPQ_H_
 

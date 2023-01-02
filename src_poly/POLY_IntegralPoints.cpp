@@ -1,4 +1,4 @@
-// Copyright 2022 <Mathieu Dutour Sikiric>
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
 

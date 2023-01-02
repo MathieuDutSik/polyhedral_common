@@ -290,13 +290,6 @@ long redund_main(int argc, char *argv[])
       fprintf(lrs_ofp, " %ld", redineq[i]);
   }
 
-  /*
-  if (!Q->hull)
-    fprintf (lrs_ofp, "\nH-representation");
-  else
-    fprintf (lrs_ofp, "\nV-representation");
-  */
-
   /* linearities will be printed first in output */
 
   if (nlinearity > 0) {
@@ -409,10 +402,10 @@ long lrs_getsolution(lrs_dic *P, lrs_dat *Q, lrs_mp_vector output, long col)
   if (Q->lponly) {
     if (!positive(A[0][col]))
       return FALSE;
+  } else {
+    if (!negative(A[0][col]))
+      return FALSE;
   }
-
-  else if (!negative(A[0][col]))
-    return FALSE;
 
   /*  and non-negative for all basic non decision variables */
 
@@ -576,24 +569,26 @@ long lrs_read_dat(lrs_dat *Q, int argc, char *argv[]) {
   {
     if ((lrs_ifp = fopen(argv[1], "r")) == NULL) {
       printf("\nBad input file name");
-      return (FALSE);
-    } else
+      return FALSE;
+    } else {
       printf("\n*Input taken from file %s", argv[1]);
+    }
   }
 
   if (argc > 2) /* command line argument overides stdin        */
   {
     if ((lrs_ofp = fopen(argv[2], "a")) == NULL) {
       printf("\nBad output file name");
-      return (FALSE);
-    } else
+      return FALSE;
+    } else {
       printf("\n*Output sent to file %s\n", argv[2]);
+    }
   }
 
   /* process input file */
   if (fscanf(lrs_ifp, "%s", name) == EOF) {
     fprintf(lrs_ofp, "\nParse error");
-    return (FALSE);
+    return FALSE;
   }
 
   while (strcmp(name, "begin") !=
@@ -605,7 +600,6 @@ long lrs_read_dat(lrs_dat *Q, int argc, char *argv[]) {
       while (c != EOF && c != '\n')
         c = fgetc(lrs_ifp);
     }
-
     else if (strcmp(name, "H-representation") == 0)
       Q->hull = FALSE;
     else if ((strcmp(name, "hull") == 0) ||
@@ -614,10 +608,10 @@ long lrs_read_dat(lrs_dat *Q, int argc, char *argv[]) {
     else if (strcmp(name, "digits") == 0) {
       if (fscanf(lrs_ifp, "%ld", &dec_digits) == EOF) {
         fprintf(lrs_ofp, "\nNo begin line");
-        return (FALSE);
+        return FALSE;
       }
       if (!lrs_set_digits(dec_digits))
-        return (FALSE);
+        return FALSE;
     } else if (strcmp(name, "linearity") == 0) {
       if (!readlinearity(Q))
         return FALSE;
@@ -631,23 +625,23 @@ long lrs_read_dat(lrs_dat *Q, int argc, char *argv[]) {
 
     if (fscanf(lrs_ifp, "%s", name) == EOF) {
       fprintf(lrs_ofp, "\nNo begin line");
-      return (FALSE);
+      return FALSE;
     }
 
   } /* end of while */
 
   if (fscanf(lrs_ifp, "%ld %ld %s", &Q->m, &Q->n, name) == EOF) {
     fprintf(lrs_ofp, "\nNo data in file");
-    return (FALSE);
+    return FALSE;
   }
   if (strcmp(name, "integer") != 0 && strcmp(name, "rational") != 0) {
     fprintf(lrs_ofp, "\nData type must be integer of rational");
-    return (FALSE);
+    return FALSE;
   }
 
   if (Q->m == 0) {
     fprintf(lrs_ofp, "\nNo input given"); /* program dies ungracefully */
-    return (FALSE);
+    return FALSE;
   }
 
   /* inputd may be reduced in preprocessing of linearities and redund cols */
@@ -744,7 +738,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
 
       if (fscanf(lrs_ifp, "%ld", &seconds) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
 
 #ifdef SIGNALS
@@ -759,7 +753,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "debug") == 0) {
       if (fscanf(lrs_ifp, "%ld %ld", &Q->strace, &Q->etrace) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
 
       fprintf(lrs_ofp, "\n*%s from B#%ld to B#%ld", name, Q->strace, Q->etrace);
@@ -768,11 +762,11 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
         Q->debug = TRUE;
     }
     if (strcmp(name, "startingcobasis") == 0) {
-      if (Q->nonnegative)
+      if (Q->nonnegative) {
         fprintf(
             lrs_ofp,
             "\n*startingcobasis incompatible with nonnegative option:skipped");
-      else {
+      } else {
         fprintf(lrs_ofp, "\n*startingcobasis");
         Q->givenstart = TRUE;
         if (!readfacets(Q, Q->inequality))
@@ -786,26 +780,28 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
         if (fscanf(lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0],
                    &Q->count[2], &P->depth) == EOF) {
           fprintf(lrs_ofp, "\nParse error");
-          return (FALSE);
+          return FALSE;
         }
         fprintf(lrs_ofp, "\n*%s V#%ld R#%ld B#%ld h=%ld data points", name,
                 Q->count[1], Q->count[0], Q->count[2], P->depth);
-      } else if (hull) {
-        if (fscanf(lrs_ifp, "%ld %ld %ld", &Q->count[0], &Q->count[2],
-                   &P->depth) == EOF) {
-          fprintf(lrs_ofp, "\nParse error");
-          return (FALSE);
-        }
-        fprintf(lrs_ofp, "\n*%s F#%ld B#%ld h=%ld vertices/rays", name,
-                Q->count[0], Q->count[2], P->depth);
       } else {
-        if (fscanf(lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0],
+        if (hull) {
+          if (fscanf(lrs_ifp, "%ld %ld %ld", &Q->count[0], &Q->count[2],
+                     &P->depth) == EOF) {
+            fprintf(lrs_ofp, "\nParse error");
+            return FALSE;
+          }
+          fprintf(lrs_ofp, "\n*%s F#%ld B#%ld h=%ld vertices/rays", name,
+                  Q->count[0], Q->count[2], P->depth);
+        } else {
+          if (fscanf(lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0],
                    &Q->count[2], &P->depth) == EOF) {
-          fprintf(lrs_ofp, "\nParse error");
-          return (FALSE);
+            fprintf(lrs_ofp, "\nParse error");
+            return FALSE;
+          }
+          fprintf(lrs_ofp, "\n*%s V#%ld R#%ld B#%ld h=%ld facets", name,
+                  Q->count[1], Q->count[0], Q->count[2], P->depth);
         }
-        fprintf(lrs_ofp, "\n*%s V#%ld R#%ld B#%ld h=%ld facets", name,
-                Q->count[1], Q->count[0], Q->count[2], P->depth);
       }
       if (!readfacets(Q, Q->facet))
         return FALSE;
@@ -823,16 +819,14 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     /* The LP will be solved after initialization to get starting vertex   */
     /* Used also with lponly flag                                          */
     if (strcmp(name, "maximize") == 0 || strcmp(name, "minimize") == 0) {
-      if (Q->hull)
+      if (Q->hull) {
         fprintf(lrs_ofp, "\n*%s option not valid for V-representation-skipped",
                 name);
-      else {
-        {
-          if (strcmp(name, "maximize") == 0)
-            Q->maximize = TRUE;
-          else
-            Q->minimize = TRUE;
-        }
+      } else {
+        if (strcmp(name, "maximize") == 0)
+          Q->maximize = TRUE;
+        else
+          Q->minimize = TRUE;
         printf("\n*%s", name);
 
         for (j = 0; j <= d; j++) {
@@ -886,7 +880,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "printcobasis") == 0) {
       if (fscanf(lrs_ifp, "%ld", &Q->frequency) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*%s", name);
       if (Q->frequency > 0)
@@ -897,7 +891,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "cache") == 0) {
       if (fscanf(lrs_ifp, "%ld", &dict_limit) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*cache %ld", dict_limit);
       if (dict_limit < 1)
@@ -911,14 +905,14 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "maxdepth") == 0) {
       if (fscanf(lrs_ifp, "%ld", &Q->maxdepth) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*%s  %ld", name, Q->maxdepth);
     }
     if (strcmp(name, "mindepth") == 0) {
       if (fscanf(lrs_ifp, "%ld", &Q->mindepth) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*%s  %ld", name, Q->mindepth);
     }
@@ -941,7 +935,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "seed") == 0) {
       if (fscanf(lrs_ifp, "%ld", &Q->seed) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*seed= %ld ", Q->seed);
     }
@@ -949,16 +943,16 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
     if (strcmp(name, "estimates") == 0) {
       if (fscanf(lrs_ifp, "%ld", &Q->runs) == EOF) {
         fprintf(lrs_ofp, "\nParse error");
-        return (FALSE);
+        return FALSE;
       }
       fprintf(lrs_ofp, "\n*%ld %s", Q->runs, name);
     }
 
     if ((strcmp(name, "voronoi") == 0) || (strcmp(name, "Voronoi") == 0)) {
-      if (!hull)
+      if (!hull) {
         fprintf(lrs_ofp,
                 "\n*voronoi requires V-representation - option skipped");
-      else {
+      } else {
         Q->voronoi = TRUE;
         Q->polytope = FALSE;
       }
@@ -1092,7 +1086,7 @@ long lrs_getfirstbasis(lrs_dic **D_p, lrs_dat *Q, lrs_mp_matrix *Lin,
     for (i = 1; i <= m; i++) {
       if (zero(A[i][1])) {
         fprintf(lrs_ofp, "\nWith voronoi option column one must be all one");
-        return (FALSE);
+        return FALSE;
       }
       copy(scale, A[i][1]); /*adjust for scaling to integers of rationals */
       itomp(ZERO, A[i][0]);
@@ -1241,24 +1235,20 @@ long lrs_getfirstbasis(lrs_dic **D_p, lrs_dat *Q, lrs_mp_matrix *Lin,
       lrs_clear_mp(Temp);
       lrs_clear_mp(scale);
       return TRUE;
-    }
-
-    else /* check to see if objective is dual degenerate */
-    {
+    } else {
+      /* check to see if objective is dual degenerate */
       j = 1;
       while (j <= d && !zero(A[0][j]))
         j++;
       if (j <= d)
         Q->dualdeg = FALSE;
     }
-  } else
-  /* re-initialize cost row to -det */
-  {
+  } else {
+    /* re-initialize cost row to -det */
     for (j = 1; j <= d; j++) {
       copy(A[0][j], D->det);
       storesign(A[0][j], NEG);
     }
-
     itomp(ZERO, A[0][0]); /* zero optimum objective value */
   }
 
@@ -1363,12 +1353,10 @@ long lrs_getnextbasis(lrs_dic **D_p, lrs_dat *Q, long backtrack)
 
     while ((j < d) && !reverse(D, Q, &i, j))
       j++;
-    if (j == d)
+    if (j == d) {
       backtrack = TRUE;
-
-    else
-    /*reverse pivot found */
-    {
+    } else {
+      /*reverse pivot found */
       cache_dict(D_p, Q, i, j);
       /* Note that the next two lines must come _after_ the
          call to cache_dict */
@@ -1928,7 +1916,7 @@ long reverse(lrs_dic *P, lrs_dat *Q, long *r, long s)
   if (!negative(A[0][col])) {
     if (Q->debug)
       fprintf(lrs_ofp, " Pos/Zero Cost Coeff");
-    return (FALSE);
+    return FALSE;
   }
 
   *r = ratio(P, Q, col);
@@ -1936,7 +1924,7 @@ long reverse(lrs_dic *P, lrs_dat *Q, long *r, long s)
   {
     if (Q->debug)
       fprintf(lrs_ofp, " Pivot col non-negative:  ray found");
-    return (FALSE);
+    return FALSE;
   }
 
   row = Row[*r];
@@ -1958,14 +1946,14 @@ long reverse(lrs_dic *P, lrs_dat *Q, long *r, long s)
                     i, C[i], j);
             fflush(lrs_ofp);
           }
-          return (FALSE);
+          return FALSE;
         }
     }
   if (Q->debug) {
     fprintf(lrs_ofp, "\n+end of reverse : indices r %ld s %ld \n", *r, s);
     fflush(stdout);
   }
-  return (TRUE);
+  return TRUE;
 } /* end of reverse */
 
 long selectpivot(lrs_dic *P, lrs_dat *Q, long *r, long *s)
@@ -1995,9 +1983,9 @@ long selectpivot(lrs_dic *P, lrs_dat *Q, long *r, long *s)
     /*find min index ratio */
     *r = ratio(P, Q, col);
     if (*r != 0)
-      return (TRUE); /* unbounded */
+      return TRUE; /* unbounded */
   }
-  return (FALSE);
+  return FALSE;
 } /* end of selectpivot        */
 /******************************************************* */
 
@@ -2119,13 +2107,13 @@ long primalfeasible(lrs_dic *P, lrs_dat *Q)
       while (j < d && !positive(A[Row[i]][Col[j]]))
         j++;
       if (j >= d)
-        return (FALSE); /* no positive entry */
+        return FALSE; /* no positive entry */
       pivot(P, Q, i, j);
       update(P, Q, &i, &j);
     } else
       primalinfeasible = FALSE;
   } /* end of while primalinfeasibile */
-  return (TRUE);
+  return TRUE;
 } /* end of primalfeasible */
 
 long lrs_solvelp(lrs_dic *P, lrs_dat *Q, long maximize)
@@ -2597,9 +2585,9 @@ long lexmin(lrs_dic *P, lrs_dat *Q, long col)
           if (zero(A[r][0])) /* no need for ratio test, any pivot feasible */
           {
             if (!zero(A[r][s]))
-              return (FALSE);
+              return FALSE;
           } else if (negative(A[r][s]) && ismin(P, Q, r, s)) {
-            return (FALSE);
+            return FALSE;
           }
         } /* end of if B[i] ... */
       }
@@ -2608,7 +2596,7 @@ long lexmin(lrs_dic *P, lrs_dat *Q, long col)
     fprintf(lrs_ofp, "\n lexmin ray in col=%ld ", col);
     printA(P, Q);
   }
-  return (TRUE);
+  return TRUE;
 } /* end of lexmin */
 
 long ismin(lrs_dic *P, lrs_dat *Q, long r, long s)
@@ -2622,10 +2610,10 @@ long ismin(lrs_dic *P, lrs_dat *Q, long r, long s)
   for (i = 1; i <= m_A; i++)
     if ((i != r) && negative(A[i][s]) &&
         comprod(A[i][0], A[r][s], A[i][s], A[r][0])) {
-      return (FALSE);
+      return FALSE;
     }
 
-  return (TRUE);
+  return TRUE;
 }
 
 void update(lrs_dic *P, lrs_dat *Q, long *i, long *j)
@@ -2989,16 +2977,16 @@ long lreadrat(long *Num, long *Den)
   char in[MAXINPUT], num[MAXINPUT], den[MAXINPUT];
   if (fscanf(lrs_ifp, "%s", in) == EOF) {
     fprintf(lrs_ofp, "\nParse error");
-    return (FALSE);
+    return FALSE;
   }
   atoaa(in, num, den); /*convert rational to num/dem strings */
   *Num = atol(num);
   if (den[0] == '\0') {
     *Den = 1L;
-    return (FALSE);
+    return FALSE;
   }
   *Den = atol(den);
-  return (TRUE);
+  return TRUE;
 }
 
 void lrs_getinput(lrs_dic *P, lrs_dat *Q, long *num, long *den, long m, long d)
@@ -3034,11 +3022,11 @@ long readlinearity(lrs_dat *Q) /* read in and check linearity list */
   long nlinearity;
   if (fscanf(lrs_ifp, "%ld", &nlinearity) == EOF) {
     fprintf(lrs_ofp, "\nParse error");
-    return (FALSE);
+    return FALSE;
   }
   if (nlinearity < 1) {
     fprintf(lrs_ofp, "\nLinearity option invalid, indices must be positive");
-    return (FALSE);
+    return FALSE;
   }
 
   Q->linearity = CALLOC((nlinearity + 1), sizeof(long));
@@ -3046,7 +3034,7 @@ long readlinearity(lrs_dat *Q) /* read in and check linearity list */
   for (i = 0; i < nlinearity; i++) {
     if (fscanf(lrs_ifp, "%ld", &j) == EOF) {
       fprintf(lrs_ofp, "\nParse error");
-      return (FALSE);
+      return FALSE;
     }
     Q->linearity[i] = j;
   }
@@ -3074,7 +3062,7 @@ long readfacets(lrs_dat *Q, long facet[])
   {
     if (fscanf(lrs_ifp, "%ld", &facet[j]) == EOF) {
       fprintf(lrs_ofp, "\nParse error");
-      return (FALSE);
+      return FALSE;
     }
     fprintf(lrs_ofp, " %ld", facet[j]);
     if (facet[j] < 1 || facet[j] > m) {
@@ -3829,11 +3817,11 @@ long dan_selectpivot(lrs_dic *P, lrs_dat *Q, long *r, long *s)
     *r = ratio(P, Q, col);
     if (*r != 0) {
       lrs_clear_mp(coeff);
-      return (TRUE); /* unbounded */
+      return TRUE; /* unbounded */
     }
   }
   lrs_clear_mp(coeff);
-  return (FALSE);
+  return FALSE;
 } /* end of dan_selectpivot        */
 
 long lrs_set_digits(long dec_digits) {
@@ -3847,7 +3835,7 @@ long lrs_set_digits(long dec_digits) {
             "\nDigits must be at most %ld\nChange MAX_DIGITS and recompile",
             DIG2DEC(MAX_DIGITS));
     fflush(stdout);
-    return (FALSE);
+    return FALSE;
   }
-  return (TRUE);
+  return TRUE;
 }

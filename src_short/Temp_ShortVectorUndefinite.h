@@ -1,3 +1,4 @@
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_
 #define SRC_SHORT_TEMP_SHORTVECTORUNDEFINITE_H_
 
