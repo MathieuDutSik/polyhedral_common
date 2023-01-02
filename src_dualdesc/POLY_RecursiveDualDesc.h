@@ -2,6 +2,7 @@
 #ifndef SRC_DUALDESC_POLY_RECURSIVEDUALDESC_H_
 #define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_H_
 
+// clang-format off
 #include "GRP_DoubleCoset.h"
 #include "MAT_MatrixInt.h"
 #include "Namelist.h"
@@ -12,10 +13,10 @@
 #include "Temp_PolytopeEquiStab.h"
 #include "Timings.h"
 
+#include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "Databank.h"
 #include "MatrixGroupBasic.h"
-#include "POLY_GAP.h"
 #include "basic_datafile.h"
 #include <limits>
 #include <map>
@@ -24,6 +25,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+// clang-format on
 
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH

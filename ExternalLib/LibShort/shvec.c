@@ -713,7 +713,7 @@ void destroyShvecInfo(shvec_info info) {
 }
 
 void computeShvec(shvec_request request, shvec_info info) {
-  int dim, result, coset, i;
+  int dim, result = 0, coset, i;
 
   if (request == NULL || info == NULL)
     die_shvec("(computeShvec) wrong input!");

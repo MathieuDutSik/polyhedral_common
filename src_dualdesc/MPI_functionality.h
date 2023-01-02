@@ -97,12 +97,10 @@ MyMatrix<T> MergeRows(int const &n_col, std::vector<int> const &l_n_rows,
 }
 
 template <typename T>
-MyMatrix<T> my_mpi_gather(boost::mpi::communicator &comm, MyMatrix<T> const &M,
-                          int i_proc) {
-  int i_rank = comm.rank();
+std::vector<T> MatrixRowsAsVector(MyMatrix<T> const &M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
-  std::vector<uint8_t> V(n_rows, n_cols);
+  std::vector<T> V(n_rows * n_cols);
   size_t pos = 0;
   for (int i_row = 0; i_row < n_rows; i_row++) {
     for (int i_col = 0; i_col < n_cols; i_col++) {
@@ -110,9 +108,20 @@ MyMatrix<T> my_mpi_gather(boost::mpi::communicator &comm, MyMatrix<T> const &M,
       pos++;
     }
   }
+  return V;
+}
+
+
+template <typename T>
+MyMatrix<T> my_mpi_gather(boost::mpi::communicator &comm, MyMatrix<T> const &M,
+                          int i_proc) {
+  int i_rank = comm.rank();
+  int n_rows = M.rows();
+  int n_cols = M.cols();
+  std::vector<T> V = MatrixRowsAsVector(M);
   //
   std::vector<int> l_n_rows = my_mpi_gather(comm, n_rows, i_proc);
-  std::vector<std::vector<uint8_t>> l_V = my_mpi_gather(comm, V, i_proc);
+  std::vector<std::vector<T>> l_V = my_mpi_gather(comm, V, i_proc);
   if (i_rank == i_proc) {
     return MergeRows(n_cols, l_n_rows, l_V);
   } else {
@@ -125,15 +134,7 @@ MyMatrix<T> my_mpi_allgather(boost::mpi::communicator &comm,
                              MyMatrix<T> const &M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
-  std::vector<T> V(n_rows * n_cols);
-  size_t pos = 0;
-  for (int i_row = 0; i_row < n_rows; i_row++) {
-    for (int i_col = 0; i_col < n_cols; i_col++) {
-      V[pos] = M(i_row, i_col);
-      pos++;
-    }
-  }
-  //
+  std::vector<T> V = MatrixRowsAsVector(M);
   std::vector<int> l_n_rows = my_mpi_allgather(comm, n_rows);
   std::vector<std::vector<T>> l_V = my_mpi_allgather(comm, V);
   return MergeRows(n_cols, l_n_rows, l_V);

@@ -36,11 +36,7 @@ resultCVP<T, Tint> CVP_N23_24A1_Version1(MyVector<T> const &eV) {
   MyVector<T> eTransCoset(24);
   MyVector<T> ListLow(24);
   while (true) {
-    //    std::cerr << "First loop\n";
     std::vector<int> LVal = BlCoset.GetVect();
-    /*    for (int iDim=0; iDim<12; iDim++)
-      std::cerr << " " << LVal[iDim];
-      std::cerr << "\n";*/
     for (int i = 0; i < 24; i++)
       eTransCoset(i) = 0;
     for (int iDim = 0; iDim < 12; iDim++)
@@ -56,7 +52,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version1(MyVector<T> const &eV) {
       T eNear = UniversalNearestScalarInteger<T, T>(eVal);
       ListLow(i) = eNear;
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff * eDiff;
       if (IsInteger(eDiff - eHalf))
         ListDimPair.push_back(i);
@@ -77,11 +72,8 @@ resultCVP<T, Tint> CVP_N23_24A1_Version1(MyVector<T> const &eV) {
         }
       }
     }
-    //    std::cerr << "eNorm=" << eNorm << " IsFirst=" << IsFirst << "
-    //    MinNorm=" << MinNorm << "\n";
     if (WeAppend) {
       int nbPair = ListDimPair.size();
-      //      std::cerr << "nbPair=" << nbPair << " MinNorm=" << eNorm << "\n";
       BlockIteration BlCVP(nbPair, 2);
       while (true) {
         std::vector<int> Wvect = BlCVP.GetVect();
@@ -111,7 +103,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version1(MyVector<T> const &eV) {
       MatNearest(iFin, i) = UniversalScalarConversion<Tint, T>(eVnear(i));
   }
   T NearestNorm = 2 * MinNorm;
-  //  std::cerr << "End of CVP_N23_24A1\n";
   return {NearestNorm, MatNearest};
 }
 
@@ -136,13 +127,11 @@ resultCVP<T, Tint> CVP_N23_24A1_Version2(MyVector<T> const &eV) {
     std::vector<int> LVal = BlCoset.GetVect();
     for (int i = 0; i < 24; i++)
       eTransCoset(i) = 0;
-    //    std::cerr << "Before Assignation of eTransCoset\n";
     for (int iDim = 0; iDim < 12; iDim++)
       if (LVal[iDim] == 1) {
         for (int i = 0; i < 24; i++)
           eTransCoset(i) += TotBasisQuotInv(iDim, i);
       }
-    //    std::cerr << "After Assignation of eTransCoset\n";
     MyVector<T> eSumVect = fV - eTransCoset;
     int nbPair = 0;
     T eNorm = 0;
@@ -150,7 +139,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version2(MyVector<T> const &eV) {
       T eVal = eSumVect(i);
       T eNear = UniversalNearestScalarInteger<T, T>(eVal);
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff * eDiff;
       if (IsInteger(eDiff - eHalf))
         nbPair++;
@@ -172,8 +160,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version2(MyVector<T> const &eV) {
         }
       }
     }
-    //    std::cerr << "eNorm=" << eNorm << " IsFirst=" << IsFirst << "
-    //    MinNorm=" << MinNorm << "\n";
     if (WeAppend) {
       int eSiz = 1;
       for (int iPair = 0; iPair < nbPair; iPair++)
@@ -185,34 +171,24 @@ resultCVP<T, Tint> CVP_N23_24A1_Version2(MyVector<T> const &eV) {
     if (val == -1)
       break;
   }
-  //  std::cerr << "nbFinal=" << nbFinal << "\n";
   int iFin = 0;
   MyMatrix<T> MatNearest(nbFinal, 24);
   MyVector<T> ListLow(24);
   for (auto &fTransCoset : ListTransCoset) {
-    //    std::cerr << "Iterate, step 1\n";
     MyVector<T> eSumVect = fV - fTransCoset;
     std::vector<int> ListDimPair;
-    //    T eNorm=0;
-    //    std::cerr << "Iterate, step 2\n";
     for (int i = 0; i < 24; i++) {
       T eVal = eSumVect(i);
       T eNear = UniversalNearestScalarInteger<T, T>(eVal);
       ListLow(i) = eNear;
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
-      //      eNorm += eDiff*eDiff;
       if (IsInteger(eDiff - eHalf))
         ListDimPair.push_back(i);
     }
-    //    std::cerr << "eNorm=" << eNorm << "\n";
     int nbPair = ListDimPair.size();
-    //    std::cerr << "nbPair=" << nbPair << "\n";
     BlockIteration BlCVP(nbPair, 2);
-    //    std::cerr << "Iterate, step 3\n";
     while (true) {
       std::vector<int> Wvect = BlCVP.GetVect();
-      //      std::cerr << "Loop, step 1\n";
       MyVector<T> W = ListLow;
       for (int iPair = 0; iPair < nbPair; iPair++)
         if (Wvect[iPair] == 1) {
@@ -227,12 +203,9 @@ resultCVP<T, Tint> CVP_N23_24A1_Version2(MyVector<T> const &eV) {
       int val = BlCVP.IncrementShow();
       if (val == -1)
         break;
-      //      std::cerr << "Loop, step 7\n";
     }
-    //    std::cerr << "Iterate, step 4\n";
   }
   T NearestNorm = 2 * MinNorm;
-  //  std::cerr << "End of CVP_N23_24A1\n";
   return {NearestNorm, MatNearest};
 }
 
@@ -282,7 +255,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version3(MyVector<T> const &eV) {
       T eVal = eSumVect(i);
       T eNear = UniversalNearestScalarInteger<T, T>(eVal);
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff * eDiff;
       if (IsInteger(eDiff - eHalf))
         nbPair++;
@@ -304,8 +276,6 @@ resultCVP<T, Tint> CVP_N23_24A1_Version3(MyVector<T> const &eV) {
         }
       }
     }
-    //    std::cerr << "eNorm=" << eNorm << " IsFirst=" << IsFirst << "
-    //    MinNorm=" << MinNorm << "\n";
     if (WeAppend) {
       int eSiz = 1;
       for (int iPair = 0; iPair < nbPair; iPair++)
@@ -319,34 +289,24 @@ resultCVP<T, Tint> CVP_N23_24A1_Version3(MyVector<T> const &eV) {
     for (int i = 0; i < 24; i++)
       eTransCoset(i) += TotBasisQuotInvShift(val, i);
   }
-  //  std::cerr << "nbFinal=" << nbFinal << "\n";
   int iFin = 0;
   MyMatrix<T> MatNearest(nbFinal, 24);
   MyVector<T> ListLow(24);
   for (auto &fTransCoset : ListTransCoset) {
-    //    std::cerr << "Iterate, step 1\n";
     MyVector<T> eSumVect = fV - fTransCoset;
     std::vector<int> ListDimPair;
-    //    T eNorm=0;
-    //    std::cerr << "Iterate, step 2\n";
     for (int i = 0; i < 24; i++) {
       T eVal = eSumVect(i);
       T eNear = UniversalNearestScalarInteger<T, T>(eVal);
       ListLow(i) = eNear;
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
-      //      eNorm += eDiff*eDiff;
       if (IsInteger(eDiff - eHalf))
         ListDimPair.push_back(i);
     }
-    //    std::cerr << "eNorm=" << eNorm << "\n";
     int nbPair = ListDimPair.size();
-    //    std::cerr << "nbPair=" << nbPair << "\n";
     BlockIteration BlCVP(nbPair, 2);
-    //    std::cerr << "Iterate, step 3\n";
     while (true) {
       std::vector<int> Wvect = BlCVP.GetVect();
-      //      std::cerr << "Loop, step 1\n";
       MyVector<T> W = ListLow;
       for (int iPair = 0; iPair < nbPair; iPair++)
         if (Wvect[iPair] == 1) {
@@ -361,12 +321,9 @@ resultCVP<T, Tint> CVP_N23_24A1_Version3(MyVector<T> const &eV) {
       int val = BlCVP.IncrementShow();
       if (val == -1)
         break;
-      //      std::cerr << "Loop, step 7\n";
     }
-    //    std::cerr << "Iterate, step 4\n";
   }
   T NearestNorm = 2 * MinNorm;
-  //  std::cerr << "End of CVP_N23_24A1\n";
   return {NearestNorm, MatNearest};
 }
 
@@ -399,7 +356,6 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
       T eVal = eSumVect(i);
       T eNear = NearestInteger_rpi(eVal);
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
       eNorm += eDiff * eDiff;
       if (IsInteger(eDiff - eHalf))
         nbPair++;
@@ -421,8 +377,6 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
         }
       }
     }
-    //    std::cerr << "eNorm=" << eNorm << " IsFirst=" << IsFirst << "
-    //    MinNorm=" << MinNorm << "\n";
     if (WeAppend) {
       int eSiz = 1;
       for (int iPair = 0; iPair < nbPair; iPair++)
@@ -436,34 +390,24 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
     for (int i = 0; i < 24; i++)
       eTransCoset(i) += TotBasisQuotInvShift(val, i);
   }
-  //  std::cerr << "nbFinal=" << nbFinal << "\n";
   int iFin = 0;
   MyVector<T> ListUpp(24);
   MyMatrix<Tint> MatNearest(nbFinal, 24);
   for (auto &fTransCoset : ListTransCoset) {
-    //    std::cerr << "Iterate, step 1\n";
     MyVector<T> eSumVect = fV - fTransCoset;
     std::vector<int> ListDimPair;
-    //    T eNorm=0;
-    //    std::cerr << "Iterate, step 2\n";
     for (int i = 0; i < 24; i++) {
       T eVal = eSumVect(i);
       T eNear = NearestInteger_rpi(eVal);
       ListUpp(i) = eNear;
       T eDiff = eVal - eNear;
-      //      std::cerr << "i=" << i << " eDiff=" << eDiff << "\n";
-      //      eNorm += eDiff*eDiff;
       if (IsInteger(eDiff - eHalf))
         ListDimPair.push_back(i);
     }
-    //    std::cerr << "eNorm=" << eNorm << "\n";
     int nbPair = ListDimPair.size();
-    //    std::cerr << "nbPair=" << nbPair << "\n";
     BlockIteration BlCVP(nbPair, 2);
-    //    std::cerr << "Iterate, step 3\n";
     while (true) {
       std::vector<int> Wvect = BlCVP.GetVect();
-      //      std::cerr << "Loop, step 1\n";
       MyVector<T> W = ListUpp;
       for (int iPair = 0; iPair < nbPair; iPair++)
         if (Wvect[iPair] == 1) {
@@ -478,12 +422,9 @@ resultCVP<T, Tint> CVP_N23_24A1(MyVector<T> const &eV) {
       int val = BlCVP.IncrementShow();
       if (val == -1)
         break;
-      //      std::cerr << "Loop, step 7\n";
     }
-    //    std::cerr << "Iterate, step 4\n";
   }
   T NearestNorm = 2 * MinNorm;
-  //  std::cerr << "End of CVP_N23_24A1\n";
   return {NearestNorm, MatNearest};
 }
 

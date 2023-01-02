@@ -1,7 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
-#include "Permutation.h"
+// clang-format on
 
 boost::asio::ip::tcp::endpoint endpoint_bank;
 

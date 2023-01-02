@@ -2,9 +2,10 @@
 #ifndef SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 #define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 
-#include "Balinski_basic.h"
-#include "MPI_functionality.h"
+// clang-format off
 #include "POLY_RecursiveDualDesc.h"
+#include "MPI_functionality.h"
+#include "Balinski_basic.h"
 #include <chrono>
 #include <limits>
 #include <string>
@@ -13,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include <map>
+// clang-format on
 
 struct message_facet {
   size_t e_hash;
@@ -378,17 +380,17 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   os.flush();
   //
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<Tint> AllArr =
-      Read_AllStandardHeuristicSerial<Tint>(eFull, os);
+    Read_AllStandardHeuristicSerial<T,Tint>(eFull, EXTred, os);
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t n_rows = EXTred.rows();
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP);
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {

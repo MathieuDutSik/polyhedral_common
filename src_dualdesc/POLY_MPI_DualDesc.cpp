@@ -1,11 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "Permutation.h"
+#include "Group.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
-#include "Permutation.h"
+// clang-format on
 
 template <typename T, typename Tidx>
 void Process_eFull(boost::mpi::communicator &comm, FullNamelist const &eFull) {

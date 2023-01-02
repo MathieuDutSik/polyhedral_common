@@ -2,9 +2,13 @@
 #ifndef BALINSKI_BASIC_H
 #define BALINSKI_BASIC_H
 
+// clang-format off
+#include "Boost_bitset_kernel.h"
+#include "MAT_Matrix.h"
 #include <vector>
 #include <unordered_map>
 #include <utility>
+// clang-format on
 
 template <typename Tint> struct UndoneOrbitInfo {
   size_t nbOrbitDone;

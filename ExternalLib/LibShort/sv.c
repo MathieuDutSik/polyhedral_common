@@ -18,6 +18,17 @@ void die_sv(char *last_words) {
   exit(EXIT_FAILURE);
 }
 
+
+void print_vectors(int dim, shvec_info info) {
+  int i;
+  printf("%d\n", info->short_vectors_number);
+  for (i = 0; i < info->short_vectors_number; i++) {
+    printf("[%f]: ", info->short_vectors_norm[i]);
+    intPrintVector(dim, info->short_vectors[i]);
+  }
+}
+
+
 int main(int argc, char *argv[]) {
   int check, gram, i, j, mode, number, dim, coset;
   double bound, **gram_matrix;
@@ -133,19 +144,11 @@ int main(int argc, char *argv[]) {
   /* output results */
 
   if (mode == SHVEC_MODE_BOUND) {
-    printf("%d\n", info->short_vectors_number);
-    for (i = 0; i < info->short_vectors_number; i++) {
-      printf("[%f]: ", info->short_vectors_norm[i]);
-      intPrintVector(dim, info->short_vectors[i]);
-    }
+    print_vectors(dim, info);
   }
 
   else if (mode == SHVEC_MODE_SHORTEST_VECTORS) {
-    printf("%d\n", info->short_vectors_number);
-    for (i = 0; i < info->short_vectors_number; i++) {
-      printf("[%f]: ", info->short_vectors_norm[i]);
-      intPrintVector(dim, info->short_vectors[i]);
-    }
+    print_vectors(dim, info);
   }
 
   else if (mode == SHVEC_MODE_MINIMUM) {
