@@ -6,6 +6,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
+#include "Temp_Positivity.h"
 #include <algorithm>
 #include <string>
 #include <utility>
