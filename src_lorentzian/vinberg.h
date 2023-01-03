@@ -82,18 +82,10 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
     with y = x Inv(Pmat)   and   eV_img = eV Inv(Pmat)
     and so x = y Pmat
    */
-  //  std::cerr << "GramMatRed=\n";
-  //  WriteMatrix(std::cerr, RecLLL.GramMatRed);
-  //  std::cerr << "Pmat=\n";
-  //  WriteMatrix(std::cerr, RecLLL.Pmat);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyVector<T> eV_img = PmatInv_T.transpose() * eV;
   MyMatrix<T> Gprod = Pmat_T * GramMat * Pmat_T.transpose();
-  //  std::cerr << "GramMatRed=\n";
-  //  WriteMatrix(std::cerr, GramMatRed);
-  //  std::cerr << "Gprod=\n";
-  //  WriteMatrix(std::cerr, Gprod);
 
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
   T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
@@ -108,8 +100,6 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
       T norm_red = Vred.dot(GramMatRed * Vred);
       MyVector<T> Vtot = eV + UniversalVectorConversion<T, Tint>(V_x);
       T norm_tot = Vtot.dot(GramMat * Vtot);
-      //      std::cerr << "ComputeSphericalSolutions norm_red=" << norm_red <<
-      //      " norm_tot=" << norm_tot << " min=" << min << "\n";
       if (norm_red != norm_tot || norm_tot != min) {
         std::cerr << "different norms\n";
         throw TerminalException{1};
@@ -149,7 +139,6 @@ template <typename Tint> Tint En_Quantity(const MyMatrix<Tint> &M) {
 template <typename Tint>
 std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M) {
   Tint TheEn = En_Quantity(M);
-  //  std::cerr << "TheEn=" << TheEn << "\n";
   Tint limit = 2 * TheEn;
   std::vector<Tint> root_lengths;
   bool is_even = true;
@@ -160,16 +149,13 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M) {
     if (res != 0)
       is_even = false;
   }
-  //  std::cerr << "limit=" << limit << " is_even=" << is_even << "\n";
   auto is_correct = [&](Tint k) -> bool {
     if (is_even) {
       Tint res2 = ResInt(k, two);
       if (res2 != 0)
         return false;
     }
-    //    std::cerr << "k=" << k << "\n";
     Tint res = ResInt(limit, k);
-    //    std::cerr << "res=" << res << "\n";
     return res == 0;
   };
   //
@@ -302,15 +288,10 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   for (int j = 0; j < n - 1; j++)
     ListZer[j] = j + 1;
   MyMatrix<Tint> Morth = SelectColumn(eGCDinfo.Pmat, ListZer);
-  //  std::cerr << "Morth=\n";
-  //  WriteMatrix(std::cerr, Morth);
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T, Tint>(Morth);
   MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V_i);
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
-  //  std::cerr << "M2_tr=\n";
-  //  WriteMatrixGAP(std::cerr, M2_tr);
-  //  std::cerr << "Det(M2_tr)=" << DeterminantMat(M2_tr) << "\n";
   std::cerr << "Before GetIntegerPoints\n";
   std::vector<MyVector<Tint>> W_in = GetIntegerPoints(M2_tr);
   std::vector<MyVector<Tint>> W;
@@ -340,8 +321,6 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
   std::cerr << "eDet=" << eDet << "\n";
-  //  std::cerr << "Morth=\n";
-  //  WriteMatrix(std::cerr, Morth);
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
@@ -349,9 +328,6 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * Morth_T * GorthInv;
-  //  std::cerr << "GM_iGorth=\n";
-  //  WriteMatrix(std::cerr, GM_iGorth);
-  //  std::vector<Tint> root_lengths = Get_root_lengths(G);
   std::cerr << "s.root_lengths =";
   for (auto &eVal : root_lengths)
     std::cerr << " " << eVal;
@@ -425,9 +401,6 @@ private:
       Tint val = -Vtot.v0.dot(Vtot.G * V2);
       double k_d = sqrt(UniversalScalarConversion<double, Tint>(val));
       double val_d = UniversalScalarConversion<double, Tint>(val) / k_d;
-      //      std::cerr << "IterateRootDecompositions k=" << k << " val=" << val
-      //      << " k_d=" << k_d << " candidates.at(k)=" << candidates.at(k) << "
-      //      V2=" << V2 << "\n";
       if (!we_found) {
         we_found = true;
         minval_d = val_d;
@@ -450,12 +423,8 @@ public:
   std::pair<MyVector<Tint>, Tint> get_cand() {
     Tint k = get_k();
     size_t val = candidates[k];
-    //    std::cerr << "IterateRootDecomposition, k=" << k << " val=" << val <<
-    //    "\n";
     candidates[k] = val + 1;
     MyVector<Tint> V = cand_a(val);
-    //    std::cerr << "IterateRootDecomposition, cand_a(candidates[k])=" << V
-    //    << "\n";
     return {V, k};
   }
 };
@@ -473,9 +442,6 @@ template <typename T, typename Tint, typename Fins_root>
 void Solutioner_CVP(const DataMappingVinbergProblem<T, Tint> &data,
                     Fins_root f_ins_root) {
   size_t n_sol = 0;
-  //  std::cerr << "shift_u=" << StringVectorGAP(data.shift_u) << "\n";
-  //  std::cerr << "data.trans_u=";
-  //  WriteMatrixGAP(std::cerr, data.trans_u);
 
   auto f_ins = [&](const MyVector<Tint> &u) -> void {
     MyVector<Tint> x = data.shift_u + data.trans_u * u;
@@ -528,7 +494,6 @@ template <typename T, typename Tint>
 DataMappingVinbergProblem<T, Tint>
 Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
                 const Tint &k) {
-  //  std::cerr << "Get_DataMapping k=" << k << "\n";
   if (k == 1 || k == 2) { // No need for some complex linear algebra work,
                           // returning directly
     MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
@@ -554,7 +519,6 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
         Bmat(n - 1 + i, j) = 0;
     }
   }
-  //  std::cerr << "Calling SolutionIntMat with Bmat / m2_Ga\n";
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
     return {{}, {}, 0, {}, {}, false};
@@ -651,7 +615,6 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   std::vector<MyVector<Tint>> list_root;
   DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k);
   if (!data.is_feasible) {
-    //    std::cerr << "Conclude that no solution is feasible\n";
     return {};
   }
 #ifdef TIMINGS
@@ -667,14 +630,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     auto f_ins_root = [&](const MyVector<Tint> &V) -> void {
       Tint norm = V.dot(Vtot.G * V);
       MyVector<Tint> eDiff = V - a;
-      //      std::cerr << "SolutionIntMat with Morth / eDiff\n";
-      //      std::cerr << "Vtot.Morth=\n";
-      //      WriteMatrix(std::cerr, Vtot.Morth);
-      //      std::cerr << "eDiff=" << StringVectorGAP(eDiff) << "\n";
       std::optional<MyVector<Tint>> opt =
           SolutionIntMat(TransposedMat(Vtot.Morth), eDiff);
-      //      std::cerr << "Inserting a vector V=" << V << " norm=" << norm << "
-      //      k=" << k << "\n";
       if (norm != k) {
         std::cerr << "We should have norm = k\n";
         throw TerminalException{1};

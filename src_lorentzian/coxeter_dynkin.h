@@ -679,8 +679,6 @@ GetIrreducibleComponents(const MyMatrix<T> &M) {
 template <typename T>
 bool CheckDiagram(const MyMatrix<T> &M, DiagramSelector const &DS) {
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
-  //  std::cerr << "CheckDiagram M=\n";
-  //  WriteMatrix(std::cerr, M);
   std::vector<IrrCoxDyn<T>> l_cd;
   for (auto &eConn : LConn) {
     size_t dim_res = eConn.size();
@@ -2152,13 +2150,6 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   DS.OnlyLorentzianAdmissible = true;
   DS.OnlySpherical = only_spherical;
   //
-  //  std::cerr << "G=\n";
-  //  WriteMatrixGAP(std::cerr, G);
-  //  std::cerr << "\n";
-  //  std::cerr << "l_root=\n";
-  //  for (auto & e_root : l_root)
-  //    std::cerr << "e_root=" << StringVectorGAP(e_root) << "\n";
-
   std::pair<MyMatrix<T>, MyMatrix<T>> ep = ComputeCoxeterMatrix(G, l_root);
   const MyMatrix<T> &CoxMat = ep.first;
   const MyMatrix<T> &ScalMat = ep.second;
@@ -2236,38 +2227,27 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   };
   std::vector<Possible_Extension<T>> l_extensions;
   auto get_entry = [&](MyVector<T> const &e_vect, T const &e_norm) -> void {
-    //    std::cerr << "---------------- e_norm=" << e_norm << " e_vect=" <<
-    //    StringVectorGAP( e_vect) << "\n";
     MyVector<T> l_scal(n_root);
     for (int i = 0; i < n_root; i++) {
       T val = e_vect(i);
       T cos_square = get_cos_square(val);
       T scal_square = cos_square * CoxMat(i, i) * e_norm;
       std::optional<T> opt = UniversalSquareRoot(scal_square);
-      //      std::cerr << "i=" << i << " cos_square=" << cos_square << "
-      //      CoxMat(i,i)=" << CoxMat(i,i) << " e_norm=" << e_norm << "
-      //      scal_square=" << scal_square << "\n"; std::cerr << "i=" << i << "
-      //      scal_square=" << scal_square << "\n";
       if (!opt) {
-        //        std::cerr << "   Failed to match\n";
         return;
       }
       T scal = -*opt;
-      //      std::cerr << "     scal=" << scal << "\n";
       l_scal(i) = scal;
     }
 #ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
     std::cerr << "---------------- e_norm=" << e_norm
               << " e_vect=" << StringVectorGAP(e_vect) << "\n";
 #endif
-    //    std::cerr << "Scalar products found : l_scal = " <<
-    //    StringVectorGAP(l_scal) << "\n";
     /* So, we have computed l_scal(i) = alpha.dot.ui = u.dot.ui
        If u = sum wi u_i then w = G^{-1} l_scal
        eNorm = w.dot.w  is the Euclidean norm of u.
      */
     MyVector<T> w = ScalMatInv * l_scal;
-    //    std::cerr << "w = " << StringVectorGAP(w) << "\n";
     T eNorm = l_scal.dot(w);
     T res_norm = e_norm - eNorm;
 #ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
@@ -2292,8 +2272,6 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
         std::cerr << "The matrices should be equal\n";
         throw TerminalException{1};
       }
-      //      std::cerr << "Symbol of CoxMatExt=" <<
-      //      coxdyn_matrix_to_string(CoxMatExt) << "\n";
     }
 #endif
 #ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
