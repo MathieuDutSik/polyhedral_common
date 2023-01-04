@@ -24,7 +24,10 @@ int main(int argc, char *argv[]) {
     //
     std::string FileO = argv[2];
     MyMatrix<T> Mred = MatrixFromVectorFamily(l_vect_red);
-    WriteMatrixFile(FileO, Mred);
+    std::ofstream os(FileO);
+    os << "return ";
+    WriteMatrixGAP(os, Mred);
+    os << ";\n";
   } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
