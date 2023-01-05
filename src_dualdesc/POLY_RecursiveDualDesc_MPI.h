@@ -427,22 +427,37 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };
-  vectface vf = get_vectface();
-  int i_proc_ret = 0;
-  if (AllArr.bank_parallelization_method == "bank_mpi") {
-    if (i_rank < n_proc - 1) {
-      comm_local.barrier();
+
+  try {
+    vectface vf = get_vectface();
+    
+    int i_proc_ret = 0;
+    if (AllArr.bank_parallelization_method == "bank_mpi") {
       if (i_rank == i_proc_ret) {
+        os << "sending bank_mpi termination signal\n";
         comm.send(n_proc - 1, tag_mpi_bank_end, val_mpi_bank_end);
       }
+      if (i_rank == n_proc - 1) {
+        return;
+      }
+    }    
+
+    // output 
+    os << "We have vf\n";
+    vectface vf_tot = my_mpi_gather(comm_local, vf, i_proc_ret);
+    os << "We have vf_tot\n";
+    if (comm.rank() == i_proc_ret)
+      OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
+    os << "We have done our output\n";
+ 
+  } catch (RuntimeException const &e) {
+    int i_proc_ret = 0;
+    if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == i_proc_ret) {
+        os << "sending bank_mpi termination signal\n";
+        comm.send(n_proc - 1, tag_mpi_bank_end, val_mpi_bank_end);
     }
+    throw RuntimeException{1};      
   }
-  os << "We have vf\n";
-  vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
-  os << "We have vf_tot\n";
-  if (comm.rank() == i_proc_ret)
-    OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
-  os << "We have done our output\n";
 }
 
 // clang-format off
