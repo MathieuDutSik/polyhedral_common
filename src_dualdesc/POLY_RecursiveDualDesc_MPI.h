@@ -387,6 +387,18 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
+  if (AllArr.bank_parallelization_method == "bank_mpi" && n_proc < 2) {
+    std::cerr << "For the bank_mpi we need at least 2 nodes. n_proc=" << n_proc << "\n";
+    throw TerminalException{1};
+  }
+  int proc_bank = n_proc - 1;
+  int i_proc_ret = 0;
+  auto msg_term_bank=[&]() -> void {
+    if (i_rank == i_proc_ret) {
+      os << "sending bank_mpi termination signal\n";
+      comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
+    }
+  };
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
@@ -410,7 +422,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     if (AllArr.bank_parallelization_method == "bank_mpi") {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
-      if (i_rank < n_proc - 1) {
+      if (i_rank < proc_bank) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                           Tgroup, Tidx_value>(
             comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
@@ -420,8 +432,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
         return vectface(n_rows);
       }
     }
-    std::cerr
-        << "Failed to find a matching entry for bank_parallelization_method\n";
+    std::cerr << "No match for bank_parallelization_method\n";
     std::cerr << "AllArr.bank_parallelization_method="
               << AllArr.bank_parallelization_method << "\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
@@ -430,33 +441,23 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
 
   try {
     vectface vf = get_vectface();
-    
-    int i_proc_ret = 0;
     if (AllArr.bank_parallelization_method == "bank_mpi") {
-      if (i_rank == i_proc_ret) {
-        os << "sending bank_mpi termination signal\n";
-        comm.send(n_proc - 1, tag_mpi_bank_end, val_mpi_bank_end);
-      }
-      if (i_rank == n_proc - 1) {
+      msg_term_bank();
+      if (i_rank == proc_bank) {
         return;
       }
-    }    
-
-    // output 
+    }
+    // output
     os << "We have vf\n";
     vectface vf_tot = my_mpi_gather(comm_local, vf, i_proc_ret);
     os << "We have vf_tot\n";
-    if (comm.rank() == i_proc_ret)
+    if (i_rank == i_proc_ret)
       OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
     os << "We have done our output\n";
- 
   } catch (RuntimeException const &e) {
-    int i_proc_ret = 0;
-    if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == i_proc_ret) {
-        os << "sending bank_mpi termination signal\n";
-        comm.send(n_proc - 1, tag_mpi_bank_end, val_mpi_bank_end);
-    }
-    throw RuntimeException{1};      
+    if (AllArr.bank_parallelization_method == "bank_mpi")
+      msg_term_bank();
+    throw RuntimeException{1};
   }
 }
 
