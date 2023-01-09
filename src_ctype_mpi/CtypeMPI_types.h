@@ -1143,7 +1143,9 @@ template <typename T> struct less<TypeCtypeExch<T>> {
     return false;
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 namespace boost::serialization {
 
@@ -1178,7 +1180,10 @@ inline void serialize(Archive &ar, PairExch<T> &ePair,
   ar &make_nvp("index", ePair.eIndex);
 }
 
-} // namespace boost::serialization
+// clang-format off
+}  // namespace boost::serialization
+// clang-format on
+
 
 namespace std {
 template <typename Tint> struct hash<TypeCtypeExch<Tint>> {
@@ -1209,7 +1214,9 @@ template <typename Tint> struct hash<TypeCtypeAdjExch<Tint>> {
     return h1;
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 template <typename T>
 TypeCtypeExch<T> ParseStringToCtypeExch(std::string const &str) {
@@ -1242,4 +1249,6 @@ TypeIndex ParseStringToTypeIndex(std::string const &str) {
   return {iProc, idxMatrixF, iAdj};
 }
 
-#endif // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+// clang-format off
+#endif  // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
+// clang-format on

@@ -88,8 +88,9 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
   ar &make_nvp("nbundone", erec.nbUndone);
   ar &make_nvp("setundone", erec.eSetUndone);
 }
-
-} // namespace boost::serialization
+// clang-format off
+}  // namespace boost::serialization
+// clang-format on
 
 template <typename TbasicBank> vectface ComputeSetUndone(TbasicBank const &bb) {
   vectface vf_undone(bb.nbRow);
@@ -210,12 +211,14 @@ bool EvaluationConnectednessCriterion_Kernel(
     }
     if (fint.count() > f_v.size()) {
       os << "  Exit 1: linear programming check\n";
-      return true; // This is the linear programming check, See DD 2016.
+      // This is the linear programming check, See DD 2016.
+      return true;
     }
     size_t n_cols_rel = n_cols - x.first;
     if (list_vert.size() <= n_cols_rel - 2) {
       os << "  Exit 2: pure Balinski case\n";
-      return true; // This is the pure Balinski case
+      // This is the pure Balinski case
+      return true;
     }
     if (rank_vertset(list_vert) <= n_cols_rel - 2) {
       os << "  |list_vert|=" << list_vert.size()
@@ -223,8 +226,9 @@ bool EvaluationConnectednessCriterion_Kernel(
          << " n_cols_rel=" << n_cols_rel << "\n";
       os << "  Exit 3: rank computation, a little subtler Balinski "
             "computation\n";
-      return true; // This is the rank computation. A little advanced Balinski,
-                   // see the Balinski paper and adapt the proof.
+      // This is the rank computation. A little advanced Balinski,
+      // see the Balinski paper and adapt the proof.
+      return true;
     }
     os << "  Exit 4: nothing works, exiting\n";
     return false;
@@ -324,4 +328,6 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
                                                     vf_undone, os);
 }
 
-#endif
+// clang-format off
+#endif  // SRC_DUALDESC_BALINSKI_BASIC_H_
+// clang-format on
