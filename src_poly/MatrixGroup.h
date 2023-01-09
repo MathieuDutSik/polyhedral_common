@@ -301,7 +301,8 @@ ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
     ListV.push_back(V);
     MapV[V] = i;
   }
-  return {int(EXT.cols()), EXT, std::move(ListV), std::move(MapV)};
+  int n_col = EXT.cols();
+  return {n_col, EXT, std::move(ListV), std::move(MapV)};
 }
 
 template <typename T, typename Telt>
@@ -316,7 +317,8 @@ ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
     ListV.push_back(V);
     MapV[V] = i;
   }
-  return {int(EXT.cols()), G, EXT, Visotrop, std::move(ListV), std::move(MapV)};
+  int n_col = EXT.cols();
+  return {n_col, G, EXT, Visotrop, std::move(ListV), std::move(MapV)};
 }
 
 template <typename T, typename Telt, typename Thelper>
@@ -769,7 +771,8 @@ DirectSpaceOrbit_Equivalence(std::vector<MyMatrix<T>> const &ListMatrGen,
                              Fterminate const &f_terminate) {
   int n = eSpace1.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>; // Space , Repr
+  // Here Tpair is <Space,Repr>
+  using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
   std::vector<Tpair> ListPair;
   ListPair.push_back({eSpace1, IdentityMat<T>(n)});
   if (f_terminate(eSpace1))
@@ -825,7 +828,8 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
                             Fterminate const &f_terminate) {
   int n = eSpace.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>; // Space , Repr
+  // Tpair is a pair <Space, Repr>
+  using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
   std::vector<Tpair> ListPair;
   ListPair.push_back({eSpace, IdentityMat<T>(n)});
   if (f_terminate(eSpace))
@@ -977,7 +981,6 @@ GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
   MyMatrix<T> eProd1 = MatrixFromVectorFamily(Qinv * Visotrop_red);
   MyMatrix<T> PosDefSpace = NullspaceMat(eProd1);
   MyMatrix<T> eProd2 = helper.G * PosDefSpace.transpose();
-  ;
   MyMatrix<T> Sign11space = NullspaceMat(eProd2);
   MyMatrix<T> G11 = Sign11space * helper.G * Sign11space.transpose();
   auto get_second_isotropic = [&]() -> MyVector<T> {
@@ -1132,7 +1135,8 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyVector<T> const &a, Thelper const &helper) {
   using Telt = typename Tgroup::Telt;
   int n = TheSpace.rows();
-  size_t n_limit = 60000; // The critical number for the computation
+  // The critical number for the computation
+  size_t n_limit = 60000;
   auto test_adequateness =
       [&](MyVector<T> const &x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);

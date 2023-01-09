@@ -209,7 +209,7 @@ void f_print(std::vector<int> const &V, std::string const &estr) {
   for (auto &val : V)
     std::cerr << " " << val;
   std::cerr << "\n";
-};
+}
 
 template <typename Tgroup>
 std::vector<int> OrbitIntersection(Tgroup const &TheGRP,

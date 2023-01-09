@@ -638,9 +638,9 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       while (true) {
         bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
         MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
-        if (IsCompleteSpann)
+        if (IsCompleteSpann) {
           WaitStuck(1, TheId);
-        else {
+        } else {
           for (int iThr = 0; iThr < NbThr; iThr++)
             SpannNewThread();
           MProc.GetO(TheId) << "Before TreatDatabase\n";

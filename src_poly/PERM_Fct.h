@@ -366,7 +366,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 #ifdef TIMINGS
         std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
-        return {}; // We fail because the image is not integral.
+        // We fail because the image is not integral.
+        return {};
       }
       VectorContain(0, i_col) = rec_eSum2.second;
     }
@@ -375,7 +376,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 #ifdef TIMINGS
       std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
-      return {}; // We fail because the image does not belong to EXT2
+      // We fail because the image does not belong to EXT2
+      return {};
     }
     V[i_row] = epair.second;
     f[epair.second] = 1;
