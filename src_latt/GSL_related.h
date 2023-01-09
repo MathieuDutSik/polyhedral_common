@@ -18,16 +18,12 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
   int dimension;
   int i, j, iColSel, ScalarMult;
   double eEigSel, TheEig;
-  int *CURRENT;
   T eVal, eSum;
   dimension = eMat.rows();
   eigenvalues = gsl_vector_alloc(dimension);
   Gram = gsl_matrix_alloc(dimension, dimension);
   EigenVectors = gsl_matrix_alloc(dimension, dimension);
   workspace = gsl_eigen_symmv_alloc(dimension);
-  if ((CURRENT = (int *)malloc(dimension * sizeof(int))) == 0) {
-    throw TerminalException{1};
-  }
   for (i = 0; i < dimension; i++)
     for (j = 0; j < dimension; j++) {
       eVal = eMat(i, j);
@@ -52,22 +48,22 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
     gsl_matrix_get_col(FundamentalLevel, EigenVectors, iColSel);
     ScalarMult = 1;
     while (true) {
-      for (i = 0; i < dimension; i++)
-        CURRENT[i] = (int)rint((double)gsl_vector_get(FundamentalLevel, i) *
-                               ((double)ScalarMult));
+      for (i = 0; i < dimension; i++) {
+        double f1 = static_cast<double>(gsl_vector_get(FundamentalLevel, i));
+        double f2 = static_cast<double>(ScalarMult);
+        eVec(i) = static_cast<int>(rint(f1 * f2));
+      }
       eSum = 0;
       for (i = 0; i < dimension; i++)
         for (j = 0; j < dimension; j++) {
           eVal = eMat(i, j);
-          eSum = eSum + eVal * CURRENT[i] * CURRENT[j];
+          eSum = eSum + eVal * eVec(i) * eVec(j);
         }
       if (eSum < 0)
         break;
       ScalarMult++;
     }
     eVec->n = dimension;
-    for (i = 0; i < dimension; i++)
-      TVec_Assign(eVec, i, CURRENT[i]);
     gsl_vector_free(FundamentalLevel);
   } else {
     std::cerr << "Matrix does seem positive semidefinite in double precision\n";
@@ -78,7 +74,6 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
   gsl_matrix_free(Gram);
   gsl_matrix_free(EigenVectors);
   gsl_eigen_symmv_free(workspace);
-  free(CURRENT);
   return eVec;
 }
 

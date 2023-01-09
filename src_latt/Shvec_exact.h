@@ -19,12 +19,12 @@ const int TEMP_SHVEC_MODE_BOUND = 0;
 const int TEMP_SHVEC_MODE_SHORTEST_VECTORS = 1;
 const int TEMP_SHVEC_MODE_MINIMUM = 2;
 const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
-const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4; // Find all the vectors at specific
+const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4;
 const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
 const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
 const int STOP_COMPUTATION = 666;
 const int NORMAL_TERMINATION_COMPUTATION = 555;
-} // namespace TempShvec_globals
+}
 
 template <typename T> struct T_shvec_request {
   int dim;
@@ -107,8 +107,7 @@ ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
   return {std::move(short_vectors), info.minimum};
 }
 
-// We return
-// floor(sqrt(A) + epsilon + B)
+// We return floor(sqrt(A) + epsilon + B)
 template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
 #ifdef CHECK_BASIC_CONSISTENCY
@@ -273,7 +272,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   const MyVector<T> &C = request.coset;
   bool needs_new_bound = true;
   i = dim - 1;
-  if (bound < 0) { // Nothing in that case
+  if (bound < 0) {
     return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
   }
   Trem(i) = bound;
@@ -286,11 +285,8 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
 #endif
   T eQuot, eSum, hVal, eNorm;
   while (true) {
-    //    std::cerr << "i=" << i << " Upper=" << Upper << " x=" << x << "\n";
     if (needs_new_bound) {
       eQuot = Trem(i) / q(i, i);
-      //      std::cerr << "Trem(i)=" << Trem(i) << " q(i,i)=" << q(i,i) <<
-      //      "\n";
       eSum = -U(i) - C(i);
       f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
       needs_new_bound = false;

@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> TheMat = ReadMatrix<T>(INmat);
     // computing the kernel
     DiagSymMat<T> eDiag = DiagonalizeSymmetricMatrix(TheMat);
-    if (eDiag.nbMinus > 0)
+    if (eDiag.nbMinus > 0) {
       std::cout << "The matrix is NOT positive semidefinite\n";
-    else {
+    } else {
       if (eDiag.nbZero > 0)
         std::cout << "The matrix is positive semidefinite\n";
       else

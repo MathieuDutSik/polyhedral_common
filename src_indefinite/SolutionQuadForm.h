@@ -72,11 +72,6 @@ SearchSolutionEvenQuadForm(const MyMatrix<T> &A, const MyVector<T> &w,
     
     
   };
-       
-         
-  while(true) {
-    if 
-  }
 }
 
 // clang-format off

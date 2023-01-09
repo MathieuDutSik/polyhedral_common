@@ -390,9 +390,9 @@ EnumerationDelaunayPolytopes(MainProcessor &MProc, int const &TheId,
   while (true) {
     bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
     MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
-    if (IsCompleteSpann)
+    if (IsCompleteSpann) {
       WaitComplete(TheId);
-    else {
+    } else {
       for (int iThr = 0; iThr < NbThr; iThr++) {
         int NewId = MProc.MPU_GetId();
         MProc.GetO(TheId) << "NewId=" << NewId << "\n";
