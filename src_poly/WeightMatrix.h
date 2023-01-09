@@ -980,9 +980,9 @@ GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #endif
 
 template <typename T, typename Tgr, typename Tidx_value>
-inline typename std::enable_if<!is_functional_graph_class<Tgr>::value,
-                               Tgr>::type
-GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
+inline
+    typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
+    GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
