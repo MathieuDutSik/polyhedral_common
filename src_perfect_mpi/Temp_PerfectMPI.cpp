@@ -167,12 +167,11 @@ int main() {
   };
   auto GetLowestIncidenceUndone =
       [&]() -> boost::optional<std::pair<TypePerfectExch<Tint>, int>> {
-    for (int iCaseIncidence = 0; iCaseIncidence < nbCaseIncidence;
-         iCaseIncidence++) {
-      int incd = iCaseIncidence + MinIncidenceRealized;
+    for (int iCase = 0; iCase < nbCaseIncidence; iCase++) {
+      int incd = iCase + MinIncidenceRealized;
       if (incd <= MaxIncidenceTreating) {
-        auto it1 = ListCasesNotDone[iCaseIncidence].begin();
-        if (it1 != ListCasesNotDone[iCaseIncidence].end()) {
+        auto it1 = ListCasesNotDone[iCase].begin();
+        if (it1 != ListCasesNotDone[iCase].end()) {
           std::pair<TypePerfectExch<Tint>, int> ePair = {it1->first,
                                                          it1->second.idxMatrix};
           return boost::optional<std::pair<TypePerfectExch<Tint>, int>>(ePair);
@@ -246,9 +245,9 @@ int main() {
             << "\n";
   for (int iCase = 0; iCase < nbCaseIncidence; iCase++) {
     int incd = iCase + MinIncidenceRealized;
-    std::cerr << "iCaseIncidence=" << iCaseIncidence << " incd=" << incd
+    std::cerr << "iCase=" << iCase << " incd=" << incd
               << " |ListCasesNotDone[pos]|="
-              << ListCasesNotDone[iCaseIncidence].size() << "\n";
+              << ListCasesNotDone[iCase].size() << "\n";
   }
   //
   // The main loop itself.
