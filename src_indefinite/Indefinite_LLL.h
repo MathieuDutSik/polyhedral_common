@@ -14,8 +14,8 @@
 // #define DEBUG_INDEFINITE_LLL
 
 template <typename T> struct ResultGramSchmidt_Indefinite {
-  bool success; // true means we have a basis. False that we have an isotropic
-                // vector
+  // true means we have a basis. False that we have an isotropic vector
+  bool success;
   std::vector<MyVector<T>> Bstar;
   std::vector<T> Bstar_norms;
   MyMatrix<T> mu;
@@ -65,8 +65,9 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
 }
 
 template <typename T, typename Tint> struct ResultIndefiniteLLL {
-  bool success; // true if we obtained the reduced matrix. false if we found an
-                // isotropic vector
+  // true if we obtained the reduced matrix. false if we found an
+  // isotropic vector
+  bool success;
   MyMatrix<Tint> B;
   MyMatrix<T> Mred;
   MyVector<T> Xisotrop;
@@ -77,7 +78,8 @@ template <typename T, typename Tint> struct ResultIndefiniteLLL {
 template <typename T, typename Tint>
 ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   int n = M.rows();
-  T c = T(7) / T(8); // The c constant of the LLL algorithm
+  // The c constant of the LLL algorithm
+  T c = T(7) / T(8);
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   auto get_matrix = [&]() -> MyMatrix<T> {
     MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
@@ -105,15 +107,8 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
         T val = ResGS.mu(i, j);
-        //        double val_d = UniversalScalarConversion<double,T>(val);
         Tint q = UniversalNearestScalarInteger<Tint, T>(val);
-        //        std::cerr << " ResGS.mu=" << ResGS.mu(i,j) << " val_d=" <<
-        //        val_d << " q=" << q << "\n"; std::cerr << "i=" << i << "
-        //        B.row(i)=" << GetMatrixRow(B, i) << " B.row(j)=" <<
-        //        GetMatrixRow(B,j) << "\n";
         B.row(i) -= q * B.row(j);
-        //        std::cerr << "   q=" << q << " B.row(i)=" << GetMatrixRow(B,i)
-        //        << "\n";
       }
     }
     T mu = ResGS.mu(k, k - 1);
@@ -185,8 +180,6 @@ ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
   size_t limit_iter = 2 * n;
   while (true) {
     MyMatrix<Tint> RandUnit = get_random_int_matrix();
-    //    std::cerr << "RandUnit=\n";
-    //    WriteMatrix(std::cerr, RandUnit);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T, Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
@@ -197,8 +190,6 @@ ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
       return {std::move(B), std::move(Mwork)};
     }
     T norm = get_norm(eRes.Mred);
-    //    std::cerr << "norm=" << norm << " norm_work=" << norm_work
-    //              << " iter_no_improv=" << iter_no_improv << "\n";
     if (norm >= norm_work) {
       iter_no_improv++;
       if (limit_iter == iter_no_improv)
@@ -223,16 +214,12 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
   for (Tidx i_row = 0; i_row < n; i_row++)
     for (Tidx i_col = 0; i_col < n; i_col++)
       Mabs(i_row, i_col) = T_abs(M(i_row, i_col));
-  //  std::cerr << "M=" << M << "\n";
   WeightMatrix<true, T, Tidx_value> WMat =
       WeightedMatrixFromMyMatrix<true, T, Tidx_value>(Mabs);
   WMat.ReorderingSetWeight();
   std::vector<Tidx> CanonicOrd =
       GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat)
           .first;
-  //  std::cerr << "We have CanonicOrd\n";
-  //  for (Tidx i=0; i<n; i++)
-  //    std::cerr << "i=" << i << " val=" << CanonicOrd[i] << "\n";
   MyMatrix<T> Mreord(n, n);
   MyMatrix<T> MreordAbs(n, n);
   for (Tidx i_row = 0; i_row < n; i_row++) {
@@ -243,16 +230,11 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
       MreordAbs(i_row, i_col) = T_abs(M(j_row, j_col));
     }
   }
-  //  std::cerr << "Mreord=\n";
-  //  WriteMatrix(std::cerr, Mreord);
-  //  std::cerr << "MreordAbs=\n";
-  //  WriteMatrix(std::cerr, MreordAbs);
   MyMatrix<Tint> Mtrans1 = ZeroMatrix<Tint>(n, n);
   for (Tidx i_row = 0; i_row < n; i_row++) {
     Tidx j_row = CanonicOrd[i_row];
     Mtrans1(i_row, j_row) = 1;
   }
-  //  std::cerr << "We have Mtrans1, Mreord\n";
   MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T, Tint>(Mtrans1);
   MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
@@ -273,14 +255,7 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
   }
   MyMatrix<Tint> Mtrans2 = IdentityMat<Tint>(n);
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(GR);
-  //  std::cerr << "|LConn|=" << LConn.size() << "\n";
   for (auto &eConn : LConn) {
-    /*
-    std::cerr << "eConn =";
-    for (auto & eVal : eConn)
-      std::cerr << " " << eVal;
-    std::cerr << "\n";
-    */
     size_t len = eConn.size();
     std::vector<size_t> Status(len, 0);
     std::vector<size_t> eConnRev(n, std::numeric_limits<size_t>::max());
@@ -311,8 +286,6 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
       }
     }
   }
-  //  std::cerr << "We have Mtrans2=\n";
-  //  WriteMatrix(std::cerr, Mtrans2);
   MyMatrix<Tint> eP = Mtrans2 * Mtrans1;
   MyMatrix<T> eP_T = UniversalMatrixConversion<T, Tint>(eP);
   MyMatrix<T> M_red = eP_T * M * eP_T.transpose();
@@ -347,4 +320,6 @@ ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
   }
 }
 
-#endif //  SRC_INDEFINITE_INDEFINITE_LLL_H_
+// clang-format off
+#endif  //  SRC_INDEFINITE_INDEFINITE_LLL_H_
+// clang-format on
