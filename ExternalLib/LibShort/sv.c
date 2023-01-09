@@ -18,7 +18,6 @@ void die_sv(char *last_words) {
   exit(EXIT_FAILURE);
 }
 
-
 void print_vectors(int dim, shvec_info info) {
   int i;
   printf("%d\n", info->short_vectors_number);
@@ -27,7 +26,6 @@ void print_vectors(int dim, shvec_info info) {
     intPrintVector(dim, info->short_vectors[i]);
   }
 }
-
 
 int main(int argc, char *argv[]) {
   int check, gram, i, j, mode, number, dim, coset;

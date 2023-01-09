@@ -599,8 +599,7 @@ long lrs_read_dat(lrs_dat *Q, int argc, char *argv[]) {
       c = name[0];
       while (c != EOF && c != '\n')
         c = fgetc(lrs_ifp);
-    }
-    else if (strcmp(name, "H-representation") == 0)
+    } else if (strcmp(name, "H-representation") == 0)
       Q->hull = FALSE;
     else if ((strcmp(name, "hull") == 0) ||
              (strcmp(name, "V-representation") == 0))
@@ -795,7 +794,7 @@ long lrs_read_dic(lrs_dic *P, lrs_dat *Q)
                   Q->count[0], Q->count[2], P->depth);
         } else {
           if (fscanf(lrs_ifp, "%ld %ld %ld %ld", &Q->count[1], &Q->count[0],
-                   &Q->count[2], &P->depth) == EOF) {
+                     &Q->count[2], &P->depth) == EOF) {
             fprintf(lrs_ofp, "\nParse error");
             return FALSE;
           }

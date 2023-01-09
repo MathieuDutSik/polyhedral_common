@@ -383,17 +383,18 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<Tint> AllArr =
-    Read_AllStandardHeuristicSerial<T,Tint>(eFull, EXTred, os);
+      Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, os);
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
   if (AllArr.bank_parallelization_method == "bank_mpi" && n_proc < 2) {
-    std::cerr << "For the bank_mpi we need at least 2 nodes. n_proc=" << n_proc << "\n";
+    std::cerr << "For the bank_mpi we need at least 2 nodes. n_proc=" << n_proc
+              << "\n";
     throw TerminalException{1};
   }
   int proc_bank = n_proc - 1;
   int i_proc_ret = 0;
-  auto msg_term_bank=[&]() -> void {
+  auto msg_term_bank = [&]() -> void {
     if (i_rank == i_proc_ret) {
       os << "sending bank_mpi termination signal\n";
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
@@ -402,7 +403,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
+  std::map<std::string, Tint> TheMap =
+      ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {

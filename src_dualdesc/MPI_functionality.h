@@ -9,10 +9,10 @@
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
-#include <string>
-#include <vector>
-#include <utility>
 #include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 /*
   For the vector, simple syntactic sugar
@@ -96,8 +96,7 @@ MyMatrix<T> MergeRows(int const &n_col, std::vector<int> const &l_n_rows,
   return Mret;
 }
 
-template <typename T>
-std::vector<T> MatrixRowsAsVector(MyMatrix<T> const &M) {
+template <typename T> std::vector<T> MatrixRowsAsVector(MyMatrix<T> const &M) {
   int n_rows = M.rows();
   int n_cols = M.cols();
   std::vector<T> V(n_rows * n_cols);
@@ -110,7 +109,6 @@ std::vector<T> MatrixRowsAsVector(MyMatrix<T> const &M) {
   }
   return V;
 }
-
 
 template <typename T>
 MyMatrix<T> my_mpi_gather(boost::mpi::communicator &comm, MyMatrix<T> const &M,

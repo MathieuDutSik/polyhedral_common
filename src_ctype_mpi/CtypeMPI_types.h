@@ -46,7 +46,9 @@ template <typename T> MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const &M) {
   return Mret;
 }
 
-template <typename T> struct TypeCtypeExch { MyMatrix<T> eMat; };
+template <typename T> struct TypeCtypeExch {
+  MyMatrix<T> eMat;
+};
 
 template <typename T>
 void PairExch_to_vectorchar(TypeCtypeExch<T> const &eCtype, int const &nbRow,
@@ -289,9 +291,9 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
   Face ListIchange(n_rows);
   for (auto &e_triple : TheInfo) {
 #ifdef PRINT_FLIP
-    std::cerr << "e_triple=" << static_cast<int>(e_triple.i)
-              << " , " << static_cast<int>(e_triple.j)
-              << " , " << static_cast<int>(e_triple.k) << "\n";
+    std::cerr << "e_triple=" << static_cast<int>(e_triple.i) << " , "
+              << static_cast<int>(e_triple.j) << " , "
+              << static_cast<int>(e_triple.k) << "\n";
 #endif
     ListIchange[e_triple.i] = 1;
   }
@@ -424,7 +426,8 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
   for (int8_t i = 0; i < n_edge; i++)
     for (int8_t j = i + 1; j < n_edge; j++) {
 #ifdef PRINT_TRIPLE
-      std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j) << "\n";
+      std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
+                << "\n";
 #endif
       MyVector<T> eDiff(n_cols);
       for (int8_t i_col = 0; i_col < n_cols; i_col++)
@@ -589,9 +592,8 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
       std::cerr << " " << kv.first(i);
     std::cerr << " LSet =";
     for (auto &et : kv.second)
-      std::cerr << " {" << static_cast<int>(et.i)
-                << "," << static_cast<int>(et.j)
-                << "," << static_cast<int>(et.k)
+      std::cerr << " {" << static_cast<int>(et.i) << ","
+                << static_cast<int>(et.j) << "," << static_cast<int>(et.k)
                 << "}";
     std::cerr << "\n";
     j_ineq++;
@@ -606,7 +608,9 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
   }
   for (int i_edge = 0; i_edge < n_edge; i_edge++) {
     for (int j_edge = 0; j_edge < n_edge; j_edge++)
-      std::cerr << " " << static_cast<int>(PairTriple.second[i_edge * n_edge + j_edge]);
+      std::cerr << " "
+                << static_cast<int>(
+                       PairTriple.second[i_edge * n_edge + j_edge]);
     std::cerr << "\n";
   }
   int nb_triple = PairTriple.first.size() / 3;
@@ -618,9 +622,8 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "nb_triple=" << nb_triple << "\n";
   for (int i_triple = 0; i_triple < nb_triple; i_triple++) {
     triple et = PairTriple.first[3 * i_triple];
-    std::cerr << "et=" << static_cast<int>(et.i)
-              << " " << static_cast<int>(et.j)
-              << " " << static_cast<int>(et.k)
+    std::cerr << "et=" << static_cast<int>(et.i) << " "
+              << static_cast<int>(et.j) << " " << static_cast<int>(et.k)
               << "\n";
   }
 #endif
@@ -636,13 +639,15 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_ADJ
   for (int i_edge = 0; i_edge < n_edgered; i_edge++) {
     for (int j_edge = 0; j_edge < n_edgered; j_edge++)
-      std::cerr << " " << static_cast<int>(PairTriple.second[i_edge * n_edgered + j_edge]);
+      std::cerr << " "
+                << static_cast<int>(
+                       PairTriple.second[i_edge * n_edgered + j_edge]);
     std::cerr << "\n";
   }
 #endif
-  //#define PRINT_GET_ADJ_O
-  // We apply here the 3 dimensional criterion for feasibility of C-type
-  // switches
+  // #define PRINT_GET_ADJ_O
+  //  We apply here the 3 dimensional criterion for feasibility of C-type
+  //  switches
   auto TestApplicabilityCriterion_with_e = [&](triple const &e_triple,
                                                int8_t const &e) -> bool {
 #ifdef PRINT_GET_ADJ
@@ -652,8 +657,9 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
     int8_t j = e_triple.j / 2;
     int8_t k = e_triple.k / 2;
 #ifdef PRINT_GET_ADJ_O
-    std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
-              << " e=" << static_cast<int>(e) << "\n";
+    std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
+              << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e)
+              << "\n";
 #endif
     //
     // testing e
@@ -712,11 +718,12 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
       int8_t k = e_triple.k;
 #ifdef PRINT_GET_ADJ
       std::cerr << "FOUND i=" << static_cast<int>(i)
-                << " j=" << static_cast<int>(j)
-                << " k=" << static_cast<int>(k)
+                << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
                 << "\n";
-      std::cerr << "ENT1 = " << static_cast<int>(j) << " " << static_cast<int>(k) << "\n";
-      std::cerr << "ENT2 = " << static_cast<int>(i) << " " << static_cast<int>(j) << "\n";
+      std::cerr << "ENT1 = " << static_cast<int>(j) << " "
+                << static_cast<int>(k) << "\n";
+      std::cerr << "ENT2 = " << static_cast<int>(i) << " "
+                << static_cast<int>(j) << "\n";
 #endif
       ListResultCriterion[j * n_edge + k] = 1;
       ListResultCriterion[i * n_edge + j] = 1;
@@ -726,8 +733,8 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
       [&](std::vector<triple> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_ADJ
-      std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " " << static_cast<int>(e_triple.j)
-                << "\n";
+      std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
+                << static_cast<int>(e_triple.j) << "\n";
 #endif
       if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
         return false;
@@ -927,7 +934,9 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_STRUCTINFO
   for (int i_edge = 0; i_edge < n_edgered; i_edge++) {
     for (int j_edge = 0; j_edge < n_edgered; j_edge++)
-      std::cerr << " " << static_cast<int>(PairTriple.second[i_edge * n_edgered + j_edge]);
+      std::cerr << " "
+                << static_cast<int>(
+                       PairTriple.second[i_edge * n_edgered + j_edge]);
     std::cerr << "\n";
   }
 #endif
@@ -984,11 +993,12 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
       int8_t k = e_triple.k;
 #ifdef PRINT_GET_STRUCTINFO
       std::cerr << "FOUND i=" << static_cast<int>(i)
-                << " j=" << static_cast<int>(j)
-                << " k=" << static_cast<int>(k)
+                << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
                 << "\n";
-      std::cerr << "ENT1 = " << static_cast<int>(j) << " " << static_cast<int>(k) << "\n";
-      std::cerr << "ENT2 = " << static_cast<int>(i) << " " << static_cast<int>(j) << "\n";
+      std::cerr << "ENT1 = " << static_cast<int>(j) << " "
+                << static_cast<int>(k) << "\n";
+      std::cerr << "ENT2 = " << static_cast<int>(i) << " "
+                << static_cast<int>(j) << "\n";
 #endif
       ListResultCriterion[j * n_edge + k] = 1;
       ListResultCriterion[i * n_edge + j] = 1;
@@ -998,8 +1008,8 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
       [&](std::vector<triple> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_STRUCTINFO
-      std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " " << static_cast<int>(e_triple.j)
-                << "\n";
+      std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
+                << static_cast<int>(e_triple.j) << "\n";
 #endif
       if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
         return false;
