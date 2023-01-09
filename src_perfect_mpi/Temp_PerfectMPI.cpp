@@ -244,9 +244,8 @@ int main() {
   std::cerr << "Reading finished, we have |ListCasesDone|="
             << ListCasesDone.size() << " nbCaseNotDone=" << nbCaseNotDone
             << "\n";
-  for (int iCaseIncidence = 0; iCaseIncidence < nbCaseIncidence;
-       iCaseIncidence++) {
-    int incd = iCaseIncidence + MinIncidenceRealized;
+  for (int iCase = 0; iCase < nbCaseIncidence; iCase++) {
+    int incd = iCase + MinIncidenceRealized;
     std::cerr << "iCaseIncidence=" << iCaseIncidence << " incd=" << incd
               << " |ListCasesNotDone[pos]|="
               << ListCasesNotDone[iCaseIncidence].size() << "\n";
@@ -270,7 +269,8 @@ int main() {
                 << " |ListMatrixUnsent|=" << ListMatrixUnsent.size()
                 << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
                 << "\n";
-      if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
+      int nMatrixUnsent = ListMatrixUnsent.size();
+      if (nMatrixUnsent < MaxStoredUnsentMatrices) {
         boost::optional<std::pair<TypePerfectExch<Tint>, int>> eReq =
             GetLowestIncidenceUndone();
         if (eReq) {

@@ -20,14 +20,15 @@ int main() {
   for (int i = 0; i < n; i++)
     for (int j = i; j < n; j++) {
       int val = 1 + i * j + i * i + j;
-      A(i, j) = double(val);
-      A(j, i) = double(val);
+      double val_d = static_cast<double>(val);
+      A(i, j) = val_d;
+      A(j, i) = val_d;
     }
   //
   std::vector<dual2nd> v;
   for (int i = 0; i < n; i++) {
     int val = 10 + i;
-    dual2nd val_d = double(val);
+    dual2nd val_d = static_cast<double>(val);
     v.push_back(val_d);
     double val_dd = val_d.val.val;
     std::cerr << "i=" << i << " val=" << val << " val_dd=" << val_dd << "\n";

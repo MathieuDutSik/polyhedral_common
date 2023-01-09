@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef INCLUDE_GENERIC_POLARIZATION
-#define INCLUDE_GENERIC_POLARIZATION
+#ifndef SRC_POLARIZATION_GENERIC_POLARIZATION_H_
+#define SRC_POLARIZATION_GENERIC_POLARIZATION_H_
 
 #include "COMB_Combinatorics.h"
 #include "Temp_common.h"
@@ -39,7 +39,7 @@ dual2nd Compute_Polarization(int const &n, std::vector<int> const &Ranges,
     //
     dual2nd Aval = 0;
     for (int idx = 0; idx < TotDim; idx++) {
-      double eFactor = double(ListFactor[idx]);
+      double eFactor = static_cast<double>(ListFactor[idx]);
       int i = ListI[idx];
       int j = ListJ[idx];
       Aval += eFactor * (cA[i] - xVect[i]) * cA[n + idx] * (cA[j] - xVect[j]);
@@ -89,7 +89,7 @@ dual2nd Senergy(int const &n, std::vector<int> const &Ranges,
       //
       dual2nd Aval = 0;
       for (int idx = 0; idx < TotDim; idx++) {
-        double eFactor = double(ListFactor[idx]);
+        double eFactor = static_cast<double>(ListFactor[idx]);
         int i = ListI[idx];
         int j = ListJ[idx];
         Aval += eFactor * xVect[i] * A[idx] * xVect[j];
@@ -162,4 +162,7 @@ std::function<dual2nd(dual2nd const&)> const& f)
 }
 */
 
-#endif
+// clang-format off
+#endif  // SRC_POLARIZATION_GENERIC_POLARIZATION_H_
+// clang-format on
+

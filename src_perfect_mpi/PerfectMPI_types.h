@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef PERFECT_MPI_TYPES
-#define PERFECT_MPI_TYPES
+#ifndef SRC_PERFECT_MPI_PERFECTMPI_TYPES_H_
+#define SRC_PERFECT_MPI_PERFECTMPI_TYPES_H_
 
 #include "MAT_Matrix.h"
 #include <functional>
@@ -15,7 +15,8 @@ struct TypeIndex {
 };
 
 template <typename T> struct TypePerfectExch {
-  int incd; // the number of shortest vectors divided by 2
+  // the number of shortest vectors divided by 2
+  int incd;
   MyMatrix<T> eMat;
 };
 
@@ -77,7 +78,9 @@ template <typename T> struct less<TypePerfectExch<T>> {
     return false;
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 namespace boost {
 namespace serialization {
@@ -113,8 +116,10 @@ inline void serialize(Archive &ar, PairExch<T> &ePair,
   ar &make_nvp("index", ePair.eIndex);
 }
 
-} // namespace serialization
-} // namespace boost
+// clang-format off
+}  // namespace serialization
+}  // namespace boost
+// clang-format on
 
 namespace std {
 template <typename Tint> struct hash<TypePerfectExch<Tint>> {
@@ -131,7 +136,9 @@ template <typename Tint> struct hash<TypePerfectExch<Tint>> {
   }
 };
 
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 template <typename T>
 TypePerfectExch<T> ParseStringToPerfectExch(std::string const &str) {
@@ -141,7 +148,7 @@ TypePerfectExch<T> ParseStringToPerfectExch(std::string const &str) {
   int n;
   std::istringstream(LStr[1]) >> n;
   std::vector<T> LVal;
-  for (int i = 2; i < int(LStr.size()); i++) {
+  for (int i = 2; i < static_cast<int>(LStr.size()); i++) {
     T eVal;
     std::istringstream(LStr[i]) >> eVal;
     LVal.push_back(eVal);
@@ -172,4 +179,6 @@ TypeIndex ParseStringToTypeIndex(std::string const &str) {
   return {iProc, idxMatrixF, iAdj};
 }
 
-#endif
+// clang-format off
+#endif  // SRC_PERFECT_MPI_PERFECTMPI_TYPES_H_
+// clang-format on
