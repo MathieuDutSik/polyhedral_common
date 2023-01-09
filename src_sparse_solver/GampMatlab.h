@@ -461,7 +461,8 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
 #endif
   auto check_stopping = [&]() -> bool {
     bool stop = false;
-    T q = 1 / 10; // q in [0,1)
+    // The chosen value of q has to be in the interval [0,1)
+    T q = T(1) / T(10);
     if (delta > 0)
       q = 0;
     // check relative change
@@ -473,11 +474,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     if (xrel_chg < tol * (1 - q)) {
       Out.exit = "Exit: Stablized";
       stop = true;
-      //      std::cerr << "L2_Norm(TheDiff)=" << L2_Norm(TheDiff) << "\n";
-      //      std::cerr << "L2_Norm(x)=" << L2_Norm(x) << "\n";
-      //      std::cerr << "xrel_chg=" << xrel_chg << "\n";
-      //      std::cerr << "tol=" << tol << " q=" << q << "\n";
-      //      std::cerr << "check_stopping, exit, case 1\n";
       return stop;
     }
     if (xrel_chg >= tol * (1 + q)) {

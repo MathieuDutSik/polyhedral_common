@@ -36,13 +36,14 @@ int main(int argc, char *argv[]) {
     std::vector<T2> tripletList_A(nnz);
     std::vector<T2> tripletList_D(nbVert);
     int iNNZ = 0;
+    double one_val = 1.0;
     for (int iVert = 0; iVert < nbVert; iVert++) {
       int nbAdj;
       is >> nbAdj;
       for (int iAdj = 0; iAdj < nbAdj; iAdj++) {
         int eAdj;
         is >> eAdj;
-        tripletList_A[iNNZ] = T2(iVert, eAdj, double(1));
+        tripletList_A[iNNZ] = T2(iVert, eAdj, one_val);
         iNNZ++;
       }
       tripletList_D[iVert] = T2(iVert, iVert, nbAdj);
