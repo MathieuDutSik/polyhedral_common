@@ -5,9 +5,9 @@
 #include "Basic_file.h"
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
+#include <limits>
 #include <string>
 #include <vector>
-#include <limits>
 
 //
 // Heuristic business

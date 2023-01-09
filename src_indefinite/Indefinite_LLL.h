@@ -7,11 +7,11 @@
 #include "MAT_Matrix.h"
 #include "WeightMatrix.h"
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <vector>
-#include <limits>
 
-//#define DEBUG_INDEFINITE_LLL
+// #define DEBUG_INDEFINITE_LLL
 
 template <typename T> struct ResultGramSchmidt_Indefinite {
   bool success; // true means we have a basis. False that we have an isotropic

@@ -43,7 +43,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "port_i=" << port_i << "\n";
     short unsigned int port = port_i;
     //
-    endpoint_bank = boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port);
+    endpoint_bank =
+        boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port);
     auto process_signal = [](int signum) {
       signal_callback_handler_bank<Tkey, Tval>(signum);
     };

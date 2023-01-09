@@ -1,13 +1,15 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "Group.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
+#include "Group.h"
 #include "QuadField.h"
+// clang-format on
 
 template <typename T, typename Tidx>
 void Process_eFull(FullNamelist const &eFull) {

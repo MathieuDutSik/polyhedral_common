@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     {
       MyMatrix<T> M = ReadMatrixFile<T>(FileI);
       int n_rows = M.rows();
-      for (int i_row=0; i_row<n_rows; i_row++) {
+      for (int i_row = 0; i_row < n_rows; i_row++) {
         MyVector<T> V = GetMatrixRow(M, i_row);
         l_vect.push_back(V);
       }
