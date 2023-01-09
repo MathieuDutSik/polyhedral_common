@@ -112,13 +112,9 @@ template <typename T>
 std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
                                                MyVector<T> const &u,
                                                MyVector<T> const &k) {
-  //  std::cerr << "ResolveLattEquation k="; WriteVector(std::cerr,
-  //  RemoveFractionVector(k));
   std::vector<MyVector<T>> l_v = {u, k};
   MyMatrix<T> eIndep = MatrixFromVectorFamily(l_v);
   MyMatrix<T> IntBasis = IntersectionLattice_VectorSpace(Latt, eIndep);
-  //  std::cerr << "IntBasis=\n";
-  //  WriteMatrix(std::cerr, IntBasis);
   std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
   if (!opt_u) {
     std::cerr << "We failed to find a solution for u\n";
@@ -127,7 +123,6 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   const MyVector<T> &sol_u = *opt_u;
   T u1 = sol_u(0);
   T u2 = sol_u(1);
-  //  std::cerr << "u1=" << u1 << " u2=" << u2 << "\n";
   std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
   if (!opt_k) {
     std::cerr << "We failed to find a solution for k\n";
@@ -136,44 +131,35 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   const MyVector<T> &sol_k = *opt_k;
   T k1 = sol_k(0);
   T k2 = sol_k(1);
-  //  std::cerr << "k1=" << k1 << " k2=" << k2 << "\n";
-  //  std::cerr << "u=";
-  //  WriteVector(std::cerr, u);
-  //  std::cerr << "k=";
-  //  WriteVector(std::cerr, k);
   //
   GCD_int<T> ep = ComputePairGcd(k1, k2);
   T u1_norm = ep.Pmat(0, 0) * u1 + ep.Pmat(1, 0) * u2;
   T u2_norm = ep.Pmat(0, 1) * u1 + ep.Pmat(1, 1) * u2;
   T k1_norm = ep.Pmat(0, 0) * k1 + ep.Pmat(1, 0) * k2;
   T k2_norm = ep.Pmat(0, 1) * k1 + ep.Pmat(1, 1) * k2;
-  //  std::cerr << "norm : u1=" << u1_norm << " u2=" << u2_norm << "\n";
-  //  std::cerr << "norm : k1=" << k1_norm << " k2=" << k2_norm << "\n";
   if (k2_norm != 0) {
     std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
     throw TerminalException{1};
   }
-  if (!IsInteger(u2_norm)) // No solution then
+  if (!IsInteger(u2_norm)) {
+    // No solution then
     return {};
+  }
   //
   T c0 = -u1_norm / k1_norm;
   T cS = 1 / k1_norm;
-  //  std::cerr << "c0=" << c0 << " cS=" << cS << "\n";
   T hinp = -c0 / cS;
   T h;
   if (cS > 0) {
     h = UniversalCeilScalarInteger<T, T>(hinp);
-    //    std::cerr << "1 : hinp=" << hinp << " h=" << h << "\n";
     if (hinp == h)
       h += 1;
   } else {
     h = UniversalFloorScalarInteger<T, T>(hinp);
-    //    std::cerr << "2 : hinp=" << hinp << " h=" << h << "\n";
     if (hinp == h)
       h -= 1;
   }
   T c = c0 + h * cS;
-  //  std::cerr << "h=" << h << " c=" << c << "\n";
   if (c <= 0) {
     std::cerr << "We should have c>0\n";
     throw TerminalException{1};
@@ -209,25 +195,16 @@ template <typename T> struct LatticeProjectionFramework {
   LatticeProjectionFramework(MyMatrix<T> const &G, MyMatrix<T> const &Subspace,
                              MyMatrix<T> const &_Latt)
       : Latt(_Latt) {
-    //    std::cerr << "LatticeProjectionFramework, step 1\n";
     int n = G.rows();
     int dim = Latt.rows();
-    //    std::cerr << "n=" << n << " dim=" << dim << "\n";
-    //    std::cerr << "|Subspace|=" << Subspace.rows() << " / " <<
-    //    Subspace.cols() << "\n"; std::cerr << "LatticeProjectionFramework,
-    //    step 2\n";
     ProjP = GetProjectionMatrix(G, Subspace);
-    //    std::cerr << "LatticeProjectionFramework, step 3\n";
     ProjFamily = MyMatrix<T>(dim, n);
-    //    std::cerr << "LatticeProjectionFramework, step 4\n";
     for (int i = 0; i < dim; i++) {
       MyVector<T> eVect = GetMatrixRow(Latt, i);
       MyVector<T> eVectProj = ProjP * eVect;
       AssignMatrixRow(ProjFamily, i, eVectProj);
     }
-    //    std::cerr << "LatticeProjectionFramework, step 5\n";
     BasisProj = GetZbasis(ProjFamily);
-    //    std::cerr << "LatticeProjectionFramework, step 6\n";
   }
   std::optional<MyVector<T>> GetOnePreimage(MyVector<T> const &V) const {
     std::optional<MyVector<T>> opt = SolutionIntMat(ProjFamily, V);
@@ -243,9 +220,7 @@ template <typename T>
 std::vector<size_t>
 GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect) {
   using Tfield = typename overlying_field<T>::field_type;
-  //  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
   int dimSpace = l_vect[0].size();
-  //  std::cerr << "dimSpace=" << dimSpace << "\n";
   if (l_vect.size() < size_t(2 * dimSpace)) {
     std::cerr << "Number of roots should be at least 2 * dimspace = "
               << (2 * dimSpace) << "\n";
@@ -563,8 +538,8 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
   };
   MyMatrix<T> ThePow = M;
   size_t expo = 1;
-  for (size_t u = 0; u <= max_finite_order;
-       u++) { // We go a little bit over the needed range
+  for (size_t u = 0; u <= max_finite_order; u++) {
+    // We go a little bit over the needed range
     if (is_identity(ThePow)) {
       std::cerr << "is_infinite_order expo=" << expo << "\n";
       return true;

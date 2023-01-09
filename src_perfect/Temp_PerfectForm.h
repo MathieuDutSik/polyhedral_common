@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef TEMP_PERFECT_FORM_INCLUDE
-#define TEMP_PERFECT_FORM_INCLUDE
+#ifndef SRC_PERFECT_TEMP_PERFECTFORM_H_
+#define SRC_PERFECT_TEMP_PERFECTFORM_H_
 
 #include "MatrixGroup.h"
 #include "POLY_ThreadDualDescription.h"
@@ -388,9 +388,9 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
     std::cerr << "iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
               << " TheLowerBound=" << TheLowerBound << " test=" << test << "\n";
 #endif
-    if (!test)
+    if (!test) {
       TheUpperBound = (TheUpperBound + TheLowerBound) / 2;
-    else {
+    } else {
       Tshortest<T, Tint> RecSHV = RetriveShortestDesc(Qupp);
 #ifdef DEBUG_FLIP
       std::cerr << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
@@ -402,8 +402,9 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
         T nUpp = 2 * TheUpperBound;
         TheLowerBound = nLow;
         TheUpperBound = nUpp;
-      } else
+      } else {
         break;
+      }
     }
   }
 #ifdef DEBUG_FLIP
@@ -952,9 +953,9 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   while (true) {
     bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
     MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
-    if (IsCompleteSpann)
+    if (IsCompleteSpann) {
       WaitComplete(TheId);
-    else {
+    } else {
       for (int iThr = 0; iThr < NbThr; iThr++) {
         int NewId = MProc.MPU_GetId();
         MProc.GetO(TheId) << "NewId=" << NewId << "\n";
@@ -1174,4 +1175,6 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
 }
 
-#endif
+// clang-format off
+#endif  // SRC_PERFECT_TEMP_PERFECTFORM_H_
+// clang-format on

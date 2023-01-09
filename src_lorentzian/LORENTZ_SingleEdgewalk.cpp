@@ -5,7 +5,7 @@
 #include "Permutation.h"
 
 #include "edgewalk.h"
-//#include "vinberg.h"
+// #include "vinberg.h"
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;

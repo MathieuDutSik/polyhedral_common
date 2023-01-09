@@ -19,9 +19,9 @@
   --- The values M(i,i) are not used.
  */
 
-//#define DEBUG_COXETER_DYNKIN_COMBINATORICS
+// #define DEBUG_COXETER_DYNKIN_COMBINATORICS
 
-//#define CHECK_EFFICIENT_ENUMERATION
+// #define CHECK_EFFICIENT_ENUMERATION
 
 struct DiagramSelector {
   bool OnlySimplyLaced;
@@ -1937,14 +1937,16 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
       test_vector_and_insert(V);
       V(i) = val_four;
       test_vector_and_insert(V);
-      V(i) = val_six; // This covers G2 and tilde{G2}
+      // This covers G2 and tilde{G2}
+      V(i) = val_six;
       test_vector_and_insert(V);
     }
     for (auto &eIsol : list_isolated) {
       MyVector<T> V = V_basic;
       if (!DS.OnlySpherical) {
+        // I1(infinity), always works.
         V(eIsol) = val_inf;
-        test_vector_and_insert(V); // I1(infinity), always works.
+        test_vector_and_insert(V);
       }
     }
   } else {
@@ -2032,7 +2034,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
       V(list_cand_for_triple_vertex[eVal]) = val_single_edge;
     test_vector_and_insert(V);
   }
-  if (!DS.OnlySpherical) { // Considering now the tilde{B3} cases
+  if (!DS.OnlySpherical) {
+    // Considering now the tilde{B3} cases
     SetCppIterator SCI_B(n_isolated, 3);
     T val;
     for (auto &eV : SCI_B) {
@@ -2052,7 +2055,8 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 7\n";
 #endif
-  if (!DS.OnlySpherical) { // Only tildeD4 is feasible, and it is not euclidean
+  if (!DS.OnlySpherical) {
+    // Only tildeD4 is feasible, and it is not euclidean
     SetCppIterator SCI_B(n_isolated, 4);
     for (auto &eV : SCI_B) {
       MyVector<T> V = V_basic;

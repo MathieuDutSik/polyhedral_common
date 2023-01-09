@@ -54,10 +54,10 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
-  ListBoolValues1["EarlyTerminationIfNotReflective"] =
-      false; // Sometimes we can terminate by proving that it is not reflective
-  ListBoolValues1["ApplyReduction"] =
-      true; // Normally, we want to ApplyReduction, this is for debug only
+  // Sometimes we can terminate by proving that it is not reflective
+  ListBoolValues1["EarlyTerminationIfNotReflective"] = false;
+  // Normally, we want to ApplyReduction, this is for debug only
+  ListBoolValues1["ApplyReduction"] = true;
   ListBoolValues1["ComputeAllSimpleRoots"] = true;
   ListStringValues1["FileHeuristicIdealStabEquiv"] = "unset.heu";
   ListStringValues1["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
@@ -82,8 +82,8 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
   ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
   ListStringValues1["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
-  ListBoolValues1["ApplyReduction"] =
-      true; // Normally, we want to ApplyReduction, this is for debug only
+  // Normally, we want to ApplyReduction, this is for debug only
+  ListBoolValues1["ApplyReduction"] = true;
   SingleBlock BlockPROC;
   BlockPROC.ListStringValues = ListStringValues1;
   BlockPROC.ListBoolValues = ListBoolValues1;
@@ -118,10 +118,18 @@ SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
   return {G, l_norms, std::move(map_norm_latt)};
 }
 
+
+// Computation related to the enumeration algorithm.
+// Since it has several square roots, we need to keep track.
+//
+// We have
+// sign: 0 for 0, 1 for positive, -1 for negative
+// quant1: this is (k.alpha_{N,\Delta'})^2 / R_{N,\Delta'}
+// quant2: this is (k.alpha_{N,\Delta'})^2 / N
 template <typename T, typename Tint> struct RootCandidate {
-  int sign; // 0 for 0, 1 for positive, -1 for negative
-  T quant1; // this is (k.alpha_{N,\Delta'})^2 / R_{N,\Delta'}
-  T quant2; // this is (k.alpha_{N,\Delta'})^2 / N
+  int sign;
+  T quant1;
+  T quant2;
   T e_norm;
   MyVector<Tint> alpha;
   FundDomainVertex<T, Tint> fund_v;
@@ -176,16 +184,20 @@ int get_sign_cand(RootCandidate<T, Tint> const &poss1,
                   RootCandidate<T, Tint> const &poss2) {
   int sign1 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant1},
                                        {poss2.sign, poss2.quant1});
-  if (sign1 != 0)
-    return sign1; // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)
-                  // correspond to 1 in the above.
+  if (sign1 != 0) {
+    // because -k.alpha1 / sqrt(R1)    <     -k.alpha2 / sqrt(R2)
+    // correspond to 1 in the above.
+    return sign1;
+  }
   int sign2 = get_sign_pair_stdpair<T>({poss1.sign, poss1.quant2},
                                        {poss2.sign, poss2.quant2});
-  if (sign2 != 0)
-    return sign2; // because -k.alpha1 / sqrt(N1)    <     -k.alpha2 / sqrt(N2)
-                  // correspond to 1 in the above.
-  int sign3 = get_sign_pair_t(poss1.e_norm, poss2.e_norm);
-  return sign3; // because N1 < N2 corresponds to 1
+  if (sign2 != 0) {
+    // because -k.alpha1 / sqrt(N1)    <     -k.alpha2 / sqrt(N2)
+    // correspond to 1 in the above.
+    return sign2;
+  }
+  // because N1 < N2 corresponds to 1
+  return get_sign_pair_t(poss1.e_norm, poss2.e_norm);
 }
 
 template <typename T, typename Tint>
@@ -305,9 +317,11 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   std::vector<MyVector<Tint>> const &l_ui = eReq.l_ui;
   MyVector<T> const &k = eReq.k;
   MyVector<T> const &kP = eReq.kP;
+  // 0 for 0, 1 for positive, -1 for negative
+  // this is (kP.v_{N,\Delta'})^2 / N
   struct RootCandidateCuspidal {
-    int sign; // 0 for 0, 1 for positive, -1 for negative
-    T quant;  // this is (kP.v_{N,\Delta'})^2 / N
+    int sign;
+    T quant;
     T e_norm;
     MyVector<Tint> v;
   };
@@ -357,13 +371,16 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   std::sort(l_candidates.begin(), l_candidates.end(),
             [&](RootCandidateCuspidal const &x,
                 RootCandidateCuspidal const &y) -> bool {
-              // We want x > y if -k.alpha(x) / sqrt(Nx) < -k.alpha(y) /
-              // sqrt(Ny) or if equality if Nx < Ny
+              // We want x > y if
+              // -k.alpha(x) / sqrt(Nx) < -k.alpha(y) / sqrt(Ny)
+              // or if equality if Nx < Ny
               int sign = get_sign_pair_stdpair<T>({x.sign, x.quant},
                                                   {y.sign, y.quant});
-              if (sign != 0)
-                return sign > 0; // because -k.alpha1 / sqrt(R1)    < -k.alpha2
-                                 // / sqrt(R2)   correspond to 1 in the above.
+              if (sign != 0) {
+                // because -k.alpha1 / sqrt(R1)    < -k.alpha2 / sqrt(R2)
+                // correspond to 1 in the above.
+                return sign > 0;
+              }
               return x.e_norm < y.e_norm;
             });
 #ifdef TIMINGS
@@ -547,12 +564,6 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // Find a basis (k,r0) of the plane P
   //
   MyVector<T> v_disc_t = UniversalVectorConversion<T, Tint>(v_disc);
-  /*
-  MyMatrix<T> CoxMat = ComputeCoxeterMatrix(G, l_ui).first;
-  std::string symb = coxdyn_matrix_to_string(CoxMat);
-  std::cerr << "Coxeter diagram of the vertex k in u_i direction=" << symb <<
-  "\n";
-  */
   int n = G.rows();
   size_t n_root = l_ui.size();
 #ifdef DEBUG_EDGEWALK_GENERIC

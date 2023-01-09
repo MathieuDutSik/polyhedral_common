@@ -213,16 +213,19 @@ template <typename T, typename Tint> struct VinbergTot {
   MyVector<Tint> v0;
   MyVector<Tint> V_i;
   //
-  MyMatrix<Tint>
-      Morth; // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
-  MyMatrix<T> Morth_T; // The (n, n-1)-matrix formed by the orthogonal to the
-                       // vector M v0
-  Tint eDet;           // The determinant of the matrix.
-  MyMatrix<Tint>
-      Gorth; // The Gram matrix of the orthogonal. Must be positive definite.
-  MyMatrix<T>
-      Gorth_T; // The Gram matrix of the orthogonal. Must be positive definite.
-  MyMatrix<T> GM_iGorth; // The inverse of the coefficient for the computation.
+  // The (n, n-1)-matrix formed by the orthogonal to the vector M v0
+  MyMatrix<Tint> Morth;
+  // The (n, n-1)-matrix formed by the orthogonal to the
+  // vector M v0
+  MyMatrix<T> Morth_T;
+  // The determinant of the matrix.
+  Tint eDet;
+  // The Gram matrix of the orthogonal. Must be positive definite.
+  MyMatrix<Tint> Gorth;
+  // The Gram matrix of the orthogonal. Must be positive definite.
+  MyMatrix<T> Gorth_T;
+  // The inverse of the coefficient for the computation.
+  MyMatrix<T> GM_iGorth;
   std::vector<MyVector<Tint>> W;
   std::vector<Tint> root_lengths;
 };
@@ -249,7 +252,6 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot) {
     }
     if (ChosenMethod == 3) {
       std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield);
-      //      MyMatrix<Tfield> M2 = Polytopization(M_Tfield);
       MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
       std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2);
       if (ListIdx1 != ListIdx2) {
@@ -494,8 +496,9 @@ template <typename T, typename Tint>
 DataMappingVinbergProblem<T, Tint>
 Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
                 const Tint &k) {
-  if (k == 1 || k == 2) { // No need for some complex linear algebra work,
-                          // returning directly
+  if (k == 1 || k == 2) {
+    // No need for some complex linear algebra work,
+    // returning directly
     MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
     MyVector<T> sV = a_T.transpose() * Vtot.GM_iGorth;
     Tint term1 = k - a.dot(Vtot.G * a);
@@ -522,7 +525,8 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
     return {{}, {}, 0, {}, {}, false};
-  MyVector<Tint> res = *opt; // The solution res is of dimension 2n-1
+  // The solution res is of dimension 2n-1
+  MyVector<Tint> res = *opt;
   //
   MyVector<Tint> w0(n - 1);
   for (size_t i = 0; i < n - 1; i++)
@@ -661,14 +665,12 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     // Now we write x = y P and this gets us
     // [y - V_img] G_red [y - V_img]^T
     //
-    //    LLLreduction<T, Tint> RecLLL = LLLnoreduction<T, Tint>(data.G);
     LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(data.G);
     MyMatrix<Tint> const &Pmat = RecLLL.Pmat;
     MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
     MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
     MyVector<T> eV_img = PmatInv_T.transpose() * data.V;
     MyMatrix<Tint> trans_P = data.trans_u * Pmat.transpose();
-    //    MyMatrix<Tint> trans_P = data.trans_u;
 
     for (size_t i_root = 0; i_root < n_root; i_root++) {
       MyVector<T> eFAC = GetMatrixRow(FACfeasible, i_root);
@@ -685,7 +687,6 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
     T_shvec_request<T> request =
         initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
-    //    initShvecReq<T>(data.G, data.V, data.norm, mode);
     //
     size_t n_pass = 0;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
@@ -787,10 +788,15 @@ MyMatrix<int> GetWeightMatrix(const VinbergTot<T, Tint> &Vtot,
   //
   // Building of the input
   //
-  T cst1 = T(1) / T(4); //  1/4
-  T cst2 = T(1) / T(2); //  1/2
-  T cst3 = T(3) / T(4); //  3/4
-  T cst4 = 1;           //  1
+  // We have
+  // cst1 = 1 / 4
+  // cst2 = 1 / 2
+  // cst3 = 3 / 4
+  // cst4 = 1
+  T cst1 = T(1) / T(4);
+  T cst2 = T(1) / T(2);
+  T cst3 = T(3) / T(4);
+  T cst4 = 1;
   auto weight = [&](int i, int j) -> int {
     T aII = M(i, i);
     T aJJ = M(j, j);
@@ -1237,8 +1243,8 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
     std::cerr << "Mroot=\n";
     WriteMatrix(std::cerr, Mroot);
     std::cerr << "Before cdd::DualDescription\n";
-    return cdd::DualDescription(
-        Mroot); // maybe use another dual description function
+    // maybe use another dual description function
+    return cdd::DualDescription(Mroot);
   };
   MyMatrix<T> FAC = get_facets();
   std::cerr << "FundCone, step 5\n";
@@ -1258,10 +1264,13 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
       if (scal < 0)
         n_minus++;
     }
-    if (n_plus == 0 || n_minus == 0) // The inequality is valid. Exiting
+    if (n_plus == 0 || n_minus == 0) {
+      // The inequality is valid. Exiting
       return;
+    }
     auto get_root = [&]() -> MyVector<Tint> {
-      if (n_plus > n_minus) // We look for the vector that splits most
+      // We look for the vector that splits most
+      if (n_plus > n_minus)
         return -V;
       else
         return V;

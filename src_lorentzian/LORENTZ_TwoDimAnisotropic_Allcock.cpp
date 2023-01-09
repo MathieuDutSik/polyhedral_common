@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     //
     MyVector<Tint> r(2);
     auto set_r = [&]() -> void {
-      if (a_T > 0) { // Then (1,0) is of positive norm
+      if (a_T > 0) {
         r(0) = 1;
         r(1) = 0;
         return;

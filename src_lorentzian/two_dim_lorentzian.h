@@ -25,8 +25,8 @@
 
  */
 
-//#define CHECK_TWO_DIM_LORENTZIAN
-//#define DEBUG_TWO_DIM_LORENTZIAN
+// #define CHECK_TWO_DIM_LORENTZIAN
+// #define DEBUG_TWO_DIM_LORENTZIAN
 
 template <typename T, typename Tint>
 T eval_quad(const MyMatrix<T> &G, const MyVector<Tint> &v) {
@@ -151,7 +151,6 @@ Shorter(const MyMatrix<T> &G, MyVector<Tint> r, MyVector<Tint> l) {
     return {eval_quad(G, v1), eval_scal(G, v1, v2), eval_quad(G, v2)};
   };
   T M = eval_quad(G, r);
-  //  l = Canonical(G, M, r, l);
   std::vector<T> char_ent1 = get_char_mat(r, l);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "Shorter M=" << M << "\n";
@@ -271,7 +270,8 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
               << StringVectorGAP(l) << "\n";
     std::cerr << "After canonical\n";
 #endif
-    if (A_vect == get_char_mat(r, l)) { // Concluding step
+    if (A_vect == get_char_mat(r, l)) {
+      // Concluding step
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
       std::cerr << "Exiting case\n";
 #endif
@@ -639,8 +639,10 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "lower_bnd=" << lower_bnd << "\n";
 #endif
-  if (SearchNorm < lower_bnd) // no solution possible
+  if (SearchNorm < lower_bnd) {
+    // no solution possible
     return {};
+  }
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
   if (opt) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
