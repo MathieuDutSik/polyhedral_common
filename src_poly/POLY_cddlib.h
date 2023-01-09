@@ -7766,11 +7766,20 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
   dd_rowrange itemp, otemp;
   bool localdebug = false;
 
+  auto clean=[&]() -> void {
+    if (cone->d <= 0 || cone->newcol[1] == 0) { /* fixing the number of output */
+      cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount - 1;
+      cone->parent->ldim = cone->LinearityDim - 1;
+    } else {
+      cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount;
+      cone->parent->ldim = cone->LinearityDim;
+    }
+  };
   if (cone->d <= 0) {
     cone->Iteration = cone->m;
     cone->FeasibleRayCount = 0;
     cone->CompStatus = dd_AllFound;
-    goto _L99;
+    return clean();
   }
   while (cone->Iteration <= cone->m) {
     dd_rowrange hh = dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces);
@@ -7806,17 +7815,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
     }
     if (cone->CompStatus == dd_AllFound || cone->CompStatus == dd_RegionEmpty) {
       set_addelem(cone->AddedHalfspaces, hh);
-      goto _L99;
+      return clean();
     }
     (cone->Iteration)++;
-  }
-_L99:;
-  if (cone->d <= 0 || cone->newcol[1] == 0) { /* fixing the number of output */
-    cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount - 1;
-    cone->parent->ldim = cone->LinearityDim - 1;
-  } else {
-    cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount;
-    cone->parent->ldim = cone->LinearityDim;
   }
 }
 

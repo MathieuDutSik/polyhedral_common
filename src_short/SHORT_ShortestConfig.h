@@ -493,7 +493,7 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
   if (!IsIntegralMatrix(MatEquiv_T)) {
     std::cerr << "Error, the matrix is not integral\n";
     throw TerminalException{1};
-  };
+  }
   MyMatrix<Tint> MatEquiv_i = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
   return std::move(MatEquiv_i);
 }
@@ -520,7 +520,7 @@ std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M) {
       std::cerr << "Problem in SHORT_GetStabilizer\n";
       std::cerr << "Error, the matrix is not integral\n";
       throw TerminalException{1};
-    };
+    }
     MyMatrix<Tint> MatEquiv_i = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
     ListMatrGen.push_back(MatEquiv_i);
   }
@@ -637,7 +637,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(
         ListVectWork, ListMat, NoExtension, TheMethod);
     if (RecTest.reply) {
-      bool replyRet = int(ListVectWork.size()) == InitialSize;
+      bool replyRet = static_cast<int>(ListVectWork.size()) == InitialSize;
       std::vector<MyVector<Tint>> ListVectComplete;
       for (auto &eVect : ListVectWork) {
         ListVectComplete.push_back(eVect);
@@ -989,7 +989,7 @@ MyVector<int> CyclicCanonicalization_SymN(MyVector<int> const &fCand,
     nCand(i) = RetCand[j];
   }
   return nCand;
-};
+}
 
 // Canicalize the vector under symn action + the multiplication by
 // non-zero element of Fd (field of the prime d)

@@ -29,7 +29,8 @@ TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const &WMat,
       return WMat.GetValue(iRow, iCol);
     if (iRow == n && iCol == n)
       return siz + 2;
-    if (iRow == n) { // Thus iCol < n.
+    if (iRow == n) {
+      // Thus iCol < n.
       if (f[iCol] == 0)
         return siz;
       else
@@ -242,23 +243,18 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   std::vector<Tidx> ListIdx(nbRow);
   for (size_t idx = 0; idx < nbRow; idx++)
     ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
-  //  std::cerr << "IsomorphismFromCanonicReord : CanonicReord1=" <<
-  //  CanonicReord1 << "\n"; std::cerr << "IsomorphismFromCanonicReord :
-  //  CanonicReord2=" << CanonicReord2 << "\n"; std::cerr <<
-  //  "IsomorphismFromCanonicReord : ListIdx=" << ListIdx << "\n";
-
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 =
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT1, CanonicReord1);
   MyMatrix<Tfield> Basis2 =
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT2, CanonicReord2);
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
-  //  std::cerr << "P=\n";
-  //  WriteMatrix(std::cerr, P);
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
-  if (!test) // We fail the polytope equivalence
+  if (!test) {
+    // We fail the polytope equivalence
     return {};
+  }
   std::pair<std::vector<Tidx>, MyMatrix<Tfield>> IsoInfo{ListIdx, P};
   return IsoInfo;
 }
@@ -368,9 +364,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
   std::cerr << "|LinPolytope_Aut : FCT_EXT_Qinv|=" << time << "\n";
 #endif
   std::vector<Telt> LGen;
-  //  std::cerr << "nbRow=" << nbRow << " |ListGen|=" << ListGen.size() << "\n";
   for (auto &eList : ListGen) {
-    //    std::cerr << "|eList|=" << eList.size() << "\n";
     LGen.push_back(Telt(eList));
   }
 #ifdef TIMINGS
@@ -428,7 +422,6 @@ MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const &EXT) {
   std::cerr << "|CanonicOrdering + EXTreord|=" << time << "\n";
 #endif
 
-  //  MyMatrix<T> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
   MyMatrix<T> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS
   std::cerr << "|CanonicalizeOrderedMatrix|=" << time << "\n";
@@ -728,8 +721,8 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
 
   size_t nbRow1 = EXT1.rows();
   size_t nbRow2 = EXT2.rows();
-  if (nbRow1 !=
-      nbRow2) { // At this point it should be equal, but better to check
+  if (nbRow1 != nbRow2) {
+    // At this point it should be equal, but better to check
     return {};
   }
 
@@ -849,7 +842,8 @@ GetSimpleWeightMatrixAntipodal_AbsTrick(MyMatrix<T> const &TheEXT,
         ChgSign = true;
       }
       Tidx_value &value = ValueMap[eScal];
-      if (value == 0) { // This is a missing value
+      if (value == 0) {
+        // This is a missing value
         if (positionZero == miss_val && eScal == 0)
           positionZero = idxWeight;
         idxWeight++;
@@ -913,13 +907,15 @@ GetSimpleWeightMatrixAntipodal(MyMatrix<T> const &TheEXT,
         eSum1 += V(iCol) * TheEXT(jPair, iCol);
       T eSum2 = -eSum1;
       Tidx_value &value1 = ValueMap[eSum1];
-      if (value1 == 0) { // This is a missing value
+      if (value1 == 0) {
+        // This is a missing value
         idxWeight++;
         value1 = idxWeight;
         INP_ListWeight.push_back(eSum1);
       }
       Tidx_value &value2 = ValueMap[eSum2];
-      if (value2 == 0) { // This is a missing value
+      if (value2 == 0) {
+        // This is a missing value
         idxWeight++;
         value2 = idxWeight;
         INP_ListWeight.push_back(eSum2);
@@ -1058,8 +1054,8 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
               size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
               bool ChgSign1 = WMatAbs.ArrSigns[idx1];
               bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              bool ChgSign =
-                  ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              // ChgSign is true if ChgSign1 != ChgSign2
+              bool ChgSign = ChgSign1 ^ ChgSign2;
               uint8_t valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
                 valJ = 2;
@@ -1084,7 +1080,6 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
   auto IsCorrectListGen = [&]() -> bool {
     for (auto &eGen : ePair.second) {
       bool test = TestExistSignVector(eGen);
-      //      std::cerr << "test=" << test << "\n";
       if (!test)
         return false;
     }
@@ -1136,7 +1131,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
       }
     if (nbUndone == 0)
       break;
-  };
+  }
 #ifdef DEBUG
   Tint eHash2 = MD5_hash_T<Tint>(strAssign);
   std::cerr << "strAssign=" << strAssign << "\n";
@@ -1326,8 +1321,8 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
               size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
               bool ChgSign1 = WMatAbs.ArrSigns[idx1];
               bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              bool ChgSign =
-                  ChgSign1 ^ ChgSign2; // true if ChgSign1 != ChgSign2
+              // ChgSign is true if ChgSign1 != ChgSign2
+              bool ChgSign = ChgSign1 ^ ChgSign2;
               uint8_t valJ;
               if ((ChgSign && val == 1) || (!ChgSign && val == 2))
                 valJ = 2;
@@ -1353,7 +1348,6 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
   auto IsCorrectListGen = [&]() -> bool {
     for (auto &eGen : ListGen) {
       bool test = TestExistSignVector(eGen);
-      //      std::cerr << "test=" << test << "\n";
       if (!test)
         return false;
     }
@@ -1552,13 +1546,15 @@ T_TranslateToMatrix_QM_SHV(MyMatrix<T> const &qMat, MyMatrix<Tint> const &SHV) {
       for (size_t i = 0; i < n; i++)
         eScal += V(i) * SHV(2 * jPair, i);
       Tidx_value &value1 = ValueMap[eScal];
-      if (value1 == 0) { // This is a missing value
+      if (value1 == 0) {
+        // This is a missing value
         idxWeight++;
         value1 = idxWeight;
         INP_ListWeight.push_back(eScal);
       }
       Tidx_value &value2 = ValueMap[-eScal];
-      if (value2 == 0) { // This is a missing value
+      if (value2 == 0) {
+        // This is a missing value
         idxWeight++;
         value2 = idxWeight;
         INP_ListWeight.push_back(-eScal);
@@ -1609,7 +1605,6 @@ template <typename T, typename Tgroup, typename Tval, typename Tidx_value>
 std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &ep,
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &fp) {
-  // #define DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
@@ -1635,12 +1630,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   SecondTime time;
 #endif
 
-  //  std::cerr << "Before eCanonicReord\n";
   std::vector<Tidx> eCanonicReord =
       GetGroupCanonicalizationVector_Kernel<Tval, Tgr, Tidx, Tidx_value>(
           ep.second)
           .first;
-  //  std::cerr << "Before fCanonicReord\n";
   std::vector<Tidx> fCanonicReord =
       GetGroupCanonicalizationVector_Kernel<Tval, Tgr, Tidx, Tidx_value>(
           fp.second)
@@ -1649,7 +1642,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   std::cerr << "|GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   using Tfield = typename overlying_field<T>::field_type;
-  //  std::cerr << "Before IsomorphismFromCanonicReord\n";
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(
           ep.first, fp.first, eCanonicReord, fCanonicReord);

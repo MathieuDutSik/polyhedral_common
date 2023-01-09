@@ -365,24 +365,15 @@ public:
         for (size_t u = 0; u < len; u++) {
           size_t i = map[2 * u];
           size_t i_B = map[2 * u + 1];
-          //          std::cerr << "i=" << i << " i_B=" << i_B << "\n";
           size_t ePt1 = list_diag_element[shift + i];
           size_t fPt1 = list_diag_element[shift_B + i_B];
-          //          std::cerr << "   ePt1=" << ePt1 << " fPt1=" << fPt1 <<
-          //          "\n";
           size_t ePt2 = OnPoints(ePt1, eGen);
           size_t fPt2 = OnPoints(fPt1, eGen);
-          //          std::cerr << "   ePt2=" << ePt2 << " fPt2=" << fPt2 <<
-          //          "\n";
           size_t j = list_revdiag_elements[ePt2];
           size_t j_B = list_revdiag_elements[fPt2];
           size_t u_img = map_rev[j + siz * j_B];
-          //          std::cerr << "   j=" << j << " j_B=" << j_B << " u_img="
-          //          << u_img << "\n";
           eList[u] = u_img;
         }
-        //        std::cerr << "CheckList(eList)=" <<
-        //        permutalib::CheckList(eList) << "\n";
         Telt eGB(eList);
         LGenMap.emplace_back(std::move(eGB));
       }
@@ -425,7 +416,6 @@ public:
     }
     auto insert_offdiag_pair = [&](size_t eVal, size_t fVal,
                                    const size_t &shift_index) -> void {
-      //      std::cerr << "Beginning of insert_offdiag_pair\n";
       size_t iWeight = list_diag_idx[eVal];
       size_t jWeight = list_diag_idx[fVal];
       size_t pos = mat_select_pair[iWeight + nw_diag * jWeight];
@@ -459,23 +449,20 @@ public:
     };
     auto insert_offdiag_pair_gen = [&](const size_t &eVal, const size_t &fVal,
                                        const size_t &shift_index) -> void {
-      //      std::cerr << "Calling insert_offdiag_pair_gen\n";
       if constexpr (is_symmetric) {
         size_t iWeight = list_diag_idx[eVal];
         size_t jWeight = list_diag_idx[fVal];
         if (iWeight < jWeight) {
-          //          std::cerr << "Calling at case 1\n";
           return insert_offdiag_pair(eVal, fVal, shift_index);
         } else {
-          //          std::cerr << "Calling at case 2\n";
           return insert_offdiag_pair(fVal, eVal, shift_index);
         }
       } else {
-        //        std::cerr << "Calling at case 3\n";
         return insert_offdiag_pair(eVal, fVal, shift_index);
       }
     };
-    if (nbVert < 50) { // In that case, we look at the full structure
+    if (nbVert < 50) {
+      // In that case, we look at the full structure
       for (size_t u = 0; u < nbVert; u++) {
         size_t eVal = eList[u];
         for (size_t iRow = 0; iRow < nbRow; iRow++) {
