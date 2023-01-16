@@ -118,7 +118,6 @@ SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
   return {G, l_norms, std::move(map_norm_latt)};
 }
 
-
 // Computation related to the enumeration algorithm.
 // Since it has several square roots, we need to keep track.
 //

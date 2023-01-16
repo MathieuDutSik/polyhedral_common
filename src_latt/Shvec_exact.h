@@ -24,7 +24,7 @@ const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
 const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
 const int STOP_COMPUTATION = 666;
 const int NORMAL_TERMINATION_COMPUTATION = 555;
-}
+} // namespace TempShvec_globals
 
 template <typename T> struct T_shvec_request {
   int dim;

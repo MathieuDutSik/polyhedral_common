@@ -1184,7 +1184,6 @@ inline void serialize(Archive &ar, PairExch<T> &ePair,
 }  // namespace boost::serialization
 // clang-format on
 
-
 namespace std {
 template <typename Tint> struct hash<TypeCtypeExch<Tint>> {
   std::size_t operator()(const TypeCtypeExch<Tint> &k) const {
