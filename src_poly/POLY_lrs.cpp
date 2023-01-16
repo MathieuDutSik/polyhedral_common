@@ -119,28 +119,35 @@ void process(std::string const &eFile, std::string const &choice) {
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 4 && argc != 5) {
+    if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_lrs choice rational [DATAIN]\n";
-      std::cerr << "POLY_lrs choice Qsqrt5 [DATAIN]\n";
-      std::cerr << "POLY_lrs choice Qsqrt2 [DATAIN]\n";
+      std::cerr << "POLY_lrs choice arith [DATAIN]\n";
       std::cerr << "or\n";
       std::cerr
           << "POLY_lrs choice RealAlgebraic [DATAIN] [DATA_ALGEBRAIC_FIELD]\n";
       std::cerr << "\n";
+      std::cerr << "with:\n";
+      std::cerr << "choice : the chosen processing option\n";
+      std::cerr << "arith  : the chosen arithmetic\n";
       std::cerr << "DATAIN : The polyhedral cone inequalities\n";
       std::cerr << "DATA_ALGEBRAIC_FIELD : The algebraic field used\n";
       std::cerr << "\n";
-      std::cerr << "        -----\n";
+      std::cerr << "        --- choice ---\n";
       std::cerr << "\n";
       std::cerr << "lrs: exact behavior as in lrs\n";
-      std::cerr
-          << "vertex_incidence: the incidence of the vertices is printed\n";
+      std::cerr << "vertex_incidence: the incidence of the vertices\n";
       std::cerr << "number_facet: total number of facets\n";
       std::cerr << "qhull_incidence: print the list of incidences\n";
       std::cerr << "structure_vertex_facets: number of facets contained by "
                    "vertices and the number of vertices of such facets\n";
+      std::cerr << "\n";
+      std::cerr << "        --- arith ---\n";
+      std::cerr << "\n";
+      std::cerr << "rational : rational arithmetic on input\n";
+      std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a field whose description is in FileDesc\n";
       return -1;
     }
     //
@@ -161,14 +168,15 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return process<T>(eFile, choice);
       }
-      if (type == "RealAlgebraic") {
+      std::optional<std::string> opt_realalgebraic = get_postfix(type, "RealAlgebraic=");
+      if (opt_realalgebraic) {
+        std::string FileAlgebraicField = *opt_realalgebraic;
         using T_rat = mpq_class;
         if (argc != 5) {
           std::cerr << "Missing the file for the real algebraic field "
                        "description on input\n";
           throw TerminalException{1};
         }
-        std::string FileAlgebraicField = argv[4];
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
