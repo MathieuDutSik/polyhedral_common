@@ -1,8 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "POLY_lrslib.h"
 #include "QuadField.h"
+#include "POLY_lrslib.h"
+// clang-format on
 
 template <typename T>
 void process(std::string const &eFile, std::string const &choice) {
@@ -153,30 +155,25 @@ int main(int argc, char *argv[]) {
     //
     std::string choice = argv[1];
     std::string eFile = argv[3];
-    std::string type = argv[2];
+    std::string arith = argv[2];
     auto call_lrs = [&]() -> void {
-      if (type == "rational") {
+      if (arith == "rational") {
         return process<mpq_class>(eFile, choice);
       }
-      if (type == "Qsqrt5") {
+      if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
         return process<T>(eFile, choice);
       }
-      if (type == "Qsqrt2") {
+      if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
         return process<T>(eFile, choice);
       }
-      std::optional<std::string> opt_realalgebraic = get_postfix(type, "RealAlgebraic=");
+      std::optional<std::string> opt_realalgebraic = get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
         using T_rat = mpq_class;
-        if (argc != 5) {
-          std::cerr << "Missing the file for the real algebraic field "
-                       "description on input\n";
-          throw TerminalException{1};
-        }
+        std::string FileAlgebraicField = *opt_realalgebraic;
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
@@ -188,7 +185,7 @@ int main(int argc, char *argv[]) {
         using T = RealField<idx_real_algebraic_field>;
         return process<T>(eFile, choice);
       }
-      std::cerr << "Failed to find a matching field for type=" << type << "\n";
+      std::cerr << "Failed to find a matching field for arith=" << arith << "\n";
       std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
                    "RealAlgebraic\n";
       throw TerminalException{1};

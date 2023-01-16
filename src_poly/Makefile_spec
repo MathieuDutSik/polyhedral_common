@@ -13,7 +13,8 @@
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
-PROGRAM		= POLY_lrs
+#PROGRAM		= POLY_lrs
+PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -24,7 +25,6 @@ PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
-#PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonBlocks
 #PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= POLY_lrs POLY_lrs_set_reduction
