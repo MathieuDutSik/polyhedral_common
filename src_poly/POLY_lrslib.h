@@ -484,9 +484,9 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       j++;
 
     //      PrintP(*D_p, "Before exiting test");
-    if (j == d)
+    if (j == d) {
       backtrack = globals::L_TRUE;
-    else {
+    } else {
       cache_dict(D_p, Q, i, j, dict_count);
       /* Note that the next two lines must come _after_ the
          call to cache_dict */
@@ -695,8 +695,10 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
               comp = comprod(Nmin, A[i][col], A[i][ratiocol], Dmin);
             else
               comp = -1;
-          } else if (Nmin == 0 && A[i][ratiocol] == 0)
-            comp = 0;
+          } else {
+            if (Nmin == 0 && A[i][ratiocol] == 0)
+              comp = 0;
+          }
           if (ratiocol == 0)
             comp = -comp; /* all signs reversed for rhs */
         }
@@ -705,8 +707,10 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
           Nmin = A[i][ratiocol];
           Dmin = A[i][col];
           ndegencount = 1;
-        } else if (comp == 0) /* repeated minimum */
-          minratio[nstart + ndegencount++] = minratio[j];
+        } else {
+          if (comp == 0) /* repeated minimum */
+            minratio[nstart + ndegencount++] = minratio[j];
+        }
       } /* end of  for (j=start.... */
       degencount = ndegencount;
       start = nstart;
@@ -868,8 +872,9 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
         return globals::L_FALSE; /* no positive entry */
       pivot(P, Q, i, j);
       update(P, &i, &j);
-    } else
+    } else {
       primalinfeasible = globals::L_FALSE;
+    }
   } /* end of while primalinfeasibile */
   return globals::L_TRUE;
 } /* end of primalfeasible */
@@ -1575,9 +1580,9 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
 template <typename T>
 int64_t check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t *i_p,
                     int64_t *j_p) {
-  if (global->Qtail == global->Qhead)
+  if (global->Qtail == global->Qhead) {
     return 0;
-  else {
+  } else {
     global->Qtail = global->Qtail->prev;
 
     *D_p = global->Qtail;
@@ -1733,8 +1738,7 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
     A[i][0] = 0;
   if (A[i][hull] != 0)                 /* for H-rep, are zero in column 0     */
     Q->homogeneous = globals::L_FALSE; /* for V-rep, all zero in column 1     */
-  if (ineq == globals::EQ)             /* input is linearity */
-  {
+  if (ineq == globals::EQ) {           /* input is linearity */
     Q->linearity[Q->nlinearity] = row;
     Q->nlinearity++;
   }
@@ -1744,9 +1748,9 @@ template <typename T>
 void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
   int64_t i;
 
-  if (max == globals::MAXIMIZE)
+  if (max == globals::MAXIMIZE) {
     Q->maximize = globals::L_TRUE;
-  else {
+  } else {
     Q->minimize = globals::L_TRUE;
     for (i = 0; i <= P->d; i++)
       num[i] = -num[i];

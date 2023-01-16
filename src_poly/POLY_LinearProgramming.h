@@ -860,8 +860,9 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
       }
     }
     eResult.TheRelat = TheRelat;
-  } else
+  } else {
     eResult.eTestExist = false;
+  }
   return eResult;
 }
 

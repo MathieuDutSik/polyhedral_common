@@ -6334,7 +6334,6 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p, bool *feasible,
       if (cone->parent->EqualityIndex[k] == -1)
         *feasible = false; /* strict inequality required */
     }
-    /*    if (temp < -zero) { */
     if (temp < 0) {
       *feasible = false;
       if (fii > cone->m && cone->parent->EqualityIndex[k] >= 0) {
@@ -6988,7 +6987,6 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
     for (j = 0; j < cone->d; j++)
       temp += cone->A[i - 1][j] * Ptr->Ray[j];
     Ptr->ARay = temp;
-    /*    if ( temp <= -zero && Ptr != cone->FirstRay) {*/
     if (temp < 0 && Ptr != cone->FirstRay) {
       /* fprintf(stdout,"Moving an infeasible record w.r.t. %ld to
        * FirstRay\n",i); */
@@ -7038,7 +7036,6 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
     for (j = 0; j < cone->d; j++)
       temp += cone->A[i - 1][j] * Ptr->Ray[j];
     Ptr->ARay = temp;
-    /*    if ( temp < -zero) {*/
     if (temp < 0) {
       if (!negfound) {
         negfound = true;
@@ -7048,25 +7045,25 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
         Ptr->Next = cone->NegHead;
         cone->NegHead = Ptr;
       }
-    }
-    /*    else if (temp > zero) {*/
-    else if (temp > 0) {
-      if (!posfound) {
-        posfound = true;
-        cone->PosHead = Ptr;
-        cone->PosLast = Ptr;
-      } else {
-        Ptr->Next = cone->PosHead;
-        cone->PosHead = Ptr;
-      }
     } else {
-      if (!zerofound) {
-        zerofound = true;
-        cone->ZeroHead = Ptr;
-        cone->ZeroLast = Ptr;
+      if (temp > 0) {
+        if (!posfound) {
+          posfound = true;
+          cone->PosHead = Ptr;
+          cone->PosLast = Ptr;
+        } else {
+          Ptr->Next = cone->PosHead;
+          cone->PosHead = Ptr;
+        }
       } else {
-        Ptr->Next = cone->ZeroHead;
-        cone->ZeroHead = Ptr;
+        if (!zerofound) {
+          zerofound = true;
+          cone->ZeroHead = Ptr;
+          cone->ZeroLast = Ptr;
+        } else {
+          Ptr->Next = cone->ZeroHead;
+          cone->ZeroHead = Ptr;
+        }
       }
     }
     Ptr = NextPtr;
@@ -7138,7 +7135,6 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
                     "point the FirstRay.\n");
   completed = false;
   while (Ptr != nullptr && !completed) {
-    /*    if ( (Ptr->ARay) < -zero ) { */
     if (Ptr->ARay < 0) {
       dd_Eliminate(cone, &PrevPtr);
       Ptr = PrevPtr->Next;
@@ -7158,58 +7154,59 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
         fprintf(stdout, "Error: An infeasible ray found after their removal\n");
         negfound = true;
       }
-    }
-    /*    else if (temp > zero) {*/
-    else if (temp > 0) {
-      if (!posfound) {
-        posfound = true;
-        cone->PosHead = Ptr;
-        cone->PosLast = Ptr;
-      } else {
-        cone->PosLast = Ptr;
-      }
     } else {
-      (cone->ZeroRayCount)++;
-      if (!zerofound) {
-        zerofound = true;
-        cone->ZeroHead = Ptr;
-        cone->ZeroLast = Ptr;
-        cone->ZeroLast->Next = nullptr;
-      } else { /* Find a right position to store the record sorted w.r.t.
-                  FirstInfeasIndex */
-        fii = Ptr->FirstInfeasIndex;
-        found = false;
-        ZeroPtr1 = nullptr;
-        for (ZeroPtr0 = cone->ZeroHead; !found && ZeroPtr0 != nullptr;
-             ZeroPtr0 = ZeroPtr0->Next) {
-          fiitest = ZeroPtr0->FirstInfeasIndex;
-          if (fiitest >= fii) {
-            found = true;
-          } else
-            ZeroPtr1 = ZeroPtr0;
+      if (temp > 0) {
+        if (!posfound) {
+          posfound = true;
+          cone->PosHead = Ptr;
+          cone->PosLast = Ptr;
+        } else {
+          cone->PosLast = Ptr;
         }
-        /* fprintf(stdout,"insert position found \n %d  index %ld\n",found,
-         * fiitest); */
-        if (!found) { /* the new record must be stored at the end of list */
-          cone->ZeroLast->Next = Ptr;
+      } else {
+        (cone->ZeroRayCount)++;
+        if (!zerofound) {
+          zerofound = true;
+          cone->ZeroHead = Ptr;
           cone->ZeroLast = Ptr;
           cone->ZeroLast->Next = nullptr;
-        } else {
-          if (ZeroPtr1 == nullptr) { /* store the new one at the head, and
-                                        update the head ptr */
-            /* fprintf(stdout,"Insert at the head\n"); */
-            Ptr->Next = cone->ZeroHead;
-            cone->ZeroHead = Ptr;
-          } else { /* store the new one inbetween ZeroPtr1 and 0 */
-            /* fprintf(stdout,"Insert inbetween\n");  */
-            Ptr->Next = ZeroPtr1->Next;
-            ZeroPtr1->Next = Ptr;
+        } else { /* Find a right position to store the record sorted w.r.t.
+                    FirstInfeasIndex */
+          fii = Ptr->FirstInfeasIndex;
+          found = false;
+          ZeroPtr1 = nullptr;
+          for (ZeroPtr0 = cone->ZeroHead; !found && ZeroPtr0 != nullptr;
+               ZeroPtr0 = ZeroPtr0->Next) {
+            fiitest = ZeroPtr0->FirstInfeasIndex;
+            if (fiitest >= fii) {
+              found = true;
+            } else {
+              ZeroPtr1 = ZeroPtr0;
+            }
           }
+          /* fprintf(stdout,"insert position found \n %d  index %ld\n",found,
+           * fiitest); */
+          if (!found) { /* the new record must be stored at the end of list */
+            cone->ZeroLast->Next = Ptr;
+            cone->ZeroLast = Ptr;
+            cone->ZeroLast->Next = nullptr;
+          } else {
+            if (ZeroPtr1 == nullptr) { /* store the new one at the head, and
+                                          update the head ptr */
+              /* fprintf(stdout,"Insert at the head\n"); */
+              Ptr->Next = cone->ZeroHead;
+              cone->ZeroHead = Ptr;
+            } else { /* store the new one inbetween ZeroPtr1 and 0 */
+              /* fprintf(stdout,"Insert inbetween\n");  */
+              Ptr->Next = ZeroPtr1->Next;
+              ZeroPtr1->Next = Ptr;
+            }
+          }
+          /*
+            Ptr->Next=cone->ZeroHead;
+            cone->ZeroHead=Ptr;
+          */
         }
-        /*
-        Ptr->Next=cone->ZeroHead;
-        cone->ZeroHead=Ptr;
-        */
       }
     }
     Ptr = NextPtr;
@@ -7790,9 +7787,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
       }
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
     } else {
-      if (cone->PreOrderedRun)
+      if (cone->PreOrderedRun) {
         dd_AddNewHalfspace2(cone, hh);
-      else {
+      } else {
         dd_AddNewHalfspace1(cone, hh);
       }
       set_addelem(cone->AddedHalfspaces, hh);
