@@ -5,7 +5,7 @@
 #include "POLY_PolytopeFct.h"
 #include <stdio.h>
 int main(int argc, char *argv[]) {
-  using T = mpq_class;
+  SingletonTime time1;
   try {
     if (argc != 3) {
       fprintf(stderr, "Number of argument is = %d\n", argc);
@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "NullspaceComputationLinbox [inputMat] [n_iter]\n");
       return -1;
     }
+    using T = mpq_class;
     // reading the matrix
     std::ifstream INmat(argv[1]);
     MyMatrix<T> EXT = ReadMatrix<T>(INmat);
@@ -58,7 +59,10 @@ int main(int argc, char *argv[]) {
     f(1);
     f(2);
     f(3);
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in Timing_NullspaceFacet\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

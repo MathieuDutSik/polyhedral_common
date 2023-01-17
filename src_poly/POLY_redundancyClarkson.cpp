@@ -21,6 +21,7 @@ void process_A(std::string const& eFileI, std::string const& eFileO, std::string
         os << eVal;
       }
       os << "];\n";
+      return;
     }
     if (choice == "Python") {
       int nbIrred = ListIrred.size();
@@ -30,6 +31,7 @@ void process_A(std::string const& eFileI, std::string const& eFileO, std::string
         int eVal = ListIrred[i];
         os << eVal;
       }
+      return;
     }
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
@@ -82,6 +84,7 @@ void process_B(std::string const& eFileI, std::string const& eFileO, std::string
 
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -112,7 +115,10 @@ int main(int argc, char *argv[]) {
       process_B(argv[3], "stderr", argv[1], argv[2]);
     if (argc == 5)
       process_B(argv[3], argv[4], argv[1], argv[2]);
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Something wrong happenned somewhere\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

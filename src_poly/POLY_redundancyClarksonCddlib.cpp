@@ -4,6 +4,7 @@
 #include "POLY_c_cddlib.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -37,6 +38,8 @@ int main(int argc, char *argv[]) {
     throw TerminalException{1};
 #endif
   } catch (TerminalException const &e) {
+    std::cerr << "Error in POLY_redundancyClarksonCddlib\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

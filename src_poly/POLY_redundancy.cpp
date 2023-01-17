@@ -3,6 +3,7 @@
 #include "POLY_RedundancyElimination.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -30,7 +31,10 @@ int main(int argc, char *argv[]) {
       os << eVal;
     }
     os << "];\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in POLY_redundancy\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

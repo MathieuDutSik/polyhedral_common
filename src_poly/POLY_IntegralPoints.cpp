@@ -3,6 +3,7 @@
 #include "POLY_PolytopeInt.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     using T = mpq_class;
     using Tint = int;
@@ -38,6 +39,8 @@ int main(int argc, char *argv[]) {
     os << "];\n";
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in POLY_IntegralPoints\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

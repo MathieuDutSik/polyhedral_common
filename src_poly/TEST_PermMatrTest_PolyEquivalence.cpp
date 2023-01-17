@@ -3,6 +3,7 @@
 #include "TestGroup.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -61,7 +62,8 @@ int main(int argc, char *argv[]) {
     process();
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in TEST_PermMatrTest_PolyEquivalence\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

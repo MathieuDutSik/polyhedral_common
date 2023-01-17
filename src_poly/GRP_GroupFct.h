@@ -8,6 +8,7 @@
 #include "COMB_Stor.h"
 #include "NumberTheory.h"
 #include "Temp_common.h"
+#include "Timings.h"
 #include "hash_functions.h"
 #include <string>
 #include <unordered_map>

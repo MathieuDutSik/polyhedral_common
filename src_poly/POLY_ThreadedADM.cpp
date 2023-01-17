@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "POLY_ThreadDualDescription.h"
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_TEMP_THREADED_ADM();
@@ -20,6 +21,8 @@ int main(int argc, char *argv[]) {
     MainFunctionComputeDualDesc<T, Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in POLY_ThreadedADM\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

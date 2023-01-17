@@ -6,6 +6,7 @@
 #include "Permutation.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     using T = mpq_class;
     //
@@ -68,4 +69,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Something went wrong in the computation, please debug\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

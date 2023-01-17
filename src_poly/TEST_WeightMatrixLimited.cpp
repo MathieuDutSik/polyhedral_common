@@ -6,6 +6,7 @@
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -70,6 +71,8 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in TEST_WeightMatrixLimited\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

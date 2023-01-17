@@ -2,6 +2,7 @@
 #include "LatticeDelaunay.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_DELAUNAY();
@@ -22,6 +23,8 @@ int main(int argc, char *argv[]) {
     TreatDelaunayEntry<T, Tint, Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in ComputeDelaunay\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

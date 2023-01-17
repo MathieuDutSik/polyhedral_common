@@ -3,6 +3,7 @@
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -112,7 +113,10 @@ int main(int argc, char *argv[]) {
       std::ofstream os(argv[2]);
       prt(os);
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in GRP_ListMat_Subset_EXT_Isomorphism\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }
