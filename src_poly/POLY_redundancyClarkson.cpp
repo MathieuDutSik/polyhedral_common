@@ -10,10 +10,11 @@ template<typename T>
 void process_A(std::string const& eFileI, std::string const& eFileO, std::string const& choice) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(EXT);
+  int nbIrred = ListIrred.size();
+  std::cerr << "nbIrred=" << nbIrred << "\n";
   auto print_result=[&](std::ostream& os) -> void {
     if (choice == "GAP") {
       os << "return [";
-      int nbIrred = ListIrred.size();
       for (int i = 0; i < nbIrred; i++) {
         if (i > 0)
           os << ",";
@@ -24,7 +25,6 @@ void process_A(std::string const& eFileI, std::string const& eFileO, std::string
       return;
     }
     if (choice == "Python") {
-      int nbIrred = ListIrred.size();
       for (int i = 0; i < nbIrred; i++) {
         if (i > 0)
           os << " ";

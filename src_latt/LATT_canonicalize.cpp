@@ -3,6 +3,7 @@
 #include "NumberTheory.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -57,4 +58,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

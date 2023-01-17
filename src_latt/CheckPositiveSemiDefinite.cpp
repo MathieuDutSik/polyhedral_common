@@ -2,8 +2,9 @@
 #include "NumberTheory.h"
 #include "Temp_Positivity.h"
 int main(int argc, char *argv[]) {
-  using T = mpq_class;
+  SingletonTime time1;
   try {
+    using T = mpq_class;
     if (argc != 2) {
       fprintf(stderr, "Number of argument is = %d\n", argc);
       fprintf(stderr, "This program is used as\n");
@@ -23,8 +24,10 @@ int main(int argc, char *argv[]) {
       else
         std::cout << "The matrix is positive definite\n";
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in CheckPositiveSemiDefinite\n";
     exit(e.eVal);
   }
-  std::cerr << "Normal termination of the program\n";
+  runtime(time1);
 }

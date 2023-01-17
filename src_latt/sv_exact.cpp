@@ -12,9 +12,10 @@
 }
 
 int main(int argc, char *argv[]) {
-  using T = mpq_class;
-  using Tint = mpz_class;
+  SingletonTime time1;
   try {
+    using T = mpq_class;
+    using Tint = mpz_class;
     bool coset = false;
     bool NeedBound = false;
     int i, j, mode;
@@ -128,7 +129,10 @@ int main(int argc, char *argv[]) {
         std::cout << " " << info.short_vectors[i](iCol);
       std::cout << "\n";
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in sv_exact\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }
