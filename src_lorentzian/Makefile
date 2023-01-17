@@ -1,4 +1,4 @@
-#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock COXDYN_FindExtensions COXDYN_ComputeSymbol LORENTZ_ComputeStabilizer_Vertex
+PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism LORENTZ_FundDomain_Vinberg LORENTZ_TwoDimAnisotropic_Allcock COXDYN_FindExtensions COXDYN_ComputeSymbol LORENTZ_ComputeStabilizer_Vertex
 #PROGRAM		= COXDYN_FindExtensions
 #PROGRAM		= COXDYN_ComputeSymbol
 #PROGRAM		= LORENTZ_TwoDimAnisotropic_Allcock
@@ -13,7 +13,7 @@
 #PROGRAM		= LORENTZ_ComputeRoots_Vertex
 #PROGRAM		= COXDYN_FindExtensionsCoxMat
 #PROGRAM		= LORENTZ_SingleEdgewalk
-PROGRAM		= COXDYN_GetFacetOneDomain
+#PROGRAM		= COXDYN_GetFacetOneDomain
 
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		= Test

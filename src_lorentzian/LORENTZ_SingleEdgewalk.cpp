@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "We obtain something different\n";
     }
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in LORENTZ_SingleEdgewalk\n";
     exit(e.eVal);
   }
   runtime(time1);

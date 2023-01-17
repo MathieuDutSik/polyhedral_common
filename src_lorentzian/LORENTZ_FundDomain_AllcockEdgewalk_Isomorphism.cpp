@@ -7,6 +7,7 @@
 #include "edgewalk.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_EDGEWALK_Isomorphism();
     if (argc != 2) {
@@ -32,7 +33,8 @@ int main(int argc, char *argv[]) {
     MainFunctionEdgewalk_Isomorphism<T, Tint, Tgroup>(eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

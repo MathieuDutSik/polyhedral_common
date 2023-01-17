@@ -3,6 +3,7 @@
 #include "lorentzian_linalg.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3) {
       std::cerr << "COXDYN_GetFacetOneDomain [FileI] [FileO]\n";
@@ -28,8 +29,10 @@ int main(int argc, char *argv[]) {
     os << "return ";
     WriteMatrixGAP(os, Mred);
     os << ";\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in COXDYN_GetFacetOneDomain\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

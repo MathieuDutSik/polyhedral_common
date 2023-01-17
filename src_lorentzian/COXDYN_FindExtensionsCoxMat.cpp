@@ -3,6 +3,7 @@
 #include "coxeter_dynkin.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 5) {
       std::cerr << "COXDYN_FindExtensionsCoxMat [FileCoxMat] [opt_sph_eucl] "
@@ -65,7 +66,8 @@ int main(int argc, char *argv[]) {
     os << "return " << StringMatrixGAP(Mtot) << ";\n";
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in COXDYN_FindExtensionsCoxMat\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

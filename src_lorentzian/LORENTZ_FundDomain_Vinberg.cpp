@@ -6,6 +6,7 @@
 #include "vinberg.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_VINBERG();
     if (argc != 2) {
@@ -22,7 +23,8 @@ int main(int argc, char *argv[]) {
     MainFunctionVinberg<T, Tint>(eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in LORENTZ_FundDomain_Vinberg\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

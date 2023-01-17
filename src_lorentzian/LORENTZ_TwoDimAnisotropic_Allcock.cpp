@@ -6,6 +6,7 @@
 #include "two_dim_lorentzian.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 5) {
       std::cerr << "TEST_Anisotropic a b c M\n";
@@ -101,7 +102,8 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal end of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in LORENTZ_TwoDimAnisotropic_Allcock\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

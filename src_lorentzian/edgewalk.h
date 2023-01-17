@@ -1768,6 +1768,7 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
     std::cerr << "-------- e_norm=" << e_norm << " --------------\n";
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
+    MyMatrix<Tint> Latt_i_Orth_tint = UniversalMatrixConversion<Tint,T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     CheckPositiveDefinite(G_P);
     std::vector<MyVector<Tint>> l_v =

@@ -83,8 +83,9 @@ int main(int argc, char *argv[]) {
       }
       os << "];\n";
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in LORENTZ_ComputeStabilizer_Vertex\n";
     exit(e.eVal);
   }
   runtime(time1);
