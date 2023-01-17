@@ -3,6 +3,7 @@
 #include "NumberTheory.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 2) {
       std::cerr << "TestPermutationSignCanonic [FileI]\n";
@@ -44,7 +45,10 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in TestPermutationSignCanonic\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

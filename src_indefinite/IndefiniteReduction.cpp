@@ -3,6 +3,7 @@
 #include "NumberTheory.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3 && argc != 2) {
       std::cerr << "IndefiniteReduction [FileI] [FileO]\n";
@@ -48,7 +49,10 @@ int main(int argc, char *argv[]) {
       std::ofstream os(FileO);
       print_result(os);
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in IndefiniteReduction\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

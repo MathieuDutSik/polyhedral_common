@@ -1,7 +1,7 @@
-#PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
+PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
 #PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= IndefiniteLLL
-PROGRAM		= IndefiniteReduction
+#PROGRAM		= IndefiniteReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
