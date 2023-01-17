@@ -20,9 +20,9 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
 }
 
 int main(int argc, char *argv[]) {
-  using Tint = int;
-  //
+  SingletonTime time1;
   try {
+    using Tint = int;
     std::string Prefix = argv[1];
     //
     // Parsing the input
@@ -69,7 +69,10 @@ int main(int argc, char *argv[]) {
       iProc++;
     }
     std::cerr << "MaxCoeff=" << MaxCoeff << "\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in CTYP_ComputeMaxCoefficients\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

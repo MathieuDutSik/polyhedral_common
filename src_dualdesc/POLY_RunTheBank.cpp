@@ -16,6 +16,7 @@ void signal_callback_handler_bank(int signum) {
 }
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_BankingSystem();
     if (argc != 2) {
@@ -52,7 +53,8 @@ int main(int argc, char *argv[]) {
     DataBankAsioServer<Tkey, Tval>(Saving, SavingPrefix, port, std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something wrong happened\n";
+    std::cerr << "Error in POLY_RunTheBank\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

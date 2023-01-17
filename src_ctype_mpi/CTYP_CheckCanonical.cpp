@@ -4,6 +4,7 @@
 #include "Temp_PolytopeEquiStab.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 2) {
       std::cerr << "CTYP_MakeInitialFile [FileIn]\n";
@@ -68,7 +69,10 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in CTYP_CheckCanonical\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

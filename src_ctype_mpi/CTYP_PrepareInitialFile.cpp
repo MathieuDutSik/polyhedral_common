@@ -54,10 +54,9 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const &M, int const &NbAdj,
 }
 
 int main(int argc, char *argv[]) {
-  //  using T=mpq_class;
-  using Tint = int;
-  //
+  SingletonTime time1;
   try {
+    using Tint = int;
     FullNamelist eFull = NAMELIST_InitialPreparation();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -297,7 +296,10 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in CTYP_PrepareInitialFile\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }
