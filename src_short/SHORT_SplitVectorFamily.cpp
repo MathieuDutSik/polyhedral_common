@@ -3,6 +3,7 @@
 #include "SHORT_ShortestConfig.h"
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -43,7 +44,10 @@ int main(int argc, char *argv[]) {
       if (res == mod)
         WriteMatrix(os, ListSHV[iShort]);
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in SHORT_SplitVectorFamily\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

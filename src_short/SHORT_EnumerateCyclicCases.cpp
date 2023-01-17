@@ -8,6 +8,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     using Tfield = mpq_class;
     using Tint = int;
@@ -106,9 +107,11 @@ int main(int argc, char *argv[]) {
       }
     }
     os << "];\n";
-    std::cerr << "Normal termination of the program nbFound=" << nbFound
-              << "\n";
+    std::cerr << "nbFound=" << nbFound << "\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in SHORT_EnumerateCyclicCases\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

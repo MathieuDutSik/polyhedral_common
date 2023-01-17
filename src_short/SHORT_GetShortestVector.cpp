@@ -6,6 +6,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -28,7 +29,10 @@ int main(int argc, char *argv[]) {
     Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(M);
     int nbRow = RecSHV.SHV.rows();
     std::cerr << "nbRow=" << nbRow << "\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in SHORT_GetShortestVector\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

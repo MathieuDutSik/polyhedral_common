@@ -8,6 +8,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -43,7 +44,10 @@ int main(int argc, char *argv[]) {
     //
     std::string eFileOUT(argv[4]);
     WriteListConfigurationShortestVector(eFileOUT, ListConfOut);
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in SHORT_LiftConfigurationShortest\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }

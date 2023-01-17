@@ -8,6 +8,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -49,7 +50,10 @@ int main(int argc, char *argv[]) {
       os << RecRet.second[iConf];
     }
     os << "]);\n";
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in SHORT_ReduceVectorFamilyGAP\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }
