@@ -5,6 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  SingletonTime time1;
   try {
     if (argc == 1) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -57,6 +58,8 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Error in CP_TestCompletePositivity\n";
     exit(e.eVal);
   }
+  runtime(time1);
 }
