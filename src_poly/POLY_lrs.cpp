@@ -7,27 +7,35 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFile, std::string const &choice) {
-  std::ifstream is(eFile);
-  MyMatrix<T> EXT_pre = ReadMatrixLrsCdd<T>(is);
+void process(std::string const &eFileI, std::string const &choice, std::ostream & os) {
+  auto read_file=[&]() -> MyMatrix<T> {
+    std::optional<std::string> opt = get_prefix(eFileI, "lrs");
+    std::ifstream is(eFileI);
+    if (opt) {
+      return ReadMatrixLrsCdd<T>(is);
+    } else {
+      return ReadMatrix<T>(is);
+    }
+  };
+  MyMatrix<T> EXT_pre = read_file();
   MyMatrix<T> EXT = lrs::FirstColumnZero(EXT_pre);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   //
   if (choice == "lrs") {
-    std::cout << "V-representation\n";
-    std::cout << "begin\n";
-    std::cout << "****** " << nbCol << " rational\n";
+    os << "V-representation\n";
+    os << "begin\n";
+    os << "****** " << nbCol << " rational\n";
     long nVertices = 0;
     auto fPrint = [&](T *out) -> void {
       for (int iCol = 0; iCol < nbCol; iCol++)
-        std::cout << " " << out[iCol];
-      std::cout << "\n";
+        os << " " << out[iCol];
+      os << "\n";
       nVertices++;
     };
     lrs::Kernel_DualDescription_DropFirst(EXT, fPrint);
-    std::cout << "end\n";
-    std::cout << "*Total: nvertices=" << nVertices << "\n";
+    os << "end\n";
+    os << "*Total: nvertices=" << nVertices << "\n";
     return;
   }
   if (choice == "vertex_incidence") {
@@ -43,20 +51,20 @@ void process(std::string const &eFile, std::string const &choice) {
       }
     };
     lrs::Kernel_DualDescription_DropFirst(EXT, fUpdateIncd);
-    std::cout << "VertexIncd=[";
+    os << "VertexIncd=[";
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (iRow > 0)
-        std::cout << ",";
-      std::cout << VertexIncd[iRow];
+        os << ",";
+      os << VertexIncd[iRow];
     }
-    std::cout << "]\n";
+    os << "]\n";
     return;
   }
   if (choice == "number_facet") {
     size_t nFacets = 0;
     auto fIncrement = [&]([[maybe_unused]] T *out) -> void { nFacets++; };
     lrs::Kernel_DualDescription_DropFirst(EXT, fIncrement);
-    std::cout << "nFacets=" << nFacets << "\n";
+    os << "nFacets=" << nFacets << "\n";
     return;
   }
   if (choice == "qhull_incidence") {
@@ -69,12 +77,12 @@ void process(std::string const &eFile, std::string const &choice) {
           eScal += out[iCol] * EXT(iRow, iCol);
         if (eScal == 0) {
           if (!IsFirst)
-            std::cout << " ";
+            os << " ";
           IsFirst = false;
-          std::cout << iRow;
+          os << iRow;
         }
       }
-      std::cout << "\n";
+      os << "\n";
     };
     lrs::Kernel_DualDescription_DropFirst(EXT, fPrintIncd);
     return;
@@ -101,17 +109,17 @@ void process(std::string const &eFile, std::string const &choice) {
     };
     lrs::Kernel_DualDescription_DropFirst(EXT, f_insert);
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      std::cout << "iRow=" << iRow
-                << " |Contained Facet|=" << VertexIncd[iRow].size() << "\n";
+      os << "iRow=" << iRow
+         << " |Contained Facet|=" << VertexIncd[iRow].size() << "\n";
       std::map<size_t, size_t> map;
       for (auto &idx_facet : VertexIncd[iRow]) {
         size_t len = ListFace[idx_facet].count();
         map[len]++;
       }
-      std::cout << " |map(len(face)) =";
+      os << " |map(len(face)) =";
       for (auto &kv : map)
-        std::cout << " (" << kv.first << "," << kv.second << ")";
-      std::cout << "\n";
+        os << " (" << kv.first << "," << kv.second << ")";
+      os << "\n";
     }
     return;
   }
@@ -122,13 +130,12 @@ void process(std::string const &eFile, std::string const &choice) {
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 4) {
+    if (argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_lrs choice arith [DATAIN]\n";
+      std::cerr << "POLY_lrs choice arith [DATAIN] [DATAOUT]\n";
       std::cerr << "or\n";
-      std::cerr
-          << "POLY_lrs choice RealAlgebraic [DATAIN] [DATA_ALGEBRAIC_FIELD]\n";
+      std::cerr << "POLY_lrs choice arith [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "choice : the chosen processing option\n";
@@ -155,21 +162,24 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string choice = argv[1];
-    std::string eFile = argv[3];
     std::string arith = argv[2];
-    auto call_lrs = [&]() -> void {
+    std::string eFileI = argv[3];
+    std::string eFileO = "stderr";
+    if (argc == 5)
+      eFileO = argv[4];
+    auto call_lrs = [&](std::ostream & os) -> void {
       if (arith == "rational") {
-        return process<mpq_class>(eFile, choice);
+        return process<mpq_class>(eFileI, choice, os);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFile, choice);
+        return process<T>(eFileI, choice, os);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFile, choice);
+        return process<T>(eFileI, choice, os);
       }
       std::optional<std::string> opt_realalgebraic = get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
@@ -184,14 +194,23 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFile, choice);
+        return process<T>(eFileI, choice, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith << "\n";
       std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    call_lrs();
+    if (eFileO == "stderr") {
+      call_lrs(std::cerr);
+    } else {
+      if (eFileO == "stdout") {
+        call_lrs(std::cout);
+      } else {
+        std::ofstream os(eFileO);
+        call_lrs(os);
+      }
+    }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs\n";
