@@ -247,7 +247,8 @@ public:
           throw TerminalException{1};
         }
       }
-    } else { // This case is rarer. It is for big jumps.
+    } else {
+      // This case is rarer. It is for big jumps.
       uint8_t val_u8 = 0;
       for (size_t u = curr_n_byte; u < needed_n_byte; u++) {
         size_t n_write = std::fwrite(&val_u8, sizeof(uint8_t), 1, fp);

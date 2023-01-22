@@ -18,7 +18,8 @@
 
 struct message_facet {
   size_t e_hash;
-  vectface vf; // List of vectface by the DatabaseBank
+  // vf: List of vectface by the DatabaseBank
+  vectface vf;
 };
 
 struct message_query {
@@ -44,7 +45,9 @@ inline void serialize(Archive &ar, message_query &mesg,
   ar &make_nvp("query", mesg.query);
 }
 
-} // namespace boost::serialization
+// clang-format off
+}  // namespace boost::serialization
+// clang-format on
 
 size_t mpi_get_hash_kernel(Face const &x, int const &n_vert_div8,
                            std::vector<uint8_t> &V_hash) {

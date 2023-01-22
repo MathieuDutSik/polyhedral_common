@@ -24,7 +24,9 @@ const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
 const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
 const int STOP_COMPUTATION = 666;
 const int NORMAL_TERMINATION_COMPUTATION = 555;
-} // namespace TempShvec_globals
+// clang-format off
+}  // namespace TempShvec_globals
+// clang-format on
 
 template <typename T> struct T_shvec_request {
   int dim;
@@ -469,25 +471,26 @@ int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
     //
     Vminimize(1 + i) = 1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize);
-    if (eSol.DualDefined &&
-        eSol.PrimalDefined) { // Well defined so we get a potential lower bound
+    if (eSol.DualDefined && eSol.PrimalDefined) {
+      // Well defined so we get a potential lower bound
       Tint eLow = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
       if (eLow > lower)
         lower = eLow;
     }
-    if (!eSol.DualDefined &&
-        eSol.PrimalDefined) { // Infinite direction. Therefore no better bound
-                              // available
+    if (!eSol.DualDefined && eSol.PrimalDefined) {
+      // Infinite direction. Therefore no better bound available
     }
-    if (!eSol.PrimalDefined) { // No feasible solution. Therefore not feasible.
-      upper = lower - 1;       // This will lead to a backtrack operation
+    if (!eSol.PrimalDefined) {
+      // No feasible solution. Therefore not feasible.
+      // This will lead to a backtrack operation
+      upper = lower - 1;
       return;
     }
     //
     Vminimize(1 + i) = -1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize);
-    if (eSol.DualDefined &&
-        eSol.PrimalDefined) { // Well defined so we get a potential upper bound
+    if (eSol.DualDefined && eSol.PrimalDefined) {
+      // Well defined so we get a potential upper bound
       Tint eUpp = UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);
       if (eUpp < upper)
         upper = eUpp;
@@ -670,7 +673,8 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
       ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
     return {TheNorm, ListVect};
   }
-  T bound = 0; // should not be used
+  // Following value of bound = 0 should not be used
+  T bound = 0;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
   T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request);

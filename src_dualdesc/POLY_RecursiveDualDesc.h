@@ -304,8 +304,8 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
   for (auto &kv : eMap) {
     std::vector<Tint> NewVal;
     Tint ePow = 1;
-    Tint kv_first_tint =
-        size_t(kv.first); // Needed conversion because of Mac typing issues.
+    // Needed conversion below because of Mac typing issues.
+    Tint kv_first_tint = size_t(kv.first);
     for (int i = 0; i <= kv.second; i++) {
       for (auto &eVal : LVal)
         NewVal.push_back(ePow * eVal);
@@ -364,8 +364,9 @@ public:
      this would have populated it with entries that never occur and so slow it
      down. */
   UNORD_MAP<Tint, Torbsize> OrbSize_Map;
-  std::vector<Tint>
-      ListPossOrbsize; // Canonically computed from the list of factors
+  // From the list of factors of the group size we compute the list of possible
+  // orbit sizes and that has to be invariant and not change from one run to the next
+  std::vector<Tint> ListPossOrbsize;
   /* TRICK 3: Knowing the factorization of the order of the group allow us to
      know exactly
      what are the possible orbitsize occurring and so the number of bits needed
@@ -378,9 +379,9 @@ public:
   Tint nbUndone;
   size_t nbOrbit;
   std::vector<uint8_t> Vappend;
-  std::vector<uint8_t>
-      ListOrbit; // This CANNOT be replaced by vectface as we hack our way and
-                 // so making a vectface will not allow
+  // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
+  // would not be available with a vectface.
+  std::vector<uint8_t> ListOrbit;
   // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const &f_in) const {
     SingEnt se{Face(n_act), 0};
@@ -494,7 +495,8 @@ public:
     /* TRICK 4: value 0 is the default constructed one and so using it we can
        find if the entry is new or not in only one call */
     Torbsize &idx = OrbSize_Map[orbSize];
-    if (idx == 0) { // A rare case. The linear loop should be totally ok
+    if (idx == 0) {
+      // A rare case. The linear loop should be totally ok
       auto set = [&]() -> int {
         for (size_t u = 0; u < ListPossOrbsize.size(); u++)
           if (ListPossOrbsize[u] == orbSize) {
@@ -611,7 +613,8 @@ public:
     V_hash = std::vector<uint8_t>(n_act_div8, 0);
 #endif
 #ifdef SUBSET_HASH
-    size_t n_ent_bit = 8 * sizeof(size_t); // The selection
+    // The selection of indices for the hash
+    size_t n_ent_bit = 8 * sizeof(size_t);
     if (n_act <= n_ent_bit) {
       n_bit_hash = n_act;
       for (size_t i = 0; i < n_ent_bit; i++)
@@ -665,8 +668,8 @@ public:
                                                        size_t idx2) -> bool {
       size_t pos1 = delta * idx1;
       size_t pos2 = delta * idx2;
-      for (size_t i = 1; i < n_act;
-           i++) { // TRICK 9: Two faces will differ by at least 2 bits
+      for (size_t i = 1; i < n_act; i++) {
+        // TRICK 9: Two faces will differ by at least 2 bits
         bool val1 = getbit(foc.ListOrbit, pos1);
         bool val2 = getbit(foc.ListOrbit, pos2);
         if (val1 != val2)
@@ -691,14 +694,15 @@ public:
     }
     return retListOrbit;
   }
-  std::optional<Face> FuncInsert(
-      Face const
-          &face_can) { // The face should have been canonicalized beforehand.
+  std::optional<Face> FuncInsert(Face const&face_can) {
+    // The face should have been canonicalized beforehand.
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
-    if (DictOrbit.size() == foc.nbOrbit) // Insertion did not raise the count
-                                         // and so it was already present
+    if (DictOrbit.size() == foc.nbOrbit) {
+      // Insertion did not raise the count
+      // and so it was already present
       return {};
+    }
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
@@ -1478,7 +1482,8 @@ vectface DUALDESC_AdjacencyDecomposition(
 }
 
 std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
-  size_t n_ent_bit = 8 * sizeof(size_t); // The size of the selection
+  // The size of the selection done
+  size_t n_ent_bit = 8 * sizeof(size_t);
   size_t n_bit_hash = n_ent_bit;
   if (n_act <= n_ent_bit)
     n_bit_hash = n_act;

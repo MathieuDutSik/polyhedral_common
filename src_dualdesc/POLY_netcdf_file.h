@@ -263,8 +263,8 @@ void POLY_NC_WriteGroup(netCDF::NcFile &dataFile, Tgroup const &GRP,
   varGRPSIZE.putVar(V_grpsize.data());
   //
   if (orbit_setup) {
-    int n_act_div8 =
-        (n_act + int(orbit_status) + 7) / 8; // We put an additional
+     // We put an additional
+    int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
     netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
     netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
     std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
@@ -283,7 +283,7 @@ void POLY_NC_WriteOrbitDimVars(netCDF::NcFile &dataFile, int const &n_act) {
   netCDF::NcDim eDimAct = dataFile.addDim("n_act", n_act);
   //
   bool orbit_status = false;
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
+  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
   netCDF::NcDim eDimActDiv8 = dataFile.addDim("n_act_div8", n_act_div8);
   netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
   std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
@@ -502,9 +502,10 @@ Face POLY_NC_ReadFace(netCDF::NcFile &dataFile, size_t const &iOrbit) {
   netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act");
   size_t n_act = dimGRP_INCD.getSize();
   bool orbit_status = false;
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
+  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
   //
-  using Tint = int; // This is actually not relevant here
+  // The Ting = int is actually not relevant here
+  using Tint = int;
   PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(
       dataFile, iOrbit, n_act_div8, orbit_status);
   Face face(n_act);
@@ -544,7 +545,8 @@ SingleEntryStatus<Tint> POLY_NC_ReadSingleEntryStatus(netCDF::NcFile &dataFile,
   netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act");
   size_t n_act = dimGRP_INCD.getSize();
   bool orbit_status = true;
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8; // We put an additional
+  // We put an n_act_div8 for the number of digits
+  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
   //
   PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(
       dataFile, iOrbit, n_act_div8, orbit_status);
