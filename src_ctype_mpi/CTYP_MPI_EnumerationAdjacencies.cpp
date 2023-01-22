@@ -532,8 +532,8 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
       if (status1.MPI_TAG == tag_form_adj) {
-        StatusNeighbors[status1.MPI_SOURCE] =
-            0; // Getting a message pretty much means it is alive
+        // Getting a message pretty much means it is alive
+        StatusNeighbors[status1.MPI_SOURCE] = 0;
         std::vector<char> eVect_c(totalsiz_exch);
         char *ptr_recv = eVect_c.data();
         MPI_Status status2;

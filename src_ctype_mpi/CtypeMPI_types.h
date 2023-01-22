@@ -248,7 +248,9 @@ template <> struct hash<triple> {
     return std::hash<std::vector<int8_t>>()(eV);
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 bool operator==(triple const &obj1, triple const &obj2) {
   return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.j;

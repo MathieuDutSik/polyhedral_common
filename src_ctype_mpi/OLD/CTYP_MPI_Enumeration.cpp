@@ -102,8 +102,8 @@ int main() {
       std::cerr << "Testing and getting a request\n";
       boost::optional<mpi::status> stat = ListRequest[u].test();
 
-      if (stat) { // that request has ended. Let's read it.
-
+      if (stat) {
+        // that request has ended. Let's read it.
         if (stat->error() != 0) {
           /*
           mpi::status e_stat = *stat;
@@ -302,8 +302,8 @@ int main() {
     if (prob) {
       std::cerr << "We are probing something\n";
       if (prob->tag() == tag_new_form) {
-        StatusNeighbors[prob->source()] =
-            0; // Getting a message pretty much means it is alive
+        // Getting a message pretty much means it is alive
+        StatusNeighbors[prob->source()] = 0;
         PairExch<Tint> ePair;
         world.recv(prob->source(), prob->tag(), ePair);
         std::cerr << "Receiving a matrix ePair=" << ePair.eCtype
@@ -313,7 +313,8 @@ int main() {
         last_timeoper = std::chrono::system_clock::now();
       }
       if (prob->tag() == tag_termination) {
-        StatusNeighbors[prob->source()] = 1; // This is the termination message
+        // This is the termination message
+        StatusNeighbors[prob->source()] = 1;
       }
     } else {
       std::cerr << "irank=" << irank
