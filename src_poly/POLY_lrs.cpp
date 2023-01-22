@@ -7,8 +7,9 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const &choice, std::ostream & os) {
-  auto read_file=[&]() -> MyMatrix<T> {
+void process(std::string const &eFileI, std::string const &choice,
+             std::ostream &os) {
+  auto read_file = [&]() -> MyMatrix<T> {
     std::optional<std::string> opt = get_prefix(eFileI, "lrs");
     std::ifstream is(eFileI);
     if (opt) {
@@ -109,8 +110,8 @@ void process(std::string const &eFileI, std::string const &choice, std::ostream 
     };
     lrs::Kernel_DualDescription_DropFirst(EXT, f_insert);
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      os << "iRow=" << iRow
-         << " |Contained Facet|=" << VertexIncd[iRow].size() << "\n";
+      os << "iRow=" << iRow << " |Contained Facet|=" << VertexIncd[iRow].size()
+         << "\n";
       std::map<size_t, size_t> map;
       for (auto &idx_facet : VertexIncd[iRow]) {
         size_t len = ListFace[idx_facet].count();
@@ -157,7 +158,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a field whose description is in FileDesc\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
+                   "field whose description is in FileDesc\n";
       return -1;
     }
     //
@@ -167,7 +169,7 @@ int main(int argc, char *argv[]) {
     std::string eFileO = "stderr";
     if (argc == 5)
       eFileO = argv[4];
-    auto call_lrs = [&](std::ostream & os) -> void {
+    auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         return process<mpq_class>(eFileI, choice, os);
       }
@@ -181,7 +183,8 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return process<T>(eFileI, choice, os);
       }
-      std::optional<std::string> opt_realalgebraic = get_postfix(arith, "RealAlgebraic=");
+      std::optional<std::string> opt_realalgebraic =
+          get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
@@ -196,7 +199,8 @@ int main(int argc, char *argv[]) {
         using T = RealField<idx_real_algebraic_field>;
         return process<T>(eFileI, choice, os);
       }
-      std::cerr << "Failed to find a matching field for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching field for arith=" << arith
+                << "\n";
       std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
                    "RealAlgebraic\n";
       throw TerminalException{1};

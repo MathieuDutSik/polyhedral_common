@@ -5,9 +5,9 @@
 // The hash map do not seem to make much difference in the overall
 // performance.
 
-//#define UNORDERED_MAP_SPECIFIC
-//#define TSL_SPARSE_MAP_SPECIFIC
-//#define TSL_ROBIN_MAP_SPECIFIC
+// #define UNORDERED_MAP_SPECIFIC
+// #define TSL_SPARSE_MAP_SPECIFIC
+// #define TSL_ROBIN_MAP_SPECIFIC
 #define TSL_HOPSCOTCH_MAP_SPECIFIC
 
 #ifdef UNORDERED_MAP_SPECIFIC

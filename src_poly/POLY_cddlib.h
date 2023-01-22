@@ -7763,8 +7763,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
   dd_rowrange itemp, otemp;
   bool localdebug = false;
 
-  auto clean=[&]() -> void {
-    if (cone->d <= 0 || cone->newcol[1] == 0) { /* fixing the number of output */
+  auto clean = [&]() -> void {
+    if (cone->d <= 0 ||
+        cone->newcol[1] == 0) { /* fixing the number of output */
       cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount - 1;
       cone->parent->ldim = cone->LinearityDim - 1;
     } else {

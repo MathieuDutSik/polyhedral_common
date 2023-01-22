@@ -6,13 +6,14 @@
 #include "POLY_cddlib.h"
 // clang-format on
 
-template<typename T>
-void process_A(std::string const& eFileI, std::string const& eFileO, std::string const& choice) {
+template <typename T>
+void process_A(std::string const &eFileI, std::string const &eFileO,
+               std::string const &choice) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(EXT);
   int nbIrred = ListIrred.size();
   std::cerr << "nbIrred=" << nbIrred << "\n";
-  auto print_result=[&](std::ostream& os) -> void {
+  auto print_result = [&](std::ostream &os) -> void {
     if (choice == "GAP") {
       os << "return [";
       for (int i = 0; i < nbIrred; i++) {
@@ -44,9 +45,8 @@ void process_A(std::string const& eFileI, std::string const& eFileO, std::string
   return print_result(os);
 }
 
-
-
-void process_B(std::string const& eFileI, std::string const& eFileO, std::string const& choice, std::string const& arith) {
+void process_B(std::string const &eFileI, std::string const &eFileO,
+               std::string const &choice, std::string const &arith) {
   if (arith == "rational") {
     return process_A<mpq_class>(eFileI, eFileO, choice);
   }
@@ -60,7 +60,8 @@ void process_B(std::string const& eFileI, std::string const& eFileO, std::string
     using T = QuadField<Trat, 2>;
     return process_A<T>(eFileI, eFileO, choice);
   }
-  std::optional<std::string> opt_realalgebraic = get_postfix(arith, "RealAlgebraic=");
+  std::optional<std::string> opt_realalgebraic =
+      get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
     using T_rat = mpq_class;
     std::string FileAlgebraicField = *opt_realalgebraic;
@@ -77,11 +78,9 @@ void process_B(std::string const& eFileI, std::string const& eFileO, std::string
   }
   std::cerr << "Failed to find a matching field for arith=" << arith << "\n";
   std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
-    "RealAlgebraic\n";
+               "RealAlgebraic\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
@@ -100,7 +99,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     ---- choice ----\n";
       std::cerr << "\n";
-      std::cerr << "GAP : For having a gap readiable file (via ReadAsFunction)\n";
+      std::cerr
+          << "GAP : For having a gap readiable file (via ReadAsFunction)\n";
       std::cerr << "Python : For having a python readable file\n";
       std::cerr << "\n";
       std::cerr << "     ---- arith ----\n";
@@ -108,7 +108,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a field whose description is in FileDesc\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
+                   "field whose description is in FileDesc\n";
       return -1;
     }
     if (argc == 4)
