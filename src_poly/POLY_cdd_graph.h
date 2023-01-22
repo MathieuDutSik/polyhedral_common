@@ -64,8 +64,8 @@ DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT) {
   dd_FreeMatrix(M);
   return DDA<T>{TheFAC, eSkelGraph, eRidgeGraph};
 }
-} // namespace cdd
 
 // clang-format off
+}  // namespace cdd
 #endif  // SRC_POLY_POLY_CDD_GRAPH_H_
 // clang-format on

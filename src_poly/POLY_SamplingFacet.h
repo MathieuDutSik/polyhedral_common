@@ -70,7 +70,8 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
     bool IsFinished = true;
     for (int iC = 0; iC < nbCases; iC++)
       if (ListStatus[iC] == 0) {
-        nbCall++; // we liberally increase the value
+        // we liberally increase the nbCall value
+        nbCall++;
         IsFinished = false;
         ListStatus[iC] = 1;
         Face eFace = ListFace[iC];

@@ -131,9 +131,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   cdd::dd_lpdata<T>
       *lp; /* pointer to LP data structure that is not visible by user. */
   cdd::dd_colrange j;
-  //  std::cerr << "TheEXT=\n";
-  //  WriteMatrix(std::cerr, TheEXT);
-  //  std::cerr << "rank=" << RankMat(TheEXT) << "\n";
   int d_input;
   int nbRow, nbCol, idx;
   std::vector<int> DualSolutionPos;
@@ -280,7 +277,6 @@ template <typename T>
 std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const &NSP) {
   int TheDim = NSP.rows();
   int nbCol = NSP.cols();
-  //  std::cerr << "TheDim=" << TheDim << "\n";
   if (TheDim == 0)
     return {};
   int FirstVertex = -1;
@@ -457,13 +453,6 @@ template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
     eVect(iCol) = eSum;
   }
   //
-  /*
-  std::cerr << "RankMat(nMat)=" << RankMat(nMat) << "\n";
-  std::cerr << "nMat=\n";
-  WriteMatrix(std::cerr, nMat);
-  std::cerr << " eVect=\n";
-  WriteVector(std::cerr, eVect);*/
-  //
   LpSolution<T> eSol = CDD_LinearProgramming(nMat, eVect);
   if (!eSol.PrimalDefined) {
     std::cerr << "The optimization resulted in a result whose primal is not "
@@ -475,11 +464,6 @@ template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
     throw TerminalException{1};
   }
   MyVector<T> SolDir = eSol.DirectSolution;
-  /*
-  std::cerr << "SolDir=";
-  WriteVector(std::cerr, SolDir);
-  std::cerr << "PrimalDefined=" << eSol.PrimalDefined << " DualDefined=" <<
-  eSol.DualDefined << "\n"; */
   ZeroAssignation(eBasis);
   for (int iCol = 0; iCol < nbCol; iCol++)
     eBasis(iCol, 0) = SolDir(iCol);
@@ -549,20 +533,15 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
       TheVert(iCol + 1) = SolDir(iCol);
     Face eInc(nbRow);
-    //    std::cerr << "nbRow=" << nbRow << "\n";
     for (int iRow = 0; iRow < nbRow; iRow++) {
       T eSum = 0;
       for (int iCol = 0; iCol < nbCol; iCol++)
         eSum += nMat(iRow, iCol) * TheVert(iCol);
-      //      std::cerr << "iRow=" << iRow << "  eSum=" << eSum << "\n";
       if (eSum == 0)
         eInc[iRow] = 1;
     }
-    //    std::cerr << "FindOneInitialVertex  eInc(count/size)=" << eInc.count()
-    //    << " / " << eInc.size() << "\n";
     MyMatrix<T> RnkMat = SelectRow(nMat, eInc);
     int TheRank = RankMat(RnkMat);
-    //    std::cerr << "TheRank=" << TheRank << "\n";
     if (TheRank == nbCol - 1) {
       ListFace.push_back(eInc);
       if (ListFace.size() == nb)
@@ -618,11 +597,6 @@ MyMatrix<T> LP_GetExpressionForLP(MyMatrix<T> const &EXT) {
 template <typename T>
 Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  /*  std::cerr << "EXT=\n";
-  WriteMatrix(std::cerr, EXT);
-  std::cerr << "eVect=\n";
-  WriteVector(std::cerr, eVect);
-  std::cerr << "RankMat(EXT)=" << RankMat(EXT) << "\n";*/
   std::optional<MyVector<T>> opt = SolutionMat(EXT, eVect);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -642,17 +616,8 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
     EXT2.row(iRow) = EXT.row(iRow);
   MyVector<T> uVect = -eVect;
   AssignMatrixRow(EXT2, nbRow, uVect);
-  //  std::cerr << "RankMat(EXT2)=" << RankMat(EXT2) << "\n";
   MyMatrix<T> EXTpoly = Polytopization<T>(EXT2);
-  // std::cerr << "EXTpoly=\n";
-  // WriteMatrix(std::cerr, EXTpoly);
-  // std::cerr << "RankMat(EXTpoly)=" << RankMat(EXTpoly) << "\n";
   MyMatrix<T> EXT_lp = LP_GetExpressionForLP(EXTpoly);
-  // std::cerr << "RankMat(EXT_lp)=" << RankMat(EXT_lp) << "\n";
-  /*  std::cerr << "EXTpoly=\n";
-  WriteMatrix(std::cerr, EXTpoly);
-  std::cerr << "EXT_lp=\n";
-  WriteMatrix(std::cerr, EXT_lp);*/
 
   int TheDim = EXT_lp.cols();
   MyVector<T> TheCritFacet = EXT_lp.row(nbRow);
@@ -660,16 +625,15 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
       [&]() -> MyVector<T> {
     MyVector<T> eMinimize(TheDim);
     while (true) {
-      int siz = 3; // quite enough for us
+      // quite enough for us
+      int siz = 3;
       int sizTot = 1 + 2 * siz;
       for (int iCol = 0; iCol < TheDim; iCol++) {
         int a = random() % sizTot;
         T eVal = a - siz;
         eMinimize(iCol) = eVal;
       }
-      //      std::cerr << "Before call to CDD_LinearProgramming 1\n";
       LpSolution<T> eSol = CDD_LinearProgramming(EXT_lp, eMinimize);
-      //      std::cerr << " After call to CDD_LinearProgramming 1\n";
       if (eSol.PrimalDefined && eSol.DualDefined)
         if (eSol.rankDirectSol == TheDim - 1)
           return eMinimize;
@@ -679,12 +643,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
   while (true) {
     MyVector<T> eMinimize = GetOneFacetDefiningVect();
     for (int iter = 0; iter < nbIter; iter++) {
-      //      std::cerr << "Before call to CDD_LinearProgramming 2\n";
       LpSolution<T> eSol = CDD_LinearProgramming(EXT_lp, eMinimize);
-      //      std::cerr << " After call to CDD_LinearProgramming 2\n";
-      //      std::cerr << "eSol.PrimalDefined=" << eSol.PrimalDefined << "
-      //      eSol.DualDefined=" << eSol.DualDefined << " rankDirectSol=" <<
-      //      eSol.rankDirectSol << " TheDim=" << TheDim << "\n";
       if (eSol.PrimalDefined && eSol.DualDefined &&
           eSol.rankDirectSol == TheDim - 1) {
         Face eFace = eSol.eFace;
@@ -793,16 +752,10 @@ template <typename T>
 PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
                                     Constraint const &eConstraint) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  //  std::cerr << "ListVect=\n";
-  //  WriteMatrix(std::cerr, ListVect);
-  //  std::cerr << "End of write\n";
   MyMatrix<T> ListVectTr = ListVect.transpose();
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(ListVectTr);
   MyMatrix<T> NSP = eSelect.NSP;
   int nbVect = ListVect.rows();
-  //  std::cerr << "NSP=\n";
-  //  WriteMatrix(std::cerr, NSP);
-  //  std::cerr << "End of write\n";
   int nbRelation = NSP.rows();
   std::vector<MyVector<T>> ListInequalities;
   for (auto &eVect : eConstraint.ListStrictlyPositive) {
@@ -837,13 +790,6 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
     ToBeMinimized(iRel + 1) = eSum;
   }
   MyMatrix<T> MatInequalities = MatrixFromVectorFamily(ListInequalities);
-  /*
-  std::cerr << "ListInequalities=\n";
-  WriteMatrix(std::cerr, ListInequalities);
-  std::cerr << "ToBeMinimized=\n";
-  WriteVector(std::cerr, ToBeMinimized);*/
-  //  LpSolution<T> eSol=CDD_LinearProgramming_BugSearch(ListInequalities,
-  //  ToBeMinimized);
   LpSolution<T> eSol = CDD_LinearProgramming(MatInequalities, ToBeMinimized);
   PosRelRes<T> eResult;
   if (eSol.PrimalDefined && eSol.DualDefined) {
@@ -932,7 +878,6 @@ template <typename T>
 MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
-  //  PosRelRes<T> eRes=SearchPositiveRelationSimple_DualMethod(FAC);
   PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
   std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
   if (!eRes.eTestExist) {
@@ -1008,41 +953,18 @@ template <typename T> struct EmbeddedPolytope {
 template <typename T>
 EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
                                             MyMatrix<T> const &ListEqua) {
-  /*
-  std::cerr << "ComputeEmbeddedPolytope, step 1\n";
-  std::cerr << "|ListIneq| = " << ListIneq.rows() << " / " << ListIneq.cols() <<
-  "\n"; WriteMatrix(std::cerr, ListIneq); std::cerr << "|ListEqua| = " <<
-  ListEqua.rows() << " / " << ListEqua.cols() << "\n"; WriteMatrix(std::cerr,
-  ListEqua);*/
-  //
   MyMatrix<T> NSP = NullspaceTrMat(ListEqua);
-  //  std::cerr << "ComputeEmbeddedPolytope, step 2 |NSP| = " << NSP.rows() << "
-  //  / " << NSP.cols() << "\n";
-  //
   MyMatrix<T> ListIneqRed = ListIneq * (NSP.transpose());
-  //  std::cerr << "|ListIneqRed| = " << ListIneqRed.rows() << " / " <<
-  //  ListIneqRed.cols() << "\n"; std::cerr << "ComputeEmbeddedPolytope, step
-  //  3\n";
-  //
   MyMatrix<T> LinSpa = LinearDeterminedByInequalities(ListIneqRed);
-  //  std::cerr << "|LinSpa| = " << LinSpa.rows() << " / " << LinSpa.cols() <<
-  //  "\n"; std::cerr << "ComputeEmbeddedPolytope, step 4\n";
-  //
   MyMatrix<T> FinalSpace = (LinSpa.transpose()) * NSP;
-  //  std::cerr << "|FinalSpace| = " << FinalSpace.rows() << " / " <<
-  //  FinalSpace.cols() << "\n"; std::cerr << "ComputeEmbeddedPolytope, step
-  //  5\n";
   std::optional<MyMatrix<T>> eRes = AffinizeSubspace(FinalSpace);
-  //  std::cerr << "ComputeEmbeddedPolytope, step 6\n";
   if (!eRes) {
     std::cerr << "Call to ComputeEmbeddedPolytope failed\n";
     std::cerr << "Because the affinization operation failed\n";
     throw TerminalException{1};
   }
   MyMatrix<T> FinalSpace_Aff = *eRes;
-  //  std::cerr << "ComputeEmbeddedPolytope, step 7\n";
   MyMatrix<T> ListIneqFinal = ListIneq * (FinalSpace_Aff.transpose());
-  //  std::cerr << "ComputeEmbeddedPolytope, step 8\n";
   return {FinalSpace_Aff, ListIneqFinal};
 }
 
