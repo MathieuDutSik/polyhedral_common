@@ -203,8 +203,10 @@ vectface SPAN_face_ExtremeRays(Face const &face, Tgroup const &StabFace,
                                int const &RankFace, const Face &extfac_incd,
                                MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
   auto f_filt = [&](MyMatrix<T> const &M, int const &RankTarget) -> bool {
-    if (M.rows() < RankTarget)
-      return false; // The number of rows cannot match the rank, so reject
+    if (M.rows() < RankTarget) {
+      // The number of rows cannot match the rank, so reject
+      return false;
+    }
     return RankMat(M) == RankTarget;
   };
   return SPAN_face_ExtremeRays_F(face, StabFace, RankFace, extfac_incd, FAC,
@@ -216,8 +218,6 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(
     Face const &face, Tgroup const &StabFace, int const &RankFace,
     const Face &extfac_incd, MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
   auto f_filt = [&](MyMatrix<T> const &M, int const &RankTarget) -> bool {
-    //    std::cerr << "|M|=" << M.rows() << " / " << M.cols() << " RankTarget="
-    //    << RankTarget << "\n";
     if (M.rows() == RankTarget) {
       // If it were to be a face, it would be a simplicial one.
       // So, we remove it from consideration

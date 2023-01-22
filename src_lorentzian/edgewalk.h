@@ -609,13 +609,15 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // We follow here the convention on oriented basis of Section 8:
   // "First member lies in the interior of (1/2)P and whose second member is k"
   MyMatrix<T> OrientedBasis(2, n);
-  if (norm < 0) { // the point is inner, the oriented basis is clear.
+  if (norm < 0) {
+    // the point is inner, the oriented basis is clear.
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ordinary case\n";
 #endif
     AssignMatrixRow(OrientedBasis, 0, r0);
     AssignMatrixRow(OrientedBasis, 1, k);
-  } else { // Now the point is ideal
+  } else {
+    // Now the point is ideal
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Builging OrientedBasis, ideal case\n";
 #endif
@@ -650,8 +652,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     };
     MyVector<T> v_pos = get_positive_norm_vector();
     T scal = v_pos.dot(G * k);
-    if (scal >
-        0) { // The convention is that negative scalar product is for facets.
+    if (scal > 0) {
+      // The convention is that negative scalar product is for facets.
       v_pos = -v_pos;
     }
     AssignMatrixRow(OrientedBasis, 0, v_pos);
@@ -712,7 +714,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef DEBUG_EDGEWALK_GENERIC
     std::cerr << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
 #endif
-    if (DeterminantMat(Expr) < 0) { // Change to get positive determinant
+    if (DeterminantMat(Expr) < 0) {
+      // Change to get positive determinant
       for (int i = 0; i < n; i++)
         BasisProj(0, i) = -BasisProj(0, i);
     }
@@ -758,7 +761,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     MyVector<Tint> l_B = Canonical(Gwork, r0_norm, r0_work, l_A);
     std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>> opt =
         Anisotropic<T, Tint>(Gwork, res_norm, r0_work, l_B);
-    if (!opt) { // No solution, this definitely can happen
+    if (!opt) {
+      // No solution, this definitely can happen
       return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
     const std::vector<MyVector<Tint>> &l_vect1 = opt->second;
@@ -1504,7 +1508,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           GetAdjacencyDirection(theVert.MatRoot, eFAC);
       FundDomainVertex<T, Tint> fVert =
           EdgewalkProcedure<T, Tint, Tgroup>(cusp_bank, si, theVert.gen, ad);
-      { // Output. Fairly important to see what is happening
+      {
+        // Output. Fairly important to see what is happening
 #ifdef DEBUG_ENUM_PROCESS
         T norm = fVert.gen.dot(G * fVert.gen);
         std::cerr << "Result of EdgewalkProcedure\n";
@@ -1940,7 +1945,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       MyVector<T> eVect_A = GetNegativeNormVector(Gprod);
       MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
       T scal = V.dot(G * eVect_B);
-      if (scal < 0) { // This is because of the sign convention
+      // This is because of the sign convention
+      if (scal < 0) {
         return eVect_B;
       } else {
         return -eVect_B;

@@ -23,7 +23,9 @@ template <> struct hash<TypeIndexRed> {
   }
 };
 
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 template <typename T> struct InformationMatrix {
   TypePerfectExch<T> ePerfect;

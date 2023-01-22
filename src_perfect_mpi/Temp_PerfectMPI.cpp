@@ -122,7 +122,8 @@ int main() {
       if (RequestStatus[u] == 0)
         return u;
       boost::optional<boost::mpi::status> stat = ListRequest[u].test();
-      if (stat) { // that request has ended. Let's read it.
+      if (stat) {
+        // that request has ended. Let's read it.
         if (stat->error() != 0) {
           std::cerr << "something went wrong in the MPI" << std::endl;
           throw TerminalException{1};
