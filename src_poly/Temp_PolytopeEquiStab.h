@@ -1110,7 +1110,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
             WMatAbs.positionZero) {
           size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
           bool ChgSign = WMatAbs.ArrSigns[idx];
-          int ValSign = 1 - 2 * int(ChgSign);
+          int ValSign = 1 - 2 * static_cast<int>(ChgSign);
           int RetSign = ValSign * ListSigns[k_row];
           ListSigns[i_row] = RetSign;
 #ifdef DEBUG

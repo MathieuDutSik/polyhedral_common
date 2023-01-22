@@ -228,7 +228,7 @@ std::string StringVectorUint8_t(std::vector<uint8_t> const &V) {
   for (size_t i = 0; i < V.size(); i++) {
     if (i > 0)
       estr += ",";
-    estr += std::to_string((int)V[i]);
+    estr += std::to_string(static_cast<int>(V[i]));
   }
   estr += "]";
   return estr;
@@ -264,7 +264,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile &dataFile, Tgroup const &GRP,
   //
   if (orbit_setup) {
      // We put an additional
-    int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
+    int n_act_div8 = (n_act + static_cast<int>(orbit_status) + 7) / 8;
     netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
     netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
     std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
@@ -283,7 +283,7 @@ void POLY_NC_WriteOrbitDimVars(netCDF::NcFile &dataFile, int const &n_act) {
   netCDF::NcDim eDimAct = dataFile.addDim("n_act", n_act);
   //
   bool orbit_status = false;
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
+  int n_act_div8 = (n_act + static_cast<int>(orbit_status) + 7) / 8;
   netCDF::NcDim eDimActDiv8 = dataFile.addDim("n_act_div8", n_act_div8);
   netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
   std::vector<std::string> LDim3{"n_orbit", "n_act_div8"};
@@ -394,7 +394,7 @@ void POLY_NC_WriteFace(netCDF::NcFile &dataFile, size_t const &iOrbit,
   uint8_t val = 0;
   uint8_t siz = 0;
   auto insertBit = [&](bool const &bit) -> void {
-    val += int(bit) * expo;
+    val += static_cast<int>(bit) * expo;
     expo *= 2;
     siz++;
     if (siz == 8) {
@@ -427,7 +427,7 @@ void POLY_NC_WriteSingleEntryStatus(netCDF::NcFile &dataFile,
   uint8_t val = 0;
   uint8_t siz = 0;
   auto insertBit = [&](bool const &bit) -> void {
-    val += int(bit) * expo;
+    val += static_cast<int>(bit) * expo;
     expo *= 2;
     siz++;
     if (siz == 8) {
@@ -460,7 +460,7 @@ void POLY_NC_SetBit(netCDF::NcFile &dataFile, size_t const &iOrbit,
   varORB_INCD.getVar(start_incd, count_incd, &val);
   uint8_t res = val / 2;
   //
-  uint8_t val_ret = int(status) + 2 * res;
+  uint8_t val_ret = static_cast<int>(status) + 2 * res;
   varORB_INCD.putVar(start_incd, count_incd, &val_ret);
 }
 
@@ -502,7 +502,7 @@ Face POLY_NC_ReadFace(netCDF::NcFile &dataFile, size_t const &iOrbit) {
   netCDF::NcDim dimGRP_INCD = dataFile.getDim("n_act");
   size_t n_act = dimGRP_INCD.getSize();
   bool orbit_status = false;
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
+  int n_act_div8 = (n_act + static_cast<int>(orbit_status) + 7) / 8;
   //
   // The Ting = int is actually not relevant here
   using Tint = int;
@@ -546,7 +546,7 @@ SingleEntryStatus<Tint> POLY_NC_ReadSingleEntryStatus(netCDF::NcFile &dataFile,
   size_t n_act = dimGRP_INCD.getSize();
   bool orbit_status = true;
   // We put an n_act_div8 for the number of digits
-  int n_act_div8 = (n_act + int(orbit_status) + 7) / 8;
+  int n_act_div8 = (n_act + static_cast<int>(orbit_status) + 7) / 8;
   //
   PairVface_OrbSize<Tint> ePair = POLY_NC_ReadVface_OrbSize<Tint>(
       dataFile, iOrbit, n_act_div8, orbit_status);

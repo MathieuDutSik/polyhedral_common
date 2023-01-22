@@ -843,7 +843,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     sum_adj += ListDegExpe2[iVert];
   }
   double frac_adj =
-      double(sum_adj) / (double(nbVertTot) * double(nbVertTot - 1));
+    static_cast<double>(sum_adj) / (static_cast<double>(nbVertTot) * static_cast<double>(nbVertTot - 1));
   std::cerr << "sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent
             << " frac_adj=" << frac_adj << "\n";
   if (nb_error > 0) {
