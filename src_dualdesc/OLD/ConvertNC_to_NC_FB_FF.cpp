@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
     UNORD_MAP<Tint, Torbsize> OrbSize_Map;
     auto GetOrbSizeIndex = [&](Tint const &orbSize) -> Torbsize {
       Torbsize &idx = OrbSize_Map[orbSize];
-      if (idx == 0) { // A rare case. The linear loop should be totally ok
+      if (idx == 0) {
+        // A rare case. The linear loop should be totally ok
         auto set = [&]() -> int {
           for (size_t u = 0; u < ListPossOrbsize.size(); u++)
             if (ListPossOrbsize[u] == orbSize) {

@@ -279,6 +279,6 @@ vectface ConvertGAPread_ListFace(DataGAP<T, Telt> const &data, int const &n) {
 }
 
 // clang-format off
-} // namespace datagap
+}  // namespace datagap
 #endif  // SRC_DUALDESC_POLY_GAP_H_
 // clang-format on

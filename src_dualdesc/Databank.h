@@ -32,7 +32,9 @@ inline void serialize(Archive &ar, PairStore<Tgroup> &pair,
   ar &make_nvp("ListFace", pair.ListFace);
 }
 
-} // namespace boost::serialization
+// clang-format off
+}  // namespace boost::serialization
+// clang-format on
 
 template <typename Tkey, typename Tval>
 std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
@@ -156,9 +158,10 @@ public:
     os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
     typename std::unordered_map<Tkey, Tval>::const_iterator iter =
         ListEnt.find(eKey);
-    if (iter == ListEnt.end())
-      return TrivElt; // If returning empty then it means nothing has been
-                      // found.
+    if (iter == ListEnt.end()) {
+      // If returning empty then it means nothing has been found
+      return TrivElt;
+    }
     return iter->second;
   }
 };
@@ -226,7 +229,9 @@ inline void serialize(Archive &ar, PairKV<Tkey, Tval> &pair,
   ar &make_nvp("eVal", pair.eVal);
 }
 
-} // namespace boost::serialization
+// clang-format off
+}  // namespace boost::serialization
+// clang-format on
 
 // ASIO client and server
 
@@ -266,10 +271,12 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
       os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =
           ListEnt.find(eTriple.eKey);
-      if (iter == ListEnt.end())
-        send_data<Tval>(socket, Tval()); // If returning empty then it means
-      else                               // nothing has been found.
+      if (iter == ListEnt.end()) {
+        // If returning empty then it means nothing has been found.
+        send_data<Tval>(socket, Tval());
+      } else {
         send_data<Tval>(socket, iter->second);
+      }
     }
     os << "---------- " << n_iter << " -----------------------\n";
     n_iter++;

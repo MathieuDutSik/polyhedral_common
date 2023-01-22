@@ -253,7 +253,8 @@ struct request_status_list {
 struct empty_message_management {
   boost::mpi::communicator &comm;
   request_status_list rsl;
-  int expected_value; // Random, but identical on all process.
+  // expected_value is random, but identical on all process.
+  int expected_value;
   int tag;
   empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
                            int const &tag)
