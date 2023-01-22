@@ -200,9 +200,8 @@ public:
   }
   Tint size() const { return e_size; }
   int n_act() const { return n; }
-  PermutationGroupPtr
-  get_group() const // USe only by some function specific to permlib.
-  {
+  PermutationGroupPtr get_group() const {
+    // Use only by some function specific to permlib.
     return group;
   }
 };
@@ -217,7 +216,9 @@ template <> struct hash<permlib::Permutation> {
     return std::hash<std::vector<permlib::dom_int>>()(V);
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 void WriteVectorInt(std::ostream &os, std::vector<int> const &OneInc) {
   int i, siz;

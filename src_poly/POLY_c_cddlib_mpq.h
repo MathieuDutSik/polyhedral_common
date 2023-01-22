@@ -14,7 +14,7 @@ vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const &TheEXT);
 vectface DualDescription_incd_boost_mpq_rational(
     MyMatrix<boost::multiprecision::mpq_rational> const &TheEXT);
 // clang-format off
-} // namespace cbased_cdd
+}  // namespace cbased_cdd
 // clang-format on
 
 // clang-format off

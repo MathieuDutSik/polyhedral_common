@@ -2851,7 +2851,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                   set_addelem(data->tieset, j);
                 }
               }
-            } else { // ring case
+            } else {
+              // ring case
               rat = -data->rcost[j - 1];
               if (*s == 0 || dd_SmallerFrac(rat, val, minrat, minrat_q)) {
                 minrat = rat;
@@ -3024,7 +3025,8 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
     }
     for (j = 1; j <= d_size; j++)
       Ts[j - 1][s - 1] /= Xtemp0;
-  } else { // ring case now
+  } else {
+    // ring case now
     for (j = 1; j <= d_size; j++) {
       if (j != s) {
         for (j1 = 1; j1 <= d_size; j1++) {
@@ -3593,7 +3595,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_colrange j, s;
 
   unsigned int rseed = 1;
-  r = -40000; // values designed to create segfault in case it is not set later
+  // r value assigned designed to create segfault in case it is not set later
+  r = -40000;
 
   /* *err=dd_NoError; */
   set_emptyset(lp->redset_extra);
@@ -7742,7 +7745,8 @@ dd_rowrange dd_SelectNextHalfspace(dd_conedata<T> *cone, dd_rowset excluded) {
       return dd_SelectNextHalfspace0(cone, excluded);
     }
   }
-  return -1; // That case should never happen
+  // That case should never happen
+  return -1;
 }
 
 template <typename T> void dd_DDInit(dd_conedata<T> *cone) {
@@ -7934,7 +7938,7 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
       (poly->child == nullptr || poly->child->CompStatus != dd_AllFound)) {
     cone = dd_ConeDataLoad(poly);
     // create a cone associated with poly by homogenization
-    cone->HalfspaceOrder = horder; // set the row order
+    cone->HalfspaceOrder = horder;
     dd_DDInit(cone);
     if (poly->representation == dd_Generator && poly->m <= 0) {
       *err = dd_EmptyVrepresentation;

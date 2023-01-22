@@ -42,7 +42,9 @@ const int64_t MINIMIZE = 0L; /* maximize the lp  */
 const int64_t GE = 1L;       /* constraint is >= */
 const int64_t EQ = 0L;       /* constraint is linearity */
 const uint64_t dict_limit = 10;
-} // namespace globals
+// clang-format off
+}  // namespace globals
+// clang-format on
 
 template <typename T> struct lrs_dic {
   T **A;

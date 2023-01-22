@@ -89,7 +89,8 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
   size_t idxWeight = 0;
   auto get_T_idx = [&](T eval) -> Tidx {
     size_t &idx = ValueMap_T[eval];
-    if (idx == 0) { // value is missing
+    if (idx == 0) {
+      // value is missing
       idxWeight++;
       idx = idxWeight;
       ListWeight.push_back(eval);
@@ -145,7 +146,8 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
   int idxWeight = 0;
   auto get_T_idx = [&](const T &eval) -> int {
     int &idx = ValueMap_T[eval];
-    if (idx == 0) { // value is missing
+    if (idx == 0) {
+      // value is missing
       idxWeight++;
       idx = idxWeight;
       ListWeight.push_back(eval);
@@ -157,7 +159,8 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
   int idxSign = 0;
   auto get_Tvs_idx = [&](SignVertex const &esign) -> int {
     int &idx = ValueMap_Tvs[esign];
-    if (idx == 0) { // value is missing
+    if (idx == 0) {
+      // value is missing
       idxSign++;
       idx = idxSign;
       ListPossibleSignatures.push_back(esign);
@@ -165,8 +168,8 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
     return idx - 1;
   };
   // Now computing the indices
-  std::vector<Tidx> eBlockBreak =
-      VP.ListBlocks[jBlock]; // We do need a copy operation here
+  // We have to do a copy operation for eBlockRead
+  std::vector<Tidx> eBlockBreak = VP.ListBlocks[jBlock];
   const std::vector<Tidx> &eBlockSpec = VP.ListBlocks[iBlock];
   size_t siz_block_break = eBlockBreak.size();
   size_t siz_block_spec = eBlockSpec.size();
@@ -491,7 +494,8 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
   int idxWeight = 0;
   auto get_T_idx = [&](const T &eval) -> int {
     int &idx = ValueMap_T[eval];
-    if (idx == 0) { // value is missing
+    if (idx == 0) {
+      // value is missing
       idxWeight++;
       idx = idxWeight;
       ListWeight.push_back(eval);
@@ -503,7 +507,8 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
   int idxSign = 0;
   auto get_Tvs_idx = [&](SignVertex const &esign) -> int {
     int &idx = ValueMap_Tvs[esign];
-    if (idx == 0) { // value is missing
+    if (idx == 0) {
+      // value is missing
       idxSign++;
       idx = idxSign;
       ListPossibleSignatures.push_back(esign);
@@ -663,8 +668,10 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   size_t nbCase = new_list_signature.size();
   // Now adding the list_of index
   std::vector<int> list_signature = WMVS.ListSignatureByVertex;
-  list_signature.push_back(nbCase - 2); // for nbRow
-  list_signature.push_back(nbCase - 1); // for nbRow+1
+  // nbCase - 2 corresponds to for nbRow
+  // nbCase - 1 corresponds to for nbRow + 1
+  list_signature.push_back(nbCase - 2);
+  list_signature.push_back(nbCase - 1);
   //
   // Determining the number of cases
   //

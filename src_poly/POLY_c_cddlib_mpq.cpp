@@ -84,5 +84,7 @@ vectface DualDescription_incd_boost_mpq_rational(
   return DualDescription_incd_T(TheEXT, fset);
 }
 
-} // namespace cbased_cdd
+// clang-format off
+}  // namespace cbased_cdd
+// clang-format on
 #endif

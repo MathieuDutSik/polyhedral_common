@@ -385,7 +385,8 @@ get_spanning_list_ent_face(
   using Telt = typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> set_EXT;
-  size_t dim = -1; // That value should be overwritten later
+  // That value of dim should be overwritten later
+  size_t dim = -1;
   for (auto &ePt : FaceToVector(ef_input.f_ext)) {
     MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
     dim = V.size();
@@ -435,9 +436,9 @@ get_spanning_list_ent_face(
     std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
 #endif
     for (size_t i = curr_pos; i < len; i++) {
-      ent_face<Tint> ef =
-          l_ent_face[i]; // We cannot use const& here apparently for mysterious
-                         // reasons (3 hours debugging)
+      // We cannot use const& for ent_face for mysterious
+      // reasons (3 hours debugging)
+      ent_face<Tint> ef = l_ent_face[i];
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[ef.iCone];
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "i=" << i << " iCone=" << ef.iCone

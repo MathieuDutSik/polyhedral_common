@@ -436,7 +436,8 @@ public:
             }
           } else {
             std::cerr << "Using the wrong formula\n";
-            pos_B = i + siz2 * j; // false
+            // false
+            pos_B = i + siz2 * j;
           }
         }
         size_t pos_C = list_offdiag_shifts[pos] + pos_B;

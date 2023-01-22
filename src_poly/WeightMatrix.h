@@ -491,7 +491,9 @@ struct hash<WeightMatrix<is_symmetric, T, Tidx_value>> {
     return ComputeHashWeightMatrix_up_to_equiv(WMat, seed_in);
   }
 };
-} // namespace std
+// clang-format off
+}  // namespace std
+// clang-format on
 
 std::pair<int, std::vector<size_t>> get_smallest_set(const Face &f) {
   size_t n = f.size();
@@ -767,7 +769,8 @@ int Pairs_GetNeededN(int nb_color) {
       else
         nb_pair = 2 * (K + 1) * K;
     }
-    int e_pow = 1 << nb_pair; // Computes 2^nb_pair
+    // Computes e_pow = 2^nb_pair
+    int e_pow = 1 << nb_pair;
     if (e_pow >= nb_color)
       return N;
     N++;
