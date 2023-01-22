@@ -6044,7 +6044,7 @@ arithmetics.
           }
         }
       }
-    };
+    }
     break;
   case dd_Inconsistent:
     for (j = 1; j <= d_size; j++) {
@@ -6060,7 +6060,7 @@ arithmetics.
           break;
         }
       }
-    };
+    }
     break;
   case dd_LPSundecided:
     break;
@@ -6089,7 +6089,6 @@ arithmetics.
       }
     };
     break;
-    ;
   }
 
   dd_SetSolutions(m_size, d_size, A, Ts, objrow, rhscol, LPS, optvalue, sol,
@@ -6637,7 +6636,7 @@ template <typename T> void dd_FreeDDMemory0(dd_conedata<T> *cone) {
       delete PrevPtr;
       count++;
       PrevPtr = Ptr;
-    };
+    }
     cone->FirstRay = nullptr;
 
     delete[] cone->LastRay->Ray;

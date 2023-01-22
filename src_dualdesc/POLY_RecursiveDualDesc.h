@@ -1327,7 +1327,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
       RPL.FuncInsert(eFlip);
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
-  };
+  }
   return RPL.FuncListOrbitIncidence();
 }
 
