@@ -8,9 +8,7 @@ int main() {
   int TotDim = n * (n + 1) / 2;
   const double expo = 2;
   std::function<dual2nd(dual2nd const &)> f =
-      [&expo](dual2nd const &Aval) -> dual2nd {
-    return exp(-expo * Aval);
-  };
+      [&expo](dual2nd const &Aval) -> dual2nd { return exp(-expo * Aval); };
   double onethird = 1.0 / 3.0;
   //  double onethird=0;
   std::vector<dual2nd> cA{dual2nd(onethird), dual2nd(onethird), dual2nd(2),

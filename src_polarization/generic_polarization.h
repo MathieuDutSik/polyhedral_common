@@ -165,4 +165,3 @@ std::function<dual2nd(dual2nd const&)> const& f)
 // clang-format off
 #endif  // SRC_POLARIZATION_GENERIC_POLARIZATION_H_
 // clang-format on
-
