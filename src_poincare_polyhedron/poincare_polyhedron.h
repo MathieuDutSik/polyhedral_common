@@ -7,6 +7,7 @@
 #include "QuadField.h"
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
+#include "POLY_PolytopeFct.h"
 // clang-format on
 
 // The initial data for the Poincare Polyhedron Theorem
@@ -73,7 +74,9 @@ StepEnum<T> BuildInitialStepEnum(std::vector<MyMatrix<T>> const &ListMat) {
   std::vector<PairElt<T>> ListNeighbor;
   int i = 1;
   for (auto &eMat : ListMat) {
-    ListNeighbor.push({i, eMat});
+    TrackGroup tg{{i}};
+    PairElt<T> ep{tg, eMat};
+    ListNeighbor.push_back(ep);
     i++;
   }
   return {ListNeighbor};
@@ -116,7 +119,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
   int n_mat = se.ListNeighbor.size();
   MyMatrix<T> FAC(n_mat, n);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> eMat = se.ListNeighbor[i_mat];
+    MyMatrix<T> eMat = se.ListNeighbor[i_mat].second;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
     AssignMatrixRow(FAC, i_mat, x_diff);
@@ -125,7 +128,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
   int n_ext = vf.size();
   MyMatrix<T> EXT(n_ext, n);
   int pos = 0;
-  std::vector<Face> v_red(Face(n_ext), n_mat);
+  std::vector<Face> v_red(n_mat, Face(n_ext));
   for (auto &eInc : vf) {
     MyVector<T> eEXT = FindFacetInequality(FAC, eInc);
     AssignMatrixRow(EXT, pos, eEXT);
