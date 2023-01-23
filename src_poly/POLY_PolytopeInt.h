@@ -242,6 +242,58 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
   return ListPoint;
 }
 
+
+
+/*
+  We are looking for the 01 solutions X of the equation XA = B.
+  We have m equations and n unknowns.
+
+  -
+
+  What could be a polyhedral approach to the problem:
+  * Compute the Q-vector space of possible solutions of dimension r.
+  * Define the polytope of possible solutions with 0 <= x_i <= 1.
+    It will have dimension r and have 2n defining inequalities.
+  * Backtrack on the possible partial choices for x_i, that is for
+    sure. We have a C-style data set containing three possible values
+    for the indices:
+    - 0 for 0
+    - 1 for 1
+    - 2 for unknown
+  * Compute by linear programming the upper bound of function x_i over
+    the corresponding restricted polytopes. Both 0 <= x_i  and x_i <= 1
+    have to be considered. If only one extreme value is attained, then
+    we can set it to be equal and iterate the refinement strategy.
+    If none are attained then no solution are possible and we backtrack.
+  * Could we use redundancy informations?
+    It would seem yes. If some redundancy is like f = C + sum C_i f_i
+    with C > 0 then we can detect it right away by the linear programming.
+    If C = 0, then the choice of some C would imply many other choices.
+    So, said variable becomes pivotal. And the cost does not appear to
+    be higher than a linear program. We simply use the dual solution.
+  * Can we do a backtracking on pow(2,r) choices?
+    It should be doable. We select r independent coordinate {i_1, ..., i_r}.
+    We iterate over their possible values, and find bz matrix product their
+    possible values and keep the one that are integral.
+
+ */
+template <typename T, typename Tint, typename Finsert>
+void Kernel_Enumerate01_solutions(MyMatrix<T> const &A, MyVector<T> const& B, Finsert f_insert) {
+  std::optional<MyVector<T>> opt = SolutionIntMat(A, B);
+  if (!opt)
+    return;
+  MyVector<T> const& ePt = *opt;
+  MyMatrix<T> NSP = NullspaceIntMat(A);
+  
+  
+  
+}
+
+
+
+
+
+
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEINT_H_
 // clang-format on
