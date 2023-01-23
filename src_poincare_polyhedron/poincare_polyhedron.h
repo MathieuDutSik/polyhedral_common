@@ -1,9 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
 #define SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
-
+// clang-format off
+#include "NumberTheory.h"
+#include "NumberTheoryRealField.h"
+#include "QuadField.h"
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
+// clang-format on
 
 // The initial data for the Poincare Polyhedron Theorem
 // ---a point x
@@ -40,13 +44,14 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
   return {ListDI_ret};
 }
 
-template <typename T> using PairElt<T> = std::pair<TrackGroup, MyMatrix<T>>;
+template <typename T> using PairElt = std::pair<TrackGroup, MyMatrix<T>>;
 
 template <typename T>
 PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
   return {ProductTrack(p1.first, p2.first), p1.second * p2.second};
 }
 
+template <typename T>
 PairElt<T> InversePair(PairElt<T> const &p) {
   return {InverseTrack(p.first), Inverse(p.second)};
 }
@@ -61,7 +66,7 @@ void WriteTrackGroup(std::ofstream & os, TrackGroup const& tg) {
 
 template <typename T> struct StepEnum {
   std::vector<PairElt<T>> ListNeighbor;
-}
+};
 
 template <typename T>
 StepEnum<T> BuildInitialStepEnum(std::vector<MyMatrix<T>> const &ListMat) {
@@ -95,7 +100,7 @@ struct ListSingAdj {
 template <typename T> struct AdjacencyInfo {
   MyMatrix<T> EXT;
   StepEnum<T> se_red;
-  std::vector<ListSingAdj> ll_adj:
+  std::vector<ListSingAdj> ll_adj;
 };
 
 // The domain is defined originally as
@@ -129,7 +134,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
     }
     pos++;
   }
-  std::vector<PairElt<T>> ListNeigborRed;
+  std::vector<PairElt<T>> ListNeighborRed;
   int n_mat_red = 0;
   std::vector<int> l_i_mat;
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -142,7 +147,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
     }
   }
   std::cerr << "n_mat_red=" << n_mat_red << "\n";
-  std::vector<std::vector<TsingAdj>> ll_adj;
+  std::vector<ListSingAdj> ll_adj;
   for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
     int i_mat = l_i_mat[i_mat_red];
     Face const &f1 = v_red[i_mat];
@@ -188,7 +193,9 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
 }
 
 template <typename T>
-std::option<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {}
+std::optional<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {
+  return {};
+}
 
 struct RecOption {
   std::string eCommand;
@@ -214,7 +221,7 @@ The serial program for computing the dual description. Possibilities: lrs, cdd";
   ListStringValues2_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   SingleBlock BlockPROC;
-  BlockPROC.setListBoolValues(ListBoolValues2_doc);
+  BlockPROC.setListIntValues(ListIntValues2_doc);
   BlockPROC.setListStringValues(ListStringValues2_doc);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
@@ -258,7 +265,7 @@ AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   while (true) {
     std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
     AdjacencyInfo<T> ai = ComputeAdjacencyInfo(x, se, rec_option.eCommand);
-    std::option<StepEnum<T>> opt = ComputeMissingNeighbors(ai);
+    std::optional<StepEnum<T>> opt = ComputeMissingNeighbors(ai);
     if (!opt) {
       return ai;
     }
@@ -276,11 +283,12 @@ AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
 
 template <typename T>
 void PrintAdjacencyInfo(AdjacencyInfo<T> const& ai, std::string const& FileO) {
-  std::ifstream os(FileO);
+  std::ofstream os(FileO);
   size_t n_neigh = ai.se_red.ListNeighbor.size();
   os << n_neigh << "\n";
   for (size_t i_neigh=0; i_neigh<n_neigh; i_neigh++) {
     WriteTrackGroup(os, ai.se_red.ListNeighbor[i_neigh].first);
+  }
 }
 
 
