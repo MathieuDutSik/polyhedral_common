@@ -109,8 +109,8 @@ struct TsingAdj {
 
 struct Tfacet {
   Face IncdFacet;
-  std::vector<TsingAdj> l_adj;
-}
+  std::vector<TsingAdj> l_sing_adj;
+};
 
 
 
@@ -175,7 +175,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
   }
   std::cerr << "n_mat_red=" << n_mat_red << " |s_facet|=" << s_facet.size() << "\n";
   std::cerr << "First part: adjacency structure within the polyhedron\n";
-  std::vector<ListSingAdj> ll_adj;
+  std::vector<Tfacet> ll_adj;
   for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
     int i_mat = l_i_mat[i_mat_red];
     Face const &f1 = v_red[i_mat];
@@ -191,7 +191,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
         MyMatrix<T> EXT_red = SelectRow(EXT, f);
         int rnk = RankMat(EXT_red);
         if (rnk == n - 2) {
-          l_adj.push_back({j_mat_red, miss_val, miss_val, miss_val, f});
+          l_adj.push_back({static_cast<size_t>(j_mat_red), miss_val, miss_val, miss_val, f});
         }
       }
     }
@@ -249,7 +249,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
     for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
       Face f_map(n_ext);
       for (int i_ext=0; i_ext<n_ext; i_ext++) {
-        if (ll_adj[i_mat_red].l_adj[i_ext].IncdRidge[i_ext] == 1) {
+        if (ll_adj[i_mat_red].l_sing_adj[i_ext].IncdRidge[i_ext] == 1) {
           size_t idx = map_index[i_ext];
           f_map[idx] = 1;
         }
