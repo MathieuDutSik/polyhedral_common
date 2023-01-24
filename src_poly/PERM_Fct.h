@@ -371,16 +371,17 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       }
       VectorContain(0, i_col) = rec_eSum2.second;
     }
-    std::pair<bool, size_t> epair = Cont.GetIdx();
-    if (!epair.first) {
+    std::optional<size_t> opt = Cont.GetIdx();
+    if (!opt) {
 #ifdef TIMINGS
       std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
       // We fail because the image does not belong to EXT2
       return {};
     }
-    V[i_row] = epair.second;
-    f[epair.second] = 1;
+    size_t pos = *opt;
+    V[i_row] = pos;
+    f[pos] = 1;
   }
 #ifdef SANITY_CHECK
   int n_error = 0;
