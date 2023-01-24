@@ -78,6 +78,14 @@ template <typename T> struct AdjacencyInfo {
 // Tr(AX) <= Tr(PAP^T X)
 // which we rewrite
 // a.x <= phi(a).x        0 <= (phi(a) - a).x
+//
+// Matrixwise the scalar product a.x is rewritten as
+// A X^T
+// phi(a) is expressed as AQ
+// 0 <= (AQ - A) X^T
+// The mapping A ----> AQ maps to the adjacent domain.
+// The mapping of the X ----> X c(Q)^T with c(Q) the
+// contragredient representation.
 template <typename T>
 AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
                                       StepEnum<T> const &se,
