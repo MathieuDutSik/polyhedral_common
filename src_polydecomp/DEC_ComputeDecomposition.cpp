@@ -493,12 +493,13 @@ get_spanning_list_ent_face(
           for (auto &e_line : set_EXT) {
             for (size_t i_col = 0; i_col < dim; i_col++)
               VectorContain(0, i_col) = e_line(i_col);
-            std::pair<bool, size_t> epair = Cont.GetIdx();
-            if (!epair.first) {
+            std::optional<size_t> opt = Cont.GetIdx();
+            if (!opt) {
               std::cerr << "The vector is not in the image. Clear bug\n";
               throw TerminalException{1};
             }
-            faceNew[epair.second] = 1;
+            size_t idx = *opt;
+            faceNew[idx] = 1;
           }
           ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
           f_insert(efNew);
