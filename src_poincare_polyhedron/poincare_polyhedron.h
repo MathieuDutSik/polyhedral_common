@@ -51,7 +51,9 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
 
 template <typename T>
 PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
-  return {ProductTrack(p1.tg, p2.tg), p1.mat * p2.mat};
+  TrackGroup tg = ProductTrack(p1.tg, p2.tg);
+  MyMatrix<T> mat = p1.mat * p2.mat;
+  return {tg, mat};
 }
 
 template <typename T>
@@ -75,7 +77,7 @@ bool operator==(PairElt<T> const& pe1, PairElt<T> const& pe2) {
 namespace std {
   template<typename T>
   struct hash<PairElt<T>> {
-    std::size_t operator()(PairElt<T> const& pe) {
+    std::size_t operator()(PairElt<T> const& pe) const {
       return std::hash<MyMatrix<T>>()(pe.mat);
     }
   };
