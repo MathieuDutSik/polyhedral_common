@@ -45,16 +45,21 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
   return {ListDI_ret};
 }
 
-template <typename T> using PairElt = std::pair<TrackGroup, MyMatrix<T>>;
+
+template<typename T>
+struct PairElt {
+  TrackGroup tg;
+  MyMatrix<T> mat;
+};
 
 template <typename T>
 PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
-  return {ProductTrack(p1.first, p2.first), p1.second * p2.second};
+  return {ProductTrack(p1.tg, p2.tg), p1.mat * p2.mat};
 }
 
 template <typename T>
 PairElt<T> InversePair(PairElt<T> const &p) {
-  return {InverseTrack(p.first), Inverse(p.second)};
+  return {InverseTrack(p.tg), Inverse(p.mat)};
 }
 
 void WriteTrackGroup(std::ofstream & os, TrackGroup const& tg) {
@@ -141,7 +146,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
   int n_mat = se.ListNeighbor.size();
   MyMatrix<T> FAC(n_mat, n);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> eMat = se.ListNeighbor[i_mat].second;
+    MyMatrix<T> eMat = se.ListNeighbor[i_mat].mat;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
     AssignMatrixRow(FAC, i_mat, x_diff);
@@ -221,7 +226,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
   for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
     size_t n_adj = ll_adj[i_mat_red].l_sing_adj.size();
     int i_mat = l_i_mat[i_mat_red];
-    MyMatrix<T> Q = se.ListNeighbor[i_mat].second;
+    MyMatrix<T> Q = se.ListNeighbor[i_mat].mat;
     MyMatrix<T> cQ = Contragredient(Q);
     MyMatrix<T> EXTimg = EXT * cQ;
     ContainerMatrix<T> Cont(EXTimg, VectorContain);
@@ -358,7 +363,7 @@ void PrintAdjacencyInfo(AdjacencyInfo<T> const& ai, std::string const& FileO) {
   size_t n_neigh = ai.se_red.ListNeighbor.size();
   os << n_neigh << "\n";
   for (size_t i_neigh=0; i_neigh<n_neigh; i_neigh++) {
-    WriteTrackGroup(os, ai.se_red.ListNeighbor[i_neigh].first);
+    WriteTrackGroup(os, ai.se_red.ListNeighbor[i_neigh].tg);
   }
 }
 
