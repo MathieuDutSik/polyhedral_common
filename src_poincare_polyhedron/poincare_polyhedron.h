@@ -10,13 +10,9 @@
 #include "POLY_PolytopeFct.h"
 // clang-format on
 
-// The initial data for the Poincare Polyhedron Theorem
-// ---a point x
-// ---a list of group element which is of course assumed to generate the group
-template <typename T> struct DataPoincare {
-  MyVector<T> x;
-  std::vector<MyMatrix<T>> ListGroupElt;
-};
+//
+// First part, the data set used
+//
 
 // The data structure for keeîng track of the group elements:
 // ---Positive value (so element 0 correspond to 1, X to X+1, ...) are the
@@ -27,6 +23,13 @@ template <typename T> struct DataPoincare {
 // DI stands for "Direct or Inverse"
 struct TrackGroup {
   std::vector<int> ListDI;
+};
+
+// We do operations but we can keep track of what is happening.
+template<typename T>
+struct PairElt {
+  TrackGroup tg;
+  MyMatrix<T> mat;
 };
 
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
@@ -46,12 +49,6 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
 }
 
 
-template<typename T>
-struct PairElt {
-  TrackGroup tg;
-  MyMatrix<T> mat;
-};
-
 template <typename T>
 PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
   return {ProductTrack(p1.tg, p2.tg), p1.mat * p2.mat};
@@ -70,21 +67,117 @@ void WriteTrackGroup(std::ofstream & os, TrackGroup const& tg) {
   }
 }
 
+template <typename T>
+bool operator==(PairElt<T> const& pe1, PairElt<T> const& pe2) {
+  return pe1.mat == pe2.mat;
+}
+
+namespace std {
+  template<typename T>
+  struct hash<PairElt<T>> {
+    std::size_t operator()(PairElt<T> const& pe) {
+      return std::hash<MyMatrix<T>>()(pe.mat);
+    }
+  };
+}
+
+template<typename T>
+PairElt<T> GenerateIdentity(int const& n) {
+  TrackGroup tg;
+  MyMatrix<T> mat = IdentityMat<T>(n);
+  return {tg, mat};
+}
+
+//
+// Second part, the finite group generation
+//
+
+template<typename T>
+std::vector<PairElt<T>> GroupGeneration(std::vector<PairElt<T>> const& input_l_ent) {
+  std::vector<PairElt<T>> l_ent = input_l_ent;
+  while(true) {
+    std::unordered_set<PairElt<T>> GenElt;
+    size_t n_ent = l_ent.size();
+    for (size_t i_ent=0; i_ent<n_ent; i_ent++) {
+      PairElt<T> const& pe1 = l_ent[i_ent];
+      for (size_t j_ent=0; j_ent<n_ent; j_ent++) {
+        PairElt<T> const& pe2 = l_ent[j_ent];
+        PairElt<T> prod = ProductPair(pe1, pe2);
+        GenElt.insert(prod);
+      }
+    }
+    if (GenElt.size() == n_ent) {
+      return input_l_ent;
+    }
+    l_ent.clear();
+    for (auto & e_ent : GenElt)
+      l_ent.push_back(e_ent);
+  }
+}
+
+
+// a right coset is of the form Ug
+template<typename T>
+std::vector<PairElt<T>> IdentifyRightCosets(std::vector<PairElt<T>> const& l_ent, std::vector<PairElt<T>> const& list_grp_elt) {
+  std::unordered_set<PairElt<T>> s_coset;
+  auto f_insert=[&](PairElt<T> const& pe) -> void {
+    for (auto & e_grp_elt : list_grp_elt) {
+      PairElt<T> prod = ProductPair(e_grp_elt, pe);
+      if (s_coset.count(prod) == 1)
+        break;
+    }
+    s_coset.insert(pe);
+  };
+  for (auto & pe : l_ent)
+    f_insert(pe);
+  std::vector<PairElt<T>> l_coset;
+  for (auto & e_coset : s_coset)
+    l_coset.push_back(e_coset);
+  return l_coset;
+}
+
+//
+// The elementary data structures for the Poincare stuff
+//
+
+
+// The initial data for the Poincare Polyhedron Theorem
+// ---a point x
+// ---a list of group element which is of course assumed to generate the group
+template <typename T> struct DataPoincare {
+  MyVector<T> x;
+  std::vector<PairElt<T>> ListGroupElt;
+};
+
+
 template <typename T> struct StepEnum {
+  std::vector<PairElt<T>> stabilizerElt;
   std::vector<PairElt<T>> ListNeighbor;
 };
 
 template <typename T>
-StepEnum<T> BuildInitialStepEnum(std::vector<MyMatrix<T>> const &ListMat) {
-  std::vector<PairElt<T>> ListNeighbor;
-  int i = 1;
-  for (auto &eMat : ListMat) {
-    TrackGroup tg{{i}};
-    PairElt<T> ep{tg, eMat};
-    ListNeighbor.push_back(ep);
-    i++;
+StepEnum<T> BuildInitialStepEnum(DataPoincare<T> const& dp) {
+  std::vector<PairElt<T>> l_stab_elt;
+  MyVector<T> x = dp.x;
+  int n = x.size();
+  l_stab_elt.push_back(GenerateIdentity<T>(n));
+  for (auto & e_elt : dp.ListGroupElt) {
+    // TODO: Check that part
+    MyVector<T> x_img = e_elt.mat.transpose() * x;
+    if (x_img == x) {
+      l_stab_elt.push_back(e_elt);
+    }
   }
-  return {ListNeighbor};
+  std::vector<PairElt<T>> stabilizerElt = GroupGeneration(l_stab_elt);
+  std::vector<PairElt<T>> ListNeighbor1 = IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
+  std::vector<PairElt<T>> ListNeighbor2;
+  for (auto & e_grp_elt : stabilizerElt) {
+    for (auto & e_coset : ListNeighbor1) {
+      PairElt<T> prod = ProductPair(e_grp_elt, e_coset);
+      ListNeighbor2.push_back(prod);
+    }
+  }
+  return {stabilizerElt, ListNeighbor2};
 }
 
 template <typename T>
@@ -92,6 +185,11 @@ MyMatrix<T> Contragredient(MyMatrix<T> const& M)
 {
   return Inverse(TransposedMat(M));
 }
+
+
+//
+// Now the polyhedral stuff
+//
 
 
 // This is for the single adjacency in the polyhedron
@@ -313,10 +411,12 @@ DataPoincare<T> ReadDataPoincare(std::string const& FileI) {
   MyVector<T> x = ReadVector<T>(is);
   size_t n_elt;
   is >> n_elt;
-  std::vector<MyMatrix<T>> ListGroupElt;
+  std::vector<PairElt<T>> ListGroupElt;
   for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
     MyVector<T> eElt = ReadMatrix<T>(is);
-    ListGroupElt.push_back(eElt);
+    TrackGroup tg{{int(i_elt+1)}};
+    PairElt<T> pe{tg, eElt};
+    ListGroupElt.push_back(pe);
   }
   return {x, ListGroupElt};
 }
@@ -336,7 +436,7 @@ template <typename T>
 AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
                                              RecOption const &rec_option) {
   MyVector<T> x = dp.x;
-  StepEnum<T> se = BuildInitialStepEnum(dp.ListGroupElt);
+  StepEnum<T> se = BuildInitialStepEnum(dp);
   int n_iter = 0;
   while (true) {
     std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
