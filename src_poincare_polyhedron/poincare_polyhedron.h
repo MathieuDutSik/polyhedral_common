@@ -152,6 +152,23 @@ template <typename T> struct DataPoincare {
 };
 
 
+template <typename T>
+DataPoincare<T> ReadDataPoincare(std::string const& FileI) {
+  IsExistingFileDie(FileI);
+  std::ifstream is(FileI);
+  MyVector<T> x = ReadVector<T>(is);
+  size_t n_elt;
+  is >> n_elt;
+  std::vector<PairElt<T>> ListGroupElt;
+  for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
+    MyVector<T> eElt = ReadMatrix<T>(is);
+    TrackGroup tg{{int(i_elt+1)}};
+    PairElt<T> pe{tg, eElt};
+    ListGroupElt.push_back(pe);
+  }
+  return {x, ListGroupElt};
+}
+
 template <typename T> struct StepEnum {
   std::vector<PairElt<T>> stabilizerElt;
   std::vector<PairElt<T>> ListNeighbor;
@@ -381,59 +398,6 @@ struct RecOption {
   int n_iter_max;
 };
 
-
-
-FullNamelist NAMELIST_GetPoincareInput() {
-  std::map<std::string, SingleBlock> ListBlock;
-  // METHOD
-  std::map<std::string, std::string> ListIntValues2_doc;
-  std::map<std::string, std::string> ListStringValues2_doc;
-  ListIntValues2_doc["n_iter_max"] = "Default: -1\n\
-The maximum number of iteration. If negative then infinite";
-  ListStringValues2_doc["eCommand"] = "eCommand: lrs\n\
-The serial program for computing the dual description. Possibilities: lrs, cdd";
-  ListStringValues2_doc["FileI"] = "The input file of the computation";
-  ListStringValues2_doc["FileO"] = "The output file of the computation";
-  ListStringValues2_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
-  SingleBlock BlockPROC;
-  BlockPROC.setListIntValues(ListIntValues2_doc);
-  BlockPROC.setListStringValues(ListStringValues2_doc);
-  ListBlock["PROC"] = BlockPROC;
-  // Merging all data
-  return {std::move(ListBlock), "undefined"};
-}
-
-
-
-template <typename T>
-DataPoincare<T> ReadDataPoincare(std::string const& FileI) {
-  IsExistingFileDie(FileI);
-  std::ifstream is(FileI);
-  MyVector<T> x = ReadVector<T>(is);
-  size_t n_elt;
-  is >> n_elt;
-  std::vector<PairElt<T>> ListGroupElt;
-  for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
-    MyVector<T> eElt = ReadMatrix<T>(is);
-    TrackGroup tg{{int(i_elt+1)}};
-    PairElt<T> pe{tg, eElt};
-    ListGroupElt.push_back(pe);
-  }
-  return {x, ListGroupElt};
-}
-
-RecOption ReadInitialData(FullNamelist const& eFull) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("DATA");
-  std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
-  std::string FileI = BlockPROC.ListStringValues.at("FileI");
-  std::string FileO = BlockPROC.ListStringValues.at("FileO");
-  std::string Arithmetic = BlockPROC.ListStringValues.at("arithmetic");
-  int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
-  return {eCommand, FileI, FileO, Arithmetic, n_iter_max};
-}
-
-
 template <typename T>
 AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
                                              RecOption const &rec_option) {
@@ -458,6 +422,44 @@ AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   }
 }
 
+
+
+//
+// The code for calling it.
+//
+
+FullNamelist NAMELIST_GetPoincareInput() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // METHOD
+  std::map<std::string, std::string> ListIntValues2_doc;
+  std::map<std::string, std::string> ListStringValues2_doc;
+  ListIntValues2_doc["n_iter_max"] = "Default: -1\n\
+The maximum number of iteration. If negative then infinite";
+  ListStringValues2_doc["eCommand"] = "eCommand: lrs\n\
+The serial program for computing the dual description. Possibilities: lrs, cdd";
+  ListStringValues2_doc["FileI"] = "The input file of the computation";
+  ListStringValues2_doc["FileO"] = "The output file of the computation";
+  ListStringValues2_doc["Arithmetic"] = "Default: rational\n\
+Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+  SingleBlock BlockPROC;
+  BlockPROC.setListIntValues(ListIntValues2_doc);
+  BlockPROC.setListStringValues(ListStringValues2_doc);
+  ListBlock["PROC"] = BlockPROC;
+  // Merging all data
+  return {std::move(ListBlock), "undefined"};
+}
+
+
+
+RecOption ReadInitialData(FullNamelist const& eFull) {
+  SingleBlock BlockPROC = eFull.ListBlock.at("DATA");
+  std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
+  std::string FileI = BlockPROC.ListStringValues.at("FileI");
+  std::string FileO = BlockPROC.ListStringValues.at("FileO");
+  std::string Arithmetic = BlockPROC.ListStringValues.at("arithmetic");
+  int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
+  return {eCommand, FileI, FileO, Arithmetic, n_iter_max};
+}
 
 template <typename T>
 void PrintAdjacencyInfo(AdjacencyInfo<T> const& ai, std::string const& FileO) {
