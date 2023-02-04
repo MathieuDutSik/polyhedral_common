@@ -139,6 +139,51 @@ std::vector<PairElt<T>> IdentifyRightCosets(std::vector<PairElt<T>> const& l_ent
 }
 
 //
+// The common function for paperwork
+//
+
+template <typename T>
+struct DataEXT {
+  MyMatrix<T> EXT;
+  std::vector<Face> v_red;
+};
+
+template <typename T>
+DataEXT<T> GetTransposedDualDesc(vectface const& vf, MyMatrix<T> const& FAC) {
+  int n = FAC.cols();
+  int n_fac = FAC.rows();
+  int n_ext = vf.size();
+  MyMatrix<T> EXT(n_ext, n);
+  int pos = 0;
+  std::vector<Face> v_red(n_fac, Face(n_ext));
+  for (auto &eInc : vf) {
+    MyVector<T> eEXT = FindFacetInequality(FAC, eInc);
+    AssignMatrixRow(EXT, pos, eEXT);
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+      v_red[i_fac][pos] = eInc[i_fac];
+    }
+    pos++;
+  }
+  return {EXT, v_red};
+}
+
+std::unordered_map<Face, size_t> get_map_face(std::vector<Face> const& l_facet) {
+  size_t n_facet = l_facet.size();
+  std::unordered_map<Face, size_t> s_facet;
+  for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
+    Face const& f = l_facet[i_facet];
+    s_facet[f] = i_facet;
+  }
+  if (l_facet.size() != s_facet.size()) {
+    std::cerr << "l_facet contains some duplicate and that is illegal\n";
+    throw TerminalException{1};
+  }
+  return s_facet;
+}
+
+
+
+//
 // The elementary data structures for the Poincare stuff
 //
 
@@ -169,48 +214,6 @@ DataPoincare<T> ReadDataPoincare(std::string const& FileI) {
   return {x, ListGroupElt};
 }
 
-template <typename T> struct StepEnum {
-  std::vector<PairElt<T>> stabilizerElt;
-  std::vector<PairElt<T>> ListNeighbor;
-};
-
-template <typename T>
-StepEnum<T> BuildInitialStepEnum(DataPoincare<T> const& dp) {
-  std::vector<PairElt<T>> l_stab_elt;
-  MyVector<T> x = dp.x;
-  int n = x.size();
-  l_stab_elt.push_back(GenerateIdentity<T>(n));
-  for (auto & e_elt : dp.ListGroupElt) {
-    // TODO: Check that part
-    MyVector<T> x_img = e_elt.mat.transpose() * x;
-    if (x_img == x) {
-      l_stab_elt.push_back(e_elt);
-    }
-  }
-  std::vector<PairElt<T>> stabilizerElt = GroupGeneration(l_stab_elt);
-  std::vector<PairElt<T>> ListNeighbor1 = IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
-  std::vector<PairElt<T>> ListNeighbor2;
-  for (auto & e_grp_elt : stabilizerElt) {
-    for (auto & e_coset : ListNeighbor1) {
-      PairElt<T> prod = ProductPair(e_grp_elt, e_coset);
-      ListNeighbor2.push_back(prod);
-    }
-  }
-  return {stabilizerElt, ListNeighbor2};
-}
-
-template <typename T>
-MyMatrix<T> Contragredient(MyMatrix<T> const& M)
-{
-  return Inverse(TransposedMat(M));
-}
-
-
-//
-// Now the polyhedral stuff
-//
-
-
 // This is for the single adjacency in the polyhedron
 // * iFaceAdj is the index of the facet in the polyhedron
 //   which is adjacent to it in the ridge.
@@ -227,13 +230,17 @@ struct TsingAdj {
   Face IncdRidge;
 };
 
-
-
 struct Tfacet {
   Face IncdFacet;
   std::vector<TsingAdj> l_sing_adj;
 };
 
+template <typename T>
+struct ResultAdjacencyInfo {
+  MyMatrix<T> FAC;
+  MyMatrix<T> EXT;
+  std::unordered_map<Face, size_t> s_facet;
+};
 
 
 template <typename T> struct AdjacencyInfo {
@@ -242,148 +249,184 @@ template <typename T> struct AdjacencyInfo {
   std::vector<Tfacet> ll_adj;
 };
 
-// The domain is defined originally as
-// Tr(AX) <= Tr(PAP^T X)
-// which we rewrite
-// a.x <= phi(a).x        0 <= (phi(a) - a).x
-//
-// Matrixwise the scalar product a.x is rewritten as
-// A X^T
-// phi(a) is expressed as AQ
-// 0 <= (AQ - A) X^T
-// The mapping A ----> AQ maps to the adjacent domain.
-// The mapping of the X ----> X c(Q)^T with c(Q) the
-// contragredient representation.
+
 template <typename T>
-AdjacencyInfo<T> ComputeAdjacencyInfo(MyVector<T> const &x,
-                                      StepEnum<T> const &se,
-                                      std::string const &eCommand) {
-  size_t miss_val = std::numeric_limits<size_t>::max();
-  int n = x.size();
-  int n_mat = se.ListNeighbor.size();
-  MyMatrix<T> FAC(n_mat, n);
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> eMat = se.ListNeighbor[i_mat].mat;
-    MyVector<T> x_img = eMat.transpose() * x;
-    MyVector<T> x_diff = x_img - x;
-    AssignMatrixRow(FAC, i_mat, x_diff);
-  }
-  vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
-  int n_ext = vf.size();
-  MyMatrix<T> EXT(n_ext, n);
-  int pos = 0;
-  std::vector<Face> v_red(n_mat, Face(n_ext));
-  for (auto &eInc : vf) {
-    MyVector<T> eEXT = FindFacetInequality(FAC, eInc);
-    AssignMatrixRow(EXT, pos, eEXT);
-    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      v_red[i_mat][pos] = eInc[i_mat];
-    }
-    pos++;
-  }
-  std::vector<PairElt<T>> ListNeighborRed;
-  int n_mat_red = 0;
-  std::vector<int> l_i_mat;
-  std::map<Face, size_t> s_facet;
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> EXT_red = SelectRow(EXT, v_red[i_mat]);
-    int rnk = RankMat(EXT_red);
-    if (rnk == n - 1) {
-      ListNeighborRed.push_back(se.ListNeighbor[i_mat]);
-      l_i_mat.push_back(n_mat_red);
-      s_facet[v_red[i_mat]] = n_mat_red + 1;
-      n_mat_red++;
-    }
-  }
-  std::cerr << "n_mat_red=" << n_mat_red << " |s_facet|=" << s_facet.size() << "\n";
-  std::cerr << "First part: adjacency structure within the polyhedron\n";
-  std::vector<Tfacet> ll_adj;
-  for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
-    int i_mat = l_i_mat[i_mat_red];
-    Face const &f1 = v_red[i_mat];
-    std::vector<TsingAdj> l_adj;
-    for (int j_mat_red = 0; j_mat_red < n_mat_red; j_mat_red++) {
-      if (i_mat_red != j_mat_red) {
-        int j_mat = l_i_mat[j_mat_red];
-        Face const &f2 = v_red[j_mat];
-        Face f(n_ext);
-        for (int i_ext = 0; i_ext < n_ext; i_ext++)
-          if (f1[i_ext] == 1 && f2[i_ext] == 1)
-            f[i_ext] = 1;
-        MyMatrix<T> EXT_red = SelectRow(EXT, f);
-        int rnk = RankMat(EXT_red);
-        if (rnk == n - 2) {
-          l_adj.push_back({static_cast<size_t>(j_mat_red), miss_val, miss_val, miss_val, f});
-        }
-      }
-    }
-    Face IncdFacet = v_red[i_mat];
-    ll_adj.push_back({IncdFacet, l_adj});
-  }
-  auto get_iPoly=[&](size_t iFace, Face const& f1) -> size_t {
-    size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
-    for (size_t i_adjB=0; i_adjB<n_adjB; i_adjB++) {
-      Face f2 = ll_adj[iFace].l_sing_adj[i_adjB].IncdRidge;
-      if (f1 == f2)
-        return i_adjB;
-    }
-    std::cerr << "Failed to find a matching for f1\n";
-    throw TerminalException{1};
-  };
-  for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
-    size_t n_adj = ll_adj[i_mat_red].l_sing_adj.size();
-    for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
-      size_t iFaceAdj = ll_adj[i_mat_red].l_sing_adj[i_adj].iFaceAdj;
-      Face f1 = ll_adj[i_mat_red].l_sing_adj[i_adj].IncdRidge;
-      ll_adj[i_mat_red].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
-    }
-  }
-  std::cerr << "Second part: computing the opposite facets\n";
-  MyMatrix<T> VectorContain(1, n_ext);
-  for (int i_mat_red = 0; i_mat_red < n_mat_red; i_mat_red++) {
-    size_t n_adj = ll_adj[i_mat_red].l_sing_adj.size();
-    int i_mat = l_i_mat[i_mat_red];
-    MyMatrix<T> Q = se.ListNeighbor[i_mat].mat;
-    MyMatrix<T> cQ = Contragredient(Q);
-    MyMatrix<T> EXTimg = EXT * cQ;
-    ContainerMatrix<T> Cont(EXTimg, VectorContain);
-    Face MapFace(n_ext);
-    std::vector<size_t> l_idx(n_ext,0);
-    std::map<int,size_t> map_index;
-    for (int i_ext=0; i_ext<n_ext; i_ext++) {
-      if (ll_adj[i_mat_red].IncdFacet[i_ext] == 1) {
-        for (int i=0; i<n; i++)
-          VectorContain(i) = EXT(i_ext, i);
-        std::optional<size_t> opt = Cont.GetIdx();
-        if (opt) {
-          size_t idx = *opt;
-          MapFace[idx] = 1;
-          map_index[i_ext] = idx;
-        }
-      }
-    }
-    size_t pos = s_facet[MapFace];
-    if (pos == 0) {
-      std::cerr << "Failed to find the MapFace in s_facet\n";
-      throw TerminalException{1};
-    }
-    size_t iFaceOpp = pos - 1;
-    for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
-      Face f_map(n_ext);
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
-        if (ll_adj[i_mat_red].l_sing_adj[i_ext].IncdRidge[i_ext] == 1) {
-          size_t idx = map_index[i_ext];
-          f_map[idx] = 1;
-        }
-      }
-      size_t iPolyOpp = get_iPoly(iFaceOpp, f_map);
-      ll_adj[i_mat_red].l_sing_adj[i_adj].iFaceOpp = iFaceOpp;
-      ll_adj[i_mat_red].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
-    }
-  }
-  StepEnum<T> se_red = {ListNeighborRed};
-  return {EXT, se_red, ll_adj};
+MyMatrix<T> Contragredient(MyMatrix<T> const& M)
+{
+  return Inverse(TransposedMat(M));
 }
+
+template <typename T>
+struct StepEnum {
+public:
+  MyVector<T> x;
+  std::vector<PairElt<T>> stabilizerElt;
+  std::vector<PairElt<T>> ListNeighbor;
+  StepEnum(DataPoincare<T> const& dp) {
+    std::vector<PairElt<T>> l_stab_elt;
+    x = dp.x;
+    int n = x.size();
+    l_stab_elt.push_back(GenerateIdentity<T>(n));
+    for (auto & e_elt : dp.ListGroupElt) {
+      // TODO: Check that part
+      MyVector<T> x_img = e_elt.mat.transpose() * x;
+      if (x_img == x) {
+        l_stab_elt.push_back(e_elt);
+      }
+    }
+    stabilizerElt = GroupGeneration(l_stab_elt);
+    std::vector<PairElt<T>> ListNeighbor1 = IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
+    for (auto & e_grp_elt : stabilizerElt) {
+      for (auto & e_coset : ListNeighbor1) {
+        PairElt<T> prod = ProductPair(e_grp_elt, e_coset);
+        ListNeighbor.push_back(prod);
+      }
+    }
+  }
+  MyMatrix<T> GetFAC() const {
+    int n = x.size();
+    int n_mat = ListNeighbor.size();
+    MyMatrix<T> FAC(n_mat, n);
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      MyMatrix<T> eMat = se.ListNeighbor[i_mat].mat;
+      MyVector<T> x_img = eMat.transpose() * x;
+      MyVector<T> x_diff = x_img - x;
+      AssignMatrixRow(FAC, i_mat, x_diff);
+    }
+    return FAC;
+  }
+  void RemoveRedundancy(std::string const& eCommand) {
+    MyMatrix<T> FAC = GetFAC();
+    int n_mat = FAC.rows();
+    vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
+    DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
+    std::vector<PairElt<T>> ListNeighborRed;
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      MyMatrix<T> EXT_red = SelectRow(dataext.EXT, dataext.v_red[i_mat]);
+      int rnk = RankMat(EXT_red);
+      if (rnk == n - 1) {
+        ListNeighborRed.push_back(ListNeighbor[i_mat]);
+      }
+    }
+    ListNeighbor = ListNeighborRed
+  }
+  // The domain is defined originally as
+  // Tr(AX) <= Tr(PAP^T X)
+  // which we rewrite
+  // a.x <= phi(a).x        0 <= (phi(a) - a).x
+  //
+  // Matrixwise the scalar product a.x is rewritten as
+  // A X^T
+  // phi(a) is expressed as AQ
+  // 0 <= (AQ - A) X^T
+  // The mapping A ----> AQ maps to the adjacent domain.
+  // The mapping of the X ----> X c(Q)^T with c(Q) the
+  // contragredient representation.
+  template <typename T>
+  AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand) {
+    size_t miss_val = std::numeric_limits<size_t>::max();
+    MyMatrix<T> FAC = GetFAC();
+    int n = x.size();
+    int n_mat = ListNeighbor.size();
+    vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
+    DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
+    std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
+
+    std::cerr << "First part: adjacency structure within the polyhedron\n";
+    std::vector<Tfacet> ll_adj;
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      Face const &f1 = v_red[i_mat];
+      std::vector<TsingAdj> l_adj;
+      for (int j_mat = 0; j_mat < n_mat; j_mat++) {
+        if (i_mat != j_mat) {
+          Face const &f2 = v_red[j_mat];
+          Face f(n_ext);
+          for (int i_ext = 0; i_ext < n_ext; i_ext++)
+            if (f1[i_ext] == 1 && f2[i_ext] == 1)
+              f[i_ext] = 1;
+          MyMatrix<T> EXT_red = SelectRow(EXT, f);
+          int rnk = RankMat(EXT_red);
+          if (rnk == n - 2) {
+            l_adj.push_back({static_cast<size_t>(j_mat), miss_val, miss_val, miss_val, f});
+          }
+        }
+      }
+      Face IncdFacet = v_red[i_mat];
+      ll_adj.push_back({IncdFacet, l_adj});
+    }
+    auto get_iPoly=[&](size_t iFace, Face const& f1) -> size_t {
+      size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
+      for (size_t i_adjB=0; i_adjB<n_adjB; i_adjB++) {
+        Face f2 = ll_adj[iFace].l_sing_adj[i_adjB].IncdRidge;
+        if (f1 == f2)
+          return i_adjB;
+      }
+      std::cerr << "Failed to find a matching for f1\n";
+      throw TerminalException{1};
+    };
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
+      for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
+        size_t iFaceAdj = ll_adj[i_mat].l_sing_adj[i_adj].iFaceAdj;
+        Face f1 = ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge;
+        ll_adj[i_mat].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
+      }
+    }
+    std::cerr << "Second part: computing the opposite facets\n";
+    MyMatrix<T> VectorContain(1, n_ext);
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
+      MyMatrix<T> Q = ListNeighbor[i_mat].mat;
+      MyMatrix<T> cQ = Contragredient(Q);
+      MyMatrix<T> EXTimg = EXT * cQ;
+      ContainerMatrix<T> Cont(EXTimg, VectorContain);
+      Face MapFace(n_ext);
+      std::vector<size_t> l_idx(n_ext,0);
+      std::map<int,size_t> map_index;
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
+          for (int i=0; i<n; i++)
+            VectorContain(i) = EXT(i_ext, i);
+          std::optional<size_t> opt = Cont.GetIdx();
+          if (opt) {
+            size_t idx = *opt;
+            MapFace[idx] = 1;
+            map_index[i_ext] = idx;
+          }
+        }
+      }
+      size_t pos = s_facet[MapFace];
+      if (pos == 0) {
+        std::cerr << "Failed to find the MapFace in s_facet\n";
+        throw TerminalException{1};
+      }
+      size_t iFaceOpp = pos - 1;
+      for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
+        Face f_map(n_ext);
+        for (int i_ext=0; i_ext<n_ext; i_ext++) {
+          if (ll_adj[i_mat].l_sing_adj[i_ext].IncdRidge[i_ext] == 1) {
+            size_t idx = map_index[i_ext];
+            f_map[idx] = 1;
+          }
+        }
+        size_t iPolyOpp = get_iPoly(iFaceOpp, f_map);
+        ll_adj[i_mat].l_sing_adj[i_adj].iFaceOpp = iFaceOpp;
+        ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
+      }
+    }
+    return {EXT, ll_adj};
+  }
+
+
+};
+
+
+//
+// Now the polyhedral stuff
+//
+
+
+
 
 template <typename T>
 std::optional<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {
