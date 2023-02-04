@@ -172,7 +172,7 @@ std::unordered_map<Face, size_t> get_map_face(std::vector<Face> const& l_facet) 
   std::unordered_map<Face, size_t> s_facet;
   for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
     Face const& f = l_facet[i_facet];
-    s_facet[f] = i_facet;
+    s_facet[f] = i_facet + 1;
   }
   if (l_facet.size() != s_facet.size()) {
     std::cerr << "l_facet contains some duplicate and that is illegal\n";
@@ -283,14 +283,18 @@ public:
       }
     }
   }
+  MyVector<T> GetIneq(PairElt<T> const e_elt) const {
+    MyMatrix<T> eMat = ListNeighbor[i_mat].mat;
+    MyVector<T> x_img = eMat.transpose() * x;
+    MyVector<T> x_diff = x_img - x;
+    return x_diff;
+  }
   MyMatrix<T> GetFAC() const {
     int n = x.size();
     int n_mat = ListNeighbor.size();
     MyMatrix<T> FAC(n_mat, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      MyMatrix<T> eMat = se.ListNeighbor[i_mat].mat;
-      MyVector<T> x_img = eMat.transpose() * x;
-      MyVector<T> x_diff = x_img - x;
+      MyVector<T> x_diff = GetIneq(ListNeighbor[i_mat]);
       AssignMatrixRow(FAC, i_mat, x_diff);
     }
     return FAC;
@@ -416,7 +420,8 @@ public:
     }
     return {EXT, ll_adj};
   }
-
+  void InsertGenerators(std::vector<PairElt<T>> const& ListGen) {
+  }
 
 };
 
