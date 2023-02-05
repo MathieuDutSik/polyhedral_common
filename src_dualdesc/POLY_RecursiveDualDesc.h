@@ -365,7 +365,8 @@ public:
      down. */
   UNORD_MAP<Tint, Torbsize> OrbSize_Map;
   // From the list of factors of the group size we compute the list of possible
-  // orbit sizes and that has to be invariant and not change from one run to the next
+  // orbit sizes and that has to be invariant and not change from one run to the
+  // next
   std::vector<Tint> ListPossOrbsize;
   /* TRICK 3: Knowing the factorization of the order of the group allow us to
      know exactly
@@ -694,7 +695,7 @@ public:
     }
     return retListOrbit;
   }
-  std::optional<Face> FuncInsert(Face const&face_can) {
+  std::optional<Face> FuncInsert(Face const &face_can) {
     // The face should have been canonicalized beforehand.
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);

@@ -263,7 +263,7 @@ void POLY_NC_WriteGroup(netCDF::NcFile &dataFile, Tgroup const &GRP,
   varGRPSIZE.putVar(V_grpsize.data());
   //
   if (orbit_setup) {
-     // We put an additional
+    // We put an additional
     int n_act_div8 = (n_act + static_cast<int>(orbit_status) + 7) / 8;
     netCDF::NcDim eDimAct = dataFile.addDim("n_act_div8", n_act_div8);
     netCDF::NcDim eDimOrbit = dataFile.addDim("n_orbit");
