@@ -69,36 +69,17 @@ template <typename T>
 RecSparse<T> AMP_linear_operators(MySparseMatrix<T> const &preA0) {
   const int n = preA0.rows();
   const int m = preA0.cols();
-  //  std::cerr << "(rows/cols)preA0=" << preA0.rows() << " / " << preA0.cols()
-  //  << "\n";
   MySparseMatrix<T> A0 = preA0.transpose();
-  //  std::cerr << "(rows/cols)A0=" << A0.rows() << " / " << A0.cols() << "\n";
   std::function<MyVector<T>(MyVector<T> const &)> f1 =
       [=](MyVector<T> const &x) -> MyVector<T> {
-    //    std::cerr << "Before product A0*x\n";
-    //    std::cerr << "(rows/cols)x = " << x.rows() << " / " << x.cols() <<
-    //    "\n"; std::cerr << "(rows/cols)A0 = " << A0.rows() << " / " <<
-    //    A0.cols() << "\n";
     MyVector<T> yRet = A0 * x;
-    //    std::cerr << "L1(x)=" << L1_norm(x) << " L1(yRet)=" << L1_norm(yRet)
-    //    << "\n";
     return yRet;
   };
   std::function<MyVector<T>(MyVector<T> const &)> f2 =
       [=](MyVector<T> const &x) -> MyVector<T> {
-    //    std::cerr << "f2: n=" << n << " m=" << m << "\n";
-    //    std::cerr << "(rows/cols)x = " << x.rows() << " / " << x.cols() <<
-    //    "\n"; std::cerr << "(rows/cols)A0 = " << A0.rows() << " / " <<
-    //    A0.cols() << "\n"; std::cerr << "Before product x*A0\n";
     MyMatrix<T> xTr = x.transpose();
-    //    std::cerr << "We have xTr\n";
-    //    std::cerr << "(rows/cols)xTr = " << xTr.rows() << " / " << xTr.cols()
-    //    << "\n";
     MyMatrix<T> eProduct = xTr * A0;
-    //    std::cerr << "We have eProduct\n";
     MyVector<T> yRet = eProduct.transpose();
-    //    std::cerr << "L1(x)=" << L1_norm(x) << " L1(yRet)=" << L1_norm(yRet)
-    //    << "\n";
     return yRet;
   };
   MyVector<T> weight(n);
@@ -216,7 +197,6 @@ Test Version: please do NOT distribute
     Out.cntAt = 1;
     Out.cntA = 0;
     Out.exit = "Data b = 0";
-    //    std::cerr << "Return AMP_yall1, case 1\n";
     return Out;
   }
   MyVector<T> b1 = b / bmax;
@@ -252,7 +232,6 @@ Test Version: please do NOT distribute
         Out.x(i) = 0;
     }
   }
-  //  std::cerr << "Return AMP_yall1, case 2\n";
   return Out;
 }
 
@@ -287,9 +266,6 @@ MyVector<T> proj2box(MyVector<T> const &z, MyVector<T> const &w,
                      bool const &nonneg, T const &nu, int const &m) {
   size_t siz = z.size();
   MyVector<T> zRet = MyVector<T>(siz);
-  //  std::cerr << "nonneg=" << nonneg << " siz=" << siz << "\n";
-  //  std::cerr << "(rows/cols)w=" << w.rows() << " / " << w.cols() << "\n";
-  //  std::cerr << "(rows/cols)z=" << z.rows() << " / " << z.cols() << "\n";
   if (nonneg) {
     for (size_t i = 0; i < siz; i++)
       zRet(i) = std::min(w(i), z(i));
@@ -303,7 +279,6 @@ MyVector<T> proj2box(MyVector<T> const &z, MyVector<T> const &w,
       zRet(i) = z(i) * w(i) / std::max(w(i), std::abs(z(i)));
     }
   }
-  //  std::cerr << "Returning from proj2box\n";
   return zRet;
 }
 
@@ -349,7 +324,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   */
   int m = eRecSparse.m;
   int n = eRecSparse.n;
-  //  std::cerr << "m=" << m << " n=" << n << "\n";
   T sqrtm = sqrt(m);
   T bnrm = L2_Norm(b);
   T tol = eRecOpt.tol;
@@ -376,21 +350,13 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   MyVector<T> xp;
   MyVector<T> w = eRecSparse.weights;
   MyVector<T> x = x0;
-  //  std::cerr << "(rows/cols)x0=" << x0.rows() << " / " << x0.cols() << "\n";
   if (x0.rows() == 0)
     x = eRecSparse.At(b);
-  //  std::cerr << "(rows/cols)x=" << x.rows() << " / " << x.cols() << "\n";
   MyVector<T> z = z0;
   if (z0.rows() == 0)
     z = ZeroVector<T>(n);
   MyVector<T> y(m);
   MyVector<T> Aty(n);
-  /*
-  auto iprint1_0=[&]() -> void {
-    MyVector<T> rp = eRecSparse.A(x) - b;
-    T rpnrm = L2_Norm(rp);
-    std::cerr << " norm( A*x0 - b ) = " << rpnrm << "\n";
-    };*/
 #ifdef DEBUG
   auto iprint1_1 = [&]() -> void {
     MyVector<T> rp = eRecSparse.A(x) - b;
@@ -414,17 +380,11 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
 #endif
 #ifdef DEBUG
   auto iprint2 = [&]() -> void {
-    //    std::cerr << "Beginning of iprint2\n";
     T rdnrm = L2_Norm(rd);
-    //    std::cerr << "iprint2, step 1\n";
     MyVector<T> rp = eRecSparse.A(x) - b;
-    //    std::cerr << "iprint2, step 2\n";
     T rpnrm = L2_Norm(rp);
-    //    std::cerr << "iprint2, step 3\n";
     T objp = T_sumAbs(w, x);
-    //    std::cerr << "iprint2, step 4\n";
     T objd = T_ScalarProduct(b, y);
-    //    std::cerr << "iprint2, step 5\n";
     if (rho > 0) {
       T eNorm1 = T_ScalarProduct(rp, rp);
       objp = objp + (1 / (2 * rho)) * eNorm1;
@@ -443,8 +403,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
       std::cerr << "\n";
     }
 #endif
-    //    std::cerr << "xs=" << eRecOpt.xs << "\n";
-    //    std::cerr << "nu=" << eRecOpt.nu << "\n";
     if (eRecOpt.xs > 0 && eRecOpt.nu == 0) {
       T optim = std::max(dgap / std::abs(objp), rdnrm / sqrtm);
       if (rho == 0) {
@@ -466,9 +424,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     if (delta > 0)
       q = 0;
     // check relative change
-    //    std::cerr << "(rows/cols) x=" << x.rows() << " / " << x.cols() <<
-    //    "\n"; std::cerr << "(rows/cols)xp=" << xp.rows() << " / " << xp.cols()
-    //    << "\n";
     MyVector<T> TheDiff = x - xp;
     T xrel_chg = L2_Norm(TheDiff) / L2_Norm(x);
     if (xrel_chg < tol * (1 - q)) {
@@ -477,14 +432,12 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
       return stop;
     }
     if (xrel_chg >= tol * (1 + q)) {
-      //      std::cerr << "check_stopping, exit, case 2\n";
       return stop;
     }
     // check dual residual
     T rdnrm = L2_Norm(rd);
     bool d_feasible = rdnrm < tol * sqrtm;
     if (!d_feasible) {
-      //      std::cerr << "check_stopping, exit, case 3\n";
       return stop;
     }
     // check duality gap
@@ -501,7 +454,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     }
     bool gap_small = std::abs(objd - objp) < tol * std::abs(objp);
     if (!gap_small) {
-      //      std::cerr << "check_stopping, exit, case 4\n";
       return stop;
     }
     // check primal residual
@@ -520,7 +472,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
       stop = true;
       Out.exit = "Exit: Converged";
     }
-    //    std::cerr << "check_stopping, exit, case 5\n";
     return stop;
   };
   if (nonorth) {
@@ -540,21 +491,9 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   T ddmu = delta / mu;
   Out.cntA = 0;
   Out.cntAt = 0;
-  //  std::cerr << "Before central loop\n";
   for (iter = 1; iter <= maxit; iter++) {
-    //    std::cerr << "iter=" << iter << " / " << maxit << "\n";
-    //    std::cerr << "nonorth=" << nonorth << "\n";
     MyVector<T> xdmu = x / mu;
-    //    std::cerr << "mu=" << mu << "\n";
-    //    std::cerr << "MeanAbs(x)=" << MeanAbs(x) << "\n";
-    //    std::cerr << "MeanAbs(xdmu)=" << MeanAbs(xdmu) << "\n";
-    //    std::cerr << "stepfreq=" << stepfreq << "\n";
-    //    std::cerr << "rho=" << rho << "\n";
-    //    std::cerr << "(rows/cols)x=" << x.rows() << " / " << x.cols() << "\n";
-    //    std::cerr << "(rows/cols)xdmu=" << xdmu.rows() << " / " << xdmu.cols()
-    //    << "\n";
     if (!nonorth) {
-      //      std::cerr << "Passing in orthonormal case\n";
       y = eRecSparse.A(z - xdmu) + bdmu;
       if (rho > 0) {
         y = y / rdmu1;
@@ -565,9 +504,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
         }
       }
     } else {
-      //      std::cerr << "Passing in non-orthonormal case\n";
       MyVector<T> ry = eRecSparse.A(Aty - z + xdmu) - bdmu;
-      //      std::cerr << "MeanAbs(ry)=" << MeanAbs(ry) << "\n";
       if (rho > 0)
         ry = ry + rdmu * y;
       if (iter <= 1 || iter % stepfreq == 0) {
@@ -581,42 +518,24 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
         stp = eScal / (denom + eps);
         Out.cntAt++;
       }
-      //      std::cerr << "stp=" << stp << "\n";
       y = y - stp * ry;
     }
-    //    std::cerr << "L1_Norm(y)=" << L1_Norm(y) << "\n";
     Aty = eRecSparse.At(y);
-    //    std::cerr << "1: MeanAbs(Aty)=" << MeanAbs(Aty) << "\n";
-
     z = Aty + xdmu;
-    //    std::cerr << "2: MeanAbs(z)=" << MeanAbs(z) << "\n";
     z = proj2box(z, w, nonneg, nu, m);
-    //    std::cerr << "3: MeanAbs(z)=" << MeanAbs(z) << "\n";
-
     Out.cntA++;
     Out.cntAt++;
 
     rd = Aty - z;
-    //    std::cerr << "4: MeanAbs(rd)=" << MeanAbs(rd) << "\n";
     xp = x;
-    //    std::cerr << "5: MeanAbs(xp)=" << MeanAbs(xp) << "\n";
-    //    std::cerr << "gamma=" << gamma << "\n";
-    //    std::cerr << "mu=" << mu << "\n";
     x = x + (gamma * mu) * rd;
-    //    std::cerr << "MeanAbs(x)=" << MeanAbs(x) << "\n";
 
     bool stop = check_stopping();
-    //    if (iter == 2)
-    //      exit(1);
-
-    //    std::cerr << "print=" << print << "\n";
 #ifdef DEBUG
     if (print) {
-      //      std::cerr << "Before calls to iprint2\n";
       iprint2();
     }
 #endif
-    //    std::cerr << "stop=" << stop << "\n";
     if (stop)
       break;
   }
@@ -630,7 +549,6 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     iprint1_1();
 #endif
   Out.x = x;
-  //  std::cerr << "Exiting yall1_solve, final\n";
   return Out;
 }
 
@@ -657,10 +575,10 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   eRecOpt.maxit = 99999;
   eRecOpt.xs = -1;
   OutSolver<double> eRecOut = AMP_yall1(eRecSparse, eVect, eRecOpt);
-  //  std::cerr << "After AMP_yall1\n";
   //
   return eRecOut.x;
 }
+
 // clang-format off
 #endif  // SRC_SPARSE_SOLVER_GAMPMATLAB_H_
 // clang-format on

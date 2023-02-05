@@ -38,13 +38,8 @@ template <typename T, typename Telt>
 MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
                                        MyMatrix<T> const &EXT2,
                                        Telt const &ePerm) {
-  //  std::cerr << "Beginning of RepresentVertexPermutation\n";
-  //  std::cerr << "EXT1=\n";
-  //  WriteMatrix(std::cerr, EXT1);
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
-  //  std::cerr << "|ListRowSelect|=" << ListRowSelect.size() << " |EXT1|=" <<
-  //  EXT1.rows() << " / " << EXT1.cols() << "\n";
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv = Inverse(M1);
   size_t nbRow_s = ListRowSelect.size();
@@ -54,13 +49,10 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
   MyMatrix<T> RetMat = M1inv * M2;
 #ifdef SANITY_CHECK
-  //  std::cerr << "Doing sanity_checks in RepresentVertexPermutation\n";
   int nbRow = EXT2.rows();
   int nbCol = EXT2.cols();
   MyMatrix<T> EXT1_img = EXT1 * RetMat;
   MyMatrix<T> EXT2_perm(nbRow, nbCol);
-  //  std::cerr << "EXT1_img=\n";
-  //  WriteMatrix(std::cerr, EXT1_img);
   for (int iRow = 0; iRow < nbRow; iRow++) {
     int iRowImg = ePerm.at(iRow);
     for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -519,16 +511,6 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   size_t n_cols = EXT1.cols();
   //
   // We are testing if EXT1 P = perm(EXT2)
-  //  std::vector<Tidx> V(n_rows);
-  /*
-  std::cerr << "CheckEquivalence EXT1=\n";
-  WriteMatrix(std::cerr, EXT1);
-  std::cerr << "CheckEquivalence EXT2=\n";
-  WriteMatrix(std::cerr, EXT2);
-  std::cerr << "ListIdx=" << ListIdx << "\n";
-  std::cerr << "CheckEquivalence P=\n";
-  WriteMatrix(std::cerr, P);
-  */
 
   MyVector<T> Vimg(n_cols);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
@@ -550,9 +532,6 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
       if (Img_EXT1 != EXT2_map)
         return false;
     }
-    //    std::cerr << "i_row=" << i_row << " Vimg=" << StringVectorGAP(Vimg) <<
-    //    " i_row_img=" << i_row_img << " EXTé(i_row_img)=" <<
-    //    StringVectorGAP(GetMatrixRow(EXT2, i_row_img)) << "\n";
   }
   return true;
 }
