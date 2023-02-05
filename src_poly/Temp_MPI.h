@@ -41,27 +41,9 @@ void MPI_RECV_vector(vector<mpq_class> &a, int src, int tag, MPI_Comm comm) {
 
 template <>
 void MPI_SEND_vector(vector<double> &a, int dest, int tag, MPI_Comm comm) {
-  vector<int> eVectSend;
-  int *eVectSendC;
-  double *eVectSendDouble;
-  int eSize, ret;
-  eSize = a.size();
-  if ((eVectSendC = (int *)malloc(1 * sizeof(int))) == 0) {
-    throw TerminalException{1};
-  }
-  eSize = eVectSend.size();
-  eVectSendC[0] = eSize;
-  ret = MPI_Send(eVectSendC, 1, MPI_INT, dest, tag, comm);
-  free(eVectSendC);
-  //
-  if ((eVectSendDouble = (double *)malloc(eSize * sizeof(double))) == 0) {
-    throw TerminalException{1};
-  }
-  for (idx = 0; idx < eSize; idx++)
-    eVectSendDouble[idx] = a[idx];
-  ret =
-      MPI_Send(eVectSendDouble, eSize, MPI_DOUBLE_PRECISION, dest, 1002, comm);
-  free(eVectSendDouble);
+  std::vector<int> eVectSendC(1, a.size());
+  (int)MPI_Send(eVectSendC.data(), 1, MPI_INT, dest, tag, comm);
+  (int)MPI_Send(a.data(), eSize, MPI_DOUBLE_PRECISION, dest, 1002, comm);
 }
 
 template <>

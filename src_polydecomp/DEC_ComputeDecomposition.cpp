@@ -345,9 +345,10 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
 }
 
 // A face of the cellular complex is determined by all the ways in which
+// f_ext is the subset of the corresponding face
 template <typename Tint> struct ent_face {
   size_t iCone;
-  Face f_ext; // The subset itself
+  Face f_ext;
   MyMatrix<Tint> eMat;
 };
 
@@ -356,10 +357,6 @@ std::optional<MyMatrix<Tint>>
 test_equiv_ent_face(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
                     ent_face<Tint> const &ef1, ent_face<Tint> const &ef2) {
   using Telt = typename Tgroup::Telt;
-  //  std::cerr << "ef1.iCone=" << ef1.iCone << " ef2.iCone=" << ef2.iCone <<
-  //  "\n"; std::cerr << "test_equiv_ent_face ef1.f_ext=" <<
-  //  SignatureFace(ef1.f_ext) << " ef2.f_ext=" << SignatureFace(ef2.f_ext) <<
-  //  "\n";
   if (ef1.iCone != ef2.iCone)
     return {};
   size_t iC = ef1.iCone;

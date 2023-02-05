@@ -39,7 +39,7 @@ std::set<int> GetSetFrom_DB(Face const &eList) {
   std::set<int> eSet;
   boost::dynamic_bitset<>::size_type aRow = eList.find_first();
   for (int i = 0; i < nb; i++) {
-    eSet.insert(int(aRow));
+    eSet.insert(static_cast<int>(aRow));
     aRow = eList.find_next(aRow);
   }
   return eSet;
