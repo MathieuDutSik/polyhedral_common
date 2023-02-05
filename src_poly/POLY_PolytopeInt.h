@@ -242,8 +242,6 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
   return ListPoint;
 }
 
-
-
 /*
   We are looking for the 01 solutions X of the equation XA = B.
   We have m equations and n unknowns.
@@ -278,21 +276,14 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
 
  */
 template <typename T, typename Tint, typename Finsert>
-void Kernel_Enumerate01_solutions(MyMatrix<T> const &A, MyVector<T> const& B, Finsert f_insert) {
+void Kernel_Enumerate01_solutions(MyMatrix<T> const &A, MyVector<T> const &B,
+                                  Finsert f_insert) {
   std::optional<MyVector<T>> opt = SolutionIntMat(A, B);
   if (!opt)
     return;
-  MyVector<T> const& ePt = *opt;
+  MyVector<T> const &ePt = *opt;
   MyMatrix<T> NSP = NullspaceIntMat(A);
-  
-  
-  
 }
-
-
-
-
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEINT_H_
