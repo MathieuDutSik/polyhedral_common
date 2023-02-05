@@ -135,6 +135,30 @@ IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
   return l_coset;
 }
 
+// a left coset is of the form gU
+template <typename T>
+std::vector<PairElt<T>>
+IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
+                    std::vector<PairElt<T>> const &list_grp_elt) {
+  std::unordered_set<PairElt<T>> s_coset;
+  auto f_insert = [&](PairElt<T> const &pe) -> void {
+    for (auto &e_grp_elt : list_grp_elt) {
+      PairElt<T> prod = ProductPair(pe, e_grp_elt);
+      if (s_coset.count(prod) == 1)
+        break;
+    }
+    s_coset.insert(pe);
+  };
+  for (auto &pe : l_ent)
+    f_insert(pe);
+  std::vector<PairElt<T>> l_coset;
+  for (auto &e_coset : s_coset)
+    l_coset.push_back(e_coset);
+  return l_coset;
+}
+
+
+
 //
 // The common function for paperwork
 //
@@ -248,28 +272,86 @@ template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
   std::vector<PairElt<T>> stabilizerElt;
-  std::vector<PairElt<T>> ListNeighbor;
-  StepEnum(DataPoincare<T> const &dp) {
-    std::vector<PairElt<T>> l_stab_elt;
-    x = dp.x;
-    int n = x.size();
-    l_stab_elt.push_back(GenerateIdentity<T>(n));
-    for (auto &e_elt : dp.ListGroupElt) {
-      // TODO: Check that part
+  std::vector<PairElt<T>> ListNeighborCoset;
+  std::vector<MyVector<T>> ListNeighborX;
+  std::vector<std::pair<size_t,size_t>> ListNeighborData;
+  std::unordered_map<MyVector<T>, std::pair<size_t,size_t>> map;
+  bool InsertStabilizerGenerator(PairElt<T> const& eElt) {
+    auto iter = stabilizerElt.find(eElt);
+    if (iter != stabilizerElt.end()) {
+      return false;
+    }
+    std::vector<PairElt<T>> ExtListGen = stabilizerElt;
+    ExtListGen.push_back(eElt);
+    stabilizerElt = GroupGeneration(ExtListGen);
+    return true;
+  }
+  void InsertCoset(PairElt<T> const& eCoset) {
+    size_t n_coset = ListNeighborCoset.size();
+    ListNeighborCoset.push_back(eCoset);
+    std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map_local;
+    MyVector<T> x_img = eCoset.mat.transpose() * x;
+    size_t n_elt = stabilizerElt.size();
+    for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
+      MyVector<T> x2 = stabilizerElt[i_elt].mat.transpose() * x_img;
+      std::pair<size_t, size_t> & val = map_local[x2];
+      val.first = n_coset;
+      val.second = i_elt;
+    }
+    for (auto& kv : map_local) {
+      ListNeighborX.push_back(kv.first);
+      ListNeighborData.push_back(kv.second);
+      map[kv.first] = kv.second;
+    }
+  }
+  void ComputeCosets(std::vector<PairElt<T>> const& l_elt) {
+    ListNeighborX.clear();
+    ListNeighborData.clear();
+    ListNeighborCoset.clear();
+    map.clear();
+    std::vector<PairElt<T>> l_cos = IdentifyLeftCosets(l_elt, stabilizerElt);
+    for (auto & eCoset : l_cos) {
+      InsertCoset(eCoset);
+    }
+  }
+  void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
+    auto generator_upgrade[&](PairElt<T> const& e_elt) -> void {
+      bool test = InsertStabilizerGenerator(e_elt);
+      if (test) {
+        // Copy needed of the old data then recompute
+        std::vector<PairElt<T>> OldListCos = ListNeighborCoset;
+        ComputeCosets(OldListCos);
+      }
+    };
+    for (auto & e_elt : ListGen) {
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
-        l_stab_elt.push_back(e_elt);
+        generator_upgrade(e_elt);
+      } else {
+        auto iter = map.find(x_img);
+        if (iter == map.end()) {
+          InsertCoset(e_elt);
+        } else {
+          std::pair<size_t,size_t> const& val = iter->second;
+          size_t i_coset = val.first;
+          size_t i_elt = val.second;
+          PairElt<T> TheProd = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+          PairElt<T> e_elt_inv = InversePair(e_elt);
+          PairElt<T> stab_elt = ProductPair(TheProd, e_elt_inv);
+          MyVector<T> x2 = stab_elt.mat.transpose() * x;
+          if (x2 != x) {
+            std::cerr << "x is not stabilized\n";
+            throw TerminalException{1};
+          }
+          generator_upgrade(stab_elt);
+        }
       }
     }
-    stabilizerElt = GroupGeneration(l_stab_elt);
-    std::vector<PairElt<T>> ListNeighbor1 =
-        IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
-    for (auto &e_grp_elt : stabilizerElt) {
-      for (auto &e_coset : ListNeighbor1) {
-        PairElt<T> prod = ProductPair(e_grp_elt, e_coset);
-        ListNeighbor.push_back(prod);
-      }
-    }
+  }
+  StepEnum(DataPoincare<T> const &dp) {
+    x = dp.x;
+    stabilizerElt = {GenerateIdentity<T>(n)};
+    InsertGenerators(dp.ListGroupElt);
   }
   MyVector<T> GetIneq(PairElt<T> const e_elt) const {
     MyMatrix<T> eMat = ListNeighbor[i_mat].mat;
@@ -279,10 +361,10 @@ public:
   }
   MyMatrix<T> GetFAC() const {
     int n = x.size();
-    int n_mat = ListNeighbor.size();
+    int n_mat = ListNeighborX.size();
     MyMatrix<T> FAC(n_mat, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      MyVector<T> x_diff = GetIneq(ListNeighbor[i_mat]);
+      MyVector<T> x_diff = ListNeighborX[i_mat] - x;
       AssignMatrixRow(FAC, i_mat, x_diff);
     }
     return FAC;
@@ -339,8 +421,8 @@ public:
           MyMatrix<T> EXT_red = SelectRow(EXT, f);
           int rnk = RankMat(EXT_red);
           if (rnk == n - 2) {
-            l_adj.push_back(
-                {static_cast<size_t>(j_mat), miss_val, miss_val, miss_val, f});
+            size_t j_mat_s = static_cast<size_t>(j_mat);
+            l_adj.push_back({j_mat_s, miss_val, miss_val, miss_val, f});
           }
         }
       }
@@ -409,7 +491,6 @@ public:
     }
     return {EXT, ll_adj};
   }
-  void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {}
 };
 
 //
@@ -523,13 +604,13 @@ void Process_rec_option(RecOption const &rec_option) {
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
-    using T_rat = mpq_class;
-    std::string FileAlgebraicField = *opt_realalgebraic;
+    std::string const& FileAlgebraicField = *opt_realalgebraic;
     if (!IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
       throw TerminalException{1};
     }
+    using T_rat = mpq_class;
     HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
