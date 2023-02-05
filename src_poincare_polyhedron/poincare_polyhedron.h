@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
-#define SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
+#ifndef SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_
+#define SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
@@ -541,5 +541,5 @@ void Process_rec_option(RecOption const &rec_option) {
 }
 
 // clang-format off
-#endif  // SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
+#endif  // SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_
 // clang-format on
