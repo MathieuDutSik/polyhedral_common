@@ -34,7 +34,7 @@ MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {
   iColSel = -1;
   eEigSel = 0;
   for (i = 0; i < dimension; i++) {
-    TheEig = (double)gsl_vector_get(eigenvalues, i);
+    TheEig = static_cast<double>(gsl_vector_get(eigenvalues, i));
     if (TheEig < eEigSel) {
       eEigSel = TheEig;
       iColSel = i;

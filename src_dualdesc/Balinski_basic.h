@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef BALINSKI_BASIC_H
-#define BALINSKI_BASIC_H
+#ifndef SRC_DUALDESC_BALINSKI_BASIC_H_
+#define SRC_DUALDESC_BALINSKI_BASIC_H_
 
 // clang-format off
 #include "Boost_bitset_kernel.h"
