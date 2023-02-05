@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "poincare_polyhedron.h"
 #include "NumberTheory.h"
+#include "poincare_polyhedron.h"
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;

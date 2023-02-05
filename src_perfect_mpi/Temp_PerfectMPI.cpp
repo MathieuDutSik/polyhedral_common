@@ -247,8 +247,8 @@ int main() {
   for (int iCase = 0; iCase < nbCaseIncidence; iCase++) {
     int incd = iCase + MinIncidenceRealized;
     std::cerr << "iCase=" << iCase << " incd=" << incd
-              << " |ListCasesNotDone[pos]|="
-              << ListCasesNotDone[iCase].size() << "\n";
+              << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[iCase].size()
+              << "\n";
   }
   //
   // The main loop itself.

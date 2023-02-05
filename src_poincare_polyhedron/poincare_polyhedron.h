@@ -26,8 +26,7 @@ struct TrackGroup {
 };
 
 // We do operations but we can keep track of what is happening.
-template<typename T>
-struct PairElt {
+template <typename T> struct PairElt {
   TrackGroup tg;
   MyMatrix<T> mat;
 };
@@ -48,7 +47,6 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
   return {ListDI_ret};
 }
 
-
 template <typename T>
 PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
   TrackGroup tg = ProductTrack(p1.tg, p2.tg);
@@ -56,35 +54,32 @@ PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
   return {tg, mat};
 }
 
-template <typename T>
-PairElt<T> InversePair(PairElt<T> const &p) {
+template <typename T> PairElt<T> InversePair(PairElt<T> const &p) {
   return {InverseTrack(p.tg), Inverse(p.mat)};
 }
 
-void WriteTrackGroup(std::ofstream & os, TrackGroup const& tg) {
+void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
   size_t n_elt = tg.ListDI.size();
   os << n_elt;
-  for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
+  for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
     os << ":" << tg.ListDI[i_elt];
   }
 }
 
 template <typename T>
-bool operator==(PairElt<T> const& pe1, PairElt<T> const& pe2) {
+bool operator==(PairElt<T> const &pe1, PairElt<T> const &pe2) {
   return pe1.mat == pe2.mat;
 }
 
 namespace std {
-  template<typename T>
-  struct hash<PairElt<T>> {
-    std::size_t operator()(PairElt<T> const& pe) const {
-      return std::hash<MyMatrix<T>>()(pe.mat);
-    }
-  };
-}
+template <typename T> struct hash<PairElt<T>> {
+  std::size_t operator()(PairElt<T> const &pe) const {
+    return std::hash<MyMatrix<T>>()(pe.mat);
+  }
+};
+} // namespace std
 
-template<typename T>
-PairElt<T> GenerateIdentity(int const& n) {
+template <typename T> PairElt<T> GenerateIdentity(int const &n) {
   TrackGroup tg;
   MyMatrix<T> mat = IdentityMat<T>(n);
   return {tg, mat};
@@ -94,16 +89,17 @@ PairElt<T> GenerateIdentity(int const& n) {
 // Second part, the finite group generation
 //
 
-template<typename T>
-std::vector<PairElt<T>> GroupGeneration(std::vector<PairElt<T>> const& input_l_ent) {
+template <typename T>
+std::vector<PairElt<T>>
+GroupGeneration(std::vector<PairElt<T>> const &input_l_ent) {
   std::vector<PairElt<T>> l_ent = input_l_ent;
-  while(true) {
+  while (true) {
     std::unordered_set<PairElt<T>> GenElt;
     size_t n_ent = l_ent.size();
-    for (size_t i_ent=0; i_ent<n_ent; i_ent++) {
-      PairElt<T> const& pe1 = l_ent[i_ent];
-      for (size_t j_ent=0; j_ent<n_ent; j_ent++) {
-        PairElt<T> const& pe2 = l_ent[j_ent];
+    for (size_t i_ent = 0; i_ent < n_ent; i_ent++) {
+      PairElt<T> const &pe1 = l_ent[i_ent];
+      for (size_t j_ent = 0; j_ent < n_ent; j_ent++) {
+        PairElt<T> const &pe2 = l_ent[j_ent];
         PairElt<T> prod = ProductPair(pe1, pe2);
         GenElt.insert(prod);
       }
@@ -112,28 +108,29 @@ std::vector<PairElt<T>> GroupGeneration(std::vector<PairElt<T>> const& input_l_e
       return input_l_ent;
     }
     l_ent.clear();
-    for (auto & e_ent : GenElt)
+    for (auto &e_ent : GenElt)
       l_ent.push_back(e_ent);
   }
 }
 
-
 // a right coset is of the form Ug
-template<typename T>
-std::vector<PairElt<T>> IdentifyRightCosets(std::vector<PairElt<T>> const& l_ent, std::vector<PairElt<T>> const& list_grp_elt) {
+template <typename T>
+std::vector<PairElt<T>>
+IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
+                    std::vector<PairElt<T>> const &list_grp_elt) {
   std::unordered_set<PairElt<T>> s_coset;
-  auto f_insert=[&](PairElt<T> const& pe) -> void {
-    for (auto & e_grp_elt : list_grp_elt) {
+  auto f_insert = [&](PairElt<T> const &pe) -> void {
+    for (auto &e_grp_elt : list_grp_elt) {
       PairElt<T> prod = ProductPair(e_grp_elt, pe);
       if (s_coset.count(prod) == 1)
         break;
     }
     s_coset.insert(pe);
   };
-  for (auto & pe : l_ent)
+  for (auto &pe : l_ent)
     f_insert(pe);
   std::vector<PairElt<T>> l_coset;
-  for (auto & e_coset : s_coset)
+  for (auto &e_coset : s_coset)
     l_coset.push_back(e_coset);
   return l_coset;
 }
@@ -142,14 +139,13 @@ std::vector<PairElt<T>> IdentifyRightCosets(std::vector<PairElt<T>> const& l_ent
 // The common function for paperwork
 //
 
-template <typename T>
-struct DataEXT {
+template <typename T> struct DataEXT {
   MyMatrix<T> EXT;
   std::vector<Face> v_red;
 };
 
 template <typename T>
-DataEXT<T> GetTransposedDualDesc(vectface const& vf, MyMatrix<T> const& FAC) {
+DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
   int n = FAC.cols();
   int n_fac = FAC.rows();
   int n_ext = vf.size();
@@ -167,11 +163,12 @@ DataEXT<T> GetTransposedDualDesc(vectface const& vf, MyMatrix<T> const& FAC) {
   return {EXT, v_red};
 }
 
-std::unordered_map<Face, size_t> get_map_face(std::vector<Face> const& l_facet) {
+std::unordered_map<Face, size_t>
+get_map_face(std::vector<Face> const &l_facet) {
   size_t n_facet = l_facet.size();
   std::unordered_map<Face, size_t> s_facet;
-  for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
-    Face const& f = l_facet[i_facet];
+  for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
+    Face const &f = l_facet[i_facet];
     s_facet[f] = i_facet + 1;
   }
   if (l_facet.size() != s_facet.size()) {
@@ -181,12 +178,9 @@ std::unordered_map<Face, size_t> get_map_face(std::vector<Face> const& l_facet) 
   return s_facet;
 }
 
-
-
 //
 // The elementary data structures for the Poincare stuff
 //
-
 
 // The initial data for the Poincare Polyhedron Theorem
 // ---a point x
@@ -196,18 +190,17 @@ template <typename T> struct DataPoincare {
   std::vector<PairElt<T>> ListGroupElt;
 };
 
-
 template <typename T>
-DataPoincare<T> ReadDataPoincare(std::string const& FileI) {
+DataPoincare<T> ReadDataPoincare(std::string const &FileI) {
   IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
   size_t n_elt;
   is >> n_elt;
   std::vector<PairElt<T>> ListGroupElt;
-  for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
+  for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
     MyVector<T> eElt = ReadMatrix<T>(is);
-    TrackGroup tg{{int(i_elt+1)}};
+    TrackGroup tg{{int(i_elt + 1)}};
     PairElt<T> pe{tg, eElt};
     ListGroupElt.push_back(pe);
   }
@@ -235,13 +228,11 @@ struct Tfacet {
   std::vector<TsingAdj> l_sing_adj;
 };
 
-template <typename T>
-struct ResultAdjacencyInfo {
+template <typename T> struct ResultAdjacencyInfo {
   MyMatrix<T> FAC;
   MyMatrix<T> EXT;
   std::unordered_map<Face, size_t> s_facet;
 };
-
 
 template <typename T> struct AdjacencyInfo {
   MyMatrix<T> EXT;
@@ -249,25 +240,21 @@ template <typename T> struct AdjacencyInfo {
   std::vector<Tfacet> ll_adj;
 };
 
-
-template <typename T>
-MyMatrix<T> Contragredient(MyMatrix<T> const& M)
-{
+template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
 
-template <typename T>
-struct StepEnum {
+template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
   std::vector<PairElt<T>> stabilizerElt;
   std::vector<PairElt<T>> ListNeighbor;
-  StepEnum(DataPoincare<T> const& dp) {
+  StepEnum(DataPoincare<T> const &dp) {
     std::vector<PairElt<T>> l_stab_elt;
     x = dp.x;
     int n = x.size();
     l_stab_elt.push_back(GenerateIdentity<T>(n));
-    for (auto & e_elt : dp.ListGroupElt) {
+    for (auto &e_elt : dp.ListGroupElt) {
       // TODO: Check that part
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
@@ -275,9 +262,10 @@ public:
       }
     }
     stabilizerElt = GroupGeneration(l_stab_elt);
-    std::vector<PairElt<T>> ListNeighbor1 = IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
-    for (auto & e_grp_elt : stabilizerElt) {
-      for (auto & e_coset : ListNeighbor1) {
+    std::vector<PairElt<T>> ListNeighbor1 =
+        IdentifyRightCosets(dp.ListGroupElt, stabilizerElt);
+    for (auto &e_grp_elt : stabilizerElt) {
+      for (auto &e_coset : ListNeighbor1) {
         PairElt<T> prod = ProductPair(e_grp_elt, e_coset);
         ListNeighbor.push_back(prod);
       }
@@ -299,7 +287,7 @@ public:
     }
     return FAC;
   }
-  void RemoveRedundancy(std::string const& eCommand) {
+  void RemoveRedundancy(std::string const &eCommand) {
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
@@ -351,16 +339,17 @@ public:
           MyMatrix<T> EXT_red = SelectRow(EXT, f);
           int rnk = RankMat(EXT_red);
           if (rnk == n - 2) {
-            l_adj.push_back({static_cast<size_t>(j_mat), miss_val, miss_val, miss_val, f});
+            l_adj.push_back(
+                {static_cast<size_t>(j_mat), miss_val, miss_val, miss_val, f});
           }
         }
       }
       Face IncdFacet = v_red[i_mat];
       ll_adj.push_back({IncdFacet, l_adj});
     }
-    auto get_iPoly=[&](size_t iFace, Face const& f1) -> size_t {
+    auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
       size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
-      for (size_t i_adjB=0; i_adjB<n_adjB; i_adjB++) {
+      for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
         Face f2 = ll_adj[iFace].l_sing_adj[i_adjB].IncdRidge;
         if (f1 == f2)
           return i_adjB;
@@ -370,7 +359,7 @@ public:
     };
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
-      for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
+      for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         size_t iFaceAdj = ll_adj[i_mat].l_sing_adj[i_adj].iFaceAdj;
         Face f1 = ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge;
         ll_adj[i_mat].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
@@ -385,11 +374,11 @@ public:
       MyMatrix<T> EXTimg = EXT * cQ;
       ContainerMatrix<T> Cont(EXTimg, VectorContain);
       Face MapFace(n_ext);
-      std::vector<size_t> l_idx(n_ext,0);
-      std::map<int,size_t> map_index;
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      std::vector<size_t> l_idx(n_ext, 0);
+      std::map<int, size_t> map_index;
+      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
-          for (int i=0; i<n; i++)
+          for (int i = 0; i < n; i++)
             VectorContain(i) = EXT(i_ext, i);
           std::optional<size_t> opt = Cont.GetIdx();
           if (opt) {
@@ -405,9 +394,9 @@ public:
         throw TerminalException{1};
       }
       size_t iFaceOpp = pos - 1;
-      for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
+      for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
-        for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        for (int i_ext = 0; i_ext < n_ext; i_ext++) {
           if (ll_adj[i_mat].l_sing_adj[i_ext].IncdRidge[i_ext] == 1) {
             size_t idx = map_index[i_ext];
             f_map[idx] = 1;
@@ -420,18 +409,12 @@ public:
     }
     return {EXT, ll_adj};
   }
-  void InsertGenerators(std::vector<PairElt<T>> const& ListGen) {
-  }
-
+  void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {}
 };
-
 
 //
 // Now the polyhedral stuff
 //
-
-
-
 
 template <typename T>
 std::optional<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {
@@ -470,8 +453,6 @@ AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   }
 }
 
-
-
 //
 // The code for calling it.
 //
@@ -497,9 +478,7 @@ Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc
   return {std::move(ListBlock), "undefined"};
 }
 
-
-
-RecOption ReadInitialData(FullNamelist const& eFull) {
+RecOption ReadInitialData(FullNamelist const &eFull) {
   SingleBlock BlockPROC = eFull.ListBlock.at("DATA");
   std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
   std::string FileI = BlockPROC.ListStringValues.at("FileI");
@@ -510,28 +489,22 @@ RecOption ReadInitialData(FullNamelist const& eFull) {
 }
 
 template <typename T>
-void PrintAdjacencyInfo(AdjacencyInfo<T> const& ai, std::string const& FileO) {
+void PrintAdjacencyInfo(AdjacencyInfo<T> const &ai, std::string const &FileO) {
   std::ofstream os(FileO);
   size_t n_neigh = ai.se_red.ListNeighbor.size();
   os << n_neigh << "\n";
-  for (size_t i_neigh=0; i_neigh<n_neigh; i_neigh++) {
+  for (size_t i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
     WriteTrackGroup(os, ai.se_red.ListNeighbor[i_neigh].tg);
   }
 }
 
-
-template <typename T>
-void full_process_type(RecOption const& rec_option) {
+template <typename T> void full_process_type(RecOption const &rec_option) {
   DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI);
   AdjacencyInfo<T> ai = IterativePoincareRefinement(dp, rec_option);
   PrintAdjacencyInfo(ai, rec_option.FileO);
 }
 
-
-
-
-
-void Process_rec_option(RecOption const& rec_option) {
+void Process_rec_option(RecOption const &rec_option) {
   std::string arith = rec_option.Arithmetic;
   if (arith == "rational") {
     using T = mpq_class;
@@ -547,7 +520,8 @@ void Process_rec_option(RecOption const& rec_option) {
     using T = QuadField<Trat, 2>;
     return full_process_type<T>(rec_option);
   }
-  std::optional<std::string> opt_realalgebraic = get_postfix(arith, "RealAlgebraic=");
+  std::optional<std::string> opt_realalgebraic =
+      get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
     using T_rat = mpq_class;
     std::string FileAlgebraicField = *opt_realalgebraic;
@@ -565,13 +539,6 @@ void Process_rec_option(RecOption const& rec_option) {
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }
-
-
-
-
-
-
-
 
 // clang-format off
 #endif  // SRC_POINCARE_POLYHEDRON_TH_POINCARE_POLYHEDRON_H_
