@@ -443,7 +443,7 @@ DataMapping<Tidx> RepresentVertexPermutationTest_Blocks(
     } else {
       f_insert(ListBlocks[i_block], *eEquiv);
     }
-    block_status[i_block] = bool(eEquiv);
+    block_status[i_block] = static_cast<bool>(eEquiv);
   }
   return {correct, std::move(block_status), std::move(eGen)};
 }

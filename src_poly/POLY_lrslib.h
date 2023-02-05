@@ -163,22 +163,18 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
 /* contains output                                   */
 /* col=0 for vertex 1....d for ray/facet             */
 {
-  int64_t j; /* cobasic index     */
+  int64_t j;
   T **A = P->A;
   int64_t *Row = P->Row;
-  //  std::cerr << "col=" << col << " A[0][col]=" << A[0][col] << "\n";
   if (col == 0) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 1\n";
     return lrs_getvertex(P, Q, output);
   }
 
   if (Q->lponly) {
     if (A[0][col] <= 0) {
-      // std::cerr << "col=" << col << " : lrs_getsolution, exit case 2\n";
       return globals::L_FALSE;
     }
   } else if (A[0][col] >= 0) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 3\n";
     return globals::L_FALSE;
   }
 
@@ -187,14 +183,12 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     j++;
 
   if (j <= P->m) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 4\n";
     return globals::L_FALSE;
   }
 
   if (Q->geometric || Q->allbases || lexmin(P, Q, col) || Q->lponly)
     return lrs_getray(P, Q, col, Q->n, output);
-  //  std::cerr << "col=" << col << " : lrs_getsolution, exit case 5\n";
-  return globals::L_FALSE; /* no more output in this dictionary */
+  return globals::L_FALSE;
 }
 
 /***********************************/
@@ -585,19 +579,22 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
   ired = 0;
 
   for (ind = 0; ind < n; ind++) { /* print solution */
-    if (ind == 0 && !hull) /* must have a ray, set first column to zero */
+    if (ind == 0 && !hull) {
+      /* must have a ray, set first column to zero */
       output[0] = 0;
-    else if ((ired < Q->nredundcol) &&
-             (redundcol[ired] == ind)) { /* column was deleted as redundant */
-      if (redcol == ind) /* true for linearity on this cobasic index */
-        /* we print reduced determinant instead of zero */
-        output[ind] = P->det;
-      else
-        output[ind] = 0;
-      ired++;
-    } else { /* column not deleted as redundant */
-      getnextoutput(P, Q, i, col, output[ind]);
-      i++;
+    } else {
+      if (ired < Q->nredundcol && redundcol[ired] == ind) {
+        /* column was deleted as redundant */
+        if (redcol == ind) /* true for linearity on this cobasic index */
+          /* we print reduced determinant instead of zero */
+          output[ind] = P->det;
+        else
+          output[ind] = 0;
+        ired++;
+      } else { /* column not deleted as redundant */
+        getnextoutput(P, Q, i, col, output[ind]);
+        i++;
+      }
     }
   }
   return globals::L_TRUE;
@@ -828,10 +825,12 @@ void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
         }
 
   if (Ars > 0) {
-    for (j = 0; j <= d; j++) /* no need to change sign if Ars neg */
+    for (j = 0; j <= d; j++) {
+      /* no need to change sign if Ars neg */
       /*   A[r][j]=-A[r][j];              */
       if (A[r][j] != 0)
         A[r][j] = -A[r][j];
+    }
   } else {
     for (i = 0; i <= m_A; i++)
       if (A[i][s] != 0)
@@ -1258,31 +1257,7 @@ void update(lrs_dic<T> *P, int64_t *i, int64_t *j)
   reorder1(B, Row, *i, m + 1);
   C[*j] = leave;
   reorder1(C, Col, *j, d);
-  /* restore i and j to new positions in basis */
-  for (*i = 1; B[*i] != enter; (*i)++)
-    ; /*Find basis index */
-  for (*j = 0; C[*j] != leave; (*j)++)
-    ; /*Find co-basis index */
 }
-
-/* globals::TRUE if the current dictionary is primal degenerate */
-/* not thoroughly tested   2000/02/15                  */
-/*
-template<typename T>
-int64_t lrs_degenerate(lrs_dic<T> * P)
-{
-  int64_t i;
-  int64_t *B, *Row;
-  T** A = P->A;
-  int64_t d = P->d;
-  int64_t m = P->m;
-  B = P->B;
-  Row = P->Row;
-  for (i = d + 1; i <= m; i++)
-    if (A[Row[i]][0] == 0)
-      return globals::L_TRUE;
-  return globals::L_FALSE;
-}*/
 
 /*********************************************************/
 /*                 Miscellaneous                         */
@@ -2046,7 +2021,7 @@ vectface DualDescription_temp_incd(MyMatrix<T> const &EXT) {
       eScal = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
         eScal += out[iCol] * EXTwork(iRow, iCol);
-      face[iRow] = bool(eScal == 0);
+      face[iRow] = static_cast<bool>(eScal == 0);
     }
     ListIncd.push_back(face);
 #endif
@@ -2129,7 +2104,7 @@ vectface DualDescription_temp_incd_reduction(MyMatrix<T> const &EXT) {
       eScal = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
         eScal += out[iCol] * EXTring(iRow, iCol);
-      face[iRow] = bool(eScal == 0);
+      face[iRow] = static_cast<bool>(eScal == 0);
     }
     ListIncd.push_back(face);
 #endif
