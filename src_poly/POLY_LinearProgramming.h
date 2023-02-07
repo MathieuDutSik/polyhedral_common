@@ -621,8 +621,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
 
   int TheDim = EXT_lp.cols();
   MyVector<T> TheCritFacet = EXT_lp.row(nbRow);
-  std::function<MyVector<T>(void)> GetOneFacetDefiningVect =
-      [&]() -> MyVector<T> {
+  auto GetOneFacetDefiningVect = [&]() -> MyVector<T> {
     MyVector<T> eMinimize(TheDim);
     while (true) {
       // quite enough for us

@@ -46,7 +46,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
   std::string FileOut = ePrefix + "GLP.out";
   std::string FileErr1 = ePrefix + "GLP.err1";
   std::string FileErr2 = ePrefix + "GLP.err2";
-  std::function<void(void)> CleanAtLeaving = [&](void) -> void {
+  auto CleanAtLeaving = [&]() -> void {
     /*
     RemoveFileIfExist(FileMath);
     RemoveFileIfExist(FileOut);
@@ -56,8 +56,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
   //
   // Definition of needed data types and routines
   //
-  std::function<void(std::ostream &, T)> PrintValue =
-      [&](std::ostream &os, T const &eVal) -> void {
+  auto PrintValue = [&](std::ostream &os, T const &eVal) -> void {
     if (eGLPKoption.UseDouble) {
       double eVal_d = UniversalScalarConversion<double, T>(eVal);
       os << eVal_d;
@@ -69,9 +68,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
     int iCol;
     T eVal;
   };
-  std::function<void(std::ostream &, std::vector<PairCV>)>
-      PrintConstraintVector =
-          [&](std::ostream &os, std::vector<PairCV> const &LPair) -> void {
+  auto PrintConstraintVector = [&](std::ostream &os, std::vector<PairCV> const &LPair) -> void {
     int len = LPair.size();
     bool IsFirst = true;
     for (int i = 0; i < len; i++) {
@@ -137,8 +134,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
   PrintConstraintVector(OUTfs, ToBeMinVect);
   OUTfs << ";\n";
   //
-  std::function<void(std::vector<PairCV> &, T &)> EquaCanonicalize =
-      [&](std::vector<PairCV> &ListPair, T &eVal) -> void {
+  auto EquaCanonicalize = [&](std::vector<PairCV> &ListPair, T &eVal) -> void {
     int lenA = ListPair.size();
     int len = lenA + 1;
     MyVector<T> eVect(len);
@@ -161,8 +157,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
       PairCV ePair{iCol, eVal};
       LLPair[iRow].push_back(ePair);
     }
-  std::function<LpSolutionSimple<T>(void)> StandardUnfeas =
-      [&](void) -> LpSolutionSimple<T> {
+  auto StandardUnfeas = [&]() -> LpSolutionSimple<T> {
     CleanAtLeaving();
     int nbRow = -1;
     int nbCol = -1;

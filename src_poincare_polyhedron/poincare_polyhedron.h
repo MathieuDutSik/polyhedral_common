@@ -354,7 +354,7 @@ public:
     InsertGenerators(dp.ListGroupElt);
   }
   MyVector<T> GetIneq(PairElt<T> const e_elt) const {
-    MyMatrix<T> eMat = ListNeighbor[i_mat].mat;
+    MyMatrix<T> const& eMat = e_elt.mat;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
     return x_diff;
@@ -491,6 +491,21 @@ public:
     }
     return {EXT, ll_adj};
   }
+  std::vector<PairElt<T>> GenerateTypeIneighbors(std::string const& eCommand, std::vector<PairElt<T>> const& l_elt) {
+    std::vector<PairElt<T>> ListMiss;
+    MyMatrix<T> FAC = 
+    
+    auto f_insert=[&](PairElt<T> const& TestElt) -> void {
+      MyVector<T> x_img = GetIneq(TestElt);
+      MyVector<T> x_diff = x_img - x;
+      
+      
+    };
+    for (auto & e_elt : l_elt)
+      f_insert(e_elt);
+    return ListMiss;
+  }
+
 };
 
 //

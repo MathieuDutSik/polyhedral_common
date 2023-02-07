@@ -748,8 +748,7 @@ SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
     ListMatVect.push_back(eVect);
   }
   MyMatrix<T> ListMatVectB = MatrixFromVectorFamily(ListMatVect);
-  std::function<bool(MyMatrix<T>)> IsMatrixCorrect =
-      [&](MyMatrix<T> const &M) -> bool {
+  auto f_correct = [&](MyMatrix<T> const &M) -> bool {
     if (!IsIntegralMatrix(M))
       return false;
     if (eData.NeedCheckStabilization) {
@@ -773,17 +772,17 @@ SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
   Tgroup GRP1 = GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        T_SHV1, T_SHV2, GRP1, *eResEquiv, IsMatrixCorrect));
+        T_SHV1, T_SHV2, GRP1, *eResEquiv, f_correct));
   } else {
     std::optional<MyMatrix<T>> fResEquiv =
         LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1,
                                                 *eResEquiv);
     if (!fResEquiv)
       return {};
-    if (IsMatrixCorrect(*fResEquiv))
+    if (f_correct(*fResEquiv))
       return ConvertEquiv(fResEquiv);
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        T_SHV1, T_SHV2, GRP1, *eResEquiv, IsMatrixCorrect));
+        T_SHV1, T_SHV2, GRP1, *eResEquiv, f_correct));
   }
 }
 
@@ -803,8 +802,7 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const &eData,
   }
   MyMatrix<T> ListMatVectB = MatrixFromVectorFamily(ListMatVect);
   MyMatrix<T> T_SHV = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
-  std::function<bool(MyMatrix<T>)> IsMatrixCorrect =
-      [&](MyMatrix<T> const &M) -> bool {
+  auto f_correct = [&](MyMatrix<T> const &M) -> bool {
     if (!IsIntegralMatrix(M))
       return false;
     if (eData.NeedCheckStabilization) {
@@ -822,7 +820,7 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const &eData,
     std::vector<Telt> LGen = g.GeneratorsOfGroup();
     for (auto &eGen : LGen) {
       MyMatrix<T> M = RepresentVertexPermutation(T_SHV, T_SHV, eGen);
-      if (!IsMatrixCorrect(M))
+      if (!f_correct(M))
         return false;
     }
     return true;
@@ -837,14 +835,12 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const &eData,
   if (IsCorrectGroup(GRPshv1))
     return GRPshv1;
   if (GRPshv1.size() < eData.UpperLimitMethod4) {
-    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv1,
-                                                  IsMatrixCorrect);
+    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv1, f_correct);
   } else {
     Tgroup GRPshv2 = LinPolytopeIntegral_Stabilizer_Method8(T_SHV, GRPshv1);
     if (IsCorrectGroup(GRPshv2))
       return GRPshv2;
-    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv2,
-                                                  IsMatrixCorrect);
+    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv2, f_correct);
   }
 }
 

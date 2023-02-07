@@ -168,11 +168,9 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   if (IsGroupCorrect(EXT_T, GRPisom)) {
     return GRPisom;
   }
-  std::function<bool(MyMatrix<T>)> IsMatrixCorrect =
-      [](MyMatrix<T> const &M) -> bool { return IsIntegralMatrix(M); };
   if (GRPisom.size() < eData.UpperLimitMethod4) {
-    return LinPolytopeIntegral_Stabilizer_Method4(EXT_T, GRPisom,
-                                                  IsMatrixCorrect);
+    auto f_correct = [](MyMatrix<T> const &M) -> bool { return IsIntegralMatrix(M); };
+    return LinPolytopeIntegral_Stabilizer_Method4(EXT_T, GRPisom, f_correct);
   } else {
     return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom);
   }
@@ -242,10 +240,9 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
   std::cerr << "Trying other strategies\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1);
   if (GRP1.size() < eData.UpperLimitMethod4) {
-    std::function<bool(MyMatrix<T>)> IsMatrixCorrect =
-        [](MyMatrix<T> const &M) -> bool { return IsIntegralMatrix(M); };
+    auto f_correct = [](MyMatrix<T> const &M) -> bool { return IsIntegralMatrix(M); };
     return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        EXT1_T, EXT2_T, GRP1, eRes.TheEquiv, IsMatrixCorrect));
+        EXT1_T, EXT2_T, GRP1, eRes.TheEquiv, f_correct));
   }
   return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method8(
       EXT1_T, EXT2_T, GRP1, eRes.TheEquiv));
