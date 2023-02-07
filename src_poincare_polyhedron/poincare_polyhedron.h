@@ -286,6 +286,11 @@ public:
     stabilizerElt = GroupGeneration(ExtListGen);
     return true;
   }
+  PairElt<T> GetElement(std::pair<size_t,size_t> const& val) const {
+    size_t i_coset = val.first;
+    size_t i_elt = val.second;
+    return ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+  }
   void InsertCoset(PairElt<T> const& eCoset) {
     size_t n_coset = ListNeighborCoset.size();
     ListNeighborCoset.push_back(eCoset);
@@ -332,10 +337,7 @@ public:
         if (iter == map.end()) {
           InsertCoset(e_elt);
         } else {
-          std::pair<size_t,size_t> const& val = iter->second;
-          size_t i_coset = val.first;
-          size_t i_elt = val.second;
-          PairElt<T> TheProd = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+          PairElt<T> TheProd = GetElement(iter->second);
           PairElt<T> e_elt_inv = InversePair(e_elt);
           PairElt<T> stab_elt = ProductPair(TheProd, e_elt_inv);
           MyVector<T> x2 = stab_elt.mat.transpose() * x;
@@ -348,10 +350,10 @@ public:
       }
     }
   }
-  StepEnum(DataPoincare<T> const &dp) {
-    x = dp.x;
+  StepEnum(MyVector<T> const& _x) {
+    x = _x;
+    int n = x.size();
     stabilizerElt = {GenerateIdentity<T>(n)};
-    InsertGenerators(dp.ListGroupElt);
   }
   MyVector<T> GetIneq(PairElt<T> const e_elt) const {
     MyMatrix<T> const& eMat = e_elt.mat;
@@ -396,7 +398,6 @@ public:
   // The mapping A ----> AQ maps to the adjacent domain.
   // The mapping of the X ----> X c(Q)^T with c(Q) the
   // contragredient representation.
-  template <typename T>
   AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand) {
     size_t miss_val = std::numeric_limits<size_t>::max();
     MyMatrix<T> FAC = GetFAC();
@@ -491,18 +492,44 @@ public:
     }
     return {EXT, ll_adj};
   }
-  std::vector<PairElt<T>> GenerateTypeIneighbors(std::string const& eCommand, std::vector<PairElt<T>> const& l_elt) {
+  std::vector<PairElt<T>> GenerateTypeIneighbors(std::vector<PairElt<T>> const& l_elt) {
     std::vector<PairElt<T>> ListMiss;
-    MyMatrix<T> FAC = 
-    
-    auto f_insert=[&](PairElt<T> const& TestElt) -> void {
+    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> VectorContain(1, n);
+    ContainerMatrix<T> Cont(FAC, VectorContain);
+    auto f_belong=[&](MyVector<T> const& uVect) -> bool {
+      for (int i=0; i<n; i++)
+        VectorContain(0,i) = uVect(i);
+      std::optional<size_t> opt = Cont.GetIdx();
+      return opt.has_value();
+    };
+    std::function<void(PairElt<T>)> f_insert=[&](PairElt<T> const& TestElt) -> void {
       MyVector<T> x_img = GetIneq(TestElt);
       MyVector<T> x_diff = x_img - x;
-      
-      
+      bool test = f_belong(x_diff);
+      if (test)
+        return;
+      std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_diff);
+      if (opt) {
+        MyVector<T> V = *opt;
+        for (int u=0; u<V.size(); u++) {
+          if (V(u) > 0) {
+            PairElt<T> uElt = GetElement(ListNeighborData[u]);
+            PairElt<T> uEltInv = InversePair(uElt);
+            PairElt<T> eProd = ProductPair(uEltInv, TestElt);
+            return f_insert(eProd);
+          }
+        }
+      }
+      ListMiss.push_back(TestElt);
     };
     for (auto & e_elt : l_elt)
       f_insert(e_elt);
+    return ListMiss;
+  }
+  std::vector<PairElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const& ai) {
+    std::vector<PairElt<T>> ListMiss;
+
     return ListMiss;
   }
 
@@ -526,22 +553,49 @@ struct RecOption {
 };
 
 template <typename T>
-AdjacencyInfo<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
-                                             RecOption const &rec_option) {
+StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp, RecOption const &rec_option) {
+  std::string eCommand = rec_option.eCommand;
   MyVector<T> x = dp.x;
-  StepEnum<T> se = BuildInitialStepEnum(dp);
+  StepEnum<T> se(dp);
+  se.InsertGenerators(dp.ListGroupElt);
+  se.RemoveRedundancy(eCommand);
+  bool DidSomething = false;
+  auto insert_block=[&](std::vector<PairElt<T>> const& ListMiss) -> void {
+    if (ListMiss.size() > 0) {
+      se.InsertGenerators(ListMiss);
+      se.RemoveRedundancy(eCommand);
+      DidSomething = true;
+    }
+  };
   int n_iter = 0;
   while (true) {
+    DidSomething = false;
+    //
+    // Iteration Type I
+    //
     std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
-    AdjacencyInfo<T> ai = ComputeAdjacencyInfo(x, se, rec_option.eCommand);
-    std::optional<StepEnum<T>> opt = ComputeMissingNeighbors(ai);
-    if (!opt) {
-      return ai;
+    std::vector<PairElt<T>> ListMissI = se.GenerateTypeIneighbors(dp.ListGroupElt);
+    std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
+    insert_block(ListMissI);
+    //
+    // Iteration Type II
+    //
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand);
+    std::vector<PairElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
+    std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
+    insert_block(ListMissII);
+    //
+    // Terminating if ok.
+    //
+    if (!DidSomething) {
+      return se;
     }
-    se = *opt;
+    //
+    // Iteration checks
+    //
     if (rec_option.n_iter_max > 0) {
       if (n_iter > rec_option.n_iter_max) {
-        std::cerr << "Reached the maximum number of iterations\n";
+        std::cerr << "Reached the maximum number of iterations for type I\n";
         throw TerminalException{1};
       }
     }
@@ -585,19 +639,21 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
 }
 
 template <typename T>
-void PrintAdjacencyInfo(AdjacencyInfo<T> const &ai, std::string const &FileO) {
+void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
   std::ofstream os(FileO);
-  size_t n_neigh = ai.se_red.ListNeighbor.size();
+  size_t n_neigh = se.ListNeighborX.size();
   os << n_neigh << "\n";
   for (size_t i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
-    WriteTrackGroup(os, ai.se_red.ListNeighbor[i_neigh].tg);
+    PairElt<T> eElt = se.GetElement(i_neigh);
+    WriteTrackGroup(os, eElt.tg);
+    os << "\n";
   }
 }
 
 template <typename T> void full_process_type(RecOption const &rec_option) {
   DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI);
-  AdjacencyInfo<T> ai = IterativePoincareRefinement(dp, rec_option);
-  PrintAdjacencyInfo(ai, rec_option.FileO);
+  StepEnum<T> se = IterativePoincareRefinement(dp, rec_option);
+  PrintAdjacencyInfo(se, rec_option.FileO);
 }
 
 void Process_rec_option(RecOption const &rec_option) {
