@@ -260,7 +260,6 @@ template <typename T> struct ResultAdjacencyInfo {
 
 template <typename T> struct AdjacencyInfo {
   MyMatrix<T> EXT;
-  StepEnum<T> se_red;
   std::vector<Tfacet> ll_adj;
 };
 
@@ -320,7 +319,7 @@ public:
     }
   }
   void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
-    auto generator_upgrade[&](PairElt<T> const& e_elt) -> void {
+    auto generator_upgrade=[&](PairElt<T> const& e_elt) -> void {
       bool test = InsertStabilizerGenerator(e_elt);
       if (test) {
         // Copy needed of the old data then recompute
@@ -373,6 +372,7 @@ public:
   }
   void RemoveRedundancy(std::string const &eCommand) {
     MyMatrix<T> FAC = GetFAC();
+    int n = x.size();
     int n_mat = FAC.rows();
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
