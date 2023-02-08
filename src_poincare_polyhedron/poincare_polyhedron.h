@@ -8,6 +8,7 @@
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_PolytopeFct.h"
+#include "POLY_LinearProgramming.h"
 // clang-format on
 
 //
@@ -276,9 +277,9 @@ public:
   std::vector<std::pair<size_t,size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t,size_t>> map;
   bool InsertStabilizerGenerator(PairElt<T> const& eElt) {
-    auto iter = stabilizerElt.find(eElt);
-    if (iter != stabilizerElt.end()) {
-      return false;
+    for (auto & fElt : stabilizerElt) {
+      if (eElt == fElt)
+        return false;
     }
     std::vector<PairElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
@@ -376,15 +377,31 @@ public:
     int n_mat = FAC.rows();
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
-    std::vector<PairElt<T>> ListNeighborRed;
+    Face f_status_keep(n_mat);
+    std::set<size_t> l_keep;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MyMatrix<T> EXT_red = SelectRow(dataext.EXT, dataext.v_red[i_mat]);
+      std::pair<size_t, size_t> epair = ListNeighborData[i_mat];
+      size_t i_coset = epair.first;
       int rnk = RankMat(EXT_red);
       if (rnk == n - 1) {
-        ListNeighborRed.push_back(ListNeighbor[i_mat]);
+        l_keep.insert(i_coset);
+        f_status_keep[i_mat] = 1;
       }
     }
-    ListNeighbor = ListNeighborRed
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      std::pair<size_t, size_t> epair = ListNeighborData[i_mat];
+      size_t i_coset = epair.first;
+      if (l_keep.count(i_coset) != f_status_keep[i_mat]) {
+        std::cerr << "There is incoherency in the orbit nature\n";
+        throw TerminalException{1};
+      }
+    }
+    std::vector<PairElt<T>> ListNeighborCosetRed;
+    for (auto & i_coset : l_keep) {
+      ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
+    }
+    ComputeCosets(ListNeighborCosetRed);
   }
   // The domain is defined originally as
   // Tr(AX) <= Tr(PAP^T X)
@@ -402,24 +419,25 @@ public:
     size_t miss_val = std::numeric_limits<size_t>::max();
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
-    int n_mat = ListNeighbor.size();
+    int n_mat = ListNeighborData.size();
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
+    int n_ext = dataext.EXT.rows();
     std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
 
     std::cerr << "First part: adjacency structure within the polyhedron\n";
     std::vector<Tfacet> ll_adj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      Face const &f1 = v_red[i_mat];
+      Face const &f1 = dataext.v_red[i_mat];
       std::vector<TsingAdj> l_adj;
       for (int j_mat = 0; j_mat < n_mat; j_mat++) {
         if (i_mat != j_mat) {
-          Face const &f2 = v_red[j_mat];
+          Face const &f2 = dataext.v_red[j_mat];
           Face f(n_ext);
           for (int i_ext = 0; i_ext < n_ext; i_ext++)
             if (f1[i_ext] == 1 && f2[i_ext] == 1)
               f[i_ext] = 1;
-          MyMatrix<T> EXT_red = SelectRow(EXT, f);
+          MyMatrix<T> EXT_red = SelectRow(dataext.EXT, f);
           int rnk = RankMat(EXT_red);
           if (rnk == n - 2) {
             size_t j_mat_s = static_cast<size_t>(j_mat);
@@ -427,7 +445,7 @@ public:
           }
         }
       }
-      Face IncdFacet = v_red[i_mat];
+      Face IncdFacet = dataext.v_red[i_mat];
       ll_adj.push_back({IncdFacet, l_adj});
     }
     auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
@@ -452,9 +470,9 @@ public:
     MyMatrix<T> VectorContain(1, n_ext);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
-      MyMatrix<T> Q = ListNeighbor[i_mat].mat;
+      MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
       MyMatrix<T> cQ = Contragredient(Q);
-      MyMatrix<T> EXTimg = EXT * cQ;
+      MyMatrix<T> EXTimg = dataext.EXT * cQ;
       ContainerMatrix<T> Cont(EXTimg, VectorContain);
       Face MapFace(n_ext);
       std::vector<size_t> l_idx(n_ext, 0);
@@ -462,7 +480,7 @@ public:
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
           for (int i = 0; i < n; i++)
-            VectorContain(i) = EXT(i_ext, i);
+            VectorContain(i) = dataext.EXT(i_ext, i);
           std::optional<size_t> opt = Cont.GetIdx();
           if (opt) {
             size_t idx = *opt;
@@ -490,9 +508,10 @@ public:
         ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
       }
     }
-    return {EXT, ll_adj};
+    return {dataext.EXT, ll_adj};
   }
   std::vector<PairElt<T>> GenerateTypeIneighbors(std::vector<PairElt<T>> const& l_elt) {
+    int n = x.size();
     std::vector<PairElt<T>> ListMiss;
     MyMatrix<T> FAC = GetFAC();
     MyMatrix<T> VectorContain(1, n);
@@ -555,8 +574,7 @@ struct RecOption {
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp, RecOption const &rec_option) {
   std::string eCommand = rec_option.eCommand;
-  MyVector<T> x = dp.x;
-  StepEnum<T> se(dp);
+  StepEnum<T> se(dp.x);
   se.InsertGenerators(dp.ListGroupElt);
   se.RemoveRedundancy(eCommand);
   bool DidSomething = false;
@@ -644,7 +662,8 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
   size_t n_neigh = se.ListNeighborX.size();
   os << n_neigh << "\n";
   for (size_t i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
-    PairElt<T> eElt = se.GetElement(i_neigh);
+    std::pair<size_t, size_t> epair = se.ListNeighborData[i_neigh];
+    PairElt<T> eElt = se.GetElement(epair);
     WriteTrackGroup(os, eElt.tg);
     os << "\n";
   }
