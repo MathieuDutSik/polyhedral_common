@@ -34,7 +34,21 @@ template <typename T> struct PairElt {
 
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   std::vector<int> ListDI = tg1.ListDI;
-  ListDI.insert(ListDI.end(), tg2.ListDI.begin(), tg2.ListDI.end());
+  size_t len = ListDI.size();
+  for (auto & eVal : tg2.ListDI) {
+    if (len > 0) {
+      if (ListDI[len-1] == -eVal) {
+        ListDI.pop_back();
+        len--;
+      } else {
+        ListDI.push_back(eVal);
+        len++;
+      }
+    } else {
+      ListDI.push_back(eVal);
+      len++;
+    }
+  }
   return {ListDI};
 }
 
@@ -59,6 +73,12 @@ template <typename T> PairElt<T> InversePair(PairElt<T> const &p) {
   return {InverseTrack(p.tg), Inverse(p.mat)};
 }
 
+template <typename T> PairElt<T> GenerateIdentity(int const &n) {
+  TrackGroup tg;
+  MyMatrix<T> mat = IdentityMat<T>(n);
+  return {tg, mat};
+}
+
 void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
   size_t n_elt = tg.ListDI.size();
   os << n_elt;
@@ -79,12 +99,6 @@ template <typename T> struct hash<PairElt<T>> {
   }
 };
 } // namespace std
-
-template <typename T> PairElt<T> GenerateIdentity(int const &n) {
-  TrackGroup tg;
-  MyMatrix<T> mat = IdentityMat<T>(n);
-  return {tg, mat};
-}
 
 //
 // Second part, the finite group generation
@@ -546,9 +560,48 @@ public:
       f_insert(e_elt);
     return ListMiss;
   }
+  bool TestIntersection(MyMatrix<T> const& FAC, PairElt<T> const& eElt) {
+    MyMatrix<T> FACimg = FAC * eElt.mat;
+    MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
+    return IsFullDimensional(FACtot);
+  }
   std::vector<PairElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const& ai) {
+    int n = x.size();
     std::vector<PairElt<T>> ListMiss;
-
+    MyMatrix<T> FAC = GetFAC();
+    int n_mat = FAC.rows();
+    std::vector<PairElt<T>> ListAdj;
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      ListAdj.push_back(GetElement(ListNeighborData[i_mat]));
+    }
+    auto GetMissedGenerator=[&](int i_mat, int i_facet) -> std::optional<PairElt<T>> {
+      PairElt<T> TheMat = GenerateIdentity<T>(n);
+      int i_mat_work = i_mat;
+      int i_facet_work = i_facet;
+      while(true) {
+        TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
+        int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
+        int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
+        i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        MyVector<T> x_img = TheMat.mat.transpose() * x;
+        if (x_img == x) {
+          return {};
+        }
+        if (TestIntersection(FAC, TheMat)) {
+          return TheMat;
+        }
+      }
+    };
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
+      for (int i_facet=0; i_facet<n_facet; i_facet++) {
+        std::optional<PairElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
+        if (opt) {
+          ListMiss.push_back(*opt);
+        }
+      }
+    }
     return ListMiss;
   }
 
