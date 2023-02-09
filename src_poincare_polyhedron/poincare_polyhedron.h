@@ -704,7 +704,7 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
   std::string FileI = BlockPROC.ListStringValues.at("FileI");
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
-  std::string Arithmetic = BlockPROC.ListStringValues.at("arithmetic");
+  std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
   int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
   return {eCommand, FileI, FileO, Arithmetic, n_iter_max};
 }
