@@ -267,23 +267,37 @@ template <typename T> struct DataPoincare {
 };
 
 template <typename T>
-DataPoincare<T> ReadDataPoincare(std::string const &FileI) {
+DataPoincare<T> ReadDataPoincare(std::string const &FileI, int const& n_expand) {
   IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
-  std::cerr << "ReadDataPoincare : |x|=" << x.size() << "\n";
+  int n = x.size();
+  std::cerr << "ReadDataPoincare : |x|=" << n << "\n";
   int n_elt;
   is >> n_elt;
   std::cerr << "ReadDataPoincare : n_elt=" << n_elt << "\n";
-  std::vector<PairElt<T>> ListGroupElt;
+  std::unordered_set<PairElt<T>> s_elt;
+  s_elt.insert(GenerateIdentity<T>(n));
   for (int i_elt = 0; i_elt < n_elt; i_elt++) {
     int pos = i_elt + 1;
     MyMatrix<T> eElt = ReadMatrix<T>(is);
     TrackGroup tg{{pos}};
     PairElt<T> pe{tg, eElt};
-    ListGroupElt.push_back(pe);
+    s_elt.insert(pe);
   }
-  return {x, ListGroupElt};
+  std::vector<PairElt<T>> l_elt;
+  for (auto & eElt : s_elt)
+    l_elt.push_back(eElt);
+  std::cerr << "|Initial set|=" << l_elt.size() << "\n";
+  l_elt = InverseSaturation(l_elt);
+  std::vector<PairElt<T>> l_gen = l_elt;
+  std::cerr << "|Inverse saturation|=" << l_elt.size() << "\n";
+  std::cerr << "n_expand=" << n_expand << "\n";
+  for (int i_expand=0; i_expand<n_expand; i_expand++) {
+    l_elt = ListExpansion(l_elt, l_gen);
+    std::cerr << "i_expand=" << i_expand << " |l_elt|=" << l_elt.size() << "\n";
+  }
+  return {x, l_elt};
 }
 
 // This is for the single adjacency in the polyhedron
@@ -720,6 +734,7 @@ struct RecOption {
   std::string FileO;
   std::string Arithmetic;
   int n_iter_max;
+  int n_expand;
 };
 
 template <typename T>
@@ -783,6 +798,8 @@ FullNamelist NAMELIST_GetPoincareInput() {
   std::map<std::string, std::string> ListStringValues2_doc;
   ListIntValues2_doc["n_iter_max"] = "Default: -1\n\
 The maximum number of iteration. If negative then infinite";
+  ListIntValues2_doc["n_expand"] = "Default: 0\n\
+The number of iteration to expand the initial set of group elements";
   ListStringValues2_doc["eCommand"] = "eCommand: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
   ListStringValues2_doc["FileI"] = "The input file of the computation";
@@ -804,7 +821,8 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
   std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
   int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
-  return {eCommand, FileI, FileO, Arithmetic, n_iter_max};
+  int n_expand = BlockPROC.ListIntValues.at("n_expand");
+  return {eCommand, FileI, FileO, Arithmetic, n_iter_max, n_expand};
 }
 
 template <typename T>
@@ -822,7 +840,7 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
 
 template <typename T> void full_process_type(RecOption const &rec_option) {
   std::cerr << "Beginning of full_process_type\n";
-  DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI);
+  DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI, rec_option.n_expand);
   std::cerr << "We have dp\n";
   StepEnum<T> se = IterativePoincareRefinement(dp, rec_option);
   std::cerr << "We have se\n";
