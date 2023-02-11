@@ -241,7 +241,7 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI) {
   std::vector<PairElt<T>> ListGroupElt;
   for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
     std::cerr << "ReadDataPoincare : i_elt=" << i_elt << "\n";
-    MyVector<T> eElt = ReadMatrix<T>(is);
+    MyMatrix<T> eElt = ReadMatrix<T>(is);
     std::cerr << "ReadDataPoincare : we have eElt\n";
     TrackGroup tg{{int(i_elt + 1)}};
     PairElt<T> pe{tg, eElt};
