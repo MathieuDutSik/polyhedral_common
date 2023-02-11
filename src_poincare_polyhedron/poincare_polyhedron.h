@@ -101,7 +101,7 @@ template <typename T> struct hash<PairElt<T>> {
 } // namespace std
 
 //
-// Second part, the finite group generation
+// Second part, the finite group
 //
 
 template <typename T>
@@ -171,6 +171,43 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
     l_coset.push_back(e_coset);
   return l_coset;
 }
+
+template <typename T>
+std::vector<PairElt<T>> InverseSaturation(std::vector<PairElt<T>> const& l_ent)
+{
+  std::unordered_set<PairElt<T>> s_sat;
+  for (auto & eElt : l_ent) {
+    s_sat.insert(eElt);
+    PairElt<T> eEltInv = InversePair(eElt);
+    s_sat.insert(eEltInv);
+  }
+  std::vector<PairElt<T>> l_ret;
+  for (auto & eElt : s_sat)
+    l_ret.push_back(eElt);
+  return l_ret;
+}
+
+
+template <typename T>
+std::vector<PairElt<T>> ListExpansion(std::vector<PairElt<T>> const& l_previous, std::vector<PairElt<T>> const& l_gen)
+{
+  std::unordered_set<PairElt<T>> s_expand;
+  for (auto & eElt : l_previous) {
+    for (auto & fElt : l_gen) {
+      PairElt<T> newElt = ProductPair(eElt, fElt);
+      s_expand.insert(newElt);
+    }
+  }
+  std::vector<PairElt<T>> l_ret;
+  for (auto & eElt : s_expand)
+    l_ret.push_back(eElt);
+  return l_ret;
+}
+
+
+
+
+
 
 
 
@@ -666,7 +703,6 @@ public:
       f_insert(eElt);
     return GRP;
   }
-
 };
 
 //
