@@ -393,6 +393,12 @@ public:
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
     int n_mat = FAC.rows();
+    int rnk = RankMat(FAC);
+    if (rnk != n) {
+      std::cerr << "Error in RemoveRedundancy\n";
+      std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
+      throw TerminalException{1};
+    }
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     Face f_status_keep(n_mat);
@@ -438,6 +444,12 @@ public:
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
     int n_mat = ListNeighborData.size();
+    int rnk = RankMat(FAC);
+    if (rnk != n) {
+      std::cerr << "Error in ComputeAdjacencyInfo\n";
+      std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
+      throw TerminalException{1};
+    }
     vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();

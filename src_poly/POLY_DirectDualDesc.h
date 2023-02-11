@@ -112,7 +112,9 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   os << "External program terminated\n";
   if (iret1 != 0) {
     os << "The program has not terminated correctly\n";
+    os << "FileI = " << FileI << "\n";
     os << "FileO = " << FileO << "\n";
+    os << "FileE = " << FileE << "\n";
     throw TerminalException{1};
   }
   //  os << "iret1=" << iret1 << "\n";
