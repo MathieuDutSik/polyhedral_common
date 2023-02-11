@@ -527,7 +527,8 @@ public:
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-          if (ll_adj[i_mat].l_sing_adj[i_ext].IncdRidge[i_ext] == 1) {
+          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj << " i_ext=" << i_ext << "\n";
+          if (ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge[i_ext] == 1) {
             size_t idx = map_index[i_ext];
             f_map[idx] = 1;
           }
@@ -593,17 +594,24 @@ public:
       PairElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
+      std::cerr << "i_mat_work=" << i_mat_work << " i_facet_work=" << i_facet_work << "\n";
       while(true) {
         TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
+        std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
         int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
+        std::cerr << "We have iPolyOpp=" << iPolyOpp << "\n";
         i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        std::cerr << "Now i_mat_work=" << i_mat_work << "\n";
         i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        std::cerr << "Now i_facet_work=" << i_facet_work << "\n";
         MyVector<T> x_img = TheMat.mat.transpose() * x;
         if (x_img == x) {
           return {};
         }
-        if (TestIntersection(FAC, TheMat)) {
+        bool test = TestIntersection(FAC, TheMat);
+        std::cerr << "test=" << test << "\n";
+        if (test) {
           return TheMat;
         }
       }
@@ -618,6 +626,45 @@ public:
       }
     }
     return ListMiss;
+  }
+  template<typename Tgroup>
+  Tgroup GetPermutationGroup() const {
+    using Telt = typename Tgroup::Telt;
+    using Tidx = typename Telt::Tidx;
+    int n_neigh = ListNeighborX.size();
+    std::unordered_map<MyVector<T>, int> map_rev;
+    for (int i_neigh=0; i_neigh<n_neigh; i_neigh++)
+      map_rev[ListNeighborX[i_neigh]] = i_neigh + 1;
+    auto GetPermutation=[&](PairElt<T> const& eElt) -> Telt {
+      std::vector<Tidx> eList(n_neigh);
+      for (int i_neigh=0; i_neigh<n_neigh; i_neigh++) {
+        MyVector<T> V = ListNeighborX[i_neigh];
+        MyVector<T> Vimg = eElt.mat.transpose() * V;
+        int pos = map_rev[Vimg];
+        if (pos == 0) {
+          std::cerr << "Vimg should belong to the list of entries\n";
+          throw TerminalException{1};
+        }
+        eList[i_neigh] = pos - 1;
+      }
+      return Telt(eList);
+    };
+    std::vector<Tidx> idList(n_neigh);
+    for (int i_neigh=0; i_neigh<n_neigh; i_neigh++)
+      idList[i_neigh] = i_neigh;
+    Telt id(idList);
+    std::vector<Telt> LGen;
+    Tgroup GRP(LGen, id);
+    auto f_insert=[&](PairElt<T> const& eElt) -> void {
+      Telt ePerm = GetPermutation(eElt);
+      if (GRP.isin(ePerm))
+        return;
+      LGen.push_back(ePerm);
+      GRP = Tgroup(LGen, idList);
+    };
+    for (auto& eElt : stabilizerElt)
+      f_insert(eElt);
+    return GRP;
   }
 
 };
