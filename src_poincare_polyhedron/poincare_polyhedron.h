@@ -234,16 +234,15 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI) {
   IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
-  std::cerr << "ReadDataPoincare : We have x\n";
-  size_t n_elt;
+  std::cerr << "ReadDataPoincare : |x|=" << x.size() << "\n";
+  int n_elt;
   is >> n_elt;
   std::cerr << "ReadDataPoincare : n_elt=" << n_elt << "\n";
   std::vector<PairElt<T>> ListGroupElt;
-  for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
-    std::cerr << "ReadDataPoincare : i_elt=" << i_elt << "\n";
+  for (int i_elt = 0; i_elt < n_elt; i_elt++) {
+    int pos = i_elt + 1;
     MyMatrix<T> eElt = ReadMatrix<T>(is);
-    std::cerr << "ReadDataPoincare : we have eElt\n";
-    TrackGroup tg{{int(i_elt + 1)}};
+    TrackGroup tg{{pos}};
     PairElt<T> pe{tg, eElt};
     ListGroupElt.push_back(pe);
   }
@@ -399,7 +398,7 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
-    vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
+    vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     Face f_status_keep(n_mat);
     std::set<size_t> l_keep;
@@ -450,7 +449,7 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
-    vectface vf = DualDescExternalProgram(FAC, eCommand, std::cerr);
+    vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();
     std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
