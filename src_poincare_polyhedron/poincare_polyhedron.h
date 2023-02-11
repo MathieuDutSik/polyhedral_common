@@ -234,11 +234,15 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI) {
   IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
+  std::cerr << "ReadDataPoincare : We have x\n";
   size_t n_elt;
   is >> n_elt;
+  std::cerr << "ReadDataPoincare : n_elt=" << n_elt << "\n";
   std::vector<PairElt<T>> ListGroupElt;
   for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
+    std::cerr << "ReadDataPoincare : i_elt=" << i_elt << "\n";
     MyVector<T> eElt = ReadMatrix<T>(is);
+    std::cerr << "ReadDataPoincare : we have eElt\n";
     TrackGroup tg{{int(i_elt + 1)}};
     PairElt<T> pe{tg, eElt};
     ListGroupElt.push_back(pe);
@@ -700,7 +704,7 @@ Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc
 }
 
 RecOption ReadInitialData(FullNamelist const &eFull) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("DATA");
+  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
   std::string FileI = BlockPROC.ListStringValues.at("FileI");
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
@@ -723,9 +727,13 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
 }
 
 template <typename T> void full_process_type(RecOption const &rec_option) {
+  std::cerr << "Beginning of full_process_type\n";
   DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI);
+  std::cerr << "We have dp\n";
   StepEnum<T> se = IterativePoincareRefinement(dp, rec_option);
+  std::cerr << "We have se\n";
   PrintAdjacencyInfo(se, rec_option.FileO);
+  std::cerr << "se has been written to file\n";
 }
 
 void Process_rec_option(RecOption const &rec_option) {
