@@ -596,37 +596,47 @@ public:
   }
   std::vector<PairElt<T>>
   GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) {
+    std::cerr << "Beginning of GenerateTypeIneighbors\n";
     int n = x.size();
     std::vector<PairElt<T>> ListMiss;
     MyMatrix<T> FAC = GetFAC();
+    std::cerr << "FAC=\n";
+    WriteMatrix(std::cerr, FAC);
     MyMatrix<T> VectorContain(1, n);
     ContainerMatrix<T> Cont(FAC, VectorContain);
     auto f_belong = [&](MyVector<T> const &uVect) -> bool {
+      std::cerr << "f_belong : uVect =";
+      for (int i = 0; i < n; i++)
+        std::cerr << " " << uVect(i);
+      std::cerr << "\n";
       for (int i = 0; i < n; i++)
         VectorContain(0, i) = uVect(i);
       std::optional<size_t> opt = Cont.GetIdx();
       return opt.has_value();
     };
-    std::function<void(PairElt<T>)> f_insert =
-        [&](PairElt<T> const &TestElt) -> void {
-      MyVector<T> x_img = GetIneq(TestElt);
-      MyVector<T> x_diff = x_img - x;
-      bool test = f_belong(x_diff);
-      if (test)
-        return;
-      std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_diff);
-      if (opt) {
-        MyVector<T> V = *opt;
-        for (int u = 0; u < V.size(); u++) {
-          if (V(u) > 0) {
-            PairElt<T> uElt = GetElement(ListNeighborData[u]);
-            PairElt<T> uEltInv = InversePair(uElt);
-            PairElt<T> eProd = ProductPair(uEltInv, TestElt);
-            return f_insert(eProd);
+    auto f_insert = [&](PairElt<T> const &TestElt) -> void {
+      PairElt<T> WorkElt = TestElt;
+      while(true) {
+        MyVector<T> x_img = GetIneq(WorkElt);
+        MyVector<T> x_diff = x_img - x;
+        bool test = f_belong(x_diff);
+        if (test)
+          return;
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_diff);
+        if (opt) {
+          MyVector<T> V = *opt;
+          for (int u = 0; u < V.size(); u++) {
+            if (V(u) > 0) {
+              PairElt<T> uElt = GetElement(ListNeighborData[u]);
+              PairElt<T> uEltInv = InversePair(uElt);
+              WorkElt = ProductPair(uEltInv, WorkElt);
+            }
           }
+        } else {
+          ListMiss.push_back(WorkElt);
+          return;
         }
       }
-      ListMiss.push_back(TestElt);
     };
     for (auto &e_elt : l_elt)
       f_insert(e_elt);
