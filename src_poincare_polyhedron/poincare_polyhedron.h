@@ -35,9 +35,9 @@ template <typename T> struct PairElt {
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   std::vector<int> ListDI = tg1.ListDI;
   size_t len = ListDI.size();
-  for (auto & eVal : tg2.ListDI) {
+  for (auto &eVal : tg2.ListDI) {
     if (len > 0) {
-      if (ListDI[len-1] == -eVal) {
+      if (ListDI[len - 1] == -eVal) {
         ListDI.pop_back();
         len--;
       } else {
@@ -154,7 +154,7 @@ IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
 template <typename T>
 std::vector<PairElt<T>>
 IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
-                    std::vector<PairElt<T>> const &list_grp_elt) {
+                   std::vector<PairElt<T>> const &list_grp_elt) {
   std::unordered_set<PairElt<T>> s_coset;
   auto f_insert = [&](PairElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
@@ -173,43 +173,35 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
 }
 
 template <typename T>
-std::vector<PairElt<T>> InverseSaturation(std::vector<PairElt<T>> const& l_ent)
-{
+std::vector<PairElt<T>>
+InverseSaturation(std::vector<PairElt<T>> const &l_ent) {
   std::unordered_set<PairElt<T>> s_sat;
-  for (auto & eElt : l_ent) {
+  for (auto &eElt : l_ent) {
     s_sat.insert(eElt);
     PairElt<T> eEltInv = InversePair(eElt);
     s_sat.insert(eEltInv);
   }
   std::vector<PairElt<T>> l_ret;
-  for (auto & eElt : s_sat)
+  for (auto &eElt : s_sat)
     l_ret.push_back(eElt);
   return l_ret;
 }
 
-
 template <typename T>
-std::vector<PairElt<T>> ListExpansion(std::vector<PairElt<T>> const& l_previous, std::vector<PairElt<T>> const& l_gen)
-{
+std::vector<PairElt<T>> ListExpansion(std::vector<PairElt<T>> const &l_previous,
+                                      std::vector<PairElt<T>> const &l_gen) {
   std::unordered_set<PairElt<T>> s_expand;
-  for (auto & eElt : l_previous) {
-    for (auto & fElt : l_gen) {
+  for (auto &eElt : l_previous) {
+    for (auto &fElt : l_gen) {
       PairElt<T> newElt = ProductPair(eElt, fElt);
       s_expand.insert(newElt);
     }
   }
   std::vector<PairElt<T>> l_ret;
-  for (auto & eElt : s_expand)
+  for (auto &eElt : s_expand)
     l_ret.push_back(eElt);
   return l_ret;
 }
-
-
-
-
-
-
-
 
 //
 // The common function for paperwork
@@ -267,7 +259,8 @@ template <typename T> struct DataPoincare {
 };
 
 template <typename T>
-DataPoincare<T> ReadDataPoincare(std::string const &FileI, int const& n_expand) {
+DataPoincare<T> ReadDataPoincare(std::string const &FileI,
+                                 int const &n_expand) {
   IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
@@ -286,14 +279,14 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI, int const& n_expand) 
     s_elt.insert(pe);
   }
   std::vector<PairElt<T>> l_elt;
-  for (auto & eElt : s_elt)
+  for (auto &eElt : s_elt)
     l_elt.push_back(eElt);
   std::cerr << "|Initial set|=" << l_elt.size() << "\n";
   l_elt = InverseSaturation(l_elt);
   std::vector<PairElt<T>> l_gen = l_elt;
   std::cerr << "|Inverse saturation|=" << l_elt.size() << "\n";
   std::cerr << "n_expand=" << n_expand << "\n";
-  for (int i_expand=0; i_expand<n_expand; i_expand++) {
+  for (int i_expand = 0; i_expand < n_expand; i_expand++) {
     l_elt = ListExpansion(l_elt, l_gen);
     std::cerr << "i_expand=" << i_expand << " |l_elt|=" << l_elt.size() << "\n";
   }
@@ -342,10 +335,10 @@ public:
   std::vector<PairElt<T>> stabilizerElt;
   std::vector<PairElt<T>> ListNeighborCoset;
   std::vector<MyVector<T>> ListNeighborX;
-  std::vector<std::pair<size_t,size_t>> ListNeighborData;
-  std::unordered_map<MyVector<T>, std::pair<size_t,size_t>> map;
-  bool InsertStabilizerGenerator(PairElt<T> const& eElt) {
-    for (auto & fElt : stabilizerElt) {
+  std::vector<std::pair<size_t, size_t>> ListNeighborData;
+  std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
+  bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
+    for (auto &fElt : stabilizerElt) {
       if (eElt == fElt)
         return false;
     }
@@ -354,41 +347,41 @@ public:
     stabilizerElt = GroupGeneration(ExtListGen);
     return true;
   }
-  PairElt<T> GetElement(std::pair<size_t,size_t> const& val) const {
+  PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
     size_t i_coset = val.first;
     size_t i_elt = val.second;
     return ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
   }
-  void InsertCoset(PairElt<T> const& eCoset) {
+  void InsertCoset(PairElt<T> const &eCoset) {
     size_t n_coset = ListNeighborCoset.size();
     ListNeighborCoset.push_back(eCoset);
     std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map_local;
     MyVector<T> x_img = eCoset.mat.transpose() * x;
     size_t n_elt = stabilizerElt.size();
-    for (size_t i_elt=0; i_elt<n_elt; i_elt++) {
+    for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
       MyVector<T> x2 = stabilizerElt[i_elt].mat.transpose() * x_img;
-      std::pair<size_t, size_t> & val = map_local[x2];
+      std::pair<size_t, size_t> &val = map_local[x2];
       val.first = n_coset;
       val.second = i_elt;
     }
-    for (auto& kv : map_local) {
+    for (auto &kv : map_local) {
       ListNeighborX.push_back(kv.first);
       ListNeighborData.push_back(kv.second);
       map[kv.first] = kv.second;
     }
   }
-  void ComputeCosets(std::vector<PairElt<T>> const& l_elt) {
+  void ComputeCosets(std::vector<PairElt<T>> const &l_elt) {
     ListNeighborX.clear();
     ListNeighborData.clear();
     ListNeighborCoset.clear();
     map.clear();
     std::vector<PairElt<T>> l_cos = IdentifyLeftCosets(l_elt, stabilizerElt);
-    for (auto & eCoset : l_cos) {
+    for (auto &eCoset : l_cos) {
       InsertCoset(eCoset);
     }
   }
   void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
-    auto generator_upgrade=[&](PairElt<T> const& e_elt) -> void {
+    auto generator_upgrade = [&](PairElt<T> const &e_elt) -> void {
       bool test = InsertStabilizerGenerator(e_elt);
       if (test) {
         // Copy needed of the old data then recompute
@@ -396,7 +389,7 @@ public:
         ComputeCosets(OldListCos);
       }
     };
-    for (auto & e_elt : ListGen) {
+    for (auto &e_elt : ListGen) {
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
         generator_upgrade(e_elt);
@@ -418,13 +411,13 @@ public:
       }
     }
   }
-  StepEnum(MyVector<T> const& _x) {
+  StepEnum(MyVector<T> const &_x) {
     x = _x;
     int n = x.size();
     stabilizerElt = {GenerateIdentity<T>(n)};
   }
   MyVector<T> GetIneq(PairElt<T> const e_elt) const {
-    MyMatrix<T> const& eMat = e_elt.mat;
+    MyMatrix<T> const &eMat = e_elt.mat;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
     return x_diff;
@@ -463,7 +456,7 @@ public:
         f_status_keep[i_mat] = 1;
       }
     }
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       std::pair<size_t, size_t> epair = ListNeighborData[i_mat];
       size_t i_coset = epair.first;
       if (l_keep.count(i_coset) != f_status_keep[i_mat]) {
@@ -472,7 +465,7 @@ public:
       }
     }
     std::vector<PairElt<T>> ListNeighborCosetRed;
-    for (auto & i_coset : l_keep) {
+    for (auto &i_coset : l_keep) {
       ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
     }
     ComputeCosets(ListNeighborCosetRed);
@@ -578,7 +571,8 @@ public:
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj << " i_ext=" << i_ext << "\n";
+          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj
+                    << " i_ext=" << i_ext << "\n";
           if (ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge[i_ext] == 1) {
             size_t idx = map_index[i_ext];
             f_map[idx] = 1;
@@ -591,19 +585,21 @@ public:
     }
     return {dataext.EXT, ll_adj};
   }
-  std::vector<PairElt<T>> GenerateTypeIneighbors(std::vector<PairElt<T>> const& l_elt) {
+  std::vector<PairElt<T>>
+  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) {
     int n = x.size();
     std::vector<PairElt<T>> ListMiss;
     MyMatrix<T> FAC = GetFAC();
     MyMatrix<T> VectorContain(1, n);
     ContainerMatrix<T> Cont(FAC, VectorContain);
-    auto f_belong=[&](MyVector<T> const& uVect) -> bool {
-      for (int i=0; i<n; i++)
-        VectorContain(0,i) = uVect(i);
+    auto f_belong = [&](MyVector<T> const &uVect) -> bool {
+      for (int i = 0; i < n; i++)
+        VectorContain(0, i) = uVect(i);
       std::optional<size_t> opt = Cont.GetIdx();
       return opt.has_value();
     };
-    std::function<void(PairElt<T>)> f_insert=[&](PairElt<T> const& TestElt) -> void {
+    std::function<void(PairElt<T>)> f_insert =
+        [&](PairElt<T> const &TestElt) -> void {
       MyVector<T> x_img = GetIneq(TestElt);
       MyVector<T> x_diff = x_img - x;
       bool test = f_belong(x_diff);
@@ -612,7 +608,7 @@ public:
       std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_diff);
       if (opt) {
         MyVector<T> V = *opt;
-        for (int u=0; u<V.size(); u++) {
+        for (int u = 0; u < V.size(); u++) {
           if (V(u) > 0) {
             PairElt<T> uElt = GetElement(ListNeighborData[u]);
             PairElt<T> uEltInv = InversePair(uElt);
@@ -623,30 +619,32 @@ public:
       }
       ListMiss.push_back(TestElt);
     };
-    for (auto & e_elt : l_elt)
+    for (auto &e_elt : l_elt)
       f_insert(e_elt);
     return ListMiss;
   }
-  bool TestIntersection(MyMatrix<T> const& FAC, PairElt<T> const& eElt) {
+  bool TestIntersection(MyMatrix<T> const &FAC, PairElt<T> const &eElt) {
     MyMatrix<T> FACimg = FAC * eElt.mat;
     MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
     return IsFullDimensional(FACtot);
   }
-  std::vector<PairElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const& ai) {
+  std::vector<PairElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai) {
     int n = x.size();
     std::vector<PairElt<T>> ListMiss;
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
     std::vector<PairElt<T>> ListAdj;
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       ListAdj.push_back(GetElement(ListNeighborData[i_mat]));
     }
-    auto GetMissedGenerator=[&](int i_mat, int i_facet) -> std::optional<PairElt<T>> {
+    auto GetMissedGenerator = [&](int i_mat,
+                                  int i_facet) -> std::optional<PairElt<T>> {
       PairElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
-      std::cerr << "i_mat_work=" << i_mat_work << " i_facet_work=" << i_facet_work << "\n";
-      while(true) {
+      std::cerr << "i_mat_work=" << i_mat_work
+                << " i_facet_work=" << i_facet_work << "\n";
+      while (true) {
         TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
         std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
@@ -667,9 +665,9 @@ public:
         }
       }
     };
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
-      for (int i_facet=0; i_facet<n_facet; i_facet++) {
+      for (int i_facet = 0; i_facet < n_facet; i_facet++) {
         std::optional<PairElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
         if (opt) {
           ListMiss.push_back(*opt);
@@ -678,17 +676,16 @@ public:
     }
     return ListMiss;
   }
-  template<typename Tgroup>
-  Tgroup GetPermutationGroup() const {
+  template <typename Tgroup> Tgroup GetPermutationGroup() const {
     using Telt = typename Tgroup::Telt;
     using Tidx = typename Telt::Tidx;
     int n_neigh = ListNeighborX.size();
     std::unordered_map<MyVector<T>, int> map_rev;
-    for (int i_neigh=0; i_neigh<n_neigh; i_neigh++)
+    for (int i_neigh = 0; i_neigh < n_neigh; i_neigh++)
       map_rev[ListNeighborX[i_neigh]] = i_neigh + 1;
-    auto GetPermutation=[&](PairElt<T> const& eElt) -> Telt {
+    auto GetPermutation = [&](PairElt<T> const &eElt) -> Telt {
       std::vector<Tidx> eList(n_neigh);
-      for (int i_neigh=0; i_neigh<n_neigh; i_neigh++) {
+      for (int i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
         MyVector<T> V = ListNeighborX[i_neigh];
         MyVector<T> Vimg = eElt.mat.transpose() * V;
         int pos = map_rev[Vimg];
@@ -701,19 +698,19 @@ public:
       return Telt(eList);
     };
     std::vector<Tidx> idList(n_neigh);
-    for (int i_neigh=0; i_neigh<n_neigh; i_neigh++)
+    for (int i_neigh = 0; i_neigh < n_neigh; i_neigh++)
       idList[i_neigh] = i_neigh;
     Telt id(idList);
     std::vector<Telt> LGen;
     Tgroup GRP(LGen, id);
-    auto f_insert=[&](PairElt<T> const& eElt) -> void {
+    auto f_insert = [&](PairElt<T> const &eElt) -> void {
       Telt ePerm = GetPermutation(eElt);
       if (GRP.isin(ePerm))
         return;
       LGen.push_back(ePerm);
       GRP = Tgroup(LGen, idList);
     };
-    for (auto& eElt : stabilizerElt)
+    for (auto &eElt : stabilizerElt)
       f_insert(eElt);
     return GRP;
   }
@@ -738,13 +735,14 @@ struct RecOption {
 };
 
 template <typename T>
-StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp, RecOption const &rec_option) {
+StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
+                                        RecOption const &rec_option) {
   std::string eCommand = rec_option.eCommand;
   StepEnum<T> se(dp.x);
   se.InsertGenerators(dp.ListGroupElt);
   se.RemoveRedundancy(eCommand);
   bool DidSomething = false;
-  auto insert_block=[&](std::vector<PairElt<T>> const& ListMiss) -> void {
+  auto insert_block = [&](std::vector<PairElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
       se.InsertGenerators(ListMiss);
       se.RemoveRedundancy(eCommand);
@@ -758,7 +756,8 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp, RecOption con
     // Iteration Type I
     //
     std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
-    std::vector<PairElt<T>> ListMissI = se.GenerateTypeIneighbors(dp.ListGroupElt);
+    std::vector<PairElt<T>> ListMissI =
+        se.GenerateTypeIneighbors(dp.ListGroupElt);
     std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
     insert_block(ListMissI);
     //
@@ -840,7 +839,8 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
 
 template <typename T> void full_process_type(RecOption const &rec_option) {
   std::cerr << "Beginning of full_process_type\n";
-  DataPoincare<T> dp = ReadDataPoincare<T>(rec_option.FileI, rec_option.n_expand);
+  DataPoincare<T> dp =
+      ReadDataPoincare<T>(rec_option.FileI, rec_option.n_expand);
   std::cerr << "We have dp\n";
   StepEnum<T> se = IterativePoincareRefinement(dp, rec_option);
   std::cerr << "We have se\n";
@@ -867,7 +867,7 @@ void Process_rec_option(RecOption const &rec_option) {
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
-    std::string const& FileAlgebraicField = *opt_realalgebraic;
+    std::string const &FileAlgebraicField = *opt_realalgebraic;
     if (!IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
