@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   gsl_eigen_symmv_workspace *workspace;
   int *CURRENT;
   int **GramInt;
-  int Sum, ScalarMult;
+  int Sum;
   FILE *FileMat;
   FILE *FileRes;
   double TheEig, eEigSel;
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   gsl_matrix_fscanf(FileMat, Gram);
   for (i = 0; i < dimension; i++)
     for (j = 0; j < dimension; j++)
-      GramInt[i][j] = (int)gsl_matrix_get(Gram, i, j);
+      GramInt[i][j] = static_cast<int>(gsl_matrix_get(Gram, i, j));
   fclose(FileMat);
 
   gsl_eigen_symmv(Gram, eigenvalues, EigenVectors, workspace);
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   iColSel = -1;
   eEigSel = 0;
   for (i = 0; i < dimension; i++) {
-    TheEig = (double)gsl_vector_get(eigenvalues, i);
+    TheEig = static_cast<double>(gsl_vector_get(eigenvalues, i));
     /* fprintf(stderr,"i=%d eig=%f\n", i, TheEig);*/
     if (TheEig < eEigSel) {
       eEigSel = TheEig;
@@ -75,18 +75,19 @@ int main(int argc, char *argv[]) {
   if (eEigSel < 0) {
     FundamentalLevel = gsl_vector_alloc(dimension);
     gsl_matrix_get_col(FundamentalLevel, EigenVectors, iColSel);
-    ScalarMult = 1;
+    double ScalarMult = 1.0;
     while (1) {
-      for (i = 0; i < dimension; i++)
-        CURRENT[i] = (int)rint((double)gsl_vector_get(FundamentalLevel, i) *
-                               ((double)ScalarMult));
+      for (i = 0; i < dimension; i++) {
+        double val = static_cast<double>(gsl_vector_get(FundamentalLevel, i)) * ScalarMult;
+        CURRENT[i] = static_cast<int>(rint(val));
+      }
       Sum = 0;
       for (i = 0; i < dimension; i++)
         for (j = 0; j < dimension; j++)
           Sum += GramInt[i][j] * CURRENT[i] * CURRENT[j];
       if (Sum < 0)
         break;
-      ScalarMult++;
+      ScalarMult += 1.0;
     }
     fprintf(FileRes, "return rec(pos_semidef:=false, eVect:=[");
     for (i = 0; i < dimension; i++) {

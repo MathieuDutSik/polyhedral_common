@@ -159,8 +159,9 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     }
     if (ansOpt == "sampling") {
       std::vector<std::string> ListOpt;
-      for (int i = 1; i < int(ListStr.size()); i++)
-        ListOpt.push_back(ListStr[i]);
+      int n_ent = ListStr.size();
+      for (int i_ent = 1; i_ent < n_ent; i_ent++)
+        ListOpt.push_back(ListStr[i_ent]);
       return DUALDESC_SamplingFacetProcedure(EXT, ListOpt);
     }
     if (ansOpt == "lrs_limited") {

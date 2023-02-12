@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
     int SumStatus = 0;
     for (auto &ePair : ListInfoMatrices) {
       int eStatus = 0;
-      if ((ePair.second.nbAdjacent == int(ePair.second.ListIAdj.size())) &&
-          ePair.second.nbAdjacent > 0)
+      int n_adj = ePair.second.ListIAdj.size();
+      if (ePair.second.nbAdjacent == n_adj && ePair.second.nbAdjacent > 0)
         eStatus = 1;
       SumStatus += eStatus;
       os << eStatus << "\n";

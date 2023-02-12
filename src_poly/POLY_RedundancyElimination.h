@@ -15,21 +15,21 @@ template <typename T>
 std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M) {
   MyMatrix<T> Mred = ColumnReduction(M);
   MyMatrix<T> EXT = cdd::DualDescription(Mred);
-  size_t n_row = Mred.rows();
-  size_t n_vert = EXT.rows();
-  size_t n_col = Mred.cols();
+  int n_row = Mred.rows();
+  int n_vert = EXT.rows();
+  int n_col = Mred.cols();
   std::vector<int> TheSel;
-  for (size_t i_row = 0; i_row < n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     std::vector<int> eIncd;
-    for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
+    for (int i_vert = 0; i_vert < n_vert; i_vert++) {
       T scal = 0;
-      for (size_t i_col = 0; i_col < n_col; i_col++)
+      for (int i_col = 0; i_col < n_col; i_col++)
         scal += EXT(i_vert, i_col) * Mred(i_row, i_col);
       if (scal == 0)
         eIncd.push_back(i_vert);
     }
     MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
-    if (RankMat(EXT_face) == int(n_col - 1))
+    if (RankMat(EXT_face) == n_col - 1)
       TheSel.push_back(i_row);
   }
   return TheSel;

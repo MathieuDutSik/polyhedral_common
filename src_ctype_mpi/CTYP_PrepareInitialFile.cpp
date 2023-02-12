@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
     //
     auto InsertMatrixCan = [&](MyMatrix<Tint> const &M,
                                int const &NbAdj) -> void {
-      if (M.rows() != (int)n_vect || M.cols() != (int)n) {
+      if (M.rows() != static_cast<int>(n_vect) || M.cols() != static_cast<int>(n)) {
         std::cerr << "We have |M|=" << M.rows() << " / " << M.cols() << "\n";
         std::cerr << "But n_vect=" << n_vect << " and n=" << n << "\n";
         throw TerminalException{1};
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
         //
         netCDF::NcDim eDim_n_vect = var_Ctype.getDim(1);
         int read_n_vect = eDim_n_vect.getSize();
-        if (read_n_vect != int(n_vect)) {
+        if (read_n_vect != static_cast<int>(n_vect)) {
           std::cerr << "inconsistency in input of read_n_vect and n_vect\n";
           std::cerr << "read_n_vect=" << read_n_vect << " n_vect=" << n_vect
                     << "\n";
@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
         //
         netCDF::NcDim eDim_n = var_Ctype.getDim(2);
         int read_n = eDim_n.getSize();
-        if (read_n != int(n)) {
+        if (read_n != static_cast<int>(n)) {
           std::cerr << "inconsistency in input of read_n and n\n";
           std::cerr << "read_n=" << read_n << " n=" << n << "\n";
           throw TerminalException{1};

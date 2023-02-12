@@ -7348,7 +7348,7 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
       completed = true;
     }
     pos1++;
-    progress = 100.0 * ((double)pos1 / pos2) * (2.0 * pos2 - pos1) / pos2;
+    progress = 100.0 * (static_cast<double>(pos1) / pos2) * (2.0 * pos2 - pos1) / pos2;
     if (progress - prevprogress >= 10 && pos1 % 10 == 0 && localdebug) {
       fprintf(
           stdout,
@@ -8050,7 +8050,7 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
         eScal = 0;
         for (size_t iCol = 0; iCol < nbCol; iCol++)
           eScal += RayPtr->Ray[iCol] * EXT(iRow, iCol);
-        f[iRow] = bool(eScal == 0);
+        f[iRow] = static_cast<bool>(eScal == 0);
       }
       ListIncd.push_back(f);
     }

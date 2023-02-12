@@ -42,8 +42,8 @@ void MPI_RECV_vector(vector<mpq_class> &a, int src, int tag, MPI_Comm comm) {
 template <>
 void MPI_SEND_vector(vector<double> &a, int dest, int tag, MPI_Comm comm) {
   std::vector<int> eVectSendC(1, a.size());
-  (int)MPI_Send(eVectSendC.data(), 1, MPI_INT, dest, tag, comm);
-  (int)MPI_Send(a.data(), eSize, MPI_DOUBLE_PRECISION, dest, 1002, comm);
+  (void)MPI_Send(eVectSendC.data(), 1, MPI_INT, dest, tag, comm);
+  (void)MPI_Send(a.data(), eSize, MPI_DOUBLE_PRECISION, dest, 1002, comm);
 }
 
 template <>

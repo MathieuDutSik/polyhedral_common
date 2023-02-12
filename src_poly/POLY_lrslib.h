@@ -2058,7 +2058,7 @@ vectface DualDescription_temp_incd_limited(MyMatrix<T> const &EXT,
         eScal = 0;
         for (size_t iCol = 0; iCol < nbCol; iCol++)
           eScal += out[iCol] * EXTwork(iRow, iCol);
-        face[iRow] = bool(eScal == 0);
+        face[iRow] = static_cast<bool>(eScal == 0);
       }
       ListIncd.push_back(face);
 #endif

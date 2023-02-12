@@ -894,7 +894,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
     MyMatrix<T> FACprojCor = SelectNonZeroRows(FACproj);
     MyMatrix<T> TheSpann;
     if (FACprojCor.rows() == 0)
-      TheSpann = IdentityMat<T>(int(eSelect.NSP.rows()));
+      TheSpann = IdentityMat<T>(eSelect.NSP.rows());
     else
       TheSpann = KernelLinearDeterminedByInequalities(FACprojCor);
     if (TheSpann.rows() == 0)

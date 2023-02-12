@@ -323,7 +323,7 @@ int main() {
                 << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
                 << "\n";
       bool DoSomething = false;
-      if (int(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
+      if (static_cast<int>(ListMatrixUnsent.size()) < MaxStoredUnsentMatrices) {
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
           // We pass the first test with respect to runtime
           if (!StopWhenFinished || ListCasesNotDone.size() > 0) {
