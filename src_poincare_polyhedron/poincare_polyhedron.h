@@ -583,6 +583,15 @@ public:
         ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
       }
     }
+    std::cerr << "ai: n_mat=" << n_mat << "\n";
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      int n_adj = ll_adj[i_mat].l_sing_adj.size();
+      std::cerr << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
+      for (int i_adj=0; i_adj<n_adj; i_adj++) {
+        TsingAdj const& singAdj = ll_adj[i_mat].l_sing_adj[i_adj];
+        std::cerr << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj << " iPolyAdj=" << singAdj.iPolyAdj << " iFaceOpp=" << singAdj.iFaceOpp << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
+      }
+    }
     return {dataext.EXT, ll_adj};
   }
   std::vector<PairElt<T>>
@@ -652,7 +661,7 @@ public:
         std::cerr << "We have iPolyOpp=" << iPolyOpp << "\n";
         i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
         std::cerr << "Now i_mat_work=" << i_mat_work << "\n";
-        i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
         std::cerr << "Now i_facet_work=" << i_facet_work << "\n";
         MyVector<T> x_img = TheMat.mat.transpose() * x;
         if (x_img == x) {
