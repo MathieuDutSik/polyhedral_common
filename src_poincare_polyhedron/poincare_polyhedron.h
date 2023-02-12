@@ -599,6 +599,11 @@ public:
     std::cerr << "Beginning of GenerateTypeIneighbors\n";
     int n = x.size();
     std::vector<PairElt<T>> ListMiss;
+    int n_mat = ListNeighborX.size();
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      MyVector<T> u = ListNeighborX[i_mat];
+      std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
+    }
     MyMatrix<T> FAC = GetFAC();
     std::cerr << "FAC=\n";
     WriteMatrix(std::cerr, FAC);
@@ -617,19 +622,18 @@ public:
     auto f_insert = [&](PairElt<T> const &TestElt) -> void {
       PairElt<T> WorkElt = TestElt;
       while(true) {
-        MyVector<T> x_img = GetIneq(WorkElt);
-        MyVector<T> x_diff = x_img - x;
-        bool test = f_belong(x_diff);
+        MyVector<T> x_ineq = GetIneq(WorkElt);
+        bool test = f_belong(x_ineq);
         if (test)
           return;
-        std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_diff);
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_ineq);
         if (opt) {
           MyVector<T> V = *opt;
           for (int u = 0; u < V.size(); u++) {
             if (V(u) > 0) {
               PairElt<T> uElt = GetElement(ListNeighborData[u]);
               PairElt<T> uEltInv = InversePair(uElt);
-              WorkElt = ProductPair(uEltInv, WorkElt);
+              WorkElt = ProductPair(WorkElt, uEltInv);
             }
           }
         } else {
@@ -661,24 +665,23 @@ public:
       PairElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
-      std::cerr << "i_mat_work=" << i_mat_work
-                << " i_facet_work=" << i_facet_work << "\n";
+      //      std::cerr << "i_mat_work=" << i_mat_work << " i_facet_work=" << i_facet_work << "\n";
       while (true) {
         TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
-        std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
+        //        std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
         int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
-        std::cerr << "We have iPolyOpp=" << iPolyOpp << "\n";
+        //        std::cerr << "We have iPolyOpp=" << iPolyOpp << "\n";
         i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
-        std::cerr << "Now i_mat_work=" << i_mat_work << "\n";
+        //        std::cerr << "Now i_mat_work=" << i_mat_work << "\n";
         i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
-        std::cerr << "Now i_facet_work=" << i_facet_work << "\n";
+        //        std::cerr << "Now i_facet_work=" << i_facet_work << "\n";
         MyVector<T> x_img = TheMat.mat.transpose() * x;
         if (x_img == x) {
           return {};
         }
         bool test = TestIntersection(FAC, TheMat);
-        std::cerr << "test=" << test << "\n";
+        //        std::cerr << "test=" << test << "\n";
         if (test) {
           return TheMat;
         }
