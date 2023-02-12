@@ -1900,8 +1900,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,
-    typename Tgroup::Telt const &ePerm,
-    Fcorrect f_correct) {
+    typename Tgroup::Telt const &ePerm, Fcorrect f_correct) {
   using Telt = typename Tgroup::Telt;
   for (auto &fPerm : GRP1) {
     Telt eEquivCand = fPerm * ePerm;
@@ -1913,9 +1912,9 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
 }
 
 template <typename T, typename Tgroup, typename Fcorrect>
-Tgroup LinPolytopeIntegral_Stabilizer_Method4(
-    MyMatrix<T> const &EXT_T, Tgroup const &GRPisom,
-    Fcorrect f_correct) {
+Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
+                                              Tgroup const &GRPisom,
+                                              Fcorrect f_correct) {
   static_assert(
       is_ring_field<T>::value,
       "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method4");

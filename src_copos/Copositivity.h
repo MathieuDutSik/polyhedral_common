@@ -767,9 +767,10 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
 // add nbCone, etc.)
 //    if it is not a boolean is returned and the cone is further subdivided.
 template <typename T, typename Tint, typename Finsert, typename Ftest>
-SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(
-    MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
-    Finsert f_insert, Ftest f_test) {
+SingleTestResult<Tint>
+EnumerateCopositiveShortVector_Kernel(MyMatrix<T> const &eSymmMat,
+                                      MyMatrix<Tint> const &InitialBasis,
+                                      Finsert f_insert, Ftest f_test) {
   struct DataPair {
     int idx;
     MyMatrix<Tint> TheBasis0;
@@ -861,7 +862,8 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   T MinNorm = MinimumDiagonal(eSymmMat);
   int nbCone = 0;
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
-  auto f_insert = [&](MyMatrix<Tint> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> bool {
+  auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
     bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
     if (!test)
       return false;
@@ -891,7 +893,8 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
     nbCone++;
     return true;
   };
-  auto f_test = [&](MyMatrix<Tint> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
+  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
     return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
@@ -926,7 +929,8 @@ EnumerateCopositiveShortVector_V2(MyMatrix<T> const &eSymmMat,
   int nbCone = 0;
   std::vector<MyMatrix<Tint>> ListBasis;
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
-  auto f_insert = [&](MyMatrix<Tint> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> bool {
+  auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
     bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
     if (!test)
       return false;
@@ -940,7 +944,8 @@ EnumerateCopositiveShortVector_V2(MyMatrix<T> const &eSymmMat,
     nbCone++;
     return true;
   };
-  auto f_test = [&](MyMatrix<Tint> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
+  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
     return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
@@ -961,7 +966,8 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
                  MyMatrix<Tint> const &InitialBasis) {
   int n = eSymmMat.rows();
   size_t nbCone = 0;
-  auto f_insert = [&](MyMatrix<int> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> bool {
+  auto f_insert = [&](MyMatrix<int> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
     for (int i = 0; i < n; i++)
       for (int j = i + 1; j < n; j++)
         if (eSymmMatB(i, j) < 0)
@@ -969,7 +975,8 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
     nbCone++;
     return true;
   };
-  auto f_test = [&](MyMatrix<int> const &TheBasis, MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
+  auto f_test = [&](MyMatrix<int> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
     return SingleTestCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(

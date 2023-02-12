@@ -1,9 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "rational.h"
 #include "Group.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "SHORT_ShortestConfig.h"
+#include "rational.h"
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;

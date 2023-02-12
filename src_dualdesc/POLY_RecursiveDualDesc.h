@@ -1516,7 +1516,7 @@ size_t evaluate_subset_hash(const std::vector<Tidx> &subset_index,
                             const Face &f) {
   size_t hash = 0;
   size_t *ptr1 = &hash;
-  uint8_t *ptr2 = reinterpret_cast<uint8_t*>(ptr1);
+  uint8_t *ptr2 = reinterpret_cast<uint8_t *>(ptr1);
   size_t n_bit_hash = subset_index.size();
   for (size_t i = 0; i < n_bit_hash; i++) {
     bool val = f[subset_index[i]];

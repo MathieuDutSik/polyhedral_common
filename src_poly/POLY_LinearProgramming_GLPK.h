@@ -68,7 +68,8 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
     int iCol;
     T eVal;
   };
-  auto PrintConstraintVector = [&](std::ostream &os, std::vector<PairCV> const &LPair) -> void {
+  auto PrintConstraintVector = [&](std::ostream &os,
+                                   std::vector<PairCV> const &LPair) -> void {
     int len = LPair.size();
     bool IsFirst = true;
     for (int i = 0; i < len; i++) {

@@ -904,8 +904,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   }
 }
 
-template <typename T>
-bool IsFullDimensional(MyMatrix<T> const &FAC) {
+template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC) {
   PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
   if (!eRes.eTestExist) {
     return true;
@@ -919,10 +918,6 @@ MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC));
 }
-
-
-
-
 
 /* Finds an interior point in the cone determined by the inequalities.
    No group used here nor any equalities.
