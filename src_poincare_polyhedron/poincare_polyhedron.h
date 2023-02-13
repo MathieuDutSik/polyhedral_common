@@ -747,6 +747,47 @@ public:
       f_insert(eElt);
     return GRP;
   }
+  std::vector<std::vector<int>> GetGroupPresentation(AdjacencyInfo<T> const &ai) {
+    int n = x.size();
+    std::vector<std::vector<int>> ListWord;
+    MyMatrix<T> FAC = GetFAC();
+    int n_mat = FAC.rows();
+    std::vector<PairElt<T>> ListAdj;
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      ListAdj.push_back(GetElement(ListNeighborData[i_mat]));
+    }
+    auto InsertWordRidge = [&](int i_mat, int i_facet) -> void {
+      PairElt<T> TheMat = GenerateIdentity<T>(n);
+      int i_mat_work = i_mat;
+      int i_facet_work = i_facet;
+      std::vector<int> TheWord;
+      while (true) {
+        TheWord.push_back(i_mat_work);
+        TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
+        int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
+        int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
+        i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+        i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
+        MyVector<T> x_img = TheMat.mat.transpose() * x;
+        if (x_img == x) {
+          ListWord.push_back(TheWord);
+          return;
+        }
+      }
+    };
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      int iFaceOpp = ai.ll_adj[i_mat].l_sing_adj[0].iFaceOpp;
+      std::vector<int> TheWord{i_mat, iFaceOpp};
+      ListWord.push_back(TheWord);
+    }
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
+      for (int i_facet = 0; i_facet < n_facet; i_facet++) {
+        InsertWordRidge(i_mat, i_facet);
+      }
+    }
+    return ListWord;
+  }
 };
 
 //
