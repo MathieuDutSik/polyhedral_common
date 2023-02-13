@@ -628,6 +628,8 @@ public:
       while(true) {
         std::cerr << "  n_iter=" << n_iter << "\n";
         MyVector<T> x_ineq = GetIneq(WorkElt);
+        if (IsZeroVector(x_ineq))
+          return;
         bool test = f_belong(x_ineq);
         std::cerr << "  f_belong : test=" << test << "\n";
         if (test)
