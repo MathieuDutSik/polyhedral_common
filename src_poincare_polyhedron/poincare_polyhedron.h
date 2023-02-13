@@ -747,7 +747,7 @@ public:
       f_insert(eElt);
     return GRP;
   }
-  std::vector<std::vector<int>> GetGroupPresentation(AdjacencyInfo<T> const &ai) {
+  std::pair<int, std::vector<std::vector<int>>> GetGroupPresentation(AdjacencyInfo<T> const &ai) {
     int n = x.size();
     std::vector<std::vector<int>> ListWord;
     MyMatrix<T> FAC = GetFAC();
@@ -786,7 +786,7 @@ public:
         InsertWordRidge(i_mat, i_facet);
       }
     }
-    return ListWord;
+    return {n_mat, ListWord};
   }
 };
 
@@ -806,6 +806,8 @@ struct RecOption {
   std::string Arithmetic;
   int n_iter_max;
   int n_expand;
+  bool ComputeStabilizerPermutation;
+  bool ComputeGroupPresentation;
 };
 
 template <typename T>
@@ -867,21 +869,27 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
 FullNamelist NAMELIST_GetPoincareInput() {
   std::map<std::string, SingleBlock> ListBlock;
   // METHOD
-  std::map<std::string, std::string> ListIntValues2_doc;
-  std::map<std::string, std::string> ListStringValues2_doc;
-  ListIntValues2_doc["n_iter_max"] = "Default: -1\n\
+  std::map<std::string, std::string> ListBoolValues_doc;
+  std::map<std::string, std::string> ListIntValues_doc;
+  std::map<std::string, std::string> ListStringValues_doc;
+  ListBoolValues_doc["ComputeStabilizerPermutation"] = "Default: false\n\
+Compute the action of its stabilizer on the facets as permutation group";
+  ListBoolValues_doc["ComputeGroupPresentation"] = "Default: false\n\
+Compute the presentation of the greoup from facets and ridges";
+  ListIntValues_doc["n_iter_max"] = "Default: -1\n\
 The maximum number of iteration. If negative then infinite";
-  ListIntValues2_doc["n_expand"] = "Default: 0\n\
+  ListIntValues_doc["n_expand"] = "Default: 0\n\
 The number of iteration to expand the initial set of group elements";
-  ListStringValues2_doc["eCommand"] = "eCommand: lrs\n\
+  ListStringValues_doc["eCommand"] = "eCommand: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
-  ListStringValues2_doc["FileI"] = "The input file of the computation";
-  ListStringValues2_doc["FileO"] = "The output file of the computation";
-  ListStringValues2_doc["Arithmetic"] = "Default: rational\n\
+  ListStringValues_doc["FileI"] = "The input file of the computation";
+  ListStringValues_doc["FileO"] = "The output file of the computation";
+  ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   SingleBlock BlockPROC;
-  BlockPROC.setListIntValues(ListIntValues2_doc);
-  BlockPROC.setListStringValues(ListStringValues2_doc);
+  BlockPROC.setListBoolValues(ListBoolValues_doc);
+  BlockPROC.setListIntValues(ListIntValues_doc);
+  BlockPROC.setListStringValues(ListStringValues_doc);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
   return {std::move(ListBlock), "undefined"};
@@ -895,7 +903,9 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
   int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
   int n_expand = BlockPROC.ListIntValues.at("n_expand");
-  return {eCommand, FileI, FileO, Arithmetic, n_iter_max, n_expand};
+  bool ComputeStabilizerPermutation = BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
+  bool ComputeGroupPresentation = BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
+  return {eCommand, FileI, FileO, Arithmetic, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
 }
 
 template <typename T>
@@ -911,7 +921,24 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
   }
 }
 
-template <typename T> void full_process_type(RecOption const &rec_option) {
+void PrintGroupPresentation(std::ostream& os, std::pair<int, std::vector<std::vector<int>>> const& ThePres) {
+  os << "The number of generators is " << ThePres.first << "\n";
+  size_t n_word = ThePres.second.size();
+  os << "The number of words is " << n_word << "\n";
+  for (size_t i_word=0; i_word<n_word; i_word++) {
+    os << i_word << " : {";
+    std::vector<int> const& eWord = ThePres.second[i_word];
+    size_t len = eWord.size();
+    for (size_t u=0; u<len; u++) {
+      if (u>0)
+        os << ",";
+      os << eWord[u];
+    }
+    os << "}\n";
+  }
+}
+
+template <typename T,typename Tgroup> void full_process_type(RecOption const &rec_option) {
   std::cerr << "Beginning of full_process_type\n";
   DataPoincare<T> dp =
       ReadDataPoincare<T>(rec_option.FileI, rec_option.n_expand);
@@ -920,23 +947,39 @@ template <typename T> void full_process_type(RecOption const &rec_option) {
   std::cerr << "We have se\n";
   PrintAdjacencyInfo(se, rec_option.FileO);
   std::cerr << "se has been written to file\n";
+  bool ComputeStabilizerPermutation = rec_option.ComputeStabilizerPermutation;
+  bool ComputeGroupPresentation = rec_option.ComputeGroupPresentation;
+  std::cerr << "ComputeStabilizerPermutation = " << ComputeStabilizerPermutation << "\n";
+  std::cerr << "ComputeGroupPresentation = " << ComputeGroupPresentation << "\n";
+  if (ComputeStabilizerPermutation) {
+    std::cerr << "Writing the permutation group stabilizer\n";
+    Tgroup GRP = se.template GetPermutationGroup<Tgroup>();
+    std::cerr << "GRP=" << GRP.GapString() << "\n";
+  }
+  if (ComputeGroupPresentation) {
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand);
+    std::cerr << "Writing the group presentation\n";
+    std::pair<int, std::vector<std::vector<int>>> ThePres = se.GetGroupPresentation(ai);
+    PrintGroupPresentation(std::cerr, ThePres);
+  }
 }
 
+template <typename Tgroup>
 void Process_rec_option(RecOption const &rec_option) {
   std::string arith = rec_option.Arithmetic;
   if (arith == "rational") {
     using T = mpq_class;
-    return full_process_type<T>(rec_option);
+    return full_process_type<T,Tgroup>(rec_option);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return full_process_type<T>(rec_option);
+    return full_process_type<T,Tgroup>(rec_option);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return full_process_type<T>(rec_option);
+    return full_process_type<T,Tgroup>(rec_option);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -952,7 +995,7 @@ void Process_rec_option(RecOption const &rec_option) {
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return full_process_type<T>(rec_option);
+    return full_process_type<T,Tgroup>(rec_option);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
