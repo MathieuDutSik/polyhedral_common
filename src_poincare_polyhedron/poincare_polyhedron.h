@@ -872,9 +872,9 @@ FullNamelist NAMELIST_GetPoincareInput() {
   std::map<std::string, std::string> ListBoolValues_doc;
   std::map<std::string, std::string> ListIntValues_doc;
   std::map<std::string, std::string> ListStringValues_doc;
-  ListBoolValues_doc["ComputeStabilizerPermutation"] = "Default: false\n\
+  ListBoolValues_doc["ComputeStabilizerPermutation"] = "Default: F\n\
 Compute the action of its stabilizer on the facets as permutation group";
-  ListBoolValues_doc["ComputeGroupPresentation"] = "Default: false\n\
+  ListBoolValues_doc["ComputeGroupPresentation"] = "Default: F\n\
 Compute the presentation of the greoup from facets and ridges";
   ListIntValues_doc["n_iter_max"] = "Default: -1\n\
 The maximum number of iteration. If negative then infinite";
