@@ -571,8 +571,7 @@ public:
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj
-                    << " i_ext=" << i_ext << "\n";
+          //          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj << " i_ext=" << i_ext << "\n";
           if (ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge[i_ext] == 1) {
             size_t idx = map_index[i_ext];
             f_map[idx] = 1;
@@ -583,13 +582,16 @@ public:
         ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
       }
     }
-    std::cerr << "ai: n_mat=" << n_mat << "\n";
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      int n_adj = ll_adj[i_mat].l_sing_adj.size();
-      std::cerr << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
-      for (int i_adj=0; i_adj<n_adj; i_adj++) {
-        TsingAdj const& singAdj = ll_adj[i_mat].l_sing_adj[i_adj];
-        std::cerr << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj << " iPolyAdj=" << singAdj.iPolyAdj << " iFaceOpp=" << singAdj.iFaceOpp << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
+    bool print_ai = false;
+    if (print_ai) {
+      std::cerr << "ai: n_mat=" << n_mat << "\n";
+      for (int i_mat=0; i_mat<n_mat; i_mat++) {
+        int n_adj = ll_adj[i_mat].l_sing_adj.size();
+        std::cerr << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
+        for (int i_adj=0; i_adj<n_adj; i_adj++) {
+          TsingAdj const& singAdj = ll_adj[i_mat].l_sing_adj[i_adj];
+          std::cerr << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj << " iPolyAdj=" << singAdj.iPolyAdj << " iFaceOpp=" << singAdj.iFaceOpp << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
+        }
       }
     }
     return {dataext.EXT, ll_adj};
@@ -610,7 +612,7 @@ public:
     MyMatrix<T> VectorContain(1, n);
     ContainerMatrix<T> Cont(FAC, VectorContain);
     auto f_belong = [&](MyVector<T> const &uVect) -> bool {
-      std::cerr << "f_belong : uVect =";
+      std::cerr << "  f_belong : uVect =";
       for (int i = 0; i < n; i++)
         std::cerr << " " << uVect(i);
       std::cerr << "\n";
@@ -621,14 +623,19 @@ public:
     };
     auto f_insert = [&](PairElt<T> const &TestElt) -> void {
       PairElt<T> WorkElt = TestElt;
+      int n_iter = 0;
+      std::cerr << "Beginning of f_insert\n";
       while(true) {
+        std::cerr << "  n_iter=" << n_iter << "\n";
         MyVector<T> x_ineq = GetIneq(WorkElt);
         bool test = f_belong(x_ineq);
+        std::cerr << "  f_belong : test=" << test << "\n";
         if (test)
           return;
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_ineq);
         if (opt) {
           MyVector<T> V = *opt;
+          std::cerr << "  SolMatNonNeg V=" << StringVector(V) << "\n";
           for (int u = 0; u < V.size(); u++) {
             if (V(u) > 0) {
               PairElt<T> uElt = GetElement(ListNeighborData[u]);
@@ -637,9 +644,11 @@ public:
             }
           }
         } else {
+          std::cerr << "  SolMatNonNeg : no solution found\n";
           ListMiss.push_back(WorkElt);
           return;
         }
+        n_iter++;
       }
     };
     for (auto &e_elt : l_elt)

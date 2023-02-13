@@ -751,9 +751,7 @@ template <typename T>
 PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
                                     Constraint const &eConstraint) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  MyMatrix<T> ListVectTr = ListVect.transpose();
-  SelectionRowCol<T> eSelect = TMat_SelectRowCol(ListVectTr);
-  MyMatrix<T> NSP = eSelect.NSP;
+  MyMatrix<T> NSP = NullspaceMat(ListVect);
   int nbVect = ListVect.rows();
   int nbRelation = NSP.rows();
   std::vector<MyVector<T>> ListInequalities;
@@ -847,7 +845,7 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
   Constraint eConstraint{ListStrictlyPositive, ListPositive,
                          ListSetStrictPositive};
   //
-  PosRelRes<T> PRR = SearchPositiveRelation(ListVect, eConstraint);
+  PosRelRes<T> PRR = SearchPositiveRelation(InputListVect, eConstraint);
   if (!PRR.eTestExist)
     return {};
   MyVector<T> TheSol(nbVect);

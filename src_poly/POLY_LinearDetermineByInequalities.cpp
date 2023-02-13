@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LinearDeterminedByInequalities [DATAFAC]\n";
+      std::cerr << "POLY_LinearDetermineByInequalities [DATAFAC]\n";
       std::cerr << "\n";
       std::cerr << "DATAEXT: The input data of the polytope vertices\n";
       return -1;
