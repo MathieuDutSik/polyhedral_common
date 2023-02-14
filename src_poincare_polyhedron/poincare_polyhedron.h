@@ -339,12 +339,8 @@ public:
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
-    if (stabilizerElt_map.find(eElt) != stabilizerElt_map.end())
+    if (IsPresentInStabilizer(eElt))
       return false;
-    for (auto &fElt : stabilizerElt) {
-      if (eElt == fElt)
-        return false;
-    }
     std::vector<PairElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
     stabilizerElt = GroupGeneration(ExtListGen);
