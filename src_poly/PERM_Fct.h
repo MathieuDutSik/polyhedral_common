@@ -341,8 +341,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> VectorContain(1, n_cols);
-  ContainerMatrix<T> Cont(EXT2, VectorContain);
+  MyVector<T> VectorContain(n_cols);
+  ContainerMatrix<T> Cont(EXT2);
   //
   // We are testing if EXT1 P = perm(EXT2)
   std::vector<Tidx> V(n_rows);
@@ -361,9 +361,9 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
         // We fail because the image is not integral.
         return {};
       }
-      VectorContain(0, i_col) = rec_eSum2.second;
+      VectorContain(i_col) = rec_eSum2.second;
     }
-    std::optional<size_t> opt = Cont.GetIdx();
+    std::optional<size_t> opt = Cont.GetIdx_v(VectorContain);
     if (!opt) {
 #ifdef TIMINGS
       std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";

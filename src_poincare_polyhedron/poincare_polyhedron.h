@@ -576,21 +576,20 @@ public:
       }
     }
     std::cerr << "Second part: computing the opposite facets\n";
-    MyMatrix<T> VectorContain(1, n_ext);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
       MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
       MyMatrix<T> cQ = Contragredient(Q);
       MyMatrix<T> EXTimg = dataext.EXT * cQ;
-      ContainerMatrix<T> Cont(EXTimg, VectorContain);
+      ContainerMatrix<T> Cont(EXTimg);
       Face MapFace(n_ext);
       std::vector<size_t> l_idx(n_ext, 0);
       std::map<int, size_t> map_index;
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
-          for (int i = 0; i < n; i++)
-            VectorContain(i) = dataext.EXT(i_ext, i);
-          std::optional<size_t> opt = Cont.GetIdx();
+          std::optional<size_t> opt = Cont.GetIdx_f([&](int i) -> T {
+            return dataext.EXT(i_ext, i);
+          });
           if (opt) {
             size_t idx = *opt;
             MapFace[idx] = 1;

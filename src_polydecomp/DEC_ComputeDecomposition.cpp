@@ -484,13 +484,10 @@ get_spanning_list_ent_face(
           const ConeDesc<T, Tint, Tgroup> &fC = ListCones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
           MyMatrix<Tint> EXTimg = fC.EXT_i * eMatAdj;
-          MyMatrix<Tint> VectorContain(1, dim);
-          ContainerMatrix<Tint> Cont(EXTimg, VectorContain);
+          ContainerMatrix<Tint> Cont(EXTimg);
           Face faceNew(EXTimg.rows());
           for (auto &e_line : set_EXT) {
-            for (size_t i_col = 0; i_col < dim; i_col++)
-              VectorContain(0, i_col) = e_line(i_col);
-            std::optional<size_t> opt = Cont.GetIdx();
+            std::optional<size_t> opt = Cont.GetIdx_v(e_line);
             if (!opt) {
               std::cerr << "The vector is not in the image. Clear bug\n";
               throw TerminalException{1};
