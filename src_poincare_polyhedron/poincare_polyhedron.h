@@ -333,11 +333,14 @@ template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
   std::vector<PairElt<T>> stabilizerElt;
+  std::unordered_set<PairElt<T>> stabilizerElt_map;
   std::vector<PairElt<T>> ListNeighborCoset;
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
+    if (stabilizerElt_map.find(eElt) != stabilizerElt_map.end())
+      return false;
     for (auto &fElt : stabilizerElt) {
       if (eElt == fElt)
         return false;
@@ -345,6 +348,9 @@ public:
     std::vector<PairElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
     stabilizerElt = GroupGeneration(ExtListGen);
+    stabilizerElt_map.clear();
+    for (auto & eElt : stabilizerElt)
+      stabilizerElt_map.insert(eElt);
     return true;
   }
   PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
@@ -380,13 +386,39 @@ public:
       InsertCoset(eCoset);
     }
   }
-  void InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
+  bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
+    return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
+  }
+  bool IsPresentInCosetOrStabilizer(PairElt<T> const& eElt) const {
+    MyVector<T> x_img = eElt.mat.transpose() * x;
+    if (x_img == x) {
+      return IsPresentInStabilizer(eElt);
+    } else {
+      auto iter = map.find(x_img);
+      if (iter == map.end()) {
+        return false;
+      } else {
+        PairElt<T> TheProd = GetElement(iter->second);
+        PairElt<T> eElt_inv = InversePair(eElt);
+        PairElt<T> stab_elt = ProductPair(TheProd, eElt_inv);
+        MyVector<T> x2 = stab_elt.mat.transpose() * x;
+        if (x2 != x) {
+          std::cerr << "x is not stabilized\n";
+          throw TerminalException{1};
+        }
+        return IsPresentInStabilizer(stab_elt);
+      }
+    }
+  }
+  bool InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
+    bool DidSomething = false;
     auto generator_upgrade = [&](PairElt<T> const &e_elt) -> void {
       bool test = InsertStabilizerGenerator(e_elt);
       if (test) {
         // Copy needed of the old data then recompute
         std::vector<PairElt<T>> OldListCos = ListNeighborCoset;
         ComputeCosets(OldListCos);
+        DidSomething = true;
       }
     };
     for (auto &e_elt : ListGen) {
@@ -397,6 +429,7 @@ public:
         auto iter = map.find(x_img);
         if (iter == map.end()) {
           InsertCoset(e_elt);
+          DidSomething = true;
         } else {
           PairElt<T> TheProd = GetElement(iter->second);
           PairElt<T> e_elt_inv = InversePair(e_elt);
@@ -410,11 +443,14 @@ public:
         }
       }
     }
+    return DidSomething;
   }
   StepEnum(MyVector<T> const &_x) {
     x = _x;
     int n = x.size();
-    stabilizerElt = {GenerateIdentity<T>(n)};
+    PairElt<T> IdMat = GenerateIdentity<T>(n);
+    stabilizerElt = {IdMat};
+    stabilizerElt_map.insert(IdMat);
   }
   MyVector<T> GetIneq(PairElt<T> const e_elt) const {
     MyMatrix<T> const &eMat = e_elt.mat;
@@ -599,8 +635,6 @@ public:
   std::vector<PairElt<T>>
   GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) {
     std::cerr << "Beginning of GenerateTypeIneighbors\n";
-    int n = x.size();
-    std::vector<PairElt<T>> ListMiss;
     int n_mat = ListNeighborX.size();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MyVector<T> u = ListNeighborX[i_mat];
@@ -609,31 +643,21 @@ public:
     MyMatrix<T> FAC = GetFAC();
     std::cerr << "FAC=\n";
     WriteMatrix(std::cerr, FAC);
-    MyMatrix<T> VectorContain(1, n);
-    ContainerMatrix<T> Cont(FAC, VectorContain);
-    auto f_belong = [&](MyVector<T> const &uVect) -> bool {
-      std::cerr << "  f_belong : uVect =";
-      for (int i = 0; i < n; i++)
-        std::cerr << " " << uVect(i);
-      std::cerr << "\n";
-      for (int i = 0; i < n; i++)
-        VectorContain(0, i) = uVect(i);
-      std::optional<size_t> opt = Cont.GetIdx();
-      return opt.has_value();
-    };
-    auto f_insert = [&](PairElt<T> const &TestElt) -> void {
+    auto f_insert = [&](PairElt<T> const &TestElt) -> std::optional<PairElt<T>> {
       PairElt<T> WorkElt = TestElt;
       int n_iter = 0;
       std::cerr << "Beginning of f_insert\n";
       while(true) {
         std::cerr << "  n_iter=" << n_iter << "\n";
         MyVector<T> x_ineq = GetIneq(WorkElt);
-        if (IsZeroVector(x_ineq))
-          return;
-        bool test = f_belong(x_ineq);
-        std::cerr << "  f_belong : test=" << test << "\n";
-        if (test)
-          return;
+        if (IsZeroVector(x_ineq)) {
+          bool test_stab = IsPresentInStabilizer(WorkElt);
+          if (test_stab) {
+            return {};
+          } else {
+            return WorkElt;
+          }
+        }
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_ineq);
         if (opt) {
           MyVector<T> V = *opt;
@@ -647,14 +671,19 @@ public:
           }
         } else {
           std::cerr << "  SolMatNonNeg : no solution found\n";
-          ListMiss.push_back(WorkElt);
-          return;
+          return WorkElt;
         }
         n_iter++;
       }
     };
-    for (auto &e_elt : l_elt)
-      f_insert(e_elt);
+    std::vector<PairElt<T>> ListMiss;
+    for (auto &e_elt : l_elt) {
+      std::optional<PairElt<T>> opt = f_insert(e_elt);
+      if (opt) {
+        PairElt<T> const& RedElt = *opt;
+        ListMiss.push_back(RedElt);
+      }
+    }
     return ListMiss;
   }
   bool TestIntersection(MyMatrix<T> const &FAC, PairElt<T> const &eElt) {
@@ -820,9 +849,11 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   bool DidSomething = false;
   auto insert_block = [&](std::vector<PairElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
-      se.InsertGenerators(ListMiss);
-      se.RemoveRedundancy(eCommand);
-      DidSomething = true;
+      bool test = se.InsertGenerators(ListMiss);
+      if (test) {
+        se.RemoveRedundancy(eCommand);
+        DidSomething = true;
+      }
     }
   };
   int n_iter = 0;
