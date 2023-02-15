@@ -7,7 +7,6 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= icpc -std=c++17 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++17
-#CC		= clang++ -Wall -std=c++17 -g -fsanitize=memory
 #CC		= clang++ -g -Wall -Wextra -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
 #CC		= clang++ -g -Wall -Wextra -std=c++17
 #CC		= clang++ -O2 -Weverything -std=c++17 -DDEBUG
@@ -22,9 +21,11 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address
 #CC		= g++ -std=c++17 -Wall -g -O2
 #CC		= g++ -std=c++17 -Wall -g -O3
+#CC		= clang++ -Wall -std=c++17 -g -fsanitize=memory
+
+# CLANG
 CC		= g++ -std=c++17 -Wall -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
-#CC		= g++ -std=c++17 -Wall -g -fsanitize=memory
 #CC		= g++ -std=c++17 -Wall -g -fstack-check -fno-stack-clash-protection
 #CC		= g++ -std=c++17 -Wall -g
 #CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
@@ -43,6 +44,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DMATRIX_GROUP_DIAGNOSTICS -DDEBUG_MATRIX_GROUP -DDEBUG_LORENTZIAN_LINALG -DTIMINGS -DDEBUG_POSITIVITY -DTRACK_INFOS_LOG
+#CDEFS           = -DEIGEN_NO_DEBUG
 CDEFS           =
 #CDEFS           = -DSANITY_CHECK -DPRINT_SYMBOL_INFORMATION -DDEBUG_LORENTZIAN_LINALG -DDEBUG_POSITIVITY -DTRACK_INFOS_LOG -DDEBUG_MATRIX_GROUP -DCHECK_LORENTZIAN_STAB_EQUIV -DDEBUG_LORENTZIAN_STAB_EQUIV -DTIMINGS -DDEBUG_EDGEWALK_GENERIC -DPERMUTALIB_BLOCKING_SANITY_CHECK -DDEBUG_GET_CANONICALIZED_RECORD
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)

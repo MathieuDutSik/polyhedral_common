@@ -176,10 +176,19 @@ template <typename T>
 std::vector<PairElt<T>>
 InverseSaturation(std::vector<PairElt<T>> const &l_ent) {
   std::unordered_set<PairElt<T>> s_sat;
+  int i_ent = 0;
   for (auto &eElt : l_ent) {
     s_sat.insert(eElt);
+    std::cerr << "We have eElt i_ent=" << i_ent << "\n";
+    WriteMatrix(std::cerr, eElt.mat);
+    std::cerr << "Before Determinant computation\n";
+    T TheDet = DeterminantMat(eElt.mat);
+    std::cerr << "TheDet=" << TheDet << "\n";
+    std::cerr << "Before InversePair\n";
     PairElt<T> eEltInv = InversePair(eElt);
+    std::cerr << "We have eEltInv\n";
     s_sat.insert(eEltInv);
+    i_ent++;
   }
   std::vector<PairElt<T>> l_ret;
   for (auto &eElt : s_sat)
@@ -469,6 +478,7 @@ public:
     int n = x.size();
     int n_mat = FAC.rows();
     int rnk = RankMat(FAC);
+    std::cerr << "RemoveRedundancy : n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
     if (rnk != n) {
       std::cerr << "Error in RemoveRedundancy\n";
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
@@ -476,6 +486,7 @@ public:
     }
     vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
+    std::cerr << "RemoveRedundancy : n_ext=" << dataext.EXT.rows() << "\n";
     Face f_status_keep(n_mat);
     std::set<size_t> l_keep;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -496,6 +507,7 @@ public:
         throw TerminalException{1};
       }
     }
+    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << "\n";
     std::vector<PairElt<T>> ListNeighborCosetRed;
     for (auto &i_coset : l_keep) {
       ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);

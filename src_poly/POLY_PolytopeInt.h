@@ -273,10 +273,58 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
     It should be doable. We select r independent coordinate {i_1, ..., i_r}.
     We iterate over their possible values, and find bz matrix product their
     possible values and keep the one that are integral.
-
  */
+
+
+/*
+  The matrix A(m,n) and B(n)   and we look for x A = B
+  We search for solution x in {0,1}^m.
+  
+ */
+/*
 template <typename T, typename Tint, typename Finsert>
-void Kernel_Enumerate01_solutions(MyMatrix<T> const &A, MyVector<T> const &B,
+void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> const &B,
+                                  Finsert f_insert) {
+  int m = A.rows();
+  int n = A.cols();
+  MyMatrix<T> Bresidual(m+1,n);
+  for (int i=0; i<n; i++) {
+    Bresidual(0,i) = B(i);
+  }
+  MyVector<T> TheSol;
+  int level_select = 0;
+  auto set_residual=[&](int level, int coef) -> void {
+    if (coef == 0) {
+      for (int i=0; i<n; i++)
+        Bresidual(level+1,i) = Bresidual(level,i);
+    } else {
+      for (int i=0; i<n; i++)
+        Bresidual(level+1,i) = Bresidual(level,i) - A(level,i);
+    }
+  };
+  auto is_feasible=[&](int level) -> bool {
+    // Filtering by the GCD
+    for (int i=0; i<n; i++) {
+      T TheGcd = A(level,i);
+      for (int j=0; j<m-level; j++)
+        TheGcd = GcdPair(TheGcd, A(j+level,i));
+      T TheRes = ResInt(Bresidual(level+1,i), TheGcd);
+      if (TheRes != 0)
+        return false;
+    }
+    return true;
+  };
+  while(true) {
+    
+
+    
+  }
+
+}
+*/
+
+template <typename T, typename Tint, typename Finsert>
+void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> const &B,
                                   Finsert f_insert) {
   std::optional<MyVector<T>> opt = SolutionIntMat(A, B);
   if (!opt)
@@ -284,6 +332,8 @@ void Kernel_Enumerate01_solutions(MyMatrix<T> const &A, MyVector<T> const &B,
   MyVector<T> const &ePt = *opt;
   MyMatrix<T> NSP = NullspaceIntMat(A);
 }
+
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEINT_H_
