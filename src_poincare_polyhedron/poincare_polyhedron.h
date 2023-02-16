@@ -179,14 +179,7 @@ InverseSaturation(std::vector<PairElt<T>> const &l_ent) {
   int i_ent = 0;
   for (auto &eElt : l_ent) {
     s_sat.insert(eElt);
-    std::cerr << "We have eElt i_ent=" << i_ent << "\n";
-    WriteMatrix(std::cerr, eElt.mat);
-    std::cerr << "Before Determinant computation\n";
-    T TheDet = DeterminantMat(eElt.mat);
-    std::cerr << "TheDet=" << TheDet << "\n";
-    std::cerr << "Before InversePair\n";
     PairElt<T> eEltInv = InversePair(eElt);
-    std::cerr << "We have eEltInv\n";
     s_sat.insert(eEltInv);
     i_ent++;
   }
@@ -283,6 +276,8 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
   for (int i_elt = 0; i_elt < n_elt; i_elt++) {
     int pos = i_elt + 1;
     MyMatrix<T> eElt = ReadMatrix<T>(is);
+    T TheDet = DeterminantMat(eElt);
+    std::cerr << "i_elt=" << i_elt << " TheDet=" << TheDet << "\n";
     TrackGroup tg{{pos}};
     PairElt<T> pe{tg, eElt};
     s_elt.insert(pe);
