@@ -384,10 +384,8 @@ get_spanning_list_ent_face(
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> set_EXT;
   // That value of dim should be overwritten later
-  size_t dim = -1;
   for (auto &ePt : FaceToVector(ef_input.f_ext)) {
     MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
-    dim = V.size();
     // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
     set_EXT.insert(Vimg);
