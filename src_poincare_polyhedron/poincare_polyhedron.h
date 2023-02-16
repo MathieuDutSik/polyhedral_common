@@ -342,6 +342,23 @@ public:
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
+  void print_statistics(std::ostream& os) const {
+    os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
+    os << "|ListNeighborCoset|=" << ListNeighborCoset.size() << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
+    std::map<size_t,size_t> map_by_cos;
+    for (auto & ePair : ListNeighborData) {
+      map_by_cos[ePair.first]++;
+    }
+    std::map<size_t,size_t> map_by_size;
+    for (auto & kv: map_by_cos) {
+      map_by_size[kv.second]++;
+    }
+    os << "Sizes :";
+    for (auto & kv : map_by_size) {
+      os << " [" << kv.first << "," << kv.second << "]";
+    }
+    os << "\n";
+  }
   bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
     if (IsPresentInStabilizer(eElt))
       return false;
@@ -443,6 +460,7 @@ public:
         }
       }
     }
+    print_statistics(std::cerr);
     return DidSomething;
   }
   StepEnum(MyVector<T> const &_x) {
@@ -480,6 +498,7 @@ public:
       throw TerminalException{1};
     }
     vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
+    std::cerr << "We have vf\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     std::cerr << "RemoveRedundancy : n_ext=" << dataext.EXT.rows() << "\n";
     Face f_status_keep(n_mat);
