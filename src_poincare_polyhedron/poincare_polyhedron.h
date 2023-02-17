@@ -333,6 +333,34 @@ template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
 
+/*
+  The program works for A3 (where actually we used B3)
+  But it has some problems for the case of the cocompact group of interest to us.
+  ---
+  Problems:
+  - Bad numerics where we are forced to have evaluation of number very near 0 and the continued
+    fraction algorithm fails us.
+    => Look at the absolute values of the coefficients in double precision.
+    => How hard it is to compute the symmetric function P(x_1) ... P(x_k)?
+       This ought to give us a value that is rational. If P(x_1) is very small, likely the others are not.
+    => See exactly where things go haywire.
+  - Non-convergence of finding the dual description. Our hope is definitely that there are a lot of
+    facets that are redundant. This is the foundation of our approach. Another element is that for an element,
+    we can easily identify if it is new or already present.
+    So, we have already accepted that insertion done step by step is the business of the day.
+  - If the checks of non-redundancy are so so expensive, then we should keep track of them
+    in a database of known redundant entries.
+    This should probably be just a std::unordered_map<Myvector<T>,std::pair<size_t,size_t>>
+    We would have a statbilizer type that is passed as a reference to the insertion process.
+    and then when an insertion is done.
+    But all that seems overkill right now because the stabilizer are so far trivial.
+  - What should be reasonably accessible for us:
+    - redundancy checks using Clarkson method (based on Linear programming)
+    - Linear programming over those special fields has to be doable.
+      Maybe we could use shifting to doule precision to help solve those linear problems.
+    - dual description for a set of inequalities that are all defining facets.
+
+ */
 template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
