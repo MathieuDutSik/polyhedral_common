@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     Process_rec_option<Tgroup>(rec_option);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in IndefiniteReduction\n";
+    std::cerr << "Error in POINCARE_Initial_Computation\n";
     exit(e.eVal);
   }
   runtime(time1);

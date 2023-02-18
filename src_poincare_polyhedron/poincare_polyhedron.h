@@ -174,19 +174,48 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
       PairElt<T> prod = ProductPair(pe, e_grp_elt);
       if (s_coset.find(prod) != s_coset.end()) {
         std::cerr << "find matching\n";
-        break;
+        return;
       }
     }
     s_coset.insert(pe);
   };
   for (auto &pe : l_ent)
     f_insert(pe);
-  std::vector<PairElt<T>> l_coset;
-  for (auto &e_coset : s_coset)
-    l_coset.push_back(e_coset);
+  std::vector<PairElt<T>> l_coset(s_coset.begin(), s_coset.end());
+  //  for (auto &e_coset : s_coset)
+  //    l_coset.push_back(e_coset);
   std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
   return l_coset;
 }
+
+template <typename T>
+std::vector<PairElt<T>>
+IdentifyDoubleCosets(MyVector<T> const& x, std::vector<PairElt<T>> const &l_ent,
+                     std::vector<PairElt<T>> const &list_grp_elt) {
+  std::unordered_map<MyVector<T>,PairElt<T>> map;
+  auto f_insert = [&](PairElt<T> const &pe) -> void {
+    MyVector<T> x2 = pe.mat.transpose() * x;
+    for (auto &e_grp_elt : list_grp_elt) {
+      MyVector<T> x3 = e_grp_elt.mat.transpose() * x2;
+      auto iter = map.find(x3);
+      if (iter != map.end()) {
+        std::cerr << "find matching\n";
+        return;
+      }
+    }
+    map[x2] = pe;
+  };
+  for (auto &pe : l_ent)
+    f_insert(pe);
+  std::vector<PairElt<T>> l_coset;
+  for (auto & kv : map)
+    l_coset.push_back(kv.second);
+  std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
+  return l_coset;
+}
+
+
+
 
 template <typename T>
 std::vector<PairElt<T>>
@@ -444,7 +473,18 @@ public:
     for (auto &kv : map_local) {
       ListNeighborX.push_back(kv.first);
       ListNeighborData.push_back(kv.second);
+      auto iter=map.find(kv.first);
+      if (iter != map.end()) {
+        std::cerr << "find overlap V=" << StringVector(kv.first) << " pair=" << kv.second.first << "/" << kv.second.second << "\n";
+        std::cerr << "          iter=" << StringVector(iter->first) << " pair=" << iter->second.first << "/" << iter->second.second << "\n";
+        throw TerminalException{1};
+      }
       map[kv.first] = kv.second;
+    }
+    if (ListNeighborX.size() != map.size()) {
+      std::cerr << "|map_local|=" << map_local.size() << "\n";
+      std::cerr << "|ListNeighborX|=" << ListNeighborX.size() << " |map|=" << map.size() << "\n";
+      throw TerminalException{1};
     }
   }
   void ComputeCosets(std::vector<PairElt<T>> const &l_elt) {
@@ -452,7 +492,7 @@ public:
     ListNeighborData.clear();
     ListNeighborCoset.clear();
     map.clear();
-    std::vector<PairElt<T>> l_cos = IdentifyLeftCosets(l_elt, stabilizerElt);
+    std::vector<PairElt<T>> l_cos = IdentifyDoubleCosets(x, l_elt, stabilizerElt);
     for (auto &eCoset : l_cos) {
       InsertCoset(eCoset);
     }
