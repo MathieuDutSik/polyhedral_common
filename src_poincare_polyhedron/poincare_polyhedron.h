@@ -435,6 +435,10 @@ public:
       os << " [" << kv.first << "," << kv.second << "]";
     }
     os << "\n";
+    std::vector<int> V = ComputeMatchingVector();
+    for (size_t i_mat=0; i_mat<V.size(); i_mat++) {
+      os << "i_mat=" << i_mat << " j=" << V[i_mat] << "\n";
+    }
   }
   bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
     return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
@@ -642,20 +646,31 @@ public:
       ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
     }
     ComputeCosets(ListNeighborCosetRed);
+    print_statistics(std::cerr);
   }
   // For a facet of the cone, there should be a matching element in the adjacent
   // facet.
-  std::optional<int> FindMatchingImat(int const& i_mat) const {
-    MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
-    MyVector<T> x_img = Q.transpose() * x;
+  std::vector<int> ComputeMatchingVector() const {
     int n_mat = ListNeighborData.size();
-    for (int j_mat=0; j_mat<n_mat; j_mat++) {
-      Q = GetElement(ListNeighborData[j_mat]).mat;
-      MyVector<T> x2 = Q.transpose() * x_img;
-      if (x2 == x)
-        return j_mat;
+    std::vector<MyMatrix<T>> l_mat;
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
+      l_mat.push_back(Q);
     }
-    return {};
+    auto get_j_mat=[&](int const& i_mat) -> int {
+      MyVector<T> x_img = l_mat[i_mat].transpose() * x;
+      for (int j_mat=0; j_mat<n_mat; j_mat++) {
+        MyVector<T> x2 = l_mat[j_mat].transpose() * x_img;
+        if (x2 == x)
+          return j_mat;
+      }
+      return -1;
+    };
+    std::vector<int> MatchVector;
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      MatchVector.push_back(get_j_mat(i_mat));
+    }
+    return MatchVector;
   }
   // The domain is defined originally as
   // Tr(AX) <= Tr(PAP^T X)
@@ -753,11 +768,9 @@ public:
       }
       if (s_facet.find(MapFace) == s_facet.end()) {
         std::cerr << "i_mat=" << i_mat << "\n";
-        std::optional<int> opt = FindMatchingImat(i_mat);
-        if (opt) {
-          std::cerr << "Matching j_mat=" << *opt << "\n";
-        } else {
-          std::cerr << "No matching facet\n";
+        std::vector<int> V = ComputeMatchingVector();
+        for (int i_mat=0; i_mat<n_mat; i_mat++) {
+          std::cerr << "i_mat=" << i_mat << " j=" << V[i_mat] << "\n";
         }
         for (auto & kv : s_facet) {
           std::cerr << "i_facet=" << kv.second << " facet=" << StringFace(kv.first) << "\n";
