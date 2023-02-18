@@ -284,7 +284,7 @@ get_map_face(std::vector<Face> const &l_facet) {
   std::unordered_map<Face, size_t> s_facet;
   for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
     Face const &f = l_facet[i_facet];
-    s_facet[f] = i_facet + 1;
+    s_facet[f] = i_facet;
   }
   if (l_facet.size() != s_facet.size()) {
     for (size_t i_facet=0; i_facet<l_facet.size(); i_facet++) {
@@ -737,12 +737,15 @@ public:
           }
         }
       }
-      size_t pos = s_facet[MapFace];
-      if (pos == 0) {
+      if (s_facet.find(MapFace) == s_facet.end()) {
+        for (auto & kv : s_facet) {
+          std::cerr << "i_facet=" << kv.second << " facet=" << StringFace(kv.first) << "\n";
+        }
+        std::cerr << "MapFace=" << StringFace(MapFace) << "\n";
         std::cerr << "Failed to find the MapFace in s_facet\n";
         throw TerminalException{1};
       }
-      size_t iFaceOpp = pos - 1;
+      size_t iFaceOpp = s_facet[MapFace];
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
