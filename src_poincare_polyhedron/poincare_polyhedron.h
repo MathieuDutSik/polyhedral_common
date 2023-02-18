@@ -109,21 +109,34 @@ std::vector<PairElt<T>>
 GroupGeneration(std::vector<PairElt<T>> const &input_l_ent) {
   std::vector<PairElt<T>> l_ent = input_l_ent;
   while (true) {
-    std::unordered_set<PairElt<T>> GenElt;
+    std::unordered_set<PairElt<T>> s_GenElt;
+    std::vector<PairElt<T>> l_GenElt;
+    auto f_insert=[&](PairElt<T> const& eElt) -> void {
+      for (auto & fElt : l_GenElt)
+        if (fElt == eElt)
+          return;
+      l_GenElt.push_back(eElt);
+    };
     size_t n_ent = l_ent.size();
     for (size_t i_ent = 0; i_ent < n_ent; i_ent++) {
       PairElt<T> const &pe1 = l_ent[i_ent];
       for (size_t j_ent = 0; j_ent < n_ent; j_ent++) {
         PairElt<T> const &pe2 = l_ent[j_ent];
         PairElt<T> prod = ProductPair(pe1, pe2);
-        GenElt.insert(prod);
+        s_GenElt.insert(prod);
+        f_insert(prod);
       }
     }
-    if (GenElt.size() == n_ent) {
-      return input_l_ent;
+    if (s_GenElt.size() != l_GenElt.size()) {
+      std::cerr << "|s_GenElt|=" << s_GenElt.size() << " |l_GenElt|=" << l_GenElt.size() << "\n";
+      std::cerr << "sizes are different\n";
+      throw TerminalException{1};
+    }
+    if (s_GenElt.size() == n_ent) {
+      return l_ent;
     }
     l_ent.clear();
-    for (auto &e_ent : GenElt)
+    for (auto &e_ent : s_GenElt)
       l_ent.push_back(e_ent);
   }
 }
@@ -159,8 +172,10 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
   auto f_insert = [&](PairElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
       PairElt<T> prod = ProductPair(pe, e_grp_elt);
-      if (s_coset.count(prod) == 1)
+      if (s_coset.find(prod) != s_coset.end()) {
+        std::cerr << "find matching\n";
         break;
+      }
     }
     s_coset.insert(pe);
   };
@@ -169,6 +184,7 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
   std::vector<PairElt<T>> l_coset;
   for (auto &e_coset : s_coset)
     l_coset.push_back(e_coset);
+  std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
   return l_coset;
 }
 
@@ -242,6 +258,10 @@ get_map_face(std::vector<Face> const &l_facet) {
     s_facet[f] = i_facet + 1;
   }
   if (l_facet.size() != s_facet.size()) {
+    for (size_t i_facet=0; i_facet<l_facet.size(); i_facet++) {
+      std::cerr << "i_facet=" << i_facet << " " << StringFace(l_facet[i_facet]) << "\n";
+    }
+    std::cerr << "|l_facet|=" << l_facet.size() << " |s_facet|=" << s_facet.size() << "\n";
     std::cerr << "l_facet contains some duplicate and that is illegal\n";
     throw TerminalException{1};
   }
@@ -387,12 +407,18 @@ public:
     }
     os << "\n";
   }
+  bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
+    return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
+  }
   bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
     if (IsPresentInStabilizer(eElt))
       return false;
+    std::cerr << "InsertStabilizerGenerator 1 |stabilizerElt|=" << stabilizerElt.size() << "\n";
     std::vector<PairElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
+    std::cerr << "InsertStabilizerGenerator 2 |ExtListGen|=" << ExtListGen.size() << "\n";
     stabilizerElt = GroupGeneration(ExtListGen);
+    std::cerr << "InsertStabilizerGenerator 3 |stabilizerElt|=" << stabilizerElt.size() << "\n";
     stabilizerElt_map.clear();
     for (auto & eElt : stabilizerElt)
       stabilizerElt_map.insert(eElt);
@@ -430,9 +456,6 @@ public:
     for (auto &eCoset : l_cos) {
       InsertCoset(eCoset);
     }
-  }
-  bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
-    return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
   }
   bool IsPresentInCosetOrStabilizer(PairElt<T> const& eElt) const {
     MyVector<T> x_img = eElt.mat.transpose() * x;
@@ -508,8 +531,30 @@ public:
     int n = x.size();
     int n_mat = ListNeighborX.size();
     MyMatrix<T> FAC(n_mat, n);
+    std::unordered_map<MyVector<T>,size_t> map_test;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MyVector<T> x_diff = ListNeighborX[i_mat] - x;
+      size_t& val = map_test[x_diff];
+      if (val != 0) {
+        size_t j_mat = val - 1;
+        std::cerr << "Collision found between i_mat=" << i_mat << " j_mat=" << j_mat << "\n";
+        std::pair<size_t,size_t> i_pair = ListNeighborData[i_mat];
+        std::pair<size_t,size_t> j_pair = ListNeighborData[j_mat];
+        std::cerr << "i_pair=" << i_pair.first << "/" << i_pair.second << " j_pair=" << j_pair.first << "/" << j_pair.second << "\n";
+        PairElt<T> ePair = GetElement(i_pair);
+        PairElt<T> fPair = GetElement(j_pair);
+        MyVector<T> eV = ePair.mat.transpose() * x;
+        MyVector<T> fV = fPair.mat.transpose() * x;
+        PairElt<T> ePairInv = InversePair(ePair);
+        PairElt<T> eStabElt = ProductPair(fPair, ePairInv);
+        MyVector<T> xImg = eStabElt.mat.transpose() * x;
+        std::cerr << "eV=" << StringVector(eV) << " fV=" << StringVector(fV) << "\n";
+        std::cerr << "x=" << StringVector(x) << " xImg=" << StringVector(xImg) << "\n";
+        bool test = IsPresentInStabilizer(eStabElt);
+        std::cerr << "test=" << test << "\n";
+        throw TerminalException{1};
+      }
+      val = i_mat + 1;
       AssignMatrixRow(FAC, i_mat, x_diff);
     }
     return FAC;
@@ -525,6 +570,8 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
+    //    std::cerr << "FAC=\n";
+    //    WriteMatrix(std::cerr, FAC);
     vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
     std::cerr << "We have vf\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
@@ -579,9 +626,12 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
+    std::cerr << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows() << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n << " nk=" << rnk << "\n";
     vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
+    std::cerr << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();
+    std::cerr << "n_ext=" << n_ext << "\n";
     std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
 
     std::cerr << "First part: adjacency structure within the polyhedron\n";
@@ -716,6 +766,7 @@ public:
               PairElt<T> uElt = GetElement(ListNeighborData[u]);
               PairElt<T> uEltInv = InversePair(uElt);
               WorkElt = ProductPair(WorkElt, uEltInv);
+              //              WorkElt = ProductPair(uEltInv, WorkElt);
             }
           }
         } else {
@@ -909,20 +960,22 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   while (true) {
     DidSomething = false;
     //
-    // Iteration Type I
-    //
-    std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
-    std::vector<PairElt<T>> ListMissI =
-        se.GenerateTypeIneighbors(dp.ListGroupElt);
-    std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
-    insert_block(ListMissI);
-    //
     // Iteration Type II
     //
     AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand);
     std::vector<PairElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
     std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
+    //
+    // Iteration Type I
+    //
+    if (!DidSomething) {
+      std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
+      std::vector<PairElt<T>> ListMissI =
+        se.GenerateTypeIneighbors(dp.ListGroupElt);
+      std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
+      insert_block(ListMissI);
+    }
     //
     // Terminating if ok.
     //
