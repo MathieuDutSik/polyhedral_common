@@ -643,6 +643,20 @@ public:
     }
     ComputeCosets(ListNeighborCosetRed);
   }
+  // For a facet of the cone, there should be a matching element in the adjacent
+  // facet.
+  std::optional<int> FindMatchingImat(int const& i_mat) const {
+    MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
+    MyVector<T> x_img = Q.transpose() * x;
+    int n_mat = ListNeighborData.size();
+    for (int j_mat=0; j_mat<n_mat; j_mat++) {
+      Q = GetElement(ListNeighborData[j_mat]).mat;
+      MyVector<T> x2 = Q.transpose() * x_img;
+      if (x2 == x)
+        return j_mat;
+    }
+    return {};
+  }
   // The domain is defined originally as
   // Tr(AX) <= Tr(PAP^T X)
   // which we rewrite
@@ -738,6 +752,13 @@ public:
         }
       }
       if (s_facet.find(MapFace) == s_facet.end()) {
+        std::cerr << "i_mat=" << i_mat << "\n";
+        std::optional<int> opt = FindMatchingImat(i_mat);
+        if (opt) {
+          std::cerr << "Matching j_mat=" << *opt << "\n";
+        } else {
+          std::cerr << "No matching facet\n";
+        }
         for (auto & kv : s_facet) {
           std::cerr << "i_facet=" << kv.second << " facet=" << StringFace(kv.first) << "\n";
         }
