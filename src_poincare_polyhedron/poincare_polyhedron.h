@@ -382,6 +382,19 @@ template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
 
+template <typename T> MyMatrix<T> SmallestCanonicalization(MyMatrix<T> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> Mret(nbRow,nbCol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    MyVector<T> V = GetMatrixRow(M, iRow);
+    MyVector<T> Vcan = CanonicalizationSmallestCoefficientVectorPlusCoeff(V).TheVect;
+    AssignMatrixRow(Mret, iRow, Vcan);
+  }
+  return Mret;
+}
+
+
 /*
   The program works for A3 (where actually we used B3)
   But it has some problems for the case of the cocompact group of interest to us.
@@ -408,7 +421,7 @@ template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
     - Linear programming over those special fields has to be doable.
       Maybe we could use shifting to doule precision to help solve those linear problems.
     - dual description for a set of inequalities that are all defining facets.
-
+  -
  */
 template <typename T> struct StepEnum {
 public:
@@ -460,7 +473,9 @@ public:
   PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
     size_t i_coset = val.first;
     size_t i_elt = val.second;
-    return ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+    PairElt<T> prod = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+    PairElt<T> eInv = InversePair(stabilizerElt[i_elt]);
+    return ProductPair(eInv, prod);
   }
   void InsertCoset(PairElt<T> const &eCoset) {
     size_t n_coset = ListNeighborCoset.size();
@@ -533,7 +548,7 @@ public:
         DidSomething = true;
       }
     };
-    for (auto &e_elt : ListGen) {
+    auto f_insert=[&](PairElt<T> const& e_elt) -> void {
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
         generator_upgrade(e_elt);
@@ -554,7 +569,14 @@ public:
           generator_upgrade(stab_elt);
         }
       }
+    };
+    for (auto &e_elt : ListGen) {
+      f_insert(e_elt);
+      PairElt<T> f_elt = InversePair(e_elt);
+      f_insert(f_elt);
     }
+    for (auto & e_elt : GetMissingInverseElement())
+      f_insert(e_elt);
     print_statistics(std::cerr);
     return DidSomething;
   }
@@ -672,6 +694,18 @@ public:
     }
     return MatchVector;
   }
+  std::vector<PairElt<T>> GetMissingInverseElement() const {
+    std::vector<int> V = ComputeMatchingVector();
+    std::vector<PairElt<T>> ListMiss;
+    int n_mat = ListNeighborData.size();
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      if (V[i_mat] == -1) {
+        PairElt<T> Q = InversePair(GetElement(ListNeighborData[i_mat]));
+        ListMiss.push_back(Q);
+      }
+    }
+    return ListMiss;
+  }
   // The domain is defined originally as
   // Tr(AX) <= Tr(PAP^T X)
   // which we rewrite
@@ -745,19 +779,21 @@ public:
       }
     }
     std::cerr << "Second part: computing the opposite facets\n";
+    MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
       MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
       MyMatrix<T> cQ = Contragredient(Q);
       MyMatrix<T> EXTimg = dataext.EXT * cQ;
-      ContainerMatrix<T> Cont(EXTimg);
+      MyMatrix<T> EXTimgCan = SmallestCanonicalization(EXTimg);
+      ContainerMatrix<T> Cont(EXTimgCan);
       Face MapFace(n_ext);
       std::vector<size_t> l_idx(n_ext, 0);
       std::map<int, size_t> map_index;
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
           std::optional<size_t> opt = Cont.GetIdx_f([&](int i) -> T {
-            return dataext.EXT(i_ext, i);
+            return EXTcan(i_ext, i);
           });
           if (opt) {
             size_t idx = *opt;
@@ -767,6 +803,10 @@ public:
         }
       }
       if (s_facet.find(MapFace) == s_facet.end()) {
+        std::cerr << "EXTimgCan=\n";
+        WriteMatrix(std::cerr, EXTimgCan);
+        std::cerr << "EXTcan=\n";
+        WriteMatrix(std::cerr, EXTcan);
         std::cerr << "i_mat=" << i_mat << "\n";
         std::vector<int> V = ComputeMatchingVector();
         for (int i_mat=0; i_mat<n_mat; i_mat++) {
