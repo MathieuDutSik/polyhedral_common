@@ -32,6 +32,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
         int eVal = ListIrred[i];
         os << eVal;
       }
+      os << "\n";
       return;
     }
     std::cerr << "Failed to find a matching entry\n";

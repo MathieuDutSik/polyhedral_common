@@ -394,6 +394,20 @@ template <typename T> MyMatrix<T> SmallestCanonicalization(MyMatrix<T> const &M)
   return Mret;
 }
 
+template<typename T>
+MyMatrix<T> AddZeroColumn(MyMatrix<T> const& M)
+{
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> Mret(nbRow,nbCol+1);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    Mret(iRow,0) = 0;
+    for (int iCol=0; iCol<nbCol; iCol++)
+      Mret(iRow,1+iCol) = M(iRow,iCol);
+  }
+  return Mret;
+}
+
 
 /*
   The program works for A3 (where actually we used B3)
@@ -636,6 +650,12 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
+    std::string File1 = "FAC_" + std::to_string(n) + "_" + std::to_string(n_mat);
+    WriteMatrixFile(File1, FAC);
+    //
+    std::string File2 = "FACexp_" + std::to_string(n) + "_" + std::to_string(n_mat);
+    MyMatrix<T> FACexp = AddZeroColumn(FAC);
+    WriteMatrixFile(File2, FACexp);
     //    std::cerr << "FAC=\n";
     //    WriteMatrix(std::cerr, FAC);
     vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
@@ -652,6 +672,7 @@ public:
       if (rnk == n - 1) {
         l_keep.insert(i_coset);
         f_status_keep[i_mat] = 1;
+        std::cerr << " inserting non-redudant i_mat=" << i_mat << "\n";
       }
     }
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
