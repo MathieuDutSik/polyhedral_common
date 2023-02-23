@@ -463,8 +463,18 @@ public:
     }
     os << "\n";
     std::vector<int> V = ComputeMatchingVector();
+    bool HasMissingMatching = false;
     for (size_t i_mat=0; i_mat<V.size(); i_mat++) {
-      os << "i_mat=" << i_mat << " j=" << V[i_mat] << "\n";
+      int val = V[i_mat];
+      os << "i_mat=" << i_mat << " j=" << val << "\n";
+      if (val == -1) {
+        HasMissingMatching = true;
+      }
+    }
+    if (HasMissingMatching) {
+      os << "ERROR: We have some matching missing\n";
+    } else {
+      os << "OK: All facets have matching on the other side\n";
     }
   }
   bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
