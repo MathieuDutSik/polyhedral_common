@@ -780,7 +780,13 @@ public:
     }
     std::cerr << "Second part: computing the opposite facets\n";
     MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
+    std::vector<int> V = ComputeMatchingVector();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      int j_mat = V[i_mat];
+      if (j_mat == -1) {
+        std::cerr << "Found j_mat = -1 which is forbidden\n";
+        throw TerminalException{1};
+      }
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
       MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
       MyMatrix<T> cQ = Contragredient(Q);
@@ -820,6 +826,11 @@ public:
         throw TerminalException{1};
       }
       size_t iFaceOpp = s_facet[MapFace];
+      if (iFaceOpp != j_mat) {
+        std::cerr << "Error at i_mat=" << i_mat << "\n";
+        std::cerr << "iFaceOpp=" << iFaceOpp << " j_mat=" << j_mat << "\n";
+        throw TerminalException{1};
+      }
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
@@ -877,15 +888,21 @@ public:
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_ineq);
         if (opt) {
           MyVector<T> V = *opt;
-          std::cerr << "  SolMatNonNeg V=" << StringVector(V) << "\n";
-          for (int u = 0; u < V.size(); u++) {
-            if (V(u) > 0) {
-              PairElt<T> uElt = GetElement(ListNeighborData[u]);
-              PairElt<T> uEltInv = InversePair(uElt);
-              WorkElt = ProductPair(WorkElt, uEltInv);
-              //              WorkElt = ProductPair(uEltInv, WorkElt);
+          auto f_update=[&]() -> void {
+            // If we take just 1 then we go into infinite loops.
+            for (int u = 0; u < V.size(); u++) {
+              if (V(u) > 0) {
+                PairElt<T> uElt = GetElement(ListNeighborData[u]);
+                PairElt<T> uEltInv = InversePair(uElt);
+                WorkElt = ProductPair(WorkElt, uEltInv);
+                //                WorkElt = ProductPair(uEltInv, WorkElt);
+              }
             }
-          }
+            return;
+            std::cerr << "Failed to find a strictly positive entry\n";
+            throw TerminalException{1};
+          };
+          f_update();
         } else {
           std::cerr << "  SolMatNonNeg : no solution found\n";
           return WorkElt;
