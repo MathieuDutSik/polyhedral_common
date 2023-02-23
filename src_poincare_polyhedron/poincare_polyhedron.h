@@ -656,25 +656,27 @@ public:
     std::string File2 = "FACexp_" + std::to_string(n) + "_" + std::to_string(n_mat);
     MyMatrix<T> FACexp = AddZeroColumn(FAC);
     WriteMatrixFile(File2, FACexp);
-    //    std::cerr << "FAC=\n";
-    //    WriteMatrix(std::cerr, FAC);
-    vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
-    std::cerr << "We have vf\n";
-    DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
-    std::cerr << "RemoveRedundancy : n_ext=" << dataext.EXT.rows() << "\n";
+    //
+    // Doing the redundancy computation
+    //
+    std::cerr << "Before Clarkson computation\n";
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
+    std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+    //
+    // Paperwork
+    //
     Face f_status_keep(n_mat);
     std::set<size_t> l_keep;
-    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      MyMatrix<T> EXT_red = SelectRow(dataext.EXT, dataext.v_red[i_mat]);
+    for (auto& i_mat : ListIrred) {
       std::pair<size_t, size_t> epair = ListNeighborData[i_mat];
       size_t i_coset = epair.first;
-      int rnk = RankMat(EXT_red);
-      if (rnk == n - 1) {
-        l_keep.insert(i_coset);
-        f_status_keep[i_mat] = 1;
-        std::cerr << " inserting non-redudant i_mat=" << i_mat << "\n";
-      }
+      l_keep.insert(i_coset);
+      f_status_keep[i_mat] = 1;
+      std::cerr << " inserting non-redudant i_mat=" << i_mat << "\n";
     }
+    //
+    // Check
+    //
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       std::pair<size_t, size_t> epair = ListNeighborData[i_mat];
       size_t i_coset = epair.first;
