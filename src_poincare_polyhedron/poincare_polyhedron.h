@@ -408,6 +408,15 @@ MyMatrix<T> AddZeroColumn(MyMatrix<T> const& M)
   return Mret;
 }
 
+template<typename T>
+struct DataFAC {
+  int n_mat;
+  MyMatrix<T> FAC;
+  MyVector<T> eVectInt;
+  std::vector<PairElt<T>> ListAdj;
+};
+
+
 
 /*
   The program works for A3 (where actually we used B3)
@@ -648,6 +657,17 @@ public:
       AssignMatrixRow(FAC, i_mat, x_diff);
     }
     return FAC;
+  }
+  DataFAC<T> GetDataCone() const {
+    MyMatrix<T> FAC = GetFAC();
+    int n_mat = FAC.rows();
+    MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FAC);
+    std::vector<PairElt<T>> ListAdj;
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
+      ListAdj.push_back(uElt);
+    }
+    return {n_mat, FAC, eVectInt, ListAdj};
   }
   void RemoveRedundancy(std::string const &eCommand) {
     MyMatrix<T> FAC = GetFAC();
@@ -892,60 +912,75 @@ public:
     }
     return {dataext.EXT, ll_adj};
   }
+  std::optional<PairElt<T>> GetMissing_TypeI(std::string const& input_strategy, DataFAC<T> const& datafac, PairElt<T> const &TestElt) const {
+    std::string strategy = input_strategy;
+    PairElt<T> WorkElt = TestElt;
+    int n_iter = 0;
+    std::cerr << "Beginning of f_insert\n";
+    MyVector<T> curr_x = WorkElt.mat.transpose() * x;
+    T curr_scal = curr_x.dot(datafac.eVectInt);
+    while(true) {
+      std::cerr << "  n_iter=" << n_iter << "\n";
+      MyVector<T> x_ineq = GetIneq(WorkElt);
+      if (IsZeroVector(x_ineq)) {
+        bool test_stab = IsPresentInStabilizer(WorkElt);
+        if (test_stab) {
+          return {};
+        } else {
+          return WorkElt;
+        }
+      }
+      if (strategy == "strategy1") {
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
+        if (opt) {
+          MyVector<T> V = *opt;
+          // If we take just 1 then we go into infinite loops.
+          for (int u = 0; u < V.size(); u++) {
+            if (V(u) > 0) {
+              PairElt<T> uElt = GetElement(ListNeighborData[u]);
+              PairElt<T> uEltInv = InversePair(uElt);
+              WorkElt = ProductPair(WorkElt, uEltInv);
+            }
+          }
+        } else {
+          std::cerr << "  SolMatNonNeg : no solution found\n";
+          return WorkElt;
+        }
+      }
+      if (strategy == "strategy2") {
+        bool DidSomething = false;
+        for (auto & eAdj : datafac.ListAdj) {
+          MyVector<T> test_x = eAdj.mat.transpose() * curr_x;
+          T test_scal = test_x.dot(datafac.eVectInt);
+          if (test_scal < curr_scal) {
+            double curr_scal_d = UniversalScalarConversion<double,T>(curr_scal);
+            double test_scal_d = UniversalScalarConversion<double,T>(test_scal);
+            std::cerr << "Improving scalar product from curr_scal_d=" << curr_scal_d << " to test_scal_d=" << test_scal_d << "\n";
+            curr_x = test_x;
+            curr_scal = test_scal;
+            DidSomething = true;
+          }
+        }
+        if (!DidSomething) {
+          strategy = "strategy1";
+        }
+      }
+      n_iter++;
+    }
+  }
   std::vector<PairElt<T>>
-  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) {
+  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) const {
     std::cerr << "Beginning of GenerateTypeIneighbors\n";
     int n_mat = ListNeighborX.size();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MyVector<T> u = ListNeighborX[i_mat];
       std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
     }
-    MyMatrix<T> FAC = GetFAC();
-    std::cerr << "FAC=\n";
-    WriteMatrix(std::cerr, FAC);
-    auto f_insert = [&](PairElt<T> const &TestElt) -> std::optional<PairElt<T>> {
-      PairElt<T> WorkElt = TestElt;
-      int n_iter = 0;
-      std::cerr << "Beginning of f_insert\n";
-      while(true) {
-        std::cerr << "  n_iter=" << n_iter << "\n";
-        MyVector<T> x_ineq = GetIneq(WorkElt);
-        if (IsZeroVector(x_ineq)) {
-          bool test_stab = IsPresentInStabilizer(WorkElt);
-          if (test_stab) {
-            return {};
-          } else {
-            return WorkElt;
-          }
-        }
-        std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, x_ineq);
-        if (opt) {
-          MyVector<T> V = *opt;
-          auto f_update=[&]() -> void {
-            // If we take just 1 then we go into infinite loops.
-            for (int u = 0; u < V.size(); u++) {
-              if (V(u) > 0) {
-                PairElt<T> uElt = GetElement(ListNeighborData[u]);
-                PairElt<T> uEltInv = InversePair(uElt);
-                WorkElt = ProductPair(WorkElt, uEltInv);
-                //                WorkElt = ProductPair(uEltInv, WorkElt);
-              }
-            }
-            return;
-            std::cerr << "Failed to find a strictly positive entry\n";
-            throw TerminalException{1};
-          };
-          f_update();
-        } else {
-          std::cerr << "  SolMatNonNeg : no solution found\n";
-          return WorkElt;
-        }
-        n_iter++;
-      }
-    };
+    std::string input_strategy = "strategy2";
+    DataFAC<T> datafac = GetDataCone();
     std::vector<PairElt<T>> ListMiss;
     for (auto &e_elt : l_elt) {
-      std::optional<PairElt<T>> opt = f_insert(e_elt);
+      std::optional<PairElt<T>> opt = GetMissing_TypeI(input_strategy, datafac, e_elt);
       if (opt) {
         PairElt<T> const& RedElt = *opt;
         ListMiss.push_back(RedElt);
