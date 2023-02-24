@@ -918,14 +918,19 @@ public:
     std::cerr << "Beginning of f_insert\n";
     MyVector<T> curr_x = WorkElt.mat.transpose() * x;
     T curr_scal = curr_x.dot(datafac.eVectInt);
+    T target_scal = x.dot(datafac.eVectInt);
+    double target_scal_d = UniversalScalarConversion<double,T>(target_scal);
+    std::cerr << "target_scal=" << target_scal_d << "\n";
     while(true) {
       std::cerr << "  n_iter=" << n_iter << "\n";
       MyVector<T> x_ineq = GetIneq(WorkElt);
       if (IsZeroVector(x_ineq)) {
         bool test_stab = IsPresentInStabilizer(WorkElt);
         if (test_stab) {
+          std::cerr << "It is already in stabilizer so nothing to be done\n";
           return {};
         } else {
+          std::cerr << "It stabilizes but is not already known so interesting by itself\n";
           return WorkElt;
         }
       }
@@ -957,12 +962,18 @@ public:
             std::cerr << "Improving scalar product from curr_scal_d=" << curr_scal_d << " to test_scal_d=" << test_scal_d << "\n";
             curr_x = test_x;
             curr_scal = test_scal;
+            WorkElt = ProductPair(WorkElt, eAdj);
             DidSomething = true;
           }
         }
         if (!DidSomething) {
           std::cerr << "Switching to strategy1\n";
           strategy = "strategy1";
+        } else {
+          if (curr_scal < target_scal) {
+            std::cerr << "The decreasing process has found some contradiction\n";
+            return WorkElt;
+          }
         }
       }
       n_iter++;
@@ -985,16 +996,20 @@ public:
       std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
     }
     DataFAC<T> datafac = GetDataCone();
-    std::vector<PairElt<T>> ListMiss;
+    std::unordered_set<PairElt<T>> SetMiss;
     int n_done = 0;
     for (auto &e_elt : l_elt) {
-      std::cerr << "n_done=" << n_done << " |ListMiss|=" << ListMiss.size() << "\n";
+      std::cerr << "n_done=" << n_done << " |SetMiss|=" << SetMiss.size() << "\n";
       std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, e_elt, max_iter);
       if (opt) {
         PairElt<T> const& RedElt = *opt;
-        ListMiss.push_back(RedElt);
+        SetMiss.insert(RedElt);
       }
       n_done++;
+    }
+    std::vector<PairElt<T>> ListMiss;
+    for (auto & ePair : SetMiss) {
+      ListMiss.push_back(ePair);
     }
     return ListMiss;
   }
