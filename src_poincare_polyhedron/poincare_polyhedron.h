@@ -702,7 +702,6 @@ public:
       size_t i_coset = epair.first;
       l_keep.insert(i_coset);
       f_status_keep[i_mat] = 1;
-      std::cerr << " inserting non-redudant i_mat=" << i_mat << "\n";
     }
     //
     // Check
@@ -1132,6 +1131,7 @@ std::optional<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {
 
 struct RecOption {
   std::string eCommand;
+  std::string FileAdditional;
   std::string FileI;
   std::string FileO;
   std::string Arithmetic;
@@ -1148,6 +1148,14 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   StepEnum<T> se(dp.x);
   se.InsertGenerators(dp.ListGroupElt);
   se.RemoveRedundancy(eCommand);
+  std::string FileAdditional = rec_option.FileAdditional;
+  std::cerr << "FileAdditional=" << FileAdditional << "\n";
+  if (FileAdditional == "unset") {
+    DataPoincare<T> dpAddi = ReadDataPoincare<T>(FileAdditional, 0);
+    std::cerr << "We have dpAddi\n";
+    std::vector<PairElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt);
+    std::cerr << "Additional |ListMiss|=" << ListMiss.size() << "\n";
+  }
   bool DidSomething = false;
   auto insert_block = [&](std::vector<PairElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
@@ -1217,6 +1225,8 @@ The maximum number of iteration. If negative then infinite";
 The number of iteration to expand the initial set of group elements";
   ListStringValues_doc["eCommand"] = "eCommand: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
+  ListStringValues_doc["FileAdditional"] = "Default: unset\n\
+Some additional elements to test";
   ListStringValues_doc["FileI"] = "The input file of the computation";
   ListStringValues_doc["FileO"] = "The output file of the computation";
   ListStringValues_doc["Arithmetic"] = "Default: rational\n\
@@ -1233,6 +1243,7 @@ Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc
 RecOption ReadInitialData(FullNamelist const &eFull) {
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
+  std::string FileAdditional = BlockPROC.ListStringValues.at("FileAdditional");
   std::string FileI = BlockPROC.ListStringValues.at("FileI");
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
   std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
@@ -1240,7 +1251,7 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   int n_expand = BlockPROC.ListIntValues.at("n_expand");
   bool ComputeStabilizerPermutation = BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation = BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
-  return {eCommand, FileI, FileO, Arithmetic, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
+  return {eCommand, FileAdditional, FileI, FileO, Arithmetic, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
 }
 
 template <typename T>
