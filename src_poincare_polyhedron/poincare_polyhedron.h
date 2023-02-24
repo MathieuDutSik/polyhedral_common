@@ -911,8 +911,8 @@ public:
     }
     return {dataext.EXT, ll_adj};
   }
-  std::optional<PairElt<T>> GetMissing_TypeI(std::string const& input_strategy, DataFAC<T> const& datafac, PairElt<T> const &TestElt) const {
-    std::string strategy = input_strategy;
+  std::optional<PairElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, PairElt<T> const &TestElt, int const& max_iter) const {
+    std::string strategy = "strategy2";;
     PairElt<T> WorkElt = TestElt;
     int n_iter = 0;
     std::cerr << "Beginning of f_insert\n";
@@ -961,29 +961,40 @@ public:
           }
         }
         if (!DidSomething) {
+          std::cerr << "Switching to strategy1\n";
           strategy = "strategy1";
         }
       }
       n_iter++;
+      std::cerr << "max_iter=" << max_iter << "\n";
+      if (max_iter > 0) {
+        std::cerr << "Going to iteration termination check\n";
+        if (max_iter < n_iter) {
+          std::cerr << "Exiting the enumeration\n";
+          return {};
+        }
+      }
     }
   }
   std::vector<PairElt<T>>
-  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt) const {
+  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt, int const& max_iter) const {
     std::cerr << "Beginning of GenerateTypeIneighbors\n";
     int n_mat = ListNeighborX.size();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MyVector<T> u = ListNeighborX[i_mat];
       std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
     }
-    std::string input_strategy = "strategy2";
     DataFAC<T> datafac = GetDataCone();
     std::vector<PairElt<T>> ListMiss;
+    int n_done = 0;
     for (auto &e_elt : l_elt) {
-      std::optional<PairElt<T>> opt = GetMissing_TypeI(input_strategy, datafac, e_elt);
+      std::cerr << "n_done=" << n_done << " |ListMiss|=" << ListMiss.size() << "\n";
+      std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, e_elt, max_iter);
       if (opt) {
         PairElt<T> const& RedElt = *opt;
         ListMiss.push_back(RedElt);
       }
+      n_done++;
     }
     return ListMiss;
   }
@@ -1150,10 +1161,10 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   se.RemoveRedundancy(eCommand);
   std::string FileAdditional = rec_option.FileAdditional;
   std::cerr << "FileAdditional=" << FileAdditional << "\n";
-  if (FileAdditional == "unset") {
+  if (FileAdditional != "unset") {
     DataPoincare<T> dpAddi = ReadDataPoincare<T>(FileAdditional, 0);
     std::cerr << "We have dpAddi\n";
-    std::vector<PairElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt);
+    std::vector<PairElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt, 10);
     std::cerr << "Additional |ListMiss|=" << ListMiss.size() << "\n";
   }
   bool DidSomething = false;
@@ -1182,7 +1193,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
     if (!DidSomething) {
       std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
       std::vector<PairElt<T>> ListMissI =
-        se.GenerateTypeIneighbors(dp.ListGroupElt);
+        se.GenerateTypeIneighbors(dp.ListGroupElt, 0);
       std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
       insert_block(ListMissI);
     }
