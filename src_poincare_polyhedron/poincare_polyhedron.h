@@ -109,7 +109,8 @@ T NormPairElt(PairElt<T> const& e_elt) {
       T delta=0;
       if (i == j)
         delta = 1;
-      val += T_abs(e_elt.mat(i,j) - delta);
+      T u = e_elt.mat(i,j) - delta;
+      val += T_abs(u);
     }
   }
   return val;
@@ -1032,7 +1033,7 @@ public:
     }
     return ListMiss;
   }
-  bool InsertAndCheckRedundancy(std::vector<PairElt<T>> const& l_elt_pre) {
+  void InsertAndCheckRedundancy(std::vector<PairElt<T>> const& l_elt_pre) {
     std::vector<PairElt<T>> l_elt = l_elt_pre;
     std::sort(l_elt.begin(), l_elt.end(), [](PairElt<T> const& x, PairElt<T> const& y) -> bool {
       T norm_x = NormPairElt(x);
@@ -1045,7 +1046,7 @@ public:
     });
     int n_elt = l_elt.size();
     for (int i_elt=0; i_elt<n_elt; i_elt++) {
-      double norm = UniversalScalarConversion<double,T>(l_elt[i_elt]);
+      double norm = UniversalScalarConversion<double,T>(NormPairElt(l_elt[i_elt]));
       std::cerr << "i_elt=" << i_elt << " norm=" << norm << "\n";
     }
     DataFAC<T> datafac;
@@ -1060,7 +1061,7 @@ public:
     };
     for (auto & e_elt : l_elt) {
       PairElt<T> e_eltInv = InversePair(e_elt);
-      std::vector<T> e_pair{e_elt,e_eltInv};
+      std::vector<PairElt<T>> e_pair{e_elt,e_eltInv};
       if (datafac.eVectInt) {
         std::vector<PairElt<T>> n_pair;
         for (auto & TestElt : e_pair) {
@@ -1234,6 +1235,8 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
                                         RecOption const &rec_option) {
   std::string eCommand = rec_option.eCommand;
   StepEnum<T> se(dp.x);
+  se.InsertAndCheckRedundancy(dp.ListGroupElt);
+  /*
   se.InsertGenerators(dp.ListGroupElt);
   se.RemoveRedundancy();
   std::string FileAdditional = rec_option.FileAdditional;
@@ -1244,6 +1247,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
     std::vector<PairElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt, 10);
     std::cerr << "Additional |ListMiss|=" << ListMiss.size() << "\n";
   }
+  */
   bool DidSomething = false;
   auto insert_block = [&](std::vector<PairElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
