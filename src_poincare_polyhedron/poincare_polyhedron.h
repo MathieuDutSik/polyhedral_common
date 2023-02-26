@@ -100,6 +100,21 @@ template <typename T> struct hash<PairElt<T>> {
 };
 } // namespace std
 
+template<typename T>
+T NormPairElt(PairElt<T> const& e_elt) {
+  T val = 0;
+  int n = e_elt.mat.rows();
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      T delta=0;
+      if (i == j)
+        delta = 1;
+      val += T_abs(e_elt.mat(i,j) - delta);
+    }
+  }
+  return val;
+}
+
 //
 // Second part, the finite group
 //
@@ -411,12 +426,11 @@ MyMatrix<T> AddZeroColumn(MyMatrix<T> const& M)
 template<typename T>
 struct DataFAC {
   int n_mat;
+  int rnk;
   MyMatrix<T> FAC;
-  MyVector<T> eVectInt;
+  std::optional<MyVector<T>> eVectInt;
   std::vector<PairElt<T>> ListAdj;
 };
-
-
 
 /*
   The program works for A3 (where actually we used B3)
@@ -455,6 +469,7 @@ public:
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
+  std::optional<MyVector<T>> eVectInt;
   void print_statistics(std::ostream& os) const {
     os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
     os << "|ListNeighborCoset|=" << ListNeighborCoset.size() << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
@@ -661,15 +676,19 @@ public:
   DataFAC<T> GetDataCone() const {
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
-    MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FAC);
+    int rnk = RankMat(FAC);
+    std::optional<MyVector<T>> eVectInt;
+    if (rnk == FAC.cols()) {
+      eVectInt = GetSpaceInteriorPoint_Basic(FAC);
+    }
     std::vector<PairElt<T>> ListAdj;
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
       ListAdj.push_back(uElt);
     }
-    return {n_mat, FAC, eVectInt, ListAdj};
+    return {n_mat, rnk, FAC, eVectInt, ListAdj};
   }
-  void RemoveRedundancy(std::string const &eCommand) {
+  void RemoveRedundancy() {
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
     int n_mat = FAC.rows();
@@ -917,8 +936,8 @@ public:
     int n_iter = 0;
     std::cerr << "Beginning of f_insert\n";
     MyVector<T> curr_x = WorkElt.mat.transpose() * x;
-    T curr_scal = curr_x.dot(datafac.eVectInt);
-    T target_scal = x.dot(datafac.eVectInt);
+    T curr_scal = curr_x.dot(*datafac.eVectInt);
+    T target_scal = x.dot(*datafac.eVectInt);
     double target_scal_d = UniversalScalarConversion<double,T>(target_scal);
     std::cerr << "target_scal=" << target_scal_d << "\n";
     while(true) {
@@ -955,7 +974,7 @@ public:
         bool DidSomething = false;
         for (auto & eAdj : datafac.ListAdj) {
           MyVector<T> test_x = eAdj.mat.transpose() * curr_x;
-          T test_scal = test_x.dot(datafac.eVectInt);
+          T test_scal = test_x.dot(*datafac.eVectInt);
           if (test_scal < curr_scal) {
             double curr_scal_d = UniversalScalarConversion<double,T>(curr_scal);
             double test_scal_d = UniversalScalarConversion<double,T>(test_scal);
@@ -1012,6 +1031,49 @@ public:
       ListMiss.push_back(ePair);
     }
     return ListMiss;
+  }
+  bool InsertAndCheckRedundancy(std::vector<PairElt<T>> const& l_elt_pre) {
+    std::vector<PairElt<T>> l_elt = l_elt_pre;
+    std::sort(l_elt.begin(), l_elt.end(), [](PairElt<T> const& x, PairElt<T> const& y) -> bool {
+      T norm_x = NormPairElt(x);
+      T norm_y = NormPairElt(y);
+      if (norm_x < norm_y)
+        return true;
+      if (norm_x > norm_y)
+        return false;
+      return x.mat < y.mat;
+    });
+    int n_elt = l_elt.size();
+    for (int i_elt=0; i_elt<n_elt; i_elt++) {
+      double norm = UniversalScalarConversion<double,T>(l_elt[i_elt]);
+      std::cerr << "i_elt=" << i_elt << " norm=" << norm << "\n";
+    }
+    DataFAC<T> datafac;
+    auto insert_generator=[&](std::vector<PairElt<T>> const f_list) -> void {
+      bool test = InsertGenerators(f_list);
+      if (test) {
+        datafac = GetDataCone();
+      }
+      if (test && datafac.eVectInt) {
+        RemoveRedundancy();
+      }
+    };
+    for (auto & e_elt : l_elt) {
+      PairElt<T> e_eltInv = InversePair(e_elt);
+      std::vector<T> e_pair{e_elt,e_eltInv};
+      if (datafac.eVectInt) {
+        std::vector<PairElt<T>> n_pair;
+        for (auto & TestElt : e_pair) {
+          std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0);
+          if (opt) {
+            n_pair.push_back(*opt);
+          }
+        }
+        insert_generator(e_pair);
+      } else {
+        insert_generator(e_pair);
+      }
+    }
   }
   bool TestIntersection(MyMatrix<T> const &FAC, PairElt<T> const &eElt) {
     MyMatrix<T> FACimg = FAC * eElt.mat;
@@ -1173,7 +1235,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   std::string eCommand = rec_option.eCommand;
   StepEnum<T> se(dp.x);
   se.InsertGenerators(dp.ListGroupElt);
-  se.RemoveRedundancy(eCommand);
+  se.RemoveRedundancy();
   std::string FileAdditional = rec_option.FileAdditional;
   std::cerr << "FileAdditional=" << FileAdditional << "\n";
   if (FileAdditional != "unset") {
@@ -1187,7 +1249,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
     if (ListMiss.size() > 0) {
       bool test = se.InsertGenerators(ListMiss);
       if (test) {
-        se.RemoveRedundancy(eCommand);
+        se.RemoveRedundancy();
         DidSomething = true;
       }
     }
