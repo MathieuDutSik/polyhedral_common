@@ -471,6 +471,7 @@ public:
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   std::optional<MyVector<T>> eVectInt;
+  std::unordered_set<PairElt<T>> known_redundant;
   void print_statistics(std::ostream& os) const {
     os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
     os << "|ListNeighborCoset|=" << ListNeighborCoset.size() << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
@@ -491,7 +492,7 @@ public:
     bool HasMissingMatching = false;
     for (size_t i_mat=0; i_mat<V.size(); i_mat++) {
       int val = V[i_mat];
-      os << "i_mat=" << i_mat << " j=" << val << "\n";
+      //      os << "i_mat=" << i_mat << " j=" << val << "\n";
       if (val == -1) {
         HasMissingMatching = true;
       }
@@ -598,6 +599,8 @@ public:
       }
     };
     auto f_insert=[&](PairElt<T> const& e_elt) -> void {
+      if (known_redundant.count(e_elt) == 1)
+        return;
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
         generator_upgrade(e_elt);
@@ -722,6 +725,15 @@ public:
       size_t i_coset = epair.first;
       l_keep.insert(i_coset);
       f_status_keep[i_mat] = 1;
+    }
+    //
+    // Updating the list of known redundants
+    //
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      if (f_status_keep[i_mat] == 0) {
+        PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
+        known_redundant.insert(uElt);
+      }
     }
     //
     // Check
@@ -972,7 +984,11 @@ public:
         }
       }
       if (strategy == "strategy2") {
-        bool DidSomething = false;
+        int n_oper = 0;
+        if (curr_scal < target_scal) {
+          std::cerr << "The decreasing process has found some contradiction\n";
+          return WorkElt;
+        }
         for (auto & eAdj : datafac.ListAdj) {
           MyVector<T> test_x = eAdj.mat.transpose() * curr_x;
           T test_scal = test_x.dot(*datafac.eVectInt);
@@ -983,17 +999,16 @@ public:
             curr_x = test_x;
             curr_scal = test_scal;
             WorkElt = ProductPair(WorkElt, eAdj);
-            DidSomething = true;
+            n_oper++;
+            if (curr_scal < target_scal) {
+              std::cerr << "The decreasing process has found some contradiction\n";
+              return WorkElt;
+            }
           }
         }
-        if (!DidSomething) {
+        if (n_oper == 0) {
           std::cerr << "Switching to strategy1\n";
           strategy = "strategy1";
-        } else {
-          if (curr_scal < target_scal) {
-            std::cerr << "The decreasing process has found some contradiction\n";
-            return WorkElt;
-          }
         }
       }
       n_iter++;
@@ -1059,7 +1074,10 @@ public:
         RemoveRedundancy();
       }
     };
+    int pos = 0;
     for (auto & e_elt : l_elt) {
+      std::cerr << "       pos = " << pos << "\n";
+      std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       PairElt<T> e_eltInv = InversePair(e_elt);
       std::vector<PairElt<T>> e_pair{e_elt,e_eltInv};
       if (datafac.eVectInt) {
@@ -1070,10 +1088,12 @@ public:
             n_pair.push_back(*opt);
           }
         }
-        insert_generator(e_pair);
+        std::cerr << "|n_pair|=" << n_pair.size() << "\n";
+        insert_generator(n_pair);
       } else {
         insert_generator(e_pair);
       }
+      pos++;
     }
   }
   bool TestIntersection(MyMatrix<T> const &FAC, PairElt<T> const &eElt) {
