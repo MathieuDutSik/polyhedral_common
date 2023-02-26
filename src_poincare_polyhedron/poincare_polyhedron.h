@@ -1051,6 +1051,7 @@ public:
   }
   void InsertAndCheckRedundancy(std::vector<PairElt<T>> const& l_elt_pre) {
     std::vector<PairElt<T>> l_elt = l_elt_pre;
+    std::cerr << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(), [](PairElt<T> const& x, PairElt<T> const& y) -> bool {
       T norm_x = NormPairElt(x);
       T norm_y = NormPairElt(y);
