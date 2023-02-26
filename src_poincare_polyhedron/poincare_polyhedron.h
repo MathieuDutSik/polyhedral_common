@@ -521,10 +521,14 @@ public:
     return true;
   }
   PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
+    std::cerr << "Beginning of GetElement\n";
     size_t i_coset = val.first;
     size_t i_elt = val.second;
+    std::cerr << "i_coset=" << i_coset << " i_elt=" << i_elt << "\n";
     PairElt<T> prod = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+    std::cerr << "We have prod\n";
     PairElt<T> eInv = InversePair(stabilizerElt[i_elt]);
+    std::cerr << "We have eInv\n";
     return ProductPair(eInv, prod);
   }
   void InsertCoset(PairElt<T> const &eCoset) {
@@ -873,6 +877,7 @@ public:
         std::cerr << "Found j_mat = -1 which is forbidden\n";
         throw TerminalException{1};
       }
+      size_t j_mat_s = j_mat;
       size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
       MyMatrix<T> Q = GetElement(ListNeighborData[i_mat]).mat;
       MyMatrix<T> cQ = Contragredient(Q);
@@ -912,7 +917,7 @@ public:
         throw TerminalException{1};
       }
       size_t iFaceOpp = s_facet[MapFace];
-      if (iFaceOpp != j_mat) {
+      if (iFaceOpp != j_mat_s) {
         std::cerr << "Error at i_mat=" << i_mat << "\n";
         std::cerr << "iFaceOpp=" << iFaceOpp << " j_mat=" << j_mat << "\n";
         throw TerminalException{1};
@@ -975,7 +980,9 @@ public:
           // If we take just 1 then we go into infinite loops.
           for (int u = 0; u < V.size(); u++) {
             if (V(u) > 0) {
+              std::cerr << "u=" << u << " V(u)=" << V(u) << "\n";
               PairElt<T> uElt = GetElement(ListNeighborData[u]);
+              std::cerr << "After GetElement\n";
               PairElt<T> uEltInv = InversePair(uElt);
               WorkElt = ProductPair(WorkElt, uEltInv);
             }
