@@ -489,16 +489,16 @@ public:
     }
     os << "\n";
     std::vector<int> V = ComputeMatchingVector();
-    bool HasMissingMatching = false;
+    int n_missing = 0;
     for (size_t i_mat=0; i_mat<V.size(); i_mat++) {
       int val = V[i_mat];
       //      os << "i_mat=" << i_mat << " j=" << val << "\n";
       if (val == -1) {
-        HasMissingMatching = true;
+        n_missing++;
       }
     }
-    if (HasMissingMatching) {
-      os << "ERROR: We have some matching missing\n";
+    if (n_missing > 0) {
+      os << "ERROR: We have some matching missing n_missing=" << n_missing << "\n";
     } else {
       os << "OK: All facets have matching on the other side\n";
     }
@@ -599,8 +599,10 @@ public:
       }
     };
     auto f_insert=[&](PairElt<T> const& e_elt) -> void {
-      if (known_redundant.count(e_elt) == 1)
+      if (known_redundant.count(e_elt) == 1) {
+        std::cerr << "Exiting f_insert because the element is already known to be redundant\n";
         return;
+      }
       MyVector<T> x_img = e_elt.mat.transpose() * x;
       if (x_img == x) {
         generator_upgrade(e_elt);
@@ -622,12 +624,7 @@ public:
         }
       }
     };
-    for (auto &e_elt : ListGen) {
-      f_insert(e_elt);
-      PairElt<T> f_elt = InversePair(e_elt);
-      f_insert(f_elt);
-    }
-    for (auto & e_elt : GetMissingInverseElement())
+    for (auto &e_elt : ListGen)
       f_insert(e_elt);
     print_statistics(std::cerr);
     return DidSomething;
@@ -703,12 +700,13 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
+    MyMatrix<T> FACexp = AddZeroColumn(FAC);
+    /*
     std::string File1 = "FAC_" + std::to_string(n) + "_" + std::to_string(n_mat);
     WriteMatrixFile(File1, FAC);
-    //
     std::string File2 = "FACexp_" + std::to_string(n) + "_" + std::to_string(n_mat);
-    MyMatrix<T> FACexp = AddZeroColumn(FAC);
     WriteMatrixFile(File2, FACexp);
+    */
     //
     // Doing the redundancy computation
     //
@@ -729,10 +727,12 @@ public:
     //
     // Updating the list of known redundants
     //
+    int n_remove = 0;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       if (f_status_keep[i_mat] == 0) {
         PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
         known_redundant.insert(uElt);
+        n_remove++;
       }
     }
     //
@@ -746,13 +746,15 @@ public:
         throw TerminalException{1};
       }
     }
-    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << "\n";
-    std::vector<PairElt<T>> ListNeighborCosetRed;
-    for (auto &i_coset : l_keep) {
-      ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
+    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << " n_remove=" << n_remove << "\n";
+    if (n_remove > 0) {
+      std::vector<PairElt<T>> ListNeighborCosetRed;
+      for (auto &i_coset : l_keep) {
+        ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
+      }
+      ComputeCosets(ListNeighborCosetRed);
+      print_statistics(std::cerr);
     }
-    ComputeCosets(ListNeighborCosetRed);
-    print_statistics(std::cerr);
   }
   // For a facet of the cone, there should be a matching element in the adjacent
   // facet.
@@ -995,28 +997,27 @@ public:
           if (test_scal < curr_scal) {
             double curr_scal_d = UniversalScalarConversion<double,T>(curr_scal);
             double test_scal_d = UniversalScalarConversion<double,T>(test_scal);
-            std::cerr << "Improving scalar product from curr_scal_d=" << curr_scal_d << " to test_scal_d=" << test_scal_d << "\n";
+            std::cerr << "    Improving scalar product from curr_scal_d=" << curr_scal_d << " to test_scal_d=" << test_scal_d << "\n";
             curr_x = test_x;
             curr_scal = test_scal;
             WorkElt = ProductPair(WorkElt, eAdj);
             n_oper++;
             if (curr_scal < target_scal) {
-              std::cerr << "The decreasing process has found some contradiction\n";
+              std::cerr << "    The decreasing process has found some contradiction\n";
               return WorkElt;
             }
           }
         }
         if (n_oper == 0) {
-          std::cerr << "Switching to strategy1\n";
+          std::cerr << "  Switching to strategy1\n";
           strategy = "strategy1";
         }
       }
       n_iter++;
-      std::cerr << "max_iter=" << max_iter << "\n";
       if (max_iter > 0) {
-        std::cerr << "Going to iteration termination check\n";
+        std::cerr << "    Going to iteration termination check\n";
         if (max_iter < n_iter) {
-          std::cerr << "Exiting the enumeration\n";
+          std::cerr << "    Exiting the enumeration\n";
           return {};
         }
       }
