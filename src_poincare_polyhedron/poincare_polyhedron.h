@@ -521,14 +521,14 @@ public:
     return true;
   }
   PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
-    std::cerr << "Beginning of GetElement\n";
     size_t i_coset = val.first;
     size_t i_elt = val.second;
-    std::cerr << "i_coset=" << i_coset << " i_elt=" << i_elt << "\n";
+    if (i_coset > ListNeighborCoset.size()) {
+      std::cerr << "Accessing something over the index\n";
+      throw TerminalException{1};
+    }
     PairElt<T> prod = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
-    std::cerr << "We have prod\n";
     PairElt<T> eInv = InversePair(stabilizerElt[i_elt]);
-    std::cerr << "We have eInv\n";
     return ProductPair(eInv, prod);
   }
   void InsertCoset(PairElt<T> const &eCoset) {
@@ -693,7 +693,7 @@ public:
     }
     return {n_mat, rnk, FAC, eVectInt, ListAdj};
   }
-  void RemoveRedundancy() {
+  int RemoveRedundancy() {
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
     int n_mat = FAC.rows();
@@ -759,6 +759,7 @@ public:
       ComputeCosets(ListNeighborCosetRed);
       print_statistics(std::cerr);
     }
+    return n_remove;
   }
   // For a facet of the cone, there should be a matching element in the adjacent
   // facet.
@@ -980,9 +981,7 @@ public:
           // If we take just 1 then we go into infinite loops.
           for (int u = 0; u < V.size(); u++) {
             if (V(u) > 0) {
-              std::cerr << "u=" << u << " V(u)=" << V(u) << "\n";
               PairElt<T> uElt = GetElement(ListNeighborData[u]);
-              std::cerr << "After GetElement\n";
               PairElt<T> uEltInv = InversePair(uElt);
               WorkElt = ProductPair(WorkElt, uEltInv);
             }
@@ -1077,10 +1076,17 @@ public:
     auto insert_generator=[&](std::vector<PairElt<T>> const f_list) -> void {
       bool test = InsertGenerators(f_list);
       if (test) {
+        std::cerr << "Before GetDataCone 1\n";
         datafac = GetDataCone();
+        std::cerr << "After GetDataCone 1\n";
       }
       if (test && datafac.eVectInt) {
-        RemoveRedundancy();
+        int n_remove = RemoveRedundancy();
+        if (n_remove > 0) {
+          std::cerr << "Before GetDataCone 2\n";
+          datafac = GetDataCone();
+          std::cerr << "After GetDataCone 2\n";
+        }
       }
     };
     int pos = 0;
