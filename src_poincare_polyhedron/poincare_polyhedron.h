@@ -785,14 +785,48 @@ public:
     }
     return MatchVector;
   }
-  std::vector<PairElt<T>> GetMissingInverseElement() const {
+  // Find attemps missing elements
+  //
+  // Inequalities is
+  // x.a <= x.aw
+  // Inequality is f_w(x) = x.aw - x.a
+  // If there are redundancy for w^(-1) then we can write
+  // f_{w^(-1)}(x) = a_1 f_w1(x) + .... + a_N f_wN(x)   with a_j >= 0
+  // The transformation rule that we have is
+  // x.a = xc(w).aw  with c(w) = (w^(-1))^T
+  // Expanding this gets us
+  // x.aw^(-1) - x.a = sum a_j (x.aw_i - x.a)
+  // xc(w).a - xc(w).aw = sum a_j (xc(w).aw_iw - xc(w).aw)
+  // So maybe inserting the w_i w is a good idea.
+  std::vector<PairElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac) const {
     std::vector<int> V = ComputeMatchingVector();
     std::vector<PairElt<T>> ListMiss;
     int n_mat = ListNeighborData.size();
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       if (V[i_mat] == -1) {
-        PairElt<T> Q = InversePair(GetElement(ListNeighborData[i_mat]));
-        ListMiss.push_back(Q);
+        PairElt<T> w = GetElement(ListNeighborData[i_mat]);
+        PairElt<T> wInv = InversePair(w);
+        MyVector<T> x_ineq = GetIneq(wInv);
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
+        if (opt) {
+          MyVector<T> const& W = *opt;
+          int n_expr = 0;
+          std::cerr << "LCoeff =";
+          for (int j_mat=0; j_mat<n_mat; j_mat++) {
+            if (W(j_mat) > 0) {
+              std::cerr << " " << W(j_mat);
+              PairElt<T> w_i = GetElement(ListNeighborData[i_mat]);
+              PairElt<T> prod = ProductPair(w_i, w);
+              ListMiss.push_back(prod);
+              n_expr += 1;
+            }
+          }
+          std::cerr << "\n";
+          std::cerr << "We have opt n_expr=" << n_expr << "\n";
+        } else {
+          ListMiss.push_back(wInv);
+          std::cerr << "wInv actually define a new inequality\n";
+        }
       }
     }
     return ListMiss;
@@ -1089,9 +1123,29 @@ public:
         }
       }
     };
+    std::unordered_set<PairElt<T>> ListTried;
+    auto f_inverses_clear=[&]() -> void {
+      if (datafac.eVectInt) {
+        while(true) {
+          std::vector<PairElt<T>> ListMiss = GetMissingInverseElement(datafac);
+          std::vector<PairElt<T>> ListMissB;
+          for (auto & eElt : ListMiss) {
+            if (ListTried.count(eElt) == 0) {
+              ListMissB.push_back(eElt);
+              ListTried.insert(eElt);
+            }
+          }
+          std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << "\n";
+          if (ListMissB.size() == 0)
+            break;
+          insert_generator(ListMissB);
+        }
+      }
+    };
     int pos = 0;
     for (auto & e_elt : l_elt) {
       std::cerr << "       pos = " << pos << "\n";
+      f_inverses_clear();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       PairElt<T> e_eltInv = InversePair(e_elt);
       std::vector<PairElt<T>> e_pair{e_elt,e_eltInv};
