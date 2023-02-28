@@ -811,18 +811,17 @@ public:
         if (opt) {
           MyVector<T> const& W = *opt;
           int n_expr = 0;
-          std::cerr << "LCoeff =";
+          T sumCoeff = 0;
           for (int j_mat=0; j_mat<n_mat; j_mat++) {
             if (W(j_mat) > 0) {
-              std::cerr << " " << W(j_mat);
+              sumCoeff += W(j_mat);
               PairElt<T> w_i = GetElement(ListNeighborData[i_mat]);
               PairElt<T> prod = ProductPair(w_i, w);
               ListMiss.push_back(prod);
               n_expr += 1;
             }
           }
-          std::cerr << "\n";
-          std::cerr << "We have opt n_expr=" << n_expr << "\n";
+          std::cerr << "We have opt n_expr=" << n_expr << " sumCoeff=" << sumCoeff << "\n";
         } else {
           ListMiss.push_back(wInv);
           std::cerr << "wInv actually define a new inequality\n";
