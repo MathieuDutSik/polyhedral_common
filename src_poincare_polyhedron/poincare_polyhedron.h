@@ -1100,7 +1100,10 @@ public:
         for (auto & TestElt : e_pair) {
           std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0);
           if (opt) {
-            n_pair.push_back(*opt);
+            PairElt<T> const& uElt1 = *opt;
+            PairElt<T> uElt2 = InversePair(uElt1);
+            n_pair.push_back(uElt1);
+            n_pair.push_back(uElt2);
           }
         }
         std::cerr << "|n_pair|=" << n_pair.size() << "\n";
