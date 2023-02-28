@@ -15,7 +15,7 @@
 // First part, the data set used
 //
 
-// The data structure for keeîng track of the group elements:
+// The data structure for keeping track of the group elements:
 // ---Positive value (so element 0 correspond to 1, X to X+1, ...) are the
 // elements themselves.
 // ---Negative values correspond to their inverse (that is -1 correspond to
