@@ -440,7 +440,7 @@ struct ShortVectorGroup {
   ShortVectorGroup(MyVector<T> const& _x, std::vector<PairElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
   }
 
-  PairElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) {
+  PairElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
     list_active[x] = std::vector<size_t>();
@@ -455,8 +455,8 @@ struct ShortVectorGroup {
       for (auto & kv : list_curr) {
         for (size_t iGen=0; iGen<nGen; iGen++) {
           PairElt<T> const& eGen = ListGen[iGen];
-          MyVector<T> xNew = eGen.mat.transpose() * kv->first;
-          std::vector<size_t> eList = kv->second;
+          MyVector<T> xNew = eGen.mat.transpose() * kv.first;
+          std::vector<size_t> eList = kv.second;
           eList.push_back(iGen);
           T scal = xNew.dot(y);
           if (scal < target_scal) {
@@ -468,7 +468,7 @@ struct ShortVectorGroup {
           }
           if (set_done.count(xNew) == 0) {
             list_active[xNew] = eList;
-            list_done_insert(xNew);
+            set_done.insert(xNew);
           }
         }
       }
@@ -844,7 +844,7 @@ public:
   // x.aw^(-1) - x.a = sum a_j (x.aw_i - x.a)
   // xc(w).a - xc(w).aw = sum a_j (xc(w).aw_iw - xc(w).aw)
   // So maybe inserting the w_i w is a good idea.
-  std::vector<PairElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac) const {
+  std::vector<PairElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
     std::vector<int> V = ComputeMatchingVector();
     std::vector<PairElt<T>> ListMiss;
     int n_mat = ListNeighborData.size();
@@ -855,19 +855,31 @@ public:
         MyVector<T> x_ineq = GetIneq(wInv);
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
         if (opt) {
-          MyVector<T> const& W = *opt;
-          int n_expr = 0;
-          T sumCoeff = 0;
-          for (int j_mat=0; j_mat<n_mat; j_mat++) {
-            if (W(j_mat) > 0) {
-              sumCoeff += W(j_mat);
-              PairElt<T> w_i = GetElement(ListNeighborData[i_mat]);
-              PairElt<T> prod = ProductPair(w_i, w);
-              ListMiss.push_back(prod);
-              n_expr += 1;
+          // The code below is actually not working. It is kept for historical reasons
+          // and because it could be useful later.
+          if (false) {
+            MyVector<T> const& W = *opt;
+            int n_expr = 0;
+            T sumCoeff = 0;
+            for (int j_mat=0; j_mat<n_mat; j_mat++) {
+              if (W(j_mat) > 0) {
+                sumCoeff += W(j_mat);
+                PairElt<T> w_i = GetElement(ListNeighborData[i_mat]);
+                PairElt<T> prod = ProductPair(w_i, w);
+                ListMiss.push_back(prod);
+                n_expr += 1;
+              }
             }
+            std::cerr << "We have opt n_expr=" << n_expr << " sumCoeff=" << sumCoeff << "\n";
           }
-          std::cerr << "We have opt n_expr=" << n_expr << " sumCoeff=" << sumCoeff << "\n";
+          // Finding by nearest group point.
+          Face f(n_mat);
+          f[i_mat] = 1;
+          MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
+          T target_scal = eVectInt.dot(x);
+          PairElt<T> TheNew = svg.GetShortVector(eVectInt, target_scal);
+          ListMiss.push_back(TheNew);
+          std::cerr << "wInv actually define a new inequality\n";
         } else {
           ListMiss.push_back(wInv);
           std::cerr << "wInv actually define a new inequality\n";
@@ -1169,10 +1181,11 @@ public:
       }
     };
     std::unordered_set<PairElt<T>> ListTried;
+    ShortVectorGroup<T> svg(x, l_elt);
     auto f_inverses_clear=[&]() -> void {
       if (datafac.eVectInt) {
         while(true) {
-          std::vector<PairElt<T>> ListMiss = GetMissingInverseElement(datafac);
+          std::vector<PairElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
           std::vector<PairElt<T>> ListMissB;
           for (auto & eElt : ListMiss) {
             if (ListTried.count(eElt) == 0) {

@@ -955,7 +955,7 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 
 template <typename T>
 MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC, MyMatrix<T> const& Equa) {
-  MyMatrix<T> NSP = NullspaceMat(TrasposedMat(Equa));
+  MyMatrix<T> NSP = NullspaceMat(TransposedMat(Equa));
   MyMatrix<T> FACred = FAC * NSP.transpose();
   MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred);
   MyVector<T> TheSol = NSP.transpose() * eVectInt;
@@ -979,6 +979,32 @@ MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC, MyMatrix<T> const& Equ
 #endif
   return TheSol;
 }
+
+template <typename T>
+MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const& f) {
+  int n_row = FAC.rows();
+  int n = FAC.cols();
+  if (n_row != f.size()) {
+    std::cerr << "FAC and f have incoherent lengths\n";
+    throw TerminalException{1};
+  }
+  int cnt = f.count();
+  MyMatrix<T> FACred(n_row - cnt, n);
+  MyMatrix<T> Equa(cnt, n);
+  int pos_fac = 0;
+  int pos_equa = 0;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    if (f[i_row] == 0) {
+      FACred.row(pos_fac) = FAC.row(i_row);
+      pos_fac++;
+    } else {
+      Equa.row(pos_equa) = FAC.row(i_row);
+      pos_equa++;
+    }
+  }
+  return GetSpaceInteriorPoint(FACred, Equa);
+}
+
 
 template <typename T> struct EmbeddedPolytope {
   MyMatrix<T> LinSpace;
