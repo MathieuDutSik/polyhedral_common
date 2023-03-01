@@ -433,6 +433,52 @@ struct DataFAC {
   std::vector<PairElt<T>> ListAdj;
 };
 
+template<typename T>
+struct ShortVectorGroup {
+  MyVector<T> x;
+  std::vector<PairElt<T>> ListGen;
+  ShortVectorGroup(MyVector<T> const& _x, std::vector<PairElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
+  }
+
+  PairElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) {
+    std::unordered_set<MyVector<T>> set_done;
+    std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
+    list_active[x] = std::vector<size_t>();
+    set_done.insert(x);
+    size_t nGen = ListGen.size();
+    int n = y.size();
+    int iter = 0;
+    while (true) {
+      std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
+      std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr = std::move(list_active);
+      std::cerr << "|list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
+      for (auto & kv : list_curr) {
+        for (size_t iGen=0; iGen<nGen; iGen++) {
+          PairElt<T> const& eGen = ListGen[iGen];
+          MyVector<T> xNew = eGen.mat.transpose() * kv->first;
+          std::vector<size_t> eList = kv->second;
+          eList.push_back(iGen);
+          T scal = xNew.dot(y);
+          if (scal < target_scal) {
+            PairElt<T> RetElt = GenerateIdentity<T>(n);
+            for (auto & pos : eList) {
+              RetElt = ProductPair(RetElt, ListGen[pos]);
+            }
+            return RetElt;
+          }
+          if (set_done.count(xNew) == 0) {
+            list_active[xNew] = eList;
+            list_done_insert(xNew);
+          }
+        }
+      }
+      iter += 1;
+    }
+  }
+};
+
+
+
 /*
   The program works for A3 (where actually we used B3)
   But it has some problems for the case of the cocompact group of interest to us.
