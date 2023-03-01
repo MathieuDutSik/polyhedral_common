@@ -881,8 +881,10 @@ public:
           f[i_mat] = 1;
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
           T target_scal = eVectInt.dot(x);
-          PairElt<T> TheNew = svg.GetShortVector(eVectInt, target_scal);
-          ListMiss.push_back(TheNew);
+          PairElt<T> eNew1 = svg.GetShortVector(eVectInt, target_scal);
+          PairElt<T> eNew2 = InversePair(eNew1);
+          ListMiss.push_back(eNew1);
+          ListMiss.push_back(eNew2);
           std::cerr << "wInv actually define a new inequality\n";
         } else {
           ListMiss.push_back(wInv);
