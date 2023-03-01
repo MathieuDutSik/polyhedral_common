@@ -921,7 +921,7 @@ MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
    No group used here nor any equalities.
  */
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
+MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
   int n_rows = FAC.rows();
   int n_cols = FAC.cols();
   MyMatrix<T> ListInequalities = ZeroMatrix<T>(n_rows, n_cols + 1);
@@ -940,6 +940,7 @@ MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
     throw TerminalException{1};
   }
   MyVector<T> eVect = eSol.DirectSolution;
+#ifdef DEBUG_LINEAR_PROGRAM
   MyVector<T> ListScal = FAC * eVect;
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScal(i_row);
@@ -948,7 +949,35 @@ MyMatrix<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
       throw TerminalException{1};
     }
   }
+#endif
   return eVect;
+}
+
+template <typename T>
+MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC, MyMatrix<T> const& Equa) {
+  MyMatrix<T> NSP = NullspaceMat(TrasposedMat(Equa));
+  MyMatrix<T> FACred = FAC * NSP.transpose();
+  MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred);
+  MyVector<T> TheSol = NSP.transpose() * eVectInt;
+#ifdef DEBUG_LINEAR_PROGRAM
+  MyVector<T> ListScal_FAC = FAC * TheSol;
+  for (int i_row = 0; i_row < FAC.rows(); i_row++) {
+    T eScal = ListScal_FAC(i_row);
+    if (eScal <= 0) {
+      std::cerr << "We have eScal=" << eScal << " which should be positive\n";
+      throw TerminalException{1};
+    }
+  }
+  MyVector<T> ListScal_Equa = Equa * TheSol;
+  for (int i_row = 0; i_row < Equa.rows(); i_row++) {
+    T eScal = ListScal_Equa(i_row);
+    if (eScal != 0) {
+      std::cerr << "We have eScal=" << eScal << " which should be zero\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return TheSol;
 }
 
 template <typename T> struct EmbeddedPolytope {
