@@ -441,6 +441,7 @@ struct ShortVectorGroup {
   }
 
   PairElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
+    std::cerr << "Beginning of GetShortVector\n";
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
     list_active[x] = std::vector<size_t>();
@@ -448,6 +449,7 @@ struct ShortVectorGroup {
     size_t nGen = ListGen.size();
     int n = y.size();
     int iter = 0;
+    int n_cons = 0;
     while (true) {
       std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
       std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr = std::move(list_active);
@@ -464,8 +466,10 @@ struct ShortVectorGroup {
             for (auto & pos : eList) {
               RetElt = ProductPair(RetElt, ListGen[pos]);
             }
+            std::cerr << "Exiting GetShortVector after n_cons=" << n_cons << "\n";
             return RetElt;
           }
+          n_cons++;
           if (set_done.count(xNew) == 0) {
             list_active[xNew] = eList;
             set_done.insert(xNew);
