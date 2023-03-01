@@ -984,7 +984,8 @@ template <typename T>
 MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const& f) {
   int n_row = FAC.rows();
   int n = FAC.cols();
-  if (n_row != f.size()) {
+  int n_f = f.size();
+  if (n_row != n_f) {
     std::cerr << "FAC and f have incoherent lengths\n";
     throw TerminalException{1};
   }
