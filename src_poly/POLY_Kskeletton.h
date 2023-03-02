@@ -2,6 +2,11 @@
 #ifndef SRC_POLY_POLY_KSKELETTON_H_
 #define SRC_POLY_POLY_KSKELETTON_H_
 
+
+// clang-format off
+#include "NumberTheory.h"
+#include "NumberTheoryRealField.h"
+#include "QuadField.h"
 #include "GRP_GroupFct.h"
 #include "MAT_Matrix.h"
 #include "Namelist.h"
@@ -13,6 +18,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+// clang-format on
 
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
@@ -618,28 +624,33 @@ void OutputFaces(const std::vector<vectface> &TheOutput,
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, int> ListIntValues1;
-  ListStringValues1["EXTfile"] = "unset.ext";
-  ListStringValues1["FACfile"] = "unset.ext";
-  ListStringValues1["GRPfile"] = "unset.grp";
-  ListStringValues1["OUTfile"] = "unset.out";
-  ListStringValues1["OutFormat"] = "GAP";
-  ListStringValues1["method_spann"] = "unset.out";
-  ListStringValues1["method_final"] = "unset.out";
-  ListIntValues1["LevSearch"] = -1;
-  SingleBlock BlockDATA;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListIntValues = ListIntValues1;
-  ListBlock["PROC"] = BlockDATA;
+  std::map<std::string, std::string> ListStringValues1_doc;
+  std::map<std::string, std::string> ListIntValues1_doc;
+  ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
+The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial ";
+  ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
+  ListStringValues1_doc["GRPfile"] = "The symmetry group used for the computation. It is a permutation group acting on the facets";
+  ListStringValues1_doc["OUTfile"] = "The output file for the computation";
+  ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
+Only GAP so far is provided.";
+  ListStringValues1_doc["method_spann"] = "Default: LinearProgramming\n\
+The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimplicial";
+  ListStringValues1_doc["method_final"] = "Default: all\n\
+Available options are all and stop_nonsimplicial";
+  ListStringValues1_doc["Arithmetic"] = "Default: rational\n\
+Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+  ListIntValues1_doc["LevSearch"] = "Default: -1\n\
+The level of the search. If set to -1 then the full lattice is computed";
+  SingleBlock BlockPROC;
+  BlockPROC.setListIntValues(ListIntValues1_doc);
+  BlockPROC.setListStringValues(ListStringValues1_doc);
+  ListBlock["PROC"] = BlockPROC;
   // Merging all data
   return {std::move(ListBlock), "undefined"};
 }
 
 template <typename T, typename Tgroup>
-void MainFunctionFaceLattice(FullNamelist const &eFull) {
+void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::cerr << "Reading PROC\n";
@@ -701,6 +712,45 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
 }
+
+template <typename Tgroup>
+void MainFunctionFaceLattice(FullNamelist const &eFull) {
+  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
+  std::string arith = BlockPROC.ListStringValues.at("Arithmetic");
+  if (arith == "rational") {
+    using T = mpq_class;
+    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+  }
+  if (arith == "Qsqrt5") {
+    using Trat = mpq_class;
+    using T = QuadField<Trat, 5>;
+    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+  }
+  if (arith == "Qsqrt2") {
+    using Trat = mpq_class;
+    using T = QuadField<Trat, 2>;
+    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+  }
+  std::optional<std::string> opt_realalgebraic =
+      get_postfix(arith, "RealAlgebraic=");
+  if (opt_realalgebraic) {
+    std::string const &FileAlgebraicField = *opt_realalgebraic;
+    if (!IsExistingFile(FileAlgebraicField)) {
+      std::cerr << "FileAlgebraicField=" << FileAlgebraicField
+                << " is missing\n";
+      throw TerminalException{1};
+    }
+    using T_rat = mpq_class;
+    HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+    int const idx_real_algebraic_field = 1;
+    insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
+    using T = RealField<idx_real_algebraic_field>;
+    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+  }
+  std::cerr << "Failed to find a matching arithmetic\n";
+  throw TerminalException{1};
+}
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_KSKELETTON_H_

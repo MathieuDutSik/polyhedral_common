@@ -1,5 +1,5 @@
 #PROGRAM		= LATT_lll
-#PROGRAM		= POLY_FaceLatticeGen
+PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
@@ -43,7 +43,7 @@
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
-PROGRAM		= GRP_LinPolytope_Automorphism
+#PROGRAM		= GRP_LinPolytope_Automorphism
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
