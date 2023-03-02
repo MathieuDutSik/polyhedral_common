@@ -53,6 +53,14 @@ TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   return {ListDI};
 }
 
+void WriteTrackGroup(std::ostream & os, TrackGroup const &tg) {
+  size_t len = tg.ListDI.size();
+  os << len;
+  for (auto & eVal : tg.ListDI)
+    os << " " << eVal;
+}
+
+
 TrackGroup InverseTrack(TrackGroup const &tg) {
   std::vector<int> ListDI_ret;
   size_t len = tg.ListDI.size();
@@ -559,6 +567,16 @@ public:
       os << "OK: All facets have matching on the other side\n";
     }
   }
+  void write_description_to_file(std::string const& eFile, DataFAC<T> const& datafac) const {
+    std::ofstream os(eFile);
+    size_t n_mat = datafac.ListAdj.size();
+    os << n_mat << "\n";
+    for (size_t i_mat=0; i_mat<n_mat; i_mat++) {
+      WriteTrackGroup(os, datafac.ListAdj[i_mat].tg);
+      WriteMatrix(os, datafac.ListAdj[i_mat].mat);
+    }
+    WriteMatrix(os, datafac.FAC);
+  }
   bool IsPresentInStabilizer(CombElt<T> const& eElt) const {
     return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
   }
@@ -761,12 +779,6 @@ public:
       throw TerminalException{1};
     }
     MyMatrix<T> FACexp = AddZeroColumn(FAC);
-    /*
-    std::string File1 = "FAC_" + std::to_string(n) + "_" + std::to_string(n_mat);
-    WriteMatrixFile(File1, FAC);
-    std::string File2 = "FACexp_" + std::to_string(n) + "_" + std::to_string(n_mat);
-    WriteMatrixFile(File2, FACexp);
-    */
     //
     // Doing the redundancy computation
     //
@@ -1029,7 +1041,6 @@ public:
       for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
         Face f_map(n_ext);
         for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-          //          std::cerr << "i_mat=" << i_mat << " i_adj=" << i_adj << " i_ext=" << i_ext << "\n";
           if (ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge[i_ext] == 1) {
             size_t idx = map_index[i_ext];
             f_map[idx] = 1;
@@ -1215,6 +1226,8 @@ public:
     int pos = 0;
     for (auto & e_elt : l_elt) {
       std::cerr << "       pos = " << pos << "\n";
+      std::string eFileData = "DATAFAC_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
+      write_description_to_file(eFileData, datafac);
       f_inverses_clear();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       CombElt<T> e_eltInv = InverseComb(e_elt);
