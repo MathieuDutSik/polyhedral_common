@@ -438,52 +438,93 @@ struct DataFAC {
   std::vector<CombElt<T>> ListAdj;
 };
 
+
+template<typename X>
+std::vector<size_t> GetShortVector_X(MyVector<X> const& y, X const& target_scal, MyVector<X> const& x, std::vector<MyMatrix<X>> const& ListGen) {
+  std::cerr << "Beginning of GetShortVector\n";
+  std::unordered_set<MyVector<X>> set_done;
+  std::unordered_map<MyVector<X>, std::vector<size_t>> list_active;
+  list_active[x] = std::vector<size_t>();
+  set_done.insert(x);
+  size_t nGen = ListGen.size();
+  int iter = 0;
+  int n_cons = 0;
+  while (true) {
+    std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
+    std::unordered_map<MyVector<X>, std::vector<size_t>> list_curr = std::move(list_active);
+    std::cerr << "|list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
+    for (auto & kv : list_curr) {
+      for (size_t iGen=0; iGen<nGen; iGen++) {
+        MyMatrix<X> const& eGen = ListGen[iGen];
+        MyVector<X> xNew = eGen.transpose() * kv.first;
+        std::vector<size_t> eList = kv.second;
+        eList.push_back(iGen);
+        X scal = xNew.dot(y);
+        if (scal < target_scal) {
+          return eList;
+        }
+        n_cons++;
+        if (set_done.count(xNew) == 0) {
+          list_active[xNew] = eList;
+          set_done.insert(xNew);
+        }
+      }
+    }
+    iter += 1;
+  }
+}
+
+
+
 template<typename T>
 struct ShortVectorGroup {
   MyVector<T> x;
+  MyVector<double> x_d;
   std::vector<CombElt<T>> ListGen;
+  std::vector<MyMatrix<T>> ListGen_T;
+  std::vector<MyMatrix<double>> ListGen_d;
+
   ShortVectorGroup(MyVector<T> const& _x, std::vector<CombElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
+    x_d = UniversalVectorConversion<double,T>(x);
+    for (auto & eComb : ListGen) {
+      ListGen_T.push_back(eComb.mat);
+      ListGen_d.push_back(eComb.mat_d);
+    }
+  }
+
+  std::optional<CombElt<T>> EvaluateProposedSolution(std::vector<size_t> const& eList, MyVector<T> const& y, T const& target_scal) const {
+    int n = x.size();
+    CombElt<T> RetElt = GenerateIdentity<T>(n);
+    for (auto & pos : eList) {
+      RetElt = ProductComb(RetElt, ListGen[pos]);
+    }
+    MyVector<T> xNew = RetElt.mat.transpose() * x;
+    T scal = xNew.dot(y);
+    if (scal < target_scal) {
+      return RetElt;
+    } else {
+      return {};
+    }
   }
 
   CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
-    std::cerr << "Beginning of GetShortVector\n";
-    std::unordered_set<MyVector<T>> set_done;
-    std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
-    list_active[x] = std::vector<size_t>();
-    set_done.insert(x);
-    size_t nGen = ListGen.size();
-    int n = y.size();
-    int iter = 0;
-    int n_cons = 0;
-    while (true) {
-      std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
-      std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr = std::move(list_active);
-      std::cerr << "|list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
-      for (auto & kv : list_curr) {
-        for (size_t iGen=0; iGen<nGen; iGen++) {
-          CombElt<T> const& eGen = ListGen[iGen];
-          MyVector<T> xNew = eGen.mat.transpose() * kv.first;
-          std::vector<size_t> eList = kv.second;
-          eList.push_back(iGen);
-          T scal = xNew.dot(y);
-          if (scal < target_scal) {
-            CombElt<T> RetElt = GenerateIdentity<T>(n);
-            for (auto & pos : eList) {
-              RetElt = ProductComb(RetElt, ListGen[pos]);
-            }
-            std::cerr << "Exiting GetShortVector after n_cons=" << n_cons << "\n";
-            return RetElt;
-          }
-          n_cons++;
-          if (set_done.count(xNew) == 0) {
-            list_active[xNew] = eList;
-            set_done.insert(xNew);
-          }
-        }
-      }
-      iter += 1;
+    MyVector<double> y_d = UniversalVectorConversion<double,T>(y);
+    double target_scal_d = UniversalScalarConversion<double,T>(target_scal);
+    // The double could actually fail.
+    std::vector<size_t> eList_d = GetShortVector_X(y_d, target_scal_d, x_d, ListGen_d);
+    std::optional<CombElt<T>> opt_d = EvaluateProposedSolution(eList_d, y, target_scal);
+    if (opt_d) {
+      return *opt_d;
     }
+    std::vector<size_t> eList_T = GetShortVector_X(y, target_scal, x, ListGen_T);
+    std::optional<CombElt<T>> opt_T = EvaluateProposedSolution(eList_d, y, target_scal);
+    if (!opt_T) {
+      std::cerr << "That case really should not happen\n";
+      throw TerminalException{1};
+    }
+    return *opt_T;
   }
+
 };
 
 
