@@ -27,9 +27,10 @@ struct TrackGroup {
 };
 
 // We do operations but we can keep track of what is happening.
-template <typename T> struct PairElt {
+template <typename T> struct CombElt {
   TrackGroup tg;
   MyMatrix<T> mat;
+  MyMatrix<double> mat_d;
 };
 
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
@@ -63,20 +64,24 @@ TrackGroup InverseTrack(TrackGroup const &tg) {
 }
 
 template <typename T>
-PairElt<T> ProductPair(PairElt<T> const &p1, PairElt<T> const &p2) {
+CombElt<T> ProductComb(CombElt<T> const &p1, CombElt<T> const &p2) {
   TrackGroup tg = ProductTrack(p1.tg, p2.tg);
   MyMatrix<T> mat = p1.mat * p2.mat;
-  return {tg, mat};
+  MyMatrix<double> mat_d = p1.mat_d * p2.mat_d;
+  return {tg, mat, mat_d};
 }
 
-template <typename T> PairElt<T> InversePair(PairElt<T> const &p) {
-  return {InverseTrack(p.tg), Inverse(p.mat)};
+template <typename T> CombElt<T> InverseComb(CombElt<T> const &p) {
+  MyMatrix<T> eInv = Inverse(p.mat);
+  MyMatrix<double> eInv_d = UniversalMatrixConversion<double,T>(eInv);
+  return {InverseTrack(p.tg), std::move(eInv), std::move(eInv_d)};
 }
 
-template <typename T> PairElt<T> GenerateIdentity(int const &n) {
+template <typename T> CombElt<T> GenerateIdentity(int const &n) {
   TrackGroup tg;
   MyMatrix<T> mat = IdentityMat<T>(n);
-  return {tg, mat};
+  MyMatrix<double> mat_d = IdentityMat<double>(n);
+  return {tg, mat, mat_d};
 }
 
 void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
@@ -88,20 +93,20 @@ void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
 }
 
 template <typename T>
-bool operator==(PairElt<T> const &pe1, PairElt<T> const &pe2) {
+bool operator==(CombElt<T> const &pe1, CombElt<T> const &pe2) {
   return pe1.mat == pe2.mat;
 }
 
 namespace std {
-template <typename T> struct hash<PairElt<T>> {
-  std::size_t operator()(PairElt<T> const &pe) const {
+template <typename T> struct hash<CombElt<T>> {
+  std::size_t operator()(CombElt<T> const &pe) const {
     return std::hash<MyMatrix<T>>()(pe.mat);
   }
 };
 } // namespace std
 
 template<typename T>
-T NormPairElt(PairElt<T> const& e_elt) {
+T NormCombElt(CombElt<T> const& e_elt) {
   T val = 0;
   int n = e_elt.mat.rows();
   for (int i=0; i<n; i++) {
@@ -121,13 +126,13 @@ T NormPairElt(PairElt<T> const& e_elt) {
 //
 
 template <typename T>
-std::vector<PairElt<T>>
-GroupGeneration(std::vector<PairElt<T>> const &input_l_ent) {
-  std::vector<PairElt<T>> l_ent = input_l_ent;
+std::vector<CombElt<T>>
+GroupGeneration(std::vector<CombElt<T>> const &input_l_ent) {
+  std::vector<CombElt<T>> l_ent = input_l_ent;
   while (true) {
-    std::unordered_set<PairElt<T>> s_GenElt;
-    std::vector<PairElt<T>> l_GenElt;
-    auto f_insert=[&](PairElt<T> const& eElt) -> void {
+    std::unordered_set<CombElt<T>> s_GenElt;
+    std::vector<CombElt<T>> l_GenElt;
+    auto f_insert=[&](CombElt<T> const& eElt) -> void {
       for (auto & fElt : l_GenElt)
         if (fElt == eElt)
           return;
@@ -135,10 +140,10 @@ GroupGeneration(std::vector<PairElt<T>> const &input_l_ent) {
     };
     size_t n_ent = l_ent.size();
     for (size_t i_ent = 0; i_ent < n_ent; i_ent++) {
-      PairElt<T> const &pe1 = l_ent[i_ent];
+      CombElt<T> const &pe1 = l_ent[i_ent];
       for (size_t j_ent = 0; j_ent < n_ent; j_ent++) {
-        PairElt<T> const &pe2 = l_ent[j_ent];
-        PairElt<T> prod = ProductPair(pe1, pe2);
+        CombElt<T> const &pe2 = l_ent[j_ent];
+        CombElt<T> prod = ProductComb(pe1, pe2);
         s_GenElt.insert(prod);
         f_insert(prod);
       }
@@ -159,13 +164,13 @@ GroupGeneration(std::vector<PairElt<T>> const &input_l_ent) {
 
 // a right coset is of the form Ug
 template <typename T>
-std::vector<PairElt<T>>
-IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
-                    std::vector<PairElt<T>> const &list_grp_elt) {
-  std::unordered_set<PairElt<T>> s_coset;
-  auto f_insert = [&](PairElt<T> const &pe) -> void {
+std::vector<CombElt<T>>
+IdentifyRightCosets(std::vector<CombElt<T>> const &l_ent,
+                    std::vector<CombElt<T>> const &list_grp_elt) {
+  std::unordered_set<CombElt<T>> s_coset;
+  auto f_insert = [&](CombElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
-      PairElt<T> prod = ProductPair(e_grp_elt, pe);
+      CombElt<T> prod = ProductComb(e_grp_elt, pe);
       if (s_coset.count(prod) == 1)
         break;
     }
@@ -173,7 +178,7 @@ IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
   };
   for (auto &pe : l_ent)
     f_insert(pe);
-  std::vector<PairElt<T>> l_coset;
+  std::vector<CombElt<T>> l_coset;
   for (auto &e_coset : s_coset)
     l_coset.push_back(e_coset);
   return l_coset;
@@ -181,13 +186,13 @@ IdentifyRightCosets(std::vector<PairElt<T>> const &l_ent,
 
 // a left coset is of the form gU
 template <typename T>
-std::vector<PairElt<T>>
-IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
-                   std::vector<PairElt<T>> const &list_grp_elt) {
-  std::unordered_set<PairElt<T>> s_coset;
-  auto f_insert = [&](PairElt<T> const &pe) -> void {
+std::vector<CombElt<T>>
+IdentifyLeftCosets(std::vector<CombElt<T>> const &l_ent,
+                   std::vector<CombElt<T>> const &list_grp_elt) {
+  std::unordered_set<CombElt<T>> s_coset;
+  auto f_insert = [&](CombElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
-      PairElt<T> prod = ProductPair(pe, e_grp_elt);
+      CombElt<T> prod = ProductComb(pe, e_grp_elt);
       if (s_coset.find(prod) != s_coset.end()) {
         std::cerr << "find matching\n";
         return;
@@ -197,7 +202,7 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
   };
   for (auto &pe : l_ent)
     f_insert(pe);
-  std::vector<PairElt<T>> l_coset(s_coset.begin(), s_coset.end());
+  std::vector<CombElt<T>> l_coset(s_coset.begin(), s_coset.end());
   //  for (auto &e_coset : s_coset)
   //    l_coset.push_back(e_coset);
   std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
@@ -205,11 +210,11 @@ IdentifyLeftCosets(std::vector<PairElt<T>> const &l_ent,
 }
 
 template <typename T>
-std::vector<PairElt<T>>
-IdentifyDoubleCosets(MyVector<T> const& x, std::vector<PairElt<T>> const &l_ent,
-                     std::vector<PairElt<T>> const &list_grp_elt) {
-  std::unordered_map<MyVector<T>,PairElt<T>> map;
-  auto f_insert = [&](PairElt<T> const &pe) -> void {
+std::vector<CombElt<T>>
+IdentifyDoubleCosets(MyVector<T> const& x, std::vector<CombElt<T>> const &l_ent,
+                     std::vector<CombElt<T>> const &list_grp_elt) {
+  std::unordered_map<MyVector<T>,CombElt<T>> map;
+  auto f_insert = [&](CombElt<T> const &pe) -> void {
     MyVector<T> x2 = pe.mat.transpose() * x;
     for (auto &e_grp_elt : list_grp_elt) {
       MyVector<T> x3 = e_grp_elt.mat.transpose() * x2;
@@ -223,7 +228,7 @@ IdentifyDoubleCosets(MyVector<T> const& x, std::vector<PairElt<T>> const &l_ent,
   };
   for (auto &pe : l_ent)
     f_insert(pe);
-  std::vector<PairElt<T>> l_coset;
+  std::vector<CombElt<T>> l_coset;
   for (auto & kv : map)
     l_coset.push_back(kv.second);
   std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
@@ -234,33 +239,33 @@ IdentifyDoubleCosets(MyVector<T> const& x, std::vector<PairElt<T>> const &l_ent,
 
 
 template <typename T>
-std::vector<PairElt<T>>
-InverseSaturation(std::vector<PairElt<T>> const &l_ent) {
-  std::unordered_set<PairElt<T>> s_sat;
+std::vector<CombElt<T>>
+InverseSaturation(std::vector<CombElt<T>> const &l_ent) {
+  std::unordered_set<CombElt<T>> s_sat;
   int i_ent = 0;
   for (auto &eElt : l_ent) {
     s_sat.insert(eElt);
-    PairElt<T> eEltInv = InversePair(eElt);
+    CombElt<T> eEltInv = InverseComb(eElt);
     s_sat.insert(eEltInv);
     i_ent++;
   }
-  std::vector<PairElt<T>> l_ret;
+  std::vector<CombElt<T>> l_ret;
   for (auto &eElt : s_sat)
     l_ret.push_back(eElt);
   return l_ret;
 }
 
 template <typename T>
-std::vector<PairElt<T>> ListExpansion(std::vector<PairElt<T>> const &l_previous,
-                                      std::vector<PairElt<T>> const &l_gen) {
-  std::unordered_set<PairElt<T>> s_expand;
+std::vector<CombElt<T>> ListExpansion(std::vector<CombElt<T>> const &l_previous,
+                                      std::vector<CombElt<T>> const &l_gen) {
+  std::unordered_set<CombElt<T>> s_expand;
   for (auto &eElt : l_previous) {
     for (auto &fElt : l_gen) {
-      PairElt<T> newElt = ProductPair(eElt, fElt);
+      CombElt<T> newElt = ProductComb(eElt, fElt);
       s_expand.insert(newElt);
     }
   }
-  std::vector<PairElt<T>> l_ret;
+  std::vector<CombElt<T>> l_ret;
   for (auto &eElt : s_expand)
     l_ret.push_back(eElt);
   return l_ret;
@@ -322,7 +327,7 @@ get_map_face(std::vector<Face> const &l_facet) {
 // ---a list of group element which is of course assumed to generate the group
 template <typename T> struct DataPoincare {
   MyVector<T> x;
-  std::vector<PairElt<T>> ListGroupElt;
+  std::vector<CombElt<T>> ListGroupElt;
 };
 
 template <typename T>
@@ -336,7 +341,7 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
   int n_elt;
   is >> n_elt;
   std::cerr << "ReadDataPoincare : n_elt=" << n_elt << "\n";
-  std::unordered_set<PairElt<T>> s_elt;
+  std::unordered_set<CombElt<T>> s_elt;
   s_elt.insert(GenerateIdentity<T>(n));
   for (int i_elt = 0; i_elt < n_elt; i_elt++) {
     int pos = i_elt + 1;
@@ -344,15 +349,15 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
     T TheDet = DeterminantMat(eElt);
     std::cerr << "i_elt=" << i_elt << " TheDet=" << TheDet << "\n";
     TrackGroup tg{{pos}};
-    PairElt<T> pe{tg, eElt};
+    CombElt<T> pe{tg, eElt};
     s_elt.insert(pe);
   }
-  std::vector<PairElt<T>> l_elt;
+  std::vector<CombElt<T>> l_elt;
   for (auto &eElt : s_elt)
     l_elt.push_back(eElt);
   std::cerr << "|Initial set|=" << l_elt.size() << "\n";
   l_elt = InverseSaturation(l_elt);
-  std::vector<PairElt<T>> l_gen = l_elt;
+  std::vector<CombElt<T>> l_gen = l_elt;
   std::cerr << "|Inverse saturation|=" << l_elt.size() << "\n";
   std::cerr << "n_expand=" << n_expand << "\n";
   for (int i_expand = 0; i_expand < n_expand; i_expand++) {
@@ -430,17 +435,17 @@ struct DataFAC {
   int rnk;
   MyMatrix<T> FAC;
   std::optional<MyVector<T>> eVectInt;
-  std::vector<PairElt<T>> ListAdj;
+  std::vector<CombElt<T>> ListAdj;
 };
 
 template<typename T>
 struct ShortVectorGroup {
   MyVector<T> x;
-  std::vector<PairElt<T>> ListGen;
-  ShortVectorGroup(MyVector<T> const& _x, std::vector<PairElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
+  std::vector<CombElt<T>> ListGen;
+  ShortVectorGroup(MyVector<T> const& _x, std::vector<CombElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
   }
 
-  PairElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
+  CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
     std::cerr << "Beginning of GetShortVector\n";
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
@@ -456,15 +461,15 @@ struct ShortVectorGroup {
       std::cerr << "|list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
       for (auto & kv : list_curr) {
         for (size_t iGen=0; iGen<nGen; iGen++) {
-          PairElt<T> const& eGen = ListGen[iGen];
+          CombElt<T> const& eGen = ListGen[iGen];
           MyVector<T> xNew = eGen.mat.transpose() * kv.first;
           std::vector<size_t> eList = kv.second;
           eList.push_back(iGen);
           T scal = xNew.dot(y);
           if (scal < target_scal) {
-            PairElt<T> RetElt = GenerateIdentity<T>(n);
+            CombElt<T> RetElt = GenerateIdentity<T>(n);
             for (auto & pos : eList) {
-              RetElt = ProductPair(RetElt, ListGen[pos]);
+              RetElt = ProductComb(RetElt, ListGen[pos]);
             }
             std::cerr << "Exiting GetShortVector after n_cons=" << n_cons << "\n";
             return RetElt;
@@ -514,14 +519,14 @@ struct ShortVectorGroup {
 template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
-  std::vector<PairElt<T>> stabilizerElt;
-  std::unordered_set<PairElt<T>> stabilizerElt_map;
-  std::vector<PairElt<T>> ListNeighborCoset;
+  std::vector<CombElt<T>> stabilizerElt;
+  std::unordered_set<CombElt<T>> stabilizerElt_map;
+  std::vector<CombElt<T>> ListNeighborCoset;
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   std::optional<MyVector<T>> eVectInt;
-  std::unordered_set<PairElt<T>> known_redundant;
+  std::unordered_set<CombElt<T>> known_redundant;
   void print_statistics(std::ostream& os) const {
     os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
     os << "|ListNeighborCoset|=" << ListNeighborCoset.size() << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
@@ -553,14 +558,14 @@ public:
       os << "OK: All facets have matching on the other side\n";
     }
   }
-  bool IsPresentInStabilizer(PairElt<T> const& eElt) const {
+  bool IsPresentInStabilizer(CombElt<T> const& eElt) const {
     return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
   }
-  bool InsertStabilizerGenerator(PairElt<T> const &eElt) {
+  bool InsertStabilizerGenerator(CombElt<T> const &eElt) {
     if (IsPresentInStabilizer(eElt))
       return false;
     std::cerr << "InsertStabilizerGenerator 1 |stabilizerElt|=" << stabilizerElt.size() << "\n";
-    std::vector<PairElt<T>> ExtListGen = stabilizerElt;
+    std::vector<CombElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
     std::cerr << "InsertStabilizerGenerator 2 |ExtListGen|=" << ExtListGen.size() << "\n";
     stabilizerElt = GroupGeneration(ExtListGen);
@@ -570,18 +575,18 @@ public:
       stabilizerElt_map.insert(eElt);
     return true;
   }
-  PairElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
+  CombElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
     size_t i_coset = val.first;
     size_t i_elt = val.second;
     if (i_coset > ListNeighborCoset.size()) {
       std::cerr << "Accessing something over the index\n";
       throw TerminalException{1};
     }
-    PairElt<T> prod = ProductPair(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
-    PairElt<T> eInv = InversePair(stabilizerElt[i_elt]);
-    return ProductPair(eInv, prod);
+    CombElt<T> prod = ProductComb(ListNeighborCoset[i_coset], stabilizerElt[i_elt]);
+    CombElt<T> eInv = InverseComb(stabilizerElt[i_elt]);
+    return ProductComb(eInv, prod);
   }
-  void InsertCoset(PairElt<T> const &eCoset) {
+  void InsertCoset(CombElt<T> const &eCoset) {
     size_t n_coset = ListNeighborCoset.size();
     ListNeighborCoset.push_back(eCoset);
     std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map_local;
@@ -610,17 +615,17 @@ public:
       throw TerminalException{1};
     }
   }
-  void ComputeCosets(std::vector<PairElt<T>> const &l_elt) {
+  void ComputeCosets(std::vector<CombElt<T>> const &l_elt) {
     ListNeighborX.clear();
     ListNeighborData.clear();
     ListNeighborCoset.clear();
     map.clear();
-    std::vector<PairElt<T>> l_cos = IdentifyDoubleCosets(x, l_elt, stabilizerElt);
+    std::vector<CombElt<T>> l_cos = IdentifyDoubleCosets(x, l_elt, stabilizerElt);
     for (auto &eCoset : l_cos) {
       InsertCoset(eCoset);
     }
   }
-  bool IsPresentInCosetOrStabilizer(PairElt<T> const& eElt) const {
+  bool IsPresentInCosetOrStabilizer(CombElt<T> const& eElt) const {
     MyVector<T> x_img = eElt.mat.transpose() * x;
     if (x_img == x) {
       return IsPresentInStabilizer(eElt);
@@ -629,9 +634,9 @@ public:
       if (iter == map.end()) {
         return false;
       } else {
-        PairElt<T> TheProd = GetElement(iter->second);
-        PairElt<T> eElt_inv = InversePair(eElt);
-        PairElt<T> stab_elt = ProductPair(TheProd, eElt_inv);
+        CombElt<T> TheProd = GetElement(iter->second);
+        CombElt<T> eElt_inv = InverseComb(eElt);
+        CombElt<T> stab_elt = ProductComb(TheProd, eElt_inv);
         MyVector<T> x2 = stab_elt.mat.transpose() * x;
         if (x2 != x) {
           std::cerr << "x is not stabilized\n";
@@ -641,18 +646,18 @@ public:
       }
     }
   }
-  bool InsertGenerators(std::vector<PairElt<T>> const &ListGen) {
+  bool InsertGenerators(std::vector<CombElt<T>> const &ListGen) {
     bool DidSomething = false;
-    auto generator_upgrade = [&](PairElt<T> const &e_elt) -> void {
+    auto generator_upgrade = [&](CombElt<T> const &e_elt) -> void {
       bool test = InsertStabilizerGenerator(e_elt);
       if (test) {
         // Copy needed of the old data then recompute
-        std::vector<PairElt<T>> OldListCos = ListNeighborCoset;
+        std::vector<CombElt<T>> OldListCos = ListNeighborCoset;
         ComputeCosets(OldListCos);
         DidSomething = true;
       }
     };
-    auto f_insert=[&](PairElt<T> const& e_elt) -> void {
+    auto f_insert=[&](CombElt<T> const& e_elt) -> void {
       if (known_redundant.count(e_elt) == 1) {
         std::cerr << "Exiting f_insert because the element is already known to be redundant\n";
         return;
@@ -666,9 +671,9 @@ public:
           InsertCoset(e_elt);
           DidSomething = true;
         } else {
-          PairElt<T> TheProd = GetElement(iter->second);
-          PairElt<T> e_elt_inv = InversePair(e_elt);
-          PairElt<T> stab_elt = ProductPair(TheProd, e_elt_inv);
+          CombElt<T> TheProd = GetElement(iter->second);
+          CombElt<T> e_elt_inv = InverseComb(e_elt);
+          CombElt<T> stab_elt = ProductComb(TheProd, e_elt_inv);
           MyVector<T> x2 = stab_elt.mat.transpose() * x;
           if (x2 != x) {
             std::cerr << "x is not stabilized\n";
@@ -686,11 +691,11 @@ public:
   StepEnum(MyVector<T> const &_x) {
     x = _x;
     int n = x.size();
-    PairElt<T> IdMat = GenerateIdentity<T>(n);
+    CombElt<T> IdMat = GenerateIdentity<T>(n);
     stabilizerElt = {IdMat};
     stabilizerElt_map.insert(IdMat);
   }
-  MyVector<T> GetIneq(PairElt<T> const e_elt) const {
+  MyVector<T> GetIneq(CombElt<T> const e_elt) const {
     MyMatrix<T> const &eMat = e_elt.mat;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
@@ -710,12 +715,12 @@ public:
         std::pair<size_t,size_t> i_pair = ListNeighborData[i_mat];
         std::pair<size_t,size_t> j_pair = ListNeighborData[j_mat];
         std::cerr << "i_pair=" << i_pair.first << "/" << i_pair.second << " j_pair=" << j_pair.first << "/" << j_pair.second << "\n";
-        PairElt<T> ePair = GetElement(i_pair);
-        PairElt<T> fPair = GetElement(j_pair);
+        CombElt<T> ePair = GetElement(i_pair);
+        CombElt<T> fPair = GetElement(j_pair);
         MyVector<T> eV = ePair.mat.transpose() * x;
         MyVector<T> fV = fPair.mat.transpose() * x;
-        PairElt<T> ePairInv = InversePair(ePair);
-        PairElt<T> eStabElt = ProductPair(fPair, ePairInv);
+        CombElt<T> ePairInv = InverseComb(ePair);
+        CombElt<T> eStabElt = ProductComb(fPair, ePairInv);
         MyVector<T> xImg = eStabElt.mat.transpose() * x;
         std::cerr << "eV=" << StringVector(eV) << " fV=" << StringVector(fV) << "\n";
         std::cerr << "x=" << StringVector(x) << " xImg=" << StringVector(xImg) << "\n";
@@ -736,9 +741,9 @@ public:
     if (rnk == FAC.cols()) {
       eVectInt = GetSpaceInteriorPoint_Basic(FAC);
     }
-    std::vector<PairElt<T>> ListAdj;
+    std::vector<CombElt<T>> ListAdj;
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
+      CombElt<T> uElt = GetElement(ListNeighborData[i_mat]);
       ListAdj.push_back(uElt);
     }
     return {n_mat, rnk, FAC, eVectInt, ListAdj};
@@ -784,7 +789,7 @@ public:
     int n_remove = 0;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       if (f_status_keep[i_mat] == 0) {
-        PairElt<T> uElt = GetElement(ListNeighborData[i_mat]);
+        CombElt<T> uElt = GetElement(ListNeighborData[i_mat]);
         known_redundant.insert(uElt);
         n_remove++;
       }
@@ -802,7 +807,7 @@ public:
     }
     std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << " n_remove=" << n_remove << "\n";
     if (n_remove > 0) {
-      std::vector<PairElt<T>> ListNeighborCosetRed;
+      std::vector<CombElt<T>> ListNeighborCosetRed;
       for (auto &i_coset : l_keep) {
         ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
       }
@@ -848,14 +853,14 @@ public:
   // x.aw^(-1) - x.a = sum a_j (x.aw_i - x.a)
   // xc(w).a - xc(w).aw = sum a_j (xc(w).aw_iw - xc(w).aw)
   // So maybe inserting the w_i w is a good idea.
-  std::vector<PairElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
+  std::vector<CombElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
     std::vector<int> V = ComputeMatchingVector();
-    std::vector<PairElt<T>> ListMiss;
+    std::vector<CombElt<T>> ListMiss;
     int n_mat = ListNeighborData.size();
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       if (V[i_mat] == -1) {
-        PairElt<T> w = GetElement(ListNeighborData[i_mat]);
-        PairElt<T> wInv = InversePair(w);
+        CombElt<T> w = GetElement(ListNeighborData[i_mat]);
+        CombElt<T> wInv = InverseComb(w);
         MyVector<T> x_ineq = GetIneq(wInv);
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
         if (opt) {
@@ -868,8 +873,8 @@ public:
             for (int j_mat=0; j_mat<n_mat; j_mat++) {
               if (W(j_mat) > 0) {
                 sumCoeff += W(j_mat);
-                PairElt<T> w_i = GetElement(ListNeighborData[i_mat]);
-                PairElt<T> prod = ProductPair(w_i, w);
+                CombElt<T> w_i = GetElement(ListNeighborData[i_mat]);
+                CombElt<T> prod = ProductComb(w_i, w);
                 ListMiss.push_back(prod);
                 n_expr += 1;
               }
@@ -881,8 +886,8 @@ public:
           f[i_mat] = 1;
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
           T target_scal = eVectInt.dot(x);
-          PairElt<T> eNew1 = svg.GetShortVector(eVectInt, target_scal);
-          PairElt<T> eNew2 = InversePair(eNew1);
+          CombElt<T> eNew1 = svg.GetShortVector(eVectInt, target_scal);
+          CombElt<T> eNew2 = InverseComb(eNew1);
           ListMiss.push_back(eNew1);
           ListMiss.push_back(eNew2);
           std::cerr << "Found new elements by Short Group Element\n";
@@ -1048,9 +1053,9 @@ public:
     }
     return {dataext.EXT, ll_adj};
   }
-  std::optional<PairElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, PairElt<T> const &TestElt, int const& max_iter) const {
+  std::optional<CombElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
     std::string strategy = "strategy2";;
-    PairElt<T> WorkElt = TestElt;
+    CombElt<T> WorkElt = TestElt;
     int n_iter = 0;
     std::cerr << "Beginning of f_insert\n";
     MyVector<T> curr_x = WorkElt.mat.transpose() * x;
@@ -1078,9 +1083,9 @@ public:
           // If we take just 1 then we go into infinite loops.
           for (int u = 0; u < V.size(); u++) {
             if (V(u) > 0) {
-              PairElt<T> uElt = GetElement(ListNeighborData[u]);
-              PairElt<T> uEltInv = InversePair(uElt);
-              WorkElt = ProductPair(WorkElt, uEltInv);
+              CombElt<T> uElt = GetElement(ListNeighborData[u]);
+              CombElt<T> uEltInv = InverseComb(uElt);
+              WorkElt = ProductComb(WorkElt, uEltInv);
             }
           }
         } else {
@@ -1103,7 +1108,7 @@ public:
             std::cerr << "    Improving scalar product from curr_scal_d=" << curr_scal_d << " to test_scal_d=" << test_scal_d << "\n";
             curr_x = test_x;
             curr_scal = test_scal;
-            WorkElt = ProductPair(WorkElt, eAdj);
+            WorkElt = ProductComb(WorkElt, eAdj);
             n_oper++;
             if (curr_scal < target_scal) {
               std::cerr << "    The decreasing process has found some contradiction\n";
@@ -1126,8 +1131,8 @@ public:
       }
     }
   }
-  std::vector<PairElt<T>>
-  GenerateTypeIneighbors(std::vector<PairElt<T>> const &l_elt, int const& max_iter) const {
+  std::vector<CombElt<T>>
+  GenerateTypeIneighbors(std::vector<CombElt<T>> const &l_elt, int const& max_iter) const {
     std::cerr << "Beginning of GenerateTypeIneighbors\n";
     int n_mat = ListNeighborX.size();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1135,29 +1140,29 @@ public:
       std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
     }
     DataFAC<T> datafac = GetDataCone();
-    std::unordered_set<PairElt<T>> SetMiss;
+    std::unordered_set<CombElt<T>> SetMiss;
     int n_done = 0;
     for (auto &e_elt : l_elt) {
       std::cerr << "n_done=" << n_done << " |SetMiss|=" << SetMiss.size() << "\n";
-      std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, e_elt, max_iter);
+      std::optional<CombElt<T>> opt = GetMissing_TypeI(datafac, e_elt, max_iter);
       if (opt) {
-        PairElt<T> const& RedElt = *opt;
+        CombElt<T> const& RedElt = *opt;
         SetMiss.insert(RedElt);
       }
       n_done++;
     }
-    std::vector<PairElt<T>> ListMiss;
+    std::vector<CombElt<T>> ListMiss;
     for (auto & ePair : SetMiss) {
       ListMiss.push_back(ePair);
     }
     return ListMiss;
   }
-  void InsertAndCheckRedundancy(std::vector<PairElt<T>> const& l_elt_pre) {
-    std::vector<PairElt<T>> l_elt = l_elt_pre;
+  void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre) {
+    std::vector<CombElt<T>> l_elt = l_elt_pre;
     std::cerr << "InsertAndCheckRedundancy before std::sort\n";
-    std::sort(l_elt.begin(), l_elt.end(), [](PairElt<T> const& x, PairElt<T> const& y) -> bool {
-      T norm_x = NormPairElt(x);
-      T norm_y = NormPairElt(y);
+    std::sort(l_elt.begin(), l_elt.end(), [](CombElt<T> const& x, CombElt<T> const& y) -> bool {
+      T norm_x = NormCombElt(x);
+      T norm_y = NormCombElt(y);
       if (norm_x < norm_y)
         return true;
       if (norm_x > norm_y)
@@ -1166,11 +1171,11 @@ public:
     });
     int n_elt = l_elt.size();
     for (int i_elt=0; i_elt<n_elt; i_elt++) {
-      double norm = UniversalScalarConversion<double,T>(NormPairElt(l_elt[i_elt]));
+      double norm = UniversalScalarConversion<double,T>(NormCombElt(l_elt[i_elt]));
       std::cerr << "i_elt=" << i_elt << " norm=" << norm << "\n";
     }
     DataFAC<T> datafac;
-    auto insert_generator=[&](std::vector<PairElt<T>> const f_list) -> void {
+    auto insert_generator=[&](std::vector<CombElt<T>> const f_list) -> void {
       bool test = InsertGenerators(f_list);
       if (test) {
         std::cerr << "Before GetDataCone 1\n";
@@ -1186,13 +1191,13 @@ public:
         }
       }
     };
-    std::unordered_set<PairElt<T>> ListTried;
+    std::unordered_set<CombElt<T>> ListTried;
     ShortVectorGroup<T> svg(x, l_elt);
     auto f_inverses_clear=[&]() -> void {
       if (datafac.eVectInt) {
         while(true) {
-          std::vector<PairElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
-          std::vector<PairElt<T>> ListMissB;
+          std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
+          std::vector<CombElt<T>> ListMissB;
           for (auto & eElt : ListMiss) {
             if (ListTried.count(eElt) == 0) {
               ListMissB.push_back(eElt);
@@ -1211,15 +1216,15 @@ public:
       std::cerr << "       pos = " << pos << "\n";
       f_inverses_clear();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
-      PairElt<T> e_eltInv = InversePair(e_elt);
-      std::vector<PairElt<T>> e_pair{e_elt,e_eltInv};
+      CombElt<T> e_eltInv = InverseComb(e_elt);
+      std::vector<CombElt<T>> e_pair{e_elt,e_eltInv};
       if (datafac.eVectInt) {
-        std::vector<PairElt<T>> n_pair;
+        std::vector<CombElt<T>> n_pair;
         for (auto & TestElt : e_pair) {
-          std::optional<PairElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0);
+          std::optional<CombElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0);
           if (opt) {
-            PairElt<T> const& uElt1 = *opt;
-            PairElt<T> uElt2 = InversePair(uElt1);
+            CombElt<T> const& uElt1 = *opt;
+            CombElt<T> uElt2 = InverseComb(uElt1);
             n_pair.push_back(uElt1);
             n_pair.push_back(uElt2);
           }
@@ -1232,28 +1237,28 @@ public:
       pos++;
     }
   }
-  bool TestIntersection(MyMatrix<T> const &FAC, PairElt<T> const &eElt) {
+  bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt) {
     MyMatrix<T> FACimg = FAC * eElt.mat;
     MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
     return IsFullDimensional(FACtot);
   }
-  std::vector<PairElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai) {
+  std::vector<CombElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai) {
     int n = x.size();
-    std::vector<PairElt<T>> ListMiss;
+    std::vector<CombElt<T>> ListMiss;
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
-    std::vector<PairElt<T>> ListAdj;
+    std::vector<CombElt<T>> ListAdj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       ListAdj.push_back(GetElement(ListNeighborData[i_mat]));
     }
     auto GetMissedGenerator = [&](int i_mat,
-                                  int i_facet) -> std::optional<PairElt<T>> {
-      PairElt<T> TheMat = GenerateIdentity<T>(n);
+                                  int i_facet) -> std::optional<CombElt<T>> {
+      CombElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
       //      std::cerr << "i_mat_work=" << i_mat_work << " i_facet_work=" << i_facet_work << "\n";
       while (true) {
-        TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
+        TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
         //        std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
         int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
@@ -1276,7 +1281,7 @@ public:
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
       for (int i_facet = 0; i_facet < n_facet; i_facet++) {
-        std::optional<PairElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
+        std::optional<CombElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
         if (opt) {
           ListMiss.push_back(*opt);
         }
@@ -1291,7 +1296,7 @@ public:
     std::unordered_map<MyVector<T>, int> map_rev;
     for (int i_neigh = 0; i_neigh < n_neigh; i_neigh++)
       map_rev[ListNeighborX[i_neigh]] = i_neigh + 1;
-    auto GetPermutation = [&](PairElt<T> const &eElt) -> Telt {
+    auto GetPermutation = [&](CombElt<T> const &eElt) -> Telt {
       std::vector<Tidx> eList(n_neigh);
       for (int i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
         MyVector<T> V = ListNeighborX[i_neigh];
@@ -1311,7 +1316,7 @@ public:
     Telt id(idList);
     std::vector<Telt> LGen;
     Tgroup GRP(LGen, id);
-    auto f_insert = [&](PairElt<T> const &eElt) -> void {
+    auto f_insert = [&](CombElt<T> const &eElt) -> void {
       Telt ePerm = GetPermutation(eElt);
       if (GRP.isin(ePerm))
         return;
@@ -1327,18 +1332,18 @@ public:
     std::vector<std::vector<int>> ListWord;
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
-    std::vector<PairElt<T>> ListAdj;
+    std::vector<CombElt<T>> ListAdj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       ListAdj.push_back(GetElement(ListNeighborData[i_mat]));
     }
     auto InsertWordRidge = [&](int i_mat, int i_facet) -> void {
-      PairElt<T> TheMat = GenerateIdentity<T>(n);
+      CombElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
       std::vector<int> TheWord;
       while (true) {
         TheWord.push_back(i_mat_work);
-        TheMat = ProductPair(TheMat, ListAdj[i_mat_work]);
+        TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
         int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
         i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
@@ -1400,12 +1405,12 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   if (FileAdditional != "unset") {
     DataPoincare<T> dpAddi = ReadDataPoincare<T>(FileAdditional, 0);
     std::cerr << "We have dpAddi\n";
-    std::vector<PairElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt, 10);
+    std::vector<CombElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt, 10);
     std::cerr << "Additional |ListMiss|=" << ListMiss.size() << "\n";
   }
   */
   bool DidSomething = false;
-  auto insert_block = [&](std::vector<PairElt<T>> const &ListMiss) -> void {
+  auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
       bool test = se.InsertGenerators(ListMiss);
       if (test) {
@@ -1421,7 +1426,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
     // Iteration Type II
     //
     AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand);
-    std::vector<PairElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
+    std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
     std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
     //
@@ -1429,7 +1434,7 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
     //
     if (!DidSomething) {
       std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
-      std::vector<PairElt<T>> ListMissI =
+      std::vector<CombElt<T>> ListMissI =
         se.GenerateTypeIneighbors(dp.ListGroupElt, 0);
       std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
       insert_block(ListMissI);
@@ -1509,7 +1514,7 @@ void PrintAdjacencyInfo(StepEnum<T> const &se, std::string const &FileO) {
   os << n_neigh << "\n";
   for (size_t i_neigh = 0; i_neigh < n_neigh; i_neigh++) {
     std::pair<size_t, size_t> epair = se.ListNeighborData[i_neigh];
-    PairElt<T> eElt = se.GetElement(epair);
+    CombElt<T> eElt = se.GetElement(epair);
     WriteTrackGroup(os, eElt.tg);
     os << "\n";
   }
