@@ -53,13 +53,6 @@ TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   return {ListDI};
 }
 
-void WriteTrackGroup(std::ostream & os, TrackGroup const &tg) {
-  size_t len = tg.ListDI.size();
-  os << len;
-  for (auto & eVal : tg.ListDI)
-    os << " " << eVal;
-}
-
 
 TrackGroup InverseTrack(TrackGroup const &tg) {
   std::vector<int> ListDI_ret;
@@ -96,8 +89,9 @@ void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
   size_t n_elt = tg.ListDI.size();
   os << n_elt;
   for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
-    os << ":" << tg.ListDI[i_elt];
+    os << " " << tg.ListDI[i_elt];
   }
+  os << "\n";
 }
 
 template <typename T>
