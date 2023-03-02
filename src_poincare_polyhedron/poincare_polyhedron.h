@@ -885,7 +885,7 @@ public:
           PairElt<T> eNew2 = InversePair(eNew1);
           ListMiss.push_back(eNew1);
           ListMiss.push_back(eNew2);
-          std::cerr << "wInv actually define a new inequality\n";
+          std::cerr << "Found new elements by Short Group Element\n";
         } else {
           ListMiss.push_back(wInv);
           std::cerr << "wInv actually define a new inequality\n";
