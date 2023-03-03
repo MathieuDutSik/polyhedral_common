@@ -1,4 +1,3 @@
-// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_POLY_LRSLIB_H_
 #define SRC_POLY_POLY_LRSLIB_H_
 
@@ -42,9 +41,7 @@ const int64_t MINIMIZE = 0L; /* maximize the lp  */
 const int64_t GE = 1L;       /* constraint is >= */
 const int64_t EQ = 0L;       /* constraint is linearity */
 const uint64_t dict_limit = 10;
-// clang-format off
-}  // namespace globals
-// clang-format on
+} // namespace globals
 
 template <typename T> struct lrs_dic {
   T **A;
@@ -109,7 +106,7 @@ template <typename T> struct lrs_dat {
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
   int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
-  int64_t printslack; /* globals::TRUE if indices of slack inequal. printed   */
+  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed   */
   int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
   int64_t verbose;  /* globals::FALSE for minimalist output                  */
   int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
@@ -163,18 +160,22 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
 /* contains output                                   */
 /* col=0 for vertex 1....d for ray/facet             */
 {
-  int64_t j;
+  int64_t j; /* cobasic index     */
   T **A = P->A;
   int64_t *Row = P->Row;
+  //  std::cerr << "col=" << col << " A[0][col]=" << A[0][col] << "\n";
   if (col == 0) {
+    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 1\n";
     return lrs_getvertex(P, Q, output);
   }
 
   if (Q->lponly) {
     if (A[0][col] <= 0) {
+      // std::cerr << "col=" << col << " : lrs_getsolution, exit case 2\n";
       return globals::L_FALSE;
     }
   } else if (A[0][col] >= 0) {
+    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 3\n";
     return globals::L_FALSE;
   }
 
@@ -183,12 +184,14 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     j++;
 
   if (j <= P->m) {
+    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 4\n";
     return globals::L_FALSE;
   }
 
   if (Q->geometric || Q->allbases || lexmin(P, Q, col) || Q->lponly)
     return lrs_getray(P, Q, col, Q->n, output);
-  return globals::L_FALSE;
+  //  std::cerr << "col=" << col << " : lrs_getsolution, exit case 5\n";
+  return globals::L_FALSE; /* no more output in this dictionary */
 }
 
 /***********************************/
@@ -375,6 +378,7 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
         lrs_getray(*D_p, Q, Col[0], (*D_p)->C[0] + i - hull,
                    Lin[i]); /* adjust index for deletions */
       if (!removecobasicindex(*D_p, 0)) {
+        //	    std::cerr << "Exit case 2\n";
         return globals::L_FALSE;
       }
     }
@@ -388,6 +392,7 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   if (Q->maximize || Q->minimize) {
     Q->unbounded = !lrs_solvelp(*D_p, Q);
     if (Q->lponly) {
+      //	std::cerr << "Exit case 4\n";
       return globals::L_TRUE;
     } else { /* check to see if objective is dual degenerate */
       j = 1;
@@ -449,15 +454,14 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
     //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
     if ((*D_p)->depth >= Q->maxdepth) {
       backtrack = globals::L_TRUE;
-      if (Q->maxdepth == 0) {
-        /* estimate only */
+      if (Q->maxdepth == 0) { /* estimate only */
+        //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
         return globals::L_FALSE;
       }
     }
-    if (Q->truncate && (*D_p)->A[0][0] < 0) {
-      /* truncate when moving from opt. vertex */
+    if (Q->truncate &&
+        (*D_p)->A[0][0] < 0) /* truncate when moving from opt. vertex */
       backtrack = globals::L_TRUE;
-    }
 
     //      PrintP(*D_p, "Before backtrack test");
     if (backtrack) { /* go back to prev. dictionary, restore i,j */
@@ -480,10 +484,11 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       j++;
 
     //      PrintP(*D_p, "Before exiting test");
-    if (j == d) {
+    if (j == d)
       backtrack = globals::L_TRUE;
-    } else {
+    else {
       cache_dict(D_p, Q, i, j, dict_count);
+      //	  PrintP(*D_p, "After cache_dict");
       /* Note that the next two lines must come _after_ the
          call to cache_dict */
 
@@ -492,13 +497,17 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
         Q->deepest++;
 
       pivot(*D_p, Q, i, j);
+      //	  PrintP(*D_p, "After pivot");
       update(*D_p, &i, &j);
+      //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
       Q->count[2]++;
       Q->totalnodes++;
 
       save_basis(*D_p, Q);
+      //	  PrintP(*D_p, "After save_basis");
+      //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
       return globals::L_TRUE;
     }
   } /* end of main while loop for getnextbasis */
@@ -579,22 +588,19 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
   ired = 0;
 
   for (ind = 0; ind < n; ind++) { /* print solution */
-    if (ind == 0 && !hull) {
-      /* must have a ray, set first column to zero */
+    if (ind == 0 && !hull) /* must have a ray, set first column to zero */
       output[0] = 0;
-    } else {
-      if (ired < Q->nredundcol && redundcol[ired] == ind) {
-        /* column was deleted as redundant */
-        if (redcol == ind) /* true for linearity on this cobasic index */
-          /* we print reduced determinant instead of zero */
-          output[ind] = P->det;
-        else
-          output[ind] = 0;
-        ired++;
-      } else { /* column not deleted as redundant */
-        getnextoutput(P, Q, i, col, output[ind]);
-        i++;
-      }
+    else if ((ired < Q->nredundcol) &&
+             (redundcol[ired] == ind)) { /* column was deleted as redundant */
+      if (redcol == ind) /* true for linearity on this cobasic index */
+        /* we print reduced determinant instead of zero */
+        output[ind] = P->det;
+      else
+        output[ind] = 0;
+      ired++;
+    } else { /* column not deleted as redundant */
+      getnextoutput(P, Q, i, col, output[ind]);
+      i++;
     }
   }
   return globals::L_TRUE;
@@ -694,10 +700,8 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
               comp = comprod(Nmin, A[i][col], A[i][ratiocol], Dmin);
             else
               comp = -1;
-          } else {
-            if (Nmin == 0 && A[i][ratiocol] == 0)
-              comp = 0;
-          }
+          } else if (Nmin == 0 && A[i][ratiocol] == 0)
+            comp = 0;
           if (ratiocol == 0)
             comp = -comp; /* all signs reversed for rhs */
         }
@@ -706,10 +710,8 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
           Nmin = A[i][ratiocol];
           Dmin = A[i][col];
           ndegencount = 1;
-        } else {
-          if (comp == 0) /* repeated minimum */
-            minratio[nstart + ndegencount++] = minratio[j];
-        }
+        } else if (comp == 0) /* repeated minimum */
+          minratio[nstart + ndegencount++] = minratio[j];
       } /* end of  for (j=start.... */
       degencount = ndegencount;
       start = nstart;
@@ -825,12 +827,10 @@ void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
         }
 
   if (Ars > 0) {
-    for (j = 0; j <= d; j++) {
-      /* no need to change sign if Ars neg */
+    for (j = 0; j <= d; j++) /* no need to change sign if Ars neg */
       /*   A[r][j]=-A[r][j];              */
       if (A[r][j] != 0)
         A[r][j] = -A[r][j];
-    }
   } else {
     for (i = 0; i <= m_A; i++)
       if (A[i][s] != 0)
@@ -867,15 +867,16 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
     if (i <= m) {
       j = 0; /*find a positive entry for in row */
       while (j < d && A[Row[i]][Col[j]] <= 0) {
+        //	    std::cerr << "j=" << j << " A[R][C]=" << A[Row[i]][Col[j]]
+        //<< "\n";
         j++;
       }
       if (j >= d)
         return globals::L_FALSE; /* no positive entry */
       pivot(P, Q, i, j);
       update(P, &i, &j);
-    } else {
+    } else
       primalinfeasible = globals::L_FALSE;
-    }
   } /* end of while primalinfeasibile */
   return globals::L_TRUE;
 } /* end of primalfeasible */
@@ -974,12 +975,12 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
   /* Remove linearities from cobasis for rest of computation */
   /* This is done in order so indexing is not screwed up */
 
-  for (i = 0; i < nlinearity; i++) {
-    /* find cobasic index */
+  for (i = 0; i < nlinearity; i++) { /* find cobasic index */
     k = 0;
     while (k < d && C[k] != linearity[i] + d)
       k++;
     if (k >= d) {
+      //	  std::cerr << "Error removing linearity\n";
       return globals::L_FALSE;
     }
     if (!removecobasicindex(P, k))
@@ -1257,7 +1258,31 @@ void update(lrs_dic<T> *P, int64_t *i, int64_t *j)
   reorder1(B, Row, *i, m + 1);
   C[*j] = leave;
   reorder1(C, Col, *j, d);
+  /* restore i and j to new positions in basis */
+  for (*i = 1; B[*i] != enter; (*i)++)
+    ; /*Find basis index */
+  for (*j = 0; C[*j] != leave; (*j)++)
+    ; /*Find co-basis index */
 }
+
+/* globals::TRUE if the current dictionary is primal degenerate */
+/* not thoroughly tested   2000/02/15                  */
+/*
+template<typename T>
+int64_t lrs_degenerate(lrs_dic<T> * P)
+{
+  int64_t i;
+  int64_t *B, *Row;
+  T** A = P->A;
+  int64_t d = P->d;
+  int64_t m = P->m;
+  B = P->B;
+  Row = P->Row;
+  for (i = d + 1; i <= m; i++)
+    if (A[Row[i]][0] == 0)
+      return globals::L_TRUE;
+  return globals::L_FALSE;
+}*/
 
 /*********************************************************/
 /*                 Miscellaneous                         */
@@ -1557,9 +1582,9 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
 template <typename T>
 int64_t check_cache(lrs_dic<T> **D_p, lrs_dat<T> *global, int64_t *i_p,
                     int64_t *j_p) {
-  if (global->Qtail == global->Qhead) {
+  if (global->Qtail == global->Qhead)
     return 0;
-  } else {
+  else {
     global->Qtail = global->Qtail->prev;
 
     *D_p = global->Qtail;
@@ -1715,7 +1740,8 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
     A[i][0] = 0;
   if (A[i][hull] != 0)                 /* for H-rep, are zero in column 0     */
     Q->homogeneous = globals::L_FALSE; /* for V-rep, all zero in column 1     */
-  if (ineq == globals::EQ) {           /* input is linearity */
+  if (ineq == globals::EQ)             /* input is linearity */
+  {
     Q->linearity[Q->nlinearity] = row;
     Q->nlinearity++;
   }
@@ -1725,9 +1751,9 @@ template <typename T>
 void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
   int64_t i;
 
-  if (max == globals::MAXIMIZE) {
+  if (max == globals::MAXIMIZE)
     Q->maximize = globals::L_TRUE;
-  } else {
+  else {
     Q->minimize = globals::L_TRUE;
     for (i = 0; i <= P->d; i++)
       num[i] = -num[i];
