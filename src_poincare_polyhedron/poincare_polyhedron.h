@@ -94,6 +94,13 @@ void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
   os << "\n";
 }
 
+template<typename T>
+void WriteComb(std::ofstream &os, CombElt<T> const& eElt) {
+  WriteTrackGroup(os, eElt.tg);
+  WriteMatrix(os, eElt.mat);
+}
+
+
 template <typename T>
 bool operator==(CombElt<T> const &pe1, CombElt<T> const &pe2) {
   return pe1.mat == pe2.mat;
@@ -571,6 +578,31 @@ public:
       WriteMatrix(os, datafac.ListAdj[i_mat].mat);
     }
     WriteMatrix(os, datafac.FAC);
+  }
+  void write_step_enum_to_file(std::string const& eFile) const {
+    std::ofstream os(eFile);
+    os << stabilizerElt.size() << "\n";
+    for (auto & eElt : stabilizerElt) {
+      WriteComb(os, eElt);
+    }
+    os << ListNeighborCoset.size() << "\n";
+    for (auto & eElt : ListNeighborCoset) {
+      WriteComb(os, eElt);
+    }
+    os << ListNeighborX.size() << "\n";
+    for (auto & eVect : ListNeighborX) {
+      WriteVector(os, eVect);
+    }
+    os << ListNeighborData.size() << "\n";
+    for (auto & ePair : ListNeighborData) {
+      os << ePair.first << " " << ePair.second << "\n";
+    }
+    if (eVectInt) {
+      os << "1\n";
+      WriteVector(os, *eVectInt);
+    } else {
+      os << "0\n";
+    }
   }
   bool IsPresentInStabilizer(CombElt<T> const& eElt) const {
     return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
@@ -1063,6 +1095,8 @@ public:
     }
     return {dataext.EXT, ll_adj};
   }
+
+  /*
   std::optional<CombElt<T>> GetMissing_TypeI_Advanced(DataFAC<T> const& datafac, CombElt<T> const &TestElt) const {
     struct ResultOptim {
       T the_scal;
@@ -1153,7 +1187,6 @@ public:
           std::vector<ResultOptim> l_cand;
           for (int i = 0; i < n_mat; i++) {
             if (V(i) > 0) {
-              
               l_cand.push_back(i);
             }
           }
@@ -1214,6 +1247,7 @@ public:
       n_iter++;
     }
   }
+*/
   std::optional<CombElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
     std::string strategy = "strategy2";;
     CombElt<T> WorkElt = TestElt;
@@ -1377,6 +1411,8 @@ public:
       std::cerr << "       pos = " << pos << "\n";
       std::string eFileData = "DATAFAC_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
       write_description_to_file(eFileData, datafac);
+      std::string eFileStep = "STEPENUM_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
+      write_step_enum_to_file(eFileStep);
       f_inverses_clear();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       CombElt<T> e_eltInv = InverseComb(e_elt);
