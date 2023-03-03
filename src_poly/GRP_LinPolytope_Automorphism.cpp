@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
       full_process_B<Tgroup>(arith, eFile, std::cerr);
     }
     if (argc == 4) {
-      std::ofstream os(argv[2]);
+      std::ofstream os(argv[3]);
       full_process_B<Tgroup>(arith, eFile, os);
     }
     std::cerr << "Normal termination of the program\n";

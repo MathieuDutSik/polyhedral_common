@@ -439,6 +439,7 @@ struct DataFAC {
   MyMatrix<T> FAC;
   std::optional<MyVector<T>> eVectInt;
   std::vector<CombElt<T>> ListAdj;
+  std::vector<CombElt<T>> ListAdjInv;
 };
 
 template<typename T>
@@ -755,11 +756,14 @@ public:
       eVectInt = GetSpaceInteriorPoint_Basic(FAC);
     }
     std::vector<CombElt<T>> ListAdj;
+    std::vector<CombElt<T>> ListAdjInv;
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       CombElt<T> uElt = GetElement(ListNeighborData[i_mat]);
+      CombElt<T> uEltInv = InverseComb(uElt);
       ListAdj.push_back(uElt);
+      ListAdjInv.push_back(uEltInv);
     }
-    return {n_mat, rnk, FAC, eVectInt, ListAdj};
+    return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
   int RemoveRedundancy() {
     MyMatrix<T> FAC = GetFAC();
@@ -1058,6 +1062,157 @@ public:
       }
     }
     return {dataext.EXT, ll_adj};
+  }
+  std::optional<CombElt<T>> GetMissing_TypeI_Advanced(DataFAC<T> const& datafac, CombElt<T> const &TestElt) const {
+    struct ResultOptim {
+      T the_scal;
+      MyVector<T> the_x;
+      std::vector<int> eList;
+    };
+    auto f_start=[&](MyVector<T> const& start_x) -> ResultOptim {
+      T scal = start_x.dot(*datafac.eVectInt);
+      return {scal, start_x, {}};
+    };
+    auto f_get_ineq=[&](MyVector<T> const& x_ins) -> MyVector<T> {
+      MyVector<T> x_ret = x_ins - x;
+      return x_ret;
+    };
+    auto f_increment=[&](ResultOptim const& ro, int i_mat) -> ResultOptim {
+      if (i_mat > 0) {
+        int pos = i_mat - 1;
+        CombElt<T> const& eAdj = datafac.ListAdj[pos];
+        MyVector<T> test_x = eAdj.mat.transpose() * ro.the_x;
+        T test_scal = test_x.dot(*datafac.eVectInt);
+        std::vector<int> eList;
+        eList.push_back(i_mat);
+        return {std::move(test_scal), std::move(test_x), std::move(eList)};
+      } else {
+        int pos = - i_mat - 1;
+        CombElt<T> const& eAdj = datafac.ListAdjInv[pos];
+        MyVector<T> test_x = eAdj.mat.transpose() * ro.the_x;
+        T test_scal = test_x.dot(*datafac.eVectInt);
+        std::vector<int> eList;
+        eList.push_back(i_mat);
+        return {std::move(test_scal), std::move(test_x), std::move(eList)};
+      }
+    };
+    auto f_greedy=[&](MyVector<T> const& start_x) -> ResultOptim {
+      ResultOptim ro = f_start(start_x);
+      while (true) {
+        int n_oper = 0;
+        for (int i=0; i<datafac.n_mat; i++) {
+          ResultOptim ro_new = f_increment(ro, i + 1);
+          if (ro_new.the_scal < ro.the_scal) {
+            ro = std::move(ro_new);
+            n_oper++;
+          }
+        }
+        if (n_oper == 0) {
+          return ro;
+        }
+      }
+    };
+    auto f_all_decrease=[&](MyVector<T> const& start_x) -> std::vector<ResultOptim> {
+      ResultOptim ro = f_start(start_x);
+      //
+      std::unordered_set<MyVector<T>> l_done;
+      std::vector<ResultOptim> l_active{ro};
+      std::vector<ResultOptim> l_total;
+      while(true) {
+        std::vector<ResultOptim> l_result;
+        for (auto & ro : l_active) {
+          for (int i=0; i<datafac.n_mat; i++) {
+            ResultOptim ro_new = f_increment(ro, i + 1);
+            if (ro_new.the_scal < ro.the_scal) {
+              if (l_done.count(ro_new) == 0) {
+                l_result.push_back(ro_new);
+                l_total.push_back(ro_new);
+                l_done.insert(ro_new.the_x);
+              }
+            }
+          }
+        }
+        if (l_result.size() == 0) {
+          return l_total;
+        }
+        l_active = std::move(l_result);
+      }
+    };
+    std::unordered_set<MyVector<T>> l_new_point;
+    struct ResultLP {
+      std::optional<MyVector<T>> opt_new_ineq;
+      std::vector<ResultOptim> l_new;
+    };
+    auto f_linear_programming=[&](MyVector<T> const& x_start) -> ResultLP {
+      MyVector<T> x_ineq = f_get_ineq(x_start);
+      ResultOptim ro = f_start(x_start);
+      while (true) {
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
+        if (opt) {
+          MyVector<T> V = *opt;
+          std::vector<ResultOptim> l_cand;
+          for (int i = 0; i < n_mat; i++) {
+            if (V(i) > 0) {
+              
+              l_cand.push_back(i);
+            }
+          }
+          size_t len = l_cand.size();
+          size_t pos = rand() % len;
+          ro = 
+              CombElt<T> const& uElt = datafac.ListAdj[
+              CombElt<T> uEltInv = InverseComb(uElt);
+              WorkElt = ProductComb(WorkElt, uEltInv);
+            
+        } else {
+          std::cerr << "  SolMatNonNeg : no solution found\n";
+          return {
+          return WorkElt;
+        }
+      }
+    };
+
+    CombElt<T> WorkElt = TestElt;
+
+    
+    int n_iter = 0;
+    MyVector<T> curr_x = WorkElt.mat.transpose() * x;
+    T curr_scal = curr_x.dot(*datafac.eVectInt);
+    T target_scal = x.dot(*datafac.eVectInt);
+    double target_scal_d = UniversalScalarConversion<double,T>(target_scal);
+    std::cerr << "target_scal=" << target_scal_d << "\n";
+    while(true) {
+      std::cerr << "  n_iter=" << n_iter << "\n";
+      MyVector<T> x_ineq = GetIneq(WorkElt);
+      if (IsZeroVector(x_ineq)) {
+        bool test_stab = IsPresentInStabilizer(WorkElt);
+        if (test_stab) {
+          std::cerr << "It is already in stabilizer so nothing to be done\n";
+          return {};
+        } else {
+          std::cerr << "It stabilizes but is not already known so interesting by itself\n";
+          return WorkElt;
+        }
+      }
+      if (strategy == "strategy1") {
+        std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
+        if (opt) {
+          MyVector<T> V = *opt;
+          // If we take just 1 then we go into infinite loops.
+          for (int u = 0; u < V.size(); u++) {
+            if (V(u) > 0) {
+              CombElt<T> uElt = GetElement(ListNeighborData[u]);
+              CombElt<T> uEltInv = InverseComb(uElt);
+              WorkElt = ProductComb(WorkElt, uEltInv);
+            }
+          }
+        } else {
+          std::cerr << "  SolMatNonNeg : no solution found\n";
+          return WorkElt;
+        }
+      }
+      n_iter++;
+    }
   }
   std::optional<CombElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
     std::string strategy = "strategy2";;
