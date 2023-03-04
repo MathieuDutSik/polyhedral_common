@@ -602,6 +602,7 @@ public:
   }
   void write_step_enum_to_file(std::string const& eFile) const {
     std::ofstream os(eFile);
+    WriteVector(os, x);
     os << stabilizerElt.size() << "\n";
     for (auto & eElt : stabilizerElt) {
       WriteComb(os, eElt);
