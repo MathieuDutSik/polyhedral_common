@@ -179,39 +179,39 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
     const MyVector<T> &V2 = f2(iRowImg);
 #ifdef DEBUG_PERM_FCT_NOW_OK
     std::cerr << "V1      =";
-    WriteVector(std::cerr, V1);
+    WriteVectorNoDim(std::cerr, V1);
     std::cerr << "V2      =";
-    WriteVector(std::cerr, V2);
+    WriteVectorNoDim(std::cerr, V2);
     //
     MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield, T>(V1);
     std::cerr << "V1_T    =";
-    WriteVector(std::cerr, V1_T);
+    WriteVectorNoDim(std::cerr, V1_T);
     //
     MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield, T>(V2);
     std::cerr << "V2_T    =";
-    WriteVector(std::cerr, V2_T);
+    WriteVectorNoDim(std::cerr, V2_T);
     //
     MyVector<Tfield> V1_img = EqMat.transpose() * V1_T;
     std::cerr << "V1_img  =";
-    WriteVector(std::cerr, V1_img);
+    WriteVectorNoDim(std::cerr, V1_img);
     //
     MyVector<Tfield> V1_expr = M1inv_field.transpose() * V1_T;
     std::cerr << "V1_expr =";
-    WriteVector(std::cerr, V1_expr);
+    WriteVectorNoDim(std::cerr, V1_expr);
     //
     MyVector<Tfield> V1_imgB = M2_field.transpose() * V1_expr;
     std::cerr << "V1_imgB =";
-    WriteVector(std::cerr, V1_imgB);
+    WriteVectorNoDim(std::cerr, V1_imgB);
     //
     MyVector<Tfield> V1_imgC =
         M2_field.transpose() * M1inv_field.transpose() * V1_T;
     std::cerr << "V1_imgC =";
-    WriteVector(std::cerr, V1_imgC);
+    WriteVectorNoDim(std::cerr, V1_imgC);
     //
     MyMatrix<Tfield> eProd = M1inv_field * M2_field;
     MyVector<Tfield> V1_imgD = eProd.transpose() * V1_T;
     std::cerr << "V1_imgD =";
-    WriteVector(std::cerr, V1_imgD);
+    WriteVectorNoDim(std::cerr, V1_imgD);
 #endif
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       Tfield eSum = -V2(iCol);
@@ -593,9 +593,9 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
       std::cerr << "\n";
 
       std::cerr << "EXTrow1[iVect]=";
-      WriteVector(std::cerr, EXTrow1[iVect]);
+      WriteVectorNoDim(std::cerr, EXTrow1[iVect]);
       std::cerr << "EXTrow2[jVect]=";
-      WriteVector(std::cerr, EXTrow2[jVect]);
+      WriteVectorNoDim(std::cerr, EXTrow2[jVect]);
       std::cerr << "EXTrow1=\n";
       WriteMatrix(std::cerr, EXT1);
       std::cerr << "EXTrow2=\n";

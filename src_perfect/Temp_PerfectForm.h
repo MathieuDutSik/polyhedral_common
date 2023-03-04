@@ -483,7 +483,7 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 #ifdef DEBUG_FLIP
         std::cerr << "iRowGamma=" << iRowGamma << " / " << nbRowGamma
                   << " eVectShort=";
-        WriteVector(std::cerr, eVectShort);
+        WriteVectorNoDim(std::cerr, eVectShort);
 #endif
         T rVal = EvaluationQuadForm<T, Tint>(eMatDir, eVectShort);
         T qVal = EvaluationQuadForm<T, Tint>(eMatIn, eVectShort);

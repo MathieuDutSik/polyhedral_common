@@ -407,7 +407,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
     if (is_approved(eV_i)) {
 #ifdef DEBUG_EDGEWALK_GENERIC
       std::cerr << "Inserting eV_i=";
-      WriteVector(std::cerr, eV_i);
+      WriteVectorNoDim(std::cerr, eV_i);
 #endif
       l_ui_ret.push_back(eV_i);
     }

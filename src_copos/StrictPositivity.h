@@ -46,7 +46,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   int dimLinSpa = LinSpa.ListMat.size();
   std::cerr << "dimLinSpa=" << dimLinSpa << "\n";
   std::cerr << "eMatExpr=";
-  WriteVector(std::cerr, eMatExpr);
+  WriteVectorNoDim(std::cerr, eMatExpr);
 #endif
   //
   std::function<bool(MyMatrix<T>)> IsAdmissible =
@@ -106,7 +106,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     if (eRel.eTestExist) {
 #ifdef STRICT_POSITIVITY
       std::cerr << "TheRelat=";
-      WriteVector(std::cerr, eRel.TheRelat);
+      WriteVectorNoDim(std::cerr, eRel.TheRelat);
 #endif
       std::vector<int> ListIdx;
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {

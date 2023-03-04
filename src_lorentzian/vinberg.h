@@ -65,7 +65,7 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
     WriteMatrix(std::cerr, GramMat);
     std::cerr << "det=" << DeterminantMat(GramMat) << "\n";
     std::cerr << "eV=";
-    WriteVector(std::cerr, eV);
+    WriteVectorNoDim(std::cerr, eV);
     std::cerr << "norm=" << norm << "\n";
   }
   LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
@@ -1093,7 +1093,7 @@ void Print_DataReflectionGroup_TXT(const DataReflectionGroup<T, Tint> &data,
   size_t n_root = data.ListRoot.size();
   os << "|ListRoot|=" << n_root << "\n";
   for (size_t i = 0; i < n_root; i++)
-    WriteVector(os, data.ListRoot[i]);
+    WriteVectorNoDim(os, data.ListRoot[i]);
   os << "G=\n";
   WriteMatrix(os, data.G);
   os << "M=\n";
@@ -1311,7 +1311,7 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
   std::cerr << "FundCone, step 7\n";
   std::cerr << "SelectedRoots=\n";
   for (auto &eVect : SelectedRoots)
-    WriteVector(std::cerr, eVect);
+    WriteVectorNoDim(std::cerr, eVect);
   return SelectedRoots;
 }
 
@@ -1362,7 +1362,7 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit) {
       }
       std::cerr << "ListRoot=\n";
       for (auto &eRoot : ListRoot) {
-        WriteVector(std::cerr, eRoot);
+        WriteVectorNoDim(std::cerr, eRoot);
       }
       int rnk = RankMat(MatrixFromVectorFamily(ListRoot));
       std::cerr << "After insert |ListRoot|=" << ListRoot.size()

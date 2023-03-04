@@ -42,7 +42,7 @@ void WriteInputFileCdd(std::string const &FileName, MyMatrix<T> const &ListIneq,
   }
   os << "end\n";
   os << "minimize\n";
-  WriteVector(os, ToBeMinimized);
+  WriteVectorNoDim(os, ToBeMinimized);
 }
 
 template <typename T>
@@ -211,8 +211,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
     eSol.PrimalDefined = true;
     eSol.DirectSolution = eVectDirSol;
     eSol.DirectSolutionExt = eVectDirSolExt;
-    //    std::cerr << "eVectDirSolExt=";
-    //    WriteVector(std::cerr, eVectDirSolExt);
     Face eFace(nbRow);
     if (DualDefined) {
       // The comparison with values makes sense only of the dual program is
@@ -234,7 +232,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           std::cerr << "TheEXT=\n";
           WriteMatrix(std::cerr, TheEXT);
           std::cerr << "eVect=\n";
-          WriteVector(std::cerr, eVect);
+          WriteVectorNoDim(std::cerr, eVect);
           std::cerr << "Obtained vertex solution is not valid\n";
           std::cerr << "Please debug. Before calling TerminalEnding\n";
           throw TerminalException{1};

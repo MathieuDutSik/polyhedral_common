@@ -67,7 +67,7 @@ void WriteFundDomainVertex(MyMatrix<T> const &G,
   }
   if (OutFormat == "TXT") {
     os << "gen=";
-    WriteVector(os, gen_nf);
+    WriteVectorNoDim(os, gen_nf);
     os << "l_roots=\n";
     WriteMatrixGAP(os, Mroot);
     return;

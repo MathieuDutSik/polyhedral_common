@@ -269,7 +269,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       MyVector<Tint> eVect = ListVect[0];
       MyVector<Tint> eVectB = 2 * eVect;
       std::cerr << "Inserting from PrimalDefined but not dual defined eVectB=";
-      WriteVector(std::cerr, eVectB);
+      WriteVectorNoDim(std::cerr, eVectB);
       TheFamilyVect.insert(eVectB);
     } else {
       //      std::cerr << "We have optimal value\n";
@@ -382,7 +382,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           if (DiffNew.size() > 0) {
             for (auto &eVect : DiffNew) {
               std::cerr << "Inserting from DiffNew eVect=";
-              WriteVector(std::cerr, eVect);
+              WriteVectorNoDim(std::cerr, eVect);
               TheFamilyVect.insert(eVect);
             }
           } else {
@@ -414,12 +414,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             std::cerr << "eMatSec=\n";
             WriteMatrix(std::cerr, eMatSec);
             std::cerr << "eVect3=";
-            WriteVector(std::cerr, eVect3);
+            WriteVectorNoDim(std::cerr, eVect3);
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
           }
           std::cerr << "Inserting from GetShortVectorDegenerate eVect3=";
-          WriteVector(std::cerr, eVect3);
+          WriteVectorNoDim(std::cerr, eVect3);
           TheFamilyVect.insert(eVect3);
         } else {
           bool NeedNonZero = true;
@@ -431,7 +431,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             throw TerminalException{1};
           }
           std::cerr << "Inserting from GetShortVector eVect=";
-          WriteVector(std::cerr, eVect);
+          WriteVectorNoDim(std::cerr, eVect);
           TheFamilyVect.insert(eVect);
         }
       }

@@ -310,9 +310,9 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
         std::cerr << "Norm inconsistency in the code\n";
         std::cerr << "eVal=" << eVal << " ListNorm[0]=" << ListNorm[0] << "\n";
         std::cerr << "NewX=";
-        WriteVector(std::cerr, NewX);
+        WriteVectorNoDim(std::cerr, NewX);
         std::cerr << "X=";
-        WriteVector(std::cerr, X);
+        WriteVectorNoDim(std::cerr, X);
         std::cerr << "\n";
         for (int i = 0; i < n; i++) {
           std::cerr << "i=" << i << " norm=" << ListNorm[i] << "\n";
@@ -320,10 +320,10 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
         throw TerminalException{1};
       }
       std::cerr << "After computing NewX. NewX=\n";
-      WriteVector(std::cerr, NewX);
+      WriteVectorNoDim(std::cerr, NewX);
       if (NewX.minCoeff() < 0) {
         std::cerr << "X=";
-        WriteVector(std::cerr, X);
+        WriteVectorNoDim(std::cerr, X);
         std::cerr << "Error. We found a negative vector\n";
         std::cerr << "eSymmMat=\n";
         WriteMatrix(std::cerr, eSymmMat);
@@ -376,7 +376,7 @@ void WriteSingleTestResult(
       os << "The matrix is not copositive\n";
       os << "Nature of violation=" << eResult.strNature << "\n";
       os << "V=";
-      WriteVector(os, eResult.eVectResult1);
+      WriteVectorNoDim(os, eResult.eVectResult1);
     }
     return;
   }
@@ -412,7 +412,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const &OutFormat,
       os << "Matrix is not Copositive\n";
       os << "Nature=" << CopoRes.eResult.strNature << "\n";
       os << "eVect1=";
-      WriteVector(os, CopoRes.eResult.eVectResult1);
+      WriteVectorNoDim(os, CopoRes.eResult.eVectResult1);
     } else {
       int n = eSymmMat.rows();
       os << "Matrix is Copositive\n";
@@ -1034,12 +1034,12 @@ EnumerateCopositiveShortVector(MyMatrix<T> const &eSymmMat,
     std::cerr << "res1.TotalListVect, |res1.TotalListVect|="
               << res1.TotalListVect.size() << "\n";
     for (auto &eVect : res1.TotalListVect)
-      WriteVector(std::cerr, eVect);
+      WriteVectorNoDim(std::cerr, eVect);
     //
     std::cerr << "res2.TotalListVect, |res2.TotalListVect|="
               << res2.TotalListVect.size() << "\n";
     for (auto &eVect : res2.TotalListVect)
-      WriteVector(std::cerr, eVect);
+      WriteVectorNoDim(std::cerr, eVect);
     //
     throw TerminalException{1};
   }

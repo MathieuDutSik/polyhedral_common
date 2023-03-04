@@ -31,11 +31,6 @@ GetShortVector_unlimited_float_kernel(MyMatrix<T> const &M, T const &CritNorm,
     if (ListEigVal(i) < 0)
       nbNeg++;
   }
-  /*
-  std::cerr << "ListEigVal=\n";
-  WriteVector(std::cerr, ListEigVal);
-  std::cerr << "ListEigVect=\n";
-  WriteMatrix(std::cerr, ListEigVect);*/
 
   if (nbNeg == 0) {
     return {};
@@ -46,11 +41,6 @@ GetShortVector_unlimited_float_kernel(MyMatrix<T> const &M, T const &CritNorm,
     for (int i = 0; i < n; i++) {
       MyVector<Tint> eVect(n);
       bool IsZero = true;
-      /*      std::cerr << "  i=" << i << "    ListEigVect(i,:)=";
-      for (int j=0; j<n; j++) {
-        std::cerr << " " << ListEigVect(i,j);
-      }
-      std::cerr << "\n";*/
       for (int j = 0; j < n; j++) {
         Tfloat eVal_f = eMult * ListEigVect(i, j);
         Tint eVal = UniversalNearestScalarInteger<Tint, Tfloat>(eVal_f);
