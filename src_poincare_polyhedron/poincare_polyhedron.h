@@ -94,11 +94,33 @@ void WriteTrackGroup(std::ofstream &os, TrackGroup const &tg) {
   os << "\n";
 }
 
+TrackGroup ReadTrackGroup(std::istream & is) {
+  int n_elt;
+  is >> n_elt;
+  std::vector<int> ListDI;
+  for (int i=0; i<n_elt; i++) {
+    int val;
+    is >> val;
+    ListDI.push_back(val);
+  }
+  return {ListDI};
+}
+
+
 template<typename T>
 void WriteComb(std::ofstream &os, CombElt<T> const& eElt) {
   WriteTrackGroup(os, eElt.tg);
   WriteMatrix(os, eElt.mat);
 }
+
+template<typename T>
+CombElt<T> ReadComb(std::istream &is) {
+  TrackGroup tg = ReadTrackGroup(is);
+  MyMatrix<T> mat = ReadMatrix<T>(is);
+  MyMatrix<double> mat_d = UniversalMatrixConversion<double,T>(mat);
+  return {tg, mat, mat_d};
+}
+
 
 
 template <typename T>
@@ -531,7 +553,7 @@ template <typename T> struct StepEnum {
 public:
   MyVector<T> x;
   std::vector<CombElt<T>> stabilizerElt;
-  std::unordered_set<CombElt<T>> stabilizerElt_map;
+  std::unordered_set<CombElt<T>> stabilizerElt_set;
   std::vector<CombElt<T>> ListNeighborCoset;
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
@@ -604,8 +626,69 @@ public:
       os << "0\n";
     }
   }
+  void clear() {
+    x.clear();
+    stabilizerElt.clear();
+    stabilizerElt_set.clear();
+    ListNeighborCoset.clear();
+    ListNeighborX.clear();
+    ListNeighborData.clear();
+    map.clear();
+    eVectInt = {};
+    known_redundant.clear();
+  }
+  void read_step_enum_from_file(std::string const& eFile) {
+    clear();
+    //
+    std::ifstream is(eFile);
+    x = ReadVector<T>(is);
+    //
+    size_t n_stabelt;
+    is >> n_stabelt;
+    for (size_t i=0; i<n_stabelt; i++) {
+      CombElt<T> eComb = ReadComb<T>(is);
+      stabilizerElt.push_back(eComb);
+      stabilizerElt_set.insert(eComb);
+    }
+    //
+    size_t n_coset;
+    is >> n_coset;
+    for (size_t i_coset=0; i_coset<n_coset; i_coset++) {
+      CombElt<T> eComb = ReadComb<T>(is);
+      ListNeighborCoset.push_back(eComb);
+    }
+    //
+    size_t n_neigh;
+    is >> n_neigh;
+    for (size_t i_neigh=0; i_neigh<n_neigh; i_neigh++) {
+      MyVector<T> V = ReadVector<T>(is);
+      ListNeighborX.push_back(V);
+    }
+    //
+    size_t n_data;
+    is >> n_data;
+    for (size_t i_data=0; i_data<n_data; i_data++) {
+      size_t first, second;
+      is >> first;
+      is >> second;
+      ListNeighborData.push_back({first,second});
+    }
+    if (n_data != n_neigh) {
+      std::cerr << "Inconsistent n_neigh=" << n_neigh << " n_data=" << n_data << "\n";
+      throw TerminalException{1};
+    }
+    //
+    int choice;
+    is >> choice;
+    if (choice == 1) {
+      MyVector<T> V = ReadVector<T>(is);
+      eVectInt = V;
+    } else {
+      eVectInt = {};
+    }
+  }
   bool IsPresentInStabilizer(CombElt<T> const& eElt) const {
-    return stabilizerElt_map.find(eElt) != stabilizerElt_map.end();
+    return stabilizerElt_set.count(eElt) == 1;
   }
   bool InsertStabilizerGenerator(CombElt<T> const &eElt) {
     if (IsPresentInStabilizer(eElt))
@@ -616,9 +699,9 @@ public:
     std::cerr << "InsertStabilizerGenerator 2 |ExtListGen|=" << ExtListGen.size() << "\n";
     stabilizerElt = GroupGeneration(ExtListGen);
     std::cerr << "InsertStabilizerGenerator 3 |stabilizerElt|=" << stabilizerElt.size() << "\n";
-    stabilizerElt_map.clear();
+    stabilizerElt_set.clear();
     for (auto & eElt : stabilizerElt)
-      stabilizerElt_map.insert(eElt);
+      stabilizerElt_set.insert(eElt);
     return true;
   }
   CombElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
@@ -739,7 +822,7 @@ public:
     int n = x.size();
     CombElt<T> IdMat = GenerateIdentity<T>(n);
     stabilizerElt = {IdMat};
-    stabilizerElt_map.insert(IdMat);
+    stabilizerElt_set.insert(IdMat);
   }
   MyVector<T> GetIneq(CombElt<T> const e_elt) const {
     MyMatrix<T> const &eMat = e_elt.mat;
