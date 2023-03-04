@@ -627,7 +627,7 @@ public:
     }
   }
   void clear() {
-    x.clear();
+    x = ZeroVector<T>(0);
     stabilizerElt.clear();
     stabilizerElt_set.clear();
     ListNeighborCoset.clear();
@@ -1680,17 +1680,13 @@ public:
 // Now the polyhedral stuff
 //
 
-template <typename T>
-std::optional<StepEnum<T>> ComputeMissingNeighbors(AdjacencyInfo<T> const &ai) {
-  return {};
-}
-
 struct RecOption {
   std::string eCommand;
-  std::string FileAdditional;
-  std::string FileI;
+  std::string FileStepEnum;
+  std::string FileDataPoincare;
   std::string FileO;
   std::string Arithmetic;
+  std::string Approach;
   int n_iter_max;
   int n_expand;
   bool ComputeStabilizerPermutation;
@@ -1698,11 +1694,9 @@ struct RecOption {
 };
 
 template <typename T>
-StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
+StepEnum<T> IterativePoincareRefinement(StepEnum<T> se, DataPoincare<T> const & dp,
                                         RecOption const &rec_option) {
   std::string eCommand = rec_option.eCommand;
-  StepEnum<T> se(dp.x);
-  se.InsertAndCheckRedundancy(dp.ListGroupElt);
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
@@ -1772,12 +1766,14 @@ The maximum number of iteration. If negative then infinite";
 The number of iteration to expand the initial set of group elements";
   ListStringValues_doc["eCommand"] = "eCommand: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
-  ListStringValues_doc["FileAdditional"] = "Default: unset\n\
-Some additional elements to test";
-  ListStringValues_doc["FileI"] = "The input file of the computation";
+  ListStringValues_doc["FileStepEnum"] = "Default: unset\n\
+The step enum current state";
+  ListStringValues_doc["FileDataPoincare"] = "Default: unset\n\
+The input file of the computation";
   ListStringValues_doc["FileO"] = "The output file of the computation";
   ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+  ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
   SingleBlock BlockPROC;
   BlockPROC.setListBoolValues(ListBoolValues_doc);
   BlockPROC.setListIntValues(ListIntValues_doc);
@@ -1790,15 +1786,16 @@ Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc
 RecOption ReadInitialData(FullNamelist const &eFull) {
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
-  std::string FileAdditional = BlockPROC.ListStringValues.at("FileAdditional");
-  std::string FileI = BlockPROC.ListStringValues.at("FileI");
+  std::string FileStepEnum = BlockPROC.ListStringValues.at("FileStepEnum");
+  std::string FileDataPoincare = BlockPROC.ListStringValues.at("FileDataPoincare");
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
   std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
+  std::string Approach = BlockPROC.ListStringValues.at("Approach");
   int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
   int n_expand = BlockPROC.ListIntValues.at("n_expand");
   bool ComputeStabilizerPermutation = BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation = BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
-  return {eCommand, FileAdditional, FileI, FileO, Arithmetic, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
+  return {eCommand, FileStepEnum, FileDataPoincare, FileO, Arithmetic, Approach, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
 }
 
 template <typename T>
@@ -1831,12 +1828,30 @@ void PrintGroupPresentation(std::ostream& os, std::pair<int, std::vector<std::ve
   }
 }
 
+template <typename T>
+StepEnum<T> compute_step_enum(RecOption const &rec_option) {
+  DataPoincare<T> dp =
+    ReadDataPoincare<T>(rec_option.FileDataPoincare, rec_option.n_expand);
+  std::cerr << "We have dp\n";
+  StepEnum<T> se(dp.x);
+  auto f_init=[&]() -> void {
+    if (rec_option.Approach == "IncrementallyAdd") {
+      return se.InsertAndCheckRedundancy(dp.ListGroupElt);
+    }
+    if (rec_option.Approach == "FacetAdjacencies") {
+      return se.read_step_enum_from_file(rec_option.FileStepEnum);
+    }
+    std::cerr << "Failed to find a matching entry in compute_step_enum\n";
+    throw TerminalException{1};
+  };
+  f_init();
+  return IterativePoincareRefinement(se, dp, rec_option);
+}
+
+
 template <typename T,typename Tgroup> void full_process_type(RecOption const &rec_option) {
   std::cerr << "Beginning of full_process_type\n";
-  DataPoincare<T> dp =
-      ReadDataPoincare<T>(rec_option.FileI, rec_option.n_expand);
-  std::cerr << "We have dp\n";
-  StepEnum<T> se = IterativePoincareRefinement(dp, rec_option);
+  StepEnum<T> se = compute_step_enum<T>(rec_option);
   std::cerr << "We have se\n";
   PrintAdjacencyInfo(se, rec_option.FileO);
   std::cerr << "se has been written to file\n";

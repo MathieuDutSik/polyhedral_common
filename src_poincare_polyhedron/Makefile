@@ -24,7 +24,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= clang++ -Wall -std=c++17 -g -fsanitize=memory
 
 # CLANG
-CC		= g++ -std=c++17 -Wall -g -O3
+CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 #CC		= g++ -std=c++17 -Wall -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 #CC		= g++ -std=c++17 -Wall -g -fsanitize=address -fno-omit-frame-pointer
 #CC		= g++ -std=c++17 -Wall -g -fstack-check -fno-stack-clash-protection
