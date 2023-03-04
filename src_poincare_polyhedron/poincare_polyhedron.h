@@ -558,7 +558,6 @@ public:
   std::vector<MyVector<T>> ListNeighborX;
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
-  std::optional<MyVector<T>> eVectInt;
   std::unordered_set<CombElt<T>> known_redundant;
   void print_statistics(std::ostream& os) const {
     os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
@@ -619,12 +618,6 @@ public:
     for (auto & ePair : ListNeighborData) {
       os << ePair.first << " " << ePair.second << "\n";
     }
-    if (eVectInt) {
-      os << "1\n";
-      WriteVector(os, *eVectInt);
-    } else {
-      os << "0\n";
-    }
   }
   void clear() {
     x = ZeroVector<T>(0);
@@ -634,7 +627,6 @@ public:
     ListNeighborX.clear();
     ListNeighborData.clear();
     map.clear();
-    eVectInt = {};
     known_redundant.clear();
   }
   void read_step_enum_from_file(std::string const& eFile) {
@@ -679,15 +671,6 @@ public:
     }
     for (size_t i=0; i<n_data; i++) {
       map[ListNeighborX[i]] = ListNeighborData[i];
-    }
-    //
-    int choice;
-    is >> choice;
-    if (choice == 1) {
-      MyVector<T> V = ReadVector<T>(is);
-      eVectInt = V;
-    } else {
-      eVectInt = {};
     }
   }
   bool IsPresentInStabilizer(CombElt<T> const& eElt) const {
