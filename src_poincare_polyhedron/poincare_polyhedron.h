@@ -677,6 +677,9 @@ public:
       std::cerr << "Inconsistent n_neigh=" << n_neigh << " n_data=" << n_data << "\n";
       throw TerminalException{1};
     }
+    for (size_t i=0; i<n_data; i++) {
+      map[ListNeighborX[i]] = ListNeighborData[i];
+    }
     //
     int choice;
     is >> choice;
@@ -1700,18 +1703,6 @@ StepEnum<T> IterativePoincareRefinement(DataPoincare<T> const &dp,
   std::string eCommand = rec_option.eCommand;
   StepEnum<T> se(dp.x);
   se.InsertAndCheckRedundancy(dp.ListGroupElt);
-  /*
-  se.InsertGenerators(dp.ListGroupElt);
-  se.RemoveRedundancy();
-  std::string FileAdditional = rec_option.FileAdditional;
-  std::cerr << "FileAdditional=" << FileAdditional << "\n";
-  if (FileAdditional != "unset") {
-    DataPoincare<T> dpAddi = ReadDataPoincare<T>(FileAdditional, 0);
-    std::cerr << "We have dpAddi\n";
-    std::vector<CombElt<T>> ListMiss = se.GenerateTypeIneighbors(dpAddi.ListGroupElt, 10);
-    std::cerr << "Additional |ListMiss|=" << ListMiss.size() << "\n";
-  }
-  */
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
