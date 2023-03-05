@@ -1168,7 +1168,7 @@ public:
   //
   // Now the code for advancing the optimization procedure.
   //
-  std::optional<CombElt<T>> GetMissing_TypeI_Advanced(DataFAC<T> const& datafac, CombElt<T> const &TestElt) const {
+  std::optional<CombElt<T>> GetMissing_TypeI_Gen2(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
     struct ResultOptim {
       T the_scal;
       MyVector<T> the_x;
@@ -1337,9 +1337,16 @@ public:
         ro = f_random_move(ro);
       }
       n_iter++;
+      if (max_iter > 0) {
+        std::cerr << "    Going to iteration termination check\n";
+        if (max_iter < n_iter) {
+          std::cerr << "    Exiting the enumeration\n";
+          return {};
+        }
+      }
     }
   }
-  std::optional<CombElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
+  std::optional<CombElt<T>> GetMissing_TypeI_Gen1(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter) const {
     std::string strategy = "strategy2";;
     CombElt<T> WorkElt = TestElt;
     int n_iter = 0;
@@ -1417,32 +1424,6 @@ public:
       }
     }
   }
-  std::vector<CombElt<T>>
-  GenerateTypeIneighbors(std::vector<CombElt<T>> const &l_elt, int const& max_iter) const {
-    std::cerr << "Beginning of GenerateTypeIneighbors\n";
-    int n_mat = ListNeighborX.size();
-    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      MyVector<T> u = ListNeighborX[i_mat];
-      std::cerr << "i_mat=" << i_mat << " neighbor=" << StringVector(u) << "\n";
-    }
-    DataFAC<T> datafac = GetDataCone();
-    std::unordered_set<CombElt<T>> SetMiss;
-    int n_done = 0;
-    for (auto &e_elt : l_elt) {
-      std::cerr << "n_done=" << n_done << " |SetMiss|=" << SetMiss.size() << "\n";
-      std::optional<CombElt<T>> opt = GetMissing_TypeI(datafac, e_elt, max_iter);
-      if (opt) {
-        CombElt<T> const& RedElt = *opt;
-        SetMiss.insert(RedElt);
-      }
-      n_done++;
-    }
-    std::vector<CombElt<T>> ListMiss;
-    for (auto & ePair : SetMiss) {
-      ListMiss.push_back(ePair);
-    }
-    return ListMiss;
-  }
   void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
     std::cerr << "InsertAndCheckRedundancy before std::sort\n";
@@ -1511,7 +1492,7 @@ public:
       if (datafac.eVectInt) {
         std::vector<CombElt<T>> n_pair;
         for (auto & TestElt : e_pair) {
-          std::optional<CombElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0);
+          std::optional<CombElt<T>> opt = GetMissing_TypeI_Gen1(datafac, TestElt, 0);
           if (opt) {
             CombElt<T> const& uElt1 = *opt;
             CombElt<T> uElt2 = InverseComb(uElt1);
@@ -1701,16 +1682,6 @@ StepEnum<T> IterativePoincareRefinement(StepEnum<T> se, DataPoincare<T> const & 
     std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
     std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
-    //
-    // Iteration Type I
-    //
-    if (!DidSomething) {
-      std::cerr << "IterativePoincareRefinement n_iter=" << n_iter << "\n";
-      std::vector<CombElt<T>> ListMissI =
-        se.GenerateTypeIneighbors(dp.ListGroupElt, 0);
-      std::cerr << "|ListMissI|=" << ListMissI.size() << "\n";
-      insert_block(ListMissI);
-    }
     //
     // Terminating if ok.
     //
