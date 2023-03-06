@@ -519,6 +519,25 @@ struct ShortVectorGroup {
   }
 };
 
+//
+// Now the polyhedral stuff
+//
+
+struct RecOption {
+  std::string eCommand;
+  std::string FileStepEnum;
+  std::string FileDataPoincare;
+  std::string FileO;
+  std::string Arithmetic;
+  std::string Approach;
+  std::string MethodMissingI;
+  std::string MethodVertexMatching;
+  int n_iter_max;
+  int n_expand;
+  bool ComputeStabilizerPermutation;
+  bool ComputeGroupPresentation;
+};
+
 
 
 /*
@@ -1641,25 +1660,8 @@ public:
   }
 };
 
-//
-// Now the polyhedral stuff
-//
-
-struct RecOption {
-  std::string eCommand;
-  std::string FileStepEnum;
-  std::string FileDataPoincare;
-  std::string FileO;
-  std::string Arithmetic;
-  std::string Approach;
-  int n_iter_max;
-  int n_expand;
-  bool ComputeStabilizerPermutation;
-  bool ComputeGroupPresentation;
-};
-
 template <typename T>
-StepEnum<T> IterativePoincareRefinement(StepEnum<T> se, DataPoincare<T> const & dp,
+StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
                                         RecOption const &rec_option) {
   std::string eCommand = rec_option.eCommand;
   bool DidSomething = false;
@@ -1729,6 +1731,10 @@ The input file of the computation";
   ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
+  ListStringValues_doc["MethodMissingI"] = "Default: gen1\n\
+Method used for computing TypeI neighbors";
+  ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
+Whether to generate new elements from vertex matchings";
   SingleBlock BlockPROC;
   BlockPROC.setListBoolValues(ListBoolValues_doc);
   BlockPROC.setListIntValues(ListIntValues_doc);
@@ -1746,11 +1752,13 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
   std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
   std::string Approach = BlockPROC.ListStringValues.at("Approach");
+  std::string MethodMissingI = BlockPROC.ListStringValues.at("MethodMissingI");
+  std::string MethodVertexMatching = BlockPROC.ListStringValues.at("MethodVertexMatching");
   int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
   int n_expand = BlockPROC.ListIntValues.at("n_expand");
   bool ComputeStabilizerPermutation = BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation = BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
-  return {eCommand, FileStepEnum, FileDataPoincare, FileO, Arithmetic, Approach, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
+  return {eCommand, FileStepEnum, FileDataPoincare, FileO, Arithmetic, Approach, MethodMissingI, MethodVertexMatching, n_iter_max, n_expand, ComputeStabilizerPermutation, ComputeGroupPresentation};
 }
 
 template <typename T>
@@ -1800,7 +1808,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option) {
     throw TerminalException{1};
   };
   f_init();
-  return IterativePoincareRefinement(se, dp, rec_option);
+  return IterativePoincareRefinement(se, rec_option);
 }
 
 
