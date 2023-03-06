@@ -375,7 +375,7 @@ public:
 
   EquivInfo<Tequiv> IsPresentNoLock(int const &iEntryStart,
                                     PairT_Tinv<T> const &eRec,
-                                    std::ostream &os) {
+                                    [[maybe_unused]] std::ostream &os) {
     //    os << "Start IsPresentNoLock\n";
     //    os << "eInv=" << eInv << "\n";
     //    os << "nbEntry=" << nbEntry << "\n";

@@ -407,7 +407,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           UpgradeBalinskiStat = [&](PolyhedralBalinski &eStat,
                                     SimpleOrbitFacet<T, Tgroup> const &fEnt,
                                     SimpleOrbitFacetInv<T> const &fInv,
-                                    std::ostream &os) -> void {
+                                    [[maybe_unused]] std::ostream &os) -> void {
         if (eStat.final)
           return;
         eStat.nbUnsolved += fInv.eOrbitSize;
@@ -473,7 +473,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       if (ansGRP == "partition" || ansGRP == "classic") {
         GetRecord =
             [&](Face const &eOrb,
-                std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
+                [[maybe_unused]] std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
           Tgroup TheStab = TheGRPrelevant.Stabilizer_OnSets(eOrb);
           int siz = eOrb.count();
           Tint eOrbitSize = TheGRPrelevant.size() / TheStab.size();
@@ -493,7 +493,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           }
           return {};
         };
-        GetRecord = [TheGRPrelevant](Face const &eOrb, std::ostream &os)
+        GetRecord = [TheGRPrelevant](Face const &eOrb, [[maybe_unused]] std::ostream &os)
             -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
           Face eFaceMin = eOrb;
           Tint n_match = 0;

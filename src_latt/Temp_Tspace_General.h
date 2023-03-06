@@ -303,7 +303,7 @@ MyMatrix<T> T_GRAM_GetScalProdMat(MyMatrix<T> const &eMat,
 
 template <typename T, typename Tint, typename Tgroup>
 void T_GetGramMatrixAutomorphismGroup(
-    MyMatrix<T> const &eMat, T const &TheTol, Tgroup &GRPperm,
+    MyMatrix<T> const &eMat, Tgroup &GRPperm,
     std::vector<MyMatrix<Tint>> &ListMatrGens) {
   using Tidx_value = int16_t;
   T MaxDet = T_GRAM_GetUpperBound(eMat);
@@ -323,7 +323,7 @@ void T_GetGramMatrixAutomorphismGroup(
 
 template <typename T, typename Tint, typename Telt>
 bool T_TestGramMatrixEquivalence(MyMatrix<T> const &eMat1,
-                                 MyMatrix<T> const &eMat2, T const &TheTol) {
+                                 MyMatrix<T> const &eMat2) {
   using Tidx_value = int16_t;
   T MaxDet1 = T_GRAM_GetUpperBound(eMat1);
   T MaxDet2 = T_GRAM_GetUpperBound(eMat2);

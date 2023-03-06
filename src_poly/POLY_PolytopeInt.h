@@ -325,7 +325,7 @@ void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> cons
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> const &B,
-                                  Finsert f_insert) {
+                                  [[maybe_unused]] Finsert f_insert) {
   std::optional<MyVector<T>> opt = SolutionIntMat(A, B);
   if (!opt)
     return;
