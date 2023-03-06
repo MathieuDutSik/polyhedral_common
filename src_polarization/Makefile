@@ -8,7 +8,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 
 #CC		= icpc -std=c++11 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++11
-CC		= g++ -std=c++17 -Wall -g -O2
+CC		= g++ -std=c++17 -Wall -Wextra -g -O2
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o

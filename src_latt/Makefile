@@ -15,10 +15,10 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= clang++ -O2 -Weverything -std=c++17 -DDEBUG
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
-#CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
-#CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0
-CC		= g++ -std=c++17 -Wall -O3
-#CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
+#CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
+#CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0
+CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
