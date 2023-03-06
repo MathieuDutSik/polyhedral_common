@@ -1219,6 +1219,7 @@ public:
       eList.push_back(i_mat);
       return {std::move(test_scal), std::move(test_x), std::move(eList)};
     };
+    /*
     auto f_greedy=[&](MyVector<T> const& start_x) -> ResultOptim {
       ResultOptim ro = f_start(start_x);
       while (true) {
@@ -1235,6 +1236,7 @@ public:
         }
       }
     };
+    */
     auto f_all_decrease=[&](ResultOptim const& ro) -> std::vector<ResultOptim> {
       std::unordered_set<MyVector<T>> l_done;
       std::vector<ResultOptim> l_active{ro};
@@ -1245,7 +1247,7 @@ public:
           for (int i=0; i<datafac.n_mat; i++) {
             ResultOptim ro_new = f_increment(ro, i + 1);
             if (ro_new.the_scal < ro.the_scal) {
-              if (l_done.count(ro_new) == 0) {
+              if (l_done.count(ro_new.the_x) == 0) {
                 l_result.push_back(ro_new);
                 l_total.push_back(ro_new);
                 l_done.insert(ro_new.the_x);
@@ -1271,7 +1273,7 @@ public:
     auto f_evaluate=[&](ResultOptim const& ro) -> CombElt<T> {
       CombElt<T> RetElt = TestElt;
       for (auto & i_mat : ro.eList) {
-        RetElt = RetElt * f_get_combelt(i_mat);
+        RetElt = ProductComb(RetElt, f_get_combelt(i_mat));
       }
       return RetElt;
     };
@@ -1443,7 +1445,17 @@ public:
       }
     }
   }
-  void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre) {
+  std::optional<CombElt<T>> GetMissing_TypeI(DataFAC<T> const& datafac, CombElt<T> const &TestElt, int const& max_iter, std::string const& MethodMissingI) const {
+    if (MethodMissingI == "Gen1") {
+      return GetMissing_TypeI_Gen1(datafac, TestElt, max_iter);
+    }
+    if (MethodMissingI == "Gen2") {
+      return GetMissing_TypeI_Gen2(datafac, TestElt, max_iter);
+    }
+    std::cerr << "Failed to find a matching entry. MethodMissingI=" << MethodMissingI << "\n";
+    throw TerminalException{1};
+  }
+  void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre, std::string const& MethodMissingI) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
     std::cerr << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(), [](CombElt<T> const& x, CombElt<T> const& y) -> bool {
@@ -1511,7 +1523,7 @@ public:
       if (datafac.eVectInt) {
         std::vector<CombElt<T>> n_pair;
         for (auto & TestElt : e_pair) {
-          std::optional<CombElt<T>> opt = GetMissing_TypeI_Gen1(datafac, TestElt, 0);
+          std::optional<CombElt<T>> opt = GetMissing_TypeI(datafac, TestElt, 0, MethodMissingI);
           if (opt) {
             CombElt<T> const& uElt1 = *opt;
             CombElt<T> uElt2 = InverseComb(uElt1);
@@ -1799,7 +1811,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option) {
   StepEnum<T> se(dp.x);
   auto f_init=[&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
-      return se.InsertAndCheckRedundancy(dp.ListGroupElt);
+      return se.InsertAndCheckRedundancy(dp.ListGroupElt, rec_option.MethodMissingI);
     }
     if (rec_option.Approach == "FacetAdjacencies") {
       return se.read_step_enum_from_file(rec_option.FileStepEnum);
