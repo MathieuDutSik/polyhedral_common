@@ -1031,6 +1031,101 @@ public:
     }
     return ListMiss;
   }
+  // The facets can be defined by the same inequality but with opposite signs.
+  // In that case, we have to add some new elements inspired by the missing elements.
+  std::vector<CombElt<T>> GetMissingFacetMatchingElement(DataFAC<T> const& datafac, std::string const& eCommand, ShortVectorGroup<T> const& svg) const {
+    //
+    // Preprocessing information
+    //
+    MyMatrix<T> EXT = DirectFacetComputationIneq(datafac.FAC, eCommand, std::cerr);
+    std::vector<int> V = ComputeMatchingVector();
+    //
+    // Building incidence informations
+    //
+    int n_fac = datafac.FAC.rows();
+    int n_ext = EXT.rows();
+    int n = EXT.cols();
+    vectface vf(n_ext);
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      Face f(n_ext);
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        T scal=0;
+        for (int i=0; i<n; i++)
+          scal += EXT(i_ext,i) * datafac.FAC(i_fac,i);
+        if (scal == 0)
+          f[i_ext] = 1;
+      }
+      vf.push_back(f);
+    }
+    Face f_incidence(n_fac * n_fac);
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      for (int j_fac=i_fac+1; j_fac<n_fac; j_fac++) {
+        Face f(n_ext);
+        Face f1 = vf[i_fac];
+        Face f2 = vf[j_fac];
+        for (int i_ext=0; i_ext<n_ext; i_ext++) {
+          if (f1[i_ext] && f2[i_ext])
+            f[i_ext] = 1;
+        }
+        if (static_cast<int>(f.count()) < n - 2) {
+          MyMatrix<T> EXT_red = SelectRow(EXT, f);
+          int rnk = RankMat(EXT_red);
+          if (rnk == n - 2) {
+            f_incidence[i_fac + n_fac * j_fac] = 1;
+            f_incidence[j_fac + n_fac * i_fac] = 1;
+          }
+        }
+      }
+    }
+    //
+    // Determining the vertices which are 
+    //
+    Face f_insert_svg(n_ext);
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      MyMatrix<T> Q = datafac.ListAdj[i_fac];
+      MyMatrix<T> cQ = Contragredient(Q);
+      MyMatrix<T> EXTimg = EXT * cQ;
+      MyMatrix<T> FACimg = datafac.FAC * Q;
+      Face f = vf[i_fac];
+      auto f_set=[&](int i_ext) {
+        if (f[i_ext] == 0) {
+          // Not in face, so no insertion
+          return;
+        }
+        if (f_insert_svg[i_ext] == 1) {
+          // Already selected, so no need to compute
+          return;
+        }
+        for (int i_fac=0; i_fac<n_fac; i_fac++) {
+          T scal = 0;
+          for (int i=0; i<n; i++) {
+            scal += EXT(i_ext,i) * datafac.FAC(i_fac,i);
+          }
+          if (scal < 0) {
+            f_insert_svg[i_ext] = 1;
+            return;
+          }
+        }
+      };
+      for (int i_ext=0; i_ext<n_ext; i_ext++)
+        f_set(i_ext);
+    }
+    //
+    // Now calling the SGE code
+    //
+    std::vector<CombElt<T>> ListMiss;
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      if (f_insert_svg[i_ext] == 1) {
+        MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
+        T target_scal = eEXT.dot(x);
+        CombElt<T> eNew1 = svg.GetShortVector(eEXT, target_scal);
+        CombElt<T> eNew2 = InverseComb(eNew1);
+        ListMiss.push_back(eNew1);
+        ListMiss.push_back(eNew2);
+      }
+    }
+    return ListMiss;
+  }
   // The domain is defined originally as
   // Tr(AX) <= Tr(PAP^T X)
   // which we rewrite
@@ -1055,7 +1150,7 @@ public:
       throw TerminalException{1};
     }
     std::cerr << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows() << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n << " nk=" << rnk << "\n";
-    vectface vf = DirectFacetOrbitComputation_nogroup(FAC, eCommand, std::cerr);
+    vectface vf = DirectFacetComputationIncidence(FAC, eCommand, std::cerr);
     std::cerr << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();

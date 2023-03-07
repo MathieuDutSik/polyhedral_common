@@ -50,7 +50,7 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (prog == "lrs")
-        return lrs::DualDescription_temp_incd(EXT);
+        return lrs::DualDescription_incd(EXT);
       if (prog == "cdd")
         return cdd::DualDescription_incd(EXT);
       std::cerr << "Failed to find a matching program\n";
@@ -172,7 +172,7 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
         if (ListStrB.size() == 2 && ListStrB[0] == "upperlimit")
           std::istringstream(ListStrB[1]) >> upperlimit;
       }
-      return lrs::DualDescription_temp_incd_limited(EXT, upperlimit);
+      return lrs::DualDescription_incd_limited(EXT, upperlimit);
     }
     std::cerr << "No right program found\n";
     std::cerr << "Let us die\n";

@@ -43,10 +43,21 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
   return retval;
 }
 
-template <typename T>
-vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
-                                 std::string const &eCommand,
-                                 std::ostream &os) {
+template<typename T>
+size_t GetShift([[maybe_unused]] MyMatrix<T> const &EXT, std::string const &eCommand) {
+  size_t shift;
+  if (eCommand == "normaliz") {
+    shift = 0;
+  } else {
+    shift = 1;
+  }
+  return shift;
+}
+
+template <typename T, typename Finsert>
+void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
+                                    std::string const &eCommand,
+                                    std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -123,22 +134,6 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   std::ifstream is(FileO);
   std::vector<T> LVal(DimEXT);
   T eScal;
-  size_t shift;
-  if (eCommand == "normaliz") {
-    shift = 0;
-  } else {
-    shift = 1;
-  }
-#ifdef USE_ISINCD
-  auto isincd = [&](size_t i_row) -> bool {
-    eScal = 0;
-    for (size_t i = shift; i < DimEXT; i++)
-      eScal += LVal[i] * EXT(i_row, i - shift);
-    return eScal == 0;
-  };
-#else
-  Face f(n_row);
-#endif
   std::string line;
   size_t pos_wrt = 0;
   auto f_read = [&](const std::string &str) -> void {
@@ -148,17 +143,7 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   auto process_line = [&]() -> void {
     STRING_Split_f(line, " ", f_read);
     pos_wrt = 0;
-#ifdef USE_ISINCD
-    ListFace.InsertFaceRef(isincd);
-#else
-    for (size_t i_row = 0; i_row < n_row; i_row++) {
-      eScal = 0;
-      for (size_t i = shift; i < DimEXT; i++)
-        eScal += LVal[i] * EXT(i_row, i - shift);
-      f[i_row] = static_cast<bool>(eScal == 0);
-    }
-    ListFace.push_back(f);
-#endif
+    f_insert(LVal);
   };
   size_t iLine = 0;
   // For this case we know at the beginning the number of inequalities
@@ -232,13 +217,67 @@ vectface DualDescExternalProgram(MyMatrix<T> const &EXT,
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
   RemoveFileIfExist(FileE);
-  return ListFace;
 }
 
 template <typename T>
-vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
-                                             std::string const &ansProg,
-                                             std::ostream &os) {
+vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
+                                          std::string const &eCommand,
+                                          std::ostream &os) {
+  size_t n_row = EXT.rows();
+  size_t n_col = EXT.cols();
+  size_t DimEXT = n_col + 1;
+  vectface vf(n_row);
+  Face f(n_row);
+  size_t shift = GetShift(EXT, eCommand);
+  T eScal;
+  auto f_insert=[&](std::vector<T> const& LVal) -> void {
+#ifdef USE_ISINCD
+    auto isincd = [&](size_t i_row) -> bool {
+      eScal = 0;
+      for (size_t i = shift; i < DimEXT; i++)
+        eScal += LVal[i] * EXT(i_row, i - shift);
+      return eScal == 0;
+    };
+    vf.InsertFaceRef(isincd);
+#else
+    for (size_t i_row = 0; i_row < n_row; i_row++) {
+      eScal = 0;
+      for (size_t i = shift; i < DimEXT; i++)
+        eScal += LVal[i] * EXT(i_row, i - shift);
+      f[i_row] = static_cast<bool>(eScal == 0);
+    }
+    vf.push_back(f);
+#endif
+  };
+  DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
+  return vf;
+}
+
+template <typename T>
+MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
+                                        std::string const &eCommand,
+                                        std::ostream &os) {
+  //  size_t n_row = EXT.rows();
+  size_t n_col = EXT.cols();
+  size_t DimEXT = n_col + 1;
+  size_t shift = GetShift(EXT, eCommand);
+  int nbColRed = DimEXT - shift;
+  MyVector<T> V(nbColRed);
+  std::vector<MyVector<T>> ListVect;
+  auto f_insert=[&](std::vector<T> const& LVal) -> void {
+    for (int i=0; i<nbColRed; i++) {
+      V(i) = LVal[i + shift];
+    }
+    ListVect.push_back(V);
+  };
+  DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
+  return MatrixFromVectorFamily(ListVect);
+}
+
+template <typename T>
+vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
+                                         std::string const &ansProg,
+                                         std::ostream &os) {
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -261,12 +300,12 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   eProg = "lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return lrs::DualDescription_temp_incd(EXT);
+    return lrs::DualDescription_incd(EXT);
   //
   eProg = "lrs_ring";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return lrs::DualDescription_temp_incd_reduction(EXT);
+    return lrs::DualDescription_incd_reduction(EXT);
   //
   // The external programs are available only for rationl types
   //
@@ -274,22 +313,22 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
     eProg = "glrs";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "glrs", os);
+      return DualDescExternalProgramIncidence(EXT, "glrs", os);
     //
     eProg = "ppl_ext";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "ppl_lcdd", os);
+      return DualDescExternalProgramIncidence(EXT, "ppl_lcdd", os);
     //
     eProg = "cdd_ext";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "lcdd_gmp", os);
+      return DualDescExternalProgramIncidence(EXT, "lcdd_gmp", os);
     //
     eProg = "normaliz";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return DualDescExternalProgram(EXT, "normaliz", os);
+      return DualDescExternalProgramIncidence(EXT, "normaliz", os);
   }
   //
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
@@ -306,6 +345,75 @@ vectface DirectFacetOrbitComputation_nogroup(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
+
+
+
+
+template <typename T>
+MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
+                                               std::string const &ansProg,
+                                               std::ostream &os) {
+  std::string eProg;
+  std::vector<std::string> ListProg;
+  //
+  eProg = "cdd";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return cdd::DualDescription(EXT);
+  //
+  eProg = "lrs";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescription(EXT);
+  //
+  eProg = "lrs_ring";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescription_reduction(EXT);
+  //
+  // The external programs are available only for rationl types
+  //
+  if constexpr (is_implementation_of_Q<T>::value) {
+    eProg = "glrs";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramIneq(EXT, "glrs", os);
+    //
+    eProg = "ppl_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramIneq(EXT, "ppl_lcdd", os);
+    //
+    eProg = "cdd_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramIneq(EXT, "lcdd_gmp", os);
+    //
+    eProg = "normaliz";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramIneq(EXT, "normaliz", os);
+  }
+  //
+  std::cerr << "ERROR: No right program found with ansProg=" << ansProg
+            << " or incorrect output\n";
+  std::cerr << "List of authorized programs :";
+  bool IsFirst = true;
+  for (auto &eP : ListProg) {
+    if (!IsFirst)
+      std::cerr << " ,";
+    IsFirst = false;
+    std::cerr << " " << eP;
+  }
+  std::cerr << "\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
+
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                      std::string const &ansProg,
@@ -313,7 +421,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  vectface ListIncd = DirectFacetOrbitComputation_nogroup(EXT, ansProg, os);
+  vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
 #ifdef TIMINGS
   os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
      << "\n";
