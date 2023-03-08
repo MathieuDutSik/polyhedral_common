@@ -3,7 +3,7 @@ name: Docker Image polyhedral_common CI
 on:
   # Every day at 5 am.
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 14 * * 1"
   # Manually triggered
   workflow_dispatch:
 jobs:
