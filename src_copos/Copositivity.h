@@ -966,7 +966,7 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
                  MyMatrix<Tint> const &InitialBasis) {
   int n = eSymmMat.rows();
   size_t nbCone = 0;
-  auto f_insert = [&](MyMatrix<int> const &TheBasis,
+  auto f_insert = [&]([[maybe_unused]] MyMatrix<int> const &TheBasis,
                       MyMatrix<T> const &eSymmMatB) -> bool {
     for (int i = 0; i < n; i++)
       for (int j = i + 1; j < n; j++)

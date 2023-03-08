@@ -1499,9 +1499,12 @@ std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
     double frac =
         static_cast<double>(n_act - 1) / static_cast<double>(n_ent_bit - 1);
     for (size_t i = 0; i < n_ent_bit; i++) {
-      size_t pos = size_t(round(frac * static_cast<double>(i)));
-      if (pos < 0)
+      int pos_i = lround(frac * static_cast<double>(i));
+      size_t pos;
+      if (pos_i < 0)
         pos = 0;
+      else
+        pos = pos_i;
       if (pos >= n_act)
         pos = n_act - 1;
       pos_wrt--;

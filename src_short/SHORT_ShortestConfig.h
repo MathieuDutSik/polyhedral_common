@@ -494,8 +494,7 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
     std::cerr << "Error, the matrix is not integral\n";
     throw TerminalException{1};
   }
-  MyMatrix<Tint> MatEquiv_i = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-  return std::move(MatEquiv_i);
+  return UniversalMatrixConversion<Tint, T>(MatEquiv_T);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -899,7 +898,7 @@ SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
     return SHORT_TestEquivalence<T, Tint, Tgroup>(M1.SHV, M2.SHV);
   };
   std::function<int(SHVshortest<T, Tint> const &)> fSize =
-      [](SHVshortest<T, Tint> const &M) -> int { return 0; };
+      []([[maybe_unused]] SHVshortest<T, Tint> const &M) -> int { return 0; };
   FctsDataBank<SHVshortest<T, Tint>> recFct{fEquiv, fSize};
   DataBank<SHVshortest<T, Tint>> TheBank(eSave, eMemory, ePrefix, recFct);
   std::atomic<int> NbDone(0);

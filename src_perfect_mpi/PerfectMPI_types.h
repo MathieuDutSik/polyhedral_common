@@ -87,7 +87,7 @@ namespace serialization {
 // TypePerfectExch
 template <class Archive, typename T>
 inline void serialize(Archive &ar, TypePerfectExch<T> &eRecMat,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("incd", eRecMat.incd);
   int rows = eRecMat.eMat.rows();
   int cols = eRecMat.eMat.cols();
@@ -102,7 +102,7 @@ inline void serialize(Archive &ar, TypePerfectExch<T> &eRecMat,
 // TypePerfectExch
 template <class Archive>
 inline void serialize(Archive &ar, TypeIndex &eTypIdx,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("iProc", eTypIdx.iProc);
   ar &make_nvp("idxMatrix", eTypIdx.idxMatrix);
   ar &make_nvp("iAdj", eTypIdx.iAdj);
@@ -111,7 +111,7 @@ inline void serialize(Archive &ar, TypeIndex &eTypIdx,
 // PairExch
 template <class Archive, typename T>
 inline void serialize(Archive &ar, PairExch<T> &ePair,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("perfect", ePair.ePerfect);
   ar &make_nvp("index", ePair.eIndex);
 }
