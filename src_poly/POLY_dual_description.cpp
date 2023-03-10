@@ -15,7 +15,7 @@ void process(std::string const &eFileI, std::string const& ansProg, std::ostream
   os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
   size_t pos = 0;
   for (Face f : vf) {
-    os << "pos=" << pos << " f=" << StringFace(f) << "\n";
+    os << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count() << "\n";
   }
   WriteMatrix(os, FAC);
 }
@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_dual_description arith command [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "choice  : the chosen processing option\n";
       std::cerr << "arith   : the chosen arithmetic\n";
+      std::cerr << "command : the program used for computing the dual description\n";
       std::cerr << "DATAIN  : The polyhedral cone inequalities\n";
       std::cerr << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";

@@ -130,6 +130,14 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   }
   //  os << "iret1=" << iret1 << "\n";
   vectface ListFace(n_row);
+  size_t n_facet = 0;
+  auto check_consistency=[&]() -> void {
+    if (ListFace.size() != n_facet) {
+      os << "Consistency error |ListFace|=" << ListFace.size()
+         << " n_facet=" << n_facet << "\n";
+      throw TerminalException{1};
+    }
+  };
   //
   std::ifstream is(FileO);
   std::vector<T> LVal(DimEXT);
@@ -140,16 +148,18 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     ParseScalar_inplace<T>(str, LVal[pos_wrt]);
     pos_wrt++;
   };
+  size_t n_insert = 0;
   auto process_line = [&]() -> void {
     STRING_Split_f(line, " ", f_read);
     pos_wrt = 0;
     f_insert(LVal);
+    n_insert++;
   };
   size_t iLine = 0;
   // For this case we know at the beginning the number of inequalities
   if (eCommand == "normaliz") {
     bool has_n_facet = false;
-    size_t n_facet = 0, iLineLimit = 0;
+    size_t iLineLimit = 0;
     while (std::getline(is, line)) {
       os << "iLine=" << iLine << " line=" << line << "\n";
       if (has_n_facet) {
@@ -170,14 +180,10 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
       }
       iLine++;
     }
-    if (ListFace.size() != n_facet) {
-      os << "Consistency error |ListFace|=" << ListFace.size()
-         << " n_facet=" << n_facet << "\n";
-      throw TerminalException{1};
-    }
+    check_consistency();
   }
   if (eCommand == "ppl_lcdd" || eCommand == "lcdd_gmp") {
-    size_t headersize, n_facet = 0, iLineLimit = 0;
+    size_t headersize, iLineLimit = 0;
     if (eCommand == "lcdd_gmp")
       headersize = 4;
     if (eCommand == "ppl_lcdd")
@@ -193,11 +199,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
         process_line();
       iLine++;
     }
-    if (ListFace.size() != n_facet) {
-      os << "Consistency error |ListFace|=" << ListFace.size()
-         << " n_facet=" << n_facet << "\n";
-      throw TerminalException{1};
-    }
+    check_consistency();
   }
   if (eCommand == "glrs") {
     size_t headersize = 7;
@@ -213,7 +215,13 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   os << "|FileRead|=" << time << "\n";
 #endif
   os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
-  //  throw TerminalException{1};
+  if (n_insert == 0) {
+    std::cerr << "We inserted zero entries\n";
+    os << "FileI = " << FileI << "\n";
+    os << "FileO = " << FileO << "\n";
+    os << "FileE = " << FileE << "\n";
+    throw TerminalException{1};
+  }
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
   RemoveFileIfExist(FileE);
