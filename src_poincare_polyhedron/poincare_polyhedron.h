@@ -1037,8 +1037,14 @@ public:
     //
     // Preprocessing information
     //
-    MyMatrix<T> EXT = DirectFacetComputationIneq(datafac.FAC, eCommand, std::cerr);
+    MyMatrix<T> EXT = DirectFacetComputationInequalities(datafac.FAC, eCommand, std::cerr);
     std::vector<int> V = ComputeMatchingVector();
+    for (auto & eVal : V) {
+      if (eVal == -1) {
+        std::cerr << "We have a missing matching facet problem. Exiting here\n";
+        throw TerminalException{1};
+      }
+    }
     //
     // Building incidence informations
     //
@@ -1078,11 +1084,11 @@ public:
       }
     }
     //
-    // Determining the vertices which are 
+    // Determining the vertices which are
     //
     Face f_insert_svg(n_ext);
     for (int i_fac=0; i_fac<n_fac; i_fac++) {
-      MyMatrix<T> Q = datafac.ListAdj[i_fac];
+      MyMatrix<T> const& Q = datafac.ListAdj[i_fac].mat;
       MyMatrix<T> cQ = Contragredient(Q);
       MyMatrix<T> EXTimg = EXT * cQ;
       MyMatrix<T> FACimg = datafac.FAC * Q;
@@ -1550,7 +1556,7 @@ public:
     std::cerr << "Failed to find a matching entry. MethodMissingI=" << MethodMissingI << "\n";
     throw TerminalException{1};
   }
-  void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre, std::string const& MethodMissingI) {
+  void InsertAndCheckRedundancy(std::vector<CombElt<T>> const& l_elt_pre, std::string const& MethodMissingI, std::string eCommand) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
     std::cerr << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(), [](CombElt<T> const& x, CombElt<T> const& y) -> bool {
@@ -1586,21 +1592,41 @@ public:
     };
     std::unordered_set<CombElt<T>> ListTried;
     ShortVectorGroup<T> svg(x, l_elt);
-    auto f_inverses_clear=[&]() -> void {
+    auto f_inverses_clear=[&]() -> bool {
+      bool DidSomething = false;
+      while(true) {
+        std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
+        std::vector<CombElt<T>> ListMissB;
+        for (auto & eElt : ListMiss) {
+          if (ListTried.count(eElt) == 0) {
+            ListMissB.push_back(eElt);
+            ListTried.insert(eElt);
+          }
+        }
+        std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << "\n";
+        if (ListMissB.size() == 0)
+          return DidSomething;
+        insert_generator(ListMissB);
+        DidSomething = true;
+      }
+    };
+    auto f_facet_matching=[&]() -> bool {
+      if (eCommand == "unset")
+        return false;
+      std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement(datafac, eCommand, svg);
+      if (ListMiss.size() == 0) {
+        return false;
+      }
+      insert_generator(ListMiss);
+      return true;
+    };
+    auto f_coherency_update=[&]() -> void {
       if (datafac.eVectInt) {
         while(true) {
-          std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
-          std::vector<CombElt<T>> ListMissB;
-          for (auto & eElt : ListMiss) {
-            if (ListTried.count(eElt) == 0) {
-              ListMissB.push_back(eElt);
-              ListTried.insert(eElt);
-            }
-          }
-          std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << "\n";
-          if (ListMissB.size() == 0)
-            break;
-          insert_generator(ListMissB);
+          bool result1 = f_inverses_clear();
+          bool result2 = f_facet_matching();
+          if (!result1 && !result2)
+            return;
         }
       }
     };
@@ -1611,7 +1637,7 @@ public:
       write_description_to_file(eFileData, datafac);
       std::string eFileStep = "STEPENUM_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
       write_step_enum_to_file(eFileStep);
-      f_inverses_clear();
+      f_coherency_update();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       CombElt<T> e_eltInv = InverseComb(e_elt);
       std::vector<CombElt<T>> e_pair{e_elt,e_eltInv};
@@ -1653,23 +1679,17 @@ public:
       CombElt<T> TheMat = GenerateIdentity<T>(n);
       int i_mat_work = i_mat;
       int i_facet_work = i_facet;
-      //      std::cerr << "i_mat_work=" << i_mat_work << " i_facet_work=" << i_facet_work << "\n";
       while (true) {
         TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
         int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
-        //        std::cerr << "We have iFaceOpp=" << iFaceOpp << "\n";
         int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
-        //        std::cerr << "We have iPolyOpp=" << iPolyOpp << "\n";
         i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
-        //        std::cerr << "Now i_mat_work=" << i_mat_work << "\n";
         i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
-        //        std::cerr << "Now i_facet_work=" << i_facet_work << "\n";
         MyVector<T> x_img = TheMat.mat.transpose() * x;
         if (x_img == x) {
           return {};
         }
         bool test = TestIntersection(FAC, TheMat);
-        //        std::cerr << "test=" << test << "\n";
         if (test) {
           return TheMat;
         }
@@ -1906,7 +1926,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option) {
   StepEnum<T> se(dp.x);
   auto f_init=[&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
-      return se.InsertAndCheckRedundancy(dp.ListGroupElt, rec_option.MethodMissingI);
+      return se.InsertAndCheckRedundancy(dp.ListGroupElt, rec_option.MethodMissingI, rec_option.eCommand);
     }
     if (rec_option.Approach == "FacetAdjacencies") {
       return se.read_step_enum_from_file(rec_option.FileStepEnum);
