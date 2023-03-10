@@ -128,13 +128,15 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     os << "FileE = " << FileE << "\n";
     throw TerminalException{1};
   }
-  //  os << "iret1=" << iret1 << "\n";
-  vectface ListFace(n_row);
   size_t n_facet = 0;
+  size_t n_insert = 0;
   auto check_consistency=[&]() -> void {
-    if (ListFace.size() != n_facet) {
-      os << "Consistency error |ListFace|=" << ListFace.size()
-         << " n_facet=" << n_facet << "\n";
+    if (n_insert != n_facet) {
+      os << "Consistency error\n";
+      os << "n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
+      os << "FileI = " << FileI << "\n";
+      os << "FileO = " << FileO << "\n";
+      os << "FileE = " << FileE << "\n";
       throw TerminalException{1};
     }
   };
@@ -148,7 +150,6 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     ParseScalar_inplace<T>(str, LVal[pos_wrt]);
     pos_wrt++;
   };
-  size_t n_insert = 0;
   auto process_line = [&]() -> void {
     STRING_Split_f(line, " ", f_read);
     pos_wrt = 0;
