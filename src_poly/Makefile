@@ -2,11 +2,12 @@
 PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   TEST_PermMatrTest_PolyEquivalence TEST_PermMatrTest_PolyStabilizer \
                   TEST_LinPolytope_Canonic TEST_WeightMatrixLimited \
+		  TEST_LinPolytope_WMatCanonic \
+		  TEST_PolytopeIntegralPoints \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons \
 		  POLY_redundancy POLY_redundancyClarkson POLY_redundancyClarksonBlocks \
 		  POLY_IntegralPoints \
-		  TEST_PolytopeIntegralPoints \
 		  POLY_lcdd POLY_FaceLatticeGen \
 		  POLY_lrs POLY_lrs_set_reduction POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
@@ -18,6 +19,8 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic \
                   GRP_OrbitSplittingPerfect \
+		  POLY_SolutionMatNonnegative \
+		  POLY_dual_description \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet \
 		  POLY_IsomorphismReduction \
