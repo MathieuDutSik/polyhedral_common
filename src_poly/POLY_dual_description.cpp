@@ -31,10 +31,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_dual_description arith command [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "choice : the chosen processing option\n";
-      std::cerr << "arith  : the chosen arithmetic\n";
-      std::cerr << "DATAIN : The polyhedral cone inequalities\n";
-      std::cerr << "DATA_ALGEBRAIC_FIELD : The algebraic field used\n";
+      std::cerr << "choice  : the chosen processing option\n";
+      std::cerr << "arith   : the chosen arithmetic\n";
+      std::cerr << "DATAIN  : The polyhedral cone inequalities\n";
+      std::cerr << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";

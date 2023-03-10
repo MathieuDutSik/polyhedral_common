@@ -139,10 +139,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_lrs choice arith [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "choice : the chosen processing option\n";
-      std::cerr << "arith  : the chosen arithmetic\n";
-      std::cerr << "DATAIN : The polyhedral cone inequalities\n";
-      std::cerr << "DATA_ALGEBRAIC_FIELD : The algebraic field used\n";
+      std::cerr << "choice  : the chosen processing option\n";
+      std::cerr << "arith   : the chosen arithmetic\n";
+      std::cerr << "DATAIN  : The polyhedral cone inequalities\n";
+      std::cerr << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- choice ---\n";
       std::cerr << "\n";
