@@ -1037,7 +1037,10 @@ public:
     //
     // Preprocessing information
     //
+    std::cerr << "GetMissingFacetMatchingElement, beginning\n";
+    MicrosecondTime time;
     MyMatrix<T> EXT = DirectFacetComputationInequalities(datafac.FAC, eCommand, std::cerr);
+    std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
     std::vector<int> V = ComputeMatchingVector();
     for (auto & eVal : V) {
       if (eVal == -1) {
@@ -1051,6 +1054,7 @@ public:
     int n_fac = datafac.FAC.rows();
     int n_ext = EXT.rows();
     int n = EXT.cols();
+    std::cerr << "n_fac=" << n_fac << " n_ext=" << n_ext << " n=" << n << "\n";
     vectface vf(n_ext);
     for (int i_fac=0; i_fac<n_fac; i_fac++) {
       Face f(n_ext);
@@ -1061,8 +1065,10 @@ public:
         if (scal == 0)
           f[i_ext] = 1;
       }
+      std::cerr << "i_fac=" << i_fac << "  |f|=" << f.count() << "\n";
       vf.push_back(f);
     }
+    std::cerr << "We have vf\n";
     Face f_incidence(n_fac * n_fac);
     for (int i_fac=0; i_fac<n_fac; i_fac++) {
       for (int j_fac=i_fac+1; j_fac<n_fac; j_fac++) {
@@ -1073,7 +1079,7 @@ public:
           if (f1[i_ext] && f2[i_ext])
             f[i_ext] = 1;
         }
-        if (static_cast<int>(f.count()) < n - 2) {
+        if (static_cast<int>(f.count()) >= n - 2) {
           MyMatrix<T> EXT_red = SelectRow(EXT, f);
           int rnk = RankMat(EXT_red);
           if (rnk == n - 2) {
@@ -1083,6 +1089,16 @@ public:
         }
       }
     }
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      int n_adj = 0;
+      for (int j_fac=0; j_fac<n_fac; j_fac++) {
+        if (f_incidence[i_fac + n_fac * j_fac] == 1) {
+          n_adj++;
+        }
+      }
+      std::cerr << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
+    }
+    std::cerr << "We have f_incidence\n";
     //
     // Determining the vertices which are
     //
@@ -1095,7 +1111,7 @@ public:
       Face f = vf[i_fac];
       auto f_set=[&](int i_ext) {
         if (f[i_ext] == 0) {
-          // Not in face, so no insertion
+          // Not in face, so no insertion to do
           return;
         }
         if (f_insert_svg[i_ext] == 1) {
@@ -1105,7 +1121,7 @@ public:
         for (int i_fac=0; i_fac<n_fac; i_fac++) {
           T scal = 0;
           for (int i=0; i<n; i++) {
-            scal += EXT(i_ext,i) * datafac.FAC(i_fac,i);
+            scal += EXT(i_ext,i) * FACimg(i_fac,i);
           }
           if (scal < 0) {
             f_insert_svg[i_ext] = 1;
@@ -1116,6 +1132,7 @@ public:
       for (int i_ext=0; i_ext<n_ext; i_ext++)
         f_set(i_ext);
     }
+    std::cerr << "We have f_insert_svg\n";
     //
     // Now calling the SGE code
     //
@@ -1130,6 +1147,7 @@ public:
         ListMiss.push_back(eNew2);
       }
     }
+    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << "\n";
     return ListMiss;
   }
   // The domain is defined originally as
