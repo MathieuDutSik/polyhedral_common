@@ -1858,7 +1858,7 @@ The input file of the computation";
   ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
-  ListStringValues_doc["MethodMissingI"] = "Default: gen1\n\
+  ListStringValues_doc["MethodMissingI"] = "Default: Gen1\n\
 Method used for computing TypeI neighbors";
   ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
 Whether to generate new elements from vertex matchings";
