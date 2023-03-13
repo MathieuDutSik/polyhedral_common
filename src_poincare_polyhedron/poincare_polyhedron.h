@@ -584,7 +584,7 @@ struct ShortVectorGroup {
 
   CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
     CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
-    //    CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
+    CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
     return eElt1;
   }
 
@@ -1067,23 +1067,6 @@ public:
         MyVector<T> x_ineq = GetIneq(wInv);
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
         if (opt) {
-          // The code below is actually not working. It is kept for historical reasons
-          // and because it could be useful later.
-          if (false) {
-            MyVector<T> const& W = *opt;
-            int n_expr = 0;
-            T sumCoeff = 0;
-            for (int j_mat=0; j_mat<n_mat; j_mat++) {
-              if (W(j_mat) > 0) {
-                sumCoeff += W(j_mat);
-                CombElt<T> w_i = GetElement(ListNeighborData[i_mat]);
-                CombElt<T> prod = ProductComb(w_i, w);
-                ListMiss.push_back(prod);
-                n_expr += 1;
-              }
-            }
-            std::cerr << "We have opt n_expr=" << n_expr << " sumCoeff=" << sumCoeff << "\n";
-          }
           // Finding by nearest group point.
           Face f(n_mat);
           f[i_mat] = 1;
