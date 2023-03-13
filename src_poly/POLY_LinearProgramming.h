@@ -821,8 +821,8 @@ PosRelRes<T> SearchPositiveRelationSimple(MyMatrix<T> const &ListVect) {
 }
 
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
-                                                  MyVector<T> const &eVect) {
+std::optional<MyVector<T>> SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
+                                                           MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> InputListVect(nbVect + 1, nbCol);
@@ -851,6 +851,73 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
     TheSol(iVect) = PRR.TheRelat(iVect) / PRR.TheRelat(nbVect);
   return TheSol;
 }
+
+template <typename T>
+std::optional<MyVector<T>> SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect,
+                                                     MyVector<T> const &eVect) {
+  int nbVect = ListVect.rows();
+  int nbCol = ListVect.cols();
+  MyMatrix<T> ListIneq(nbVect,nbCol+1);
+  MyVector<T> eIneq(nbCol+1);
+  for (int iVect=0; iVect<nbVect; iVect++) {
+    ListIneq(iVect,0) = 0;
+    for (int iCol=0; iCol<nbCol; iCol++)
+      ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
+  }
+  eIneq(0) = 0;
+  for (int iCol=0; iCol<nbCol; iCol++)
+    eIneq(1 + iCol) = eVect(iCol);
+  //
+  LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq);
+  if (!eSol.DualDefined) {
+    return {};
+  }
+  return eSol.DualSolution;
+}
+
+template <typename T>
+std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
+                                                        MyVector<T> const &eVect) {
+  std::optional<MyVector<T>> opt1 = SolutionMatNonnegative_Version1(ListVect, eVect);
+  std::optional<MyVector<T>> opt2 = SolutionMatNonnegative_LP(ListVect, eVect);
+  if (opt1 && !opt2) {
+    std::cerr << "opt1 is defined but not opt2, incoherent\n";
+    throw TerminalException{1};
+  }
+  if (!opt1 && opt2) {
+    std::cerr << "opt1 is not defined but opt2 is, incoherent\n";
+    throw TerminalException{1};
+  }
+  if (!opt1 && !opt2)
+    return {};
+  MyVector<T> const& V = *opt1;
+  int nbRow = V.size();
+  if (nbRow != ListVect.rows()) {
+    std::cerr << "Dimension incoherency\n";
+    throw TerminalException{1};
+  }
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (V(iRow) < 0) {
+      std::cerr << "V should be non-negative\n";
+      throw TerminalException{1};
+    }
+  }
+  MyVector<T> prod = ListVect.transpose() * V;
+  if (prod != eVect) {
+    std::cerr << "prod does not matcheVect\n";
+    throw TerminalException{1};
+  }
+  return V;
+}
+
+template <typename T>
+std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
+                                                  MyVector<T> const &eVect) {
+  return SolutionMatNonnegative_Check(ListVect, eVect);
+}
+
+
+
 
 template <typename T>
 LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
