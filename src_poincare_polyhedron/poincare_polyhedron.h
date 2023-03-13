@@ -478,8 +478,9 @@ struct ShortVectorGroup {
   ShortVectorGroup(MyVector<T> const& _x, std::vector<CombElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
   }
 
-  CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
-    std::cerr << "Beginning of GetShortVector\n";
+  CombElt<T> GetShortVectorNoDuplication(MyVector<T> const& y, T const& target_scal) const {
+    MicrosecondTime time;
+    std::cerr << "Beginning of GetShortVectorNoDuplication\n";
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
     list_active[x] = std::vector<size_t>();
@@ -491,7 +492,6 @@ struct ShortVectorGroup {
     while (true) {
       std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
       std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr = std::move(list_active);
-      std::cerr << "  |list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
       for (auto & kv : list_curr) {
         for (size_t iGen=0; iGen<nGen; iGen++) {
           CombElt<T> const& eGen = ListGen[iGen];
@@ -504,7 +504,7 @@ struct ShortVectorGroup {
             for (auto & pos : eList) {
               RetElt = ProductComb(RetElt, ListGen[pos]);
             }
-            std::cerr << "Exiting GetShortVector after n_cons=" << n_cons << "\n";
+            std::cerr << "Exiting GetShortVectorNoDuplication after n_cons=" << n_cons << " time=" << time << "\n";
             return RetElt;
           }
           n_cons++;
@@ -517,6 +517,68 @@ struct ShortVectorGroup {
       iter += 1;
     }
   }
+
+  CombElt<T> GetShortVectorIteration(MyVector<T> const& y, T const& target_scal) const {
+    MicrosecondTime time;
+    std::cerr << "Beginning of GetShortVectorIteration\n";
+    size_t nGen = ListGen.size();
+    int n = y.size();
+    int n_cons = 0;
+    int n_iter = 1;
+    while (true) {
+      std::cerr << "Passing by the loop for n_iter=" << n_iter << "\n";
+      std::vector<MyVector<T>> ListX(n_iter+1);
+      std::vector<size_t> eList(n_iter, 0);
+      ListX[0] = x;
+      for (int i=0; i<n_iter; i++) {
+        CombElt<T> const& eGen = ListGen[0];
+        MyVector<T> xNew = eGen.mat.transpose() * ListX[i];
+        ListX[i + 1] = xNew;
+      }
+      auto get_iter=[&]() -> int {
+        for (int i = n_iter-1; i > 0; i--) {
+          if (eList[i] < nGen-1) {
+            return i;
+          }
+        }
+        return -1;
+      };
+      while(true) {
+        n_cons++;
+        int pos = get_iter();
+        if (pos == -1) {
+          break;
+        }
+        eList[pos]++;
+        for (int i=pos+1; i<n_iter; i++) {
+          eList[i] = 0;
+        }
+        for (int i=pos; i<n_iter; i++) {
+          CombElt<T> const& eGen = ListGen[eList[i]];
+          MyVector<T> xNew = eGen.mat.transpose() * ListX[i];
+          ListX[i + 1] = xNew;
+        }
+        MyVector<T> const& xTest = ListX[n_iter];
+        T scal = xTest.dot(y);
+        if (scal < target_scal) {
+          CombElt<T> RetElt = GenerateIdentity<T>(n);
+          for (auto & pos : eList) {
+            RetElt = ProductComb(RetElt, ListGen[pos]);
+          }
+          std::cerr << "Exiting GetShortVectorIteration after n_cons=" << n_cons << " time=" << time << "\n";
+          return RetElt;
+        }
+      }
+      n_iter++;
+    }
+  }
+
+  CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
+    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
+    CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
+    return eElt1;
+  }
+
 };
 
 //
