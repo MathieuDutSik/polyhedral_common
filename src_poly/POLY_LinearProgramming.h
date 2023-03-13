@@ -910,10 +910,46 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListV
   return V;
 }
 
+
+template <typename T>
+std::optional<MyVector<T>> SolutionMatNonnegative_Safe(MyMatrix<T> const &ListVect,
+                                                       MyVector<T> const &eVect) {
+  std::optional<MyVector<T>> opt_LP = SolutionMatNonnegative_LP(ListVect, eVect);
+  if (opt_LP) {
+    MyVector<T> const& V = *opt_LP;
+    int nbRow = V.size();
+    if (nbRow != ListVect.rows()) {
+      std::cerr << "Dimension incoherency\n";
+      throw TerminalException{1};
+    }
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (V(iRow) < 0) {
+        std::cerr << "V should be non-negative\n";
+        throw TerminalException{1};
+      }
+    }
+    MyVector<T> prod = ListVect.transpose() * V;
+    if (prod != eVect) {
+      std::cerr << "prod does not matcheVect\n";
+      throw TerminalException{1};
+    }
+    return V;
+  }
+  std::optional<MyVector<T>> opt_V1 = SolutionMatNonnegative_Version1(ListVect, eVect);
+  if (opt_V1) {
+    std::cerr << "opt_V1 is defined but not opt_LP, incoherent\n";
+    throw TerminalException{1};
+  }
+  return {};
+}
+
+
+
 template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
                                                   MyVector<T> const &eVect) {
-  return SolutionMatNonnegative_Check(ListVect, eVect);
+  //  return SolutionMatNonnegative_Check(ListVect, eVect);
+  return SolutionMatNonnegative_Safe(ListVect, eVect);
 }
 
 
