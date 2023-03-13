@@ -973,8 +973,9 @@ public:
     // Doing the redundancy computation
     //
     std::cerr << "Before Clarkson computation\n";
+    MicrosecondTime timeClarkson;
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
-    std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+    std::cerr << "|ListIrred|=" << ListIrred.size() << " time=" << timeClarkson << "\n";
     //
     // Paperwork
     //
@@ -1065,12 +1066,16 @@ public:
         CombElt<T> w = GetElement(ListNeighborData[i_mat]);
         CombElt<T> wInv = InverseComb(w);
         MyVector<T> x_ineq = GetIneq(wInv);
+        MicrosecondTime time1;
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
+        std::cerr << "|SolutionMatNonnegative|=" << time1 << "\n";
         if (opt) {
           // Finding by nearest group point.
           Face f(n_mat);
           f[i_mat] = 1;
+          MicrosecondTime time2;
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
+          std::cerr << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
           T target_scal = eVectInt.dot(x);
           CombElt<T> eNew1 = svg.GetShortVector(eVectInt, target_scal);
           CombElt<T> eNew2 = InverseComb(eNew1);
