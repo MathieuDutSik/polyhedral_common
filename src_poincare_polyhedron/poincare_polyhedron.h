@@ -544,8 +544,8 @@ struct ShortVectorGroup {
         return -1;
       };
       while(true) {
-        n_cons++;
         int pos = get_iter();
+        //        std::cerr << "pos=" << pos << "\n";
         if (pos == -1) {
           break;
         }
@@ -568,15 +568,16 @@ struct ShortVectorGroup {
           std::cerr << "Exiting GetShortVectorIteration after n_cons=" << n_cons << " time=" << time << "\n";
           return RetElt;
         }
+        n_cons++;
       }
       n_iter++;
     }
   }
 
   CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
-    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
+    //    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
     CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
-    return eElt1;
+    return eElt2;
   }
 
 };
