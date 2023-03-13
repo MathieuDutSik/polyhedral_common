@@ -1132,19 +1132,23 @@ public:
       for (int i_ext=0; i_ext<n_ext; i_ext++)
         f_set(i_ext);
     }
-    std::cerr << "We have f_insert_svg\n";
+    size_t count = f_insert_svg.count();
+    std::cerr << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext << "\n";
     //
     // Now calling the SGE code
     //
     std::vector<CombElt<T>> ListMiss;
+    size_t pos = 0;
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
       if (f_insert_svg[i_ext] == 1) {
+        std::cerr << "pos=" << pos << " / " << count << "      i_ext=" << i_ext << " / " << n_ext << "\n";
         MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
         T target_scal = eEXT.dot(x);
         CombElt<T> eNew1 = svg.GetShortVector(eEXT, target_scal);
         CombElt<T> eNew2 = InverseComb(eNew1);
         ListMiss.push_back(eNew1);
         ListMiss.push_back(eNew2);
+        pos++;
       }
     }
     std::cerr << "Returning |ListMiss|=" << ListMiss.size() << "\n";
