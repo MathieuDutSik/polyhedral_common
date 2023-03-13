@@ -536,16 +536,23 @@ struct ShortVectorGroup {
         ListX[i + 1] = xNew;
       }
       auto get_iter=[&]() -> int {
-        for (int i = n_iter-1; i > 0; i--) {
+        for (int i = n_iter-1; i >= 0; i--) {
           if (eList[i] < nGen-1) {
             return i;
           }
         }
         return -1;
       };
+      //      std::cerr << "Begin inner while loop\n";
       while(true) {
         int pos = get_iter();
-        //        std::cerr << "pos=" << pos << "\n";
+        /*
+        std::cerr << "pos=" << pos << " n_iter=" << n_iter << " eList=[";
+        for (auto & val : eList) {
+          std::cerr << " " << val;
+        }
+        std::cerr << " ]\n";
+        */
         if (pos == -1) {
           break;
         }
@@ -570,14 +577,15 @@ struct ShortVectorGroup {
         }
         n_cons++;
       }
+      //      std::cerr << " Exit inner while loop\n";
       n_iter++;
     }
   }
 
   CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
-    //    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
-    CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
-    return eElt2;
+    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
+    //    CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
+    return eElt1;
   }
 
 };
