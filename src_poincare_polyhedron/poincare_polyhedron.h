@@ -583,9 +583,9 @@ struct ShortVectorGroup {
   }
 
   CombElt<T> GetShortVector(MyVector<T> const& y, T const& target_scal) const {
-    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
+    //    CombElt<T> eElt1 = GetShortVectorNoDuplication(y, target_scal);
     CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
-    return eElt1;
+    return eElt2;
   }
 
 };
