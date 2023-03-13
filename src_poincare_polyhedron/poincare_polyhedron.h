@@ -491,7 +491,7 @@ struct ShortVectorGroup {
     while (true) {
       std::cerr << "iter=" << iter << " |list_active|=" << list_active.size() << "\n";
       std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr = std::move(list_active);
-      std::cerr << "|list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
+      std::cerr << "  |list_curr|=" << list_curr.size() << " |list_active|=" << list_active.size() << "\n";
       for (auto & kv : list_curr) {
         for (size_t iGen=0; iGen<nGen; iGen++) {
           CombElt<T> const& eGen = ListGen[iGen];
@@ -1137,7 +1137,7 @@ public:
     //
     // Now calling the SGE code
     //
-    std::vector<CombElt<T>> ListMiss;
+    std::unordered_set<CombElt<T>> SetMiss;
     size_t pos = 0;
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
       if (f_insert_svg[i_ext] == 1) {
@@ -1146,11 +1146,14 @@ public:
         T target_scal = eEXT.dot(x);
         CombElt<T> eNew1 = svg.GetShortVector(eEXT, target_scal);
         CombElt<T> eNew2 = InverseComb(eNew1);
-        ListMiss.push_back(eNew1);
-        ListMiss.push_back(eNew2);
+        SetMiss.insert(eNew1);
+        SetMiss.insert(eNew2);
         pos++;
       }
     }
+    std::vector<CombElt<T>> ListMiss;
+    for (auto & eElt : SetMiss)
+      ListMiss.push_back(eElt);
     std::cerr << "Returning |ListMiss|=" << ListMiss.size() << "\n";
     return ListMiss;
   }
