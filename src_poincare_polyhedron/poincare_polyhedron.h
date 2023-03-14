@@ -478,6 +478,12 @@ struct ShortVectorGroup {
   ShortVectorGroup(MyVector<T> const& _x, std::vector<CombElt<T>> const& _ListGen) : x(_x), ListGen(_ListGen) {
   }
 
+  bool IsSolution(MyVector<T> const& v, T const& target_scal, CombElt<T> const& eElt) const {
+    MyVector<T> xImg = eElt.mat.transpose() * x;
+    T scal = v.dot(xImg);
+    return scal < target_scal;
+  }
+
   CombElt<T> GetShortVectorNoDuplication(MyVector<T> const& y, T const& target_scal) const {
     MicrosecondTime time;
     std::cerr << "Beginning of GetShortVectorNoDuplication\n";
@@ -543,16 +549,8 @@ struct ShortVectorGroup {
         }
         return -1;
       };
-      //      std::cerr << "Begin inner while loop\n";
       while(true) {
         int pos = get_iter();
-        /*
-        std::cerr << "pos=" << pos << " n_iter=" << n_iter << " eList=[";
-        for (auto & val : eList) {
-          std::cerr << " " << val;
-        }
-        std::cerr << " ]\n";
-        */
         if (pos == -1) {
           break;
         }
@@ -577,7 +575,6 @@ struct ShortVectorGroup {
         }
         n_cons++;
       }
-      //      std::cerr << " Exit inner while loop\n";
       n_iter++;
     }
   }
@@ -587,8 +584,33 @@ struct ShortVectorGroup {
     CombElt<T> eElt2 = GetShortVectorIteration(y, target_scal);
     return eElt2;
   }
-
 };
+
+// As it happens, when we find some element we are likely to find
+// the same one later. So testing the ones we already have is a good
+// idea
+template<typename T>
+struct ShortVectorGroupMemoize {
+  ShortVectorGroup<T> const& svg;
+  std::vector<CombElt<T>> ListMiss;
+  ShortVectorGroupMemoize(ShortVectorGroup<T> const& _svg) : svg(_svg) {}
+
+  void ComputeInsertSolution(MyVector<T> const& y, T const& target_scal) {
+    for (auto & eElt : ListMiss) {
+      if (svg.IsSolution(y, target_scal, eElt)) {
+        return;
+      }
+    }
+    CombElt<T> eElt = svg.GetShortVector(y, target_scal);
+    ListMiss.push_back(eElt);
+  }
+
+  std::vector<CombElt<T>> const& GetListMiss() const {
+    return ListMiss;
+  }
+};
+
+
 
 //
 // Now the polyhedral stuff
@@ -1059,8 +1081,9 @@ public:
   // So maybe inserting the w_i w is a good idea.
   std::vector<CombElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
     std::vector<int> V = ComputeMatchingVector();
-    std::vector<CombElt<T>> ListMiss;
+    ShortVectorGroupMemoize<T> svg_mem(svg);
     int n_mat = ListNeighborData.size();
+    std::vector<CombElt<T>> ListMiss;
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       if (V[i_mat] == -1) {
         CombElt<T> w = GetElement(ListNeighborData[i_mat]);
@@ -1077,16 +1100,17 @@ public:
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
           std::cerr << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
           T target_scal = eVectInt.dot(x);
-          CombElt<T> eNew1 = svg.GetShortVector(eVectInt, target_scal);
-          CombElt<T> eNew2 = InverseComb(eNew1);
-          ListMiss.push_back(eNew1);
-          ListMiss.push_back(eNew2);
+          svg_mem.ComputeInsertSolution(eVectInt, target_scal);
           std::cerr << "Found new elements by Short Group Element\n";
         } else {
           ListMiss.push_back(wInv);
           std::cerr << "wInv actually define a new inequality\n";
         }
       }
+    }
+    for (auto & eElt: svg_mem.GetListMiss() ) {
+      ListMiss.push_back(eElt);
+      ListMiss.push_back(InverseComb(eElt));
     }
     return ListMiss;
   }
@@ -1197,22 +1221,22 @@ public:
     // Now calling the SGE code
     //
     std::unordered_set<CombElt<T>> SetMiss;
+    ShortVectorGroupMemoize<T> svg_mem(svg);
     size_t pos = 0;
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
       if (f_insert_svg[i_ext] == 1) {
         std::cerr << "pos=" << pos << " / " << count << "      i_ext=" << i_ext << " / " << n_ext << "\n";
         MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
         T target_scal = eEXT.dot(x);
-        CombElt<T> eNew1 = svg.GetShortVector(eEXT, target_scal);
-        CombElt<T> eNew2 = InverseComb(eNew1);
-        SetMiss.insert(eNew1);
-        SetMiss.insert(eNew2);
+        svg_mem.ComputeInsertSolution(eEXT, target_scal);
         pos++;
       }
     }
     std::vector<CombElt<T>> ListMiss;
-    for (auto & eElt : SetMiss)
+    for (auto & eElt: svg_mem.GetListMiss() ) {
       ListMiss.push_back(eElt);
+      ListMiss.push_back(InverseComb(eElt));
+    }
     std::cerr << "Returning |ListMiss|=" << ListMiss.size() << "\n";
     return ListMiss;
   }
