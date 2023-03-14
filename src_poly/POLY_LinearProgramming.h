@@ -872,7 +872,8 @@ std::optional<MyVector<T>> SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect
   if (!eSol.DualDefined) {
     return {};
   }
-  return eSol.DualSolution;
+  MyVector<T> TheRet = - eSol.DualSolution;
+  return TheRet;
 }
 
 template <typename T>
@@ -912,7 +913,7 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListV
 
 
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative_Safe(MyMatrix<T> const &ListVect,
+std::optional<MyVector<T>> SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
                                                        MyVector<T> const &eVect) {
   auto local_terminate=[&]() -> void {
     std::string FILE_FAC = "DEBUG_Nonnegative_FAC";
@@ -929,15 +930,28 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Safe(MyMatrix<T> const &ListVe
       std::cerr << "Dimension incoherency\n";
       local_terminate();
     }
+    bool HasError = false;
     for (int iRow=0; iRow<nbRow; iRow++) {
-      if (V(iRow) < 0) {
-        std::cerr << "V should be non-negative\n";
-        local_terminate();
+      T val = V(iRow);
+      if (val < 0) {
+        double val_d = UniversalScalarConversion<double,T>(val);
+        std::cerr << "iRow=" << iRow << " val=" << val << " val_d=" << val_d << "\n";
+        HasError = true;
       }
     }
     MyVector<T> prod = ListVect.transpose() * V;
     if (prod != eVect) {
       std::cerr << "prod does not matcheVect\n";
+      std::cerr << "|prod|=" << prod.rows() << " / " << prod.cols() << "\n";
+      std::cerr << "|eVect|=" << eVect.rows() << " / " << eVect.cols() << "\n";
+      for (int iRow=0; iRow<prod.rows(); iRow++) {
+        double prod_d = UniversalScalarConversion<double,T>(prod(iRow,0));
+        double eVect_d = UniversalScalarConversion<double,T>(eVect(iRow,0));
+        std::cerr << "iRow=" << iRow << " prod_d=" << prod_d << " eVect_d=" << eVect_d << "\n";
+      }
+      HasError = true;
+    }
+    if (HasError) {
       local_terminate();
     }
     return V;
@@ -956,7 +970,7 @@ template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
                                                   MyVector<T> const &eVect) {
   //  return SolutionMatNonnegative_Check(ListVect, eVect);
-  return SolutionMatNonnegative_Safe(ListVect, eVect);
+  return SolutionMatNonnegative_FailSafe(ListVect, eVect);
 }
 
 
