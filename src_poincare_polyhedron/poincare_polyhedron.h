@@ -1467,7 +1467,7 @@ public:
       // 0 for finding new inequality
       // 1 for finding the zero vector
       // 2 for managed to find a new position
-      // 3 Failed to fid a new position by linear programming
+      // 3 Failed to find a new position by linear programming
       int result;
       ResultOptim ro_new;
     };
@@ -1658,6 +1658,14 @@ public:
       std::cerr << "i_elt=" << i_elt << " norm=" << norm << "\n";
     }
     DataFAC<T> datafac;
+    size_t idx_write = 0;
+    auto write_files=[&]() -> void {
+      std::string eFileData = "DATAFAC_" + std::to_string(idx_write) + "_" + std::to_string(datafac.n_mat);
+      write_description_to_file(eFileData, datafac);
+      std::string eFileStep = "STEPENUM_" + std::to_string(idx_write) + "_" + std::to_string(datafac.n_mat);
+      write_step_enum_to_file(eFileStep);
+      idx_write++;
+    };
     auto insert_generator=[&](std::vector<CombElt<T>> const f_list) -> void {
       bool test = InsertGenerators(f_list);
       if (test) {
@@ -1673,6 +1681,7 @@ public:
           std::cerr << "After GetDataCone 2\n";
         }
       }
+      write_files();
     };
     std::unordered_set<CombElt<T>> ListTried;
     ShortVectorGroup<T> svg(x, l_elt);
@@ -1717,10 +1726,6 @@ public:
     int pos = 0;
     for (auto & e_elt : l_elt) {
       std::cerr << "       pos = " << pos << "\n";
-      std::string eFileData = "DATAFAC_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
-      write_description_to_file(eFileData, datafac);
-      std::string eFileStep = "STEPENUM_" + std::to_string(pos) + "_" + std::to_string(datafac.n_mat);
-      write_step_enum_to_file(eFileStep);
       f_coherency_update();
       std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
       CombElt<T> e_eltInv = InverseComb(e_elt);
