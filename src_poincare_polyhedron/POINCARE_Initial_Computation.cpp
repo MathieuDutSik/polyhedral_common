@@ -7,7 +7,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     FullNamelist eFull = NAMELIST_GetPoincareInput();
     if (argc != 2) {
@@ -23,10 +23,9 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     RecOption rec_option = ReadInitialData(eFull);
     Process_rec_option<Tgroup>(rec_option);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of the program time=" << time << "\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POINCARE_Initial_Computation\n";
+    std::cerr << "Error in POINCARE_Initial_Computation time=" << time << "\n";
     exit(e.eVal);
   }
-  runtime(time1);
 }

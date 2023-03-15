@@ -1717,6 +1717,7 @@ public:
     ShortVectorGroup<T> svg(x, l_elt);
     auto f_inverses_clear=[&]() -> bool {
       HumanTime time;
+      bool DidSomething = false;
       while(true) {
         std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
         std::vector<CombElt<T>> ListMissB;
@@ -1727,7 +1728,13 @@ public:
           }
         }
         std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << " time=" << time << "\n";
-        return insert_generator(ListMissB);
+        if (ListMissB.size()) {
+          std::cerr << "Exiting the f_inverses_clear loop time=" << time << "\n";
+          return DidSomething;
+        }
+        bool test = insert_generator(ListMissB);
+        if (test)
+          DidSomething = true;
       }
     };
     auto f_facet_matching=[&]() -> bool {
