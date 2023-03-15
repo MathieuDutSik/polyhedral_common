@@ -485,7 +485,7 @@ struct ShortVectorGroup {
   }
 
   CombElt<T> GetShortVectorNoDuplication(MyVector<T> const& y, T const& target_scal) const {
-    MicrosecondTime time;
+    HumanTime time;
     std::cerr << "Beginning of GetShortVectorNoDuplication\n";
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
@@ -525,7 +525,7 @@ struct ShortVectorGroup {
   }
 
   CombElt<T> GetShortVectorIteration(MyVector<T> const& y, T const& target_scal) const {
-    MicrosecondTime time;
+    HumanTime time;
     std::cerr << "Beginning of GetShortVectorIteration\n";
     size_t nGen = ListGen.size();
     int n = y.size();
@@ -980,6 +980,7 @@ public:
     return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
   int RemoveRedundancy() {
+    HumanTime time;
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
     int n_mat = FAC.rows();
@@ -995,9 +996,8 @@ public:
     // Doing the redundancy computation
     //
     std::cerr << "Before Clarkson computation\n";
-    MicrosecondTime timeClarkson;
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
-    std::cerr << "|ListIrred|=" << ListIrred.size() << " time=" << timeClarkson << "\n";
+    std::cerr << "|ListIrred|=" << ListIrred.size() << " time=" << time << "\n";
     //
     // Paperwork
     //
@@ -1031,7 +1031,7 @@ public:
         throw TerminalException{1};
       }
     }
-    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << " n_remove=" << n_remove << "\n";
+    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size() << " n_remove=" << n_remove << " time=" << time << "\n";
     if (n_remove > 0) {
       std::vector<CombElt<T>> ListNeighborCosetRed;
       for (auto &i_coset : l_keep) {
@@ -1040,11 +1040,13 @@ public:
       ComputeCosets(ListNeighborCosetRed);
       print_statistics(std::cerr);
     }
+    std::cerr << "ComputeCosets time=" << time << "\n";
     return n_remove;
   }
   // For a facet of the cone, there should be a matching element in the adjacent
   // facet.
   std::vector<int> ComputeMatchingVector() const {
+    HumanTime time;
     int n_mat = ListNeighborData.size();
     std::vector<MyMatrix<T>> l_mat;
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
@@ -1064,6 +1066,7 @@ public:
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       MatchVector.push_back(get_j_mat(i_mat));
     }
+    std::cerr << "ComputingMatchingVector time=" << time << "\n";
     return MatchVector;
   }
   // Find attemps missing elements
@@ -1080,6 +1083,7 @@ public:
   // xc(w).a - xc(w).aw = sum a_j (xc(w).aw_iw - xc(w).aw)
   // So maybe inserting the w_i w is a good idea.
   std::vector<CombElt<T>> GetMissingInverseElement(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
+    HumanTime time;
     std::vector<int> V = ComputeMatchingVector();
     ShortVectorGroupMemoize<T> svg_mem(svg);
     int n_mat = ListNeighborData.size();
@@ -1089,14 +1093,14 @@ public:
         CombElt<T> w = GetElement(ListNeighborData[i_mat]);
         CombElt<T> wInv = InverseComb(w);
         MyVector<T> x_ineq = GetIneq(wInv);
-        MicrosecondTime time1;
+        HumanTime time1;
         std::optional<MyVector<T>> opt = SolutionMatNonnegative(datafac.FAC, x_ineq);
         std::cerr << "|SolutionMatNonnegative|=" << time1 << "\n";
         if (opt) {
           // Finding by nearest group point.
           Face f(n_mat);
           f[i_mat] = 1;
-          MicrosecondTime time2;
+          HumanTime time2;
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
           std::cerr << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
           T target_scal = eVectInt.dot(x);
@@ -1112,16 +1116,17 @@ public:
       ListMiss.push_back(eElt);
       ListMiss.push_back(InverseComb(eElt));
     }
+    std::cerr << "GetMissingInverseElement time=" << time << "\n";
     return ListMiss;
   }
   // The facets can be defined by the same inequality but with opposite signs.
   // In that case, we have to add some new elements inspired by the missing elements.
   std::vector<CombElt<T>> GetMissingFacetMatchingElement(DataFAC<T> const& datafac, std::string const& eCommand, ShortVectorGroup<T> const& svg) const {
+    HumanTime time;
     //
     // Preprocessing information
     //
     std::cerr << "GetMissingFacetMatchingElement, beginning\n";
-    MicrosecondTime time;
     MyMatrix<T> EXT = DirectFacetComputationInequalities(datafac.FAC, eCommand, std::cerr);
     std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
     std::vector<int> V = ComputeMatchingVector();
@@ -1151,7 +1156,7 @@ public:
       std::cerr << "i_fac=" << i_fac << "  |f|=" << f.count() << "\n";
       vf.push_back(f);
     }
-    std::cerr << "We have vf\n";
+    std::cerr << "We have vf time=" << time << "\n";
     Face f_incidence(n_fac * n_fac);
     for (int i_fac=0; i_fac<n_fac; i_fac++) {
       for (int j_fac=i_fac+1; j_fac<n_fac; j_fac++) {
@@ -1181,7 +1186,7 @@ public:
       }
       std::cerr << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
     }
-    std::cerr << "We have f_incidence\n";
+    std::cerr << "We have f_incidence, time=" << time << "\n";
     //
     // Determining the vertices which are
     //
@@ -1216,11 +1221,10 @@ public:
         f_set(i_ext);
     }
     size_t count = f_insert_svg.count();
-    std::cerr << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext << "\n";
+    std::cerr << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext << " time=" << time << "\n";
     //
     // Now calling the SGE code
     //
-    std::unordered_set<CombElt<T>> SetMiss;
     ShortVectorGroupMemoize<T> svg_mem(svg);
     size_t pos = 0;
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
@@ -1232,12 +1236,13 @@ public:
         pos++;
       }
     }
+    std::cerr << "We have computed svg_mem, time=" << time << "\n";
     std::vector<CombElt<T>> ListMiss;
     for (auto & eElt: svg_mem.GetListMiss() ) {
       ListMiss.push_back(eElt);
       ListMiss.push_back(InverseComb(eElt));
     }
-    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << "\n";
+    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
     return ListMiss;
   }
   // The domain is defined originally as
@@ -1691,6 +1696,7 @@ public:
       idx_write++;
     };
     auto insert_generator=[&](std::vector<CombElt<T>> const f_list) -> void {
+      HumanTime time;
       bool test = InsertGenerators(f_list);
       if (test) {
         std::cerr << "Before GetDataCone 1\n";
@@ -1705,11 +1711,13 @@ public:
           std::cerr << "After GetDataCone 2\n";
         }
       }
+      std::cerr << "insert_generator, time=" << time << "\n";
       write_files();
     };
     std::unordered_set<CombElt<T>> ListTried;
     ShortVectorGroup<T> svg(x, l_elt);
     auto f_inverses_clear=[&]() -> bool {
+      HumanTime time;
       bool DidSomething = false;
       while(true) {
         std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
@@ -1721,8 +1729,10 @@ public:
           }
         }
         std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << "\n";
-        if (ListMissB.size() == 0)
+        if (ListMissB.size() == 0) {
+          std::cerr << "f_inverses_clear time=" << time << "\n";
           return DidSomething;
+        }
         insert_generator(ListMissB);
         DidSomething = true;
       }
@@ -1738,10 +1748,13 @@ public:
       return true;
     };
     auto f_coherency_update=[&]() -> void {
+      HumanTime time;
       if (datafac.eVectInt) {
         while(true) {
           bool result1 = f_inverses_clear();
+          std::cerr << "f_coherency_update, f_inverses_clear : time=" << time << "\n";
           bool result2 = f_facet_matching();
+          std::cerr << "f_coherency_update, f_facet_matching : time=" << time << "\n";
           if (!result1 && !result2)
             return;
         }
