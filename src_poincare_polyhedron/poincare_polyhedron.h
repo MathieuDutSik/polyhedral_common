@@ -234,8 +234,6 @@ IdentifyLeftCosets(std::vector<CombElt<T>> const &l_ent,
   for (auto &pe : l_ent)
     f_insert(pe);
   std::vector<CombElt<T>> l_coset(s_coset.begin(), s_coset.end());
-  //  for (auto &e_coset : s_coset)
-  //    l_coset.push_back(e_coset);
   std::cerr << "|l_ent|=" << l_ent.size() << " |list_grp_elt|=" << list_grp_elt.size() << " |l_coset|=" << l_coset.size() << "\n";
   return l_coset;
 }
@@ -1695,7 +1693,7 @@ public:
       write_step_enum_to_file(eFileStep);
       idx_write++;
     };
-    auto insert_generator=[&](std::vector<CombElt<T>> const f_list) -> void {
+    auto insert_generator=[&](std::vector<CombElt<T>> const f_list) -> bool {
       HumanTime time;
       bool test = InsertGenerators(f_list);
       if (test) {
@@ -1713,12 +1711,12 @@ public:
       }
       std::cerr << "insert_generator, time=" << time << "\n";
       write_files();
+      return test;
     };
     std::unordered_set<CombElt<T>> ListTried;
     ShortVectorGroup<T> svg(x, l_elt);
     auto f_inverses_clear=[&]() -> bool {
       HumanTime time;
-      bool DidSomething = false;
       while(true) {
         std::vector<CombElt<T>> ListMiss = GetMissingInverseElement(datafac, svg);
         std::vector<CombElt<T>> ListMissB;
@@ -1728,43 +1726,36 @@ public:
             ListTried.insert(eElt);
           }
         }
-        std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << "\n";
-        if (ListMissB.size() == 0) {
-          std::cerr << "f_inverses_clear time=" << time << "\n";
-          return DidSomething;
-        }
-        insert_generator(ListMissB);
-        DidSomething = true;
+        std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << " time=" << time << "\n";
+        return insert_generator(ListMissB);
       }
     };
     auto f_facet_matching=[&]() -> bool {
       if (eCommand == "unset")
         return false;
       std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement(datafac, eCommand, svg);
-      if (ListMiss.size() == 0) {
-        return false;
-      }
-      insert_generator(ListMiss);
-      return true;
+      return insert_generator(ListMiss);
     };
-    auto f_coherency_update=[&]() -> void {
+    auto f_coherency_update=[&]() -> bool {
       HumanTime time;
+      bool DidSomething = false;
       if (datafac.eVectInt) {
         while(true) {
           bool result1 = f_inverses_clear();
+          if (result1)
+            DidSomething = true;
           std::cerr << "f_coherency_update, f_inverses_clear : time=" << time << "\n";
           bool result2 = f_facet_matching();
+          if (result1)
+            DidSomething = true;
           std::cerr << "f_coherency_update, f_facet_matching : time=" << time << "\n";
           if (!result1 && !result2)
-            return;
+            return DidSomething;
         }
       }
+      return false;
     };
-    int pos = 0;
-    for (auto & e_elt : l_elt) {
-      std::cerr << "       pos = " << pos << "\n";
-      f_coherency_update();
-      std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
+    auto f_get_candidates=[&](CombElt<T> const& e_elt) -> std::vector<CombElt<T>> {
       CombElt<T> e_eltInv = InverseComb(e_elt);
       std::vector<CombElt<T>> e_pair{e_elt,e_eltInv};
       if (datafac.eVectInt) {
@@ -1779,9 +1770,20 @@ public:
           }
         }
         std::cerr << "|n_pair|=" << n_pair.size() << "\n";
-        insert_generator(n_pair);
+        return n_pair;
       } else {
-        insert_generator(e_pair);
+        return e_pair;
+      }
+    };
+    int pos = 0;
+    for (auto & e_elt : l_elt) {
+      std::cerr << "       pos = " << pos << "\n";
+      std::cerr << "       |known_redundant| = " << known_redundant.size() << "\n";
+      std::vector<CombElt<T>> l_cand = f_get_candidates(e_elt);
+      bool test = insert_generator(l_cand);
+      if (test) {
+        std::cerr << "We did something therefore we need to do a coherency update\n";
+        f_coherency_update();
       }
       pos++;
     }
