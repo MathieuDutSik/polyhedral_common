@@ -1728,7 +1728,7 @@ public:
           }
         }
         std::cerr << "|ListMiss|=" << ListMiss.size() << " |ListMissB|=" << ListMissB.size() << " |ListTried|=" << ListTried.size() << " time=" << time << "\n";
-        if (ListMissB.size()) {
+        if (ListMissB.size() == 0) {
           std::cerr << "Exiting the f_inverses_clear loop time=" << time << "\n";
           return DidSomething;
         }
