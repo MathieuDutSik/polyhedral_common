@@ -877,6 +877,54 @@ std::optional<MyVector<T>> SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect
 }
 
 template <typename T>
+struct SolutionMatNonnegativeComplete {
+  std::optional<MyVector<T>> ExtremeRay;
+  std::optional<MyVector<T>> SolNonnegative;
+};
+
+template <typename T>
+SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
+                                                                 MyVector<T> const &eVect) {
+  int nbVect = ListVect.rows();
+  int nbCol = ListVect.cols();
+  MyMatrix<T> ListIneq(nbVect,nbCol+1);
+  MyVector<T> eIneq(nbCol+1);
+  for (int iVect=0; iVect<nbVect; iVect++) {
+    ListIneq(iVect,0) = 0;
+    for (int iCol=0; iCol<nbCol; iCol++)
+      ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
+  }
+  eIneq(0) = 0;
+  for (int iCol=0; iCol<nbCol; iCol++)
+    eIneq(1 + iCol) = eVect(iCol);
+  //
+  LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq);
+  auto GetSolNonnegative=[&]() -> std::optional<MyVector<T>> {
+    if (!eSol.DualDefined) {
+      return {};
+    }
+    MyVector<T> TheRet = - eSol.DualSolution;
+    return TheRet;
+  };
+  std::optional<MyVector<T>> SolNonnegative = GetSolNonnegative();
+  auto GetExtremeRay=[&]() -> std::optional<MyVector<T>> {
+    if (eSol.PrimalDefined) {
+      MyVector<T> V(nbCol);
+      for (int iCol=0; iCol<nbCol; iCol++)
+        V(iCol) = eSol.DirectSolution(1+iCol);
+      return V;
+    }
+    return {};
+  };
+  std::optional<MyVector<T>> ExtremeRay = GetExtremeRay();
+  return {ExtremeRay, SolNonnegative};
+}
+
+
+
+
+
+template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
                                                         MyVector<T> const &eVect) {
   std::optional<MyVector<T>> opt1 = SolutionMatNonnegative_Version1(ListVect, eVect);
