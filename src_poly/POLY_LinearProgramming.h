@@ -974,6 +974,44 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
 }
 
 
+template <typename T>
+Face ComputeSkeletonClarkson(MyMatrix<T> const& FACinp) {
+  MyMatrix<T> FAC = ColumnReduction(FACinp);
+  int n_fac = FAC.rows();
+  int dim = FAC.cols();
+  Face f_adj(n_fac * n_fac);
+  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    MyMatrix<T> Equa(1,dim);
+    for (int i=0; i<dim; i++)
+      Equa(0,i) = FAC(i_fac,i);
+    MyMatrix<T> NSP = NullspaceMat(Equa);
+    std::vector<int> ListIdx;
+    for (int j_fac=0; j_fac<i_fac; j_fac++) {
+      if (f_adj[i_fac + j_fac * n_fac] == 1) {
+        ListIdx.push_back(j_fac);
+      }
+    }
+    for (int j_fac=i_fac+1; j_fac<n_fac; j_fac++)
+      ListIdx.push_back(j_fac);
+    int n_ineq = ListIdx.size();
+    MyMatrix<T> FAC_local(n_ineq, dim-1);
+    for (int i_ineq=0; i_ineq<n_ineq; i_ineq++) {
+      int idx = ListIdx[i_ineq];
+      MyVector<T> eFAC = GetMatrixRow(FAC, idx);
+      MyVector<T> eFACred = NSP.transpose() * eFAC;
+      for (int i=0; i<dim-1; i++)
+        FAC_local(i_ineq,i) = eFACred(i);
+    }
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC_local);
+    for (auto & eIrred : ListIrred) {
+      int pos = ListIdx[eIrred];
+      f_adj[pos + i_fac * n_fac] = 1;
+    }
+  }
+  return f_adj;
+}
+
+
 
 
 template <typename T>
