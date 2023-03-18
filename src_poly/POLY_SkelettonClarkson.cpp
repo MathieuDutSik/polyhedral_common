@@ -12,10 +12,13 @@ void process(std::string const &eFileI, std::ostream &os) {
   Face f_adj = ComputeSkeletonClarkson(FAC);
   int n_fac = FAC.rows();
   for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    int n_adj = 0;
     for (int j_fac=0; j_fac<n_fac; j_fac++) {
-      os << " " << f_adj[i_fac + j_fac * n_fac];
+      int val = f_adj[j_fac + i_fac * n_fac];
+      os << " " << val;
+      n_adj += val;
     }
-    os << "\n";
+    os << " n_adj=" << n_adj << "\n";
   }
 }
 
