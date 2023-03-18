@@ -884,7 +884,7 @@ struct SolutionMatNonnegativeComplete {
 
 template <typename T>
 SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
-                                                                 MyVector<T> const &eVect) {
+                                                                    MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> ListIneq(nbVect,nbCol+1);
@@ -909,9 +909,19 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
   std::optional<MyVector<T>> SolNonnegative = GetSolNonnegative();
   auto GetExtremeRay=[&]() -> std::optional<MyVector<T>> {
     if (eSol.PrimalDefined) {
-      MyVector<T> V(nbCol);
-      for (int iCol=0; iCol<nbCol; iCol++)
-        V(iCol) = eSol.DirectSolution(1+iCol);
+      MyVector<T> V = eSol.DirectSolution;
+      MyVector<T> LScal = ListVect * V;
+      for (int iVect=0; iVect<nbVect; iVect++) {
+        if (V(iVect) < 0) {
+          std::cerr << "Failed to find an extreme ray\n";
+          throw TerminalException{1};
+        }
+      }
+      T eScal = V.dot(eVect);
+      if (eScal >= 0) {
+        std::cerr << "The direction is not a counter example\n";
+        throw TerminalException{1};
+      }
       return V;
     }
     return {};
