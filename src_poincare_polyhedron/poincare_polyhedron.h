@@ -1509,31 +1509,16 @@ public:
       eList.push_back(i_mat);
       return {std::move(test_scal), std::move(test_x), std::move(eList)};
     };
-    /*
-    auto f_greedy=[&](MyVector<T> const& start_x) -> ResultOptim {
-      ResultOptim ro = f_start(start_x);
-      while (true) {
-        int n_oper = 0;
-        for (int i=0; i<datafac.n_mat; i++) {
-          ResultOptim ro_new = f_increment(ro, i + 1);
-          if (ro_new.the_scal < ro.the_scal) {
-            ro = std::move(ro_new);
-            n_oper++;
-          }
-        }
-        if (n_oper == 0) {
-          return ro;
-        }
-      }
-    };
-    */
     auto f_all_decrease=[&](ResultOptim const& ro) -> std::vector<ResultOptim> {
       std::unordered_set<MyVector<T>> l_done;
       std::vector<ResultOptim> l_active{ro};
       std::vector<ResultOptim> l_total;
+      int iter=0;
       while(true) {
         std::vector<ResultOptim> l_result;
+        std::cerr << "iter=" << iter << " f_all_decrease |l_active|=" << l_active.size() << "\n";
         for (auto & ro : l_active) {
+          std::cerr << "  ro.the_scal_d=" << UniversalScalarConversion<double,T>(ro.the_scal) << "\n";
           for (int i=0; i<datafac.n_mat; i++) {
             ResultOptim ro_new = f_increment(ro, i + 1);
             if (ro_new.the_scal < ro.the_scal) {
@@ -1545,10 +1530,12 @@ public:
             }
           }
         }
+        std::cerr << "   f_all_decrease |l_result|=" << l_result.size() << "\n";
         if (l_result.size() == 0) {
           return l_total;
         }
         l_active = std::move(l_result);
+        iter++;
       }
     };
     auto f_decrease_best=[&](ResultOptim const& ro) -> ResultOptim {
@@ -1624,7 +1611,9 @@ public:
       std::cerr << "  n_iter=" << n_iter << "\n";
       l_new_point.insert(ro.the_x);
       ro = f_decrease_best(ro);
+      std::cerr << "    We have ro\n";
       ResultLP res = f_linear_programming(ro);
+      std::cerr << "    res.result=" << res.result << "\n";
       if (res.result == 0) {
         CombElt<T> ResidualElt = f_evaluate(ro);
         std::cerr << "  SolMatNonNeg : no solution found\n";

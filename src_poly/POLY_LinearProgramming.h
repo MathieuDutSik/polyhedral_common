@@ -887,6 +887,7 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
                                                                     MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
+  std::cerr << "GetSolutionMatNonnegativeComplete nbVect=" << nbVect << " nbCol=" << nbCol << "\n";
   MyMatrix<T> ListIneq(nbVect,nbCol+1);
   MyVector<T> eIneq(nbCol+1);
   for (int iVect=0; iVect<nbVect; iVect++) {
@@ -912,8 +913,9 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
       MyVector<T> V = eSol.DirectSolution;
       MyVector<T> LScal = ListVect * V;
       for (int iVect=0; iVect<nbVect; iVect++) {
-        if (V(iVect) < 0) {
-          std::cerr << "Failed to find an extreme ray\n";
+        if (LScal(iVect) < 0) {
+          std::cerr << "LScal=" << StringVectorGAP(LScal) << "\n";
+          std::cerr << "Negative value at iVect=" << iVect << " LScal(iVect)=" << LScal(iVect) << "\n";
           throw TerminalException{1};
         }
       }
@@ -1069,9 +1071,6 @@ Face ComputeSkeletonClarkson(MyMatrix<T> const& FACinp) {
   }
   return f_adj;
 }
-
-
-
 
 template <typename T>
 LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
