@@ -997,7 +997,7 @@ public:
     //
     std::cerr << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
-    std::cerr << "|ListIrred|=" << ListIrred.size() << " time=" << time << "\n";
+    std::cerr << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat << " time=" << time << "\n";
     //
     // Paperwork
     //
@@ -1130,7 +1130,7 @@ public:
     std::cerr << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac << " dim=" << dim << "\n";
     ShortVectorGroupMemoize<T> svg_mem(svg);
     Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
-    std::cerr << "We have f_adj, time=" << time << "\n";
+    std::cerr << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
     //
     auto get_nsp=[&](int const& i_fac) -> MyMatrix<T> {
       MyMatrix<T> Equa(dim,1);
@@ -1523,6 +1523,9 @@ public:
       while(true) {
         std::vector<ResultOptim> l_result;
         std::cerr << "iter=" << iter << " f_all_decrease |l_active|=" << l_active.size() << "\n";
+        // It is uncertain whether looking at negative values is a good idea at all.
+        // What is certain is that it ends the infinite loop.
+        bool has_negative = false;
         for (auto & ro : l_active) {
           std::cerr << "  ro.the_scal_d=" << UniversalScalarConversion<double,T>(ro.the_scal) << "\n";
           for (int i=0; i<datafac.n_mat; i++) {
@@ -1532,12 +1535,15 @@ public:
                 l_result.push_back(ro_new);
                 l_total.push_back(ro_new);
                 l_done.insert(ro_new.the_x);
+                if (ro_new.the_scal < 0) {
+                  has_negative = true;
+                }
               }
             }
           }
         }
         std::cerr << "   f_all_decrease |l_result|=" << l_result.size() << "\n";
-        if (l_result.size() == 0) {
+        if (l_result.size() == 0 || has_negative) {
           return l_total;
         }
         l_active = std::move(l_result);
