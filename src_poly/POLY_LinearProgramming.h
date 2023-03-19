@@ -920,8 +920,14 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
         }
       }
       T eScal = V.dot(eVect);
-      if (eScal >= 0) {
+      if (eScal > 0) {
+        std::cerr << "eScal=" << eScal << "\n";
         std::cerr << "The direction is not a counter example\n";
+        throw TerminalException{1};
+      }
+      if (eScal == 0 && !SolNonnegative) {
+        std::cerr << "eScal = 0 and no Non-negative solution were found\n";
+        std::cerr << "Possibly a bug here\n";
         throw TerminalException{1};
       }
       return V;

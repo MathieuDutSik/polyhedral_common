@@ -960,6 +960,7 @@ public:
     return FAC;
   }
   DataFAC<T> GetDataCone() const {
+    HumanTime time;
     MyMatrix<T> FAC = GetFAC();
     int n_mat = FAC.rows();
     int rnk = RankMat(FAC);
@@ -975,6 +976,7 @@ public:
       ListAdj.push_back(uElt);
       ListAdjInv.push_back(uEltInv);
     }
+    std::cerr << "New DataFAC computed time=" << time << "\n";
     return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
   int RemoveRedundancy() {
@@ -993,7 +995,7 @@ public:
     //
     // Doing the redundancy computation
     //
-    std::cerr << "Before Clarkson computation\n";
+    std::cerr << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
     std::cerr << "|ListIrred|=" << ListIrred.size() << " time=" << time << "\n";
     //
@@ -1124,11 +1126,12 @@ public:
     // Preprocessing information
     //
     std::cerr << "GetMissingFacetMatchingElement_LP, beginning\n";
-    Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
-    std::cerr << "We have f_adj, time=" << time << "\n";
     int dim = datafac.FAC.cols();
     int n_fac = datafac.FAC.rows();
+    std::cerr << "n_fac=" << n_fac << " dim=" << dim << "\n";
     ShortVectorGroupMemoize<T> svg_mem(svg);
+    Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
+    std::cerr << "We have f_adj, time=" << time << "\n";
     //
     auto get_nsp=[&](int const& i_fac) -> MyMatrix<T> {
       MyMatrix<T> Equa(dim,1);
@@ -1764,16 +1767,12 @@ public:
       HumanTime time;
       bool test = InsertGenerators(f_list);
       if (test) {
-        std::cerr << "Before GetDataCone 1\n";
         datafac = GetDataCone();
-        std::cerr << "After GetDataCone 1\n";
       }
       if (test && datafac.eVectInt) {
         int n_remove = RemoveRedundancy();
         if (n_remove > 0) {
-          std::cerr << "Before GetDataCone 2\n";
           datafac = GetDataCone();
-          std::cerr << "After GetDataCone 2\n";
         }
       }
       std::cerr << "insert_generator, time=" << time << "\n";
