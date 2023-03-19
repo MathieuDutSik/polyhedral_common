@@ -887,7 +887,6 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
                                                                     MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
-  std::cerr << "GetSolutionMatNonnegativeComplete nbVect=" << nbVect << " nbCol=" << nbCol << "\n";
   MyMatrix<T> ListIneq(nbVect,nbCol+1);
   MyVector<T> eIneq(nbCol+1);
   for (int iVect=0; iVect<nbVect; iVect++) {

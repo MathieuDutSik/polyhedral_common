@@ -1125,10 +1125,9 @@ public:
     //
     // Preprocessing information
     //
-    std::cerr << "GetMissingFacetMatchingElement_LP, beginning\n";
     int dim = datafac.FAC.cols();
     int n_fac = datafac.FAC.rows();
-    std::cerr << "n_fac=" << n_fac << " dim=" << dim << "\n";
+    std::cerr << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac << " dim=" << dim << "\n";
     ShortVectorGroupMemoize<T> svg_mem(svg);
     Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
     std::cerr << "We have f_adj, time=" << time << "\n";
@@ -1169,8 +1168,10 @@ public:
       MyMatrix<T> NSP = get_nsp(i_fac);
       MyMatrix<T> FACimg = datafac.FAC * Q;
       MyMatrix<T> FAC_local = get_localfac(i_fac, datafac.FAC, NSP);
+      int n_adj = FAC_local.rows();
       MyMatrix<T> FAC_localImg = get_localfac(j_fac, FACimg, NSP);
       int n_adj_img = FAC_localImg.rows();
+      int n_found = 0;
       for (int i_adj_img=0; i_adj_img<n_adj_img; i_adj_img++) {
         MyVector<T> eVect = GetMatrixRow(FAC_localImg, i_adj_img);
         SolutionMatNonnegativeComplete<T> SolCompl = GetSolutionMatNonnegativeComplete(FAC_local, eVect);
@@ -1183,8 +1184,10 @@ public:
           MyVector<T> eEXT = NSP.transpose() * eEXTred;
           T target_scal = eEXT.dot(x);
           svg_mem.ComputeInsertSolution(eEXT, target_scal);
+          n_found++;
         }
       }
+      std::cerr << "i_fac=" << i_fac << "/" << n_fac << "  n_adj=" << n_adj << " n_adj_img=" << n_adj_img << " n_found=" << n_found << "\n";
     }
     //
     // Now calling the SGE code
