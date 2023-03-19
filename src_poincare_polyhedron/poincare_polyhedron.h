@@ -1117,14 +1117,92 @@ public:
     std::cerr << "GetMissingInverseElement time=" << time << "\n";
     return ListMiss;
   }
-  // The facets can be defined by the same inequality but with opposite signs.
-  // In that case, we have to add some new elements inspired by the missing elements.
-  std::vector<CombElt<T>> GetMissingFacetMatchingElement(DataFAC<T> const& datafac, std::string const& eCommand, ShortVectorGroup<T> const& svg) const {
+  // Compute by linear programming the structure.
+  std::vector<CombElt<T>> GetMissingFacetMatchingElement_LP(DataFAC<T> const& datafac, ShortVectorGroup<T> const& svg) const {
     HumanTime time;
     //
     // Preprocessing information
     //
-    std::cerr << "GetMissingFacetMatchingElement, beginning\n";
+    std::cerr << "GetMissingFacetMatchingElement_LP, beginning\n";
+    Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
+    std::cerr << "We have f_adj, time=" << time << "\n";
+    int dim = datafac.FAC.cols();
+    int n_fac = datafac.FAC.rows();
+    ShortVectorGroupMemoize<T> svg_mem(svg);
+    //
+    auto get_nsp=[&](int const& i_fac) -> MyMatrix<T> {
+      MyMatrix<T> Equa(dim,1);
+      for (int i=0; i<dim; i++)
+        Equa(i,0) = datafac.FAC(i_fac,i);
+      return NullspaceMat(Equa);
+    };
+    auto get_localfac=[&](int const& i_fac, MyMatrix<T> const& TheFAC, MyMatrix<T> const& NSP) -> MyMatrix<T> {
+      int count = 0;
+      for (int j_fac=0; j_fac<n_fac; j_fac++) {
+        if (f_adj[i_fac + j_fac * n_fac] == 1) {
+          count++;
+        }
+      }
+      MyMatrix<T> FAC_local(count, dim-1);
+      int pos = 0;
+      for (int k_fac=0; k_fac<n_fac; k_fac++) {
+        if (f_adj[i_fac + k_fac * n_fac] == 1) {
+          MyVector<T> eFAC = GetMatrixRow(TheFAC, k_fac);
+          MyVector<T> eFACred = NSP * eFAC;
+          AssignMatrixRow(FAC_local, pos, eFACred);
+          pos++;
+        }
+      }
+      return FAC_local;
+    };
+    std::vector<int> V = ComputeMatchingVector();
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      MyMatrix<T> const& Q = datafac.ListAdj[i_fac].mat;
+      int j_fac = V[i_fac];
+      if (j_fac == -1) {
+        std::cerr << "Found a negative value of V\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> NSP = get_nsp(i_fac);
+      MyMatrix<T> FACimg = datafac.FAC * Q;
+      MyMatrix<T> FAC_local = get_localfac(i_fac, datafac.FAC, NSP);
+      MyMatrix<T> FAC_localImg = get_localfac(j_fac, FACimg, NSP);
+      int n_adj_img = FAC_localImg.rows();
+      for (int i_adj_img=0; i_adj_img<n_adj_img; i_adj_img++) {
+        MyVector<T> eVect = GetMatrixRow(FAC_localImg, i_adj_img);
+        SolutionMatNonnegativeComplete<T> SolCompl = GetSolutionMatNonnegativeComplete(FAC_local, eVect);
+        if (!SolCompl.SolNonnegative) {
+          if (!SolCompl.ExtremeRay) {
+            std::cerr << "Failed to have an extreme ray\n";
+            throw TerminalException{1};
+          }
+          MyVector<T> const& eEXTred = *SolCompl.ExtremeRay;
+          MyVector<T> eEXT = NSP.transpose() * eEXTred;
+          T target_scal = eEXT.dot(x);
+          svg_mem.ComputeInsertSolution(eEXT, target_scal);
+        }
+      }
+    }
+    //
+    // Now calling the SGE code
+    //
+    std::cerr << "We have computed svg_mem, time=" << time << "\n";
+    std::vector<CombElt<T>> ListMiss;
+    for (auto & eElt: svg_mem.GetListMiss() ) {
+      ListMiss.push_back(eElt);
+      ListMiss.push_back(InverseComb(eElt));
+    }
+    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
+    return ListMiss;
+  }
+  // The facets can be defined by the same inequality but with opposite signs.
+  // In that case, we have to add some new elements inspired by the missing elements.
+  std::vector<CombElt<T>> GetMissingFacetMatchingElement_DD(DataFAC<T> const& datafac, std::string const& eCommand, ShortVectorGroup<T> const& svg) const {
+    HumanTime time;
+    //
+    // Preprocessing information
+    //
+    std::cerr << "GetMissingFacetMatchingElement_DD, beginning\n";
     MyMatrix<T> EXT = DirectFacetComputationInequalities(datafac.FAC, eCommand, std::cerr);
     std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
     std::vector<int> V = ComputeMatchingVector();
@@ -1740,8 +1818,13 @@ public:
     auto f_facet_matching=[&]() -> bool {
       if (eCommand == "unset")
         return false;
-      std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement(datafac, eCommand, svg);
-      return insert_generator(ListMiss);
+      if (eCommand == "linear_programming") {
+        std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement_LP(datafac, svg);
+        return insert_generator(ListMiss);
+      } else {
+        std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement_DD(datafac, eCommand, svg);
+        return insert_generator(ListMiss);
+      }
     };
     auto f_coherency_update=[&]() -> bool {
       HumanTime time;
