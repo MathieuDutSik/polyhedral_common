@@ -377,7 +377,7 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
     MyMatrix<T> eElt = ReadMatrix<T>(is);
     MyMatrix<double> eElt_d = UniversalMatrixConversion<double,T>(eElt);
     T TheDet = DeterminantMat(eElt);
-    std::cerr << "i_elt=" << i_elt << " TheDet=" << TheDet << "\n";
+    std::cerr << "i_elt=" << i_elt << "/" << n_elt << " TheDet=" << TheDet << "\n";
     TrackGroup tg{{pos}};
     CombElt<T> pe{tg, eElt, eElt_d};
     s_elt.insert(pe);
@@ -1527,7 +1527,7 @@ public:
         // What is certain is that it ends the infinite loop.
         bool has_negative = false;
         for (auto & ro : l_active) {
-          std::cerr << "  ro.the_scal_d=" << UniversalScalarConversion<double,T>(ro.the_scal) << "\n";
+          //          std::cerr << "  ro.the_scal_d=" << UniversalScalarConversion<double,T>(ro.the_scal) << "\n";
           for (int i=0; i<datafac.n_mat; i++) {
             ResultOptim ro_new = f_increment(ro, i + 1);
             if (ro_new.the_scal < ro.the_scal) {
@@ -1542,7 +1542,7 @@ public:
             }
           }
         }
-        std::cerr << "   f_all_decrease |l_result|=" << l_result.size() << "\n";
+        std::cerr << "   f_all_decrease |l_result|=" << l_result.size() << " has_negative=" << has_negative << "\n";
         if (l_result.size() == 0 || has_negative) {
           return l_total;
         }
@@ -1552,7 +1552,9 @@ public:
     };
     auto f_decrease_best=[&](ResultOptim const& ro) -> ResultOptim {
       ResultOptim ro_ret = ro;
-      for (auto & ro_cand : f_all_decrease(ro)) {
+      std::vector<ResultOptim> l_result = f_all_decrease(ro);
+      std::cerr << "f_decrease_best: |l_result|=" << l_result.size() << "\n";
+      for (auto & ro_cand : l_result) {
         if (ro_cand.the_scal < ro_ret.the_scal) {
           ro_ret = ro_cand;
         }
