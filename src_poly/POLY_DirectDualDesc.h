@@ -544,25 +544,24 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 }
 
 template <typename T, typename Tgroup>
-std::vector<std::pair<MyVector<T>,Face>> DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
+std::vector<std::pair<Face,MyVector<T>>> DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                                                          std::string const &ansProg,
                                                                          std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn = DirectFacetComputationFaceIneq(EXT, ansProg, os);
 #ifdef TIMINGS
-  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
-     << "\n";
+  os << "|DualDescription|=" << time << " |ListIncd|=" << ListReturn.size() << "\n";
 #endif
-  if (ListIncd.size() == 0) {
+  if (ListReturn.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
-  vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
+  std::vector<std::pair<Face,MyVector<T>>> TheOutput = OrbitSplittingMap(ListReturn, GRP);
 #ifdef TIMINGS
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
-     << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
+     << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
      << TheOutput.size() << ") VALUE=" << time << "\n";
 #endif
   return TheOutput;
