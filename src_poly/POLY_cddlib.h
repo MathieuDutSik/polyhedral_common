@@ -7366,7 +7366,6 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 /* This procedure must be used under PreOrderedRun mode */
 {
   bool localdebug = false;
-  //  dd_raydata<T> *RayPtr0;
   dd_raydata<T> *RayPtr1;
   dd_raydata<T> *RayPtr2;
 
@@ -8029,38 +8028,21 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
 template <typename T>
 vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
                             MyMatrix<T> const &EXT) {
-  size_t nbCol = EXT.cols();
   size_t nbRow = EXT.rows();
   vectface ListIncd(nbRow);
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   T eScal;
-#ifdef USE_ISINCD
-  auto isincd = [&](size_t iRow) -> bool {
-    eScal = 0;
-    for (size_t iCol = 0; iCol < nbCol; iCol++)
-      eScal += RayPtr->Ray[iCol] * EXT(iRow, iCol);
-    return eScal == 0;
-  };
-  while (RayPtr != nullptr) {
-    if (RayPtr->feasible)
-      ListIncd.InsertFaceRef(isincd);
-    RayPtr = RayPtr->Next;
-  }
-#else
   Face f(nbRow);
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += RayPtr->Ray[iCol] * EXT(iRow, iCol);
-        f[iRow] = static_cast<bool>(eScal == 0);
+        long elem = iRow + 1;
+        f[iRow] = set_member(elem, RayPtr->ZeroSet);
       }
       ListIncd.push_back(f);
     }
     RayPtr = RayPtr->Next;
   }
-#endif
   return ListIncd;
 }
 
@@ -8078,10 +8060,8 @@ std::vector<std::pair<Face,MyVector<T>>> ListFaceIneq_from_poly(dd_polyhedradata
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += RayPtr->Ray[iCol] * EXT(iRow, iCol);
-        f[iRow] = static_cast<bool>(eScal == 0);
+        long elem = iRow + 1;
+        f[iRow] = set_member(elem, RayPtr->ZeroSet);
       }
       for (size_t iCol = 0; iCol < nbCol; iCol++)
         V(iCol) = RayPtr->Ray[iCol];
