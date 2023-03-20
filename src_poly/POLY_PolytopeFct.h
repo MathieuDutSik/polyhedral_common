@@ -313,8 +313,8 @@ public:
 #endif
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
-  Face FlipFaceIneq(Face const& sInc, MyVector<T> const& V) const {
-    return InternelFlipFaceIneq(sInc, V.data());
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
+    return InternelFlipFaceIneq(pair.first, pair.second.data());
   }
 };
 

@@ -1309,6 +1309,7 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
+    std::map<std::string, typename Tgroup::Tint> & TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
 
@@ -1321,6 +1322,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
   using DataFacet = typename TbasicBank::DataFacet;
+  using Tint = typename Tgroup::Tint;
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
@@ -1338,9 +1340,11 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+    std::map<std::string, Tint> TheMapLocal =
+      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
     vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-            TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+            TheBank, df.FF.EXT_face, df.Stab, TheMapLocal, AllArr, NewPrefix, os);
     for (auto &eOrbB : TheOutput) {
       Face eFlip = df.flip(eOrbB, os);
       RPL.FuncInsert(eFlip);
@@ -1358,8 +1362,9 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
 // ---Serial mode. Should be faster indeed.
 //
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
-vectface DUALDESC_AdjacencyDecomposition(
-    Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
+vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
+    MyMatrix<T> const &EXT, Tgroup const &GRP,
+    std::map<std::string, typename Tgroup::Tint> & TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
   using Tgr = GraphListAdj;
@@ -1380,11 +1385,6 @@ vectface DUALDESC_AdjacencyDecomposition(
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   LazyWMat<T, Tidx_value> lwm(EXT);
-  //
-  // Now computing the groups
-  //
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(EXT, GRP, AllArr);
   //
   // Checking if the entry is present in the map.
   //
@@ -1857,18 +1857,20 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   PolyHeuristicSerial<Tint> AllArr =
       Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, std::cerr);
   //
+  std::map<std::string, Tint> TheMap =
+    ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
+        TheBank, EXTred, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, AllArr, AllArr.DD_Prefix, std::cerr);
+        TheBank, EXTred, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     std::cerr
         << "Failed to find a matching entry for bank_parallelization_method\n";
@@ -1909,8 +1911,10 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   using Tbank = DataBank<Tkey, Tval>;
   Tbank TheBank(BANK_IsSaving, BANK_Prefix, std::cerr);
+  std::map<std::string, Tint> TheMap =
+    ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, GRP, AllArr, DD_Prefix, std::cerr);
+    TheBank, EXTred, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
 }
 
 // clang-format off

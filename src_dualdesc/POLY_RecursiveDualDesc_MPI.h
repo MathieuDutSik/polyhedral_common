@@ -185,9 +185,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
                             std::to_string(SelectedOrbit) + "_";
     try {
       os << "Before call to DUALDESC_AdjacencyDecomposition\n";
+      std::map<std::string, Tint> TheMap =
+        ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
+              TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, NewPrefix, os);
       os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
       for (auto &eOrbB : TheOutput) {
         Face eFlip = df.flip(eOrbB, os);
