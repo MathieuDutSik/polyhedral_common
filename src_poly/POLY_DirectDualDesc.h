@@ -453,6 +453,70 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
 
 
 
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
+                                                                        std::string const &ansProg,
+                                                                        std::ostream &os) {
+  std::string eProg;
+  std::vector<std::string> ListProg;
+  //
+  eProg = "cdd";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return cdd::DualDescriptionFaceIneq(EXT);
+  //
+  eProg = "lrs";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescriptionFaceIneq(EXT);
+  //
+  eProg = "lrs_ring";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return lrs::DualDescriptionFaceIneq_reduction(EXT);
+  //
+  // The external programs are available only for rationl types
+  //
+  if constexpr (is_implementation_of_Q<T>::value) {
+    eProg = "glrs";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramFaceIneq(EXT, "glrs", os);
+    //
+    eProg = "ppl_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramFaceIneq(EXT, "ppl_lcdd", os);
+    //
+    eProg = "cdd_ext";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramFaceIneq(EXT, "lcdd_gmp", os);
+    //
+    eProg = "normaliz";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return DualDescExternalProgramFaceIneq(EXT, "normaliz", os);
+  }
+  //
+  std::cerr << "ERROR: No right program found with ansProg=" << ansProg
+            << " or incorrect output\n";
+  std::cerr << "List of authorized programs :";
+  bool IsFirst = true;
+  for (auto &eP : ListProg) {
+    if (!IsFirst)
+      std::cerr << " ,";
+    IsFirst = false;
+    std::cerr << " " << eP;
+  }
+  std::cerr << "\n";
+  throw TerminalException{1};
+}
+
+
+
+
+
 
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
