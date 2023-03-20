@@ -8022,6 +8022,10 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
   return TheFAC;
 }
 
+
+
+
+
 template <typename T>
 vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
                             MyMatrix<T> const &EXT) {
@@ -8059,6 +8063,37 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
 #endif
   return ListIncd;
 }
+
+
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
+                                                                MyMatrix<T> const &EXT) {
+  size_t nbCol = EXT.cols();
+  size_t nbRow = EXT.rows();
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  dd_raydata<T> *RayPtr = poly->child->FirstRay;
+  T eScal;
+  Face f(nbRow);
+  MyVector<T> V(nbCol);
+  while (RayPtr != nullptr) {
+    if (RayPtr->feasible) {
+      for (size_t iRow = 0; iRow < nbRow; iRow++) {
+        eScal = 0;
+        for (size_t iCol = 0; iCol < nbCol; iCol++)
+          eScal += RayPtr->Ray[iCol] * EXT(iRow, iCol);
+        f[iRow] = static_cast<bool>(eScal == 0);
+      }
+      for (size_t iCol = 0; iCol < nbCol; iCol++)
+        V(iCol) = RayPtr->Ray[iCol];
+      ListReturn.push_back({f, V});
+    }
+    RayPtr = RayPtr->Next;
+  }
+  return ListReturn;
+}
+
+
+
 
 template <typename T>
 std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT) {
@@ -8119,6 +8154,17 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
   return ListIncd;
+}
+
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT) {
+  dd_ErrorType err;
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn = ListFaceIneq_from_poly(poly, TheEXT);
+  dd_FreePolyhedra(poly);
+  dd_FreeMatrix(M);
+  return ListReturn;
 }
 
 // clang-format off
