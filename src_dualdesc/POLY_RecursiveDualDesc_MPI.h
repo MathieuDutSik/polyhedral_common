@@ -134,7 +134,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::vector<int> StatusNeighbors(n_proc, 0);
   auto fInsertUnsent = [&](Face const &face) -> void {
     int res = static_cast<int>(get_hash(face) % size_t(n_proc));
-    os << "|face|=" << face.count() << " res=" << res << "\n";
     if (res == i_rank) {
       RPL.FuncInsert(face);
     } else {

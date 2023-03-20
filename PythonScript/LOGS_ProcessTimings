@@ -5,7 +5,10 @@ import sys
 
 
 if len(sys.argv) != 2:
-    print("The script is used as TIMINGS_ProcessLogFile\n")
+    print("The script is used as LOGS_ProcessTimings")
+    print("It reads the log file and for each entry of the form");
+    print("|FileRead|=34")
+    print("It reads the entry and takes their average, min and max and collect them by symbol")
     os.sys.exit(1)
 
 input_file = sys.argv[1]
@@ -16,28 +19,39 @@ list_min_time = []
 list_max_time = []
 list_sum_time = []
 
-ifile = open(input_file, 'r') 
-Lines = ifile.readlines() 
+ifile = open(input_file, 'r')
 
-for e_line in Lines:
+def is_entry_correct(the_entry):
+    return the_entry[0] == "|" and the_entry[-1] == "|"
+
+def get_val(val_str):
+    try:
+        return int(val_str)
+    except:
+        return -1
+
+for e_line in ifile:
     LStr = e_line.split("=")
     if len(LStr) == 2:
-        e_entry = LStr[0]
-        e_val = int(LStr[1])
-        try:
-            pos = list_entry.index(e_entry)
-            list_nb_entry[pos] += 1
-            list_min_time[pos] = min(list_min_time[pos], e_val)
-            list_max_time[pos] = max(list_max_time[pos], e_val)
-            list_sum_time[pos] += e_val
-        except ValueError:
-            pos = len(list_entry)
-            list_entry.append(e_entry)
-            list_nb_entry.append(1)
-            list_min_time.append(e_val)
-            list_max_time.append(e_val)
-            list_sum_time.append(e_val)
+        the_entry = LStr[0]
+        val_str = LStr[1]
+        e_val = get_val(val_str)
+        if is_entry_correct(the_entry) and e_val != -1:
+            try:
+                pos = list_entry.index(the_entry)
+                list_nb_entry[pos] += 1
+                list_min_time[pos] = min(list_min_time[pos], e_val)
+                list_max_time[pos] = max(list_max_time[pos], e_val)
+                list_sum_time[pos] += e_val
+            except ValueError:
+                pos = len(list_entry)
+                list_entry.append(the_entry)
+                list_nb_entry.append(1)
+                list_min_time.append(e_val)
+                list_max_time.append(e_val)
+                list_sum_time.append(e_val)
 
 for i in range(len(list_entry)):
-    e_avg = list_sum_time[i] / list_nb_entry[i]
-    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg)
+    e_nb = list_nb_entry[i]
+    e_avg = list_sum_time[i] / e_nb
+    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg, " nb", e_nb)
