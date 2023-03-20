@@ -171,6 +171,8 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
 template <typename T> struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
+  int nbRow;
+  int nbCol;
   Face OneInc;
   std::vector<int> OneInc_V;
   std::vector<T> ListInvScal;
@@ -190,12 +192,12 @@ public:
         break;
       idx_drop++;
     }
-    size_t nbRow = EXT.rows();
-    size_t nbCol = EXT.cols();
+    nbRow = EXT.rows();
+    nbCol = EXT.cols();
     EXT_red = MyMatrix<T>(nbRow, nbCol - 1);
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      size_t pos = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      int pos = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++) {
         if (iCol != idx_drop) {
           EXT_red(iRow, pos) = EXT(iRow, iCol);
           pos++;
@@ -206,10 +208,10 @@ public:
     // Inverse scalar products
     //
     ListInvScal = std::vector<T>(nbRow, 0);
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
         T eSum = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
+        for (int iCol = 0; iCol < nbCol; iCol++)
           eSum += FacetIneq(iCol) * EXT(iRow, iCol);
         ListInvScal[iRow] = -1 / eSum;
       }
@@ -220,9 +222,9 @@ public:
     size_t e_incd = OneInc.count();
     EXT_face = MyMatrix<T>(e_incd, nbCol - 1);
     boost::dynamic_bitset<>::size_type j_row = OneInc.find_first();
-    for (size_t i_row = 0; i_row < e_incd; i_row++) {
-      size_t pos = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++) {
+    for (int i_row = 0; i_row < e_incd; i_row++) {
+      int pos = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++) {
         if (iCol != idx_drop) {
           EXT_face(i_row, pos) = EXT(j_row, iCol);
           pos++;
@@ -231,39 +233,7 @@ public:
       j_row = OneInc.find_next(j_row);
     }
   }
-  Face Flip(Face const &sInc) const {
-#ifdef DEBUG_FLIP
-    if (OneInc.count() != sInc.size()) {
-      std::cerr << "Error in Flip 1\n";
-      throw TerminalException{1};
-    }
-#endif
-    size_t nb = sInc.count();
-    size_t nbRow = EXT_red.rows();
-    size_t nbCol = EXT_red.cols() + 1;
-    MyMatrix<T> TheProv(nb, nbCol - 1);
-    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-    auto f = [&](MyMatrix<T> &M, size_t eRank,
-                 [[maybe_unused]] size_t iRow) -> void {
-      int aRow = OneInc_V[jRow];
-      M.row(eRank) = EXT_red.row(aRow);
-      jRow = sInc.find_next(jRow);
-    };
-    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
-    /*
-    for (size_t iRow=0; iRow<nb; iRow++) {
-      int aRow=OneInc_V[jRow];
-      TheProv.row(iRow)=EXT_red.row(aRow);
-      jRow = sInc.find_next(jRow);
-    }
-    MyMatrix<T> NSP = NullspaceTrMat(TheProv);
-    */
-#ifdef DEBUG_FLIP
-    if (NSP.rows() != 1) {
-      std::cerr << "Error in Flip 2\n";
-      throw TerminalException{1};
-    }
-#endif
+  Face InternalFlipFaceIneq(Face const& sInc, T* out) const {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while (true) {
@@ -273,15 +243,15 @@ public:
     }
     int outRow = OneInc_V[pos_outside];
     T eSum = 0;
-    for (size_t iCol = 0; iCol < nbCol - 1; iCol++)
-      eSum += EXT_red(outRow, iCol) * NSP(0, iCol);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++)
+      eSum += EXT_red(outRow, iCol) * out[iCol];
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
     // F0 should be zero on the ridge
     MyVector<T> F0(nbCol - 1);
-    for (size_t iCol = 0; iCol < nbCol - 1; iCol++)
-      F0(iCol) = eSign * NSP(0, iCol);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++)
+      F0(iCol) = eSign * out[iCol];
     // The sought inequality is expressed as F0 + beta FacetIneq
     // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
@@ -289,14 +259,14 @@ public:
     Face fret(nbRow);
     T beta_max = 0;
     bool isAssigned = false;
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
         T eSum = 0;
-        for (size_t iCol = 0; iCol < nbCol - 1; iCol++)
+        for (int iCol = 0; iCol < nbCol - 1; iCol++)
           eSum += EXT_red(iRow, iCol) * F0(iCol);
         T beta = eSum * ListInvScal[iRow];
         if (!isAssigned || beta > beta_max) {
-          for (size_t kRow = 0; kRow < iRow; kRow++)
+          for (int kRow = 0; kRow < iRow; kRow++)
             fret[kRow] = 0;
           beta_max = beta;
         }
@@ -307,14 +277,42 @@ public:
       }
     }
     // Now adding the points from the ridge
-    jRow = sInc.find_first();
-    for (size_t iRow = 0; iRow < nb; iRow++) {
+    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+    while (jRow != boost::dynamic_bitset<>::npos) {
       int aRow = OneInc_V[jRow];
       fret[aRow] = 1;
       jRow = sInc.find_next(jRow);
     }
     // returning the found facet
     return fret;
+  }
+  Face FlipFace(Face const &sInc) const {
+#ifdef DEBUG_FLIP
+    if (OneInc.count() != sInc.size()) {
+      std::cerr << "Error in Flip 1\n";
+      throw TerminalException{1};
+    }
+#endif
+    size_t nb = sInc.count();
+    MyMatrix<T> TheProv(nb, nbCol - 1);
+    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+    auto f = [&](MyMatrix<T> &M, size_t eRank,
+                 [[maybe_unused]] size_t iRow) -> void {
+      int aRow = OneInc_V[jRow];
+      M.row(eRank) = EXT_red.row(aRow);
+      jRow = sInc.find_next(jRow);
+    };
+    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
+#ifdef DEBUG_FLIP
+    if (NSP.rows() != 1) {
+      std::cerr << "Error in Flip 2\n";
+      throw TerminalException{1};
+    }
+#endif
+    return InternalFlipFaceIneq(sInc, NSP.data());
+  }
+  Face FlipFaceIneq(Face const& sInc, MyVector<T> const& V) const {
+    return InternelFlipFaceIneq(sInc, V.data());
   }
 };
 

@@ -325,7 +325,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
-    Face eFlip = FF.Flip(f);
+    Face eFlip = FF.FlipFace(f);
 #ifdef TIMINGS
     os << "|flip|=" << time << "\n";
 #endif
@@ -347,7 +347,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
-    Face result = FF.Flip(f);
+    Face result = FF.FlipFace(f);
 #ifdef TIMINGS
     os << "|flip|=" << time << "\n";
 #endif
@@ -1342,7 +1342,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
             TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
     for (auto &eOrbB : TheOutput) {
-      Face eFlip = df.flip(eOrbB, std::cerr);
+      Face eFlip = df.flip(eOrbB, os);
       RPL.FuncInsert(eFlip);
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
