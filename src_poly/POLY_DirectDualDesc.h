@@ -266,7 +266,6 @@ template <typename T>
 MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
                                         std::string const &eCommand,
                                         std::ostream &os) {
-  //  size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
@@ -282,6 +281,39 @@ MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return MatrixFromVectorFamily(ListVect);
 }
+
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
+                                                                         std::string const &eCommand,
+                                                                         std::ostream &os) {
+  size_t n_row = EXT.rows();
+  size_t n_col = EXT.cols();
+  size_t DimEXT = n_col + 1;
+  size_t shift = GetShift(EXT, eCommand);
+  int nbColRed = DimEXT - shift;
+  MyVector<T> V(nbColRed);
+  Face f(n_row);
+  T eScal;
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  auto f_insert=[&](std::vector<T> const& LVal) -> void {
+    for (int i=0; i<nbColRed; i++) {
+      V(i) = LVal[i + shift];
+    }
+    for (size_t i_row = 0; i_row < n_row; i_row++) {
+      eScal = 0;
+      for (size_t i = shift; i < DimEXT; i++)
+        eScal += LVal[i] * EXT(i_row, i - shift);
+      f[i_row] = static_cast<bool>(eScal == 0);
+    }
+    ListReturn.push_back({f, V});
+  };
+  DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
+  return ListReturn;
+}
+
+
+
+
 
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
