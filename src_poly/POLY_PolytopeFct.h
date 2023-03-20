@@ -235,7 +235,7 @@ public:
       i_row++;
     }
   }
-  Face InternalFlipFaceIneq(Face const& sInc, T* out) const {
+  Face InternalFlipFaceIneq(Face const& sInc, const T* out) const {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while (true) {
@@ -314,7 +314,7 @@ public:
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
   Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
-    return InternelFlipFaceIneq(pair.first, pair.second.data());
+    return InternalFlipFaceIneq(pair.first, pair.second.data());
   }
 };
 

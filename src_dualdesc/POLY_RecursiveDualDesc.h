@@ -321,11 +321,25 @@ template <typename T, typename Tgroup> struct DataFacetCan {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face flip(const Face &f, std::ostream & os) const {
+  Face FlipFace(const Face &f, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
     Face eFlip = FF.FlipFace(f);
+#ifdef TIMINGS
+    os << "|flip|=" << time << "\n";
+#endif
+    Face result = GRP.CanonicalImage(eFlip);
+#ifdef TIMINGS
+    os << "|canonicalization|=" << time << "\n";
+#endif
+    return result;
+  }
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    Face eFlip = FF.FlipFaceIneq(pair);
 #ifdef TIMINGS
     os << "|flip|=" << time << "\n";
 #endif
@@ -343,11 +357,21 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face flip(const Face &f, std::ostream & os) const {
+  Face FlipFace(const Face &f, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
     Face result = FF.FlipFace(f);
+#ifdef TIMINGS
+    os << "|flip|=" << time << "\n";
+#endif
+    return result;
+  }
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    Face result = FF.FlipFaceIneq(pair);
 #ifdef TIMINGS
     os << "|flip|=" << time << "\n";
 #endif
@@ -1305,13 +1329,48 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
   return TheMap;
 }
 
+
+
 // Needs initial definition due to template crazyness
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
     std::map<std::string, typename Tgroup::Tint> & TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
+
+
+
+
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
+         typename TbasicBank, typename Finsert>
+void DUALDESC_AdjacencyDecomposition_and_insert(
+    Tbank &TheBank, typename TbasicBank::DataFacet const& df,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
+    std::string const &ePrefix, std::ostream& os) {
+  using Tint = typename Tgroup::Tint;
+  std::map<std::string, Tint> TheMap =
+    ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  if (ansSplit != "split") {
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    std::vector<std::pair<Face,MyVector<T>>> TheOutput = DirectFacetIneqOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+    AllArr.DualDescriptionProgram.pop(os);
+    for (auto &eOrb : TheOutput) {
+      Face eFlip = df.FlipFaceIneq(eOrb, os);
+      f_insert(eFlip);
+    }
+  } else {
+    vectface TheOutput =
+      DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+        TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+    for (auto &eOrb : TheOutput) {
+      Face eFlip = df.FlipFace(eOrb, os);
+      f_insert(eFlip);
+    }
+  }
+}
+
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank>
@@ -1340,15 +1399,10 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-    std::map<std::string, Tint> TheMapLocal =
-      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
-    vectface TheOutput =
-        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-            TheBank, df.FF.EXT_face, df.Stab, TheMapLocal, AllArr, NewPrefix, os);
-    for (auto &eOrbB : TheOutput) {
-      Face eFlip = df.flip(eOrbB, os);
+    auto f_insert=[&](Face const& eFlip) -> void {
       RPL.FuncInsert(eFlip);
-    }
+    };
+    DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
   return RPL.FuncListOrbitIncidence();
@@ -1399,7 +1453,6 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   //
   // Now computing the groups
   //
-  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   Tgroup TheGRPrelevant;
   //
   // The computations themselves
@@ -1414,70 +1467,58 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   // subgroup.
   bool BankSymmCheck;
   auto compute_split_or_not = [&]() -> vectface {
-    if (ansSplit != "split") {
+    std::string ansSymm =
+      HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    os << "ansSymm=" << ansSymm << "\n";
+    if (ansSymm == "yes") {
+      TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
+                                                                             lwm.GetWMat());
+      NeedSplit = TheGRPrelevant.size() != GRP.size();
+      BankSymmCheck = false;
+    } else {
       TheGRPrelevant = GRP;
       BankSymmCheck = true;
-      //
-      std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-      vectface vf = DirectFacetOrbitComputation(EXT, GRP, ansProg, os);
-      AllArr.DualDescriptionProgram.pop(os);
-      return vf;
-    } else {
-      std::string ansSymm =
-          HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-      os << "ansSymm=" << ansSymm << "\n";
-      if (ansSymm == "yes") {
-        TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
-            lwm.GetWMat());
-        NeedSplit = TheGRPrelevant.size() != GRP.size();
-        BankSymmCheck = false;
-      } else {
-        TheGRPrelevant = GRP;
-        BankSymmCheck = true;
-      }
-      Tint GroupSizeComp = TheGRPrelevant.size();
-      os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
-         << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
-      //      std::string MainPrefix = ePrefix + "Database_" +
-      //      std::to_string(nbRow) + "_" + std::to_string(nbCol);
-      std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
-      std::string ansChosenDatabase =
-          HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
-      os << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase
-         << "\n";
-      if (ansChosenDatabase == "canonic") {
-        using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
-        TbasicBank bb(EXT, TheGRPrelevant);
-        return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
-                                                      Tidx_value, TbasicBank>(
-            TheBank, bb, AllArr, MainPrefix, TheMap, os);
-      }
-      if (ansChosenDatabase == "repr") {
-        WeightMatrix<true, int, Tidx_value> WMat =
-            WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant);
-        auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
-          auto test = TheGRPrelevant.RepresentativeAction_OnSets(f1, f2);
-          if (test)
-            return true;
-          return false;
-        };
-        auto f_stab = [&](const Face &f) -> Tgroup {
-          return TheGRPrelevant.Stabilizer_OnSets(f);
-        };
-        auto f_inv = [&](const Face &f) -> size_t {
-          return GetLocalInvariantWeightMatrix(WMat, f);
-        };
-        using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
-                                        decltype(f_stab), decltype(f_inv)>;
-        TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_stab, f_inv);
-        return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
-                                                      Tidx_value, TbasicBank>(
-            TheBank, bb, AllArr, MainPrefix, TheMap, os);
-      }
-      std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
-      std::cerr << "Authorized values: canonic, repr\n";
-      throw TerminalException{1};
     }
+    Tint GroupSizeComp = TheGRPrelevant.size();
+    os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
+       << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
+    //      std::string MainPrefix = ePrefix + "Database_" +
+    //      std::to_string(nbRow) + "_" + std::to_string(nbCol);
+    std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
+    std::string ansChosenDatabase =
+      HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+    os << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase
+       << "\n";
+    if (ansChosenDatabase == "canonic") {
+      using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
+      TbasicBank bb(EXT, TheGRPrelevant);
+      return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,Tidx_value, TbasicBank>(
+          TheBank, bb, AllArr, MainPrefix, TheMap, os);
+    }
+    if (ansChosenDatabase == "repr") {
+      WeightMatrix<true, int, Tidx_value> WMat =
+        WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant);
+      auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
+        auto test = TheGRPrelevant.RepresentativeAction_OnSets(f1, f2);
+        if (test)
+          return true;
+        return false;
+      };
+      auto f_stab = [&](const Face &f) -> Tgroup {
+        return TheGRPrelevant.Stabilizer_OnSets(f);
+      };
+      auto f_inv = [&](const Face &f) -> size_t {
+        return GetLocalInvariantWeightMatrix(WMat, f);
+      };
+      using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
+                                      decltype(f_stab), decltype(f_inv)>;
+      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_stab, f_inv);
+      return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value, TbasicBank>(
+        TheBank, bb, AllArr, MainPrefix, TheMap, os);
+    }
+    std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
+    std::cerr << "Authorized values: canonic, repr\n";
+    throw TerminalException{1};
   };
   vectface ListOrbitFaces = compute_split_or_not();
   SingletonTime end;
