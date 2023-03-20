@@ -291,21 +291,20 @@ std::vector<std::pair<Face,MyVector<T>>> DualDescExternalProgramFaceIneq(MyMatri
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
   int nbColRed = DimEXT - shift;
-  MyVector<T> V(nbColRed);
-  Face f(n_row);
+  std::pair<Face,MyVector<T>> pair{Face(n_row), MyVector<T>(nbColRed)};
   T eScal;
   std::vector<std::pair<Face,MyVector<T>>> ListReturn;
   auto f_insert=[&](std::vector<T> const& LVal) -> void {
     for (int i=0; i<nbColRed; i++) {
-      V(i) = LVal[i + shift];
+      pair.second(i) = LVal[i + shift];
     }
     for (size_t i_row = 0; i_row < n_row; i_row++) {
       eScal = 0;
       for (size_t i = shift; i < DimEXT; i++)
         eScal += LVal[i] * EXT(i_row, i - shift);
-      f[i_row] = static_cast<bool>(eScal == 0);
+      pair.first[i_row] = static_cast<bool>(eScal == 0);
     }
-    ListReturn.push_back({f, V});
+    ListReturn.push_back(pair);
   };
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return ListReturn;

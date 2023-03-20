@@ -8055,17 +8055,16 @@ std::vector<std::pair<Face,MyVector<T>>> ListFaceIneq_from_poly(dd_polyhedradata
   std::vector<std::pair<Face,MyVector<T>>> ListReturn;
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   T eScal;
-  Face f(nbRow);
-  MyVector<T> V(nbCol);
+  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
         long elem = iRow + 1;
-        f[iRow] = set_member(elem, RayPtr->ZeroSet);
+        pair.first[iRow] = set_member(elem, RayPtr->ZeroSet);
       }
       for (size_t iCol = 0; iCol < nbCol; iCol++)
-        V(iCol) = RayPtr->Ray[iCol];
-      ListReturn.push_back({f, V});
+        pair.second(iCol) = RayPtr->Ray[iCol];
+      ListReturn.push_back(pair);
     }
     RayPtr = RayPtr->Next;
   }
