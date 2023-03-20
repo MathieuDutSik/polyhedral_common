@@ -190,7 +190,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
               TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
       os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
       for (auto &eOrbB : TheOutput) {
-        Face eFlip = df.flip(eOrbB);
+        Face eFlip = df.flip(eOrbB, os);
         fInsertUnsent(eFlip);
       }
       RPL.FuncPutOrbitAsDone(SelectedOrbit);

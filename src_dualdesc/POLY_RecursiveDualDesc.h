@@ -321,9 +321,19 @@ template <typename T, typename Tgroup> struct DataFacetCan {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face flip(const Face &f) const {
+  Face flip(const Face &f, std::ostream & os) const {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
     Face eFlip = FF.Flip(f);
-    return GRP.CanonicalImage(eFlip);
+#ifdef TIMINGS
+    os << "|flip|=" << time << "\n";
+#endif
+    Face result = GRP.CanonicalImage(eFlip);
+#ifdef TIMINGS
+    os << "|canonicalization|=" << time << "\n";
+#endif
+    return result;
   }
 };
 
@@ -333,7 +343,16 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face flip(const Face &f) const { return FF.Flip(f); }
+  Face flip(const Face &f, std::ostream & os) const {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    Face result = FF.Flip(f);
+#ifdef TIMINGS
+    os << "|flip|=" << time << "\n";
+#endif
+    return result;
+  }
 };
 
 template <typename Tidx>
@@ -1323,7 +1342,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
             TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
     for (auto &eOrbB : TheOutput) {
-      Face eFlip = df.flip(eOrbB);
+      Face eFlip = df.flip(eOrbB, std::cerr);
       RPL.FuncInsert(eFlip);
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
