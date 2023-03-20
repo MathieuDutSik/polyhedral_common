@@ -638,6 +638,62 @@ vectface OrbitFace(const Face &f, const std::vector<Telt> &LGen) {
   return vf;
 }
 
+
+template <typename Tgroup, typename T>
+std::vector<std::pair<Face,T>> OrbitSplittingMap(std::vector<std::pair<Face,T>> & PreListTotal,
+                                                 Tgroup const &TheGRP) {
+  using Telt = typename Tgroup::Telt;
+  std::unordered_map<Face,T> ListTotal;
+  for (auto & ePair : PreListTotal)
+    ListTotal[std::move(ePair.first)] = std::move(ePair.second);
+  std::vector<std::pair<Face,T>> ListReturn;
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  Face fSet(TheGRP.n_act());
+  while (true) {
+    typename std::unordered_map<Face,T>::iterator iter = ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    Face eSet = iter->first;
+    T val = std::move(iter->second);
+    std::unordered_set<Face> Additional{eSet};
+    ListTotal.erase(eSet);
+    std::unordered_set<Face> SingleOrbit;
+    while (true) {
+      std::unordered_set<Face> NewElts;
+      for (auto const &gSet : Additional) {
+        for (auto const &eGen : ListGen) {
+          OnFace_inplace(fSet, gSet, eGen);
+          if (SingleOrbit.count(fSet) == 0 && Additional.count(fSet) == 0) {
+            if (NewElts.count(fSet) == 0) {
+#ifdef DEBUG
+              if (ListTotal.count(fSet) > 0) {
+                NewElts.insert(fSet);
+                ListTotal.erase(fSet);
+              } else {
+                std::cerr << "Orbit do not matched, PANIC!!!\n";
+                throw TerminalException{1};
+              }
+#else
+              NewElts.insert(fSet);
+              ListTotal.erase(fSet);
+#endif
+            }
+          }
+        }
+      }
+      for (auto &uSet : Additional)
+        SingleOrbit.insert(uSet);
+      if (NewElts.size() == 0)
+        break;
+      Additional = std::move(NewElts);
+    }
+    ListReturn.push_back({std::move(eSet), std::move(val)});
+  }
+  return ListReturn;
+}
+
+
+
 template <typename Tgroup, typename F>
 void OrbitSplittingSet_Kernel(vectface const &PreListTotal,
                               Tgroup const &TheGRP, F f) {

@@ -186,7 +186,7 @@ public:
     //
     // Idx dropping for the projection
     //
-    size_t idx_drop = 0;
+    int idx_drop = 0;
     while (true) {
       if (FacetIneq(idx_drop) != 0)
         break;
@@ -222,7 +222,8 @@ public:
     size_t e_incd = OneInc.count();
     EXT_face = MyMatrix<T>(e_incd, nbCol - 1);
     boost::dynamic_bitset<>::size_type j_row = OneInc.find_first();
-    for (int i_row = 0; i_row < e_incd; i_row++) {
+    int i_row = 0;
+    while (j_row != boost::dynamic_bitset<>::npos) {
       int pos = 0;
       for (int iCol = 0; iCol < nbCol; iCol++) {
         if (iCol != idx_drop) {
@@ -231,6 +232,7 @@ public:
         }
       }
       j_row = OneInc.find_next(j_row);
+      i_row++;
     }
   }
   Face InternalFlipFaceIneq(Face const& sInc, T* out) const {

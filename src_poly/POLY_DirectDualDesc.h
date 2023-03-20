@@ -448,6 +448,34 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return TheOutput;
 }
 
+template <typename T, typename Tgroup>
+std::vector<std::pair<MyVector<T>,Face>> DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
+                                                                         std::string const &ansProg,
+                                                                         std::ostream &os) {
+#ifdef TIMINGS
+  MicrosecondTime time;
+#endif
+  vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
+#ifdef TIMINGS
+  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
+     << "\n";
+#endif
+  if (ListIncd.size() == 0) {
+    std::cerr << "We found ListIncd to be empty. A clear error\n";
+    throw TerminalException{1};
+  }
+  vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
+#ifdef TIMINGS
+  os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
+     << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
+     << TheOutput.size() << ") VALUE=" << time << "\n";
+#endif
+  return TheOutput;
+}
+
+
+
+
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_
 // clang-format on
