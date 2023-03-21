@@ -534,6 +534,9 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
+  if (GRP.size() == 1) {
+    return ListIncd;
+  }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef TIMINGS
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
