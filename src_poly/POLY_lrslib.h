@@ -78,11 +78,9 @@ template <typename T> struct lrs_dat {
   /* count[4]=integer vertices                    */
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
-  int64_t totalnodes; /* count total number of tree nodes evaluated   */
   int64_t runs;       /* probes for estimate function                 */
   int64_t seed;       /* seed for random number generator             */
   /**** flags  **********                         */
-  int64_t allbases;  /* globals::TRUE if all bases should be printed          */
   int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
   int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t getvolume;   /* do volume calculation                        */
@@ -167,7 +165,7 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     return globals::L_FALSE;
   }
 
-  if (Q->allbases || lexmin(P, Q, col) || Q->lponly)
+  if (lexmin(P, Q, col) || Q->lponly)
     return lrs_getray(P, Q, col, Q->n, output);
   return globals::L_FALSE; /* no more output in this dictionary */
 }
@@ -187,8 +185,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->nredundcol = 0L;
   Q->runs = 0L;
   Q->seed = 1234L;
-  Q->totalnodes = 0L;
-  Q->allbases = globals::L_FALSE;
   Q->bound =
       globals::L_FALSE; /* upper/lower bound on objective function given */
   Q->homogeneous = globals::L_TRUE;
@@ -456,7 +452,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
-      Q->totalnodes++;
       return globals::L_TRUE;
     }
   } /* end of main while loop for getnextbasis */
@@ -486,8 +481,7 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
   if (hull)
     return globals::L_FALSE; /* skip printing the origin */
 
-  if (!lexflag && !Q->allbases &&
-      !Q->lponly) /* not lexmin, and not printing forced */
+  if (!lexflag && !Q->lponly) /* not lexmin, and not printing forced */
     return globals::L_FALSE;
 
   /* copy column 0 to output */
