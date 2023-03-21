@@ -327,7 +327,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #endif
     Face eFlip = FF.FlipFace(f);
 #ifdef TIMINGS
-    os << "|flip|=" << time << "\n";
+    os << "|FlipFace|=" << time << "\n";
 #endif
     Face result = GRP.CanonicalImage(eFlip);
 #ifdef TIMINGS
@@ -341,7 +341,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #endif
     Face eFlip = FF.FlipFaceIneq(pair);
 #ifdef TIMINGS
-    os << "|flip|=" << time << "\n";
+    os << "|FlipFaceIneq|=" << time << "\n";
 #endif
     Face result = GRP.CanonicalImage(eFlip);
 #ifdef TIMINGS
@@ -363,7 +363,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #endif
     Face result = FF.FlipFace(f);
 #ifdef TIMINGS
-    os << "|flip|=" << time << "\n";
+    os << "|FlipFace|=" << time << "\n";
 #endif
     return result;
   }
@@ -373,7 +373,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #endif
     Face result = FF.FlipFaceIneq(pair);
 #ifdef TIMINGS
-    os << "|flip|=" << time << "\n";
+    os << "|FlipFaceIneq|=" << time << "\n";
 #endif
     return result;
   }
