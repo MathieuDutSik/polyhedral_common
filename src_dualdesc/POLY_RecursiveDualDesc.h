@@ -1330,6 +1330,18 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
 }
 
 
+template<typename Tgroup>
+void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
+  if (AllArr.max_runtime > 0) {
+    int runtime = si(AllArr.start);
+    if (runtime > AllArr.max_runtime) {
+      std::cerr << "The maximum runtime has been elapsed. max_runtime = "
+                << AllArr.max_runtime << "\n";
+      throw RuntimeException{1};
+    }
+  }
+}
+
 
 // Needs initial definition due to template crazyness
 template<typename Tbank, typename T, typename Tgroup, typename Tidx_value>
@@ -1349,6 +1361,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     std::string const &ePrefix, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
+  CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
     ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
@@ -1407,6 +1420,9 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
   return RPL.FuncListOrbitIncidence();
 }
 
+
+
+
 //
 // A number of appoximations are done in this code:
 // ---In the bank we assume that the full symmetry is used.
@@ -1427,14 +1443,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
   }
-  if (AllArr.max_runtime > 0) {
-    int runtime = si(AllArr.start);
-    if (runtime > AllArr.max_runtime) {
-      std::cerr << "The maximum runtime has been elapsed. max_runtime = "
-                << AllArr.max_runtime << "\n";
-      throw RuntimeException{1};
-    }
-  }
+  CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   LazyWMat<T, Tidx_value> lwm(EXT);
