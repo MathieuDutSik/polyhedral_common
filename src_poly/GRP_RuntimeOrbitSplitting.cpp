@@ -7,7 +7,7 @@
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 4) {
+    if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "GRP_RuntimeOrbitSplitting [FileDoubleCoset]\n";

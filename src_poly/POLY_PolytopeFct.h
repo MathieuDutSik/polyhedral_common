@@ -5,11 +5,11 @@
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
+#include "rational.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "rational.h"
 
 struct GLPKoption {
   bool UseDouble;
@@ -146,7 +146,8 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   for (size_t iCol = 0; iCol < nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    if( OneInc[iRow] ) continue;
+    if (OneInc[iRow])
+      continue;
     T eScal = 0;
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       eScal += eVect(iCol) * TheEXT(iRow, iCol);
@@ -211,24 +212,25 @@ public:
     //
     // Faster Rational<long> version of EXT_red
     //
-    if constexpr( is_mpq_class<T>::value ) {
-        try_int = true;
-        EXT_int = MyMatrix<Rational<long>>(nbRow, nbCol - 1);
-        for( int iRow = 0; iRow < nbRow; iRow++) {
-            for (int iCol = 0; iCol < nbCol-1; iCol++) {
-                mpz_class eDen = EXT_red(iRow, iCol).get_den();
-                if (EXT_red(iRow, iCol).get_num().fits_slong_p() && EXT_red(iRow, iCol).get_den().fits_slong_p()) {
-                    EXT_int(iRow, iCol) = Rational<long>(EXT_red(iRow, iCol).get_num().get_si(), EXT_red(iRow, iCol).get_den().get_si());
-                }
-                else {
-                    try_int = false;
-                    break;
-                }
-
-            }
-            if(!try_int)
-                break;
-       }
+    if constexpr (is_mpq_class<T>::value) {
+      try_int = true;
+      EXT_int = MyMatrix<Rational<long>>(nbRow, nbCol - 1);
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+          mpz_class eDen = EXT_red(iRow, iCol).get_den();
+          if (EXT_red(iRow, iCol).get_num().fits_slong_p() &&
+              EXT_red(iRow, iCol).get_den().fits_slong_p()) {
+            EXT_int(iRow, iCol) =
+                Rational<long>(EXT_red(iRow, iCol).get_num().get_si(),
+                               EXT_red(iRow, iCol).get_den().get_si());
+          } else {
+            try_int = false;
+            break;
+          }
+        }
+        if (!try_int)
+          break;
+      }
     }
     //
     // Inverse scalar products
@@ -261,7 +263,7 @@ public:
       i_row++;
     }
   }
-  Face InternalFlipFaceIneq(Face const& sInc, const T* out) const {
+  Face InternalFlipFaceIneq(Face const &sInc, const T *out) const {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while (true) {
@@ -322,76 +324,81 @@ public:
     }
 #endif
     size_t nb = sInc.count();
-    MyMatrix<T> NSP = MyMatrix<T>(1, nbCol-1);
+    MyMatrix<T> NSP = MyMatrix<T>(1, nbCol - 1);
     bool failed_int = false;
-    if constexpr( is_mpq_class<T>::value ) {
-	    if ( try_int ) {
-	  
-	      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-	      auto f = [&](MyMatrix<Rational<long>> &M, size_t eRank,
-		       [[maybe_unused]] size_t iRow) -> void {
-            int aRow = OneInc_V[jRow];
-            M.row(eRank) = EXT_int.row(aRow);
-            jRow = sInc.find_next(jRow);
-	      };
-#ifdef TIMINGS
-	      MicrosecondTime time;
-#endif
-	      MyMatrix<Rational<long>> NSPint = NullspaceTrMat_Kernel<Rational<long>, decltype(f)>(nb, nbCol - 1, f);
-#ifdef TIMINGS
-	      //std::cerr << "|nullspaceint|=" << time << "\n";
-#endif
-	      // check result at full precision in case of overflows
-	      if (NSPint.rows() != 1) {
-	        std::cerr << "NSPint.rows() != 1" << "\n";
-          failed_int = true;
-	      } else {
-          bool allzero = true;
-          for( int iCol = 0; iCol < nbCol-1; iCol++ ) {
-	          Rational<long> val = NSPint(0, iCol);
-	          NSP(0,iCol) = mpq_class(val.get_num(), val.get_den());
-	          if( NSP(0,iCol) != 0 ) allzero = false;
-          }
-          if( allzero ) {
-	          std::cerr << "NSPint is all zero" << "\n";
-	          failed_int = true;
-          } else {
-	          // check if part of kernel
-	          jRow = sInc.find_first();
-	          for( size_t iRow = 0; iRow < nb; iRow++ ) {
-		          int aRow = OneInc_V[jRow];
-		          auto row = EXT_red.row(aRow);
-		          jRow = sInc.find_next(jRow);
-		          mpq_class sm = 0;
-		          for( int iCol = 0; iCol < nbCol-1; iCol++ ) {
-		            sm += NSP(0, iCol) * row(iCol);
-		          }
-		          if( sm != 0 ) {
-		            std::cerr << "Not really a kernel vector " << sm << "\n";
-		            failed_int = true;
-		            break;
-		          }
-	          }
-          }
-	      }
-	    }
-    }
-    
-    if( failed_int || !try_int ) {
-        std::cerr << "Rational<long> failed, retrying with mpq_class" << "\n";
+    if constexpr (is_mpq_class<T>::value) {
+      if (try_int) {
         boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-        auto f = [&](MyMatrix<T> &M, size_t eRank,
-                    [[maybe_unused]] size_t iRow) -> void {
-            int aRow = OneInc_V[jRow];
-            M.row(eRank) = EXT_red.row(aRow);
-            jRow = sInc.find_next(jRow);
+        auto f = [&](MyMatrix<Rational<long>> &M, size_t eRank,
+                     [[maybe_unused]] size_t iRow) -> void {
+          int aRow = OneInc_V[jRow];
+          M.row(eRank) = EXT_int.row(aRow);
+          jRow = sInc.find_next(jRow);
         };
 #ifdef TIMINGS
         MicrosecondTime time;
 #endif
-        NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
+        MyMatrix<Rational<long>> NSPint =
+            NullspaceTrMat_Kernel<Rational<long>, decltype(f)>(nb, nbCol - 1,
+                                                               f);
 #ifdef TIMINGS
-        //std::cerr << "|nullspace|=" << time << "\n";
+        std::cerr << "|nullspace<Rational<long>>|=" << time << "\n";
+#endif
+        // check result at full precision in case of overflows
+        if (NSPint.rows() != 1) {
+          std::cerr << "NSPint.rows() != 1"
+                    << "\n";
+          failed_int = true;
+        } else {
+          bool allzero = true;
+          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+            Rational<long> val = NSPint(0, iCol);
+            NSP(0, iCol) = mpq_class(val.get_num(), val.get_den());
+            if (NSP(0, iCol) != 0)
+              allzero = false;
+          }
+          if (allzero) {
+            std::cerr << "NSPint is all zero"
+                      << "\n";
+            failed_int = true;
+          } else {
+            // check if part of kernel
+            jRow = sInc.find_first();
+            for (size_t iRow = 0; iRow < nb; iRow++) {
+              int aRow = OneInc_V[jRow];
+              auto row = EXT_red.row(aRow);
+              jRow = sInc.find_next(jRow);
+              mpq_class sm = 0;
+              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+                sm += NSP(0, iCol) * row(iCol);
+              }
+              if (sm != 0) {
+                std::cerr << "Not really a kernel vector " << sm << "\n";
+                failed_int = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (failed_int || !try_int) {
+      std::cerr << "Rational<long> strategy failed , retrying with mpq_class"
+                << "\n";
+      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+      auto f = [&](MyMatrix<T> &M, size_t eRank,
+                   [[maybe_unused]] size_t iRow) -> void {
+        int aRow = OneInc_V[jRow];
+        M.row(eRank) = EXT_red.row(aRow);
+        jRow = sInc.find_next(jRow);
+      };
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
+      NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
+#ifdef TIMINGS
+      std::cerr << "|nullspace<T>|=" << time << "\n";
 #endif
     }
 #ifdef DEBUG_FLIP
@@ -402,7 +409,7 @@ public:
 #endif
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
     return InternalFlipFaceIneq(pair.first, pair.second.data());
   }
 };
