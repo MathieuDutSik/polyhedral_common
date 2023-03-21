@@ -255,9 +255,26 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
 }
 
 template <typename Tgroup>
+void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP,
+                                      const vectface &eListBig) {
+  std::string strSizeSma = std::to_string(SmaGRP.size());
+  std::string strSizeBig = std::to_string(BigGRP.size());
+  std::string strLen = std::to_string(eListBig.size());
+  std::string FileOut = "DoubleCoset_" + strSizeBig + "_" + strSizeSma + "_" + strLen;
+  std::ofstream os(FileOut);
+  WriteGroup(os, BigGRP);
+  WriteGroup(os, SmaGRP);
+  WriteListFace(os, eListBig);
+}
+
+
+template <typename Tgroup>
 vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                  const vectface &eListBig, std::ostream &os) {
   std::string method_split = "canonic";
+#ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
+  PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
+#endif
   return OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, eListBig, method_split,
                                       os);
 }

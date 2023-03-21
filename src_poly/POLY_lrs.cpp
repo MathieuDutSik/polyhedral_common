@@ -155,6 +155,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
+      std::cerr << "integer  : integer arithmetic on input\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
@@ -170,8 +171,13 @@ int main(int argc, char *argv[]) {
     if (argc == 5)
       eFileO = argv[4];
     auto call_lrs = [&](std::ostream &os) -> void {
+      if (arith == "integer") {
+        using T = mpz_class;
+        return process<T>(eFileI, choice, os);
+      }
       if (arith == "rational") {
-        return process<mpq_class>(eFileI, choice, os);
+        using T = mpq_class;
+        return process<T>(eFileI, choice, os);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;

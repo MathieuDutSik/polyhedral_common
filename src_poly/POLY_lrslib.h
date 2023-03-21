@@ -68,7 +68,6 @@ template <typename T> struct lrs_dat {
   int64_t *redundcol; /* holds columns which are redundant            */
   int64_t *linearity; /* holds cobasic indices of input linearities   */
   int64_t *minratio;  /* used for lexicographic ratio test            */
-  int64_t *temparray; /* for sorting indices, dimensioned to d        */
   int64_t inputd;     /* input dimension: n-1 for H-rep, n for V-rep  */
 
   int64_t m;      /* number of rows in input file                 */
@@ -77,20 +76,15 @@ template <typename T> struct lrs_dat {
   /* given by inputd-nredundcol                   */
   int64_t count[10]; /* count[0]=rays [1]=verts. [2]=base [3]=pivots */
   /* count[4]=integer vertices                    */
-  int64_t deepest;    /* max depth ever reached in search             */
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
   int64_t totalnodes; /* count total number of tree nodes evaluated   */
   int64_t runs;       /* probes for estimate function                 */
   int64_t seed;       /* seed for random number generator             */
-  double cest[10];    /* ests: 0=rays,1=vert,2=bases,3=vol,4=int vert */
   /**** flags  **********                         */
   int64_t allbases;  /* globals::TRUE if all bases should be printed          */
   int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
   int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
-  int64_t frequency; /* frequency to print cobasis indices           */
-  int64_t
-      geometric; /* globals::TRUE if incident vertex prints after each ray */
   int64_t getvolume;   /* do volume calculation                        */
   int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
@@ -99,28 +93,18 @@ template <typename T> struct lrs_dat {
   int64_t lponly;    /* true if only lp solution wanted              */
   int64_t maxdepth;  /* max depth to search to in treee              */
   int64_t maximize;  /* flag for LP maximization                     */
-  int64_t maxoutput; /* if positive, maximum number of output lines  */
   int64_t minimize;  /* flag for LP minimization                     */
   int64_t mindepth;  /* do not backtrack above mindepth              */
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
   int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
-  int64_t printslack;   /* globals::TRUE if indices of slack inequal. printed   */
   int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
-  int64_t verbose;  /* globals::FALSE for minimalist output                  */
   int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
 
   /* Variables for saving/restoring cobasis,  db */
 
   int64_t id; /* numbered sequentially */
-
-  int64_t saved_count[3]; /* How often to print out current cobasis */
-  int64_t *saved_C;
-  int64_t saved_depth;
-  int64_t saved_d;
-
-  int64_t saved_flag; /* There is something in the saved cobasis */
 
   /* Variables for cacheing dictionaries, db */
   lrs_dic<T> *Qhead, *Qtail;
@@ -163,19 +147,15 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
   int64_t j; /* cobasic index     */
   T **A = P->A;
   int64_t *Row = P->Row;
-  //  std::cerr << "col=" << col << " A[0][col]=" << A[0][col] << "\n";
   if (col == 0) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 1\n";
     return lrs_getvertex(P, Q, output);
   }
 
   if (Q->lponly) {
     if (A[0][col] <= 0) {
-      // std::cerr << "col=" << col << " : lrs_getsolution, exit case 2\n";
       return globals::L_FALSE;
     }
   } else if (A[0][col] >= 0) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 3\n";
     return globals::L_FALSE;
   }
 
@@ -184,13 +164,11 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     j++;
 
   if (j <= P->m) {
-    //    std::cerr << "col=" << col << " : lrs_getsolution, exit case 4\n";
     return globals::L_FALSE;
   }
 
-  if (Q->geometric || Q->allbases || lexmin(P, Q, col) || Q->lponly)
+  if (Q->allbases || lexmin(P, Q, col) || Q->lponly)
     return lrs_getray(P, Q, col, Q->n, output);
-  //  std::cerr << "col=" << col << " : lrs_getsolution, exit case 5\n";
   return globals::L_FALSE; /* no more output in this dictionary */
 }
 
@@ -199,50 +177,36 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
 /***********************************/
 template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   lrs_dat<T> *Q;
-  int64_t i;
   Q = new lrs_dat<T>;
 
   /* initialize variables */
   Q->m = 0L;
   Q->n = 0L;
   Q->inputd = 0L;
-  Q->deepest = 0L;
   Q->nlinearity = 0L;
   Q->nredundcol = 0L;
   Q->runs = 0L;
   Q->seed = 1234L;
   Q->totalnodes = 0L;
-  for (i = 0; i < 10; i++) {
-    Q->count[i] = 0L;
-    Q->cest[i] = 0.0;
-  }
-  Q->count[2] = 1L; /* basis counter */
-                    /* initialize flags */
   Q->allbases = globals::L_FALSE;
   Q->bound =
       globals::L_FALSE; /* upper/lower bound on objective function given */
-  Q->frequency = 0L;
-  Q->geometric = globals::L_FALSE;
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
   Q->incidence = globals::L_FALSE;
   Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
-  Q->maxoutput = 0L;
   Q->nonnegative = globals::L_FALSE;
   Q->printcobasis = globals::L_FALSE;
-  Q->printslack = globals::L_FALSE;
   Q->truncate =
       globals::L_FALSE; /* truncate tree when moving from opt vertex        */
-  Q->verbose = globals::L_FALSE;
   Q->maximize = globals::L_FALSE; /*flag for LP maximization */
   Q->minimize = globals::L_FALSE; /*flag for LP minimization */
   Q->restart =
       globals::L_FALSE; /* globals::TRUE if restarting from some cobasis */
   Q->givenstart =
       globals::L_FALSE; /* globals::TRUE if a starting cobasis is given */
-  Q->saved_flag = 0;    /* no cobasis saved initially, db */
   return Q;
 }
 
@@ -440,22 +404,14 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
   int64_t d = (*D_p)->d;
 
   if (backtrack && (*D_p)->depth == 0) {
-    //    std::cerr << "lrs_getnextbasis, exit case 1\n";
     return globals::L_FALSE; /* cannot backtrack from root      */
   }
 
-  if (Q->maxoutput > 0 && Q->count[0] + Q->count[1] - Q->hull >= Q->maxoutput) {
-    //    std::cerr << "lrs_getnextbasis, exit case 2\n";
-    return globals::L_FALSE;
-  }
-  //  std::cerr << "d=" << d << " m=" << m << "\n";
   //  PrintP(*D_p, "Before while loop");
   while ((j < d) || ((*D_p)->B[m] != m)) {
-    //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
     if ((*D_p)->depth >= Q->maxdepth) {
       backtrack = globals::L_TRUE;
       if (Q->maxdepth == 0) { /* estimate only */
-        //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
         return globals::L_FALSE;
       }
     }
@@ -470,7 +426,7 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       if (!check_cache(D_p, Q, &i, &j)) {
         (*D_p)->depth--;
         selectpivot(*D_p, Q, &i, &j);
-        pivot(*D_p, Q, i, j);
+        pivot(*D_p, i, j);
         update(*D_p, &i, &j);
       }
 
@@ -493,25 +449,17 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
          call to cache_dict */
 
       (*D_p)->depth++;
-      if ((*D_p)->depth > Q->deepest)
-        Q->deepest++;
 
-      pivot(*D_p, Q, i, j);
+      pivot(*D_p, i, j);
       //	  PrintP(*D_p, "After pivot");
       update(*D_p, &i, &j);
       //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
-      Q->count[2]++;
       Q->totalnodes++;
-
-      save_basis(*D_p, Q);
-      //	  PrintP(*D_p, "After save_basis");
-      //	  std::cerr << "lrs_getnextbasis, exit case 4\n";
       return globals::L_TRUE;
     }
   } /* end of main while loop for getnextbasis */
-  //  std::cerr << "lrs_getnextbasis, exit case 5\n";
   return globals::L_FALSE;
 }
 
@@ -535,9 +483,6 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
 
   hull = Q->hull;
   lexflag = P->lexflag;
-  if (lexflag || Q->allbases)
-    ++(Q->count[1]);
-
   if (hull)
     return globals::L_FALSE; /* skip printing the origin */
 
@@ -561,8 +506,6 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
       i++;
     }
   }
-  if (lexflag && output[0] == 1)
-    ++Q->count[4]; /* integer vertex */
   return globals::L_TRUE;
 }
 
@@ -579,11 +522,8 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
   int64_t ired; /* counts number of redundant columns            */
                 /* assign local variables to structures */
   int64_t *redundcol = Q->redundcol;
-  int64_t *count = Q->count;
   int64_t hull = Q->hull;
   int64_t n = Q->n;
-  if (redcol == n)
-    ++count[0];
   i = 1;
   ired = 0;
 
@@ -718,7 +658,7 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
     }             /* end of else perform ratio test statement */
     basicindex++; /* increment column of basis inverse to check next */
   }               /*end of while loop */
-  return (minratio[start]);
+  return minratio[start];
 } /* end of ratio */
 
 template <typename T>
@@ -791,7 +731,7 @@ int64_t selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 }
 
 template <typename T>
-void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
+void pivot(lrs_dic<T> *P, int64_t bas, int64_t cob)
 /* Qpivot routine for array A              */
 /* indices bas, cob are for Basis B and CoBasis C    */
 /* corresponding to row Row[bas] and column       */
@@ -809,7 +749,6 @@ void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
 
   d = P->d;
   m_A = P->m_A;
-  Q->count[3]++; /* count the pivot */
 
   r = Row[bas];
   s = Col[cob];
@@ -860,20 +799,16 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
   lastdv = Q->lastdv;
   while (primalinfeasible) {
     i = lastdv + 1;
-    //      std::cerr << "i=" << i << " Row=" << Row[i] << "\n";
-    //      std::cerr << "val=" << A[Row[i]][0] << "\n";
     while (i <= m && A[Row[i]][0] >= 0)
       i++;
     if (i <= m) {
       j = 0; /*find a positive entry for in row */
       while (j < d && A[Row[i]][Col[j]] <= 0) {
-        //	    std::cerr << "j=" << j << " A[R][C]=" << A[Row[i]][Col[j]]
-        //<< "\n";
         j++;
       }
       if (j >= d)
         return globals::L_FALSE; /* no positive entry */
-      pivot(P, Q, i, j);
+      pivot(P, i, j);
       update(P, &i, &j);
     } else
       primalinfeasible = globals::L_FALSE;
@@ -891,8 +826,7 @@ int64_t lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
   int64_t d = P->d;
 
   while (dan_selectpivot(P, Q, &i, &j)) {
-    Q->count[3]++;
-    pivot(P, Q, i, j);
+    pivot(P, i, j);
     update(P, &i, &j);
   }
 
@@ -940,7 +874,7 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
       while (C[k] <= d && A[Row[i]][Col[k]] == 0)
         k++;
       if (C[k] <= d) {
-        pivot(P, Q, i, k);
+        pivot(P, i, k);
         update(P, &i, &k);
       } else if (j < nlinearity) { /* cannot pivot linearity to cobasis */
         if (A[Row[i]][0] == 0)
@@ -980,7 +914,6 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
     while (k < d && C[k] != linearity[i] + d)
       k++;
     if (k >= d) {
-      //	  std::cerr << "Error removing linearity\n";
       return globals::L_FALSE;
     }
     if (!removecobasicindex(P, k))
@@ -994,7 +927,7 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
     while (i <= m && A[Row[i]][0] >= 0)
       i++;
     if (i <= m)
-      fprintf(stderr, "\n*Infeasible startingcobasis - will be modified");
+      std::cerr << "Infeasible startingcobasis - will be modified";
   }
   return globals::L_TRUE;
 } /*  end of getabasis */
@@ -1026,7 +959,6 @@ int64_t removecobasicindex(lrs_dic<T> *P, int64_t k)
     Col[j] = Col[j + 1];
   }
 
-  //  std::cerr << "deloc=" << deloc << "\n";
   if (deloc != d) {
     /* copy col d to deloc */
     for (i = 0; i <= m; i++)
@@ -1163,7 +1095,7 @@ int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
         /*the second while loop will put it back where it was       */
         /*faster (and safer) as done below                          */
         int64_t ii = i;
-        pivot(P, Q, ii, k);
+        pivot(P, ii, k);
         update(P, &ii, &k);
       } else {
         delete[] Cobasic;
@@ -1174,8 +1106,6 @@ int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
   }
   /* Suggested new code from db ends */
 
-  if (lexmin(P, Q, 0))
-    --Q->count[1]; /* decrement vertex count if lexmin */
   /* check restarting from a primal feasible dictionary               */
   for (i = lastdv + 1; i <= m; i++)
     if (A[Row[i]][0] < 0) {
@@ -1265,32 +1195,11 @@ void update(lrs_dic<T> *P, int64_t *i, int64_t *j)
     ; /*Find co-basis index */
 }
 
-/* globals::TRUE if the current dictionary is primal degenerate */
-/* not thoroughly tested   2000/02/15                  */
-/*
-template<typename T>
-int64_t lrs_degenerate(lrs_dic<T> * P)
-{
-  int64_t i;
-  int64_t *B, *Row;
-  T** A = P->A;
-  int64_t d = P->d;
-  int64_t m = P->m;
-  B = P->B;
-  Row = P->Row;
-  for (i = d + 1; i <= m; i++)
-    if (A[Row[i]][0] == 0)
-      return globals::L_TRUE;
-  return globals::L_FALSE;
-}*/
-
 /*********************************************************/
 /*                 Miscellaneous                         */
 /******************************************************* */
-
-void reorder(int64_t a[], int64_t range)
 /*reorder array in increasing order with one misplaced element */
-{
+void reorder(int64_t a[], int64_t range) {
   int64_t i, temp;
   for (i = 0; i < range - 1; i++)
     if (a[i] > a[i + 1]) {
@@ -1304,7 +1213,6 @@ void reorder(int64_t a[], int64_t range)
       a[i] = a[i + 1];
       a[i + 1] = temp;
     }
-
 } /* end of reorder */
 
 template <typename T>
@@ -1326,7 +1234,6 @@ int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
   Col = P->Col;
 
   while (selectpivot(P, Q, &i, &j)) {
-    Q->count[2]++;
 
     /* sign of new value of A[0][0]            */
     /* is      A[0][s]*A[r][0]-A[0][0]*A[r][s] */
@@ -1338,7 +1245,7 @@ int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
     if (Ns > Nt)
       return globals::L_FALSE; /* non-redundant */
 
-    pivot(P, Q, i, j);
+    pivot(P, i, j);
     update(P, &i, &j);
   }
   return !(j < d && i == 0); /* unbounded is also non-redundant */
@@ -1382,7 +1289,7 @@ int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
   if (i > m)
     return globals::L_TRUE;
 
-  pivot(P, Q, i, j);
+  pivot(P, i, j);
   update(P, &i, &j);
 
   return globals::L_FALSE; /*index is no longer cobasic */
@@ -1574,8 +1481,6 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
   delete[] Q->facet;
   delete[] Q->redundcol;
   delete[] Q->minratio;
-  delete[] Q->temparray;
-  delete[] Q->saved_C;
   delete Q;
 }
 
@@ -1651,10 +1556,8 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   Q->facet = new int64_t[d + 1];
   Q->redundcol = new int64_t[d + 1];
   Q->minratio = new int64_t[m + 1];
-  Q->temparray = new int64_t[d + 1];
 
   Q->inequality[0] = 2L;
-  Q->saved_C = new int64_t[d + 1];
 
   Q->lastdv = d; /* last decision variable may be decreased */
                  /* if there are redundant columns          */
@@ -1689,31 +1592,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   p->C[d] = m + d + 1;
   p->Col[d] = 0;
   return p;
-}
-
-/*
-   this routine makes a copy of the information needed to restart,
-   so that we can guarantee that if a signal is received, we
-   can guarantee that nobody is messing with it.
-   This as opposed to adding all kinds of critical regions in
-   the main line code.
-
-   It is also used to make sure that in case of overflow, we
-   have a valid cobasis to restart from.
- */
-template <typename T> void save_basis(lrs_dic<T> *P, lrs_dat<T> *Q) {
-  int i;
-  /* assign local variables to structures */
-  int64_t *C = P->C;
-  int64_t d;
-  d = P->d;
-  Q->saved_flag = 1;
-  for (i = 0; i < 3; i++)
-    Q->saved_count[i] = Q->count[i];
-  for (i = 0; i < d + 1; i++)
-    Q->saved_C[i] = C[i];
-  Q->saved_d = P->d;
-  Q->saved_depth = P->depth;
 }
 
 template <typename T>
@@ -1816,44 +1694,6 @@ int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 }
 
 template <typename T>
-int64_t phaseone(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* Do a dual pivot to get primal feasibility (pivot in X_0)*/
-/* Bohdan Kaluzny's handiwork                                    */
-{
-  int64_t i, j, k;
-  /* assign local variables to structures */
-  T *A = P->A;
-  int64_t *Row = P->Row;
-  int64_t *Col = P->Col;
-  int64_t m, d;
-  T b_vector;
-  m = P->m;
-  d = P->d;
-  i = 0;
-  k = d + 1;
-
-  b_vector = 0;
-  while (k <= m) {
-    if (b_vector > A[Row[k]][0]) {
-      i = k;
-      b_vector = A[Row[i]][0];
-    }
-    k++;
-  }
-
-  if (b_vector < 0) { /* pivot row found! */
-    j = 0;            /*find a positive entry for in row */
-    while (j < d && A[Row[i]][Col[j]] <= 0)
-      j++;
-    if (j >= d)
-      return globals::L_FALSE; /* no positive entry */
-    pivot(P, Q, i, j);
-    update(P, &i, &j);
-  }
-  return globals::L_TRUE;
-}
-
-template <typename T>
 void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   int j;
   int iRow, nbRow, nbCol;
@@ -1942,24 +1782,35 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
   int col;
-  //  std::cerr << "Before call to initLRS in DualDescription_incd\n";
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
-  /*
-  int nbCol=EXT.cols();
-  int nbRow=EXT.rows();
-  int nbIter=0;
-  std::cerr << "nbRow=" << nbRow << "\n";
-  std::cerr << "P->d=" << P->d << "\n";
-  std::cerr << "Q->hull=" << Q->hull << "  Q->n=" << Q->n << "\n";*/
   do {
-    /*
-      nbIter++;
-      std::cerr << "nbIter=" << nbIter << " nbCol=" << nbCol << "\n";
-      PrintP(P, "Before lrs_getsolution loop");*/
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
+#ifdef PRINT_ANALYSIS
+        size_t nbCol = EXT.cols();
+        size_t nbRow = EXT.rows();
+        std::cerr << "------------ Begin ------------\n";
+        std::cerr << "Incidence =";
+        for (size_t iRow = 0; iRow < nbRow; iRow++) {
+          T eScal = 0;
+          for (size_t iCol = 0; iCol < nbCol; iCol++)
+            eScal += output[iCol] * EXT(iRow, iCol);
+          if (eScal == 0)
+            std::cerr << " " << iRow;
+        }
+        std::cerr << "\n";
+        std::cerr << "col=" << col << "\n";
+        std::cerr << "Col =";
+        for (int i=0; i<P->d; i++)
+          std::cerr << " " << P->Col[i];
+        std::cerr << "\n";
+        std::cerr << "Row =";
+        for (int i=0; i<P->m; i++)
+          std::cerr << " " << P->Row[i];
+        std::cerr << "\n";
+#endif
         f(output);
       }
     }
@@ -2093,6 +1944,36 @@ MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   return MatrixFromVectorFamily(ListVect);
 }
 
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq(MyMatrix<T> const &EXT) {
+  std::pair<MyMatrix<T>,int> ePair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const& EXTwork = ePair.first;
+  int shift = ePair.second;
+  int nbCol = EXTwork.cols();
+  int nbRow = EXTwork.rows();
+  int nbColRed = nbCol - shift;
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
+  T eScal;
+  auto f = [&](T *out) -> void {
+    for (int i=0; i<nbColRed; i++)
+      pair.second(i) = out[i + shift];
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      eScal = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTwork(iRow, iCol);
+      pair.first[iRow] = static_cast<bool>(eScal == 0);
+    }
+    ListReturn.push_back(pair);
+  };
+  Kernel_DualDescription_DropFirst(EXTwork, f);
+  return ListReturn;
+}
+
+
+
+
+
 
 
 
@@ -2106,20 +1987,9 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT, int const &UpperLi
   bool IsFirst = true;
   T eScal;
   int nbFound = 0;
-#if !defined USE_ISINCD
   Face face(nbRow);
-#endif
   auto f = [&](T *out) -> bool {
     if (!IsFirst) {
-#ifdef USE_ISINCD
-      auto isincd = [&](size_t iRow) -> bool {
-        eScal = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTwork(iRow, iCol);
-        return eScal == 0;
-      };
-      ListIncd.InsertFace(isincd);
-#else
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
         for (size_t iCol = 0; iCol < nbCol; iCol++)
@@ -2127,7 +1997,6 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT, int const &UpperLi
         face[iRow] = static_cast<bool>(eScal == 0);
       }
       ListIncd.push_back(face);
-#endif
       nbFound++;
     }
     IsFirst = false;
@@ -2141,7 +2010,6 @@ template <typename T>
 vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   using Tring = typename underlying_ring<T>::ring_type;
-  //  typedef typename underlying_ring<T>::ring_type Tring;
   size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   MyMatrix<Tring> EXTring(nbRow, nbCol);
@@ -2153,19 +2021,8 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   }
   vectface ListIncd(nbRow);
   Tring eScal;
-#if !defined USE_ISINCD
   Face face(nbRow);
-#endif
   auto f = [&](Tring *out) -> void {
-#ifdef USE_ISINCD
-    auto isincd = [&](size_t iRow) -> bool {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTring(iRow, iCol);
-      return eScal == 0;
-    };
-    ListIncd.InsertFace(isincd);
-#else
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       eScal = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
@@ -2173,7 +2030,6 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
       face[iRow] = static_cast<bool>(eScal == 0);
     }
     ListIncd.push_back(face);
-#endif
   };
   Kernel_DualDescription_DropFirst(EXTring, f);
   return ListIncd;
@@ -2185,7 +2041,6 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   MyMatrix<T> const& EXTwork = pair.first;
   int shift = pair.second;
   using Tring = typename underlying_ring<T>::ring_type;
-  //  typedef typename underlying_ring<T>::ring_type Tring;
   int nbCol = EXTwork.cols();
   int nbRow = EXTwork.rows();
   int nbColRed = nbCol - shift;
@@ -2205,6 +2060,41 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   };
   Kernel_DualDescription_DropFirst(EXTring, f);
   return MatrixFromVectorFamily(ListVect);
+}
+
+
+template <typename T>
+std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
+  std::pair<MyMatrix<T>,int> ePair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const& EXTwork = ePair.first;
+  int shift = ePair.second;
+  using Tring = typename underlying_ring<T>::ring_type;
+  int nbCol = EXTwork.cols();
+  int nbRow = EXTwork.rows();
+  int nbColRed = nbCol - shift;
+  MyMatrix<Tring> EXTring(nbRow, nbCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
+    MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
+    MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
+    AssignMatrixRow(EXTring, iRow, eRow3);
+  }
+  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
+  Tring eScal;
+  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  auto f = [&](Tring *out) -> void {
+    for (int i=0; i<nbColRed; i++)
+      pair.second(i) = out[i + shift];
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      eScal = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTring(iRow, iCol);
+      pair.first[iRow] = static_cast<bool>(eScal == 0);
+    }
+    ListReturn.push_back(pair);
+  };
+  Kernel_DualDescription_DropFirst(EXTring, f);
+  return ListReturn;
 }
 
 // clang-format off

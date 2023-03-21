@@ -185,14 +185,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
                             std::to_string(SelectedOrbit) + "_";
     try {
       os << "Before call to DUALDESC_AdjacencyDecomposition\n";
-      vectface TheOutput =
-          DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.Stab, AllArr, NewPrefix, os);
-      os << "We have TheOutput, |TheOutput|=" << TheOutput.size() << "\n";
-      for (auto &eOrbB : TheOutput) {
-        Face eFlip = df.flip(eOrbB, os);
+      auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsent(eFlip);
-      }
+      };
+      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
     } catch (RuntimeException const &e) {
       HasReachedRuntimeException = true;
