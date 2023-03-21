@@ -136,7 +136,7 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen = ListGen.size();
   Tidx n = TheGRP.n_act();
-  os << TheGRP.n_act() << " " << nbGen << "\n";
+  os << int(TheGRP.n_act()) << " " << nbGen << "\n";
   for (auto &eGen : ListGen) {
     for (Tidx i = 0; i < n; i++) {
       Tidx eVal = OnPoints(i, eGen);
