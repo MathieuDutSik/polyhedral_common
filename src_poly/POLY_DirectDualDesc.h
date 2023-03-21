@@ -558,6 +558,9 @@ std::vector<std::pair<Face,MyVector<T>>> DirectFacetIneqOrbitComputation(MyMatri
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
+  if (GRP.size() == 1) {
+    return ListReturn;
+  }
   std::vector<std::pair<Face,MyVector<T>>> TheOutput = OrbitSplittingMap(ListReturn, GRP);
 #ifdef TIMINGS
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
