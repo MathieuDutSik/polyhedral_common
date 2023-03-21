@@ -94,7 +94,6 @@ template <typename T> struct lrs_dat {
   int64_t lponly;    /* true if only lp solution wanted              */
   int64_t maxdepth;  /* max depth to search to in treee              */
   int64_t maximize;  /* flag for LP maximization                     */
-  int64_t maxoutput; /* if positive, maximum number of output lines  */
   int64_t minimize;  /* flag for LP minimization                     */
   int64_t mindepth;  /* do not backtrack above mindepth              */
   int64_t
@@ -179,7 +178,6 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
 /***********************************/
 template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   lrs_dat<T> *Q;
-  int64_t i;
   Q = new lrs_dat<T>;
 
   /* initialize variables */
@@ -192,11 +190,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->runs = 0L;
   Q->seed = 1234L;
   Q->totalnodes = 0L;
-  for (i = 0; i < 10; i++) {
-    Q->count[i] = 0L;
-  }
-  Q->count[2] = 1L; /* basis counter */
-                    /* initialize flags */
   Q->allbases = globals::L_FALSE;
   Q->bound =
       globals::L_FALSE; /* upper/lower bound on objective function given */
@@ -206,7 +199,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
-  Q->maxoutput = 0L;
   Q->nonnegative = globals::L_FALSE;
   Q->printcobasis = globals::L_FALSE;
   Q->truncate =
@@ -414,22 +406,15 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
   int64_t d = (*D_p)->d;
 
   if (backtrack && (*D_p)->depth == 0) {
-    //    std::cerr << "lrs_getnextbasis, exit case 1\n";
     return globals::L_FALSE; /* cannot backtrack from root      */
   }
 
-  if (Q->maxoutput > 0 && Q->count[0] + Q->count[1] - Q->hull >= Q->maxoutput) {
-    //    std::cerr << "lrs_getnextbasis, exit case 2\n";
-    return globals::L_FALSE;
-  }
-  //  std::cerr << "d=" << d << " m=" << m << "\n";
   //  PrintP(*D_p, "Before while loop");
   while ((j < d) || ((*D_p)->B[m] != m)) {
     //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
     if ((*D_p)->depth >= Q->maxdepth) {
       backtrack = globals::L_TRUE;
       if (Q->maxdepth == 0) { /* estimate only */
-        //	    std::cerr << "lrs_getnextbasis, exit case 3\n";
         return globals::L_FALSE;
       }
     }
@@ -444,7 +429,7 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       if (!check_cache(D_p, Q, &i, &j)) {
         (*D_p)->depth--;
         selectpivot(*D_p, Q, &i, &j);
-        pivot(*D_p, Q, i, j);
+        pivot(*D_p, i, j);
         update(*D_p, &i, &j);
       }
 
@@ -470,18 +455,16 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       if ((*D_p)->depth > Q->deepest)
         Q->deepest++;
 
-      pivot(*D_p, Q, i, j);
+      pivot(*D_p, i, j);
       //	  PrintP(*D_p, "After pivot");
       update(*D_p, &i, &j);
       //	  PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
-      Q->count[2]++;
       Q->totalnodes++;
       return globals::L_TRUE;
     }
   } /* end of main while loop for getnextbasis */
-  //  std::cerr << "lrs_getnextbasis, exit case 5\n";
   return globals::L_FALSE;
 }
 
@@ -505,9 +488,6 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
 
   hull = Q->hull;
   lexflag = P->lexflag;
-  if (lexflag || Q->allbases)
-    ++(Q->count[1]);
-
   if (hull)
     return globals::L_FALSE; /* skip printing the origin */
 
@@ -531,8 +511,6 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
       i++;
     }
   }
-  if (lexflag && output[0] == 1)
-    ++Q->count[4]; /* integer vertex */
   return globals::L_TRUE;
 }
 
@@ -549,11 +527,8 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
   int64_t ired; /* counts number of redundant columns            */
                 /* assign local variables to structures */
   int64_t *redundcol = Q->redundcol;
-  int64_t *count = Q->count;
   int64_t hull = Q->hull;
   int64_t n = Q->n;
-  if (redcol == n)
-    ++count[0];
   i = 1;
   ired = 0;
 
@@ -761,7 +736,7 @@ int64_t selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 }
 
 template <typename T>
-void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
+void pivot(lrs_dic<T> *P, int64_t bas, int64_t cob)
 /* Qpivot routine for array A              */
 /* indices bas, cob are for Basis B and CoBasis C    */
 /* corresponding to row Row[bas] and column       */
@@ -779,7 +754,6 @@ void pivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t bas, int64_t cob)
 
   d = P->d;
   m_A = P->m_A;
-  Q->count[3]++; /* count the pivot */
 
   r = Row[bas];
   s = Col[cob];
@@ -839,7 +813,7 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
       }
       if (j >= d)
         return globals::L_FALSE; /* no positive entry */
-      pivot(P, Q, i, j);
+      pivot(P, i, j);
       update(P, &i, &j);
     } else
       primalinfeasible = globals::L_FALSE;
@@ -857,8 +831,7 @@ int64_t lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
   int64_t d = P->d;
 
   while (dan_selectpivot(P, Q, &i, &j)) {
-    Q->count[3]++;
-    pivot(P, Q, i, j);
+    pivot(P, i, j);
     update(P, &i, &j);
   }
 
@@ -906,7 +879,7 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
       while (C[k] <= d && A[Row[i]][Col[k]] == 0)
         k++;
       if (C[k] <= d) {
-        pivot(P, Q, i, k);
+        pivot(P, i, k);
         update(P, &i, &k);
       } else if (j < nlinearity) { /* cannot pivot linearity to cobasis */
         if (A[Row[i]][0] == 0)
@@ -1127,7 +1100,7 @@ int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
         /*the second while loop will put it back where it was       */
         /*faster (and safer) as done below                          */
         int64_t ii = i;
-        pivot(P, Q, ii, k);
+        pivot(P, ii, k);
         update(P, &ii, &k);
       } else {
         delete[] Cobasic;
@@ -1138,8 +1111,6 @@ int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
   }
   /* Suggested new code from db ends */
 
-  if (lexmin(P, Q, 0))
-    --Q->count[1]; /* decrement vertex count if lexmin */
   /* check restarting from a primal feasible dictionary               */
   for (i = lastdv + 1; i <= m; i++)
     if (A[Row[i]][0] < 0) {
@@ -1268,7 +1239,6 @@ int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
   Col = P->Col;
 
   while (selectpivot(P, Q, &i, &j)) {
-    Q->count[2]++;
 
     /* sign of new value of A[0][0]            */
     /* is      A[0][s]*A[r][0]-A[0][0]*A[r][s] */
@@ -1280,7 +1250,7 @@ int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
     if (Ns > Nt)
       return globals::L_FALSE; /* non-redundant */
 
-    pivot(P, Q, i, j);
+    pivot(P, i, j);
     update(P, &i, &j);
   }
   return !(j < d && i == 0); /* unbounded is also non-redundant */
@@ -1324,7 +1294,7 @@ int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
   if (i > m)
     return globals::L_TRUE;
 
-  pivot(P, Q, i, j);
+  pivot(P, i, j);
   update(P, &i, &j);
 
   return globals::L_FALSE; /*index is no longer cobasic */
@@ -1726,44 +1696,6 @@ int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
       return globals::L_TRUE; /* unbounded */
   }
   return globals::L_FALSE;
-}
-
-template <typename T>
-int64_t phaseone(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* Do a dual pivot to get primal feasibility (pivot in X_0)*/
-/* Bohdan Kaluzny's handiwork                                    */
-{
-  int64_t i, j, k;
-  /* assign local variables to structures */
-  T *A = P->A;
-  int64_t *Row = P->Row;
-  int64_t *Col = P->Col;
-  int64_t m, d;
-  T b_vector;
-  m = P->m;
-  d = P->d;
-  i = 0;
-  k = d + 1;
-
-  b_vector = 0;
-  while (k <= m) {
-    if (b_vector > A[Row[k]][0]) {
-      i = k;
-      b_vector = A[Row[i]][0];
-    }
-    k++;
-  }
-
-  if (b_vector < 0) { /* pivot row found! */
-    j = 0;            /*find a positive entry for in row */
-    while (j < d && A[Row[i]][Col[j]] <= 0)
-      j++;
-    if (j >= d)
-      return globals::L_FALSE; /* no positive entry */
-    pivot(P, Q, i, j);
-    update(P, &i, &j);
-  }
-  return globals::L_TRUE;
 }
 
 template <typename T>
