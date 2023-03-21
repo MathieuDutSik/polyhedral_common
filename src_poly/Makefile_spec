@@ -13,7 +13,7 @@
 #PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
-PROGRAM		= POLY_lrs
+#PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
@@ -36,6 +36,7 @@ PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
+PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
