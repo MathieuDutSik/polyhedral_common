@@ -76,7 +76,6 @@ template <typename T> struct lrs_dat {
   /* given by inputd-nredundcol                   */
   int64_t count[10]; /* count[0]=rays [1]=verts. [2]=base [3]=pivots */
   /* count[4]=integer vertices                    */
-  int64_t deepest;    /* max depth ever reached in search             */
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
   int64_t totalnodes; /* count total number of tree nodes evaluated   */
@@ -184,7 +183,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->m = 0L;
   Q->n = 0L;
   Q->inputd = 0L;
-  Q->deepest = 0L;
   Q->nlinearity = 0L;
   Q->nredundcol = 0L;
   Q->runs = 0L;
@@ -411,7 +409,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
 
   //  PrintP(*D_p, "Before while loop");
   while ((j < d) || ((*D_p)->B[m] != m)) {
-    //      std::cerr << "j=" << j << " D-B[m]=" << (*D_p)->B[m] << "\n";
     if ((*D_p)->depth >= Q->maxdepth) {
       backtrack = globals::L_TRUE;
       if (Q->maxdepth == 0) { /* estimate only */
@@ -452,8 +449,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
          call to cache_dict */
 
       (*D_p)->depth++;
-      if ((*D_p)->depth > Q->deepest)
-        Q->deepest++;
 
       pivot(*D_p, i, j);
       //	  PrintP(*D_p, "After pivot");
@@ -663,7 +658,7 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
     }             /* end of else perform ratio test statement */
     basicindex++; /* increment column of basis inverse to check next */
   }               /*end of while loop */
-  return (minratio[start]);
+  return minratio[start];
 } /* end of ratio */
 
 template <typename T>
@@ -1793,6 +1788,29 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
+#ifdef PRINT_ANALYSIS
+        size_t nbCol = EXT.cols();
+        size_t nbRow = EXT.rows();
+        std::cerr << "------------ Begin ------------\n";
+        std::cerr << "Incidence =";
+        for (size_t iRow = 0; iRow < nbRow; iRow++) {
+          T eScal = 0;
+          for (size_t iCol = 0; iCol < nbCol; iCol++)
+            eScal += output[iCol] * EXT(iRow, iCol);
+          if (eScal == 0)
+            std::cerr << " " << iRow;
+        }
+        std::cerr << "\n";
+        std::cerr << "col=" << col << "\n";
+        std::cerr << "Col =";
+        for (int i=0; i<P->d; i++)
+          std::cerr << " " << P->Col[i];
+        std::cerr << "\n";
+        std::cerr << "Row =";
+        for (int i=0; i<P->m; i++)
+          std::cerr << " " << P->Row[i];
+        std::cerr << "\n";
+#endif
         f(output);
       }
     }
