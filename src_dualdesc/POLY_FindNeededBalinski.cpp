@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
           Face f = ff->getface(i_orbit);
           int eIncd = f.count();
           if (eIncd >= MinIncd) {
+            std::cerr << "|f|=" << f.size() << "/" << f.count() << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
             vectface vf_orbit = OrbitFace(f, LGen);
             MyMatrix<T> FAC_undone = GetVertexSet_from_vectface(EXT, vf_orbit);
             bool test = EvaluationConnectednessCriterion_PreKernel(
