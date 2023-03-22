@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
           int eIncd = f.count();
           if (eIncd >= MinIncd) {
             std::cerr << "|f_red|=" << f_red.size() << "/" << f_red.count() << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
-            vectface vf_orbit = OrbitFace(f, LGen);
+            vectface vf_orbit = OrbitFace(f_red, LGen);
             MyMatrix<T> FAC_undone = GetVertexSet_from_vectface(EXT, vf_orbit);
             bool test = EvaluationConnectednessCriterion_PreKernel(
                 EXT, GRP, FAC_undone, vf_orbit, std::cerr);
