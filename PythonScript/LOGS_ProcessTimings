@@ -22,7 +22,10 @@ list_sum_time = []
 ifile = open(input_file, 'r')
 
 def is_entry_correct(the_entry):
-    return the_entry[0] == "|" and the_entry[-1] == "|"
+    test1 = the_entry[0] == "|" and the_entry[-1] == "|"
+    if test1:
+        return True
+    return the_entry.startswith("Timing |") and the_entry[-1] == "|"
 
 def get_val(val_str):
     try:
