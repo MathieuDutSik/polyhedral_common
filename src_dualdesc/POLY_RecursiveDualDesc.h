@@ -1193,10 +1193,10 @@ public:
                              CompleteList_SetUndone.end(), {}, 0);
   }
   iterator_face begin_face_undone() const {
-    IteratorFaceType(foc, begin_index_undone());
+    return IteratorFaceType(foc, begin_index_undone());
   }
   iterator_face end_face_undone() const {
-    IteratorFaceType(foc, end_index_undone());
+    return IteratorFaceType(foc, end_index_undone());
   }
 };
 
