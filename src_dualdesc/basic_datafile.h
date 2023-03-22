@@ -19,12 +19,8 @@ public:
   FileNumber(FileNumber &&) = delete;
   FileNumber() = delete;
 
-  FileNumber(std::string const &file, bool is_new) : file(file) {
-    if (is_new) {
-      if (IsExistingFile(file)) {
-        std::cerr << "FileNumber: The file " << file << " should be missing\n";
-        throw TerminalException{1};
-      }
+  FileNumber(std::string const &file, bool overwrite) : file(file) {
+    if (overwrite) {
       fp = std::fopen(file.data(), "w+");
     } else {
       if (!IsExistingFile(file)) {
@@ -78,10 +74,6 @@ public:
   FileBool() = delete;
 
   FileBool(std::string const &file) : file(file) {
-    if (IsExistingFile(file)) {
-      std::cerr << "FileBool: The file " << file << " should be missing\n";
-      throw TerminalException{1};
-    }
     fp = std::fopen(file.data(), "w+");
     n_ent = 0;
   }
@@ -190,10 +182,6 @@ public:
   FileFace() = delete;
 
   FileFace(std::string const &file, size_t const &_siz) : file(file) {
-    if (IsExistingFile(file)) {
-      std::cerr << "FileFace: The file " << file << " should be missing\n";
-      throw TerminalException{1};
-    }
     fp = std::fopen(file.data(), "w+");
     siz = _siz;
     n_face = 0;

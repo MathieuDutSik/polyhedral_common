@@ -1296,6 +1296,7 @@ public:
     os << "Clean closing of the DatabaseOrbits\n";
   }
   void flush() const {
+    std::cerr << "Doing the flushing operation\n";
     FileNumber fn(eFileNB, true);
     FileBool fb(eFileFB);
     FileFace ff(eFileFF, bb.delta);
