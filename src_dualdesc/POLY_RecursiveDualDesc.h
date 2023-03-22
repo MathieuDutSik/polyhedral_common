@@ -1216,13 +1216,6 @@ private:
   /* TRICK 7: Using separate files for faces and status allow us to gain
      locality. The faces are written one by one while the access to status is
      random */
-  // This is for storing the number of orbits of the polytope
-  FileNumber *fn;
-  // This is for storing the status of the orbits
-  FileBool *fb;
-  // This is for storing the faces and the index of orbit
-  FileFace *ff;
-  bool is_opened;
   bool SavingTrigger;
   bool AdvancedTerminationCriterion;
   std::ostream &os;
@@ -1255,18 +1248,23 @@ public:
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
-    fn = nullptr;
-    fb = nullptr;
-    ff = nullptr;
-    is_opened = false;
     if (SavingTrigger) {
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
         os << "Opening existing files (NB, FB, FF)\n";
-        fn = new FileNumber(eFileNB, false);
-        n_orbit = fn->getval();
-        fb = new FileBool(eFileFB, n_orbit);
-        ff = new FileFace(eFileFF, bb.delta, n_orbit);
+        FileNumber fn(eFileNB, false);
+        n_orbit = fn.getval();
+        FileBool fb(eFileFB, n_orbit);
+        FileFace ff(eFileFF, bb.delta, n_orbit);
+        for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+          Face f = ff.getface(i_orbit);
+          SingEnt eEnt = bb.foc.FaceToSingEnt(f);
+          bool status = fb.getbit(i_orbit);
+          // The DictOrbit
+          bb.InsertListOrbitEntry(eEnt, i_orbit);
+          // The other fields
+          bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
+        }
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1279,27 +1277,12 @@ public:
         std::ofstream os_grp(eFileGRP);
         os_grp << bb.GRP;
         // Writing polytope
-        std::ofstream os_ext(eFileEXT);
-        WriteMatrix(os_ext, bb.EXT);
+        WriteMatrixFile(eFileEXT, bb.EXT);
         // Opening the files
-        fn = new FileNumber(eFileNB, true);
-        fb = new FileBool(eFileFB);
-        ff = new FileFace(eFileFF, bb.delta);
         n_orbit = 0;
-        fn->setval(n_orbit);
       }
-      is_opened = true;
       //
       os << "Inserting orbits, n_orbit=" << n_orbit << "\n";
-      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
-        Face f = ff->getface(i_orbit);
-        SingEnt eEnt = bb.foc.FaceToSingEnt(f);
-        bool status = fb->getbit(i_orbit);
-        // The DictOrbit
-        bb.InsertListOrbitEntry(eEnt, i_orbit);
-        // The other fields
-        bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
-      }
       print_status();
     }
   }
@@ -1309,17 +1292,16 @@ public:
        does destroy the database and this gives a small window in which bad
        stuff can happen.
      */
-    if (is_opened) {
-      delete fb;
-      delete fn;
-      delete ff;
-    }
+    flush();
     os << "Clean closing of the DatabaseOrbits\n";
   }
   void flush() const {
-    ff->direct_write(bb.foc.foc.ListOrbit);
+    FileNumber fn(eFileNB, true);
+    FileBool fb(eFileFB);
+    FileFace ff(eFileFF, bb.delta);
+    ff.direct_write(bb.foc.ListOrbit);
     size_t nbOrbit = bb.foc.nbOrbit;
-    fn->setval(nbOrbit);
+    fn.setval(nbOrbit);
     size_t len = (nbOrbit + 7) / 8;
     std::vector<uint8_t> V_status(len, 255);
     auto iter = bb.begin_index_undone();
@@ -1328,39 +1310,26 @@ public:
       setbit(V_status, pos, false);
       iter++;
     }
-    fb->direct_write(V_status);
+    fb.direct_write(V_status);
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
-      delete fb;
-      delete fn;
-      delete ff;
-      is_opened = false;
-      //
-      RemoveFile(eFileNB);
-      RemoveFile(eFileFB);
-      RemoveFile(eFileFF);
-      RemoveFile(eFileEXT);
-      RemoveFile(eFileGRP);
+      RemoveFileIfExist(eFileNB);
+      RemoveFileIfExist(eFileFB);
+      RemoveFileIfExist(eFileFF);
+      RemoveFileIfExist(eFileEXT);
+      RemoveFileIfExist(eFileGRP);
     }
     return bb.FuncListOrbitIncidence();
   }
   void FuncInsert(Face const &face_can) {
-    std::optional<Face> test = bb.FuncInsert(face_can);
-    if (test && SavingTrigger) {
-      fb->setbit(bb.foc.nbOrbit - 1, false);
-      ff->setface(bb.foc.nbOrbit - 1, *test);
-      fn->setval(bb.foc.nbOrbit);
-    }
+    (void)bb.FuncInsert(face_can);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return bb.ComputeInitialSet(ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     bb.FuncPutOrbitAsDone(i_orb);
-    if (SavingTrigger) {
-      fb->setbit(i_orb, true);
-    }
     print_status();
   }
   Face ComputeIntersectionUndone() const {
