@@ -1421,6 +1421,10 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
 
 template<typename Tgroup>
 void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
+  if (ExitEvent) {
+    std::cerr << "Terminating the program by Ctrl-C\n";
+    throw TerminalException{1};
+  }
   if (AllArr.max_runtime > 0) {
     int runtime = si(AllArr.start);
     if (runtime > AllArr.max_runtime) {
@@ -1528,10 +1532,6 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
   os << "Beginning of DUALDESC_AdjacencyDecomposition\n";
-  if (ExitEvent) {
-    std::cerr << "Terminating the program by Ctrl-C\n";
-    throw TerminalException{1};
-  }
   CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -1987,6 +1987,7 @@ template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   // Setting up the Control C event.
   ExitEvent = false;
+  std::cerr << "Before submission of signal_callback_handler\n";
   signal(SIGINT, signal_callback_handler);
   //
   using Tint = typename Tgroup::Tint;
