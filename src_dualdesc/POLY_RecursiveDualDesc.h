@@ -1977,6 +1977,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
   std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
   std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  std::cerr << "OrbitSplitTechique\n" << AllArr.OrbitSplitTechnique << "\n";
   //
   bool DD_Saving = false;
   std::string DD_Prefix = "totally_irrelevant_second";

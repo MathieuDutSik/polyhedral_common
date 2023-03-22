@@ -157,6 +157,29 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       }
       return FindVertices(EXT, iter);
     }
+    if (ansOpt == "lp_cdd_min") {
+      // So possible format is lp_cdd_min:iter_100
+      int iter = 10;
+      if (ListStr.size() > 1) {
+        std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
+        if (ListStrB.size() == 2 && ListStrB[0] == "iter")
+          std::istringstream(ListStrB[1]) >> iter;
+      }
+      vectface vf = FindVertices(EXT, iter);
+      size_t min_incd = std::numeric_limits<size_t>::max();
+      for (auto & eFace : vf) {
+        size_t incd = eFace.count();
+        if (incd < min_incd)
+          min_incd = incd;
+      }
+      vectface vf_ret(EXT.rows());
+      for (auto & eFace : vf) {
+        size_t incd = eFace.count();
+        if (incd == min_incd)
+          vf_ret.push_back(eFace);
+      }
+      return vf_ret;
+    }
     if (ansOpt == "sampling") {
       std::vector<std::string> ListOpt;
       int n_ent = ListStr.size();
