@@ -260,10 +260,28 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   }
 }
 
+template<typename Tgroup>
+vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, const vectface& vf,
+                                    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream & os) {
+  using Tint = typename Tgroup::Tint;
+  std::map<std::string, Tint> TheMap;
+  Tint ordGRPbig = GRPbig.size();
+  Tint ordGRPsma = GRPsma.size();
+  Tint index = ordGRPbig / ordGRPsma;
+  TheMap["groupsize_big"] = ordGRPbig;
+  TheMap["groupsize_sma"] = ordGRPsma;
+  TheMap["index"] = index;
+  TheMap["n_orbit"] = vf.size();
+  std::string method_split = HeuristicEvaluation(TheMap, AllArr.OrbitSplitTechnique);
+  return OrbitSplittingListOrbit_spec(GRPbig, GRPsma, vf, method_split, os);
+}
+
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
                              WeightMatrix<true, T, Tidx_value> const &WMat,
-                             Tgroup const &GRP, std::ostream &os) {
+                             Tgroup const &GRP,
+                             PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+                             std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
@@ -283,7 +301,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   if (GRP.size() == RecAns.GRP.size())
     return ListReprTrans;
   Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
-  return OrbitSplittingListOrbit(GrpConj, GRP, ListReprTrans, os);
+  return OrbitSplittingListOrbitGen(GrpConj, GRP, ListReprTrans, AllArr, os);
 }
 
 size_t get_matching_power(size_t const &val) {
@@ -1329,7 +1347,6 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
   return TheMap;
 }
 
-
 template<typename Tgroup>
 void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
   if (AllArr.max_runtime > 0) {
@@ -1454,7 +1471,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
       HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
   if (ansBankCheck == "yes") {
     vectface ListFace =
-        getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, os);
+      getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, AllArr, os);
     if (ListFace.size() > 0)
       return ListFace;
   }
@@ -1542,7 +1559,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   os << "Before return section\n";
   if (NeedSplit) {
     os << "Before OrbitSplittingListOrbit\n";
-    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, os);
+    return OrbitSplittingListOrbitGen(TheGRPrelevant, GRP, ListOrbitFaces, AllArr, os);
   } else {
     os << "Returning ListOrbitFaces\n";
     return ListOrbitFaces;
@@ -1674,6 +1691,9 @@ If set to unset.heu then basic heuristics are applied which should be fine for s
   ListStringValuesH_doc["ChosenDatabaseFile"] = "Default: unset.heu\n\
 The heuristic for choosing between canonic or repr.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
+  ListStringValuesH_doc["OrbitSplitTechniqueFile"] = "Default: unset.heu\n\
+The heuristic for choosing the orbit splitting technique.\n\
+If set to unset.heu then basic heuristics are applied which should be fine";
   SingleBlock BlockHEURIS;
   BlockHEURIS.setListStringValues(ListStringValuesH_doc);
   ListBlock["HEURISTIC"] = BlockHEURIS;
@@ -1870,6 +1890,9 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase, os);
   os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  //
+  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique, os);
+  os << "OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   AllArr.Saving = DD_Saving;

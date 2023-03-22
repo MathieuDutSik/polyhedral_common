@@ -65,6 +65,13 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
   return HeuristicFromListString<T>(ListString);
 }
 
+template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
+  std::vector<std::string> ListString = {"1",
+                                         "1 groupsize_sma < 100 exhaustive",
+                                         "canonic"};
+  return HeuristicFromListString<T>(ListString);
+}
+
 template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   std::vector<std::string> ListString = {
       "2", "2 groupsize > 5000000000000 incidence > 1000000 traces",
@@ -209,6 +216,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> CheckDatabaseBank;
   TheHeuristic<T> ChosenDatabase;
+  TheHeuristic<T> OrbitSplitTechnique;
   bool Saving;
   bool AdvancedTerminationCriterion;
   SingletonTime start;
@@ -244,6 +252,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodInitialFacetSet<T>(),
           MethodCheckDatabaseBank<T>(),
           MethodChosenDatabase<T>(),
+          MethodOrbitSplitTechnique<T>(),
           Saving,
           AdvancedTerminationCriterion,
           SingletonTime(),

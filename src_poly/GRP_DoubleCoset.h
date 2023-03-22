@@ -228,19 +228,23 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     WMat = WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP);
   }
   vectface eListSma(BigGRP.n_act());
-  for (auto &eSet : eListBig) {
-    if (method_split == "repr") {
+  if (method_split == "repr") {
+    for (auto &eSet : eListBig) {
       vectface ListListSet =
           DoubleCosetDescription_Representation<Tgroup, Tidx_value>(
               BigGRP, SmaGRP, WMat, eSet);
       eListSma.append(ListListSet);
     }
-    if (method_split == "canonic") {
+  }
+  if (method_split == "canonic") {
+    for (auto &eSet : eListBig) {
       vectface ListListSet =
           DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, os);
       eListSma.append(ListListSet);
     }
-    if (method_split == "exhaustive") {
+  }
+  if (method_split == "exhaustive") {
+    for (auto &eSet : eListBig) {
       vectface ListListSet =
           DoubleCosetDescription_Exhaustive(BigGRP, SmaGRP, eSet);
       eListSma.append(ListListSet);
