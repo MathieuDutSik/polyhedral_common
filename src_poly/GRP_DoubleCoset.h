@@ -213,6 +213,21 @@ vectface DoubleCosetDescription_Exhaustive(Tgroup const &BigGRP,
 }
 
 template <typename Tgroup>
+void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP,
+                                      const vectface &eListBig) {
+  std::string strSizeSma = std::to_string(SmaGRP.size());
+  std::string strSizeBig = std::to_string(BigGRP.size());
+  std::string strLen = std::to_string(eListBig.size());
+  std::string strN = std::to_string(int(BigGRP.n_act()));
+  std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" + strSizeSma + "_vf" + strLen + "_idx";
+  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  std::ofstream os(FileOut);
+  WriteGroup(os, BigGRP);
+  WriteGroup(os, SmaGRP);
+  WriteListFace(os, eListBig);
+}
+
+template <typename Tgroup>
 vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
                                       const vectface &eListBig,
@@ -259,21 +274,6 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
      << "\n";
 #endif
   return eListSma;
-}
-
-template <typename Tgroup>
-void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP,
-                                      const vectface &eListBig) {
-  std::string strSizeSma = std::to_string(SmaGRP.size());
-  std::string strSizeBig = std::to_string(BigGRP.size());
-  std::string strLen = std::to_string(eListBig.size());
-  std::string strN = std::to_string(int(BigGRP.n_act()));
-  std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" + strSizeSma + "_vf" + strLen + "_idx";
-  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-  std::ofstream os(FileOut);
-  WriteGroup(os, BigGRP);
-  WriteGroup(os, SmaGRP);
-  WriteListFace(os, eListBig);
 }
 
 
