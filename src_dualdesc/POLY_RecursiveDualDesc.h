@@ -261,14 +261,14 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
 }
 
 template<typename Tgroup>
-vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, const vectface& vf,
+vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, vectface& vf,
                                     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream & os) {
   using Tint = typename Tgroup::Tint;
   std::map<std::string, Tint> TheMap;
   Tint ordGRPbig = GRPbig.size();
   Tint ordGRPsma = GRPsma.size();
   if (ordGRPbig == ordGRPsma)
-    return vf;
+    return std::move(vf);
   Tint index = ordGRPbig / ordGRPsma;
   TheMap["groupsize_big"] = ordGRPbig;
   TheMap["groupsize_sma"] = ordGRPsma;
