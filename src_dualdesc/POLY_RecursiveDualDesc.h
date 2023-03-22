@@ -816,21 +816,19 @@ public:
   }
 
 private:
-  struct IteratorType {
+  struct IteratorIndexType {
   private:
-    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
     std::map<size_t, std::vector<size_t>>::const_iterator iter;
     size_t pos;
 
   public:
-    IteratorType(const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
-                 std::map<size_t, std::vector<size_t>>::const_iterator iter,
-                 size_t pos)
-        : foc(foc), iter(iter), pos(pos) {}
-    Face operator*() const {
-      return foc.RetrieveListOrbitFace(iter->second[pos]);
+    IteratorIndexType(std::map<size_t, std::vector<size_t>>::const_iterator iter,
+                      size_t pos)
+        : iter(iter), pos(pos) {}
+    size_t operator*() const {
+      return iter->second[pos];
     }
-    IteratorType &operator++() {
+    IteratorIndexType &operator++() {
       pos++;
       if (pos == iter->second.size()) {
         iter++;
@@ -838,8 +836,8 @@ private:
       }
       return *this;
     }
-    IteratorType operator++(int) {
-      IteratorType tmp = *this;
+    IteratorIndexType operator++(int) {
+      IteratorIndexType tmp = *this;
       pos++;
       if (pos == iter->second.size()) {
         iter++;
@@ -847,7 +845,7 @@ private:
       }
       return tmp;
     }
-    IteratorType &operator--() {
+    IteratorIndexType &operator--() {
       if (pos == 0) {
         iter--;
         pos = iter->second.size();
@@ -855,8 +853,8 @@ private:
       pos--;
       return *this;
     }
-    IteratorType operator--(int) {
-      IteratorType tmp = *this;
+    IteratorIndexType operator--(int) {
+      IteratorIndexType tmp = *this;
       if (pos == 0) {
         iter--;
         pos = iter->second.size();
@@ -865,21 +863,67 @@ private:
       return tmp;
     }
 
-    bool operator!=(const IteratorType &x) const {
+    bool operator!=(const IteratorIndexType &x) const {
       return pos != x.pos || iter != x.iter;
     }
-    bool operator==(const IteratorType &x) const {
+    bool operator==(const IteratorIndexType &x) const {
       return pos == x.pos && iter == x.iter;
     }
   };
 
+  struct IteratorFaceType {
+  private:
+    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
+    IteratorIndexType iter;
+
+  public:
+    IteratorFaceType(const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
+                     IteratorIndexType iter)
+        : foc(foc), iter(iter) {}
+    Face operator*() const {
+      return foc.RetrieveListOrbitFace(*iter);
+    }
+    IteratorFaceType &operator++() {
+      iter++;
+      return *this;
+    }
+    IteratorFaceType operator++(int) {
+      IteratorFaceType tmp = *this;
+      iter++;
+      return tmp;
+    }
+    IteratorFaceType &operator--() {
+      iter--;
+      return *this;
+    }
+    IteratorFaceType operator--(int) {
+      IteratorFaceType tmp = *this;
+      tmp--;
+      return tmp;
+    }
+
+    bool operator!=(const IteratorFaceType &x) const {
+      return iter != x.iter;
+    }
+    bool operator==(const IteratorFaceType &x) const {
+      return iter == x.iter;
+    }
+  };
+
 public:
-  using iterator = IteratorType;
-  iterator begin_undone() const {
-    return IteratorType(foc, CompleteList_SetUndone.begin(), 0);
+  using iterator_index = IteratorIndexType;
+  using iterator_face = IteratorFaceType;
+  iterator_index begin_index_undone() const {
+    return IteratorIndexType(CompleteList_SetUndone.begin(), 0);
   }
-  iterator end_undone() const {
-    return IteratorType(foc, CompleteList_SetUndone.end(), 0);
+  iterator_index end_index_undone() const {
+    return IteratorIndexType(CompleteList_SetUndone.end(), 0);
+  }
+  iterator_face begin_face_undone() const {
+    return IteratorFaceType(foc, begin_index_undone());
+  }
+  iterator_face end_face_undone() const {
+    return IteratorFaceType(foc, end_index_undone());
   }
 };
 
@@ -1036,9 +1080,8 @@ public:
   }
 
 private:
-  struct IteratorType {
+  struct IteratorIndexType {
   private:
-    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
     std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
         iter1;
     std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
@@ -1047,18 +1090,17 @@ private:
     size_t pos;
 
   public:
-    IteratorType(
-        const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
+    IteratorIndexType(
         std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
             iter1,
         std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
             iter1_end,
         UNORD_MAP<size_t, std::vector<size_t>>::const_iterator iter2,
         size_t pos)
-        : foc(foc), iter1(iter1), iter1_end(iter1_end), iter2(iter2), pos(pos) {
+        : iter1(iter1), iter1_end(iter1_end), iter2(iter2), pos(pos) {
     }
-    Face operator*() const {
-      return foc.RetrieveListOrbitFace(iter2->second[pos]);
+    size_t operator*() const {
+      return iter2->second[pos];
     }
     void PtrIncrease() {
       pos++;
@@ -1073,16 +1115,16 @@ private:
         }
       }
     }
-    IteratorType &operator++() {
+    IteratorIndexType &operator++() {
       PtrIncrease();
       return *this;
     }
-    IteratorType operator++(int) {
-      IteratorType tmp = *this;
+    IteratorIndexType operator++(int) {
+      IteratorIndexType tmp = *this;
       PtrIncrease();
       return tmp;
     }
-    bool operator!=(const IteratorType &x) const {
+    bool operator!=(const IteratorIndexType &x) const {
       // If one of iter1 operator is the end then the comparison of the first
       // one suffices to conclude
       if (x.iter1 == iter1_end)
@@ -1094,22 +1136,67 @@ private:
     }
   };
 
+  struct IteratorFaceType {
+  private:
+    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
+    IteratorIndexType iter;
+
+  public:
+    IteratorFaceType(const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
+                     IteratorIndexType iter)
+        : foc(foc), iter(iter) {}
+    Face operator*() const {
+      return foc.RetrieveListOrbitFace(*iter);
+    }
+    IteratorFaceType &operator++() {
+      iter++;
+      return *this;
+    }
+    IteratorFaceType operator++(int) {
+      IteratorFaceType tmp = *this;
+      iter++;
+      return tmp;
+    }
+    IteratorFaceType &operator--() {
+      iter--;
+      return *this;
+    }
+    IteratorFaceType operator--(int) {
+      IteratorFaceType tmp = *this;
+      tmp--;
+      return tmp;
+    }
+    bool operator!=(const IteratorFaceType &x) const {
+      return iter != x.iter;
+    }
+    bool operator==(const IteratorFaceType &x) const {
+      return iter == x.iter;
+    }
+  };
+
 public:
-  using iterator = IteratorType;
-  iterator begin_undone() const {
+  using iterator_index = IteratorIndexType;
+  using iterator_face = IteratorFaceType;
+  iterator_index begin_index_undone() const {
     std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
         iter1 = CompleteList_SetUndone.begin();
     std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
         iter1_end = CompleteList_SetUndone.end();
     if (iter1 == iter1_end)
-      return IteratorType(foc, iter1, iter1_end, {}, 0);
+      return IteratorIndexType(iter1, iter1_end, {}, 0);
     UNORD_MAP<size_t, std::vector<size_t>>::const_iterator iter2 =
         CompleteList_SetUndone.at(iter1->first).begin();
-    return IteratorType(foc, iter1, iter1_end, iter2, 0);
+    return IteratorIndexType(iter1, iter1_end, iter2, 0);
   }
-  iterator end_undone() const {
-    return IteratorType(foc, CompleteList_SetUndone.end(),
-                        CompleteList_SetUndone.end(), {}, 0);
+  iterator_index end_index_undone() const {
+    return IteratorIndexType(CompleteList_SetUndone.end(),
+                             CompleteList_SetUndone.end(), {}, 0);
+  }
+  iterator_face begin_face_undone() const {
+    IteratorFaceType(foc, begin_index_undone());
+  }
+  iterator_face end_face_undone() const {
+    IteratorFaceType(foc, end_index_undone());
   }
 };
 
@@ -1229,6 +1316,20 @@ public:
     }
     os << "Clean closing of the DatabaseOrbits\n";
   }
+  void flush() const {
+    ff->direct_write(bb.foc.foc.ListOrbit);
+    size_t nbOrbit = bb.foc.nbOrbit;
+    fn->setval(nbOrbit);
+    size_t len = (nbOrbit + 7) / 8;
+    std::vector<uint8_t> V_status(len, 255);
+    auto iter = bb.begin_index_undone();
+    while (iter != bb.end_index_undone()) {
+      size_t pos = *iter;
+      setbit(V_status, pos, false);
+      iter++;
+    }
+    fb->direct_write(V_status);
+  }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
       delete fb;
@@ -1275,8 +1376,8 @@ public:
 
     for (size_t i_row = 0; i_row < n_row; i_row++)
       eSetReturn[i_row] = 1;
-    typename TbasicBank::iterator iter = bb.begin_undone();
-    while (iter != bb.end_undone()) {
+    typename TbasicBank::iterator_face iter = bb.begin_face_undone();
+    while (iter != bb.end_face_undone()) {
       eSetReturn &= OrbitIntersection(bb.GRP, *iter);
       if (eSetReturn.count() == 0) {
         return eSetReturn;
@@ -1493,13 +1594,12 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   // --- 3 : We have computed for a subgroup which actually is a strict
   // subgroup.
   bool BankSymmCheck;
-  auto compute_split_or_not = [&]() -> vectface {
+  auto compute_decomposition = [&]() -> vectface {
     std::string ansSymm =
       HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     os << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
-      TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
-                                                                             lwm.GetWMat());
+      TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(lwm.GetWMat());
       NeedSplit = TheGRPrelevant.size() != GRP.size();
       BankSymmCheck = false;
     } else {
@@ -1547,7 +1647,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
     std::cerr << "Authorized values: canonic, repr\n";
     throw TerminalException{1};
   };
-  vectface ListOrbitFaces = compute_split_or_not();
+  vectface ListOrbitFaces = compute_decomposition();
   SingletonTime end;
   TheMap["time"] = s(start, end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);

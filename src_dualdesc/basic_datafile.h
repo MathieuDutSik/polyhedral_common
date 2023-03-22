@@ -153,6 +153,17 @@ public:
     }
     n_ent = std::max(n_ent, pos + 1);
   }
+
+  void direct_write(std::vector<uint8_t> const& V) {
+    size_t start_byte = 0;
+    std::fseek(fp, start_byte, SEEK_SET);
+    size_t len_w = V.size();
+    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+    if (n_write != len_w) {
+      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+      throw TerminalException{1};
+    }
+  }
 };
 
 struct FileFace {
@@ -308,6 +319,17 @@ public:
       throw TerminalException{1};
     }
     n_face = std::max(n_face, pos + 1);
+  }
+
+  void direct_write(std::vector<uint8_t> const& V) {
+    size_t start_byte = 0;
+    std::fseek(fp, start_byte, SEEK_SET);
+    size_t len_w = V.size();
+    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+    if (n_write != len_w) {
+      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+      throw TerminalException{1};
+    }
   }
 };
 
