@@ -86,7 +86,7 @@ public:
     n_ent = 0;
   }
 
-  FileBool(std::string const &file, size_t const &_n_ent) {
+  FileBool(std::string const &file, size_t const &_n_ent) : file(file) {
     if (!IsExistingFile(file)) {
       std::cerr << "FileBool: The file " << file << " should not be missing\n";
       throw TerminalException{1};
@@ -189,7 +189,7 @@ public:
     SetBuffer();
   }
 
-  FileFace(std::string const &file, size_t const &_siz, size_t const &_n_face) {
+  FileFace(std::string const &file, size_t const &_siz, size_t const &_n_face) : file(file) {
     if (!IsExistingFile(file)) {
       std::cerr << "FileFace: The file " << file << " should not be missing\n";
       throw TerminalException{1};
