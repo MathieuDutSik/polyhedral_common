@@ -267,6 +267,8 @@ vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, 
   std::map<std::string, Tint> TheMap;
   Tint ordGRPbig = GRPbig.size();
   Tint ordGRPsma = GRPsma.size();
+  if (ordGRPbig == ordGRPsma)
+    return vf;
   Tint index = ordGRPbig / ordGRPsma;
   TheMap["groupsize_big"] = ordGRPbig;
   TheMap["groupsize_sma"] = ordGRPsma;
