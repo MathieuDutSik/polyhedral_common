@@ -203,7 +203,11 @@ public:
   ~FileFace() {
     std::cerr << "Clean destruction of FileFace associated to file=" << file << "\n";
     std::fclose(fp);
- }
+  }
+
+  size_t get_size() const {
+    return siz;
+  }
 
   // face set/get
   Face getface(size_t const &pos) {

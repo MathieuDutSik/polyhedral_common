@@ -42,6 +42,12 @@ int main(int argc, char *argv[]) {
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     std::map<Tidx, int> LFact = GRP.factor_size();
     Tidx n_act = GRP.n_act();
+    if (EXT.rows() != int(n_act)) {
+      std::cerr << "We have |EXT|=" << EXT.rows() << "\n";
+      std::cerr << "But n_act=" << int(n_act) << "\n";
+      std::cerr << "Inconsistency\n";
+      throw TerminalException{1};
+    }
     std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     size_t delta = ep.second;
     std::cerr << "delta=" << delta << "\n";
@@ -91,9 +97,12 @@ int main(int argc, char *argv[]) {
         bool status = fb->getbit(i_orbit);
         if (!status) {
           Face f = ff->getface(i_orbit);
+          Face f_red(n_act);
+          for (Tidx i=0; i<n_act; i++)
+            f_red[i] = f[i];
           int eIncd = f.count();
           if (eIncd >= MinIncd) {
-            std::cerr << "|f|=" << f.size() << "/" << f.count() << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
+            std::cerr << "|f_red|=" << f_red.size() << "/" << f_red.count() << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
             vectface vf_orbit = OrbitFace(f, LGen);
             MyMatrix<T> FAC_undone = GetVertexSet_from_vectface(EXT, vf_orbit);
             bool test = EvaluationConnectednessCriterion_PreKernel(
