@@ -221,7 +221,10 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << "\n";
+  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << eListBig.size() << "\n";
+#ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
+  PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
+#endif
   using Tidx_value = uint16_t;
   WeightMatrix<true, int, Tidx_value> WMat;
   if (method_split == "repr") {
@@ -278,9 +281,6 @@ template <typename Tgroup>
 vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                  const vectface &eListBig, std::ostream &os) {
   std::string method_split = "canonic";
-#ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
-  PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
-#endif
   return OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, eListBig, method_split,
                                       os);
 }
