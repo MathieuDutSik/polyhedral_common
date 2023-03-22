@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;
-    if (argc != 6) {
+    if (argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_FindNeededBalinski [FileEXT] [FileGRP] "
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     //
     int NprocI = -1;
     std::string NprocI_str = argv[4];
-    if (NprocI_str == "serial") {
+    if (NprocI_str != "serial") {
       NprocI = ParseScalar<int>(NprocI_str);
     }
     //
