@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
     Tidx n_act = GRP.n_act();
     std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     size_t delta = ep.second;
+    std::cerr << "delta=" << delta << "\n";
     //
     std::string DatabaseI = argv[3];
     //

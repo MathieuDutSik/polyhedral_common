@@ -36,7 +36,10 @@ public:
     }
   }
 
-  ~FileNumber() { std::fclose(fp); }
+  ~FileNumber() {
+    std::cerr << "Clean destruction of FileNumber associated to file=" << file << "\n";
+    std::fclose(fp);
+  }
 
   size_t getval() {
     size_t i_byte = 0;
@@ -92,7 +95,10 @@ public:
     n_ent = _n_ent;
   }
 
-  ~FileBool() { std::fclose(fp); }
+  ~FileBool() {
+    std::cerr << "Clean destruction of FileBool associated to file=" << file << "\n";
+    std::fclose(fp);
+  }
 
   // bool set/get
   bool getbit(size_t const &pos) {
@@ -194,7 +200,10 @@ public:
     SetBuffer();
   }
 
-  ~FileFace() { std::fclose(fp); }
+  ~FileFace() {
+    std::cerr << "Clean destruction of FileFace associated to file=" << file << "\n";
+    std::fclose(fp);
+ }
 
   // face set/get
   Face getface(size_t const &pos) {
