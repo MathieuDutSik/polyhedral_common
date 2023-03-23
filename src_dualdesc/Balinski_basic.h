@@ -97,8 +97,8 @@ template <typename TbasicBank> vectface ComputeSetUndone(TbasicBank const &bb) {
   using Tgroup = typename TbasicBank::Tgroup;
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> LGen = bb.GRP.GeneratorsOfGroup();
-  typename TbasicBank::iterator iter = bb.begin_undone();
-  while (iter != bb.end_undone()) {
+  typename TbasicBank::iterator_face iter = bb.begin_face_undone();
+  while (iter != bb.end_face_undone()) {
     vectface vf_orbit = OrbitFace(*iter, LGen);
     vf_undone.append(vf_orbit);
     iter++;

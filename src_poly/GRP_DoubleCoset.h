@@ -236,7 +236,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << eListBig.size() << " method_split=" << method_split << "\n";
+  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << eListBig.size() << " method_split=" << method_split << std::endl;
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
 #endif
@@ -271,7 +271,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
 #ifdef TIMINGS
   os << "OrbitSplitting elapsed_microseconds=" << time
      << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
-     << "\n";
+     << std::endl;
 #endif
   return eListSma;
 }

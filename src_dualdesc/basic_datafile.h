@@ -19,12 +19,8 @@ public:
   FileNumber(FileNumber &&) = delete;
   FileNumber() = delete;
 
-  FileNumber(std::string const &file, bool is_new) : file(file) {
-    if (is_new) {
-      if (IsExistingFile(file)) {
-        std::cerr << "FileNumber: The file " << file << " should be missing\n";
-        throw TerminalException{1};
-      }
+  FileNumber(std::string const &file, bool overwrite) : file(file) {
+    if (overwrite) {
       fp = std::fopen(file.data(), "w+");
     } else {
       if (!IsExistingFile(file)) {
@@ -78,10 +74,6 @@ public:
   FileBool() = delete;
 
   FileBool(std::string const &file) : file(file) {
-    if (IsExistingFile(file)) {
-      std::cerr << "FileBool: The file " << file << " should be missing\n";
-      throw TerminalException{1};
-    }
     fp = std::fopen(file.data(), "w+");
     n_ent = 0;
   }
@@ -153,6 +145,17 @@ public:
     }
     n_ent = std::max(n_ent, pos + 1);
   }
+
+  void direct_write(std::vector<uint8_t> const& V) {
+    size_t start_byte = 0;
+    std::fseek(fp, start_byte, SEEK_SET);
+    size_t len_w = V.size();
+    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+    if (n_write != len_w) {
+      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+      throw TerminalException{1};
+    }
+  }
 };
 
 struct FileFace {
@@ -179,10 +182,6 @@ public:
   FileFace() = delete;
 
   FileFace(std::string const &file, size_t const &_siz) : file(file) {
-    if (IsExistingFile(file)) {
-      std::cerr << "FileFace: The file " << file << " should be missing\n";
-      throw TerminalException{1};
-    }
     fp = std::fopen(file.data(), "w+");
     siz = _siz;
     n_face = 0;
@@ -308,6 +307,17 @@ public:
       throw TerminalException{1};
     }
     n_face = std::max(n_face, pos + 1);
+  }
+
+  void direct_write(std::vector<uint8_t> const& V) {
+    size_t start_byte = 0;
+    std::fseek(fp, start_byte, SEEK_SET);
+    size_t len_w = V.size();
+    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+    if (n_write != len_w) {
+      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+      throw TerminalException{1};
+    }
   }
 };
 
