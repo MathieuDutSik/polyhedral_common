@@ -1302,7 +1302,9 @@ public:
        does destroy the database and this gives a small window in which bad
        stuff can happen.
      */
-    flush();
+    if (SavingTrigger) {
+      flush();
+    }
     os << "Clean closing of the DatabaseOrbits\n";
   }
   void flush() const {
@@ -1314,11 +1316,6 @@ public:
     size_t nbOrbit = bb.foc.nbOrbit;
     fn.setval(nbOrbit);
     size_t len = (nbOrbit + 7) / 8;
-    std::vector<uint8_t> V_test(1);
-    for (int i=0; i<8; i++) {
-      setbit(V_test, i, true);
-    }
-    std::cerr << "V_test[0]=" << int(V_test[0]) << "\n";
     std::vector<uint8_t> V_status(len, 255);
     std::set<size_t> set;
     auto iter = bb.begin_index_undone();
