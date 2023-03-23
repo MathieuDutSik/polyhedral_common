@@ -1304,6 +1304,11 @@ public:
     size_t nbOrbit = bb.foc.nbOrbit;
     fn.setval(nbOrbit);
     size_t len = (nbOrbit + 7) / 8;
+    std::vector<uint8_t> V_test(1);
+    for (int i=0; i<8; i++) {
+      setbit(V_test, i, true);
+    }
+    std::cerr << "V_test[0]=" << int(V_test[0]) << "\n";
     std::vector<uint8_t> V_status(len, 255);
     auto iter = bb.begin_index_undone();
     while (iter != bb.end_index_undone()) {
