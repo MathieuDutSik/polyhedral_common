@@ -1253,28 +1253,25 @@ public:
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
         os << "Opening existing files (NB, FB, FF)\n";
+#ifdef TIMINGS
+        MicrosecondTime time;
+#endif
         FileNumber fn(eFileNB, false);
         n_orbit = fn.getval();
         FileBool fb(eFileFB, n_orbit);
         FileFace ff(eFileFF, bb.delta, n_orbit);
-        std::set<size_t> set;
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           Face f = ff.getface(i_orbit);
           SingEnt eEnt = bb.foc.FaceToSingEnt(f);
           bool status = fb.getbit(i_orbit);
-          if (status) {
-            set.insert(i_orbit);
-          }
           // The DictOrbit
           bb.InsertListOrbitEntry(eEnt, i_orbit);
           // The other fields
           bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
         }
-        std::cerr << "READING : set =";
-        for (auto & val : set) {
-          std::cerr << " " << val;
-        }
-        std::cerr << "\n";
+#ifdef TIMINGS
+        os << "|Databse reading|=" << time << "\n";
+#endif
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1309,6 +1306,9 @@ public:
   }
   void flush() const {
     std::cerr << "Doing the flushing operation\n";
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
     FileNumber fn(eFileNB, true);
     FileBool fb(eFileFB);
     FileFace ff(eFileFF, bb.delta);
@@ -1317,20 +1317,16 @@ public:
     fn.setval(nbOrbit);
     size_t len = (nbOrbit + 7) / 8;
     std::vector<uint8_t> V_status(len, 255);
-    std::set<size_t> set;
     auto iter = bb.begin_index_undone();
     while (iter != bb.end_index_undone()) {
       size_t pos = *iter;
-      set.insert(pos);
       setbit(V_status, pos, false);
       iter++;
     }
-    std::cerr << "WRITING : set =";
-    for (auto & val : set) {
-      std::cerr << " " << val;
-    }
-    std::cerr << "\n";
     fb.direct_write(V_status);
+#ifdef TIMINGS
+    os << "|flush|=" << time << "\n";
+#endif
   }
   vectface FuncListOrbitIncidence() {
     if (SavingTrigger) {
@@ -1484,7 +1480,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     AllArr.DualDescriptionProgram.pop(os);
     for (auto &eOrb : TheOutput) {
       Face eFlip = df.FlipFaceIneq(eOrb, os);
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
       f_insert(eFlip);
+#ifdef TIMINGS
+      os << "|insert1|=" << time << "\n";
+#endif
     }
   } else {
     vectface TheOutput =
@@ -1492,7 +1494,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
         TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
     for (auto &eOrb : TheOutput) {
       Face eFlip = df.FlipFace(eOrb, os);
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
       f_insert(eFlip);
+#ifdef TIMINGS
+      os << "|insert2|=" << time << "\n";
+#endif
     }
   }
 }
