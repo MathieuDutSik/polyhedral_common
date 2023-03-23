@@ -1218,6 +1218,7 @@ private:
      locality. The faces are written one by one while the access to status is
      random */
   bool SavingTrigger;
+  bool NeedToFlush;
   bool AdvancedTerminationCriterion;
   std::ostream &os;
   size_t delta;
@@ -1249,6 +1250,7 @@ public:
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
+    NeedToFlush = true;
     if (SavingTrigger) {
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
@@ -1299,7 +1301,7 @@ public:
        does destroy the database and this gives a small window in which bad
        stuff can happen.
      */
-    if (SavingTrigger) {
+    if (SavingTrigger && NeedToFlush) {
       flush();
     }
     os << "Clean closing of the DatabaseOrbits\n";
@@ -1329,6 +1331,7 @@ public:
 #endif
   }
   vectface FuncListOrbitIncidence() {
+    NeedToFlush = false;
     if (SavingTrigger) {
       RemoveFileIfExist(eFileNB);
       RemoveFileIfExist(eFileFB);
