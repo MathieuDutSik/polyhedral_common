@@ -19,6 +19,7 @@
 #include "MatrixGroupBasic.h"
 #include "basic_datafile.h"
 #include <limits>
+#include <set>
 #include <map>
 #include <signal.h>
 #include <string>
@@ -1256,15 +1257,24 @@ public:
         n_orbit = fn.getval();
         FileBool fb(eFileFB, n_orbit);
         FileFace ff(eFileFF, bb.delta, n_orbit);
+        std::set<size_t> set;
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           Face f = ff.getface(i_orbit);
           SingEnt eEnt = bb.foc.FaceToSingEnt(f);
           bool status = fb.getbit(i_orbit);
+          if (status) {
+            set.insert(i_orbit);
+          }
           // The DictOrbit
           bb.InsertListOrbitEntry(eEnt, i_orbit);
           // The other fields
           bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
         }
+        std::cerr << "READING : set =";
+        for (auto & val : set) {
+          std::cerr << " " << val;
+        }
+        std::cerr << "\n";
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1310,12 +1320,19 @@ public:
     }
     std::cerr << "V_test[0]=" << int(V_test[0]) << "\n";
     std::vector<uint8_t> V_status(len, 255);
+    std::set<size_t> set;
     auto iter = bb.begin_index_undone();
     while (iter != bb.end_index_undone()) {
       size_t pos = *iter;
+      set.insert(pos);
       setbit(V_status, pos, false);
       iter++;
     }
+    std::cerr << "WRITING : set =";
+    for (auto & val : set) {
+      std::cerr << " " << val;
+    }
+    std::cerr << "\n";
     fb.direct_write(V_status);
   }
   vectface FuncListOrbitIncidence() {
