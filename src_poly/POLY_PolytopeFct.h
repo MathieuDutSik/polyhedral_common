@@ -6,10 +6,13 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "rational.h"
+#include "Fp.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "NumberTheoryGeneric.h"
 
 struct GLPKoption {
   bool UseDouble;
@@ -171,10 +174,13 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
   return retList;
 }
 
-template <typename T> struct FlippingFramework {
+template <typename T, typename Tfast = Fp<long, 2147389441>> struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
-  MyMatrix<Rational<long>> EXT_int;
+  //static const long P = 2147389441; 
+  //using Tfast = Fp<long, P>;
+  //using Tfast = Rational<long>;
+  MyMatrix<Tfast> EXT_int;
   bool try_int;
   int nbRow;
   int nbCol;
@@ -214,14 +220,13 @@ public:
     //
     if constexpr (is_mpq_class<T>::value) {
       try_int = true;
-      EXT_int = MyMatrix<Rational<long>>(nbRow, nbCol - 1);
+      EXT_int = MyMatrix<Tfast>(nbRow, nbCol - 1);
       for (int iRow = 0; iRow < nbRow; iRow++) {
         for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          mpz_class eDen = EXT_red(iRow, iCol).get_den();
           if (EXT_red(iRow, iCol).get_num().fits_slong_p() &&
               EXT_red(iRow, iCol).get_den().fits_slong_p()) {
             EXT_int(iRow, iCol) =
-                Rational<long>(EXT_red(iRow, iCol).get_num().get_si(),
+                Tfast(EXT_red(iRow, iCol).get_num().get_si(),
                                EXT_red(iRow, iCol).get_den().get_si());
           } else {
             try_int = false;
@@ -329,7 +334,7 @@ public:
     if constexpr (is_mpq_class<T>::value) {
       if (try_int) {
         boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-        auto f = [&](MyMatrix<Rational<long>> &M, size_t eRank,
+        auto f = [&](MyMatrix<Tfast> &M, size_t eRank,
                      [[maybe_unused]] size_t iRow) -> void {
           int aRow = OneInc_V[jRow];
           M.row(eRank) = EXT_int.row(aRow);
@@ -338,11 +343,11 @@ public:
 #ifdef TIMINGS
         MicrosecondTime time;
 #endif
-        MyMatrix<Rational<long>> NSPint =
-            NullspaceTrMat_Kernel<Rational<long>, decltype(f)>(nb, nbCol - 1,
+        MyMatrix<Tfast> NSPint =
+            NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1,
                                                                f);
 #ifdef TIMINGS
-        std::cerr << "|nullspace<Rational<long>>|=" << time << "\n";
+        std::cerr << "|nullspace<Tfast>|=" << time << "\n";
 #endif
         // check result at full precision in case of overflows
         if (NSPint.rows() != 1) {
@@ -352,16 +357,40 @@ public:
         } else {
           bool allzero = true;
           for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            Rational<long> val = NSPint(0, iCol);
-            NSP(0, iCol) = mpq_class(val.get_num(), val.get_den());
-            if (NSP(0, iCol) != 0)
+            if (NSPint(0, iCol) != 0){
               allzero = false;
+              break;
+            }
           }
           if (allzero) {
             std::cerr << "NSPint is all zero"
                       << "\n";
             failed_int = true;
           } else {
+            //lift result to mpq_class
+            if constexpr (std::is_same<Tfast,Fp<long,2147389441>>::value) {
+              // reconstruct 
+              std::vector<long> nums(nbCol-1,0);
+              std::vector<long> dens(nbCol-1,1); 
+              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+                Rational<long> val = NSPint(0, iCol).rational_lift(); 
+                nums[iCol] = val.get_num();
+                dens[iCol] = val.get_den();
+              }
+              long lcm = LCMlist(dens);
+              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+                NSP(0, iCol) = mpq_class(nums[iCol] * (lcm / dens[iCol]), 1);
+              }
+            }
+            
+            if constexpr (std::is_same_v<Tfast,Rational<long>>) {
+              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+                Rational<long> val = NSPint(0, iCol); 
+                NSP(0, iCol) = mpq_class(val.get_num(), val.get_den());
+              }
+            }
+
+            
             // check if part of kernel
             jRow = sInc.find_first();
             for (size_t iRow = 0; iRow < nb; iRow++) {
