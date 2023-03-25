@@ -1481,6 +1481,10 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
     std::vector<std::pair<Face,MyVector<T>>> TheOutput = DirectFacetIneqOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS
+  MicrosecondTime time_full;
+  os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
     for (auto &eOrb : TheOutput) {
       Face eFlip = df.FlipFaceIneq(eOrb, os);
 #ifdef TIMINGS
@@ -1491,10 +1495,17 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
       os << "|insert1|=" << time << "\n";
 #endif
     }
+#ifdef TIMINGS
+  os << "|outputtime|=" << time_full << "\n";
+#endif
   } else {
     vectface TheOutput =
       DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
         TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+#ifdef TIMINGS
+  MicrosecondTime time_full;
+  os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
     for (auto &eOrb : TheOutput) {
       Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
@@ -1505,6 +1516,9 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
       os << "|insert2|=" << time << "\n";
 #endif
     }
+#ifdef TIMINGS
+  os << "|outputtime|=" << time_full << "\n";
+#endif
   }
 }
 
