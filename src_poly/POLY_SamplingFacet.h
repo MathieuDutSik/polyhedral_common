@@ -140,9 +140,9 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                          std::string const &ansSamp,
-                                          std::ostream &os) {
+vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                                 std::string const &ansSamp,
+                                                 std::ostream &os) {
   os << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
@@ -208,6 +208,26 @@ vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   }
   return ListIncd;
 }
+
+template <typename T>
+inline typename std::enable_if<is_ring_field<T>::value, vectface>::type
+DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                 std::string const &ansSamp,
+                                 std::ostream &os) {
+  return Kernel_DirectComputationInitialFacetSet(EXT, ansSamp, os);
+}
+
+template <typename T>
+inline typename std::enable_if<!is_ring_field<T>::value, vectface>::type
+DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                 std::string const &ansSamp,
+                                 std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
+  return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
+}
+
+
 
 template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   // Heuristic first, should work in many cases
