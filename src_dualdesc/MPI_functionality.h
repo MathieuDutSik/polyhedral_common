@@ -209,7 +209,6 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
                                           TbasicBank const &bb,
                                           std::ostream &os) {
   os << "EvaluationConnectednessCriterion_MPI, step 1\n";
-  using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
