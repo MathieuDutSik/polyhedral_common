@@ -14,3 +14,4 @@ set -e
 (cd src_indefinite && make clean && make)
 (cd src_lorentzian && make clean && make)
 (cd src_perfect_mpi && make clean && make)
+(cd src_poincare_polyhedron && make clean && make)
