@@ -267,7 +267,7 @@ EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
       Tgroup StabFace = TheGRP.Stabilizer_OnSets(eOrb);
       vectface TheSpann = f_spann(eOrb, StabFace, iLevel, FAC, TheGRP);
       for (Face fOrb : TheSpann) {
-        Face fOrbCan = TheGRP.CanonicalImage(fOrb);
+        Face fOrbCan = TheGRP.OptCanonicalImage(fOrb);
         NListOrb.push_back(fOrbCan);
       }
     }

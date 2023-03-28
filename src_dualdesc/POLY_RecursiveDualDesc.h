@@ -195,6 +195,16 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT) {
   return CanonicalizationPolytopePair<T, int, Tidx_value>(EXT, WMat).first;
 }
 
+template <typename Tgroup>
+Face CanonicalImageDualDesc(Tgroup const& GRP, Face const& f) {
+#ifdef CANONICAL_IMAGE_V2
+  return GRP.OptCanonicalImage(f);
+#else
+  return GRP.CanonicalImage(f);
+#endif
+}
+
+
 template <typename T, typename Tgroup, typename Tidx_value>
 std::pair<MyMatrix<T>, PairStore<Tgroup>> GetCanonicalInformation(
     MyMatrix<T> const &EXT, WeightMatrix<true, T, Tidx_value> const &WMat,
@@ -220,7 +230,7 @@ std::pair<MyMatrix<T>, PairStore<Tgroup>> GetCanonicalInformation(
     Face eFaceImg(EXT.rows());
     for (auto &eFace : ListFace) {
       OnFace_inplace(eFaceImg, eFace, ePerm);
-      Face eIncCan = eTriple.GRP.CanonicalImage(eFaceImg);
+      Face eIncCan = CanonicalImageDualDesc(eTriple.GRP, eFaceImg);
       SetFace.insert(eIncCan);
     }
     for (auto &eInc : SetFace) {
@@ -350,7 +360,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    Face result = GRP.CanonicalImage(eFlip);
+    Face result = CanonicalImageDualDesc(GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -364,7 +374,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    Face result = GRP.CanonicalImage(eFlip);
+    Face result = CanonicalImageDualDesc(GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -610,7 +620,7 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
   size_t nbRow = EXT.rows();
   vectface list_face(nbRow);
   for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os))
-    list_face.push_back(GRP.CanonicalImage(eFace));
+    list_face.push_back(CanonicalImageDualDesc(GRP, eFace));
   return list_face;
 }
 

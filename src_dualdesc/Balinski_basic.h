@@ -237,7 +237,7 @@ bool EvaluationConnectednessCriterion_Kernel(
   };
   std::unordered_map<Face, bool> map_face_status;
   auto get_opt_face_status = [&](const pfr &x) -> std::optional<bool> {
-    Face f_can = GRP.CanonicalImage(x.second);
+    Face f_can = GRP.OptCanonicalImage(x.second);
     auto iter = map_face_status.find(f_can);
     if (iter == map_face_status.end()) {
       return {};
@@ -246,7 +246,7 @@ bool EvaluationConnectednessCriterion_Kernel(
     }
   };
   auto insert_pfr = [&](const pfr &x, const bool &val) -> bool {
-    Face f_can = GRP.CanonicalImage(x.second);
+    Face f_can = GRP.OptCanonicalImage(x.second);
     map_face_status[f_can] = val;
     return val;
   };
@@ -331,7 +331,6 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
 template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
                                              std::ostream &os) {
-  using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of

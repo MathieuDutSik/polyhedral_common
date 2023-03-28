@@ -116,7 +116,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP,
   std::unordered_set<Face> SetFace;
   vectface CurrList(BigGRP.n_act());
   auto DoubleCosetInsertEntry_first = [&](Face const &testList) -> void {
-    Face faceCan = SmaGRP.CanonicalImage(testList);
+    Face faceCan = SmaGRP.OptCanonicalImage(testList);
     if (SetFace.count(faceCan) > 0)
       return;
     CurrList.push_back(faceCan);
@@ -124,7 +124,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP,
     IncreaseSize(faceCan);
   };
   auto DoubleCosetInsertEntry_second = [&](Face const &testList) -> void {
-    Face faceCan = SmaGRP.CanonicalImage(testList);
+    Face faceCan = SmaGRP.OptCanonicalImage(testList);
     if (SetFace.count(faceCan) > 0)
       return;
     SetFace.insert(faceCan);

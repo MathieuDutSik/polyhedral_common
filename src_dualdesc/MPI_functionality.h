@@ -153,11 +153,11 @@ T my_mpi_allreduce_sum(boost::mpi::communicator &comm, T const &x) {
 }
 
 
-template <typename T, template Tgroup>
+template <typename T, typename Tgroup>
 bool EvaluationConnectednessCriterion_KernelMPI_field(boost::mpi::communicator &comm,
                                                       MyMatrix<T> const& FAC,
                                                       Tgroup const& GRP,
-                                                      vectface vf_undone_loc,
+                                                      vectface const& vf_undone_loc,
                                                       std::ostream &os) {
   vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
   MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(FAC, vf_undone_loc);
@@ -182,7 +182,7 @@ bool EvaluationConnectednessCriterion_KernelMPI_field(boost::mpi::communicator &
                                                  vf_undone_tot, f_recur, os);
 }
 
-template <typename T, template Tgroup>
+template <typename T, typename Tgroup>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
 EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
                                            MyMatrix<T> const& FAC,
@@ -192,7 +192,7 @@ EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
   return EvaluationConnectednessCriterion_KernelMPI_field(comm, FAC, GRP, vf_undone_loc, os);
 }
 
-template <typename T, template Tgroup>
+template <typename T, typename Tgroup>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
 EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
                                            MyMatrix<T> const& FAC,
