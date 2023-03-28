@@ -314,7 +314,7 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            const Tgroup &GRP,
                                            const vectface &vf_undone,
                                            std::ostream &os) {
-  return EvaluationConnectednessCriterion_PreKernel(FAC, GRP, vf_undone, os);
+  return EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
 }
 
 template <typename T, typename Tgroup>
@@ -325,7 +325,7 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
-  return EvaluationConnectednessCriterion_PreKernel(FACfield, GRP, vf_undone, os);
+  return EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP, vf_undone, os);
 }
 
 template <typename TbasicBank>
