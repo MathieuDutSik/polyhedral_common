@@ -5,9 +5,9 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  TEST_LinPolytope_WMatCanonic \
 		  TEST_PolytopeIntegralPoints \
 		  POLY_CreateAffineBasis \
-		  POLY_cdd_skeletons \
+		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
 		  POLY_redundancy POLY_redundancyClarkson POLY_redundancyClarksonBlocks \
-		  POLY_IntegralPoints \
+		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  POLY_lcdd POLY_FaceLatticeGen \
 		  POLY_lrs POLY_lrs_set_reduction POLY_lp_cdd \
 		  POLY_LinearDetermineByInequalities \
@@ -18,7 +18,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Invariant \
                   GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic \
-                  GRP_OrbitSplittingPerfect \
+                  GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
 		  POLY_SolutionMatNonnegative \
 		  POLY_dual_description \
 		  POLY_ComputeEngelSymbol \

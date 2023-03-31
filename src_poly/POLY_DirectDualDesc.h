@@ -332,20 +332,24 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
 #endif
   }
   //
-  eProg = "cdd";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return cdd::DualDescription_incd(EXT);
-  //
+  if constexpr (is_ring_field<T>::value) {
+    // CDD certainly requires the ring to be a field
+    eProg = "cdd";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return cdd::DualDescription_incd(EXT);
+    // If it is a field, then it makes sense to look at the internal ring
+    eProg = "lrs_ring";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return lrs::DualDescription_incd_reduction(EXT);
+  }
+  // It applies to the field case or ring
   eProg = "lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescription_incd(EXT);
   //
-  eProg = "lrs_ring";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return lrs::DualDescription_incd_reduction(EXT);
   //
   // The external programs are available only for rationl types
   //
@@ -396,20 +400,23 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   std::string eProg;
   std::vector<std::string> ListProg;
   //
-  eProg = "cdd";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return cdd::DualDescription(EXT);
+  if constexpr (is_ring_field<T>::value) {
+    // CDD certainly requires a field for working out.
+    eProg = "cdd";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return cdd::DualDescription(EXT);
+    // For lrs_ring, we certainly need to have a field for T
+    eProg = "lrs_ring";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return lrs::DualDescription_reduction(EXT);
+  }
   //
   eProg = "lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescription(EXT);
-  //
-  eProg = "lrs_ring";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return lrs::DualDescription_reduction(EXT);
   //
   // The external programs are available only for rationl types
   //
@@ -460,20 +467,23 @@ std::vector<std::pair<Face,MyVector<T>>> DirectFacetComputationFaceIneq(MyMatrix
   std::string eProg;
   std::vector<std::string> ListProg;
   //
-  eProg = "cdd";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return cdd::DualDescriptionFaceIneq(EXT);
-  //
+  if constexpr (is_ring_field<T>::value) {
+    // CDD requires for T to be a field
+    eProg = "cdd";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return cdd::DualDescriptionFaceIneq(EXT);
+    // For lrs_ring that computes in a subring, we need T to be a field.
+    eProg = "lrs_ring";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return lrs::DualDescriptionFaceIneq_reduction(EXT);
+  }
+  // T can be a field or a ring here
   eProg = "lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescriptionFaceIneq(EXT);
-  //
-  eProg = "lrs_ring";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return lrs::DualDescriptionFaceIneq_reduction(EXT);
   //
   // The external programs are available only for rationl types
   //

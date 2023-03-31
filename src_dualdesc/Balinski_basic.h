@@ -146,6 +146,8 @@ MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const &FAC,
   ---Michel Deza, Mathieu Dutour Sikirić, Enumeration of the facets of cut
   polytopes over some highly symmetric graphs, preprint at arxiv:1501.05407,
   International Transactions in Operational Research 23-5 (2016) 853--860
+
+  The EXT_undone is precomputed because it can be done in parallel.
  */
 template <typename T, typename Tgroup, typename Teval_recur>
 bool EvaluationConnectednessCriterion_Kernel(
@@ -235,7 +237,7 @@ bool EvaluationConnectednessCriterion_Kernel(
   };
   std::unordered_map<Face, bool> map_face_status;
   auto get_opt_face_status = [&](const pfr &x) -> std::optional<bool> {
-    Face f_can = GRP.CanonicalImage(x.second);
+    Face f_can = GRP.OptCanonicalImage(x.second);
     auto iter = map_face_status.find(f_can);
     if (iter == map_face_status.end()) {
       return {};
@@ -244,7 +246,7 @@ bool EvaluationConnectednessCriterion_Kernel(
     }
   };
   auto insert_pfr = [&](const pfr &x, const bool &val) -> bool {
-    Face f_can = GRP.CanonicalImage(x.second);
+    Face f_can = GRP.OptCanonicalImage(x.second);
     map_face_status[f_can] = val;
     return val;
   };
@@ -286,11 +288,11 @@ bool EvaluationConnectednessCriterion_Kernel(
 }
 
 template <typename T, typename Tgroup>
-bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
-                                                const Tgroup &GRP,
-                                                const MyMatrix<T> &EXT_undone,
-                                                const vectface &vf_undone,
-                                                std::ostream &os) {
+bool EvaluationConnectednessCriterion_PreKernel_field(const MyMatrix<T> &FAC,
+                                                      const Tgroup &GRP,
+                                                      const vectface &vf_undone,
+                                                      std::ostream &os) {
+  MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(FAC, vf_undone);
   size_t max_iter = 100;
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
@@ -306,10 +308,29 @@ bool EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                                  vf_undone, f_recur, os);
 }
 
+template <typename T, typename Tgroup>
+inline typename std::enable_if<is_ring_field<T>::value, bool>::type
+EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
+                                           const Tgroup &GRP,
+                                           const vectface &vf_undone,
+                                           std::ostream &os) {
+  return EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
+}
+
+template <typename T, typename Tgroup>
+inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
+EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
+                                           const Tgroup &GRP,
+                                           const vectface &vf_undone,
+                                           std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
+  return EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP, vf_undone, os);
+}
+
 template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
                                              std::ostream &os) {
-  using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
@@ -322,9 +343,8 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
     return false;
   // Now explicit building of the set of vertices
   vectface vf_undone = ComputeSetUndone(bb);
-  MyMatrix<T> EXT_undone = GetVertexSet_from_vectface(bb.EXT, vf_undone);
   //
-  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP, EXT_undone,
+  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP,
                                                     vf_undone, os);
 }
 

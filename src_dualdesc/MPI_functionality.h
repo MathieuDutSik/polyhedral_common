@@ -152,12 +152,63 @@ T my_mpi_allreduce_sum(boost::mpi::communicator &comm, T const &x) {
   return sum;
 }
 
+
+template <typename T, typename Tgroup>
+bool EvaluationConnectednessCriterion_KernelMPI_field(boost::mpi::communicator &comm,
+                                                      MyMatrix<T> const& FAC,
+                                                      Tgroup const& GRP,
+                                                      vectface const& vf_undone_loc,
+                                                      std::ostream &os) {
+  vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
+  MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(FAC, vf_undone_loc);
+  os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
+  MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
+  // Every processor is computing the adjacency stuff. Fairly inefficient but ok
+  // for the time being.
+  os << "EvaluationConnectednessCriterion_MPI, step 5\n";
+  size_t max_iter = 100;
+  size_t n_iter = 0;
+  auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
+    n_iter++;
+    os << "  f_recur n_iter=" << n_iter << "\n";
+    if (n_iter == max_iter)
+      return false;
+    if (pfr.first > 1)
+      return false;
+    return true;
+  };
+  os << "EvaluationConnectednessCriterion_MPI, step 6\n";
+  return EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone_tot,
+                                                 vf_undone_tot, f_recur, os);
+}
+
+template <typename T, typename Tgroup>
+inline typename std::enable_if<is_ring_field<T>::value, bool>::type
+EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
+                                           MyMatrix<T> const& FAC,
+                                           Tgroup const& GRP,
+                                           vectface const& vf_undone_loc,
+                                           std::ostream &os) {
+  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FAC, GRP, vf_undone_loc, os);
+}
+
+template <typename T, typename Tgroup>
+inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
+EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
+                                           MyMatrix<T> const& FAC,
+                                           Tgroup const& GRP,
+                                           vectface const& vf_undone_loc,
+                                           std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
+  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FACfield, GRP, vf_undone_loc, os);
+}
+
 template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
                                           TbasicBank const &bb,
                                           std::ostream &os) {
   os << "EvaluationConnectednessCriterion_MPI, step 1\n";
-  using T = typename TbasicBank::T;
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
@@ -179,30 +230,7 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
     return false;
   os << "EvaluationConnectednessCriterion_MPI, step 3\n";
   vectface vf_undone_loc = ComputeSetUndone(bb);
-  vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
-  //
-  os << "EvaluationConnectednessCriterion_MPI, step 4\n";
-  MyMatrix<T> EXT_undone_loc =
-      GetVertexSet_from_vectface(bb.EXT, vf_undone_loc);
-  os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
-  MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
-  // Every processor is computing the adjacency stuff. Fairly inefficient but ok
-  // for the time being.
-  os << "EvaluationConnectednessCriterion_MPI, step 5\n";
-  size_t max_iter = 100;
-  size_t n_iter = 0;
-  auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
-    n_iter++;
-    os << "  f_recur n_iter=" << n_iter << "\n";
-    if (n_iter == max_iter)
-      return false;
-    if (pfr.first > 1)
-      return false;
-    return true;
-  };
-  os << "EvaluationConnectednessCriterion_MPI, step 6\n";
-  return EvaluationConnectednessCriterion_Kernel(bb.EXT, bb.GRP, EXT_undone_tot,
-                                                 vf_undone_tot, f_recur, os);
+  return EvaluationConnectednessCriterion_KernelMPI(comm, bb.EXT, bb.GRP, vf_undone_loc, os);
 }
 
 struct request_status_list {

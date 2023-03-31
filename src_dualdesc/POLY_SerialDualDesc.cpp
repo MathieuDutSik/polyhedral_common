@@ -54,6 +54,12 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     std::string NumericalType = GetNumericalType(eFull);
+    /*
+    if (NumericalType == "integer") {
+      using T = mpz_class;
+      Process<T>(eFull);
+    }
+    */
     if (NumericalType == "rational") {
       using T = mpq_class;
       //    using T = boost::multiprecision::cpp_rational;
