@@ -174,17 +174,9 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
   return retList;
 }
 
-
-
-template <typename T, typename Tfast = Fp<long, 2147389441>> struct FlippingFramework {
+template <typename T> struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
-  //static const long P = 2147389441; 
-  //using Tfast = Fp<long, P>;
-  //using Tfast = Rational<long>;
-  MyMatrix<mpz_class> EXT_mpz;
-  MyMatrix<Tfast> EXT_int;
-  bool try_int;
   int nbRow;
   int nbCol;
   Face OneInc;
@@ -194,7 +186,7 @@ private:
 public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-      : try_int(false), OneInc(_OneInc) {
+      : OneInc(_OneInc) {
     OneInc_V = Dynamic_bitset_to_vectorint(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
@@ -216,41 +208,6 @@ public:
           EXT_red(iRow, pos) = EXT(iRow, iCol);
           pos++;
         }
-      }
-    }
-    //
-    // Faster Rational<long> version of EXT_red
-    //
-    if constexpr (is_mpq_class<T>::value) {
-      try_int = true;
-      
-      EXT_mpz = MyMatrix<mpz_class>(nbRow, nbCol - 1);
-      std::vector<mpz_class> dens(nbCol-1,1);
-      for( int iRow = 0; iRow < nbRow; iRow++) {
-        for( int iCol = 0; iCol < nbCol - 1; iCol++){
-          dens[iCol] = EXT_red(iRow, iCol).get_den();
-        }
-        mpz_class scale = LCMlist(dens);
-        for( int iCol = 0; iCol < nbCol - 1; iCol++) {
-          EXT_mpz(iRow, iCol) = (scale / EXT_red(iRow,iCol).get_den()) * EXT_red(iRow,iCol).get_num();
-        }
-      }      
-      
-      EXT_int = MyMatrix<Tfast>(nbRow, nbCol - 1);
-      for (int iRow = 0; iRow < nbRow; iRow++) {
-        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          if (EXT_red(iRow, iCol).get_num().fits_slong_p() &&
-              EXT_red(iRow, iCol).get_den().fits_slong_p()) {
-            EXT_int(iRow, iCol) =
-                Tfast(EXT_red(iRow, iCol).get_num().get_si(),
-                               EXT_red(iRow, iCol).get_den().get_si());
-          } else {
-            try_int = false;
-            break;
-          }
-        }
-        if (!try_int)
-          break;
       }
     }
     //
@@ -345,126 +302,14 @@ public:
     }
 #endif
     size_t nb = sInc.count();
-    MyMatrix<T> NSP = MyMatrix<T>(1, nbCol - 1);
-    bool failed_int = false;
-    if constexpr (is_mpq_class<T>::value) {
-      if (try_int) {
-        boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-        auto f = [&](MyMatrix<Tfast> &M, size_t eRank,
-                     [[maybe_unused]] size_t iRow) -> void {
-          int aRow = OneInc_V[jRow];
-          M.row(eRank) = EXT_int.row(aRow);
-          jRow = sInc.find_next(jRow);
-        };
-#ifdef TIMINGS
-        MicrosecondTime time;
-#endif
-        MyMatrix<Tfast> NSPint =
-            NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1,
-                                                               f);
-#ifdef TIMINGS
-        std::cerr << "|nullspace<Tfast>|=" << time << "\n";
-#endif
-        // check result at full precision in case of overflows
-        if (NSPint.rows() != 1) {
-          std::cerr << "NSPint.rows() != 1"
-                    << "\n";
-          failed_int = true;
-        } else {
-          bool allzero = true;
-          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            if (NSPint(0, iCol) != 0){
-              allzero = false;
-              break;
-            }
-          }
-          if (allzero) {
-            std::cerr << "NSPint is all zero"
-                      << "\n";
-            failed_int = true;
-          } else {
-            MyMatrix<mpz_class> NSPmpz = MyMatrix<mpz_class>(1, nbCol - 1);
-            
-            //lift result to mpq_class
-            if constexpr (std::is_same<Tfast,Fp<long,2147389441>>::value) {
-#ifdef TIMINGS
-              MicrosecondTime lift_time;
-#endif
-              // reconstruct 
-              std::vector<long> nums(nbCol-1,0);
-              std::vector<long> dens(nbCol-1,1); 
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                Rational<long> val = NSPint(0, iCol).rational_lift(); 
-                nums[iCol] = val.get_num();
-                dens[iCol] = val.get_den();
-              }
-              long lcm = LCMlist(dens);
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                NSPmpz(0, iCol) = mpz_class(nums[iCol] * (lcm / dens[iCol]));
-                NSP(0, iCol) = mpq_class(NSPmpz(0,iCol), 1);
-              }
-#ifdef TIMINGS
-              std::cerr << "|lift|=" << lift_time << "\n";
-#endif
-            }
-            
-            if constexpr (std::is_same_v<Tfast,Rational<long>>) {
-              std::vector<mpz_class> dens(nbCol-1);
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                Rational<long> val = NSPint(0, iCol); 
-                dens[iCol] = mpz_class(val.get_den());
-                NSP(0, iCol) = mpq_class(val.get_num(), val.get_den());
-              }
-              // rescale to NSPmpz to make check faster
-              mpz_class scale = LCMlist(dens);
-              for( int iCol = 0; iCol < nbCol -1; iCol++) {
-                NSPmpz(0, iCol) = (scale / NSP(0,iCol).get_den()) * NSP(0,iCol).get_num();
-              }
-            }
-            
- 
-            // check if part of kernel
-            jRow = sInc.find_first();
-            for (size_t iRow = 0; iRow < nb; iRow++) {
-              int aRow = OneInc_V[jRow];
-              auto row = EXT_mpz.row(aRow);
-              jRow = sInc.find_next(jRow);
-              mpq_class sm = 0;
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                sm += NSPmpz(0, iCol) * row(iCol);
-              }
-              if (sm != 0) {
-                std::cerr << "Not really a kernel vector " << sm << "\n";
-                failed_int = true;
-                break;
-              }
-            }
-          }
-        }
-#ifdef TIMINGS
-        std::cerr << "|check|=" << time << "\n";
-#endif
-      }
-    }
-
-    if (failed_int || !try_int) {
-      std::cerr << "Rational<long> strategy failed , retrying with mpq_class"
-                << "\n";
-      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-      auto f = [&](MyMatrix<T> &M, size_t eRank,
-                   [[maybe_unused]] size_t iRow) -> void {
-        int aRow = OneInc_V[jRow];
-        M.row(eRank) = EXT_red.row(aRow);
-        jRow = sInc.find_next(jRow);
-      };
-#ifdef TIMINGS
-      MicrosecondTime time;
-#endif
-      NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
-#ifdef TIMINGS
-      std::cerr << "|nullspace<T>|=" << time << "\n";
-#endif
-    }
+    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+    auto f = [&](MyMatrix<T> &M, size_t eRank,
+                 [[maybe_unused]] size_t iRow) -> void {
+      int aRow = OneInc_V[jRow];
+      M.row(eRank) = EXT_red.row(aRow);
+      jRow = sInc.find_next(jRow);
+    };
+    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
 #ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
       std::cerr << "Error in Flip 2\n";
@@ -525,12 +370,9 @@ public:
       }
     }
     EXT_red = UniversalMatrixConversion<Tint, T>(EXT_redT);
-    //EXT_red = RescaleRows(EXT_redT);
-    //EXT_redT = UniversalMatrixConversion<T, Tint>(EXT_red);
     //
     // Faster modular version of EXT_red
-    //  
-    
+    //   
     max_bits = 0;
     EXT_fastT = MyMatrix<Tfast>(nbRow, nbCol - 1);
     EXT_fast  = MyMatrix<long>(nbRow, nbCol - 1);
@@ -544,12 +386,12 @@ public:
     try_int = (max_bits <= 30);
     max_bits += mpz_sizeinbase(mpz_class(nbCol).get_mpz_t(), 2);
     //
-    // Inverse scalar products
+    // Scalar products
     //
     ListScal = std::vector<Tint>(nbRow, 0);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
-        T eSum = 0;
+        Tint eSum = 0;
         for (int iCol = 0; iCol < nbCol; iCol++)
           eSum += FacetIneq(iCol) * EXT_scaled(iRow, iCol);
         ListScal[iRow] = eSum;
@@ -676,13 +518,7 @@ public:
         M.row(eRank) = EXT_fastT.row(aRow);
         jRow = sInc.find_next(jRow);
       };
-#ifdef TIMINGS
-      MicrosecondTime time;
-#endif
       MyMatrix<Tfast> NSP_fastT = NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1,f);
-#ifdef TIMINGS
-      std::cerr << "|nullspace<Tfast>|=" << time << "\n";
-#endif
       // check result at full precision in case of overflows
       if (NSP_fastT.rows() != 1) {
         std::cerr << "NSP_fastT.rows() != 1"
@@ -703,9 +539,6 @@ public:
         } else {
           MyMatrix<long> NSP_fast = MyMatrix<long>(1, nbCol - 1);
           
-#ifdef TIMINGS
-          MicrosecondTime lift_time;
-#endif
           // reconstruct 
           size_t max_bits_NSP = 0;
           std::vector<long> nums(nbCol-1,0);
@@ -721,9 +554,6 @@ public:
             NSP(0, iCol) = Tint(NSP_fast(0,iCol));
             max_bits_NSP = std::max(max_bits_NSP, mpz_sizeinbase(NSP(0,iCol).get_mpz_t(), 2));
           }
-#ifdef TIMINGS
-          std::cerr << "|lift|=" << lift_time << "\n";
-#endif
 
           
           // check if elements are small enough to do computation in 
@@ -750,9 +580,6 @@ public:
           }
         }
       }
-#ifdef TIMINGS
-      std::cerr << "|check|=" << time << "\n";
-#endif
     }
 
     if (failed_int || !try_int) {
@@ -765,13 +592,7 @@ public:
         M.row(eRank) = EXT_redT.row(aRow);
         jRow = sInc.find_next(jRow);
       };
-#ifdef TIMINGS
-      MicrosecondTime time;
-#endif
       NSP = RescaleRows(NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f));
-#ifdef TIMINGS
-      std::cerr << "|nullspace<T>|=" << time << "\n";
-#endif
     }
 #ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
