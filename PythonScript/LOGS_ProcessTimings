@@ -54,7 +54,9 @@ for e_line in ifile:
                 list_max_time.append(e_val)
                 list_sum_time.append(e_val)
 
-for i in range(len(list_entry)):
+order=[i[0] for i in sorted(enumerate(list_sum_time), key=lambda x:x[1])]
+for j in range(len(list_entry)):
+    i = order[j]
     e_nb = list_nb_entry[i]
     e_avg = list_sum_time[i] / e_nb
-    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg, " nb", e_nb)
+    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg, " tot=", list_sum_time[i], " nb", e_nb)
