@@ -7,10 +7,12 @@
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 2) {
+    if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "GRP_RuntimeOrbitSplitting [FileDoubleCoset]\n";
+      std::cerr << "   or\n";
+      std::cerr << "GRP_RuntimeOrbitSplitting [FileDoubleCoset] [method]\n";
       std::cerr << "\n";
       std::cerr << "with FileDoubleCoset containing the BigGRP, the SmaGRP and the list of orbits\n";
       return -1;
@@ -31,6 +33,11 @@ int main(int argc, char *argv[]) {
     vectface ListFaceBig = ReadListFace(is);
     //
     std::vector<std::string> ListMethod={"repr", "canonic", "exhaustive"};
+    if (argc == 3) {
+      std::string method = argv[2];
+      ListMethod = {method};
+    }
+    //
     for (auto & method : ListMethod) {
       HumanTime time;
       vectface ListFaceSma =
