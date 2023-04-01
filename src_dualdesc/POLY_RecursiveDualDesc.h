@@ -204,6 +204,15 @@ Face CanonicalImageDualDesc(Tgroup const& GRP, Face const& f) {
 #endif
 }
 
+template <typename Tgroup>
+std::pair<Face,typename Tgroup::Tint> CanonicalImageOrbitSizeDualDesc(Tgroup const& GRP, Face const& f) {
+#ifdef CANONICAL_IMAGE_V2
+  return GRP.OptCanonicalImageOrbitSize(f);
+#else
+  return GRP.CanonicalImageOrbitSize(f);
+#endif
+}
+
 
 template <typename T, typename Tgroup, typename Tidx_value>
 std::pair<MyMatrix<T>, PairStore<Tgroup>> GetCanonicalInformation(
@@ -347,12 +356,13 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
 }
 
 template <typename T, typename Tgroup> struct DataFacetCan {
+  using Tint = typename Tgroup::Tint;
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face FlipFace(const Face &f, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFace(const Face &f, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -360,13 +370,13 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    Face result = CanonicalImageDualDesc(GRP, eFlip);
+    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
     return result;
   }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -374,7 +384,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    Face result = CanonicalImageDualDesc(GRP, eFlip);
+    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -383,12 +393,13 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 };
 
 template <typename T, typename Tgroup> struct DataFacetRepr {
+  using Tint = typename Tgroup::Tint;
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face FlipFace(const Face &f, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFace(const Face &f, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -396,9 +407,9 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    return result;
+    return {result,0};
   }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -406,7 +417,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    return result;
+    return {result,0};
   }
 };
 
@@ -768,14 +779,14 @@ public:
     }
     return retListOrbit;
   }
-  std::optional<Face> FuncInsert(Face const &face_can) {
+  void FuncInsert(Face const &face_can) {
     // The face should have been canonicalized beforehand.
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
       // Insertion did not raise the count
       // and so it was already present
-      return {};
+      return;
     }
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
@@ -784,7 +795,21 @@ public:
     Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
     foc.InsertListOrbitIdxOrb(idx_orb);
     InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
-    return foc.SingEntToFace(face_can, idx_orb);
+  }
+  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
+    Face const& face_can = face_orbsize.first;
+    // The face should have been canonicalized beforehand.
+    foc.InsertListOrbitFace(face_can);
+    DictOrbit.insert(foc.nbOrbit);
+    if (DictOrbit.size() == foc.nbOrbit) {
+      // Insertion did not raise the count
+      // and so it was already present
+      return;
+    }
+    Tint const& orbSize = face_orbsize.second;
+    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
+    foc.InsertListOrbitIdxOrb(idx_orb);
+    InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
@@ -1009,7 +1034,7 @@ public:
     }
     return retListOrbit;
   }
-  std::optional<Face> FuncInsert(Face const &face_i) {
+  void FuncInsert(Face const &face_i) {
     size_t len = face_i.count();
     size_t eInv = f_inv(face_i);
     if (CompleteList_SetDone.count(len) == 1) {
@@ -1018,7 +1043,7 @@ public:
           Face face_e = foc.RetrieveListOrbitFace(i_orb);
           bool test = f_repr(face_i, face_e);
           if (test)
-            return {};
+            return;
         }
       }
     }
@@ -1028,18 +1053,20 @@ public:
           Face face_e = foc.RetrieveListOrbitFace(i_orb);
           bool test = f_repr(face_i, face_e);
           if (test)
-            return {};
+            return;
         }
       }
     }
     foc.InsertListOrbitFace(face_i);
+    // We need to recompute
     Tint ordStab = f_stab(face_i).size();
     Tint orbSize = groupOrder / ordStab;
     Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
     foc.InsertListOrbitIdxOrb(idx_orb);
     InsertEntryDatabase(face_i, false, idx_orb, foc.nbOrbit);
-    //
-    return foc.SingEntToFace(face_i, idx_orb);
+  }
+  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
+    FuncInsert(face_orbsize.first);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet(EXT, ansSamp, os);
@@ -1351,8 +1378,11 @@ public:
     }
     return bb.FuncListOrbitIncidence();
   }
-  void FuncInsert(Face const &face_can) {
-    (void)bb.FuncInsert(face_can);
+  void FuncInsert(Face const &face) {
+    bb.FuncInsert(face);
+  }
+  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
+    bb.FuncInsertPair(face_orbsize);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return bb.ComputeInitialSet(ansSamp, os);
@@ -1496,7 +1526,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      Face eFlip = df.FlipFaceIneq(eOrb, os);
+      std::pair<Face,Tint> eFlip = df.FlipFaceIneq(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
@@ -1517,7 +1547,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      Face eFlip = df.FlipFace(eOrb, os);
+      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
@@ -1542,6 +1572,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
   using DataFacet = typename TbasicBank::DataFacet;
+  using Tint = typename Tgroup::Tint;
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
@@ -1559,8 +1590,8 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-    auto f_insert=[&](Face const& eFlip) -> void {
-      RPL.FuncInsert(eFlip);
+    auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
+      RPL.FuncInsertPair(eFlip);
     };
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
