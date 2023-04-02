@@ -16,13 +16,12 @@
 
 template <typename Tgroup, typename Tidx_value>
 vectface DoubleCosetDescription_Representation(
-    Tgroup const &BigGRP, Tgroup const &SmaGRP,
+    std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
     WeightMatrix<true, int, Tidx_value> const &WMat,
     Face const &eList, typename Tgroup::Tint const& TotalSize,
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
-  std::vector<Telt> ListGen = BigGRP.GeneratorsOfGroup();
   //
   struct Local {
     int status;
@@ -53,7 +52,7 @@ vectface DoubleCosetDescription_Representation(
         ListLocal[iLocal].status = 1;
         DoSomething = true;
         Face eFace = ListLocal[iLocal].eFace;
-        for (auto const &eGen : ListGen) {
+        for (auto const &eGen : BigGens) {
           Face eNewList = OnFace(eFace, eGen);
           DoubleCosetInsertEntry(eNewList);
         }
@@ -77,7 +76,7 @@ vectface DoubleCosetDescription_Representation(
   while (true) {
     size_t n_orb = PartialOrbit.size();
     for (size_t i_orb = pos_start; i_orb < n_orb; i_orb++) {
-      for (auto &eGen : ListGen) {
+      for (auto &eGen : BigGens) {
         Face eNewList = OnFace(PartialOrbit[i_orb], eGen);
         if (!IsPresent(eNewList)) {
           PartialOrbit.push_back(eNewList);
@@ -98,16 +97,16 @@ vectface DoubleCosetDescription_Representation(
 }
 
 template <typename Tgroup>
-vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP, Tgroup const &SmaGRP,
+vectface DoubleCosetDescription_Canonic(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
                                         Face const &eList, typename Tgroup::Tint const& TotalSize,
                                         std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
-  std::vector<Telt> ListGen = BigGRP.GeneratorsOfGroup();
   //
   Tint SizeGen = 0;
   std::unordered_set<Face> SetFace;
-  vectface CurrList(BigGRP.n_act());
+  Tidx n = eList.size();
+  vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &testList) -> void {
     std::pair<Face,Tint> pairCan = SmaGRP.OptCanonicalImageOrbitSize(testList);
     if (SetFace.count(pairCan.first) > 0)
@@ -124,20 +123,20 @@ vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP, Tgroup const &SmaG
     SizeGen += pairCan.second;
   };
   auto get_list_list_set=[&]() -> vectface {
-    vectface ListListSet(BigGRP.n_act());
+    vectface ListListSet(n);
     for (auto &eFace : SetFace)
       ListListSet.push_back(eFace);
     return ListListSet;
   };
   DoubleCosetInsertEntry_first(eList);
-  Face eFaceImg(BigGRP.n_act());
+  Face eFaceImg(n);
   while (true) {
     if (SizeGen == TotalSize)
       return get_list_list_set();
     if (CurrList.size() == 0)
       break;
     Face eFace = CurrList.pop();
-    for (auto const &eGen : ListGen) {
+    for (auto const &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
       DoubleCosetInsertEntry_first(eFaceImg);
     }
@@ -148,7 +147,7 @@ vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP, Tgroup const &SmaG
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
     Face eFace = ListListSet.pop();
-    for (auto &eGen : ListGen) {
+    for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
       if (PartialOrbit.count(eFaceImg) == 0) {
         PartialOrbit.insert(eFaceImg);
@@ -165,14 +164,13 @@ vectface DoubleCosetDescription_Canonic(Tgroup const &BigGRP, Tgroup const &SmaG
 }
 
 template <typename Tgroup>
-vectface DoubleCosetDescription_Exhaustive(Tgroup const &BigGRP, Tgroup const &SmaGRP,
+vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
                                            Face const &eList, typename Tgroup::Tint const& TotalSize,
                                            std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
-  Tidx n = BigGRP.n_act();
-  std::vector<Telt> LGenBig = BigGRP.GeneratorsOfGroup();
+  Tidx n = eList.size();
   //
   vectface vf(n);
   std::vector<uint8_t> status;
@@ -202,7 +200,7 @@ vectface DoubleCosetDescription_Exhaustive(Tgroup const &BigGRP, Tgroup const &S
       break;
     status[pos] = 1;
     Face f = vf[pos];
-    for (auto &eGen : LGenBig) {
+    for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, f, eGen);
       f_insert(eFaceImg);
     }
@@ -239,18 +237,22 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
 #endif
   using Tidx_value = uint16_t;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   WeightMatrix<true, int, Tidx_value> WMat;
   if (method_split == "repr") {
     WMat = WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP);
   }
-  vectface eListSma(BigGRP.n_act());
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
   if (method_split == "repr") {
     for (auto &eSet : eListBig) {
       Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
       Tint TotalSize = BigGRP.size() / TheStab.size();
       vectface ListListSet =
-        DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGRP, SmaGRP, WMat, eSet, TotalSize, os);
+        DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGens, SmaGRP, WMat, eSet, TotalSize, os);
       eListSma.append(ListListSet);
     }
   }
@@ -259,7 +261,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
       Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
       Tint TotalSize = BigGRP.size() / TheStab.size();
       vectface ListListSet =
-        DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, TotalSize, os);
+        DoubleCosetDescription_Canonic(BigGens, SmaGRP, eSet, TotalSize, os);
       eListSma.append(ListListSet);
     }
   }
@@ -268,7 +270,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
       Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
       Tint TotalSize = BigGRP.size() / TheStab.size();
       vectface ListListSet =
-        DoubleCosetDescription_Exhaustive(BigGRP, SmaGRP, eSet, TotalSize, os);
+        DoubleCosetDescription_Exhaustive(BigGens, SmaGRP, eSet, TotalSize, os);
       eListSma.append(ListListSet);
     }
   }
