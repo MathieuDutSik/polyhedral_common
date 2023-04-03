@@ -6,10 +6,13 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "rational.h"
+#include "Fp.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "NumberTheoryGeneric.h"
 
 struct GLPKoption {
   bool UseDouble;
@@ -174,8 +177,6 @@ std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
 template <typename T> struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
-  MyMatrix<Rational<long>> EXT_int;
-  bool try_int;
   int nbRow;
   int nbCol;
   Face OneInc;
@@ -185,7 +186,7 @@ private:
 public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-      : try_int(false), OneInc(_OneInc) {
+      : OneInc(_OneInc) {
     OneInc_V = Dynamic_bitset_to_vectorint(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
@@ -207,29 +208,6 @@ public:
           EXT_red(iRow, pos) = EXT(iRow, iCol);
           pos++;
         }
-      }
-    }
-    //
-    // Faster Rational<long> version of EXT_red
-    //
-    if constexpr (is_mpq_class<T>::value) {
-      try_int = true;
-      EXT_int = MyMatrix<Rational<long>>(nbRow, nbCol - 1);
-      for (int iRow = 0; iRow < nbRow; iRow++) {
-        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          mpz_class eDen = EXT_red(iRow, iCol).get_den();
-          if (EXT_red(iRow, iCol).get_num().fits_slong_p() &&
-              EXT_red(iRow, iCol).get_den().fits_slong_p()) {
-            EXT_int(iRow, iCol) =
-                Rational<long>(EXT_red(iRow, iCol).get_num().get_si(),
-                               EXT_red(iRow, iCol).get_den().get_si());
-          } else {
-            try_int = false;
-            break;
-          }
-        }
-        if (!try_int)
-          break;
       }
     }
     //
@@ -324,83 +302,14 @@ public:
     }
 #endif
     size_t nb = sInc.count();
-    MyMatrix<T> NSP = MyMatrix<T>(1, nbCol - 1);
-    bool failed_int = false;
-    if constexpr (is_mpq_class<T>::value) {
-      if (try_int) {
-        boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-        auto f = [&](MyMatrix<Rational<long>> &M, size_t eRank,
-                     [[maybe_unused]] size_t iRow) -> void {
-          int aRow = OneInc_V[jRow];
-          M.row(eRank) = EXT_int.row(aRow);
-          jRow = sInc.find_next(jRow);
-        };
-#ifdef TIMINGS
-        MicrosecondTime time;
-#endif
-        MyMatrix<Rational<long>> NSPint =
-            NullspaceTrMat_Kernel<Rational<long>, decltype(f)>(nb, nbCol - 1,
-                                                               f);
-#ifdef TIMINGS
-        std::cerr << "|nullspace<Rational<long>>|=" << time << "\n";
-#endif
-        // check result at full precision in case of overflows
-        if (NSPint.rows() != 1) {
-          std::cerr << "NSPint.rows() != 1"
-                    << "\n";
-          failed_int = true;
-        } else {
-          bool allzero = true;
-          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            Rational<long> val = NSPint(0, iCol);
-            NSP(0, iCol) = mpq_class(val.get_num(), val.get_den());
-            if (NSP(0, iCol) != 0)
-              allzero = false;
-          }
-          if (allzero) {
-            std::cerr << "NSPint is all zero"
-                      << "\n";
-            failed_int = true;
-          } else {
-            // check if part of kernel
-            jRow = sInc.find_first();
-            for (size_t iRow = 0; iRow < nb; iRow++) {
-              int aRow = OneInc_V[jRow];
-              auto row = EXT_red.row(aRow);
-              jRow = sInc.find_next(jRow);
-              mpq_class sm = 0;
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                sm += NSP(0, iCol) * row(iCol);
-              }
-              if (sm != 0) {
-                std::cerr << "Not really a kernel vector " << sm << "\n";
-                failed_int = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (failed_int || !try_int) {
-      std::cerr << "Rational<long> strategy failed , retrying with mpq_class"
-                << "\n";
-      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-      auto f = [&](MyMatrix<T> &M, size_t eRank,
-                   [[maybe_unused]] size_t iRow) -> void {
-        int aRow = OneInc_V[jRow];
-        M.row(eRank) = EXT_red.row(aRow);
-        jRow = sInc.find_next(jRow);
-      };
-#ifdef TIMINGS
-      MicrosecondTime time;
-#endif
-      NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
-#ifdef TIMINGS
-      std::cerr << "|nullspace<T>|=" << time << "\n";
-#endif
-    }
+    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+    auto f = [&](MyMatrix<T> &M, size_t eRank,
+                 [[maybe_unused]] size_t iRow) -> void {
+      int aRow = OneInc_V[jRow];
+      M.row(eRank) = EXT_red.row(aRow);
+      jRow = sInc.find_next(jRow);
+    };
+    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
 #ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
       std::cerr << "Error in Flip 2\n";
@@ -413,6 +322,292 @@ public:
     return InternalFlipFaceIneq(pair.first, pair.second.data());
   }
 };
+
+template <> struct FlippingFramework<mpq_class> {
+private:
+  using T = mpq_class;
+  using Tint = mpz_class;
+  using Tfast = Fp<long, 2147389441>;
+  MyMatrix<T> EXT_redT; // rational type, but scaled to integer
+  MyMatrix<mpz_class> EXT_red;
+  MyMatrix<Tfast> EXT_fastT;
+  MyMatrix<long> EXT_fast;
+  int nbRow;
+  int nbCol;
+  bool try_int;
+  Face OneInc;
+  size_t max_bits;
+  std::vector<int> OneInc_V;
+  std::vector<mpz_class> ListScal;
+
+public:
+  MyMatrix<T> EXT_face;
+  FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
+      : try_int(false), OneInc(_OneInc) {
+    OneInc_V = Dynamic_bitset_to_vectorint(OneInc);
+
+    MyMatrix<Tint> EXT_scaled = RescaleRows(EXT);
+    MyVector<Tint> FacetIneq = RescaleVec(FindFacetInequality(EXT, OneInc));
+    //
+    // Idx dropping for the projection
+    //
+    int idx_drop = 0;
+    while (true) {
+      if (FacetIneq(idx_drop) != 0)
+        break;
+      idx_drop++;
+    }
+    nbRow = EXT.rows();
+    nbCol = EXT.cols();
+    EXT_redT = MyMatrix<T>(nbRow, nbCol - 1);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      int pos = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (iCol != idx_drop) {
+          EXT_redT(iRow, pos) = EXT_scaled(iRow, iCol);
+          pos++;
+        }
+      }
+    }
+    EXT_red = UniversalMatrixConversion<Tint, T>(EXT_redT);
+    //
+    // Faster modular version of EXT_red
+    //   
+    max_bits = 0;
+    EXT_fastT = MyMatrix<Tfast>(nbRow, nbCol - 1);
+    EXT_fast  = MyMatrix<long>(nbRow, nbCol - 1);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2), max_bits); 
+        EXT_fast(iRow, iCol) = EXT_red(iRow, iCol).get_si();
+        EXT_fastT(iRow, iCol) = Tfast(EXT_fast(iRow, iCol));
+      }
+    }
+    try_int = (max_bits <= 30);
+    max_bits += mpz_sizeinbase(mpz_class(nbCol).get_mpz_t(), 2);
+    //
+    // Scalar products
+    //
+    ListScal = std::vector<Tint>(nbRow, 0);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      if (OneInc[iRow] == 0) {
+        Tint eSum = 0;
+        for (int iCol = 0; iCol < nbCol; iCol++)
+          eSum += FacetIneq(iCol) * EXT_scaled(iRow, iCol);
+        ListScal[iRow] = eSum;
+      }
+    }
+    //
+    // Now the EXT face that is used by other procedure
+    //
+    size_t e_incd = OneInc.count();
+    EXT_face = MyMatrix<T>(e_incd, nbCol - 1);
+    boost::dynamic_bitset<>::size_type j_row = OneInc.find_first();
+    int i_row = 0;
+    while (j_row != boost::dynamic_bitset<>::npos) {
+      int pos = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (iCol != idx_drop) {
+          EXT_face(i_row, pos) = EXT(j_row, iCol);
+          pos++;
+        }
+      }
+      j_row = OneInc.find_next(j_row);
+      i_row++;
+    }
+  }
+  MyVector<Tint> RescaleVec(MyVector<T> const &v) const {
+    int cols = v.size();
+    std::vector<mpz_class> dens(cols,1);
+    MyVector<Tint> vret = MyVector<Tint>(cols);
+    for( int iCol = 0; iCol < cols; iCol++){
+      dens[iCol] = v(iCol).get_den();
+    }
+    mpz_class scale = LCMlist(dens);
+    for( int iCol = 0; iCol < cols; iCol++) {
+      vret(iCol) = (scale / v(iCol).get_den()) * v(iCol).get_num();
+    }
+    return vret;
+  }
+  MyMatrix<Tint> RescaleRows(MyMatrix<T> const &M) const {
+    int rows = M.rows();
+    int cols = M.cols();
+    std::vector<mpz_class> dens(cols,1);
+    MyMatrix<Tint> Mret = MyMatrix<Tint>(rows, cols);
+    for( int iRow = 0; iRow < rows; iRow++) {
+      for( int iCol = 0; iCol < cols; iCol++){
+        dens[iCol] = M(iRow, iCol).get_den();
+      }
+      mpz_class scale = LCMlist(dens);
+      for( int iCol = 0; iCol < cols; iCol++) {
+        Mret(iRow, iCol) = (scale / M(iRow,iCol).get_den()) * M(iRow,iCol).get_num();
+      }
+    }
+    return Mret;
+  }
+  
+  Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) const {
+    // We need to compute a vertex in the facet, but not the ridge
+    size_t pos_outside = 0;
+    while (true) {
+      if (sInc[pos_outside] == 0)
+        break;
+      pos_outside++;
+    }
+    int outRow = OneInc_V[pos_outside];
+    Tint eSum = 0;
+    for (int iCol = 0; iCol < nbCol - 1; iCol++)
+      eSum += EXT_red(outRow, iCol) * out[iCol];
+    int eSign = 1;
+    if (eSum < 0)
+      eSign = -1;
+    // F0 should be zero on the ridge
+    MyVector<Tint> F0(nbCol - 1);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++)
+      F0(iCol) = eSign * out[iCol];
+    // The sought inequality is expressed as F0 + beta FacetIneq
+    // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
+    // beta >= -F0(v) ListInvScal(v) = beta(v)
+    // beta >= max beta(v)
+    Face fret(nbRow);
+    Tint beta_max_num = 0;
+    Tint beta_max_den = 1;
+    bool isAssigned = false;
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      if (OneInc[iRow] == 0) {
+        Tint eSum = 0;
+        for (int iCol = 0; iCol < nbCol - 1; iCol++)
+          eSum += EXT_red(iRow, iCol) * F0(iCol);
+        if (!isAssigned || eSum * beta_max_den < beta_max_num * ListScal[iRow]) {
+          for (int kRow = 0; kRow < iRow; kRow++)
+            fret[kRow] = 0;
+          beta_max_num = eSum;
+          beta_max_den = ListScal[iRow];
+        }
+        if (eSum * beta_max_den == beta_max_num * ListScal[iRow]) {
+          fret[iRow] = 1;
+        }
+        isAssigned = true;
+      }
+    }
+    // Now adding the points from the ridge
+    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+    while (jRow != boost::dynamic_bitset<>::npos) {
+      int aRow = OneInc_V[jRow];
+      fret[aRow] = 1;
+      jRow = sInc.find_next(jRow);
+    }
+    // returning the found facet
+    return fret;
+  }
+  Face FlipFace(Face const &sInc) const {
+#ifdef DEBUG_FLIP
+    if (OneInc.count() != sInc.size()) {
+      std::cerr << "Error in Flip 1\n";
+      throw TerminalException{1};
+    }
+#endif
+    size_t nb = sInc.count();
+    MyMatrix<Tint> NSP = MyMatrix<Tint>(1, nbCol - 1);
+    bool failed_int = false;
+    if (try_int) {
+      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+      auto f = [&](MyMatrix<Tfast> &M, size_t eRank,
+                   [[maybe_unused]] size_t iRow) -> void {
+        int aRow = OneInc_V[jRow];
+        M.row(eRank) = EXT_fastT.row(aRow);
+        jRow = sInc.find_next(jRow);
+      };
+      MyMatrix<Tfast> NSP_fastT = NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1,f);
+      // check result at full precision in case of overflows
+      if (NSP_fastT.rows() != 1) {
+        std::cerr << "NSP_fastT.rows() != 1"
+                  << "\n";
+        failed_int = true;
+      } else {
+        bool allzero = true;
+        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+          if (NSP_fastT(0, iCol) != 0){
+            allzero = false;
+            break;
+          }
+        }
+        if (allzero) {
+          std::cerr << "NSPint is all zero"
+                    << "\n";
+          failed_int = true;
+        } else {
+          MyMatrix<long> NSP_fast = MyMatrix<long>(1, nbCol - 1);
+          
+          // reconstruct 
+          size_t max_bits_NSP = 0;
+          std::vector<long> nums(nbCol-1,0);
+          std::vector<long> dens(nbCol-1,1); 
+          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+            Rational<long> val = NSP_fastT(0, iCol).rational_lift(); 
+            nums[iCol] = val.get_num();
+            dens[iCol] = val.get_den();
+          }
+          long lcm = LCMlist(dens);
+          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+            NSP_fast(0, iCol) = nums[iCol] * (lcm / dens[iCol]);
+            NSP(0, iCol) = Tint(NSP_fast(0,iCol));
+            max_bits_NSP = std::max(max_bits_NSP, mpz_sizeinbase(NSP(0,iCol).get_mpz_t(), 2));
+          }
+
+          
+          // check if elements are small enough to do computation in 
+          if( max_bits + max_bits_NSP <= 60 ) { 
+            // check if part of kernel
+            jRow = sInc.find_first();
+            for (size_t iRow = 0; iRow < nb; iRow++) {
+              int aRow = OneInc_V[jRow];
+              auto row = EXT_fast.row(aRow);
+              jRow = sInc.find_next(jRow);
+              long sm = 0;
+              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+                sm += NSP_fast(0, iCol) * row(iCol);
+              }
+              if (sm != 0) {
+                std::cerr << "Not really a kernel vector " << sm << "\n";
+                failed_int = true;
+                break;
+              }
+            }
+          } else {
+            std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP << std::endl;
+            failed_int = true;
+          }
+        }
+      }
+    }
+
+    if (failed_int || !try_int) {
+      std::cerr << "Rational<long> strategy failed , retrying with mpq_class"
+                << "\n";
+      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+      auto f = [&](MyMatrix<T> &M, size_t eRank,
+                   [[maybe_unused]] size_t iRow) -> void {
+        int aRow = OneInc_V[jRow];
+        M.row(eRank) = EXT_redT.row(aRow);
+        jRow = sInc.find_next(jRow);
+      };
+      NSP = RescaleRows(NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f));
+    }
+#ifdef DEBUG_FLIP
+    if (NSP.rows() != 1) {
+      std::cerr << "Error in Flip 2\n";
+      throw TerminalException{1};
+    }
+#endif
+    return InternalFlipFaceIneq(sInc, NSP.data());
+  }
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
+    MyVector<Tint> out = RescaleVec(pair.second);
+    return InternalFlipFaceIneq(pair.first, out.data());
+  }
+};
+
 
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
