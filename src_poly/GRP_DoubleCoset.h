@@ -272,6 +272,106 @@ void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP
 }
 
 template <typename Tgroup>
+vectface DoubleCosetDescription_Representation_Block(Tgroup const &BigGRP,
+                                      Tgroup const &SmaGRP,
+                                      const vectface &eListBig,
+                                      std::ostream &os) {
+  // Use generators to build more and more elements and check for equivalence.
+  // In some rare cases it does not work and another scheme has to be used.
+  using Tidx_value = uint16_t;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  WeightMatrix<true, int, Tidx_value> WMat = WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP);
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  for (auto &eSet : eListBig) {
+    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint TotalSize = BigGRP.size() / TheStab.size();
+    vectface ListListSet =
+      DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGens, SmaGRP, WMat, eSet, TotalSize, os);
+    eListSma.append(ListListSet);
+  }
+  return eListSma;
+}
+
+template <typename Tgroup>
+vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
+                                      Tgroup const &SmaGRP,
+                                      const vectface &eListBig,
+                                      std::ostream &os) {
+  // A reliable technique, it has the same issues as the representative method
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  for (auto &eSet : eListBig) {
+    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint TotalSize = BigGRP.size() / TheStab.size();
+    vectface ListListSet =
+      DoubleCosetDescription_Canonic<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+    eListSma.append(ListListSet);
+  }
+  return eListSma;
+}
+
+template <typename Tgroup>
+vectface DoubleCosetDescription_Exhaustive_Block(Tgroup const &BigGRP,
+                                      Tgroup const &SmaGRP,
+                                      const vectface &eListBig,
+                                      std::ostream &os) {
+  // Generate the full orbit for the big group and then split it using the small group.
+  // To be preferred when SmaGRP is really small.
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  for (auto &eSet : eListBig) {
+    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint TotalSize = BigGRP.size() / TheStab.size();
+    vectface ListListSet =
+      DoubleCosetDescription_Exhaustive<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+    eListSma.append(ListListSet);
+  }
+  return eListSma;
+}
+
+template <typename Tgroup>
+vectface DoubleCosetDescription_SingleCoset_Block(Tgroup const &BigGRP,
+                                      Tgroup const &SmaGRP,
+                                      const vectface &eListBig,
+                                      std::ostream &os) {
+  // Compute the left cosets, that is BigGRP = cup_i g_i SmaGRP
+  // Then form the representatives x g_i and test for equivalence.
+  // Should be great when the index is small.
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> ListCos = BigGRP.LeftTransversal_Direct(SmaGRP);
+  for (auto &eSet : eListBig) {
+#ifdef CHECK_DOUBLE_COSET
+    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint TotalSize = BigGRP.size() / TheStab.size();
+    vectface ListListSet =
+      DoubleCosetDescription_SingleCoset(SmaGRP, eSet, TotalSize, ListCos, os);
+#else
+    vectface ListListSet =
+      DoubleCosetDescription_SingleCoset(SmaGRP, eSet, ListCos, os);
+#endif
+    eListSma.append(ListListSet);
+  }
+  return eListSma;
+}
+
+
+
+template <typename Tgroup>
 vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
                                       const vectface &eListBig,
@@ -284,73 +384,27 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
 #endif
-  using Tidx_value = uint16_t;
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using Tint = typename Tgroup::Tint;
-  WeightMatrix<true, int, Tidx_value> WMat;
-  if (method_split == "repr") {
-    WMat = WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP);
-  }
-  Tidx n = BigGRP.n_act();
-  vectface eListSma(n);
-  if (method_split == "repr") {
-    // Use generators to build more and more elements and check for equivalence.
-    // In some rare cases it does not work and another scheme has to be used.
-    std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-    for (auto &eSet : eListBig) {
-      Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-      Tint TotalSize = BigGRP.size() / TheStab.size();
-      vectface ListListSet =
-        DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGens, SmaGRP, WMat, eSet, TotalSize, os);
-      eListSma.append(ListListSet);
+  auto get_split=[&]() -> vectface {
+    if (method_split == "repr") {
+      return DoubleCosetDescription_Representation_Block(BigGRP, SmaGRP, eListBig, os);
     }
-  }
-  if (method_split == "canonic") {
-    // A reliable technique, it has the same issues as the representative method
-    std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-    for (auto &eSet : eListBig) {
-      Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-      Tint TotalSize = BigGRP.size() / TheStab.size();
-      vectface ListListSet =
-        DoubleCosetDescription_Canonic(BigGens, SmaGRP, eSet, TotalSize, os);
-      eListSma.append(ListListSet);
+    if (method_split == "canonic") {
+      return DoubleCosetDescription_Canonic_Block(BigGRP, SmaGRP, eListBig, os);
     }
-  }
-  if (method_split == "exhaustive") {
-    // Generate the full orbit for the big group and then split it using the small group.
-    // To be preferred when SmaGRP is really small.
-    std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-    for (auto &eSet : eListBig) {
-      Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-      Tint TotalSize = BigGRP.size() / TheStab.size();
-      vectface ListListSet =
-        DoubleCosetDescription_Exhaustive(BigGens, SmaGRP, eSet, TotalSize, os);
-      eListSma.append(ListListSet);
+    if (method_split == "exhaustive") {
+      return DoubleCosetDescription_Exhaustive_Block(BigGRP, SmaGRP, eListBig, os);
     }
-  }
-  if (method_split == "single_cosets") {
-    // Compute the left cosets, that is BigGRP = cup_i g_i SmaGRP
-    // Then form the representatives x g_i and test for equivalence.
-    // Should be great when the index is small.
-    std::vector<Telt> ListCos = BigGRP.LeftTransversal_Direct(SmaGRP);
-    for (auto &eSet : eListBig) {
-#ifdef CHECK_DOUBLE_COSET
-      Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-      Tint TotalSize = BigGRP.size() / TheStab.size();
-      vectface ListListSet =
-        DoubleCosetDescription_SingleCoset(SmaGRP, eSet, TotalSize, ListCos, os);
-#else
-      vectface ListListSet =
-        DoubleCosetDescription_SingleCoset(SmaGRP, eSet, ListCos, os);
-#endif
-      eListSma.append(ListListSet);
+    if (method_split == "single_cosets") {
+      return DoubleCosetDescription_SingleCoset_Block(BigGRP, SmaGRP, eListBig, os);
     }
-  }
+    std::cerr << "Failed to find a matching entry\n";
+    throw TerminalException{1};
+  };
+  vectface eListSma = get_split();
 #ifdef TIMINGS
-  os << "OrbitSplitting elapsed_microseconds=" << time
-     << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
-     << std::endl;
+    os << "OrbitSplitting elapsed_microseconds=" << time
+       << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
+       << std::endl;
 #endif
   return eListSma;
 }
