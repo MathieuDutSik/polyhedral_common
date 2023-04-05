@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "|SmaGRP|=" << SmaGRP.size() << "\n";
     vectface ListFaceBig = ReadListFace(is);
     //
-    std::vector<std::string> ListMethod={"repr", "canonic", "exhaustive", "single_cosets"};
+    std::vector<std::string> ListMethod={"repr", "canonic", "canonic_initial_triv", "exhaustive", "single_cosets"};
     if (argc == 3) {
       std::string method = argv[2];
       ListMethod = {method};

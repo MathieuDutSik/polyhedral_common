@@ -164,6 +164,73 @@ vectface DoubleCosetDescription_Canonic(std::vector<typename Tgroup::Telt> const
 }
 
 template <typename Tgroup>
+vectface DoubleCosetDescription_CanonicInitialTriv(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
+                                                   Face const &eList, typename Tgroup::Tint const& TotalSize,
+                                                   std::ostream &os) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  //
+  Tint SizeGen = 0;
+  std::unordered_set<Face> SetFace;
+  Tidx n = eList.size();
+  vectface CurrList(n);
+  auto DoubleCosetInsertEntry_first = [&](Face const &f) -> void {
+    Face f_can = SmaGRP.CanonicalImageInitialTriv(f);
+    if (SetFace.count(f_can) > 0)
+      return;
+    CurrList.push_back(f_can);
+    SetFace.insert(f_can);
+    SizeGen += SmaGRP.OrbitSize_OnSets(f);
+  };
+  auto DoubleCosetInsertEntry_second = [&](Face const &f) -> void {
+    Face f_can = SmaGRP.CanonicalImageInitialTriv(f);
+    if (SetFace.count(f_can) > 0)
+      return;
+    SetFace.insert(f_can);
+    SizeGen += SmaGRP.OrbitSize_OnSets(f);
+  };
+  auto get_list_list_set=[&]() -> vectface {
+    vectface ListListSet(n);
+    for (auto &eFace : SetFace)
+      ListListSet.push_back(eFace);
+    return ListListSet;
+  };
+  DoubleCosetInsertEntry_first(eList);
+  Face eFaceImg(n);
+  while (true) {
+    if (SizeGen == TotalSize)
+      return get_list_list_set();
+    if (CurrList.size() == 0)
+      break;
+    Face eFace = CurrList.pop();
+    for (auto const &eGen : BigGens) {
+      OnFace_inplace(eFaceImg, eFace, eGen);
+      DoubleCosetInsertEntry_first(eFaceImg);
+    }
+  }
+  vectface ListListSet = get_list_list_set();
+  //  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" <<
+  //  TotalSize << "\n";
+  std::unordered_set<Face> PartialOrbit = SetFace;
+  while (true) {
+    Face eFace = ListListSet.pop();
+    for (auto &eGen : BigGens) {
+      OnFace_inplace(eFaceImg, eFace, eGen);
+      if (PartialOrbit.count(eFaceImg) == 0) {
+        PartialOrbit.insert(eFaceImg);
+        ListListSet.push_back(eFaceImg);
+        DoubleCosetInsertEntry_second(eFaceImg);
+        if (SizeGen == TotalSize) {
+          return get_list_list_set();
+        }
+      }
+    }
+  }
+  os << "Likely not reachable stage\n";
+  throw TerminalException{1};
+}
+
+template <typename Tgroup>
 vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
                                            Face const &eList, typename Tgroup::Tint const& TotalSize,
                                            [[maybe_unused]] std::ostream &os) {
@@ -319,6 +386,28 @@ vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
 }
 
 template <typename Tgroup>
+vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
+                                                         Tgroup const &SmaGRP,
+                                                         const vectface &eListBig,
+                                                         std::ostream &os) {
+  // A reliable technique, it has the same issues as the representative method
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  for (auto &eSet : eListBig) {
+    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint TotalSize = BigGRP.size() / TheStab.size();
+    vectface ListListSet =
+      DoubleCosetDescription_CanonicInitialTriv<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+    eListSma.append(ListListSet);
+  }
+  return eListSma;
+}
+
+template <typename Tgroup>
 vectface DoubleCosetDescription_Exhaustive_Block(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
                                       const vectface &eListBig,
@@ -390,6 +479,9 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     }
     if (method_split == "canonic") {
       return DoubleCosetDescription_Canonic_Block(BigGRP, SmaGRP, eListBig, os);
+    }
+    if (method_split == "canonic_initial_triv") {
+      return DoubleCosetDescription_CanonicInitialTriv_Block(BigGRP, SmaGRP, eListBig, os);
     }
     if (method_split == "exhaustive") {
       return DoubleCosetDescription_Exhaustive_Block(BigGRP, SmaGRP, eListBig, os);
