@@ -240,37 +240,31 @@ vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> co
   Tidx n = eList.size();
   //
   vectface vf(n);
-  std::vector<uint8_t> status;
   std::unordered_set<Face> SetFace;
+  size_t total_len = 0;
   auto f_insert = [&](const Face &f) -> void {
     if (SetFace.find(f) == SetFace.end()) {
       vf.push_back(f);
-      status.push_back(0);
       SetFace.insert(f);
+      total_len++;
     }
-  };
-  size_t miss_val = std::numeric_limits<size_t>::max();
-  auto get_undone = [&]() -> size_t {
-    for (size_t i = 0; i < status.size(); i++)
-      if (status[i] == 0)
-        return i;
-    return miss_val;
   };
   f_insert(eList);
   Face eFaceImg(n);
+  size_t pos = 0;
   while (true) {
-    Tint SizeGen = vf.size();
+    Tint SizeGen = total_len;
     if (SizeGen == TotalSize)
       break;
-    size_t pos = get_undone();
-    if (pos == miss_val)
-      break;
-    status[pos] = 1;
-    Face f = vf[pos];
-    for (auto &eGen : BigGens) {
-      OnFace_inplace(eFaceImg, f, eGen);
-      f_insert(eFaceImg);
+    size_t new_pos = total_len;
+    for (size_t idx=pos; idx<total_len; idx++) {
+      Face f = vf[idx];
+      for (auto &eGen : BigGens) {
+        OnFace_inplace(eFaceImg, f, eGen);
+        f_insert(eFaceImg);
+      }
     }
+    pos = new_pos;
   }
   return OrbitSplittingSet(vf, SmaGRP);
 }
