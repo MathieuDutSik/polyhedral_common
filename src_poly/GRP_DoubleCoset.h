@@ -9,6 +9,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "sparse_set.h"
+#include "robin_set.h"
+#include "hopscotch_set.h"
 
 //
 // Double Coset Computation
@@ -228,8 +231,8 @@ vectface DoubleCosetDescription_CanonicInitialTriv(std::vector<typename Tgroup::
   throw TerminalException{1};
 }
 
-template <typename Tgroup>
-vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
+template <typename Tgroup, typename T_hash_set>
+vectface DoubleCosetDescription_Exhaustive_T(std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
                                            Face const &eList, typename Tgroup::Tint const& TotalSize,
                                            [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -238,7 +241,7 @@ vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> co
   Tidx n = eList.size();
   //
   vectface vf(n);
-  std::unordered_set<Face> SetFace;
+  T_hash_set SetFace;
   size_t total_len = 0;
   auto f_insert = [&](const Face &f) -> void {
     if (SetFace.find(f) == SetFace.end()) {
@@ -250,8 +253,10 @@ vectface DoubleCosetDescription_Exhaustive(std::vector<typename Tgroup::Telt> co
   f_insert(eList);
   Face eFaceImg(n);
   size_t pos = 0;
+  //  std::cerr << "TotalSize=" << TotalSize << "\n";
   while (true) {
     Tint SizeGen = total_len;
+    //    std::cerr << "pos=" << pos << " total_len=" << total_len << "\n";
     if (SizeGen == TotalSize)
       break;
     size_t new_pos = total_len;
@@ -394,8 +399,8 @@ vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
   return eListSma;
 }
 
-template <typename Tgroup>
-vectface DoubleCosetDescription_Exhaustive_Block(Tgroup const &BigGRP,
+ template <typename Tgroup, typename T_hash_set>
+vectface DoubleCosetDescription_Exhaustive_Block_T(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
                                       const vectface &eListBig,
                                       std::ostream &os) {
@@ -410,7 +415,7 @@ vectface DoubleCosetDescription_Exhaustive_Block(Tgroup const &BigGRP,
   for (auto &eSet : eListBig) {
     Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
-      DoubleCosetDescription_Exhaustive<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+      DoubleCosetDescription_Exhaustive_T<Tgroup,T_hash_set>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
   }
   return eListSma;
@@ -468,8 +473,17 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     if (method_split == "canonic_initial_triv") {
       return DoubleCosetDescription_CanonicInitialTriv_Block(BigGRP, SmaGRP, eListBig, os);
     }
-    if (method_split == "exhaustive") {
-      return DoubleCosetDescription_Exhaustive_Block(BigGRP, SmaGRP, eListBig, os);
+    if (method_split == "exhaustive_std") {
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,std::unordered_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+    }
+    if (method_split == "exhaustive_sparse") {
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::sparse_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+    }
+    if (method_split == "exhaustive_robin") {
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::robin_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+    }
+    if (method_split == "exhaustive_hopscotch") {
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::hopscotch_set<Face>>(BigGRP, SmaGRP, eListBig, os);
     }
     if (method_split == "single_cosets") {
       return DoubleCosetDescription_SingleCoset_Block(BigGRP, SmaGRP, eListBig, os);
