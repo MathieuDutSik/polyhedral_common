@@ -269,7 +269,7 @@ vectface DoubleCosetDescription_Exhaustive_T(std::vector<typename Tgroup::Telt> 
     }
     pos = new_pos;
   }
-  return OrbitSplittingSet(vf, SmaGRP);
+  return OrbitSplittingSet_T(SetFace, SmaGRP);
 }
 
 template <typename Tgroup>
@@ -479,7 +479,8 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     if (method_split == "exhaustive_sparse") {
       return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::sparse_set<Face>>(BigGRP, SmaGRP, eListBig, os);
     }
-    if (method_split == "exhaustive_robin") {
+    if (method_split == "exhaustive_robin" || method_split == "exhaustive") {
+      // That variant seems a little bit faster
       return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::robin_set<Face>>(BigGRP, SmaGRP, eListBig, os);
     }
     if (method_split == "exhaustive_hopscotch") {
