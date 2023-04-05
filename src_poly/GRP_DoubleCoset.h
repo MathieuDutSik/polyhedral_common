@@ -39,9 +39,7 @@ vectface DoubleCosetDescription_Representation(
         return;
     }
     ListLocal.push_back({0, testList, eInv});
-    Tgroup fStab = SmaGRP.Stabilizer_OnSets(testList);
-    Tint OrbSizeSma = SmaGRP.size() / fStab.size();
-    SizeGen += OrbSizeSma;
+    SizeGen += SmaGRP.OrbitSize_OnSets(testList);
   };
   DoubleCosetInsertEntry(eList);
   while (true) {
@@ -297,9 +295,7 @@ vectface DoubleCosetDescription_SingleCoset(Tgroup const &SmaGRP,
       vf.push_back(f_can);
       SetFace.insert(f_can);
 #ifdef CHECK_DOUBLE_COSET
-      Tgroup TheStab = SmaGRP.Stabilizer_OnSets(NewF);
-      Tint OrbitSize = SmaGRP.size() / TheStab.size();
-      GenSize += OrbitSize;
+      GenSize += SmaGRP.OrbitSize_OnSets(NewF);
 #endif
     }
   };
@@ -348,8 +344,7 @@ vectface DoubleCosetDescription_Representation_Block(Tgroup const &BigGRP,
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
-    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-    Tint TotalSize = BigGRP.size() / TheStab.size();
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGens, SmaGRP, WMat, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -370,8 +365,7 @@ vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
-    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-    Tint TotalSize = BigGRP.size() / TheStab.size();
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_Canonic<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -392,8 +386,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
-    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-    Tint TotalSize = BigGRP.size() / TheStab.size();
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_CanonicInitialTriv<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -415,8 +408,7 @@ vectface DoubleCosetDescription_Exhaustive_Block(Tgroup const &BigGRP,
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
-    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-    Tint TotalSize = BigGRP.size() / TheStab.size();
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_Exhaustive<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -439,8 +431,7 @@ vectface DoubleCosetDescription_SingleCoset_Block(Tgroup const &BigGRP,
   std::vector<Telt> ListCos = BigGRP.LeftTransversal_Direct(SmaGRP);
   for (auto &eSet : eListBig) {
 #ifdef CHECK_DOUBLE_COSET
-    Tgroup TheStab = BigGRP.Stabilizer_OnSets(eSet);
-    Tint TotalSize = BigGRP.size() / TheStab.size();
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_SingleCoset(SmaGRP, eSet, TotalSize, ListCos, os);
 #else
