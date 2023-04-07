@@ -467,6 +467,22 @@ public:
   // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
   // would not be available with a vectface.
   std::vector<uint8_t> ListOrbit;
+  FaceOrbsizeContainer() = delete;
+  FaceOrbsizeContainer(const FaceOrbsizeContainer &) = delete;
+  FaceOrbsizeContainer &operator=(const FaceOrbsizeContainer &) = delete;
+  FaceOrbsizeContainer(FaceOrbsizeContainer &&) = delete;
+  FaceOrbsizeContainer(const std::map<Tidx, int> &LFact, const size_t &n_act)
+      : n_act(n_act) {
+    TotalNumber = 0;
+    nbOrbitDone = 0;
+    nbUndone = 0;
+    nbOrbit = 0;
+    std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
+    n_bit_orbsize = ep.first;
+    delta = ep.second;
+    ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
+    Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
+  }
   // conversion functions that depend only on n_act and n_bit_orbsize.
   SingEnt FaceToSingEnt(Face const &f_in) const {
     SingEnt se{Face(n_act), 0};
@@ -606,18 +622,6 @@ public:
   void Counts_SetOrbitDone(const size_t &idx_orb) {
     nbUndone -= ListPossOrbsize[idx_orb];
     nbOrbitDone++;
-  }
-  FaceOrbsizeContainer(const std::map<Tidx, int> &LFact, const size_t &n_act)
-      : n_act(n_act) {
-    TotalNumber = 0;
-    nbOrbitDone = 0;
-    nbUndone = 0;
-    nbOrbit = 0;
-    std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
-    n_bit_orbsize = ep.first;
-    delta = ep.second;
-    ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
-    Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
 };
 
