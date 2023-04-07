@@ -421,6 +421,24 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   }
 };
 
+
+template<typename Tgroup>
+struct FaceGrpContainer {
+private:
+  Tgroup GRP;
+  vectface vf;
+public:
+  size_t nbOrbit;
+  FaceGrpContainer(Tgroup _GRP, vectface _vf) : GRP(_GRP), vf(std::move(_vf)) {
+  }
+  std::pair<Face,typename Tgroup::Tint> GetPair(size_t const& idx_orb) const {
+    using Tint = typename Tgroup::Tint;
+    Face f = vf[idx_orb];
+    Tint orbSize = GRP.OrbitSize_OnSets(f);
+    return {f, orbSize};
+  }
+};
+
 template <typename Tidx>
 std::pair<size_t, size_t> get_delta(const std::map<Tidx, int> &LFact,
                                     const size_t &n_act) {
@@ -526,6 +544,12 @@ public:
       pow *= 2;
     }
     return se;
+  }
+  std::pair<Face,Tint> GetPair(size_t const &i_orb) const {
+    SingEnt se = RetrieveListOrbitEntry(i_orb);
+    Face const& f = se.face;
+    Tint orbSize = ListPossOrbsize[se.idx_orb];
+    return {std::move(f), std::move(orbSize)};
   }
   Face RetrieveListOrbitFace(size_t const &i_orb) const {
     Face face(n_act);
