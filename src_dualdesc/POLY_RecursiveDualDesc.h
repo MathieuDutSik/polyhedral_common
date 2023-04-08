@@ -259,8 +259,8 @@ template<typename Tint>
 struct FaceOrbitsizeTableContainer {
 public:
   std::vector<Tint> ListPossOrbsize;
-  vectface vfo;
   size_t n;
+  vectface vfo;
   FaceOrbitsizeTableContainer(std::vector<Tint> const& _ListPossOrbsize, size_t _n, vectface && _vfo) : ListPossOrbsize(std::move(_ListPossOrbsize)), n(_n), vfo(std::move(_vfo)) {
   }
   template<typename Tgroup>
