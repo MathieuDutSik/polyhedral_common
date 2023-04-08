@@ -17,19 +17,33 @@ static const int tag_mpi_bank_insert = 983;
 static const int tag_mpi_bank_request = 991;
 static const int tag_mpi_bank_reception = 997;
 
-template <typename Tgroup_impl> struct PairStore {
+size_t get_matching_power(size_t const &val) {
+  size_t pow = 1;
+  size_t pos = 0;
+  while (true) {
+    if (pow >= val)
+      return pos;
+    pow *= 2;
+    pos++;
+  }
+}
+
+template <typename Tgroup_impl> struct TripleStore {
   using Tgroup = Tgroup_impl;
+  using Tint = typename Tgroup::Tint;
   Tgroup GRP;
+  std::vector<Tint> ListPossOrbsize;
   vectface ListFace;
 };
 
 namespace boost::serialization {
 
 template <class Archive, typename Tgroup>
-inline void serialize(Archive &ar, PairStore<Tgroup> &pair,
+inline void serialize(Archive &ar, TripleStore<Tgroup> &triple,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("GRP", pair.GRP);
-  ar &make_nvp("ListFace", pair.ListFace);
+  ar &make_nvp("GRP", triple.GRP);
+  ar &make_nvp("ListPossOrbsize", triple.ListPossOrbsize);
+  ar &make_nvp("ListFace", triple.ListFace);
 }
 
 // clang-format off
@@ -40,8 +54,10 @@ template <typename Tkey, typename Tval>
 std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   using T = typename Tkey::value_type;
   using Tgroup = typename Tval::Tgroup;
+  using Tint = typename Tgroup::Tint;
   std::string eFileEXT = Prefix + ".ext";
   std::string eFileGRP = Prefix + ".grp";
+  std::string eFileOrbitSize = Prefix + ".orbitsize";
   std::string eFileNB = Prefix + ".nb";
   std::string eFileFF = Prefix + ".ff";
   //
@@ -54,26 +70,34 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   Tgroup GRP;
   is_grp >> GRP;
   //
+  std::ifstream is_orbitsize(eFileOrbitSize);
+  std::vector<Tint> ListPossOrbsize;
+  is_orbitsize >> ListPossOrbsize;
+  size_t n_factor = ListPossOrbsize.size();
+  size_t n_bit_orbsize = get_matching_power(n_factor + 1);
+  size_t delta = n_bit_orbsize + n_row;
+  //
   FileNumber fn(eFileNB, false);
   size_t n_orbit = fn.getval();
   //
-  FileFace ff(eFileFF, n_row, n_orbit);
-  vectface ListFace(n_row);
+  FileFace ff(eFileFF, delta, n_orbit);
+  vectface ListFace(delta);
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face eFace = ff.getface(i_orbit);
     ListFace.push_back(eFace);
   }
   std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size()
             << "\n";
-  Tval eVal{std::move(GRP), std::move(ListFace)};
+  Tval eVal{std::move(GRP), std::move(ListPossOrbsize), std::move(ListFace)};
   return {std::move(EXT), std::move(eVal)};
 }
 
 template <typename T, typename Tgroup>
 void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
-                     const PairStore<Tgroup> &ePair) {
+                     const TripleStore<Tgroup> &triple) {
   std::string eFileEXT = Prefix + ".ext";
   std::string eFileGRP = Prefix + ".grp";
+  std::string eFileOrbitSize = Prefix + ".orbitsize";
   std::string eFileNB = Prefix + ".nb";
   std::string eFileFF = Prefix + ".ff";
   if (!FILE_IsFileMakeable(eFileEXT)) {
@@ -87,15 +111,17 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
   size_t n_row = EXT.rows();
   //
   std::ofstream os_grp(eFileGRP);
-  os_grp << ePair.GRP;
+  os_grp << triple.GRP;
+  //
+  std::ofstream os_orbitsize(eFileOrbitSize);
+  os_grp << triple.ListPossOrbsize;
   //
   FileNumber fn(eFileNB, true);
-  size_t n_orbit = ePair.ListFace.size();
+  size_t n_orbit = triple.ListFace.size();
   fn.setval(n_orbit);
   //
   FileFace ff(eFileFF, n_row);
-  for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++)
-    ff.setface(i_orbit, ePair.ListFace[i_orbit]);
+  ff.direct_write(triple.ListFace.serial_get_std_vector_uint8_t());
 }
 
 template <typename Tkey, typename Tval>

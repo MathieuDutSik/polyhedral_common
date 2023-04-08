@@ -13,6 +13,25 @@
 #include "robin_set.h"
 #include "hopscotch_set.h"
 
+template<typename Tgroup>
+struct FaceOrbitsizeGrpContainer {
+private:
+  Tgroup GRP;
+  vectface vf;
+public:
+  FaceOrbitsizeGrpContainer(Tgroup _GRP, vectface &&_vf) : GRP(_GRP), vf(std::move(_vf)) {
+  }
+  std::pair<Face,typename Tgroup::Tint> GetPair(size_t const& idx_orb) const {
+    using Tint = typename Tgroup::Tint;
+    Face f = vf[idx_orb];
+    Tint orbSize = GRP.OrbitSize_OnSets(f);
+    return {f, orbSize};
+  }
+  size_t size() const {
+    return vf.size();
+  }
+};
+
 //
 // Double Coset Computation
 //
@@ -333,10 +352,10 @@ void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP
   WriteListFace(os, eListBig);
 }
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface DoubleCosetDescription_Representation_Block(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
-                                      const vectface &eListBig,
+                                      const Tface_orbitsize &ListFaceOrbitsize,
                                       std::ostream &os) {
   // Use generators to build more and more elements and check for equivalence.
   // In some rare cases it does not work and another scheme has to be used.
@@ -348,8 +367,11 @@ vectface DoubleCosetDescription_Representation_Block(Tgroup const &BigGRP,
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-  for (auto &eSet : eListBig) {
-    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
+    Tint const& TotalSize = pair.second;
     vectface ListListSet =
       DoubleCosetDescription_Representation<Tgroup, Tidx_value>(BigGens, SmaGRP, WMat, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -357,10 +379,10 @@ vectface DoubleCosetDescription_Representation_Block(Tgroup const &BigGRP,
   return eListSma;
 }
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
-                                      const vectface &eListBig,
+                                      const Tface_orbitsize &ListFaceOrbitsize,
                                       std::ostream &os) {
   // A reliable technique, it has the same issues as the representative method
   using Telt = typename Tgroup::Telt;
@@ -369,8 +391,11 @@ vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-  for (auto &eSet : eListBig) {
-    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
+    Tint const& TotalSize = pair.second;
     vectface ListListSet =
       DoubleCosetDescription_Canonic<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -378,10 +403,10 @@ vectface DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP,
   return eListSma;
 }
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
                                                          Tgroup const &SmaGRP,
-                                                         const vectface &eListBig,
+                                                         const Tface_orbitsize &ListFaceOrbitsize,
                                                          std::ostream &os) {
   // A reliable technique, it has the same issues as the representative method
   using Telt = typename Tgroup::Telt;
@@ -390,8 +415,11 @@ vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-  for (auto &eSet : eListBig) {
-    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
+    Tint const& TotalSize = pair.second;
     vectface ListListSet =
       DoubleCosetDescription_CanonicInitialTriv<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -399,11 +427,11 @@ vectface DoubleCosetDescription_CanonicInitialTriv_Block(Tgroup const &BigGRP,
   return eListSma;
 }
 
- template <typename Tgroup, typename T_hash_set>
+template <typename Tgroup, typename T_hash_set, typename Tface_orbitsize>
 vectface DoubleCosetDescription_Exhaustive_Block_T(Tgroup const &BigGRP,
-                                      Tgroup const &SmaGRP,
-                                      const vectface &eListBig,
-                                      std::ostream &os) {
+                                                   Tgroup const &SmaGRP,
+                                                   const Tface_orbitsize &ListFaceOrbitsize,
+                                                   std::ostream &os) {
   // Generate the full orbit for the big group and then split it using the small group.
   // To be preferred when SmaGRP is really small.
   using Telt = typename Tgroup::Telt;
@@ -412,8 +440,11 @@ vectface DoubleCosetDescription_Exhaustive_Block_T(Tgroup const &BigGRP,
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
-  for (auto &eSet : eListBig) {
-    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
+    Tint const& TotalSize = pair.second;
     vectface ListListSet =
       DoubleCosetDescription_Exhaustive_T<Tgroup,T_hash_set>(BigGens, SmaGRP, eSet, TotalSize, os);
     eListSma.append(ListListSet);
@@ -421,22 +452,26 @@ vectface DoubleCosetDescription_Exhaustive_Block_T(Tgroup const &BigGRP,
   return eListSma;
 }
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface DoubleCosetDescription_SingleCoset_Block(Tgroup const &BigGRP,
-                                      Tgroup const &SmaGRP,
-                                      const vectface &eListBig,
-                                      std::ostream &os) {
+                                                  Tgroup const &SmaGRP,
+                                                  const Tface_orbitsize &ListFaceOrbitsize,
+                                                  std::ostream &os) {
   // Compute the left cosets, that is BigGRP = cup_i g_i SmaGRP
   // Then form the representatives x g_i and test for equivalence.
   // Should be great when the index is small.
   using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> ListCos = BigGRP.LeftTransversal_Direct(SmaGRP);
-  for (auto &eSet : eListBig) {
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
 #ifdef CHECK_DOUBLE_COSET
-    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
+    Tint const& TotalSize = pair.second;
     vectface ListListSet =
       DoubleCosetDescription_SingleCoset(SmaGRP, eSet, TotalSize, ListCos, os);
 #else
@@ -450,44 +485,44 @@ vectface DoubleCosetDescription_SingleCoset_Block(Tgroup const &BigGRP,
 
 
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
-                                      const vectface &eListBig,
+                                      const Tface_orbitsize &ListFaceOrbitsize,
                                       std::string const &method_split,
                                       std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << eListBig.size() << " method_split=" << method_split << std::endl;
+  os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << ListFaceOrbitsize.size() << " method_split=" << method_split << std::endl;
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
 #endif
   auto get_split=[&]() -> vectface {
     if (method_split == "repr") {
-      return DoubleCosetDescription_Representation_Block(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Representation_Block(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "canonic") {
-      return DoubleCosetDescription_Canonic_Block(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Canonic_Block(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "canonic_initial_triv") {
-      return DoubleCosetDescription_CanonicInitialTriv_Block(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_CanonicInitialTriv_Block(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "exhaustive_std") {
-      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,std::unordered_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,std::unordered_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "exhaustive_sparse") {
-      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::sparse_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::sparse_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "exhaustive_robin" || method_split == "exhaustive") {
       // That variant seems a little bit faster
-      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::robin_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::robin_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "exhaustive_hopscotch") {
-      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::hopscotch_set<Face>>(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,tsl::hopscotch_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     if (method_split == "single_cosets") {
-      return DoubleCosetDescription_SingleCoset_Block(BigGRP, SmaGRP, eListBig, os);
+      return DoubleCosetDescription_SingleCoset_Block(BigGRP, SmaGRP, ListFaceOrbitsize, os);
     }
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
@@ -495,7 +530,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
   vectface eListSma = get_split();
 #ifdef TIMINGS
     os << "OrbitSplitting elapsed_microseconds=" << time
-       << " |eListBig|=" << eListBig.size() << " |eListSma|=" << eListSma.size()
+       << " |eListBig|=" << ListFaceOrbitsize.size() << " |eListSma|=" << eListSma.size()
        << std::endl;
 #endif
   return eListSma;
@@ -516,6 +551,7 @@ template <typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
                                 std::ostream &os3) {
+  using Tint = typename Tgroup::Tint;
   std::cerr << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
             << "\n";
   size_t nb_orbit_big = eListBig.size();
@@ -523,8 +559,9 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   size_t pos = 0;
   for (auto &eSet : eListBig) {
     pos++;
+    Tint TotalSize = BigGRP.Orbitsize_OnSets(eSet);
     vectface ListListSet =
-        DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, std::cerr);
+      DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, TotalSize, std::cerr);
     mpz_class orb_siz = ListListSet.size();
     nb_orbit_sma += orb_siz;
     for (auto &eFace : ListListSet) {

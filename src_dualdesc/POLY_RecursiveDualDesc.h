@@ -213,128 +213,28 @@ std::pair<Face,typename Tgroup::Tint> CanonicalImageOrbitSizeDualDesc(Tgroup con
 #endif
 }
 
-
-template <typename T, typename Tgroup, typename Tidx_value>
-std::pair<MyMatrix<T>, PairStore<Tgroup>> GetCanonicalInformation(
-    MyMatrix<T> const &EXT, WeightMatrix<true, T, Tidx_value> const &WMat,
-    Tgroup const &TheGRPrelevant, vectface const &ListFace) {
-  using Telt = typename Tgroup::Telt;
-  TripleCanonic<T, Tgroup> eTriple =
-      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
-  bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
-  vectface ListFaceO(EXT.rows());
-  Telt perm1 = Telt(eTriple.ListIdx);
-  Telt ePerm = ~perm1;
-  if (!NeedRemapOrbit) {
-    // We needed to compute the full group, but it turned out to be the same
-    // as the input group.
-    Face eFaceImg(EXT.rows());
-    for (auto &eFace : ListFace) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
-      ListFaceO.push_back(eFaceImg);
-    }
-  } else {
-    // The full group is bigger than the input group. So we need to reduce.
-    UNORD_SET<Face> SetFace;
-    Face eFaceImg(EXT.rows());
-    for (auto &eFace : ListFace) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
-      Face eIncCan = CanonicalImageDualDesc(eTriple.GRP, eFaceImg);
-      SetFace.insert(eIncCan);
-    }
-    for (auto &eInc : SetFace) {
-      ListFaceO.push_back(eInc);
-    }
+vectface vectface_reduction(vectface const& vf, size_t n_red) {
+  vectface vf_red(n_red);
+  Face f_red(n_red);
+  for (auto & f : vf) {
+    for (size_t i=0; i<n_red; i++)
+      f_red[i] = f[i];
+    vf_red.push_back(f_red);
   }
-  PairStore<Tgroup> ePair{eTriple.GRP, std::move(ListFaceO)};
-  return {std::move(eTriple.EXT), std::move(ePair)};
+  return vf_red;
 }
 
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
-void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
-                          WeightMatrix<true, T, Tidx_value> const &WMat,
-                          Tgroup const &TheGRPrelevant,
-                          bool const &BankSymmCheck, vectface const &ListFace) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  if (!BankSymmCheck) {
-    // The computation was already done for the full symmetry group. Only
-    // canonic form is needed.
-    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-        CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
-    vectface ListFaceO(EXT.rows());
-    Telt perm1 = Telt(ePair.second);
-    Telt ePerm = ~perm1;
-    Face eFaceImg(EXT.rows());
-    for (auto &eFace : ListFace) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
-      ListFaceO.push_back(eFaceImg);
-    }
-    Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
-    bank.InsertEntry(std::move(ePair.first),
-                     {std::move(GrpConj), std::move(ListFaceO)});
-  } else {
-    std::pair<MyMatrix<T>, PairStore<Tgroup>> eP =
-        GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListFace);
-    bank.InsertEntry(std::move(eP.first), std::move(eP.second));
+template <typename Tidx>
+std::pair<size_t, size_t> get_delta(const std::map<Tidx, int> &LFact,
+                                    const size_t &n_act) {
+  size_t n_factor = 1;
+  for (auto &kv : LFact) {
+    n_factor *= (1 + kv.second);
   }
-}
-
-template<typename Tgroup>
-vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, vectface& vf,
-                                    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream & os) {
-  using Tint = typename Tgroup::Tint;
-  std::map<std::string, Tint> TheMap;
-  Tint ordGRPbig = GRPbig.size();
-  Tint ordGRPsma = GRPsma.size();
-  if (ordGRPbig == ordGRPsma)
-    return std::move(vf);
-  Tint index = ordGRPbig / ordGRPsma;
-  TheMap["groupsize_big"] = ordGRPbig;
-  TheMap["groupsize_sma"] = ordGRPsma;
-  TheMap["index"] = index;
-  TheMap["n_orbit"] = vf.size();
-  std::string method_split = HeuristicEvaluation(TheMap, AllArr.OrbitSplitTechnique);
-  return OrbitSplittingListOrbit_spec(GRPbig, GRPsma, vf, method_split, os);
-}
-
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
-vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
-                             WeightMatrix<true, T, Tidx_value> const &WMat,
-                             Tgroup const &GRP,
-                             PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
-                             std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-      CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
-  const PairStore<Tgroup> &RecAns = bank.GetDualDesc(ePair.first);
-  if (RecAns.ListFace.size() == 0) {
-    return vectface(0);
-  }
-  os << "Finding a matching entry\n";
-  vectface ListReprTrans(EXT.rows());
-  Telt ePerm = Telt(ePair.second);
-  Face eFaceImg(EXT.rows());
-  for (auto const &eFace : RecAns.ListFace) {
-    OnFace_inplace(eFaceImg, eFace, ePerm);
-    ListReprTrans.push_back(eFaceImg);
-  }
-  if (GRP.size() == RecAns.GRP.size())
-    return ListReprTrans;
-  Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
-  return OrbitSplittingListOrbitGen(GrpConj, GRP, ListReprTrans, AllArr, os);
-}
-
-size_t get_matching_power(size_t const &val) {
-  size_t pow = 1;
-  size_t pos = 0;
-  while (true) {
-    if (pow >= val)
-      return pos;
-    pow *= 2;
-    pos++;
-  }
+  /* TRICK 4: We need to add 1 because of shift by 1 in the OrbSize_Map */
+  size_t n_bit_orbsize = get_matching_power(n_factor + 1);
+  size_t delta = n_bit_orbsize + n_act;
+  return {n_bit_orbsize, delta};
 }
 
 template <typename Tidx, typename Tint>
@@ -353,6 +253,243 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
     LVal = NewVal;
   }
   return LVal;
+}
+
+template<typename Tint>
+struct FaceOrbitsizeTableContainer {
+public:
+  std::vector<Tint> ListPossOrbsize;
+  vectface vfo;
+  size_t n;
+  FaceOrbitsizeTableContainer(std::vector<Tint> const& _ListPossOrbsize, size_t _n, vectface && _vfo) : ListPossOrbsize(std::move(_ListPossOrbsize)), n(_n), vfo(std::move(_vfo)) {
+  }
+  template<typename Tgroup>
+  FaceOrbitsizeTableContainer(vectface const& vf, Tgroup const& GRP) {
+    n = vf.get_n();
+    using Tidx=typename Tgroup::Telt::Tidx;
+    std::map<Tidx, int> LFact = GRP.factor_size();
+    std::pair<size_t, size_t> ep = get_delta(LFact, n);
+    size_t n_bit_orbsize = ep.first;
+    size_t delta = ep.second;
+    ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
+    UNORD_MAP<Tint, size_t> OrbSize_Map;
+    for (size_t i=0; i<ListPossOrbsize.size(); i++) {
+      OrbSize_Map[ListPossOrbsize[i]] = i;
+    }
+    vectface vf_ins(delta);
+    vfo = std::move(vf_ins);
+    for (auto & eFace : vf) {
+      Tint orbitSize = GRP.OrbitSize_OnSets(eFace);
+      size_t idx_orb = OrbSize_Map[orbitSize];
+      Face f(delta);
+      for (size_t i=0; i<n; i++)
+        f[i] = eFace[i];
+      size_t work_idx = idx_orb;
+      size_t i_acc = n;
+      for (size_t i = 0; i < n_bit_orbsize; i++) {
+        bool val = work_idx % 2;
+        f[i_acc] = val;
+        i_acc++;
+        work_idx = work_idx / 2;
+      }
+      vfo.push_back(f);
+    }
+  }
+  std::pair<Face,Tint> GetPair(size_t const& idx) const {
+    Face f = vfo[idx];
+    Face f_red(n);
+    for (size_t i=0; i<n; i++)
+      f_red[i] = f[i];
+    size_t pow = 1;
+    size_t idx_orb = 0;
+    for (size_t i = n; i < vfo.get_n(); i++) {
+      if (f[i] == 1)
+        idx_orb += pow;
+      pow *= 2;
+    }
+    Tint orbSize = ListPossOrbsize[idx_orb];
+    return {f, orbSize};
+  }
+  size_t size() const {
+    return vfo.size();
+  }
+  vectface GetListFaces() const {
+    return vectface_reduction(vfo, n);
+  }
+};
+
+template<typename Telt>
+Telt trivial_extension(Telt const& ePerm, size_t const& delta) {
+  using Tidx = typename Telt::Tidx;
+  Tidx delta_tidx = delta;
+  std::vector<Tidx> V(delta);
+  Tidx siz = ePerm.size();
+  for (Tidx i=0; i<siz; i++) {
+    Tidx ePt = ePerm.at(i);
+    V[i] = ePt;
+  }
+  for (Tidx i=siz; i<delta_tidx; i++) {
+    V[i] = i;
+  }
+  return Telt(V);
+}
+
+template<typename Tgroup>
+Tgroup trivial_extension_group(Tgroup const& eGroup, size_t const& delta) {
+  using Telt=typename Tgroup::Telt;
+  using Tidx=typename Telt::Tidx;
+  std::vector<Telt> LGen = eGroup.GeneratorsOfGroup();
+  std::vector<Telt> LGenExt;
+  for (auto & eGen : LGen) {
+    Telt eGenExt = trivial_extension(eGen, delta);
+    LGenExt.push_back(eGenExt);
+  }
+  std::vector<Tidx> V(delta);
+  for (size_t i=0; i<delta; i++) {
+    V[i] = i;
+  }
+  Telt id(V);
+  return Tgroup(LGenExt, id);
+}
+
+
+
+
+
+template <typename T, typename Tgroup, typename Tidx_value>
+std::pair<MyMatrix<T>, TripleStore<Tgroup>> GetCanonicalInformation(
+    MyMatrix<T> const &EXT, WeightMatrix<true, T, Tidx_value> const &WMat,
+    Tgroup const &TheGRPrelevant,
+    FaceOrbitsizeTableContainer<typename Tgroup::Tint> const& ListOrbitFaceOrbitsize) {
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  std::vector<Tint> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
+  TripleCanonic<T, Tgroup> eTriple =
+      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
+  bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
+  size_t delta = ListOrbitFaceOrbitsize.vfo.size();
+  Telt perm1 = Telt(eTriple.ListIdx);
+  Telt ePerm = ~perm1;
+  Telt ePermExt = trivial_extension(ePerm, delta);
+  vectface ListFaceO(delta);
+  Face eFaceImg(delta);
+  if (!NeedRemapOrbit) {
+    // We needed to compute the full group, but it turned out to be the same
+    // as the input group.
+    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
+      OnFace_inplace(eFaceImg, eFace, ePermExt);
+      ListFaceO.push_back(eFaceImg);
+    }
+  } else {
+    // The full group is bigger than the input group. So we need to reduce.
+    UNORD_SET<Face> SetFace;
+    Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
+    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
+      OnFace_inplace(eFaceImg, eFace, ePermExt);
+      Face eIncCan = CanonicalImageDualDesc(GRPext, eFaceImg);
+      SetFace.insert(eIncCan);
+    }
+    for (auto &eInc : SetFace) {
+      ListFaceO.push_back(eInc);
+    }
+  }
+  TripleStore<Tgroup> ePair{eTriple.GRP, std::move(ListPossOrbSize), std::move(ListFaceO)};
+  return {std::move(eTriple.EXT), std::move(ePair)};
+}
+
+template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
+                          WeightMatrix<true, T, Tidx_value> const &WMat,
+                          Tgroup const &TheGRPrelevant,
+                          bool const &BankSymmCheck,
+                          FaceOrbitsizeTableContainer<typename Tgroup::Tint> const& ListOrbitFaceOrbitsize) {
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  using Tidx = typename Telt::Tidx;
+  size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
+  if (!BankSymmCheck) {
+    // The computation was already done for the full symmetry group. Only
+    // canonic form is needed.
+    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
+        CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
+    vectface ListFaceO(delta);
+    Telt perm1 = Telt(ePair.second);
+    Telt ePerm = ~perm1;
+    Telt ePermExt = trivial_extension(ePerm, delta);
+    Face eFaceImg(delta);
+    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      ListFaceO.push_back(eFaceImg);
+    }
+    Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
+    std::vector<Tint> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
+    bank.InsertEntry(std::move(ePair.first),
+                     {std::move(GrpConj), std::move(ListPossOrbSize), std::move(ListFaceO)});
+  } else {
+    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
+        GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListOrbitFaceOrbitsize);
+    bank.InsertEntry(std::move(eP.first), std::move(eP.second));
+  }
+}
+
+template<typename Tgroup, typename Tface_orbitsize>
+vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, Tface_orbitsize const& ListFaceOrbitsize,
+                                    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream & os) {
+  using Tint = typename Tgroup::Tint;
+  std::map<std::string, Tint> TheMap;
+  Tint ordGRPbig = GRPbig.size();
+  Tint ordGRPsma = GRPsma.size();
+  if (ordGRPbig == ordGRPsma) {
+    return ListFaceOrbitsize.GetListFaces();
+  }
+  Tint index = ordGRPbig / ordGRPsma;
+  TheMap["groupsize_big"] = ordGRPbig;
+  TheMap["groupsize_sma"] = ordGRPsma;
+  TheMap["index"] = index;
+  TheMap["n_orbit"] = ListFaceOrbitsize.size();
+  std::string method_split = HeuristicEvaluation(TheMap, AllArr.OrbitSplitTechnique);
+  return OrbitSplittingListOrbit_spec(GRPbig, GRPsma, ListFaceOrbitsize, method_split, os);
+}
+
+template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
+                             WeightMatrix<true, T, Tidx_value> const &WMat,
+                             Tgroup const &GRP,
+                             PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+                             std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  using Tidx = typename Telt::Tidx;
+  std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
+      CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat);
+  const TripleStore<Tgroup> &RecAns = bank.GetDualDesc(ePair.first);
+  if (RecAns.ListFace.size() == 0) {
+    return vectface(0);
+  }
+  os << "Finding a matching entry\n";
+  Telt ePerm = Telt(ePair.second);
+  size_t n = EXT.rows();
+  if (GRP.size() == RecAns.GRP.size()) {
+    vectface ListReprTrans(n);
+    Face eFaceImg(n);
+    vectface ListFace = vectface_reduction(RecAns.ListFace, n);
+    for (auto const &eFace : ListFace) {
+      OnFace_inplace(eFaceImg, eFace, ePerm);
+      ListReprTrans.push_back(eFaceImg);
+    }
+    return ListReprTrans;
+  }
+  Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
+  size_t delta = RecAns.ListFace.get_n();
+  Telt ePermExt = trivial_extension(ePerm, delta);
+  vectface ListReprTrans(delta);
+  Face eFaceImg(delta);
+  for (auto const &eFace : RecAns.ListFace) {
+    OnFace_inplace(eFaceImg, eFace, ePerm);
+    ListReprTrans.push_back(eFaceImg);
+  }
+  FaceOrbitsizeTableContainer<Tint> fotc(RecAns.ListPossOrbsize, n, std::move(ListReprTrans));
+  return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
 
 template <typename T, typename Tgroup> struct DataFacetCan {
@@ -422,35 +559,6 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 };
 
 
-template<typename Tgroup>
-struct FaceGrpContainer {
-private:
-  Tgroup GRP;
-  vectface vf;
-public:
-  size_t nbOrbit;
-  FaceGrpContainer(Tgroup _GRP, vectface _vf) : GRP(_GRP), vf(std::move(_vf)) {
-  }
-  std::pair<Face,typename Tgroup::Tint> GetPair(size_t const& idx_orb) const {
-    using Tint = typename Tgroup::Tint;
-    Face f = vf[idx_orb];
-    Tint orbSize = GRP.OrbitSize_OnSets(f);
-    return {f, orbSize};
-  }
-};
-
-template <typename Tidx>
-std::pair<size_t, size_t> get_delta(const std::map<Tidx, int> &LFact,
-                                    const size_t &n_act) {
-  size_t n_factor = 1;
-  for (auto &kv : LFact) {
-    n_factor *= (1 + kv.second);
-  }
-  /* TRICK 4: We need to add 1 because of shift by 1 in the OrbSize_Map */
-  size_t n_bit_orbsize = get_matching_power(n_factor + 1);
-  size_t delta = n_bit_orbsize + n_act;
-  return {n_bit_orbsize, delta};
-}
 
 template <typename Tint, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
@@ -647,6 +755,11 @@ public:
     nbUndone -= ListPossOrbsize[idx_orb];
     nbOrbitDone++;
   }
+  FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
+    vectface vfo;
+    vfo.build_vectface(delta, nbOrbit, std::move(ListOrbit));
+    return FaceOrbitsizeTableContainer(std::move(ListPossOrbsize), n_act, std::move(vfo));
+  }
 };
 
 template <typename T, typename Tgroup>
@@ -797,15 +910,10 @@ public:
                   std::function<bool(size_t, size_t)>>({}, fctHash, fctEqual);
   }
   ~DatabaseCanonic() {}
-  vectface FuncListOrbitIncidence() {
+  FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
-    vectface retListOrbit(n_act);
-    for (size_t i_orbit = 0; i_orbit < foc.nbOrbit; i_orbit++) {
-      Face f = foc.RetrieveListOrbitFace(i_orbit);
-      retListOrbit.push_back(f);
-    }
-    return retListOrbit;
+    return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
     // The face should have been canonicalized beforehand.
@@ -1052,15 +1160,10 @@ public:
     nbCol = EXT.cols();
   }
   ~DatabaseRepr() {}
-  vectface FuncListOrbitIncidence() {
+  FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
-    vectface retListOrbit(n_act);
-    for (size_t i_orbit = 0; i_orbit < foc.nbOrbit; i_orbit++) {
-      Face f = foc.RetrieveListOrbitFace(i_orbit);
-      retListOrbit.push_back(f);
-    }
-    return retListOrbit;
+    return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_i) {
     size_t len = face_i.count();
@@ -1395,7 +1498,8 @@ public:
     os << "|flush|=" << time << "\n";
 #endif
   }
-  vectface FuncListOrbitIncidence() {
+  // FuncListOrbitIncidence() {
+  FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     NeedToFlush = false;
     if (SavingTrigger) {
       RemoveFileIfExist(eFileNB);
@@ -1404,7 +1508,7 @@ public:
       RemoveFileIfExist(eFileEXT);
       RemoveFileIfExist(eFileGRP);
     }
-    return bb.FuncListOrbitIncidence();
+    return bb.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face) {
     bb.FuncInsert(face);
@@ -1593,7 +1697,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank>
-vectface Kernel_DUALDESC_AdjacencyDecomposition(
+FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
@@ -1624,7 +1728,7 @@ vectface Kernel_DUALDESC_AdjacencyDecomposition(
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
-  return RPL.FuncListOrbitIncidence();
+  return RPL.GetListFaceOrbitsize();
 }
 
 
@@ -1677,7 +1781,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   // --- 3 : We have computed for a subgroup which actually is a strict
   // subgroup.
   bool BankSymmCheck;
-  auto compute_decomposition = [&]() -> vectface {
+  auto compute_decomposition = [&]() -> FaceOrbitsizeTableContainer<Tint> {
     std::string ansSymm =
       HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     os << "ansSymm=" << ansSymm << "\n";
@@ -1730,7 +1834,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
     std::cerr << "Authorized values: canonic, repr\n";
     throw TerminalException{1};
   };
-  vectface ListOrbitFaces = compute_decomposition();
+  FaceOrbitsizeTableContainer<Tint> ListOrbitFaceOrbitsize = compute_decomposition();
   SingletonTime end;
   TheMap["time"] = s(start, end);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
@@ -1739,15 +1843,15 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
   if (ansBank == "yes") {
     os << "Before insert_entry_in_bank\n";
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,
-                         BankSymmCheck, ListOrbitFaces);
+                         BankSymmCheck, ListOrbitFaceOrbitsize);
   }
   os << "Before return section\n";
   if (NeedSplit) {
     os << "Before OrbitSplittingListOrbit\n";
-    return OrbitSplittingListOrbitGen(TheGRPrelevant, GRP, ListOrbitFaces, AllArr, os);
+    return OrbitSplittingListOrbitGen(TheGRPrelevant, GRP, ListOrbitFaceOrbitsize, AllArr, os);
   } else {
     os << "Returning ListOrbitFaces\n";
-    return ListOrbitFaces;
+    return ListOrbitFaceOrbitsize.GetListFaces();
   }
 }
 
@@ -1942,11 +2046,13 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
   if (OutFormat == "BankEntry") {
     // We are creating a bank entry for further works.
     using Tidx_value = uint16_t;
+    using Tint=typename Tgroup::Tint;
     WeightMatrix<true, T, Tidx_value> WMat =
         GetWeightMatrix<T, Tidx_value>(EXT);
     WMat.ReorderingSetWeight();
-    std::pair<MyMatrix<T>, PairStore<Tgroup>> eP =
-        GetCanonicalInformation(EXT, WMat, GRP, TheOutput);
+    FaceOrbitsizeTableContainer<Tint> fotc(TheOutput, GRP);
+    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
+        GetCanonicalInformation(EXT, WMat, GRP, fotc);
     Write_BankEntry(OUTfile, eP.first, eP.second);
   }
   std::cerr << "No option has been chosen\n";
@@ -2108,7 +2214,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
-  using Tval = PairStore<Tgroup>;
+  using Tval = TripleStore<Tgroup>;
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
@@ -2145,7 +2251,7 @@ template <typename T, typename Tgroup>
 vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Tint = typename Tgroup::Tint;
   using Tkey = MyMatrix<T>;
-  using Tval = PairStore<Tgroup>;
+  using Tval = TripleStore<Tgroup>;
   using Tidx_value = int32_t;
   bool BANK_IsSaving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";

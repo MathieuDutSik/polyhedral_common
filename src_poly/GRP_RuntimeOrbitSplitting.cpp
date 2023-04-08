@@ -39,6 +39,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "|SmaGRP|=" << SmaGRP.size() << "\n";
     vectface ListFaceBig = ReadListFace(is);
     //
+    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(BigGRP, std::move(ListFaceBig));
+    //
     std::string str_methods = argv[2];
     if (str_methods != "all") {
       ListMethod = STRING_Split(str_methods, ",");
@@ -48,11 +50,17 @@ int main(int argc, char *argv[]) {
       std::cerr << " " << method;
     std::cerr << "\n";
     //
+    std::set<size_t> SetSizes;
     for (auto & method : ListMethod) {
       HumanTime time;
       vectface ListFaceSma =
-        OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, ListFaceBig, method, std::cerr);
+        OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, ListFaceOrbitsizes, method, std::cerr);
       std::cerr << "Result for method=" << method << " |ListFaceSma|=" << ListFaceSma.size() << " time=" << time << "\n";
+      SetSizes.insert(ListFaceSma.size());
+    }
+    if (SetSizes.size() != 1) {
+      std::cerr << "Incoherency in the orbit splitting computation. Methods give different results\n";
+      throw TerminalException{1};
     }
     //
     std::cerr << "Normal termination of the program\n";
