@@ -308,7 +308,7 @@ public:
       pow *= 2;
     }
     Tint orbSize = ListPossOrbsize[idx_orb];
-    return {f, orbSize};
+    return {f_red, orbSize};
   }
   size_t size() const {
     return vfo.size();

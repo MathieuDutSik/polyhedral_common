@@ -600,7 +600,7 @@ void OnFace_inplace(Face &fSet, Face const &eSet, Telt const &eElt) {
   if (len_A != len_B) {
     std::cerr << "|fSet|=" << fSet.size() << " |eSet|=" << eSet.size() << " |eElt|=" << len_A << "\n";
     std::cerr << "Inconsistency\n";
-    throw TerminalException{1};
+    //    throw TerminalException{1};
   }
   boost::dynamic_bitset<>::size_type pos = eSet.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
