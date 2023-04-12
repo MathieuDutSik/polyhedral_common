@@ -595,8 +595,13 @@ template <typename Telt>
 void OnFace_inplace(Face &fSet, Face const &eSet, Telt const &eElt) {
   using Tidx = typename Telt::Tidx;
   fSet.reset();
-  //  size_t len = eElt.size();
-  //  std::cerr << "|fSet|=" << fSet.size() << " |eSet|=" << eSet.size() << " |eElt|=" << len << "\n";
+  size_t len_A = eElt.size();
+  size_t len_B = fSet.size();
+  if (len_A != len_B) {
+    std::cerr << "|fSet|=" << fSet.size() << " |eSet|=" << eSet.size() << " |eElt|=" << len_A << "\n";
+    std::cerr << "Inconsistency\n";
+    throw TerminalException{1};
+  }
   boost::dynamic_bitset<>::size_type pos = eSet.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
     Tidx jExt = eElt.at(pos);
