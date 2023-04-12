@@ -65,17 +65,21 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   std::ifstream is_ext(eFileEXT);
   MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
   size_t n_row = EXT.rows();
+  std::cerr << "We have read EXT\n";
   //
   std::ifstream is_grp(eFileGRP);
   Tgroup GRP;
   is_grp >> GRP;
+  std::cerr << "GRP has been read\n";
   //
+  std::cerr << "eFileOrbitSize=" << eFileOrbitSize << "\n";
   std::ifstream is_orbitsize(eFileOrbitSize);
   std::vector<Tint> ListPossOrbsize;
   is_orbitsize >> ListPossOrbsize;
   size_t n_factor = ListPossOrbsize.size();
   size_t n_bit_orbsize = get_matching_power(n_factor + 1);
   size_t delta = n_bit_orbsize + n_row;
+  std::cerr << "We have n_factor / n_bit_orbsize / delta\n";
   //
   FileNumber fn(eFileNB, false);
   size_t n_orbit = fn.getval();
@@ -114,7 +118,7 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
   os_grp << triple.GRP;
   //
   std::ofstream os_orbitsize(eFileOrbitSize);
-  os_grp << triple.ListPossOrbsize;
+  os_orbitsize << triple.ListPossOrbsize;
   //
   FileNumber fn(eFileNB, true);
   size_t n_orbit = triple.ListFace.size();
