@@ -479,7 +479,6 @@ vectface DoubleCosetDescription_SingleCoset_Block(Tgroup const &BigGRP,
   for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
     std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
     Face const& eSet = pair.first;
-    std::cerr << "DoubleCosetDescription_SingleCoset_Block, |eSet|=" << eSet.size() << "\n";
     if (f_terminal()) break;
 #ifdef CHECK_DOUBLE_COSET
     Tint const& TotalSize = pair.second;
