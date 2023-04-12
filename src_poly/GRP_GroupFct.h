@@ -595,6 +595,8 @@ template <typename Telt>
 void OnFace_inplace(Face &fSet, Face const &eSet, Telt const &eElt) {
   using Tidx = typename Telt::Tidx;
   fSet.reset();
+  //  size_t len = eElt.size();
+  //  std::cerr << "|fSet|=" << fSet.size() << " |eSet|=" << eSet.size() << " |eElt|=" << len << "\n";
   boost::dynamic_bitset<>::size_type pos = eSet.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
     Tidx jExt = eElt.at(pos);

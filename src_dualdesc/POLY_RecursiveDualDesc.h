@@ -418,7 +418,7 @@ void insert_entry_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     Telt ePermExt = trivial_extension(ePerm, delta);
     Face eFaceImg(delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
+      OnFace_inplace(eFaceImg, eFace, ePermExt);
       ListFaceO.push_back(eFaceImg);
     }
     Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
@@ -485,7 +485,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   vectface ListReprTrans(delta);
   Face eFaceImg(delta);
   for (auto const &eFace : RecAns.ListFace) {
-    OnFace_inplace(eFaceImg, eFace, ePerm);
+    OnFace_inplace(eFaceImg, eFace, ePermExt);
     ListReprTrans.push_back(eFaceImg);
   }
   FaceOrbitsizeTableContainer<Tint> fotc(RecAns.ListPossOrbsize, n, std::move(ListReprTrans));

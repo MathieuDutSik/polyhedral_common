@@ -17,7 +17,7 @@
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
-#PROGRAM		= GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
@@ -36,7 +36,7 @@
 #PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
-PROGRAM		= GRP_RuntimeOrbitSplitting
+#PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
