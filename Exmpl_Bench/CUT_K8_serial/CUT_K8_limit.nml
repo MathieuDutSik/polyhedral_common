@@ -2,7 +2,7 @@
  EXTfile = "CutK8.ext"
  GRPfile = "CutK8.grp"
  OUTfile = "CutK8.orbitFacet"
- max_runtime = -1
+ max_runtime = 1100
  AdvancedTerminationCriterion = T
 /
 
