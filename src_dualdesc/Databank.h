@@ -61,25 +61,20 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   std::string eFileNB = Prefix + ".nb";
   std::string eFileFF = Prefix + ".ff";
   //
-  std::cerr << "eFileEXT=" << eFileEXT << "\n";
   std::ifstream is_ext(eFileEXT);
   MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
   size_t n_row = EXT.rows();
-  std::cerr << "We have read EXT\n";
   //
   std::ifstream is_grp(eFileGRP);
   Tgroup GRP;
   is_grp >> GRP;
-  std::cerr << "GRP has been read\n";
   //
-  std::cerr << "eFileOrbitSize=" << eFileOrbitSize << "\n";
   std::ifstream is_orbitsize(eFileOrbitSize);
   std::vector<Tint> ListPossOrbsize;
   is_orbitsize >> ListPossOrbsize;
   size_t n_factor = ListPossOrbsize.size();
   size_t n_bit_orbsize = get_matching_power(n_factor + 1);
   size_t delta = n_bit_orbsize + n_row;
-  std::cerr << "We have n_factor / n_bit_orbsize / delta\n";
   //
   FileNumber fn(eFileNB, false);
   size_t n_orbit = fn.getval();
@@ -90,7 +85,9 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
     Face eFace = ff.getface(i_orbit);
     ListFace.push_back(eFace);
   }
-  std::cerr << " |EXT|=" << EXT.rows() << " |ListFace|=" << ListFace.size()
+  std::cerr << "Read_BankEntry returning for Prefix=" << Prefix
+            << " |EXT|=" << EXT.rows() << "/" << EXT.cols()
+            << " |ListFace|=" << ListFace.size()
             << "\n";
   Tval eVal{std::move(GRP), std::move(ListPossOrbsize), std::move(ListFace)};
   return {std::move(EXT), std::move(eVal)};

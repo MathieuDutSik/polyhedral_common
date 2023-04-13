@@ -33,7 +33,7 @@ public:
   }
 
   ~FileNumber() {
-    std::cerr << "Clean destruction of FileNumber associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileNumber associated to file=" << file << "\n";
     std::fclose(fp);
   }
 
@@ -88,7 +88,7 @@ public:
   }
 
   ~FileBool() {
-    std::cerr << "Clean destruction of FileBool associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileBool associated to file=" << file << "\n";
     std::fclose(fp);
   }
 
@@ -200,7 +200,7 @@ public:
   }
 
   ~FileFace() {
-    std::cerr << "Clean destruction of FileFace associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileFace associated to file=" << file << "\n";
     std::fclose(fp);
   }
 
