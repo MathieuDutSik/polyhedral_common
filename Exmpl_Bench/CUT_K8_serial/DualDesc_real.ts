@@ -1,7 +1,7 @@
 &HEURISTIC_PRIOR
-  DefaultPrior = "state_ppl_ext"
-  ListConclusion = "state_lrs_ring", "state_lrs_ring", "state_ppl_ext"
-  ListFullCond = "incidence < 30", "incidence < 35", "incidence < 40"
+  DefaultPrior = "state"
+  ListConclusion = "state"
+  ListFullCond = "incidence < 30"
 /
 
 
@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "lrs_ring", "ppl_ext"
-  ListDescription = "lrs_ring:distri1", "ppl_ext:distri1"
-  ListName = "state_lrs_ring", "state_ppl_ext"
+  ListAnswer = "lrsring_pplext_cdd"
+  ListDescription = "lrs_ring:distri1 ppl_ext:distri1 cdd:distri1"
+  ListName = "state"
 /
