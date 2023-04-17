@@ -19,7 +19,9 @@ void process(std::string const &eFileI, std::string const &choice,
     }
   };
   MyMatrix<T> EXT_pre = read_file();
-  MyMatrix<T> EXT = lrs::FirstColumnZero(EXT_pre);
+  std::pair<MyMatrix<T>,int> pair = lrs::FirstColumnZeroCond(EXT_pre);
+  MyMatrix<T> const& EXT = pair.first;
+  int shift = pair.second;
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   //
@@ -38,6 +40,24 @@ void process(std::string const &eFileI, std::string const &choice,
     os << "end\n";
     os << "*Total: nvertices=" << nVertices << "\n";
     return;
+  }
+  if (choice == "GAP") {
+    os << "return [";
+    long nVertices = 0;
+    auto fPrint = [&](T *out) -> void {
+      if (nVertices > 0)
+        os << ",\n";
+      os << "[";
+      for (int iCol = shift; iCol < nbCol; iCol++) {
+        if (iCol > shift)
+          os << ",";
+        os << out[iCol];
+      }
+      os << "]";
+      nVertices++;
+    };
+    lrs::Kernel_DualDescription_DropFirst(EXT, fPrint);
+    os << "];\n";
   }
   if (choice == "vertex_incidence") {
     std::vector<size_t> VertexIncd(nbRow, 0);
