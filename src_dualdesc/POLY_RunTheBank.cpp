@@ -16,7 +16,7 @@ void signal_callback_handler_bank(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_BankingSystem();
     if (argc != 2) {

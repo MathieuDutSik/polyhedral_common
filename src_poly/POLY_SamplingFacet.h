@@ -283,7 +283,7 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
   for (auto &eRidge : ListRidge) {
-    Face eFace = RPLlift.Flip(eRidge);
+    Face eFace = RPLlift.FlipFace(eRidge);
     vf_ret.push_back(eFace);
   }
   std::cerr << "We have vf_ret\n";
