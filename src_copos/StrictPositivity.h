@@ -72,9 +72,13 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   };
   RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
+#ifdef STRICT_POSITIVITY
   int nbIter = 0;
+#endif
   while (true) {
+#ifdef STRICT_POSITIVITY
     nbIter++;
+#endif
     Tshortest<T, Tint> RecSHV =
         T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis);
     NakedPerfect<T, Tint> eNaked =

@@ -610,9 +610,9 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
   }
 }
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
-                                 const vectface &eListBig, std::ostream &os) {
+                                 const Tface_orbitsize &eListBig, std::ostream &os) {
   std::string method_split = "canonic";
   return OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, eListBig, method_split,
                                       os);
@@ -625,16 +625,18 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
                                 std::ostream &os3) {
   using Tint = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
   std::cerr << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
             << "\n";
   size_t nb_orbit_big = eListBig.size();
   mpz_class nb_orbit_sma;
   size_t pos = 0;
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
     pos++;
-    Tint TotalSize = BigGRP.Orbitsize_OnSets(eSet);
+    Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
-      DoubleCosetDescription_Canonic(BigGRP, SmaGRP, eSet, TotalSize, std::cerr);
+      DoubleCosetDescription_Canonic<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, std::cerr);
     mpz_class orb_siz = ListListSet.size();
     nb_orbit_sma += orb_siz;
     for (auto &eFace : ListListSet) {

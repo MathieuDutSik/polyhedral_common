@@ -8,7 +8,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     using Tfield = mpq_class;
     using Tint = int;

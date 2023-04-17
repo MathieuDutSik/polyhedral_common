@@ -622,7 +622,7 @@ void VoronoiAlgo_THR_EnumeratePerfectForm(
 
 template <typename T, typename Tint, typename Tgroup>
 void VoronoiAlgo_PrintListMatrix(
-    std::ostream &os, LinSpaceMatrix<T> const &LinSpa,
+    std::ostream &os, [[maybe_unused]] LinSpaceMatrix<T> const &LinSpa,
     ListPerfectForm<T, Tint, Tgroup> const &ListPerf) {
   int nbGram = ListPerf.GetNbPerf();
   os << nbGram << "\n";
@@ -856,8 +856,8 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   std::function<void(TrivialBalinski &, SimplePerfect<T, Tint> const &,
                      SimplePerfectInv<T> const &, std::ostream &)>
       UpgradeBalinskiStat =
-          [](TrivialBalinski const &eStat, SimplePerfect<T, Tint> const &eEnt,
-             SimplePerfectInv<T> const &eInv, std::ostream &os) -> void {};
+          []([[maybe_unused]] TrivialBalinski const &eStat, [[maybe_unused]] SimplePerfect<T, Tint> const &eEnt,
+             [[maybe_unused]] SimplePerfectInv<T> const &eInv, [[maybe_unused]] std::ostream &os) -> void {};
   std::function<std::optional<MyMatrix<Tint>>(SimplePerfect<T, Tint> const &,
                                               SimplePerfect<T, Tint> const &)>
       fEquiv =
@@ -889,11 +889,11 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   int nbSpannThread = 0;
   std::condition_variable cv;
   std::mutex mtx_cv;
-  auto WaitStuck = [&](int const &MyId) -> void {
+  auto WaitStuck = [&]([[maybe_unused]] int const &MyId) -> void {
     std::unique_lock<std::mutex> lk(mtx_cv);
     cv.wait(lk, [&] { return ListOrbit.IsStuck() == false; });
   };
-  auto WaitComplete = [&](int const &MyId) -> void {
+  auto WaitComplete = [&]([[maybe_unused]] int const &MyId) -> void {
     std::unique_lock<std::mutex> lk(mtx_cv);
     cv.wait(lk, [&] { return nbSpannThread == 0; });
   };

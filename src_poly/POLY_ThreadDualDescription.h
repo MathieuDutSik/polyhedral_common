@@ -459,7 +459,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
           MProc.GetO(TheId)
               << "PARTITION: After the test time = " << time << "\n";
-          if (time.eval() > 60) {
+          if (time.const_eval_int64() > 60) {
             //
             SecondTime time;
             auto eReplyB =

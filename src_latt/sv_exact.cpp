@@ -12,7 +12,7 @@
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     using T = mpq_class;
     using Tint = mpz_class;

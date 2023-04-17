@@ -34,8 +34,9 @@ int main(int argc, char *argv[]) {
     vectface ListFaceBig = ReadListFace(is3);
     std::cerr << "|ListFaceBig|=" << ListFaceBig.size() << "\n";
     //
+    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(BigGRP, std::move(ListFaceBig));
     vectface ListFaceSma =
-        OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceBig, std::cerr);
+        OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceOrbitsizes, std::cerr);
     std::cerr << "|ListFaceSma|=" << ListFaceSma.size() << "\n";
     //
     std::cerr << "Normal termination of the program\n";
