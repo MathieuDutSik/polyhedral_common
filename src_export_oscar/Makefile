@@ -1,4 +1,4 @@
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism POLY_IsomorphismReduction sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction
+PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism POLY_IsomorphismReduction sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
