@@ -5,7 +5,7 @@
 #include "Permutation.h"
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;

@@ -5,7 +5,7 @@
 #include "NumberTheory.h"
 #include "Permutation.h"
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     std::vector<std::string> ListMethod={"repr", "canonic", "canonic_initial_triv",
                                          "exhaustive_std", "exhaustive_sparse",

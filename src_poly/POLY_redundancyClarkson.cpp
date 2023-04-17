@@ -84,7 +84,7 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";

@@ -26,7 +26,7 @@ void process(std::string const &eFileI, std::string const& eFileG, std::string c
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";

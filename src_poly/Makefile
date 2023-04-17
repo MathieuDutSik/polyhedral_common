@@ -19,10 +19,10 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic \
                   GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
-		  POLY_SolutionMatNonnegative \
-		  POLY_dual_description \
+		  POLY_SolutionMatNonnegative POLY_cdd_lp2 \
+		  POLY_dual_description POLY_dual_description_group \
 		  POLY_ComputeEngelSymbol \
-		  POLY_GetFullRankFacetSet \
+		  POLY_GetFullRankFacetSet POLY_sampling_facets \
 		  POLY_IsomorphismReduction \
 		  POLY_FaceLatticeDirect
 

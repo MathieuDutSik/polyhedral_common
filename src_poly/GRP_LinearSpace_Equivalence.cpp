@@ -4,7 +4,7 @@
 #include "Permutation.h"
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";

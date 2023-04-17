@@ -5,7 +5,7 @@
 #include "POLY_PolytopeFct.h"
 #include <stdio.h>
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 3) {
       fprintf(stderr, "Number of argument is = %d\n", argc);
