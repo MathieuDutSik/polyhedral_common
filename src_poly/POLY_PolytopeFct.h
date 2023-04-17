@@ -384,7 +384,8 @@ public:
       }
     }
     try_int = (max_bits <= 30);
-    max_bits += mpz_sizeinbase(mpz_class(nbCol).get_mpz_t(), 2);
+    mpz_class nbCol_mpz(nbCol);
+    max_bits += mpz_sizeinbase(nbCol_mpz.get_mpz_t(), 2);
     //
     // Scalar products
     //

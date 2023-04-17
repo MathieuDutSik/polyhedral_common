@@ -375,6 +375,7 @@ std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq
   using Tint = mpz_class;
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
+  mpz_class n_col_mpz(n_col);
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
   int nbColRed = DimEXT - shift;
@@ -390,7 +391,7 @@ std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq
       EXT_long(iRow, iCol) = EXT_int(iRow, iCol).get_si();
     }
   }
-  max_bits += mpz_sizeinbase(mpz_class(n_col).get_mpz_t(), 2);
+  max_bits += mpz_sizeinbase(n_col_mpz.get_mpz_t(), 2);
   std::vector<long> LVal_long(DimEXT,0);
   auto f_insert=[&](std::vector<T> const& LVal) -> void {
     for (int i=0; i<nbColRed; i++) {
