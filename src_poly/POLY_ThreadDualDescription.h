@@ -474,9 +474,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         GetRecord =
             [&](Face const &eOrb,
                 [[maybe_unused]] std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
-          Tgroup TheStab = TheGRPrelevant.Stabilizer_OnSets(eOrb);
           int siz = eOrb.count();
-          Tint eOrbitSize = TheGRPrelevant.size() / TheStab.size();
+          Tint eOrbitSize = TheGRPrelevant.OrbitSize_OnSets(eOrb);
           SimpleOrbitFacet<T, Tgroup> eOrbF{eOrb};
           size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
           SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};

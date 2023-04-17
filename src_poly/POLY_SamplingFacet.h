@@ -146,25 +146,24 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   os << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
+  auto get_iter=[&]() -> int {
+    int iter = 10;
+    if (ListStr.size() > 1) {
+      std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
+      if (ListStrB.size() == 2 && ListStrB[0] == "iter")
+        std::istringstream(ListStrB[1]) >> iter;
+    }
+    return iter;
+  };
   auto compute_samp = [&]() -> vectface {
     if (ansOpt == "lp_cdd") {
       // So possible format is lp_cdd:iter_100
-      int iter = 10;
-      if (ListStr.size() > 1) {
-        std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
-        if (ListStrB.size() == 2 && ListStrB[0] == "iter")
-          std::istringstream(ListStrB[1]) >> iter;
-      }
+      int iter = get_iter();
       return FindVertices(EXT, iter);
     }
     if (ansOpt == "lp_cdd_min") {
       // So possible format is lp_cdd_min:iter_100
-      int iter = 10;
-      if (ListStr.size() > 1) {
-        std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
-        if (ListStrB.size() == 2 && ListStrB[0] == "iter")
-          std::istringstream(ListStrB[1]) >> iter;
-      }
+      int iter = get_iter();
       vectface vf = FindVertices(EXT, iter);
       size_t min_incd = std::numeric_limits<size_t>::max();
       for (auto & eFace : vf) {

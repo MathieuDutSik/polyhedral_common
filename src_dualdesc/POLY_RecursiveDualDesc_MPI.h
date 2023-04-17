@@ -141,7 +141,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
     Tint stabSize = bb.GRP.Stabilizer_OnSets(face).size();
-    Tint orbitSize = bb.GRP.size() / stabSize;
     std::pair<Face,Tint> face_pair{face,stabSize};
     fInsertUnsentPair(face_pair);
   };
@@ -317,7 +316,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "We have test_termination=" << test_termination << "\n";
   if (test_termination) {
     os << "Correct termination, returning the database\n";
-    return RPL.FuncListOrbitIncidence();
+    FaceOrbitsizeTableContainer<Tint> fotc = RPL.GetListFaceOrbitsize();
+    return fotc.GetListFaces();
   } else {
     os << "RuntimeException, terminating the computation\n";
     throw RuntimeException{1};
@@ -365,7 +365,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
-  using Tval = PairStore<Tgroup>;
+  using Tval = TripleStore<Tgroup>;
   int i_rank = comm.rank();
   int n_proc = comm.size();
   int pos_generator = 0;

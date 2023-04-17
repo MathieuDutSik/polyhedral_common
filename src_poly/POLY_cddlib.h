@@ -6530,7 +6530,6 @@ template <typename T> void dd_CreateInitialEdges(dd_conedata<T> *cone) {
   dd_raydata<T> *Ptr1;
   dd_raydata<T> *Ptr2;
   dd_rowrange fii1, fii2;
-  long count = 0;
   bool adj;
 
   cone->Iteration = cone->d; /* CHECK */
@@ -6545,7 +6544,6 @@ template <typename T> void dd_CreateInitialEdges(dd_conedata<T> *cone) {
     Ptr2 = Ptr1->Next;
     while (Ptr2 != nullptr) {
       fii2 = Ptr2->FirstInfeasIndex;
-      count++;
       dd_CheckAdjacency(cone, &Ptr1, &Ptr2, &adj);
       if (fii1 != fii2 && adj)
         dd_ConditionalAddEdge(cone, Ptr1, Ptr2, cone->FirstRay);
@@ -6568,7 +6566,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
   dd_raydata<T> *Ptr2begin;
   dd_rowrange fii1;
   bool ptr2found, quit;
-  long count = 0, pos1, pos2;
+  long pos1, pos2;
   float workleft, prevworkleft = 110.0, totalpairs;
   bool localdebug = false;
 
@@ -6599,7 +6597,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
     if (ptr2found) {
       quit = false;
       for (Ptr2 = Ptr2begin; !quit; Ptr2 = Ptr2->Next) {
-        count++;
         dd_ConditionalAddEdge(cone, Ptr1, Ptr2, RRbegin);
         if (Ptr2 == RRend || Ptr2->Next == nullptr)
           quit = true;
@@ -6624,17 +6621,14 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
 template <typename T> void dd_FreeDDMemory0(dd_conedata<T> *cone) {
   dd_raydata<T> *Ptr;
   dd_raydata<T> *PrevPtr;
-  long count;
 
   /* THIS SHOULD BE REWRITTEN carefully */
   PrevPtr = cone->ArtificialRay;
   if (PrevPtr != nullptr) {
-    count = 0;
     for (Ptr = cone->ArtificialRay->Next; Ptr != nullptr; Ptr = Ptr->Next) {
       delete[] PrevPtr->Ray;
       delete[] PrevPtr->ZeroSet;
       delete PrevPtr;
-      count++;
       PrevPtr = Ptr;
     }
     cone->FirstRay = nullptr;

@@ -269,9 +269,7 @@ bool EvaluationConnectednessCriterion_Kernel(
         for (auto &eFace : vf_span) {
           bool val_f = get_face_status({x.first + 1, eFace});
           if (!val_f) {
-            Tgroup eStab_B = eStab.Stabilizer_OnSets(eFace);
-            Tint orb_size = eStab.size() / eStab_B.size();
-            siz_false += orb_size;
+            siz_false += eStab.OrbitSize_OnSets(eFace);
             // If we cannot prove connectivity for just 1 facet, then
             // connectivity holds.
             if (siz_false > 1)

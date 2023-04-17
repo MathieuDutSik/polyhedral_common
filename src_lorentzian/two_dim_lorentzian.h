@@ -571,10 +571,14 @@ get_first_next_vector_isotropic(MyMatrix<T> const &G, MyVector<Tint> const &r0,
   };
   std::vector<MyVector<Tint>> l_sol_red;
   std::optional<MyVector<Tint>> e_sol;
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
   size_t n_match = 0;
+#endif
   for (auto &e_v : l_sol) {
     if (is_corr(e_v)) {
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
       n_match++;
+#endif
       if (e_sol) {
         if (det_two(e_v, *e_sol) > 0)
           e_sol = e_v;
