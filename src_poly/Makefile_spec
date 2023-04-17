@@ -43,7 +43,8 @@
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
 #PROGRAM		= POLY_dual_description
-PROGRAM		= POLY_dual_description_group
+#PROGRAM		= POLY_dual_description_group
+PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 
