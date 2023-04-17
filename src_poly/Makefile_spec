@@ -14,7 +14,7 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_lrs
-#PROGRAM		= POLY_redundancyClarkson
+PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -45,7 +45,7 @@
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
-PROGRAM		= POLY_cdd_lp2
+#PROGRAM		= POLY_cdd_lp2
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 
