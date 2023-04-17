@@ -10,6 +10,12 @@ template <typename T>
 void process(std::string const &eFileFAC, std::string const& eFileIneq, std::ostream &os) {
   MyMatrix<T> TheEXT = ReadMatrixFile<T>(eFileFAC);
   MyVector<T> eVect = ReadVectorFile<T>(eFileIneq);
+  if (TheEXT.cols() != eVect.size()) {
+    std::cerr << "|TheEXT|=" << TheEXT.rows() << " / " << TheEXT.cols() << "\n";
+    std::cerr << "|eVect|=" << eVect.size() << "\n";
+    std::cerr << "This is inconsistentt\n";
+    throw TerminalException{1};
+  }
   LpSolution<T> eSol = CDD_LinearProgramming(TheEXT, eVect);
   os << "return rec(";
   os << "answer:=\"" << eSol.Answer << "\",\n";
