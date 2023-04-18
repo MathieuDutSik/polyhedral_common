@@ -14,7 +14,7 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_lrs
-PROGRAM		= POLY_redundancyClarkson
+#PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -25,7 +25,7 @@ PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
-#PROGRAM		= POLY_redundancyClarksonBlocks
+PROGRAM		= POLY_redundancyClarksonGroup
 #PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Invariant

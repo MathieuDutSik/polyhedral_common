@@ -6,7 +6,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  TEST_PolytopeIntegralPoints \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
-		  POLY_redundancy POLY_redundancyClarkson POLY_redundancyClarksonBlocks \
+		  POLY_redundancy POLY_redundancyClarkson POLY_redundancyClarksonGroup \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  POLY_lcdd POLY_FaceLatticeGen \
 		  POLY_lrs POLY_lrs_set_reduction \
