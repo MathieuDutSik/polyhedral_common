@@ -557,7 +557,7 @@ public:
 
           
           // check if elements are small enough to do computation in 
-          if( max_bits + max_bits_NSP <= 60 ) { 
+          if (max_bits + max_bits_NSP <= 60) { 
             // check if part of kernel
             jRow = sInc.find_first();
             for (size_t iRow = 0; iRow < nb; iRow++) {
