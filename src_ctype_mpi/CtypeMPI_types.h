@@ -1019,11 +1019,15 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
     return true;
   };
   // erasing the inequalities that are sure to be redundant.
+#ifdef DEBUG
   int nb_redund = 0;
+#endif
   std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
   for (auto &kv : Tot_map) {
     if (!TestFeasibilityListTriple(kv.second)) {
+#ifdef DEBUG
       nb_redund++;
+#endif
     } else {
       Tot_mapB[kv.first] = kv.second;
     }
@@ -1154,7 +1158,7 @@ namespace boost::serialization {
 // TypeCtypeExch
 template <class Archive, typename T>
 inline void serialize(Archive &ar, TypeCtypeExch<T> &eRecMat,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   int rows = eRecMat.eMat.rows();
   int cols = eRecMat.eMat.cols();
   ar &make_nvp("rows", rows);
@@ -1168,7 +1172,7 @@ inline void serialize(Archive &ar, TypeCtypeExch<T> &eRecMat,
 // TypeCtypeExch
 template <class Archive>
 inline void serialize(Archive &ar, TypeIndex &eTypIdx,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("iProc", eTypIdx.iProc);
   ar &make_nvp("idxMatrix", eTypIdx.idxMatrix);
   ar &make_nvp("iAdj", eTypIdx.iAdj);
@@ -1177,7 +1181,7 @@ inline void serialize(Archive &ar, TypeIndex &eTypIdx,
 // PairExch
 template <class Archive, typename T>
 inline void serialize(Archive &ar, PairExch<T> &ePair,
-                      const unsigned int version) {
+                      [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("perfect", ePair.eCtype);
   ar &make_nvp("index", ePair.eIndex);
 }
