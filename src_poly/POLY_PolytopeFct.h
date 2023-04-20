@@ -6,7 +6,9 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "rational.h"
-#include "Fp.h"
+#ifndef DISABLE_MPQ_CLASS
+# include "Fp.h"
+#endif
 #include <string>
 #include <unordered_set>
 #include <utility>

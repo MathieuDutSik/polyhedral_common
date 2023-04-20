@@ -3,7 +3,7 @@
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
 # include "NumberTheoryBoostGmpInt.h"
 #else
-# include "NumberTheoryRational.h"
+# include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
