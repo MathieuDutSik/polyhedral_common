@@ -61,8 +61,7 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   std::string eFileNB = Prefix + ".nb";
   std::string eFileFF = Prefix + ".ff";
   //
-  std::ifstream is_ext(eFileEXT);
-  MyMatrix<T> EXT = ReadMatrix<T>(is_ext);
+  MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
   size_t n_row = EXT.rows();
   //
   std::ifstream is_grp(eFileGRP);
@@ -107,8 +106,7 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
     throw TerminalException{1};
   }
   //
-  std::ofstream os_ext(eFileEXT);
-  WriteMatrix(os_ext, EXT);
+  WriteMatrixFile(eFileEXT, EXT);
   size_t n_row = EXT.rows();
   //
   std::ofstream os_grp(eFileGRP);

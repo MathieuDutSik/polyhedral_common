@@ -31,6 +31,10 @@ int main(int argc, char *argv[]) {
     std::string eFileOrbitSize = ThePrefix + ".orbitsize";
     std::string eFileNB = ThePrefix + ".nb";
     std::string eFileFF = ThePrefix + ".ff";
+    IsExistingFileDie(eFileEXT);
+    IsExistingFileDie(eFileGRP);
+    IsExistingFileDie(eFileNB);
+    IsExistingFileDie(eFileFF);
     //
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
     size_t n_row = EXT.rows();
