@@ -323,6 +323,8 @@ public:
   }
 };
 
+// Need to find a better template for the solution
+#ifndef DISABLE_MPQ_CLASS
 template <> struct FlippingFramework<mpq_class> {
 private:
   using T = mpq_class;
@@ -372,13 +374,13 @@ public:
     EXT_red = UniversalMatrixConversion<Tint, T>(EXT_redT);
     //
     // Faster modular version of EXT_red
-    //   
+    //
     max_bits = 0;
     EXT_fastT = MyMatrix<Tfast>(nbRow, nbCol - 1);
     EXT_fast  = MyMatrix<long>(nbRow, nbCol - 1);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2), max_bits); 
+        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2), max_bits);
         EXT_fast(iRow, iCol) = EXT_red(iRow, iCol).get_si();
         EXT_fastT(iRow, iCol) = Tfast(EXT_fast(iRow, iCol));
       }
@@ -445,7 +447,7 @@ public:
     }
     return Mret;
   }
-  
+
   Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) const {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
@@ -538,13 +540,13 @@ public:
           failed_int = true;
         } else {
           MyMatrix<long> NSP_fast = MyMatrix<long>(1, nbCol - 1);
-          
-          // reconstruct 
+
+          // reconstruct
           size_t max_bits_NSP = 0;
           std::vector<long> nums(nbCol-1,0);
-          std::vector<long> dens(nbCol-1,1); 
+          std::vector<long> dens(nbCol-1,1);
           for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            Rational<long> val = NSP_fastT(0, iCol).rational_lift(); 
+            Rational<long> val = NSP_fastT(0, iCol).rational_lift();
             nums[iCol] = val.get_num();
             dens[iCol] = val.get_den();
           }
@@ -555,9 +557,9 @@ public:
             max_bits_NSP = std::max(max_bits_NSP, mpz_sizeinbase(NSP(0,iCol).get_mpz_t(), 2));
           }
 
-          
-          // check if elements are small enough to do computation in 
-          if (max_bits + max_bits_NSP <= 60) { 
+
+          // check if elements are small enough to do computation in
+          if (max_bits + max_bits_NSP <= 60) {
             // check if part of kernel
             jRow = sInc.find_first();
             for (size_t iRow = 0; iRow < nb; iRow++) {
@@ -607,7 +609,7 @@ public:
     return InternalFlipFaceIneq(pair.first, out.data());
   }
 };
-
+#endif
 
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
