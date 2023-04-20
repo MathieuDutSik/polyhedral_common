@@ -4,7 +4,9 @@
 
 #include "Boost_bitset_kernel.h"
 #include "cdd.h"
-#include "gmpxx.h"
+#ifndef DISABLE_MPQ_CLASS
+# include "gmpxx.h"
+#endif
 #include "setoper.h"
 #include <boost/multiprecision/gmp.hpp>
 #include <vector>
@@ -68,12 +70,14 @@ vectface DualDescription_incd_T(MyMatrix<T> const &TheEXT, Fset fset) {
   return ListIncd;
 }
 
+#ifndef DISABLE_MPQ_CLASS
 vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const &TheEXT) {
   auto fset = [](mpq_t &ptr, mpq_class const &val) -> void {
     mpq_set(ptr, val.get_mpq_t());
   };
   return DualDescription_incd_T(TheEXT, fset);
 }
+#endif
 
 vectface DualDescription_incd_boost_mpq_rational(
     MyMatrix<boost::multiprecision::mpq_rational> const &TheEXT) {

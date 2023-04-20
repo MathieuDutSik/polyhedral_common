@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "EXTIN : The list of vertices (or inequalities for that matter)\n";
       std::cerr << "OutGroup : The automorphism group file\n";
-      srd::cerr << "\n";
+      std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
       std::cerr << "integer  : integer arithmetic on input\n";

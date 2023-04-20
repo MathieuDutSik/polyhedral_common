@@ -643,7 +643,7 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   std::cerr << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
             << "\n";
   size_t nb_orbit_big = eListBig.size();
-  mpz_class nb_orbit_sma;
+  Tint nb_orbit_sma;
   size_t pos = 0;
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
@@ -651,10 +651,10 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet =
       DoubleCosetDescription_Canonic<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, std::cerr);
-    mpz_class orb_siz = ListListSet.size();
+    Tint orb_siz = ListListSet.size();
     nb_orbit_sma += orb_siz;
     for (auto &eFace : ListListSet) {
-      mpz_class res = getsetasint<mpz_class>(eFace);
+      Tint res = getsetasint<Tint>(eFace);
       os3 << res << "\n";
     }
     std::cerr << "iInc=" << pos << " / " << nb_orbit_big

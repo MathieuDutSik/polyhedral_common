@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "MAT_MatrixInt.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "MAT_MatrixInt.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;

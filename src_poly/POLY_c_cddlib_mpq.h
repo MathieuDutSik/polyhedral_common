@@ -6,11 +6,15 @@
 
 #include "Boost_bitset_kernel.h"
 #include "MatrixTypes.h"
-#include "gmpxx.h"
+#ifndef DISABLE_MPQ_CLASS
+# include "gmpxx.h"
+#endif
 #include <boost/multiprecision/gmp.hpp>
 
 namespace cbased_cdd {
+#ifndef DISABLE_MPQ_CLASS
 vectface DualDescription_incd_mpq_class(MyMatrix<mpq_class> const &TheEXT);
+#endif
 vectface DualDescription_incd_boost_mpq_rational(
     MyMatrix<boost::multiprecision::mpq_rational> const &TheEXT);
 // clang-format off

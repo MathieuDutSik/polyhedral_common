@@ -6,7 +6,6 @@
 #include "Basic_string.h"
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
-#include "NumberTheory.h"
 #include "Temp_common.h"
 #include "Timings.h"
 #include "hash_functions.h"
