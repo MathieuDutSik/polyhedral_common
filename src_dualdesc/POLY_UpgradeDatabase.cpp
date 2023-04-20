@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     vectface vf = read_vf();
     //
     std::map<Tidx, int> LFact = GRP.factor_size();
-    std::pair<size_t, size_t> ep = get_delta(LFact, n);
+    std::pair<size_t, size_t> ep = get_delta(LFact, n_row);
     size_t n_bit_orbsize = ep.first;
     size_t delta = ep.second;
     std::vector<Tint> ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     // Now writing the new data
     //
     std::ofstream os_orbitsize(eFileOrbitSize);
-    os_orbitsize << triple.ListPossOrbsize;
+    os_orbitsize << ListPossOrbsize;
     //
     RemoveFileIfExist(eFileFF);
     FileFace ff(eFileFF, delta);
