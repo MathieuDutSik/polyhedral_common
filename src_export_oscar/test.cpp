@@ -1,9 +1,8 @@
-#include "NumberTheory.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "MAT_Matrix.h"
 int main()
 {
-  using T = mpq_class;
-
+  using T = boost::multiprecision::mpq_rational;
   int n = 10;
   int m = 10;
   MyMatrix<T> M(n,m);
