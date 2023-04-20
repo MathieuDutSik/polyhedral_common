@@ -6,7 +6,8 @@
 #PROGRAM		= POLY_RunTheBank
 #PROGRAM		= Test_face Test_bool
 #PROGRAM		= POLY_DatabaseRestructuration
-PROGRAM		= POLY_UpgradeDatabase POLY_SerialDualDesc
+#PROGRAM		= POLY_UpgradeDatabase POLY_SerialDualDesc
+PROGRAM		= POLY_UpgradeDatabase
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

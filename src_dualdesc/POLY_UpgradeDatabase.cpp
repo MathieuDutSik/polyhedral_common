@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
       size_t i_acc = n_row;
       for (size_t i = 0; i < n_bit_orbsize; i++) {
         bool val = work_idx % 2;
-        f[i_acc] = val;
+        f_full[i_acc] = val;
         i_acc++;
         work_idx = work_idx / 2;
       }
