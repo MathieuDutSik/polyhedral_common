@@ -25,8 +25,8 @@
 #PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
-PROGRAM		= POLY_redundancyClarksonGroup
-#PROGRAM		= POLY_redundancy_Equivariant
+#PROGRAM		= POLY_redundancyClarksonGroup
+PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
@@ -61,10 +61,14 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++17 -Wall -O3 -g
-#CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
-CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CLANG
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+#CLANG
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
