@@ -1,4 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheoryRational.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
 
