@@ -6,7 +6,7 @@
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
 # include "NumberTheoryBoostGmpInt.h"
 #else
-# include "NumberTheoryRational.h"
+# include "NumberTheory.h"
 #endif
 #include "ShortestUniversal.h"
 #include "Shvec_exact.h"

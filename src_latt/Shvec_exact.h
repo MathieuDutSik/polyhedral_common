@@ -4,7 +4,6 @@
 
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
-#include "NumberTheory.h"
 #include "POLY_LinearProgramming.h"
 #include <utility>
 #include <vector>
