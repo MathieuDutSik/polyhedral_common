@@ -1,6 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheoryRational.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -16,7 +23,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "OUTfile   : The file containing the two pairs\n";
       return -1;
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpz_int;
+#else
     using T = mpz_class;
+#endif
     using Tidx = unsigned int;
     //
     std::cerr << "Reading input\n";

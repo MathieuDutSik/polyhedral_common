@@ -1,9 +1,15 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheoryRational.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "Group.h"
-#include "NumberTheoryRational.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -23,7 +29,11 @@ int main(int argc, char *argv[]) {
     using T = long;
     using Tidx = int32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using Tint = boost::multiprecision::mpz_int;
+#else
     using Tint = mpz_class;
+#endif
     using Tgroup = permutalib::Group<Telt, Tint>;
     //
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";

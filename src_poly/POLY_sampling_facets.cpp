@@ -1,6 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
 #include "POLY_SamplingFacet.h"
@@ -50,6 +54,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "lrs_limited:upperlimit_X : lrs limited to the first X vertices being found\n";
       return -1;
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using Trat = boost::multiprecision::mpq_rational;
+#else
+    using Trat = mpq_class;
+#endif
     //
     std::string arith = argv[1];
     std::string command = argv[2];
@@ -59,29 +68,26 @@ int main(int argc, char *argv[]) {
       eFileO = argv[4];
     auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "rational") {
-        return process<mpq_class>(eFileI, command, os);
+        return process<Trat>(eFileI, command, os);
       }
       if (arith == "Qsqrt5") {
-        using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
         return process<T>(eFileI, command, os);
       }
       if (arith == "Qsqrt2") {
-        using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
         return process<T>(eFileI, command, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
-        using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
         }
-        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        HelperClassRealField<Trat> hcrf(FileAlgebraicField);
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;

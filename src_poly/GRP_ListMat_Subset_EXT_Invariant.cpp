@@ -14,7 +14,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "OUTfile   : The file containing the two pairs\n";
       return -1;
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpz_int;
+#else
     using T = mpz_class;
+#endif
     //
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     //

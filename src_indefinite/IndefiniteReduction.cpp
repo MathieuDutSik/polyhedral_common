@@ -1,6 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Indefinite_LLL.h"
-#include "NumberTheory.h"
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
@@ -11,8 +15,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "IndefiniteReduction [FileI]\n";
       throw TerminalException{1};
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+#else
     using T = mpq_class;
     using Tint = mpz_class;
+#endif
 
     std::string FileI = argv[1];
     //

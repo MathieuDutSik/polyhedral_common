@@ -2,9 +2,15 @@
 /* Version July 11, 2005                                      */
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
 
+// clang-format off
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheoryRational.h"
+#endif
 #include "ShortestUniversal.h"
-// #include "Shvec_double.h"
 #include "Shvec_exact.h"
+// clang-format on
 
 [[noreturn]] void die_sv(std::string const &last_words) {
   std::cout << "sv.c: " << last_words << "\n";
@@ -14,12 +20,18 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+#else
     using T = mpq_class;
     using Tint = mpz_class;
+#endif
+
     bool coset = false;
     bool NeedBound = false;
     int i, j, mode;
-    mpq_class bound = 0;
+    T bound = 0;
     mode = TempShvec_globals::TEMP_SHVEC_MODE_UNDEF;
     int c;
     while ((c = getopt(argc, argv, "hb:s:t:mMTcgevl")) != -1)
@@ -80,7 +92,7 @@ int main(int argc, char *argv[]) {
     int dim;
     std::cin >> dim;
     MyMatrix<T> gram_matrix(dim, dim);
-    mpq_class eT;
+    T eT;
     for (i = 0; i < dim; i++)
       for (j = 0; j <= i; j++) {
         std::cin >> eT;
