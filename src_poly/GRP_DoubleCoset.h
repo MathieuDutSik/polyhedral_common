@@ -337,19 +337,33 @@ vectface DoubleCosetDescription_SingleCoset(Tgroup const &SmaGRP,
 }
 
 
-template <typename Tgroup>
+template <typename Tgroup, typename Tface_orbitsize>
 void PrintDoubleCosetCasesTestProblem(Tgroup const &BigGRP, Tgroup const &SmaGRP,
-                                      const vectface &eListBig) {
+                                      const Tface_orbitsize &ListFaceOrbitsize) {
+  using Tint = typename Tgroup::Tint;
+  size_t nbOrbit = ListFaceOrbitsize.size();
   std::string strSizeSma = std::to_string(SmaGRP.size());
   std::string strSizeBig = std::to_string(BigGRP.size());
-  std::string strLen = std::to_string(eListBig.size());
+  std::string strLen = std::to_string(nbOrbit);
   std::string strN = std::to_string(int(BigGRP.n_act()));
   std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" + strSizeSma + "_vf" + strLen + "_idx";
   std::string FileOut = FindAvailableFileFromPrefix(Prefix);
   std::ofstream os(FileOut);
   WriteGroup(os, BigGRP);
   WriteGroup(os, SmaGRP);
-  WriteListFace(os, eListBig);
+  os << nbOrbit << "\n";
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& f = pair.first;
+    size_t len = f.size();
+    os << len;
+    for (size_t i=0; i<len; i++) {
+      int val = f[i];
+      os << " " << val;
+    }
+    os << "\n";
+  }
+
 }
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
@@ -505,7 +519,7 @@ vectface OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP,
 #endif
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << ListFaceOrbitsize.size() << " method_split=" << method_split << std::endl;
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
-  PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, eListBig);
+  PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
   auto get_split=[&]() -> vectface {
     if (method_split == "repr") {
