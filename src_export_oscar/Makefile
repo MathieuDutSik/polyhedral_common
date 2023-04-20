@@ -1,4 +1,5 @@
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_lp2
+PROGRAM		= test
+#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_lp2
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
