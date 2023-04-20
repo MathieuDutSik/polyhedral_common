@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "Indefinite_LLL.h"
+// clang-format off
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
 # include "NumberTheoryBoostGmpInt.h"
 #else
 # include "NumberTheory.h"
 #endif
+#include "Indefinite_LLL.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
