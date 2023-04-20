@@ -145,12 +145,6 @@ int main(int argc, char *argv[]) {
         compute_redundancy(os);
       }
     }
-
-
-    //
-    //
-    std::ofstream os(argv[2]);
-
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_redundancyClarksonBlocks\n";
