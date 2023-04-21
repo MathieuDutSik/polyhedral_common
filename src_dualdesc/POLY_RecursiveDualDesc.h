@@ -642,12 +642,12 @@ public:
     SingEnt se{Face(n_act), 0};
     size_t i_acc = delta * i_orb;
     for (size_t i = 0; i < n_act; i++) {
-      se.face[i] = getbit(ListOrbit, i_acc);
+      se.face[i] = getbit_vector(ListOrbit, i_acc);
       i_acc++;
     }
     Torbsize pow = 1;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
-      se.idx_orb += Torbsize(getbit(ListOrbit, i_acc)) * pow;
+      se.idx_orb += Torbsize(getbit_vector(ListOrbit, i_acc)) * pow;
       i_acc++;
       pow *= 2;
     }
@@ -663,7 +663,7 @@ public:
     Face face(n_act);
     size_t i_acc = delta * i_orb;
     for (size_t i = 0; i < n_act; i++) {
-      face[i] = getbit(ListOrbit, i_acc);
+      face[i] = getbit_vector(ListOrbit, i_acc);
       i_acc++;
     }
     return face;
@@ -681,13 +681,13 @@ public:
     size_t i_acc = nbOrbit * delta;
     for (size_t i = 0; i < n_act; i++) {
       bool val = eEnt.face[i];
-      setbit(ListOrbit, i_acc, val);
+      setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
     }
     size_t work_idx = eEnt.idx_orb;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
       bool val = work_idx % 2;
-      setbit(ListOrbit, i_acc, val);
+      setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
       work_idx = work_idx / 2;
     }
@@ -706,7 +706,7 @@ public:
     size_t i_acc = nbOrbit * delta;
     for (size_t i = 0; i < n_act; i++) {
       bool val = face[i];
-      setbit(ListOrbit, i_acc, val);
+      setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
     }
   }
@@ -718,7 +718,7 @@ public:
     Torbsize work_idx = idx_orb;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
       bool val = work_idx % 2;
-      setbit(ListOrbit, i_acc, val);
+      setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
       work_idx = work_idx / 2;
     }
@@ -863,8 +863,8 @@ public:
       size_t pos = delta * idx;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
       for (size_t i = 0; i < n_act; i++) {
-        bool val = getbit(foc.ListOrbit, pos);
-        setbit(V_hash, i, val);
+        bool val = getbit_vector(foc.ListOrbit, pos);
+        setbit_vector(V_hash, i, val);
         pos++;
       }
 #ifdef MURMUR_HASH
@@ -884,7 +884,7 @@ public:
       uint8_t *ptr2 = (uint8_t *)ptr1;
       for (size_t i = 0; i < n_bit_hash; i++) {
         double idx = pos + size_t(subset_index[i]);
-        bool val = getbit(foc.ListOrbit, idx);
+        bool val = getbit_vector(foc.ListOrbit, idx);
         setbit_ptr(ptr2, i, val);
       }
       return hash;
@@ -896,8 +896,8 @@ public:
       size_t pos2 = delta * idx2;
       for (size_t i = 1; i < n_act; i++) {
         // TRICK 9: Two faces will differ by at least 2 bits
-        bool val1 = getbit(foc.ListOrbit, pos1);
-        bool val2 = getbit(foc.ListOrbit, pos2);
+        bool val1 = getbit_vector(foc.ListOrbit, pos1);
+        bool val2 = getbit_vector(foc.ListOrbit, pos2);
         if (val1 != val2)
           return false;
         pos1++;
@@ -1490,7 +1490,7 @@ public:
     auto iter = bb.begin_index_undone();
     while (iter != bb.end_index_undone()) {
       size_t pos = *iter;
-      setbit(V_status, pos, false);
+      setbit_vector(V_status, pos, false);
       iter++;
     }
     fb.direct_write(V_status);

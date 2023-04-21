@@ -53,7 +53,7 @@ size_t mpi_get_hash_kernel(Face const &x, int const &n_vert_div8,
                            std::vector<uint8_t> &V_hash) {
   size_t n_vert = x.size();
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++)
-    setbit(V_hash, i_vert, x[i_vert]);
+    setbit_vector(V_hash, i_vert, x[i_vert]);
   uint32_t seed = 0x1b873560;
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
 }
