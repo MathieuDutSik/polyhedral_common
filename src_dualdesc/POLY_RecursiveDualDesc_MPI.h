@@ -140,8 +140,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
-    Tint stabSize = bb.GRP.Stabilizer_OnSets(face).size();
-    std::pair<Face,Tint> face_pair{face,stabSize};
+    Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
+    std::pair<Face,Tint> face_pair{face, orbitSize};
     fInsertUnsentPair(face_pair);
   };
   //
