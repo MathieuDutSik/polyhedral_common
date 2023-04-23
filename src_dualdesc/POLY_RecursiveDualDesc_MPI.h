@@ -243,6 +243,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "nb_finished_oth=" << nb_finished_oth << "\n";
     return nb_finished_oth;
   };
+  auto wait = [&]() -> void {
+    int n_milliseconds = 1000;
+    std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+  };
   bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
@@ -256,6 +260,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
     os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached
        << " SomethingToDo=" << SomethingToDo << "\n";
+    os << "get_unsent_size()=" << bte_facet.get_unsent_size() << " MaxBuffered=" << MaxBuffered << "\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
@@ -269,21 +274,15 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         // and possibly treating orbits with unnecessary large incidence
         if (bte_facet.get_unsent_size() >= MaxBuffered) {
           os << "Calling clear_one_entry after reaching MaxBuffered\n";
-          if (!bte_facet.clear_one_entry(os)) {
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
-          }
+          if (!bte_facet.clear_one_entry(os))
+            wait();
         }
         process_database();
       } else {
         if (!bte_facet.is_buffer_empty()) {
           os << "Calling clear_one_entry\n";
-          if (!bte_facet.clear_one_entry(os)) {
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
-          }
+          if (!bte_facet.clear_one_entry(os))
+            wait();
         } else {
           int nb_finished_oth = get_nb_finished_oth();
           os << "Nothing to do, entering the busy loop status="
@@ -297,9 +296,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
               process_mpi_status(*prob);
               break;
             }
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
+            wait();
           } while (!get_maxruntimereached());
         }
       }
