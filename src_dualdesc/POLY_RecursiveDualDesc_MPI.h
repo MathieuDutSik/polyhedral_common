@@ -154,7 +154,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   if (n_orb_tot == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
-    for (auto &face : RPL.ComputeInitialSet(ansSamp, os)) {
+    vectface vf_init = RPL.ComputeInitialSet(ansSamp, os);
+    vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
+    for (auto &face : vf_init_merge) {
       fInsertUnsent(face);
     }
   }

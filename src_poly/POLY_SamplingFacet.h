@@ -165,19 +165,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       // So possible format is lp_cdd_min:iter_100
       int iter = get_iter();
       vectface vf = FindVertices(EXT, iter);
-      size_t min_incd = std::numeric_limits<size_t>::max();
-      for (auto & eFace : vf) {
-        size_t incd = eFace.count();
-        if (incd < min_incd)
-          min_incd = incd;
-      }
-      vectface vf_ret(EXT.rows());
-      for (auto & eFace : vf) {
-        size_t incd = eFace.count();
-        if (incd == min_incd)
-          vf_ret.push_back(eFace);
-      }
-      return vf_ret;
+      return select_minimum_count(vf);
     }
     if (ansOpt == "sampling") {
       std::vector<std::string> ListOpt;

@@ -69,6 +69,23 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
   return vectface(n_vert, l_n_face, l_V);
 }
 
+vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf, std::string const& ansSamp, std::ostream & os) {
+  os << "merge_initial_samp, |vf|=" << vf.size() << "\n";
+  vectface vf_gather = my_mpi_allgather(comm, vf);
+  os << "merge_initial_samp, |vf_gather|=" << vf_gather.size() << "\n";
+  std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
+  std::string ansOpt = ListStr[0];
+  os << "ansSamp=" << ansSamp << " ansOpt=" << ansOpt << "\n";
+  if (ansOpt == "lp_cdd_min") {
+    vectface vf_ret = select_minimum_count(vf_gather);
+    os << "merge_initial_samp, |vf_ret|=" << vf_ret.size() << "\n";
+    return vf_ret;
+  }
+  return vf_gather;
+}
+
+
+
 /*
   For MyMatrix<T>, a little bit more advanced work. We merge the rows together
  */
