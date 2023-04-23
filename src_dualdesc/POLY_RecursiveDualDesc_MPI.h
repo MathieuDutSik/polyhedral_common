@@ -111,6 +111,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     throw TerminalException{1};
   }
   //
+  // GRP stuff
+  //
+  DataFaceOrbitSize<Tint> data = GetDataFaceOrbitSize(bb.GRP);
+  //
   // The types of exchanges
   //
   // New facets to be added, the most common request
@@ -127,7 +131,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   empty_message_management emm_termin(comm, 0, tag_termination);
   os << "emm_termin has been created\n";
-  buffered_T_exchanges<std::pair<Face,Tint>, std::vector<std::pair<Face,Tint>>> bte_facet(comm, MaxFly, tag_new_facets);
+  buffered_T_exchanges<Face, vectface> bte_facet(comm, MaxFly, tag_new_facets);
   os << "bte_facet has been created\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
@@ -136,7 +140,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (res == i_rank) {
       RPL.FuncInsertPair(face_pair);
     } else {
-      bte_facet.insert_entry(res, face_pair);
+      Face f_ret = ConvertFaceOrbitSize(face_pair, data);
+      bte_facet.insert_entry(res, f_ret);
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
@@ -148,10 +153,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // Initial invocation of the synchronization code
   //
   os << "Compute initital\n";
-  size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
-  all_reduce(comm, n_orb_loc, n_orb_tot, boost::mpi::maximum<size_t>());
-  os << "n_orb_loc=" << n_orb_loc << " n_orb_tot=" << n_orb_tot << "\n";
-  if (n_orb_tot == 0) {
+  size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
+  all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
+  os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
+  if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
     vectface vf_init = RPL.ComputeInitialSet(ansSamp, os);
@@ -170,10 +175,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (e_tag == tag_new_facets) {
       os << "RECV of tag_new_facets from " << e_src << "\n";
       StatusNeighbors[e_src] = 0;
-      std::vector<std::pair<Face,Tint>> l_recv_face = bte_facet.recv_message(e_src);
+      vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
-      for (auto &face_pair : l_recv_face)
+      for (auto &face : l_recv_face) {
+        std::pair<Face, Tint> face_pair = ConvertFace(face, data);
         RPL.FuncInsertPair(face_pair);
+      }
     }
     if (e_tag == tag_termination) {
       os << "RECV of tag_termination from " << e_src << "\n";

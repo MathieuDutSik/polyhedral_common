@@ -256,6 +256,83 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
 }
 
 template<typename Tint>
+struct DataFaceOrbitSize {
+  std::vector<Tint> ListPossOrbsize;
+  UNORD_MAP<Tint, size_t> OrbSize_Map;
+  size_t n;
+  size_t n_bit_orbsize;
+  size_t delta;
+};
+
+template<typename Tgroup>
+DataFaceOrbitSize<typename Tgroup::Tint> GetDataFaceOrbitSize(Tgroup const& GRP) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  size_t n = GRP.n_act();
+  std::map<Tidx, int> LFact = GRP.factor_size();
+  std::pair<size_t, size_t> ep = get_delta(LFact, n);
+  size_t n_bit_orbsize = ep.first;
+  size_t delta = ep.second;
+  std::vector<Tint> ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
+  UNORD_MAP<Tint, size_t> OrbSize_Map;
+  return {ListPossOrbsize, OrbSize_Map, n, n_bit_orbsize, delta};
+}
+
+template<typename Tint>
+Face ConvertFaceOrbitSize(std::pair<Face,Tint> const& pair, DataFaceOrbitSize<Tint> & data) {
+  Face const& f = pair.first;
+  Tint const& orbitSize = pair.second;
+  size_t &idx = data.OrbSize_Map[orbitSize];
+  if (idx == 0) {
+    // A rare case. The linear loop should be totally ok
+    auto set = [&]() -> size_t {
+      for (size_t u = 0; u < data.ListPossOrbsize.size(); u++)
+        if (data.ListPossOrbsize[u] == orbitSize) {
+          return u + 1;
+        }
+      return 0;
+    };
+    idx = set();
+  }
+  size_t idx_orb = idx - 1;
+  //
+  Face f_ret(data.delta);
+  for (size_t i=0; i<data.n; i++)
+    f_ret[i] = f[i];
+  size_t work_idx = idx_orb;
+  size_t i_acc = data.n;
+  for (size_t i = 0; i < data.n_bit_orbsize; i++) {
+    bool val = work_idx % 2;
+    f_ret[i_acc] = val;
+    i_acc++;
+    work_idx = work_idx / 2;
+  }
+  return f_ret;
+}
+
+template<typename Tint>
+std::pair<Face,Tint> ConvertFace(Face const& f, DataFaceOrbitSize<Tint> const& data) {
+  Face f_ret(data.n);
+  for (size_t i=0; i<data.n; i++) {
+    f_ret[i] = f[i];
+  }
+  size_t idx_orb = 0;
+  size_t pow = 1;
+  size_t i_acc = data.n;
+  for (size_t i = 0; i < data.n_bit_orbsize; i++) {
+    if (f[i_acc] == 1)
+      idx_orb += pow;
+    i_acc++;
+    pow *= 2;
+  }
+  Tint orbitSize = data.ListPossOrbsize[idx_orb];
+  return {f_ret, orbitSize};
+}
+
+
+
+
+template<typename Tint>
 struct FaceOrbitsizeTableContainer {
 public:
   std::vector<Tint> ListPossOrbsize;
