@@ -1,0 +1,10 @@
+&PROC
+ FileLorMat = "GramMat"
+ OptionInitialVertex = "vinberg"
+ OutFormat = "GAP"
+ FileOut = "Result"
+ OptionNorms = "all"
+ EarlyTerminationIfNotReflective = T
+ ComputeAllSimpleRoots = T
+/
+
