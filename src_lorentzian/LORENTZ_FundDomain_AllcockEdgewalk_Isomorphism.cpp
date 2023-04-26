@@ -1,8 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "Group.h"
+#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "Group.h"
 #include "Permutation.h"
 #include "edgewalk.h"
 // clang-format on
