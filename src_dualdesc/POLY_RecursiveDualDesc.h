@@ -576,7 +576,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  std::pair<Face,Tint> FlipFace(const Face &f, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -590,7 +590,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #endif
     return result;
   }
-  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -613,7 +613,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  std::pair<Face,Tint> FlipFace(const Face &f, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -623,7 +623,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #endif
     return {result,0};
   }
-  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, std::ostream & os) const {
+  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif

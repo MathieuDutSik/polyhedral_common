@@ -1,12 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "Group.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
-#include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 // possible strategies for computing isomorphsim
 
