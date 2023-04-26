@@ -26,7 +26,7 @@
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
 #PROGRAM		= POLY_redundancyClarksonGroup
-#PROGRAM		= POLY_redundancy_Equivariant
+PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
@@ -48,7 +48,7 @@
 #PROGRAM		= POLY_cdd_lp2
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_lp2 POLY_dual_description_group POLY_sampling_facets
+#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_lp2 POLY_dual_description_group POLY_sampling_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

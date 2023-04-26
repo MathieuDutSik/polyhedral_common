@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "SimulDiophantApprox.h"
+// clang-format on
 
 template <typename T, typename F>
 void DoProcessing(MyMatrix<T> const &M, MyVector<T> const &B, F f) {
