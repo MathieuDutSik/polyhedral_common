@@ -20,7 +20,7 @@ void process(std::string const& FileEXT, std::string const& FileGRP, std::string
   std::vector<int> BlockBelong(nbRow);
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face f = vfo[i_orbit];
-    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |f|=" << f.size() << "/" << f.count() << "\n";
+    //    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |f|=" << f.size() << "/" << f.count() << "\n";
     for (size_t i=0; i<nbRow; i++) {
       if (f[i] == 1) {
         BlockBelong[i] = i_orbit;
