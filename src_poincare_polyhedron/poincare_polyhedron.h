@@ -268,12 +268,10 @@ template <typename T>
 std::vector<CombElt<T>>
 InverseSaturation(std::vector<CombElt<T>> const &l_ent) {
   std::unordered_set<CombElt<T>> s_sat;
-  int i_ent = 0;
   for (auto &eElt : l_ent) {
     s_sat.insert(eElt);
     CombElt<T> eEltInv = InverseComb(eElt);
     s_sat.insert(eEltInv);
-    i_ent++;
   }
   std::vector<CombElt<T>> l_ret;
   for (auto &eElt : s_sat)

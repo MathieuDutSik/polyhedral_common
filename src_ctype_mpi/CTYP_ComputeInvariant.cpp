@@ -1,13 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
+#include "NumberTheoryRational.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
-#include "rational.h"
 #include <boost/mpi.hpp>
 #include <netcdf>
-
-#include "Group.h"
 #include "Permutation.h"
+#include "Group.h"
+// clang-format on
 
 template <typename T, typename Tint>
 void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,

@@ -1,13 +1,15 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "hash_functions.h"
 #include "rational.h"
 #include "sparse-map/include/tsl/sparse_map.h"
 #include <boost/mpi.hpp>
 #include <netcdf>
 #include <unordered_map>
+// clang-format on
 namespace mpi = boost::mpi;
 
 #define TIMINGS_HASH
