@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
+#include "NumberTheoryRational.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "Temp_PerfectForm.h"
-#include "rational.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   try {

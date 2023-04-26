@@ -1,15 +1,16 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "PerfectMPI_types.h"
 #include "Temp_PerfectForm.h"
 #include "rational.h"
 #include <unordered_map>
-
 #include "hash_functions.h"
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
+// clang-format off
 namespace mpi = boost::mpi;
 
 FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI() {

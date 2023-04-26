@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "PerfectMPI_types.h"
 #include "Temp_PerfectForm.h"
 #include <unordered_map>
+// clang-format on
 
 using TypeIndexRed = std::pair<int, int>;
 
