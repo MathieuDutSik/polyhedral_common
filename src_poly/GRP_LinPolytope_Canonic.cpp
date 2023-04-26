@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     const bool use_scheme = true;
     using Tidx = int16_t;
-    std::ifstream is(argv[1]);
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string FileExt = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
     size_t nbCol = EXT.cols();
     size_t nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

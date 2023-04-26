@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
     //
-    std::ifstream is(argv[1]);
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1]);
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
     const bool use_scheme1 = true;
     Tgroup GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT);

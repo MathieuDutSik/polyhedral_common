@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
     //
     using Tint = mpz_class;
     const bool use_scheme = true;
-    std::ifstream is(argv[1]);
-    MyMatrix<Tint> EXT = ReadMatrix<Tint>(is);
+    std::string eFile = argv[1];
+    MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(eFile);
     int nbCol = EXT.cols();
     int nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

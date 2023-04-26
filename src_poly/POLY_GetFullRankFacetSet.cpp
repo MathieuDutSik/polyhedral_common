@@ -12,9 +12,9 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-    std::ifstream is(argv[1]);
     using T = mpq_class;
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     size_t n_rows = EXT.rows();
     //
     vectface ListFace = GetFullRankFacetSet(EXT);

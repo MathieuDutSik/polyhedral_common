@@ -254,6 +254,7 @@ int main() {
   //
   // The main loop itself.
   //
+  HumanTime time;
   std::chrono::time_point<std::chrono::system_clock> start =
       std::chrono::system_clock::now();
   while (true) {

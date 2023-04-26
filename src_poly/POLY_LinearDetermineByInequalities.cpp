@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
     }
     //
     std::cerr << "Reading input\n";
-    std::ifstream Ifs(argv[1]);
     using T = mpq_class;
-    MyMatrix<T> FAC = ReadMatrix<T>(Ifs);
+    std::string eFile = argv[1];
+    MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
     //
     MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FAC);
     std::cerr << "LinSpace=\n";

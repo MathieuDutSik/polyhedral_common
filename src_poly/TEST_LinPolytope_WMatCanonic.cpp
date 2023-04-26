@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     using Twmat = WeightMatrix<true, T, Tidx_value>;
     //
-    std::ifstream is(argv[1]);
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     int nbCol = EXT.cols();
     int nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

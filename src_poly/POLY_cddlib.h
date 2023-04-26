@@ -5201,6 +5201,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
         std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
+          std::cout << "1: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
@@ -5213,6 +5214,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
         std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
+          std::cout << "2: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
@@ -5254,6 +5256,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
             std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
             for (auto &jred : eBlock) {
               set_addelem(is_decided, jred);
+              std::cout << "3: Deciding " << jred << "\n";
               set_entry_in_lpw(jred);
             }
           }
@@ -5271,6 +5274,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
             std::cout << "i=" << i << " |eBlock|=" << eBlock.size() << "\n";
             for (auto &jred : eBlock) {
               set_addelem(is_decided, jred);
+              std::cout << "4: Deciding " << jred << "\n";
               set_addelem(redset, jred);
             }
           }

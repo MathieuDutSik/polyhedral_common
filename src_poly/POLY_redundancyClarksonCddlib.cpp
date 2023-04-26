@@ -16,9 +16,9 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-    std::ifstream is(argv[1]);
     using T = mpq_class;
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
 #ifdef USE_CDDLIB
     std::vector<int> ListIrred = cbased_cdd::RedundancyReductionClarkson(EXT);

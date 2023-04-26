@@ -26,8 +26,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have the facets\n";
 
     auto f = [&](int method) -> void {
-      std::chrono::time_point<std::chrono::system_clock> time1 =
-          std::chrono::system_clock::now();
+      HumanTime time;
       int sumrank = 0;
       for (auto &eFace : ListFace) {
         size_t nb = eFace.count();
@@ -48,12 +47,7 @@ int main(int argc, char *argv[]) {
         }
         sumrank += NSP.rows();
       }
-      std::chrono::time_point<std::chrono::system_clock> time2 =
-          std::chrono::system_clock::now();
-      std::cerr << "method=" << method << " time="
-                << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                         time1)
-                       .count()
+      std::cerr << "method=" << method << " time=" << time
                 << " sumrank=" << sumrank << "\n";
     };
     f(1);

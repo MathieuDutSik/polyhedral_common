@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-    std::ifstream is(argv[1]);
     using T = mpq_class;
-    MyMatrix<T> ListV = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> ListV = ReadMatrixFile<T>(eFile);
     //
     vectface ListFace = EnumerateHyperplaneRegions(ListV);
     int n_vect = ListV.rows();
