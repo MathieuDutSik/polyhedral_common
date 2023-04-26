@@ -26,7 +26,7 @@
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
 #PROGRAM		= POLY_redundancyClarksonGroup
-PROGRAM		= POLY_redundancy_Equivariant
+#PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
