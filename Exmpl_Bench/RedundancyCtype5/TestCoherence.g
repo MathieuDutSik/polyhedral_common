@@ -18,9 +18,18 @@ do
     gCommand:=Concatenation(gProg, " rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred2);
     Exec(gCommand);
     #
+    eFileIrred3:=Concatenation("Irred_3_", String(i));
+    hProg:="../../src_poly/POLY_redundancy_Equivariant";
+    hCommand:=Concatenation(hProg, " rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
+    Exec(hCommand);
+    #
     U1:=ReadAsFunction(eFileIrred1)();
     U2:=ReadAsFunction(eFileIrred2)();
+    U3:=ReadAsFunction(eFileIrred3)();
     if U1<>U2 then
-        Error("Inconsistency problem between the two methods");
+        Error("Inconsistency problem between method 1 and 2");
+    fi;
+    if U1<>U3 then
+        Error("Inconsistency problem between method 1 and 3");
     fi;
 od;
