@@ -14,6 +14,7 @@ void process(std::string const& FileEXT, std::string const& FileGRP, std::string
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
+  std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";
   vectface vfo = DecomposeOrbitPoint_Full(GRP);
   size_t n_orbit=vfo.size();
   std::vector<int> BlockBelong(nbRow);
