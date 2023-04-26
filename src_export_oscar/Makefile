@@ -1,5 +1,5 @@
 #PROGRAM		= test
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_lp2
+PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_lp2 GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= sv_exact
 #PROGRAM		= POLY_cdd_lp2
