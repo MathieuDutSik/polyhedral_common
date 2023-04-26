@@ -1,6 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "QuadField.h"
 #include "Temp_PerfectForm.h"
+// clang-format on
 
 typedef QuadField<mpq_class, 2> field;
 

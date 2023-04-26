@@ -1,7 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "Group.h"
+// clang-format off
+#include "NumberTheory.h"
 #include "Permutation.h"
+#include "Group.h"
 #include "Temp_PerfectForm.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   try {

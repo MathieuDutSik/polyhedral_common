@@ -681,9 +681,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
         }
       }
     } else {
-      size_t iOrbit = 0;
       for (auto &eOrbit : list_list_face[iLev - 2]) {
-        size_t iRepr = 0;
         for (auto &eRepr : eOrbit.first) {
           const ConeDesc<T, Tint, Tgroup> &eC = ListCones[eRepr.iCone];
           Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(eRepr.f_ext);
@@ -696,9 +694,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
                                  IdentityMat<Tint>(n_col)};
             f_insert(e_ent);
           }
-          iRepr++;
         }
-        iOrbit++;
       }
     }
     std::vector<FaceDesc> ListDomain;
