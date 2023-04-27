@@ -2,7 +2,11 @@
 // clang-format off
 #include "GRP_GroupFct.h"
 #include "Group.h"
-#include "NumberTheory.h"
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
 #include "Permutation.h"
@@ -26,17 +30,20 @@ void full_process_A(std::string const& eFileEXT, std::string const& eFileGram, s
 
 template<typename Tgroup>
 void full_process_B(std::string const& arith, std::string const& eFileEXT, std::string const& eFileGram, std::ostream & os) {
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+  using Trat = boost::multiprecision::mpq_rational;
+#else
+  using Trat = mpq_class;
+#endif
   if (arith == "rational") {
-    using T = mpq_class;
+    using T = Trat;
     return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   if (arith == "Qsqrt5") {
-    using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
     return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   if (arith == "Qsqrt2") {
-    using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
     return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
@@ -49,8 +56,7 @@ void full_process_B(std::string const& arith, std::string const& eFileEXT, std::
                 << " is missing\n";
       throw TerminalException{1};
     }
-    using T_rat = mpq_class;
-    HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+    HelperClassRealField<Trat> hcrf(FileAlgebraicField);
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
@@ -87,9 +93,13 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using Tint = boost::multiprecision::mpz_int;
+#else
+    using Tint = mpz_class;
+#endif
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::string arith = argv[1];
     std::string eFileEXT = argv[2];
