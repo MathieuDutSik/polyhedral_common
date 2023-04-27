@@ -1,6 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 #include "MatrixCanonicalForm.h"
 // clang-format on
 
@@ -15,8 +19,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_Isomorphism [ListMat]\n";
       return -1;
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+#else
     using T = mpq_class;
     using Tint = mpz_class;
+#endif
     using Tidx = uint32_t;
     //
     std::string FileListMat = argv[1];

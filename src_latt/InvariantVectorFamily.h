@@ -137,7 +137,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
     //    std::cerr << "Before Int_IndexLattice computation\n";
     Tint indx = Int_IndexLattice(M);
     //    std::cerr << "indx=" << indx << "\n";
-    if (T_Norm(indx) == 1)
+    if (T_NormGen(indx) == 1)
       return true;
     return false;
   };
