@@ -259,6 +259,44 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   return IsoInfo;
 }
 
+template <typename T, typename Tfield, typename Tidx>
+std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>
+IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1, const MyMatrix<T> &GramMat1,
+                                    const MyMatrix<T> &EXT2, const MyMatrix<T> &GramMat2,
+                                    const std::vector<Tidx> &CanonicReord1,
+                                    const std::vector<Tidx> &CanonicReord2) {
+  size_t nbRow = EXT1.rows();
+  // Building the combinatorial equivalence
+  std::vector<Tidx> ListIdx(nbRow);
+  for (size_t idx = 0; idx < nbRow; idx++)
+    ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
+  // Building the matrix equivalence
+  MyMatrix<Tfield> Basis1 =
+      GetBasisFromOrdering<T, Tfield, Tidx>(EXT1, CanonicReord1);
+  MyMatrix<Tfield> Basis2 =
+      GetBasisFromOrdering<T, Tfield, Tidx>(EXT2, CanonicReord2);
+  MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
+  // Now testing the obtained mappings
+  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+  if (!test) {
+    // We fail the polytope equivalence
+    return {};
+  }
+  // We check that EXT1 P = EXT2
+  // EXT1 GramMat1 EXT1^T = EXT2 GramMat2 EXT2^T
+  // EXT1 GramMat1 EXT1^T = EXT1 P GramMat2 P^T EXT1^T
+  // So, GramMat1 = P GramMat2 P^T
+  MyMatrix<Tfield> GramMat1_Tfield = UniversalMatrixConversion<Tfield,T>(GramMat1);
+  MyMatrix<Tfield> GramMat2_Tfield = UniversalMatrixConversion<Tfield,T>(GramMat2);
+  MyMatrix<Tfield> eProd = P * GramMat2_Tfield * P.transpose();
+  if (eProd != GramMat1_Tfield) {
+    // We fail the Gram test
+    return {};
+  }
+  std::pair<std::vector<Tidx>, MyMatrix<Tfield>> IsoInfo{ListIdx, P};
+  return IsoInfo;
+}
+
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
 GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput) {
@@ -377,7 +415,7 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
 }
 
 template <typename T, typename Tidx, bool use_scheme>
-std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT) {
+std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> const& GramMat) {
   using Tidx_value = uint16_t;
   using Tgr = GraphBitset;
 #ifdef TIMINGS
@@ -400,11 +438,18 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT) {
     }
   };
   std::vector<Tidx> CanonicOrd =
-      FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXT, f);
+    FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS
-  std::cerr << "|FCT_EXT_Qinv|=" << time << "\n";
+  std::cerr << "|FCT_EXT_Qinput|=" << time << "\n";
 #endif
   return CanonicOrd;
+}
+
+template <typename T, typename Tidx, bool use_scheme>
+std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT) {
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<T> Qmat = GetQmatrix(EXTred);
+  return LinPolytope_CanonicOrdering_GramMat<T,Tidx,use_scheme>(EXTred, Qmat);
 }
 
 template <typename T, bool use_scheme, typename Tidx>
@@ -460,6 +505,22 @@ LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2) {
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,
                                                    CanonicReord2);
+  if (!IsoInfo)
+    return {};
+  return IsoInfo->first;
+}
+
+template <typename T, typename Tidx, bool use_scheme>
+std::optional<std::vector<Tidx>>
+LinPolytope_Isomorphism_GramMat(const MyMatrix<T> &EXT1, const MyMatrix<T> & GramMat1, const MyMatrix<T> &EXT2, const MyMatrix<T>& GramMat2) {
+  std::vector<Tidx> CanonicReord1 =
+    LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT1, GramMat1);
+  std::vector<Tidx> CanonicReord2 =
+    LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT2, GramMat2);
+  using Tfield = typename overlying_field<T>::field_type;
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
+    IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(EXT1, GramMat1, EXT2, GramMat2,
+                                                         CanonicReord1, CanonicReord2);
   if (!IsoInfo)
     return {};
   return IsoInfo->first;

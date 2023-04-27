@@ -49,7 +49,8 @@
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 #PROGRAM		= POLY_redundancyClarksonGroup
-PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
+#PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
 #PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_lp2 POLY_dual_description_group POLY_sampling_facets
