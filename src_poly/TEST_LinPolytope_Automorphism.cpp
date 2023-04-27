@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
     //
-    std::string eFile = argv[1]);
+    std::string eFile = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
     const bool use_scheme1 = true;

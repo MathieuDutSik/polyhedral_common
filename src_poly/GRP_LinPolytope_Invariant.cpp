@@ -1,9 +1,15 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "NumberTheory.h"
+// clang-format off
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -16,9 +22,11 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpq_rational;
+#else
     using T = mpq_class;
-    const bool use_scheme = true;
-    using Tidx = int16_t;
+#endif
     std::string FileExt = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
     MyMatrix<T> EXTred = RowReduction(EXT);
@@ -38,5 +46,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in GRP_LinPolytope_Canonic\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }
