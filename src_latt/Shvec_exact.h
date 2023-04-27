@@ -794,7 +794,7 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
   T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
   //
   std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
+  auto f_insert = [&](const MyVector<Tint> &V_y, [[maybe_unused]] const T &min) -> bool {
     MyVector<Tint> V_x = Pmat.transpose() * V_y;
     l_vect.push_back(V_x);
     return true;

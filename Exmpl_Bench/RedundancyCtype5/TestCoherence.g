@@ -1,10 +1,11 @@
 
-DoTest2:=true;
-DoTest3:=false;
+DoTest2:=false;
+DoTest3:=true;
 
 
-nType:=76;
-for i in [1..nType]
+#ListIdx:=[1..76];
+ListIdx:=[7];
+for i in ListIdx
 do
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
