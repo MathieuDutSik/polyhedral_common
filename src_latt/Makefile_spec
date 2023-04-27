@@ -3,7 +3,8 @@
 #PROGRAM		= LATT_spanset
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= sv_exact
-PROGRAM		= LATT_Automorphism LATT_Isomorphism
+PROGRAM		= sv_near
+#PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 
 OBJECTS		= $(PROGRAM:%=%.o)

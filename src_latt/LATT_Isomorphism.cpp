@@ -9,7 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -106,5 +106,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
       eFileO = argv[4];
     auto call_lp = [&](std::ostream &os) -> void {
       if (arith == "rational") {
-        return process<Trat>(eFileFAC, eFileIneq, os);
+        using T = Trat;
+        return process<T>(eFileFAC, eFileIneq, os);
       }
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;

@@ -18,7 +18,7 @@
 }
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpq_rational;
@@ -146,5 +146,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in sv_exact\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

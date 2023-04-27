@@ -25,35 +25,6 @@
 
 #define DEBUG_VINBERG
 
-//
-// Finding the closest points
-//
-
-template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
-                                                 const MyVector<T> &eV,
-                                                 const T &norm) {
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
-  const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
-  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
-  //
-  std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
-    if (min == norm) {
-      MyVector<Tint> V_x = Pmat.transpose() * V_y;
-      l_vect.push_back(V_x);
-    }
-    return true;
-  };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
-  return l_vect;
-}
-
 // Compute the solutions of G [x - eV] = a
 template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,

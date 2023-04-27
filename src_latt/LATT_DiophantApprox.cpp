@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -41,5 +41,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LATT_DiophantApprox\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

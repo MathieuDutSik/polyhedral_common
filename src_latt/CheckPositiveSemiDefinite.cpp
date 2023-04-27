@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
     using T = mpq_class;
     if (argc != 2) {
@@ -32,5 +32,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in CheckPositiveSemiDefinite\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }
