@@ -17,6 +17,7 @@ void process(std::string const& FileExtI, std::string const& FileGrpI, std::stri
     if (OutFormat == "GAP") {
       os << "return [";
       size_t nbIrred = status.count();
+      std::cerr << "nbIrred=" << nbIrred << "\n";
       boost::dynamic_bitset<>::size_type pos = status.find_first();
       for (size_t i = 0; i < nbIrred; i++) {
         if (i > 0)

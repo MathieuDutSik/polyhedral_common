@@ -3,8 +3,8 @@ DoTest2:=false;
 DoTest3:=true;
 
 
-#ListIdx:=[1..76];
-ListIdx:=[7];
+ListIdx:=[1..76];
+#ListIdx:=[7];
 for i in ListIdx
 do
     eFile:=Concatenation("TheCtype_5_", String(i));
