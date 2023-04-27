@@ -25,20 +25,20 @@ void full_process_A(std::string const& eFileEXT, std::string const& eFileGram, s
 }
 
 template<typename Tgroup>
-void full_process_B(std::string const& arith, std::string const& eFile, std::ostream & os) {
+void full_process_B(std::string const& arith, std::string const& eFileEXT, std::string const& eFileGram, std::ostream & os) {
   if (arith == "rational") {
     using T = mpq_class;
-    return full_process_A<T,Tgroup>(eFile, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return full_process_A<T,Tgroup>(eFile, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return full_process_A<T,Tgroup>(eFile, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -54,7 +54,7 @@ void full_process_B(std::string const& arith, std::string const& eFile, std::ost
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return full_process_A<T,Tgroup>(eFile, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
@@ -65,15 +65,15 @@ void full_process_B(std::string const& arith, std::string const& eFile, std::ost
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 3 && argc != 4) {
+    if (argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [EXTIN] [OutGroup]\n";
+      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [EXTIN] [FileGram] [OutGroup]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_LinPolytope_Automorphism Arith [EXTIN]\n";
+      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [EXTIN] [FileGram]\n";
       std::cerr << "\n";
-      std::cerr
-          << "EXTIN : The list of vertices (or inequalities for that matter)\n";
+      std::cerr << "FileEXT  : The list of vertices\n";
+      std::cerr << "FileGram : The Gram matrix\n";
       std::cerr << "OutGroup : The automorphism group file\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
@@ -92,14 +92,15 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::string arith = argv[1];
-    std::string eFile = argv[2];
+    std::string eFileEXT = argv[2];
+    std::string eFileGram = argv[3];
     //
-    if (argc == 3) {
-      full_process_B<Tgroup>(arith, eFile, std::cerr);
-    }
     if (argc == 4) {
-      std::ofstream os(argv[3]);
-      full_process_B<Tgroup>(arith, eFile, os);
+      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, std::cerr);
+    }
+    if (argc == 5) {
+      std::ofstream os(argv[4]);
+      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, os);
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

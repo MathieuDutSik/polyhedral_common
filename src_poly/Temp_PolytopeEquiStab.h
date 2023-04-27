@@ -335,45 +335,6 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
 }
 
 template <typename T, bool use_scheme, typename Tgroup>
-Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using Tgr = GraphListAdj;
-  using Tidx_value = uint16_t;
-  size_t nbRow = EXT.rows();
-#ifdef TIMINGS
-  SecondTime time;
-#endif
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
-#ifdef TIMINGS
-  std::cerr << "|LinPolytope_Aut : ColumnReduction|=" << time << "\n";
-#endif
-  using Treturn = std::vector<std::vector<Tidx>>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
-               [[maybe_unused]] auto f5) -> Treturn {
-    if constexpr (use_scheme) {
-      return GetStabilizerWeightMatrix_Heuristic<T, Tidx>(nbRow, f1, f2, f3,
-                                                          f4);
-    } else {
-      WeightMatrix<true, T, Tidx_value> WMat(nbRow, f1, f2);
-      return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat);
-    }
-  };
-  Treturn ListGen = FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(EXTred, f);
-#ifdef TIMINGS
-  std::cerr << "|LinPolytope_Aut : FCT_EXT_Qinv|=" << time << "\n";
-#endif
-  std::vector<Telt> LGen;
-  for (auto &eList : ListGen) {
-    LGen.push_back(Telt(eList));
-  }
-#ifdef TIMINGS
-  std::cerr << "|LinPolytope_Aut : LGen|=" << time << "\n";
-#endif
-  return Tgroup(LGen, nbRow);
-}
-
-template <typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> const& GramMat) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -406,6 +367,13 @@ Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> cons
   std::cerr << "|LinPolytope_Aut : LGen|=" << time << "\n";
 #endif
   return Tgroup(LGen, nbRow);
+}
+
+template <typename T, bool use_scheme, typename Tgroup>
+Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<T> Qmat = GetQmatrix(EXTred);
+  return LinPolytope_Automorphism_GramMat<T,use_scheme,Tgroup>(EXTred, Qmat);
 }
 
 template <typename T, typename Tidx, bool use_scheme>
