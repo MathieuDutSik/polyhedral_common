@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         if (equiv) {
           WriteMatrix(os, *equiv);
         } else {
-          os << "0\n";
+          os << "0 0\n";
         }
       }
       std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat << "\n";

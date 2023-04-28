@@ -11,7 +11,7 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileFAC, std::string const& eFileIneq, std::ostream &os) {
+void process(std::string const &eFileFAC, std::string const& eFileIneq, std::string const& OutFormat, std::ostream &os) {
   MyMatrix<T> TheEXT = ReadMatrixFile<T>(eFileFAC);
   MyVector<T> eVect = ReadVectorFile<T>(eFileIneq);
   if (TheEXT.cols() != eVect.size()) {
@@ -21,33 +21,54 @@ void process(std::string const &eFileFAC, std::string const& eFileIneq, std::ost
     throw TerminalException{1};
   }
   LpSolution<T> eSol = CDD_LinearProgramming(TheEXT, eVect);
-  os << "return rec(";
-  os << "answer:=\"" << eSol.Answer << "\",\n";
-  os << "OptimalValue:=" << eSol.OptimalValue;
-  if (eSol.PrimalDefined) {
-    os << ",\n primal_solution:=" << StringVectorGAP(eSol.DirectSolution);
+  if (OutFormat == "GAP") {
+    os << "return rec(";
+    os << "answer:=\"" << eSol.Answer << "\",\n";
+    os << "OptimalValue:=" << eSol.OptimalValue;
+    if (eSol.PrimalDefined) {
+      os << ",\n primal_solution:=" << StringVectorGAP(eSol.DirectSolution);
+    }
+    if (eSol.DualDefined) {
+      os << ",\n dual_solution:=" << StringVectorGAP(eSol.DualSolution);
+    }
+    os << ");\n";
+    return;
   }
-  if (eSol.DualDefined) {
-    os << ",\n dual_solution:=" << StringVectorGAP(eSol.DualSolution);
+  if (OutFormat == "Oscar") {
+    os << eSol.Answer << "\n";
+    os << eSol.OptimalValue << "\n";
+    if (eSol.PrimalDefined) {
+      WriteVector(os, eSol.DirectSolution);
+    } else {
+      os << "0\n";
+    }
+    if (eSol.DualDefined) {
+      WriteVector(os, eSol.DualSolution);
+    } else {
+      os << "0\n";
+    }
+    return;
   }
-  os << ");\n";
+  std::cerr << "Failed to find a matching for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
 }
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 4 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq] [DATAOUT]\n";
+      std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "arith    : the chosen arithmetic\n";
-      std::cerr << "FileFAC  : The list of inequalities\n";
-      std::cerr << "FileIneq : The inequality to be minimized\n";
-      std::cerr << "DATAOUT  : The file of output (if present, otherwise std::cerr)\n";
+      std::cerr << "arith     : the chosen arithmetic\n";
+      std::cerr << "FileFAC   : The list of inequalities\n";
+      std::cerr << "FileIneq  : The inequality to be minimized\n";
+      std::cerr << "OutFormat : The formatting of the output, GAP or Oscar\n";
+      std::cerr << "DATAOUT   : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
@@ -67,21 +88,22 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string eFileFAC = argv[2];
     std::string eFileIneq = argv[3];
+    std::string OutFormat = "GAP";
     std::string eFileO = "stderr";
     if (argc == 5)
       eFileO = argv[4];
     auto call_lp = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = Trat;
-        return process<T>(eFileFAC, eFileIneq, os);
+        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileFAC, eFileIneq, os);
+        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
       }
       if (arith == "Qsqrt2") {
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileFAC, eFileIneq, os);
+        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -96,7 +118,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileFAC, eFileIneq, os);
+        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

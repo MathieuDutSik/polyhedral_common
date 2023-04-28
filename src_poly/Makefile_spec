@@ -46,13 +46,13 @@ PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
-#PROGRAM		= POLY_cdd_lp2
+#PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
-#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_lp2 POLY_dual_description_group POLY_sampling_facets
+#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_LinearProgramming POLY_dual_description_group POLY_sampling_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

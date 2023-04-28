@@ -20,7 +20,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
                   GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
-		  POLY_SolutionMatNonnegative POLY_cdd_lp2 \
+		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
 		  POLY_dual_description POLY_dual_description_group \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
