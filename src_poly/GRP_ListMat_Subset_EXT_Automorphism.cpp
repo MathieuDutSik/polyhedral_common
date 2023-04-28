@@ -14,15 +14,16 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 2 && argc != 3) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "        or\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [INfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Automorphism [FileI]\n";
       std::cerr << "\n";
-      std::cerr << "INfile    : The file containing the group\n";
-      std::cerr << "OUTfile   : The file containing the two pairs\n";
+      std::cerr << "FileI     : The file containing the group\n";
+      std::cerr << "OutFormat : The output format that can be GAP or Oscar\n";
+      std::cerr << "FileO     : The file containg the output\n";
       return -1;
     }
     //    using T = mpz_class;
@@ -38,7 +39,14 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     //
-    std::ifstream is(argv[1]);
+    std::string FileI = argv[1];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FileO = argv[3];
+    }
+    std::ifstream is(FileI);
     int nbMat, len;
     is >> nbMat;
     std::vector<MyMatrix<T>> ListMat;
@@ -82,9 +90,27 @@ int main(int argc, char *argv[]) {
       LGen.push_back(Telt(eList));
     Tgroup GRP(LGen, n_rows);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
-    if (argc == 3) {
-      std::ofstream os(argv[2]);
-      os << "return " << GRP.GapString() << ";\n";
+    auto f_print=[&](std::ostream & os) -> void {
+      if (OutFormat == "GAP") {
+        os << "return " << GRP.GapString() << ";\n";
+        return;
+      }
+      if (OutFormat == "Oscar") {
+        WriteGroup(os, GRP);
+        return;
+      }
+      std::cerr << "Failed to find a matching OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
+    };
+    if (FileO == "stderr") {
+      f_print(std::cerr);
+    } else {
+      if (FileO == "stdout") {
+        f_print(std::cout);
+      } else {
+        std::ofstream os(FileO);
+        f_print(os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
