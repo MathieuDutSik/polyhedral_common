@@ -11,8 +11,8 @@
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 3 && argc != 2) {
-      std::cerr << "IndefiniteReduction [FileI] [FileO]\n";
+    if (argc != 4 && argc != 2) {
+      std::cerr << "IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "IndefiniteReduction [FileI]\n";
       throw TerminalException{1};
@@ -24,8 +24,13 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = mpz_class;
 #endif
-
     std::string FileI = argv[1];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FileO = argv[3];
+    }
     //
     MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
     std::cerr << "We have M\n";
@@ -43,22 +48,31 @@ int main(int argc, char *argv[]) {
         std::cerr << "M_Control is not what it should be\n";
         throw TerminalException{1};
       }
-      std::cerr << "B=\n";
-      WriteMatrix(std::cerr, ResRed.B);
-      std::cerr << "Mred=\n";
-      WriteMatrix(std::cerr, ResRed.Mred);
-      os << "return rec(B:=";
-      WriteMatrixGAP(os, ResRed.B);
-      os << ", Mred:=";
-      WriteMatrixGAP(os, ResRed.Mred);
-      os << ");\n";
+      if (OutFormat == "GAP") {
+        os << "return rec(B:=";
+        WriteMatrixGAP(os, ResRed.B);
+        os << ", Mred:=";
+        WriteMatrixGAP(os, ResRed.Mred);
+        os << ");\n";
+        return;
+      }
+      if (OutFormat == "Oscar") {
+        WriteMatrix(std::cerr, ResRed.B);
+        WriteMatrix(std::cerr, ResRed.Mred);
+        return;
+      }
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
     };
-    if (argc == 2) {
+    if (FileO == "stderr") {
       print_result(std::cerr);
     } else {
-      std::string FileO = argv[2];
-      std::ofstream os(FileO);
-      print_result(os);
+      if (FileO == "stdout") {
+        print_result(std::cout);
+      } else {
+        std::ofstream os(FileO);
+        print_result(os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
