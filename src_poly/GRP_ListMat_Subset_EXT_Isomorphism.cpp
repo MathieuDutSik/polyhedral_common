@@ -12,12 +12,12 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 2 && argc != 3) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [INfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [FileI]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -32,7 +32,14 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Reading input\n";
     //
-    std::ifstream is(argv[1]);
+    std::string FileI = argv[1];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FileO = argv[3];
+    }
+    std::ifstream is(FileI);
     int nbMat, len;
     is >> nbMat;
     //
@@ -104,25 +111,48 @@ int main(int argc, char *argv[]) {
             EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
     //
     auto prt = [&](std::ostream &os) -> void {
-      if (!PairTest) {
-        os << "return false;\n";
-      } else {
-        const std::vector<Tidx> &V = *PairTest;
-        int n_rows = EXT1.rows();
-        os << "return [";
-        for (int i = 0; i < n_rows; i++) {
-          if (i > 0)
-            os << ",";
-          os << (V[i] + 1);
+      if (OutFormat == "GAP") {
+        if (!PairTest) {
+          os << "return false;\n";
+        } else {
+          const std::vector<Tidx> &V = *PairTest;
+          int n_rows = EXT1.rows();
+          os << "return [";
+          for (int i = 0; i < n_rows; i++) {
+            if (i > 0)
+              os << ",";
+            os << (V[i] + 1);
+          }
+          os << "];\n";
         }
-        os << "];\n";
+        return;
       }
+      if (OutFormat == "Oscar") {
+        if (!PairTest) {
+          os << "0\n";
+        } else {
+          const std::vector<Tidx> &V = *PairTest;
+          int n_rows = EXT1.rows();
+          os << n_rows << "\n";
+          for (int i = 0; i < n_rows; i++) {
+            int pos = V[i] + 1;
+            os << " " << pos;
+          }
+        }
+        return;
+      }
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
     };
-    if (argc == 2) {
+    if (FileO == "stderr") {
       prt(std::cerr);
     } else {
-      std::ofstream os(argv[2]);
-      prt(os);
+      if (FileO == "stdout") {
+        prt(std::cout);
+      } else {
+        std::ofstream os(FileO);
+        prt(os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
