@@ -4,12 +4,14 @@
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
 #include "POLY_cddlib.h"
+#include "POLY_lrslib.h"
 // clang-format on
 
 template <typename T>
 void process_A(std::string const &eFileI, std::string const &eFileO,
                std::string const &choice) {
-  MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
+  MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
+  MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(EXT);
   int nbIrred = ListIrred.size();
   std::cerr << "nbIrred=" << nbIrred << "\n";

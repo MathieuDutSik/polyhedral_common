@@ -14,9 +14,9 @@ void process(std::string const& FileExtI, std::string const& FileGrpI, std::stri
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGrpI);
   Face status = GetNonRedundant_Equivariant(EXT, GRP);
   auto print = [&]() -> void {
+    size_t nbIrred = status.count();
     if (OutFormat == "GAP") {
       os << "return [";
-      size_t nbIrred = status.count();
       std::cerr << "nbIrred=" << nbIrred << "\n";
       boost::dynamic_bitset<>::size_type pos = status.find_first();
       for (size_t i = 0; i < nbIrred; i++) {
@@ -30,7 +30,6 @@ void process(std::string const& FileExtI, std::string const& FileGrpI, std::stri
       return;
     }
     if (OutFormat == "Raw") {
-      size_t nbIrred = status.count();
       os << nbIrred << "\n";
       boost::dynamic_bitset<>::size_type pos = status.find_first();
       for (size_t i = 0; i < nbIrred; i++) {
@@ -44,8 +43,7 @@ void process(std::string const& FileExtI, std::string const& FileGrpI, std::stri
       return;
     }
     if (OutFormat == "NB") {
-      size_t nbIrred = status.count();
-      os << nbIrred << "\n";
+      os << "Total number of non-redundant facets=" << nbIrred << "\n";
       return;
     }
     std::cerr << "Failed to find a matching OutFormat. OutFormat=" << OutFormat << "\n";

@@ -21,8 +21,8 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
-#PROGRAM		= POLY_redundancyClarkson
-PROGRAM		= POLY_redundancyClarksonGroup
+PROGRAM		= POLY_redundancyClarkson
+#PROGRAM		= POLY_redundancyClarksonGroup
 #PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
 #PROGRAM		= POLY_IntegralPoints
