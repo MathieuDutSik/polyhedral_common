@@ -6,12 +6,14 @@
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
 #include "POLY_cddlib.h"
+#include "POLY_lrslib.h"
 #include "Permutation.h"
 // clang-format on
 
 template<typename T, typename Tgroup>
 void process(std::string const& FileEXT, std::string const& FileGRP, std::string const& OutFormat, std::ostream & os) {
-  MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
+  MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
+  MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
   std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";

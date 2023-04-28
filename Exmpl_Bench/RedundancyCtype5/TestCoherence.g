@@ -1,6 +1,6 @@
 
-DoTest2:=false;
-DoTest3:=true;
+DoTest2:=true;
+DoTest3:=false;
 
 
 ListIdx:=[1..76];

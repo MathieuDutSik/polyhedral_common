@@ -14,7 +14,6 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_lrs
-#PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -22,10 +21,13 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
+#PROGRAM		= POLY_redundancyClarkson
+PROGRAM		= POLY_redundancyClarksonGroup
+#PROGRAM		= POLY_redundancy_Equivariant
+#PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
 #PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
-#PROGRAM		= POLY_redundancyClarksonGroup
 #PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
 #PROGRAM		= GRP_ListMat_Subset_EXT_Invariant
 #PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
@@ -47,12 +49,9 @@
 #PROGRAM		= POLY_cdd_lp2
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
-#PROGRAM		= POLY_redundancyClarksonGroup
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
-PROGRAM		= POLY_redundancy_Equivariant
-#PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant GRP_ListMat_Subset_EXT_Isomorphism POLY_cdd_lp2 POLY_dual_description_group POLY_sampling_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
