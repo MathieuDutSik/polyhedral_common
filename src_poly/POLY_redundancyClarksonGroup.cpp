@@ -1,10 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "GRP_GroupFct.h"
-#include "Group.h"
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
+#include "GRP_GroupFct.h"
+#include "Group.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "Permutation.h"

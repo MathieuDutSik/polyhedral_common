@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "GRP_GroupFct.h"
 #include "Group.h"
-#include "NumberTheory.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -27,9 +29,9 @@ int main(int argc, char *argv[]) {
     //
     std::ifstream is(argv[1]);
     MyMatrix<T> EXT = ReadMatrix<T>(is);
-    MyMatrix<T> preWMat_EXT = ReadMatrix<int>(is);
-    int nbRow = WMat_EXT.rows();
-    int nbCol = WMat_EXT.cols();
+    MyMatrix<T> preWMat_EXT = ReadMatrix<T>(is);
+    int nbRow = preWMat_EXT.rows();
+    int nbCol = preWMat_EXT.cols();
     MyMatrix<std::vector<T>> WMat_EXT(nbRow, nbCol);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       for (int iCol = 0; iCol < nbCol; iCol++) {

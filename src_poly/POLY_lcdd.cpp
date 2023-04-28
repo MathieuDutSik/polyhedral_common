@@ -1,7 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_cddlib.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;

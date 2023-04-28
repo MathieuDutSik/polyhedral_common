@@ -1,9 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "MatrixLinbox.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "MatrixLinbox.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeFct.h"
 #include <stdio.h>
+// clang-format on
+
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {

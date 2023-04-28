@@ -1,7 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "GRP_GroupFct.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   HumanTime time1;

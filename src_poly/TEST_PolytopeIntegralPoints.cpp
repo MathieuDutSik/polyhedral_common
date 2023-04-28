@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
+// clang-format on
 
 template <typename T>
 MyMatrix<T> ReordListPoint(const std::vector<MyVector<T>> &ListPoint) {

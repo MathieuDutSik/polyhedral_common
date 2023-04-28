@@ -6,6 +6,7 @@
 #include "Group.h"
 #include "Permutation.h"
 // clang-format on
+
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
