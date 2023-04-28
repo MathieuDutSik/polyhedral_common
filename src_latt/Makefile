@@ -1,4 +1,4 @@
-PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_InvariantZBasisShortVectorNoGroup LATT_Automorphism LATT_Isomorphism
+PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_InvariantZBasisShortVectorNoGroup LATT_Automorphism LATT_Isomorphism sv_near
 #PROGRAM		= CheckPositiveSemiDefinite
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= LATT_canonicalizeMultiple
