@@ -15,6 +15,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "IndefiniteReduction [FileI]\n";
+      std::cerr << "or\n";
+      std::cerr << "FileI     : The input file\n";
+      std::cerr << "OutFormat : Possible values, GAP and Oscar (if missing, then GAP)\n";
+      std::cerr << "FileO     : The output file (is missing, then stderr)\n";
       throw TerminalException{1};
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
@@ -57,8 +61,8 @@ int main(int argc, char *argv[]) {
         return;
       }
       if (OutFormat == "Oscar") {
-        WriteMatrix(std::cerr, ResRed.B);
-        WriteMatrix(std::cerr, ResRed.Mred);
+        WriteMatrix(os, ResRed.B);
+        WriteMatrix(os, ResRed.Mred);
         return;
       }
       std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
