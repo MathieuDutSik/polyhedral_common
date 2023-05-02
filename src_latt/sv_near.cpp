@@ -28,9 +28,10 @@ void process(std::string const& choice, std::string const& FileGram, std::string
     std::optional<std::string> opt_near = get_postfix(choice, "near=");
     if (opt_near) {
       T norm = ParseScalar<T>(*opt_near);
-      std::vector<MyVector<Tint>> ListVect = FindAtMostNormVectors<T,Tint>(GramMat, eV, norm);
+      MyVector<T> fV = -eV;
+      std::vector<MyVector<Tint>> ListVect = FindAtMostNormVectors<T,Tint>(GramMat, fV, norm);
       if (ListVect.size() == 0)
-        return ZeroMatrix<Tint>(n,0);
+        return ZeroMatrix<Tint>(0,n);
       return MatrixFromVectorFamily(ListVect);
     }
     std::cerr << "Failed to find a matching entry for choice=" << choice << "\n";
@@ -42,11 +43,13 @@ void process(std::string const& choice, std::string const& FileGram, std::string
       os << "return ";
       WriteMatrixGAP(os, result);
       os << ";\n";
+      return;
     }
     if (OutFormat == "Oscar") {
       WriteMatrix(os, result);
+      return;
     }
-    std::cerr << "Failed to find a matching entry for choice=" << choice << "\n";
+    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};
   };
   write_result();

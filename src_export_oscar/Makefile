@@ -1,7 +1,6 @@
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_exact GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming GRP_LinPolytope_Automorphism GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat LATT_Automorphism LATT_Isomorphism
+#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_near GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming GRP_LinPolytope_Automorphism GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
-#PROGRAM		= sv_exact
-#PROGRAM		= POLY_cdd_lp2
+PROGRAM		= sv_near
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
