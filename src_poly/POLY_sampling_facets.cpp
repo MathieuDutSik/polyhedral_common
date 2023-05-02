@@ -22,7 +22,7 @@ void process(std::string const &eFileI, std::string const& ansSamp, std::string 
   }
   if (OutFormat == "Oscar") {
     size_t n_ent = vf.size();
-    size_t n = vf.size();
+    size_t n = vf.get_n();
     MyMatrix<int> M(n_ent, n);
     for (size_t i_ent=0; i_ent<n_ent; i_ent++) {
       Face f = vf[i_ent];

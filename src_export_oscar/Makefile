@@ -2,7 +2,8 @@
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism
-PROGRAM		= LATT_Isomorphism
+#PROGRAM		= LATT_Isomorphism
+PROGRAM		= POLY_sampling_facets
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
