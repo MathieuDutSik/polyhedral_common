@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
             os << eVal;
           }
         } else {
-          os << "-1\n";
+          os << "0\n";
         }
         return;
       }

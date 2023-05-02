@@ -15,7 +15,7 @@
 
 
 template<typename T, typename Tgroup>
-void full_process_A(std::string const& eFileEXT, std::string const& eFileGram, std::ostream & os) {
+void full_process_A(std::string const& eFileEXT, std::string const& eFileGram, std::string const& OutFormat, std::ostream & os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
   MyMatrix<T> GramMat = ReadMatrixFile<T>(eFileGram);
   int nbCol = EXT.cols();
@@ -25,11 +25,20 @@ void full_process_A(std::string const& eFileEXT, std::string const& eFileGram, s
   const bool use_scheme = true;
   Tgroup GRP = LinPolytope_Automorphism_GramMat<T, use_scheme, Tgroup>(EXT, GramMat);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
-  WriteGroup(os, GRP);
+  if (OutFormat == "GAP") {
+    os << "return " << GRP.GapString() << ";\n";
+    return;
+  }
+  if (OutFormat == "Oscar") {
+    WriteGroup(os, GRP);
+    return;
+  }
+  std::cerr << "GRP_LinPolytope_Automorphism : Failed to find matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
 }
 
 template<typename Tgroup>
-void full_process_B(std::string const& arith, std::string const& eFileEXT, std::string const& eFileGram, std::ostream & os) {
+void full_process_B(std::string const& arith, std::string const& eFileEXT, std::string const& eFileGram, std::string const& OutFormat, std::ostream & os) {
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
   using Trat = boost::multiprecision::mpq_rational;
 #else
@@ -37,15 +46,15 @@ void full_process_B(std::string const& arith, std::string const& eFileEXT, std::
 #endif
   if (arith == "rational") {
     using T = Trat;
-    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   if (arith == "Qsqrt5") {
     using T = QuadField<Trat, 5>;
-    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   if (arith == "Qsqrt2") {
     using T = QuadField<Trat, 2>;
-    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -60,7 +69,7 @@ void full_process_B(std::string const& arith, std::string const& eFileEXT, std::
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, os);
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
@@ -71,16 +80,17 @@ void full_process_B(std::string const& arith, std::string const& eFileEXT, std::
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 4 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [EXTIN] [FileGram] [OutGroup]\n";
+      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [FileEXT] [FileGram] [OutFormat] [OutGroup]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [EXTIN] [FileGram]\n";
+      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [FileEXT] [FileGram]\n";
       std::cerr << "\n";
-      std::cerr << "FileEXT  : The list of vertices\n";
-      std::cerr << "FileGram : The Gram matrix\n";
-      std::cerr << "OutGroup : The automorphism group file\n";
+      std::cerr << "FileEXT   : The list of vertices\n";
+      std::cerr << "FileGram  : The Gram matrix\n";
+      std::cerr << "OutFormat : The output format (GAP or Oscar)\n";
+      std::cerr << "OutGroup  : The automorphism group file\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
@@ -104,13 +114,22 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string eFileEXT = argv[2];
     std::string eFileGram = argv[3];
-    //
-    if (argc == 4) {
-      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, std::cerr);
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
+    if (argc == 6) {
+      OutFormat = argv[4];
+      FileOut = argv[5];
     }
-    if (argc == 5) {
-      std::ofstream os(argv[4]);
-      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, os);
+    //
+    if (FileOut == "stderr") {
+      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, std::cerr);
+    } else {
+      if (FileOut == "stdout") {
+        full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

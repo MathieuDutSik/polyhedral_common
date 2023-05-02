@@ -6,7 +6,8 @@
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_cdd_LinearProgramming
-PROGRAM		= GRP_LinPolytope_Automorphism
+#PROGRAM		= GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Automorphism_GramMat
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
