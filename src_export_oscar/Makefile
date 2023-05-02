@@ -1,4 +1,4 @@
-#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_near GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming GRP_LinPolytope_Automorphism GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat LATT_Automorphism LATT_Isomorphism
+PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_near GRP_ListMat_Subset_EXT_Invariant IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming GRP_LinPolytope_Automorphism GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism
@@ -7,7 +7,7 @@
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= GRP_LinPolytope_Automorphism
-PROGRAM		= GRP_LinPolytope_Automorphism_GramMat
+#PROGRAM		= GRP_LinPolytope_Automorphism_GramMat
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
