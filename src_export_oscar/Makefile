@@ -4,7 +4,8 @@
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
 #PROGRAM		= POLY_sampling_facets
-PROGRAM		= POLY_dual_description_group
+#PROGRAM		= POLY_dual_description_group
+PROGRAM		= POLY_cdd_LinearProgramming
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

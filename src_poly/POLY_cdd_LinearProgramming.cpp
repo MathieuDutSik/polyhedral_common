@@ -90,8 +90,10 @@ int main(int argc, char *argv[]) {
     std::string eFileIneq = argv[3];
     std::string OutFormat = "GAP";
     std::string eFileO = "stderr";
-    if (argc == 5)
-      eFileO = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      eFileO = argv[5];
+    }
     auto call_lp = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = Trat;
