@@ -3,7 +3,8 @@
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
-PROGRAM		= POLY_sampling_facets
+#PROGRAM		= POLY_sampling_facets
+PROGRAM		= POLY_dual_description_group
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

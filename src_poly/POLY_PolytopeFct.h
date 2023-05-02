@@ -908,6 +908,19 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
+MyMatrix<int> VectfaceAsMatrix(vectface const& vf) {
+  size_t n_ent = vf.size();
+  size_t n = vf.get_n();
+  MyMatrix<int> M(n_ent, n);
+  for (size_t i_ent=0; i_ent<n_ent; i_ent++) {
+    Face f = vf[i_ent];
+    for (size_t i=0; i<n; i++)
+      M(i_ent, i) = f[i];
+  }
+  return M;
+}
+
+
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEFCT_H_
 // clang-format on
