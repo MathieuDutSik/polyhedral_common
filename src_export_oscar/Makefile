@@ -5,7 +5,8 @@
 #PROGRAM		= LATT_Isomorphism
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_dual_description_group
-PROGRAM		= POLY_cdd_LinearProgramming
+#PROGRAM		= POLY_cdd_LinearProgramming
+PROGRAM		= GRP_LinPolytope_Automorphism
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
