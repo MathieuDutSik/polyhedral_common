@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
       std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2);
       if (!opt)
         return {};
-      std::optional<MyMatrix<T>> optB = FindMatrixTransformationTest(SHV1_T, SHV2_T, *opt);
+      std::optional<MyMatrix<T>> optB = FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
       if (!optB) {
         std::cerr << "We have a matrix bug\n";
         throw TerminalException{1};
@@ -65,16 +65,15 @@ int main(int argc, char *argv[]) {
         std::cerr << "Bug: The matrix should be integral\n";
         throw TerminalException{1};
       }
-      /*
       for (size_t i=0; i<ListMat1.size(); i++) {
         MyMatrix<T> eMat1 = ListMat1[i];
         MyMatrix<T> eMat2 = ListMat2[i];
         MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
         if (eProd != eMat2) {
-          
+          std::cerr << "Inconsistency error in the code\n";
+          throw TerminalException{1};
         }
       }
-      */
       MyMatrix<Tint> M = UniversalMatrixConversion<Tint,T>(M_T);
       return M;
     };
