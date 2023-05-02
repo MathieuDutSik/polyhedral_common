@@ -804,6 +804,9 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
 
     WMat1.ReorderingSetWeight();
     WMat2.ReorderingSetWeight();
+    if (WMat1.GetWeight() != WMat2.GetWeight()) {
+      return {};
+    }
 #ifdef TIMINGS
     std::cerr << "|ReorderingSetWeight|=" << time << "\n";
 #endif

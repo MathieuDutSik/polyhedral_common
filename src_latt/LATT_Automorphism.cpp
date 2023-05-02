@@ -74,12 +74,14 @@ int main(int argc, char *argv[]) {
           WriteMatrixGAP(os, eMat);
         }
         os << "];\n";
+        return;
       }
       if (OutFormat == "Oscar") {
         os << ListGenEquiv.size() << "\n";
         for (auto & eMat : ListGenEquiv) {
           WriteMatrix(os, eMat);
         }
+        return;
       }
       std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};

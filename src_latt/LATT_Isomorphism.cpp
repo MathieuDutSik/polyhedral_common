@@ -65,6 +65,16 @@ int main(int argc, char *argv[]) {
         std::cerr << "Bug: The matrix should be integral\n";
         throw TerminalException{1};
       }
+      /*
+      for (size_t i=0; i<ListMat1.size(); i++) {
+        MyMatrix<T> eMat1 = ListMat1[i];
+        MyMatrix<T> eMat2 = ListMat2[i];
+        MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
+        if (eProd != eMat2) {
+          
+        }
+      }
+      */
       MyMatrix<Tint> M = UniversalMatrixConversion<Tint,T>(M_T);
       return M;
     };
@@ -80,6 +90,7 @@ int main(int argc, char *argv[]) {
         } else {
           os << "return false;\n";
         }
+        return;
       }
       if (OutFormat == "Oscar") {
         if (equiv) {
@@ -87,6 +98,7 @@ int main(int argc, char *argv[]) {
         } else {
           os << "0 0\n";
         }
+        return;
       }
       std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};
