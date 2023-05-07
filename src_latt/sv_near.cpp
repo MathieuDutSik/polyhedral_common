@@ -157,9 +157,9 @@ int main(int argc, char *argv[]) {
         call_SV(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of the program sv_near\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in sv_exact\n";
+    std::cerr << "Raised exception led to premature end of sv_near\n";
     exit(e.eVal);
   }
   runtime(time);
