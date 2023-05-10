@@ -1,7 +1,7 @@
 &HEURISTIC_PRIOR
-  DefaultPrior = "state"
-  ListConclusion = "state"
-  ListFullCond = "incidence < 30"
+  DefaultPrior = "state_opts"
+  ListConclusion = "state_ppl_ext"
+  ListFullCond = "delta < 17"
 /
 
 
@@ -15,21 +15,21 @@
 
 &KEY_COMPRESSION
   ListDescription = "superfine"
-  ListKey = "incidence"
+  ListKey = "delta"
 /
 
 
 &PROBABILITY_DISTRIBUTIONS
-  ListNmax = 100
-  ListNstart = 100
-  ListDescription = "145.3"
-  ListName = "distri1"
-  ListNature = "dirac"
+  ListNmax = 25, 1
+  ListNstart = 2, 1
+  ListDescription = "0.0", "0.0"
+  ListName = "distri1", "distriTriv"
+  ListNature = "dirac", "dirac"
 /
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "lrsring_pplext_cdd"
-  ListDescription = "lrs_ring:distri1 ppl_ext:distri1 cdd:distri1"
-  ListName = "state"
+  ListAnswer = "lrsring_pplext_cdd", "ppl_ext"
+  ListDescription = "lrs_ring:distri1 ppl_ext:distri1 cdd:distri1", "ppl_ext:distriTriv"
+  ListName = "state_opts", "state_ppl_ext"
 /
