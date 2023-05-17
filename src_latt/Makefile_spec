@@ -25,7 +25,7 @@ NOLINKFLAG 	= -c -DDEBUG_TIME
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src_gap -I../src_comb -I../src_poly -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I.
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
 CFLAGS 		= -I$(GMP_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)

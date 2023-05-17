@@ -1,7 +1,7 @@
 #PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank Test_face Test_bool POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_SerialDualDesc POLY_MPI_DualDesc
+PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_SerialDualDesc POLY_MPI_DualDesc
 #PROGRAM		= POLY_FindNeededBalinski POLY_SerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
@@ -44,7 +44,7 @@ OUTPUTFLAG 	= -o
 ENV_OPTIONS     = $(DUALDESC_COMPILATION_OPTIONS)
 COPTIONS        = -DTIMINGS -DPRINT_DOUBLE_COSETS_TEST_PROBLEM -DDEBUG
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
-CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_perfect -I../permutalib/src_gap -I../src_lorentzian -I.
+CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_poly -I../src_perfect -I../permutalib/src -I../src_lorentzian -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(MPI_INCLUDE_CPP) $(CDDLIB_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) -DEIGEN_NO_DEBUG
 
 CTOTAL		= $(CHASHMAP) $(CLOCAL) $(CFLAGS) $(COPTIONS) $(ENV_OPTIONS)
