@@ -1,6 +1,6 @@
 &HEURISTIC_PRIOR
-  DefaultPrior = "state_opts"
-  ListConclusion = "state_ppl_ext"
+  DefaultPrior = "state_ppl_ext"
+  ListConclusion = "state_opts"
   ListFullCond = "delta < 17"
 /
 
