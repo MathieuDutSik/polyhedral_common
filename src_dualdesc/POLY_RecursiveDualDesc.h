@@ -627,9 +627,10 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 
 
 
-template <typename Tint, typename Torbsize, typename Tidx>
+template <typename Tgroup, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
+  using Tint = typename Tgroup::Tint;
   /* TRICK 2: We keep the list of orbit and the map. We could in principle have
      built the map from the start since we know the occurring orders. However,
      since some orbitsize never occur
@@ -659,8 +660,9 @@ public:
   FaceOrbsizeContainer(const FaceOrbsizeContainer &) = delete;
   FaceOrbsizeContainer &operator=(const FaceOrbsizeContainer &) = delete;
   FaceOrbsizeContainer(FaceOrbsizeContainer &&) = delete;
-  FaceOrbsizeContainer(const std::map<Tidx, int> &LFact, const size_t &n_act)
-      : n_act(n_act) {
+  FaceOrbsizeContainer(const Tgroup &GRP) {
+    std::map<Tidx, int> LFact = GRP.factor_size();
+    n_act = GRP.n_act();
     TotalNumber = 0;
     nbOrbitDone = 0;
     nbUndone = 0;
@@ -834,7 +836,7 @@ public:
   int nbRow;
   int nbCol;
   size_t delta;
-  FaceOrbsizeContainer<Tint, Torbsize, Tidx> foc;
+  FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
 
 private:
   Tint groupOrder;
@@ -868,7 +870,7 @@ public:
     foc.Counts_InsertOrbit(status, orbSize);
   }
   DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
-      : EXT(_EXT), GRP(_GRP), foc(GRP.factor_size(), EXT.rows()) {
+      : EXT(_EXT), GRP(_GRP), foc(GRP) {
     groupOrder = GRP.size();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -1087,11 +1089,11 @@ private:
 
   struct IteratorFaceType {
   private:
-    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
+    const FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> &foc;
     IteratorIndexType iter;
 
   public:
-    IteratorFaceType(const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
+    IteratorFaceType(const FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> &foc,
                      IteratorIndexType iter)
         : foc(foc), iter(iter) {}
     Face operator*() const {
@@ -1157,7 +1159,7 @@ public:
   int nbRow;
   int nbCol;
   size_t delta;
-  FaceOrbsizeContainer<Tint, Torbsize, Tidx> foc;
+  FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
 
 private:
   Tint groupOrder;
@@ -1190,7 +1192,7 @@ public:
   }
   DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
                Fstab f_stab, Finv f_inv)
-      : EXT(_EXT), GRP(_GRP), foc(GRP.factor_size(), EXT.rows()),
+      : EXT(_EXT), GRP(_GRP), foc(GRP),
         f_repr(f_repr), f_stab(f_stab), f_inv(f_inv) {
     groupOrder = GRP.size();
 
@@ -1348,11 +1350,11 @@ private:
 
   struct IteratorFaceType {
   private:
-    const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc;
+    const FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> &foc;
     IteratorIndexType iter;
 
   public:
-    IteratorFaceType(const FaceOrbsizeContainer<Tint, Torbsize, Tidx> &foc,
+    IteratorFaceType(const FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> &foc,
                      IteratorIndexType iter)
         : foc(foc), iter(iter) {}
     Face operator*() const {
