@@ -687,18 +687,19 @@ public:
     Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
   // conversion functions that depend only on n_act and n_bit_orbsize.
-  SingEnt FaceToSingEnt(Face const &f_in) const {
-    SingEnt se{Face(n_act), 0};
+  std::pair<Face,Tint> FaceToSingEnt(Face const &f_in) const {
+    Face f(n_act);
+    Torbsize idx_orb = 0;
     for (size_t i = 0; i < n_act; i++)
-      se.face[i] = f_in[i];
+      f[i] = f_in[i];
     size_t i_acc = n_act;
     Torbsize pow = 1;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
-      se.idx_orb += Torbsize(f_in[i_acc]) * pow;
+      idx_orb += Torbsize(f_in[i_acc]) * pow;
       i_acc++;
       pow *= 2;
     }
-    return se;
+    return {std::move(f), ListPossOrbsize[idx_orb]};
   }
   Face SingEntToFace(const Face &face, const size_t &idx_orb) const {
     Face f(delta);
@@ -745,7 +746,7 @@ public:
     }
     return face;
   }
-  void InsertListOrbitEntry(SingEnt const &eEnt) {
+  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt) {
     // Insert bytes to avoid a memory segfault.
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
@@ -757,11 +758,11 @@ public:
     // Now setting up the bits for face and idx_orb.
     size_t i_acc = nbOrbit * delta;
     for (size_t i = 0; i < n_act; i++) {
-      bool val = eEnt.face[i];
+      bool val = eEnt.first[i];
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
     }
-    size_t work_idx = eEnt.idx_orb;
+    size_t work_idx = GetOrbSizeIndex(eEnt.second);
     for (size_t i = 0; i < n_bit_orbsize; i++) {
       bool val = work_idx % 2;
       setbit_vector(ListOrbit, i_acc, val);
@@ -818,8 +819,7 @@ public:
     }
     return idx - 1;
   }
-  void Counts_InsertOrbit(const bool &status, const size_t &idx_orb) {
-    Tint orbSize = ListPossOrbsize[idx_orb];
+  void Counts_InsertOrbit(const bool &status, const Tint &orbSize) {
     TotalNumber += orbSize;
     if (status) {
       nbOrbitDone++;
@@ -895,12 +895,12 @@ public:
   DatabaseCanonic &operator=(const DatabaseCanonic<T, Tint, Tgroup> &) = delete;
 
   void InsertEntryDatabase(Face const &face, bool const &status,
-                           size_t const &idx_orb, size_t const &pos) {
+                           Tint const &orbSize, size_t const &pos) {
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
     }
-    foc.Counts_InsertOrbit(status, idx_orb);
+    foc.Counts_InsertOrbit(status, orbSize);
   }
   DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
       : EXT(_EXT), GRP(_GRP), foc(GRP.factor_size(), EXT.rows()) {
@@ -1007,7 +1007,7 @@ public:
     Tint orbSize = groupOrder / ordStab;
     Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
     foc.InsertListOrbitIdxOrb(idx_orb);
-    InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
+    InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
     Face const& face_can = face_orbsize.first;
@@ -1022,7 +1022,7 @@ public:
     Tint const& orbSize = face_orbsize.second;
     Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
     foc.InsertListOrbitIdxOrb(idx_orb);
-    InsertEntryDatabase(face_can, false, idx_orb, foc.nbOrbit);
+    InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
@@ -1059,7 +1059,7 @@ public:
     std::cerr << "Failed to find an undone orbit\n";
     throw TerminalException{1};
   }
-  void InsertListOrbitEntry(SingEnt const &eEnt, const size_t &i_orbit) {
+  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt, const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
     DictOrbit.insert(i_orbit);
   }
@@ -1214,7 +1214,7 @@ public:
   operator=(const DatabaseRepr<T, Tint, Tgroup, Frepr, Fstab, Finv> &) = delete;
 
   void InsertEntryDatabase(Face const &face, bool const &status,
-                           size_t const &idx_orb, size_t const &pos) {
+                           Tint const &orbSize, size_t const &pos) {
     size_t len = face.count();
     size_t eInv = f_inv(face);
     if (status) {
@@ -1222,7 +1222,7 @@ public:
     } else {
       CompleteList_SetUndone[len][eInv].push_back(pos);
     }
-    foc.Counts_InsertOrbit(status, idx_orb);
+    foc.Counts_InsertOrbit(status, orbSize);
   }
   DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
                Fstab f_stab, Finv f_inv)
@@ -1271,7 +1271,7 @@ public:
     Tint orbSize = groupOrder / ordStab;
     Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
     foc.InsertListOrbitIdxOrb(idx_orb);
-    InsertEntryDatabase(face_i, false, idx_orb, foc.nbOrbit);
+    InsertEntryDatabase(face_i, false, orbSize, foc.nbOrbit);
   }
   void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
     FuncInsert(face_orbsize.first);
@@ -1320,7 +1320,7 @@ public:
     return {pos, f, FlippingFramework<T>(EXT, f), GRP,
             ReducedGroupAction(Stab, f)};
   }
-  void InsertListOrbitEntry(SingEnt const &eEnt,
+  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt,
                             [[maybe_unused]] const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
   }
@@ -1509,12 +1509,12 @@ public:
         FileFace ff(eFileFF, bb.delta, n_orbit);
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           Face f = ff.getface(i_orbit);
-          SingEnt eEnt = bb.foc.FaceToSingEnt(f);
+          std::pair<Face,Tint> eEnt = bb.foc.FaceToSingEnt(f);
           bool status = fb.getbit(i_orbit);
           // The DictOrbit
           bb.InsertListOrbitEntry(eEnt, i_orbit);
           // The other fields
-          bb.InsertEntryDatabase(eEnt.face, status, eEnt.idx_orb, i_orbit);
+          bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
         }
 #ifdef TIMINGS
         os << "|Databse reading|=" << time << "\n";
