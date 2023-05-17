@@ -113,7 +113,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // GRP stuff
   //
-  DataFaceOrbitSize<Tint> data = GetDataFaceOrbitSize(bb.GRP);
+  DataFaceOrbitSize<Tgroup> data(bb.GRP);
   //
   // The types of exchanges
   //
@@ -140,7 +140,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (res == i_rank) {
       RPL.FuncInsertPair(face_pair);
     } else {
-      Face f_ret = ConvertFaceOrbitSize(face_pair, data);
+      Face f_ret = data.ConvertFaceOrbitSize(face_pair);
       bte_facet.insert_entry(res, f_ret);
     }
   };
@@ -178,7 +178,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
       for (auto &face : l_recv_face) {
-        std::pair<Face, Tint> face_pair = ConvertFace(face, data);
+        std::pair<Face, Tint> face_pair = data.ConvertFace(face);
         RPL.FuncInsertPair(face_pair);
       }
     }
