@@ -640,11 +640,6 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 template <typename Tint, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
-  struct _SingEnt {
-    Face face;
-    Torbsize idx_orb;
-  };
-  using SingEnt = _SingEnt;
   /* TRICK 2: We keep the list of orbit and the map. We could in principle have
      built the map from the start since we know the occurring orders. However,
      since some orbitsize never occur
@@ -687,7 +682,7 @@ public:
     Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
   // conversion functions that depend only on n_act and n_bit_orbsize.
-  std::pair<Face,Tint> FaceToSingEnt(Face const &f_in) const {
+  std::pair<Face,Tint> FaceToPair(Face const &f_in) const {
     Face f(n_act);
     Torbsize idx_orb = 0;
     for (size_t i = 0; i < n_act; i++)
@@ -701,41 +696,22 @@ public:
     }
     return {std::move(f), ListPossOrbsize[idx_orb]};
   }
-  Face SingEntToFace(const Face &face, const size_t &idx_orb) const {
-    Face f(delta);
-    for (size_t i = 0; i < n_act; i++)
-      f[i] = face[i];
-    size_t work_idx = idx_orb;
-    size_t i_acc = n_act;
-    for (size_t i = 0; i < n_bit_orbsize; i++) {
-      bool val = work_idx % 2;
-      f[i_acc] = val;
-      i_acc++;
-      work_idx = work_idx / 2;
-    }
-    return f;
-  }
   // Database code that uses ListOrbit;
-  SingEnt RetrieveListOrbitEntry(size_t const &i_orb) const {
-    SingEnt se{Face(n_act), 0};
+  std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
+    Face f(n_act);
+    Torbsize idx_orb = 0;
     size_t i_acc = delta * i_orb;
     for (size_t i = 0; i < n_act; i++) {
-      se.face[i] = getbit_vector(ListOrbit, i_acc);
+      f[i] = getbit_vector(ListOrbit, i_acc);
       i_acc++;
     }
     Torbsize pow = 1;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
-      se.idx_orb += Torbsize(getbit_vector(ListOrbit, i_acc)) * pow;
+      idx_orb += Torbsize(getbit_vector(ListOrbit, i_acc)) * pow;
       i_acc++;
       pow *= 2;
     }
-    return se;
-  }
-  std::pair<Face,Tint> GetPair(size_t const &i_orb) const {
-    SingEnt se = RetrieveListOrbitEntry(i_orb);
-    Face const& f = se.face;
-    Tint orbSize = ListPossOrbsize[se.idx_orb];
-    return {std::move(f), std::move(orbSize)};
+    return {std::move(f), ListPossOrbsize[idx_orb]};
   }
   Face RetrieveListOrbitFace(size_t const &i_orb) const {
     Face face(n_act);
@@ -828,8 +804,8 @@ public:
     }
     nbOrbit++;
   }
-  void Counts_SetOrbitDone(const size_t &idx_orb) {
-    nbUndone -= ListPossOrbsize[idx_orb];
+  void Counts_SetOrbitDone(const Tint &orbSize) {
+    nbUndone -= orbSize;
     nbOrbitDone++;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
@@ -865,7 +841,6 @@ public:
   using DataFacet = DataFacetCan<T, Tgroup>;
   using Torbsize = uint16_t;
   using Tidx = typename Telt::Tidx;
-  using SingEnt = typename FaceOrbsizeContainer<Tint, Torbsize, Tidx>::SingEnt;
   int nbRow;
   int nbCol;
   size_t delta;
@@ -1028,8 +1003,8 @@ public:
     return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
-    SingEnt eEnt = foc.RetrieveListOrbitEntry(i_orb);
-    size_t len = eEnt.face.count();
+    std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
+    size_t len = eEnt.first.count();
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<size_t> &V = CompleteList_SetUndone[len];
@@ -1039,7 +1014,7 @@ public:
       V[0] = V[V.size() - 1];
       V.pop_back();
     }
-    foc.Counts_SetOrbitDone(eEnt.idx_orb);
+    foc.Counts_SetOrbitDone(eEnt.second);
   }
   DataFacetCan<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     for (auto &eEnt : CompleteList_SetUndone) {
@@ -1189,7 +1164,6 @@ public:
   using DataFacet = DataFacetRepr<T, Tgroup>;
   using Torbsize = uint16_t;
   using Tidx = typename Telt::Tidx;
-  using SingEnt = typename FaceOrbsizeContainer<Tint, Torbsize, Tidx>::SingEnt;
   int nbRow;
   int nbCol;
   size_t delta;
@@ -1280,11 +1254,11 @@ public:
     return DirectComputationInitialFacetSet(EXT, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
-    SingEnt eEnt = foc.RetrieveListOrbitEntry(iOrb);
-    size_t len = eEnt.face.count();
+    std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(iOrb);
+    size_t len = eEnt.first.count();
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
-    size_t eInv = f_inv(eEnt.face);
+    size_t eInv = f_inv(eEnt.first);
     std::vector<size_t> &V = CompleteList_SetUndone[len][eInv];
     size_t spec_orbit = V[0];
     V[0] = V[V.size() - 1];
@@ -1296,7 +1270,7 @@ public:
       CompleteList_SetUndone.erase(len);
     }
     CompleteList_SetDone[len][eInv].push_back(spec_orbit);
-    foc.Counts_SetOrbitDone(eEnt.idx_orb);
+    foc.Counts_SetOrbitDone(eEnt.second);
   }
   DataFacetRepr<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     auto iter1 = CompleteList_SetUndone.begin();
@@ -1452,7 +1426,6 @@ public:
   using T = typename TbasicBank::T;
   using Telt = typename Tgroup::Telt;
   using Tint = typename TbasicBank::Tint;
-  using SingEnt = typename TbasicBank::SingEnt;
   Tint CritSiz;
   TbasicBank &bb;
 
@@ -1509,7 +1482,7 @@ public:
         FileFace ff(eFileFF, bb.delta, n_orbit);
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           Face f = ff.getface(i_orbit);
-          std::pair<Face,Tint> eEnt = bb.foc.FaceToSingEnt(f);
+          std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
           bool status = fb.getbit(i_orbit);
           // The DictOrbit
           bb.InsertListOrbitEntry(eEnt, i_orbit);
