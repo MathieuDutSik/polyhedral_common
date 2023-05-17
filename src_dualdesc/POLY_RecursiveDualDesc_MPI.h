@@ -322,7 +322,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "We have test_termination=" << test_termination << "\n";
   if (test_termination) {
     os << "Correct termination, returning the database\n";
-    FaceOrbitsizeTableContainer<Tgroup> fotc = RPL.GetListFaceOrbitsize();
+    FaceOrbitsizeTableContainer<Tint> fotc = RPL.GetListFaceOrbitsize();
     return fotc.GetListFaces();
   } else {
     os << "RuntimeException, terminating the computation\n";
