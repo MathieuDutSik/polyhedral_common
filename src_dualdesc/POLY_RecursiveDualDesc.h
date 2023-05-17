@@ -258,7 +258,16 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
 template<typename Tgroup>
 struct DataFaceOrbitSize {
   using Tint = typename Tgroup::Tint;
+  /* TRICK 3: Knowing the factorization of the order of the group allow us to
+     know exactly
+     what are the possible orbitsize occurring and so the number of bits needed
+     to encode them */
   std::vector<Tint> ListPossOrbsize;
+  /* TRICK 2: We keep the list of orbit and the map. We could in principle have
+     built the map from the start since we know the occurring orders. However,
+     since some orbitsize never occur
+     this would have populated it with entries that never occur and so slow it
+     down. */
   UNORD_MAP<Tint, size_t> OrbSize_Map;
   size_t n;
   size_t n_bit_orbsize;
@@ -304,9 +313,8 @@ struct DataFaceOrbitSize {
   }
   std::pair<Face,Tint> ConvertFace(Face const& f) const {
     Face f_ret(n);
-    for (size_t i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++)
       f_ret[i] = f[i];
-    }
     size_t idx_orb = 0;
     size_t pow = 1;
     size_t i_acc = n;
@@ -316,8 +324,7 @@ struct DataFaceOrbitSize {
       i_acc++;
       pow *= 2;
     }
-    Tint orbitSize = ListPossOrbsize[idx_orb];
-    return {f_ret, orbitSize};
+    return {f_ret, ListPossOrbsize[idx_orb]};
   }
 };
 
@@ -631,20 +638,11 @@ template <typename Tgroup, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
   using Tint = typename Tgroup::Tint;
-  /* TRICK 2: We keep the list of orbit and the map. We could in principle have
-     built the map from the start since we know the occurring orders. However,
-     since some orbitsize never occur
-     this would have populated it with entries that never occur and so slow it
-     down. */
   UNORD_MAP<Tint, Torbsize> OrbSize_Map;
   // From the list of factors of the group size we compute the list of possible
   // orbit sizes and that has to be invariant and not change from one run to the
   // next
   std::vector<Tint> ListPossOrbsize;
-  /* TRICK 3: Knowing the factorization of the order of the group allow us to
-     know exactly
-     what are the possible orbitsize occurring and so the number of bits needed
-     to encode them */
   size_t n_act;
   size_t n_bit_orbsize;
   size_t delta;
@@ -756,7 +754,8 @@ public:
       i_acc++;
     }
   }
-  void InsertListOrbitIdxOrb(Torbsize const &idx_orb) {
+  void InsertListOrbitIdxOrb(Tint const &orbSize) {
+    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
     /* TRICK 8: The computation of the stabilizer is needed for getting the
        orbitsize but this is expensive to do. Therefore we first insert the list
        of faces and if found to be new then we insert afterwards the idx_orb */
@@ -972,8 +971,7 @@ public:
      * expensive stabilizer */
     Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
     Tint orbSize = groupOrder / ordStab;
-    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
-    foc.InsertListOrbitIdxOrb(idx_orb);
+    foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
@@ -987,8 +985,7 @@ public:
       return;
     }
     Tint const& orbSize = face_orbsize.second;
-    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
-    foc.InsertListOrbitIdxOrb(idx_orb);
+    foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
@@ -1235,8 +1232,7 @@ public:
     // We need to recompute
     Tint ordStab = f_stab(face_i).size();
     Tint orbSize = groupOrder / ordStab;
-    Torbsize idx_orb = foc.GetOrbSizeIndex(orbSize);
-    foc.InsertListOrbitIdxOrb(idx_orb);
+    foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase(face_i, false, orbSize, foc.nbOrbit);
   }
   void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
