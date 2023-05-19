@@ -251,13 +251,21 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
 }
 
 struct request_status_list {
+  size_t n_proc;
   size_t MaxNumberFlyingMessage;
   std::vector<boost::mpi::request> l_mpi_request;
   std::vector<int> l_mpi_status;
-  request_status_list(size_t const &MaxNumberFlyingMessage)
-      : MaxNumberFlyingMessage(MaxNumberFlyingMessage),
-        l_mpi_request(MaxNumberFlyingMessage),
-        l_mpi_status(MaxNumberFlyingMessage, 0) {}
+  bool strict;
+  request_status_list(size_t const&n_proc, size_t const &MaxNumberFlyingMessage)
+    : n_proc(n_proc), MaxNumberFlyingMessage(MaxNumberFlyingMessage),
+      l_mpi_request(MaxNumberFlyingMessage),
+      l_mpi_status(MaxNumberFlyingMessage, 0) {
+    if (n_proc == MaxNumberFlyingMessage) {
+      strict = true;
+    } else {
+      strict = false;
+    }
+  }
   boost::mpi::request &operator[](size_t const &pos) {
     l_mpi_status[pos] = 1;
     return l_mpi_request[pos];
@@ -303,7 +311,7 @@ struct empty_message_management {
   int tag;
   empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
                            int const &tag)
-      : comm(comm), rsl(MaxFly), tag(tag) {
+    : comm(comm), rsl(comm.size(), MaxFly), tag(tag) {
     int expected_value_pre = random();
     expected_value = boost::mpi::all_reduce(comm, expected_value_pre,
                                             boost::mpi::minimum<int>());
@@ -339,7 +347,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
   std::vector<T_vector> l_under_cons;
   buffered_T_exchanges(boost::mpi::communicator &comm, size_t const &MaxFly,
                        int const &tag)
-      : comm(comm), rsl(MaxFly), tag(tag), n_proc(comm.size()),
+    : comm(comm), rsl(comm.size(), MaxFly), tag(tag), n_proc(comm.size()),
         l_message(n_proc), l_under_cons(MaxFly) {}
   void insert_entry(size_t const &pos, T const &x) {
     l_message[pos].push_back(x);
@@ -406,7 +414,7 @@ template <typename Tint> struct database_balinski_info {
   database_balinski_info(boost::mpi::communicator &comm, int tag_request,
                          int tag_info, Tint const &CritSiz)
       : comm(comm), tag_request(tag_request), tag_info(tag_info),
-        n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
+        n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc, n_proc),
         ListBalinski(n_proc), ListStatus_Emptyness(n_proc, 0),
         RequestNat(n_proc, 0), CritSiz(CritSiz), expected_value(47),
         last_update(n_proc, get_cpp_time(7, 1, 1974)),
