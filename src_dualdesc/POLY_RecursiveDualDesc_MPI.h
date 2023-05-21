@@ -125,7 +125,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // Reading the input
   //
   size_t MaxBuffered = 10000 * n_proc;
-  int MaxFly = 4 * n_proc;
+  int MaxFly;
+  if (AllArr.SimpleExchangeScheme) {
+    MaxFly = n_proc;
+  } else {
+    MaxFly = 4 * n_proc;
+  }
   //
   // The parallel MPI classes
   //

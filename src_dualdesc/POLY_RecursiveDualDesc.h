@@ -1989,6 +1989,8 @@ If data is saved then you can rerun with the saved state\n\
 if max_runtime is negative then there is no maximum runtime";
   ListBoolValues1_doc["AdvancedTerminationCriterion"] = "Default: F\n\
 This is about whether to used the advanced Balinski termination criterion";
+  ListBoolValues1_doc["SimpleExchangeScheme"] = "Default: F\n\
+If selected then a message sent to another node can be sent only after the previously sent is marked as finished";
   SingleBlock BlockDATA;
   BlockDATA.setListStringValues(ListStringValues1_doc);
   BlockDATA.setListBoolValues(ListBoolValues1_doc);
@@ -2235,6 +2237,9 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   bool AdvancedTerminationCriterion =
       BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
+  //
+  bool SimpleExchangeScheme = BlockDATA.ListBoolValues.at("SimpleExchangeScheme");
+  AllArr.SimpleExchangeScheme = SimpleExchangeScheme;
   //
   AllArr.dimEXT = EXTred.cols();
   //
