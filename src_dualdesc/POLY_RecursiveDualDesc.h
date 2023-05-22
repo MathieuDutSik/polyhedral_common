@@ -275,9 +275,9 @@ struct DataFaceOrbitSize {
   DataFaceOrbitSize(Tgroup const& GRP) {
     using Tidx = typename Tgroup::Telt::Tidx;
     std::map<Tidx, int> LFact = GRP.factor_size();
+    n = GRP.n_act();
     std::pair<size_t, size_t> ep = get_delta(LFact, n);
     ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
-    n = GRP.n_act();
     n_bit_orbsize = ep.first;
     delta = ep.second;
   }
