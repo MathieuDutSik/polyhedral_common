@@ -390,15 +390,18 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
       size_t max_siz = 0;
       int chosen_iproc = -1;
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-        if (rsl.is_ok(i_proc)) {
+        bool test = rsl.is_ok(i_proc);
+        os << "i_proc=" << i_proc << " test=" << test << "\n";
+        if (test) {
           size_t siz = l_message[i_proc].size();
+          os << "  siz=" << siz << "\n";
           if (siz > max_siz) {
             max_siz = siz;
             chosen_iproc = i_proc;
           }
         }
       }
-      os << "max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      os << "strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
       return process(chosen_iproc, chosen_iproc);
     } else {
       size_t idx = rsl.GetFreeIndex(-1); // The dest is unused in that case
@@ -414,7 +417,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
           chosen_iproc = i_proc;
         }
       }
-      os << "max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      os << "no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
       return process(chosen_iproc, idx);
     }
   }
