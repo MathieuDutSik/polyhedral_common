@@ -312,8 +312,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             wait();
           } while (!get_maxruntimereached());
         } else {
-          os << "Calling clear_one_entry\n";
-          if (!bte_facet.clear_one_entry(os))
+          bool test = bte_facet.clear_one_entry(os);
+          os << "Calling clear_one_entry test=" << test << "\n";
+          if (!test)
             wait();
         }
       }

@@ -64,6 +64,7 @@
 #define UNORD_SET tsl::hopscotch_set
 #endif
 
+std::chrono::time_point<std::chrono::system_clock> end_of_time;
 std::atomic<bool> ExitEvent;
 
 void signal_callback_handler(int signum) {

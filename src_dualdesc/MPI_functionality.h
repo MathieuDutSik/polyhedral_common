@@ -387,6 +387,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
       return true;
     };
     if (strict) {
+      size_t nb_undone = rsl.clear_and_get_nb_undone();
+      os << "strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
       size_t max_siz = 0;
       int chosen_iproc = -1;
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
