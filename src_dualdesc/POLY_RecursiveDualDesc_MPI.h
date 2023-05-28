@@ -280,6 +280,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "prob is not empty\n";
       process_mpi_status(*prob);
     } else {
+      os << "prob is empty\n";
       if (SomethingToDo) {
         os << "Case something to do\n";
         // we have to clear our buffers sometimes while running
@@ -293,11 +294,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         }
         process_database();
       } else {
-        if (!bte_facet.is_buffer_empty()) {
-          os << "Calling clear_one_entry\n";
-          if (!bte_facet.clear_one_entry(os))
-            wait();
-        } else {
+        bool test = bte_facet.is_buffer_empty();
+        os << "Case nothing to do test=" << test << "\n";
+        if (test) {
           int nb_finished_oth = get_nb_finished_oth();
           os << "Nothing to do, entering the busy loop status="
              << get_maxruntimereached()
@@ -312,6 +311,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             }
             wait();
           } while (!get_maxruntimereached());
+        } else {
+          os << "Calling clear_one_entry\n";
+          if (!bte_facet.clear_one_entry(os))
+            wait();
         }
       }
     }
