@@ -823,6 +823,9 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp>
 struct DatabaseCanonic {
 public:
+  // The number of orbits with 32 bits, is limited to 4294967296
+  // which ought to be enough.
+  using Tidx_orbit = uint32_t;
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
@@ -839,10 +842,10 @@ public:
 
 private:
   Tint groupOrder;
-  UNORD_SET<size_t, std::function<size_t(size_t)>,
-            std::function<bool(size_t, size_t)>>
+  UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
+            std::function<bool(Tidx_orbit, Tidx_orbit)>>
       DictOrbit;
-  std::map<size_t, std::vector<size_t>> CompleteList_SetUndone;
+  std::map<size_t, std::vector<Tidx_orbit>> CompleteList_SetUndone;
   /* TRICK 3: Encoding the pair of face and idx_orb as bits allow us to save
    * memory */
 #ifdef SUBSET_HASH
@@ -902,7 +905,7 @@ public:
       }
     }
 #endif
-    std::function<size_t(size_t)> fctHash = [&](size_t idx) -> size_t {
+    std::function<size_t(Tidx_orbit)> fctHash = [&](Tidx_orbit idx) -> size_t {
       size_t pos = delta * idx;
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
       for (size_t i = 0; i < n_act; i++) {
@@ -933,8 +936,8 @@ public:
       return hash;
 #endif
     };
-    std::function<bool(size_t, size_t)> fctEqual = [&](size_t idx1,
-                                                       size_t idx2) -> bool {
+    std::function<bool(Tidx_orbit, Tidx_orbit)> fctEqual = [&](Tidx_orbit idx1,
+                                                               Tidx_orbit idx2) -> bool {
       size_t pos1 = delta * idx1;
       size_t pos2 = delta * idx2;
       for (size_t i = 1; i < n_act; i++) {
@@ -949,8 +952,8 @@ public:
       return true;
     };
     DictOrbit =
-        UNORD_SET<size_t, std::function<size_t(size_t)>,
-                  std::function<bool(size_t, size_t)>>({}, fctHash, fctEqual);
+        UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
+                  std::function<bool(Tidx_orbit, Tidx_orbit)>>({}, fctHash, fctEqual);
   }
   ~DatabaseCanonic() {}
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
@@ -996,7 +999,7 @@ public:
     size_t len = eEnt.first.count();
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
-    std::vector<size_t> &V = CompleteList_SetUndone[len];
+    std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
@@ -1031,11 +1034,11 @@ public:
 private:
   struct IteratorIndexType {
   private:
-    std::map<size_t, std::vector<size_t>>::const_iterator iter;
+    std::map<size_t, std::vector<Tidx_orbit>>::const_iterator iter;
     size_t pos;
 
   public:
-    IteratorIndexType(std::map<size_t, std::vector<size_t>>::const_iterator iter,
+    IteratorIndexType(std::map<size_t, std::vector<Tidx_orbit>>::const_iterator iter,
                       size_t pos)
         : iter(iter), pos(pos) {}
     size_t operator*() const {
