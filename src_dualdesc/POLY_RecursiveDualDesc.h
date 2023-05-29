@@ -1005,6 +1005,9 @@ public:
     } else {
       V[0] = V[V.size() - 1];
       V.pop_back();
+      if (2*V.size() < V.capacity()) {
+        V.shrink_to_fit();
+      }
     }
     foc.Counts_SetOrbitDone(eEnt.second);
   }
