@@ -11,7 +11,6 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_LinearProgramming_GLPK.h"
 #include "POLY_PolytopeInt.h"
-#include "Parallel_Classes_Types.h"
 #include "Temp_Positivity.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Temp_Tspace_General.h"
@@ -871,70 +870,6 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
   }
   return ListSpann;
 }
-
-/*
-template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
-SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
-                            int const &NPROC, std::string const &TheMethod) {
-  int nbEnt = ListSHVinp.size();
-  int res_np = nbEnt % NPROC;
-  int q_np = (nbEnt - res_np) / NPROC;
-  std::vector<int> ListPos(NPROC + 1, 0);
-  std::vector<int> ListSiz(NPROC, q_np);
-  for (int i = 0; i < res_np; i++)
-    ListSiz[i]++;
-  for (int i = 0; i < NPROC; i++)
-    ListPos[i + 1] = ListPos[i] + ListSiz[i];
-  //
-  bool eSave = false;
-  bool eMemory = true;
-  std::string ePrefix = "/irrelevant";
-  std::function<std::optional<MyMatrix<Tint>>(SHVshortest<T, Tint> const &,
-                                              SHVshortest<T, Tint> const &)>
-      fEquiv =
-          [](SHVshortest<T, Tint> const &M1,
-             SHVshortest<T, Tint> const &M2) -> std::optional<MyMatrix<Tint>> {
-    return SHORT_TestEquivalence<T, Tint, Tgroup>(M1.SHV, M2.SHV);
-  };
-  std::function<int(SHVshortest<T, Tint> const &)> fSize =
-      []([[maybe_unused]] SHVshortest<T, Tint> const &M) -> int { return 0; };
-  FctsDataBank<SHVshortest<T, Tint>> recFct{fEquiv, fSize};
-  DataBank<SHVshortest<T, Tint>> TheBank(eSave, eMemory, ePrefix, recFct);
-  std::atomic<int> NbDone(0);
-  std::condition_variable cv;
-  std::mutex mtx_cv;
-  auto TreatEntries = [&](int idx) -> void {
-    for (int i = ListPos[idx]; i < ListPos[idx + 1]; i++) {
-      std::vector<MyMatrix<Tint>> ListSpann =
-          SHORT_SpannSimplicial<T, Tint, Tgroup>(ListSHVinp[i], ListSHVinp,
-                                                 TheMethod);
-      for (auto &eSpann : ListSpann) {
-        SHVshortest<T, Tint> eEnt{eSpann};
-        SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann);
-        TheBank.InsertEntry(eEnt, eInv);
-      }
-    }
-    NbDone++;
-    cv.notify_one();
-  };
-  std::vector<std::thread> ListThr(NPROC);
-  for (int iProc = 0; iProc < NPROC; iProc++)
-    ListThr[iProc] = std::thread(TreatEntries, iProc);
-  for (int iProc = 0; iProc < NPROC; iProc++)
-    ListThr[iProc].detach();
-  std::unique_lock<std::mutex> lk(mtx_cv);
-  cv.wait(lk, [&] { return NbDone == NPROC; });
-  //
-  // Collecting output
-  //
-  int nbEntry = TheBank.GetNbEntry();
-  std::vector<MyMatrix<Tint>> ListRet(nbEntry);
-  for (int i = 0; i < nbEntry; i++)
-    ListRet[i] = TheBank.GetEntry(i).SHV;
-  return ListRet;
-}
-*/
 
 template <typename Tint>
 void WriteListConfigurationShortestVector(
