@@ -3,7 +3,7 @@
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
-#include "Temp_PerfectForm.h"
+#include "Temp_PerfectForm_Enum.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
