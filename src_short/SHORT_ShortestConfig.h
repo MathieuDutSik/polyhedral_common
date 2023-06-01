@@ -11,7 +11,7 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_LinearProgramming_GLPK.h"
 #include "POLY_PolytopeInt.h"
-#include "Parallel_Classes.h"
+#include "Parallel_Classes_Types.h"
 #include "Temp_Positivity.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Temp_Tspace_General.h"
@@ -872,6 +872,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
   return ListSpann;
 }
 
+/*
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
@@ -933,6 +934,7 @@ SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
     ListRet[i] = TheBank.GetEntry(i).SHV;
   return ListRet;
 }
+*/
 
 template <typename Tint>
 void WriteListConfigurationShortestVector(
