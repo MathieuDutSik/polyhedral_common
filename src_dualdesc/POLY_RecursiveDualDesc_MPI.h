@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include <map>
+#include <atomic>
 // clang-format on
 
 struct message_facet {
@@ -80,6 +81,93 @@ size_t mpi_get_hash(Face const &x) {
   ---Computation of existing with a call to the serial code. Should be modelled
   on the C-type code.
  */
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
+         typename TbasicBank, typename Finsert, typename Fcomm>
+void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
+    Tbank &TheBank, typename TbasicBank::DataFacet const& df,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert, Fcomm f_comm,
+    std::string const &ePrefix, std::ostream& os) {
+  using Tint = typename Tgroup::Tint;
+  CheckTermination<Tgroup>(AllArr);
+  std::map<std::string, Tint> TheMap =
+    ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  if (ansSplit != "split") {
+    auto EXT = df.FF.EXT_face;
+    auto Stab = df.Stab;
+    
+    // start comm thread
+    os << "Start Thread" << std::endl;
+    std::atomic_bool done = false;
+    std::thread comm_thread(f_comm, std::ref(done));
+
+    
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    std::vector<std::pair<Face,MyVector<T>>> TheOutput = DirectFacetIneqOrbitComputation(EXT, Stab, ansProg, os);
+    AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS
+    MicrosecondTime time_full;
+    os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+    // stop comm thread
+    done = true;
+    MicrosecondTime time_join;
+    os << "Join thread" << std::endl;
+    comm_thread.join();
+    os << "|join|=" << time_join << "\n";
+
+    for (auto &eOrb : TheOutput) {
+      std::pair<Face,Tint> eFlip = df.FlipFaceIneq(eOrb, os);
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
+      f_insert(eFlip);
+#ifdef TIMINGS
+      os << "|insert1|=" << time << "\n";
+#endif
+    }
+#ifdef TIMINGS
+    os << "|outputtime|=" << time_full << "\n";
+#endif
+  } else {
+    
+    // start comm thread
+    os << "Start Thread" << std::endl;
+    std::atomic_bool done = false;
+    std::thread comm_thread(f_comm, std::ref(done));
+
+
+    vectface TheOutput =
+      DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+        TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+#ifdef TIMINGS
+    MicrosecondTime time_full;
+    os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+    // stop comm thread
+    done = true;
+    MicrosecondTime time_join;
+    os << "Join thread" << std::endl;
+    comm_thread.join();
+    os << "|join|=" << time_join << "\n";
+
+    for (auto &eOrb : TheOutput) {
+      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
+      f_insert(eFlip);
+#ifdef TIMINGS
+      os << "|insert2|=" << time << "\n";
+#endif
+    }
+#ifdef TIMINGS
+    os << "|outputtime|=" << time_full << "\n";
+#endif
+  }
+}
+
+
 template <typename Tbank, typename TbasicBank, typename T, typename Tgroup,
           typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
@@ -189,27 +277,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     os << "Exiting process_mpi_status\n";
   };
-  auto process_database = [&]() -> void {
-    os << "process_database, begin\n";
-    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-    os << "process_database, we have df\n";
-    size_t SelectedOrbit = df.SelectedOrbit;
-    std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
-                            std::to_string(SelectedOrbit) + "_";
-    try {
-      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
-      auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
-        fInsertUnsentPair(eFlip);
-      };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
-      RPL.FuncPutOrbitAsDone(SelectedOrbit);
-    } catch (RuntimeException const &e) {
-      HasReachedRuntimeException = true;
-      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
-            "runtime exhaustion\n";
-    }
-    os << "process_database, EXIT\n";
-  };
   auto get_maxruntimereached = [&]() -> bool {
     if (HasReachedRuntimeException)
       return true;
@@ -252,10 +319,59 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "nb_finished_oth=" << nb_finished_oth << "\n";
     return nb_finished_oth;
   };
+  auto short_wait = [&]() -> void {
+    int n_milliseconds = 10;
+    std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+  };
+
   auto wait = [&]() -> void {
     int n_milliseconds = 1000;
     std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
   };
+  auto f_comm = [&](std::atomic_bool &done) -> void {
+    // start with no work
+    size_t cnt = 0;
+    while (!done && cnt < 10000) {
+      cnt++;
+      short_wait();
+    }
+    if(!done) 
+      os << "Start Probing" << std::endl;
+    // Start probing
+    while (!done) {
+        boost::optional<boost::mpi::status> prob = comm.iprobe();
+        if (prob) {
+          os << "process_mpi_status" << std::endl;
+          process_mpi_status(*prob);
+        } else {
+          wait();
+        }
+    }
+  };
+  auto process_database = [&]() -> void {
+    os << "process_database, begin\n";
+    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    os << "process_database, we have df\n";
+    size_t SelectedOrbit = df.SelectedOrbit;
+    std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
+                            std::to_string(SelectedOrbit) + "_";
+    try {
+      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
+      auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
+        fInsertUnsentPair(eFlip);
+      };
+      //DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, df, AllArr, f_insert, f_comm, NewPrefix, os);
+
+      RPL.FuncPutOrbitAsDone(SelectedOrbit);
+    } catch (RuntimeException const &e) {
+      HasReachedRuntimeException = true;
+      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
+            "runtime exhaustion\n";
+    }
+    os << "process_database, EXIT\n";
+  };
+
   bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
