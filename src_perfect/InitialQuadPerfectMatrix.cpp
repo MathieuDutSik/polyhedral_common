@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "QuadField.h"
-#include "Temp_PerfectForm.h"
+#include "Temp_PerfectForm_Enum.h"
 // clang-format on
 
 typedef QuadField<mpq_class, 2> field;

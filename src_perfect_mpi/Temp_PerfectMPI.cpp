@@ -4,7 +4,7 @@
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
 #include "PerfectMPI_types.h"
-#include "Temp_PerfectForm.h"
+#include "Temp_PerfectForm_Enum.h"
 #include "rational.h"
 #include <unordered_map>
 #include "hash_functions.h"

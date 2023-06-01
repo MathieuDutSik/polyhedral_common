@@ -220,6 +220,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> OrbitSplitTechnique;
   bool Saving;
   bool AdvancedTerminationCriterion;
+  bool SimpleExchangeScheme;
   SingletonTime start;
   int max_runtime;
   short unsigned int port;
@@ -237,6 +238,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool Saving = false;
   bool AdvancedTerminationCriterion = false;
+  bool SimpleExchangeScheme = false;
   int max_runtime = -1;
   short unsigned int port = 1234;
   bool BANK_IsSaving = false;
@@ -256,6 +258,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodOrbitSplitTechnique<T>(),
           Saving,
           AdvancedTerminationCriterion,
+          SimpleExchangeScheme,
           SingletonTime(),
           max_runtime,
           port,
