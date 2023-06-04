@@ -6,6 +6,15 @@
 #include "POLY_DirectDualDesc.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_LinearProgramming.h"
+#include <set>
+#include <limits>
+#include <algorithm>
+#include <unordered_set>
+#include <unordered_map>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 // clang-format on
 
 //
