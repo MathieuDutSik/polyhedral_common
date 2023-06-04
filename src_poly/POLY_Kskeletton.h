@@ -624,7 +624,9 @@ FullNamelist NAMELIST_GetStandard_FaceLattice() {
   ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
 The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial ";
   ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
-  ListStringValues1_doc["GRPfile"] = "The symmetry group used for the computation. It is a permutation group acting on the facets";
+  ListStringValues1_doc["GRPfile"] =
+      "The symmetry group used for the computation. It is a permutation group "
+      "acting on the facets";
   ListStringValues1_doc["OUTfile"] = "The output file for the computation";
   ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
 Only GAP so far is provided.";

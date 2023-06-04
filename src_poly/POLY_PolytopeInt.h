@@ -275,21 +275,16 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
     possible values and keep the one that are integral.
  */
 
-
 /*
   The matrix A(m,n) and B(n)   and we look for x A = B
   We search for solution x in {0,1}^m.
-  
+
  */
 /*
 template <typename T, typename Tint, typename Finsert>
-void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> const &B,
-                                  Finsert f_insert) {
-  int m = A.rows();
-  int n = A.cols();
-  MyMatrix<T> Bresidual(m+1,n);
-  for (int i=0; i<n; i++) {
-    Bresidual(0,i) = B(i);
+void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T>
+const &B, Finsert f_insert) { int m = A.rows(); int n = A.cols(); MyMatrix<T>
+Bresidual(m+1,n); for (int i=0; i<n; i++) { Bresidual(0,i) = B(i);
   }
   MyVector<T> TheSol;
   int level_select = 0;
@@ -315,25 +310,24 @@ void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> cons
     return true;
   };
   while(true) {
-    
 
-    
+
+
   }
 
 }
 */
 
 template <typename T, typename Tint, typename Finsert>
-void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A, MyVector<T> const &B,
-                                  [[maybe_unused]] Finsert f_insert) {
+void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A,
+                                          MyVector<T> const &B,
+                                          [[maybe_unused]] Finsert f_insert) {
   std::optional<MyVector<T>> opt = SolutionIntMat(A, B);
   if (!opt)
     return;
   MyVector<T> const &ePt = *opt;
   MyMatrix<T> NSP = NullspaceIntMat(A);
 }
-
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEINT_H_

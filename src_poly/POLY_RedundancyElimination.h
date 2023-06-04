@@ -396,8 +396,8 @@ MyMatrix<T> SelectColumnAddZero(MyMatrix<T> const &TheMat,
   size_t nbRow = TheMat.rows();
   size_t nbColRed = eList.size();
   MyMatrix<T> TheProv(nbRow, 1 + nbColRed);
-  for (size_t iRow=0; iRow<nbRow; iRow++)
-    TheProv(iRow,0) = 0;
+  for (size_t iRow = 0; iRow < nbRow; iRow++)
+    TheProv(iRow, 0) = 0;
   for (size_t iCol = 0; iCol < nbColRed; iCol++) {
     size_t jCol = eList[iCol];
     TheProv.col(1 + iCol) = TheMat.col(jCol);
@@ -417,7 +417,6 @@ MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
   }
   return TheProv;
 }
-
 
 template <typename T, typename Tgroup>
 Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
@@ -442,7 +441,7 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
     std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit
               << " |e_orbit|=" << e_orbit.count() << "\n";
     std::cerr << "O =";
-    for (size_t i_row=0; i_row<n_rows; i_row++) {
+    for (size_t i_row = 0; i_row < n_rows; i_row++) {
       if (e_orbit[i_row] == 1) {
         int val = i_row + 1;
         std::cerr << " " << val;
@@ -492,7 +491,8 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
     // The computation itself
     //
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(M);
-    std::cerr << "    |eSelect.ListColSelect|=" << eSelect.ListColSelect.size() << " n_cols=" << n_cols << "\n";
+    std::cerr << "    |eSelect.ListColSelect|=" << eSelect.ListColSelect.size()
+              << " n_cols=" << n_cols << "\n";
     MyVector<T> V = GetMatrixRow(EXT, i_row);
     // return true if it is redundant. False if irredundant
     auto get_status = [&]() -> bool {

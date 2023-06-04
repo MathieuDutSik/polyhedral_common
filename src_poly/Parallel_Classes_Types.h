@@ -40,8 +40,6 @@ template <typename T> struct PairT_Tinv {
   Tinv xInv;
 };
 
-
-
 // clang-format off
 #endif  // SRC_POLY_PARALLEL_CLASSES_TYPES_H_
 // clang-format on
