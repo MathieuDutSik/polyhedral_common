@@ -588,7 +588,7 @@ template <typename T, typename Tgroup>
 void Write_BankEntry_NC(const std::string &eFile, const MyMatrix<T> &EXT,
                         const PairStore<Tgroup> &ePair) {
   if (!FILE_IsFileMakeable(eFile)) {
-    std::cerr << "Error in Write_BankEntry: File eFile=" << eFile
+    std::cerr << "Error in Write_BankEntry_NC: File eFile=" << eFile
               << " is not makeable\n";
     throw TerminalException{1};
   }
