@@ -203,7 +203,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     check_consistency();
   }
   if (eCommand == "glrs") {
-    size_t headersize = 7;
+    size_t headersize = 5;
     while (std::getline(is, line)) {
       if (line == "end")
         break;
