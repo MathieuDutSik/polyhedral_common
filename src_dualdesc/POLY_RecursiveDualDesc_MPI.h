@@ -3,8 +3,8 @@
 #define SRC_DUALDESC_POLY_RECURSIVEDUALDESC_MPI_H_
 
 // clang-format off
-#include "Databank_mpi.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "Databank_mpi.h"
 #include "MPI_functionality.h"
 #include "Balinski_basic.h"
 #include <chrono>
