@@ -136,34 +136,41 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     std::atomic_bool done = false;
     std::thread comm_thread(f_comm, std::ref(done));
 
+    try {
+      vectface TheOutput =
+        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+          TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+#ifdef TIMINGS
+      MicrosecondTime time_full;
+      os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+      // stop comm thread
+      done = true;
+      MicrosecondTime time_join;
+      os << "Join thread" << std::endl;
+      comm_thread.join();
+      os << "|join|=" << time_join << "\n";
 
-    vectface TheOutput =
-      DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-        TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+      for (auto &eOrb : TheOutput) {
+        std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
-    MicrosecondTime time_full;
-    os << "|outputsize|=" << TheOutput.size() << "\n";
+        MicrosecondTime time;
 #endif
-    // stop comm thread
-    done = true;
-    MicrosecondTime time_join;
-    os << "Join thread" << std::endl;
-    comm_thread.join();
-    os << "|join|=" << time_join << "\n";
+        f_insert(eFlip);
+#ifdef TIMINGS
+        os << "|insert2|=" << time << "\n";
+#endif
+      }
 
-    for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
-      MicrosecondTime time;
+      os << "|outputtime|=" << time_full << "\n";
 #endif
-      f_insert(eFlip);
-#ifdef TIMINGS
-      os << "|insert2|=" << time << "\n";
-#endif
+
+    } catch (RuntimeException const &e) {
+      os << "RuntimeException, join comm thread\n";
+      comm_thread.join();
+      throw; // rethrow
     }
-#ifdef TIMINGS
-    os << "|outputtime|=" << time_full << "\n";
-#endif
   }
 }
 
