@@ -156,6 +156,35 @@ public:
       throw TerminalException{1};
     }
   }
+
+  size_t getpopcnt() {
+    size_t curr_n_byte = (n_ent + 7) / 8;
+    std::fseek(fp, 0, SEEK_SET);
+    std::vector<uint8_t> buffer(curr_n_byte);
+    size_t ret = fread(buffer.data(), curr_n_byte*sizeof(uint8_t), 1, fp);
+    if (ret != 1) {
+      std::cerr << "FileBool: Error in getpopcnt(...)\n";
+      throw TerminalException{1};
+    }
+    // popcnt
+    size_t curr_n_ints = n_ent/32;
+    size_t sm = 0; 
+    uint32_t* ptr = (uint32_t*)(buffer.data());
+    for(size_t i = 0; i < curr_n_ints; i++){
+      sm += __builtin_popcount(*(ptr+i));
+    }
+    // count remainder
+    for(size_t i = 4*curr_n_ints; i < curr_n_byte; i++){
+      uint8_t b = buffer[i];
+      for(size_t j = 0; j < 8; j++) {
+        if(8*i+j < n_ent) {
+          sm += (b&(uint8_t(1)<<j)) ? 1 : 0;
+        }
+      }
+    }
+    return sm;
+  }
+
 };
 
 struct FileFace {
