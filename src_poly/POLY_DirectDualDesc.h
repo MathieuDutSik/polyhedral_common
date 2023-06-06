@@ -6,6 +6,7 @@
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
+#include "MAT_MatrixInt.h"
 #include <string>
 #include <vector>
 
@@ -260,6 +261,79 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
     }
     vf.push_back(f);
 #endif
+  };
+  DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
+  return vf;
+}
+
+template <typename T, typename Tint>
+std::vector<Tint> RescaleVec(std::vector<T> const &v) {
+  static_assert(is_implementation_of_Q<T>::value, "Requires T to be an implementation of Q");
+  static_assert(is_implementation_of_Q<Tint>::value || is_implementation_of_Z<Tint>::value, "Requires Tint to be an implementation of Z or Q");
+  int cols = v.size();
+  std::vector<Tint> dens(cols,1);
+  std::vector<Tint> vret = std::vector<Tint>(cols);
+  for( int iCol = 0; iCol < cols; iCol++){
+    dens[iCol] = v[iCol].get_den();
+  }
+  Tint scale = LCMlist(dens);
+  for( int iCol = 0; iCol < cols; iCol++) {
+    vret[iCol] = (scale / v[iCol].get_den()) * v[iCol].get_num();
+  }
+  return vret;
+}
+
+template <>
+vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
+                                          std::string const &eCommand,
+                                          std::ostream &os) {
+  using T = mpq_class;
+  using Tint = mpz_class;
+  size_t n_row = EXT.rows();
+  size_t n_col = EXT.cols();
+  mpz_class n_col_mpz(n_col);
+  size_t DimEXT = n_col + 1;
+  size_t shift = GetShift(EXT, eCommand);
+  Tint eScal; long eScal_long;
+  vectface vf(n_row);
+  Face f(n_row);
+  MyMatrix<Tint> EXT_int = RescaleRows<T, Tint>(EXT);
+  MyMatrix<long> EXT_long = MyMatrix<long>(n_row, n_col);
+  size_t max_bits = 0;
+  for (int iRow = 0; iRow < n_row; iRow++) {
+    for (int iCol = 0; iCol < n_col; iCol++) {
+      max_bits = std::max(mpz_sizeinbase(EXT_int(iRow, iCol).get_mpz_t(), 2), max_bits); 
+      EXT_long(iRow, iCol) = EXT_int(iRow, iCol).get_si();
+    }
+  }
+  max_bits += mpz_sizeinbase(n_col_mpz.get_mpz_t(), 2);
+  std::vector<long> LVal_long(DimEXT,0);
+
+  auto f_insert=[&](std::vector<T> const& LVal) -> void {
+    std::vector<Tint> LVal_int = RescaleVec<T,Tint>(LVal);
+    size_t max_bits_LVal = 0;
+    for( size_t i = shift; i < DimEXT; i++) {
+      max_bits_LVal = std::max(max_bits_LVal, mpz_sizeinbase(LVal_int[i].get_mpz_t(), 2));
+      LVal_long[i] = LVal_int[i].get_si();
+    }
+
+    if( max_bits + max_bits_LVal <= 60 ) {
+      // safe to use long
+      for (size_t i_row = 0; i_row < n_row; i_row++) {
+        eScal_long = 0;
+        for (size_t i = shift; i < DimEXT; i++)
+          eScal_long += LVal_long[i] * EXT_long(i_row, i - shift);
+        f[i_row] = static_cast<bool>(eScal_long == 0);
+      }
+    } else {
+      for (size_t i_row = 0; i_row < n_row; i_row++) {
+        eScal = 0;
+        for (size_t i = shift; i < DimEXT; i++)
+          eScal += LVal_int[i] * EXT_int(i_row, i - shift);
+        f[i_row] = static_cast<bool>(eScal == 0);
+      }
+    }
+    vf.push_back(f);
   };
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return vf;
