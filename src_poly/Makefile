@@ -16,7 +16,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
-                  GRP_ListMat_Diag_EXT_Automorphism GRP_ListMat_Diag_EXT_Isomorphism GRP_ListMat_Diag_EXT_Invariant \
+                  GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Invariant \
                   GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytopeIntegral_Isomorphism \
                   GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
                   GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \

@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
     if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Diag_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_ListMat_Diag_EXT_Isomorphism [FileI]\n";
+      std::cerr << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -156,9 +156,9 @@ int main(int argc, char *argv[]) {
         prt(os);
       }
     }
-    std::cerr << "Normal termination of GRP_ListMat_Diag_EXT_Isomorphism\n";
+    std::cerr << "Normal termination of GRP_ListMat_Vdiag_EXT_Isomorphism\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_ListMat_Diag_EXT_Isomorphism\n";
+    std::cerr << "Error in GRP_ListMat_Vdiag_EXT_Isomorphism\n";
     exit(e.eVal);
   }
   runtime(time1);

@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Diag_EXT_Invariant [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant [INfile] [OUTfile]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     using Tfield = mpq_class;
 #endif
     //
-    std::cerr << "GRP_ListMat_Diag_EXT_Invariant : Reading input\n";
+    std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant : Reading input\n";
     //
     std::ifstream is(argv[1]);
     int nbMat, len;
@@ -69,9 +69,9 @@ int main(int argc, char *argv[]) {
     //
     std::ofstream os(argv[2]);
     os << "return " << e_hash << ";\n";
-    std::cerr << "Normal termination of GRP_ListMat_Diag_EXT_Invariant\n";
+    std::cerr << "Normal termination of GRP_ListMat_Vdiag_EXT_Invariant\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_ListMat_Diag_EXT_Invariant\n";
+    std::cerr << "Error in GRP_ListMat_Vdiag_EXT_Invariant\n";
     exit(e.eVal);
   }
   runtime(time1);
