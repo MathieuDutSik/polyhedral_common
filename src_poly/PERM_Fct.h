@@ -357,16 +357,15 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
         Tfield val = UniversalScalarConversion<Tfield,T>(EXT1(i_row, j_row));
         eSum1 += val * P(j_row, i_col);
       }
-      std::pair<bool, T> rec_eSum2 =
-          UniversalScalarConversionCheck<T, Tfield>(eSum1);
-      if (!rec_eSum2.first) {
+      std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
+      if (!opt) {
 #ifdef TIMINGS
         std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
         // We fail because the image is not integral.
         return {};
       }
-      VectorContain(i_col) = rec_eSum2.second;
+      VectorContain(i_col) = *opt;
     }
     std::optional<size_t> opt = Cont.GetIdx_v(VectorContain);
     if (!opt) {
@@ -524,13 +523,12 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
       Tfield eSum1 = 0;
       for (size_t j_row = 0; j_row < n_cols; j_row++)
         eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
-      std::pair<bool, T> rec_eSum2 =
-          UniversalScalarConversionCheck<T, Tfield>(eSum1);
-      if (!rec_eSum2.first) {
+      std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
+      if (!opt) {
         // We fail because the image is not integral.
         return false;
       }
-      T Img_EXT1 = rec_eSum2.second;
+      T Img_EXT1 = *opt;
       Vimg[i_col] = Img_EXT1;
       //
       T EXT2_map = EXT2(i_row_img, i_col);
