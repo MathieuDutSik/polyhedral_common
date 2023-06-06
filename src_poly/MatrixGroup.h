@@ -1027,6 +1027,7 @@ GetListQuadraticForms(FiniteMatrixGroupHelper<T, Telt> const &helper) {
   return {Qinv};
 }
 
+/*
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::optional<std::vector<MyMatrix<T>>>
 PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
@@ -1108,6 +1109,9 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
   std::cerr << "Failed to find a breaking invariant family\n";
   throw TerminalException{1};
 }
+*/
+
+
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
