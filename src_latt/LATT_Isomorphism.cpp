@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 
     MyMatrix<T> SHV1_T = UniversalMatrixConversion<T,Tint>(SHV1);
     MyMatrix<T> SHV2_T = UniversalMatrixConversion<T,Tint>(SHV2);
+    using Tfield = T;
 
     auto get_equiv=[&]() -> std::optional<MyMatrix<Tint>> {
       if (SHV1_T.rows() != SHV1.rows())
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
       std::vector<T> Vdiag1(n_rows, 0);
       std::vector<T> Vdiag2(n_rows, 0);
       const bool use_scheme = true;
-      std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2);
+      std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2);
       if (!opt)
         return {};
       std::optional<MyMatrix<T>> optB = FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);

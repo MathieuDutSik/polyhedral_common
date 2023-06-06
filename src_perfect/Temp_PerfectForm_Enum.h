@@ -2,7 +2,7 @@
 #ifndef SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 #define SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 
-#include "Temp_Perfect.h"
+#include "Temp_PerfectForm.h"
 #include "POLY_ThreadDualDescription.h"
 #include "Parallel_Classes.h"
 

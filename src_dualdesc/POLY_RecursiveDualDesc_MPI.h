@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_RecursiveDualDesc.h"
+#include "Databank_mpi.h"
 #include "MPI_functionality.h"
 #include "Balinski_basic.h"
 #include <chrono>
@@ -103,7 +104,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 
     
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-    std::vector<std::pair<Face,MyVector<T>>> TheOutput = DirectFacetIneqOrbitComputation(EXT, Stab, ansProg, os);
+    vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS
     MicrosecondTime time_full;
@@ -117,7 +118,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     os << "|join|=" << time_join << "\n";
 
     for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFaceIneq(eOrb, os);
+      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif

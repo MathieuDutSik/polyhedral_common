@@ -2,8 +2,8 @@
 #ifndef SRC_POLY_PARALLEL_CLASSES_H_
 #define SRC_POLY_PARALLEL_CLASSES_H_
 
-#include "ThreadManagement.h"
 #include "Parallel_Classes_Types.h"
+#include "ThreadManagement.h"
 
 // DataBank database for storing known results
 //

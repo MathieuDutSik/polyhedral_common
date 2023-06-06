@@ -66,10 +66,9 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
 }
 
 template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
-  std::vector<std::string> ListString = {"2",
-                                         "1 groupsize_sma < 100 exhaustive",
-                                         "1 index < 20 single_cosets",
-                                         "canonic"};
+  std::vector<std::string> ListString = {
+      "2", "1 groupsize_sma < 100 exhaustive", "1 index < 20 single_cosets",
+      "canonic"};
   return HeuristicFromListString<T>(ListString);
 }
 

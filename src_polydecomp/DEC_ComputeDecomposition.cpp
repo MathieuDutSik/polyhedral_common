@@ -172,8 +172,9 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
   std::vector<Tint> Vsubset = f_vsub<Tint>(Concat.rows(), M.rows());
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
+  using Tfield = typename overlying_field<Tint>::field_type;
   WeightMatrix<true, std::vector<Tint>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<Tint, Tidx, Tidx_value>(Concat, ListMat,
+      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(Concat, ListMat,
                                                             Vsubset);
   WMat.ReorderingSetWeight();
   return {M, Spann, Qmat, std::move(WMat), fd};

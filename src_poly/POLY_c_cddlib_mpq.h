@@ -7,7 +7,7 @@
 #include "Boost_bitset_kernel.h"
 #include "MatrixTypes.h"
 #ifndef DISABLE_MPQ_CLASS
-# include "gmpxx.h"
+#include "gmpxx.h"
 #endif
 #include <boost/multiprecision/gmp.hpp>
 

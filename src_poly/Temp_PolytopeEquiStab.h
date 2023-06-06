@@ -261,8 +261,10 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
 
 template <typename T, typename Tfield, typename Tidx>
 std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>
-IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1, const MyMatrix<T> &GramMat1,
-                                    const MyMatrix<T> &EXT2, const MyMatrix<T> &GramMat2,
+IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
+                                    const MyMatrix<T> &GramMat1,
+                                    const MyMatrix<T> &EXT2,
+                                    const MyMatrix<T> &GramMat2,
                                     const std::vector<Tidx> &CanonicReord1,
                                     const std::vector<Tidx> &CanonicReord2) {
   size_t nbRow = EXT1.rows();
@@ -286,8 +288,10 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1, const MyMatrix<T> &
   // EXT1 GramMat1 EXT1^T = EXT2 GramMat2 EXT2^T
   // EXT1 GramMat1 EXT1^T = EXT1 P GramMat2 P^T EXT1^T
   // So, GramMat1 = P GramMat2 P^T
-  MyMatrix<Tfield> GramMat1_Tfield = UniversalMatrixConversion<Tfield,T>(GramMat1);
-  MyMatrix<Tfield> GramMat2_Tfield = UniversalMatrixConversion<Tfield,T>(GramMat2);
+  MyMatrix<Tfield> GramMat1_Tfield =
+      UniversalMatrixConversion<Tfield, T>(GramMat1);
+  MyMatrix<Tfield> GramMat2_Tfield =
+      UniversalMatrixConversion<Tfield, T>(GramMat2);
   MyMatrix<Tfield> eProd = P * GramMat2_Tfield * P.transpose();
   if (eProd != GramMat1_Tfield) {
     // We fail the Gram test
@@ -373,7 +377,8 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
 }
 
 template <typename T, bool use_scheme, typename Tgroup>
-Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> const& GramMat) {
+Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
+                                        MyMatrix<T> const &GramMat) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphListAdj;
@@ -393,7 +398,8 @@ Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> cons
       return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat);
     }
   };
-  Treturn ListGen = FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
+  Treturn ListGen =
+      FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS
   std::cerr << "|LinPolytope_Aut : FCT_EXT_Qinput|=" << time << "\n";
 #endif
@@ -411,11 +417,13 @@ template <typename T, bool use_scheme, typename Tgroup>
 Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<T> Qmat = GetQmatrix(EXTred);
-  return LinPolytope_Automorphism_GramMat<T,use_scheme,Tgroup>(EXTred, Qmat);
+  return LinPolytope_Automorphism_GramMat<T, use_scheme, Tgroup>(EXTred, Qmat);
 }
 
 template <typename T, typename Tidx, bool use_scheme>
-std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> const& GramMat) {
+std::vector<Tidx>
+LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT,
+                                    MyMatrix<T> const &GramMat) {
   using Tidx_value = uint16_t;
   using Tgr = GraphBitset;
 #ifdef TIMINGS
@@ -438,7 +446,7 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, My
     }
   };
   std::vector<Tidx> CanonicOrd =
-    FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
+      FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS
   std::cerr << "|FCT_EXT_Qinput|=" << time << "\n";
 #endif
@@ -449,7 +457,7 @@ template <typename T, typename Tidx, bool use_scheme>
 std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<T> Qmat = GetQmatrix(EXTred);
-  return LinPolytope_CanonicOrdering_GramMat<T,Tidx,use_scheme>(EXTred, Qmat);
+  return LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXTred, Qmat);
 }
 
 template <typename T, bool use_scheme, typename Tidx>
@@ -511,16 +519,17 @@ LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2) {
 }
 
 template <typename T, typename Tidx, bool use_scheme>
-std::optional<std::vector<Tidx>>
-LinPolytope_Isomorphism_GramMat(const MyMatrix<T> &EXT1, const MyMatrix<T> & GramMat1, const MyMatrix<T> &EXT2, const MyMatrix<T>& GramMat2) {
+std::optional<std::vector<Tidx>> LinPolytope_Isomorphism_GramMat(
+    const MyMatrix<T> &EXT1, const MyMatrix<T> &GramMat1,
+    const MyMatrix<T> &EXT2, const MyMatrix<T> &GramMat2) {
   std::vector<Tidx> CanonicReord1 =
-    LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT1, GramMat1);
+      LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT1, GramMat1);
   std::vector<Tidx> CanonicReord2 =
-    LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT2, GramMat2);
+      LinPolytope_CanonicOrdering_GramMat<T, Tidx, use_scheme>(EXT2, GramMat2);
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-    IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(EXT1, GramMat1, EXT2, GramMat2,
-                                                         CanonicReord1, CanonicReord2);
+      IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(
+          EXT1, GramMat1, EXT2, GramMat2, CanonicReord1, CanonicReord2);
   if (!IsoInfo)
     return {};
   return IsoInfo->first;
@@ -563,11 +572,10 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
 // ---Note that TheEXT does not have to be of full rank.
 //    It makes perfect sense to compute some group
 //    and get it only as permutation group.
-template <typename T, typename Tidx, typename Treturn, typename F>
+template <typename T, typename Tfield, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f) {
-  using Tfield = typename overlying_field<T>::field_type;
 #ifdef SANITY_CHECK
   for (auto &eMat : ListMat) {
     if (!IsSymmetricMatrix(eMat)) {
@@ -666,7 +674,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
   return f(nbRow, f1, f2, f3, f4, f5);
 }
 
-template <typename T, typename Tidx, typename Tidx_value>
+template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
 WeightMatrix<true, std::vector<T>, Tidx_value>
 GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                               std::vector<MyMatrix<T>> const &ListMat,
@@ -676,11 +684,11 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(TheEXT, ListMat,
+  return FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(TheEXT, ListMat,
                                                           Vdiag, f);
 }
 
-template <typename T>
+template <typename T, typename Tfield>
 size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                   std::vector<MyMatrix<T>> const &ListMat,
                                   std::vector<T> const &Vdiag) {
@@ -691,7 +699,7 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
 #endif
 
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
+    GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
 #ifdef TIMINGS
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
 #endif
@@ -709,7 +717,7 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
   return e_hash;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::vector<std::vector<Tidx>>
 GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                      std::vector<MyMatrix<T>> const &ListMat,
@@ -733,14 +741,14 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
     }
   };
   Treturn ListGen =
-      FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
+    FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::cerr << "|GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
   return ListGen;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::vector<Tidx>
 Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                std::vector<MyMatrix<T>> const &ListMat,
@@ -765,20 +773,19 @@ Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
     }
   };
   Treturn CanonicReord =
-      FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
+      FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::cerr << "|Canonicalization_ListMat_Vdiag|=" << time << "\n";
 #endif
   return CanonicReord;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     MyMatrix<T> const &EXT1, std::vector<MyMatrix<T>> const &ListMat1,
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2) {
   using Tidx_value = uint16_t;
-  using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS
   SecondTime time;
 #endif
@@ -793,11 +800,11 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
   // Different scenario depending on the size
   if (nbRow1 < 2000) {
     WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT1, ListMat1,
-                                                           Vdiag1);
+        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT1, ListMat1,
+                                                                   Vdiag1);
     WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT2, ListMat2,
-                                                           Vdiag2);
+        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT2, ListMat2,
+                                                                   Vdiag2);
 #ifdef TIMINGS
     std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
 #endif
@@ -821,11 +828,11 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
   }
 
   std::vector<Tidx> CanonicReord1 =
-      Canonicalization_ListMat_Vdiag<T, Tidx, use_scheme>(EXT1, ListMat1,
-                                                          Vdiag1);
+    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(EXT1, ListMat1,
+                                                                Vdiag1);
   std::vector<Tidx> CanonicReord2 =
-      Canonicalization_ListMat_Vdiag<T, Tidx, use_scheme>(EXT2, ListMat2,
-                                                          Vdiag2);
+    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(EXT2, ListMat2,
+                                                                Vdiag2);
 
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,

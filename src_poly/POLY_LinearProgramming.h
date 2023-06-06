@@ -821,8 +821,9 @@ PosRelRes<T> SearchPositiveRelationSimple(MyMatrix<T> const &ListVect) {
 }
 
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
-                                                           MyVector<T> const &eVect) {
+std::optional<MyVector<T>>
+SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
+                                MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> InputListVect(nbVect + 1, nbCol);
@@ -853,68 +854,70 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Version1(MyMatrix<T> const &Li
 }
 
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect,
-                                                     MyVector<T> const &eVect) {
+std::optional<MyVector<T>>
+SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect,
+                          MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
-  MyMatrix<T> ListIneq(nbVect,nbCol+1);
-  MyVector<T> eIneq(nbCol+1);
-  for (int iVect=0; iVect<nbVect; iVect++) {
-    ListIneq(iVect,0) = 0;
-    for (int iCol=0; iCol<nbCol; iCol++)
+  MyMatrix<T> ListIneq(nbVect, nbCol + 1);
+  MyVector<T> eIneq(nbCol + 1);
+  for (int iVect = 0; iVect < nbVect; iVect++) {
+    ListIneq(iVect, 0) = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++)
       ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
   }
   eIneq(0) = 0;
-  for (int iCol=0; iCol<nbCol; iCol++)
+  for (int iCol = 0; iCol < nbCol; iCol++)
     eIneq(1 + iCol) = eVect(iCol);
   //
   LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq);
   if (!eSol.DualDefined) {
     return {};
   }
-  MyVector<T> TheRet = - eSol.DualSolution;
+  MyVector<T> TheRet = -eSol.DualSolution;
   return TheRet;
 }
 
-template <typename T>
-struct SolutionMatNonnegativeComplete {
+template <typename T> struct SolutionMatNonnegativeComplete {
   std::optional<MyVector<T>> ExtremeRay;
   std::optional<MyVector<T>> SolNonnegative;
 };
 
 template <typename T>
-SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
-                                                                    MyVector<T> const &eVect) {
+SolutionMatNonnegativeComplete<T>
+GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
+                                  MyVector<T> const &eVect) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
-  MyMatrix<T> ListIneq(nbVect,nbCol+1);
-  MyVector<T> eIneq(nbCol+1);
-  for (int iVect=0; iVect<nbVect; iVect++) {
-    ListIneq(iVect,0) = 0;
-    for (int iCol=0; iCol<nbCol; iCol++)
+  MyMatrix<T> ListIneq(nbVect, nbCol + 1);
+  MyVector<T> eIneq(nbCol + 1);
+  for (int iVect = 0; iVect < nbVect; iVect++) {
+    ListIneq(iVect, 0) = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++)
       ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
   }
   eIneq(0) = 0;
-  for (int iCol=0; iCol<nbCol; iCol++)
+  for (int iCol = 0; iCol < nbCol; iCol++)
     eIneq(1 + iCol) = eVect(iCol);
   //
   LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq);
-  auto GetSolNonnegative=[&]() -> std::optional<MyVector<T>> {
+  auto GetSolNonnegative = [&]() -> std::optional<MyVector<T>> {
     if (!eSol.DualDefined) {
       return {};
     }
-    MyVector<T> TheRet = - eSol.DualSolution;
+    MyVector<T> TheRet = -eSol.DualSolution;
     return TheRet;
   };
   std::optional<MyVector<T>> SolNonnegative = GetSolNonnegative();
-  auto GetExtremeRay=[&]() -> std::optional<MyVector<T>> {
+  auto GetExtremeRay = [&]() -> std::optional<MyVector<T>> {
     if (eSol.PrimalDefined) {
       MyVector<T> V = eSol.DirectSolution;
       MyVector<T> LScal = ListVect * V;
-      for (int iVect=0; iVect<nbVect; iVect++) {
+      for (int iVect = 0; iVect < nbVect; iVect++) {
         if (LScal(iVect) < 0) {
           std::cerr << "LScal=" << StringVectorGAP(LScal) << "\n";
-          std::cerr << "Negative value at iVect=" << iVect << " LScal(iVect)=" << LScal(iVect) << "\n";
+          std::cerr << "Negative value at iVect=" << iVect
+                    << " LScal(iVect)=" << LScal(iVect) << "\n";
           throw TerminalException{1};
         }
       }
@@ -937,14 +940,12 @@ SolutionMatNonnegativeComplete<T> GetSolutionMatNonnegativeComplete(MyMatrix<T> 
   return {ExtremeRay, SolNonnegative};
 }
 
-
-
-
-
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
-                                                        MyVector<T> const &eVect) {
-  std::optional<MyVector<T>> opt1 = SolutionMatNonnegative_Version1(ListVect, eVect);
+std::optional<MyVector<T>>
+SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
+                             MyVector<T> const &eVect) {
+  std::optional<MyVector<T>> opt1 =
+      SolutionMatNonnegative_Version1(ListVect, eVect);
   std::optional<MyVector<T>> opt2 = SolutionMatNonnegative_LP(ListVect, eVect);
   if (opt1 && !opt2) {
     std::cerr << "opt1 is defined but not opt2, incoherent\n";
@@ -956,13 +957,13 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListV
   }
   if (!opt1 && !opt2)
     return {};
-  MyVector<T> const& V = *opt1;
+  MyVector<T> const &V = *opt1;
   int nbRow = V.size();
   if (nbRow != ListVect.rows()) {
     std::cerr << "Dimension incoherency\n";
     throw TerminalException{1};
   }
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (int iRow = 0; iRow < nbRow; iRow++) {
     if (V(iRow) < 0) {
       std::cerr << "V should be non-negative\n";
       throw TerminalException{1};
@@ -976,31 +977,33 @@ std::optional<MyVector<T>> SolutionMatNonnegative_Check(MyMatrix<T> const &ListV
   return V;
 }
 
-
 template <typename T>
-std::optional<MyVector<T>> SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
-                                                       MyVector<T> const &eVect) {
-  auto local_terminate=[&]() -> void {
+std::optional<MyVector<T>>
+SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
+                                MyVector<T> const &eVect) {
+  auto local_terminate = [&]() -> void {
     std::string FILE_FAC = "DEBUG_Nonnegative_FAC";
     WriteMatrixFile(FILE_FAC, ListVect);
     std::string FILE_INEQ = "DEBUG_Nonnegative_INEQ";
     WriteVectorFile(FILE_INEQ, eVect);
     throw TerminalException{1};
   };
-  std::optional<MyVector<T>> opt_LP = SolutionMatNonnegative_LP(ListVect, eVect);
+  std::optional<MyVector<T>> opt_LP =
+      SolutionMatNonnegative_LP(ListVect, eVect);
   if (opt_LP) {
-    MyVector<T> const& V = *opt_LP;
+    MyVector<T> const &V = *opt_LP;
     int nbRow = V.size();
     if (nbRow != ListVect.rows()) {
       std::cerr << "Dimension incoherency\n";
       local_terminate();
     }
     bool HasError = false;
-    for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       T val = V(iRow);
       if (val < 0) {
-        double val_d = UniversalScalarConversion<double,T>(val);
-        std::cerr << "iRow=" << iRow << " val=" << val << " val_d=" << val_d << "\n";
+        double val_d = UniversalScalarConversion<double, T>(val);
+        std::cerr << "iRow=" << iRow << " val=" << val << " val_d=" << val_d
+                  << "\n";
         HasError = true;
       }
     }
@@ -1009,10 +1012,11 @@ std::optional<MyVector<T>> SolutionMatNonnegative_FailSafe(MyMatrix<T> const &Li
       std::cerr << "prod does not matcheVect\n";
       std::cerr << "|prod|=" << prod.rows() << " / " << prod.cols() << "\n";
       std::cerr << "|eVect|=" << eVect.rows() << " / " << eVect.cols() << "\n";
-      for (int iRow=0; iRow<prod.rows(); iRow++) {
-        double prod_d = UniversalScalarConversion<double,T>(prod(iRow,0));
-        double eVect_d = UniversalScalarConversion<double,T>(eVect(iRow,0));
-        std::cerr << "iRow=" << iRow << " prod_d=" << prod_d << " eVect_d=" << eVect_d << "\n";
+      for (int iRow = 0; iRow < prod.rows(); iRow++) {
+        double prod_d = UniversalScalarConversion<double, T>(prod(iRow, 0));
+        double eVect_d = UniversalScalarConversion<double, T>(eVect(iRow, 0));
+        std::cerr << "iRow=" << iRow << " prod_d=" << prod_d
+                  << " eVect_d=" << eVect_d << "\n";
       }
       HasError = true;
     }
@@ -1021,15 +1025,14 @@ std::optional<MyVector<T>> SolutionMatNonnegative_FailSafe(MyMatrix<T> const &Li
     }
     return V;
   }
-  std::optional<MyVector<T>> opt_V1 = SolutionMatNonnegative_Version1(ListVect, eVect);
+  std::optional<MyVector<T>> opt_V1 =
+      SolutionMatNonnegative_Version1(ListVect, eVect);
   if (opt_V1) {
     std::cerr << "opt_V1 is defined but not opt_LP, incoherent\n";
     local_terminate();
   }
   return {};
 }
-
-
 
 template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
@@ -1038,38 +1041,36 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
   return SolutionMatNonnegative_FailSafe(ListVect, eVect);
 }
 
-
-template <typename T>
-Face ComputeSkeletonClarkson(MyMatrix<T> const& FACinp) {
+template <typename T> Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp) {
   MyMatrix<T> FAC = ColumnReduction(FACinp);
   int n_fac = FAC.rows();
   int dim = FAC.cols();
   Face f_adj(n_fac * n_fac);
-  for (int i_fac=0; i_fac<n_fac; i_fac++) {
-    MyMatrix<T> Equa(dim,1);
-    for (int i=0; i<dim; i++)
-      Equa(i,0) = FAC(i_fac,i);
+  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+    MyMatrix<T> Equa(dim, 1);
+    for (int i = 0; i < dim; i++)
+      Equa(i, 0) = FAC(i_fac, i);
     MyMatrix<T> NSP = NullspaceMat(Equa);
     std::vector<int> ListIdx;
-    for (int j_fac=0; j_fac<i_fac; j_fac++) {
+    for (int j_fac = 0; j_fac < i_fac; j_fac++) {
       if (f_adj[i_fac + j_fac * n_fac] == 1) {
         ListIdx.push_back(j_fac);
       }
     }
-    for (int j_fac=i_fac+1; j_fac<n_fac; j_fac++)
+    for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++)
       ListIdx.push_back(j_fac);
     int n_ineq = ListIdx.size();
     MyMatrix<T> FAC_local(n_ineq, dim);
-    for (int i_ineq=0; i_ineq<n_ineq; i_ineq++) {
+    for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
       int idx = ListIdx[i_ineq];
       MyVector<T> eFAC = GetMatrixRow(FAC, idx);
       MyVector<T> eFACred = NSP * eFAC;
-      FAC_local(i_ineq,0) = 0;
-      for (int i=0; i<dim-1; i++)
-        FAC_local(i_ineq,i+1) = eFACred(i);
+      FAC_local(i_ineq, 0) = 0;
+      for (int i = 0; i < dim - 1; i++)
+        FAC_local(i_ineq, i + 1) = eFACred(i);
     }
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC_local);
-    for (auto & eIrred : ListIrred) {
+    for (auto &eIrred : ListIrred) {
       int pos = ListIdx[eIrred];
       f_adj[pos + i_fac * n_fac] = 1;
     }
@@ -1177,7 +1178,8 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 }
 
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC, MyMatrix<T> const& Equa) {
+MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
+                                  MyMatrix<T> const &Equa) {
   MyMatrix<T> NSP = NullspaceMat(TransposedMat(Equa));
   MyMatrix<T> FACred = FAC * NSP.transpose();
   MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred);
@@ -1204,7 +1206,7 @@ MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC, MyMatrix<T> const& Equ
 }
 
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const& f) {
+MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f) {
   int n_row = FAC.rows();
   int n = FAC.cols();
   int n_f = f.size();
@@ -1217,7 +1219,7 @@ MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const& f) {
   MyMatrix<T> Equa(cnt, n);
   int pos_fac = 0;
   int pos_equa = 0;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     if (f[i_row] == 0) {
       FACred.row(pos_fac) = FAC.row(i_row);
       pos_fac++;
@@ -1228,7 +1230,6 @@ MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const& f) {
   }
   return GetSpaceInteriorPoint(FACred, Equa);
 }
-
 
 template <typename T> struct EmbeddedPolytope {
   MyMatrix<T> LinSpace;

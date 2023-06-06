@@ -7,7 +7,7 @@
 #include "MAT_Matrix.h"
 #include "rational.h"
 #ifndef DISABLE_MPQ_CLASS
-# include "Fp.h"
+#include "Fp.h"
 #endif
 #include <string>
 #include <unordered_set>
@@ -263,7 +263,7 @@ public:
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
       F0(iCol) = eSign * out[iCol];
     // The sought inequality is expressed as F0 + beta FacetIneq
-    // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
+    // So for all vectors v in EXT we have F0(v) + beta FacetIneq(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
     // beta >= max beta(v)
     Face fret(nbRow);
@@ -379,10 +379,11 @@ public:
     //
     max_bits = 0;
     EXT_fastT = MyMatrix<Tfast>(nbRow, nbCol - 1);
-    EXT_fast  = MyMatrix<long>(nbRow, nbCol - 1);
+    EXT_fast = MyMatrix<long>(nbRow, nbCol - 1);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2), max_bits);
+        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2),
+                            max_bits);
         EXT_fast(iRow, iCol) = EXT_red(iRow, iCol).get_si();
         EXT_fastT(iRow, iCol) = Tfast(EXT_fast(iRow, iCol));
       }
@@ -422,13 +423,13 @@ public:
   }
   MyVector<Tint> RescaleVec(MyVector<T> const &v) const {
     int cols = v.size();
-    std::vector<mpz_class> dens(cols,1);
+    std::vector<mpz_class> dens(cols, 1);
     MyVector<Tint> vret = MyVector<Tint>(cols);
-    for( int iCol = 0; iCol < cols; iCol++){
+    for (int iCol = 0; iCol < cols; iCol++) {
       dens[iCol] = v(iCol).get_den();
     }
     mpz_class scale = LCMlist(dens);
-    for( int iCol = 0; iCol < cols; iCol++) {
+    for (int iCol = 0; iCol < cols; iCol++) {
       vret(iCol) = (scale / v(iCol).get_den()) * v(iCol).get_num();
     }
     return vret;
@@ -436,15 +437,16 @@ public:
   MyMatrix<Tint> RescaleRows(MyMatrix<T> const &M) const {
     int rows = M.rows();
     int cols = M.cols();
-    std::vector<mpz_class> dens(cols,1);
+    std::vector<mpz_class> dens(cols, 1);
     MyMatrix<Tint> Mret = MyMatrix<Tint>(rows, cols);
-    for( int iRow = 0; iRow < rows; iRow++) {
-      for( int iCol = 0; iCol < cols; iCol++){
+    for (int iRow = 0; iRow < rows; iRow++) {
+      for (int iCol = 0; iCol < cols; iCol++) {
         dens[iCol] = M(iRow, iCol).get_den();
       }
       mpz_class scale = LCMlist(dens);
-      for( int iCol = 0; iCol < cols; iCol++) {
-        Mret(iRow, iCol) = (scale / M(iRow,iCol).get_den()) * M(iRow,iCol).get_num();
+      for (int iCol = 0; iCol < cols; iCol++) {
+        Mret(iRow, iCol) =
+            (scale / M(iRow, iCol).get_den()) * M(iRow, iCol).get_num();
       }
     }
     return Mret;
@@ -482,7 +484,8 @@ public:
         Tint eSum = 0;
         for (int iCol = 0; iCol < nbCol - 1; iCol++)
           eSum += EXT_red(iRow, iCol) * F0(iCol);
-        if (!isAssigned || eSum * beta_max_den < beta_max_num * ListScal[iRow]) {
+        if (!isAssigned ||
+            eSum * beta_max_den < beta_max_num * ListScal[iRow]) {
           for (int kRow = 0; kRow < iRow; kRow++)
             fret[kRow] = 0;
           beta_max_num = eSum;
@@ -522,7 +525,8 @@ public:
         M.row(eRank) = EXT_fastT.row(aRow);
         jRow = sInc.find_next(jRow);
       };
-      MyMatrix<Tfast> NSP_fastT = NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1,f);
+      MyMatrix<Tfast> NSP_fastT =
+          NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1, f);
       // check result at full precision in case of overflows
       if (NSP_fastT.rows() != 1) {
         std::cerr << "NSP_fastT.rows() != 1"
@@ -531,7 +535,7 @@ public:
       } else {
         bool allzero = true;
         for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          if (NSP_fastT(0, iCol) != 0){
+          if (NSP_fastT(0, iCol) != 0) {
             allzero = false;
             break;
           }
@@ -545,8 +549,8 @@ public:
 
           // reconstruct
           size_t max_bits_NSP = 0;
-          std::vector<long> nums(nbCol-1,0);
-          std::vector<long> dens(nbCol-1,1);
+          std::vector<long> nums(nbCol - 1, 0);
+          std::vector<long> dens(nbCol - 1, 1);
           for (int iCol = 0; iCol < nbCol - 1; iCol++) {
             Rational<long> val = NSP_fastT(0, iCol).rational_lift();
             nums[iCol] = val.get_num();
@@ -555,10 +559,10 @@ public:
           long lcm = LCMlist(dens);
           for (int iCol = 0; iCol < nbCol - 1; iCol++) {
             NSP_fast(0, iCol) = nums[iCol] * (lcm / dens[iCol]);
-            NSP(0, iCol) = Tint(NSP_fast(0,iCol));
-            max_bits_NSP = std::max(max_bits_NSP, mpz_sizeinbase(NSP(0,iCol).get_mpz_t(), 2));
+            NSP(0, iCol) = Tint(NSP_fast(0, iCol));
+            max_bits_NSP = std::max(
+                max_bits_NSP, mpz_sizeinbase(NSP(0, iCol).get_mpz_t(), 2));
           }
-
 
           // check if elements are small enough to do computation in
           if (max_bits + max_bits_NSP <= 60) {
@@ -579,7 +583,8 @@ public:
               }
             }
           } else {
-            std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP << std::endl;
+            std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP
+                      << std::endl;
             failed_int = true;
           }
         }
@@ -596,7 +601,8 @@ public:
         M.row(eRank) = EXT_redT.row(aRow);
         jRow = sInc.find_next(jRow);
       };
-      NSP = RescaleRows(NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f));
+      NSP =
+          RescaleRows(NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f));
     }
 #ifdef DEBUG_FLIP
     if (NSP.rows() != 1) {
@@ -908,18 +914,17 @@ void ComputeEngelPolyhedralSubordinationFile(std::string const &eFile,
   os << "];\n";
 }
 
-MyMatrix<int> VectfaceAsMatrix(vectface const& vf) {
+MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {
   size_t n_ent = vf.size();
   size_t n = vf.get_n();
   MyMatrix<int> M(n_ent, n);
-  for (size_t i_ent=0; i_ent<n_ent; i_ent++) {
+  for (size_t i_ent = 0; i_ent < n_ent; i_ent++) {
     Face f = vf[i_ent];
-    for (size_t i=0; i<n; i++)
+    for (size_t i = 0; i < n; i++)
       M(i_ent, i) = f[i];
   }
   return M;
 }
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_POLYTOPEFCT_H_

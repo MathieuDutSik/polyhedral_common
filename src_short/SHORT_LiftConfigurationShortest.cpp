@@ -5,6 +5,7 @@
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "SHORT_ShortestConfig.h"
+#include "SHORT_ShortestConfig_Parall.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

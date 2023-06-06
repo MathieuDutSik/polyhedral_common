@@ -909,7 +909,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   bool IsFiniteCovolume = true;
+#ifdef TIMINGS
   size_t n_iter = 0;
+#endif
   std::unordered_map<T, int> map;
   if (Vtot.DualDescProg == "lrs_iterate") {
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
@@ -917,7 +919,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     MyVector<Tint> V(n_col);
     auto f = [&](Tint *out) -> bool {
       if (!IsFirst) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
           V(i_col) = out[i_col + 1];
         T norm = UniversalScalarConversion<T, Tint>(V.dot(Vtot.G * V));
@@ -937,7 +941,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
         FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
         T norm = V.dot(Vtot.G_T * V);
         map[norm]++;

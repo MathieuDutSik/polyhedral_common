@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Invariant [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant [INfile] [OUTfile]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -23,11 +23,13 @@ int main(int argc, char *argv[]) {
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpz_int;
+    using Tfield = boost::multiprecision::mpq_rational;
 #else
     using T = mpz_class;
+    using Tfield = mpq_class;
 #endif
     //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
+    std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant : Reading input\n";
     //
     std::ifstream is(argv[1]);
     int nbMat, len;
@@ -63,13 +65,13 @@ int main(int argc, char *argv[]) {
       Vdiag[i] = val;
     }
     //
-    size_t e_hash = GetInvariant_ListMat_Vdiag(EXT, ListMat, Vdiag);
+    size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXT, ListMat, Vdiag);
     //
     std::ofstream os(argv[2]);
     os << "return " << e_hash << ";\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_ListMat_Vdiag_EXT_Invariant\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_ListMat_Subset_EXT_Invariant\n";
+    std::cerr << "Error in GRP_ListMat_Vdiag_EXT_Invariant\n";
     exit(e.eVal);
   }
   runtime(time1);
