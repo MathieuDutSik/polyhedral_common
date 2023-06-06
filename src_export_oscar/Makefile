@@ -1,13 +1,11 @@
-PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism sv_near GRP_ListMat_Subset_EXT_Invariant LATT_IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming GRP_LinPolytope_Automorphism GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat LATT_Automorphism LATT_Isomorphism LATT_canonicalize POLY_redundancy_Equivariant SHORT_TestRealizability CP_TestCompletePositivity CP_TestCopositivity LORENTZ_FundDomain_AllcockEdgewalk
+PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Isomorphism LATT_near GRP_ListMat_Subset_EXT_Invariant LATT_IndefiniteReduction POLY_dual_description_group POLY_sampling_facets POLY_cdd_LinearProgramming LATT_Automorphism LATT_Isomorphism LATT_canonicalize POLY_redundancy_Equivariant SHORT_TestRealizability CP_TestCompletePositivity CP_TestCopositivity LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
-#PROGRAM		= sv_near
+#PROGRAM		= LATT_near
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_cdd_LinearProgramming
-#PROGRAM		= GRP_LinPolytope_Automorphism
-#PROGRAM		= GRP_LinPolytope_Automorphism_GramMat
 #PROGRAM		= LATT_canonicalize
 
 OBJECTS		= $(PROGRAM:%=%.o)

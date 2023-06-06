@@ -1,1 +1,0 @@
-../src_poly/GRP_LinPolytope_Automorphism.cpp
