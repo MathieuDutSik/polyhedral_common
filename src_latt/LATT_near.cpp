@@ -71,9 +71,9 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_cdd_lp2 arith choice [FileGram] [FileV] [OutFormat] [FileOut]\n";
+      std::cerr << "LATT_near arith choice [FileGram] [FileV] [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_cdd_lp2 arith choice [FileGram] [FileV]\n";
+      std::cerr << "LATT_near arith choice [FileGram] [FileV]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "arith     : the chosen arithmetic (see below)\n";
@@ -157,9 +157,9 @@ int main(int argc, char *argv[]) {
         call_SV(os);
       }
     }
-    std::cerr << "Normal termination of the program sv_near\n";
+    std::cerr << "Normal termination of the program LATT_near\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of sv_near\n";
+    std::cerr << "Raised exception led to premature end of LATT_near\n";
     exit(e.eVal);
   }
   runtime(time);
