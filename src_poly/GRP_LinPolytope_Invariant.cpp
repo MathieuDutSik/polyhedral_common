@@ -24,8 +24,10 @@ int main(int argc, char *argv[]) {
     //
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpq_rational;
+    using Tfield = T;
 #else
     using T = mpq_class;
+    using Tfield = T;
 #endif
     std::string FileExt = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
@@ -36,7 +38,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat = { Qinv };
     std::vector<T> Vdiag(n_rows, 0);
     //
-    size_t e_hash = GetInvariant_ListMat_Vdiag(EXTred, ListMat, Vdiag);
+    size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXTred, ListMat, Vdiag);
     //
     std::string FileOut = argv[2];
     std::ofstream os(FileOut);

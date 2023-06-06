@@ -214,9 +214,12 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
     WriteVectorNoDim(std::cerr, V1_imgD);
 #endif
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
-      Tfield eSum = -V2(iCol);
-      for (size_t jRow = 0; jRow < nbCol; jRow++)
-        eSum += EqMat(jRow, iCol) * V1(jRow);
+      T val = -V2(iCol);
+      Tfield eSum = UniversalScalarConversion<Tfield,T>(val);
+      for (size_t jRow = 0; jRow < nbCol; jRow++) {
+        Tfield val_B = UniversalScalarConversion<Tfield,T>(V1(jRow));
+        eSum += EqMat(jRow, iCol) * val_B;
+      }
       if (eSum != 0) {
 #ifdef DEBUG_PERM_FCT
         std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
@@ -350,8 +353,10 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
       Tfield eSum1 = 0;
-      for (size_t j_row = 0; j_row < n_cols; j_row++)
-        eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
+      for (size_t j_row = 0; j_row < n_cols; j_row++) {
+        Tfield val = UniversalScalarConversion<Tfield,T>(EXT1(i_row, j_row));
+        eSum1 += val * P(j_row, i_col);
+      }
       std::pair<bool, T> rec_eSum2 =
           UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!rec_eSum2.first) {

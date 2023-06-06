@@ -264,8 +264,9 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "gen_cuspidal_request_full_info, step 2\n";
 #endif
+  using Tfield = overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "gen_cuspidal_request_full_info, step 3\n";
 #endif

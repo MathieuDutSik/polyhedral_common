@@ -263,7 +263,7 @@ public:
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
       F0(iCol) = eSign * out[iCol];
     // The sought inequality is expressed as F0 + beta FacetIneq
-    // So for all vectors v in EXT we have F0(v) + beta FacetInea(v) >= 0
+    // So for all vectors v in EXT we have F0(v) + beta FacetIneq(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
     // beta >= max beta(v)
     Face fret(nbRow);

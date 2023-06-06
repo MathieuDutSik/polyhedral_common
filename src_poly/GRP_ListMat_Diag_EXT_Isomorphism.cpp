@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
     if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "GRP_ListMat_Diag_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_ListMat_Subset_EXT_Isomorphism [FileI]\n";
+      std::cerr << "GRP_ListMat_Diag_EXT_Isomorphism [FileI]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
       std::cerr << "OUTfile   : The file containing the two pairs\n";
@@ -25,8 +25,10 @@ int main(int argc, char *argv[]) {
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpz_int;
+    using Tfield = boost::multiprecision::mpq_rational;
 #else
     using T = mpz_class;
+    using Tfield = mpq_class;
 #endif
     using Tidx = unsigned int;
     //
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Input read, now testing for equivalence\n";
     const bool use_scheme = true;
     std::optional<std::vector<Tidx>> PairTest =
-        TestEquivalence_ListMat_Vdiag<T, Tidx, use_scheme>(
+        TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
             EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
     //
     auto prt = [&](std::ostream &os) -> void {
@@ -154,9 +156,9 @@ int main(int argc, char *argv[]) {
         prt(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_ListMat_Diag_EXT_Isomorphism\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_ListMat_Subset_EXT_Isomorphism\n";
+    std::cerr << "Error in GRP_ListMat_Diag_EXT_Isomorphism\n";
     exit(e.eVal);
   }
   runtime(time1);

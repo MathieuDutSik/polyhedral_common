@@ -21,9 +21,11 @@ int main(int argc, char *argv[]) {
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpq_rational;
+    using Tfield = T;
     using Tint = boost::multiprecision::mpz_int;
 #else
     using T = mpq_class;
+    using Tfield = T;
     using Tint = mpz_class;
 #endif
     using Tidx = uint32_t;
@@ -45,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     const bool use_scheme = true;
     std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag);
 
     std::vector<MyMatrix<Tint>> ListGenEquiv;
     for (auto & eList : ListGen) {

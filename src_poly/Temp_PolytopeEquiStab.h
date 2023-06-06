@@ -572,11 +572,10 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
 // ---Note that TheEXT does not have to be of full rank.
 //    It makes perfect sense to compute some group
 //    and get it only as permutation group.
-template <typename T, typename Tidx, typename Treturn, typename F>
+template <typename T, typename Tfield, typename Tidx, typename Treturn, typename F>
 Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f) {
-  using Tfield = typename overlying_field<T>::field_type;
 #ifdef SANITY_CHECK
   for (auto &eMat : ListMat) {
     if (!IsSymmetricMatrix(eMat)) {
@@ -675,7 +674,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
   return f(nbRow, f1, f2, f3, f4, f5);
 }
 
-template <typename T, typename Tidx, typename Tidx_value>
+template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
 WeightMatrix<true, std::vector<T>, Tidx_value>
 GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                               std::vector<MyMatrix<T>> const &ListMat,
@@ -685,11 +684,11 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2);
   };
-  return FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(TheEXT, ListMat,
+  return FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(TheEXT, ListMat,
                                                           Vdiag, f);
 }
 
-template <typename T>
+template <typename T, typename Tfield>
 size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                   std::vector<MyMatrix<T>> const &ListMat,
                                   std::vector<T> const &Vdiag) {
@@ -700,7 +699,7 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
 #endif
 
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
+    GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
 #ifdef TIMINGS
   std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
 #endif
@@ -718,7 +717,7 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
   return e_hash;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::vector<std::vector<Tidx>>
 GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                      std::vector<MyMatrix<T>> const &ListMat,
@@ -742,14 +741,14 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
     }
   };
   Treturn ListGen =
-      FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
+    FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::cerr << "|GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
   return ListGen;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::vector<Tidx>
 Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                std::vector<MyMatrix<T>> const &ListMat,
@@ -774,20 +773,19 @@ Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
     }
   };
   Treturn CanonicReord =
-      FCT_ListMat_Vdiag<T, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
+      FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat, Vdiag, f);
 #ifdef TIMINGS
   std::cerr << "|Canonicalization_ListMat_Vdiag|=" << time << "\n";
 #endif
   return CanonicReord;
 }
 
-template <typename T, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
 std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     MyMatrix<T> const &EXT1, std::vector<MyMatrix<T>> const &ListMat1,
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2) {
   using Tidx_value = uint16_t;
-  using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS
   SecondTime time;
 #endif
@@ -802,11 +800,11 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
   // Different scenario depending on the size
   if (nbRow1 < 2000) {
     WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT1, ListMat1,
-                                                           Vdiag1);
+        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT1, ListMat1,
+                                                                   Vdiag1);
     WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tidx, Tidx_value>(EXT2, ListMat2,
-                                                           Vdiag2);
+        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT2, ListMat2,
+                                                                   Vdiag2);
 #ifdef TIMINGS
     std::cerr << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
 #endif
@@ -830,11 +828,11 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
   }
 
   std::vector<Tidx> CanonicReord1 =
-      Canonicalization_ListMat_Vdiag<T, Tidx, use_scheme>(EXT1, ListMat1,
-                                                          Vdiag1);
+    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(EXT1, ListMat1,
+                                                                Vdiag1);
   std::vector<Tidx> CanonicReord2 =
-      Canonicalization_ListMat_Vdiag<T, Tidx, use_scheme>(EXT2, ListMat2,
-                                                          Vdiag2);
+    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(EXT2, ListMat2,
+                                                                Vdiag2);
 
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,
