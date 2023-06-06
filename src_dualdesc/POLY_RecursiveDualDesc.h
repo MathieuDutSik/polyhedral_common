@@ -1695,14 +1695,14 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-    std::vector<std::pair<Face,MyVector<T>>> TheOutput = DirectFacetIneqOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+    vectface TheOutput = DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFaceIneq(eOrb, os);
+      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
