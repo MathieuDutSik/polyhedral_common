@@ -377,8 +377,8 @@ std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq
                                                                          std::ostream &os) {
   using T = mpq_class;
   using Tint = mpz_class;
-  size_t n_row = EXT.rows();
-  size_t n_col = EXT.cols();
+  int n_row = EXT.rows();
+  int n_col = EXT.cols();
   mpz_class n_col_mpz(n_col);
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
@@ -410,14 +410,14 @@ std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq
 
     if( max_bits + max_bits_LVal <= 60 ) {
       // safe to use long
-      for (size_t i_row = 0; i_row < n_row; i_row++) {
+      for (int i_row = 0; i_row < n_row; i_row++) {
         eScal_long = 0;
         for (size_t i = shift; i < DimEXT; i++)
           eScal_long += LVal_long[i] * EXT_long(i_row, i - shift);
         pair.first[i_row] = static_cast<bool>(eScal_long == 0);
       }
     } else {
-      for (size_t i_row = 0; i_row < n_row; i_row++) {
+      for (int i_row = 0; i_row < n_row; i_row++) {
         eScal = 0;
         for (size_t i = shift; i < DimEXT; i++)
           eScal += LVal_int[i] * EXT_int(i_row, i - shift);
