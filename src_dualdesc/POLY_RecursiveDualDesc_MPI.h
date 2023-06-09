@@ -96,13 +96,17 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   if (ansSplit != "split") {
     auto EXT = df.FF.EXT_face;
     auto Stab = df.Stab;
-    
-    // start comm thread
-    os << "Start Thread" << std::endl;
-    std::atomic_bool done = false;
-    std::thread comm_thread(f_comm, std::ref(done));
 
-    
+    bool launch_comm_thread = (TheMap["delta"] >= 6);
+    std::thread comm_thread;
+    std::atomic_bool done = false;
+
+    if(launch_comm_thread) {
+      // start comm thread
+      os << "Start Thread" << std::endl;
+      comm_thread = std::thread(f_comm, std::ref(done));
+    }
+
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
@@ -112,10 +116,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 #endif
     // stop comm thread
     done = true;
-    MicrosecondTime time_join;
-    os << "Join thread" << std::endl;
-    comm_thread.join();
-    os << "|join|=" << time_join << "\n";
+    
+    if(launch_comm_thread) {
+      MicrosecondTime time_join;
+      os << "Join thread" << std::endl;
+      comm_thread.join();
+      os << "|join|=" << time_join << "\n";
+    }
 
     for (auto &eOrb : TheOutput) {
       std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
@@ -169,6 +176,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 
     } catch (RuntimeException const &e) {
       os << "RuntimeException, join comm thread\n";
+      done = true;
       comm_thread.join();
       throw; // rethrow
     }
@@ -220,7 +228,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
-  size_t MaxBuffered = 10000 * n_proc;
+  size_t MaxBuffered = 10000 * size_t(std::sqrt(n_proc));
   int MaxFly;
   if (AllArr.SimpleExchangeScheme) {
     MaxFly = n_proc;
