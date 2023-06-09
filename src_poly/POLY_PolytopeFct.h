@@ -6,7 +6,7 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "rational.h"
-#ifndef DISABLE_MPQ_CLASS
+#ifndef DISABLE_FP_CLASS
 #include "Fp.h"
 #endif
 #include <string>
@@ -326,7 +326,7 @@ public:
 };
 
 // Need to find a better template for the solution
-#ifndef DISABLE_MPQ_CLASS
+#ifndef DISABLE_FP_CLASS
 template <> struct FlippingFramework<mpq_class> {
 private:
   using T = mpq_class;
