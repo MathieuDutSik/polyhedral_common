@@ -300,8 +300,8 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
   MyMatrix<Tint> EXT_int = RescaleRows<T, Tint>(EXT);
   MyMatrix<long> EXT_long = MyMatrix<long>(n_row, n_col);
   size_t max_bits = 0;
-  for (int iRow = 0; iRow < n_row; iRow++) {
-    for (int iCol = 0; iCol < n_col; iCol++) {
+  for (size_t iRow = 0; iRow < n_row; iRow++) {
+    for (size_t iCol = 0; iCol < n_col; iCol++) {
       max_bits = std::max(mpz_sizeinbase(EXT_int(iRow, iCol).get_mpz_t(), 2), max_bits); 
       EXT_long(iRow, iCol) = EXT_int(iRow, iCol).get_si();
     }
