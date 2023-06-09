@@ -860,7 +860,9 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   }
   int n = eSymmMat.rows();
   T MinNorm = MinimumDiagonal(eSymmMat);
+#ifdef PRINT_NBCONE
   int nbCone = 0;
+#endif
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
   auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
                       MyMatrix<T> const &eSymmMatB) -> bool {
@@ -890,7 +892,9 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
         }
       }
     }
+#ifdef PRINT_NBCONE
     nbCone++;
+#endif
     return true;
   };
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,

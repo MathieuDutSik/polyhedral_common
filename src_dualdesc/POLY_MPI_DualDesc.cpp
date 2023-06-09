@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   // because it makes an unscheduled destruction of the communicator.
   boost::mpi::environment env;
   boost::mpi::communicator world;
-  SingletonTime start;
+  HumanTime start;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {
@@ -63,14 +63,14 @@ int main(int argc, char *argv[]) {
     };
     process();
     //
-    std::cerr << "Normal termination of the program runtime=" << si(start)
+    std::cerr << "Normal termination of the program runtime=" << start
               << "\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Erroneous termination of the program runtime=" << si(start)
+    std::cerr << "Erroneous termination of the program runtime=" << start
               << "\n";
     exit(e.eVal);
   } catch (RuntimeException const &e) {
-    std::cerr << "Runtime termination of the program runtime=" << si(start)
+    std::cerr << "Runtime termination of the program runtime=" << start
               << "\n";
   }
 }

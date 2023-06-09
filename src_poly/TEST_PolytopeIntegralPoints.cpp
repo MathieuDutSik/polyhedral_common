@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
+// clang-format on
 
 template <typename T>
 MyMatrix<T> ReordListPoint(const std::vector<MyVector<T>> &ListPoint) {
@@ -14,7 +16,7 @@ MyMatrix<T> ReordListPoint(const std::vector<MyVector<T>> &ListPoint) {
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 2 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -28,7 +30,7 @@ int main(int argc, char *argv[]) {
     //
     //  std::cerr << "Reading input\n";
     //
-    std::ifstream isFAC(argv[1]);
+    std::string FileFAC = argv[1];
     std::string opt = "all";
     if (argc == 3)
       opt = argv[2];
@@ -38,37 +40,23 @@ int main(int argc, char *argv[]) {
     }
     using T = mpq_class;
     using Tint = int;
-    MyMatrix<T> FAC = ReadMatrix<T>(isFAC);
+    MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
     //
     MyMatrix<Tint> ListIntPoint1, ListIntPoint2;
     //
     if (opt == "all" || opt == "iter") {
       MyMatrix<T> EXT = cdd::DualDescription(FAC);
-      std::chrono::time_point<std::chrono::system_clock> time1 =
-          std::chrono::system_clock::now();
+      HumanTime time;
       MyMatrix<Tint> ListIntPoint1 =
           ReordListPoint(GetListIntegralPoint<T, Tint>(FAC, EXT));
-      std::chrono::time_point<std::chrono::system_clock> time2 =
-          std::chrono::system_clock::now();
-      std::cerr << "|GetListIntegralPoint|    = "
-                << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                         time1)
-                       .count()
-                << "\n";
+      std::cerr << "|GetListIntegralPoint| = " << time << "\n";
     }
     //
     if (opt == "all" || opt == "lp") {
-      std::chrono::time_point<std::chrono::system_clock> time1 =
-          std::chrono::system_clock::now();
+      HumanTime time;
       MyMatrix<Tint> ListIntPoint2 =
           ReordListPoint(GetListIntegralPoint_LP<T, Tint>(FAC));
-      std::chrono::time_point<std::chrono::system_clock> time2 =
-          std::chrono::system_clock::now();
-      std::cerr << "|GetListIntegralPoint_LP| = "
-                << std::chrono::duration_cast<std::chrono::microseconds>(time2 -
-                                                                         time1)
-                       .count()
-                << "\n";
+      std::cerr << "|GetListIntegralPoint_LP| = " << time << "\n";
     }
     //
     if (opt == "all") {

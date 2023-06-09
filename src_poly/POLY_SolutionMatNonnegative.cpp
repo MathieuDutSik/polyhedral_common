@@ -26,7 +26,7 @@ void full_process_type(std::string const& FileFAC, std::string const& FileINEQ) 
 
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";

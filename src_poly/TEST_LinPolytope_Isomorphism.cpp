@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "GRP_GroupFct.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "GRP_GroupFct.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -19,8 +21,8 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     using Tidx = uint16_t;
     const bool use_scheme = true;
-    std::ifstream is(argv[1]);
-    MyMatrix<Tint> EXT1 = ReadMatrix<Tint>(is);
+    std::string eFile = argv[1];
+    MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(eFile);
     int nbCol = EXT1.cols();
     int nbRow = EXT1.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

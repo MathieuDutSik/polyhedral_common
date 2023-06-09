@@ -39,7 +39,7 @@ template <typename T> void Process(FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     if (argc != 2) {

@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "MAT_MatrixInt.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "MAT_MatrixInt.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -17,8 +19,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "Reading input\n";
     //
     using T = mpq_class;
-    std::ifstream EXTfs(argv[1]);
-    MyMatrix<T> eMat = ReadMatrix<T>(EXTfs);
+    std::string FileExt = argv[1];
+    MyMatrix<T> eMat = ReadMatrixFile<T>(FileExt);
     std::cerr << "After read matrix\n";
     //
     AffineBasisResult eBasRes = ComputeAffineBasis<T>(eMat);

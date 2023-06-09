@@ -1,12 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "Group.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
-#include "NumberTheory.h"
 #include "POLY_Kskeletton.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 // possible strategies for computing isomorphsim
 
@@ -170,8 +172,9 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   MyMatrix<Tint> Qmat = GetQmatrix(Concat);
   std::vector<Tint> Vsubset = f_vsub<Tint>(Concat.rows(), M.rows());
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
+  using Tfield = typename overlying_field<Tint>::field_type;
   WeightMatrix<true, std::vector<Tint>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<Tint, Tidx, Tidx_value>(Concat, ListMat,
+      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(Concat, ListMat,
                                                             Vsubset);
   WMat.ReorderingSetWeight();
   return {M, Spann, Qmat, std::move(WMat), fd};
@@ -679,9 +682,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
         }
       }
     } else {
-      size_t iOrbit = 0;
       for (auto &eOrbit : list_list_face[iLev - 2]) {
-        size_t iRepr = 0;
         for (auto &eRepr : eOrbit.first) {
           const ConeDesc<T, Tint, Tgroup> &eC = ListCones[eRepr.iCone];
           Tgroup StabFace_ext = eC.GRP_ext.Stabilizer_OnSets(eRepr.f_ext);
@@ -694,9 +695,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
                                  IdentityMat<Tint>(n_col)};
             f_insert(e_ent);
           }
-          iRepr++;
         }
-        iOrbit++;
       }
     }
     std::vector<FaceDesc> ListDomain;

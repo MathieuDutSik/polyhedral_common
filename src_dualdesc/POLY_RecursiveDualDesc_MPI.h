@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_RecursiveDualDesc.h"
+#include "Databank_mpi.h"
 #include "MPI_functionality.h"
 #include "Balinski_basic.h"
 #include <chrono>
@@ -53,7 +54,7 @@ size_t mpi_get_hash_kernel(Face const &x, int const &n_vert_div8,
                            std::vector<uint8_t> &V_hash) {
   size_t n_vert = x.size();
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++)
-    setbit(V_hash, i_vert, x[i_vert]);
+    setbit_vector(V_hash, i_vert, x[i_vert]);
   uint32_t seed = 0x1b873560;
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
 }
@@ -111,6 +112,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     throw TerminalException{1};
   }
   //
+  // GRP stuff
+  //
+  DataFaceOrbitSize<Tgroup> data(bb.GRP);
+  //
   // The types of exchanges
   //
   // New facets to be added, the most common request
@@ -121,13 +126,18 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   // Reading the input
   //
   size_t MaxBuffered = 10000 * n_proc;
-  int MaxFly = 4 * n_proc;
+  int MaxFly;
+  if (AllArr.SimpleExchangeScheme) {
+    MaxFly = n_proc;
+  } else {
+    MaxFly = 4 * n_proc;
+  }
   //
   // The parallel MPI classes
   //
   empty_message_management emm_termin(comm, 0, tag_termination);
   os << "emm_termin has been created\n";
-  buffered_T_exchanges<std::pair<Face,Tint>, std::vector<std::pair<Face,Tint>>> bte_facet(comm, MaxFly, tag_new_facets);
+  buffered_T_exchanges<Face, vectface> bte_facet(comm, MaxFly, tag_new_facets);
   os << "bte_facet has been created\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
@@ -136,25 +146,28 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (res == i_rank) {
       RPL.FuncInsertPair(face_pair);
     } else {
-      bte_facet.insert_entry(res, face_pair);
+      Face f_ret = data.ConvertFaceOrbitSize(face_pair);
+      bte_facet.insert_entry(res, f_ret);
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
-    Tint stabSize = bb.GRP.Stabilizer_OnSets(face).size();
-    std::pair<Face,Tint> face_pair{face,stabSize};
+    Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
+    std::pair<Face,Tint> face_pair{face, orbitSize};
     fInsertUnsentPair(face_pair);
   };
   //
   // Initial invocation of the synchronization code
   //
   os << "Compute initital\n";
-  size_t n_orb_tot = 0, n_orb_loc = RPL.FuncNumberOrbit();
-  all_reduce(comm, n_orb_loc, n_orb_tot, boost::mpi::maximum<size_t>());
-  os << "n_orb_loc=" << n_orb_loc << " n_orb_tot=" << n_orb_tot << "\n";
-  if (n_orb_tot == 0) {
+  size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
+  all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
+  os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
+  if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
-    for (auto &face : RPL.ComputeInitialSet(ansSamp, os)) {
+    vectface vf_init = RPL.ComputeInitialSet(ansSamp, os);
+    vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
+    for (auto &face : vf_init_merge) {
       fInsertUnsent(face);
     }
   }
@@ -168,10 +181,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (e_tag == tag_new_facets) {
       os << "RECV of tag_new_facets from " << e_src << "\n";
       StatusNeighbors[e_src] = 0;
-      std::vector<std::pair<Face,Tint>> l_recv_face = bte_facet.recv_message(e_src);
+      vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
-      for (auto &face_pair : l_recv_face)
+      for (auto &face : l_recv_face) {
+        std::pair<Face, Tint> face_pair = data.ConvertFace(face);
         RPL.FuncInsertPair(face_pair);
+      }
     }
     if (e_tag == tag_termination) {
       os << "RECV of tag_termination from " << e_src << "\n";
@@ -243,6 +258,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "nb_finished_oth=" << nb_finished_oth << "\n";
     return nb_finished_oth;
   };
+  auto wait = [&]() -> void {
+    int n_milliseconds = 1000;
+    std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+  };
   bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
@@ -256,11 +275,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
     os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached
        << " SomethingToDo=" << SomethingToDo << "\n";
+    os << "get_unsent_size()=" << bte_facet.get_unsent_size() << " MaxBuffered=" << MaxBuffered << "\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
       process_mpi_status(*prob);
     } else {
+      os << "prob is empty\n";
       if (SomethingToDo) {
         os << "Case something to do\n";
         // we have to clear our buffers sometimes while running
@@ -269,22 +290,14 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         // and possibly treating orbits with unnecessary large incidence
         if (bte_facet.get_unsent_size() >= MaxBuffered) {
           os << "Calling clear_one_entry after reaching MaxBuffered\n";
-          if (!bte_facet.clear_one_entry(os)) {
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
-          }
+          if (!bte_facet.clear_one_entry(os))
+            wait();
         }
         process_database();
       } else {
-        if (!bte_facet.is_buffer_empty()) {
-          os << "Calling clear_one_entry\n";
-          if (!bte_facet.clear_one_entry(os)) {
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
-          }
-        } else {
+        bool test = bte_facet.is_buffer_empty();
+        os << "Case nothing to do test=" << test << "\n";
+        if (test) {
           int nb_finished_oth = get_nb_finished_oth();
           os << "Nothing to do, entering the busy loop status="
              << get_maxruntimereached()
@@ -297,10 +310,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
               process_mpi_status(*prob);
               break;
             }
-            int n_milliseconds = 1000;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(n_milliseconds));
+            wait();
           } while (!get_maxruntimereached());
+        } else {
+          bool test = bte_facet.clear_one_entry(os);
+          os << "Calling clear_one_entry test=" << test << "\n";
+          if (!test)
+            wait();
         }
       }
     }

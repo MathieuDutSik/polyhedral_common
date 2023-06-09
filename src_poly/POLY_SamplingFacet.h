@@ -146,7 +146,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   os << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
-  auto get_iter=[&]() -> int {
+  auto get_iter = [&]() -> int {
     int iter = 10;
     if (ListStr.size() > 1) {
       std::vector<std::string> ListStrB = STRING_Split(ListStr[1], "_");
@@ -165,19 +165,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       // So possible format is lp_cdd_min:iter_100
       int iter = get_iter();
       vectface vf = FindVertices(EXT, iter);
-      size_t min_incd = std::numeric_limits<size_t>::max();
-      for (auto & eFace : vf) {
-        size_t incd = eFace.count();
-        if (incd < min_incd)
-          min_incd = incd;
-      }
-      vectface vf_ret(EXT.rows());
-      for (auto & eFace : vf) {
-        size_t incd = eFace.count();
-        if (incd == min_incd)
-          vf_ret.push_back(eFace);
-      }
-      return vf_ret;
+      return select_minimum_count(vf);
     }
     if (ansOpt == "sampling") {
       std::vector<std::string> ListOpt;
@@ -211,22 +199,18 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
 template <typename T>
 inline typename std::enable_if<is_ring_field<T>::value, vectface>::type
 DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                 std::string const &ansSamp,
-                                 std::ostream &os) {
+                                 std::string const &ansSamp, std::ostream &os) {
   return Kernel_DirectComputationInitialFacetSet(EXT, ansSamp, os);
 }
 
 template <typename T>
 inline typename std::enable_if<!is_ring_field<T>::value, vectface>::type
 DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                 std::string const &ansSamp,
-                                 std::ostream &os) {
+                                 std::string const &ansSamp, std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
 }
-
-
 
 template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   // Heuristic first, should work in many cases
@@ -283,7 +267,7 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
   for (auto &eRidge : ListRidge) {
-    Face eFace = RPLlift.Flip(eRidge);
+    Face eFace = RPLlift.FlipFace(eRidge);
     vf_ret.push_back(eFace);
   }
   std::cerr << "We have vf_ret\n";

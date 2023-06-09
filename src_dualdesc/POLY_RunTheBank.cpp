@@ -1,5 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryCommon.h"
+#include "NumberTheoryGmp.h"
 #include "Permutation.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
@@ -16,7 +20,7 @@ void signal_callback_handler_bank(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_BankingSystem();
     if (argc != 2) {
@@ -34,7 +38,7 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;
     using Tkey = MyMatrix<T>;
-    using Tval = PairStore<Tgroup>;
+    using Tval = TripleStore<Tgroup>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     SingleBlock BlockPROC = eFull.ListBlock.at("PROC");

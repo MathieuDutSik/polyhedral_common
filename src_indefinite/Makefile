@@ -1,4 +1,4 @@
-PROGRAM		= IndefiniteLLL IndefiniteReduction TestPermutationSignCanonic
+PROGRAM		= LATT_IndefiniteLLL LATT_IndefiniteReduction TestPermutationSignCanonic
 #PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= IndefiniteLLL
 #PROGRAM		= IndefiniteReduction

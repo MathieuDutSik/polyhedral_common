@@ -1,11 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "Group.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "Group.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -31,8 +33,8 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     using Twmat = WeightMatrix<true, T, Tidx_value>;
     //
-    std::ifstream is(argv[1]);
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     int nbCol = EXT.cols();
     int nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

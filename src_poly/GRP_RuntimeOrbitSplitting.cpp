@@ -1,11 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "GRP_DoubleCoset.h"
 #include "GRP_GroupFct.h"
-#include "Group.h"
-#include "NumberTheory.h"
 #include "Permutation.h"
+#include "Group.h"
+// clang-format on
+
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     std::vector<std::string> ListMethod={"repr", "canonic", "canonic_initial_triv",
                                          "exhaustive_std", "exhaustive_sparse",

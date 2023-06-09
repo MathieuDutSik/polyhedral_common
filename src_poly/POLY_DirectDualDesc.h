@@ -44,8 +44,9 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
   return retval;
 }
 
-template<typename T>
-size_t GetShift([[maybe_unused]] MyMatrix<T> const &EXT, std::string const &eCommand) {
+template <typename T>
+size_t GetShift([[maybe_unused]] MyMatrix<T> const &EXT,
+                std::string const &eCommand) {
   size_t shift;
   if (eCommand == "normaliz") {
     shift = 0;
@@ -131,7 +132,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   }
   size_t n_facet = 0;
   size_t n_insert = 0;
-  auto check_consistency=[&]() -> void {
+  auto check_consistency = [&]() -> void {
     if (n_insert != n_facet) {
       os << "Consistency error\n";
       os << "n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
@@ -204,11 +205,13 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     check_consistency();
   }
   if (eCommand == "glrs") {
-    size_t headersize = 7;
+    size_t headersize = 0;
     while (std::getline(is, line)) {
-      if (line == "end")
+      if (line == "end") 
         break;
-      if (iLine >= headersize)
+      if (line == "begin")
+        headersize = iLine+2;
+      if (headersize != 0 and iLine >= headersize)
         process_line();
       iLine++;
     }
@@ -240,7 +243,7 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
   Face f(n_row);
   size_t shift = GetShift(EXT, eCommand);
   T eScal;
-  auto f_insert=[&](std::vector<T> const& LVal) -> void {
+  auto f_insert = [&](std::vector<T> const &LVal) -> void {
 #ifdef USE_ISINCD
     auto isincd = [&](size_t i_row) -> bool {
       eScal = 0;
@@ -329,8 +332,8 @@ MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
   int nbColRed = DimEXT - shift;
   MyVector<T> V(nbColRed);
   std::vector<MyVector<T>> ListVect;
-  auto f_insert=[&](std::vector<T> const& LVal) -> void {
-    for (int i=0; i<nbColRed; i++) {
+  auto f_insert = [&](std::vector<T> const &LVal) -> void {
+    for (int i = 0; i < nbColRed; i++) {
       V(i) = LVal[i + shift];
     }
     ListVect.push_back(V);
@@ -340,19 +343,19 @@ MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
-                                                                         std::string const &eCommand,
-                                                                         std::ostream &os) {
+std::vector<std::pair<Face, MyVector<T>>>
+DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
+                                std::string const &eCommand, std::ostream &os) {
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
   int nbColRed = DimEXT - shift;
-  std::pair<Face,MyVector<T>> pair{Face(n_row), MyVector<T>(nbColRed)};
+  std::pair<Face, MyVector<T>> pair{Face(n_row), MyVector<T>(nbColRed)};
   T eScal;
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
-  auto f_insert=[&](std::vector<T> const& LVal) -> void {
-    for (int i=0; i<nbColRed; i++) {
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
+  auto f_insert = [&](std::vector<T> const &LVal) -> void {
+    for (int i = 0; i < nbColRed; i++) {
       pair.second(i) = LVal[i + shift];
     }
     for (size_t i_row = 0; i_row < n_row; i_row++) {
@@ -366,6 +369,7 @@ std::vector<std::pair<Face,MyVector<T>>> DualDescExternalProgramFaceIneq(MyMatri
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return ListReturn;
 }
+
 
 template <>
 std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq(MyMatrix<mpq_class> const &EXT,
@@ -425,7 +429,6 @@ std::vector<std::pair<Face,MyVector<mpq_class>>> DualDescExternalProgramFaceIneq
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return ListReturn;
 }
-
 
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
@@ -502,10 +505,6 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
-
-
-
-
 template <typename T>
 MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
                                                std::string const &ansProg,
@@ -569,14 +568,10 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
-
-
-
-
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
-                                                                        std::string const &ansProg,
-                                                                        std::ostream &os) {
+std::vector<std::pair<Face, MyVector<T>>>
+DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
+                               std::string const &ansProg, std::ostream &os) {
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -636,11 +631,6 @@ std::vector<std::pair<Face,MyVector<T>>> DirectFacetComputationFaceIneq(MyMatrix
   throw TerminalException{1};
 }
 
-
-
-
-
-
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                      std::string const &ansProg,
@@ -670,15 +660,17 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 }
 
 template <typename T, typename Tgroup>
-std::vector<std::pair<Face,MyVector<T>>> DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                                                         std::string const &ansProg,
-                                                                         std::ostream &os) {
+std::vector<std::pair<Face, MyVector<T>>>
+DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
+                                std::string const &ansProg, std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn = DirectFacetComputationFaceIneq(EXT, ansProg, os);
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn =
+      DirectFacetComputationFaceIneq(EXT, ansProg, os);
 #ifdef TIMINGS
-  os << "|DualDescription|=" << time << " |ListIncd|=" << ListReturn.size() << "\n";
+  os << "|DualDescription|=" << time << " |ListIncd|=" << ListReturn.size()
+     << "\n";
 #endif
   if (ListReturn.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
@@ -687,7 +679,8 @@ std::vector<std::pair<Face,MyVector<T>>> DirectFacetIneqOrbitComputation(MyMatri
   if (GRP.size() == 1) {
     return ListReturn;
   }
-  std::vector<std::pair<Face,MyVector<T>>> TheOutput = OrbitSplittingMap(ListReturn, GRP);
+  std::vector<std::pair<Face, MyVector<T>>> TheOutput =
+      OrbitSplittingMap(ListReturn, GRP);
 #ifdef TIMINGS
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
@@ -695,9 +688,6 @@ std::vector<std::pair<Face,MyVector<T>>> DirectFacetIneqOrbitComputation(MyMatri
 #endif
   return TheOutput;
 }
-
-
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

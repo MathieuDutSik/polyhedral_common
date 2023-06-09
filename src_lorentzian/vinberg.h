@@ -25,35 +25,6 @@
 
 #define DEBUG_VINBERG
 
-//
-// Finding the closest points
-//
-
-template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
-                                                 const MyVector<T> &eV,
-                                                 const T &norm) {
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
-  const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
-  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
-  //
-  std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
-    if (min == norm) {
-      MyVector<Tint> V_x = Pmat.transpose() * V_y;
-      l_vect.push_back(V_x);
-    }
-    return true;
-  };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
-  return l_vect;
-}
-
 // Compute the solutions of G [x - eV] = a
 template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
@@ -871,7 +842,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   std::optional<MyVector<Tint>> opt;
+#ifdef TIMINGS
   size_t n_iter = 0;
+#endif
   std::cerr << "DualDescProg=" << Vtot.DualDescProg << "\n";
   if (Vtot.DualDescProg == "lrs_iterate") {
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
@@ -879,7 +852,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     MyVector<Tint> V(n_col);
     auto f = [&](Tint *out) -> bool {
       if (!IsFirst) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
           V(i_col) = out[i_col + 1];
         Tint scal = V.dot(Vtot.G * V);
@@ -898,7 +873,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
         FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
@@ -932,7 +909,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   bool IsFiniteCovolume = true;
+#ifdef TIMINGS
   size_t n_iter = 0;
+#endif
   std::unordered_map<T, int> map;
   if (Vtot.DualDescProg == "lrs_iterate") {
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
@@ -940,7 +919,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     MyVector<Tint> V(n_col);
     auto f = [&](Tint *out) -> bool {
       if (!IsFirst) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
           V(i_col) = out[i_col + 1];
         T norm = UniversalScalarConversion<T, Tint>(V.dot(Vtot.G * V));
@@ -960,7 +941,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
         FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
+#ifdef TIMINGS
         n_iter++;
+#endif
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
         T norm = V.dot(Vtot.G_T * V);
         map[norm]++;

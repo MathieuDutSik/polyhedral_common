@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "POLY_SamplingFacet.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -12,9 +14,9 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-    std::ifstream is(argv[1]);
     using T = mpq_class;
-    MyMatrix<T> EXT = ReadMatrix<T>(is);
+    std::string eFile = argv[1];
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     size_t n_rows = EXT.rows();
     //
     vectface ListFace = GetFullRankFacetSet(EXT);

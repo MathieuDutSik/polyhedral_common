@@ -69,6 +69,23 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
   return vectface(n_vert, l_n_face, l_V);
 }
 
+vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf, std::string const& ansSamp, std::ostream & os) {
+  os << "merge_initial_samp, |vf|=" << vf.size() << "\n";
+  vectface vf_gather = my_mpi_allgather(comm, vf);
+  os << "merge_initial_samp, |vf_gather|=" << vf_gather.size() << "\n";
+  std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
+  std::string ansOpt = ListStr[0];
+  os << "ansSamp=" << ansSamp << " ansOpt=" << ansOpt << "\n";
+  if (ansOpt == "lp_cdd_min") {
+    vectface vf_ret = select_minimum_count(vf_gather);
+    os << "merge_initial_samp, |vf_ret|=" << vf_ret.size() << "\n";
+    return vf_ret;
+  }
+  return vf_gather;
+}
+
+
+
 /*
   For MyMatrix<T>, a little bit more advanced work. We merge the rows together
  */
@@ -234,13 +251,21 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
 }
 
 struct request_status_list {
-  size_t MaxNumberFlyingMessage;
+  size_t n_proc;
+  size_t MaxFly;
   std::vector<boost::mpi::request> l_mpi_request;
   std::vector<int> l_mpi_status;
-  request_status_list(size_t const &MaxNumberFlyingMessage)
-      : MaxNumberFlyingMessage(MaxNumberFlyingMessage),
-        l_mpi_request(MaxNumberFlyingMessage),
-        l_mpi_status(MaxNumberFlyingMessage, 0) {}
+  bool strict;
+  request_status_list(size_t const&n_proc, size_t const &MaxFly)
+    : n_proc(n_proc), MaxFly(MaxFly),
+      l_mpi_request(MaxFly),
+      l_mpi_status(MaxFly, 0) {
+    if (n_proc == MaxFly) {
+      strict = true;
+    } else {
+      strict = false;
+    }
+  }
   boost::mpi::request &operator[](size_t const &pos) {
     l_mpi_status[pos] = 1;
     return l_mpi_request[pos];
@@ -260,17 +285,30 @@ struct request_status_list {
     }
     return nb_undone;
   }
-  size_t GetFreeIndex() {
+  bool is_ok(size_t const& pos) {
+    if (l_mpi_status[pos] == 0)
+      return true;
+    return false;
+  }
+  size_t GetFreeIndex(int dest) {
     (void)clear_and_get_nb_undone();
-    size_t len = l_mpi_request.size();
-    for (size_t i = 0; i < len; i++)
-      if (l_mpi_status[i] == 0)
-        return i;
-    if (MaxNumberFlyingMessage > 0)
-      return std::numeric_limits<size_t>::max();
-    l_mpi_request.push_back(boost::mpi::request());
-    l_mpi_status.push_back(1);
-    return len;
+    if (strict) {
+      if (is_ok(dest)) {
+        return dest;
+      } else {
+        return std::numeric_limits<size_t>::max();
+      }
+    } else {
+      size_t len = l_mpi_request.size();
+      for (size_t i = 0; i < len; i++)
+        if (l_mpi_status[i] == 0)
+          return i;
+      if (MaxFly > 0)
+        return std::numeric_limits<size_t>::max();
+      l_mpi_request.push_back(boost::mpi::request());
+      l_mpi_status.push_back(1);
+      return len;
+    }
   }
   bool is_empty() {
     size_t n_undone = clear_and_get_nb_undone();
@@ -286,13 +324,13 @@ struct empty_message_management {
   int tag;
   empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
                            int const &tag)
-      : comm(comm), rsl(MaxFly), tag(tag) {
+    : comm(comm), rsl(comm.size(), MaxFly), tag(tag) {
     int expected_value_pre = random();
     expected_value = boost::mpi::all_reduce(comm, expected_value_pre,
                                             boost::mpi::minimum<int>());
   }
   void send_message(int dest) {
-    size_t idx = rsl.GetFreeIndex();
+    size_t idx = rsl.GetFreeIndex(dest);
     if (idx == std::numeric_limits<size_t>::max()) {
       std::cerr << "Failed to find an index\n";
       throw TerminalException{1};
@@ -315,15 +353,22 @@ struct empty_message_management {
  */
 template <typename T, typename T_vector> struct buffered_T_exchanges {
   boost::mpi::communicator &comm;
+  int n_proc;
   request_status_list rsl;
   int tag;
-  int n_proc;
   std::vector<T_vector> l_message;
   std::vector<T_vector> l_under_cons;
+  bool strict;
   buffered_T_exchanges(boost::mpi::communicator &comm, size_t const &MaxFly,
                        int const &tag)
-      : comm(comm), rsl(MaxFly), tag(tag), n_proc(comm.size()),
-        l_message(n_proc), l_under_cons(MaxFly) {}
+    : comm(comm), n_proc(comm.size()), rsl(n_proc, MaxFly), tag(tag),
+        l_message(n_proc), l_under_cons(MaxFly) {
+    if (static_cast<size_t>(n_proc) == MaxFly) {
+      strict = true;
+    } else {
+      strict = false;
+    }
+  }
   void insert_entry(size_t const &pos, T const &x) {
     l_message[pos].push_back(x);
   }
@@ -333,26 +378,50 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     return vf;
   }
   bool clear_one_entry(std::ostream &os) {
-    size_t idx = rsl.GetFreeIndex();
-    os << "idx=" << idx << "\n";
-    if (idx == std::numeric_limits<size_t>::max())
-      return false;
-    size_t max_siz = 0;
-    int chosen_iproc = -1;
-    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-      size_t siz = l_message[i_proc].size();
-      if (siz > max_siz) {
-        max_siz = siz;
-        chosen_iproc = i_proc;
+    auto process=[&](int chosen_iproc, int idx) -> bool {
+      if (chosen_iproc == -1)
+        return false;
+      l_under_cons[idx] = std::move(l_message[chosen_iproc]);
+      l_message[chosen_iproc].clear();
+      rsl[idx] = comm.isend(chosen_iproc, tag, l_under_cons[idx]);
+      return true;
+    };
+    if (strict) {
+      size_t nb_undone = rsl.clear_and_get_nb_undone();
+      os << "strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
+      size_t max_siz = 0;
+      int chosen_iproc = -1;
+      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+        bool test = rsl.is_ok(i_proc);
+        os << "i_proc=" << i_proc << " test=" << test << "\n";
+        if (test) {
+          size_t siz = l_message[i_proc].size();
+          os << "  siz=" << siz << "\n";
+          if (siz > max_siz) {
+            max_siz = siz;
+            chosen_iproc = i_proc;
+          }
+        }
       }
+      os << "strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      return process(chosen_iproc, chosen_iproc);
+    } else {
+      size_t idx = rsl.GetFreeIndex(-1); // The dest is unused in that case
+      os << "idx=" << idx << "\n";
+      if (idx == std::numeric_limits<size_t>::max())
+        return false;
+      size_t max_siz = 0;
+      int chosen_iproc = -1;
+      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+        size_t siz = l_message[i_proc].size();
+        if (siz > max_siz) {
+          max_siz = siz;
+          chosen_iproc = i_proc;
+        }
+      }
+      os << "no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      return process(chosen_iproc, idx);
     }
-    os << "max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
-    if (chosen_iproc == -1)
-      return false;
-    l_under_cons[idx] = std::move(l_message[chosen_iproc]);
-    l_message[chosen_iproc].clear();
-    rsl[idx] = comm.isend(chosen_iproc, tag, l_under_cons[idx]);
-    return true;
   }
   size_t get_unsent_size() const {
     size_t n_unsent = 0;
@@ -389,7 +458,7 @@ template <typename Tint> struct database_balinski_info {
   database_balinski_info(boost::mpi::communicator &comm, int tag_request,
                          int tag_info, Tint const &CritSiz)
       : comm(comm), tag_request(tag_request), tag_info(tag_info),
-        n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc),
+        n_proc(comm.size()), i_rank(comm.rank()), rsl(n_proc, n_proc),
         ListBalinski(n_proc), ListStatus_Emptyness(n_proc, 0),
         RequestNat(n_proc, 0), CritSiz(CritSiz), expected_value(47),
         last_update(n_proc, get_cpp_time(7, 1, 1974)),
@@ -416,7 +485,7 @@ template <typename Tint> struct database_balinski_info {
     ToBeAnswered[source] = 1;
   }
   void submit_info(int dest, UndoneOrbitInfo<Tint> const &uoi) {
-    size_t idx = rsl.GetFreeIndex();
+    size_t idx = rsl.GetFreeIndex(dest);
     if (idx == std::numeric_limits<size_t>::max())
       return;
     rsl[idx] = comm.isend(dest, tag_info, uoi);
@@ -424,7 +493,7 @@ template <typename Tint> struct database_balinski_info {
     ToBeAnswered[dest] = 0;
   }
   void submit_request(int dest) {
-    size_t idx = rsl.GetFreeIndex();
+    size_t idx = rsl.GetFreeIndex(dest);
     if (idx == std::numeric_limits<size_t>::max())
       return;
     RequestNat[dest] = 1;

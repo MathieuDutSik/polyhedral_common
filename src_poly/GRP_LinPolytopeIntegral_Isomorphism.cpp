@@ -1,12 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "GRP_GroupFct.h"
 #include "Group.h"
-#include "NumberTheory.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 4 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -28,10 +30,10 @@ int main(int argc, char *argv[]) {
     using Tidx_value = uint32_t;
     using Tgr = GraphBitset;
     //
-    std::ifstream is1(argv[1]);
-    MyMatrix<Tint> EXT1 = ReadMatrix<Tint>(is1);
-    std::ifstream is2(argv[2]);
-    MyMatrix<Tint> EXT2 = ReadMatrix<Tint>(is2);
+    std::string FileExt1 = argv[1];
+    std::string FileExt2 = argv[2];
+    MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(FileExt1);
+    MyMatrix<Tint> EXT2 = ReadMatrixFile<Tint>(FileExt2);
     size_t nbCol = EXT1.cols();
     size_t nbRow = EXT1.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";

@@ -5091,10 +5091,12 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_colrange j, k, d;
   T *shootdir;
   dd_LPSolverType solver = dd_DualSimplex;
-  bool localdebug = false;
+  bool localdebug = true;
+  //  bool localdebug = false;
 
   m = M->rowsize;
   d = M->colsize;
+  std::cerr << "m=" << m << " d=" << d << "\n";
   dd_rowset redset;
   set_initialize(&redset, m);
   dd_AllocateArow(d, &shootdir);
@@ -5129,10 +5131,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
     }
     dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
     lpw->A[mi - 2][0] -= 1;
-    if (lpw->optvalue < 0)
-      return false;
-    else
-      return true;
+    return lpw->optvalue >= 0;
   };
   auto set_entry_in_lpw = [&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
@@ -5155,16 +5154,21 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   /* Whether we have reached a conclusion in any way on the code */
   dd_rowset is_decided;
   set_initialize(&is_decided, m);
+  int e_max = 0;
+  for (auto &e_val : BlockBelong) {
+    if (e_val > e_max)
+      e_max = e_val;
+  }
+  size_t n_block = e_max + 1;
+  std::vector<std::vector<dd_rowrange>> list_blocks(n_block);
+  for (size_t i = 0; i < BlockBelong.size(); i++) {
+    int iBlock = BlockBelong[i];
+    dd_rowrange iredw = i + 1;
+    list_blocks[iBlock].push_back(iredw);
+  }
   auto get_block = [&](dd_rowrange const &pos) -> std::vector<dd_rowrange> {
     int iBlock = BlockBelong[pos - 1];
-    std::vector<dd_rowrange> eBlock;
-    for (size_t i = 0; i < BlockBelong.size(); i++) {
-      if (BlockBelong[i] == iBlock) {
-        dd_rowrange iredw = i + 1;
-        eBlock.push_back(iredw);
-      }
-    }
-    return eBlock;
+    return list_blocks[iBlock];
   };
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find.
@@ -5191,10 +5195,13 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
         dd_WriteT(std::cout, shootdir, d);
       ired = dd_RayShooting(M, lp->sol, shootdir);
       if (localdebug)
-        printf("nonredundant row %3ld found by shooting.\n", ired);
+        std::cout << "nonredundant row " << ired << " found by shooting\n";
       if (ired > 0 && !set_member(ired, is_decided)) {
-        for (auto &jred : get_block(ired)) {
+        std::vector<dd_rowrange> eBlock = get_block(ired);
+        std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
+        for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
+          std::cout << "1: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
@@ -5203,8 +5210,11 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
       if (localdebug)
         printf("nonredundant row %3ld found by shooting.\n", ired);
       if (ired > 0 && !set_member(ired, is_decided)) {
-        for (auto &jred : get_block(ired)) {
+        std::vector<dd_rowrange> eBlock = get_block(ired);
+        std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
+        for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
+          std::cout << "2: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
@@ -5241,30 +5251,37 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
             dd_WriteT(std::cout, shootdir, d);
           }
           ired = dd_RayShooting(M, lp->sol, shootdir);
-          for (auto &jred : get_block(ired)) {
-            set_addelem(is_decided, jred);
-            set_entry_in_lpw(jred);
+          if (!set_member(ired, is_decided)) {
+            std::vector<dd_rowrange> eBlock = get_block(ired);
+            std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size()
+                      << "\n";
+            for (auto &jred : eBlock) {
+              set_addelem(is_decided, jred);
+              std::cout << "3: Deciding " << jred << "\n";
+              set_entry_in_lpw(jred);
+            }
           }
           if (localdebug) {
-            fprintf(stdout,
-                    "The %ld th inequality is nonredundant for the subsystem\n",
-                    i);
-            fprintf(stdout,
-                    "The nonredundancy of %ld th inequality is found by "
-                    "shooting.\n",
-                    ired);
+            std::cout << "The " << i
+                      << " inequality is nonredundant for the subsystem\n";
+            std::cout << "The nonredundancy of " << ired
+                      << "% inequality is found by shooting\n";
             dd_WriteT(std::cout, M->matrix[ired - 1], d);
           }
         } else {
           if (localdebug)
-            fprintf(stdout,
-                    "The %ld th inequality is redundant for the subsystem and "
-                    "thus for the whole.\n",
-                    i);
+            std::cout << "The " << i
+                      << " inequality is redundant for the subsystem and thus "
+                         "for the whole\n";
           decrement_entry_in_lpw();
-          for (auto &jred : get_block(i)) {
-            set_addelem(is_decided, jred);
-            set_addelem(redset, jred);
+          if (!set_member(i, is_decided)) {
+            std::vector<dd_rowrange> eBlock = get_block(i);
+            std::cout << "i=" << i << " |eBlock|=" << eBlock.size() << "\n";
+            for (auto &jred : eBlock) {
+              set_addelem(is_decided, jred);
+              std::cout << "4: Deciding " << jred << "\n";
+              set_addelem(redset, jred);
+            }
           }
           i++;
         }
@@ -7342,7 +7359,8 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
       completed = true;
     }
     pos1++;
-    progress = 100.0 * (static_cast<double>(pos1) / pos2) * (2.0 * pos2 - pos1) / pos2;
+    progress =
+        100.0 * (static_cast<double>(pos1) / pos2) * (2.0 * pos2 - pos1) / pos2;
     if (progress - prevprogress >= 10 && pos1 % 10 == 0 && localdebug) {
       fprintf(
           stdout,
@@ -8015,10 +8033,6 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
   return TheFAC;
 }
 
-
-
-
-
 template <typename T>
 vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
                             MyMatrix<T> const &EXT) {
@@ -8040,16 +8054,16 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
   return ListIncd;
 }
 
-
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
-                                                                MyMatrix<T> const &EXT) {
+std::vector<std::pair<Face, MyVector<T>>>
+ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
+                       MyMatrix<T> const &EXT) {
   size_t nbCol = EXT.cols();
   size_t nbRow = EXT.rows();
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   T eScal;
-  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
+  std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
   while (RayPtr != nullptr) {
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
@@ -8064,9 +8078,6 @@ std::vector<std::pair<Face,MyVector<T>>> ListFaceIneq_from_poly(dd_polyhedradata
   }
   return ListReturn;
 }
-
-
-
 
 template <typename T>
 std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT) {
@@ -8130,11 +8141,13 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT) {
+std::vector<std::pair<Face, MyVector<T>>>
+DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn = ListFaceIneq_from_poly(poly, TheEXT);
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn =
+      ListFaceIneq_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
   return ListReturn;

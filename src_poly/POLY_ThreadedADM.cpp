@@ -1,7 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "POLY_ThreadDualDescription.h"
+// clang-format off
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_TEMP_THREADED_ADM();

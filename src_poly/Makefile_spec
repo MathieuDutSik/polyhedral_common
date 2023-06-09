@@ -14,7 +14,6 @@
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lcdd
 #PROGRAM		= POLY_lrs
-#PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
 #PROGRAM		= GRP_LinPolytope_Automorphism
@@ -22,19 +21,19 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
+PROGRAM		= POLY_redundancyClarkson
+#PROGRAM		= POLY_redundancyClarksonGroup
+#PROGRAM		= POLY_redundancy_Equivariant
+#PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
 #PROGRAM		= POLY_IntegralPoints
 #PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= TEST_WeightMatrixLimited
-#PROGRAM		= POLY_redundancyClarksonBlocks
-#PROGRAM		= POLY_redundancy_Equivariant
-#PROGRAM		= GRP_ComputeAut_ListMat_Subset_EXT
-#PROGRAM		= GRP_ListMat_Subset_EXT_Invariant
-#PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism
-#PROGRAM		= GRP_ListMat_Subset_EXT_Automorphism
-#PROGRAM		= GRP_ListMat_Subset_EXT_Isomorphism GRP_ListMat_Subset_EXT_Automorphism GRP_ListMat_Subset_EXT_Invariant
+#PROGRAM		= GRP_ListMat_Vdiag_EXT_Invariant
+#PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism
+#PROGRAM		= GRP_ListMat_Vdiag_EXT_Automorphism
+#PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Invariant
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
 #PROGRAM		= GRP_LinearSpace_Equivalence
-#PROGRAM		= GRP_Invariant_ListMat_Subset_EXT
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= POLY_GetFullRankFacetSet
@@ -45,9 +44,12 @@
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
-PROGRAM		= POLY_cdd_lp2
+#PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
+#PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
+#PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
+#PROGRAM		= GRP_LinPolytope_Invariant
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
@@ -61,10 +63,14 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++17 -Wall -O3 -g
-#CC		= g++ -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
-CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CC		= g++ -std=c++17 -Wall -Wextra -O3
+#CLANG
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+#CLANG
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
@@ -73,7 +79,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../permutalib/src_gap -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
 #CDEFS           = -DEIGEN_NO_DEBUG -DTIMINGS -DDEBUG_SPECIFIC
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DTIMINGS -DPERMUTALIB_BLOCKING_SANITY_CHECK

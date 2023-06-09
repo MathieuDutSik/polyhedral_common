@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
-#include "NumberTheory.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "vinberg.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;

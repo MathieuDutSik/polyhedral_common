@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "MatrixCanonicalForm.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "MatrixCanonicalForm.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 3 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -58,5 +60,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

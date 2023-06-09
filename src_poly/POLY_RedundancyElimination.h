@@ -390,6 +390,34 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   return ListKnownIrred;
 }
 
+template <typename T>
+MyMatrix<T> SelectColumnAddZero(MyMatrix<T> const &TheMat,
+                                std::vector<int> const &eList) {
+  size_t nbRow = TheMat.rows();
+  size_t nbColRed = eList.size();
+  MyMatrix<T> TheProv(nbRow, 1 + nbColRed);
+  for (size_t iRow = 0; iRow < nbRow; iRow++)
+    TheProv(iRow, 0) = 0;
+  for (size_t iCol = 0; iCol < nbColRed; iCol++) {
+    size_t jCol = eList[iCol];
+    TheProv.col(1 + iCol) = TheMat.col(jCol);
+  }
+  return TheProv;
+}
+
+template <typename T>
+MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
+                                      std::vector<int> const &eList) {
+  int nbColRed = eList.size();
+  MyVector<T> TheProv(1 + nbColRed);
+  TheProv(0) = 0;
+  for (int iCol = 0; iCol < nbColRed; iCol++) {
+    int jCol = eList[iCol];
+    TheProv(1 + iCol) = TheV(jCol);
+  }
+  return TheProv;
+}
+
 template <typename T, typename Tgroup>
 Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Telt = typename Tgroup::Telt;
@@ -412,6 +440,14 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
     Face e_orbit = vf[i_orbit];
     std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit
               << " |e_orbit|=" << e_orbit.count() << "\n";
+    std::cerr << "O =";
+    for (size_t i_row = 0; i_row < n_rows; i_row++) {
+      if (e_orbit[i_row] == 1) {
+        int val = i_row + 1;
+        std::cerr << " " << val;
+      }
+    }
+    std::cerr << "\n";
     //
     // Selecting the relevant rows to test against
     //
@@ -455,14 +491,16 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
     // The computation itself
     //
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(M);
+    std::cerr << "    |eSelect.ListColSelect|=" << eSelect.ListColSelect.size()
+              << " n_cols=" << n_cols << "\n";
     MyVector<T> V = GetMatrixRow(EXT, i_row);
     // return true if it is redundant. False if irredundant
     auto get_status = [&]() -> bool {
       bool test1 = IsVectorInSpace(eSelect, V);
       if (!test1)
         return false;
-      MyMatrix<T> M_sel = SelectColumn(M, eSelect.ListColSelect);
-      MyVector<T> V_sel = SelectColumnVector(V, eSelect.ListColSelect);
+      MyMatrix<T> M_sel = SelectColumnAddZero(M, eSelect.ListColSelect);
+      MyVector<T> V_sel = SelectColumnVectorAddZero(V, eSelect.ListColSelect);
       LpSolution<T> eSol = CDD_LinearProgramming(M_sel, V_sel);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
         return false;

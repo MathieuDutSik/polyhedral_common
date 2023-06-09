@@ -1,9 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include "rational.h"
 #include <netcdf>
+// clang-format on
 
 FullNamelist NAMELIST_InitialPreparation() {
   std::map<std::string, SingleBlock> ListBlock;

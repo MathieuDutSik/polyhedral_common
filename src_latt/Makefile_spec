@@ -2,7 +2,9 @@
 #PROGRAM		= LATT_cannspanset
 #PROGRAM		= LATT_spanset
 #PROGRAM		= LATT_getMatrixScalProd
-PROGRAM		= sv_exact
+#PROGRAM		= sv_exact
+PROGRAM		= sv_near
+#PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 
 OBJECTS		= $(PROGRAM:%=%.o)
@@ -22,18 +24,19 @@ CC		= g++ -std=c++17 -Wall -O3
 NOLINKFLAG 	= -c -DDEBUG_TIME
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_poly -I.
-
+CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I.
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
-CFLAGS 		= -I$(GMP_INCDIR) -I$(EIGEN_PATH)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread
+CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK)
 
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CLOCAL) $(CFLAGS) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 

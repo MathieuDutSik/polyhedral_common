@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "GRAPH_GraphicalFunctions.h"
+// clang-format off
 #include "NumberTheory.h"
+#include "GRAPH_GraphicalFunctions.h"
 #include "POLY_cdd_graph.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";

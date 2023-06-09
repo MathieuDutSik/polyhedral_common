@@ -1,11 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
+// clang-format on
 
-#include "NumberTheory.h"
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 2) {
       std::cerr << "POLY_MakeInitialFileGAP [FileIn]\n";

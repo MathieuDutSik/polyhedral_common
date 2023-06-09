@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include <boost/mpi.hpp>
 #include <netcdf>
 #include <numeric>
+// clang-format on
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);

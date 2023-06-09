@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "NumberTheory.h"
 #include "SimulDiophantApprox.h"
+// clang-format on
 
 template <typename T, typename F>
 void DoProcessing(MyMatrix<T> const &M, MyVector<T> const &B, F f) {
@@ -12,7 +14,7 @@ void DoProcessing(MyMatrix<T> const &M, MyVector<T> const &B, F f) {
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -61,5 +63,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LATT_ZeroOneSolutions\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

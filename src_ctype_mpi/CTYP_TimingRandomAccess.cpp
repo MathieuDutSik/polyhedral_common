@@ -1,12 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "CtypeMPI_types.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
 #include <unordered_map>
-
 #include "hash_functions.h"
 #include <boost/mpi.hpp>
 #include <netcdf>
+// clang-format on
 namespace mpi = boost::mpi;
 
 FullNamelist NAMELIST_Timings() {

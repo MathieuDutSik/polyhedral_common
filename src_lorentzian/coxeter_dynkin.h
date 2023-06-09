@@ -575,9 +575,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
     return {};
   auto get_length = [&](size_t val1, size_t val2) -> size_t {
     size_t len = 1;
-    size_t iter = 0;
     while (true) {
-      iter++;
       std::vector<size_t> const &LVal = LLAdj[val2];
       if (LVal.size() == 1)
         break;
@@ -952,9 +950,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
       auto get_length = [&](size_t val1,
                             size_t val2) -> std::pair<size_t, size_t> {
         size_t len = 1;
-        size_t iter = 0;
         while (true) {
-          iter++;
           std::vector<size_t> const &LVal = LLAdj[val2];
           if (LVal.size() == 1)
             break;

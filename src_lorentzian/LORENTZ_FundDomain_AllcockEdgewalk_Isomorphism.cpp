@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#include "Group.h"
+// clang-format off
+#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "Group.h"
 #include "Permutation.h"
-
 #include "edgewalk.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;

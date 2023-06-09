@@ -66,10 +66,9 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
 }
 
 template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
-  std::vector<std::string> ListString = {"2",
-                                         "1 groupsize_sma < 100 exhaustive",
-                                         "1 index < 20 single_cosets",
-                                         "canonic"};
+  std::vector<std::string> ListString = {
+      "2", "1 groupsize_sma < 100 exhaustive", "1 index < 20 single_cosets",
+      "canonic"};
   return HeuristicFromListString<T>(ListString);
 }
 
@@ -220,6 +219,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> OrbitSplitTechnique;
   bool Saving;
   bool AdvancedTerminationCriterion;
+  bool SimpleExchangeScheme;
   SingletonTime start;
   int max_runtime;
   short unsigned int port;
@@ -237,6 +237,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool Saving = false;
   bool AdvancedTerminationCriterion = false;
+  bool SimpleExchangeScheme = false;
   int max_runtime = -1;
   short unsigned int port = 1234;
   bool BANK_IsSaving = false;
@@ -256,6 +257,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodOrbitSplitTechnique<T>(),
           Saving,
           AdvancedTerminationCriterion,
+          SimpleExchangeScheme,
           SingletonTime(),
           max_runtime,
           port,

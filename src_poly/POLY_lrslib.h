@@ -83,7 +83,7 @@ template <typename T> struct lrs_dat {
   /**** flags  **********                         */
   int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
   int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
-  int64_t getvolume;   /* do volume calculation                        */
+  int64_t getvolume; /* do volume calculation                        */
   int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;      /* do convex hull computation if globals::TRUE           */
@@ -1797,11 +1797,11 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
         std::cerr << "\n";
         std::cerr << "col=" << col << "\n";
         std::cerr << "Col =";
-        for (int i=0; i<P->d; i++)
+        for (int i = 0; i < P->d; i++)
           std::cerr << " " << P->Col[i];
         std::cerr << "\n";
         std::cerr << "Row =";
-        for (int i=0; i<P->m; i++)
+        for (int i = 0; i < P->m; i++)
           std::cerr << " " << P->Row[i];
         std::cerr << "\n";
 #endif
@@ -1869,7 +1869,7 @@ template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
 }
 
 template <typename T>
-std::pair<MyMatrix<T>,int> FirstColumnZeroCond(MyMatrix<T> const &M) {
+std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
   for (int iRow = 0; iRow < nbRow; iRow++) {
@@ -1887,8 +1887,7 @@ std::pair<MyMatrix<T>,int> FirstColumnZeroCond(MyMatrix<T> const &M) {
   return {M, 0};
 }
 
-template <typename T>
-vectface DualDescription_incd(MyMatrix<T> const &EXT) {
+template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
@@ -1920,17 +1919,16 @@ vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   return ListIncd;
 }
 
-template <typename T>
-MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
-  std::pair<MyMatrix<T>,int> pair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const& EXTwork = pair.first;
+template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
+  std::pair<MyMatrix<T>, int> pair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const &EXTwork = pair.first;
   int shift = pair.second;
   int nbCol = EXTwork.cols();
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
   auto f = [&](T *out) -> void {
     MyVector<T> V(nbColRed);
-    for (int i=0; i<nbColRed; i++)
+    for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
@@ -1939,18 +1937,19 @@ MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
 }
 
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq(MyMatrix<T> const &EXT) {
-  std::pair<MyMatrix<T>,int> ePair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const& EXTwork = ePair.first;
+std::vector<std::pair<Face, MyVector<T>>>
+DualDescriptionFaceIneq(MyMatrix<T> const &EXT) {
+  std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
   int nbCol = EXTwork.cols();
   int nbRow = EXTwork.rows();
   int nbColRed = nbCol - shift;
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
-  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
+  std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
   auto f = [&](T *out) -> void {
-    for (int i=0; i<nbColRed; i++)
+    for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     for (int iRow = 0; iRow < nbRow; iRow++) {
       eScal = 0;
@@ -1964,16 +1963,9 @@ std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq(MyMatrix<T> con
   return ListReturn;
 }
 
-
-
-
-
-
-
-
-
 template <typename T>
-vectface DualDescription_incd_limited(MyMatrix<T> const &EXT, int const &UpperLimit) {
+vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
+                                      int const &UpperLimit) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
@@ -2031,8 +2023,8 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
 
 template <typename T>
 MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
-  std::pair<MyMatrix<T>,int> pair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const& EXTwork = pair.first;
+  std::pair<MyMatrix<T>, int> pair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const &EXTwork = pair.first;
   int shift = pair.second;
   using Tring = typename underlying_ring<T>::ring_type;
   int nbCol = EXTwork.cols();
@@ -2048,7 +2040,7 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   std::vector<MyVector<T>> ListVect;
   auto f = [&](Tring *out) -> void {
     MyVector<T> V(nbColRed);
-    for (int i=0; i<nbColRed; i++)
+    for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
@@ -2056,11 +2048,11 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   return MatrixFromVectorFamily(ListVect);
 }
 
-
 template <typename T>
-std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
-  std::pair<MyMatrix<T>,int> ePair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const& EXTwork = ePair.first;
+std::vector<std::pair<Face, MyVector<T>>>
+DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
+  std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
+  MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
   using Tring = typename underlying_ring<T>::ring_type;
   int nbCol = EXTwork.cols();
@@ -2073,11 +2065,11 @@ std::vector<std::pair<Face,MyVector<T>>> DualDescriptionFaceIneq_reduction(MyMat
     MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
-  std::pair<Face,MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
+  std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  std::vector<std::pair<Face,MyVector<T>>> ListReturn;
+  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   auto f = [&](Tring *out) -> void {
-    for (int i=0; i<nbColRed; i++)
+    for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     for (int iRow = 0; iRow < nbRow; iRow++) {
       eScal = 0;

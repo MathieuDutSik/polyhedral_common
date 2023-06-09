@@ -1,10 +1,12 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
+#include "NumberTheoryRational.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
-#include "NumberTheory.h"
-#include "Temp_PerfectForm.h"
-#include "rational.h"
+#include "Temp_PerfectForm_Enum.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
   try {
@@ -37,16 +39,11 @@ int main(int argc, char *argv[]) {
       Tshortest<Tmat, Tint> eRec = T_ShortestVector<Tmat, Tint>(ePerfect_Tmat);
       int incd = (eRec.SHV.rows()) / 2;
       //
-      std::chrono::time_point<std::chrono::system_clock> start =
-          std::chrono::system_clock::now();
+      HumanTime time;
       MyMatrix<Tmat> eMatCan_Tmat =
           ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat).Mat;
-      std::chrono::time_point<std::chrono::system_clock> end =
-          std::chrono::system_clock::now();
-      int elapsed_seconds =
-          std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
       std::cerr << "iPerfect=" << iPerfect << " / " << nbPerfect
-                << " elapsed_seconds=" << elapsed_seconds << "\n";
+                << " elapsed_seconds=" << time << "\n";
 
       //
       os << eStatus << "\n";

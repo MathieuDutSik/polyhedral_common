@@ -459,7 +459,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
           MProc.GetO(TheId)
               << "PARTITION: After the test time = " << time << "\n";
-          if (time.eval() > 60) {
+          if (time.const_eval_int64() > 60) {
             //
             SecondTime time;
             auto eReplyB =
@@ -471,9 +471,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         };
       }
       if (ansGRP == "partition" || ansGRP == "classic") {
-        GetRecord =
-            [&](Face const &eOrb,
-                [[maybe_unused]] std::ostream &os) -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
+        GetRecord = [&](Face const &eOrb, [[maybe_unused]] std::ostream &os)
+            -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
           int siz = eOrb.count();
           Tint eOrbitSize = TheGRPrelevant.OrbitSize_OnSets(eOrb);
           SimpleOrbitFacet<T, Tgroup> eOrbF{eOrb};
@@ -492,7 +491,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           }
           return {};
         };
-        GetRecord = [TheGRPrelevant](Face const &eOrb, [[maybe_unused]] std::ostream &os)
+        GetRecord = [TheGRPrelevant](Face const &eOrb,
+                                     [[maybe_unused]] std::ostream &os)
             -> PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> {
           Face eFaceMin = eOrb;
           Tint n_match = 0;

@@ -1,12 +1,14 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "NumberTheory.h"
 #include "GRP_GroupFct.h"
 #include "Group.h"
-#include "NumberTheory.h"
 #include "POLY_lrslib.h"
 #include "Permutation.h"
+// clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     using T = mpq_class;
     //

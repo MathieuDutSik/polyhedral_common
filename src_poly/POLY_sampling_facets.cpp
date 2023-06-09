@@ -1,35 +1,50 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+# include "NumberTheoryBoostGmpInt.h"
+#else
+# include "NumberTheory.h"
+#endif
 #include "NumberTheoryRealField.h"
 #include "QuadField.h"
 #include "POLY_SamplingFacet.h"
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const& ansSamp, std::ostream &os) {
+void process(std::string const &eFileI, std::string const& ansSamp, std::string const& OutFormat, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   vectface vf = DirectComputationInitialFacetSet(EXT, ansSamp, std::cerr);
-  os << "return ";
-  VectVectInt_Gap_Print(os, vf);
-  os << ";\n";
+  if (OutFormat == "GAP") {
+    os << "return ";
+    VectVectInt_Gap_Print(os, vf);
+    os << ";\n";
+    return;
+  }
+  if (OutFormat == "Oscar") {
+    MyMatrix<int> M = VectfaceAsMatrix(vf);
+    WriteMatrix(os, M);
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
-    if (argc != 4 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_sampling_facets arith command [DATAIN] [DATAOUT]\n";
+      std::cerr << "POLY_sampling_facets arith command [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_sampling_facets arith command [DATAIN]\n";
+      std::cerr << "POLY_sampling_facets arith command [FileI]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "arith   : the chosen arithmetic\n";
-      std::cerr << "command : the program used for computing the dual description\n";
-      std::cerr << "DATAIN  : The polyhedral cone inequalities\n";
-      std::cerr << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
+      std::cerr << "arith     : the chosen arithmetic\n";
+      std::cerr << "command   : the program used for computing the dual description\n";
+      std::cerr << "FileI     : The polyhedral cone inequalities\n";
+      std::cerr << "OutFormat : The format of output, GAP or Oscar\n";
+      std::cerr << "FileO     : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
@@ -50,42 +65,47 @@ int main(int argc, char *argv[]) {
       std::cerr << "lrs_limited:upperlimit_X : lrs limited to the first X vertices being found\n";
       return -1;
     }
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using Trat = boost::multiprecision::mpq_rational;
+#else
+    using Trat = mpq_class;
+#endif
     //
     std::string arith = argv[1];
     std::string command = argv[2];
     std::string eFileI = argv[3];
+    std::string OutFormat = "GAP";
     std::string eFileO = "stderr";
-    if (argc == 5)
-      eFileO = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      eFileO = argv[5];
+    }
     auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "rational") {
-        return process<mpq_class>(eFileI, command, os);
+        return process<Trat>(eFileI, command, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
-        using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, OutFormat, os);
       }
       if (arith == "Qsqrt2") {
-        using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
-        using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
         }
-        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        HelperClassRealField<Trat> hcrf(FileAlgebraicField);
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

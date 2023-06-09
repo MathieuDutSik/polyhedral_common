@@ -2,7 +2,7 @@
 #ifndef SRC_LATT_FUNDAMENTALDELAUNAY_H_
 #define SRC_LATT_FUNDAMENTALDELAUNAY_H_
 
-#include "CVP_NiemeierAlgo.h"
+//#include "CVP_NiemeierAlgo.h"
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
@@ -39,9 +39,6 @@ resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
   //
   if (NameMeth == "SVdouble")
     return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
-  //
-  if (NameMeth == "CVP_N23_24A1")
-    return CVP_N23_24A1<T, Tint>(eV);
   //
   std::cerr << "No matching method found\n";
   throw TerminalException{1};

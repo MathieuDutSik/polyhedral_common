@@ -2,7 +2,7 @@
 #ifndef SRC_LATT_SHORTESTUNIVERSAL_H_
 #define SRC_LATT_SHORTESTUNIVERSAL_H_
 
-#include "CVP_NiemeierAlgo.h"
+//#include "CVP_NiemeierAlgo.h"
 #include "Shvec_exact.h"
 
 #ifdef USE_LIBSHORT
@@ -14,10 +14,10 @@ template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
                                               MyVector<T> const &eV,
                                               std::string const &NameMeth) {
+  /*
   bool DoCheck = false;
   if (DoCheck) {
     resultCVP<T, Tint> res1 = CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
-    //  resultCVP<T> res2=CVPVallentinProgram_double(GramMat, eV);
     resultCVP<T, Tint> res2 = CVP_N23_24A1<T, Tint>(eV);
     if (res1 != res2) {
       std::cerr << "res1.TheNorm=" << res1.TheNorm << "\n";
@@ -31,9 +31,9 @@ resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
     }
-    //    std::cerr << "All correct\n";
     return res1;
   }
+  */
   //
   if (NameMeth == "SVexact")
     return CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
@@ -42,9 +42,6 @@ resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
   if (NameMeth == "SVdouble")
     return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
 #endif
-  //
-  if (NameMeth == "CVP_N23_24A1")
-    return CVP_N23_24A1<T, Tint>(eV);
   //
   std::cerr << "No matching method found\n";
   throw TerminalException{1};

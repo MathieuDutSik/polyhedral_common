@@ -149,7 +149,7 @@ void process(std::string const &eFileI, std::string const &choice,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time1;
   try {
     if (argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -179,8 +179,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
-                   "field whose description is in FileDesc\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
+      std::cerr << "field whose description is in FileDesc\n";
       return -1;
     }
     //
