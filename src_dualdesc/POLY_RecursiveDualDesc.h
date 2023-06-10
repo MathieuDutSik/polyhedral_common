@@ -64,6 +64,10 @@
 #define UNORD_SET tsl::hopscotch_set
 #endif
 
+static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
+static const int CANONIC_STRATEGY__STORE = 1;
+static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
+
 std::atomic<bool> ExitEvent;
 
 void signal_callback_handler(int signum) {
@@ -196,21 +200,27 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT) {
 }
 
 template <typename Tgroup>
-Face CanonicalImageDualDesc(Tgroup const& GRP, Face const& f) {
-#ifdef CANONICAL_IMAGE_V2
-  return GRP.OptCanonicalImage(f);
-#else
-  return GRP.CanonicalImage(f);
-#endif
+Face CanonicalImageDualDesc(int const& method_choice, Tgroup const& GRP, Face const& f) {
+  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
+    return GRP.CanonicalImage(f);
+  if (method_choice == CANONIC_STRATEGY__STORE)
+    return GRP.StoreCanonicalImage(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
+    return GRP.CanonicalImageInitialTriv(f);
+  std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
+  std::cerr << "method_choice=" << method_choice << "\n";
+  throw TerminalException{1};
 }
 
 template <typename Tgroup>
-std::pair<Face,typename Tgroup::Tint> CanonicalImageOrbitSizeDualDesc(Tgroup const& GRP, Face const& f) {
-#ifdef CANONICAL_IMAGE_V2
-  return GRP.OptCanonicalImageOrbitSize(f);
-#else
-  return GRP.CanonicalImageOrbitSize(f);
-#endif
+std::pair<Face,typename Tgroup::Tint> CanonicalImageOrbitSizeDualDesc(int const& method_choice, Tgroup const& GRP, Face const& f) {
+  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
+    return GRP.CanonicalImageOrbitSize(f);
+  if (method_choice == CANONIC_STRATEGY__STORE)
+    return GRP.StoreCanonicalImageOrbitSize(f);
+  std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
+  std::cerr << "method_choice=" << method_choice << "\n";
+  throw TerminalException{1};
 }
 
 vectface vectface_reduction(vectface const& vf, size_t n_red) {
@@ -426,7 +436,45 @@ Tgroup trivial_extension_group(Tgroup const& eGroup, size_t const& delta) {
   return Tgroup(LGenExt, id);
 }
 
-
+template <typename T, typename Tgroup>
+int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, size_t size) {
+  int n = EXT.rows();
+  if (size < 10000) {
+    if (GRP.size() < 200)
+      return CANONIC_STRATEGY__STORE;
+    return CANONIC_STRATEGY__INITIAL_TRIV;
+  }
+  std::vector<Face> list_F;
+  for (int iter=0; iter<100; iter++) {
+    Face f = RandomFace(n);
+    list_F.push_back(f);
+  }
+  auto f_eval=[&](int the_method, int64_t const& upper_limit) -> std::optional<int64_t> {
+    NanosecondTime time;
+    int64_t duration;
+    for (auto & f : list_F) {
+      (void)CanonicalImageDualDesc(the_method, GRP, f);
+      duration = time.const_eval_int64();
+      if (duration > upper_limit)
+        return {};
+    }
+    return duration;
+  };
+  std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE, CANONIC_STRATEGY__INITIAL_TRIV};
+  if (GRP.size() < 20000) {
+    list_considered.push_back(CANONIC_STRATEGY__STORE);
+  }
+  int64_t upper_limit = std::numeric_limits<int64_t>::max();
+  int chosen_method = -1;
+  for (auto& e_method : list_considered) {
+    std::optional<int64_t> opt = f_eval(e_method, upper_limit);
+    if (opt) {
+      chosen_method = e_method;
+      upper_limit = *opt;
+    }
+  }
+  return chosen_method;
+}
 
 
 
@@ -456,11 +504,15 @@ std::pair<MyMatrix<T>, TripleStore<Tgroup>> GetCanonicalInformation(
     }
   } else {
     // The full group is bigger than the input group. So we need to reduce.
+    // The used method for canonicalization does not matter, so everything
+    // is correct.
+    size_t size = ListOrbitFaceOrbitsize.size();
+    int can_method = GetCanonicalizationMethodRandom(EXT, TheGRPrelevant, size);
     UNORD_SET<Face> SetFace;
     Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
       OnFace_inplace(eFaceImg, eFace, ePermExt);
-      Face eIncCan = CanonicalImageDualDesc(GRPext, eFaceImg);
+      Face eIncCan = CanonicalImageDualDesc(can_method, GRPext, eFaceImg);
       SetFace.insert(eIncCan);
     }
     for (auto &eInc : SetFace) {
@@ -573,6 +625,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
+  int can_method;
   std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
@@ -581,7 +634,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(GRP, eFlip);
+    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(can_method, GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -595,7 +648,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(GRP, eFlip);
+    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(can_method, GRP, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -809,6 +862,7 @@ public:
 template <typename T, typename Tgroup>
 vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
                                                 const Tgroup &GRP,
+                                                int const& can_method,
                                                 const std::string &ansSamp,
                                                 std::ostream &os) {
   // We can do a little better by passing a lambda to the
@@ -816,7 +870,7 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
   size_t nbRow = EXT.rows();
   vectface list_face(nbRow);
   for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os))
-    list_face.push_back(CanonicalImageDualDesc(GRP, eFace));
+    list_face.push_back(CanonicalImageDualDesc(can_method, GRP, eFace));
   return list_face;
 }
 
@@ -842,6 +896,7 @@ public:
 
 private:
   Tint groupOrder;
+  int can_method;
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
       DictOrbit;
@@ -857,6 +912,17 @@ private:
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
 #endif
+  void set_can_method() {
+    // right now, we are in the same classical way so as not to destroy the database.
+    can_method = 0;
+    /*
+    size_t size = 0;
+    can_method = GetCanonicalizationMethod(EXT, GRP, size);
+    use_f_insert_pair = true;
+    if (can_method == CANONIC_STRATEGY__INITIAL_TRIV)
+      use_f_insert_pair = false;
+    */
+  }
 public:
   DatabaseCanonic() = delete;
   DatabaseCanonic(const DatabaseCanonic<T, Tint, Tgroup> &) = delete;
@@ -874,6 +940,7 @@ public:
   DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
       : EXT(_EXT), GRP(_GRP), foc(GRP) {
     groupOrder = GRP.size();
+    set_can_method();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -992,7 +1059,7 @@ public:
     InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
-    return DirectComputationInitialFacetSet_Group(EXT, GRP, ansSamp, os);
+    return DirectComputationInitialFacetSet_Group(EXT, GRP, can_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
@@ -1023,7 +1090,7 @@ public:
         Face f = foc.RetrieveListOrbitFace(pos);
         Tgroup Stab = GRP.Stabilizer_OnSets(f);
         return {pos, f, FlippingFramework<T>(EXT, f), GRP,
-                ReducedGroupAction(Stab, f)};
+                ReducedGroupAction(Stab, f), can_method};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
