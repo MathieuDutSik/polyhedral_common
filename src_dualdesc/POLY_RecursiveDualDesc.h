@@ -1278,7 +1278,6 @@ public:
   int the_method;
 
 private:
-  Tint groupOrder;
   std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>
       CompleteList_SetUndone;
   std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>> CompleteList_SetDone;
@@ -1310,8 +1309,6 @@ public:
                Forbitsize f_orbitsize, Finv f_inv)
       : EXT(_EXT), GRP(_GRP), foc(GRP),
         f_repr(f_repr), f_orbitsize(f_orbitsize), f_inv(f_inv) {
-    groupOrder = GRP.size();
-
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
     delta = foc.delta;
@@ -1617,26 +1614,7 @@ public:
     if (SavingTrigger) {
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
-        os << "Opening existing files (NB, FB, FF)\n";
-#ifdef TIMINGS
-        MicrosecondTime time;
-#endif
-        FileNumber fn(eFileNB, false);
-        n_orbit = fn.getval();
-        FileBool fb(eFileFB, n_orbit);
-        FileFace ff(eFileFF, bb.delta, n_orbit);
-        for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
-          Face f = ff.getface(i_orbit);
-          std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
-          bool status = fb.getbit(i_orbit);
-          // The DictOrbit
-          bb.InsertListOrbitEntry(eEnt, i_orbit);
-          // The other fields
-          bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
-        }
-#ifdef TIMINGS
-        os << "|Databse reading|=" << time << "\n";
-#endif
+        ReadDatabase();
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1648,14 +1626,44 @@ public:
         os << "eFileGRP=" << eFileGRP << "\n";
         std::ofstream os_grp(eFileGRP);
         os_grp << bb.GRP;
-        // Writing polytope
         WriteMatrixFile(eFileEXT, bb.EXT);
-        // Opening the files
-        n_orbit = 0;
       }
       //
-      os << "Inserting orbits, n_orbit=" << n_orbit << "\n";
       print_status();
+    }
+  }
+  void ReadDatabase() {
+    os << "Opening existing files (NB, FB, FF)\n";
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    FileNumber fn(eFileNB, false);
+    size_t n_orbit = fn.getval();
+    os << "Reading database with n_orbit=" << n_orbit << "\n";
+    FileBool fb(eFileFB, n_orbit);
+    FileFace ff(eFileFF, bb.delta, n_orbit);
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+      Face f = ff.getface(i_orbit);
+      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
+      bool status = fb.getbit(i_orbit);
+      bb.InsertListOrbitEntry(eEnt, i_orbit);
+      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
+    }
+#ifdef TIMINGS
+    os << "|Databse reading|=" << time << "\n";
+#endif
+  }
+  void DatabaseMethodUpgrade(int const& the_method) {
+    FileNumber fn(eFileNB, false);
+    size_t n_orbit = fn.getval();
+    FileBool fb(eFileFB, n_orbit);
+    FileFace ff(eFileFF, bb.delta, n_orbit);
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+      Face f = ff.getface(i_orbit);
+      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
+      bool status = fb.getbit(i_orbit);
+      bb.InsertListOrbitEntry(eEnt, i_orbit);
+      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
     }
   }
   ~DatabaseOrbits() {
@@ -1993,8 +2001,6 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
     Tint GroupSizeComp = TheGRPrelevant.size();
     os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
        << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
-    //      std::string MainPrefix = ePrefix + "Database_" +
-    //      std::to_string(nbRow) + "_" + std::to_string(nbCol);
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
     std::string ansChosenDatabase =
       HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
