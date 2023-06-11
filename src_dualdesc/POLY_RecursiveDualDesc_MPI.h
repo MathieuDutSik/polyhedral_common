@@ -66,6 +66,48 @@ size_t mpi_get_hash(Face const &x) {
   return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
 }
 
+template <typename Tgroup>
+int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm, vectface const& vf, Tgroup const &GRP) {
+  int n_proc = comm.size();
+  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  int64_t miss_val = std::numeric_limits<int64_t>::max();
+  int64_t upper_limit_local = miss_val;
+  int64_t upper_limit_global = miss_val;
+  int chosen_method = -1;
+  int64_t effective_upper_limit = miss_val;
+  std::vector<int64_t> V_runtime;
+  for (auto& method : list_considered) {
+    if (upper_limit_local != miss_val) {
+      // That is a tolerance. If a method gives 5 times worse locally, then that is enough to
+      // discard it.
+      effective_upper_limit = 5 * upper_limit_local;
+    }
+    int64_t runtime_local = time_evaluation_can_method(method, vf, GRP, effective_upper_limit);
+    if (runtime_local < upper_limit_local) {
+      upper_limit_local = runtime_local;
+    }
+    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
+    int64_t runtime_global = 0;
+    for (int i_proc = 0; i_proc<n_proc; i_proc++) {
+      if (runtime_global != miss_val) {
+        int64_t runtime = V_runtime[i_proc];
+        if (runtime == miss_val) {
+          runtime_global = miss_val;
+        } else {
+          runtime_global += runtime;
+        }
+      }
+    }
+    if (runtime_global < upper_limit_global) {
+      chosen_method = method;
+      upper_limit_global = runtime_global;
+    }
+  }
+  return chosen_method;
+}
+
+
+
 /*
   This is the code for the MPI parallelization.
   Since the first attempt (see above) was maybe too complicated.
@@ -165,12 +207,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (n_orb_max) {
       vectface vf(n_vert);
       for (size_t iter=0; iter<siz; iter++) {
-        Face f = RandomFace(n);
+        Face f = RandomFace(n_vert);
         vf.push_back(f);
       }
       return vf;
     } else {
-      siz = min(siz, n_orb_loc);
+      siz = T_min(siz, n_orb_loc);
       return bb.foc.ExtractFirstNFace(siz);
     }
   };

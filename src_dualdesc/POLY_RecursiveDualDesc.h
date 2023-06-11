@@ -437,31 +437,45 @@ Tgroup trivial_extension_group(Tgroup const& eGroup, size_t const& delta) {
 }
 
 template <typename Tgroup>
-int GetCanonicalizationMethod(vectface const& vf, Tgroup const &GRP) {
-  auto f_eval=[&](int the_method, int64_t const& upper_limit) -> std::optional<int64_t> {
-    NanosecondTime time;
-    int64_t duration;
-    for (auto & f : vf) {
-      (void)CanonicalImageDualDesc(the_method, GRP, f);
-      duration = time.const_eval_int64();
-      if (duration > upper_limit)
-        return {};
-    }
-    return duration;
-  };
+std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
   // We put first the CANONIC_STRATEGY__CANONICAL_IMAGE as it is an all around reasonable method
   // on which other methods have to compete with.
   std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE, CANONIC_STRATEGY__INITIAL_TRIV};
   if (GRP.size() < 20000) { // We need to exclude that strategy if too large as that strategy has no chance.
     list_considered.push_back(CANONIC_STRATEGY__STORE);
   }
+  return list_considered;
+}
+
+template <typename Tgroup>
+int64_t time_evaluation_can_method(int const& method, vectface const& vf, Tgroup const &GRP, int64_t upper_limit) {
+  NanosecondTime time;
+  int64_t duration;
+  int64_t miss_val = std::numeric_limits<int64_t>::max();
+  if (vf.size() == 0) {
+    // This can occur in parallel runs. We do not want a decision to occur
+    // on ridiculously small runtime that would cause problem
+    return 0;
+  }
+  for (auto & f : vf) {
+    (void)CanonicalImageDualDesc(method, GRP, f);
+    duration = time.const_eval_int64();
+    if (duration > upper_limit)
+      return miss_val;
+  }
+  return duration;
+}
+
+template <typename Tgroup>
+int GetCanonicalizationMethod_Serial(vectface const& vf, Tgroup const &GRP) {
+  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
   int chosen_method = -1;
-  for (auto& e_method : list_considered) {
-    std::optional<int64_t> opt = f_eval(e_method, upper_limit);
-    if (opt) {
-      chosen_method = e_method;
-      upper_limit = *opt;
+  for (auto& method : list_considered) {
+    int64_t runtime = time_evaluation_can_method(method, vf, GRP, upper_limit);
+    if (runtime < upper_limit) {
+      chosen_method = method;
+      upper_limit = runtime;
     }
   }
   return chosen_method;
@@ -480,7 +494,7 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, s
     Face f = RandomFace(n);
     vf.push_back(f);
   }
-  return GetCanonicalizationMethod(vf, GRP);
+  return GetCanonicalizationMethod_Serial(vf, GRP);
 }
 
 
