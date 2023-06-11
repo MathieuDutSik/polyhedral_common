@@ -98,8 +98,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   Tint CritSiz = RPL.CritSiz;
-  UndoneOrbitInfo<Tint> uoi_local;
-  os << "uoi_local built\n";
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
@@ -162,6 +160,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
+  auto f_get_initial_test=[&]() -> vectface {
+    size_t siz = 100;
+    if (n_orb_max) {
+      vectface vf(n_vert);
+      for (size_t iter=0; iter<siz; iter++) {
+        Face f = RandomFace(n);
+        vf.push_back(f);
+      }
+      return vf;
+    } else {
+      siz = min(siz, n_orb_loc);
+      return bb.foc.ExtractFirstNFace(siz);
+    }
+  };
+
+
+
+
+
   if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";

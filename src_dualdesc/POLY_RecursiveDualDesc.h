@@ -745,6 +745,20 @@ public:
     }
     return {std::move(f), ListPossOrbsize[idx_orb]};
   }
+  // Extracting the single Face
+  vectface ExtractFirstNFace(size_t const& siz) const {
+    vectface vf(n_act);
+    Face f(n_act);
+    for (size_t u=0; u<siz; u++) {
+      size_t i_acc = delta * u;
+      for (size_t i = 0; i < n_act; i++) {
+        f[i] = getbit_vector(ListOrbit, i_acc);
+        i_acc++;
+      }
+      vf.push_back(f);
+    }
+    return vf;
+  }
   // Database code that uses ListOrbit;
   std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
     Face f(n_act);
@@ -899,7 +913,7 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-  int the_method; // 
+  int the_method; // we use an indifferent name because we also have it for DatabaseRepr
 private:
   Tint groupOrder;
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
@@ -1488,7 +1502,6 @@ public:
 private:
   std::string MainPrefix;
   std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF, eFileMethod1, eFileMethod2;
-  int the_method1, the_method2;
   /* TRICK 7: Using separate files for faces and status allow us to gain
      locality. The faces are written one by one while the access to status is
      random */
@@ -1500,6 +1513,16 @@ private:
   std::string strPresChar;
 
 public:
+  // method1 is the preceding method computed, method2 another one.
+  // ---If method1 and method2 are missing then we compute a best guess and
+  //    then we update the database. We can accelerate the method to identify
+  //    if at some point we identify that the guess is as good as what we have
+  //    then this can accelerate.
+  // ---If method1 is present but not method2 then we sample and get the best.
+  //    If method1 = method2 then nothing to do. Otherwise, we recompute
+  //    everything.
+  // ---If method1 and method2 are present then nothing to be done.
+  int the_method1, the_method2;
   int read_method(std::string const& eFileMethod) {
     if (IsExistingFile(eFileMethod)) {
       return std::numeric_limits<int>::max();
@@ -1537,6 +1560,8 @@ public:
     eFileFF = MainPrefix + ".ff";
     eFileMethod1 = MainPrefix + ".method1";
     eFileMethod2 = MainPrefix + ".method2";
+    the_method1 = read_method(eFileMethod1);
+    the_method2 = read_method(eFileMethod2);
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
