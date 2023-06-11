@@ -899,10 +899,9 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-
+  int the_method; // 
 private:
   Tint groupOrder;
-  int can_method;
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
       DictOrbit;
@@ -918,17 +917,6 @@ private:
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
   std::vector<uint8_t> V_hash;
 #endif
-  void set_can_method() {
-    // right now, we are in the same classical way so as not to destroy the database.
-    can_method = 0;
-    /*
-    size_t size = 0;
-    can_method = GetCanonicalizationMethod(EXT, GRP, size);
-    use_f_insert_pair = true;
-    if (can_method == CANONIC_STRATEGY__INITIAL_TRIV)
-      use_f_insert_pair = false;
-    */
-  }
 public:
   DatabaseCanonic() = delete;
   DatabaseCanonic(const DatabaseCanonic<T, Tint, Tgroup> &) = delete;
@@ -946,7 +934,7 @@ public:
   DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
       : EXT(_EXT), GRP(_GRP), foc(GRP) {
     groupOrder = GRP.size();
-    set_can_method();
+    the_method = std::numeric_limits<int>::max();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -1065,7 +1053,7 @@ public:
     InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
-    return DirectComputationInitialFacetSet_Group(EXT, GRP, can_method, ansSamp, os);
+    return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
@@ -1096,7 +1084,7 @@ public:
         Face f = foc.RetrieveListOrbitFace(pos);
         Tgroup Stab = GRP.Stabilizer_OnSets(f);
         return {pos, f, FlippingFramework<T>(EXT, f), GRP,
-                ReducedGroupAction(Stab, f), can_method};
+                ReducedGroupAction(Stab, f), the_method};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -1236,6 +1224,7 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
+  int the_method;
 
 private:
   Tint groupOrder;
@@ -1498,7 +1487,8 @@ public:
 
 private:
   std::string MainPrefix;
-  std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF;
+  std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF, eFileMethod1, eFileMethod2;
+  int the_method1, the_method2;
   /* TRICK 7: Using separate files for faces and status allow us to gain
      locality. The faces are written one by one while the access to status is
      random */
@@ -1510,6 +1500,20 @@ private:
   std::string strPresChar;
 
 public:
+  int read_method(std::string const& eFileMethod) {
+    if (IsExistingFile(eFileMethod)) {
+      return std::numeric_limits<int>::max();
+    } else {
+      std::ifstream is(eFileMethod);
+      int method;
+      is >> method;
+      return method;
+    }
+  }
+  void write_method(std::string const& eFileMethod, int const& method) {
+    std::ofstream os(eFileMethod);
+    os << method;
+  }
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
   DatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
@@ -1531,11 +1535,14 @@ public:
     eFileNB = MainPrefix + ".nb";
     eFileFB = MainPrefix + ".fb";
     eFileFF = MainPrefix + ".ff";
+    eFileMethod1 = MainPrefix + ".method1";
+    eFileMethod2 = MainPrefix + ".method2";
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
     NeedToFlush = true;
+    bb.the_method = 0; // Some preliminary
     if (SavingTrigger) {
       size_t n_orbit;
       if (IsExistingFile(eFileEXT)) {
@@ -1624,6 +1631,8 @@ public:
       RemoveFileIfExist(eFileFF);
       RemoveFileIfExist(eFileEXT);
       RemoveFileIfExist(eFileGRP);
+      RemoveFileIfExist(eFileMethod1);
+      RemoveFileIfExist(eFileMethod2);
     }
     return bb.GetListFaceOrbitsize();
   }
