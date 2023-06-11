@@ -759,7 +759,7 @@ public:
     }
     return {std::move(f), ListPossOrbsize[idx_orb]};
   }
-  // Extracting the single Face
+  // Extracting a block of faces for test cases
   vectface ExtractFirstNFace(size_t const& siz) const {
     vectface vf(n_act);
     Face f(n_act);
@@ -772,6 +772,20 @@ public:
       vf.push_back(f);
     }
     return vf;
+  }
+  // Obtain a block of test faces that can be used for runtime estimation
+  vectface get_initial_testface(bool const& use_database, size_t const& siz) const {
+    if (use_database) {
+      size_t siz_red = T_min(siz, nbOrbit);
+      return ExtractFirstNFace(siz_red);
+    } else {
+      vectface vf(n_act);
+      for (size_t iter=0; iter<siz; iter++) {
+        Face f = RandomFace(n_act);
+        vf.push_back(f);
+      }
+      return vf;
+    }
   }
   // Database code that uses ListOrbit;
   std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
@@ -1537,7 +1551,7 @@ public:
   //    everything.
   // ---If method1 and method2 are present then nothing to be done.
   int the_method1, the_method2;
-  int read_method(std::string const& eFileMethod) {
+  int read_method(std::string const& eFileMethod) const {
     if (IsExistingFile(eFileMethod)) {
       return std::numeric_limits<int>::max();
     } else {
@@ -1547,9 +1561,14 @@ public:
       return method;
     }
   }
-  void write_method(std::string const& eFileMethod, int const& method) {
+  void write_method(std::string const& eFileMethod, int const& method) const {
     std::ofstream os(eFileMethod);
     os << method;
+  }
+  bool need_recompute() const {
+    if (the_method2 == std::numeric_limits<int>::max())
+      return true;
+    return false;
   }
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;

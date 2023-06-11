@@ -202,21 +202,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
-  auto f_get_initial_test=[&]() -> vectface {
-    size_t siz = 100;
-    if (n_orb_max) {
-      vectface vf(n_vert);
-      for (size_t iter=0; iter<siz; iter++) {
-        Face f = RandomFace(n_vert);
-        vf.push_back(f);
-      }
-      return vf;
-    } else {
-      siz = T_min(siz, n_orb_loc);
-      return bb.foc.ExtractFirstNFace(siz);
-    }
-  };
-
 
 
 
