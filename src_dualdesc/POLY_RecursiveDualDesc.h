@@ -436,23 +436,12 @@ Tgroup trivial_extension_group(Tgroup const& eGroup, size_t const& delta) {
   return Tgroup(LGenExt, id);
 }
 
-template <typename T, typename Tgroup>
-int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, size_t size) {
-  int n = EXT.rows();
-  if (size < 10000) {
-    if (GRP.size() < 200)
-      return CANONIC_STRATEGY__STORE;
-    return CANONIC_STRATEGY__INITIAL_TRIV;
-  }
-  std::vector<Face> list_F;
-  for (int iter=0; iter<100; iter++) {
-    Face f = RandomFace(n);
-    list_F.push_back(f);
-  }
+template <typename Tgroup>
+int GetCanonicalizationMethod(vectface const& vf, Tgroup const &GRP) {
   auto f_eval=[&](int the_method, int64_t const& upper_limit) -> std::optional<int64_t> {
     NanosecondTime time;
     int64_t duration;
-    for (auto & f : list_F) {
+    for (auto & f : vf) {
       (void)CanonicalImageDualDesc(the_method, GRP, f);
       duration = time.const_eval_int64();
       if (duration > upper_limit)
@@ -460,8 +449,10 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, s
     }
     return duration;
   };
+  // We put first the CANONIC_STRATEGY__CANONICAL_IMAGE as it is an all around reasonable method
+  // on which other methods have to compete with.
   std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE, CANONIC_STRATEGY__INITIAL_TRIV};
-  if (GRP.size() < 20000) {
+  if (GRP.size() < 20000) { // We need to exclude that strategy if too large as that strategy has no chance.
     list_considered.push_back(CANONIC_STRATEGY__STORE);
   }
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
@@ -476,6 +467,21 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, s
   return chosen_method;
 }
 
+template <typename T, typename Tgroup>
+int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP, size_t size) {
+  if (size < 10000) {
+    if (GRP.size() < 200)
+      return CANONIC_STRATEGY__STORE;
+    return CANONIC_STRATEGY__INITIAL_TRIV;
+  }
+  int n = EXT.rows();
+  vectface vf(n);
+  for (int iter=0; iter<100; iter++) {
+    Face f = RandomFace(n);
+    vf.push_back(f);
+  }
+  return GetCanonicalizationMethod(vf, GRP);
+}
 
 
 template <typename T, typename Tgroup, typename Tidx_value>
