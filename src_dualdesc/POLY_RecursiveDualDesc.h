@@ -744,6 +744,13 @@ public:
     ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
     Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
+  void clear() {
+    TotalNumber = 0;
+    nbOrbitDone = 0;
+    nbUndone = 0;
+    nbOrbit = 0;
+    ListOrbit.clear();
+  }
   // conversion functions that depend only on n_act and n_bit_orbsize.
   std::pair<Face,Tint> FaceToPair(Face const &f_in) const {
     Face f(n_act);
@@ -943,7 +950,6 @@ public:
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
   int the_method; // we use an indifferent name because we also have it for DatabaseRepr
 private:
-  Tint groupOrder;
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
       DictOrbit;
@@ -975,7 +981,6 @@ public:
   }
   DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
       : EXT(_EXT), GRP(_GRP), foc(GRP) {
-    groupOrder = GRP.size();
     the_method = std::numeric_limits<int>::max();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -1059,6 +1064,11 @@ public:
                   std::function<bool(Tidx_orbit, Tidx_orbit)>>({}, fctHash, fctEqual);
   }
   ~DatabaseCanonic() {}
+  void clear() {
+    foc.clear();
+    DictOrbit.clear();
+    CompleteList_SetUndone.clear();
+  }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -1075,8 +1085,7 @@ public:
     }
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
-    Tint ordStab = GRP.Stabilizer_OnSets(face_can).size();
-    Tint orbSize = groupOrder / ordStab;
+    Tint orbSize = GRP.OrbitSize_OnSets(face_can);
     foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
   }
@@ -1250,7 +1259,7 @@ public:
 };
 
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp,
-          typename Frepr, typename Fstab, typename Finv>
+          typename Frepr, typename Forbitsize, typename Finv>
 struct DatabaseRepr {
 public:
   using T = T_inp;
@@ -1275,16 +1284,16 @@ private:
   std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>> CompleteList_SetDone;
   size_t n_act;
   Frepr f_repr;
-  Fstab f_stab;
+  Forbitsize f_orbitsize;
   Finv f_inv;
 
 public:
   DatabaseRepr() = delete;
-  DatabaseRepr(const DatabaseRepr<T, Tint, Tgroup, Frepr, Fstab, Finv> &) =
+  DatabaseRepr(const DatabaseRepr<T, Tint, Tgroup, Frepr, Forbitsize, Finv> &) =
       delete;
-  DatabaseRepr(DatabaseRepr<T, Tint, Tgroup, Frepr, Fstab, Finv> &&) = delete;
+  DatabaseRepr(DatabaseRepr<T, Tint, Tgroup, Frepr, Forbitsize, Finv> &&) = delete;
   DatabaseRepr &
-  operator=(const DatabaseRepr<T, Tint, Tgroup, Frepr, Fstab, Finv> &) = delete;
+  operator=(const DatabaseRepr<T, Tint, Tgroup, Frepr, Forbitsize, Finv> &) = delete;
 
   void InsertEntryDatabase(Face const &face, bool const &status,
                            Tint const &orbSize, size_t const &pos) {
@@ -1298,9 +1307,9 @@ public:
     foc.Counts_InsertOrbit(status, orbSize);
   }
   DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
-               Fstab f_stab, Finv f_inv)
+               Forbitsize f_orbitsize, Finv f_inv)
       : EXT(_EXT), GRP(_GRP), foc(GRP),
-        f_repr(f_repr), f_stab(f_stab), f_inv(f_inv) {
+        f_repr(f_repr), f_orbitsize(f_orbitsize), f_inv(f_inv) {
     groupOrder = GRP.size();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -1310,6 +1319,11 @@ public:
     nbCol = EXT.cols();
   }
   ~DatabaseRepr() {}
+  void clear() {
+    foc.clear();
+    CompleteList_SetUndone.clear();
+    CompleteList_SetDone.clear();
+  }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
@@ -1340,8 +1354,7 @@ public:
     }
     foc.InsertListOrbitFace(face_i);
     // We need to recompute
-    Tint ordStab = f_stab(face_i).size();
-    Tint orbSize = groupOrder / ordStab;
+    Tint orbSize = f_orbitsize(face_i);
     foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase(face_i, false, orbSize, foc.nbOrbit);
   }
@@ -2002,15 +2015,15 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
           return true;
         return false;
       };
-      auto f_stab = [&](const Face &f) -> Tgroup {
-        return TheGRPrelevant.Stabilizer_OnSets(f);
+      auto f_orbitsize = [&](const Face &f) -> Tint {
+        return TheGRPrelevant.OrbitSize_OnSets(f);
       };
       auto f_inv = [&](const Face &f) -> size_t {
         return GetLocalInvariantWeightMatrix(WMat, f);
       };
       using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
-                                      decltype(f_stab), decltype(f_inv)>;
-      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_stab, f_inv);
+                                      decltype(f_orbitsize), decltype(f_inv)>;
+      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_orbitsize, f_inv);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value, TbasicBank>(
         TheBank, bb, AllArr, MainPrefix, TheMap, os);
     }
