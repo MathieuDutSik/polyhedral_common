@@ -106,6 +106,10 @@ int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm, vectface const
   return chosen_method;
 }
 
+// When we upgrade the canonicalization scheme, we need to recompute the hashes and remap
+// the data
+//vectface mpi_shuffle(vectface && vf) {
+//}
 
 
 /*

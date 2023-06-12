@@ -1575,10 +1575,13 @@ public:
     std::ofstream os(eFileMethod);
     os << method;
   }
-  bool need_recompute() const {
+  bool need_recompute_representative() const {
     if (the_method2 == std::numeric_limits<int>::max())
       return true;
     return false;
+  }
+  bool is_database_present() const {
+    return IsExistingFile(eFileEXT);
   }
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
@@ -1612,9 +1615,8 @@ public:
     NeedToFlush = true;
     bb.the_method = 0; // Some preliminary
     if (SavingTrigger) {
-      size_t n_orbit;
-      if (IsExistingFile(eFileEXT)) {
-        ReadDatabase();
+      if (is_database_present()) {
+        LoadDatabase();
       } else {
         if (!FILE_IsFileMakeable(eFileEXT)) {
           os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1632,14 +1634,23 @@ public:
       print_status();
     }
   }
-  void ReadDatabase() {
+  size_t prelaod_nb_orbit() {
+    if (SavingTrigger) {
+      if (is_database_present()) {
+        FileNumber fn(eFileNB, false);
+        return fn.getval();
+      }
+    }
+    return 0;
+  }
+  void LoadDatabase() {
     os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
     FileNumber fn(eFileNB, false);
     size_t n_orbit = fn.getval();
-    os << "Reading database with n_orbit=" << n_orbit << "\n";
+    os << "Loading database with n_orbit=" << n_orbit << "\n";
     FileBool fb(eFileFB, n_orbit);
     FileFace ff(eFileFF, bb.delta, n_orbit);
     for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
@@ -1650,8 +1661,73 @@ public:
       bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
     }
 #ifdef TIMINGS
-    os << "|Databse reading|=" << time << "\n";
+    os << "|Loading Database|=" << time << "\n";
 #endif
+  }
+  vectface ReadDatabase() {
+    os << "Opening existing files (NB, FB, FF)\n";
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    FileNumber fn(eFileNB, false);
+    size_t n_orbit = fn.getval();
+    os << "Reading database with n_orbit=" << n_orbit << "\n";
+    FileBool fb(eFileFB, n_orbit);
+    FileFace ff(eFileFF, bb.delta, n_orbit);
+    vectface vf(bb.delta + 1);
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+      Face f = ff.getface(i_orbit);
+      bool status = fb.getbit(i_orbit);
+      Face f_insert(bb.delta + 1);
+      for (size_t u=0; u<bb.delta; u++) {
+        f_insert[u] = f[u];
+      }
+      f_insert[bb.delta] = status;
+      vf.push_back(f_insert);
+    }
+#ifdef TIMINGS
+    os << "|Reading Database|=" << time << "\n";
+#endif
+  }
+  void DirectAppendDatabase(vectface && vf) {
+    bb.clear();
+    size_t n_orbit = vf.size();
+    size_t len_ff = 0;
+    size_t len_fb = 0;
+    if (SavingTrigger) {
+      len_ff = (n_orbit * bb.delta + 7) / 8;
+      len_fb = (n_orbit + 7) / 8;
+    }
+    std::vector<uint8_t> ListOrbit_ff(len_ff);
+    std::vector<uint8_t> V_status(len_fb);
+    size_t pos_ff = 0;
+    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      Face f = vf[i_orbit];
+      Face f_red(bb.delta);
+      for (size_t u=0; u<bb.delta; u++) {
+        bool val = f[u];
+        f_red[u] = val;
+        if (SavingTrigger) {
+          setbit_vector(ListOrbit_ff, pos_ff, val);
+        }
+        pos_ff++;
+      }
+      bool status = f[bb.delta];
+      if (SavingTrigger) {
+        setbit_vector(V_status, i_orbit, status);
+      }
+      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f_red);
+      bb.InsertListOrbitEntry(eEnt, i_orbit);
+      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
+    }
+    if (SavingTrigger) {
+      FileNumber fn(eFileNB, true);
+      FileBool fb(eFileFB);
+      FileFace ff(eFileFF, bb.delta);
+      fn.setval(n_orbit);
+      ff.direct_write(ListOrbit_ff);
+      fb.direct_write(V_status);
+    }
   }
   void DatabaseMethodUpgrade(int const& the_method) {
     FileNumber fn(eFileNB, false);
