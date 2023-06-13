@@ -2029,6 +2029,9 @@ If set to unset.heu then basic heuristics are applied which should be fine for s
   ListStringValuesH_doc["OrbitSplitTechniqueFile"] = "Default: unset.heu\n\
 The heuristic for choosing the orbit splitting technique.\n\
 If set to unset.heu then basic heuristics are applied which should be fine";
+  ListStringValuesH_doc["CommThreadHeuristicFile"] = "Default: unset.heu\n\
+The heuristic for choosing when the communication thread is launched.\n\
+If set to unset.heu then disabled";
   SingleBlock BlockHEURIS;
   BlockHEURIS.setListStringValues(ListStringValuesH_doc);
   ListBlock["HEURISTIC"] = BlockHEURIS;
@@ -2230,6 +2233,9 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique, os);
   os << "OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
+  //
+  SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
+  os << "CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   AllArr.Saving = DD_Saving;

@@ -93,20 +93,30 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   std::map<std::string, Tint> TheMap =
     ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
+  bool launch_comm_thread = (ansCommThread=="yes");
+  std::thread comm_thread;
+  std::atomic_bool done = false;
+  auto start_comm_thread = [&]() -> void {
+    if(launch_comm_thread) {
+      os << "Start Thread" << std::endl;
+      comm_thread = std::thread(f_comm, std::ref(done));
+    }
+  };
+  auto stop_comm_thread = [&]() -> void {
+    if(launch_comm_thread) {
+      done = true;
+      MicrosecondTime time_join;
+      os << "Join thread" << std::endl;
+      comm_thread.join();
+      os << "|join|=" << time_join << "\n";
+    }
+  };
   if (ansSplit != "split") {
     auto EXT = df.FF.EXT_face;
     auto Stab = df.Stab;
 
-    bool launch_comm_thread = (TheMap["delta"] >= 6);
-    std::thread comm_thread;
-    std::atomic_bool done = false;
-
-    if(launch_comm_thread) {
-      // start comm thread
-      os << "Start Thread" << std::endl;
-      comm_thread = std::thread(f_comm, std::ref(done));
-    }
-
+    start_comm_thread();
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
@@ -114,15 +124,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
-    // stop comm thread
-    done = true;
-    
-    if(launch_comm_thread) {
-      MicrosecondTime time_join;
-      os << "Join thread" << std::endl;
-      comm_thread.join();
-      os << "|join|=" << time_join << "\n";
-    }
+    stop_comm_thread();
 
     for (auto &eOrb : TheOutput) {
       std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
@@ -139,11 +141,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 #endif
   } else {
     
-    // start comm thread
-    os << "Start Thread" << std::endl;
-    std::atomic_bool done = false;
-    std::thread comm_thread(f_comm, std::ref(done));
-
+    start_comm_thread();
     try {
       vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
@@ -152,12 +150,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       MicrosecondTime time_full;
       os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
-      // stop comm thread
-      done = true;
-      MicrosecondTime time_join;
-      os << "Join thread" << std::endl;
-      comm_thread.join();
-      os << "|join|=" << time_join << "\n";
+      stop_comm_thread();
 
       for (auto &eOrb : TheOutput) {
         std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
@@ -176,8 +169,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 
     } catch (RuntimeException const &e) {
       os << "RuntimeException, join comm thread\n";
-      done = true;
-      comm_thread.join();
+      stop_comm_thread();
       throw; // rethrow
     }
   }
