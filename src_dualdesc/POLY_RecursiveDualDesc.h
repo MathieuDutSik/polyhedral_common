@@ -644,6 +644,7 @@ template <typename T, typename Tgroup> struct DataFacetCan {
   Face eInc;
   FlippingFramework<T> FF;
   const Tgroup &GRP;
+  DataFaceOrbitSize<Tgroup> & recConvert;
   Tgroup Stab;
   int can_method;
   std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
@@ -724,6 +725,7 @@ public:
   Tint nbUndone;
   size_t nbOrbit;
   std::vector<uint8_t> Vappend;
+  DataFaceOrbitSize<Tgroup> recConvert;
   // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
   // would not be available with a vectface.
   std::vector<uint8_t> ListOrbit;
@@ -731,7 +733,7 @@ public:
   FaceOrbsizeContainer(const FaceOrbsizeContainer &) = delete;
   FaceOrbsizeContainer &operator=(const FaceOrbsizeContainer &) = delete;
   FaceOrbsizeContainer(FaceOrbsizeContainer &&) = delete;
-  FaceOrbsizeContainer(const Tgroup &GRP) {
+  FaceOrbsizeContainer(const Tgroup &GRP) : recConvert(GRP) {
     std::map<Tidx, int> LFact = GRP.factor_size();
     n_act = GRP.n_act();
     TotalNumber = 0;
@@ -1134,7 +1136,7 @@ public:
         size_t pos = eEnt.second[0];
         Face f = foc.RetrieveListOrbitFace(pos);
         Tgroup Stab = GRP.Stabilizer_OnSets(f);
-        return {pos, f, FlippingFramework<T>(EXT, f), GRP,
+        return {pos, f, FlippingFramework<T>(EXT, f), GRP, foc.recConvert,
                 ReducedGroupAction(Stab, f), the_method};
       }
     }
