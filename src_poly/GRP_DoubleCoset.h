@@ -481,6 +481,41 @@ vectface DoubleCosetDescription_Exhaustive_Block_T(
 }
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
+vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(Tgroup const &BigGRP,
+                                                                         Tgroup const &SmaGRP,
+                                                                         const Tface_orbitsize &ListFaceOrbitsize,
+                                                                         typename Tgroup::Tint const& n_limit,
+                                                                         Fterminal f_terminal,
+                                                                         std::ostream &os) {
+  // Generate the full orbit for the big group and then split it using the small group.
+  // To be preferred when SmaGRP is really small.
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  using T_hash_set = std::unordered_set<Face>;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
+    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const& eSet = pair.first;
+    Tint const& TotalSize = pair.second;
+    if (f_terminal()) break;
+    if (n_limit <= TotalSize) {
+      vectface ListListSet =
+        DoubleCosetDescription_Exhaustive_T<Tgroup,T_hash_set>(BigGens, SmaGRP, eSet, TotalSize, os);
+      eListSma.append(ListListSet);
+    } else {
+      vectface ListListSet =
+        DoubleCosetDescription_CanonicInitialTriv<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+      eListSma.append(ListListSet);
+    }
+  }
+  return eListSma;
+}
+
+template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
 vectface DoubleCosetDescription_SingleCoset_Block(
     Tgroup const &BigGRP, Tgroup const &SmaGRP,
     const Tface_orbitsize &ListFaceOrbitsize, Fterminal f_terminal,
@@ -519,6 +554,7 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                    const Tface_orbitsize &ListFaceOrbitsize,
                                    std::string const &method_split,
                                    Fterminal f_terminal, std::ostream &os) {
+  using Tint = typename Tgroup::Tint;
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -565,6 +601,15 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     if (method_split == "single_cosets") {
       return DoubleCosetDescription_SingleCoset_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
+    }
+    std::optional<std::string> opt =
+      get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
+    if (opt) {
+      // In this scheme, we use the exhaustive method when the orbit size is lower than n.
+      // Otherwise, we use the canonic_initial_triv method.
+      std::string const& n_str = *opt;
+      Tint n = ParseScalar<Tint>(n_str);
+      return DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(BigGRP, SmaGRP, ListFaceOrbitsize, n, f_terminal, os);
     }
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};

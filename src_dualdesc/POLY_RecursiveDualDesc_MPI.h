@@ -51,21 +51,111 @@ inline void serialize(Archive &ar, message_query &mesg,
 }  // namespace boost::serialization
 // clang-format on
 
-size_t mpi_get_hash_kernel(Face const &x, int const &n_vert_div8,
+size_t mpi_get_hash_kernel(Face const &x, size_t const& n_vert, int const &n_vert_div8,
                            std::vector<uint8_t> &V_hash) {
-  size_t n_vert = x.size();
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++)
     setbit_vector(V_hash, i_vert, x[i_vert]);
   uint32_t seed = 0x1b873560;
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
 }
 
-size_t mpi_get_hash(Face const &x) {
-  size_t n_vert = x.size();
+size_t mpi_get_hash(Face const &x, size_t const& n_vert) {
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8, 0);
-  return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
+  return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
 }
+
+template <typename Tgroup>
+int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm, vectface const& vf, Tgroup const &GRP) {
+  int n_proc = comm.size();
+  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  int64_t miss_val = std::numeric_limits<int64_t>::max();
+  int64_t upper_limit_local = miss_val;
+  int64_t upper_limit_global = miss_val;
+  int chosen_method = -1;
+  int64_t effective_upper_limit = miss_val;
+  std::vector<int64_t> V_runtime;
+  for (auto& method : list_considered) {
+    if (upper_limit_local != miss_val) {
+      // That is a tolerance. If a method gives 5 times worse locally, then that is enough to
+      // discard it.
+      effective_upper_limit = 5 * upper_limit_local;
+    }
+    int64_t runtime_local = time_evaluation_can_method(method, vf, GRP, effective_upper_limit);
+    if (runtime_local < upper_limit_local) {
+      upper_limit_local = runtime_local;
+    }
+    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
+    int64_t runtime_global = 0;
+    for (int i_proc = 0; i_proc<n_proc; i_proc++) {
+      if (runtime_global != miss_val) {
+        int64_t runtime = V_runtime[i_proc];
+        if (runtime == miss_val) {
+          runtime_global = miss_val;
+        } else {
+          runtime_global += runtime;
+        }
+      }
+    }
+    if (runtime_global < upper_limit_global) {
+      chosen_method = method;
+      upper_limit_global = runtime_global;
+    }
+  }
+  return chosen_method;
+}
+
+// When we upgrade the canonicalization scheme, we need to recompute the hashes
+// and redistribute the data.
+vectface mpi_shuffle(boost::mpi::communicator &comm,
+                     vectface && vf, size_t const& n) {
+  int n_proc = comm.size();
+  size_t siz = vf.size();
+  size_t delta = vf.get_n(); // the full size of the entries
+  int n_div8 = (n + 7) / 8;
+  std::vector<uint8_t> V_hash(n_div8, 0);
+  std::vector<std::vector<uint8_t>> list_in_vect(n_proc);
+  std::vector<size_t> list_in_cnt(n_proc, 0);
+  for (size_t i_elt=0; i_elt<siz; i_elt++) {
+    Face f = vf[i_elt];
+    size_t hash = mpi_get_hash_kernel(f, n, n_div8, V_hash);
+    int res = static_cast<int>(hash % size_t(n_proc));
+    size_t pos = list_in_cnt[res];
+    size_t needed_len = (delta * (pos+1) + 7) / 8;
+    size_t curr_len = list_in_vect[res].size();
+    for (size_t u=curr_len; u<needed_len; u++) {
+      list_in_vect[res].push_back(0);
+    }
+    size_t pos_vect = pos * delta;
+    for (size_t u=0; u<delta; u++) {
+      bool val = f[u];
+      setbit_vector(list_in_vect[res], pos_vect, val);
+      pos_vect++;
+    }
+    list_in_cnt[res] = pos + 1;
+  }
+  std::vector<std::vector<uint8_t>> list_out_vect(n_proc);
+  std::vector<size_t> list_out_cnt(n_proc);
+  boost::mpi::all_to_all(comm, list_in_cnt, list_out_cnt);
+  boost::mpi::all_to_all(comm, list_in_vect, list_out_vect);
+  vectface vf_ret(delta);
+  Face f(delta);
+  for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    size_t siz_out = list_out_cnt[i_proc];
+    size_t pos = 0;
+    std::vector<uint8_t> const& V = list_out_vect[i_proc];
+    for (size_t i_elt=0; i_elt<siz_out; i_elt++) {
+      for (size_t u=0; u<delta; u++) {
+        bool val = getbit_vector(V, pos);
+        f[u] = val;
+        pos++;
+      }
+      vf_ret.push_back(f);
+    }
+  }
+  return vf_ret;
+}
+
 
 /*
   This is the code for the MPI parallelization.
@@ -193,14 +283,12 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   Tint CritSiz = RPL.CritSiz;
-  UndoneOrbitInfo<Tint> uoi_local;
-  os << "uoi_local built\n";
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8, 0);
   auto get_hash = [&](Face const &x) -> size_t {
-    return mpi_get_hash_kernel(x, n_vert_div8, V_hash);
+    return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
   };
   if (AllArr.max_runtime < 0) {
     std::cerr << "The MPI version requires a strictly positive runtime\n";
@@ -257,6 +345,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
+
+
+
+
   if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
