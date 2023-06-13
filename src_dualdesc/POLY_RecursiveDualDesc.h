@@ -265,7 +265,7 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
   return LVal;
 }
 
-template<typename Tgroup>
+template<typename Torbsize, typename Tgroup>
 struct DataFaceOrbitSize {
   using Tint = typename Tgroup::Tint;
   /* TRICK 3: Knowing the factorization of the order of the group allow us to
@@ -638,13 +638,13 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
 
-template <typename T, typename Tgroup> struct DataFacetCan {
+template <typename T, typename Torbsize, typename Tgroup> struct DataFacetCan {
   using Tint = typename Tgroup::Tint;
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
   const Tgroup &GRP;
-  DataFaceOrbitSize<Tgroup> & recConvert;
+  DataFaceOrbitSize<Torbsize, Tgroup> & recConvert;
   Tgroup Stab;
   int can_method;
   std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
@@ -725,7 +725,7 @@ public:
   Tint nbUndone;
   size_t nbOrbit;
   std::vector<uint8_t> Vappend;
-  DataFaceOrbitSize<Tgroup> recConvert;
+  DataFaceOrbitSize<Torbsize, Tgroup> recConvert;
   // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
   // would not be available with a vectface.
   std::vector<uint8_t> ListOrbit;
@@ -847,7 +847,6 @@ public:
     }
   }
   void InsertListOrbitFace(Face const &face) {
-    // Insert bytes to avoid a memory segfault.
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
@@ -859,6 +858,21 @@ public:
     // comparison of novelty.
     size_t i_acc = nbOrbit * delta;
     for (size_t i = 0; i < n_act; i++) {
+      bool val = face[i];
+      setbit_vector(ListOrbit, i_acc, val);
+      i_acc++;
+    }
+  }
+  void InsertListOrbitFaceComplete(Face const &face) {
+    size_t curr_len = ListOrbit.size();
+    size_t needed_bits = (nbOrbit + 1) * delta;
+    size_t needed_len = (needed_bits + 7) / 8;
+    size_t incr = needed_len - curr_len;
+    if (incr > 0)
+      ListOrbit.insert(ListOrbit.end(), Vappend.begin(),
+                       Vappend.begin() + incr);
+    size_t i_acc = nbOrbit * delta;
+    for (size_t i = 0; i < delta; i++) {
       bool val = face[i];
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
@@ -943,8 +957,8 @@ public:
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
   const Tgroup &GRP;
-  using DataFacet = DataFacetCan<T, Tgroup>;
   using Torbsize = uint16_t;
+  using DataFacet = DataFacetCan<T, Torbsize, Tgroup>;
   using Tidx = typename Telt::Tidx;
   int nbRow;
   int nbCol;
@@ -1125,7 +1139,7 @@ public:
     }
     foc.Counts_SetOrbitDone(eEnt.second);
   }
-  DataFacetCan<T, Tgroup> FuncGetMinimalUndoneOrbit() {
+  DataFacetCan<T, Torbsize, Tgroup> FuncGetMinimalUndoneOrbit() {
     for (auto &eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
