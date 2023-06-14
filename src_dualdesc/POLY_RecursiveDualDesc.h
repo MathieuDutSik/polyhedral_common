@@ -68,6 +68,10 @@ static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
 static const int CANONIC_STRATEGY__STORE = 1;
 static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
 
+static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
+static const int REPR_STRATEGY__DEFAULT = 0; // More or less irrelevant here
+
+
 std::atomic<bool> ExitEvent;
 
 void signal_callback_handler(int signum) {
@@ -1067,6 +1071,23 @@ public:
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
   }
+  bool use_f_insert_pair() {
+    if (the_method == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+      return true;
+    }
+    return CANONIC_STRATEGY__INITIAL_TRIV;
+    if (the_method == CANONIC_STRATEGY__STORE) {
+      return true;
+    }
+    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV) {
+      return false;
+    }
+    std::cerr << "The value of the_method was not correctly set\n";
+    throw TerminalException{1};
+  }
+  int get_default_strategy() {
+    return CANONIC_STRATEGY__DEFAULT;
+  }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -1318,6 +1339,12 @@ public:
     foc.clear();
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
+  }
+  bool use_f_insert_pair() {
+    return false;
+  }
+  int get_default_strategy() {
+    return REPR_STRATEGY__DEFAULT;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     CompleteList_SetUndone.clear();
