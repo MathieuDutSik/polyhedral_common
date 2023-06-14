@@ -1731,6 +1731,7 @@ public:
 #ifdef TIMINGS
     os << "|Reading Database|=" << time << "\n";
 #endif
+    return vf;
   }
   void DirectAppendDatabase(vectface && vf) {
     bb.clear();
@@ -2028,7 +2029,6 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
   using DataFacet = typename TbasicBank::DataFacet;
-  using Tint = typename Tgroup::Tint;
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   if (RPL.FuncNumberOrbit() == 0) {
