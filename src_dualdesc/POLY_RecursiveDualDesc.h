@@ -203,41 +203,6 @@ MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT) {
   return CanonicalizationPolytopePair<T, int, Tidx_value>(EXT, WMat).first;
 }
 
-template <typename Tgroup>
-Face CanonicalImageDualDesc(int const& method_choice, Tgroup const& GRP, Face const& f) {
-  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
-    return GRP.CanonicalImage(f);
-  if (method_choice == CANONIC_STRATEGY__STORE)
-    return GRP.StoreCanonicalImage(f);
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
-    return GRP.CanonicalImageInitialTriv(f);
-  std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
-  std::cerr << "method_choice=" << method_choice << "\n";
-  throw TerminalException{1};
-}
-
-template <typename Tgroup>
-std::pair<Face,typename Tgroup::Tint> CanonicalImageOrbitSizeDualDesc(int const& method_choice, Tgroup const& GRP, Face const& f) {
-  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
-    return GRP.CanonicalImageOrbitSize(f);
-  if (method_choice == CANONIC_STRATEGY__STORE)
-    return GRP.StoreCanonicalImageOrbitSize(f);
-  std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
-  std::cerr << "method_choice=" << method_choice << "\n";
-  throw TerminalException{1};
-}
-
-vectface vectface_reduction(vectface const& vf, size_t n_red) {
-  vectface vf_red(n_red);
-  Face f_red(n_red);
-  for (auto & f : vf) {
-    for (size_t i=0; i<n_red; i++)
-      f_red[i] = f[i];
-    vf_red.push_back(f_red);
-  }
-  return vf_red;
-}
-
 template <typename Tidx>
 std::pair<size_t, size_t> get_delta(const std::map<Tidx, int> &LFact,
                                     const size_t &n_act) {
@@ -267,6 +232,22 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
     LVal = NewVal;
   }
   return LVal;
+}
+
+/*
+  This is a simple canonicalization function that does not return the Orbitsize
+ */
+template <typename Tgroup>
+Face CanonicalImageDualDesc(int const& method_choice, Tgroup const& GRP, Face const& f) {
+  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
+    return GRP.CanonicalImage(f);
+  if (method_choice == CANONIC_STRATEGY__STORE)
+    return GRP.StoreCanonicalImage(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
+    return GRP.CanonicalImageInitialTriv(f);
+  std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
+  std::cerr << "method_choice=" << method_choice << "\n";
+  throw TerminalException{1};
 }
 
 template<typename Torbsize, typename Tgroup>
@@ -347,6 +328,38 @@ struct DataFaceOrbitSize {
   }
 };
 
+/*
+  Return the canonical form and the orbit stabilizer if available and encoded as
+  a face (which creates a lot of possibility of errors)
+ */
+template <typename Torbsize, typename Tgroup>
+Face CanonicalImageGeneralDualDesc(int const& method_choice, Tgroup const& GRP, DataFaceOrbitSize<Torbsize, Tgroup> & recConvert, Face const& f) {
+  using Tint = typename Tgroup::Tint;
+  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+    std::pair<Face,Tint> pair = GRP.CanonicalImageOrbitSize(f);
+    return recConvert.ConvertFaceOrbitSize(pair);
+  }
+  if (method_choice == CANONIC_STRATEGY__STORE) {
+    std::pair<Face,Tint> pair = GRP.StoreCanonicalImageOrbitSize(f);
+    return recConvert.ConvertFaceOrbitSize(pair);
+  }
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
+    return GRP.CanonicalImageInitialTriv(f);
+  std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
+  std::cerr << "method_choice=" << method_choice << "\n";
+  throw TerminalException{1};
+}
+
+vectface vectface_reduction(vectface const& vf, size_t n_red) {
+  vectface vf_red(n_red);
+  Face f_red(n_red);
+  for (auto & f : vf) {
+    for (size_t i=0; i<n_red; i++)
+      f_red[i] = f[i];
+    vf_red.push_back(f_red);
+  }
+  return vf_red;
+}
 
 template<typename Tint>
 struct FaceOrbitsizeTableContainer {
@@ -656,7 +669,7 @@ template <typename T, typename Torbsize, typename Tgroup> struct DataFacetCan {
   DataFaceOrbitSize<Torbsize, Tgroup> & recConvert;
   Tgroup Stab;
   int can_method;
-  std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
+  Face FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -664,13 +677,13 @@ template <typename T, typename Torbsize, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(can_method, GRP, eFlip);
+    Face result = CanonicalImageGeneralDualDesc(can_method, GRP, recConvert, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
     return result;
   }
-  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -678,7 +691,7 @@ template <typename T, typename Torbsize, typename Tgroup> struct DataFacetCan {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    std::pair<Face,Tint> result = CanonicalImageOrbitSizeDualDesc(can_method, GRP, eFlip);
+    Face result = CanonicalImageGeneralDualDesc(can_method, GRP, recConvert, eFlip);
 #ifdef TIMINGS
     os << "|canonicalization|=" << time << "\n";
 #endif
@@ -693,7 +706,8 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  std::pair<Face,Tint> FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
+  // There is only one method for Repr and it does not create a stabilizer.
+  Face FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -701,9 +715,9 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #ifdef TIMINGS
     os << "|FlipFace|=" << time << "\n";
 #endif
-    return {result,0};
+    return result;
   }
-  std::pair<Face,Tint> FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
@@ -711,7 +725,7 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
 #ifdef TIMINGS
     os << "|FlipFaceIneq|=" << time << "\n";
 #endif
-    return {result,0};
+    return result;
   }
 };
 
@@ -825,7 +839,7 @@ public:
     }
     return face;
   }
-  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt) {
+  void InsertListOrbitEntry(Face const &f) {
     // Insert bytes to avoid a memory segfault.
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
@@ -837,16 +851,9 @@ public:
     // Now setting up the bits for face and idx_orb.
     size_t i_acc = nbOrbit * delta;
     for (size_t i = 0; i < n_act; i++) {
-      bool val = eEnt.first[i];
+      bool val = f[i];
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
-    }
-    size_t work_idx = recConvert.GetOrbSizeIndex(eEnt.second);
-    for (size_t i = 0; i < n_bit_orbsize; i++) {
-      bool val = work_idx % 2;
-      setbit_vector(ListOrbit, i_acc, val);
-      i_acc++;
-      work_idx = work_idx / 2;
     }
   }
   void InsertListOrbitFace(Face const &face) {
@@ -973,8 +980,10 @@ public:
   DatabaseCanonic(DatabaseCanonic<T, Tint, Tgroup> &&) = delete;
   DatabaseCanonic &operator=(const DatabaseCanonic<T, Tint, Tgroup> &) = delete;
 
-  void InsertEntryDatabase(Face const &face, bool const &status,
-                           Tint const &orbSize, size_t const &pos) {
+  void InsertEntryDatabase(std::pair<Face,Tint> const &face_pair, bool const &status,
+                           size_t const &pos) {
+    Face const& face = face_pair.first;
+    Tint const& orbSize = face_pair.second;
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
@@ -1106,21 +1115,19 @@ public:
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
     foc.InsertListOrbitIdxOrb(orbSize);
-    InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
+    InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
-  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
-    Face const& face_can = face_orbsize.first;
-    // The face should have been canonicalized beforehand.
-    foc.InsertListOrbitFace(face_can);
+  void FuncInsertPair(Face const &face_orbsize) {
+    // The face should have been canonicalized beforehand and also contains the orbits
+    foc.InsertListOrbitFace(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
       // Insertion did not raise the count
       // and so it was already present
       return;
     }
-    Tint const& orbSize = face_orbsize.second;
-    foc.InsertListOrbitIdxOrb(orbSize);
-    InsertEntryDatabase(face_can, false, orbSize, foc.nbOrbit);
+    std::pair<Face,Tint> pair = foc.FaceToPair(face_orbsize);
+    InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
@@ -1160,7 +1167,7 @@ public:
     std::cerr << "Failed to find an undone orbit\n";
     throw TerminalException{1};
   }
-  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt, const size_t &i_orbit) {
+  void InsertListOrbitEntry(Face const &eEnt, const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
     DictOrbit.insert(i_orbit);
   }
@@ -1313,8 +1320,10 @@ public:
   DatabaseRepr &
   operator=(const DatabaseRepr<T, Tint, Tgroup, Frepr, Forbitsize, Finv> &) = delete;
 
-  void InsertEntryDatabase(Face const &face, bool const &status,
-                           Tint const &orbSize, size_t const &pos) {
+  void InsertEntryDatabase(std::pair<Face,Tint> const &face_pair, bool const &status,
+                           size_t const &pos) {
+    Face const& face = face_pair.first;
+    Tint const& orbSize = face_pair.second;
     size_t len = face.count();
     size_t eInv = f_inv(face);
     if (status) {
@@ -1378,10 +1387,14 @@ public:
     // We need to recompute
     Tint orbSize = f_orbitsize(face_i);
     foc.InsertListOrbitIdxOrb(orbSize);
-    InsertEntryDatabase(face_i, false, orbSize, foc.nbOrbit);
+    InsertEntryDatabase({face_i,orbSize}, false, foc.nbOrbit);
   }
-  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
-    FuncInsert(face_orbsize.first);
+  void FuncInsertPair(Face const &face) {
+    Face f_red(nbRow);
+    for (int i=0; i<nbRow; i++) {
+      f_red[i] = face[i];
+    }
+    FuncInsert(f_red);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet(EXT, ansSamp, os);
@@ -1427,7 +1440,7 @@ public:
     return {pos, f, FlippingFramework<T>(EXT, f), GRP,
             ReducedGroupAction(Stab, f)};
   }
-  void InsertListOrbitEntry(std::pair<Face,Tint> const &eEnt,
+  void InsertListOrbitEntry(Face const &eEnt,
                             [[maybe_unused]] const size_t &i_orbit) {
     foc.InsertListOrbitEntry(eEnt);
   }
@@ -1687,8 +1700,8 @@ public:
       Face f = ff.getface(i_orbit);
       std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
       bool status = fb.getbit(i_orbit);
-      bb.InsertListOrbitEntry(eEnt, i_orbit);
-      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
+      bb.InsertListOrbitEntry(f, i_orbit);
+      bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
 #ifdef TIMINGS
     os << "|Loading Database|=" << time << "\n";
@@ -1746,9 +1759,9 @@ public:
       if (SavingTrigger) {
         setbit_vector(V_status, i_orbit, status);
       }
-      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f_red);
+      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
       bb.InsertListOrbitEntry(eEnt, i_orbit);
-      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
+      bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
     if (SavingTrigger) {
       FileNumber fn(eFileNB, true);
@@ -1769,7 +1782,7 @@ public:
       std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
       bool status = fb.getbit(i_orbit);
       bb.InsertListOrbitEntry(eEnt, i_orbit);
-      bb.InsertEntryDatabase(eEnt.first, status, eEnt.second, i_orbit);
+      bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
   }
   ~DatabaseOrbits() {
@@ -1824,8 +1837,8 @@ public:
   void FuncInsert(Face const &face) {
     bb.FuncInsert(face);
   }
-  void FuncInsertPair(std::pair<Face,Tint> const &face_orbsize) {
-    bb.FuncInsertPair(face_orbsize);
+  void FuncInsertPair(Face const &face) {
+    bb.FuncInsertPair(face);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return bb.ComputeInitialSet(ansSamp, os);
@@ -1969,7 +1982,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
+      Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
@@ -1990,7 +2003,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
+      Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
@@ -2023,6 +2036,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
       RPL.FuncInsert(face);
   }
+  bool use_f_insert_pair = bb.use_f_insert_pair();
   while (true) {
     if (RPL.GetTerminationStatus())
       break;
@@ -2033,10 +2047,17 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-    auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
-      RPL.FuncInsertPair(eFlip);
-    };
-    DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+    if (use_f_insert_pair) {
+      auto f_insert=[&](Face const& eFlip) -> void {
+        RPL.FuncInsertPair(eFlip);
+      };
+      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+    } else {
+      auto f_insert=[&](Face const& eFlip) -> void {
+        RPL.FuncInsert(eFlip);
+      };
+      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+    }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
   return RPL.GetListFaceOrbitsize();
