@@ -472,13 +472,8 @@ std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
 template <typename Tgroup>
 int64_t time_evaluation_can_method(int const& method, vectface const& vf, Tgroup const &GRP, int64_t upper_limit) {
   NanosecondTime time;
-  int64_t duration;
+  int64_t duration = 0;
   int64_t miss_val = std::numeric_limits<int64_t>::max();
-  if (vf.size() == 0) {
-    // This can occur in parallel runs. We do not want a decision to occur
-    // on ridiculously small runtime that would cause problem
-    return 0;
-  }
   for (auto & f : vf) {
     (void)CanonicalImageDualDesc(method, GRP, f);
     duration = time.const_eval_int64();
