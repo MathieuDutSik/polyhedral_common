@@ -308,6 +308,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
+  // Grow max buffer like sqrt(n_proc) instead of n_proc to
+  // 1. Get O(sqrt(n_proc)) memory usage per thread
+  // 2. Send first orbits earlier, to prevent empty threads
+  //    to do nothing for many hours at the start.
   size_t MaxBuffered = 10000 * size_t(std::sqrt(n_proc));
   int MaxFly;
   if (AllArr.SimpleExchangeScheme) {
