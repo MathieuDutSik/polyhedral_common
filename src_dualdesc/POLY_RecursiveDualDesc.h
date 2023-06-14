@@ -278,7 +278,7 @@ struct DataFaceOrbitSize {
      since some orbitsize never occur
      this would have populated it with entries that never occur and so slow it
      down. */
-  UNORD_MAP<Tint, size_t> OrbSize_Map;
+  UNORD_MAP<Tint, Torbsize> OrbSize_Map;
   size_t n;
   size_t n_bit_orbsize;
   size_t delta;
@@ -291,22 +291,27 @@ struct DataFaceOrbitSize {
     n_bit_orbsize = ep.first;
     delta = ep.second;
   }
-  Face ConvertFaceOrbitSize(std::pair<Face,Tint> const& pair) {
-    Face const& f = pair.first;
-    Tint const& orbitSize = pair.second;
-    size_t &idx = OrbSize_Map[orbitSize];
+  Torbsize GetOrbSizeIndex(Tint const &orbSize) {
+    /* TRICK 4: value 0 is the default constructed one and so using it we can
+       find if the entry is new or not in only one call */
+    Torbsize &idx = OrbSize_Map[orbSize];
     if (idx == 0) {
       // A rare case. The linear loop should be totally ok
-      auto set = [&]() -> size_t {
+      auto set = [&]() -> int {
         for (size_t u = 0; u < ListPossOrbsize.size(); u++)
-          if (ListPossOrbsize[u] == orbitSize) {
+          if (ListPossOrbsize[u] == orbSize) {
             return u + 1;
           }
         return 0;
       };
       idx = set();
     }
-    size_t idx_orb = idx - 1;
+    return idx - 1;
+  }
+  Face ConvertFaceOrbitSize(std::pair<Face,Tint> const& pair) {
+    Face const& f = pair.first;
+    Tint const& orbitSize = pair.second;
+    Torbsize idx_orb = GetOrbSizeIndex(orbitSize);
     //
     Face f_ret(delta);
     for (size_t i=0; i<n; i++)
@@ -712,11 +717,6 @@ template <typename Tgroup, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
   using Tint = typename Tgroup::Tint;
-  UNORD_MAP<Tint, Torbsize> OrbSize_Map;
-  // From the list of factors of the group size we compute the list of possible
-  // orbit sizes and that has to be invariant and not change from one run to the
-  // next
-  std::vector<Tint> ListPossOrbsize;
   size_t n_act;
   size_t n_bit_orbsize;
   size_t delta;
@@ -743,7 +743,6 @@ public:
     std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     n_bit_orbsize = ep.first;
     delta = ep.second;
-    ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
     Vappend = std::vector<uint8_t>((delta + 7) / 8, 0);
   }
   void clear() {
@@ -766,7 +765,7 @@ public:
       i_acc++;
       pow *= 2;
     }
-    return {std::move(f), ListPossOrbsize[idx_orb]};
+    return {std::move(f), recConvert.ListPossOrbsize[idx_orb]};
   }
   // Extracting a block of faces for test cases
   vectface ExtractFirstNFace(size_t const& siz) const {
@@ -811,7 +810,7 @@ public:
       i_acc++;
       pow *= 2;
     }
-    return {std::move(f), ListPossOrbsize[idx_orb]};
+    return {std::move(f), recConvert.ListPossOrbsize[idx_orb]};
   }
   Face RetrieveListOrbitFace(size_t const &i_orb) const {
     Face face(n_act);
@@ -838,7 +837,7 @@ public:
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
     }
-    size_t work_idx = GetOrbSizeIndex(eEnt.second);
+    size_t work_idx = recConvert.GetOrbSizeIndex(eEnt.second);
     for (size_t i = 0; i < n_bit_orbsize; i++) {
       bool val = work_idx % 2;
       setbit_vector(ListOrbit, i_acc, val);
@@ -879,7 +878,7 @@ public:
     }
   }
   void InsertListOrbitIdxOrb(Tint const &orbSize) {
-    Torbsize idx_orb = GetOrbSizeIndex(orbSize);
+    Torbsize idx_orb = recConvert.GetOrbSizeIndex(orbSize);
     /* TRICK 8: The computation of the stabilizer is needed for getting the
        orbitsize but this is expensive to do. Therefore we first insert the list
        of faces and if found to be new then we insert afterwards the idx_orb */
@@ -891,24 +890,6 @@ public:
       i_acc++;
       work_idx = work_idx / 2;
     }
-  }
-  // Group functionalities.
-  Torbsize GetOrbSizeIndex(Tint const &orbSize) {
-    /* TRICK 4: value 0 is the default constructed one and so using it we can
-       find if the entry is new or not in only one call */
-    Torbsize &idx = OrbSize_Map[orbSize];
-    if (idx == 0) {
-      // A rare case. The linear loop should be totally ok
-      auto set = [&]() -> int {
-        for (size_t u = 0; u < ListPossOrbsize.size(); u++)
-          if (ListPossOrbsize[u] == orbSize) {
-            return u + 1;
-          }
-        return 0;
-      };
-      idx = set();
-    }
-    return idx - 1;
   }
   void Counts_InsertOrbit(const bool &status, const Tint &orbSize) {
     TotalNumber += orbSize;
@@ -926,7 +907,8 @@ public:
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     vectface vfo;
     vfo.build_vectface(delta, nbOrbit, std::move(ListOrbit));
-    return FaceOrbitsizeTableContainer(std::move(ListPossOrbsize), n_act, std::move(vfo));
+    std::vector<Tint> ListPoss = recConvert.ListPossOrbsize;
+    return FaceOrbitsizeTableContainer(std::move(ListPoss), n_act, std::move(vfo));
   }
 };
 
