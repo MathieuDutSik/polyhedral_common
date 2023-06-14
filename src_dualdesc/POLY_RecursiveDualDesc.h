@@ -1632,13 +1632,18 @@ public:
     eFileMethod1 = MainPrefix + ".method1";
     eFileMethod2 = MainPrefix + ".method2";
     the_method1 = read_method(eFileMethod1);
+    if (the_method1 == std::numeric_limits<int>::max()) {
+      // Put the default if missing
+      the_method1 = bb.get_default_strategy();
+    }
     the_method2 = read_method(eFileMethod2);
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
     NeedToFlush = true;
-    bb.the_method = 0; // Some preliminary
+    // At the start we are working with a default strategy.
+    bb.the_method = bb.get_default_strategy();
     if (SavingTrigger) {
       if (is_database_present()) {
         LoadDatabase();
