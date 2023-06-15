@@ -159,14 +159,14 @@ vectface DoubleCosetDescription_Canonic(
       DoubleCosetInsertEntry_first(eFaceImg);
     }
   }
-  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
-  os << "DoubleCosetDescription_Canonic |SetFace|=" << SetFace.size() << "\n";
+  //  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  //  os << "DoubleCosetDescription_Canonic |SetFace|=" << SetFace.size() << "\n";
   vectface ListListSet = get_list_list_set();
-  os << "DoubleCosetDescription_Canonic |ListListSet|=" << ListListSet.size()
-     << " n=" << ListListSet.get_n() << "\n";
+  //  os << "DoubleCosetDescription_Canonic |ListListSet|=" << ListListSet.size()
+  //     << " n=" << ListListSet.get_n() << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
-    os << "|ListListSet|=" << ListListSet.size() << "\n";
+    //    os << "|ListListSet|=" << ListListSet.size() << "\n";
     Face eFace = ListListSet.pop();
     for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
@@ -419,6 +419,13 @@ DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
     Face const &eSet = pair.first;
     Tint const &TotalSize = pair.second;
+    //    Tint orbSize = BigGRP.OrbitSize_OnSets(eSet);
+    //    os << "osbSize=" << orbSize << " TotalSize=" << TotalSize << "\n";
+    //    if (orbSize != TotalSize) {
+    //      std::cerr << "orbSize=" << orbSize << " TotalSize=" << TotalSize << "\n";
+    //      std::cerr << "Inconsistency in the Size computation\n";
+    //      throw TerminalException{1};
+    //    }
     if (f_terminal())
       break;
     vectface ListListSet = DoubleCosetDescription_Canonic<Tgroup>(

@@ -368,9 +368,11 @@ public:
   size_t n;
   vectface vfo;
   FaceOrbitsizeTableContainer(std::vector<Tint> const& _ListPossOrbsize, size_t _n, vectface && _vfo) : ListPossOrbsize(std::move(_ListPossOrbsize)), n(_n), vfo(std::move(_vfo)) {
+    std::cerr << "FaceOrbitsizeTableContainer : constructor 1\n";
   }
   template<typename Tgroup>
   FaceOrbitsizeTableContainer(vectface const& vf, Tgroup const& GRP) {
+    std::cerr << "FaceOrbitsizeTableContainer : constructor 2\n";
     n = vf.get_n();
     using Tidx=typename Tgroup::Telt::Tidx;
     std::map<Tidx, int> LFact = GRP.factor_size();
@@ -652,6 +654,10 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     OnFace_inplace(eFaceImg, eFace, ePermExt);
     ListReprTrans.push_back(eFaceImg);
   }
+  std::cerr << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
+  os        << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
+  std::cerr << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
+  os        << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
   FaceOrbitsizeTableContainer<Tint> fotc(RecAns.ListPossOrbsize, n, std::move(ListReprTrans));
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
@@ -766,21 +772,6 @@ public:
     nbOrbit = 0;
     ListOrbit.clear();
   }
-  // conversion functions that depend only on n_act and n_bit_orbsize.
-  std::pair<Face,Tint> FaceToPair(Face const &f_in) const {
-    Face f(n_act);
-    Torbsize idx_orb = 0;
-    for (size_t i = 0; i < n_act; i++)
-      f[i] = f_in[i];
-    size_t i_acc = n_act;
-    Torbsize pow = 1;
-    for (size_t i = 0; i < n_bit_orbsize; i++) {
-      idx_orb += Torbsize(f_in[i_acc]) * pow;
-      i_acc++;
-      pow *= 2;
-    }
-    return {std::move(f), recConvert.ListPossOrbsize[idx_orb]};
-  }
   // Extracting a block of faces for test cases
   vectface ExtractFirstNFace(size_t const& siz) const {
     vectface vf(n_act);
@@ -834,23 +825,6 @@ public:
       i_acc++;
     }
     return face;
-  }
-  void InsertListOrbitEntry(Face const &f) {
-    // Insert bytes to avoid a memory segfault.
-    size_t curr_len = ListOrbit.size();
-    size_t needed_bits = (nbOrbit + 1) * delta;
-    size_t needed_len = (needed_bits + 7) / 8;
-    size_t incr = needed_len - curr_len;
-    if (incr > 0)
-      ListOrbit.insert(ListOrbit.end(), Vappend.begin(),
-                       Vappend.begin() + incr);
-    // Now setting up the bits for face and idx_orb.
-    size_t i_acc = nbOrbit * delta;
-    for (size_t i = 0; i < delta; i++) {
-      bool val = f[i];
-      setbit_vector(ListOrbit, i_acc, val);
-      i_acc++;
-    }
   }
   void InsertListOrbitFace(Face const &face) {
     size_t curr_len = ListOrbit.size();
@@ -1101,6 +1075,7 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
+    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_can|=" << face_can.size() << "\n";
     // The face should have been canonicalized beforehand.
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
@@ -1112,19 +1087,22 @@ public:
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
+    std::cerr << "DatabaseCanonic::FuncInsert orbSize=" << orbSize << "\n";
     foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
+    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_orbsize|=" << face_orbsize.size() << "\n";
     // The face should have been canonicalized beforehand and also contains the orbits
-    foc.InsertListOrbitFace(face_orbsize);
+    foc.InsertListOrbitFaceComplete(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
       // Insertion did not raise the count
       // and so it was already present
       return;
     }
-    std::pair<Face,Tint> pair = foc.FaceToPair(face_orbsize);
+    std::pair<Face,Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
+    std::cerr << "DatabaseCanonic::FuncInsertPair orbSize=" << pair.second << "\n";
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
@@ -1166,7 +1144,7 @@ public:
     throw TerminalException{1};
   }
   void InsertListOrbitEntry(Face const &f, const size_t &i_orbit) {
-    foc.InsertListOrbitEntry(f);
+    foc.InsertListOrbitFaceComplete(f);
     DictOrbit.insert(i_orbit);
   }
 
@@ -1385,7 +1363,7 @@ public:
     // We need to recompute
     Tint orbSize = f_orbitsize(face_i);
     foc.InsertListOrbitIdxOrb(orbSize);
-    InsertEntryDatabase({face_i,orbSize}, false, foc.nbOrbit);
+    InsertEntryDatabase({face_i, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face) {
     Face f_red(nbRow);
@@ -1440,7 +1418,7 @@ public:
   }
   void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {
-    foc.InsertListOrbitEntry(f);
+    foc.InsertListOrbitFaceComplete(f);
   }
 
 private:
@@ -1696,7 +1674,7 @@ public:
     FileFace ff(eFileFF, bb.delta, n_orbit);
     for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
       Face f = ff.getface(i_orbit);
-      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
+      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
       bool status = fb.getbit(i_orbit);
       bb.InsertListOrbitEntry(f, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
@@ -1758,7 +1736,7 @@ public:
       if (SavingTrigger) {
         setbit_vector(V_status, i_orbit, status);
       }
-      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
+      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
       bb.InsertListOrbitEntry(f, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
@@ -1778,7 +1756,7 @@ public:
     FileFace ff(eFileFF, bb.delta, n_orbit);
     for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
       Face f = ff.getface(i_orbit);
-      std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
+      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
       bool status = fb.getbit(i_orbit);
       bb.InsertListOrbitEntry(f, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
@@ -2035,6 +2013,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
       RPL.FuncInsert(face);
   }
   bool use_f_insert_pair = bb.use_f_insert_pair();
+  os << "use_f_insert_pair=" << use_f_insert_pair << "\n";
   while (true) {
     if (RPL.GetTerminationStatus())
       break;
