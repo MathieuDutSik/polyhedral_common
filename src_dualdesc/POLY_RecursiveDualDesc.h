@@ -368,11 +368,11 @@ public:
   size_t n;
   vectface vfo;
   FaceOrbitsizeTableContainer(std::vector<Tint> const& _ListPossOrbsize, size_t _n, vectface && _vfo) : ListPossOrbsize(std::move(_ListPossOrbsize)), n(_n), vfo(std::move(_vfo)) {
-    std::cerr << "FaceOrbitsizeTableContainer : constructor 1\n";
+    //    std::cerr << "FaceOrbitsizeTableContainer : constructor 1\n";
   }
   template<typename Tgroup>
   FaceOrbitsizeTableContainer(vectface const& vf, Tgroup const& GRP) {
-    std::cerr << "FaceOrbitsizeTableContainer : constructor 2\n";
+    //    std::cerr << "FaceOrbitsizeTableContainer : constructor 2\n";
     n = vf.get_n();
     using Tidx=typename Tgroup::Telt::Tidx;
     std::map<Tidx, int> LFact = GRP.factor_size();
@@ -416,7 +416,7 @@ public:
       pow *= 2;
     }
     Tint orbSize = ListPossOrbsize[idx_orb];
-    std::cerr << "FaceOrbitsizeTableContainer GetPair : idx_orb=" << idx_orb << " orbSize=" << orbSize << "\n";
+    //    std::cerr << "FaceOrbitsizeTableContainer GetPair : idx_orb=" << idx_orb << " orbSize=" << orbSize << "\n";
     return {f_red, orbSize};
   }
   size_t size() const {
@@ -654,10 +654,10 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     OnFace_inplace(eFaceImg, eFace, ePermExt);
     ListReprTrans.push_back(eFaceImg);
   }
-  std::cerr << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
-  os        << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
-  std::cerr << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
-  os        << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
+  //  std::cerr << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
+  //  os        << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
+  //  std::cerr << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
+  //  os        << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
   FaceOrbitsizeTableContainer<Tint> fotc(RecAns.ListPossOrbsize, n, std::move(ListReprTrans));
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
@@ -886,11 +886,11 @@ public:
     nbOrbitDone++;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
-    std::cerr << "FaceOrbitsizeTableContainer : GetListFaceOrbitsize\n";
+    //    std::cerr << "FaceOrbitsizeTableContainer : GetListFaceOrbitsize\n";
     vectface vfo;
     vfo.build_vectface(delta, nbOrbit, std::move(ListOrbit));
     std::vector<Tint> ListPoss = recConvert.ListPossOrbsize;
-    std::cerr << "FaceOrbitsizeTableContainer : |ListPoss|=" << ListPoss.size() << "\n";
+    //    std::cerr << "FaceOrbitsizeTableContainer : |ListPoss|=" << ListPoss.size() << "\n";
     return FaceOrbitsizeTableContainer(std::move(ListPoss), n_act, std::move(vfo));
   }
 };
@@ -1075,7 +1075,7 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
-    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_can|=" << face_can.size() << "\n";
+    //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_can|=" << face_can.size() << "\n";
     // The face should have been canonicalized beforehand.
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
@@ -1087,12 +1087,12 @@ public:
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
-    std::cerr << "DatabaseCanonic::FuncInsert orbSize=" << orbSize << "\n";
+    //    std::cerr << "DatabaseCanonic::FuncInsert orbSize=" << orbSize << "\n";
     foc.InsertListOrbitIdxOrb(orbSize);
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
-    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_orbsize|=" << face_orbsize.size() << "\n";
+    //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_orbsize|=" << face_orbsize.size() << "\n";
     // The face should have been canonicalized beforehand and also contains the orbits
     foc.InsertListOrbitFaceComplete(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
@@ -1102,7 +1102,7 @@ public:
       return;
     }
     std::pair<Face,Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
-    std::cerr << "DatabaseCanonic::FuncInsertPair orbSize=" << pair.second << "\n";
+    //    std::cerr << "DatabaseCanonic::FuncInsertPair orbSize=" << pair.second << "\n";
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
@@ -1774,7 +1774,7 @@ public:
     os << "Clean closing of the DatabaseOrbits\n";
   }
   void flush() const {
-    std::cerr << "Doing the flushing operation\n";
+    os << "Doing the flushing operation\n";
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
