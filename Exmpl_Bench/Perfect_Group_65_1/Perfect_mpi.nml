@@ -4,6 +4,7 @@
  GRPfile = "Perfect.grp"
  OUTfile = "Result"
  DeterministicRuntime = F
+ ApplyStdUnitbuf = T
  max_runtime = 7200
  AdvancedTerminationCriterion = T
 /

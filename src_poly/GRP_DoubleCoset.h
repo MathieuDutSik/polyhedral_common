@@ -159,11 +159,14 @@ vectface DoubleCosetDescription_Canonic(
       DoubleCosetInsertEntry_first(eFaceImg);
     }
   }
+  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
+  os << "DoubleCosetDescription_Canonic |SetFace|=" << SetFace.size() << "\n";
   vectface ListListSet = get_list_list_set();
-  //  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" <<
-  //  TotalSize << "\n";
+  os << "DoubleCosetDescription_Canonic |ListListSet|=" << ListListSet.size()
+     << " n=" << ListListSet.get_n() << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
+    os << "|ListListSet|=" << ListListSet.size() << "\n";
     Face eFace = ListListSet.pop();
     for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);

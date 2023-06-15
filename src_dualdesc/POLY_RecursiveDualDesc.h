@@ -414,6 +414,7 @@ public:
       pow *= 2;
     }
     Tint orbSize = ListPossOrbsize[idx_orb];
+    std::cerr << "FaceOrbitsizeTableContainer GetPair : idx_orb=" << idx_orb << " orbSize=" << orbSize << "\n";
     return {f_red, orbSize};
   }
   size_t size() const {
@@ -845,7 +846,7 @@ public:
                        Vappend.begin() + incr);
     // Now setting up the bits for face and idx_orb.
     size_t i_acc = nbOrbit * delta;
-    for (size_t i = 0; i < n_act; i++) {
+    for (size_t i = 0; i < delta; i++) {
       bool val = f[i];
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
@@ -911,9 +912,11 @@ public:
     nbOrbitDone++;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
+    std::cerr << "FaceOrbitsizeTableContainer : GetListFaceOrbitsize\n";
     vectface vfo;
     vfo.build_vectface(delta, nbOrbit, std::move(ListOrbit));
     std::vector<Tint> ListPoss = recConvert.ListPossOrbsize;
+    std::cerr << "FaceOrbitsizeTableContainer : |ListPoss|=" << ListPoss.size() << "\n";
     return FaceOrbitsizeTableContainer(std::move(ListPoss), n_act, std::move(vfo));
   }
 };
@@ -1162,8 +1165,8 @@ public:
     std::cerr << "Failed to find an undone orbit\n";
     throw TerminalException{1};
   }
-  void InsertListOrbitEntry(Face const &eEnt, const size_t &i_orbit) {
-    foc.InsertListOrbitEntry(eEnt);
+  void InsertListOrbitEntry(Face const &f, const size_t &i_orbit) {
+    foc.InsertListOrbitEntry(f);
     DictOrbit.insert(i_orbit);
   }
 
@@ -1435,9 +1438,9 @@ public:
     return {pos, f, FlippingFramework<T>(EXT, f), GRP,
             ReducedGroupAction(Stab, f)};
   }
-  void InsertListOrbitEntry(Face const &eEnt,
+  void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {
-    foc.InsertListOrbitEntry(eEnt);
+    foc.InsertListOrbitEntry(f);
   }
 
 private:
@@ -1756,7 +1759,7 @@ public:
         setbit_vector(V_status, i_orbit, status);
       }
       std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
-      bb.InsertListOrbitEntry(eEnt, i_orbit);
+      bb.InsertListOrbitEntry(f, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
     if (SavingTrigger) {
@@ -1777,7 +1780,7 @@ public:
       Face f = ff.getface(i_orbit);
       std::pair<Face,Tint> eEnt = bb.foc.FaceToPair(f);
       bool status = fb.getbit(i_orbit);
-      bb.InsertListOrbitEntry(eEnt, i_orbit);
+      bb.InsertListOrbitEntry(f, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
   }
