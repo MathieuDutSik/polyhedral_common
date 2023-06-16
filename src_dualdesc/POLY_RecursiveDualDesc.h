@@ -811,7 +811,8 @@ public:
     }
     Torbsize pow = 1;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
-      idx_orb += Torbsize(getbit_vector(ListOrbit, i_acc)) * pow;
+      if (getbit_vector(ListOrbit, i_acc))
+        idx_orb += pow;
       i_acc++;
       pow *= 2;
     }
@@ -1649,8 +1650,6 @@ public:
         os_grp << bb.GRP;
         WriteMatrixFile(eFileEXT, bb.EXT);
       }
-      //
-      print_status();
     }
   }
   size_t prelaod_nb_orbit() {
