@@ -191,6 +191,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
+  bool use_f_insert_pair = bb.use_f_insert_pair();
   std::vector<uint8_t> V_hash(n_vert_div8, 0);
   auto get_hash = [&](Face const &x) -> size_t {
     return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
@@ -225,19 +226,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "bte_facet has been created\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
-  auto fInsertUnsentPair = [&](std::pair<Face,Tint> const &face_pair) -> void {
-    int res = static_cast<int>(get_hash(face_pair.first) % size_t(n_proc));
+  auto FuncInsertGeneral=[&](Face const& face) -> void {
+    if (use_f_insert_pair)
+      RPL.FuncInsertPair(face);
+    else
+      RPL.FuncInsert(face);
+  };
+  auto fInsertUnsentPair = [&](Face const &face) -> void {
+    int res = static_cast<int>(get_hash(face) % size_t(n_proc));
     if (res == i_rank) {
-      RPL.FuncInsertPair(face_pair);
+      FuncInsertGeneral(face);
     } else {
-      Face f_ret = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
-      bte_facet.insert_entry(res, f_ret);
+      bte_facet.insert_entry(res, face);
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
     Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
     std::pair<Face,Tint> face_pair{face, orbitSize};
-    fInsertUnsentPair(face_pair);
+    Face f = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
+    fInsertUnsentPair(f);
   };
   //
   // Initial invocation of the synchronization code
@@ -271,10 +278,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       StatusNeighbors[e_src] = 0;
       vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
-      for (auto &face : l_recv_face) {
-        std::pair<Face, Tint> face_pair = bb.foc.recConvert.ConvertFace(face);
-        RPL.FuncInsertPair(face_pair);
-      }
+      for (auto &face : l_recv_face)
+        FuncInsertGeneral(face);
     }
     if (e_tag == tag_termination) {
       os << "RECV of tag_termination from " << e_src << "\n";
@@ -292,7 +297,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
                             std::to_string(SelectedOrbit) + "_";
     try {
       os << "Before call to DUALDESC_AdjacencyDecomposition\n";
-      auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
+      auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsentPair(eFlip);
       };
       DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
