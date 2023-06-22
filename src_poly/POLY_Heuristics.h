@@ -23,6 +23,12 @@ template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
   return HeuristicFromListString<T>(ListString);
 }
 
+template <typename T> TheHeuristic<T> StandardHeuristicCommThread() {
+  std::vector<std::string> ListString = {"0",
+                                         "no"};
+  return HeuristicFromListString<T>(ListString);
+}
+
 template <typename T> TheHeuristic<T> StandardHeuristicAdditionalSymmetry() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 no", "yes"};
   return HeuristicFromListString<T>(ListString);
@@ -186,6 +192,7 @@ void SetThompsonSampling(FullNamelist const &eFull,
 
 template <typename T> struct PolyHeuristic {
   TheHeuristic<T> Splitting;
+  TheHeuristic<T> CommThread;
   TheHeuristic<T> BankSave;
   TheHeuristic<T> AdditionalSymmetry;
   TheHeuristic<T> DualDescriptionProgram;
@@ -199,6 +206,7 @@ template <typename T> struct PolyHeuristic {
 template <typename T> PolyHeuristic<T> AllStandardHeuristic() {
   PolyHeuristic<T> AllArr;
   AllArr.Splitting = StandardHeuristicSplitting<T>();
+  AllArr.CommThread = StandardHeuristicCommThread<T>();
   AllArr.BankSave = StandardHeuristicBankSave<T>();
   AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
   AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
@@ -217,6 +225,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> CheckDatabaseBank;
   TheHeuristic<T> ChosenDatabase;
   TheHeuristic<T> OrbitSplitTechnique;
+  TheHeuristic<T> CommThread;
   bool Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -255,6 +264,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodCheckDatabaseBank<T>(),
           MethodChosenDatabase<T>(),
           MethodOrbitSplitTechnique<T>(),
+          StandardHeuristicCommThread<T>(),
           Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,
