@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     exit(e.eVal);
   } catch (RuntimeException const &e) {
     std::cerr << "The maximum runtime has been reached, exiting the program\n";
-    exit(e.eVal);
+    //exit(e.eVal);
   }
   runtime(time1);
 }
