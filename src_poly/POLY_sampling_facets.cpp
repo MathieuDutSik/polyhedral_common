@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "with:\n";
       std::cerr << "arith     : the chosen arithmetic\n";
       std::cerr << "command   : the command used for sampling the facets\n";
-      std::cerr << "FileI     : The polyhedral cone inequalities\n";
+      std::cerr << "FileI     : The polyhedral cone with the extreme rays in EXT\n";
       std::cerr << "OutFormat : The format of output, GAP or Oscar\n";
       std::cerr << "FileO     : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "GAP                   : The incidence in a file readable in GAP via ReadAsFunction\n";
       std::cerr << "Oscar                 : The incidence in a 0/1 matrix representing the obtained rays\n";
-      std::cerr << "FacetInequalities     : The inequalities in a file\n";
+      std::cerr << "FacetInequalities     : The inequalities in a file. If EXT is not full dimensional, then it is underdefined\n";
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
