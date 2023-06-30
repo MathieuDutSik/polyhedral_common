@@ -217,7 +217,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     stop_comm_thread();
 
     for (auto &eOrb : TheOutput) {
-      std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
+      Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
@@ -243,7 +243,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       stop_comm_thread();
 
       for (auto &eOrb : TheOutput) {
-        std::pair<Face,Tint> eFlip = df.FlipFace(eOrb, os);
+        Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
         MicrosecondTime time;
 #endif
@@ -467,7 +467,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
                             std::to_string(SelectedOrbit) + "_";
     try {
       os << "Before call to DUALDESC_AdjacencyDecomposition\n";
-      auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
+      auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsentPair(eFlip);
       };
       //DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
