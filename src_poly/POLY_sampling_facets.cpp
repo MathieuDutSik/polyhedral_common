@@ -13,7 +13,11 @@
 template <typename T>
 void process(std::string const &eFileI, std::string const& ansSamp, std::string const& OutFormat, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  vectface vf = DirectComputationInitialFacetSet(EXT, ansSamp, std::cerr);
+  std::vector<int> eList = ColumnReductionSet(EXT);
+  MyMatrix<T> EXTred = SelectColumn(EXT, eList);
+  int nbCol = EXT.cols();
+  int dim = eList.size();
+  vectface vf = DirectComputationInitialFacetSet(EXTred, ansSamp, std::cerr);
   if (OutFormat == "GAP") {
     os << "return ";
     VectVectInt_Gap_Print(os, vf);
@@ -22,6 +26,19 @@ void process(std::string const &eFileI, std::string const& ansSamp, std::string 
   }
   if (OutFormat == "Oscar") {
     MyMatrix<int> M = VectfaceAsMatrix(vf);
+    WriteMatrix(os, M);
+    return;
+  }
+  if (OutFormat == "FacetInequalities") {
+    int n_facet = vf.size();
+    MyMatrix<T> M = ZeroMatrix<T>(n_facet, nbCol);
+    for (int i_facet=0; i_facet<n_facet; i_facet++) {
+      Face f = vf[i_facet];
+      MyVector<T> eIneq = FindFacetInequality(EXTred, f);
+      for (int i=0; i<dim; i++) {
+        M(i_facet, eList[i]) = eIneq(i);
+      }
+    }
     WriteMatrix(os, M);
     return;
   }
@@ -41,8 +58,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "arith     : the chosen arithmetic\n";
-      std::cerr << "command   : the program used for computing the dual description\n";
-      std::cerr << "FileI     : The polyhedral cone inequalities\n";
+      std::cerr << "command   : the command used for sampling the facets\n";
+      std::cerr << "FileI     : The polyhedral cone with the extreme rays in EXT\n";
       std::cerr << "OutFormat : The format of output, GAP or Oscar\n";
       std::cerr << "FileO     : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
@@ -63,6 +80,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "sampling                 : The recursive sampling algorithm\n";
       std::cerr << "lrs_limited              : lrs limited to the first 100 vertices being found\n";
       std::cerr << "lrs_limited:upperlimit_X : lrs limited to the first X vertices being found\n";
+      std::cerr << "\n";
+      std::cerr << "        --- OutFormat ---\n";
+      std::cerr << "\n";
+      std::cerr << "GAP                   : The incidence in a file readable in GAP via ReadAsFunction\n";
+      std::cerr << "Oscar                 : The incidence in a 0/1 matrix representing the obtained rays\n";
+      std::cerr << "FacetInequalities     : The inequalities in a file. If EXT is not full dimensional, then it is underdefined\n";
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
