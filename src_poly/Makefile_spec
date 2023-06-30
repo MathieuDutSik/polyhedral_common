@@ -21,7 +21,7 @@
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_redundancy
-PROGRAM		= POLY_redundancyClarkson
+#PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonGroup
 #PROGRAM		= POLY_redundancy_Equivariant
 #PROGRAM		= POLY_redundancy_Equivariant POLY_redundancyClarksonGroup POLY_redundancyClarkson GRP_LinPolytope_Automorphism
@@ -43,7 +43,7 @@ PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_SolutionMatNonnegative
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
-#PROGRAM		= POLY_sampling_facets
+PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
@@ -66,9 +66,9 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wconversion -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -O3
+CC		= g++ -std=c++17 -Wall -Wextra -O3
 #CLANG
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 #CLANG
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
