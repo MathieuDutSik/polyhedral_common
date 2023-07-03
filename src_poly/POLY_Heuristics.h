@@ -13,6 +13,25 @@
 // Heuristic business
 //
 
+// Description: Heuristic for whether to apply the adjacency
+// decomposition method or not. Following points have to be taken
+// into account:
+// * If the symmetry group is very large then one can expect benefits
+// from using it.
+// * Applying the method recursively makes everything slower.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "nosplit": Call directly the classical adjacency decomposition.
+// * "split": Call the Adjacency decomposition method on the polytope
+//    or face considered.
 template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
   std::vector<std::string> ListString = {"4",
                                          "2 groupsize > 5000 level < 3 split",
@@ -23,23 +42,123 @@ template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: Whether to use a communication thread or not for the
+// MPI calls. Having this thread avoids the accumulation of data
+// in the buffer when a computation is done deeper.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "no": Do not create the communication thread.
+// * "yes": Create the communication thread.
 template <typename T> TheHeuristic<T> StandardHeuristicCommThread() {
   std::vector<std::string> ListString = {"0",
                                          "no"};
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with the adjacency decomposition
+// method, we may want ddditional symmetries. This require some
+// call to partition backtrack algorithms. Things to consider:
+// * The computation of additional symmetries can make the
+// computation much faster. If the number of orbits is divided
+// by 2 then the computation should be divided by 2.
+// * There is a cost to computing the additional symmetries.
+// which may yield nothing if the full symmetry group is equal
+// to the stabilizer.
+// * If we have additional symmetries, then we need to split the
+// orbits for the big group to the orbits for the small group.
+// This has costs and require algorithmic choices.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "no": Do not compute additional symmetries
+// * "yes": Compute additional symmetries
 template <typename T> TheHeuristic<T> StandardHeuristicAdditionalSymmetry() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 no", "yes"};
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with the adjacency decomposition
+// method, we compute the dual description of faces. Those dual
+// descriptions are expensive and if by any chance they would occur
+// again then it would be nice to use what has been computed.
+// This is what a banking system is.
+// Things to consider:
+// * Storing everything that has been computed is clearly
+// a bad idea as the banking system gets flooded and the disk as
+// wel if saving is selected.
+// * Not storing at all negates the usefulness of the method.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+// * "time" the tuntime in second. Saving what took long time is a good
+//   idea in general.
+//
+// Possible output:
+// * "no": Do not compute additional symmetries
+// * "yes": Compute additional symmetries
 template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
   std::vector<std::string> ListString = {"2", "1 time < 300 no",
                                          "1 incidence < 50 no", "yes"};
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: This is the most important method choice. There are
+// many algorithm to consider for computing the dual description and
+// you have to choose the one that suits you best.
+// Things to consider:
+// * Algorithm like lrs are working for polytopes with a lot of
+// vertices. Not so much for polytopes with degenerate vertices.
+// * Algorithm like CDD works the reverse.
+// * Not all algorithm are available for all the types. For rational
+// mpq_class everything works, but for algebraic types, that will not
+// be true.
+// * Some algorithm also have external function like glrs and ppl_lcdd
+// which tend to be faster but there is an overhead to calling external
+// programs.
+// * The lrs algorithm is only using addition, difference and multiplication.
+// Hence it makes sense to reduce the fractions to integer and then do
+// integer computations which are faster than rational computations. This
+// is not possible for all fields.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "cdd_cbased": Available only for mpq_class, uses the C-based version
+//  by C-linking
+// * "cdd": The templatized cdd (only for fields)
+// * "lrs_ring": The templatized lrs (only for fields) but fractions reduced
+//   to integers or more precisely just ring operations.
+// * "lrs": The templatized lrs (for fields and rings)
+// * "glrs": The external program glrs (only for types implementing Q)
+// * "ppl_ext": The external program ppl_lcdd (only for types implementing Q)
+// * "cdd_ext": The external program cdd (only for types implementing Q)
+// * "normaliz": he external program normaliz (only for types implementing Q)
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 cdd", "cdd"};
@@ -53,6 +172,44 @@ template <typename T> TheHeuristic<T> StandardHeuristicStabEquiv() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with the adjacency method
+// one needs to have some initial facets. There are many
+// methods for computing an initial facet.
+// Things to consider:
+// * In most cases the linear programming would give you
+// a good enough starting point.
+// * In some cases the linear programming would give you
+// the most degenerate facet as starting point. This is
+// annoying since you do not want to start by the hardest
+// one and instead you want to start with the simplest one
+// * The hardest one can sometimes be circumvented by
+// early termination criterion. This is an additional reason
+// not to start with the hardest.
+// * The most sophisticated method like "sampling" takes
+// a lot of time to run and you typically do not want that.
+// * Sometimes it just pays off to increase the nuber of
+// iterations.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "lp_cdd": The linear programming iterated 10 times.
+// * "lp_cdd:iter_100": The linear programming iterated 100 times
+// * "lp_cdd_min": The linear programming iterated 10 times
+//    but keeping only the ones of minimal incidence (recommended choice)
+// * "lp_cdd_min:iter_100": Same but iterated 100 times
+// * "sampling": A sophisticated sampling approach that is a sibling
+//   of the recursive adjacency decomposition but does that for sampling.
+//   Expensive, but allows to find facet of low incidence on the hardest
+//   stuff
+// * "lrs_limited": lrs but limited to the first 100 choices
+// * "lrs_limited:upper_limit_1000": same but for 1000
 template <typename T> TheHeuristic<T> MethodInitialFacetSet() {
   std::vector<std::string> ListString = {"2", "1 incidence < 100 lp_cdd",
                                          "1 incidence < 1000 lp_cdd:iter_100",
