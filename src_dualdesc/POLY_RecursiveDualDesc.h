@@ -726,7 +726,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
 
-template <typename T, typename Tgroup> struct DataFacetCan {
+template <typename T, typename Tgroup> struct DataFacet {
   using Tint = typename Tgroup::Tint;
   size_t SelectedOrbit;
   Face eInc;
@@ -740,24 +740,6 @@ template <typename T, typename Tgroup> struct DataFacetCan {
     return FF.FlipFaceIneq(pair);
   }
 };
-
-template <typename T, typename Tgroup> struct DataFacetRepr {
-  using Tint = typename Tgroup::Tint;
-  size_t SelectedOrbit;
-  Face eInc;
-  FlippingFramework<T> FF;
-  const Tgroup &GRP;
-  Tgroup Stab;
-  // There is only one method for Repr and it does not create a stabilizer.
-  Face FlipFace(const Face &f) const {
-    return FF.FlipFace(f);
-  }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
-    return FF.FlipFaceIneq(pair);
-  }
-};
-
-
 
 template <typename Tgroup, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
@@ -922,7 +904,6 @@ public:
   const MyMatrix<T> &EXT;
   const Tgroup &GRP;
   using Torbsize = uint16_t;
-  using DataFacet = DataFacetCan<T, Tgroup>;
   using Tidx = typename Telt::Tidx;
   int nbRow;
   int nbCol;
@@ -1143,7 +1124,7 @@ public:
     }
     foc.Counts_SetOrbitDone(eEnt.second);
   }
-  DataFacetCan<T, Tgroup> FuncGetMinimalUndoneOrbit() {
+  DataFacet<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     for (auto &eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
@@ -1288,7 +1269,6 @@ public:
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
   const Tgroup &GRP;
-  using DataFacet = DataFacetRepr<T, Tgroup>;
   using Torbsize = uint16_t;
   using Tidx = typename Telt::Tidx;
   int nbRow;
@@ -1428,7 +1408,7 @@ public:
     CompleteList_SetDone[len][eInv].push_back(spec_orbit);
     foc.Counts_SetOrbitDone(eEnt.second);
   }
-  DataFacetRepr<T, Tgroup> FuncGetMinimalUndoneOrbit() {
+  DataFacet<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     auto iter1 = CompleteList_SetUndone.begin();
     if (iter1 == CompleteList_SetUndone.end()) {
       std::cerr << "We have an empty map (1) We should not reach that stage\n";
@@ -1882,8 +1862,8 @@ public:
   }
   size_t FuncNumberOrbit() const { return bb.foc.nbOrbit; }
   bool IsFinished() const { return bb.foc.nbOrbit == bb.foc.nbOrbitDone; }
-  typename TbasicBank::DataFacet FuncGetMinimalUndoneOrbit() {
-    typename TbasicBank::DataFacet data = bb.FuncGetMinimalUndoneOrbit();
+  DataFacet<T,Tgroup> FuncGetMinimalUndoneOrbit() {
+    DataFacet<T,Tgroup> data = bb.FuncGetMinimalUndoneOrbit();
     os << strPresChar << " Considering orbit " << data.SelectedOrbit
        << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size()
        << "\n";
@@ -1975,7 +1955,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
          typename TbasicBank, typename Finsert>
 void DUALDESC_AdjacencyDecomposition_and_insert(
-    Tbank &TheBank, TbasicBank &bb, typename TbasicBank::DataFacet const& df,
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T,Tgroup> const& df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     std::string const &ePrefix, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
@@ -2066,7 +2046,6 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
-  using DataFacet = typename TbasicBank::DataFacet;
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   // The choice only really makes sense for the canonic, for repr no choice is implied.
@@ -2128,7 +2107,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
   while (true) {
     if (RPL.GetTerminationStatus())
       break;
-    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
     size_t SelectedOrbit = df.SelectedOrbit;
     // Alternative way is to use CondTempDirectory. BUT
     // For many we actually do not need to have such a construction.

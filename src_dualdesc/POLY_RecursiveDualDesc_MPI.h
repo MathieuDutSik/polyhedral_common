@@ -135,7 +135,7 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
 template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
          typename TbasicBank, typename Finsert, typename Fcomm>
 void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
-    Tbank &TheBank, TbasicBank & bb, typename TbasicBank::DataFacet const& df,
+    Tbank &TheBank, TbasicBank & bb, DataFacet<T,Tgroup> const& df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert, Fcomm f_comm,
     std::string const &ePrefix, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
@@ -242,7 +242,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
-  using DataFacet = typename TbasicBank::DataFacet;
   using Tint = typename TbasicBank::Tint;
   SingletonTime start;
   int i_rank = comm.rank();
@@ -371,10 +370,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
-
-
-
-
   if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
@@ -464,7 +459,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       cnt++;
       short_wait();
     }
-    if(!done) 
+    if(!done)
       os << "Start Probing" << std::endl;
     // Start probing
     while (!done) {
@@ -479,7 +474,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   };
   auto process_database = [&]() -> void {
     os << "process_database, begin\n";
-    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
     os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
