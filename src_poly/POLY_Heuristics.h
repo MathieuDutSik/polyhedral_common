@@ -217,12 +217,6 @@ template <typename T> TheHeuristic<T> MethodInitialFacetSet() {
   return HeuristicFromListString<T>(ListString);
 }
 
-template <typename T> TheHeuristic<T> MethodInvariantQuality() {
-  std::vector<std::string> ListString = {
-      "1", "1 groupsizerelevant > 660602000 pairinv:use_pair_orbit", "pairinv"};
-  return HeuristicFromListString<T>(ListString);
-}
-
 template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
   std::vector<std::string> ListString = {"1", "1 incidence > 50 yes", "no"};
   return HeuristicFromListString<T>(ListString);
@@ -355,7 +349,6 @@ template <typename T> struct PolyHeuristic {
   TheHeuristic<T> DualDescriptionProgram;
   TheHeuristic<T> StabEquivFacet;
   TheHeuristic<T> InitialFacetSet;
-  TheHeuristic<T> InvariantQuality;
   bool Saving;
   bool eMemory;
 };
@@ -369,7 +362,6 @@ template <typename T> PolyHeuristic<T> AllStandardHeuristic() {
   AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
   AllArr.StabEquivFacet = StandardHeuristicStabEquiv<T>();
   AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
-  AllArr.InvariantQuality = MethodInvariantQuality<T>();
   return AllArr;
 }
 
