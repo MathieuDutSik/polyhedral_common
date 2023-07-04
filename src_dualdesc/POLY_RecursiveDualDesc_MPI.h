@@ -251,31 +251,53 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   auto set_up=[&]() -> void {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
     std::string ansChoiceCanonic = HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+#ifdef TIMINGS
+    os << "|HeuristicEvaluation|=" << time << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
+#endif
     int action = RPL.determine_action_database(ansChoiceCanonic);
+#ifdef TIMINGS
+    os << "|determine_action_database|=" << time << " action=" << action << "\n";
+#endif
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
       return RPL.LoadDatabase();
     }
     vectface vf = RPL.get_runtime_testcase();
+#ifdef TIMINGS
+    os << "|get_runtime_testcase|=" << time << "\n";
+#endif
     int method = RPL.bb.evaluate_method_mpi(comm, vf);
+#ifdef TIMINGS
+    os << "|evaluate_method_serial|=" << time << "\n";
+#endif
     if (method == RPL.bb.the_method) {
       return RPL.LoadDatabase();
     }
     size_t n_orbit = RPL.preload_nb_orbit();
+#ifdef TIMINGS
+    os << "|n_orbit|=" << time << "\n";
+#endif
     vectface vfo = RPL.ReadDatabase(n_orbit);
-    int nbRow = bb.nbRow;
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-      Face fo = vfo[i_orbit];
-      Face f = face_reduction(fo, nbRow);
-      Face f_new = RPL.bb.operation_face(f);
-      set_face_partial(fo, f_new, nbRow);
-      vfo[i_orbit] = fo;
-    }
-    vectface vfb = mpi_shuffle(comm, std::move(vfo), nbRow);
+#ifdef TIMINGS
+    os << "|ReadDatabase|=" << time << "\n";
+#endif
+    vectface_update_method(vfo, bb);
+#ifdef TIMINGS
+    os << "|method update|=" << time << "\n";
+#endif
+    vectface vfb = mpi_shuffle(comm, std::move(vfo), bb.nbRow);
+#ifdef TIMINGS
+    os << "|mpi_shuffle|=" << time << "\n";
+#endif
     RPL.DirectAppendDatabase(method, std::move(vfb));
+#ifdef TIMINGS
+    os << "|DirectAppendDatabase|=" << time << "\n";
+#endif
   };
   set_up();
-  
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;

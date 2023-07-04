@@ -1617,10 +1617,16 @@ public:
   // only to the canonic.
   // ---If method file is absent then we assume it was computed with the default.
   // ---Otherwise we read it.
+  void write_method(std::string const& eFileMethod, int const& method) const {
+    std::ofstream os(eFileMethod);
+    os << method;
+  }
   int read_method(std::string const& eFileMethod) const {
     if (SavingTrigger) {
       if (IsExistingFile(eFileMethod)) {
-        return bb.get_default_strategy();
+        int the_method = bb.get_default_strategy();
+        write_method(eFileMethod, the_method);
+        return the_method;
       } else {
         std::ifstream is(eFileMethod);
         int method;
@@ -1630,10 +1636,6 @@ public:
     } else {
       return bb.get_default_strategy();
     }
-  }
-  void write_method(std::string const& eFileMethod, int const& method) const {
-    std::ofstream os(eFileMethod);
-    os << method;
   }
   bool is_database_present() const {
     return IsExistingFile(eFileEXT);
@@ -2050,6 +2052,21 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   }
 }
 
+template <typename TbasicBank>
+void vectface_update_method(vectface & vfo, TbasicBank & bb) {
+  size_t n_orbit = vfo.size();
+  int nbRow = bb.nbRow;
+  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    Face fo = vfo[i_orbit];
+    Face f = face_reduction(fo, nbRow);
+    Face f_new = bb.operation_face(f);
+    set_face_partial(fo, f_new, nbRow);
+    vfo[i_orbit] = fo;
+  }
+}
+
+
+
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank>
@@ -2064,30 +2081,49 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
                                  AllArr.AdvancedTerminationCriterion, os);
   // The choice only really makes sense for the canonic, for repr no choice is implied.
   auto set_up=[&]() -> void {
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
     std::string ansChoiceCanonic = HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+#ifdef TIMINGS
+    os << "|HeuristicEvaluation|=" << time << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
+#endif
     int action = RPL.determine_action_database(ansChoiceCanonic);
+#ifdef TIMINGS
+    os << "|determine_action_database|=" << time << " action=" << action << "\n";
+#endif
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
       return RPL.LoadDatabase();
     }
     vectface vf = RPL.get_runtime_testcase();
+#ifdef TIMINGS
+    os << "|get_runtime_testcase|=" << time << "\n";
+#endif
     int method = RPL.bb.evaluate_method_serial(vf);
+#ifdef TIMINGS
+    os << "|evaluate_method_serial|=" << time << "\n";
+#endif
     if (method == RPL.bb.the_method) {
       return RPL.LoadDatabase();
     }
     size_t n_orbit = RPL.preload_nb_orbit();
+#ifdef TIMINGS
+    os << "|n_orbit|=" << time << "\n";
+#endif
     vectface vfo = RPL.ReadDatabase(n_orbit);
-    int nbRow = bb.nbRow;
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-      Face fo = vfo[i_orbit];
-      Face f = face_reduction(fo, nbRow);
-      Face f_new = RPL.bb.operation_face(f);
-      set_face_partial(fo, f_new, nbRow);
-      vfo[i_orbit] = fo;
-    }
+#ifdef TIMINGS
+    os << "|ReadDatabase|=" << time << "\n";
+#endif
+    vectface_update_method(vfo, bb);
+#ifdef TIMINGS
+    os << "|method update|=" << time << "\n";
+#endif
     RPL.DirectAppendDatabase(method, std::move(vfo));
+#ifdef TIMINGS
+    os << "|DirectAppendDatabase|=" << time << "\n";
+#endif
   };
   set_up();
-  
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
