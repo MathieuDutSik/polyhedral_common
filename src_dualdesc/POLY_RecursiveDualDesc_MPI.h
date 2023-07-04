@@ -135,7 +135,7 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
 template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
          typename TbasicBank, typename Finsert, typename Fcomm>
 void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
-    Tbank &TheBank, typename TbasicBank::DataFacet const& df,
+    Tbank &TheBank, TbasicBank & bb, typename TbasicBank::DataFacet const& df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert, Fcomm f_comm,
     std::string const &ePrefix, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
@@ -181,7 +181,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 #ifdef TIMINGS
       MicrosecondTime time;
 #endif
-      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+      Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
       os << "|operation_face1|=" << time << "\n";
 #endif
@@ -209,11 +209,11 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 #ifdef TIMINGS
         MicrosecondTime time;
 #endif
-        Face eFlip = df.FlipFace(eOrb);
+        Face eFlipPre = df.FlipFace(eOrb);
 #ifdef TIMINGS
         os << "|FlipFace2|=" << time << "\n";
 #endif
-        Face eFlip = TheBank.bb.operation_face(eFlipPre);
+        Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
         os << "|operation_face2|=" << time << "\n";
 #endif
@@ -258,7 +258,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     vectface vf = RPL.get_runtime_testcase();
     int method = RPL.bb.evaluate_method_mpi(comm, vf);
-    if (method == RPL.the_method) {
+    if (method == RPL.bb.the_method) {
       return RPL.LoadDatabase();
     }
     size_t n_orbit = RPL.preload_nb_orbit();
@@ -271,8 +271,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       set_face_partial(fo, f_new, nbRow);
       vfo[i_orbit] = fo;
     }
-    vectface vfb = mpi_shuffle(comm, vfo, nbRow);
-    RPL.DirectAppendDatabase(method, vfo);
+    vectface vfb = mpi_shuffle(comm, std::move(vfo), nbRow);
+    RPL.DirectAppendDatabase(method, std::move(vfb));
   };
   set_up();
   
@@ -463,8 +463,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsentPair(eFlip);
       };
-      //DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
-      DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, df, AllArr, f_insert, f_comm, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, bb, df, AllArr, f_insert, f_comm, NewPrefix, os);
 
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
     } catch (RuntimeException const &e) {
