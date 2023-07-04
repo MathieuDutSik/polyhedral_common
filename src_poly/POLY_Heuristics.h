@@ -241,6 +241,42 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When using the canonic scheme for storing the database
+// for the Adjacency Decomposition Method we have to choose the canonic
+// method.
+// Things to consider:
+// * Different canonicalization methods produce different results.
+// * The standard technique is "canonic" that first computes the stabilizer
+// for computing the canonical form. So there is that cost builtin.
+// But it is the best method if most faces have a relatively big stabilizer.
+// * We can also use a trivial stabilizer for computing the stabilizer.
+// It works best if the faces have trivial or small stabilizer.
+// * We can also iterate over the group elements which makes sense if
+// the group is small.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "canonic": Use the canonicalization with the full stabilizer
+// * "canonic_initial_triv": Use the canonicalization with a subgroup of the
+//   stabilizer that is trivial.
+// * "store": Iterate over all the group elements.
+// * "guess": If there is an existing database, we use the first ones
+//   (at most 100) for runtime evaluation. If none, we randomly generate some
+//   as test case.
+// * "load": Load from the database. If info missing then use "canonic"
+//   If database missing
+template <typename T> TheHeuristic<T> MethodChoiceCanonicalization() {
+  std::vector<std::string> ListString = {"1", "1 groupsize < 500 store", "canonic"};
+  return HeuristicFromListString<T>(ListString);
+}
+
 // Description: When computing with dual description, we need to split
 // from the list of orbits for one big group to the list of orbits for
 // a smaller group. There are many possible methods to consider.
@@ -270,6 +306,9 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
 // * "exhaustive_hopscotch": exchaustive splitting using the tsl::hopscotch_set
 // * "exchaustive": exhaustive using exhaustive_robin, that is generate the
 //    full orbit for the big group and then split it using the small group.
+// * "guess": The beauty of orbit splitting is that the data is available
+//    when we choose the method, so we can do some tests before embarking
+//    one one specific method.
 template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
   std::vector<std::string> ListString = {
       "2", "1 groupsize_sma < 100 exhaustive", "1 index < 20 single_cosets",
@@ -422,6 +461,7 @@ template <typename T> struct PolyHeuristic {
   TheHeuristic<T> DualDescriptionProgram;
   TheHeuristic<T> StabEquivFacet;
   TheHeuristic<T> InitialFacetSet;
+  TheHeuristic<T> ChoiceCanonicalization;
   bool Saving;
   bool eMemory;
 };
@@ -435,6 +475,7 @@ template <typename T> PolyHeuristic<T> AllStandardHeuristic() {
   AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
   AllArr.StabEquivFacet = StandardHeuristicStabEquiv<T>();
   AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
+  AllArr.ChoiceCanonicalization = MethodChoiceCanonicalization<T>();
   return AllArr;
 }
 
