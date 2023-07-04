@@ -1643,14 +1643,15 @@ public:
              << " is not makeable\n";
           throw TerminalException{1};
         }
-        os << "Creating the files (NB, FB, FF)\n";
-        // Writing Group
-        os << "eFileGRP=" << eFileGRP << "\n";
-        std::ofstream os_grp(eFileGRP);
-        os_grp << bb.GRP;
-        WriteMatrixFile(eFileEXT, bb.EXT);
+        initial_writes();
       }
     }
+  }
+  void initial_writes() {
+    os << "Creating the files (NB, FB, FF)\n";
+    std::ofstream os_grp(eFileGRP);
+    os_grp << bb.GRP;
+    WriteMatrixFile(eFileEXT, bb.EXT);
   }
   size_t prelaod_nb_orbit() {
     if (SavingTrigger) {
