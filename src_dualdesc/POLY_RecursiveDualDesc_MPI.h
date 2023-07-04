@@ -284,6 +284,10 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS
     os << "|ReadDatabase|=" << time << "\n";
 #endif
+    RPL.set_method(method);
+#ifdef TIMINGS
+    os << "|set_method|=" << time << "\n";
+#endif
     vectface_update_method(vfo, bb);
 #ifdef TIMINGS
     os << "|method update|=" << time << "\n";
@@ -292,7 +296,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS
     os << "|mpi_shuffle|=" << time << "\n";
 #endif
-    RPL.DirectAppendDatabase(method, std::move(vfb));
+    RPL.DirectAppendDatabase(std::move(vfb));
 #ifdef TIMINGS
     os << "|DirectAppendDatabase|=" << time << "\n";
 #endif

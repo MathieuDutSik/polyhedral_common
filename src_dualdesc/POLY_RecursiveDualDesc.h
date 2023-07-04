@@ -1764,9 +1764,14 @@ public:
       return DATABASE_ACTION__SIMPLE_LOAD;
     return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;
   }
-  void DirectAppendDatabase(int const& the_method, vectface && vf) {
-    bb.clear();
+  void set_method(int const& the_method) {
     bb.the_method = the_method;
+    if (SavingTrigger) {
+      write_method(eFileMethod, the_method);
+    }
+  }
+  void DirectAppendDatabase(vectface && vf) {
+    bb.clear();
     size_t n_orbit = vf.size();
     size_t len_ff = 0;
     size_t len_fb = 0;
@@ -1803,7 +1808,6 @@ public:
       fn.setval(n_orbit);
       ff.direct_write(ListOrbit_ff);
       fb.direct_write(V_status);
-      write_method(eFileMethod, the_method);
     }
   }
   ~DatabaseOrbits() {
@@ -2114,11 +2118,15 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #ifdef TIMINGS
     os << "|ReadDatabase|=" << time << "\n";
 #endif
+    RPL.set_method(method);
+#ifdef TIMINGS
+    os << "|set_method|=" << time << "\n";
+#endif
     vectface_update_method(vfo, bb);
 #ifdef TIMINGS
     os << "|method update|=" << time << "\n";
 #endif
-    RPL.DirectAppendDatabase(method, std::move(vfo));
+    RPL.DirectAppendDatabase(std::move(vfo));
 #ifdef TIMINGS
     os << "|DirectAppendDatabase|=" << time << "\n";
 #endif
