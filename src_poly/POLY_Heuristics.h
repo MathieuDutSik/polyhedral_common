@@ -217,11 +217,59 @@ template <typename T> TheHeuristic<T> MethodInitialFacetSet() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with the dual description the use of the
+// database bank is supposed to help us. But if we check for every facet
+// then it is going to be so very slow.
+// Things to consider:
+// * Essentially the incidence has to be used, maybe also the rank and delta
+// * It has to match somehow with the banksave except for the runtime of
+//   of course.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "yes": Do query the database bank
+// * "no": Do not query the database
 template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
   std::vector<std::string> ListString = {"1", "1 incidence > 50 yes", "no"};
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with dual description, we need to split
+// from the list of orbits for one big group to the list of orbits for
+// a smaller group. There are many possible methods to consider.
+// Things to consider:
+// * If the index is small, then the "single_cosets" is the best one
+// * If the small group is really small then "exhaustive" method is
+// * The "canonic" method is an all around reasonably efficient method.
+// * We have not yet implemented the algorithms from GAP for doing
+//   this computation. There is room for improvement here.
+//
+// Variable available for making the decision:
+// * "groupsize_big": The big group size
+// * "groupsize_sma": The small group size
+// * "index": The index of the small group in the big one.
+// * "n_orbit": The number of orbits used.
+//
+// Possible output:
+// * "guess": Apply a number of guesses in order to compute the
+//    the best method.
+// * "repr": Using the repr for splitting the orbit using generators.
+// * "canonic": Using the canonic for splitting the orbit using generators.
+// * "canonic_initial_triv": Using the canonic with trivial initial
+//   stabilizer for splitting the orbit using generators.
+// * "exhaustive_std": exchaustive splitting using the std::unordered_map
+// * "exhaustive_sparse": exchaustive splitting using the tsl::sparse_set
+// * "exhaustive_robin": exchaustive splitting using the tsl::robin_set
+// * "exhaustive_hopscotch": exchaustive splitting using the tsl::hopscotch_set
+// * "exchaustive": exhaustive using exhaustive_robin, that is generate the
+//    full orbit for the big group and then split it using the small group.
 template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
   std::vector<std::string> ListString = {
       "2", "1 groupsize_sma < 100 exhaustive", "1 index < 20 single_cosets",
@@ -229,13 +277,38 @@ template <typename T> TheHeuristic<T> MethodOrbitSplitTechnique() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When computing with the adjacency decomposition method,
+// we have different possible methods.
+// Things to consider:
+// * "repr" is here mostly for experimental reasons, it is almost never used.
+// * "canonic" is the method to use.
+//
+// Variable available for making the decision:
+// * "incidence": High incidence means that classic algorithm will be slower.
+// * "groupsize": The size of the group available for the computation
+// * "level": The depth of the calls to the recursive adjacency
+//    decomposition.
+// * "rank": the dimension of the polytope in question
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "repr": Use the RepresentativeAction for testing equivalence of faces.
+// * "canonic": Use the Canonic representative for faces
 template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   std::vector<std::string> ListString = {
-      "2", "2 groupsize > 5000000000000 incidence > 1000000 traces",
+      "2", "2 groupsize > 5000000000000 incidence > 1000000 repr",
       "2 groupsize > 5000000000000 incidence > 100000 repr", "canonic"};
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: When choosing the dual description method, it can be hard
+// to decide what is the best technique. Thus, the Thompson sampling
+// can be used for better running of that sort of things.
+// Things to consider:
+// * We can take an heuristic and generate the Thompson sampling input
+//   file by using the program "Convert_Heuristic_to_Thompson_sampling"
+// * The logs are quite important to see what is happening.
+// * It is still an experimental feature.
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_proba = {"&PROBABILITY_DISTRIBUTIONS",
                                          " ListName = \"distri1\" ",

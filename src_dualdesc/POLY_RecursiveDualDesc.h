@@ -602,13 +602,13 @@ template<typename Tgroup, typename Tface_orbitsize>
 vectface OrbitSplittingListOrbitGen(const Tgroup& GRPbig, const Tgroup& GRPsma, Tface_orbitsize const& ListFaceOrbitsize,
                                     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream & os) {
   using Tint = typename Tgroup::Tint;
-  std::map<std::string, Tint> TheMap;
   Tint ordGRPbig = GRPbig.size();
   Tint ordGRPsma = GRPsma.size();
   if (ordGRPbig == ordGRPsma) {
     return ListFaceOrbitsize.GetListFaces();
   }
   Tint index = ordGRPbig / ordGRPsma;
+  std::map<std::string, Tint> TheMap;
   TheMap["groupsize_big"] = ordGRPbig;
   TheMap["groupsize_sma"] = ordGRPsma;
   TheMap["index"] = index;
