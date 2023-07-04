@@ -798,20 +798,6 @@ public:
     nbOrbit = 0;
     ListOrbit.clear();
   }
-  // Extracting a block of faces for test cases
-  vectface ExtractFirstNFace(size_t const& siz) const {
-    vectface vf(n_act);
-    Face f(n_act);
-    for (size_t u=0; u<siz; u++) {
-      size_t i_acc = delta * u;
-      for (size_t i = 0; i < n_act; i++) {
-        f[i] = getbit_vector(ListOrbit, i_acc);
-        i_acc++;
-      }
-      vf.push_back(f);
-    }
-    return vf;
-  }
   // Database code that uses ListOrbit;
   std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
     Face f(n_act);
