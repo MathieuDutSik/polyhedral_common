@@ -1071,7 +1071,7 @@ public:
   int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
     return GetCanonicalizationMethod_MPI(comm, vf, GRP);
   }
-  Face operation_face(Face const& eFlip) const {
+  Face operation_face(Face const& eFlip) {
     return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, eFlip);
   }
   int convert_string_method(std::string const& choice) const {
@@ -1363,7 +1363,7 @@ public:
   int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
     return REPR_STRATEGY__DEFAULT;
   }
-  Face operation_face(Face const& eFlip) const {
+  Face operation_face(Face const& eFlip) {
     return eFlip;
   }
   int convert_string_method(std::string const& choice) const {
@@ -1983,7 +1983,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
          typename TbasicBank, typename Finsert>
 void DUALDESC_AdjacencyDecomposition_and_insert(
-    Tbank &TheBank, typename TbasicBank::DataFacet const& df,
+    Tbank &TheBank, TbasicBank &bb, typename TbasicBank::DataFacet const& df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     std::string const &ePrefix, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
@@ -2007,7 +2007,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS
       os << "|FlipFace1|=" << time << "\n";
 #endif
-      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+      Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
       os << "|operation_face1|=" << time << "\n";
 #endif
@@ -2035,7 +2035,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS
       os << "|FlipFace2|=" << time << "\n";
 #endif
-      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+      Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
       os << "|operation_face2|=" << time << "\n";
 #endif
@@ -2109,12 +2109,12 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
       auto f_insert=[&](Face const& eFlip) -> void {
         RPL.FuncInsertPair(eFlip);
       };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
     } else {
       auto f_insert=[&](Face const& eFlip) -> void {
         RPL.FuncInsert(eFlip);
       };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
     }
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
