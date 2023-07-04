@@ -6,9 +6,7 @@
 #include "Boost_bitset_kernel.h"
 #include "MAT_Matrix.h"
 #include "Timings.h"
-#include <boost/mpi.hpp>
-#include <boost/mpi/communicator.hpp>
-#include <boost/mpi/environment.hpp>
+#include "MPI_basic.h"
 #include <limits>
 #include <string>
 #include <utility>

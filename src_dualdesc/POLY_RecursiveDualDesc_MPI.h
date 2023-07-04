@@ -65,46 +65,6 @@ size_t mpi_get_hash(Face const &x, size_t const& n_vert) {
   return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
 }
 
-template <typename Tgroup>
-int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm, vectface const& vf, Tgroup const &GRP) {
-  int n_proc = comm.size();
-  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
-  int64_t miss_val = std::numeric_limits<int64_t>::max();
-  int64_t upper_limit_local = miss_val;
-  int64_t upper_limit_global = miss_val;
-  int chosen_method = -1;
-  int64_t effective_upper_limit = miss_val;
-  std::vector<int64_t> V_runtime;
-  for (auto& method : list_considered) {
-    if (upper_limit_local != miss_val) {
-      // That is a tolerance. If a method gives 5 times worse locally, then that is enough to
-      // discard it.
-      effective_upper_limit = 5 * upper_limit_local;
-    }
-    int64_t runtime_local = time_evaluation_can_method(method, vf, GRP, effective_upper_limit);
-    if (runtime_local < upper_limit_local) {
-      upper_limit_local = runtime_local;
-    }
-    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
-    int64_t runtime_global = 0;
-    for (int i_proc = 0; i_proc<n_proc; i_proc++) {
-      if (runtime_global != miss_val) {
-        int64_t runtime = V_runtime[i_proc];
-        if (runtime == miss_val) {
-          runtime_global = miss_val;
-        } else {
-          runtime_global += runtime;
-        }
-      }
-    }
-    if (runtime_global < upper_limit_global) {
-      chosen_method = method;
-      upper_limit_global = runtime_global;
-    }
-  }
-  return chosen_method;
-}
-
 // When we upgrade the canonicalization scheme, we need to recompute the hashes
 // and redistribute the data.
 vectface mpi_shuffle(boost::mpi::communicator &comm,
@@ -217,9 +177,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     stop_comm_thread();
 
     for (auto &eOrb : TheOutput) {
-      Face eFlip = df.FlipFace(eOrb, os);
+      Face eFlipPre = df.FlipFace(eOrb);
 #ifdef TIMINGS
       MicrosecondTime time;
+#endif
+      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+#ifdef TIMINGS
+      os << "|operation_face1|=" << time << "\n";
 #endif
       f_insert(eFlip);
 #ifdef TIMINGS
@@ -230,7 +194,6 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     os << "|outputtime|=" << time_full << "\n";
 #endif
   } else {
-    
     start_comm_thread();
     try {
       vectface TheOutput =
@@ -243,20 +206,25 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       stop_comm_thread();
 
       for (auto &eOrb : TheOutput) {
-        Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
         MicrosecondTime time;
+#endif
+        Face eFlip = df.FlipFace(eOrb);
+#ifdef TIMINGS
+        os << "|FlipFace2|=" << time << "\n";
+#endif
+        Face eFlip = TheBank.bb.operation_face(eFlipPre);
+#ifdef TIMINGS
+        os << "|operation_face2|=" << time << "\n";
 #endif
         f_insert(eFlip);
 #ifdef TIMINGS
         os << "|insert2|=" << time << "\n";
 #endif
       }
-
 #ifdef TIMINGS
       os << "|outputtime|=" << time_full << "\n";
 #endif
-
     } catch (RuntimeException const &e) {
       os << "RuntimeException, join comm thread\n";
       stop_comm_thread();
@@ -282,7 +250,32 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::string lPrefix = ePrefix + "database";
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
-  Tint CritSiz = RPL.CritSiz;
+  auto set_up=[&]() -> void {
+    std::string ansChoiceCanonic = HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+    int action = RPL.determine_action_database(ansChoiceCanonic);
+    if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+      return RPL.LoadDatabase();
+    }
+    vectface vf = RPL.get_runtime_testcase();
+    int method = RPL.bb.evaluate_method_mpi(comm, vf);
+    if (method == RPL.the_method) {
+      return RPL.LoadDatabase();
+    }
+    size_t n_orbit = RPL.preload_nb_orbit();
+    vectface vfo = RPL.ReadDatabase(n_orbit);
+    int nbRow = bb.nbRow;
+    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      Face fo = vfo[i_orbit];
+      Face f = face_reduction(fo, nbRow);
+      Face f_new = RPL.bb.operation_face(f);
+      set_face_partial(fo, f_new, nbRow);
+      vfo[i_orbit] = fo;
+    }
+    vectface vfb = mpi_shuffle(comm, vfo, nbRow);
+    RPL.DirectAppendDatabase(method, vfo);
+  };
+  set_up();
+  
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;

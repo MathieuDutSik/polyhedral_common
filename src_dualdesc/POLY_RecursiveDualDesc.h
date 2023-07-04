@@ -12,6 +12,7 @@
 #include "POLY_SamplingFacet.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Timings.h"
+#include "MPI_basic.h"
 
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
@@ -64,13 +65,20 @@
 #define UNORD_SET tsl::hopscotch_set
 #endif
 
+// Those constants are for the canonic strategy since we have 3 different methods
+// available
 static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
 static const int CANONIC_STRATEGY__STORE = 1;
 static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
 
+// Those constants are for the default strategy
 static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
 static const int REPR_STRATEGY__DEFAULT = 0; // More or less irrelevant here
 
+// Those constants express the choice for the database
+static const int DATABASE_ACTION__SIMPLE_LOAD = 0;
+static const int DATABASE_ACTION__GUESS = 1;
+static const int DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE = 2;
 
 std::atomic<bool> ExitEvent;
 
@@ -361,6 +369,22 @@ vectface vectface_reduction(vectface const& vf, size_t n_red) {
   return vf_red;
 }
 
+Face face_reduction(Face const& f, size_t n_red) {
+  Face f_red(n_red);
+  for (size_t i=0; i<n_red; i++)
+    f_red[i] = f[i];
+  return f_red;
+}
+
+void set_face_partial(Face & f_out, Face const& f_in, size_t const& n_red) {
+  for (size_t i=0; i<n_red; i++)
+    f_out[i] = f_in[i];
+}
+
+
+
+
+
 template<typename Tint>
 struct FaceOrbitsizeTableContainer {
 public:
@@ -496,6 +520,46 @@ int GetCanonicalizationMethod_Serial(vectface const& vf, Tgroup const &GRP) {
     if (runtime < upper_limit) {
       chosen_method = method;
       upper_limit = runtime;
+    }
+  }
+  return chosen_method;
+}
+
+template <typename Tgroup>
+int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm, vectface const& vf, Tgroup const &GRP) {
+  int n_proc = comm.size();
+  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  int64_t miss_val = std::numeric_limits<int64_t>::max();
+  int64_t upper_limit_local = miss_val;
+  int64_t upper_limit_global = miss_val;
+  int chosen_method = -1;
+  int64_t effective_upper_limit = miss_val;
+  std::vector<int64_t> V_runtime;
+  for (auto& method : list_considered) {
+    if (upper_limit_local != miss_val) {
+      // That is a tolerance. If a method gives 5 times worse locally, then that is enough to
+      // discard it.
+      effective_upper_limit = 5 * upper_limit_local;
+    }
+    int64_t runtime_local = time_evaluation_can_method(method, vf, GRP, effective_upper_limit);
+    if (runtime_local < upper_limit_local) {
+      upper_limit_local = runtime_local;
+    }
+    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
+    int64_t runtime_global = 0;
+    for (int i_proc = 0; i_proc<n_proc; i_proc++) {
+      if (runtime_global != miss_val) {
+        int64_t runtime = V_runtime[i_proc];
+        if (runtime == miss_val) {
+          runtime_global = miss_val;
+        } else {
+          runtime_global += runtime;
+        }
+      }
+    }
+    if (runtime_global < upper_limit_global) {
+      chosen_method = method;
+      upper_limit_global = runtime_global;
     }
   }
   return chosen_method;
@@ -662,42 +726,18 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
 
-template <typename T, typename Torbsize, typename Tgroup> struct DataFacetCan {
+template <typename T, typename Tgroup> struct DataFacetCan {
   using Tint = typename Tgroup::Tint;
   size_t SelectedOrbit;
   Face eInc;
   FlippingFramework<T> FF;
   const Tgroup &GRP;
-  DataFaceOrbitSize<Torbsize, Tgroup> & recConvert;
   Tgroup Stab;
-  int can_method;
-  Face FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
-#ifdef TIMINGS
-    MicrosecondTime time;
-#endif
-    Face eFlip = FF.FlipFace(f);
-#ifdef TIMINGS
-    os << "|FlipFace|=" << time << "\n";
-#endif
-    Face result = CanonicalImageGeneralDualDesc(can_method, GRP, recConvert, eFlip);
-#ifdef TIMINGS
-    os << "|canonicalization|=" << time << "\n";
-#endif
-    return result;
+  Face FlipFace(const Face &f) const {
+    return FF.FlipFace(f);
   }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
-#ifdef TIMINGS
-    MicrosecondTime time;
-#endif
-    Face eFlip = FF.FlipFaceIneq(pair);
-#ifdef TIMINGS
-    os << "|FlipFaceIneq|=" << time << "\n";
-#endif
-    Face result = CanonicalImageGeneralDualDesc(can_method, GRP, recConvert, eFlip);
-#ifdef TIMINGS
-    os << "|canonicalization|=" << time << "\n";
-#endif
-    return result;
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
+    return FF.FlipFaceIneq(pair);
   }
 };
 
@@ -709,25 +749,11 @@ template <typename T, typename Tgroup> struct DataFacetRepr {
   const Tgroup &GRP;
   Tgroup Stab;
   // There is only one method for Repr and it does not create a stabilizer.
-  Face FlipFace(const Face &f, [[maybe_unused]] std::ostream & os) const {
-#ifdef TIMINGS
-    MicrosecondTime time;
-#endif
-    Face result = FF.FlipFace(f);
-#ifdef TIMINGS
-    os << "|FlipFace|=" << time << "\n";
-#endif
-    return result;
+  Face FlipFace(const Face &f) const {
+    return FF.FlipFace(f);
   }
-  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair, [[maybe_unused]] std::ostream & os) const {
-#ifdef TIMINGS
-    MicrosecondTime time;
-#endif
-    Face result = FF.FlipFaceIneq(pair);
-#ifdef TIMINGS
-    os << "|FlipFaceIneq|=" << time << "\n";
-#endif
-    return result;
+  Face FlipFaceIneq(std::pair<Face,MyVector<T>> const& pair) const {
+    return FF.FlipFaceIneq(pair);
   }
 };
 
@@ -785,20 +811,6 @@ public:
       vf.push_back(f);
     }
     return vf;
-  }
-  // Obtain a block of test faces that can be used for runtime estimation
-  vectface get_initial_testface(bool const& use_database, size_t const& siz) const {
-    if (use_database) {
-      size_t siz_red = T_min(siz, nbOrbit);
-      return ExtractFirstNFace(siz_red);
-    } else {
-      vectface vf(n_act);
-      for (size_t iter=0; iter<siz; iter++) {
-        Face f = RandomFace(n_act);
-        vf.push_back(f);
-      }
-      return vf;
-    }
   }
   // Database code that uses ListOrbit;
   std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
@@ -924,7 +936,7 @@ public:
   const MyMatrix<T> &EXT;
   const Tgroup &GRP;
   using Torbsize = uint16_t;
-  using DataFacet = DataFacetCan<T, Torbsize, Tgroup>;
+  using DataFacet = DataFacetCan<T, Tgroup>;
   using Tidx = typename Telt::Tidx;
   int nbRow;
   int nbCol;
@@ -1053,11 +1065,30 @@ public:
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
   }
+  int evaluate_method_serial(vectface const& vf) const {
+    return GetCanonicalizationMethod_Serial(vf, GRP);
+  }
+  int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
+    return GetCanonicalizationMethod_MPI(comm, vf, GRP);
+  }
+  Face operation_face(Face const& eFlip) const {
+    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, eFlip);
+  }
+  int convert_string_method(std::string const& choice) const {
+    if (choice == "canonic")
+      return CANONIC_STRATEGY__CANONICAL_IMAGE;
+    if (choice == "canonic_initial_triv")
+      return CANONIC_STRATEGY__INITIAL_TRIV;
+    if (choice == "store")
+      return CANONIC_STRATEGY__STORE;
+    std::cerr << "The value of choice is not an allowed one\n";
+    std::cerr << "Only possibilities are canonic, canonic_initial_triv, store\n";
+    throw TerminalException{1};
+  }
   bool use_f_insert_pair() {
     if (the_method == CANONIC_STRATEGY__CANONICAL_IMAGE) {
       return true;
     }
-    return CANONIC_STRATEGY__INITIAL_TRIV;
     if (the_method == CANONIC_STRATEGY__STORE) {
       return true;
     }
@@ -1126,7 +1157,7 @@ public:
     }
     foc.Counts_SetOrbitDone(eEnt.second);
   }
-  DataFacetCan<T, Torbsize, Tgroup> FuncGetMinimalUndoneOrbit() {
+  DataFacetCan<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     for (auto &eEnt : CompleteList_SetUndone) {
       size_t len = eEnt.second.size();
       if (len > 0) {
@@ -1137,8 +1168,8 @@ public:
         size_t pos = eEnt.second[0];
         Face f = foc.RetrieveListOrbitFace(pos);
         Tgroup Stab = GRP.Stabilizer_OnSets(f);
-        return {pos, f, FlippingFramework<T>(EXT, f), GRP, foc.recConvert,
-                ReducedGroupAction(Stab, f), the_method};
+        return {pos, f, FlippingFramework<T>(EXT, f), GRP,
+                ReducedGroupAction(Stab, f)};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -1325,6 +1356,22 @@ public:
     foc.clear();
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
+  }
+  int evaluate_method_serial(vectface const& vf) const {
+    return REPR_STRATEGY__DEFAULT;
+  }
+  int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
+    return REPR_STRATEGY__DEFAULT;
+  }
+  Face operation_face(Face const& eFlip) const {
+    return eFlip;
+  }
+  int convert_string_method(std::string const& choice) const {
+    if (choice == "default")
+      return REPR_STRATEGY__DEFAULT;
+    std::cerr << "The value of choice is not an allowed one\n";
+    std::cerr << "Only possibility is default\n";
+    throw TerminalException{1};
   }
   bool use_f_insert_pair() {
     return false;
@@ -1554,7 +1601,7 @@ public:
 
 private:
   std::string MainPrefix;
-  std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF, eFileMethod1, eFileMethod2;
+  std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF, eFileMethod;
   /* TRICK 7: Using separate files for faces and status allow us to gain
      locality. The faces are written one by one while the access to status is
      random */
@@ -1566,34 +1613,27 @@ private:
   std::string strPresChar;
 
 public:
-  // method1 is the preceding method computed, method2 another one.
-  // ---If method1 and method2 are missing then we compute a best guess and
-  //    then we update the database. We can accelerate the method to identify
-  //    if at some point we identify that the guess is as good as what we have
-  //    then this can accelerate.
-  // ---If method1 is present but not method2 then we sample and get the best.
-  //    If method1 = method2 then nothing to do. Otherwise, we recompute
-  //    everything.
-  // ---If method1 and method2 are present then nothing to be done.
-  int the_method1, the_method2;
+  // method encodes the algorithm used for the database and essentially applies
+  // only to the canonic.
+  // ---If method file is absent then we assume it was computed with the default.
+  // ---Otherwise we read it.
   int read_method(std::string const& eFileMethod) const {
-    if (IsExistingFile(eFileMethod)) {
-      return std::numeric_limits<int>::max();
+    if (SavingTrigger) {
+      if (IsExistingFile(eFileMethod)) {
+        return bb.get_default_strategy();
+      } else {
+        std::ifstream is(eFileMethod);
+        int method;
+        is >> method;
+        return method;
+      }
     } else {
-      std::ifstream is(eFileMethod);
-      int method;
-      is >> method;
-      return method;
+      return bb.get_default_strategy();
     }
   }
   void write_method(std::string const& eFileMethod, int const& method) const {
     std::ofstream os(eFileMethod);
     os << method;
-  }
-  bool need_recompute_representative() const {
-    if (the_method2 == std::numeric_limits<int>::max())
-      return true;
-    return false;
   }
   bool is_database_present() const {
     return IsExistingFile(eFileEXT);
@@ -1619,32 +1659,20 @@ public:
     eFileNB = MainPrefix + ".nb";
     eFileFB = MainPrefix + ".fb";
     eFileFF = MainPrefix + ".ff";
-    eFileMethod1 = MainPrefix + ".method1";
-    eFileMethod2 = MainPrefix + ".method2";
-    the_method1 = read_method(eFileMethod1);
-    if (the_method1 == std::numeric_limits<int>::max()) {
-      // Put the default if missing
-      the_method1 = bb.get_default_strategy();
-    }
-    the_method2 = read_method(eFileMethod2);
+    eFileMethod = MainPrefix + ".method";
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
     NeedToFlush = true;
-    // At the start we are working with a default strategy.
-    bb.the_method = bb.get_default_strategy();
-    if (SavingTrigger) {
-      if (is_database_present()) {
-        LoadDatabase();
-      } else {
-        if (!FILE_IsFileMakeable(eFileEXT)) {
-          os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
-             << " is not makeable\n";
-          throw TerminalException{1};
-        }
-        initial_writes();
+    bb.the_method = read_method(eFileMethod);
+    if (SavingTrigger && !is_database_present()) {
+      if (!FILE_IsFileMakeable(eFileEXT)) {
+        os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
+           << " is not makeable\n";
+        throw TerminalException{1};
       }
+      initial_writes();
     }
   }
   void initial_writes() {
@@ -1653,12 +1681,10 @@ public:
     os_grp << bb.GRP;
     WriteMatrixFile(eFileEXT, bb.EXT);
   }
-  size_t prelaod_nb_orbit() {
-    if (SavingTrigger) {
-      if (is_database_present()) {
-        FileNumber fn(eFileNB, false);
-        return fn.getval();
-      }
+  size_t preload_nb_orbit() const {
+    if (SavingTrigger && is_database_present()) {
+      FileNumber fn(eFileNB, false);
+      return fn.getval();
     }
     return 0;
   }
@@ -1683,7 +1709,7 @@ public:
     os << "|Loading Database|=" << time << "\n";
 #endif
   }
-  vectface ReadDatabase() {
+  vectface ReadDatabase(size_t const& n_read) const {
     os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
     MicrosecondTime time;
@@ -1694,7 +1720,8 @@ public:
     FileBool fb(eFileFB, n_orbit);
     FileFace ff(eFileFF, bb.delta, n_orbit);
     vectface vf(bb.delta + 1);
-    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+    size_t n_read_eff = std::min(n_read, n_orbit);
+    for (size_t i_orbit = 0; i_orbit < n_read_eff; i_orbit++) {
       Face f = ff.getface(i_orbit);
       bool status = fb.getbit(i_orbit);
       Face f_insert(bb.delta + 1);
@@ -1709,8 +1736,35 @@ public:
 #endif
     return vf;
   }
-  void DirectAppendDatabase(vectface && vf) {
+  vectface get_runtime_testcase() const {
+    size_t n_orbit = preload_nb_orbit();
+    size_t n_target = 100;
+    int nbRow = bb.nbRow;
+    if (n_orbit == 0) {
+      vectface vf(nbRow);
+      for (size_t i=0; i<n_target; i++) {
+        Face f = RandomFace(nbRow);
+        vf.push_back(f);
+      }
+      return vf;
+    } else {
+      vectface vfo = ReadDatabase(n_target);
+      return vectface_reduction(vfo, nbRow);
+    }
+  }
+  int determine_action_database(std::string const& choice) {
+    if (choice == "load")
+      return DATABASE_ACTION__SIMPLE_LOAD;
+    if (choice == "guess")
+      return DATABASE_ACTION__GUESS;
+    int choice_i = bb.convert_string_method(choice);
+    if (bb.the_method == choice_i)
+      return DATABASE_ACTION__SIMPLE_LOAD;
+    return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;
+  }
+  void DirectAppendDatabase(int const& the_method, vectface && vf) {
     bb.clear();
+    bb.the_method = the_method;
     size_t n_orbit = vf.size();
     size_t len_ff = 0;
     size_t len_fb = 0;
@@ -1747,19 +1801,7 @@ public:
       fn.setval(n_orbit);
       ff.direct_write(ListOrbit_ff);
       fb.direct_write(V_status);
-    }
-  }
-  void DatabaseMethodUpgrade(int const& the_method) {
-    FileNumber fn(eFileNB, false);
-    size_t n_orbit = fn.getval();
-    FileBool fb(eFileFB, n_orbit);
-    FileFace ff(eFileFF, bb.delta, n_orbit);
-    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
-      Face f = ff.getface(i_orbit);
-      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
-      bool status = fb.getbit(i_orbit);
-      bb.InsertListOrbitEntry(f, i_orbit);
-      bb.InsertEntryDatabase(eEnt, status, i_orbit);
+      write_method(eFileMethod, the_method);
     }
   }
   ~DatabaseOrbits() {
@@ -1806,8 +1848,7 @@ public:
       RemoveFileIfExist(eFileFF);
       RemoveFileIfExist(eFileEXT);
       RemoveFileIfExist(eFileGRP);
-      RemoveFileIfExist(eFileMethod1);
-      RemoveFileIfExist(eFileMethod2);
+      RemoveFileIfExist(eFileMethod);
     }
     return bb.GetListFaceOrbitsize();
   }
@@ -1959,9 +2000,16 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
+#endif
+      Face eFlipPre = df.FlipFace(eOrb);
+#ifdef TIMINGS
+      os << "|FlipFace1|=" << time << "\n";
+#endif
+      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+#ifdef TIMINGS
+      os << "|operation_face1|=" << time << "\n";
 #endif
       f_insert(eFlip);
 #ifdef TIMINGS
@@ -1980,9 +2028,16 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-      Face eFlip = df.FlipFace(eOrb, os);
 #ifdef TIMINGS
       MicrosecondTime time;
+#endif
+      Face eFlipPre = df.FlipFace(eOrb);
+#ifdef TIMINGS
+      os << "|FlipFace2|=" << time << "\n";
+#endif
+      Face eFlip = TheBank.bb.operation_face(eFlipPre);
+#ifdef TIMINGS
+      os << "|operation_face2|=" << time << "\n";
 #endif
       f_insert(eFlip);
 #ifdef TIMINGS
@@ -2007,6 +2062,32 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
   using DataFacet = typename TbasicBank::DataFacet;
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
+  // The choice only really makes sense for the canonic, for repr no choice is implied.
+  auto set_up=[&]() -> void {
+    std::string ansChoiceCanonic = HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+    int action = RPL.determine_action_database(ansChoiceCanonic);
+    if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+      return RPL.LoadDatabase();
+    }
+    vectface vf = RPL.get_runtime_testcase();
+    int method = RPL.bb.evaluate_method_serial(vf);
+    if (method == RPL.bb.the_method) {
+      return RPL.LoadDatabase();
+    }
+    size_t n_orbit = RPL.preload_nb_orbit();
+    vectface vfo = RPL.ReadDatabase(n_orbit);
+    int nbRow = bb.nbRow;
+    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      Face fo = vfo[i_orbit];
+      Face f = face_reduction(fo, nbRow);
+      Face f_new = RPL.bb.operation_face(f);
+      set_face_partial(fo, f_new, nbRow);
+      vfo[i_orbit] = fo;
+    }
+    RPL.DirectAppendDatabase(method, std::move(vfo));
+  };
+  set_up();
+  
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
