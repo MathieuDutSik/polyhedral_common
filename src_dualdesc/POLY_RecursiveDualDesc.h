@@ -1323,10 +1323,10 @@ public:
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
   }
-  int evaluate_method_serial(vectface const& vf) const {
+  int evaluate_method_serial([[maybe_unused]] vectface const& vf) const {
     return REPR_STRATEGY__DEFAULT;
   }
-  int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
+  int evaluate_method_mpi([[maybe_unused]] boost::mpi::communicator &comm, [[maybe_unused]] vectface const& vf) const {
     return REPR_STRATEGY__DEFAULT;
   }
   Face operation_face(Face const& eFlip) {
