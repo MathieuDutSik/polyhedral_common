@@ -2385,6 +2385,9 @@ If set to unset.heu then basic heuristics are applied which should be fine";
   ListStringValuesH_doc["CommThreadHeuristicFile"] = "Default: unset.heu\n\
 The heuristic for choosing when the communication thread is launched.\n\
 If set to unset.heu then disabled";
+  ListStringValuesH_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
+The heuristic for choosing the canonicalization method used.when the communication thread is launched.\n\
+If set to unset.heu then disabled";
   SingleBlock BlockHEURIS;
   BlockHEURIS.setListStringValues(ListStringValuesH_doc);
   ListBlock["HEURISTIC"] = BlockHEURIS;
@@ -2589,6 +2592,9 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
   os << "CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
+  //
+  SetHeuristic(eFull, "ChoiceCanonicalizationFile", AllArr.ChoiceCanonicalization, os);
+  os << "ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   AllArr.Saving = DD_Saving;

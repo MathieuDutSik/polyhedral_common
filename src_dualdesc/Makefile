@@ -1,7 +1,7 @@
 #PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank Test_face Test_bool POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_SerialDualDesc POLY_MPI_DualDesc
+PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_SerialDualDesc POLY_MPI_DualDesc
 #PROGRAM		= POLY_MPI_DualDesc
 #PROGRAM		= POLY_FindNeededBalinski POLY_SerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
@@ -24,7 +24,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
 #CC		= g++-11 -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
@@ -32,7 +32,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #  GCC
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 #  CLANG
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -ftemplate-backtrace-limit=0
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -pg
 #CC		= clang++ -Wall -Wextra -std=c++17
