@@ -1066,6 +1066,7 @@ public:
     throw TerminalException{1};
   }
   int get_default_strategy() {
+    std::cerr << "Passing by get_default_stragey\n";
     return CANONIC_STRATEGY__DEFAULT;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
@@ -1588,12 +1589,16 @@ public:
     os << method;
   }
   int read_method(std::string const& eFileMethod) const {
+    std::cerr << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod << "\n";
     if (SavingTrigger) {
-      if (IsExistingFile(eFileMethod)) {
+      std::cerr << "Running the save system\n";
+      if (!IsExistingFile(eFileMethod)) {
+        std::cerr << "The file does notexixts\n";
         int the_method = bb.get_default_strategy();
         write_method(eFileMethod, the_method);
         return the_method;
       } else {
+        std::cerr << "The file xixts\n";
         std::ifstream is(eFileMethod);
         int method;
         is >> method;
@@ -1633,7 +1638,9 @@ public:
                   " |GRP|=" + std::to_string(bb.GRP.size());
     delta = bb.delta;
     NeedToFlush = true;
-    bb.the_method = read_method(eFileMethod);
+    int val = read_method(eFileMethod);
+    std::cerr << "read_method val=" << val << "\n";
+    bb.the_method = val;
     if (SavingTrigger && !is_database_present()) {
       if (!FILE_IsFileMakeable(eFileEXT)) {
         os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -1644,7 +1651,15 @@ public:
     }
   }
   void initial_writes() {
-    os << "Creating the files (NB, FB, FF)\n";
+    os << "Creating the initial files (NB, FB, FF) with zero state\n";
+    FileNumber fn(eFileNB, true);
+    FileBool fb(eFileFB);
+    FileFace ff(eFileFF, bb.delta);
+    std::vector<uint8_t> V_empty; // empty write, maybe useless.
+    fn.setval(0);
+    ff.direct_write(V_empty);
+    fb.direct_write(V_empty);
+    write_method(eFileMethod, bb.the_method);
     std::ofstream os_grp(eFileGRP);
     os_grp << bb.GRP;
     WriteMatrixFile(eFileEXT, bb.EXT);
@@ -1657,6 +1672,8 @@ public:
     return 0;
   }
   void LoadDatabase() {
+    if (!is_database_present())
+      return;
     os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
     MicrosecondTime time;
@@ -1678,6 +1695,9 @@ public:
 #endif
   }
   vectface ReadDatabase(size_t const& n_read) const {
+    vectface vf(bb.delta + 1);
+    if (!is_database_present())
+      return vf;
     os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
     MicrosecondTime time;
@@ -1687,7 +1707,6 @@ public:
     os << "Reading database with n_orbit=" << n_orbit << "\n";
     FileBool fb(eFileFB, n_orbit);
     FileFace ff(eFileFF, bb.delta, n_orbit);
-    vectface vf(bb.delta + 1);
     size_t n_read_eff = std::min(n_read, n_orbit);
     for (size_t i_orbit = 0; i_orbit < n_read_eff; i_orbit++) {
       Face f = ff.getface(i_orbit);
@@ -1726,6 +1745,7 @@ public:
     if (choice == "guess")
       return DATABASE_ACTION__GUESS;
     int choice_i = bb.convert_string_method(choice);
+    std::cerr << "choice_i=" << choice_i << " choice=" << choice << " bb.the-method=" << bb.the_method << "\n";
     if (bb.the_method == choice_i)
       return DATABASE_ACTION__SIMPLE_LOAD;
     return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;

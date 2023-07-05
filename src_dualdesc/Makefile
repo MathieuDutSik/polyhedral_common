@@ -25,6 +25,7 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+#CC		= g++ -std=c++17 -Wall -Wextra -O1 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
 #CC		= g++-11 -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
