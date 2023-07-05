@@ -16,7 +16,7 @@
  BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
  ChosenDatabaseFile              = "Bank_canonic.heu"
  CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
- ChoiceCanonicalization          = "Canonic.heu"
+ ChoiceCanonicalizationFile      = "Canonic.heu"
 /
 
 &METHOD
