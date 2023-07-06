@@ -1562,6 +1562,7 @@ private:
   std::ostream &os;
   size_t delta;
   std::string strPresChar;
+  HumanTime time;
 
 public:
   // method encodes the algorithm used for the database and essentially applies
@@ -1873,19 +1874,30 @@ public:
        << "\n";
     return data;
   }
-  bool GetTerminationStatus() const {
-    if (bb.foc.nbOrbitDone > 0) {
-      Face eSetUndone = ComputeIntersectionUndone();
-      if (bb.foc.nbUndone <= CritSiz || eSetUndone.count() > 0) {
-        os << "End of computation, nbObj=" << bb.foc.TotalNumber
-           << " nbUndone=" << bb.foc.nbUndone
-           << " |eSetUndone|=" << eSetUndone.count() << " |EXT|=" << bb.nbRow
-           << "\n";
-        return true;
+  bool GetTerminationStatus() {
+    auto get_val=[&]() -> bool {
+      if (bb.foc.nbOrbitDone > 0) {
+        if (bb.foc.nbUndone <= CritSiz) {
+          os << "Termination by classic Balinski criterion nbUndone=" << bb.foc.nbUndone << "\n";
+          return true;
+        }
+        Face eSetUndone = ComputeIntersectionUndone();
+        if (eSetUndone.count() > 0) {
+          os << "Termination by linear programming criterion |eSetUndone|=" << eSetUndone.count() << "\n";
+          return true;
+        }
       }
+      if (AdvancedTerminationCriterion)
+        return EvaluationConnectednessCriterion_Serial(bb, os);
+      return false;
+    };
+    if (get_val()) {
+      os << "End of computation, nbObj=" << bb.foc.TotalNumber
+         << " |EXT|=" << bb.nbRow << "/" << bb.nbCol
+         << " time=" << time
+         << "\n";
+      return true;
     }
-    if (AdvancedTerminationCriterion)
-      return EvaluationConnectednessCriterion_Serial(bb, os);
     return false;
   }
   UndoneOrbitInfo<Tint> GetTerminationInfo() const {
