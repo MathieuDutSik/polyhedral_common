@@ -2,8 +2,8 @@
 &DATA
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
- OUTfile = "Result"
- DeterministicRuntime = F
+ OUTfile = "Result_mpi"
+ DeterministicRuntime = T
  ApplyStdUnitbuf = T
  max_runtime = 7200
  AdvancedTerminationCriterion = T

@@ -2,8 +2,8 @@
 &DATA
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
- OUTfile = "Result"
- DeterministicRuntime = F
+ OUTfile = "Result_schema1_stepA"
+ DeterministicRuntime = T
  max_runtime = 3600
  AdvancedTerminationCriterion = T
 /

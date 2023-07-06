@@ -3,7 +3,7 @@
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
  OUTfile = "Result"
- DeterministicRuntime = F
+ DeterministicRuntime = T
  max_runtime = -1
  AdvancedTerminationCriterion = T
 /
