@@ -369,22 +369,6 @@ vectface vectface_reduction(vectface const& vf, size_t n_red) {
   return vf_red;
 }
 
-Face face_reduction(Face const& f, size_t n_red) {
-  Face f_red(n_red);
-  for (size_t i=0; i<n_red; i++)
-    f_red[i] = f[i];
-  return f_red;
-}
-
-void set_face_partial(Face & f_out, Face const& f_in, size_t const& n_red) {
-  for (size_t i=0; i<n_red; i++)
-    f_out[i] = f_in[i];
-}
-
-
-
-
-
 template<typename Tint>
 struct FaceOrbitsizeTableContainer {
 public:
@@ -1783,8 +1767,8 @@ public:
       if (SavingTrigger) {
         setbit_vector(V_status, i_orbit, status);
       }
-      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
-      bb.InsertListOrbitEntry(f, i_orbit);
+      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f_red);
+      bb.InsertListOrbitEntry(f_red, i_orbit);
       bb.InsertEntryDatabase(eEnt, status, i_orbit);
     }
     if (SavingTrigger) {
@@ -2040,6 +2024,18 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|outputtime|=" << time_full << "\n";
 #endif
   }
+}
+
+Face face_reduction(Face const& f, size_t n_red) {
+  Face f_red(n_red);
+  for (size_t i=0; i<n_red; i++)
+    f_red[i] = f[i];
+  return f_red;
+}
+
+void set_face_partial(Face & f_out, Face const& f_in, size_t const& n_red) {
+  for (size_t i=0; i<n_red; i++)
+    f_out[i] = f_in[i];
 }
 
 template <typename TbasicBank>
