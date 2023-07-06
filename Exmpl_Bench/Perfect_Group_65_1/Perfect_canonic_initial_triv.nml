@@ -2,7 +2,7 @@
 &DATA
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
- OUTfile = "Result"
+ OUTfile = "Result_canonic_initial_triv"
  DeterministicRuntime = F
  max_runtime = -1
  AdvancedTerminationCriterion = T
