@@ -70,24 +70,24 @@ size_t mpi_get_hash(Face const &x, size_t const& n_vert) {
 vectface mpi_shuffle(boost::mpi::communicator &comm,
                      vectface && vf, size_t const& n) {
   int n_proc = comm.size();
-  size_t siz = vf.size();
-  size_t delta = vf.get_n(); // the full size of the entries
+  size_t n_face = vf.size();
+  size_t siz_f = vf.get_n(); // the full size of the entries
   int n_div8 = (n + 7) / 8;
   std::vector<uint8_t> V_hash(n_div8, 0);
   std::vector<std::vector<uint8_t>> list_in_vect(n_proc);
   std::vector<size_t> list_in_cnt(n_proc, 0);
-  for (size_t i_elt=0; i_elt<siz; i_elt++) {
-    Face f = vf[i_elt];
+  for (size_t i_face=0; i_face<n_face; i_face++) {
+    Face f = vf[i_face];
     size_t hash = mpi_get_hash_kernel(f, n, n_div8, V_hash);
     int res = static_cast<int>(hash % size_t(n_proc));
     size_t pos = list_in_cnt[res];
-    size_t needed_len = (delta * (pos+1) + 7) / 8;
+    size_t needed_len = (siz_f * (pos+1) + 7) / 8;
     size_t curr_len = list_in_vect[res].size();
     for (size_t u=curr_len; u<needed_len; u++) {
       list_in_vect[res].push_back(0);
     }
-    size_t pos_vect = pos * delta;
-    for (size_t u=0; u<delta; u++) {
+    size_t pos_vect = pos * siz_f;
+    for (size_t u=0; u<siz_f; u++) {
       bool val = f[u];
       setbit_vector(list_in_vect[res], pos_vect, val);
       pos_vect++;
@@ -98,14 +98,14 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   std::vector<size_t> list_out_cnt(n_proc);
   boost::mpi::all_to_all(comm, list_in_cnt, list_out_cnt);
   boost::mpi::all_to_all(comm, list_in_vect, list_out_vect);
-  vectface vf_ret(delta);
-  Face f(delta);
+  vectface vf_ret(siz_f);
+  Face f(siz_f);
   for (int i_proc=0; i_proc<n_proc; i_proc++) {
-    size_t siz_out = list_out_cnt[i_proc];
+    size_t cnt_out = list_out_cnt[i_proc];
     size_t pos = 0;
     std::vector<uint8_t> const& V = list_out_vect[i_proc];
-    for (size_t i_elt=0; i_elt<siz_out; i_elt++) {
-      for (size_t u=0; u<delta; u++) {
+    for (size_t i_face=0; i_face<cnt_out; i_face++) {
+      for (size_t u=0; u<siz_f; u++) {
         bool val = getbit_vector(V, pos);
         f[u] = val;
         pos++;
