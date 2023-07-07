@@ -1648,55 +1648,58 @@ public:
     return 0;
   }
   void LoadDatabase() {
-    if (!is_database_present())
-      return;
-    os << "Opening existing files (NB, FB, FF)\n";
+    if (is_database_present()) {
+      os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
-    MicrosecondTime time;
+      MicrosecondTime time;
 #endif
-    FileNumber fn(eFileNB, false);
-    size_t n_orbit = fn.getval();
-    os << "Loading database with n_orbit=" << n_orbit << "\n";
-    FileBool fb(eFileFB, n_orbit);
-    FileFace ff(eFileFF, bb.delta, n_orbit);
-    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
-      Face f = ff.getface(i_orbit);
-      std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
-      bool status = fb.getbit(i_orbit);
-      bb.InsertListOrbitEntry(f, i_orbit);
-      bb.InsertEntryDatabase(eEnt, status, i_orbit);
+      FileNumber fn(eFileNB, false);
+      size_t n_orbit = fn.getval();
+      os << "Loading database with n_orbit=" << n_orbit << "\n";
+      FileBool fb(eFileFB, n_orbit);
+      FileFace ff(eFileFF, bb.delta, n_orbit);
+      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+        Face f = ff.getface(i_orbit);
+        std::pair<Face,Tint> eEnt = bb.foc.recConvert.ConvertFace(f);
+        bool status = fb.getbit(i_orbit);
+        bb.InsertListOrbitEntry(f, i_orbit);
+        bb.InsertEntryDatabase(eEnt, status, i_orbit);
+      }
+#ifdef TIMINGS
+      os << "|Loading Database|=" << time << "\n";
+#endif
+    } else {
+      os << "No database present\n";
     }
-#ifdef TIMINGS
-    os << "|Loading Database|=" << time << "\n";
-#endif
+    print_status();
   }
   vectface ReadDatabase(size_t const& n_read) const {
     vectface vfo(bb.delta + 1);
-    if (!is_database_present())
-      return vfo;
-    os << "Opening existing files (NB, FB, FF)\n";
+    if (is_database_present()) {
+      os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
-    MicrosecondTime time;
+      MicrosecondTime time;
 #endif
-    FileNumber fn(eFileNB, false);
-    size_t n_orbit = fn.getval();
-    os << "Reading database with n_orbit=" << n_orbit << "\n";
-    FileBool fb(eFileFB, n_orbit);
-    FileFace ff(eFileFF, bb.delta, n_orbit);
-    size_t n_read_eff = std::min(n_read, n_orbit);
-    for (size_t i_orbit = 0; i_orbit < n_read_eff; i_orbit++) {
-      Face f = ff.getface(i_orbit);
-      bool status = fb.getbit(i_orbit);
-      Face f_insert(bb.delta + 1);
-      for (size_t u=0; u<bb.delta; u++) {
-        f_insert[u] = f[u];
+      FileNumber fn(eFileNB, false);
+      size_t n_orbit = fn.getval();
+      os << "Reading database with n_orbit=" << n_orbit << "\n";
+      FileBool fb(eFileFB, n_orbit);
+      FileFace ff(eFileFF, bb.delta, n_orbit);
+      size_t n_read_eff = std::min(n_read, n_orbit);
+      for (size_t i_orbit = 0; i_orbit < n_read_eff; i_orbit++) {
+        Face f = ff.getface(i_orbit);
+        bool status = fb.getbit(i_orbit);
+        Face f_insert(bb.delta + 1);
+        for (size_t u=0; u<bb.delta; u++) {
+          f_insert[u] = f[u];
+        }
+        f_insert[bb.delta] = status;
+        vfo.push_back(f_insert);
       }
-      f_insert[bb.delta] = status;
-      vfo.push_back(f_insert);
-    }
 #ifdef TIMINGS
-    os << "|Reading Database|=" << time << "\n";
+      os << "|Reading Database|=" << time << "\n";
 #endif
+    }
     return vfo;
   }
   vectface get_runtime_testcase() const {
@@ -1772,6 +1775,7 @@ public:
       ff.direct_write(ListOrbit_ff);
       fb.direct_write(V_status);
     }
+    print_status();
   }
   ~DatabaseOrbits() {
     /* TRICK 5: The destructor does NOT destroy the database! This is because it
@@ -2047,13 +2051,21 @@ void vectface_update_method(vectface & vfo, TbasicBank & bb) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
   std::cerr << "vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow << "\n";
+  std::cerr << "vectface_update_method bb.the_method=" << bb.the_method << "\n";
+  size_t n_diff = 0;
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
+    Face fo1 = fo;
     Face f = face_reduction(fo, nbRow);
     Face f_new = bb.operation_face(f);
     set_face_partial(fo, f_new, nbRow);
+    Face fo2 = fo;
+    if (fo1 != fo2) {
+      n_diff += 1;
+    }
     vfo[i_orbit] = fo;
   }
+  std::cerr << "vectface_update_method, n_diff=" << n_diff << "\n";
 }
 
 
