@@ -1,0 +1,30 @@
+
+&DATA
+ EXTfile = "PerfectFacet59.ext"
+ GRPfile = "PerfectFacet59.grp"
+ OUTfile = "Result_schema1_stepA"
+ DeterministicRuntime = T
+ max_runtime = 3600
+ AdvancedTerminationCriterion = T
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "unset.heu"
+ DualDescriptionThompsonFile     = "DualDesc.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
+ ChosenDatabaseFile              = "Bank_canonic.heu"
+ CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
+ ChoiceCanonicalizationFile      = "Canonic.heu"
+/
+
+&METHOD
+ Saving = T
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = T
+/
