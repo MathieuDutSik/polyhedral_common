@@ -4,7 +4,7 @@
  GRPfile = "PerfectFacet59.grp"
  OUTfile = "Result_schema1_stepA"
  DeterministicRuntime = T
- max_runtime = 3600
+ max_runtime = 900
  AdvancedTerminationCriterion = T
 /
 
