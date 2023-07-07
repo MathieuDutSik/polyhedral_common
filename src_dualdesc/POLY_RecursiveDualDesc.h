@@ -1714,12 +1714,12 @@ public:
     int nbRow = bb.nbRow;
     os << "get_runtime_testcase n_orbit=" << n_orbit << " n_target=" << n_target << " nbRow=" << nbRo< << "\n";
     if (n_orbit == 0) {
-      vectface vfo(nbRow);
+      vectface vf(nbRow);
       for (size_t i=0; i<n_target; i++) {
         Face f = RandomFace(nbRow);
-        vfo.push_back(f);
+        vf.push_back(f);
       }
-      return vfo;
+      return vf;
     } else {
       vectface vfo = ReadDatabase(n_target);
       return vectface_reduction(vfo, nbRow);
