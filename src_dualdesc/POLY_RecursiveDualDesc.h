@@ -1680,9 +1680,9 @@ public:
 #endif
   }
   vectface ReadDatabase(size_t const& n_read) const {
-    vectface vf(bb.delta + 1);
+    vectface vfo(bb.delta + 1);
     if (!is_database_present())
-      return vf;
+      return vfo;
     os << "Opening existing files (NB, FB, FF)\n";
 #ifdef TIMINGS
     MicrosecondTime time;
@@ -1701,24 +1701,25 @@ public:
         f_insert[u] = f[u];
       }
       f_insert[bb.delta] = status;
-      vf.push_back(f_insert);
+      vfo.push_back(f_insert);
     }
 #ifdef TIMINGS
     os << "|Reading Database|=" << time << "\n";
 #endif
-    return vf;
+    return vfo;
   }
   vectface get_runtime_testcase() const {
     size_t n_orbit = preload_nb_orbit();
     size_t n_target = 100;
     int nbRow = bb.nbRow;
+    os << "get_runtime_testcase n_orbit=" << n_orbit << " n_target=" << n_target << " nbRow=" << nbRo< << "\n";
     if (n_orbit == 0) {
-      vectface vf(nbRow);
+      vectface vfo(nbRow);
       for (size_t i=0; i<n_target; i++) {
         Face f = RandomFace(nbRow);
-        vf.push_back(f);
+        vfo.push_back(f);
       }
-      return vf;
+      return vfo;
     } else {
       vectface vfo = ReadDatabase(n_target);
       return vectface_reduction(vfo, nbRow);
@@ -1761,8 +1762,8 @@ public:
         f_red[u] = val;
         if (SavingTrigger) {
           setbit_vector(ListOrbit_ff, pos_ff, val);
+          pos_ff++;
         }
-        pos_ff++;
       }
       bool status = f[bb.delta];
       if (SavingTrigger) {
@@ -2054,6 +2055,7 @@ template <typename TbasicBank>
 void vectface_update_method(vectface & vfo, TbasicBank & bb) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
+  std::cerr << "vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow << "\n";
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
     Face f = face_reduction(fo, nbRow);
@@ -2098,7 +2100,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #endif
     int method = RPL.bb.evaluate_method_serial(vf);
 #ifdef TIMINGS
-    os << "|evaluate_method_serial|=" << time << "\n";
+    os << "method=" << method << " |evaluate_method_serial|=" << time << "\n";
 #endif
     if (method == RPL.bb.the_method) {
       return RPL.LoadDatabase();
@@ -2109,7 +2111,8 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #endif
     vectface vfo = RPL.ReadDatabase(n_orbit);
 #ifdef TIMINGS
-    os << "method=" << method << " |ReadDatabase|=" << time << "\n";
+    os << "delta=" << bb.delta << " nbRow=" << bb.nbRow << "\n";
+    os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |ReadDatabase|=" << time << "\n";
 #endif
     RPL.set_method(method);
 #ifdef TIMINGS
@@ -2117,11 +2120,11 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #endif
     vectface_update_method(vfo, bb);
 #ifdef TIMINGS
-    os << "|method update|=" << time << "\n";
+    os << "bb.the_method=" << bb.the_method << " |method update|=" << time << "\n";
 #endif
     RPL.DirectAppendDatabase(std::move(vfo));
 #ifdef TIMINGS
-    os << "|DirectAppendDatabase|=" << time << "\n";
+    os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |DirectAppendDatabase|=" << time << "\n";
 #endif
   };
   set_up();
