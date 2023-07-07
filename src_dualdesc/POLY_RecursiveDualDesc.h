@@ -729,18 +729,18 @@ template <typename Tgroup, typename Torbsize, typename Tidx>
 struct FaceOrbsizeContainer {
 public:
   using Tint = typename Tgroup::Tint;
-  size_t n_act;
-  size_t n_bit_orbsize;
-  size_t delta;
+  // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
+  // would not be available with a vectface.
+  std::vector<uint8_t> ListOrbit;
   Tint TotalNumber;
   size_t nbOrbitDone;
   Tint nbUndone;
   size_t nbOrbit;
+  size_t n_act;
+  size_t n_bit_orbsize;
+  size_t delta;
   std::vector<uint8_t> Vappend;
   DataFaceOrbitSize<Torbsize, Tgroup> recConvert;
-  // We CANNOT replace ListOrbit by vectface as we use a number of hacks that
-  // would not be available with a vectface.
-  std::vector<uint8_t> ListOrbit;
   FaceOrbsizeContainer() = delete;
   FaceOrbsizeContainer(const FaceOrbsizeContainer &) = delete;
   FaceOrbsizeContainer &operator=(const FaceOrbsizeContainer &) = delete;
@@ -767,12 +767,12 @@ public:
   // Database code that uses ListOrbit;
   std::pair<Face,Tint> RetrieveListOrbitEntry(size_t const &i_orb) const {
     Face f(n_act);
-    Torbsize idx_orb = 0;
     size_t i_acc = delta * i_orb;
     for (size_t i = 0; i < n_act; i++) {
       f[i] = getbit_vector(ListOrbit, i_acc);
       i_acc++;
     }
+    Torbsize idx_orb = 0;
     Torbsize pow = 1;
     for (size_t i = 0; i < n_bit_orbsize; i++) {
       if (getbit_vector(ListOrbit, i_acc))
@@ -791,7 +791,7 @@ public:
     }
     return face;
   }
-  void InsertListOrbitFace(Face const &face) {
+  void InsertListOrbitFace_size(Face const &face, size_t const& rel_siz) {
     size_t curr_len = ListOrbit.size();
     size_t needed_bits = (nbOrbit + 1) * delta;
     size_t needed_len = (needed_bits + 7) / 8;
@@ -799,29 +799,20 @@ public:
     if (incr > 0)
       ListOrbit.insert(ListOrbit.end(), Vappend.begin(),
                        Vappend.begin() + incr);
-    // Now setting up the bits but only for the faces as this suffices for the
-    // comparison of novelty.
     size_t i_acc = nbOrbit * delta;
-    for (size_t i = 0; i < n_act; i++) {
+    for (size_t i = 0; i < rel_siz; i++) {
       bool val = face[i];
       setbit_vector(ListOrbit, i_acc, val);
       i_acc++;
     }
   }
+  void InsertListOrbitFace(Face const &face) {
+    // Now setting up the bits but only for the faces as this suffices for the
+    // comparison of novelty.
+    InsertListOrbitFace_size(face, n_act);
+  }
   void InsertListOrbitFaceComplete(Face const &face) {
-    size_t curr_len = ListOrbit.size();
-    size_t needed_bits = (nbOrbit + 1) * delta;
-    size_t needed_len = (needed_bits + 7) / 8;
-    size_t incr = needed_len - curr_len;
-    if (incr > 0)
-      ListOrbit.insert(ListOrbit.end(), Vappend.begin(),
-                       Vappend.begin() + incr);
-    size_t i_acc = nbOrbit * delta;
-    for (size_t i = 0; i < delta; i++) {
-      bool val = face[i];
-      setbit_vector(ListOrbit, i_acc, val);
-      i_acc++;
-    }
+    InsertListOrbitFace_size(face, delta);
   }
   void InsertListOrbitIdxOrb(Tint const &orbSize) {
     Torbsize idx_orb = recConvert.GetOrbSizeIndex(orbSize);
@@ -1712,7 +1703,7 @@ public:
     size_t n_orbit = preload_nb_orbit();
     size_t n_target = 100;
     int nbRow = bb.nbRow;
-    os << "get_runtime_testcase n_orbit=" << n_orbit << " n_target=" << n_target << " nbRow=" << nbRo< << "\n";
+    os << "get_runtime_testcase n_orbit=" << n_orbit << " n_target=" << n_target << " nbRow=" << nbRow << "\n";
     if (n_orbit == 0) {
       vectface vf(nbRow);
       for (size_t i=0; i<n_target; i++) {
@@ -2091,41 +2082,59 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #ifdef TIMINGS
     os << "|determine_action_database|=" << time << " action=" << action << "\n";
 #endif
+    auto f_recompute=[&](int const& method) -> void {
+      size_t n_orbit = RPL.preload_nb_orbit();
+#ifdef TIMINGS
+      os << "n_orbit=" << n_orbit << " |n_orbit|=" << time << "\n";
+#endif
+      vectface vfo = RPL.ReadDatabase(n_orbit);
+#ifdef TIMINGS
+      os << "delta=" << bb.delta << " nbRow=" << bb.nbRow << "\n";
+      os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |ReadDatabase|=" << time << "\n";
+#endif
+      RPL.set_method(method);
+#ifdef TIMINGS
+      os << "|set_method|=" << time << "\n";
+#endif
+      vectface_update_method(vfo, bb);
+#ifdef TIMINGS
+      os << "bb.the_method=" << bb.the_method << " |method update|=" << time << "\n";
+#endif
+      RPL.DirectAppendDatabase(std::move(vfo));
+#ifdef TIMINGS
+      os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |DirectAppendDatabase|=" << time << "\n";
+#endif
+    };
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+#ifdef TIMINGS
+      os << "Before RPL.LoadDatabase()\n";
+#endif
       return RPL.LoadDatabase();
     }
-    vectface vf = RPL.get_runtime_testcase();
+    if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
+      int method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS
-    os << "|get_runtime_testcase|=" << time << "\n";
+      os << "Before f_recompute, method=" << method << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
-    int method = RPL.bb.evaluate_method_serial(vf);
-#ifdef TIMINGS
-    os << "method=" << method << " |evaluate_method_serial|=" << time << "\n";
-#endif
-    if (method == RPL.bb.the_method) {
-      return RPL.LoadDatabase();
+      return f_recompute(method);
     }
-    size_t n_orbit = RPL.preload_nb_orbit();
+    if (action == DATABASE_ACTION__GUESS) {
+      vectface vf = RPL.get_runtime_testcase();
 #ifdef TIMINGS
-    os << "n_orbit=" << n_orbit << " |n_orbit|=" << time << "\n";
+      os << "|get_runtime_testcase|=" << time << "\n";
 #endif
-    vectface vfo = RPL.ReadDatabase(n_orbit);
+      int method = RPL.bb.evaluate_method_serial(vf);
 #ifdef TIMINGS
-    os << "delta=" << bb.delta << " nbRow=" << bb.nbRow << "\n";
-    os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |ReadDatabase|=" << time << "\n";
+      os << "method=" << method << " |evaluate_method_serial|=" << time << "\n";
 #endif
-    RPL.set_method(method);
-#ifdef TIMINGS
-    os << "|set_method|=" << time << "\n";
-#endif
-    vectface_update_method(vfo, bb);
-#ifdef TIMINGS
-    os << "bb.the_method=" << bb.the_method << " |method update|=" << time << "\n";
-#endif
-    RPL.DirectAppendDatabase(std::move(vfo));
-#ifdef TIMINGS
-    os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << " |DirectAppendDatabase|=" << time << "\n";
-#endif
+      if (method == bb.the_method) {
+        return RPL.LoadDatabase();
+      } else {
+        return f_recompute(method);
+      }
+    }
+    std::cerr << "Failed to find a matching entry for action=" << action << "\n";
+    throw TerminalException{1};
   };
   set_up();
   if (RPL.FuncNumberOrbit() == 0) {
