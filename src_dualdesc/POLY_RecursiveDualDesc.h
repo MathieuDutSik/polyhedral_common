@@ -1874,7 +1874,7 @@ public:
        << "\n";
     return data;
   }
-  bool GetTerminationStatus() {
+  bool GetTerminationStatus() const {
     auto get_val=[&]() -> bool {
       if (bb.foc.nbOrbitDone > 0) {
         if (bb.foc.nbUndone <= CritSiz) {
@@ -1894,7 +1894,7 @@ public:
     if (get_val()) {
       os << "End of computation, nbObj=" << bb.foc.TotalNumber
          << " |EXT|=" << bb.nbRow << "/" << bb.nbCol
-         << " time=" << time
+         << " time=" << time.const_eval()
          << "\n";
       return true;
     }
@@ -2105,11 +2105,11 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     }
     size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS
-    os << "|n_orbit|=" << time << "\n";
+    os << "n_orbit=" << n_orbit << " |n_orbit|=" << time << "\n";
 #endif
     vectface vfo = RPL.ReadDatabase(n_orbit);
 #ifdef TIMINGS
-    os << "|ReadDatabase|=" << time << "\n";
+    os << "method=" << method << " |ReadDatabase|=" << time << "\n";
 #endif
     RPL.set_method(method);
 #ifdef TIMINGS
