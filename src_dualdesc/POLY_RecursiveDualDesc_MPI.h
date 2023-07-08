@@ -261,44 +261,62 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS
     os << "|determine_action_database|=" << time << " action=" << action << "\n";
 #endif
+    auto f_recompute=[&](int const& method) -> void {
+      size_t n_orbit = RPL.preload_nb_orbit();
+#ifdef TIMINGS
+      os << "|n_orbit|=" << time << "\n";
+#endif
+      vectface vfo = RPL.ReadDatabase(n_orbit);
+#ifdef TIMINGS
+      os << "|ReadDatabase|=" << time << "\n";
+#endif
+      RPL.set_method(method);
+#ifdef TIMINGS
+      os << "|set_method|=" << time << "\n";
+#endif
+      vectface_update_method(vfo, bb);
+#ifdef TIMINGS
+      os << "|method update|=" << time << "\n";
+#endif
+      vectface vfb = mpi_shuffle(comm, std::move(vfo), bb.nbRow);
+#ifdef TIMINGS
+      os << "|mpi_shuffle|=" << time << "\n";
+#endif
+      RPL.DirectAppendDatabase(std::move(vfb));
+#ifdef TIMINGS
+      os << "|DirectAppendDatabase|=" << time << "\n";
+#endif
+    };
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+#ifdef TIMINGS
+      os << "Before RPL.LoadDatabase()\n";
+#endif
       return RPL.LoadDatabase();
     }
-    vectface vf = RPL.get_runtime_testcase();
+    if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
+      int method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS
-    os << "|get_runtime_testcase|=" << time << "\n";
+      os << "Before f_recompute, method=" << method << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
-    int method = RPL.bb.evaluate_method_mpi(comm, vf);
-#ifdef TIMINGS
-    os << "|evaluate_method_serial|=" << time << "\n";
-#endif
-    if (method == RPL.bb.the_method) {
-      return RPL.LoadDatabase();
+      return f_recompute(method);
     }
-    size_t n_orbit = RPL.preload_nb_orbit();
+    if (action == DATABASE_ACTION__GUESS) {
+      vectface vf = RPL.get_runtime_testcase();
 #ifdef TIMINGS
-    os << "|n_orbit|=" << time << "\n";
+      os << "|get_runtime_testcase|=" << time << "\n";
 #endif
-    vectface vfo = RPL.ReadDatabase(n_orbit);
+      int method = RPL.bb.evaluate_method_mpi(comm, vf);
 #ifdef TIMINGS
-    os << "|ReadDatabase|=" << time << "\n";
+      os << "|evaluate_method_serial|=" << time << "\n";
 #endif
-    RPL.set_method(method);
-#ifdef TIMINGS
-    os << "|set_method|=" << time << "\n";
-#endif
-    vectface_update_method(vfo, bb);
-#ifdef TIMINGS
-    os << "|method update|=" << time << "\n";
-#endif
-    vectface vfb = mpi_shuffle(comm, std::move(vfo), bb.nbRow);
-#ifdef TIMINGS
-    os << "|mpi_shuffle|=" << time << "\n";
-#endif
-    RPL.DirectAppendDatabase(std::move(vfb));
-#ifdef TIMINGS
-    os << "|DirectAppendDatabase|=" << time << "\n";
-#endif
+      if (method == bb.the_method) {
+        return RPL.LoadDatabase();
+      } else {
+        return f_recompute(method);
+      }
+    }
+    std::cerr << "Failed to find a matching entry for action=" << action << "\n";
+    throw TerminalException{1};
   };
   set_up();
   bool HasReachedRuntimeException = false;
