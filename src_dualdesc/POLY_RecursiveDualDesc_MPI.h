@@ -720,9 +720,9 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       }
     }
     // output
-    os << "We have vf\n";
+    os << "We have vf |vf|=" << vf.size() << " / " << vf.get_n() << "\n";
     vectface vf_tot = my_mpi_gather(comm_local, vf, i_proc_ret);
-    os << "We have vf_tot\n";
+    os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n() << " i_proc_ret=" << i_proc_ret << "\n";
     if (i_rank == i_proc_ret)
       OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
     os << "We have done our output\n";
