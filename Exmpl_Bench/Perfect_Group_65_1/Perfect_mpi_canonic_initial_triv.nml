@@ -3,6 +3,7 @@
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
  OUTfile = "Result_canonic_initial_triv"
+ ApplyStdUnitbuf = T
  DeterministicRuntime = T
  max_runtime = 10800
  AdvancedTerminationCriterion = T

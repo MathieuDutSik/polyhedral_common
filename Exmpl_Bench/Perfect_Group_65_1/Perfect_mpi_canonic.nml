@@ -3,6 +3,7 @@
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
  OUTfile = "Result_mpi_canonic"
+ ApplyStdUnitbuf = T
  DeterministicRuntime = T
  max_runtime = 3600
  AdvancedTerminationCriterion = T
