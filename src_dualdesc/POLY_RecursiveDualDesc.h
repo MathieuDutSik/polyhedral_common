@@ -2063,7 +2063,7 @@ void vectface_update_method(vectface & vfo, TbasicBank & bb) {
     if (fo1 != fo2) {
       n_diff += 1;
     }
-    vfo[i_orbit] = fo;
+    vfo.SetFace(fo, i_orbit);
   }
   std::cerr << "vectface_update_method, n_diff=" << n_diff << "\n";
 }
