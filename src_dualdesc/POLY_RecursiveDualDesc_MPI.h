@@ -636,9 +636,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int i_rank = comm.rank();
   int n_proc = comm.size();
   int pos_generator = 0;
-  if (i_rank == n_proc - 1)
-    pos_generator = 1;
-  boost::mpi::communicator comm_local = comm.split(pos_generator);
   //
   std::string FileLog =
       "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
@@ -670,6 +667,9 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
     }
   };
+  if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == n_proc - 1)
+    pos_generator = 1;
+  boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
   TbasicBank bb(EXTred, GRP);
@@ -697,7 +697,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       if (i_rank < proc_bank) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                           Tgroup, Tidx_value>(
-            comm_local, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+            comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
         DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving,
                                       AllArr.BANK_Prefix, os);
@@ -721,7 +721,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     }
     // output
     os << "We have vf |vf|=" << vf.size() << " / " << vf.get_n() << "\n";
-    vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
+    vectface vf_tot = my_mpi_gather(comm_work, vf, i_proc_ret);
     os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n() << " i_proc_ret=" << i_proc_ret << "\n";
     if (i_rank == i_proc_ret)
       OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
