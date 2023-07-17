@@ -150,10 +150,12 @@ public:
     size_t start_byte = 0;
     std::fseek(fp, start_byte, SEEK_SET);
     size_t len_w = V.size();
-    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
-    if (n_write != len_w) {
-      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
-      throw TerminalException{1};
+    if (len_w > 0) {
+      size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+      if (n_write != len_w) {
+        std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+        throw TerminalException{1};
+      }
     }
   }
 
@@ -279,14 +281,12 @@ public:
     if (needed_n_byte > curr_n_byte)
       len = needed_n_byte - curr_n_byte;
     // We are in the standard case of appending some entries.
-    if (len <= ZeroSize) {
-      if (len > 0) {
-        size_t n_write =
-            std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
-        if (n_write != len) {
-          std::cerr << "Error in setface(..), wrong number of written bytes\n";
-          throw TerminalException{1};
-        }
+    if (len <= ZeroSize && len > 0) {
+      size_t n_write =
+        std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+      if (n_write != len) {
+        std::cerr << "Error in setface(..), wrong number of written bytes\n";
+        throw TerminalException{1};
       }
     } else {
       // This case is rarer. It is for big jumps.
@@ -329,11 +329,13 @@ public:
     }
     // Writing it out
     std::fseek(fp, start_byte, SEEK_SET);
-    size_t n_write =
+    if (len_rw > 0) {
+      size_t n_write =
         std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
-    if (n_write != len_rw) {
-      std::cerr << "Error in setface(..), wrong number of written bytes\n";
-      throw TerminalException{1};
+      if (n_write != len_rw) {
+        std::cerr << "Error in setface(..), wrong number of written bytes\n";
+        throw TerminalException{1};
+      }
     }
     n_face = std::max(n_face, pos + 1);
   }
@@ -342,10 +344,12 @@ public:
     size_t start_byte = 0;
     std::fseek(fp, start_byte, SEEK_SET);
     size_t len_w = V.size();
-    size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
-    if (n_write != len_w) {
-      std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
-      throw TerminalException{1};
+    if (len_w > 0) {
+      size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
+      if (n_write != len_w) {
+        std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+        throw TerminalException{1};
+      }
     }
   }
 };
