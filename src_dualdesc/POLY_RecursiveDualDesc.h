@@ -1101,6 +1101,10 @@ public:
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
+      if (V.size() == 0) {
+        os << "Reached our precise impossibility of V of length 0\n";
+        throw TerminalException{1};
+      }
       V[0] = V[V.size() - 1];
       V.pop_back();
       if (2*V.size() < V.capacity()) {
