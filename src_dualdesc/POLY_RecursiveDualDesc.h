@@ -1085,11 +1085,14 @@ public:
     return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
+    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
+    os << "FuncPutOrbitAsDone : len=" << len << "\n";
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
+    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
