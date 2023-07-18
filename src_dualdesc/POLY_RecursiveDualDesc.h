@@ -912,6 +912,7 @@ public:
                            size_t const &pos) {
     Face const& face = face_pair.first;
     Tint const& orbSize = face_pair.second;
+    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol << " status=" << status << " |face|=" << face.count() << " orbSize=" << orbSize << " pos=" << pos << "\n";
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
@@ -1085,6 +1086,10 @@ public:
     return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
+    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
+    for (auto& kv : CompleteList_SetUndone) {
+      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size() << "\n";
+    }
     os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
