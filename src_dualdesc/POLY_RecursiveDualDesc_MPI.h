@@ -495,6 +495,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
     os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
+    os << "SelectedOrbit=" << SelectedOrbit << "\n";
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
                             std::to_string(SelectedOrbit) + "_";
     try {
@@ -672,7 +673,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
   using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
-  TbasicBank bb(EXTred, GRP);
+  TbasicBank bb(EXTred, GRP, os);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   //

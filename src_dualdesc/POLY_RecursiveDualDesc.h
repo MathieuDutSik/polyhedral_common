@@ -890,6 +890,7 @@ private:
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
       DictOrbit;
   std::map<size_t, std::vector<Tidx_orbit>> CompleteList_SetUndone;
+  std::ostream & os;
   /* TRICK 3: Encoding the pair of face and idx_orb as bits allow us to save
    * memory */
 #ifdef SUBSET_HASH
@@ -917,8 +918,8 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP)
-      : EXT(_EXT), GRP(_GRP), foc(GRP) {
+  DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP, std::ostream& _os)
+    : EXT(_EXT), GRP(_GRP), foc(GRP), os(_os) {
     the_method = std::numeric_limits<int>::max();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -1261,6 +1262,7 @@ private:
   Frepr f_repr;
   Forbitsize f_orbitsize;
   Finv f_inv;
+  std::ostream& os;
 
 public:
   DatabaseRepr() = delete;
@@ -1284,9 +1286,9 @@ public:
     foc.Counts_InsertOrbit(status, orbSize);
   }
   DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
-               Forbitsize f_orbitsize, Finv f_inv)
+               Forbitsize f_orbitsize, Finv f_inv, std::ostream& _os)
       : EXT(_EXT), GRP(_GRP), foc(GRP),
-        f_repr(f_repr), f_orbitsize(f_orbitsize), f_inv(f_inv) {
+        f_repr(f_repr), f_orbitsize(f_orbitsize), f_inv(f_inv), os(_os) {
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
     delta = foc.delta;
@@ -2254,7 +2256,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
        << "\n";
     if (ansChosenDatabase == "canonic") {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
-      TbasicBank bb(EXT, TheGRPrelevant);
+      TbasicBank bb(EXT, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, os);
     }
@@ -2275,7 +2277,7 @@ vectface DUALDESC_AdjacencyDecomposition(Tbank &TheBank,
       };
       using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
                                       decltype(f_orbitsize), decltype(f_inv)>;
-      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_orbitsize, f_inv);
+      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_orbitsize, f_inv, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value, TbasicBank>(
         TheBank, bb, AllArr, MainPrefix, TheMap, os);
     }
