@@ -70,6 +70,7 @@ jobs:
           override: true
       - name: Install Dependencies
         run: |
+          sudo apt update
           sudo apt install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
           sudo apt install -y wget
           sudo apt install -y g++-11 clang-12
