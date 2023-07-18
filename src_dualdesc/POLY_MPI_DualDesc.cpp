@@ -26,7 +26,13 @@ int main(int argc, char *argv[]) {
   // outside of the lifetime of world creates a MPI_ABORT.
   // ---We should also avoid using exit when terminating
   // because it makes an unscheduled destruction of the communicator.
-  boost::mpi::environment env;
+  // ---Mpi is not thread-safe by default, we pass the threading::serialized
+  // opton to allow mpi calls from all threads (but not at the same time).
+  // this is used by the communication threads.
+  boost::mpi::environment env(boost::mpi::threading::serialized);
+  if (env.thread_level() < boost::mpi::threading::serialized) {
+    env.abort(-1);
+  }
   boost::mpi::communicator world;
   HumanTime start;
   try {

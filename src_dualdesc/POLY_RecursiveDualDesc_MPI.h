@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 #include <map>
+#include <atomic>
 // clang-format on
 
 struct message_facet {
@@ -171,6 +172,100 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   ---Computation of existing with a call to the serial code. Should be modelled
   on the C-type code.
  */
+template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
+         typename TbasicBank, typename Finsert, typename Fcomm>
+void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
+    Tbank &TheBank, typename TbasicBank::DataFacet const& df,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert, Fcomm f_comm,
+    std::string const &ePrefix, std::ostream& os) {
+  using Tint = typename Tgroup::Tint;
+  CheckTermination<Tgroup>(AllArr);
+  std::map<std::string, Tint> TheMap =
+    ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
+  bool launch_comm_thread = (ansCommThread=="yes");
+  std::thread comm_thread;
+  std::atomic_bool done = false;
+  auto start_comm_thread = [&]() -> void {
+    if(launch_comm_thread) {
+      os << "Start Thread" << std::endl;
+      comm_thread = std::thread(f_comm, std::ref(done));
+    }
+  };
+  auto stop_comm_thread = [&]() -> void {
+    if(launch_comm_thread) {
+      done = true;
+      MicrosecondTime time_join;
+      os << "Join thread" << std::endl;
+      comm_thread.join();
+      os << "|join|=" << time_join << "\n";
+    }
+  };
+  if (ansSplit != "split") {
+    auto EXT = df.FF.EXT_face;
+    auto Stab = df.Stab;
+
+    start_comm_thread();
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
+    AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS
+    MicrosecondTime time_full;
+    os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+    stop_comm_thread();
+
+    for (auto &eOrb : TheOutput) {
+      Face eFlip = df.FlipFace(eOrb, os);
+#ifdef TIMINGS
+      MicrosecondTime time;
+#endif
+      f_insert(eFlip);
+#ifdef TIMINGS
+      os << "|insert1|=" << time << "\n";
+#endif
+    }
+#ifdef TIMINGS
+    os << "|outputtime|=" << time_full << "\n";
+#endif
+  } else {
+    
+    start_comm_thread();
+    try {
+      vectface TheOutput =
+        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+          TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+#ifdef TIMINGS
+      MicrosecondTime time_full;
+      os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+      stop_comm_thread();
+
+      for (auto &eOrb : TheOutput) {
+        Face eFlip = df.FlipFace(eOrb, os);
+#ifdef TIMINGS
+        MicrosecondTime time;
+#endif
+        f_insert(eFlip);
+#ifdef TIMINGS
+        os << "|insert2|=" << time << "\n";
+#endif
+      }
+
+#ifdef TIMINGS
+      os << "|outputtime|=" << time_full << "\n";
+#endif
+
+    } catch (RuntimeException const &e) {
+      os << "RuntimeException, join comm thread\n";
+      stop_comm_thread();
+      throw; // rethrow
+    }
+  }
+}
+
+
 template <typename Tbank, typename TbasicBank, typename T, typename Tgroup,
           typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
@@ -191,6 +286,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   bool HasReachedRuntimeException = false;
   int n_vert = bb.nbRow;
   int n_vert_div8 = (n_vert + 7) / 8;
+  bool use_f_insert_pair = bb.use_f_insert_pair();
   std::vector<uint8_t> V_hash(n_vert_div8, 0);
   auto get_hash = [&](Face const &x) -> size_t {
     return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
@@ -209,7 +305,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Reading the input
   //
-  size_t MaxBuffered = 10000 * n_proc;
+  // Grow max buffer like sqrt(n_proc) instead of n_proc to
+  // 1. Get O(sqrt(n_proc)) memory usage per thread
+  // 2. Send first orbits earlier, to prevent empty threads
+  //    to do nothing for many hours at the start.
+  size_t MaxBuffered = 10000 * size_t(std::sqrt(n_proc));
   int MaxFly;
   if (AllArr.SimpleExchangeScheme) {
     MaxFly = n_proc;
@@ -225,19 +325,25 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "bte_facet has been created\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
-  auto fInsertUnsentPair = [&](std::pair<Face,Tint> const &face_pair) -> void {
-    int res = static_cast<int>(get_hash(face_pair.first) % size_t(n_proc));
+  auto FuncInsertGeneral=[&](Face const& face) -> void {
+    if (use_f_insert_pair)
+      RPL.FuncInsertPair(face);
+    else
+      RPL.FuncInsert(face);
+  };
+  auto fInsertUnsentPair = [&](Face const &face) -> void {
+    int res = static_cast<int>(get_hash(face) % size_t(n_proc));
     if (res == i_rank) {
-      RPL.FuncInsertPair(face_pair);
+      FuncInsertGeneral(face);
     } else {
-      Face f_ret = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
-      bte_facet.insert_entry(res, f_ret);
+      bte_facet.insert_entry(res, face);
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
     Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
     std::pair<Face,Tint> face_pair{face, orbitSize};
-    fInsertUnsentPair(face_pair);
+    Face f = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
+    fInsertUnsentPair(f);
   };
   //
   // Initial invocation of the synchronization code
@@ -271,10 +377,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       StatusNeighbors[e_src] = 0;
       vectface l_recv_face = bte_facet.recv_message(e_src);
       os << "|l_recv_face|=" << l_recv_face.size() << "\n";
-      for (auto &face : l_recv_face) {
-        std::pair<Face, Tint> face_pair = bb.foc.recConvert.ConvertFace(face);
-        RPL.FuncInsertPair(face_pair);
-      }
+      for (auto &face : l_recv_face)
+        FuncInsertGeneral(face);
     }
     if (e_tag == tag_termination) {
       os << "RECV of tag_termination from " << e_src << "\n";
@@ -282,27 +386,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       emm_termin.recv_message(e_src);
     }
     os << "Exiting process_mpi_status\n";
-  };
-  auto process_database = [&]() -> void {
-    os << "process_database, begin\n";
-    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
-    os << "process_database, we have df\n";
-    size_t SelectedOrbit = df.SelectedOrbit;
-    std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
-                            std::to_string(SelectedOrbit) + "_";
-    try {
-      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
-      auto f_insert=[&](std::pair<Face,Tint> const& eFlip) -> void {
-        fInsertUnsentPair(eFlip);
-      };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
-      RPL.FuncPutOrbitAsDone(SelectedOrbit);
-    } catch (RuntimeException const &e) {
-      HasReachedRuntimeException = true;
-      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
-            "runtime exhaustion\n";
-    }
-    os << "process_database, EXIT\n";
   };
   auto get_maxruntimereached = [&]() -> bool {
     if (HasReachedRuntimeException)
@@ -346,10 +429,59 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "nb_finished_oth=" << nb_finished_oth << "\n";
     return nb_finished_oth;
   };
+  auto short_wait = [&]() -> void {
+    int n_milliseconds = 10;
+    std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
+  };
+
   auto wait = [&]() -> void {
     int n_milliseconds = 1000;
     std::this_thread::sleep_for(std::chrono::milliseconds(n_milliseconds));
   };
+  auto f_comm = [&](std::atomic_bool &done) -> void {
+    // start with no work
+    size_t cnt = 0;
+    while (!done && cnt < 10000) {
+      cnt++;
+      short_wait();
+    }
+    if(!done) 
+      os << "Start Probing" << std::endl;
+    // Start probing
+    while (!done) {
+        boost::optional<boost::mpi::status> prob = comm.iprobe();
+        if (prob) {
+          os << "process_mpi_status" << std::endl;
+          process_mpi_status(*prob);
+        } else {
+          wait();
+        }
+    }
+  };
+  auto process_database = [&]() -> void {
+    os << "process_database, begin\n";
+    DataFacet df = RPL.FuncGetMinimalUndoneOrbit();
+    os << "process_database, we have df\n";
+    size_t SelectedOrbit = df.SelectedOrbit;
+    std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
+                            std::to_string(SelectedOrbit) + "_";
+    try {
+      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
+      auto f_insert=[&](Face const& eFlip) -> void {
+        fInsertUnsentPair(eFlip);
+      };
+      //DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, df, AllArr, f_insert, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, df, AllArr, f_insert, f_comm, NewPrefix, os);
+
+      RPL.FuncPutOrbitAsDone(SelectedOrbit);
+    } catch (RuntimeException const &e) {
+      HasReachedRuntimeException = true;
+      os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
+            "runtime exhaustion\n";
+    }
+    os << "process_database, EXIT\n";
+  };
+
   bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";

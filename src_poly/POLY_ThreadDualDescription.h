@@ -388,8 +388,6 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         ansSymm = "no";
       TheMap["groupsizerelevant"] = TheGRPrelevant.size();
       std::string ansGRP = HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
-      std::string ansStratLocInv =
-          HeuristicEvaluation(TheMap, AllArr.InvariantQuality);
       Tint QuotSize = TheGRPrelevant.size() / GRP.size();
       MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP
                         << " |TheGRPrelevant|=" << TheGRPrelevant.size()
@@ -726,7 +724,6 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
   ListStringValuesH["StabEquivFacetHeuristicFile"] = "unset.heu";
   ListStringValuesH["MethodInitialFacetSetFile"] = "unset.heu";
   ListStringValuesH["BankSaveHeuristicFile"] = "unset.heu";
-  ListStringValuesH["MethodInvariantQualityFile"] = "unset.heu";
   SingleBlock BlockHEURIS;
   BlockHEURIS.ListStringValues = ListStringValuesH;
   ListBlock["HEURISTIC"] = BlockHEURIS;
@@ -809,8 +806,6 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   SetHeuristic(eFull, "StabEquivFacetHeuristicFile", AllArr.StabEquivFacet,
                std::cerr);
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet,
-               std::cerr);
-  SetHeuristic(eFull, "MethodInvariantQualityFile", AllArr.InvariantQuality,
                std::cerr);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, std::cerr);
   //

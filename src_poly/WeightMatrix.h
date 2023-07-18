@@ -242,7 +242,7 @@ public:
   std::vector<T> const &GetWeight() const { return ListWeight; }
   void ReorderingOfWeights(std::vector<Tidx_value> const &gListRev) {
     size_t nbEnt = ListWeight.size();
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
     size_t siz = gListRev.size();
     if (nbEnt != siz) {
       std::cerr << "We should have nbEnt = siz\n";
@@ -279,7 +279,7 @@ public:
     }
     ReorderingOfWeights(g);
     weight_ordered = true;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt
@@ -320,7 +320,7 @@ public:
     }
     ReorderingOfWeights(g);
     weight_ordered = true;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt
@@ -818,7 +818,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
   size_t nbRow = WMat.rows();
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = nbVert * hS;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
             << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
@@ -835,7 +835,7 @@ GetGraphFromWeightedMatrix_color_adj(
   size_t hS = Pairs_GetNeededN(nbMult);
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
             << " e_pow=" << e_pow << "\n";
   for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
@@ -901,7 +901,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
   size_t nbRow = WMat.rows();
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = hS * nbVert;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
             << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
@@ -915,7 +915,7 @@ GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
   size_t hS = GetNeededPower(nbMult);
@@ -992,11 +992,11 @@ inline
   const bool use_pairs = true;
   size_t nof_vertices =
       get_total_number_vertices<T, Tidx_value, use_pairs>(WMat);
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nof_vertices=" << nof_vertices << "\n";
 #endif
   Tgr eGR(nof_vertices);
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "eGR built\n";
 #endif
   eGR.SetHasColor(true);
@@ -1037,7 +1037,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   }
   std::vector<TidxIn> clR(nof_vertices);
   for (size_t i = 0; i < nof_vertices; i++) {
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
     if (cl[i] < 0 || cl[i] >= nof_vertices) {
       std::cerr << "We have cl[i]=" << cl[i]
                 << " but nof_vertices=" << nof_vertices << "\n";
@@ -1049,7 +1049,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   //
   size_t nbVert = nbRow + 2;
   size_t hS = nof_vertices / nbVert;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::cerr << "nbVert=" << nbVert << " hS=" << hS
             << " nof_vertices=" << nof_vertices << "\n";
   if (hS * nbVert != nof_vertices) {
@@ -1066,7 +1066,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
     if (ListStatus[iCan] == 0) {
       TidxIn iNative = clR[iCan];
       TidxIn iVertNative = iNative % nbVert;
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
       if (posCanonic < 0 || posCanonic >= nbVert) {
         std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert
                   << "\n";
@@ -1077,7 +1077,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
       for (size_t iH = 0; iH < hS; iH++) {
         TidxIn uVertNative = iVertNative + nbVert * iH;
         TidxIn jCan = cl[uVertNative];
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
         if (ListStatus[jCan] == 1) {
           std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
           throw TerminalException{1};
@@ -1307,7 +1307,7 @@ GetCanonicalizationFromSymmetrized(std::vector<Tidx> const &CanonicOrdSymmRev) {
       for (int iH = 0; iH < 2; iH++) {
         int iEntNativeB = jEntNative + nbEnt * iH;
         int iEntCanB = CanonicOrdSymm[iEntNativeB];
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
         if (ListStatus[iEntCanB] == 1) {
           std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
           throw TerminalException{1};
@@ -1417,7 +1417,7 @@ bool RenormalizeWeightMatrix(
     gListRev[jFound - 1] = i;
   }
   WMat2.ReorderingOfWeights(gListRev);
-#ifdef DEBUG
+#ifdef DEBUG_WEIGHT_MATRIX
   std::vector<T> const &ListWeight1 = WMatRef.GetWeight();
   std::vector<T> const &ListWeight2 = WMat2.GetWeight();
   for (size_t iEnt = 0; iEnt < nbEnt; iEnt++) {
