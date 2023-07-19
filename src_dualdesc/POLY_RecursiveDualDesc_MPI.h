@@ -148,13 +148,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   std::thread comm_thread;
   std::atomic_bool done = false;
   auto start_comm_thread = [&]() -> void {
-    if(launch_comm_thread) {
+    if (launch_comm_thread) {
       os << "Start Thread" << std::endl;
       comm_thread = std::thread(f_comm, std::ref(done));
     }
   };
   auto stop_comm_thread = [&]() -> void {
-    if(launch_comm_thread) {
+    if (launch_comm_thread) {
       done = true;
       MicrosecondTime time_join;
       os << "Join thread" << std::endl;
@@ -376,10 +376,18 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
   };
   auto fInsertUnsent = [&](Face const &face) -> void {
-    Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
-    std::pair<Face,Tint> face_pair{face, orbitSize};
-    Face f = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
-    fInsertUnsentPair(f);
+    // We lose a little bit since the orbSize need to be computed again, but this function is only used
+    // for the initial sampling, so not a significant issue.
+    os << "fInsertUnsent face.size=" << face.size() << " face.count=" << face.count() << "\n";
+    int res = static_cast<int>(get_hash(face) % size_t(n_proc));
+    if (res == i_rank) {
+      RPL.FuncInsert(face);
+    } else {
+      Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
+      std::pair<Face,Tint> face_pair{face, orbitSize};
+      Face f = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
+      bte_facet.insert_entry(res, f);
+    }
   };
   //
   // Initial invocation of the synchronization code
@@ -491,15 +499,15 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
   };
   auto process_database = [&]() -> void {
-    os << "process_database, begin\n";
+    //    os << "process_database, begin\n";
     DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
-    os << "process_database, we have df\n";
+    //    os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
-    os << "SelectedOrbit=" << SelectedOrbit << "\n";
+    //    os << "SelectedOrbit=" << SelectedOrbit << "\n";
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
                             std::to_string(SelectedOrbit) + "_";
     try {
-      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
+      //      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
       auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsentPair(eFlip);
       };
@@ -511,7 +519,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
             "runtime exhaustion\n";
     }
-    os << "process_database, EXIT\n";
+    //    os << "process_database, EXIT\n";
   };
 
   bool HasSendTermination = false;

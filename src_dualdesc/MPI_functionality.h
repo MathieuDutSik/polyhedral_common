@@ -77,6 +77,8 @@ vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf, 
   if (ansOpt == "lp_cdd_min") {
     vectface vf_ret = select_minimum_count(vf_gather);
     os << "merge_initial_samp, |vf_ret|=" << vf_ret.size() << "\n";
+    Face f_first = vf_ret[0];
+    os << "f_first.count=" << f_first.count() << "\n";
     return vf_ret;
   }
   return vf_gather;

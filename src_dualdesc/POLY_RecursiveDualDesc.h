@@ -369,6 +369,18 @@ vectface vectface_reduction(vectface const& vf, size_t n_red) {
   return vf_red;
 }
 
+Face face_reduction(Face const& f, size_t n_red) {
+  Face f_red(n_red);
+  for (size_t i=0; i<n_red; i++)
+    f_red[i] = f[i];
+  return f_red;
+}
+
+void set_face_partial(Face & f_out, Face const& f_in, size_t const& n_red) {
+  for (size_t i=0; i<n_red; i++)
+    f_out[i] = f_in[i];
+}
+
 template<typename Tint>
 struct FaceOrbitsizeTableContainer {
 public:
@@ -680,7 +692,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   if (RecAns.ListFace.size() == 0) {
     return vectface(0);
   }
-  os << "Finding a matching entry\n";
+  os << "Finding a matching entry in the bank\n";
   Telt ePerm = Telt(ePair.second);
   size_t n = EXT.rows();
   if (GRP.size() == RecAns.GRP.size()) {
@@ -814,7 +826,7 @@ public:
   void InsertListOrbitFaceComplete(Face const &face) {
     InsertListOrbitFace_size(face, delta);
   }
-  void InsertListOrbitIdxOrb(Tint const &orbSize) {
+  void FinishWithOrbSizeAssignation(Tint const &orbSize) {
     Torbsize idx_orb = recConvert.GetOrbSizeIndex(orbSize);
     /* TRICK 8: The computation of the stabilizer is needed for getting the
        orbitsize but this is expensive to do. Therefore we first insert the list
@@ -860,10 +872,19 @@ vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
   // We can do a little better by passing a lambda to the
   // DirectComputationInitialFacetSet but that is a little overkill right now
   size_t nbRow = EXT.rows();
-  vectface list_face(nbRow);
-  for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os))
-    list_face.push_back(CanonicalImageDualDesc(can_method, GRP, eFace));
-  return list_face;
+  //  os << "DirectComputationInitialFacetSet_Group nbRow=" << nbRow << " can_method=" << can_method << "\n";
+  vectface vf_ret(nbRow);
+  for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os)) {
+    //    os << "DirectComputationInitialFacetSet_Group eFace.size=" << eFace.size() << " count=" << eFace.count() << "\n";
+    Face face_can = CanonicalImageDualDesc(can_method, GRP, eFace);
+    //    os << "DirectComputationInitialFacetSet_Group face_can.size=" << face_can.size() << " count=" << face_can.count() << "\n";
+    // The reduction to nbRow size is not needed at all actually, but for cleanliness we do it.
+    // Also, for the initial triv method, we do not need it since face_red = face_can, but anyway left like that.
+    Face face_red = face_reduction(face_can, nbRow);
+    //    os << "DirectComputationInitialFacetSet_Group face_red.size=" << face_red.size() << " count=" << face_red.count() << "\n";
+    vf_ret.push_back(face_red);
+  }
+  return vf_ret;
 }
 
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp>
@@ -912,7 +933,7 @@ public:
                            size_t const &pos) {
     Face const& face = face_pair.first;
     Tint const& orbSize = face_pair.second;
-    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol << " status=" << status << " |face|=" << face.count() << " orbSize=" << orbSize << " pos=" << pos << "\n";
+    //    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol << " status=" << status << " face.size=" << face.size() << " face.count=" << face.count() << " orbSize=" << orbSize << " pos=" << pos << "\n";
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
@@ -929,6 +950,7 @@ public:
     n_act_div8 = (n_act + 7) / 8;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
+    //    os << "DatabaseCanonic constructor |EXT|=" << nbRow << "/" << nbCol << " delta=" << delta << " n_act=" << n_act << "\n";
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8, 0);
 #endif
@@ -1054,9 +1076,12 @@ public:
   void FuncInsert(Face const &face_can) {
     //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_can|=" << face_can.size() << "\n";
     // The face should have been canonicalized beforehand.
+    //    os << "FuncInsert face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
+    //    os << "DictOrbit.size=" << DictOrbit.size() << " foc.nbOrbit=" << foc.nbOrbit << "\n";
     if (DictOrbit.size() == foc.nbOrbit) {
+      //      os << "Already present exit\n";
       // Insertion did not raise the count
       // and so it was already present
       return;
@@ -1064,11 +1089,13 @@ public:
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
+    //    os << "New orbSize=" << orbSize << "\n";
     //    std::cerr << "DatabaseCanonic::FuncInsert orbSize=" << orbSize << "\n";
-    foc.InsertListOrbitIdxOrb(orbSize);
+    foc.FinishWithOrbSizeAssignation(orbSize);
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
+    //    os << "FuncInsertPair call\n";
     //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_orbsize|=" << face_orbsize.size() << "\n";
     // The face should have been canonicalized beforehand and also contains the orbits
     foc.InsertListOrbitFaceComplete(face_orbsize);
@@ -1086,25 +1113,26 @@ public:
     return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
-    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
-    for (auto& kv : CompleteList_SetUndone) {
-      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size() << "\n";
-    }
-    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
+    //    os << "FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+    //    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
+    //    for (auto& kv : CompleteList_SetUndone) {
+    //      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size() << "\n";
+    //    }
+    //    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
-    os << "FuncPutOrbitAsDone : len=" << len << "\n";
+    //    os << "FuncPutOrbitAsDone : len=" << len << "\n";
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
-    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
+    //    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
-      if (V.size() == 0) {
-        os << "Reached our precise impossibility of V of length 0\n";
-        throw TerminalException{1};
-      }
+      //      if (V.size() == 0) {
+      //        os << "Reached our precise impossibility of V of length 0\n";
+      //        throw TerminalException{1};
+      //      }
       V[0] = V[V.size() - 1];
       V.pop_back();
       if (2*V.size() < V.capacity()) {
@@ -1366,7 +1394,7 @@ public:
     foc.InsertListOrbitFace(face_i);
     // We need to recompute
     Tint orbSize = f_orbitsize(face_i);
-    foc.InsertListOrbitIdxOrb(orbSize);
+    foc.FinishWithOrbSizeAssignation(orbSize);
     InsertEntryDatabase({face_i, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face) {
@@ -2048,18 +2076,6 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   }
 }
 
-Face face_reduction(Face const& f, size_t n_red) {
-  Face f_red(n_red);
-  for (size_t i=0; i<n_red; i++)
-    f_red[i] = f[i];
-  return f_red;
-}
-
-void set_face_partial(Face & f_out, Face const& f_in, size_t const& n_red) {
-  for (size_t i=0; i<n_red; i++)
-    f_out[i] = f_in[i];
-}
-
 template <typename TbasicBank>
 void vectface_update_method(vectface & vfo, TbasicBank & bb) {
   size_t n_orbit = vfo.size();
@@ -2163,11 +2179,15 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     throw TerminalException{1};
   };
   set_up();
+  //  os << "Kernel_DUALDESC_AdjacencyDecomposition FuncNumberOrbit=" << RPL.FuncNumberOrbit() << "\n";
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-    for (auto &face : RPL.ComputeInitialSet(ansSamp, os))
+    for (auto &face : RPL.ComputeInitialSet(ansSamp, os)) {
+      //      os << "Case FuncNumberOrbit=0 face.size=" << face.size() << " face.count=" << face.count() << "\n";
       RPL.FuncInsert(face);
+    }
   }
+  //  os << "After initial insert\n";
   bool use_f_insert_pair = bb.use_f_insert_pair();
   os << "use_f_insert_pair=" << use_f_insert_pair << "\n";
   while (true) {
