@@ -499,15 +499,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
   };
   auto process_database = [&]() -> void {
-    //    os << "process_database, begin\n";
     DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
-    //    os << "process_database, we have df\n";
     size_t SelectedOrbit = df.SelectedOrbit;
-    //    os << "SelectedOrbit=" << SelectedOrbit << "\n";
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
                             std::to_string(SelectedOrbit) + "_";
     try {
-      //      os << "Before call to DUALDESC_AdjacencyDecomposition\n";
       auto f_insert=[&](Face const& eFlip) -> void {
         fInsertUnsentPair(eFlip);
       };

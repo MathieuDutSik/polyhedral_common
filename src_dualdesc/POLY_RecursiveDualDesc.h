@@ -1067,6 +1067,12 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
+#ifdef TRACK_DATABASE
+    if (face_can.size() != static_cast<size_t>(nbRow)) {
+      std::cerr << "We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow << "\n";
+      throw TerminalException{1};
+    }
+#endif
     // The face should have been canonicalized beforehand.
 #ifdef TRACK_DATABASE
     os << "FuncInsert face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
@@ -1078,7 +1084,7 @@ public:
 #endif
     if (DictOrbit.size() == foc.nbOrbit) {
 #ifdef TRACK_DATABASE
-      os << "Already present exit\n";
+      os << "FuncInsert : Already present exit\n";
 #endif
       // Insertion did not raise the count
       // and so it was already present
@@ -1088,24 +1094,36 @@ public:
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
 #ifdef TRACK_DATABASE
-    os << "New orbSize=" << orbSize << "\n";
+    os << "FuncInsert : New orbSize=" << orbSize << "\n";
 #endif
     foc.FinishWithOrbSizeAssignation(orbSize);
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
 #ifdef TRACK_DATABASE
-    os << "FuncInsertPair face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
+    if (face_orbsize.size() != delta) {
+      std::cerr << "We have |face_orbsize|=" << face_orbsize.size() << " but delta=" << delta << "\n";
+      throw TerminalException{1};
+    }
+#endif
+#ifdef TRACK_DATABASE
+    os << "FuncInsertPair face_orbsize.size=" << face_orbsize.size() << " face_orbsize.count=" << face_orbsize.count() << "\n";
 #endif
     // The face should have been canonicalized beforehand and also contains the orbits
     foc.InsertListOrbitFaceComplete(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
+#ifdef TRACK_DATABASE
+      os << "FuncInsertPair : Already present exit\n";
+#endif
       // Insertion did not raise the count
       // and so it was already present
       return;
     }
     std::pair<Face,Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
+#ifdef TRACK_DATABASE
+    os << "FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
+#endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
