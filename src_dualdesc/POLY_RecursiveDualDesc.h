@@ -388,11 +388,9 @@ public:
   size_t n;
   vectface vfo;
   FaceOrbitsizeTableContainer(std::vector<Tint> const& _ListPossOrbsize, size_t _n, vectface && _vfo) : ListPossOrbsize(std::move(_ListPossOrbsize)), n(_n), vfo(std::move(_vfo)) {
-    //    std::cerr << "FaceOrbitsizeTableContainer : constructor 1\n";
   }
   template<typename Tgroup>
   FaceOrbitsizeTableContainer(vectface const& vf, Tgroup const& GRP) {
-    //    std::cerr << "FaceOrbitsizeTableContainer : constructor 2\n";
     n = vf.get_n();
     using Tidx=typename Tgroup::Telt::Tidx;
     std::map<Tidx, int> LFact = GRP.factor_size();
@@ -436,7 +434,6 @@ public:
       pow *= 2;
     }
     Tint orbSize = ListPossOrbsize[idx_orb];
-    //    std::cerr << "FaceOrbitsizeTableContainer GetPair : idx_orb=" << idx_orb << " orbSize=" << orbSize << "\n";
     return {f_red, orbSize};
   }
   size_t size() const {
@@ -714,10 +711,6 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
     OnFace_inplace(eFaceImg, eFace, ePermExt);
     ListReprTrans.push_back(eFaceImg);
   }
-  //  std::cerr << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
-  //  os        << "Calling FaceOrbitsizeTableContainer constructor from getdualdesc_in_bank\n";
-  //  std::cerr << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
-  //  os        << "|RecAns.ListPossOrbsize|=" << RecAns.ListPossOrbsize.size() << "\n";
   FaceOrbitsizeTableContainer<Tint> fotc(RecAns.ListPossOrbsize, n, std::move(ListReprTrans));
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
 }
@@ -854,11 +847,9 @@ public:
     nbOrbitDone++;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
-    //    std::cerr << "FaceOrbitsizeTableContainer : GetListFaceOrbitsize\n";
     vectface vfo;
     vfo.build_vectface(delta, nbOrbit, std::move(ListOrbit));
     std::vector<Tint> ListPoss = recConvert.ListPossOrbsize;
-    //    std::cerr << "FaceOrbitsizeTableContainer : |ListPoss|=" << ListPoss.size() << "\n";
     return FaceOrbitsizeTableContainer(std::move(ListPoss), n_act, std::move(vfo));
   }
 };
@@ -933,7 +924,9 @@ public:
                            size_t const &pos) {
     Face const& face = face_pair.first;
     Tint const& orbSize = face_pair.second;
-    //    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol << " status=" << status << " face.size=" << face.size() << " face.count=" << face.count() << " orbSize=" << orbSize << " pos=" << pos << "\n";
+#ifdef TRACK_DATABASE
+    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol << " status=" << status << " face.size=" << face.size() << " face.count=" << face.count() << " orbSize=" << orbSize << " pos=" << pos << "\n";
+#endif
     if (!status) {
       size_t len = face.count();
       CompleteList_SetUndone[len].push_back(pos);
@@ -1074,14 +1067,19 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
-    //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_can|=" << face_can.size() << "\n";
     // The face should have been canonicalized beforehand.
-    //    os << "FuncInsert face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
+#ifdef TRACK_DATABASE
+    os << "FuncInsert face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
+#endif
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
-    //    os << "DictOrbit.size=" << DictOrbit.size() << " foc.nbOrbit=" << foc.nbOrbit << "\n";
+#ifdef TRACK_DATABASE
+    os << "DictOrbit.size=" << DictOrbit.size() << " foc.nbOrbit=" << foc.nbOrbit << "\n";
+#endif
     if (DictOrbit.size() == foc.nbOrbit) {
-      //      os << "Already present exit\n";
+#ifdef TRACK_DATABASE
+      os << "Already present exit\n";
+#endif
       // Insertion did not raise the count
       // and so it was already present
       return;
@@ -1089,14 +1087,16 @@ public:
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
-    //    os << "New orbSize=" << orbSize << "\n";
-    //    std::cerr << "DatabaseCanonic::FuncInsert orbSize=" << orbSize << "\n";
+#ifdef TRACK_DATABASE
+    os << "New orbSize=" << orbSize << "\n";
+#endif
     foc.FinishWithOrbSizeAssignation(orbSize);
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
-    //    os << "FuncInsertPair call\n";
-    //    std::cerr << "Call of DatabaseCanonic::FuncInsert with |face_orbsize|=" << face_orbsize.size() << "\n";
+#ifdef TRACK_DATABASE
+    os << "FuncInsertPair face_can.size=" << face_can.size() << " face_can.count=" << face_can.count() << "\n";
+#endif
     // The face should have been canonicalized beforehand and also contains the orbits
     foc.InsertListOrbitFaceComplete(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
@@ -1106,33 +1106,40 @@ public:
       return;
     }
     std::pair<Face,Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
-    //    std::cerr << "DatabaseCanonic::FuncInsertPair orbSize=" << pair.second << "\n";
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
     return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
-    //    os << "FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
-    //    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
-    //    for (auto& kv : CompleteList_SetUndone) {
-    //      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size() << "\n";
-    //    }
-    //    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
+#ifdef TRACK_DATABASE
+    os << "FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
+    for (auto& kv : CompleteList_SetUndone) {
+      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size() << "\n";
+    }
+    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
+#endif
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
-    //    os << "FuncPutOrbitAsDone : len=" << len << "\n";
+#ifdef TRACK_DATABASE
+    os << "FuncPutOrbitAsDone : len=" << len << "\n";
+#endif
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
-    //    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
+#ifdef TRACK_DATABASE
+    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
+#endif
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
-      //      if (V.size() == 0) {
-      //        os << "Reached our precise impossibility of V of length 0\n";
-      //        throw TerminalException{1};
-      //      }
+#ifdef TRACK_DATABASE
+      if (V.size() == 0) {
+        os << "We have V.size = 0 which is not allowed here\n";
+        throw TerminalException{1};
+      }
+#endif
       V[0] = V[V.size() - 1];
       V.pop_back();
       if (2*V.size() < V.capacity()) {
@@ -1603,23 +1610,23 @@ public:
   // ---If method file is absent then we assume it was computed with the default.
   // ---Otherwise we read it.
   void write_method(std::string const& eFileMethod, int const& method) const {
-    std::ofstream os(eFileMethod);
-    os << method;
+    std::ofstream os_file(eFileMethod);
+    os_file << method;
   }
   int read_method(std::string const& eFileMethod) const {
-    std::cerr << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod << "\n";
+    os << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod << "\n";
     if (SavingTrigger) {
-      std::cerr << "Running the save system\n";
+      os << "Running the save system\n";
       if (!IsExistingFile(eFileMethod)) {
-        std::cerr << "The file does notexixts\n";
+        os << "The file does not exists\n";
         int the_method = bb.get_default_strategy();
         write_method(eFileMethod, the_method);
         return the_method;
       } else {
-        std::cerr << "The file xixts\n";
-        std::ifstream is(eFileMethod);
+        os << "The file exists\n";
+        std::ifstream is_file(eFileMethod);
         int method;
-        is >> method;
+        is_file >> method;
         return method;
       }
     } else {
@@ -1657,7 +1664,7 @@ public:
     delta = bb.delta;
     NeedToFlush = true;
     int val = read_method(eFileMethod);
-    std::cerr << "read_method val=" << val << "\n";
+    os << "read_method val=" << val << "\n";
     bb.the_method = val;
     if (SavingTrigger && !is_database_present()) {
       if (!FILE_IsFileMakeable(eFileEXT)) {
@@ -1741,6 +1748,8 @@ public:
 #ifdef TIMINGS
       os << "|Reading Database|=" << time << "\n";
 #endif
+    } else {
+      os << "No database present\n";
     }
     return vfo;
   }
@@ -1767,7 +1776,6 @@ public:
     if (choice == "guess")
       return DATABASE_ACTION__GUESS;
     int choice_i = bb.convert_string_method(choice);
-    std::cerr << "choice_i=" << choice_i << " choice=" << choice << " bb.the-method=" << bb.the_method << "\n";
     if (bb.the_method == choice_i)
       return DATABASE_ACTION__SIMPLE_LOAD;
     return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;
@@ -2077,25 +2085,18 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 }
 
 template <typename TbasicBank>
-void vectface_update_method(vectface & vfo, TbasicBank & bb) {
+void vectface_update_method(vectface & vfo, TbasicBank & bb, std::ostream& os) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
-  std::cerr << "vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow << "\n";
-  std::cerr << "vectface_update_method bb.the_method=" << bb.the_method << "\n";
-  size_t n_diff = 0;
+  os << "vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow << "\n";
+  os << "vectface_update_method bb.the_method=" << bb.the_method << "\n";
   for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
-    Face fo1 = fo;
     Face f = face_reduction(fo, nbRow);
     Face f_new = bb.operation_face(f);
     set_face_partial(fo, f_new, nbRow);
-    Face fo2 = fo;
-    if (fo1 != fo2) {
-      n_diff += 1;
-    }
     vfo.AssignEntry(fo, i_orbit);
   }
-  std::cerr << "vectface_update_method, n_diff=" << n_diff << "\n";
 }
 
 
@@ -2138,7 +2139,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
 #ifdef TIMINGS
       os << "|set_method|=" << time << "\n";
 #endif
-      vectface_update_method(vfo, bb);
+      vectface_update_method(vfo, bb, os);
 #ifdef TIMINGS
       os << "bb.the_method=" << bb.the_method << " |method update|=" << time << "\n";
 #endif

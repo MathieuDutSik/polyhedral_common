@@ -274,7 +274,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS
       os << "|set_method|=" << time << "\n";
 #endif
-      vectface_update_method(vfo, bb);
+      vectface_update_method(vfo, bb, os);
 #ifdef TIMINGS
       os << "|method update|=" << time << "\n";
 #endif
