@@ -367,7 +367,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     else
       RPL.FuncInsert(face);
   };
-  auto fInsertUnsentPair = [&](Face const &face) -> void {
+  auto f_insert = [&](Face const &face) -> void {
     int res = static_cast<int>(get_hash(face) % size_t(n_proc));
     if (res == i_rank) {
       FuncInsertGeneral(face);
@@ -389,7 +389,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
     for (auto &face : vf_init_merge) {
       Face face_can = bb.operation_face(face);
-      fInsertUnsentPair(face_can);
+      f_insert(face_can);
     }
   }
   os << "DirectFacetOrbitComputation, step 6\n";
@@ -491,9 +491,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
                             std::to_string(SelectedOrbit) + "_";
     try {
-      auto f_insert=[&](Face const& eFlip) -> void {
-        fInsertUnsentPair(eFlip);
-      };
       DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, bb, df, AllArr, f_insert, f_comm, NewPrefix, os);
 
       RPL.FuncPutOrbitAsDone(SelectedOrbit);

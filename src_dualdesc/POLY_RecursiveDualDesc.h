@@ -2167,17 +2167,22 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     throw TerminalException{1};
   };
   set_up();
-  //  os << "Kernel_DUALDESC_AdjacencyDecomposition FuncNumberOrbit=" << RPL.FuncNumberOrbit() << "\n";
+  bool use_f_insert_pair = bb.use_f_insert_pair();
+  os << "use_f_insert_pair=" << use_f_insert_pair << "\n";
+  auto f_insert=[&](Face const& face) -> void {
+    if (use_f_insert_pair) {
+      RPL.FuncInsertPair(face);
+    } else {
+      RPL.FuncInsert(face);
+    }
+  };
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     for (auto &face : DirectComputationInitialFacetSet(bb.EXT, ansSamp, os)) {
-      //      os << "Case FuncNumberOrbit=0 face.size=" << face.size() << " face.count=" << face.count() << "\n";
-      RPL.FuncInsert(face);
+      Face face_can = bb.operation_face(face);
+      f_insert(face_can);
     }
   }
-  //  os << "After initial insert\n";
-  bool use_f_insert_pair = bb.use_f_insert_pair();
-  os << "use_f_insert_pair=" << use_f_insert_pair << "\n";
   while (true) {
     if (RPL.GetTerminationStatus())
       break;
@@ -2188,17 +2193,8 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     // Need to think.
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
-    if (use_f_insert_pair) {
-      auto f_insert=[&](Face const& eFlip) -> void {
-        RPL.FuncInsertPair(eFlip);
-      };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
-    } else {
-      auto f_insert=[&](Face const& eFlip) -> void {
-        RPL.FuncInsert(eFlip);
-      };
-      DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
-    }
+    DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
+    DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
   return RPL.GetListFaceOrbitsize();
