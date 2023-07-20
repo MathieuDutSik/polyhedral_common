@@ -854,30 +854,6 @@ public:
   }
 };
 
-template <typename T, typename Tgroup>
-vectface DirectComputationInitialFacetSet_Group(const MyMatrix<T> &EXT,
-                                                const Tgroup &GRP,
-                                                int const& can_method,
-                                                const std::string &ansSamp,
-                                                std::ostream &os) {
-  // We can do a little better by passing a lambda to the
-  // DirectComputationInitialFacetSet but that is a little overkill right now
-  size_t nbRow = EXT.rows();
-  //  os << "DirectComputationInitialFacetSet_Group nbRow=" << nbRow << " can_method=" << can_method << "\n";
-  vectface vf_ret(nbRow);
-  for (auto &eFace : DirectComputationInitialFacetSet(EXT, ansSamp, os)) {
-    //    os << "DirectComputationInitialFacetSet_Group eFace.size=" << eFace.size() << " count=" << eFace.count() << "\n";
-    Face face_can = CanonicalImageDualDesc(can_method, GRP, eFace);
-    //    os << "DirectComputationInitialFacetSet_Group face_can.size=" << face_can.size() << " count=" << face_can.count() << "\n";
-    // The reduction to nbRow size is not needed at all actually, but for cleanliness we do it.
-    // Also, for the initial triv method, we do not need it since face_red = face_can, but anyway left like that.
-    Face face_red = face_reduction(face_can, nbRow);
-    //    os << "DirectComputationInitialFacetSet_Group face_red.size=" << face_red.size() << " count=" << face_red.count() << "\n";
-    vf_ret.push_back(face_red);
-  }
-  return vf_ret;
-}
-
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp>
 struct DatabaseCanonic {
 public:
@@ -1030,8 +1006,8 @@ public:
   int evaluate_method_mpi(boost::mpi::communicator &comm, vectface const& vf) const {
     return GetCanonicalizationMethod_MPI(comm, vf, GRP);
   }
-  Face operation_face(Face const& eFlip) {
-    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, eFlip);
+  Face operation_face(Face const& face) {
+    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face);
   }
   int convert_string_method(std::string const& choice) const {
     if (choice == "canonic")
@@ -1058,7 +1034,7 @@ public:
     throw TerminalException{1};
   }
   int get_default_strategy() {
-    std::cerr << "Passing by get_default_stragey\n";
+    os << "DatabaseCanonic: Passing by get_default_stragey\n";
     return CANONIC_STRATEGY__DEFAULT;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
@@ -1070,6 +1046,7 @@ public:
 #ifdef TRACK_DATABASE
     if (face_can.size() != static_cast<size_t>(nbRow)) {
       std::cerr << "We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow << "\n";
+      os << "We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -1103,6 +1080,7 @@ public:
 #ifdef TRACK_DATABASE
     if (face_orbsize.size() != delta) {
       std::cerr << "We have |face_orbsize|=" << face_orbsize.size() << " but delta=" << delta << "\n";
+      os << "We have |face_orbsize|=" << face_orbsize.size() << " but delta=" << delta << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -1125,9 +1103,6 @@ public:
     os << "FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
 #endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
-  }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
-    return DirectComputationInitialFacetSet_Group(EXT, GRP, the_method, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
 #ifdef TRACK_DATABASE
@@ -1428,9 +1403,6 @@ public:
       f_red[i] = face[i];
     }
     FuncInsert(f_red);
-  }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
-    return DirectComputationInitialFacetSet(EXT, ansSamp, os);
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
     std::pair<Face,Tint> eEnt = foc.RetrieveListOrbitEntry(iOrb);
@@ -1899,9 +1871,6 @@ public:
   void FuncInsertPair(Face const &face) {
     bb.FuncInsertPair(face);
   }
-  vectface ComputeInitialSet(const std::string &ansSamp, std::ostream &os) {
-    return bb.ComputeInitialSet(ansSamp, os);
-  }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
     bb.FuncPutOrbitAsDone(i_orb);
     print_status();
@@ -2201,7 +2170,7 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
   //  os << "Kernel_DUALDESC_AdjacencyDecomposition FuncNumberOrbit=" << RPL.FuncNumberOrbit() << "\n";
   if (RPL.FuncNumberOrbit() == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-    for (auto &face : RPL.ComputeInitialSet(ansSamp, os)) {
+    for (auto &face : DirectComputationInitialFacetSet(bb.EXT, ansSamp, os)) {
       //      os << "Case FuncNumberOrbit=0 face.size=" << face.size() << " face.count=" << face.count() << "\n";
       RPL.FuncInsert(face);
     }

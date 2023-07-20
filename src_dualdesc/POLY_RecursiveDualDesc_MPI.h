@@ -375,20 +375,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       bte_facet.insert_entry(res, face);
     }
   };
-  auto fInsertUnsent = [&](Face const &face) -> void {
-    // We lose a little bit since the orbSize need to be computed again, but this function is only used
-    // for the initial sampling, so not a significant issue.
-    os << "fInsertUnsent face.size=" << face.size() << " face.count=" << face.count() << "\n";
-    int res = static_cast<int>(get_hash(face) % size_t(n_proc));
-    if (res == i_rank) {
-      RPL.FuncInsert(face);
-    } else {
-      Tint orbitSize = bb.GRP.OrbitSize_OnSets(face);
-      std::pair<Face,Tint> face_pair{face, orbitSize};
-      Face f = bb.foc.recConvert.ConvertFaceOrbitSize(face_pair);
-      bte_facet.insert_entry(res, f);
-    }
-  };
   //
   // Initial invocation of the synchronization code
   //
@@ -399,10 +385,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   if (n_orb_max == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
     os << "ansSamp=" << ansSamp << "\n";
-    vectface vf_init = RPL.ComputeInitialSet(ansSamp, os);
+    vectface vf_init = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
     vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
     for (auto &face : vf_init_merge) {
-      fInsertUnsent(face);
+      Face face_can = bb.operation_face(face);
+      fInsertUnsentPair(face_can);
     }
   }
   os << "DirectFacetOrbitComputation, step 6\n";
@@ -515,7 +502,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "The computation of DUALDESC_AdjacencyDecomposition has ended by "
             "runtime exhaustion\n";
     }
-    //    os << "process_database, EXIT\n";
   };
 
   bool HasSendTermination = false;
