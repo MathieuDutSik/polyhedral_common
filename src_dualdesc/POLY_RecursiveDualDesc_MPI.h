@@ -650,7 +650,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int proc_bank = n_proc - 1;
   int i_proc_ret = 0;
   auto msg_term_bank = [&]() -> void {
-    if (i_rank == i_proc_ret) {
+    if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == i_proc_ret) {
       os << "sending bank_mpi termination signal\n";
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
     }
@@ -701,22 +701,16 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
 
   try {
     vectface vf = get_vectface();
-    if (AllArr.bank_parallelization_method == "bank_mpi") {
-      msg_term_bank();
-      if (i_rank == proc_bank) {
-        return;
-      }
-    }
+    msg_term_bank();
     // output
     os << "We have vf |vf|=" << vf.size() << " / " << vf.get_n() << "\n";
-    vectface vf_tot = my_mpi_gather(comm_work, vf, i_proc_ret);
+    vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
     os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n() << " i_proc_ret=" << i_proc_ret << "\n";
     if (i_rank == i_proc_ret)
       OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
     os << "We have done our output\n";
   } catch (RuntimeException const &e) {
-    if (AllArr.bank_parallelization_method == "bank_mpi")
-      msg_term_bank();
+    msg_term_bank();
     throw RuntimeException{1};
   }
 }
