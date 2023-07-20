@@ -2194,7 +2194,6 @@ FaceOrbitsizeTableContainer<typename Tgroup::Tint> Kernel_DUALDESC_AdjacencyDeco
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
-    DUALDESC_AdjacencyDecomposition_and_insert<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert)>(TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
   return RPL.GetListFaceOrbitsize();
