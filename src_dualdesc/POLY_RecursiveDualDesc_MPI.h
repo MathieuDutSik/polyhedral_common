@@ -51,7 +51,8 @@ inline void serialize(Archive &ar, message_query &mesg,
 }  // namespace boost::serialization
 // clang-format on
 
-size_t mpi_get_hash_kernel(Face const &x, size_t const& n_vert, int const &n_vert_div8,
+size_t mpi_get_hash_kernel(Face const &x, size_t const &n_vert,
+                           int const &n_vert_div8,
                            std::vector<uint8_t> &V_hash) {
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++)
     setbit_vector(V_hash, i_vert, x[i_vert]);
@@ -59,7 +60,7 @@ size_t mpi_get_hash_kernel(Face const &x, size_t const& n_vert, int const &n_ver
   return robin_hood_hash_bytes(V_hash.data(), n_vert_div8, seed);
 }
 
-size_t mpi_get_hash(Face const &x, size_t const& n_vert) {
+size_t mpi_get_hash(Face const &x, size_t const &n_vert) {
   int n_vert_div8 = (n_vert + 7) / 8;
   std::vector<uint8_t> V_hash(n_vert_div8, 0);
   return mpi_get_hash_kernel(x, n_vert, n_vert_div8, V_hash);
@@ -67,8 +68,8 @@ size_t mpi_get_hash(Face const &x, size_t const& n_vert) {
 
 // When we upgrade the canonicalization scheme, we need to recompute the hashes
 // and redistribute the data.
-vectface mpi_shuffle(boost::mpi::communicator &comm,
-                     vectface && vf, size_t const& n) {
+vectface mpi_shuffle(boost::mpi::communicator &comm, vectface &&vf,
+                     size_t const &n) {
   int n_proc = comm.size();
   size_t n_face = vf.size();
   size_t siz_f = vf.get_n(); // the full size of the entries
@@ -76,18 +77,18 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   std::vector<uint8_t> V_hash(n_div8, 0);
   std::vector<std::vector<uint8_t>> list_in_vect(n_proc);
   std::vector<size_t> list_in_cnt(n_proc, 0);
-  for (size_t i_face=0; i_face<n_face; i_face++) {
+  for (size_t i_face = 0; i_face < n_face; i_face++) {
     Face f = vf[i_face];
     size_t hash = mpi_get_hash_kernel(f, n, n_div8, V_hash);
     int res = static_cast<int>(hash % size_t(n_proc));
     size_t pos = list_in_cnt[res];
-    size_t needed_len = (siz_f * (pos+1) + 7) / 8;
+    size_t needed_len = (siz_f * (pos + 1) + 7) / 8;
     size_t curr_len = list_in_vect[res].size();
-    for (size_t u=curr_len; u<needed_len; u++) {
+    for (size_t u = curr_len; u < needed_len; u++) {
       list_in_vect[res].push_back(0);
     }
     size_t pos_vect = pos * siz_f;
-    for (size_t u=0; u<siz_f; u++) {
+    for (size_t u = 0; u < siz_f; u++) {
       bool val = f[u];
       setbit_vector(list_in_vect[res], pos_vect, val);
       pos_vect++;
@@ -100,12 +101,12 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   boost::mpi::all_to_all(comm, list_in_vect, list_out_vect);
   vectface vf_ret(siz_f);
   Face f(siz_f);
-  for (int i_proc=0; i_proc<n_proc; i_proc++) {
+  for (int i_proc = 0; i_proc < n_proc; i_proc++) {
     size_t cnt_out = list_out_cnt[i_proc];
     size_t pos = 0;
-    std::vector<uint8_t> const& V = list_out_vect[i_proc];
-    for (size_t i_face=0; i_face<cnt_out; i_face++) {
-      for (size_t u=0; u<siz_f; u++) {
+    std::vector<uint8_t> const &V = list_out_vect[i_proc];
+    for (size_t i_face = 0; i_face < cnt_out; i_face++) {
+      for (size_t u = 0; u < siz_f; u++) {
         bool val = getbit_vector(V, pos);
         f[u] = val;
         pos++;
@@ -115,7 +116,6 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   }
   return vf_ret;
 }
-
 
 /*
   This is the code for the MPI parallelization.
@@ -132,19 +132,19 @@ vectface mpi_shuffle(boost::mpi::communicator &comm,
   ---Computation of existing with a call to the serial code. Should be modelled
   on the C-type code.
  */
-template<typename Tbank, typename T, typename Tgroup, typename Tidx_value,
-         typename TbasicBank, typename Finsert, typename Fcomm>
+template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
+          typename TbasicBank, typename Finsert, typename Fcomm>
 void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
-    Tbank &TheBank, TbasicBank & bb, DataFacet<T,Tgroup> const& df,
-    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert, Fcomm f_comm,
-    std::string const &ePrefix, std::ostream& os) {
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> const &df,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
+    Fcomm f_comm, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
-    ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
-  bool launch_comm_thread = (ansCommThread=="yes");
+  bool launch_comm_thread = (ansCommThread == "yes");
   std::thread comm_thread;
   std::atomic_bool done = false;
   auto start_comm_thread = [&]() -> void {
@@ -197,8 +197,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     start_comm_thread();
     try {
       vectface TheOutput =
-        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+          DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+              TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
 #ifdef TIMINGS
       MicrosecondTime time_full;
       os << "|outputsize|=" << TheOutput.size() << "\n";
@@ -233,7 +233,6 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   }
 }
 
-
 template <typename Tbank, typename TbasicBank, typename T, typename Tgroup,
           typename Tidx_value>
 vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
@@ -249,19 +248,22 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   std::string lPrefix = ePrefix + "database";
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
-  auto set_up=[&]() -> void {
+  auto set_up = [&]() -> void {
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
-    std::string ansChoiceCanonic = HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+    std::string ansChoiceCanonic =
+        HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
 #ifdef TIMINGS
-    os << "|HeuristicEvaluation|=" << time << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
+    os << "|HeuristicEvaluation|=" << time
+       << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
     int action = RPL.determine_action_database(ansChoiceCanonic);
 #ifdef TIMINGS
-    os << "|determine_action_database|=" << time << " action=" << action << "\n";
+    os << "|determine_action_database|=" << time << " action=" << action
+       << "\n";
 #endif
-    auto f_recompute=[&](int const& method) -> void {
+    auto f_recompute = [&](int const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS
       os << "|n_orbit|=" << time << "\n";
@@ -296,7 +298,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
       int method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS
-      os << "Before f_recompute, method=" << method << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
+      os << "Before f_recompute, method=" << method
+         << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
     }
@@ -315,7 +318,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         return f_recompute(method);
       }
     }
-    std::cerr << "Failed to find a matching entry for action=" << action << "\n";
+    std::cerr << "Failed to find a matching entry for action=" << action
+              << "\n";
     throw TerminalException{1};
   };
   set_up();
@@ -361,7 +365,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   os << "bte_facet has been created\n";
 
   std::vector<int> StatusNeighbors(n_proc, 0);
-  auto FuncInsertGeneral=[&](Face const& face) -> void {
+  auto FuncInsertGeneral = [&](Face const &face) -> void {
     if (use_f_insert_pair)
       RPL.FuncInsertPair(face);
     else
@@ -441,7 +445,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
          << " status=" << StatusNeighbors[i_proc] << "\n";
       nb_finished += StatusNeighbors[i_proc];
     }
-    os << "nb_finished=" << nb_finished << "\n";
+    os << "nb_finished=" << nb_finished << " n_proc=" << n_proc << "\n";
     return nb_finished;
   };
   auto get_nb_finished_oth = [&]() -> int {
@@ -453,7 +457,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         nb_finished_oth += StatusNeighbors[i_proc];
       }
     }
-    os << "nb_finished_oth=" << nb_finished_oth << "\n";
+    os << "nb_finished_oth=" << nb_finished_oth << " n_proc=" << n_proc << "\n";
     return nb_finished_oth;
   };
   auto short_wait = [&]() -> void {
@@ -472,26 +476,29 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       cnt++;
       short_wait();
     }
-    if(!done)
+    if (!done)
       os << "Start Probing" << std::endl;
     // Start probing
     while (!done) {
-        boost::optional<boost::mpi::status> prob = comm.iprobe();
-        if (prob) {
-          os << "process_mpi_status" << std::endl;
-          process_mpi_status(*prob);
-        } else {
-          wait();
-        }
+      boost::optional<boost::mpi::status> prob = comm.iprobe();
+      if (prob) {
+        os << "process_mpi_status" << std::endl;
+        process_mpi_status(*prob);
+      } else {
+        wait();
+      }
     }
   };
   auto process_database = [&]() -> void {
-    DataFacet<T,Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
+    DataFacet<T, Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
     size_t SelectedOrbit = df.SelectedOrbit;
     std::string NewPrefix = ePrefix + "PROC" + std::to_string(i_rank) + "_ADM" +
                             std::to_string(SelectedOrbit) + "_";
     try {
-      DUALDESC_AdjacencyDecomposition_and_insert_commthread<Tbank,T,Tgroup,Tidx_value,TbasicBank,decltype(f_insert), decltype(f_comm)>(TheBank, bb, df, AllArr, f_insert, f_comm, NewPrefix, os);
+      DUALDESC_AdjacencyDecomposition_and_insert_commthread<
+          Tbank, T, Tgroup, Tidx_value, TbasicBank, decltype(f_insert),
+          decltype(f_comm)>(TheBank, bb, df, AllArr, f_insert, f_comm,
+                            NewPrefix, os);
 
       RPL.FuncPutOrbitAsDone(SelectedOrbit);
     } catch (RuntimeException const &e) {
@@ -500,7 +507,6 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
             "runtime exhaustion\n";
     }
   };
-
   bool HasSendTermination = false;
   while (true) {
     os << "DirectFacetOrbitComputation, inf loop, start\n";
@@ -514,7 +520,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     bool SomethingToDo = !MaxRuntimeReached && !RPL.IsFinished();
     os << "DirectFacetOrbitComputation, MaxRuntimeReached=" << MaxRuntimeReached
        << " SomethingToDo=" << SomethingToDo << "\n";
-    os << "get_unsent_size()=" << bte_facet.get_unsent_size() << " MaxBuffered=" << MaxBuffered << "\n";
+    os << "get_unsent_size()=" << bte_facet.get_unsent_size()
+       << " MaxBuffered=" << MaxBuffered << "\n";
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
@@ -650,7 +657,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int proc_bank = n_proc - 1;
   int i_proc_ret = 0;
   auto msg_term_bank = [&]() -> void {
-    if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == i_proc_ret) {
+    if (AllArr.bank_parallelization_method == "bank_mpi" &&
+        i_rank == i_proc_ret) {
       os << "sending bank_mpi termination signal\n";
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
     }
@@ -705,7 +713,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     // output
     os << "We have vf |vf|=" << vf.size() << " / " << vf.get_n() << "\n";
     vectface vf_tot = my_mpi_gather(comm, vf, i_proc_ret);
-    os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n() << " i_proc_ret=" << i_proc_ret << "\n";
+    os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n()
+       << " i_proc_ret=" << i_proc_ret << "\n";
     if (i_rank == i_proc_ret)
       OutputFacets(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat);
     os << "We have done our output\n";
