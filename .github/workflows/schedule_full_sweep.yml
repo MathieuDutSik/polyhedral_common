@@ -7,9 +7,9 @@
 name: Lint Code Base Weekly
 
 on:
-  # Every sunday morning
+  # Every 5th of the month
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: "0 0 5 * *"
   # Manually triggered.
   workflow_dispatch:
 jobs:
