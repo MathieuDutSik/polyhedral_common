@@ -844,13 +844,15 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       }
     }
     if (ListIncd.size() >= min_len) {
-      if (RankMat(ListIncd) == dim - 1) {
+      MyMatrix<T> FACincd = MatrixFromVectorFamily(ListIncd);
+      if (RankMat(FACincd) == dim - 1) {
         ListEXT.push_back(eEXT);
       }
     }
   }
   MyMatrix<T> EXTfinal = MatrixFromVectorFamily(ListEXT);
-  return {EXTfinal, FACfinal};
+  ConeSimpDesc<T> cone{EXTfinal, FACfinal};
+  return cone;
 }
 
 // clang-format off
