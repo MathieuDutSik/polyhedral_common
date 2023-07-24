@@ -489,6 +489,7 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> ChosenDatabase;
   TheHeuristic<T> OrbitSplitTechnique;
   TheHeuristic<T> CommThread;
+  TheHeuristic<T> ChoiceCanonicalization;
   bool Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -528,6 +529,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodChosenDatabase<T>(),
           MethodOrbitSplitTechnique<T>(),
           StandardHeuristicCommThread<T>(),
+          MethodChoiceCanonicalization<T>(),
           Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,

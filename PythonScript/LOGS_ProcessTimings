@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -59,4 +59,4 @@ for j in range(len(list_entry)):
     i = order[j]
     e_nb = list_nb_entry[i]
     e_avg = list_sum_time[i] / e_nb
-    print("i=", i, " ", list_entry[i], " min=", list_min_time[i], " max=", list_max_time[i], " avg=", e_avg, " tot=", list_sum_time[i], " nb", e_nb)
+    print("i=" + str(i) +" " + str(list_entry[i]) + " min=" + str(list_min_time[i]) + " max=" + str(list_max_time[i]) + " avg=" + str(e_avg) + " tot=" + str(list_sum_time[i]) + " nb=" + str(e_nb))

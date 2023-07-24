@@ -2,10 +2,10 @@
 &DATA
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
- OUTfile = "Result_mpi"
- DeterministicRuntime = T
+ OUTfile = "Result_canonic_initial_triv"
  ApplyStdUnitbuf = T
- max_runtime = 7200
+ DeterministicRuntime = T
+ max_runtime = 10800
  AdvancedTerminationCriterion = T
 /
 
@@ -17,6 +17,7 @@
  BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
  ChosenDatabaseFile              = "Bank_canonic.heu"
  CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
+ ChoiceCanonicalizationFile      = "Canonic_initial_triv.heu"
 /
 
 &METHOD
