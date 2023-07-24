@@ -716,6 +716,143 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
   return ListListDomain;
 }
 
+template <typename T> struct ConeSimpDesc {
+  MyMatrix<T> EXT;
+  MyMatrix<T> FAC;
+};
+
+template<typename T>
+std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<T>> const& l_cone) {
+  size_t n_cone = l_cone.size();
+  int dim = l_cone[0].FAC.cols();
+  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
+    for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
+      MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
+      MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FACtot);
+      if (LinSpace.rows() != dim) {
+        std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
+        return {};
+      }
+    }
+  }
+  std::cerr << "Passing the pairwise intersection test\n";
+  std::map<MyVector<T>,int> MapEXT;
+  using Tent = std::pair<size_t,int>;
+  std::map<Face,std::vector<Tent>> FACmult;
+  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
+    MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
+    int n_ext = EXT.rows();
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      MyVector<T> V = GetMatrixRow(EXT, i_ext);
+      MapEXT[V] = 0;
+    }
+  }
+  int n_ext_tot = MapEXT.size();
+  std::cerr << "n_ext_tot=" << n_ext_tot << "\n";
+  MyMatrix<T> EXTtot(n_ext_tot, dim);
+  int pos = 0;
+  for (auto & kv : MapEXT) {
+    MyVector<T> const& eEXT = kv.first;
+    for (int i=0; i<dim; i++)
+      EXTtot(pos, i) = eEXT(i);
+    pos++;
+  }
+  std::cerr << "EXTtot built\n";
+  for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+    MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
+    MapEXT[eEXT] = i_ext_tot;
+  }
+  std::cerr << "MapEXT built\n";
+  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
+    MyMatrix<T> const& FAC = l_cone[i_cone].FAC;
+    MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
+    int n_fac = FAC.rows();
+    int n_ext = EXT.rows();
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      Face f(n_ext_tot);
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
+        int i_ext_tot = MapEXT[eEXT];
+        T sum = 0;
+        for (int i=0; i<dim; i++) {
+          sum += eEXT(i) * FAC(i_fac, i);
+        }
+        if (sum == 0) {
+          f[i_ext_tot] = 1;
+        }
+      }
+      Tent eEnt{i_cone, i_fac};
+      FACmult[f].push_back(eEnt);
+    }
+  }
+  std::cerr << "FACmult built\n";
+  std::set<MyVector<T>> SetFAC;
+  auto is_matching_facet=[&](MyVector<T> const& eFAC) -> bool {
+    for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+      T sum = 0;
+      for (int i=0; i<dim; i++) {
+        sum += eFAC(i) * EXTtot(i_ext_tot,i);
+      }
+      if (sum < 0)
+        return false;
+    }
+    return true;
+  };
+  for (auto & kv: FACmult) {
+    std::vector<Tent> const& eList = kv.second;
+    if (eList.size() != 1 && eList.size() != 2) {
+      std::cerr << "The length of the list is not 1 or 2\n";
+      return {};
+    }
+    if (eList.size() == 1) {
+      size_t i_cone = eList[0].first;
+      int i_fac = eList[0].second;
+      MyVector<T> eFAC = GetMatrixRow(l_cone[i_cone].FAC, i_fac);
+      if (!is_matching_facet(eFAC)) {
+        std::cerr << "The facet has some violating vertices\n";
+        return {};
+      }
+      SetFAC.insert(eFAC);
+    }
+  }
+  std::cerr << "We have SetFAC\n";
+  int n_fac_final = SetFAC.size();
+  std::cerr << "n_fac_final=" << n_fac_final << "\n";
+  MyMatrix<T> FACfinal(n_fac_final, dim);
+  std::vector<MyVector<T>> ListFACfinal;
+  int pos_fac = 0;
+  for (auto & eFAC : SetFAC) {
+    for (int i=0; i<dim; i++)
+      FACfinal(pos_fac, i) = eFAC(i);
+    ListFACfinal.push_back(eFAC);
+    pos_fac++;
+  }
+  std::cerr << "We have FACfinal\n";
+  std::vector<MyVector<T>> ListEXT;
+  size_t min_len = dim - 1;
+  for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+    std::vector<MyVector<T>> ListIncd;
+    MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
+    for (int i_fac_final=0; i_fac_final<n_fac_final; i_fac_final++) {
+      MyVector<T> const& eFAC = ListFACfinal[i_fac_final];
+      T sum = 0;
+      for (int i=0; i<dim; i++) {
+        sum += eFAC(i) * eEXT(i);
+      }
+      if (sum == 0) {
+        ListIncd.push_back(eFAC);
+      }
+    }
+    if (ListIncd.size() >= min_len) {
+      if (RankMat(ListIncd) == dim - 1) {
+        ListEXT.push_back(eEXT);
+      }
+    }
+  }
+  MyMatrix<T> EXTfinal = MatrixFromVectorFamily(ListEXT);
+  return {EXTfinal, FACfinal};
+}
+
 // clang-format off
 #endif  // SRC_POLYDECOMP_DECOMPOSITIONS_H_
 // clang-format on
