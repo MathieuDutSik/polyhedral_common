@@ -2473,7 +2473,7 @@ If set to unset.heu then basic heuristics are applied which should be fine";
 The heuristic for choosing when the communication thread is launched.\n\
 If set to unset.heu then disabled";
   ListStringValuesH_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
-The heuristic for choosing the canonicalization method used.when the communication thread is launched.\n\
+The heuristic for choosing the canonicalization method used.\n\
 If set to unset.heu then disabled";
   SingleBlock BlockHEURIS;
   BlockHEURIS.setListStringValues(ListStringValuesH_doc);
