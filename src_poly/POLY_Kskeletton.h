@@ -237,7 +237,9 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(
 template <typename T, typename Tgroup, typename Fspann, typename Ffinal>
 std::vector<vectface>
 EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
-                               int LevSearch, Fspann f_spann, Ffinal f_final) {
+                               int LevSearch, Fspann f_spann, Ffinal f_final,
+                               bool const& ComputeTotalNumberFaces) {
+  using Tint = typename Tgroup::Tint;
   std::vector<vectface> RetList;
   int n = TheGRP.n_act();
   vectface ListOrb(n);
@@ -251,25 +253,40 @@ EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     nList[MinVal] = 1;
     ListOrb.push_back(nList);
   }
-  std::cerr << "iLevel=0 |NListOrb|=" << ListOrb.size() << "\n";
+  std::cerr << "iLevel=0 |vf|=" << ListOrb.size();
+  if (ComputeTotalNumberFaces) {
+    std::cerr << " total=" << n;
+  }
+  std::cerr << "\n";
   bool test = f_final(0, ListOrb);
   RetList.emplace_back(std::move(ListOrb));
   if (test)
     return RetList;
   for (int iLevel = 1; iLevel <= LevSearch; iLevel++) {
-    vectface NListOrb(n);
+    std::unordered_set<Face> set;
     for (auto &eOrb : RetList[iLevel - 1]) {
       Tgroup StabFace = TheGRP.Stabilizer_OnSets(eOrb);
       vectface TheSpann = f_spann(eOrb, StabFace, iLevel, FAC, TheGRP);
       for (Face fOrb : TheSpann) {
         Face fOrbCan = TheGRP.OptCanonicalImage(fOrb);
-        NListOrb.push_back(fOrbCan);
+        set.insert(fOrbCan);
       }
     }
-    std::cerr << "iLevel=" << iLevel << " |NListOrb|=" << NListOrb.size()
-              << "\n";
-    bool test = f_final(iLevel, NListOrb);
-    RetList.emplace_back(std::move(NListOrb));
+    vectface vf(n);
+    Tint total = 0;
+    for (auto & face : set) {
+      vf.push_back(face);
+      if (ComputeTotalNumberFaces) {
+        total += TheGRP.OrbitSize_OnSets(face);
+      }
+    }
+    std::cerr << "iLevel=" << iLevel << " |vf|=" << vf.size();
+    if (ComputeTotalNumberFaces) {
+      std::cerr << " total=" << total;
+    }
+    std::cerr << "\n";
+    bool test = f_final(iLevel, vf);
+    RetList.emplace_back(std::move(vf));
     if (test)
       break;
   }
@@ -349,7 +366,8 @@ template <typename T, typename Tgroup, typename Final>
 std::vector<vectface>
 EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                         MyMatrix<T> const &EXT, int LevSearch,
-                        std::string const &method_spann, Final f_final) {
+                        std::string const &method_spann, Final f_final,
+                        bool const& ComputeTotalNumberFaces) {
   if (method_spann == "LinearProgramming") {
     auto f_spann = [&](Face const &face, Tgroup const &StabFace,
                        [[maybe_unused]] int const &RankFace,
@@ -358,8 +376,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
       return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   if (method_spann == "ExtremeRays") {
     Face extfac_incd = Compute_extfac_incd(FAC, EXT);
@@ -370,8 +387,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                    EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   if (method_spann == "ExtremeRaysNonSimplicial") {
     int nbFac = FAC.rows();
@@ -393,8 +409,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                                 extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   std::cerr << "We failed to find a matching method_spann\n";
   throw TerminalException{1};
@@ -405,14 +420,15 @@ std::vector<vectface> EnumerationFaces(Tgroup const &TheGRP,
                                        MyMatrix<T> const &FAC,
                                        MyMatrix<T> const &EXT, int LevSearch,
                                        std::string const &method_spann,
-                                       std::string const &method_final) {
+                                       std::string const &method_final,
+                                       bool const& ComputeTotalNumberFaces) {
   if (method_final == "all") {
     auto f_final = [&]([[maybe_unused]] int const &level,
                        [[maybe_unused]] vectface const &RetList) -> bool {
       return false;
     };
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
-                                   f_final);
+                                   f_final, ComputeTotalNumberFaces);
   }
   if (method_final == "stop_nonsimplicial") {
     auto f_final = [&](int const &level, vectface const &RetList) -> bool {
@@ -424,7 +440,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const &TheGRP,
       return false;
     };
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
-                                   f_final);
+                                   f_final, ComputeTotalNumberFaces);
   }
   std::cerr << "We failed to find a matching method_final\n";
   throw TerminalException{1};
@@ -636,6 +652,7 @@ FullNamelist NAMELIST_GetStandard_FaceLattice() {
   // PROC
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListIntValues1_doc;
+  std::map<std::string, std::string> ListBoolValues1_doc;
   ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
 The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
   ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
@@ -653,8 +670,11 @@ Available options are all and stop_nonsimplicial";
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   ListIntValues1_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
+  ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\
+Whether to compute the total number of faces by stabilizer computation";
   SingleBlock BlockPROC;
   BlockPROC.setListIntValues(ListIntValues1_doc);
+  BlockPROC.setListBoolValues(ListBoolValues1_doc);
   BlockPROC.setListStringValues(ListStringValues1_doc);
   ListBlock["PROC"] = BlockPROC;
   // GROUP
@@ -731,6 +751,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "FACfile=" << FACfile << "\n";
   std::ifstream FACfs(FACfile);
   MyMatrix<T> FAC = ReadMatrix<T>(FACfs);
+  std::cerr << "|FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
   if (size_t(FAC.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
     std::cerr << "We have |FAC|=" << FAC.rows() << "\n";
     std::cerr << "But <Tidx>::max()="
@@ -738,7 +759,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
     throw TerminalException{1};
   }
   if (RankMat(FAC) != FAC.cols()) {
-    std::cerr << "The matrix EXT should be of full rank\n";
+    std::cerr << "The matrix FAC should be of full rank\n";
     throw TerminalException{1};
   }
   //
@@ -746,6 +767,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "method_spann=" << method_spann << "\n";
   std::string method_final = BlockPROC.ListStringValues.at("method_final");
   std::cerr << "method_final=" << method_final << "\n";
+  bool ComputeTotalNumberFaces = BlockPROC.ListBoolValues.at("ComputeTotalNumberFaces");
+  std::cerr << "ComputeTotalNumberFaces=" << ComputeTotalNumberFaces << "\n";
   //
   MyMatrix<T> EXT;
   if (method_spann == "ExtremeRays" ||
@@ -779,7 +802,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
   //
   std::vector<vectface> TheOutput =
-      EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final);
+    EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final, ComputeTotalNumberFaces);
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
   //

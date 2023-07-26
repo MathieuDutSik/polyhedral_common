@@ -3,10 +3,11 @@
  EXTfile = "unset.ext"
  GRPfile = "Perfect.grp"
  OUTfile = "Reult"
+ ComputeTotalNumberFaces = T
  method_spann = "LinearProgramming"
  method_final = "all"
  Arithmetic = "rational"
- LevSearch = 2
+ LevSearch = 1
 /
 
 &GROUP
