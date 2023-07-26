@@ -699,7 +699,10 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = GRPin.n_act();
+  size_t tidx_max = std::numeric_limits<Tidx>::max();
+  std::cerr << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max << "\n";
   std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
+  std::cerr << "|LGen|=" << LGen.size() << "\n";
   std::vector<vectface> l_vf_tot;
   size_t n_vert_tot = 0;
   for (auto & vf : l_vf) {
@@ -711,6 +714,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
+  std::cerr << "n_vert_tot=" << n_vert_tot << "\n";
   Tgr eGR(n_vert_tot);
   eGR.SetHasColor(true);
   for (int i=0; i<n; i++) {
@@ -719,6 +723,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
   int shift = n;
   for (size_t i_level=1; i_level<l_vf_tot.size(); i_level++) {
     vectface const& vf = l_vf_tot.at(i_level);
+    std::cerr << "i_level=" << i_level << " |vf|=" << vf.size() << "\n";
     for (auto& face : vf) {
       for (int i=0; i<n; i++) {
         if (face[i] == 1) {
@@ -730,6 +735,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
       shift++;
     }
   }
+  std::cerr << "shift=" << shift << "\n";
   std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n).second;
   std::vector<Telt> ListGen;
   for (auto & eList : ListGen_vect) {
@@ -789,6 +795,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "GRPfile=" << GRPfile << "\n";
   std::ifstream GRPfs(GRPfile);
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
+  std::cerr << "|GRP|=" << GRP.size() << "\n";
   //
   int LevSearch = BlockPROC.ListIntValues.at("LevSearch");
   std::cerr << "LevSearch=" << LevSearch << "\n";
