@@ -727,6 +727,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     for (auto& face : vf) {
       for (int i=0; i<n; i++) {
         if (face[i] == 1) {
+          std::cerr << "  create edge between i=" << i << " j=" << shift << "\n";
           eGR.AddAdjacent(i, shift);
           eGR.AddAdjacent(shift, i);
         }
@@ -736,13 +737,15 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     }
   }
   std::cerr << "shift=" << shift << "\n";
-  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n_vert_tot).second;
+  int n_out = n;
+  //  int n_out = n_vert_tot;
+  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n_out).second;
   std::vector<Telt> ListGen;
   for (auto & eList : ListGen_vect) {
     Telt ePerm(eList);
     ListGen.emplace_back(std::move(ePerm));
   }
-  return Tgroup(ListGen, n);
+  return Tgroup(ListGen, n_out);
 }
 
 
@@ -820,8 +823,10 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
     using Tgr = GraphListAdj;
     Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup,Tgr>(TheOutput, GRP);
     std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
-    std::string FileGroup = BlockPROC.ListStringValues.at("FileGroup");
-    std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
+    std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
+    std::cerr << "FileGroup=" << FileGroup << "\n";
+    std::string OutFormat = BlockGROUP.ListStringValues.at("OutFormat");
+    std::cerr << "OutFormat=" << OutFormat << "\n";
     WriteGroupFormat(FileGroup, OutFormat, GRPfull);
   }
 }

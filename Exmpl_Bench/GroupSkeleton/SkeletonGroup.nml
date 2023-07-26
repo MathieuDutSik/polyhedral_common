@@ -1,7 +1,7 @@
 &PROC
- FACfile = "Pent.ext"
+ FACfile = "G6.ext"
  EXTfile = "unset.ext"
- GRPfile = "Pent.grp"
+ GRPfile = "G6.grp"
  OUTfile = "Result"
  ComputeTotalNumberFaces = T
  method_spann = "LinearProgramming"
