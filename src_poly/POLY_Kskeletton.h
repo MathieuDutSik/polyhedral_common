@@ -736,7 +736,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     }
   }
   std::cerr << "shift=" << shift << "\n";
-  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n).second;
+  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n_vert_tot).second;
   std::vector<Telt> ListGen;
   for (auto & eList : ListGen_vect) {
     Telt ePerm(eList);
@@ -816,7 +816,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   SingleBlock BlockGROUP = eFull.ListBlock.at("GROUP");
   bool ComputeAutGroup = BlockGROUP.ListBoolValues.at("ComputeAutGroup");
   if (ComputeAutGroup) {
-    using Tgr = GraphBitset;
+    //    using Tgr = GraphBitset;
+    using Tgr = GraphListAdj;
     Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup,Tgr>(TheOutput, GRP);
     std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
     std::string FileGroup = BlockPROC.ListStringValues.at("FileGroup");

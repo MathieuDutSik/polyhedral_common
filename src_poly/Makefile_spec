@@ -1,5 +1,5 @@
 #PROGRAM		= LATT_lll
-PROGRAM		= POLY_FaceLatticeGen
+#PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
@@ -16,7 +16,7 @@ PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= POLY_c_lcdd
-#PROGRAM		= GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay

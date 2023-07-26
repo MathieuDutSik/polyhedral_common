@@ -1,0 +1,17 @@
+&PROC
+ FACfile = "Pent.ext"
+ EXTfile = "unset.ext"
+ GRPfile = "Pent.grp"
+ OUTfile = "Result"
+ ComputeTotalNumberFaces = T
+ method_spann = "LinearProgramming"
+ method_final = "all"
+ Arithmetic = "rational"
+ LevSearch = 1
+/
+
+&GROUP
+ ComputeAutGroup = T
+ OutFormat = "CPP"
+ FileGroup = "stderr"
+/
