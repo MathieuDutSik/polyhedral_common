@@ -1175,25 +1175,9 @@ GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow,
   return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
-// This function takes a matrix and returns the vector
-// that canonicalize it.
-// This depends on the construction of the graph from GetGraphFromWeightedMatrix
-//
-template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
+template<typename Tgr, typename Tidx>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Kernel(
-    WeightMatrix<true, T, Tidx_value> const &WMat) {
-  size_t nbRow = WMat.rows();
-  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
-  if (nbRow >= max_poss_rows) {
-    std::cerr << "GetGroupCanonicalizationVector_Kernel : We have nbRow="
-              << nbRow
-              << " which is larger than maximum allowed size of Tidx = "
-              << max_poss_rows << "\n";
-    throw TerminalException{1};
-  }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
-
+GetGroupCanonicalizationVector_Graph_Kernel(Tgr const& eGR, size_t const& nbRow) {
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
@@ -1220,6 +1204,30 @@ GetGroupCanonicalizationVector_Kernel(
   std::cerr << "Failed to find matching numeric in "
                "GetGroupCanonicalizationVector_Kernel\n";
   throw TerminalException{1};
+}
+
+
+
+
+// This function takes a matrix and returns the vector
+// that canonicalize it.
+// This depends on the construction of the graph from GetGraphFromWeightedMatrix
+//
+template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+GetGroupCanonicalizationVector_Kernel(
+    WeightMatrix<true, T, Tidx_value> const &WMat) {
+  size_t nbRow = WMat.rows();
+  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
+  if (nbRow >= max_poss_rows) {
+    std::cerr << "GetGroupCanonicalizationVector_Kernel : We have nbRow="
+              << nbRow
+              << " which is larger than maximum allowed size of Tidx = "
+              << max_poss_rows << "\n";
+    throw TerminalException{1};
+  }
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
+  return GetGroupCanonicalizationVector_Graph_Kernel(eGR, nbRow);
 }
 
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>

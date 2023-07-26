@@ -596,10 +596,9 @@ void PrintListListOrb_IntGAP(std::ostream &os,
   os << "];\n";
 }
 
-void OutputFaces(const std::vector<vectface> &TheOutput,
-                 const std::string &OUTfile, const std::string &OutFormat) {
+void OutputFaces_File(const std::vector<vectface> &TheOutput,
+                      std::ostream & os, const std::string &OutFormat) {
   if (OutFormat == "GAP") {
-    std::ofstream os(OUTfile);
     os << "return ";
     os << "[";
     int len = TheOutput.size();
@@ -612,17 +611,33 @@ void OutputFaces(const std::vector<vectface> &TheOutput,
     os << ";\n";
     return;
   }
+  if (OutFormat == "NoOutput") {
+    return;
+  }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
 }
 
+void OutputFaces(const std::vector<vectface> &TheOutput,
+                 const std::string &OUTfile, const std::string &OutFormat) {
+  if (OUTfile == "stderr") {
+    return OutputFaces_File(TheOutput, std::cerr, OutFormat);
+  }
+  if (OUTfile == "stdout") {
+    return OutputFaces_File(TheOutput, std::cout, OutFormat);
+  }
+  std::ofstream os(OUTfile);
+  return OutputFaces_File(TheOutput, os, OutFormat);
+}
+
+
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListIntValues1_doc;
   ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
-The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial ";
+The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
   ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
   ListStringValues1_doc["GRPfile"] =
       "The symmetry group used for the computation. It is a permutation group "
@@ -642,9 +657,68 @@ The level of the search. If set to -1 then the full lattice is computed";
   BlockPROC.setListIntValues(ListIntValues1_doc);
   BlockPROC.setListStringValues(ListStringValues1_doc);
   ListBlock["PROC"] = BlockPROC;
+  // GROUP
+  std::map<std::string, std::string> ListStringValues2_doc;
+  std::map<std::string, std::string> ListBoolValues2_doc;
+  ListBoolValues2_doc["ComputeAutGroup"] = "Default: false\n\
+Whether to compute the automorphism group of the graph determined by the faces";
+  ListStringValues2_doc["OutFormat"] = "Default: CPP\n\
+Format for the output of the group. Two possibilities: GAP (for the GAP programming system) or CPP (for polyhedral)";
+  ListStringValues2_doc["FileGroup"] = "Default: stdout\n\
+File for output of the group. stdout for std::cout, stderr for std::cerr and otherwise to the file";
+  SingleBlock BlockGROUP;
+  BlockGROUP.setListBoolValues(ListBoolValues2_doc);
+  BlockGROUP.setListStringValues(ListStringValues2_doc);
+  ListBlock["GROUP"] = BlockGROUP;
   // Merging all data
   return {std::move(ListBlock), "undefined"};
 }
+
+template<typename Tgroup, typename Tgr>
+Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup const& GRPin) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n = GRPin.n_act();
+  std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
+  std::vector<vectface> l_vf_tot;
+  size_t n_vert_tot = 0;
+  for (auto & vf : l_vf) {
+    vectface vf_tot(n);
+    for (auto & face : vf) {
+      vectface vf_orbit = OrbitFace(face, LGen);
+      vf_tot.append(vf_orbit);
+    }
+    n_vert_tot += vf_tot.size();
+    l_vf_tot.emplace_back(std::move(vf_tot));
+  }
+  Tgr eGR(n_vert_tot);
+  eGR.SetHasColor(true);
+  for (int i=0; i<n; i++) {
+    eGR.SetColor(i, 0);
+  }
+  int shift = n;
+  for (size_t i_level=1; i_level<l_vf_tot.size(); i_level++) {
+    vectface const& vf = l_vf_tot.at(i_level);
+    for (auto& face : vf) {
+      for (int i=0; i<n; i++) {
+        if (face[i] == 1) {
+          eGR.AddAdjacent(i, shift);
+          eGR.AddAdjacent(shift, i);
+        }
+      }
+      eGR.SetColor(shift, i_level);
+      shift++;
+    }
+  }
+  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n).second;
+  std::vector<Telt> ListGen;
+  for (auto & eList : ListGen_vect) {
+    Telt ePerm(eList);
+    ListGen.emplace_back(std::move(ePerm));
+  }
+  return Tgroup(ListGen, n);
+}
+
 
 template <typename T, typename Tgroup>
 void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
@@ -708,6 +782,17 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
       EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final);
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
+  //
+  SingleBlock BlockGROUP = eFull.ListBlock.at("GROUP");
+  bool ComputeAutGroup = BlockGROUP.ListBoolValues.at("ComputeAutGroup");
+  if (ComputeAutGroup) {
+    using Tgr = GraphBitset;
+    Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup,Tgr>(TheOutput, GRP);
+    std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
+    std::string FileGroup = BlockPROC.ListStringValues.at("FileGroup");
+    std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
+    WriteGroupFormat(FileGroup, OutFormat, GRPfull);
+  }
 }
 
 // clang-format off

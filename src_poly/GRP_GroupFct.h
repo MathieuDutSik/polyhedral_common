@@ -151,6 +151,9 @@ void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
   WriteGroup(os, TheGRP);
 }
 
+
+
+
 template <typename Tgroup>
 void WriteGroupMakeUp(std::ostream &os, Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
@@ -199,6 +202,30 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
   os << "SetSize(GRP, " << TheGRP.size() << ");\n";
   os << "return GRP;\n";
 }
+
+template <typename Tgroup>
+void WriteGroupFormat(std::string const& FileGroup, std::string const& OutFormat, Tgroup const &TheGRP) {
+  auto f=[&](std::ostream & os) -> void {
+    if (OutFormat == "CPP") {
+      return WriteGroup(os, TheGRP);
+    }
+    if (OutFormat == "GAP") {
+      return WriteGroupGAP(os, TheGRP);
+    }
+    std::cerr << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
+    throw TerminalException{1};
+  };
+  if (FileGroup == "stderr") {
+    return f(std::cerr);
+  }
+  if (FileGroup == "stdout") {
+    return f(std::cout);
+  }
+  std::ofstream os(FileGroup);
+  return f(os);
+}
+
+
 
 //
 // group combinatorial algorithms

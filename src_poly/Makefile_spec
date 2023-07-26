@@ -1,5 +1,5 @@
 #PROGRAM		= LATT_lll
-#PROGRAM		= POLY_FaceLatticeGen
+PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
@@ -43,7 +43,7 @@
 #PROGRAM		= POLY_SolutionMatNonnegative
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
-PROGRAM		= POLY_sampling_facets
+#PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
