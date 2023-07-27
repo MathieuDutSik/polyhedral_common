@@ -2,7 +2,7 @@
  EXTfile = "Perfect.ext"
  GRPfile = "Perfect.grp"
  OUTfile = "Result"
- DeterministicRuntime = F
+ DeterministicRuntime = T
  max_runtime = 7200
  AdvancedTerminationCriterion = T
 /
@@ -15,14 +15,15 @@
  BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
  ChosenDatabaseFile              = "Bank_canonic.heu"
  CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
+ ChoiceCanonicalizationFile      = "Canonic_store.heu"
 /
 
 &METHOD
- Saving = T
+ Saving = F
  Prefix = "./Saving_Polyhedral/"
 /
 
 &BANK
  Prefix = "./Saving_Bank/"
- Saving = T
+ Saving = F
 /
