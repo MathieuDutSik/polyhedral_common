@@ -707,10 +707,18 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
   size_t n_vert_tot = 0;
   for (auto & vf : l_vf) {
     vectface vf_tot(n);
+    std::map<size_t,size_t> MapLenSize;
     for (auto & face : vf) {
+      size_t len = face.count();
       vectface vf_orbit = OrbitFace(face, LGen);
+      size_t cnt = vf_orbit.size();
+      MapLenSize[len] += cnt;
       vf_tot.append(vf_orbit);
     }
+    std::cerr << "MapLenSize =";
+    for (auto & kv : MapLenSize)
+      std::cerr << " (" << kv.first << "/" << kv.second << ")";
+    std::cerr << "\n";
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
@@ -727,7 +735,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     for (auto& face : vf) {
       for (int i=0; i<n; i++) {
         if (face[i] == 1) {
-          std::cerr << "  create edge between i=" << i << " j=" << shift << "\n";
+          //          std::cerr << "  create edge between i=" << i << " j=" << shift << "\n";
           eGR.AddAdjacent(i, shift);
           eGR.AddAdjacent(shift, i);
         }
