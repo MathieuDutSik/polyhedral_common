@@ -1,7 +1,7 @@
 &HEURISTIC_PRIOR
   DefaultPrior = "state_ppl_ext"
   ListConclusion = "state_lrs_ring", "state_lrs_ring", "state_ppl_ext"
-  ListFullCond = "incidence < 30", "incidence < 35", "incidence < 40"
+  ListFullCond = "incidence < 45", "incidence < 50", "incidence < 55"
 /
 
 

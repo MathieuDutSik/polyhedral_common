@@ -2036,13 +2036,22 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
       ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
-    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-    vectface TheOutput =
-        DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
-    AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS
     MicrosecondTime time_full;
-    os << "|outputsize|=" << TheOutput.size() << "\n";
+#endif
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+#ifdef TIMINGS
+    os << "|ansProg|=" << time_full << "\n";
+#endif
+    vectface TheOutput =
+        DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+#ifdef TIMINGS
+    os << "|TheOutput|=" << time_full << "\n";
+    os << "Number of facets being generated=" << TheOutput.size() << "\n";
+#endif
+    AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS
+    os << "|pop|=" << time_full << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
 #ifdef TIMINGS
@@ -2062,7 +2071,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     }
 #ifdef TIMINGS
-    os << "|outputtime|=" << time_full << "\n";
+    os << "|Adjacency processing|=" << time_full << "\n";
 #endif
   } else {
     vectface TheOutput =
@@ -2216,7 +2225,14 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     }
   }
   while (true) {
-    if (RPL.GetTerminationStatus())
+#ifdef TIMINGS
+    MicrosecondTime time;
+#endif
+    bool test_final = RPL.GetTerminationStatus();
+#ifdef TIMINGS
+    os << "|GetTerminationStatus|=" << time << "\n";
+#endif
+    if (test_final)
       break;
     DataFacet<T, Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
     size_t SelectedOrbit = df.SelectedOrbit;
