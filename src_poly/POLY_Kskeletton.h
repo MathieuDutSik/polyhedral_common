@@ -237,7 +237,9 @@ vectface SPAN_face_ExtremeRaysNonSimplicial(
 template <typename T, typename Tgroup, typename Fspann, typename Ffinal>
 std::vector<vectface>
 EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
-                               int LevSearch, Fspann f_spann, Ffinal f_final) {
+                               int LevSearch, Fspann f_spann, Ffinal f_final,
+                               bool const& ComputeTotalNumberFaces) {
+  using Tint = typename Tgroup::Tint;
   std::vector<vectface> RetList;
   int n = TheGRP.n_act();
   vectface ListOrb(n);
@@ -251,25 +253,40 @@ EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     nList[MinVal] = 1;
     ListOrb.push_back(nList);
   }
-  std::cerr << "iLevel=0 |NListOrb|=" << ListOrb.size() << "\n";
+  std::cerr << "iLevel=0 |vf|=" << ListOrb.size();
+  if (ComputeTotalNumberFaces) {
+    std::cerr << " total=" << n;
+  }
+  std::cerr << "\n";
   bool test = f_final(0, ListOrb);
   RetList.emplace_back(std::move(ListOrb));
   if (test)
     return RetList;
   for (int iLevel = 1; iLevel <= LevSearch; iLevel++) {
-    vectface NListOrb(n);
+    std::unordered_set<Face> set;
     for (auto &eOrb : RetList[iLevel - 1]) {
       Tgroup StabFace = TheGRP.Stabilizer_OnSets(eOrb);
       vectface TheSpann = f_spann(eOrb, StabFace, iLevel, FAC, TheGRP);
       for (Face fOrb : TheSpann) {
         Face fOrbCan = TheGRP.OptCanonicalImage(fOrb);
-        NListOrb.push_back(fOrbCan);
+        set.insert(fOrbCan);
       }
     }
-    std::cerr << "iLevel=" << iLevel << " |NListOrb|=" << NListOrb.size()
-              << "\n";
-    bool test = f_final(iLevel, NListOrb);
-    RetList.emplace_back(std::move(NListOrb));
+    vectface vf(n);
+    Tint total = 0;
+    for (auto & face : set) {
+      vf.push_back(face);
+      if (ComputeTotalNumberFaces) {
+        total += TheGRP.OrbitSize_OnSets(face);
+      }
+    }
+    std::cerr << "iLevel=" << iLevel << " |vf|=" << vf.size();
+    if (ComputeTotalNumberFaces) {
+      std::cerr << " total=" << total;
+    }
+    std::cerr << "\n";
+    bool test = f_final(iLevel, vf);
+    RetList.emplace_back(std::move(vf));
     if (test)
       break;
   }
@@ -349,7 +366,8 @@ template <typename T, typename Tgroup, typename Final>
 std::vector<vectface>
 EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                         MyMatrix<T> const &EXT, int LevSearch,
-                        std::string const &method_spann, Final f_final) {
+                        std::string const &method_spann, Final f_final,
+                        bool const& ComputeTotalNumberFaces) {
   if (method_spann == "LinearProgramming") {
     auto f_spann = [&](Face const &face, Tgroup const &StabFace,
                        [[maybe_unused]] int const &RankFace,
@@ -358,8 +376,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
       return SPAN_face_LinearProgramming(face, StabFace, FAC, FullGRP);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   if (method_spann == "ExtremeRays") {
     Face extfac_incd = Compute_extfac_incd(FAC, EXT);
@@ -370,8 +387,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                    EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   if (method_spann == "ExtremeRaysNonSimplicial") {
     int nbFac = FAC.rows();
@@ -393,8 +409,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                                 extfac_incd, FAC, EXT);
     };
     return EnumerationFaces_Fspann_Ffinal<T, Tgroup, decltype(f_spann),
-                                          decltype(f_final)>(
-        TheGRP, FAC, LevSearch, f_spann, f_final);
+                                          decltype(f_final)>(TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces);
   }
   std::cerr << "We failed to find a matching method_spann\n";
   throw TerminalException{1};
@@ -405,14 +420,15 @@ std::vector<vectface> EnumerationFaces(Tgroup const &TheGRP,
                                        MyMatrix<T> const &FAC,
                                        MyMatrix<T> const &EXT, int LevSearch,
                                        std::string const &method_spann,
-                                       std::string const &method_final) {
+                                       std::string const &method_final,
+                                       bool const& ComputeTotalNumberFaces) {
   if (method_final == "all") {
     auto f_final = [&]([[maybe_unused]] int const &level,
                        [[maybe_unused]] vectface const &RetList) -> bool {
       return false;
     };
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
-                                   f_final);
+                                   f_final, ComputeTotalNumberFaces);
   }
   if (method_final == "stop_nonsimplicial") {
     auto f_final = [&](int const &level, vectface const &RetList) -> bool {
@@ -424,7 +440,7 @@ std::vector<vectface> EnumerationFaces(Tgroup const &TheGRP,
       return false;
     };
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
-                                   f_final);
+                                   f_final, ComputeTotalNumberFaces);
   }
   std::cerr << "We failed to find a matching method_final\n";
   throw TerminalException{1};
@@ -596,10 +612,9 @@ void PrintListListOrb_IntGAP(std::ostream &os,
   os << "];\n";
 }
 
-void OutputFaces(const std::vector<vectface> &TheOutput,
-                 const std::string &OUTfile, const std::string &OutFormat) {
+void OutputFaces_File(const std::vector<vectface> &TheOutput,
+                      std::ostream & os, const std::string &OutFormat) {
   if (OutFormat == "GAP") {
-    std::ofstream os(OUTfile);
     os << "return ";
     os << "[";
     int len = TheOutput.size();
@@ -612,17 +627,34 @@ void OutputFaces(const std::vector<vectface> &TheOutput,
     os << ";\n";
     return;
   }
+  if (OutFormat == "NoOutput") {
+    return;
+  }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
 }
 
+void OutputFaces(const std::vector<vectface> &TheOutput,
+                 const std::string &OUTfile, const std::string &OutFormat) {
+  if (OUTfile == "stderr") {
+    return OutputFaces_File(TheOutput, std::cerr, OutFormat);
+  }
+  if (OUTfile == "stdout") {
+    return OutputFaces_File(TheOutput, std::cout, OutFormat);
+  }
+  std::ofstream os(OUTfile);
+  return OutputFaces_File(TheOutput, os, OutFormat);
+}
+
+
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListIntValues1_doc;
+  std::map<std::string, std::string> ListBoolValues1_doc;
   ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
-The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial ";
+The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
   ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
   ListStringValues1_doc["GRPfile"] =
       "The symmetry group used for the computation. It is a permutation group "
@@ -638,13 +670,92 @@ Available options are all and stop_nonsimplicial";
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   ListIntValues1_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
+  ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\
+Whether to compute the total number of faces by stabilizer computation";
   SingleBlock BlockPROC;
   BlockPROC.setListIntValues(ListIntValues1_doc);
+  BlockPROC.setListBoolValues(ListBoolValues1_doc);
   BlockPROC.setListStringValues(ListStringValues1_doc);
   ListBlock["PROC"] = BlockPROC;
+  // GROUP
+  std::map<std::string, std::string> ListStringValues2_doc;
+  std::map<std::string, std::string> ListBoolValues2_doc;
+  ListBoolValues2_doc["ComputeAutGroup"] = "Default: false\n\
+Whether to compute the automorphism group of the graph determined by the faces";
+  ListStringValues2_doc["OutFormat"] = "Default: CPP\n\
+Format for the output of the group. Two possibilities: GAP (for the GAP programming system) or CPP (for polyhedral)";
+  ListStringValues2_doc["FileGroup"] = "Default: stdout\n\
+File for output of the group. stdout for std::cout, stderr for std::cerr and otherwise to the file";
+  SingleBlock BlockGROUP;
+  BlockGROUP.setListBoolValues(ListBoolValues2_doc);
+  BlockGROUP.setListStringValues(ListStringValues2_doc);
+  ListBlock["GROUP"] = BlockGROUP;
   // Merging all data
   return {std::move(ListBlock), "undefined"};
 }
+
+template<typename Tgroup, typename Tgr>
+Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup const& GRPin) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n = GRPin.n_act();
+  size_t tidx_max = std::numeric_limits<Tidx>::max();
+  std::cerr << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max << "\n";
+  std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
+  std::cerr << "|LGen|=" << LGen.size() << "\n";
+  std::vector<vectface> l_vf_tot;
+  size_t n_vert_tot = 0;
+  for (auto & vf : l_vf) {
+    vectface vf_tot(n);
+    std::map<size_t,size_t> MapLenSize;
+    for (auto & face : vf) {
+      size_t len = face.count();
+      vectface vf_orbit = OrbitFace(face, LGen);
+      size_t cnt = vf_orbit.size();
+      MapLenSize[len] += cnt;
+      vf_tot.append(vf_orbit);
+    }
+    std::cerr << "MapLenSize =";
+    for (auto & kv : MapLenSize)
+      std::cerr << " (" << kv.first << "/" << kv.second << ")";
+    std::cerr << "\n";
+    n_vert_tot += vf_tot.size();
+    l_vf_tot.emplace_back(std::move(vf_tot));
+  }
+  std::cerr << "n_vert_tot=" << n_vert_tot << "\n";
+  Tgr eGR(n_vert_tot);
+  eGR.SetHasColor(true);
+  for (int i=0; i<n; i++) {
+    eGR.SetColor(i, 0);
+  }
+  int shift = n;
+  for (size_t i_level=1; i_level<l_vf_tot.size(); i_level++) {
+    vectface const& vf = l_vf_tot.at(i_level);
+    std::cerr << "i_level=" << i_level << " |vf|=" << vf.size() << "\n";
+    for (auto& face : vf) {
+      for (int i=0; i<n; i++) {
+        if (face[i] == 1) {
+          //          std::cerr << "  create edge between i=" << i << " j=" << shift << "\n";
+          eGR.AddAdjacent(i, shift);
+          eGR.AddAdjacent(shift, i);
+        }
+      }
+      eGR.SetColor(shift, i_level);
+      shift++;
+    }
+  }
+  std::cerr << "shift=" << shift << "\n";
+  int n_out = n;
+  //  int n_out = n_vert_tot;
+  std::vector<std::vector<Tidx>> ListGen_vect = TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out);
+  std::vector<Telt> ListGen;
+  for (auto & eList : ListGen_vect) {
+    Telt ePerm(eList);
+    ListGen.emplace_back(std::move(ePerm));
+  }
+  return Tgroup(ListGen, n_out);
+}
+
 
 template <typename T, typename Tgroup>
 void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
@@ -657,6 +768,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "FACfile=" << FACfile << "\n";
   std::ifstream FACfs(FACfile);
   MyMatrix<T> FAC = ReadMatrix<T>(FACfs);
+  std::cerr << "|FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
   if (size_t(FAC.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
     std::cerr << "We have |FAC|=" << FAC.rows() << "\n";
     std::cerr << "But <Tidx>::max()="
@@ -664,7 +776,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
     throw TerminalException{1};
   }
   if (RankMat(FAC) != FAC.cols()) {
-    std::cerr << "The matrix EXT should be of full rank\n";
+    std::cerr << "The matrix FAC should be of full rank\n";
     throw TerminalException{1};
   }
   //
@@ -672,6 +784,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "method_spann=" << method_spann << "\n";
   std::string method_final = BlockPROC.ListStringValues.at("method_final");
   std::cerr << "method_final=" << method_final << "\n";
+  bool ComputeTotalNumberFaces = BlockPROC.ListBoolValues.at("ComputeTotalNumberFaces");
+  std::cerr << "ComputeTotalNumberFaces=" << ComputeTotalNumberFaces << "\n";
   //
   MyMatrix<T> EXT;
   if (method_spann == "ExtremeRays" ||
@@ -692,6 +806,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "GRPfile=" << GRPfile << "\n";
   std::ifstream GRPfs(GRPfile);
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
+  std::cerr << "|GRP|=" << GRP.size() << "\n";
   //
   int LevSearch = BlockPROC.ListIntValues.at("LevSearch");
   std::cerr << "LevSearch=" << LevSearch << "\n";
@@ -705,9 +820,23 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   std::cerr << "OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
   //
   std::vector<vectface> TheOutput =
-      EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final);
+    EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final, ComputeTotalNumberFaces);
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
+  //
+  SingleBlock BlockGROUP = eFull.ListBlock.at("GROUP");
+  bool ComputeAutGroup = BlockGROUP.ListBoolValues.at("ComputeAutGroup");
+  if (ComputeAutGroup) {
+    //    using Tgr = GraphBitset;
+    using Tgr = GraphListAdj;
+    Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup,Tgr>(TheOutput, GRP);
+    std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
+    std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
+    std::cerr << "FileGroup=" << FileGroup << "\n";
+    std::string OutFormat = BlockGROUP.ListStringValues.at("OutFormat");
+    std::cerr << "OutFormat=" << OutFormat << "\n";
+    WriteGroupFormat(FileGroup, OutFormat, GRPfull);
+  }
 }
 
 // clang-format off

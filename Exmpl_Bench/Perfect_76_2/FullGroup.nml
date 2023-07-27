@@ -1,0 +1,17 @@
+&PROC
+ FACfile = "Perfect.ext"
+ EXTfile = "unset.ext"
+ GRPfile = "Perfect.grp"
+ OUTfile = "Reult"
+ ComputeTotalNumberFaces = T
+ method_spann = "LinearProgramming"
+ method_final = "all"
+ Arithmetic = "rational"
+ LevSearch = 1
+/
+
+&GROUP
+ ComputeAutGroup = T
+ OutFormat = "CPP"
+ FileGroup = "Perfect.grpfull"
+/
