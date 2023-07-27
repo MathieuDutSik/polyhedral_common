@@ -1227,7 +1227,7 @@ GetGroupCanonicalizationVector_Kernel(
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
-  return GetGroupCanonicalizationVector_Graph_Kernel(eGR, nbRow);
+  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, nbRow);
 }
 
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>

@@ -868,6 +868,24 @@ public:
   }
 };
 
+template<typename Tgroup>
+Tgroup StabilizerUsingOrbSize_OnSets(Tgroup const& GRP, std::pair<Face,typename Tgroup::Tint> const& pair) {
+  using Tint = typename Tgroup::Tint;
+  Face const& f = pair.first;
+  Tint orbSize = pair.second;
+  // If the orbit is equal to the full group then the stabilizer is trivial
+  if (GRP.size() == orbSize) {
+    size_t len = f.count();
+    return Tgroup(len);
+  }
+  // If the orbit is of size 1 then the stabilizer is the full group. However,
+  // we do not test for this because the case is incredibly rare and the Stabilizer_OnSets
+  // would anyway short circuit that.
+  //
+  Tgroup Stab = GRP.Stabilizer_OnSets(f);
+  return ReducedGroupAction(Stab, f);
+}
+
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp>
 struct DatabaseCanonic {
 public:
@@ -1181,10 +1199,10 @@ public:
            in place but the vector may be extended without impacting this first
            entry. */
         size_t pos = eEnt.second[0];
-        Face f = foc.RetrieveListOrbitFace(pos);
-        Tgroup Stab = GRP.Stabilizer_OnSets(f);
-        return {pos, f, FlippingFramework<T>(EXT, f), GRP,
-                ReducedGroupAction(Stab, f)};
+        std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
+        Face const& f = pair.first;
+        Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
+        return {pos, f, FlippingFramework<T>(EXT, f), GRP, StabRed};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -1460,10 +1478,10 @@ public:
        remain in place but the vector may be extended without impacting this
        first entry. */
     size_t pos = V[0];
-    Face f = foc.RetrieveListOrbitFace(pos);
-    Tgroup Stab = GRP.Stabilizer_OnSets(f);
-    return {pos, f, FlippingFramework<T>(EXT, f), GRP,
-            ReducedGroupAction(Stab, f)};
+    std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
+    Face const& f = pair.first;
+    Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
+    return {pos, f, FlippingFramework<T>(EXT, f), GRP, StabRed};
   }
   void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {
