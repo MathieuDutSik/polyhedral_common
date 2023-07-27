@@ -739,7 +739,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
   std::cerr << "shift=" << shift << "\n";
   int n_out = n;
   //  int n_out = n_vert_tot;
-  std::vector<std::vector<Tidx>> ListGen_vect = GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, n_out).second;
+  std::vector<std::vector<Tidx>> ListGen_vect = TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out);
   std::vector<Telt> ListGen;
   for (auto & eList : ListGen_vect) {
     Telt ePerm(eList);
