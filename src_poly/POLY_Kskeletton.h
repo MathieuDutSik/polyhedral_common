@@ -698,6 +698,7 @@ template<typename Tgroup, typename Tgr>
 Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup const& GRPin) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  HumanTime time;
   int n = GRPin.n_act();
   size_t tidx_max = std::numeric_limits<Tidx>::max();
   std::cerr << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max << "\n";
@@ -722,7 +723,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
-  std::cerr << "n_vert_tot=" << n_vert_tot << "\n";
+  std::cerr << "n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
   Tgr eGR(n_vert_tot);
   eGR.SetHasColor(true);
   for (int i=0; i<n; i++) {
@@ -744,16 +745,19 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
       shift++;
     }
   }
-  std::cerr << "shift=" << shift << "\n";
+  std::cerr << "shift=" << shift << " |eGR|=" << time << "\n";
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect = TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out);
+  std::cerr << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time << "\n";
   std::vector<Telt> ListGen;
   for (auto & eList : ListGen_vect) {
     Telt ePerm(eList);
     ListGen.emplace_back(std::move(ePerm));
   }
-  return Tgroup(ListGen, n_out);
+  Tgroup GRPfull(ListGen, n_out);
+  std::cerr << "|GRPfull|=" << time << "\n";
+  return GRPfull;
 }
 
 
