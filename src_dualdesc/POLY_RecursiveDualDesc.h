@@ -2037,41 +2037,43 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
 #ifdef TIMINGS
-    MicrosecondTime time_full;
+    MicrosecondTime time_complete;
+    MicrosecondTime time_step;
 #endif
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
 #ifdef TIMINGS
-    os << "|ansProg|=" << time_full << "\n";
+    os << "|ansProg|=" << time_step << "\n";
 #endif
     vectface TheOutput =
         DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
 #ifdef TIMINGS
-    os << "|TheOutput|=" << time_full << "\n";
+    os << "|TheOutput|=" << time_step << "\n";
     os << "Number of facets being generated=" << TheOutput.size() << "\n";
 #endif
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS
-    os << "|pop|=" << time_full << "\n";
+    os << "|pop|=" << time_step << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
 #ifdef TIMINGS
-      MicrosecondTime time;
+      MicrosecondTime time_loc;
 #endif
       Face eFlipPre = df.FlipFace(eOrb);
 #ifdef TIMINGS
-      os << "|FlipFace1|=" << time << "\n";
+      os << "|FlipFace1|=" << time_loc << "\n";
 #endif
       Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
-      os << "|operation_face1|=" << time << "\n";
+      os << "|operation_face1|=" << time_loc << "\n";
 #endif
       f_insert(eFlip);
 #ifdef TIMINGS
-      os << "|insert1|=" << time << "\n";
+      os << "|insert1|=" << time_loc << "\n";
 #endif
     }
 #ifdef TIMINGS
-    os << "|Adjacency processing|=" << time_full << "\n";
+    os << "|Adjacency processing|=" << time_step << "\n";
+    os << "|DualDesc + flip + insertion|=" << time_complete << "\n";
 #endif
   } else {
     vectface TheOutput =
