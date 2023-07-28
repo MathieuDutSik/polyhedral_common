@@ -2062,6 +2062,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
       };
       DirectFacetComputationFaceIneq(df.FF.EXT_face, ansProg, f_process, os);
+#ifdef TIMINGS
+      os << "|DirectFacetComputationFaceIneq|=" << time_step << "\n";
+#endif
+      AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS
+      os << "|pop|=" << time_step << "\n";
+#endif
     } else {
       vectface TheOutput =
         DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
@@ -2095,7 +2102,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     }
 #ifdef TIMINGS
-    os << "|DualDesc + flip + insertion|=" << time_complete << "\n";
+    os << "|DualDesc+flip+insertion|=" << time_complete << "\n";
 #endif
   } else {
     vectface TheOutput =
