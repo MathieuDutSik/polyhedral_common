@@ -1936,16 +1936,14 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   return MatrixFromVectorFamily(ListVect);
 }
 
-template <typename T>
-std::vector<std::pair<Face, MyVector<T>>>
-DualDescriptionFaceIneq(MyMatrix<T> const &EXT) {
+template <typename T, typename Fprocess>
+void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
   MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
   int nbCol = EXTwork.cols();
   int nbRow = EXTwork.rows();
   int nbColRed = nbCol - shift;
-  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
   auto f = [&](T *out) -> void {
@@ -1957,10 +1955,9 @@ DualDescriptionFaceIneq(MyMatrix<T> const &EXT) {
         eScal += out[iCol] * EXTwork(iRow, iCol);
       pair.first[iRow] = static_cast<bool>(eScal == 0);
     }
-    ListReturn.push_back(pair);
+    f_process(pair);
   };
   Kernel_DualDescription_DropFirst(EXTwork, f);
-  return ListReturn;
 }
 
 template <typename T>
@@ -2048,9 +2045,8 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   return MatrixFromVectorFamily(ListVect);
 }
 
-template <typename T>
-std::vector<std::pair<Face, MyVector<T>>>
-DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
+template <typename T, typename Fprocess>
+void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_process) {
   std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
   MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
@@ -2067,7 +2063,6 @@ DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
   }
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   auto f = [&](Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
@@ -2077,10 +2072,9 @@ DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT) {
         eScal += out[iCol] * EXTring(iRow, iCol);
       pair.first[iRow] = static_cast<bool>(eScal == 0);
     }
-    ListReturn.push_back(pair);
+    f_process(pair);
   };
   Kernel_DualDescription_DropFirst(EXTring, f);
-  return ListReturn;
 }
 
 // clang-format off

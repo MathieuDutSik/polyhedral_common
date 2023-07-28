@@ -8054,13 +8054,11 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
   return ListIncd;
 }
 
-template <typename T>
-std::vector<std::pair<Face, MyVector<T>>>
-ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
-                       MyMatrix<T> const &EXT) {
+template <typename T, typename Fprocess>
+void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
+                            MyMatrix<T> const &EXT, Fprocess f_process) {
   size_t nbCol = EXT.cols();
   size_t nbRow = EXT.rows();
-  std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   T eScal;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
@@ -8072,11 +8070,10 @@ ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
       }
       for (size_t iCol = 0; iCol < nbCol; iCol++)
         pair.second(iCol) = RayPtr->Ray[iCol];
-      ListReturn.push_back(pair);
+      f_process(pair);
     }
     RayPtr = RayPtr->Next;
   }
-  return ListReturn;
 }
 
 template <typename T>
@@ -8140,17 +8137,14 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   return ListIncd;
 }
 
-template <typename T>
-std::vector<std::pair<Face, MyVector<T>>>
-DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT) {
+template <typename T, typename Fprocess>
+void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process) {
   dd_ErrorType err;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
-  std::vector<std::pair<Face, MyVector<T>>> ListReturn =
-      ListFaceIneq_from_poly(poly, TheEXT);
+  ListFaceIneq_from_poly(poly, TheEXT, f_process);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
-  return ListReturn;
 }
 
 // clang-format off

@@ -1074,7 +1074,6 @@ public:
     throw TerminalException{1};
   }
   int get_default_strategy() {
-    os << "DatabaseCanonic: Passing by get_default_stragey\n";
     return CANONIC_STRATEGY__DEFAULT;
   }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
@@ -2044,35 +2043,57 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS
     os << "|ansProg|=" << time_step << "\n";
 #endif
-    vectface TheOutput =
+    if (df.Stab.size() == 1) {
+      auto f_process=[&](std::pair<Face,MyVector<T>> const &pair_face) -> void {
+#ifdef TIMINGS
+        MicrosecondTime time_loc;
+#endif
+        Face eFlipPre = df.FlipFaceIneq(pair_face);
+#ifdef TIMINGS
+        os << "|FlipFaceIneq1|=" << time_loc << "\n";
+#endif
+        Face eFlip = bb.operation_face(eFlipPre);
+#ifdef TIMINGS
+        os << "|operation_face1|=" << time_loc << "\n";
+#endif
+        f_insert(eFlip);
+#ifdef TIMINGS
+        os << "|insert1|=" << time_loc << "\n";
+#endif
+      };
+    } else {
+      vectface TheOutput =
         DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
 #ifdef TIMINGS
-    os << "|TheOutput|=" << time_step << "\n";
-    os << "Number of facets being generated=" << TheOutput.size() << "\n";
+      os << "|TheOutput|=" << time_step << "\n";
+      os << "Number of facets being generated=" << TheOutput.size() << "\n";
 #endif
-    AllArr.DualDescriptionProgram.pop(os);
+      AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS
-    os << "|pop|=" << time_step << "\n";
+      os << "|pop|=" << time_step << "\n";
 #endif
-    for (auto &eOrb : TheOutput) {
+      for (auto &eOrb : TheOutput) {
 #ifdef TIMINGS
-      MicrosecondTime time_loc;
+        MicrosecondTime time_loc;
 #endif
-      Face eFlipPre = df.FlipFace(eOrb);
+        Face eFlipPre = df.FlipFace(eOrb);
 #ifdef TIMINGS
-      os << "|FlipFace1|=" << time_loc << "\n";
+        os << "|FlipFace1|=" << time_loc << "\n";
 #endif
-      Face eFlip = bb.operation_face(eFlipPre);
+        Face eFlip = bb.operation_face(eFlipPre);
 #ifdef TIMINGS
-      os << "|operation_face1|=" << time_loc << "\n";
+        os << "|operation_face1|=" << time_loc << "\n";
 #endif
-      f_insert(eFlip);
+        f_insert(eFlip);
 #ifdef TIMINGS
-      os << "|insert1|=" << time_loc << "\n";
+        os << "|insert1|=" << time_loc << "\n";
+#endif
+      }
+#ifdef TIMINGS
+      os << "|Adjacency processing|=" << time_step << "\n";
 #endif
     }
 #ifdef TIMINGS
-    os << "|Adjacency processing|=" << time_step << "\n";
     os << "|DualDesc + flip + insertion|=" << time_complete << "\n";
 #endif
   } else {
