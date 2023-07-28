@@ -1,5 +1,6 @@
 #PROGRAM		= LATT_lll
-PROGRAM		= POLY_FaceLatticeGen
+PROGRAM		= POLY_MaxCoefficients
+#PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic

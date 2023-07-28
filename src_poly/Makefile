@@ -24,7 +24,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_dual_description POLY_dual_description_group \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
-		  POLY_IsomorphismReduction \
+		  POLY_IsomorphismReduction POLY_MaxCoefficients.cpp \
 		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat \
 		  POLY_FaceLatticeDirect
 
