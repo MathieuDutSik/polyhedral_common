@@ -92,10 +92,12 @@ T sqr_estimate_maximal_determinant(MyMatrix<T> const& M) {
       sum += M(iRow,iCol) * M(iRow,iCol);
     ListSqr.push_back(sum);
   }
+  /*
   std::cerr << "ListSqr=";
   for (auto & eVal : ListSqr)
     std::cerr << " " << eVal;
   std::cerr << "\n";
+  */
   std::sort(ListSqr.begin(), ListSqr.end());
   T eProd = 1;
   for (int iRow=nbRow-nbCol; iRow<nbRow; iRow++) {
