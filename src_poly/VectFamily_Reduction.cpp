@@ -49,11 +49,13 @@ int main(int argc, char *argv[]) {
       double sqr_max = sqrt(max_coeff_d);
       double max_int64_d = std::numeric_limits<int64_t>::max();
       T l1_norm = L1_norm_mat(Minp);
+      T linf_norm = Linfinity_norm_mat(Minp);
       std::cerr << "max_coeff=" << max_coeff << "\n";
       std::cerr << "max_coeff_d=" << max_coeff_d << "\n";
       std::cerr << "sqr_max=" << sqr_max << "\n";
       std::cerr << "max_int64_d=" << max_int64_d << "\n";
       std::cerr << "L1(M)=" << l1_norm << "\n";
+      std::cerr << "Linf(M)=" << linf_norm << "\n";
     };
     std::cerr << "Original complexity measures\n";
     matrix_measure(M);
