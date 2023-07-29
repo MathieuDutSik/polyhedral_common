@@ -16,6 +16,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "VectFamily_Reduction [FileI] [method]\n";
       std::cerr << "\n";
+      std::cerr << " ------- method --------\n";
+      std::cerr << "Possible values for method\n";
+      std::cerr << "direct : apply the direct LLL method\n";
+      std::cerr << "dual   : apply the dual LLL method\n";
+      std::cerr << "\n";
       std::cerr << " ------- OutFormat --------\n";
       std::cerr << "Possible values for OutFormat\n";
       std::cerr << "GAP : for writing in GAP readable file\n";
