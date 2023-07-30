@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "cdd      : the cdd program\n";
       std::cerr << "lrs      : the lrs program\n";
+      std::cerr << "pd_lrs   : the pd with lrs used for checks\n";
       std::cerr << "lrs_ring : the lrs program but reduced to ring computation (remove denominators)\n";
       std::cerr << "glrs     : the external program glrs\n";
       std::cerr << "ppl_ext  : the external program ppl_ext\n";

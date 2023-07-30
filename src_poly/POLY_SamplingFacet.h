@@ -212,7 +212,7 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
 }
 
-template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
+template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
   // Heuristic first, should work in many cases
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t dim = EXTred.cols();
@@ -231,8 +231,8 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
     i_face++;
   }
   size_t rnk = RankMat(FAC);
-  std::cerr << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows
-            << " rnk=" << rnk << " dim=" << dim << "\n";
+  os << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows
+     << " rnk=" << rnk << " dim=" << dim << "\n";
   if (rnk == dim) {
     vectface vf(n_rows);
     for (auto &eFace : set_face)
@@ -240,7 +240,7 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
     return vf;
   }
   // Otherwise we call recursively
-  std::cerr << "Failing, so calling the recursive algo\n";
+  os << "Failing, so calling the recursive algo\n";
   auto get_minincd = [&]() -> Face {
     size_t min_incd = std::numeric_limits<size_t>::max();
     for (auto &eFace : set_face) {
@@ -258,19 +258,32 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT) {
   };
   Face eSet = get_minincd();
   MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXTred, eSet));
-  std::cerr << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
+  os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
             << " rnk=" << RankMat(EXTsel) << "\n";
-  vectface ListRidge = GetFullRankFacetSet(EXTsel);
-  std::cerr << "We have ListRidge\n";
+  vectface ListRidge = GetFullRankFacetSet(EXTsel, os);
+  os << "We have ListRidge\n";
   FlippingFramework<T> RPLlift(EXTred, eSet);
-  std::cerr << "We have FlippingFramework\n";
+  os << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
   for (auto &eRidge : ListRidge) {
     Face eFace = RPLlift.FlipFace(eRidge);
     vf_ret.push_back(eFace);
   }
-  std::cerr << "We have vf_ret\n";
+  os << "We have vf_ret\n";
+#ifdef DEBUG
+  MyMatrix<T> FACsamp(vf_ret.size(), dim);
+  int pos = 0;
+  for (auto & face : vf_ret) {
+    MyVector<T> eFAC = FindFacetInequality(EXTred, face);
+    AssignMatrixRow(FACsamp, pos, eFAC);
+    pos++;
+  }
+  if (RankMat(FACsamp) != static_cast<int>(dim)) {
+    std::cerr << "Failed to find a ful rank vector configuration\n";
+    throw TerminalException{1};
+  }
+#endif
   return vf_ret;
 }
 

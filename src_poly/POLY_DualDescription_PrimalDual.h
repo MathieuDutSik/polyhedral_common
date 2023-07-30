@@ -4,6 +4,7 @@
 
 
 #include "POLY_LinearProgramming.h"
+#include "POLY_SamplingFacet.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
 
@@ -38,26 +39,15 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
       ListEXT.push_back(eEXTred);
     }
   };
-  int dim = FAC.cols();
-  int nb = 100;
-  int iter = 0;
-  MyMatrix<T> EXT;
-  while(true) {
-    vectface vf = FindVertices(FAC, nb);
-    for (auto & face : vf) {
-      MyVector<T> eEXT = FindFacetInequality(FAC, face);
-      f_insert(eEXT);
-    }
-    EXT = MatrixFromVectorFamily(ListEXT);
-    int rnk = RankMat(EXT);
-    os << "iter=" << iter << " rnk=" << rnk << " |EXT|=" << EXT.rows() << "\n";
-    if (rnk == dim) {
-      os << "Exiting the loop\n";
-      break;
-    }
+  os << "Before GetFullRankFacetSet\n";
+  vectface vf = GetFullRankFacetSet(FAC, os);
+  for (auto & face : vf) {
+    MyVector<T> eEXT = FindFacetInequality(FAC, face);
+    f_insert(eEXT);
   }
   os << "Now going into the second iteration\n";
-  iter = 0;
+  int iter = 0;
+  MyMatrix<T> EXT = MatrixFromVectorFamily(ListEXT);
   while (true) {
     vectface vf_myfac = f_dual(EXT);
     int n_before = SetEXT.size();
@@ -77,20 +67,29 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
     os << "n_after=" << n_after << "\n";
     EXT = MatrixFromVectorFamily(ListEXT);
     if (n_before == n_after) {
-      os << "Exiting the second loop\n";
+      os << "Exiting the infinite loop\n";
       break;
     }
   }
+  os << "Returning EXT\n";
   return EXT;
 }
 
 template<typename T>
-vectface POLY_DualDescription_PrimalDual(MyMatrix<T> const& FAC, std::ostream &os) {
-  int dim = FAC.cols();
+MyMatrix<T> POLY_DualDescription_PrimalDualInequalities(MyMatrix<T> const& FAC, std::ostream &os) {
   auto f_dual=[&](MyMatrix<T> const& FACin) -> vectface {
+    os << "FACin=\n";
+    WriteMatrix(os, FACin);
+    os << "rnk=" << RankMat(FACin) << "\n";
     return lrs::DualDescription_incd(FACin);
   };
-  MyMatrix<T> EXT = POLY_DualDescription_PrimalDual_Kernel(FAC, f_dual, os);
+  return POLY_DualDescription_PrimalDual_Kernel(FAC, f_dual, os);
+}
+
+template<typename T>
+vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const& FAC, std::ostream &os) {
+  MyMatrix<T> EXT = POLY_DualDescription_PrimalDualInequalities(FAC, os);
+  int dim = FAC.cols();
   int nbRow = FAC.rows();
   vectface vf(nbRow);
   for (int i_ext=0; i_ext<EXT.rows(); i_ext++) {
@@ -104,10 +103,30 @@ vectface POLY_DualDescription_PrimalDual(MyMatrix<T> const& FAC, std::ostream &o
     }
     vf.push_back(f);
   }
+  os << "|vf|=" << vf.size() << "\n";
   return vf;
 }
 
-
+template<typename T, typename Fprocess>
+void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const& FAC, Fprocess f_process, std::ostream &os) {
+  MyMatrix<T> EXT = POLY_DualDescription_PrimalDualInequalities(FAC, os);
+  int dim = FAC.cols();
+  int nbRow = FAC.rows();
+  vectface vf(nbRow);
+  for (int i_ext=0; i_ext<EXT.rows(); i_ext++) {
+    MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
+    Face f(nbRow);
+    for (int i_row=0; i_row<nbRow; i_row++) {
+      T sum = 0;
+      for (int i=0; i<dim; i++)
+        sum += FAC(i_row,i) * eEXT(i);
+      if (sum == 0)
+        f[i_row] = 1;
+    }
+    std::pair<Face,MyVector<T>> pair{f, eEXT};
+    f_process(pair);
+  }
+}
 
 
 // clang-format off

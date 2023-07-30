@@ -424,7 +424,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   eProg = "pd_lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return POLY_DualDescription_PrimalDual(EXT, os);
+    return POLY_DualDescription_PrimalDualIncidence(EXT, os);
   //
   //
   // The external programs are available only for rationl types
@@ -489,6 +489,11 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescription(EXT);
+  // It applies to the field case or ring
+  eProg = "pd_lrs";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return POLY_DualDescription_PrimalDualInequalities(EXT, os);
   //
   // The external programs are available only for rationl types
   //
@@ -551,6 +556,11 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescriptionFaceIneq(EXT, f_process);
+  // It applies to the field case or ring
+  eProg = "pd_lrs";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
   //
   // The external programs are available only for rationl types
   //
