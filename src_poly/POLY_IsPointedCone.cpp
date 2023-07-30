@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string eFileI = argv[2];
-    auto compute_skeleton = [&](std::ostream &os) -> void {
+    auto compute_pointedness = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         return process<mpq_class>(eFileI, os);
       }
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    compute_skeleton(std::cerr);
+    compute_pointedness(std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs\n";
