@@ -1,5 +1,7 @@
 #PROGRAM		= LATT_lll
-PROGRAM		= VectFamily_Reduction
+PROGRAM		= POLY_IsPointedCone
+#PROGRAM		= VectFamily_Reduction
+#PROGRAM		= VectFamily_ColumnReduction
 #PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= TEST_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
