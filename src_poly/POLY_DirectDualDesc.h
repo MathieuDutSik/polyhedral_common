@@ -451,6 +451,9 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
       return DualDescExternalProgramIncidence(EXT, "normaliz", os);
   }
   //
+  std::cerr << "ERROR in DirectFacetComputationIncidence\n";
+  std::cerr << "No right program found with ansProg=" << ansProg
+            << " or incorrect output\n";
   std::cerr << "ERROR: No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
   std::cerr << "List of authorized programs :";
@@ -519,7 +522,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
       return DualDescExternalProgramIneq(EXT, "normaliz", os);
   }
   //
-  std::cerr << "ERROR: No right program found with ansProg=" << ansProg
+  std::cerr << "ERROR in DirectFacetComputationInequalities\n";
+  std::cerr << "No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
   std::cerr << "List of authorized programs :";
   bool IsFirst = true;
@@ -586,7 +590,8 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
       return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
   }
   //
-  std::cerr << "ERROR: No right program found with ansProg=" << ansProg
+  std::cerr << "ERROR in DirectFacetComputationFaceIneq\n";
+  std::cerr << "No right program found with ansProg=" << ansProg
             << " or incorrect output\n";
   std::cerr << "List of authorized programs :";
   bool IsFirst = true;

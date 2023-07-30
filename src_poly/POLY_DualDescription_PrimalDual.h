@@ -70,6 +70,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
       os << "Exiting the infinite loop\n";
       break;
     }
+    iter++
   }
   os << "Returning EXT\n";
   return EXT;
