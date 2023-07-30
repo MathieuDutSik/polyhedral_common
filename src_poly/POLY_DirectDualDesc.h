@@ -7,6 +7,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
+#include "POLY_DualDescription_PrimalDual.h"
 #include <string>
 #include <vector>
 
@@ -419,6 +420,11 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   ListProg.push_back(eProg);
   if (ansProg == eProg)
     return lrs::DualDescription_incd(EXT);
+  // It applies to the field case or ring
+  eProg = "pd_lrs";
+  ListProg.push_back(eProg);
+  if (ansProg == eProg)
+    return POLY_DualDescription_PrimalDual(EXT, os);
   //
   //
   // The external programs are available only for rationl types

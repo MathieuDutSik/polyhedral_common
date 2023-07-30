@@ -1,5 +1,5 @@
 #PROGRAM		= LATT_lll
-PROGRAM		= POLY_IsPointedCone
+#PROGRAM		= POLY_IsPointedCone
 #PROGRAM		= VectFamily_Reduction
 #PROGRAM		= VectFamily_ColumnReduction
 #PROGRAM		= POLY_FaceLatticeGen
@@ -44,7 +44,7 @@ PROGRAM		= POLY_IsPointedCone
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
-#PROGRAM		= POLY_dual_description
+PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming
