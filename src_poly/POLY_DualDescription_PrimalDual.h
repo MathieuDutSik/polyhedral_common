@@ -43,34 +43,36 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
   vectface vf = GetFullRankFacetSet(FAC, os);
   for (auto & face : vf) {
     MyVector<T> eEXT = FindFacetInequality(FAC, face);
-    f_insert(eEXT);
+    (void)f_insert(eEXT);
   }
   os << "Now going into the second iteration\n";
   int iter = 0;
   MyMatrix<T> EXT = MatrixFromVectorFamily(ListEXT);
   while (true) {
     vectface vf_myfac = f_dual(EXT);
-    int n_before = SetEXT.size();
+    int n_ext = SetEXT.size();
     os << "------------------------\n";
-    os << "iter=" << iter << " |vf_myfac|=" << vf_myfac.size() << " n_before=" << n_before << "\n";
+    os << "iter=" << iter << " |vf_myfac|=" << vf_myfac.size() << " n_ext=" << n_ext << "\n";
     std::vector<MyVector<T>> ListNew;
-    for (auto & face : vf_myfac) {
-      MyVector<T> eFAC = FindFacetInequality(EXT, face);
-      MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
-      if (SetFAC.count(eFACred) == 0) {
-        Face face = FindViolatedFace(FAC, eFACred);
-        MyVector<T> eEXT = FindFacetInequality(FAC, face);
-        f_insert(eEXT);
+    auto f_process=[&]() -> bool {
+      for (auto & face : vf_myfac) {
+        MyVector<T> eFAC = FindFacetInequality(EXT, face);
+        MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
+        if (SetFAC.count(eFACred) == 0) {
+          Face face = FindViolatedFaceFast(FAC, eFACred);
+          MyVector<T> eEXT = FindFacetInequality(FAC, face);
+          f_insert(eEXT);
+          return false;
+        }
       }
-    }
-    int n_after = SetEXT.size();
-    os << "n_after=" << n_after << "\n";
-    EXT = MatrixFromVectorFamily(ListEXT);
-    if (n_before == n_after) {
+      return true;
+    };
+    if (f_process()) {
       os << "Exiting the infinite loop\n";
       break;
     }
-    iter++
+    EXT = MatrixFromVectorFamily(ListEXT);
+    iter++;
   }
   os << "Returning EXT\n";
   return EXT;

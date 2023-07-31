@@ -196,7 +196,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   };
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
-    std::cerr << "We should have just one row in NSP\n";
+    std::cerr << "FindFacetInequality: We should have just one row in NSP\n";
     throw TerminalException{1};
   }
   MyVector<T> eVect(nbCol);
@@ -213,9 +213,25 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
     if (eScal < 0)
       return -eVect;
   }
-  std::cerr << "Error in FindFacetInequality\n";
+  std::cerr << "FindFacetInequality: Failed to find the defining inequality\n";
   throw TerminalException{1};
 }
+
+template <typename T>
+int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
+  size_t nb = OneInc.count();
+  size_t nbCol = TheEXT.cols();
+  boost::dynamic_bitset<>::size_type aRow = OneInc.find_first();
+  auto f = [&](MyMatrix<T> &M, size_t eRank,
+               [[maybe_unused]] size_t iRow) -> void {
+    M.row(eRank) = TheEXT.row(aRow);
+    aRow = OneInc.find_next(aRow);
+  };
+  MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
+  return NSP.rows();
+}
+
+
 
 std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
   int nb = eList.count();

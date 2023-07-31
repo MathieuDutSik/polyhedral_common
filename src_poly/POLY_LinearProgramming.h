@@ -26,6 +26,20 @@ template <typename T> struct LpSolution {
   std::string Answer;
 };
 
+
+template <typename T>
+void PrintLpSolution(LpSolution<T> const& eSol, std::ostream & os) {
+  os << "method=" << eSol.method << "\n";
+  os << "PrimalDefined=" << eSol.PrimalDefined << "\n";
+  os << "DualDefined=" << eSol.DualDefined << "\n";
+  os << "DualSolution=" << StringVector(eSol.DualSolution) << "\n";
+  os << "OptimalValue=" << eSol.OptimalValue << "\n";
+  os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
+  os << "DirectSolutionExt=" << StringVector(eSol.DirectSolutionExt) << "\n";
+  os << "rankDirectSol=" << eSol.rankDirectSol << "\n";
+  os << "Answer=" << eSol.Answer << "\n";
+}
+
 template <typename T>
 void WriteInputFileCdd(std::string const &FileName, MyMatrix<T> const &ListIneq,
                        MyVector<T> const &ToBeMinimized) {
@@ -667,6 +681,50 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
     nbIter++;
   }
 }
+
+template <typename T>
+Face FindViolatedFaceFast(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  MyMatrix<T> EXT_ext(nbRow, nbCol+1);
+  MyVector<T> ToMinimize(nbCol+1);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    EXT_ext(iRow,0);
+    for (int iCol=0; iCol<nbCol; iCol++)
+      EXT_ext(iRow,iCol+1) = EXT(iRow,iCol);
+  }
+  ToMinimize(0) = 0;
+  for (int iCol=0; iCol<nbCol; iCol++)
+    ToMinimize(iCol+1) = eVect(iCol);
+  LpSolution<T> eSol = CDD_LinearProgramming(EXT_ext, ToMinimize);
+  Face eFace(nbRow);
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    T sum = 0;
+    for (int i_col=0; i_col<nbCol; i_col++) {
+      sum += EXT(i_row,i_col) * eSol.DirectSolution(i_col);
+    }
+    if (sum == 0)
+      eFace[i_row] = 1;
+  }
+  int rnk = GetFacetRank(EXT, eFace);
+  if (rnk != 1) {
+    std::cerr << "The rank is not what expected rnk=" << rnk << "\n";
+    std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+    std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
+    std::cerr << "LpSolution=\n";
+    PrintLpSolution(eSol, std::cerr);
+    throw TerminalException{1};
+  }
+  MyVector<T> eFAC = FindFacetInequality(EXT, eFace);
+  T scal = eVect.dot(eFAC);
+  if (scal >= 0) {
+    std::cerr << "Faied to find a correct solution\n";
+    throw TerminalException{1};
+  }
+  return eFace;
+}
+
 
 template <typename T> struct PosRelRes {
   bool eTestExist;

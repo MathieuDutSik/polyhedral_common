@@ -217,7 +217,11 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t dim = EXTred.cols();
   size_t n_rows = EXT.rows();
-  size_t nb = 10 * dim;
+  size_t nb = 4;
+  if (dim < 7) {
+    nb = 2 * dim;
+  }
+  nb = 10 * dim;
   vectface ListSets = FindVertices(EXTred, nb);
   std::unordered_set<Face> set_face;
   for (auto &eFace : ListSets)
