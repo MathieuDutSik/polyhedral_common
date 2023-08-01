@@ -217,11 +217,23 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   size_t dim = EXTred.cols();
   size_t n_rows = EXT.rows();
+  if (dim == 2) {
+    if (n_rows != 2) {
+      std::cerr << "In dimension 2, the cone should have exactly two extreme rays\n";
+      throw TerminalException{1};
+    }
+    vectface vf_ret(2);
+    Face f1(2), f2(2);
+    f1[0] = 1;
+    f2[1] = 1;
+    vf_ret.push_back(f1);
+    vf_ret.push_back(f2);
+    return vf_ret;
+  }
   size_t nb = 4;
   if (dim < 7) {
     nb = 2 * dim;
   }
-  nb = 10 * dim;
   vectface ListSets = FindVertices(EXTred, nb);
   std::unordered_set<Face> set_face;
   for (auto &eFace : ListSets)
