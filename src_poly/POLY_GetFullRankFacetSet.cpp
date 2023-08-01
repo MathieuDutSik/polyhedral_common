@@ -1,4 +1,4 @@
-$0;95;0c// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
 #include "POLY_SamplingFacet.h"
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     size_t n_rows = EXT.rows();
     //
-    vectface ListFace = GetFullRankFacetSet(EXT);
+    vectface ListFace = GetFullRankFacetSet(EXT, std::cerr);
     std::cerr << "We have ListFace\n";
     //
     std::ofstream os(argv[2]);
