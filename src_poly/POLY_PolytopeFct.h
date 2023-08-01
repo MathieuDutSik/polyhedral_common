@@ -152,7 +152,7 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) 
   int nbMinus = 0;
   int nbError = 0;
   MyVector<T> eVect(nbCol);
-  for (size_t iCol = 0; iCol < nbCol; iCol++)
+  for (int iCol = 0; iCol < nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eScal = 0;
@@ -457,9 +457,10 @@ public:
     EXT_fast = MyMatrix<long>(nbRow, nbCol - 1);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        max_bits = std::max(mpz_sizeinbase(EXT_red(iRow, iCol).get_mpz_t(), 2),
+        Tint const& val = EXT_red(iRow, iCol);
+        max_bits = std::max(mpz_sizeinbase(val.get_mpz_t(), 2),
                             max_bits);
-        EXT_fast(iRow, iCol) = EXT_red(iRow, iCol).get_si();
+        EXT_fast(iRow, iCol) = val.get_si();
         EXT_fastT(iRow, iCol) = Tfast(EXT_fast(iRow, iCol));
       }
     }
@@ -698,126 +699,8 @@ template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
                      Face const &sInc) {
   MyMatrix<T> TheEXT = ColumnReduction(EXT);
-  int nbRow = TheEXT.rows();
-  int nbCol = TheEXT.cols();
-  vectface TwoPlanes(nbRow);
-  T eVal, prov1, prov2, prov3, prov4;
-  T EXT1_1, EXT1_2, EXT2_1, EXT2_2;
-  T TheDet, det12, det1N, det2N, prodDet, h;
-  int nbForm, IsNonZero, i;
-  //  std::cerr << "Begining of ComputeFlipping\n";
-  //  std::cerr << "OneInc(count/size)=" << OneInc.count() << "/" <<
-  //  OneInc.size() << "\n"; std::cerr << "sInc(count/size)=" << sInc.count() <<
-  //  "/" << sInc.size() << "\n"; std::cerr << "RankMat(TheEXT)=" <<
-  //  RankMat(TheEXT) << "\n";
-  if (OneInc.count() != sInc.size()) {
-    std::cerr << "Error in ComputeFlipping\n";
-    throw TerminalException{1};
-  }
-  int nb = sInc.count();
-  MyMatrix<T> TheProv(nb, nbCol);
-  MyMatrix<T> LV(2, 2);
-  std::vector<int> OneInc_V = Dynamic_bitset_to_vectorint(OneInc);
-  boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-  for (int iRow = 0; iRow < nb; iRow++) {
-    int aRow = OneInc_V[jRow];
-    TheProv.row(iRow) = TheEXT.row(aRow);
-    jRow = sInc.find_next(jRow);
-  }
-  //  std::cerr << "RankMat(TheProv)=" << RankMat(TheProv) << "\n";
-  SelectionRowCol<T> eSelect = TMat_SelectRowCol(TheProv);
-  MyMatrix<T> NSP = eSelect.NSP;
-  if (NSP.rows() != 2) {
-    int nbRowNSP = NSP.rows();
-    std::cerr << "NSP.nbRows=" << nbRowNSP << "\n";
-    std::cerr << "Deep inconsistency in ComputeFlipping\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<T> NSPtrans = TransposedMat(NSP);
-  MyMatrix<T> LProd = TheEXT * NSPtrans;
-  nbForm = 0;
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    IsNonZero = 0;
-    for (i = 0; i < 2; i++) {
-      prov1 = LProd(iRow, i);
-      if (prov1 != 0)
-        IsNonZero = 1;
-    }
-    if (IsNonZero == 1) {
-      prov1 = LProd(iRow, 0);
-      prov2 = LProd(iRow, 1);
-      if (nbForm == 0) {
-        EXT1_1 = prov1;
-        EXT1_2 = prov2;
-        nbForm++;
-      } else {
-        TheDet = prov2 * EXT1_1 - prov1 * EXT1_2;
-        if (nbForm == 1) {
-          if (TheDet != 0) {
-            EXT2_1 = prov1;
-            EXT2_2 = prov2;
-            det12 = TheDet;
-            nbForm++;
-          }
-        } else {
-          det1N = TheDet;
-          det2N = prov2 * EXT2_1 - prov1 * EXT2_2;
-          prodDet = det1N * det2N;
-          if (prodDet > 0) {
-            prodDet = det12 * det1N;
-            if (prodDet > 0) {
-              EXT2_1 = prov1;
-              EXT2_2 = prov2;
-              det12 = det1N;
-            } else {
-              EXT1_1 = prov1;
-              EXT1_2 = prov2;
-              det12 = -det2N;
-            }
-          }
-        }
-      }
-    }
-  }
-  if (det12 > 0) {
-    eVal = -EXT1_2;
-    LV(0, 0) = eVal;
-    LV(1, 0) = EXT1_1;
-    LV(0, 1) = EXT2_2;
-    eVal = -EXT2_1;
-    LV(1, 1) = eVal;
-  } else {
-    LV(0, 0) = EXT1_2;
-    eVal = -EXT1_1;
-    LV(1, 0) = eVal;
-    eVal = -EXT2_2;
-    LV(0, 1) = eVal;
-    LV(1, 1) = EXT2_1;
-  }
-  MyMatrix<T> PairFac = NSPtrans * LV;
-  MyMatrix<T> ListScal = TheEXT * PairFac;
-  for (i = 0; i < 2; i++) {
-    Face ePlane(nbRow);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      eVal = ListScal(iRow, i);
-      if (eVal < 0) {
-        std::cerr << "This should never have happened. Please panic\n";
-        throw TerminalException{1};
-      }
-      if (eVal == 0)
-        ePlane[iRow] = 1;
-    }
-    TwoPlanes.push_back(ePlane);
-  }
-  int idxFound = -1;
-  for (int k = 0; k < 2; k++)
-    if (TwoPlanes[k] == OneInc)
-      idxFound = k;
-  if (idxFound == -1) {
-    std::cerr << "We did not find the facet\n";
-    throw TerminalException{1};
-  }
-  return TwoPlanes[1 - idxFound];
+  FlippingFramework TheFram(TheEXT, OneInc);
+  return TheFram.FlipFace(sInc);
 }
 
 void PrintListOrbit(std::ostream &os, vectface const &ListOrbit) {
