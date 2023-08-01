@@ -13,7 +13,6 @@
 #include "Temp_PolytopeEquiStab.h"
 #include "Timings.h"
 #include "MPI_basic.h"
-
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "Databank.h"
