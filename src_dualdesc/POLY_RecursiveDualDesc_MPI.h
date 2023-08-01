@@ -711,9 +711,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     vectface vf = get_vectface();
     if(AllArr.bank_parallelization_method == "bank_mpi" and i_rank == proc_bank) {
       os << "Closed DataBankMpiServer" << std::endl;
-      return; 
+      return;
     }
-    
     msg_term_bank();
     // output
     os << "We have vf |vf|=" << vf.size() << " / " << vf.get_n() << "\n";
