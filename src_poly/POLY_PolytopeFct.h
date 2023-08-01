@@ -132,55 +132,61 @@ T sqr_estimate_facet_coefficients(MyMatrix<T> const& M) {
 }
 
 template <typename T>
-void TestFacetness(MyMatrix<T> const &EXT, Face const &eList) {
-  MyMatrix<T> TheEXT = ColumnReduction(EXT);
+MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) {
   int nb = eList.count();
-  int nbRow = TheEXT.rows();
-  int nbCol = TheEXT.cols();
-  MyMatrix<T> TheProv(nb, nbCol);
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
   boost::dynamic_bitset<>::size_type aRow = eList.find_first();
-  for (int iRow = 0; iRow < nb; iRow++) {
-    TheProv.row(iRow) = TheEXT.row(aRow);
+  auto f = [&](MyMatrix<T> &M, size_t eRank,
+               [[maybe_unused]] size_t iRow) -> void {
+    M.row(eRank) = EXT.row(aRow);
     aRow = eList.find_next(aRow);
-  }
-  SelectionRowCol<T> eSelect = TMat_SelectRowCol(TheProv);
-  MyMatrix<T> NSP = eSelect.NSP;
+  };
+  MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "Error in rank in Facetness\n";
     std::cerr << "|NSP|=" << NSP.rows() << "\n";
     throw TerminalException{1};
   }
-  int nbZero = 0;
   int nbPlus = 0;
   int nbMinus = 0;
+  int nbError = 0;
+  MyVector<T> eVect(nbCol);
+  for (size_t iCol = 0; iCol < nbCol; iCol++)
+    eVect(iCol) = NSP(0, iCol);
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eScal = 0;
     for (int iCol = 0; iCol < nbCol; iCol++)
-      eScal += NSP(0, iCol) * TheEXT(iRow, iCol);
-    if (eScal == 0)
-      nbZero++;
-    if (eScal > 0)
-      nbPlus++;
-    if (eScal < 0)
-      nbMinus++;
+      eScal += eVect(iCol) * EXT(iRow, iCol);
+    if (eScal == 0) {
+      if (eList[iRow] != 1) {
+        std::cerr << "The vertex iRow has a zero scalar product but does not belong to eList\n";
+        nbError++;
+      }
+    } else {
+      if (eList[iRow] != 0) {
+        std::cerr << "The vertex iRow has a non-zero scalar product but does belong to eList\n";
+        nbError++;
+      }
+      if (eScal > 0)
+        nbPlus++;
+      if (eScal < 0)
+        nbMinus++;
+    }
   }
-  if (nbZero == EXT.rows()) {
-    std::cerr << "All vectors seems to be incident. And that is not allowed "
-                 "for a facet\n";
-    throw TerminalException{1};
+  if (nbMinus > 0 && nbPlus > 0) {
+    std::cerr << "Some plus and minus signs, illegal\n";
+    nbError++;
   }
-  if (nbZero != nb) {
-    std::cerr << "Error in computing incidence\n";
-    std::cerr << "nbZero=" << nbZero << " nb=" << nb << "\n";
+  if (nbError > 0) {
     std::cerr << "nbMinus=" << nbMinus << " nbPlus=" << nbPlus << "\n";
     std::cerr << "EXT(rows/cols)=" << EXT.rows() << " / " << EXT.cols() << "\n";
     std::cerr << "Rank(EXT)=" << RankMat(EXT) << "\n";
     throw TerminalException{1};
   }
-  if (nbMinus > 0 && nbPlus > 0) {
-    std::cerr << "Some plus and minus signs, illegal\n";
-    throw TerminalException{1};
-  }
+  if (nbPlus > 0)
+    return eVect;
+  return -eVect;
 }
 
 template <typename T>
@@ -197,6 +203,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "FindFacetInequality: We should have just one row in NSP\n";
+    std::cerr << "|NSP|=" << NSP.rows() << "\n";
     throw TerminalException{1};
   }
   MyVector<T> eVect(nbCol);
@@ -710,7 +717,6 @@ Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
   int nb = sInc.count();
   MyMatrix<T> TheProv(nb, nbCol);
   MyMatrix<T> LV(2, 2);
-  TestFacetness(TheEXT, OneInc);
   std::vector<int> OneInc_V = Dynamic_bitset_to_vectorint(OneInc);
   boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
   for (int iRow = 0; iRow < nb; iRow++) {

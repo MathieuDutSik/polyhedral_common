@@ -342,10 +342,6 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       vectface ListFaceRet = OrbitSplittingListOrbit(
           GRPconj, GRP, ListReprTrans, MProc.GetO(TheId));
       MProc.GetO(TheId) << "After the OrbitSplitting\n";
-      for (auto &eFace : ListFaceRet) {
-        TestFacetness(EXT, eFace);
-      }
-      MProc.GetO(TheId) << "After the checks\n";
       return ListFaceRet;
     }
   }

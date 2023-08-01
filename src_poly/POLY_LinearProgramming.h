@@ -707,21 +707,14 @@ Face FindViolatedFaceFast(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
     if (sum == 0)
       eFace[i_row] = 1;
   }
-  int rnk = GetFacetRank(EXT, eFace);
-  if (rnk != 1) {
-    std::cerr << "The rank is not what expected rnk=" << rnk << "\n";
-    std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
-    std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
-    std::cerr << "LpSolution=\n";
-    PrintLpSolution(eSol, std::cerr);
-    throw TerminalException{1};
-  }
-  MyVector<T> eFAC = FindFacetInequality(EXT, eFace);
+#ifdef DEBUG
+  MyVector<T> eFAC = FindFacetInequalityCheck(EXT, eFace);
   T scal = eVect.dot(eFAC);
   if (scal >= 0) {
     std::cerr << "Faied to find a correct solution\n";
     throw TerminalException{1};
   }
+#endif
   return eFace;
 }
 
