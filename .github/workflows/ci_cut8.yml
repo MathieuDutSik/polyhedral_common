@@ -8,7 +8,7 @@ name: CI of dual description CUT8
 # https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules
 
 on:
-  # Every day at 5 am.
+  # At midnight on every Wednesday
   schedule:
     - cron: "0 0 * * 3"
   # Manually triggered

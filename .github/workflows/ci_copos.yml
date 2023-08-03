@@ -5,7 +5,7 @@ name: CI of Copositivity code
 # on: release
 
 on:
-  # Every day at 5 am.
+  # At midnight on every Tueday
   schedule:
     - cron: "0 0 * * 2"
   # Manually triggered
