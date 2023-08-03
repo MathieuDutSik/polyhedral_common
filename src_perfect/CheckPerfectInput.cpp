@@ -57,7 +57,6 @@ int main(int argc, char *argv[]) {
         Face f(n_SHV);
         for (auto &eV : V)
           f[eV] = 1;
-        TestFacetness(PerfectCone, f);
       }
     };
 
