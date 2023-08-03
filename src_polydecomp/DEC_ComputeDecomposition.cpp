@@ -76,7 +76,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "List(|FAC|) =";
       for (size_t iFac = 0; iFac < n_fac; iFac++) {
         Face f = GetFacet_extfac(extfac_incd, n_fac, n_ext, iFac);
-        TestFacetness(EXT, f);
         std::cerr << " " << f.count();
       }
       std::cerr << "\n";
