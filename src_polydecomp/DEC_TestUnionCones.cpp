@@ -32,11 +32,9 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
-      size_t n_ext = EXT.rows();
       std::cerr << "We have read EXT, |EXT|=" << EXT.rows() << "/" << EXT.cols()
                 << "\n";
       MyMatrix<T> FAC = ReadMatrix<T>(is);
-      size_t n_fac = FAC.rows();
       std::cerr << "We have read FAC, |FAC|=" << FAC.rows() << "/" << FAC.cols()
                 << "\n";
       ConeSimpDesc<T> eCone{EXT, FAC};
