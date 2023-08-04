@@ -81,9 +81,6 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
 template<typename T>
 MyMatrix<T> POLY_DualDescription_PrimalDualInequalities(MyMatrix<T> const& FAC, std::ostream &os) {
   auto f_dual=[&](MyMatrix<T> const& FACin) -> vectface {
-    os << "FACin=\n";
-    WriteMatrix(os, FACin);
-    os << "rnk=" << RankMat(FACin) << "\n";
     return lrs::DualDescription_incd(FACin);
   };
   return POLY_DualDescription_PrimalDual_Kernel(FAC, f_dual, os);

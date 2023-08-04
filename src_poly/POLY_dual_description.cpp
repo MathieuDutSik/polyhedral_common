@@ -10,8 +10,8 @@ template <typename T>
 void process(std::string const &eFileI, std::string const& ansProg, std::string const& choice, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   if (choice == "control") {
-    vectface vf = DirectFacetComputationIncidence(EXT, ansProg, os);
-    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, os);
+    vectface vf = DirectFacetComputationIncidence(EXT, ansProg, std::cerr);
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     os << "Obtained results:\n";
     os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
     size_t pos = 0;
@@ -21,9 +21,10 @@ void process(std::string const &eFileI, std::string const& ansProg, std::string 
     return WriteMatrix(os, FAC);
   }
   if (choice == "CPP") {
-    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, os);
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     return WriteMatrix(os, FAC);
   }
+  std::cerr << "choice=" << choice << " but allowed possibilities are control and CPP\n";
   std::cerr << "Failed to find a matching entry\n";
   throw TerminalException{1};
 }
@@ -72,12 +73,12 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string command = argv[2];
-    std::string eFileI = argv[3];
-    std::string choice = argv[4];
+    std::string choice = argv[3];
+    std::string eFileI = argv[4];
     std::string eFileO = "stderr";
     if (argc == 6)
       eFileO = argv[5];
-    auto call_lrs = [&](std::ostream &os) -> void {
+    auto dual_desc = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
         return process<T>(eFileI, command, choice, os);
@@ -115,13 +116,13 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     if (eFileO == "stderr") {
-      call_lrs(std::cerr);
+      dual_desc(std::cerr);
     } else {
       if (eFileO == "stdout") {
-        call_lrs(std::cout);
+        dual_desc(std::cout);
       } else {
         std::ofstream os(eFileO);
-        call_lrs(os);
+        dual_desc(os);
       }
     }
     std::cerr << "Normal termination of the program\n";
