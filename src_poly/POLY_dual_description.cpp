@@ -7,28 +7,36 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const& ansProg, std::ostream &os) {
+void process(std::string const &eFileI, std::string const& ansProg, std::string const& choice, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  vectface vf = DirectFacetComputationIncidence(EXT, ansProg, os);
-  MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, os);
-  os << "Obtained results:\n";
-  os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
-  size_t pos = 0;
-  for (Face f : vf) {
-    os << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count() << "\n";
+  if (choice == "control") {
+    vectface vf = DirectFacetComputationIncidence(EXT, ansProg, os);
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, os);
+    os << "Obtained results:\n";
+    os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
+    size_t pos = 0;
+    for (Face f : vf) {
+      os << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count() << "\n";
+    }
+    return WriteMatrix(os, FAC);
   }
-  WriteMatrix(os, FAC);
+  if (choice == "CPP") {
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, os);
+    return WriteMatrix(os, FAC);
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
 }
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 4 && argc != 5) {
+    if (argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_dual_description arith command [DATAIN] [DATAOUT]\n";
+      std::cerr << "POLY_dual_description arith command choice [DATAIN] [DATAOUT]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_dual_description arith command [DATAIN]\n";
+      std::cerr << "POLY_dual_description arith command choice [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "arith   : the chosen arithmetic\n";
@@ -54,28 +62,35 @@ int main(int argc, char *argv[]) {
       std::cerr << "ppl_ext  : the external program ppl_ext\n";
       std::cerr << "cdd_ext  : the external program cdd_ext\n";
       std::cerr << "normaliz : the external program normaliz\n";
+      std::cerr << "\n";
+      std::cerr << "        --- choice ---\n";
+      std::cerr << "\n";
+      std::cerr << "control : the full data set for control and debugging\n";
+      std::cerr << "CPP     : the matrix for output (also used in Oscar)\n";
       return -1;
     }
     //
     std::string arith = argv[1];
     std::string command = argv[2];
     std::string eFileI = argv[3];
+    std::string choice = argv[4];
     std::string eFileO = "stderr";
-    if (argc == 5)
-      eFileO = argv[4];
+    if (argc == 6)
+      eFileO = argv[5];
     auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "rational") {
-        return process<mpq_class>(eFileI, command, os);
+        using T = mpq_class;
+        return process<T>(eFileI, command, choice, os);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, choice, os);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, choice, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -91,7 +106,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, command, os);
+        return process<T>(eFileI, command, choice, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
