@@ -51,23 +51,30 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
   while (true) {
     vectface vf_myfac = f_dual(EXT);
     int n_ext = SetEXT.size();
-    os << "------------------------\n";
     os << "iter=" << iter << " |vf_myfac|=" << vf_myfac.size() << " n_ext=" << n_ext << "\n";
-    std::vector<MyVector<T>> ListNew;
-    auto f_process=[&]() -> bool {
-      for (auto & face : vf_myfac) {
-        MyVector<T> eFAC = FindFacetInequality(EXT, face);
-        MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
-        if (SetFAC.count(eFACred) == 0) {
+    std::vector<MyVector<T>> ListNewEXT;
+    auto has_violating_facet=[&](MyVector<T> const& eFAC) -> bool {
+      for (auto & eNewEXT : ListNewEXT) {
+        T scal = eNewEXT.dot(eFAC);
+        if (scal < 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+    for (auto & face : vf_myfac) {
+      MyVector<T> eFAC = FindFacetInequality(EXT, face);
+      MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
+      if (SetFAC.count(eFACred) == 0) { // Missing so operation is needed
+        if (!has_violating_facet(eFACred)) { // Check if we already had something matching
           Face face = FindViolatedFaceFast(FAC, eFACred);
           MyVector<T> eEXT = FindFacetInequality(FAC, face);
           f_insert(eEXT);
-          return false;
+          ListNewEXT.push_back(eEXT);
         }
       }
-      return true;
-    };
-    if (f_process()) {
+    }
+    if (ListNewEXT.size() == 0) {
       os << "Exiting the infinite loop\n";
       break;
     }
