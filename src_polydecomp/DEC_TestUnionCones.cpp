@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc != 5 && argc != 4) {
+    if (argc != 2 && argc != 3) {
       std::cerr << "DEC_TestUnionCones [FileI] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "DEC_TestUnionCones [FileI]\n";

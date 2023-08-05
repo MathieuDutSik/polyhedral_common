@@ -1168,7 +1168,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
-  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
+  //  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
   if (!eRes.eTestExist) {
     return IdentityMat<T>(nbCol);
   } else {

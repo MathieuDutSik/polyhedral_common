@@ -725,13 +725,20 @@ template<typename T>
 std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<T>> const& l_cone) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
-  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
-    for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
-      MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
-      MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FACtot);
-      if (LinSpace.rows() != dim) {
-        std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
-        return {};
+  bool TestPairwiseIntersection = true;
+  HumanTime time;
+  if (TestPairwiseIntersection) {
+    for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
+      std::cerr << "i_cone=" << i_cone << " / " << n_cone << " duration=" << time << "\n";
+      for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
+        MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
+        MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FACtot);
+        int int_rows = LinSpace.rows();
+//        std::cerr << "i_cone=" << i_cone << " j_cone=" << j_cone << " dim=" << dim << " int=" << int_rows << "/" << LinSpace.cols() << "\n";
+        if (int_rows == dim) {
+          std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
+          return {};
+        }
       }
     }
   }
@@ -763,6 +770,8 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     MapEXT[eEXT] = i_ext_tot;
   }
   std::cerr << "MapEXT built\n";
+  // We match the facets in order to find which ones are
+  // contained into just one and so get the facet of our cones.
   for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
     MyMatrix<T> const& FAC = l_cone[i_cone].FAC;
     MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
@@ -786,6 +795,10 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     }
   }
   std::cerr << "FACmult built\n";
+  // We check that the facets matched only once have all
+  // the vertices on the right side.
+  // At the same time, we build the set of facets (with
+  // no duplication)
   std::set<MyVector<T>> SetFAC;
   auto is_matching_facet=[&](MyVector<T> const& eFAC) -> bool {
     for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
@@ -816,6 +829,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     }
   }
   std::cerr << "We have SetFAC\n";
+  // Building the FAC matrix
   int n_fac_final = SetFAC.size();
   std::cerr << "n_fac_final=" << n_fac_final << "\n";
   MyMatrix<T> FACfinal(n_fac_final, dim);
@@ -828,6 +842,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     pos_fac++;
   }
   std::cerr << "We have FACfinal\n";
+  // Selecting the vertices of the right rank.
   std::vector<MyVector<T>> ListEXT;
   size_t min_len = dim - 1;
   for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
