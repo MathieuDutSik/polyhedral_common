@@ -228,9 +228,9 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
     vf_ret.push_back(f2);
     return vf_ret;
   }
-  size_t nb = 1;
-  vectface ListSets = Kernel_FindVertices(EXT, nb);
-  Face eSet = ListSets[0];
+  Face eSet = Kernel_FindSingleVertex(EXT);
+  // Here we use a trick that the ColumnReduction will select the first column and so
+  // will return a matrix that is polytopal
   MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXT, eSet));
   os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
             << " rnk=" << RankMat(EXTsel) << "\n";

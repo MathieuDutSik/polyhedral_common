@@ -534,13 +534,12 @@ MyMatrix<T> SetIsobarycenter(MyMatrix<T> const& EXT) {
 }
 
 template <typename T>
-vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
+Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyVector<T> eVect = MyVector<T>(nbCol);
   MyVector<T> TheVert = MyVector<T>(nbCol);
-  vectface ListFace(EXT.rows());
   while (true) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
       int a = random();
@@ -564,11 +563,19 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
     MyMatrix<T> RnkMat = SelectRow(EXT, eInc);
     int TheRank = RankMat(RnkMat);
     if (TheRank == nbCol - 1) {
-      ListFace.push_back(eInc);
-      if (ListFace.size() == nb)
-        return ListFace;
+      return eInc;
     }
   }
+}
+
+template <typename T>
+vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
+  vectface vf(EXT.rows());
+  for (size_t i=0; i<nb; i++) {
+    Face f = Kernel_FindSingleVertex(EXT);
+    vf.push_back(f);
+  }
+  return vf;
 }
 
 template <typename T>
