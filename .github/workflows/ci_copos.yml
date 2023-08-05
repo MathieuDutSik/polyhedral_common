@@ -130,7 +130,7 @@ jobs:
           pwd
           echo "After compilation of copositivity code"
 
-          cd Exmpl_Bench/Copositivity
+          cd CI_tests/Copositivity
           ../../gap.sh < TestCompletePositivity.g
           ../../gap.sh < TestCopos.g
           cd ../..

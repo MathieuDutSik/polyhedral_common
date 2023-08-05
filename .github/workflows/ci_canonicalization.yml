@@ -131,4 +131,4 @@ jobs:
           echo "After compilation of lattice code"
 
           # Running the test
-          ./gap.sh < Exmpl_Bench/Canonicalizations/TestCanonicalization.g
+          ./gap.sh < CI_tests/Canonicalizations/TestCanonicalization.g
