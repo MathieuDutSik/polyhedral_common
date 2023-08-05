@@ -1,0 +1,137 @@
+name: CI of Reflective lattices
+
+# https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
+# model taken from https://github.com/mockersf/kmanb/releases
+# on: release
+
+on:
+  # At midnight on every Thursday
+  schedule:
+    - cron: "0 0 * * *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      TBB_INCDIR: /usr/include
+      TBB_LINK: "-ltbb"
+      GSL_INCDIR: /usr/include
+      GSL_C_LINK: "-lgsl -lgslcblas"
+      GLPK_INCLUDE: "-I/usr/include"
+      GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
+      FLINT_INCDIR: "/include"
+      FLINT_LINK: "-lflint"
+      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
+      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
+      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      NETCDF_CXX_ALLINC: "-I/home/runner/work/opt/netcdf-cxx4-4.3.1/include -I/home/runner/work/opt/netcdf-cxx4-4.3.1/include"
+      NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+#      NAUTY_LINK: "-L/home/runner/work/opt/nauty/lib -lnauty_shared -Wl,-rpath,/home/runner/work/opt/nauty/lib"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      LIBSHORT_PATH: /home/runner/opt/libshort
+      LIBSHORT_INCDIR: /home/runner/opt/libshort/include
+      LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
+      MPI_INCLUDE_CPP: "-I/usr/lib/x86_64-linux-gnu/openmpi/include"
+      MPI_LINK_CPP: "-lboost_mpi -lboost_serialization -lmpi -lmpi_cxx"
+      MPFR_INCDIR: /usr/include
+      MPFR_LINK: "-lmpfr"
+
+
+
+
+
+    steps:
+#      - name: Get the version
+#        id: get_version
+#        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
+          sudo apt-get install -y wget
+          sudo apt-get install -y g++-11 clang-12
+          sudo apt-get install -y g++ gcc gfortran
+          sudo apt-get install -y cmake
+          sudo apt-get install -y libgmp-dev
+          sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
+          sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
+          sudo apt-get install -y autoconf autotools-dev libtool
+          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
+          sudo apt-get install -y libntl-dev libmpfr-dev
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
+          sudo apt-get install -y autoconf autotools-dev libtool
+          sudo apt-get install -y texlive-latex-base # needed for the manual of cddlib to be compiled
+
+      - name: Build test code
+        run: |
+          ls
+          echo "After ls"
+
+          pwd
+          echo "After pwd"
+
+          ls basic_common_cpp
+          echo "After ls basic_common_cpp"
+
+          mkdir basic_common_cpp/ExternalLib/nauty/build
+          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
+          pwd
+          echo "After nauty compilation"
+
+          mkdir basic_common_cpp/ExternalLib/bliss/build
+          cd basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH .. && make all install && cd ../../../..
+          pwd
+          echo "After bliss compilation"
+
+          cd ExternalLib/LibShort && make -f Makefile_lib && make -f Makefile_lib install && cd ../..
+          pwd
+          echo "After libshort compilation"
+
+          git clone https://github.com/cddlib/cddlib
+          cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
+          pwd
+          echo "After cddlib compilation"
+
+          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
+          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+          tar -xzf eigen-3.3.9.tar.gz
+          mv eigen-3.3.9 /home/runner/work/opt/eigen
+          pwd
+          echo "After eigen-3.3.9 set up"
+
+          # Downloading and compiling gap
+          wget -q https://github.com/gap-system/gap/releases/download/v4.11.1/gap-4.11.1.tar.gz
+          tar -xzf gap-4.11.1.tar.gz
+          cd gap-4.11.1 && ./configure && make && cd ..
+          pwd
+          ln -s gap-4.11.1/bin/gap.sh .
+
+      - name: Test dual description
+        run: |
+          cd src_poly && make -f Makefile_simple_dual_desc && cd ..
+          pwd
+          echo "After compilation of Dual description code"
+
+          cd Exmpl_Bench/CI_tests
+          ../../gap.sh < TestSimpleDualDesc.g
+          cd ../..

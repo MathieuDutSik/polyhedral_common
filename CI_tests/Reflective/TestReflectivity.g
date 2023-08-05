@@ -1,5 +1,5 @@
 
-Print("Beginning TestCanonicalization\n");
+Print("Beginning TestReflectivity\n");
 
 
 TestReflectivity:=function(eRec)
