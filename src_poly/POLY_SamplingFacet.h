@@ -212,10 +212,8 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
 }
 
-template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
-  // Heuristic first, should work in many cases
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
-  size_t dim = EXTred.cols();
+template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
+  size_t dim = EXT.cols();
   size_t n_rows = EXT.rows();
   if (dim == 2) {
     if (n_rows != 2) {
@@ -230,55 +228,15 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
     vf_ret.push_back(f2);
     return vf_ret;
   }
-  size_t nb = 4;
-  if (dim < 7) {
-    nb = 2 * dim;
-  }
-  vectface ListSets = FindVertices(EXTred, nb);
-  std::unordered_set<Face> set_face;
-  for (auto &eFace : ListSets)
-    set_face.insert(eFace);
-  size_t n_face = set_face.size();
-  MyMatrix<T> FAC(n_face, dim);
-  size_t i_face = 0;
-  for (auto &eFace : set_face) {
-    MyVector<T> V = FindFacetInequality(EXT, eFace);
-    AssignMatrixRow(FAC, i_face, V);
-    i_face++;
-  }
-  size_t rnk = RankMat(FAC);
-  os << "GetFullRankFacetSet |FAC|=" << FAC.rows() << " |EXT|=" << n_rows
-     << " rnk=" << rnk << " dim=" << dim << "\n";
-  if (rnk == dim) {
-    vectface vf(n_rows);
-    for (auto &eFace : set_face)
-      vf.push_back(eFace);
-    return vf;
-  }
-  // Otherwise we call recursively
-  os << "Failing, so calling the recursive algo\n";
-  auto get_minincd = [&]() -> Face {
-    size_t min_incd = std::numeric_limits<size_t>::max();
-    for (auto &eFace : set_face) {
-      size_t incd = eFace.count();
-      if (incd < min_incd)
-        min_incd = incd;
-    }
-    for (auto &eFace : set_face) {
-      size_t incd = eFace.count();
-      if (incd == min_incd)
-        return eFace;
-    }
-    std::cerr << "We should not reach that stage\n";
-    throw TerminalException{1};
-  };
-  Face eSet = get_minincd();
-  MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXTred, eSet));
+  size_t nb = 1;
+  vectface ListSets = Kernel_FindVertices(EXT, nb);
+  Face eSet = ListSets[0];
+  MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXT, eSet));
   os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
             << " rnk=" << RankMat(EXTsel) << "\n";
-  vectface ListRidge = GetFullRankFacetSet(EXTsel, os);
+  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, os);
   os << "We have ListRidge\n";
-  FlippingFramework<T> RPLlift(EXTred, eSet);
+  FlippingFramework<T> RPLlift(EXT, eSet);
   os << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
@@ -291,7 +249,7 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
   int pos = 0;
   for (auto & face : vf_ret) {
-    MyVector<T> eFAC = FindFacetInequality(EXTred, face);
+    MyVector<T> eFAC = FindFacetInequality(EXT, face);
     AssignMatrixRow(FACsamp, pos, eFAC);
     pos++;
   }
@@ -302,6 +260,14 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
 #endif
   return vf_ret;
 }
+
+template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
+  MyMatrix<T> EXT_B = ColumnReduction(EXT);
+  MyMatrix<T> EXT_C = Polytopization(EXT_B);
+  MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
+  return Kernel_GetFullRankFacetSet(EXT_D, os);
+}
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_SAMPLINGFACET_H_

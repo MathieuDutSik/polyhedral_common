@@ -512,12 +512,11 @@ template <typename T> struct SolVertex {
 };
 
 template <typename T>
-vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
+MyMatrix<T> SetIsobarycenter(MyMatrix<T> const& EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyVector<T> eVect = MyVector<T>(nbCol);
-  MyVector<T> TheVert = MyVector<T>(nbCol);
   for (int iCol = 0; iCol < nbCol; iCol++) {
     T eSum = 0;
     for (int iRow = 0; iRow < nbRow; iRow++)
@@ -531,6 +530,16 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
     for (int iCol = 1; iCol < nbCol; iCol++)
       nMat(iRow, iCol) = EXT(iRow, iCol) - eVect(iCol);
   }
+  return nMat;
+}
+
+template <typename T>
+vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  MyVector<T> eVect = MyVector<T>(nbCol);
+  MyVector<T> TheVert = MyVector<T>(nbCol);
   vectface ListFace(EXT.rows());
   while (true) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -539,7 +548,7 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
       T eVal = a - b;
       eVect(iCol) = eVal;
     }
-    LpSolution<T> eSol = CDD_LinearProgramming(nMat, eVect);
+    LpSolution<T> eSol = CDD_LinearProgramming(EXT, eVect);
     MyVector<T> SolDir = eSol.DirectSolution;
     TheVert(0) = 1;
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
@@ -548,11 +557,11 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
     for (int iRow = 0; iRow < nbRow; iRow++) {
       T eSum = 0;
       for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += nMat(iRow, iCol) * TheVert(iCol);
+        eSum += EXT(iRow, iCol) * TheVert(iCol);
       if (eSum == 0)
         eInc[iRow] = 1;
     }
-    MyMatrix<T> RnkMat = SelectRow(nMat, eInc);
+    MyMatrix<T> RnkMat = SelectRow(EXT, eInc);
     int TheRank = RankMat(RnkMat);
     if (TheRank == nbCol - 1) {
       ListFace.push_back(eInc);
@@ -563,11 +572,12 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
 }
 
 template <typename T>
-vectface FindVertices(MyMatrix<T> const &TheEXT, int const &nb) {
+vectface FindVertices(MyMatrix<T> const &EXT, int const &nb) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  MyMatrix<T> EXT = ColumnReduction(TheEXT);
-  MyMatrix<T> EXTret = Polytopization<T>(EXT);
-  return Kernel_FindVertices(EXTret, nb);
+  MyMatrix<T> EXT_B = ColumnReduction(EXT);
+  MyMatrix<T> EXT_C = Polytopization(EXT_B);
+  MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
+  return Kernel_FindVertices(EXT_D, nb);
 }
 
 template <typename T> Face FindOneInitialVertex(MyMatrix<T> const &TheEXT) {
