@@ -732,10 +732,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       std::cerr << "i_cone=" << i_cone << " / " << n_cone << " duration=" << time << "\n";
       for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
         MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
-        MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FACtot);
-        int int_rows = LinSpace.rows();
-//        std::cerr << "i_cone=" << i_cone << " j_cone=" << j_cone << " dim=" << dim << " int=" << int_rows << "/" << LinSpace.cols() << "\n";
-        if (int_rows == dim) {
+        if (IsFullDimensional(FACtot)) {
           std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
           return {};
         }
