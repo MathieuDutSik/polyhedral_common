@@ -132,6 +132,6 @@ jobs:
           pwd
           echo "After compilation of Lorentzian code"
 
-          cd Exmpl_Bench/CI_tests
+          cd CI_tests/Reflective
           ../../gap.sh < TestReflectivity.g
           cd ../..

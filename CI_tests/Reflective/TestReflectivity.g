@@ -1,6 +1,4 @@
-
 Print("Beginning TestReflectivity\n");
-
 
 TestReflectivity:=function(eRec)
     local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U;
@@ -47,15 +45,10 @@ TestReflectivity:=function(eRec)
     return eRec.n_simple = U.n_simple;
 end;
 
-
-
-
 ListRec:=ReadAsFunction("ListReflect")();;
 
-
-for iRec in [1..Length(ListRec)]
+for eRec in ListRec
 do
-    eRec:=ListRec[iRec];
     test:=TestReflectivity(eRec);
     if test=false then
         # Error case
