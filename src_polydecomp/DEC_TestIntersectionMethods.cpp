@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     // The polyhedral cones.
     std::vector<MyMatrix<T>> l_FAC;
     //
-    auto f_test=[](MyMatrix<T> const& FACtot) -> void {
+    auto f_test=[](MyMatrix<T> const& FACtot) -> bool {
       bool test1 = IsFullDimensional(FACtot);
       bool test2 = IsFullDimensionalNextGen(FACtot);
       if (test1 != test2) {
@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "We have a bug to resolve\n";
         throw TerminalException{1};
       }
+      return test1;
     };
     //
     size_t n_domain;
@@ -41,12 +42,20 @@ int main(int argc, char *argv[]) {
       l_FAC.push_back(FAC);
     }
     //
+    size_t n_false = 0;
+    size_t n_true = 0;
     for (size_t i=0; i<n_domain; i++) {
       for (size_t j=i+1; j<n_domain; j++) {
+        std::cerr << "i=" << i << " j=" << j << " n_domain=" << n_domain << "\n";
         MyMatrix<T> FACtot = Concatenate(l_FAC[i], l_FAC[j]);
-        f_test(FACtot);
+        bool test = f_test(FACtot);
+        if (test)
+          n_true++;
+        if (!test)
+          n_false++;
       }
     }
+    std::cerr << "Normal termination n_true=" << n_true << " n_false=" << n_false << "\n";
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }
