@@ -13,6 +13,15 @@
 #include <utility>
 #include <vector>
 
+#ifdef TIMINGS
+# define TIMINGS_GROUP
+#endif
+
+#ifdef DEBUG
+# define DEBUG_DOUBLE_COSET
+#endif
+
+
 template <typename Tgroup> struct FaceOrbitsizeGrpContainer {
 private:
   Tgroup GRP;
@@ -295,24 +304,13 @@ vectface DoubleCosetDescription_Exhaustive_T(
 }
 
 template <typename Tgroup>
-#ifdef CHECK_DOUBLE_COSET
 vectface DoubleCosetDescription_SingleCoset(
     Tgroup const &SmaGRP, Face const &eList,
-    typename Tgroup::Tint const &TotalSize,
+    [[maybe_unused]] typename Tgroup::Tint const &TotalSize,
     std::vector<typename Tgroup::Telt> const &ListCos,
     [[maybe_unused]] std::ostream &os) {
-#else
-vectface DoubleCosetDescription_SingleCoset(
-    Tgroup const &SmaGRP, Face const &eList,
-    std::vector<typename Tgroup::Telt> const &ListCos,
-    [[maybe_unused]] std::ostream &os) {
-#endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-#ifdef CHECK_DOUBLE_COSET
-  using Tint = typename Tgroup::Tint;
-  Tint GenSize = 0;
-#endif
   Tidx n = eList.size();
   //
   vectface vf(n);
@@ -323,16 +321,18 @@ vectface DoubleCosetDescription_SingleCoset(
     if (SetFace.count(f_can) == 0) {
       vf.push_back(f_can);
       SetFace.insert(f_can);
-#ifdef CHECK_DOUBLE_COSET
-      GenSize += SmaGRP.OrbitSize_OnSets(NewF);
-#endif
     }
   };
   for (auto &eCos : ListCos) {
     OnFace_inplace(eFaceImg, eList, eCos);
     f_insert(eFaceImg);
   }
-#ifdef CHECK_DOUBLE_COSET
+#ifdef DEBUG_DOUBLE_COSET
+  using Tint = typename Tgroup::Tint;
+  Tint GenSize = 0;
+  for (auto & f : SetFace) {
+    GenSize += SmaGRP.OrbitSize_OnSets(NewF);
+  }
   if (GenSize != TotalSize) {
     std::cerr << "GenSize=" << GenSize << " TotalSize=" << TotalSize << "\n";
     throw TerminalException{1};
@@ -545,14 +545,9 @@ vectface DoubleCosetDescription_SingleCoset_Block(
     Face const &eSet = pair.first;
     if (f_terminal())
       break;
-#ifdef CHECK_DOUBLE_COSET
     Tint const &TotalSize = pair.second;
     vectface ListListSet = DoubleCosetDescription_SingleCoset(
         SmaGRP, eSet, TotalSize, ListCos, os);
-#else
-    vectface ListListSet =
-        DoubleCosetDescription_SingleCoset(SmaGRP, eSet, ListCos, os);
-#endif
     eListSma.append(ListListSet);
   }
   return eListSma;
@@ -565,7 +560,7 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                    std::string const &method_split,
                                    Fterminal f_terminal, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
-#ifdef TIMINGS
+#ifdef TIMINGS_GROUP
   MicrosecondTime time;
 #endif
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
@@ -625,7 +620,7 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     throw TerminalException{1};
   };
   vectface eListSma = get_split();
-#ifdef TIMINGS
+#ifdef TIMINGS_GROUP
   os << "OrbitSplitting elapsed_microseconds=" << time
      << " |eListBig|=" << ListFaceOrbitsize.size()
      << " |eListSma|=" << eListSma.size() << std::endl;

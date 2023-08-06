@@ -18,6 +18,18 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+# define DEBUG_MATRIX_GROUP
+#endif
+
+#ifdef TIMINGS
+# define TIMINGS_MATRIX_GROUP
+#endif
+
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_MATRIX_GROUP
+#endif
+
 //
 
 template <typename T, typename Telt>
@@ -282,7 +294,7 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   };
   std::optional<std::vector<T2>> opt =
       OrbitComputation_limit(ListGen, a, f_prod, f_terminate);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt) {
     std::cerr << "The opt should have been assigned\n";
     throw TerminalException{1};
@@ -402,7 +414,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   }
   std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(
       helper.G, Subspace1, helper.G, Subspace2);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt) {
     std::cerr << "We should have opt well defined\n";
     throw TerminalException{1};
@@ -422,7 +434,7 @@ MatrixIntegral_GeneratePermutationGroup(
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
 #endif
   using Tidx = typename Telt::Tidx;
@@ -440,17 +452,17 @@ MatrixIntegral_GeneratePermutationGroup(
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime timeB;
 #endif
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
@@ -471,7 +483,7 @@ MatrixIntegral_GeneratePermutationGroup(
     std::vector<Tidx> v(siz);
     for (Tidx i = 0; i < nbRow_tidx; i++)
       v[i] = ePermGen.at(i);
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |v 1|=" << timeB << "\n";
 #endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
@@ -480,15 +492,15 @@ MatrixIntegral_GeneratePermutationGroup(
     // is: In computing Oprod.
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ListImage|=" << timeB << "\n";
 #endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |SortingPerm|=" << timeB << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ePermBinv|=" << timeB << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
@@ -498,7 +510,7 @@ MatrixIntegral_GeneratePermutationGroup(
     // We have V1reord = V2reord which gets us
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ePermGenSelect|=" << timeB << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -508,11 +520,11 @@ MatrixIntegral_GeneratePermutationGroup(
       int jO = ePermGenSelect.at(iO);
       v[nbRow + iO] = nbRow + jO;
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |v 2|=" << timeB << "\n";
 #endif
     Telt eNewPerm(std::move(v));
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
     for (int iO = 0; iO < Osiz; iO++) {
       MyVector<Tmod> eVect = O[iO];
       MyVector<Tmod> eVectImg1 = TheAction(eVect, eMatrGenMod);
@@ -528,11 +540,11 @@ MatrixIntegral_GeneratePermutationGroup(
     }
 #endif
     ListPermGenProv.emplace_back(std::move(eNewPerm));
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |insert|=" << timeB << "\n";
 #endif
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |ListPermGenProv|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -631,7 +643,7 @@ MatrixIntegral_GeneratePermutationGroup(
 #ifdef DEBUG_MATRIX_GROUP
   std::cerr << "Beginning of MatrixIntegral_GeneratePermutationGroup 2\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
 #endif
   using Tidx = typename Telt::Tidx;
@@ -647,17 +659,17 @@ MatrixIntegral_GeneratePermutationGroup(
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime timeB;
 #endif
     //    MyMatrix<T> const& eMatrGen=ListMatrGens[iGen];
@@ -666,7 +678,7 @@ MatrixIntegral_GeneratePermutationGroup(
     std::cerr << "iGen=" << iGen << "/" << nbGen << "\n";
 #endif
     std::vector<Tidx> v(siz);
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |v 1|=" << timeB << "\n";
 #endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
@@ -675,15 +687,15 @@ MatrixIntegral_GeneratePermutationGroup(
     // is: In computing Oprod.
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ListImage|=" << timeB << "\n";
 #endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |SortingPerm|=" << timeB << "\n";
 #endif
     Telt ePermBinv = ~ePermB;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ePermBinv|=" << timeB << "\n";
 #endif
     //      std::cerr << "  ePermS=" << ePermS << " ePermB=" << ePermB << "\n";
@@ -693,15 +705,15 @@ MatrixIntegral_GeneratePermutationGroup(
     // We have V1reord = V2reord which gets us
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |ePermGenSelect|=" << timeB << "\n";
 #endif
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |insert|=" << timeB << "\n";
 #endif
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
   std::cerr << "Timing |ListPermGenProv|=" << time << "\n";
 #endif
   return {0, siz, ListMatrGens, std::move(ListPermGenProv)};
@@ -962,7 +974,7 @@ GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
   MyMatrix<T> BasisSp = RowReduction(helper.EXTfaithful);
   std::optional<MyMatrix<T>> opt1 =
       ListSolutionMat(BasisSp, helper.EXTfaithful);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt1) {
     std::cerr << "opt1 : Failed to solution the linear systems\n";
     throw TerminalException{1};
@@ -970,7 +982,7 @@ GetListQuadraticForms(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper) {
 #endif
   MyMatrix<T> const &EXTfaithful_red = *opt1;
   std::optional<MyVector<T>> opt2 = SolutionMat(BasisSp, helper.Visotrop);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt2) {
     std::cerr << "opt2 : Failed to solution the linear systems\n";
     throw TerminalException{1};
@@ -1051,7 +1063,7 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
         MyMatrix<Tint> eMatr_i = UniversalMatrixConversion<Tint, T>(eMatr);
         MyMatrix<Tint> eProd = eNSP_i * eMatr_i;
         std::optional<MyMatrix<Tint>> opt = CanSolutionIntMatMat(eCan, eProd);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
         if (!opt) {
           std::cerr << "The NSP space is not preserved\n";
           throw TerminalException{1};
@@ -1080,7 +1092,7 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
         jdx++;
       }
       //
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
       if (RankMat(SHVbreak) != n) {
         std::cerr << "The matrix SHVbreak is not of full rank\n";
         throw TerminalException{1};
@@ -1095,7 +1107,7 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
       for (auto &eListIdx : ListListIdx) {
         std::optional<MyMatrix<T>> opt =
             FindMatrixTransformationTest(SHVbreak, SHVbreak, eListIdx);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
         if (!opt) {
           std::cerr << "Failed to represent the permutation\n";
           throw TerminalException{1};
@@ -1334,11 +1346,11 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   std::vector<MyMatrix<Tmod>> ListMatrRetMod =
       ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
   while (true) {
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime time;
 #endif
     std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |IsStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
@@ -1351,7 +1363,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     std::optional<std::vector<MyVector<Tmod>>> opt_fso =
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, ListMatrRetMod, TheSpace, TheMod, V, helper);
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
     if (!opt_fso) {
       std::cerr << "Failed to find some entry\n";
       throw TerminalException{1};
@@ -1364,7 +1376,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "Orbit size |O|=" << O.size() << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_MATRIX_GROUP
     std::cerr << "Timing |OrbitComputation|=" << time << "\n";
 #endif
     Treturn eret =
@@ -1373,7 +1385,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 
     Tgroup GRPwork(eret.ListPermGens, eret.siz);
     Face eFace = GetFace<T, Tmod>(eret.nbRow, O, TheSpaceMod);
-#ifdef MATRIX_GROUP_DIAGNOSTICS
+#ifdef DEBUG_MATRIX_GROUP
     std::cerr << "ModStabilizer TheMod=" << TheMod << " |O|=" << O.size()
               << " |GRPwork|=" << GRPwork.size() << " |eFace|=" << eFace.count()
               << "\n";
@@ -1538,7 +1550,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       std::cerr << "nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1)
                 << " eFace2=" << StringFace(eFace2) << "\n";
 #endif
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
                      "|eFace2| = 0\n";
@@ -1546,7 +1558,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         throw TerminalException{1};
       }
 #endif
-#ifdef MATRIX_GROUP_DIAGNOSTICS
+#ifdef DEBUG_MATRIX_GROUP
       std::cerr << "ModEquivalence 1 TheMod=" << TheMod << " |O|=" << O.size()
                 << " |GRPperm|=" << GRPperm.size()
                 << " |eFace1|=" << eFace1.count()
@@ -1616,7 +1628,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
               ListMatrRet, ListMatrRetMod, helper, O, TheMod);
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
-#ifdef MATRIX_GROUP_DIAGNOSTICS
+#ifdef DEBUG_MATRIX_GROUP
       std::cerr << "ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
                 << " |GRPperm|=" << GRPperm.size()
                 << " |eFace2|=" << eFace2.count() << "\n";
@@ -1700,7 +1712,7 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
     if (IsStabilizing(ListMatrRet))
       return ListMatrRet;
   }
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsStabilizing(ListMatrRet)) {
     std::cerr << "Error in LinearSpace_Stabilizer_Kernel\n";
     throw TerminalException{1};
@@ -1821,7 +1833,7 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence_Kernel(
     if (NeedStabilizer)
       ListMatrWork = opt->first;
   }
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsEquivalence(eElt)) {
     std::cerr << "Error in LinearSpace_Equivalence_Kernel\n";
     throw TerminalException{1};
@@ -1875,7 +1887,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
   std::vector<MyMatrix<T>> ListMatrGens;
   for (auto &eGen : ListMatr) {
     MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
     if (!IsIntegralMatrix(NewGen)) {
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
@@ -1892,7 +1904,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : LMat) {
     MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
     if (!IsIntegralMatrix(NewGen)) {
       std::cerr << "Clear error in the code\n";
       throw TerminalException{1};
@@ -2005,7 +2017,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "EXTbas2=\n";
   WriteMatrix(std::cerr, EXTbas2);
 #endif
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   using Tidx = typename Telt::Tidx;
   for (auto &eMatGen2 : ListMatrGens2) {
     std::optional<std::vector<Tidx>> opt_eList =
@@ -2048,7 +2060,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   std::cerr << "We have eMatFinal=\n";
   WriteMatrix(std::cerr, eMatFinal);
 #endif
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(eMatFinal)) {
     std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: eMatFinal should "
                  "be integral\n";

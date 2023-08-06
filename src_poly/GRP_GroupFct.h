@@ -15,6 +15,11 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+# define DEBUG_GROUP
+#endif
+
+
 //
 // permutation functions
 //
@@ -691,7 +696,7 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
           OnFace_inplace(fSet, gSet, eGen);
           if (SingleOrbit.count(fSet) == 0 && Additional.count(fSet) == 0) {
             if (NewElts.count(fSet) == 0) {
-#ifdef DEBUG
+#ifdef DEBUG_GROUP
               if (ListTotal.count(fSet) > 0) {
                 NewElts.insert(fSet);
                 ListTotal.erase(fSet);

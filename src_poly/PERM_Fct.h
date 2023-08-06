@@ -8,6 +8,18 @@
 #include <utility>
 #include <vector>
 
+#ifdef TIMINGS
+# define TIMINGS_PERM_FCT
+#endif
+
+#ifdef DEBUG
+# define DEBUG_PERM_FCT
+#endif
+
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_PERM_FCT
+#endif
+
 template <typename T, typename Tidx>
 std::vector<Tidx> SortingPerm(std::vector<T> const &ListV) {
   struct PairData {
@@ -48,7 +60,7 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
     ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
   MyMatrix<T> RetMat = M1inv * M2;
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_PERM_FCT
   int nbRow = EXT2.rows();
   int nbCol = EXT2.cols();
   MyMatrix<T> EXT1_img = EXT1 * RetMat;
@@ -266,7 +278,7 @@ std::optional<MyMatrix<Tfield>>
 FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
                                     const std::vector<Tidx> &Vsubset,
                                     const std::vector<Tidx> &Vin) {
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   MicrosecondTime time;
 #endif
   size_t nbCol = EXT.cols();
@@ -289,7 +301,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
   std::optional<MyMatrix<Tfield>> test1 =
       FindMatrixTransformationTest_Generic<T, Tfield, Tidx>(Vsubset.size(),
                                                             nbCol, g1, g1, Vin);
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   std::cerr << "|FindMatrixTransformationTest_Subset|=" << time << "\n";
 #endif
   return test1;
@@ -301,7 +313,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   size_t nbCol = EXT.cols();
   if (Vsubset.size() < nbCol)
     return false;
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   MicrosecondTime time;
 #endif
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
@@ -311,7 +323,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   };
   SelectionRowCol<Tfield> TheSol =
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   std::cerr << "|IsSubsetFullRank|=" << time << "\n";
 #endif
   return TheSol.TheRank == nbCol;
@@ -321,12 +333,12 @@ template <typename T, typename Tfield, typename Tidx>
 std::optional<std::vector<Tidx>>
 RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                MyMatrix<Tfield> const &P) {
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   MicrosecondTime time;
 #endif
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_PERM_FCT
   size_t P_rows = P.rows();
   size_t P_cols = P.cols();
   if (P_rows != P_cols) {
@@ -359,7 +371,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       }
       std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!opt) {
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
         std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
         // We fail because the image is not integral.
@@ -369,7 +381,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     }
     std::optional<size_t> opt = Cont.GetIdx_v(VectorContain);
     if (!opt) {
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
       std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";
 #endif
       // We fail because the image does not belong to EXT2
@@ -379,7 +391,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     V[i_row] = pos;
     f[pos] = 1;
   }
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_PERM_FCT
   int n_error = 0;
   for (size_t i_row = 0; i_row < n_rows; i_row++)
     if (f[i_row] == 0)
@@ -389,7 +401,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     throw TerminalException{1};
   }
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   std::cerr << "|RepresentVertexPermutationTest|=" << time << "\n";
 #endif
   return V;
@@ -469,7 +481,7 @@ std::vector<Tidx>
 ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
                               const std::vector<Tidx> &Vsubset,
                               const std::vector<Tidx> &PartOrd) {
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   MicrosecondTime time;
 #endif
   size_t nbCol = EXT.cols();
@@ -501,7 +513,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
     }
   };
   std::vector<Tidx> ListIdx = get_listidx();
-#ifdef TIMINGS
+#ifdef TIMINGS_PERM_FCT
   std::cerr << "|ExtendPartialCanonicalization|=" << time << "\n";
 #endif
   return ListIdx;
