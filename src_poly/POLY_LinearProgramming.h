@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 
+#ifdef DEBUG
+# define DEBUG_LINEAR_PROGRAM
+#endif
+
 template <typename T> struct LpSolution {
   std::string method;
   bool PrimalDefined = false;
@@ -25,7 +29,6 @@ template <typename T> struct LpSolution {
   int rankDirectSol = -1;
   std::string Answer;
 };
-
 
 template <typename T>
 void PrintLpSolution(LpSolution<T> const& eSol, std::ostream & os) {
@@ -724,7 +727,7 @@ Face FindViolatedFaceFast(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
     if (sum == 0)
       eFace[i_row] = 1;
   }
-#ifdef DEBUG
+#ifdef DEBUG_LINEAR_PROGRAM
   MyVector<T> eFAC = FindFacetInequalityCheck(EXT, eFace);
   T scal = eVect.dot(eFAC);
   if (scal >= 0) {
@@ -1207,6 +1210,28 @@ template <typename T>
 MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC));
+}
+
+template <typename T> bool IsFullDimensionalNextGen(MyMatrix<T> const &FAC) {
+  int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
+  MyMatrix<T> FACexp(nbRow,1+nbCol);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    FACexp(iRow,0) = -1;
+    for (int iCol=0; iCol<nbCol; iCol++)
+      FACexp(iRow,1+iCol) = FAC(iRow,iCol);
+  }
+  MyVector<T> SumIneq(1+nbCol);
+  for (int iCol=0; iCol<=nbCol; iCol++) {
+    T sum = 0;
+    for (int iRow=0; iRow<nbRow; iRow++)
+      sum += FACexp(iRow,iCol);
+    SumIneq(iCol) = sum;
+  }
+  LpSolution<T> eSol = CDD_LinearProgramming(FACexp, SumIneq);
+  if (eSol.PrimalDefined && eSol.DualDefined)
+    return true;
+  return false;
 }
 
 /* Finds an interior point in the cone determined by the inequalities.

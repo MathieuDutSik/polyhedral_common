@@ -11,6 +11,11 @@
 #include <string>
 #include <vector>
 
+#ifdef TIMINGS
+# define TIMINGS_DUAL_DESC
+#endif
+
+
 template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
   size_t pos = 0;
   std::vector<size_t> V;
@@ -61,7 +66,7 @@ template <typename T, typename Finsert>
 void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
                                     std::string const &eCommand,
                                     std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
   size_t n_row = EXT.rows();
@@ -105,7 +110,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
       osI << "end\n";
     }
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "|FileWriting|=" << time << "\n";
 #endif
   //  os << "FileO=" << FileO << " created\n";
@@ -120,7 +125,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   }
   os << "order=" << order << "\n";
   int iret1 = system(order.c_str());
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "|glrs/ppl/cdd|=" << time << "\n";
 #endif
   os << "External program terminated\n";
@@ -217,7 +222,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
       iLine++;
     }
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "|FileRead|=" << time << "\n";
 #endif
   os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
@@ -609,11 +614,11 @@ template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                      std::string const &ansProg,
                                      std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
   vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
      << "\n";
 #endif
@@ -625,7 +630,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
     return ListIncd;
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
      << TheOutput.size() << ") VALUE=" << time << "\n";
@@ -637,7 +642,7 @@ template <typename T, typename Tgroup>
 std::vector<std::pair<Face, MyVector<T>>>
 DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                 std::string const &ansProg, std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
   std::vector<std::pair<Face, MyVector<T>>> ListReturn;
@@ -645,7 +650,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
     ListReturn.push_back(pair_face);
   };
   DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "|DualDescription|=" << time << " |ListIncd|=" << ListReturn.size()
      << "\n";
 #endif
@@ -658,7 +663,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   std::vector<std::pair<Face, MyVector<T>>> TheOutput =
       OrbitSplittingMap(ListReturn, GRP);
-#ifdef TIMINGS
+#ifdef TIMINGS_DUAL_DESC
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
      << TheOutput.size() << ") VALUE=" << time << "\n";

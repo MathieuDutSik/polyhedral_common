@@ -8,6 +8,9 @@
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
 
+#ifdef DEBUG
+# define DEBUG_PRIMAL_DUAL
+#endif
 
 template<typename T>
 MyVector<T> AbsoluteRescaleVector(MyVector<T> const& V) {
@@ -39,19 +42,24 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
       ListEXT.push_back(eEXTred);
     }
   };
+#ifdef DEBUG_PRIMAL_DUAL
   os << "Before GetFullRankFacetSet\n";
+#endif
   vectface vf = GetFullRankFacetSet(FAC, os);
   for (auto & face : vf) {
     MyVector<T> eEXT = FindFacetInequality(FAC, face);
     (void)f_insert(eEXT);
   }
+#ifdef DEBUG_PRIMAL_DUAL
   os << "Now going into the second iteration\n";
   int iter = 0;
+#endif
   MyMatrix<T> EXT = MatrixFromVectorFamily(ListEXT);
   while (true) {
     vectface vf_myfac = f_dual(EXT);
-    int n_ext = SetEXT.size();
-    os << "iter=" << iter << " |vf_myfac|=" << vf_myfac.size() << " n_ext=" << n_ext << "\n";
+#ifdef DEBUG_PRIMAL_DUAL
+    os << "iter=" << iter << " |vf_myfac|=" << vf_myfac.size() << " n_ext=" << SetEXT.size() << "\n";
+#endif
     std::vector<MyVector<T>> ListNewEXT;
     auto has_violating_facet=[&](MyVector<T> const& eFAC) -> bool {
       for (auto & eNewEXT : ListNewEXT) {
@@ -75,13 +83,19 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
       }
     }
     if (ListNewEXT.size() == 0) {
+#ifdef DEBUG_PRIMAL_DUAL
       os << "Exiting the infinite loop\n";
+#endif
       break;
     }
     EXT = MatrixFromVectorFamily(ListEXT);
+#ifdef DEBUG_PRIMAL_DUAL
     iter++;
+#endif
   }
+#ifdef DEBUG_PRIMAL_DUAL
   os << "Returning EXT\n";
+#endif
   return EXT;
 }
 
@@ -110,7 +124,9 @@ vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const& FAC, std::o
     }
     vf.push_back(f);
   }
+#ifdef DEBUG_PRIMAL_DUAL
   os << "|vf|=" << vf.size() << "\n";
+#endif
   return vf;
 }
 

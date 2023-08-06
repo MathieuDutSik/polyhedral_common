@@ -9,6 +9,14 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+# define DEBUG_HYPERPLANE
+#endif
+
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_HYPERPLANE
+#endif
+
 // The list of region is described by a vector of + and -.
 // If it is + then the encoding is by a 1. Otherwise it is by a 0.
 template <typename T>
@@ -90,7 +98,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 #endif
-#ifdef CHECK_HYPERPLANE
+#ifdef SANITY_CHECK_HYPERPLANE
     if (static_cast<int>(ListIrred.size()) < n) {
       std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
       std::cerr << "ListInequalities=\n";

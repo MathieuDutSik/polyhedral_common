@@ -1,5 +1,6 @@
 #PROGRAM		= DEC_ComputeDecomposition DEC_TestUnionCones
-PROGRAM		= DEC_TestUnionCones
+#PROGRAM		= DEC_TestUnionCones
+PROGRAM		= DEC_TestIntersectionMethods
 #PROGRAM		= DEC_ComputeDecomposition
 
 SRCFILES        = POLY_c_cddlib_mpq.cpp
