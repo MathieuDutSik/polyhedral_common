@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> l_FAC;
     //
     auto f_test=[](MyMatrix<T> const& FACtot) -> bool {
-      bool test1 = IsFullDimensional(FACtot);
-      bool test2 = IsFullDimensionalNextGen(FACtot);
+      bool test1 = IsFullDimensional_V1(FACtot);
+      bool test2 = IsFullDimensional(FACtot);
       if (test1 != test2) {
         std::cerr << "We have test1=" << test1 << " test2=" << test2 << "\n";
         std::cerr << "We have a bug to resolve\n";

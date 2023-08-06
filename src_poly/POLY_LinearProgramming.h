@@ -1197,7 +1197,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   }
 }
 
-template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC) {
+template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC) {
   PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
   if (!eRes.eTestExist) {
     return true;
@@ -1212,7 +1212,7 @@ MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC));
 }
 
-template <typename T> bool IsFullDimensionalNextGen(MyMatrix<T> const &FAC) {
+template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   MyMatrix<T> FACexp(nbRow,1+nbCol);
