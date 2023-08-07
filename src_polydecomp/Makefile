@@ -1,5 +1,5 @@
-PROGRAM		= DEC_ComputeDecomposition DEC_TestUnionCones DEC_TestIntersectionMethods
-#PROGRAM		= DEC_TestUnionCones
+#PROGRAM		= DEC_ComputeDecomposition DEC_TestUnionCones DEC_TestIntersectionMethods
+PROGRAM		= DEC_TestUnionCones
 #PROGRAM		= DEC_TestIntersectionMethods
 #PROGRAM		= DEC_ComputeDecomposition
 

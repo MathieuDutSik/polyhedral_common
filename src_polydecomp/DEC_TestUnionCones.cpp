@@ -57,14 +57,19 @@ int main(int argc, char *argv[]) {
       WriteMatrix(os, cone.FAC);
     };
     //
-    if (argc == 4) {
+    if (FileO == "stderr") {
       do_print(std::cerr);
     } else {
-      std::string FileO = argv[4];
-      std::ofstream os(FileO);
-      do_print(os);
+      if (FileO == "stderr") {
+        do_print(std::cout);
+      } else {
+        std::ofstream os(FileO);
+        do_print(os);
+      }
     }
+    std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
+    std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
   runtime(time1);
