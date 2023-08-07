@@ -331,7 +331,7 @@ vectface DoubleCosetDescription_SingleCoset(
   using Tint = typename Tgroup::Tint;
   Tint GenSize = 0;
   for (auto & f : SetFace) {
-    GenSize += SmaGRP.OrbitSize_OnSets(NewF);
+    GenSize += SmaGRP.OrbitSize_OnSets(f);
   }
   if (GenSize != TotalSize) {
     std::cerr << "GenSize=" << GenSize << " TotalSize=" << TotalSize << "\n";

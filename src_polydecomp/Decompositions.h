@@ -738,8 +738,8 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
         }
       }
     }
+    std::cerr << "Passing the pairwise intersection test time=" << time << "\n";
   }
-  std::cerr << "Passing the pairwise intersection test\n";
   std::map<MyVector<T>,int> MapEXT;
   using Tent = std::pair<size_t,int>;
   for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
@@ -751,7 +751,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     }
   }
   int n_ext_tot = MapEXT.size();
-  std::cerr << "n_ext_tot=" << n_ext_tot << "\n";
+  std::cerr << "n_ext_tot=" << n_ext_tot << " time=" << time << "\n";
   MyMatrix<T> EXTtot(n_ext_tot, dim);
   int pos = 0;
   for (auto & kv : MapEXT) {
@@ -760,12 +760,12 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       EXTtot(pos, i) = eEXT(i);
     pos++;
   }
-  std::cerr << "EXTtot built\n";
+  std::cerr << "EXTtot built time=" << time << "\n";
   for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
     MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
     MapEXT[eEXT] = i_ext_tot;
   }
-  std::cerr << "MapEXT built\n";
+  std::cerr << "MapEXT built time=" << time << "\n";
   // We match the facets in order to find which ones are
   // contained into just one and so get the facet of our cones.
   std::map<Face,std::vector<Tent>> FACmult;
@@ -791,12 +791,13 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       FACmult[f].push_back(eEnt);
     }
   }
-  std::cerr << "FACmult built |FACmult|=" << FACmult.size() << "\n";
+  std::cerr << "FACmult built |FACmult|=" << FACmult.size() << " time=" << time << "\n";
   // We check that the facets matched only once have all
   // the vertices on the right side.
   // At the same time, we build the set of facets (with
   // no duplication)
   std::set<MyVector<T>> SetFAC;
+  size_t n_size1 = 0;
   auto is_matching_facet=[&](MyVector<T> const& eFAC) -> bool {
     for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
       T sum = 0;
@@ -823,9 +824,10 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
         return {};
       }
       SetFAC.insert(eFAC);
+      n_size1++;
     }
   }
-  std::cerr << "We have SetFAC\n";
+  std::cerr << "We have SetFAC n_size1=" << n_size1 << " |SetFAC|=" << SetFAC.size() << " time=" << time << "\n";
   // Building the FAC matrix
   int n_fac_final = SetFAC.size();
   std::cerr << "n_fac_final=" << n_fac_final << "\n";
@@ -838,7 +840,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     ListFACfinal.push_back(eFAC);
     pos_fac++;
   }
-  std::cerr << "We have FACfinal\n";
+  std::cerr << "We have FACfinal time=" << time << "\n";
   // Selecting the vertices of the right rank.
   std::vector<MyVector<T>> ListEXT;
   size_t min_len = dim - 1;
@@ -863,6 +865,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
     }
   }
   MyMatrix<T> EXTfinal = MatrixFromVectorFamily(ListEXT);
+  std::cerr << "We have EXTfinal |ListEXT|=" << ListEXT.size() << " time=" << time << "\n";
   ConeSimpDesc<T> cone{EXTfinal, FACfinal};
   return cone;
 }
