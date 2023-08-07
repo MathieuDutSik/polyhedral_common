@@ -4,6 +4,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  HumanTime time1;
   try {
     if (argc != 2 && argc != 3) {
       std::cerr << "DEC_TestIntersectionMethods [FileI]\n";
@@ -59,4 +60,5 @@ int main(int argc, char *argv[]) {
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }
+  runtime(time1);
 }

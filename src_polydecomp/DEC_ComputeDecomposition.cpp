@@ -4,6 +4,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  HumanTime time1;
   try {
     if (argc != 5 && argc != 4) {
       std::cerr << "DEC_ComputeDecomposition [opt] [TheLev] [FileI] [FileO]\n";
@@ -151,4 +152,5 @@ int main(int argc, char *argv[]) {
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }
+  runtime(time1);
 }

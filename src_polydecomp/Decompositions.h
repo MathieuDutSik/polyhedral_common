@@ -725,14 +725,14 @@ template<typename T>
 std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<T>> const& l_cone) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
-  bool TestPairwiseIntersection = true;
+  bool TestPairwiseIntersection = false;
   HumanTime time;
   if (TestPairwiseIntersection) {
     for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
       std::cerr << "i_cone=" << i_cone << " / " << n_cone << " duration=" << time << "\n";
       for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
         MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
-        if (IsFullDimensional(FACtot)) {
+        if (IsFullDimensional_V1(FACtot)) {
           std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
           return {};
         }
@@ -742,7 +742,6 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
   std::cerr << "Passing the pairwise intersection test\n";
   std::map<MyVector<T>,int> MapEXT;
   using Tent = std::pair<size_t,int>;
-  std::map<Face,std::vector<Tent>> FACmult;
   for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
     MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
     int n_ext = EXT.rows();
@@ -769,6 +768,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
   std::cerr << "MapEXT built\n";
   // We match the facets in order to find which ones are
   // contained into just one and so get the facet of our cones.
+  std::map<Face,std::vector<Tent>> FACmult;
   for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
     MyMatrix<T> const& FAC = l_cone[i_cone].FAC;
     MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
@@ -791,7 +791,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       FACmult[f].push_back(eEnt);
     }
   }
-  std::cerr << "FACmult built\n";
+  std::cerr << "FACmult built |FACmult|=" << FACmult.size() << "\n";
   // We check that the facets matched only once have all
   // the vertices on the right side.
   // At the same time, we build the set of facets (with

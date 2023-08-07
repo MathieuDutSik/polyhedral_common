@@ -4,6 +4,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  HumanTime time1;
   try {
     if (argc != 2 && argc != 3) {
       std::cerr << "DEC_TestUnionCones [FileI] [FileO]\n";
@@ -22,13 +23,16 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     //
     std::string FileI = argv[1];
-    std::ifstream is(FileI);
+    std::string FileO = "stderr";
+    if (argc == 3)
+      FileO = argv[2];
     //
     // The polyhedral cones.
-    std::vector<ConeSimpDesc<T>> l_cones;
     //
+    std::ifstream is(FileI);
     size_t n_domain;
     is >> n_domain;
+    std::vector<ConeSimpDesc<T>> l_cones;
     for (size_t i = 0; i < n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
       MyMatrix<T> EXT = ReadMatrix<T>(is);
@@ -63,4 +67,5 @@ int main(int argc, char *argv[]) {
   } catch (TerminalException const &e) {
     exit(e.eVal);
   }
+  runtime(time1);
 }
