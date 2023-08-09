@@ -75,7 +75,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
       MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
       if (SetFAC.count(eFACred) == 0) { // Missing so operation is needed
         if (!has_violating_facet(eFACred)) { // Check if we already had something matching
-          Face face = FindViolatedFaceFast(FAC, eFACred);
+          Face face = FindViolatedFace(FAC, eFACred);
           MyVector<T> eEXT = FindFacetInequality(FAC, face);
           f_insert(eEXT);
           ListNewEXT.push_back(eEXT);
