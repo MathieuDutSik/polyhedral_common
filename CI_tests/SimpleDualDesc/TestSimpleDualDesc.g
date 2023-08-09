@@ -72,7 +72,8 @@ end;
 
 File1:="Example1_pd_lrs_1084_26";
 File2:="Example2_lrs_cdd_27_99";
-ListFiles:=[File1, File2];
+File3:="Example3_48_11432";
+ListFiles:=[File1, File2, File3];
 
 for eFile in ListFiles
 do
