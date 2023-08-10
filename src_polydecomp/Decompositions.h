@@ -899,7 +899,7 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
 }
 
 template<typename T>
-std::vector<std::vector<int>> ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const& l_cone) {
+std::vector<std::vector<size_t>> ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const& l_cone) {
   std::map<MyVector<T>,size_t> MapEXT;
   int dim = 0;
   for (auto & e_cone : l_cone) {
@@ -941,8 +941,25 @@ std::vector<std::vector<int>> ConnectedComponentsPolyhedral(std::vector<ConeSimp
     }
   }
   std::cerr << "The map has been built\n";
-
-  
+  //
+  using Tgr = GraphListAdj;
+  std::vector<std::pair<size_t,size_t>> l_pair;
+  for (auto & kv : MapFace_idx) {
+    std::vector<size_t> const& eList = kv.second;
+    if (eList.size() != 1 && eList.size() != 2) {
+      std::cerr << "Wrong size for eList\n";
+      throw TerminalException{1};
+    }
+    if (eList.size() == 2) {
+      size_t a = eList[0];
+      size_t b = eList[1];
+      std::pair<size_t,size_t> epair{a,b};
+      l_pair.push_back(epair);
+    }
+  }
+  Tgr eGR(l_pair, n_cone);
+  std::vector<std::vector<size_t>> vect_cone = ConnectedComponents_set(eGR);
+  return vect_cone;
 }
 
 // clang-format off

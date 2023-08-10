@@ -43,23 +43,51 @@ int main(int argc, char *argv[]) {
     std::string FileI = BlockPROC.ListStringValues.at("FileI");
     std::string FileO = BlockPROC.ListStringValues.at("FileO");
     bool TestPairwiseIntersection = BlockPROC.ListBoolValues.at("TestPairwiseIntersection");
+    bool BreakConnectedComponents = BlockPROC.ListBoolValues.at("BreakConnectedComponents");
     //
-    // The polyhedral cones.
+    // Reading the polyhedral cones.
     //
-    std::vector<ConeSimpDesc<T>> l_cones = ReadFamilyCones<T>(FileI);
+    using Tcone = std::vector<ConeSimpDesc<T>>;
+    Tcone l_cones = ReadFamilyCones<T>(FileI);
+    //
+    // Splitting by connected components
+    //
+    std::vector<Tcone> ll_cones;
+    if (BreakConnectedComponents) {
+      std::vector<std::vector<size_t>> eListList = ConnectedComponentsPolyhedral(l_cones);
+      for (auto & eList : eListList) {
+        Tcone sing_cone;
+        for (auto & idx : eList) {
+          sing_cone.push_back(l_cones[idx]);
+        }
+        ll_cones.push_back(sing_cone);
+      }
+    } else {
+      ll_cones.push_back(l_cones);
+    }
+    std::cerr << "Working with |ll_cones|=" << ll_cones.size() << "\n";
     //
     // Processing data
     //
-    std::optional<ConeSimpDesc<T>> opt = TestPolyhedralPartition(TestPairwiseIntersection, l_cones);
-    if (!opt) {
-      std::cerr << "Failed to find the full polyhedral cone\n";
-      throw TerminalException{1};
+    std::vector<ConeSimpDesc<T>> l_big_cone;
+    for (auto & u_cone : ll_cones) {
+      std::cerr << "|u_cone|=" << u_cone.size() << "\n";
+      std::optional<ConeSimpDesc<T>> opt = TestPolyhedralPartition(TestPairwiseIntersection, u_cone);
+      if (!opt) {
+        std::cerr << "Failed to find the full polyhedral cone\n";
+        throw TerminalException{1};
+      }
+      ConeSimpDesc<T> cone = *opt;
+      std::cerr << "|EXT|=" << cone.EXT.rows() << " |FAC|=" << cone.FAC.rows() << "\n";
+      l_big_cone.push_back(cone);
     }
-    ConeSimpDesc<T> const& cone = *opt;
     //
     auto do_print = [&](std::ostream &os) -> void {
-      WriteMatrix(os, cone.EXT);
-      WriteMatrix(os, cone.FAC);
+      os << l_big_cone.size() << "\n";
+      for (auto & cone : l_big_cone) {
+        WriteMatrix(os, cone.EXT);
+        WriteMatrix(os, cone.FAC);
+      }
     };
     //
     if (FileO == "stderr") {
