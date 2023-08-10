@@ -11,6 +11,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
+#include "Namelist.h"
 // clang-format on
 
 // possible strategies for computing isomorphsim
@@ -716,16 +717,39 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
   return ListListDomain;
 }
 
+FullNamelist NAMELIST_TestUnionCones() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // PROC
+  std::map<std::string, std::string> ListStringValues1_doc;
+  std::map<std::string, std::string> ListIntValues1_doc;
+  std::map<std::string, std::string> ListBoolValues1_doc;
+  ListStringValues1_doc["FileI"] = "Default: unset.ext\n\
+The input file for the list of polyhedral cone (EXT first, then FAC)";
+  ListStringValues1_doc["FileO"] = "Default: stderr\n\
+The output file. stderr means writing to std::cerr, stdout means for std::cout and otherwise to FileO";
+  ListBoolValues1_doc["TestPairwiseIntersection"] = "Default: true\n\
+Whether to test for pairwise intersection of cones. That test can be expensive and so it can be disabled";
+  SingleBlock BlockPROC;
+  BlockPROC.setListIntValues(ListIntValues1_doc);
+  BlockPROC.setListBoolValues(ListBoolValues1_doc);
+  BlockPROC.setListStringValues(ListStringValues1_doc);
+  ListBlock["PROC"] = BlockPROC;
+  // Merging all data
+  return {std::move(ListBlock), "undefined"};
+}
+
+
+
 template <typename T> struct ConeSimpDesc {
   MyMatrix<T> EXT;
   MyMatrix<T> FAC;
 };
 
 template<typename T>
-std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<T>> const& l_cone) {
+std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseIntersection,
+                                                       std::vector<ConeSimpDesc<T>> const& l_cone) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
-  bool TestPairwiseIntersection = false;
   HumanTime time;
   if (TestPairwiseIntersection) {
     for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
@@ -739,6 +763,8 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(std::vector<ConeSimpDesc<
       }
     }
     std::cerr << "Passing the pairwise intersection test time=" << time << "\n";
+  } else {
+    std::cerr << "Not doing the pairwise intersection test\n";
   }
   std::map<MyVector<T>,int> MapEXT;
   using Tent = std::pair<size_t,int>;
