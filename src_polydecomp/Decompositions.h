@@ -729,6 +729,8 @@ The input file for the list of polyhedral cone (EXT first, then FAC)";
 The output file. stderr means writing to std::cerr, stdout means for std::cout and otherwise to FileO";
   ListBoolValues1_doc["TestPairwiseIntersection"] = "Default: true\n\
 Whether to test for pairwise intersection of cones. That test can be expensive and so it can be disabled";
+  ListBoolValues1_doc["BreakConnectedComponents"] = "Default: false\n\
+It can be that the cones are union of disjoint cones. In that first process this";
   SingleBlock BlockPROC;
   BlockPROC.setListIntValues(ListIntValues1_doc);
   BlockPROC.setListBoolValues(ListBoolValues1_doc);
@@ -894,6 +896,53 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
   std::cerr << "We have EXTfinal |ListEXT|=" << ListEXT.size() << " time=" << time << "\n";
   ConeSimpDesc<T> cone{EXTfinal, FACfinal};
   return cone;
+}
+
+template<typename T>
+std::vector<std::vector<int>> ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const& l_cone) {
+  std::map<MyVector<T>,size_t> MapEXT;
+  int dim = 0;
+  for (auto & e_cone : l_cone) {
+    int n_ext = e_cone.EXT.rows();
+    dim = e_cone.EXT.cols();
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      MyVector<T> eEXT = GetMatrixRow(e_cone.EXT, i_ext);
+      MapEXT[eEXT] = 0;
+    }
+  }
+  size_t pos = 0;
+  for (auto & kv : MapEXT) {
+    kv.second = pos;
+    pos++;
+  }
+  size_t n_ext_tot = pos;
+  std::cerr << "Building the full set of vertices n_ext_tot=" << n_ext_tot << "\n";
+  //
+  std::map<Face, std::vector<size_t>> MapFace_idx;
+  size_t n_cone = l_cone.size();
+  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
+    ConeSimpDesc<T> const& e_cone = l_cone.at(i_cone);
+    int n_fac = e_cone.FAC.rows();
+    int n_ext = e_cone.EXT.rows();
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      MyVector<T> eFAC = GetMatrixRow(e_cone.FAC, i_fac);
+      Face f(n_ext_tot);
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        MyVector<T> eEXT = GetMatrixRow(e_cone.EXT, i_ext);
+        T scal = 0;
+        for (int i=0; i<dim; i++)
+          scal += eEXT(i) * eFAC(i);
+        if (scal == 0) {
+          size_t i_ext_tot = MapEXT.at(eEXT);
+          f[i_ext_tot] = 1;
+        }
+      }
+      MapFace_idx[f].push_back(i_cone);
+    }
+  }
+  std::cerr << "The map has been built\n";
+
+  
 }
 
 // clang-format off
