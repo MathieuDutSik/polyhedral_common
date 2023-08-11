@@ -4,6 +4,9 @@
 #include "Group.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryRealField.h"
+#include "NumberTheoryQuadField.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
@@ -18,6 +21,26 @@ void Process_eFull(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   using Tidx_value = int32_t;
   MPI_MainFunctionDualDesc<T, Tgroup, Tidx_value>(comm, eFull);
 }
+
+template<typename T>
+void Process_eFull_select_type(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
+  //
+  if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
+    return Process_eFull<T, uint8_t>(comm, eFull);
+  if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
+    return Process_eFull<T, uint16_t>(comm, eFull);
+  if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
+    return Process_eFull<T, uint32_t>(comm, eFull);
+#if !defined __APPLE__
+  if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
+    return Process_eFull<T, uint64_t>(comm, eFull);
+#endif
+  std::cerr << "Failed to find a numeric type that matches\n";
+  throw TerminalException{1};
+}
+
+
 
 int main(int argc, char *argv[]) {
   // The construction is relatively subtle.
@@ -47,27 +70,19 @@ int main(int argc, char *argv[]) {
     }
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    //
-    using T = mpq_class;
-    //    using T = boost::multiprecision::cpp_rational;
-    //    using T = boost::multiprecision::mpq_rational;
-    MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
-    //
-    auto process = [&]() -> void {
-      if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
-        return Process_eFull<T, uint8_t>(world, eFull);
-      if (size_t(EXT.rows()) < std::numeric_limits<uint16_t>::max())
-        return Process_eFull<T, uint16_t>(world, eFull);
-      if (size_t(EXT.rows()) < std::numeric_limits<uint32_t>::max())
-        return Process_eFull<T, uint32_t>(world, eFull);
-#if !defined __APPLE__
-      if (size_t(EXT.rows()) < std::numeric_limits<uint64_t>::max())
-        return Process_eFull<T, uint64_t>(world, eFull);
-#endif
-      std::cerr << "Failed to find a numeric type that matches\n";
+    std::string NumericalType = GetNumericalType(eFull);
+    auto process=[&]() -> void {
+      if (NumericalType == "rational") {
+        using T = mpq_class;
+        return Process_eFull_select_type<T>(world, eFull);
+      }
+      std::cerr << "Failed to find a matching type entry\n";
       throw TerminalException{1};
     };
     process();
+    //
+    //    using T = boost::multiprecision::cpp_rational;
+    //    using T = boost::multiprecision::mpq_rational;
     //
     std::cerr << "Normal termination of the program runtime=" << start
               << "\n";

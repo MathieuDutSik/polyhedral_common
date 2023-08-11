@@ -55,48 +55,53 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     std::string NumericalType = GetNumericalType(eFull);
-    /*
-    if (NumericalType == "integer") {
-      using T = mpz_class;
-      Process<T>(eFull);
-    }
-    */
-    if (NumericalType == "safe_rational") {
-      using T = Rational<SafeInt64>;
-      Process<T>(eFull);
-    }
-    if (NumericalType == "rational") {
-      using T = mpq_class;
-      //    using T = boost::multiprecision::cpp_rational;
-      //    using T = boost::multiprecision::mpq_rational;
-      Process<T>(eFull);
-    }
-    if (NumericalType == "Qsqrt5") {
-      using Trat = mpq_class;
-      using T = QuadField<Trat, 5>;
-      Process<T>(eFull);
-    }
-    if (NumericalType == "Qsqrt2") {
-      using Trat = mpq_class;
-      using T = QuadField<Trat, 2>;
-      Process<T>(eFull);
-    }
-    if (NumericalType == "RealAlgebraic") {
-      using T_rat = mpq_class;
-      SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-      std::string FileAlgebraicField =
-          BlockDATA.ListStringValues.at("FileAlgebraicField");
-      if (!IsExistingFile(FileAlgebraicField)) {
-        std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                  << " is missing\n";
-        throw TerminalException{1};
+    auto process=[&]() -> void {
+      /*
+        if (NumericalType == "integer") {
+        using T = mpz_class;
+        Process<T>(eFull);
+        }
+      */
+      if (NumericalType == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return Process<T>(eFull);
       }
-      HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
-      int const idx_real_algebraic_field = 1;
-      insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-      using T = RealField<idx_real_algebraic_field>;
-      Process<T>(eFull);
-    }
+      if (NumericalType == "rational") {
+        using T = mpq_class;
+        //    using T = boost::multiprecision::cpp_rational;
+        //    using T = boost::multiprecision::mpq_rational;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "Qsqrt5") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat, 5>;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "Qsqrt2") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat, 2>;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "RealAlgebraic") {
+        using T_rat = mpq_class;
+        SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+        std::string FileAlgebraicField =
+          BlockDATA.ListStringValues.at("FileAlgebraicField");
+        if (!IsExistingFile(FileAlgebraicField)) {
+          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
+                    << " is missing\n";
+          throw TerminalException{1};
+        }
+        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        int const idx_real_algebraic_field = 1;
+        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
+        using T = RealField<idx_real_algebraic_field>;
+        return Process<T>(eFull);
+      }
+      std::cerr << "Failed to find a matching type entry\n";
+      throw TerminalException{1};
+    };
+    process();
     //
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
