@@ -9,7 +9,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_redundancyClarksonGroup POLY_redundancy_Equivariant \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
-		  POLY_lrs POLY_lrs_set_reduction \
+		  POLY_lrs \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_LinearProgram POLY_IsPointedCone \
                   GRP_TestEquivalenceSets \
