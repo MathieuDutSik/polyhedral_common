@@ -11,7 +11,6 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3) {
-      fprintf(stderr, "Number of argument is = %d\n", argc);
       fprintf(stderr, "This program is used as\n");
       fprintf(stderr, "NullspaceComputationLinbox [inputMat] [n_iter]\n");
       return -1;

@@ -9,7 +9,6 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 2) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "TEST_LinPolytope_Canonic [EXTIN]\n";
       std::cerr << "\n";

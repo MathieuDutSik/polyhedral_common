@@ -15,7 +15,7 @@
 template<typename T>
 MyVector<T> AbsoluteRescaleVector(MyVector<T> const& V) {
   int dim = V.size();
-  T sum = 0;
+  T sum(0);
   for (int i=0; i<dim; i++)
     sum += T_abs(V(i));
   if (sum == 0)
@@ -116,7 +116,7 @@ vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const& FAC, std::o
   for (int i_ext=0; i_ext<EXT.rows(); i_ext++) {
     Face f(nbRow);
     for (int i_row=0; i_row<nbRow; i_row++) {
-      T sum = 0;
+      T sum(0);
       for (int i=0; i<dim; i++)
         sum += FAC(i_row,i) * EXT(i_ext,i);
       if (sum == 0)

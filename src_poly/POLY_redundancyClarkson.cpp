@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 // clang-format on
@@ -50,8 +51,13 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
 
 void process_B(std::string const &eFileI, std::string const &eFileO,
                std::string const &choice, std::string const &arith) {
+  if (arith == "safe_rational") {
+    using T = Rational<SafeInt64>;
+    return process_A<T>(eFileI, eFileO, choice);
+  }
   if (arith == "rational") {
-    return process_A<mpq_class>(eFileI, eFileO, choice);
+    using T = mpq_class;
+    return process_A<T>(eFileI, eFileO, choice);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;

@@ -10,7 +10,6 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = int;
     if (argc != 4) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_IntegralPoints [FAC] [EXT] [OUT]\n";
       std::cerr << "\n";

@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "GRP_GroupFct.h"
 #include "Group.h"
 #include "POLY_cddlib.h"
@@ -102,6 +103,10 @@ int main(int argc, char *argv[]) {
       FileOut = argv[5];
     }
     auto compute_redundancy=[&](std::ostream & os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+      }
       if (arith == "rational") {
         using T = mpq_class;
         return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);

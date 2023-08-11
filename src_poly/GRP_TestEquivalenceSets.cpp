@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "TestEquivalenceSets [GRPfile] [PairFile]\n";
+      std::cerr << "GRP_TestEquivalenceSets [GRPfile] [PairFile]\n";
       std::cerr << "\n";
       std::cerr << "GRPfile    : The file containing the group\n";
       std::cerr << "PairFile   : The file containing the two pairs\n";

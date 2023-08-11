@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
@@ -46,6 +47,10 @@ int main(int argc, char *argv[]) {
     std::string eFileFAC = argv[2];
     std::string eFileINEQ = argv[3];
     auto compute_solution = [&](std::ostream &os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileFAC, eFileINEQ, os);
+      }
       if (arith == "rational") {
         using T = mpq_class;
         return process<T>(eFileFAC, eFileINEQ, os);

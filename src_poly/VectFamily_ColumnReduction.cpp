@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheoryQuadField.h"
+#include "NumberTheorySafeInt.h"
 #include "POLY_PolytopeFct.h"
 #include "LatticeDefinitions.h"
 // clang-format on

@@ -6,7 +6,8 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_SamplingFacet.h"
 // clang-format on
 
@@ -104,8 +105,13 @@ int main(int argc, char *argv[]) {
       eFileO = argv[5];
     }
     auto call_lrs = [&](std::ostream &os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileI, command, OutFormat, os);
+      }
       if (arith == "rational") {
-        return process<Trat>(eFileI, command, OutFormat, os);
+        using T = Trat;
+        return process<T>(eFileI, command, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;

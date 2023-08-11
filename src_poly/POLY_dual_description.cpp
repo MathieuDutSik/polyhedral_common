@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_DirectDualDesc.h"
 // clang-format on
 
@@ -79,6 +80,10 @@ int main(int argc, char *argv[]) {
     if (argc == 6)
       eFileO = argv[5];
     auto dual_desc = [&](std::ostream &os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileI, command, choice, os);
+      }
       if (arith == "rational") {
         using T = mpq_class;
         return process<T>(eFileI, command, choice, os);

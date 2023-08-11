@@ -6,7 +6,8 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_DirectDualDesc.h"
 #include "GRP_DoubleCoset.h"
@@ -99,8 +100,13 @@ int main(int argc, char *argv[]) {
       eFileO = argv[6];
     }
     auto call_dualdesc = [&](std::ostream &os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T,Tgroup>(eFileI, eFileG, command, OutFormat, os);
+      }
       if (arith == "rational") {
-        return process<Trat,Tgroup>(eFileI, eFileG, command, OutFormat, os);
+        using T = Trat;
+        return process<T,Tgroup>(eFileI, eFileG, command, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;

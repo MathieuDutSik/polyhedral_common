@@ -8,7 +8,6 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 4) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr
           << "GRP_PermMatrTest_PolyAutomorphism single [MatrFile] [FaceFile]\n";

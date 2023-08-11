@@ -52,7 +52,7 @@ SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
       for (int jRow = 0; jRow < nbRow; jRow++) {
         auto get_test = [&]() -> bool {
           for (int iEqua = 0; iEqua < nbEqua; iEqua++) {
-            T eSum = 0;
+            T eSum(0);
             for (int iCol = 0; iCol < nbCol; iCol++)
               eSum += FAC(jRow, iCol) * NSP(iEqua, iCol);
             if (eSum != 0)
@@ -301,7 +301,7 @@ Face Compute_extfac_incd(const MyMatrix<T> &FAC, const MyMatrix<T> &EXT) {
   Face extfac_incd(nbFac * nbExt);
   for (int iFac = 0; iFac < nbFac; iFac++)
     for (int iExt = 0; iExt < nbExt; iExt++) {
-      T sum = 0;
+      T sum(0);
       for (int i = 0; i < nbCol; i++)
         sum += FAC(iFac, i) * EXT(iExt, i);
       if (sum == 0)
@@ -396,7 +396,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     Face extfac_incd(nbFac * nbExt);
     for (int iFac = 0; iFac < nbFac; iFac++)
       for (int iExt = 0; iExt < nbExt; iExt++) {
-        T sum = 0;
+        T sum(0);
         for (int i = 0; i < nbCol; i++)
           sum += FAC(iFac, i) * EXT(iExt, i);
         if (sum == 0)

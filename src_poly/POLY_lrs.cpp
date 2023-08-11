@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheoryQuadField.h"
+#include "NumberTheorySafeInt.h"
 #include "POLY_lrslib.h"
 // clang-format on
 
@@ -117,7 +118,7 @@ void process(std::string const &eFileI, std::string const &choice,
       std::vector<size_t> eIncd;
       Face f(nbRow);
       for (int iRow = 0; iRow < nbRow; iRow++) {
-        T eScal = 0;
+        T eScal(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
           eScal += out[iCol] * EXT(iRow, iCol);
         if (eScal == 0) {
@@ -191,6 +192,14 @@ int main(int argc, char *argv[]) {
     if (argc == 5)
       eFileO = argv[4];
     auto call_lrs = [&](std::ostream &os) -> void {
+      if (arith == "safe_integer") {
+        using T = SafeInt64;
+        return process<T>(eFileI, choice, os);
+      }
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileI, choice, os);
+      }
       if (arith == "integer") {
         using T = mpz_class;
         return process<T>(eFileI, choice, os);

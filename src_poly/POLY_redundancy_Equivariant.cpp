@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheoryQuadField.h"
+#include "NumberTheorySafeInt.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "POLY_RedundancyElimination.h"
@@ -93,6 +94,10 @@ int main(int argc, char *argv[]) {
       FileO = argv[5];
     }
     auto treat=[&](std::ostream & os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T,Tgroup>(FileExtI, FileGrpI, OutFormat, os);
+      }
       if (arith == "rational") {
         using T = mpq_class;
         return process<T,Tgroup>(FileExtI, FileGrpI, OutFormat, os);

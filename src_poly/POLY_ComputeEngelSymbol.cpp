@@ -8,9 +8,8 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "ComputeEngelSymbol [eFileI] [eFileO]\n";
+      std::cerr << "POLY_ComputeEngelSymbol [eFileI] [eFileO]\n";
       std::cerr << "\n";
       std::cerr << "eFileI: the input file\n";
       std::cerr << "eFileO: the output file\n";

@@ -2792,7 +2792,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
   bool colselected = false, rowselected = false, dualfeasible = true;
   dd_rowrange i, iref;
   dd_colrange j, k;
-  T val, valn, minval = 0, rat, minrat = 0, minrat_q = 1;
+  T val, valn, minval(0), rat, minrat(0), minrat_q(1);
   //  T* rcost;
   //  dd_colset tieset;
   //  dd_colset stieset;  /* store the column indices with tie */
@@ -3407,10 +3407,10 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
   long pivots_p1 = 0;
   dd_rowrange i, r_val;
   dd_colrange j, l, ms = 0, s_val, local_m_size;
-  T x, val, maxcost = 0, axvalue, maxratio = 0, maxratio_q = 1;
+  T x, val, maxcost(0), axvalue, maxratio(0), maxratio_q(1);
 
   T scaling; /* random scaling mytype value */
-  T minval = 0;
+  T minval(0);
 
   *err = dd_NoError;
   *lps = dd_LPSundecided;
@@ -4314,7 +4314,7 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
   }
   for (j = 1; j <= d; j++)
     lp->A[m - 1][j - 1] = M->matrix[itest - 1][j - 1];
-  lp->A[itest - 1][0] += 1; /* relax the original inequality by one */
+  lp->A[itest - 1][0] += T(1); /* relax the original inequality by one */
 }
 
 template <typename T>
@@ -4926,14 +4926,14 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
     dd_rowrange mi = lpw->m;
     for (j = 0; j < d; j++)
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
-    lpw->A[mi - 2][0] += 1;
+    lpw->A[mi - 2][0] += T(1);
     if (localdebug) {
       std::cout << "Hyperplane case\n";
       std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
       dd_WriteLP(std::cout, lpw);
     }
     dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
-    lpw->A[mi - 2][0] -= 1;
+    lpw->A[mi - 2][0] -= T(1);
     if (lpw->optvalue < 0)
       return false;
     else
@@ -5123,14 +5123,14 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
     dd_rowrange mi = lpw->m;
     for (j = 0; j < d; j++)
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
-    lpw->A[mi - 2][0] += 1;
+    lpw->A[mi - 2][0] += T(1);
     if (localdebug) {
       std::cout << "Hyperplane case\n";
       std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
       dd_WriteLP(std::cout, lpw);
     }
     dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
-    lpw->A[mi - 2][0] -= 1;
+    lpw->A[mi - 2][0] -= T(1);
     return lpw->optvalue >= 0;
   };
   auto set_entry_in_lpw = [&](dd_rowrange irow) -> void {

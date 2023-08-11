@@ -8,9 +8,8 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "CreateAffineBasis [eMat] [FileSave]\n";
+      std::cerr << "POLY_CreateAffineBasis [eMat] [FileSave]\n";
       std::cerr << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to express\n";
       return -1;

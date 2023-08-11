@@ -108,7 +108,7 @@ template <typename T> MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const &TheEXT) {
   MyMatrix<T> QMat(nbCol, nbCol);
   for (size_t iCol = 0; iCol < nbCol; iCol++) {
     for (size_t jCol = iCol; jCol < nbCol; jCol++) {
-      T eSum = 0;
+      T eSum(0);
       for (size_t iRow = 0; iRow < nbRow; iRow++)
         eSum += TheEXT(iRow, jCol) * TheEXT(iRow, iCol);
       QMat(iCol, jCol) = eSum;
@@ -189,14 +189,14 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   // Functions for computing the weighted matrix entries.
   auto f1 = [&](size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
-      T eSum = 0;
+      T eSum(0);
       for (size_t jCol = 0; jCol < nbCol; jCol++)
         eSum += Qinput(iCol, jCol) * TheEXT(iRow, jCol);
       V(iCol) = eSum;
     }
   };
   auto f2 = [&](size_t jRow) -> T {
-    T eSum = 0;
+    T eSum(0);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       eSum += V(iCol) * TheEXT(jRow, iCol);
     return eSum;

@@ -11,9 +11,8 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 4) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "TestEquivalenceSets [BigGRP] [SmaGRP] [ListFace]\n";
+      std::cerr << "GRP_OrbitSplitting [BigGRP] [SmaGRP] [ListFace]\n";
       std::cerr << "\n";
       std::cerr << "BigGRP     : The file containing the big group\n";
       std::cerr << "SmaGRP     : The file containing the small group\n";

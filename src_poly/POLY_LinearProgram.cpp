@@ -8,9 +8,8 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3) {
-      std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "CDD_LinearProgramming [DATA_LP] [RESULT]\n";
+      std::cerr << "POLY_LinearProgram [DATA_LP] [RESULT]\n";
       std::cerr << "\n";
       std::cerr << "DATA_LP: The file containing the data on the problem "
                    "considered\n";

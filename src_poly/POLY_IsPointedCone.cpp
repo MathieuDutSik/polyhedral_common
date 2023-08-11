@@ -2,7 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
@@ -40,7 +41,12 @@ int main(int argc, char *argv[]) {
     std::string eFileI = argv[2];
     auto compute_pointedness = [&](std::ostream &os) -> void {
       if (arith == "rational") {
-        return process<mpq_class>(eFileI, os);
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileI, os);
+      }
+      if (arith == "rational") {
+        using T = mpq_class;
+        return process<T>(eFileI, os);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;

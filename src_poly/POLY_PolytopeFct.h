@@ -155,7 +155,7 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) 
   for (int iCol = 0; iCol < nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    T eScal = 0;
+    T eScal(0);
     for (int iCol = 0; iCol < nbCol; iCol++)
       eScal += eVect(iCol) * EXT(iRow, iCol);
     if (eScal == 0) {
@@ -212,7 +212,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     if (OneInc[iRow])
       continue;
-    T eScal = 0;
+    T eScal(0);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       eScal += eVect(iCol) * TheEXT(iRow, iCol);
     if (eScal > 0)
@@ -290,10 +290,10 @@ public:
     //
     // Inverse scalar products
     //
-    ListInvScal = std::vector<T>(nbRow, 0);
+    ListInvScal = std::vector<T>(nbRow, T(0));
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
-        T eSum = 0;
+        T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
           eSum += FacetIneq(iCol) * EXT(iRow, iCol);
         ListInvScal[iRow] = -1 / eSum;
@@ -327,7 +327,7 @@ public:
       pos_outside++;
     }
     int outRow = OneInc_V[pos_outside];
-    T eSum = 0;
+    T eSum(0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
       eSum += EXT_red(outRow, iCol) * out[iCol];
     int eSign = 1;
@@ -342,11 +342,11 @@ public:
     // beta >= -F0(v) ListInvScal(v) = beta(v)
     // beta >= max beta(v)
     Face fret(nbRow);
-    T beta_max = 0;
+    T beta_max(0);
     bool isAssigned = false;
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (OneInc[iRow] == 0) {
-        T eSum = 0;
+        T eSum(0);
         for (int iCol = 0; iCol < nbCol - 1; iCol++)
           eSum += EXT_red(iRow, iCol) * F0(iCol);
         T beta = eSum * ListInvScal[iRow];

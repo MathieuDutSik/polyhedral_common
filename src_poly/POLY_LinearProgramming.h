@@ -234,7 +234,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
       // defined. Otherwise, what we may get is actually a primal_direction and
       // it would just not make sense with negative values for eSum.
       for (int iRow = 0; iRow < nbRow; iRow++) {
-        T eSum = 0;
+        T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
           eSum += eVectDirSolExt(iCol) * TheEXT(iRow, iCol);
         if (eSum < 0) {
@@ -462,7 +462,7 @@ template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
       nMat(iRow, iCol + 1) = EXT(iRow, iCol);
   }
   for (int iCol = 0; iCol <= nbCol; iCol++) {
-    T eSum = 0;
+    T eSum(0);
     for (int iRow = 0; iRow < nbRow; iRow++)
       eSum += nMat(iRow, iCol);
     eVect(iCol) = eSum;
@@ -521,10 +521,10 @@ MyMatrix<T> SetIsobarycenter(MyMatrix<T> const& EXT) {
   int nbCol = EXT.cols();
   MyVector<T> eVect = MyVector<T>(nbCol);
   for (int iCol = 0; iCol < nbCol; iCol++) {
-    T eSum = 0;
+    T eSum(0);
     for (int iRow = 0; iRow < nbRow; iRow++)
       eSum += EXT(iRow, iCol);
-    eSum = eSum / nbRow;
+    eSum = eSum / T(nbRow);
     eVect(iCol) = eSum;
   }
   MyMatrix<T> nMat(nbRow, nbCol);
@@ -547,7 +547,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
     for (int iCol = 0; iCol < nbCol; iCol++) {
       int a = random();
       int b = random();
-      T eVal = a - b;
+      T eVal(a - b);
       eVect(iCol) = eVal;
     }
     LpSolution<T> eSol = CDD_LinearProgramming(EXT, eVect);
@@ -557,7 +557,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
       TheVert(iCol + 1) = SolDir(iCol);
     Face eInc(nbRow);
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      T eSum = 0;
+      T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
         eSum += EXT(iRow, iCol) * TheVert(iCol);
       if (eSum == 0)
@@ -644,7 +644,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
   LpSolution<T> eSol = CDD_LinearProgramming(EXT_ext, ToMinimize);
   Face eFace(nbRow);
   for (int i_row=0; i_row<nbRow; i_row++) {
-    T sum = 0;
+    T sum(0);
     for (int i_col=0; i_col<nbCol; i_col++) {
       sum += EXT(i_row,i_col) * eSol.DirectSolution(i_col);
     }
@@ -694,7 +694,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     eResult.eTestExist = false;
     eResult.InternalVector = eSol.DirectSolution;
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      T eScal = 0;
+      T eScal(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
         eScal += eSol.DirectSolution(iCol) * ListVect(iRow, iCol);
       if (eScal <= 0) {
@@ -716,7 +716,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
         throw TerminalException{1};
       }
     for (int iCol = 0; iCol < nbCol; iCol++) {
-      T eSum = 0;
+      T eSum(0);
       for (int iRow = 0; iRow < nbRow; iRow++)
         eSum += eSol.DualSolution(iRow) * ListVect(iRow, iCol);
       if (eSum != 0) {
@@ -774,7 +774,7 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
   MyVector<T> ToBeMinimized(nbRelation + 1);
   ToBeMinimized(0) = 0;
   for (int iRel = 0; iRel < nbRelation; iRel++) {
-    T eSum = 0;
+    T eSum(0);
     for (int iVect = 0; iVect < nbVect; iVect++)
       eSum += NSP(iRel, iVect);
     ToBeMinimized(iRel + 1) = eSum;

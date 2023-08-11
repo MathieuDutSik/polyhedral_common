@@ -364,7 +364,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   Face f(n_rows);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
-      Tfield eSum1 = 0;
+      Tfield eSum1(0);
       for (size_t j_row = 0; j_row < n_cols; j_row++) {
         Tfield val = UniversalScalarConversion<Tfield,T>(EXT1(i_row, j_row));
         eSum1 += val * P(j_row, i_col);

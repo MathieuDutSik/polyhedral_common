@@ -6,7 +6,8 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
@@ -95,6 +96,10 @@ int main(int argc, char *argv[]) {
       eFileO = argv[5];
     }
     auto call_lp = [&](std::ostream &os) -> void {
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
+      }
       if (arith == "rational") {
         using T = Trat;
         return process<T>(eFileFAC, eFileIneq, OutFormat, os);

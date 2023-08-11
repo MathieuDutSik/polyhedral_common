@@ -8,7 +8,8 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheorySafeInt.h"
+#include "NumberTheoryQuadField.h"
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
@@ -44,6 +45,10 @@ void full_process_B(std::string const& arith, std::string const& eFileEXT, std::
 #else
   using Trat = mpq_class;
 #endif
+  if (arith == "safe_rational") {
+    using T = Rational<SafeInt64>;
+    return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
+  }
   if (arith == "rational") {
     using T = Trat;
     return full_process_A<T,Tgroup>(eFileEXT, eFileGram, OutFormat, os);
