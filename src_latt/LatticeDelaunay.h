@@ -2,6 +2,7 @@
 #ifndef SRC_LATT_LATTICEDELAUNAY_H_
 #define SRC_LATT_LATTICEDELAUNAY_H_
 
+// clang-format off
 #include "FundamentalDelaunay.h"
 #include "GRP_DoubleCoset.h"
 #include "MatrixGroup.h"
@@ -10,6 +11,7 @@
 #include <map>
 #include <string>
 #include <vector>
+// clang-format on
 
 template <typename T, typename Tint> struct DataLattice {
   int n;

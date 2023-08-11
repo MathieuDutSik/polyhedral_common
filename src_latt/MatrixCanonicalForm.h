@@ -2,6 +2,7 @@
 #ifndef SRC_LATT_MATRIXCANONICALFORM_H_
 #define SRC_LATT_MATRIXCANONICALFORM_H_
 
+// clang-format off
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
@@ -9,6 +10,7 @@
 #include "Temp_PolytopeEquiStab.h"
 #include <utility>
 #include <vector>
+// clang-format on
 
 template <typename T, typename Tint> struct Canonic_PosDef {
   MyMatrix<Tint> Basis;

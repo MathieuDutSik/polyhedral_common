@@ -2,12 +2,14 @@
 #ifndef SRC_LATT_TEMP_TSPACE_GENERAL_H_
 #define SRC_LATT_TEMP_TSPACE_GENERAL_H_
 
+// clang-format off
 #include "POLY_PolytopeFct.h"
 #include "ShortestUniversal.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
 #include <set>
 #include <vector>
+// clang-format on
 
 // Here we use SuperMat as an array because if we declare
 // it directly then we need to give a size and we do not

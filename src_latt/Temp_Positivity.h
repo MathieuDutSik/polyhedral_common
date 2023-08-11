@@ -2,11 +2,13 @@
 #ifndef SRC_LATT_TEMP_POSITIVITY_H_
 #define SRC_LATT_TEMP_POSITIVITY_H_
 
+// clang-format off
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
 #include <vector>
+// clang-format on
 
 template <typename T> T MinimumDiagonal(MyMatrix<T> const &eMat) {
   int n = eMat.rows();

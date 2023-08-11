@@ -2,12 +2,13 @@
 #ifndef SRC_LATT_SHVEC_DOUBLE_H_
 #define SRC_LATT_SHVEC_DOUBLE_H_
 
+// clang-format off
 #include "LatticeDefinitions.h"
 #include "Temp_Positivity.h"
-
 #include <la_support.h>
 #include <shvec.h>
 #include <vector>
+// clang-format on
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_double(MyMatrix<T> const &eMat, T const &MaxNorm) {

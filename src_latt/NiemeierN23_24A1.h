@@ -2,7 +2,9 @@
 #ifndef SRC_LATT_NIEMEIERN23_24A1_H_
 #define SRC_LATT_NIEMEIERN23_24A1_H_
 
+// clang-format off
 #include <vector>
+// clang-format on
 
 template <typename T> MyMatrix<T> Get_N23_eBasis() {
   T eDen = 1;

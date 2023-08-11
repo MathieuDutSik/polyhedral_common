@@ -2,11 +2,13 @@
 #ifndef SRC_LATT_CVP_NIEMEIERALGO_H_
 #define SRC_LATT_CVP_NIEMEIERALGO_H_
 
+// clang-format off
 #include "COMB_Combinatorics.h"
 #include "LatticeDefinitions.h"
 #include "NiemeierN23_24A1.h"
 #include "NumberTheory.h"
 #include <vector>
+// clang-format on
 
 //
 // We have eBasis*GramMat*TransposedMat(eBasis) = q0

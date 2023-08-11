@@ -2,11 +2,13 @@
 #ifndef SRC_LATT_GSL_RELATED_H_
 #define SRC_LATT_GSL_RELATED_H_
 
+// clang-format off
 #include "MAT_Matrix.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
+// clang-format on
 
 template <typename T>
 MyVector<T> T_FindNegativeVector(MyMatrix<T> const &eMat) {

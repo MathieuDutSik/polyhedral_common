@@ -2,6 +2,7 @@
 #ifndef SRC_LATT_INVARIANTVECTORFAMILY_H_
 #define SRC_LATT_INVARIANTVECTORFAMILY_H_
 
+// clang-format off
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
 #include "Timings.h"
@@ -9,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+// clang-format on
 
 /*
   We are considering here the enumeration of configurations of vectors for

@@ -2,9 +2,11 @@
 #ifndef SRC_LATT_SIMULDIOPHANTAPPROX_H_
 #define SRC_LATT_SIMULDIOPHANTAPPROX_H_
 
+// clang-format off
 #include "LatticeDefinitions.h"
 #include <string>
 #include <utility>
+// clang-format on
 
 template <typename Tint> struct DiophantResult {
   MyVector<Tint> Numerators;

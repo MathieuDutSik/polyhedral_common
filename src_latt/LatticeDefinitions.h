@@ -2,11 +2,13 @@
 #ifndef SRC_LATT_LATTICEDEFINITIONS_H_
 #define SRC_LATT_LATTICEDEFINITIONS_H_
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
 #include "MAT_Matrix.h"
 #include <utility>
 #include <vector>
+// clang-format on
 
 template <typename T, typename Tint> struct Tshortest {
   T eMin;

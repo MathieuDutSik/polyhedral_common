@@ -2,6 +2,7 @@
 #ifndef SRC_LATT_SHORTESTUNIVERSAL_H_
 #define SRC_LATT_SHORTESTUNIVERSAL_H_
 
+// clang-format off
 //#include "CVP_NiemeierAlgo.h"
 #include "Shvec_exact.h"
 
@@ -9,6 +10,7 @@
 #include "Shvec_double.h"
 #endif
 #include <string>
+// clang-format on
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,

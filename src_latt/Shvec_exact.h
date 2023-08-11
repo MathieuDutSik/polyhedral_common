@@ -2,11 +2,13 @@
 #ifndef SRC_LATT_SHVEC_EXACT_H_
 #define SRC_LATT_SHVEC_EXACT_H_
 
+// clang-format off
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
 #include "POLY_LinearProgramming.h"
 #include <utility>
 #include <vector>
+// clang-format on
 
 #define CHECK_BASIC_CONSISTENCY
 // #define PRINT_DEBUG_INFO
