@@ -32,6 +32,11 @@ void process(std::string const &eFileFAC, std::string const& eFileIneq, std::str
     if (eSol.DualDefined) {
       os << ",\n dual_solution:=" << StringVectorGAP(eSol.DualSolution);
     }
+    if (eSol.PrimalDefined && eSol.DualDefined) {
+      os << ", face:=";
+      WriteFaceGAP(os, eSol.eFace);
+    }
+    os << ", rankDirectSol:=" << eSol.rankDirectSol << ");\n";
     os << ");\n";
     return;
   }
