@@ -24,8 +24,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
 		  POLY_IsomorphismReduction VectFamily_Reduction \
-		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat \
-		  POLY_FaceLatticeDirect
+		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 

@@ -13,7 +13,6 @@
 #PROGRAM		= SHORT_GetShortestVector
 #PROGRAM		= SHORT_ReduceVectorFamilyGAP
 #PROGRAM		= POLY_process_csdp
-#PROGRAM		= POLY_FaceLatticeDirect
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
