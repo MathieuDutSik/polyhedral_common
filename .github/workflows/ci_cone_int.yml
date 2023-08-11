@@ -1,4 +1,4 @@
-name: CI of Reflective lattices
+name: CI of cone intersections
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -132,6 +132,6 @@ jobs:
           pwd
           echo "After compilation of Cone intersection test code"
 
-          cd Exmpl_Bench/CI_tests
+          cd CI_tests/ConeIntersection
           ../../src_polydecomp/DEC_TestIntersectionMethods FamilyCones.txt
           cd ../..
