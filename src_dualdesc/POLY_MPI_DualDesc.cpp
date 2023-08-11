@@ -72,6 +72,10 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     std::string NumericalType = GetNumericalType(eFull);
     auto process=[&]() -> void {
+      if (NumericalType == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return Process_eFull_select_type<T>(world, eFull);
+      }
       if (NumericalType == "rational") {
         using T = mpq_class;
         return Process_eFull_select_type<T>(world, eFull);
