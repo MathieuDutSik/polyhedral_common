@@ -76,6 +76,32 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return Process_eFull_select_type<T>(world, eFull);
       }
+      if (NumericalType == "Qsqrt5") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat, 5>;
+        return Process_eFull_select_type<T>(world, eFull);
+      }
+      if (NumericalType == "Qsqrt2") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat, 2>;
+        return Process_eFull_select_type<T>(world, eFull);
+      }
+      if (NumericalType == "RealAlgebraic") {
+        using T_rat = mpq_class;
+        SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+        std::string FileAlgebraicField =
+          BlockDATA.ListStringValues.at("FileAlgebraicField");
+        if (!IsExistingFile(FileAlgebraicField)) {
+          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
+                    << " is missing\n";
+          throw TerminalException{1};
+        }
+        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        int const idx_real_algebraic_field = 1;
+        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
+        using T = RealField<idx_real_algebraic_field>;
+        return Process_eFull_select_type<T>(world, eFull);
+      }
       std::cerr << "Failed to find a matching type entry\n";
       throw TerminalException{1};
     };
