@@ -132,6 +132,6 @@ jobs:
           pwd
           echo "After compilation of Dual description code"
 
-          cd Exmpl_Bench/CI_tests
+          cd CI_tests/SimpleDualDesc
           ../../gap.sh < TestSimpleDualDesc.g
           cd ../..
