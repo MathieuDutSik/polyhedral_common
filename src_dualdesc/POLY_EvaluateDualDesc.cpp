@@ -5,10 +5,10 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
+#include "NumberTheoryQuadField.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"
-#include "QuadField.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

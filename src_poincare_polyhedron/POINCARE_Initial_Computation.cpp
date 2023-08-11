@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "QuadField.h"
+#include "NumberTheoryQuadField.h"
 #include "poincare_polyhedron.h"
 #include "Group.h"
 #include "Permutation.h"
