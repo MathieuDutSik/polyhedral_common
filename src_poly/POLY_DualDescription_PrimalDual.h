@@ -140,7 +140,7 @@ void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const& FAC, Fprocess f_
     MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
     Face f(nbRow);
     for (int i_row=0; i_row<nbRow; i_row++) {
-      T sum = 0;
+      T sum(0);
       for (int i=0; i<dim; i++)
         sum += FAC(i_row,i) * eEXT(i);
       if (sum == 0)

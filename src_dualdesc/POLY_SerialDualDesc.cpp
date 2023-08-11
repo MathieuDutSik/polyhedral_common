@@ -5,10 +5,11 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
+#include "NumberTheoryQuadField.h"
+#include "NumberTheorySafeInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"
-#include "QuadField.h"
 // clang-format on
 
 template <typename T, typename Tidx>
@@ -60,6 +61,10 @@ int main(int argc, char *argv[]) {
       Process<T>(eFull);
     }
     */
+    if (NumericalType == "safe_rational") {
+      using T = Rational<SafeInt64>;
+      Process<T>(eFull);
+    }
     if (NumericalType == "rational") {
       using T = mpq_class;
       //    using T = boost::multiprecision::cpp_rational;
