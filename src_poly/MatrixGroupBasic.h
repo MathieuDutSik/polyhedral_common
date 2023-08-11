@@ -2,7 +2,9 @@
 #ifndef SRC_POLY_MATRIXGROUPBASIC_H_
 #define SRC_POLY_MATRIXGROUPBASIC_H_
 
+// clang-format off
 #include <vector>
+// clang-format on
 
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>> FindTransformationGeneral(MyMatrix<T> const &EXT1,

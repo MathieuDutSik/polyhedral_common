@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_MATRIXGROUP_H_
 #define SRC_POLY_MATRIXGROUP_H_
 
+// clang-format off
 #include "GRP_GroupFct.h"
 #include "Group.h"
 #include "InvariantVectorFamily.h"
@@ -17,6 +18,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 # define DEBUG_MATRIX_GROUP

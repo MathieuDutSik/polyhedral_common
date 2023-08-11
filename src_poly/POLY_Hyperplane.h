@@ -2,12 +2,14 @@
 #ifndef SRC_POLY_POLY_HYPERPLANE_H_
 #define SRC_POLY_POLY_HYPERPLANE_H_
 
+// clang-format off
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 # define DEBUG_HYPERPLANE

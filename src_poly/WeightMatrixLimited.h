@@ -2,12 +2,14 @@
 #ifndef SRC_POLY_WEIGHTMATRIXLIMITED_H_
 #define SRC_POLY_WEIGHTMATRIXLIMITED_H_
 
+// clang-format off
 #include "GRP_GroupFct.h"
 #include <limits>
 #include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+// clang-format on
 
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
 public:

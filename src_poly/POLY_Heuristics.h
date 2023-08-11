@@ -2,12 +2,14 @@
 #ifndef SRC_POLY_POLY_HEURISTICS_H_
 #define SRC_POLY_POLY_HEURISTICS_H_
 
+// clang-format off
 #include "Basic_file.h"
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
 #include <limits>
 #include <string>
 #include <vector>
+// clang-format on
 
 //
 // Heuristic business

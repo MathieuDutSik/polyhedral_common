@@ -2,9 +2,11 @@
 #ifndef SRC_POLY_CHECK_BLISS_TRACES_H_
 #define SRC_POLY_CHECK_BLISS_TRACES_H_
 
+// clang-format off
 #include "GRAPH_bliss.h"
 #include "GRAPH_traces.h"
 #include <vector>
+// clang-format on
 
 template <typename Tgr, typename Tgroup>
 void PrintStabilizerGroupSizes(std::ostream &os, Tgr const &eGR) {

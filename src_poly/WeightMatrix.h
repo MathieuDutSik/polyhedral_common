@@ -13,6 +13,7 @@
 #include "GRAPH_traces.h"
 #endif
 
+// clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "Boost_bitset.h"
@@ -27,6 +28,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 //
 // The templatized functions

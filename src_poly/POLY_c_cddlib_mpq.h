@@ -4,12 +4,14 @@
 
 #define GMPRATIONAL
 
+// clang-format off
 #include "Boost_bitset_kernel.h"
 #include "MatrixTypes.h"
 #ifndef DISABLE_MPQ_CLASS
 #include "gmpxx.h"
 #endif
 #include <boost/multiprecision/gmp.hpp>
+// clang-format on
 
 namespace cbased_cdd {
 #ifndef DISABLE_MPQ_CLASS

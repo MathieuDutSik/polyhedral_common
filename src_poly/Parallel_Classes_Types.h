@@ -2,10 +2,12 @@
 #ifndef SRC_POLY_PARALLEL_CLASSES_TYPES_H_
 #define SRC_POLY_PARALLEL_CLASSES_TYPES_H_
 
+// clang-format off
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
+// clang-format on
 
 //
 // Fundamental struct data types

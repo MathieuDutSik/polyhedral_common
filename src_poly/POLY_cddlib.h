@@ -19,10 +19,12 @@
    from the original C version.
 */
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "MAT_Matrix.h"
 #include <cassert>
 #include <vector>
+// clang-format on
 
 #define DEBUG_CDD
 

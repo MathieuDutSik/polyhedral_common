@@ -2,11 +2,13 @@
 #ifndef SRC_POLY_THREADMANAGEMENT_H_
 #define SRC_POLY_THREADMANAGEMENT_H_
 
+// clang-format off
 #include "BasicThreadInclude.h"
 #include "facet.h"
 // #include "tbb/tbb.h"
 #include "tbb/concurrent_vector.h"
 #include <string>
+// clang-format on
 
 /*
   The complicacy of this function is that we have to deal with the

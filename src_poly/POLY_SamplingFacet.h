@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_SAMPLINGFACET_H_
 #define SRC_POLY_POLY_SAMPLINGFACET_H_
 
+// clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
@@ -9,6 +10,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+// clang-format on
 
 struct recSamplingOption {
   int critlevel;

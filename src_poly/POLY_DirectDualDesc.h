@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_DIRECTDUALDESC_H_
 #define SRC_POLY_POLY_DIRECTDUALDESC_H_
 
+// clang-format off
 #include "Basic_string.h"
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
@@ -10,6 +11,7 @@
 #include "POLY_DualDescription_PrimalDual.h"
 #include <string>
 #include <vector>
+// clang-format on
 
 #ifdef TIMINGS
 # define TIMINGS_DUAL_DESC

@@ -2,10 +2,12 @@
 #ifndef SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
 #define SRC_POLY_POLY_LINEARPROGRAMMING_GLPK_H_
 
+// clang-format off
 #include "POLY_PolytopeFct.h"
 #include <glpk.h>
 #include <string>
 #include <vector>
+// clang-format on
 
 /*
   GLPK does not return the unfeasibility proof as opposed to CDD.

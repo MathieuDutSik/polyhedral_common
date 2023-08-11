@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_POLYTOPEFCT_H_
 #define SRC_POLY_POLY_POLYTOPEFCT_H_
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
@@ -9,12 +10,12 @@
 #ifndef DISABLE_FP_CLASS
 #include "Fp.h"
 #endif
+#include "NumberTheoryGeneric.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
-#include "NumberTheoryGeneric.h"
+// clang-format on
 
 struct GLPKoption {
   bool UseDouble;

@@ -2,8 +2,10 @@
 #ifndef SRC_POLY_PARALLEL_CLASSES_H_
 #define SRC_POLY_PARALLEL_CLASSES_H_
 
+// clang-format off
 #include "Parallel_Classes_Types.h"
 #include "ThreadManagement.h"
+// clang-format on
 
 // DataBank database for storing known results
 //

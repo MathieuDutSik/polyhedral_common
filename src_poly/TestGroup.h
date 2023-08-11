@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_TESTGROUP_H_
 #define SRC_POLY_TESTGROUP_H_
 
+// clang-format off
 #include "Group.h"
 #include "MatrixGroup.h"
 #include "Permutation.h"
@@ -9,6 +10,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+// clang-format on
 
 // Off the normal track but ok. Just used for testing purposes.
 

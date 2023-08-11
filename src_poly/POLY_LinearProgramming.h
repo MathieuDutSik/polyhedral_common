@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_LINEARPROGRAMMING_H_
 #define SRC_POLY_POLY_LINEARPROGRAMMING_H_
 
+// clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "MAT_MatrixInt.h"
@@ -9,6 +10,7 @@
 #include "POLY_cddlib.h"
 #include <string>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 # define DEBUG_LINEAR_PROGRAM

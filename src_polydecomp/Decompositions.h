@@ -3,7 +3,6 @@
 #define SRC_POLYDECOMP_DECOMPOSITIONS_H_
 
 // clang-format off
-#include "NumberTheory.h"
 #include "Group.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"

@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POLY_POLY_KSKELETTON_H_
 #define SRC_POLY_POLY_KSKELETTON_H_
+
 // clang-format off
 #include "GRP_GroupFct.h"
 #include "MAT_Matrix.h"

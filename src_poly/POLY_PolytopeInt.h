@@ -2,10 +2,12 @@
 #ifndef SRC_POLY_POLY_POLYTOPEINT_H_
 #define SRC_POLY_POLY_POLYTOPEINT_H_
 
+// clang-format off
 #include "COMB_Combinatorics.h"
 #include "POLY_LinearProgramming.h"
 #include <limits>
 #include <vector>
+// clang-format on
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,

@@ -38,11 +38,13 @@
 #define UNORD_SET_SPECIFIC tsl::hopscotch_set
 #endif
 
+// clang-format off
 #include <algorithm>
 #include <limits>
 #include <map>
 #include <utility>
 #include <vector>
+// clang-format on
 
 using SignVertex = std::vector<int>;
 

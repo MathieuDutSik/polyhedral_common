@@ -2,11 +2,13 @@
 #ifndef SRC_POLY_PERM_FCT_H_
 #define SRC_POLY_PERM_FCT_H_
 
+// clang-format off
 #include "Timings.h"
 #include <algorithm>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef TIMINGS
 # define TIMINGS_PERM_FCT

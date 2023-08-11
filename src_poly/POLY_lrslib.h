@@ -1,6 +1,5 @@
 #ifndef SRC_POLY_POLY_LRSLIB_H_
 #define SRC_POLY_POLY_LRSLIB_H_
-
 /* A templatized version of David Avis' lrs.
  * Code is mainly taken from lrslib.c
  *
@@ -22,12 +21,14 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include <limits>
 #include <string>
+// clang-format on
 
 namespace lrs {
 // some #defines and global variables from the original lrs code

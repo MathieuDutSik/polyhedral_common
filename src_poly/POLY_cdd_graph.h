@@ -2,8 +2,10 @@
 #ifndef SRC_POLY_POLY_CDD_GRAPH_H_
 #define SRC_POLY_POLY_CDD_GRAPH_H_
 
+// clang-format off
 #include "GRAPH_BitsetType.h"
 #include "POLY_cddlib.h"
+// clang-format on
 
 namespace cdd {
 template <typename T>

@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
 #define SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
 
+// clang-format off
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_cddlib.h"
@@ -9,6 +10,7 @@
 #include <set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 // Fairly expensive function. But useful for debugging
 template <typename T>

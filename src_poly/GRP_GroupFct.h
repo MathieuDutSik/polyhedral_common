@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_GRP_GROUPFCT_H_
 #define SRC_POLY_GRP_GROUPFCT_H_
 
+// clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "Boost_bitset.h"
@@ -14,6 +15,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 # define DEBUG_GROUP

@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 #define SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
 
+// clang-format off
 #include "MatrixGroup.h"
 #include "Timings.h"
 #include "WeightMatrix.h"
@@ -12,6 +13,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+// clang-format on
 
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix

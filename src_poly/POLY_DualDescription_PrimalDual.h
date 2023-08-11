@@ -2,11 +2,12 @@
 #ifndef SRC_POLY_POLY_DUALDESCRIPTION_PRIMALDUAL_H_
 #define SRC_POLY_POLY_DUALDESCRIPTION_PRIMALDUAL_H_
 
-
+// clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_SamplingFacet.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
+// clang-format on
 
 #ifdef DEBUG
 # define DEBUG_PRIMAL_DUAL

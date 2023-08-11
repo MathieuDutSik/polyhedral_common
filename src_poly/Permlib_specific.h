@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_PERMLIB_SPECIFIC_H_
 #define SRC_POLY_PERMLIB_SPECIFIC_H_
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "hash_functions.h"
 #include <memory>
@@ -10,6 +11,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 int OnPoints(int const &i, permlib::Permutation const &elt) {
   return elt.at(i);

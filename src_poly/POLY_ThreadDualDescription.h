@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
 #define SRC_POLY_POLY_THREADDUALDESCRIPTION_H_
 
+// clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "GRP_DoubleCoset.h"
@@ -17,10 +18,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-//
-// PolyhedralInv
-//
+// clang-format on
 
 template <typename T> struct PolyhedralInv {
   int dim;

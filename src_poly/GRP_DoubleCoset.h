@@ -2,6 +2,7 @@
 #ifndef SRC_POLY_GRP_DOUBLECOSET_H_
 #define SRC_POLY_GRP_DOUBLECOSET_H_
 
+// clang-format off
 #include "GRP_GroupFct.h"
 #include "WeightMatrix.h"
 #include "hopscotch_set.h"
@@ -12,6 +13,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef TIMINGS
 # define TIMINGS_GROUP

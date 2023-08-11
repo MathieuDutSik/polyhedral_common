@@ -2,10 +2,12 @@
 #ifndef SRC_POLY_TEMP_MPI_H_
 #define SRC_POLY_TEMP_MPI_H_
 
+// clang-format off
 #include "GRP_GroupFct.h"
 #include "MPI_functions.h"
 #include "MPQ_Matrix.h"
 #include <vector>
+// clang-format on
 
 struct MPIworkingstructure {
   int Nproc;
