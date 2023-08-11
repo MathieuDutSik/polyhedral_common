@@ -1,4 +1,4 @@
-#PROGRAM		= POLY_lcdd POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
+#PROGRAM		= POLY_redundancyClarkson POLY_cdd_skeletons POLY_LinearDetermineByInequalities
 PROGRAM		= POLY_redundancyClarksonCddlib POLY_GapFindHyperplaneRegions
 
 OBJECTS		= $(PROGRAM:%=%.o)
