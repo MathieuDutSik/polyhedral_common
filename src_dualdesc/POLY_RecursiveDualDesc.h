@@ -1652,7 +1652,29 @@ public:
       return bb.get_default_strategy();
     }
   }
-  bool is_database_present() const { return IsExistingFile(eFileEXT); }
+  bool is_database_present() const { 
+    if(IsExistingFile(eFileEXT)==false) {
+      return false;
+    } 
+    // verify that EXT file is same as bb.EXT
+    MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
+    if (EXT==bb.EXT) {
+      return true;
+    }
+    // else database got changed e.g. due to method change
+    // remove it
+    // optional future function: check for equivalence and convert
+    if (SavingTrigger) {
+      os << "Database got changed, removing old one\n";
+      RemoveFileIfExist(eFileNB);
+      RemoveFileIfExist(eFileFB);
+      RemoveFileIfExist(eFileFF);
+      RemoveFileIfExist(eFileEXT);
+      RemoveFileIfExist(eFileGRP);
+      RemoveFileIfExist(eFileMethod);
+    }
+    return false;
+  }
   DatabaseOrbits() = delete;
   DatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
   DatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
