@@ -2481,6 +2481,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListStringValues1_doc["NumericalType"] = "Default: rational\n\
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
+safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic: coordinate in a real algebraic field";

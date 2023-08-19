@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
+      std::cerr << "safe_rational : rational based on int64_t that fails gracefully of overflowing\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string eFileI = argv[2];
     auto compute_pointedness = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
+      if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
         return process<T>(eFileI, os);
       }

@@ -12,7 +12,6 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_lrs \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_IsPointedCone \
-                  GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
                   GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Invariant \
