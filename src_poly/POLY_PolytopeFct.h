@@ -17,6 +17,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_FLIP
+#endif
+
 struct GLPKoption {
   bool UseDouble;
   bool UseExact;
@@ -273,12 +277,14 @@ private:
   int nbCol;
   Face OneInc;
   std::pair<std::vector<int>,std::vector<int>> PairIncs;
+  int e_incd0;
+  int e_incd1;
   std::vector<T> ListInvScal;
 
 public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : OneInc(_OneInc), ListInvScal(OneInc.size() - OneInc.count()) {
+    : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListInvScal(e_incd0) {
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
@@ -305,22 +311,18 @@ public:
     //
     // Inverse scalar products
     //
-    size_t pos_row = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (OneInc[iRow] == 0) {
-        T eSum(0);
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          eSum += FacetIneq(iCol) * EXT(iRow, iCol);
-        ListInvScal[pos_row] = -1 / eSum;
-        pos_row++;
-      }
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
+      T eSum(0);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eSum += FacetIneq(iCol) * EXT(iRow, iCol);
+      ListInvScal[pos_row] = -1 / eSum;
     }
     //
     // Now the EXT face that is used by other procedure
     //
-    size_t e_incd = OneInc.count();
-    EXT_face = MyMatrix<T>(e_incd, nbCol - 1);
-    for (int i_row=0; i_row<e_incd; i_row++) {
+    EXT_face = MyMatrix<T>(e_incd1, nbCol - 1);
+    for (int i_row=0; i_row<e_incd1; i_row++) {
       int j_row = PairIncs.second[i_row];
       int pos = 0;
       for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -354,27 +356,30 @@ public:
     // So for all vectors v in EXT we have F0(v) + beta FacetIneq(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
     // beta >= max beta(v)
-    Face fret(nbRow);
     T beta_max(0);
     bool isAssigned = false;
     size_t pos_row = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (OneInc[iRow] == 0) {
+    Face f_select(e_incd0);
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
         T eSum(0);
         for (int iCol = 0; iCol < nbCol - 1; iCol++)
           eSum += EXT_red(iRow, iCol) * F0(iCol);
         T beta = eSum * ListInvScal[pos_row];
         if (!isAssigned || beta > beta_max) {
-          for (int kRow = 0; kRow < iRow; kRow++)
-            fret[kRow] = 0;
+          for (int k = 0; k < pos_row; k++)
+            f_select[k] = 0;
           beta_max = beta;
         }
         if (beta_max == beta) {
-          fret[iRow] = 1;
+          f_select[pos_row] = 1;
         }
         isAssigned = true;
-        pos_row++;
-      }
+    }
+    Face fret(nbRow);
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
+      fret[iRow] = f_select[pos_row];
     }
     // Now adding the points from the ridge
     boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
@@ -432,6 +437,8 @@ private:
   Face OneInc;
   size_t max_bits;
   std::pair<std::vector<int>,std::vector<int>> PairIncs;
+  int e_incd0;
+  int e_incd1;
   std::vector<mpz_class> ListScal;
 
 public:
@@ -440,7 +447,7 @@ public:
     return mpz_sizeinbase(v.get_mpz_t(), 2);
   }
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : try_int(false), OneInc(_OneInc), ListScal(OneInc.size() - OneInc.count()) {
+    : try_int(false), OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListScal(e_incd0) {
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
 
     MyMatrix<Tint> EXT_scaled = RescaleRows(EXT);
@@ -486,22 +493,18 @@ public:
     //
     // Scalar products
     //
-    size_t pos_row = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (OneInc[iRow] == 0) {
-        Tint eSum = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          eSum += FacetIneq(iCol) * EXT_scaled(iRow, iCol);
-        ListScal[pos_row] = eSum;
-        pos_row++;
-      }
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
+      Tint eSum = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eSum += FacetIneq(iCol) * EXT_scaled(iRow, iCol);
+      ListScal[pos_row] = eSum;
     }
     //
     // Now the EXT face that is used by other procedure
     //
-    int e_incd = OneInc.count();
-    EXT_face = MyMatrix<T>(e_incd, nbCol - 1);
-    for (int i_row=0; i_row<e_incd; i_row++) {
+    EXT_face = MyMatrix<T>(e_incd1, nbCol - 1);
+    for (int i_row=0; i_row<e_incd1; i_row++) {
       int j_row = PairIncs.second[i_row];
       int pos = 0;
       for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -562,30 +565,32 @@ public:
     MyVector<Tint> F0(nbCol - 1);
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
       F0(iCol) = eSign * out[iCol];
-    Face fret(nbRow);
     Tint beta_max_num = 0;
     Tint beta_max_den = 1;
     bool isAssigned = false;
-    size_t pos_row = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (OneInc[iRow] == 0) {
-        Tint eSum = 0;
-        T const& eScal = ListScal[pos_row];
-        for (int iCol = 0; iCol < nbCol - 1; iCol++)
-          eSum += EXT_red(iRow, iCol) * F0(iCol);
-        if (!isAssigned ||
-            eSum * beta_max_den < beta_max_num * eScal) {
-          for (int kRow = 0; kRow < iRow; kRow++)
-            fret[kRow] = 0;
-          beta_max_num = eSum;
-          beta_max_den = eScal;
-        }
-        if (eSum * beta_max_den == beta_max_num * eScal) {
-          fret[iRow] = 1;
-        }
-        isAssigned = true;
-        pos_row++;
+    Face f_select(e_incd0);
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
+      Tint eSum = 0;
+      T const& eScal = ListScal[pos_row];
+      for (int iCol = 0; iCol < nbCol - 1; iCol++)
+        eSum += EXT_red(iRow, iCol) * F0(iCol);
+      if (!isAssigned ||
+          eSum * beta_max_den < beta_max_num * eScal) {
+        for (int k = 0; k < pos_row; k++)
+          f_select[k] = 0;
+        beta_max_num = eSum;
+        beta_max_den = eScal;
       }
+      if (eSum * beta_max_den == beta_max_num * eScal) {
+        f_select[pos_row] = 1;
+      }
+      isAssigned = true;
+    }
+    Face fret(nbRow);
+    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+      int iRow = PairIncs.first[pos_row];
+      fret[iRow] = f_select[pos_row];
     }
     // Now adding the points from the ridge
     boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
