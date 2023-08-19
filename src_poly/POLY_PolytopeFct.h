@@ -358,23 +358,22 @@ public:
     // beta >= max beta(v)
     T beta_max(0);
     bool isAssigned = false;
-    size_t pos_row = 0;
     Face f_select(e_incd0);
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
-        T eSum(0);
-        for (int iCol = 0; iCol < nbCol - 1; iCol++)
-          eSum += EXT_red(iRow, iCol) * F0(iCol);
-        T beta = eSum * ListInvScal[pos_row];
-        if (!isAssigned || beta > beta_max) {
-          for (int k = 0; k < pos_row; k++)
-            f_select[k] = 0;
-          beta_max = beta;
-        }
-        if (beta_max == beta) {
-          f_select[pos_row] = 1;
-        }
-        isAssigned = true;
+      T eSum(0);
+      for (int iCol = 0; iCol < nbCol - 1; iCol++)
+        eSum += EXT_red(iRow, iCol) * F0(iCol);
+      T beta = eSum * ListInvScal[pos_row];
+      if (!isAssigned || beta > beta_max) {
+        for (int k = 0; k < pos_row; k++)
+          f_select[k] = 0;
+        beta_max = beta;
+      }
+      if (beta_max == beta) {
+        f_select[pos_row] = 1;
+      }
+      isAssigned = true;
     }
     Face fret(nbRow);
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
@@ -406,13 +405,7 @@ public:
       M.row(eRank) = EXT_red.row(aRow);
       jRow = sInc.find_next(jRow);
     };
-    MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f);
-#ifdef DEBUG_FLIP
-    if (NSP.rows() != 1) {
-      std::cerr << "Error in Flip 2\n";
-      throw TerminalException{1};
-    }
-#endif
+    MyMatrix<T> NSP = NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f);
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
@@ -621,66 +614,60 @@ public:
         jRow = sInc.find_next(jRow);
       };
       MyMatrix<Tfast> NSP_fastT =
-          NullspaceTrMat_Kernel<Tfast, decltype(f)>(nb, nbCol - 1, f);
+        NullspaceTrMatTarget_Kernel<Tfast, decltype(f)>(nb, nbCol - 1, 1, f);
       // check result at full precision in case of overflows
-      if (NSP_fastT.rows() != 1) {
-        std::cerr << "NSP_fastT.rows() != 1"
+      bool allzero = true;
+      for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+        if (NSP_fastT(0, iCol) != 0) {
+          allzero = false;
+          break;
+        }
+      }
+      if (allzero) {
+        std::cerr << "NSPint is all zero"
                   << "\n";
         failed_int = true;
       } else {
-        bool allzero = true;
+        MyVector<long> VZ_long(nbCol - 1);
+
+        // reconstruct
+        size_t max_bits_NSP = 0;
+        std::vector<long> nums(nbCol - 1, 0);
+        std::vector<long> dens(nbCol - 1, 1);
         for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          if (NSP_fastT(0, iCol) != 0) {
-            allzero = false;
-            break;
-          }
+          Rational<long> val = NSP_fastT(0, iCol).rational_lift();
+          nums[iCol] = val.get_num();
+          dens[iCol] = val.get_den();
         }
-        if (allzero) {
-          std::cerr << "NSPint is all zero"
-                    << "\n";
-          failed_int = true;
-        } else {
-          MyVector<long> VZ_long(nbCol - 1);
-
-          // reconstruct
-          size_t max_bits_NSP = 0;
-          std::vector<long> nums(nbCol - 1, 0);
-          std::vector<long> dens(nbCol - 1, 1);
-          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            Rational<long> val = NSP_fastT(0, iCol).rational_lift();
-            nums[iCol] = val.get_num();
-            dens[iCol] = val.get_den();
-          }
-          long lcm = LCMlist(dens);
-          for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-            VZ_long(iCol) = nums[iCol] * (lcm / dens[iCol]);
-            NSP(0, iCol) = Tint(VZ_long(iCol));
-            max_bits_NSP = std::max(max_bits_NSP, get_bit(NSP(0, iCol)));
-          }
-
-          // check if elements are small enough to do computation in
-          if (max_bits + max_bits_NSP <= 60) {
-            // check if part of kernel
-            jRow = sInc.find_first();
-            for (size_t iRow = 0; iRow < nb; iRow++) {
-              int aRow = PairIncs.second[jRow];
-              auto row = EXT_long.row(aRow);
-              jRow = sInc.find_next(jRow);
-              long sm = 0;
-              for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-                sm += VZ_long(iCol) * row(iCol);
-              }
-              if (sm != 0) {
-                std::cerr << "Not really a kernel vector " << sm << "\n";
-                failed_int = true;
-                break;
-              }
+        long lcm = LCMlist(dens);
+        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+          VZ_long(iCol) = nums[iCol] * (lcm / dens[iCol]);
+          NSP(0, iCol) = Tint(VZ_long(iCol));
+          max_bits_NSP = std::max(max_bits_NSP, get_bit(NSP(0, iCol)));
+        }
+        
+        // check if elements are small enough to do computation in
+        if (max_bits + max_bits_NSP <= 60) {
+          // check if part of kernel
+          jRow = sInc.find_first();
+          for (size_t iRow = 0; iRow < nb; iRow++) {
+            int aRow = PairIncs.second[jRow];
+            auto row = EXT_long.row(aRow);
+            jRow = sInc.find_next(jRow);
+            long sm = 0;
+            for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+              sm += VZ_long(iCol) * row(iCol);
             }
-          } else {
-            std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP
-                      << std::endl;
-            failed_int = true;
+            if (sm != 0) {
+              std::cerr << "Not really a kernel vector " << sm << "\n";
+              failed_int = true;
+              break;
+            }
           }
+        } else {
+          std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP
+                    << std::endl;
+          failed_int = true;
         }
       }
     }
@@ -696,14 +683,8 @@ public:
         jRow = sInc.find_next(jRow);
       };
       NSP =
-          RescaleRows(NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol - 1, f));
+        RescaleRows(NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f));
     }
-#ifdef DEBUG_FLIP
-    if (NSP.rows() != 1) {
-      std::cerr << "Error in Flip 2\n";
-      throw TerminalException{1};
-    }
-#endif
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
