@@ -2282,6 +2282,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
     bool test_final = RPL.GetTerminationStatus();
 #ifdef TIMINGS
+    os << "test_final=" << test_final << "\n";
     os << "|GetTerminationStatus|=" << time << "\n";
 #endif
     if (test_final)
