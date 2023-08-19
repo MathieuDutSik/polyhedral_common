@@ -205,12 +205,7 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
     M.row(eRank) = TheEXT.row(aRow);
     aRow = OneInc.find_next(aRow);
   };
-  MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
-  if (NSP.rows() != 1) {
-    std::cerr << "FindFacetInequality: We should have just one row in NSP\n";
-    std::cerr << "|NSP|=" << NSP.rows() << "\n";
-    throw TerminalException{1};
-  }
+  MyMatrix<T> NSP = NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol, 1, f);
   MyVector<T> eVect(nbCol);
   for (size_t iCol = 0; iCol < nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
@@ -243,19 +238,6 @@ int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   return NSP.rows();
 }
 
-
-
-std::vector<int> Dynamic_bitset_to_vectorint(Face const &eList) {
-  int nb = eList.count();
-  boost::dynamic_bitset<>::size_type aRow = eList.find_first();
-  std::vector<int> retList(nb);
-  for (int i = 0; i < nb; i++) {
-    retList[i] = static_cast<int>(aRow);
-    aRow = eList.find_next(aRow);
-  }
-  return retList;
-}
-
 std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face const &eList) {
   int len = eList.size();
   std::vector<int> V0;
@@ -270,6 +252,21 @@ std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face c
   return {std::move(V0), std::move(V1)};
 }
 
+
+// This is the FlippingFramework for a given facet F of a polytope.
+//
+// After the constructor is built, then we provide a function for
+// given a facet G of F, find the facet F' such that G = F \cap F'.
+//
+// The computation requires a number of finding of the kernel of
+// matrices which are of rank 1. Thus we use the NullspaceTrMatTarget_Kernel
+// function.
+//
+// There are two fuctions:
+// 1) FlipFace for flipping only a face.
+// 2) FlipFaceIneq for flipping the face and the inequality if it is already
+// known. Normally, the inequality is produce by the various techniques
+// used. But the problem is to store them.
 template <typename T> struct FlippingFramework {
 private:
   MyMatrix<T> EXT_red;
@@ -413,6 +410,25 @@ public:
   }
 };
 
+// This is a special solution for computing the solutions.
+//
+// It is a specialization for the mpq_class. It uses special
+// techniques for the computation of the Kernel.
+//
+// That is we are reducing the solution to a type Fp,
+// that is a finite field computation. That solution
+// is lifted and we check for its correctness.
+//
+// The computation uses the following types:
+// * Tfast = Fp: The finite field type
+// * mpz_class : The type for doing the flips
+// * long: The types used for making the check that
+//    the vector is in the kernel.
+//
+// There is a computation of bits in order to make
+// sure that the computation with long will not
+// overflow.
+//
 // Need to find a better template for the solution
 #ifndef DISABLE_FP_CLASS
 template <> struct FlippingFramework<mpq_class> {
@@ -580,19 +596,18 @@ public:
       }
       isAssigned = true;
     }
+    // Now putting things together
     Face fret(nbRow);
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       fret[iRow] = f_select[pos_row];
     }
-    // Now adding the points from the ridge
     boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
     while (jRow != boost::dynamic_bitset<>::npos) {
       int aRow = PairIncs.second[jRow];
       fret[aRow] = 1;
       jRow = sInc.find_next(jRow);
     }
-    // returning the found facet
     return fret;
   }
   Face FlipFace(Face const &sInc) const {
@@ -645,7 +660,6 @@ public:
           NSP(0, iCol) = Tint(VZ_long(iCol));
           max_bits_NSP = std::max(max_bits_NSP, get_bit(NSP(0, iCol)));
         }
-        
         // check if elements are small enough to do computation in
         if (max_bits + max_bits_NSP <= 60) {
           // check if part of kernel
