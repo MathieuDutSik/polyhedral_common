@@ -1991,8 +1991,8 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbCol = EXTwork.cols();
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
+  MyVector<T> V(nbColRed);
   auto f = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
-    MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
@@ -2080,8 +2080,8 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   std::vector<MyVector<T>> ListVect;
+  MyVector<T> V(nbColRed);
   auto f = [&]([[maybe_unused]] lrs_dic<Tring> *P, [[maybe_unused]] lrs_dat<Tring> *Q, [[maybe_unused]] int const& col, Tring *out) -> void {
-    MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);

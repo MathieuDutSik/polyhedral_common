@@ -1,0 +1,6 @@
+4
+1 groupsize >= 50000 split
+1 delta <= 7 nosplit
+2 groupsize >= 20 incidence > 150 split
+1 groupsize < 100 nosplit
+split
