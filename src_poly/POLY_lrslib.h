@@ -1861,7 +1861,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           }
           n_entry += 1;
 #endif
-          f(output);
+          f(P, Q, output);
         }
         is_first = false;
       }
@@ -1883,13 +1883,17 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
+  bool is_first = true;
   do {
     bool is_finished = false;
     for (col = 0; col <= P->d; col++)
       if (lrs_getsolution(P, Q, output, col)) {
-        bool test = f(output);
-        if (!test)
-          is_finished = true;
+        if (!is_first) {
+          bool test = f(P, Q, output);
+          if (!test)
+            is_finished = true;
+        }
+        is_first = false;
       }
     if (is_finished)
       break;
@@ -1945,7 +1949,7 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
-  auto f = [&](T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
 #ifdef USE_ISINCD
     auto isincd = [&](size_t iRow) -> bool {
       eScal = 0;
@@ -1975,7 +1979,7 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbCol = EXTwork.cols();
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
     MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
@@ -1995,7 +1999,7 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
-  auto f = [&](T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     for (int iRow = 0; iRow < nbRow; iRow++) {
@@ -2020,18 +2024,15 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
   T eScal;
   int nbFound = 0;
   Face face(nbRow);
-  auto f = [&](T *out) -> bool {
-    if (!IsFirst) {
-      for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTwork(iRow, iCol);
-        face[iRow] = static_cast<bool>(eScal == 0);
-      }
-      ListIncd.push_back(face);
-      nbFound++;
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> bool {
+    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      eScal = 0;
+      for (size_t iCol = 0; iCol < nbCol; iCol++)
+        eScal += out[iCol] * EXTwork(iRow, iCol);
+      face[iRow] = static_cast<bool>(eScal == 0);
     }
-    IsFirst = false;
+    ListIncd.push_back(face);
+    nbFound++;
     return nbFound != UpperLimit;
   };
   Kernel_DualDescription_cond(EXTwork, f);
@@ -2054,7 +2055,7 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   vectface ListIncd(nbRow);
   Tring eScal;
   Face face(nbRow);
-  auto f = [&](Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       eScal = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
@@ -2084,7 +2085,7 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
     MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
@@ -2112,7 +2113,7 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_proces
   }
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  auto f = [&](Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     for (int iRow = 0; iRow < nbRow; iRow++) {
