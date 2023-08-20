@@ -1782,58 +1782,40 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
+        if (!is_first) {
 #ifdef LRS_PRINT_ANALYSIS
-        size_t nbCol = EXT.cols();
-        size_t nbRow = EXT.rows();
-        size_t real_incidence = 0;
-        std::cerr << "------------ Entry " << n_entry << " col=" << col << " ------------\n";
-        std::cerr << "    ScalProd =";
-        Face real_incd(nbRow);
-        for (size_t iRow = 0; iRow < nbRow; iRow++) {
-          T eScal(0);
-          for (size_t iCol = 0; iCol < nbCol; iCol++)
-            eScal += output[iCol] * EXT(iRow, iCol);
-          if (eScal == 0) {
-            std::cerr << " " << iRow;
-            real_incidence += 1;
-            real_incd[iRow] = 1;
-          }
-        }
-        std::cerr << "\n";
-        size_t lrs_incidence = P->d - 1;
-        size_t n_error = 0;
-        size_t n_correct = 0;
-        std::cerr << "    Lrs_Dict =";
-        Face lrs_incd(nbRow);
-        int max_iRow = std::numeric_limits<int>::min();
-        int min_iRow = std::numeric_limits<int>::max();
-        for (int i=0; i<P->d; i++) {
-          int idx1 = P->C[i];
-          int idx2 = Q->lastdv;
-          //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 << "\n";
-          int idx = Q->inequality[idx1 - idx2] - 1;
-          int the_col = P->Col[i];
-          if (the_col != col) {
-            std::cerr << " " << idx;
-            lrs_incd[idx] = 1;
-            if (real_incd[idx] == 1) {
-              n_correct++;
-            } else {
-              n_error++;
+          size_t nbCol = EXT.cols();
+          size_t nbRow = EXT.rows();
+          size_t real_incidence = 0;
+          std::cerr << "------------ Entry " << n_entry << " col=" << col << " ------------\n";
+          std::cerr << "    ScalProd =";
+          Face real_incd(nbRow);
+          for (size_t iRow = 0; iRow < nbRow; iRow++) {
+            T eScal(0);
+            for (size_t iCol = 0; iCol < nbCol; iCol++)
+              eScal += output[iCol] * EXT(iRow, iCol);
+            if (eScal == 0) {
+              std::cerr << " " << iRow;
+              real_incidence += 1;
+              real_incd[iRow] = 1;
             }
           }
-        }
-        for (int i=Q->lastdv+1; i<=P->m; i++) {
-          int iRow = P->Row[i];
-          if (iRow < min_iRow)
-            min_iRow = iRow;
-          if (iRow > max_iRow)
-            max_iRow = iRow;
-          if (P->A[iRow][0] == 0) {
-            if (col == 0 || P->A[iRow][col] == 0) {
-              int idx = iRow - 1;
+          std::cerr << "\n";
+          size_t lrs_incidence = P->d - 1;
+          size_t n_error = 0;
+          size_t n_correct = 0;
+          std::cerr << "    Lrs_Dict =";
+          Face lrs_incd(nbRow);
+          int max_iRow = std::numeric_limits<int>::min();
+          int min_iRow = std::numeric_limits<int>::max();
+          for (int i=0; i<P->d; i++) {
+            int idx1 = P->C[i];
+            int idx2 = Q->lastdv;
+            //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 << "\n";
+            int idx = Q->inequality[idx1 - idx2] - 1;
+            int the_col = P->Col[i];
+            if (the_col != col) {
               std::cerr << " " << idx;
-              lrs_incidence += 1;
               lrs_incd[idx] = 1;
               if (real_incd[idx] == 1) {
                 n_correct++;
@@ -1842,26 +1824,46 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
               }
             }
           }
-        }
-        if (n_error > max_n_error) {
-          max_n_error = n_error;
-        }
-        std::cerr << "\n";
-        std::cerr << "    real_incidence=" << real_incidence << " n_correct=" << n_correct << " n_error=" << n_error << "\n";
-        std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow << "\n";
-        if (!is_first && real_incidence != lrs_incidence) {
-          std::cerr << "The incidence are different\n";
-          std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
-          throw TerminalException{1};
-        }
-        if (!is_first && real_incd != lrs_incd) {
-          std::cerr << "The real_incd is not equal to lrs_incd\n";
-          throw TerminalException{1};
+          for (int i=Q->lastdv+1; i<=P->m; i++) {
+            int iRow = P->Row[i];
+            if (iRow < min_iRow)
+              min_iRow = iRow;
+            if (iRow > max_iRow)
+              max_iRow = iRow;
+            if (P->A[iRow][0] == 0) {
+              if (col == 0 || P->A[iRow][col] == 0) {
+                int idx = iRow - 1;
+                std::cerr << " " << idx;
+                lrs_incidence += 1;
+                lrs_incd[idx] = 1;
+                if (real_incd[idx] == 1) {
+                  n_correct++;
+                } else {
+                  n_error++;
+                }
+              }
+            }
+          }
+          if (n_error > max_n_error) {
+            max_n_error = n_error;
+          }
+          std::cerr << "\n";
+          std::cerr << "    real_incidence=" << real_incidence << " n_correct=" << n_correct << " n_error=" << n_error << "\n";
+          std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow << "\n";
+          if (real_incidence != lrs_incidence) {
+            std::cerr << "The incidence are different\n";
+            std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
+            throw TerminalException{1};
+          }
+          if (real_incd != lrs_incd) {
+            std::cerr << "The real_incd is not equal to lrs_incd\n";
+            throw TerminalException{1};
+          }
+          n_entry += 1;
+#endif
+          f(output);
         }
         is_first = false;
-        n_entry += 1;
-#endif
-        f(output);
       }
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
