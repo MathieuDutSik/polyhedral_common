@@ -84,7 +84,8 @@ template <typename T> MyMatrix<T> CyclicPolytope(int n, int k) {
   return TheEXT;
 }
 
-// Compute the maximal determinant
+// Compute an upper bound on the determinant of maximal minor
+// The Hadamard bound is
 // We have det(A)^2 <= Pi_{i=1}^n (sum_j x_{ij}^2)
 template<typename T>
 T sqr_estimate_maximal_determinant(MyMatrix<T> const& M) {

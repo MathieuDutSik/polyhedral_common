@@ -88,7 +88,6 @@ template <typename T> struct lrs_dat {
   int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;      /* do convex hull computation if globals::TRUE           */
-  int64_t incidence; /* print all tight inequalities (vertices/rays) */
   int64_t lponly;    /* true if only lp solution wanted              */
   int64_t maxdepth;  /* max depth to search to in treee              */
   int64_t maximize;  /* flag for LP maximization                     */
@@ -97,7 +96,6 @@ template <typename T> struct lrs_dat {
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
-  int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
   int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
   int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
 
@@ -190,12 +188,10 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
       globals::L_FALSE; /* upper/lower bound on objective function given */
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
-  Q->incidence = globals::L_FALSE;
   Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->nonnegative = globals::L_FALSE;
-  Q->printcobasis = globals::L_FALSE;
   Q->truncate =
       globals::L_FALSE; /* truncate tree when moving from opt vertex        */
   Q->maximize = globals::L_FALSE; /*flag for LP maximization */
@@ -1783,27 +1779,25 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
-#ifdef PRINT_ANALYSIS
+#ifdef LRS_PRINT_ANALYSIS
         size_t nbCol = EXT.cols();
         size_t nbRow = EXT.rows();
         std::cerr << "------------ Begin ------------\n";
-        std::cerr << "Incidence =";
+        std::cerr << "ScalProd =";
         for (size_t iRow = 0; iRow < nbRow; iRow++) {
-          T eScal = 0;
+          T eScal(0);
           for (size_t iCol = 0; iCol < nbCol; iCol++)
             eScal += output[iCol] * EXT(iRow, iCol);
           if (eScal == 0)
             std::cerr << " " << iRow;
         }
         std::cerr << "\n";
-        std::cerr << "col=" << col << "\n";
-        std::cerr << "Col =";
-        for (int i = 0; i < P->d; i++)
-          std::cerr << " " << P->Col[i];
-        std::cerr << "\n";
-        std::cerr << "Row =";
-        for (int i = 0; i < P->m; i++)
-          std::cerr << " " << P->Row[i];
+        std::cerr << "Lrs(Dic) =";
+        for (size_t iRow = 0; iRow < nbRow; iRow++) {
+          if (P->A[iRow][col] == 0) {
+            std::cerr << " " << iRow;
+          }
+        }
         std::cerr << "\n";
 #endif
         f(output);
