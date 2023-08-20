@@ -1776,34 +1776,78 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
+  size_t n_entry = 0;
+  bool is_first = true;
+  size_t max_n_error = 0;
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
 #ifdef LRS_PRINT_ANALYSIS
         size_t nbCol = EXT.cols();
         size_t nbRow = EXT.rows();
-        std::cerr << "------------ Begin ------------\n";
-        std::cerr << "ScalProd =";
+        size_t real_incidence = 0;
+        std::cerr << "------------ Entry " << n_entry << " col=" << col << " ------------\n";
+        std::cerr << "    ScalProd =";
+        Face real_incd(nbRow);
         for (size_t iRow = 0; iRow < nbRow; iRow++) {
           T eScal(0);
           for (size_t iCol = 0; iCol < nbCol; iCol++)
             eScal += output[iCol] * EXT(iRow, iCol);
-          if (eScal == 0)
+          if (eScal == 0) {
             std::cerr << " " << iRow;
-        }
-        std::cerr << "\n";
-        std::cerr << "Lrs(Dic) =";
-        for (size_t iRow = 0; iRow < nbRow; iRow++) {
-          if (P->A[iRow][col] == 0) {
-            std::cerr << " " << iRow;
+            real_incidence += 1;
+            real_incd[iRow] = 1;
           }
         }
         std::cerr << "\n";
+        size_t lrs_incidence = P->d - 1;
+        size_t n_error = 0;
+        size_t n_correct = 0;
+        std::cerr << "    Lrs_Dict =";
+        Face lrs_incd(nbRow);
+        int max_iRow = std::numeric_limits<int>::min();
+        int min_iRow = std::numeric_limits<int>::max();
+        for (int i=Q->lastdv+1; i<=P->m; i++) {
+          int iRow = P->Row[i];
+          if (iRow < min_iRow)
+            min_iRow = iRow;
+          if (iRow > max_iRow)
+            max_iRow = iRow;
+          if (P->A[iRow][0] == 0) {
+            if (col == 0 || P->A[iRow][col] == 0) {
+              int idx = iRow - 1;
+              std::cerr << " " << idx;
+              lrs_incidence += 1;
+              lrs_incd[idx] = 1;
+              if (real_incd[idx] == 1) {
+                n_correct++;
+              } else {
+                n_error++;
+              }
+            }
+          }
+        }
+        if (n_error > max_n_error) {
+          max_n_error = n_error;
+        }
+        std::cerr << "\n";
+        std::cerr << "    real_incidence=" << real_incidence << " n_correct=" << n_correct << " n_error=" << n_error << "\n";
+        std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow << "\n";
+        if (!is_first && real_incidence != lrs_incidence) {
+          std::cerr << "The incidence are different\n";
+          std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
+          throw TerminalException{1};
+        }
+        is_first = false;
+        n_entry += 1;
 #endif
         f(output);
       }
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
+#ifdef LRS_PRINT_ANALYSIS
+  std::cerr << "max_n_error=" << max_n_error << "\n";
+#endif
   delete[] output;
   lrs_free_dic(P, Q);
   lrs_free_dat(Q);
