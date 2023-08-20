@@ -37,7 +37,7 @@ void process(std::string const &eFileI, std::string const &choice,
       os << "\n";
       nVertices++;
     };
-    lrs::Kernel_DualDescription_DropFirst(EXT, fPrint);
+    lrs::Kernel_DualDescription(EXT, fPrint);
     os << "end\n";
     os << "*Total: nvertices=" << nVertices << "\n";
     return;
@@ -57,7 +57,7 @@ void process(std::string const &eFileI, std::string const &choice,
       os << "]";
       nVertices++;
     };
-    lrs::Kernel_DualDescription_DropFirst(EXT, fPrint);
+    lrs::Kernel_DualDescription(EXT, fPrint);
     os << "];\n";
   }
   if (choice == "vertex_incidence") {
@@ -72,7 +72,7 @@ void process(std::string const &eFileI, std::string const &choice,
           VertexIncd[iRow] += 1;
       }
     };
-    lrs::Kernel_DualDescription_DropFirst(EXT, fUpdateIncd);
+    lrs::Kernel_DualDescription(EXT, fUpdateIncd);
     os << "VertexIncd=[";
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (iRow > 0)
@@ -85,7 +85,7 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "number_facet") {
     size_t nFacets = 0;
     auto fIncrement = [&]([[maybe_unused]] T *out) -> void { nFacets++; };
-    lrs::Kernel_DualDescription_DropFirst(EXT, fIncrement);
+    lrs::Kernel_DualDescription(EXT, fIncrement);
     os << "nFacets=" << nFacets << "\n";
     return;
   }
@@ -106,7 +106,7 @@ void process(std::string const &eFileI, std::string const &choice,
       }
       os << "\n";
     };
-    lrs::Kernel_DualDescription_DropFirst(EXT, fPrintIncd);
+    lrs::Kernel_DualDescription(EXT, fPrintIncd);
     return;
   }
   if (choice == "structure_vertex_facets") {
@@ -129,7 +129,7 @@ void process(std::string const &eFileI, std::string const &choice,
       ListFace.push_back(f);
       idx_facet++;
     };
-    lrs::Kernel_DualDescription_DropFirst(EXT, f_insert);
+    lrs::Kernel_DualDescription(EXT, f_insert);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       os << "iRow=" << iRow << " |Contained Facet|=" << VertexIncd[iRow].size()
          << "\n";

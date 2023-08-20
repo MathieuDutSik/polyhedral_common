@@ -1876,18 +1876,6 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
 }
 
 template <typename T, typename F>
-void Kernel_DualDescription_DropFirst(MyMatrix<T> const &EXT, F const &f) {
-  bool IsFirst = true;
-  auto f_first = [&](T *out) -> void {
-    if (!IsFirst) {
-      f(out);
-    }
-    IsFirst = false;
-  };
-  Kernel_DualDescription(EXT, f_first);
-}
-
-template <typename T, typename F>
 void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
@@ -1976,7 +1964,7 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
     ListIncd.push_back(face);
 #endif
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
   return ListIncd;
 }
 
@@ -1993,7 +1981,7 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
   return MatrixFromVectorFamily(ListVect);
 }
 
@@ -2018,7 +2006,7 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
     }
     f_process(pair);
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
 }
 
 template <typename T>
@@ -2075,7 +2063,7 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
     }
     ListIncd.push_back(face);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
   return ListIncd;
 }
 
@@ -2102,7 +2090,7 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
   return MatrixFromVectorFamily(ListVect);
 }
 
@@ -2135,7 +2123,7 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_proces
     }
     f_process(pair);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
 }
 
 // clang-format off
