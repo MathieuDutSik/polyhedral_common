@@ -1807,6 +1807,22 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
         Face lrs_incd(nbRow);
         int max_iRow = std::numeric_limits<int>::min();
         int min_iRow = std::numeric_limits<int>::max();
+        for (int i=0; i<P->d; i++) {
+          int idx1 = P->C[i];
+          int idx2 = Q->lastdv;
+          //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 << "\n";
+          int idx = Q->inequality[idx1 - idx2] - 1;
+          int the_col = P->Col[i];
+          if (the_col != col) {
+            std::cerr << " " << idx;
+            lrs_incd[idx] = 1;
+            if (real_incd[idx] == 1) {
+              n_correct++;
+            } else {
+              n_error++;
+            }
+          }
+        }
         for (int i=Q->lastdv+1; i<=P->m; i++) {
           int iRow = P->Row[i];
           if (iRow < min_iRow)
@@ -1836,6 +1852,10 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
         if (!is_first && real_incidence != lrs_incidence) {
           std::cerr << "The incidence are different\n";
           std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
+          throw TerminalException{1};
+        }
+        if (!is_first && real_incd != lrs_incd) {
+          std::cerr << "The real_incd is not equal to lrs_incd\n";
           throw TerminalException{1};
         }
         is_first = false;
