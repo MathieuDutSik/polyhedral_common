@@ -1802,9 +1802,11 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
-  size_t n_entry = 0;
   bool is_first = true;
+#ifdef LRS_PRINT_ANALYSIS
+  size_t n_entry = 0;
   size_t max_n_error = 0;
+#endif
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
