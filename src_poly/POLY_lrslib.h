@@ -1768,6 +1768,32 @@ template <typename T> void freeLRS(lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   lrs_free_dat(Q);
 }
 
+
+template <typename T>
+void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, Face & f) {
+  int nbRow = Q->m;
+  for (int i=0; i<nbRow; i++)
+    f[i] = 0;
+  for (int i=0; i<P->d; i++) {
+    int idx1 = P->C[i];
+    int idx2 = Q->lastdv;
+    int idx = Q->inequality[idx1 - idx2] - 1;
+    int the_col = P->Col[i];
+    if (the_col != col) {
+      f[idx] = 1;
+    }
+  }
+  for (int i=Q->lastdv+1; i<=P->m; i++) {
+    int iRow = P->Row[i];
+    if (P->A[iRow][0] == 0) {
+      if (col == 0 || P->A[iRow][col] == 0) {
+        int idx = iRow - 1;
+        f[idx] = 1;
+      }
+    }
+  }
+}
+
 template <typename T, typename F>
 void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
@@ -1861,7 +1887,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           }
           n_entry += 1;
 #endif
-          f(P, Q, output);
+          f(P, Q, col, output);
         }
         is_first = false;
       }
@@ -1889,7 +1915,7 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
     for (col = 0; col <= P->d; col++)
       if (lrs_getsolution(P, Q, output, col)) {
         if (!is_first) {
-          bool test = f(P, Q, output);
+          bool test = f(P, Q, col, output);
           if (!test)
             is_finished = true;
         }
@@ -1942,31 +1968,15 @@ std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
 
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
   T eScal;
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
-#ifdef USE_ISINCD
-    auto isincd = [&](size_t iRow) -> bool {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      return eScal == 0;
-    };
-    ListIncd.InsertFace(isincd);
-#else
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      face[iRow] = static_cast<bool>(eScal == 0);
-    }
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> void {
+    set_face(P, Q, col, face);
     ListIncd.push_back(face);
-#endif
   };
   Kernel_DualDescription(EXTwork, f);
   return ListIncd;
@@ -1979,7 +1989,7 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbCol = EXTwork.cols();
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
+  auto f = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
     MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
@@ -1999,15 +2009,10 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      pair.first[iRow] = static_cast<bool>(eScal == 0);
-    }
+    set_face(P, Q, col, pair.first);
     f_process(pair);
   };
   Kernel_DualDescription(EXTwork, f);
@@ -2017,20 +2022,13 @@ template <typename T>
 vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
                                       int const &UpperLimit) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
-  bool IsFirst = true;
   T eScal;
   int nbFound = 0;
   Face face(nbRow);
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, T *out) -> bool {
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      face[iRow] = static_cast<bool>(eScal == 0);
-    }
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> bool {
+    set_face(P, Q, col, face);
     ListIncd.push_back(face);
     nbFound++;
     return nbFound != UpperLimit;
@@ -2055,13 +2053,8 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   vectface ListIncd(nbRow);
   Tring eScal;
   Face face(nbRow);
-  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTring(iRow, iCol);
-      face[iRow] = static_cast<bool>(eScal == 0);
-    }
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, [[maybe_unused]] Tring *out) -> void {
+    set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
   Kernel_DualDescription(EXTring, f);
@@ -2085,7 +2078,7 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
+  auto f = [&]([[maybe_unused]] lrs_dic<Tring> *P, [[maybe_unused]] lrs_dat<Tring> *Q, [[maybe_unused]] int const& col, Tring *out) -> void {
     MyVector<T> V(nbColRed);
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
@@ -2113,15 +2106,10 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_proces
   }
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTring(iRow, iCol);
-      pair.first[iRow] = static_cast<bool>(eScal == 0);
-    }
+    set_face(P, Q, col, pair.first);
     f_process(pair);
   };
   Kernel_DualDescription(EXTring, f);

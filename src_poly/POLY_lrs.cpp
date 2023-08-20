@@ -31,7 +31,7 @@ void process(std::string const &eFileI, std::string const &choice,
     os << "begin\n";
     os << "****** " << nbCol << " rational\n";
     long nVertices = 0;
-    auto fPrint = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
       for (int iCol = 0; iCol < nbCol; iCol++)
         os << " " << out[iCol];
       os << "\n";
@@ -45,7 +45,7 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "GAP") {
     os << "return [";
     long nVertices = 0;
-    auto fPrint = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
       if (nVertices > 0)
         os << ",\n";
       os << "[";
@@ -63,7 +63,7 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "vertex_incidence") {
     std::vector<size_t> VertexIncd(nbRow, 0);
     T eScal;
-    auto fUpdateIncd = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto fUpdateIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
         for (int iCol = 0; iCol < nbCol; iCol++)
@@ -84,7 +84,7 @@ void process(std::string const &eFileI, std::string const &choice,
   }
   if (choice == "number_facet") {
     size_t nFacets = 0;
-    auto fIncrement = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto fIncrement = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, [[maybe_unused]] T *out) -> void {
       nFacets++;
     };
     lrs::Kernel_DualDescription(EXT, fIncrement);
@@ -93,7 +93,7 @@ void process(std::string const &eFileI, std::string const &choice,
   }
   if (choice == "qhull_incidence") {
     T eScal;
-    auto fPrintIncd = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto fPrintIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
       bool IsFirst = true;
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
@@ -115,7 +115,7 @@ void process(std::string const &eFileI, std::string const &choice,
     std::vector<std::vector<size_t>> VertexIncd(nbRow);
     std::vector<Face> ListFace;
     size_t idx_facet = 0;
-    auto f_insert = [&](lrs::lrs_dic<T> *P, lrs::lrs_dat<T> *Q, T *out) -> void {
+    auto f_insert = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
       std::cerr << "idx_facet=" << idx_facet << "\n";
       std::vector<size_t> eIncd;
       Face f(nbRow);
