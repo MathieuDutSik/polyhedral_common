@@ -508,7 +508,7 @@ template <typename Tgroup>
 int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP) {
   std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
-  int chosen_method = -1;
+  int chosen_method = CANONIC_STRATEGY__DEFAULT;
   for (auto &method : list_considered) {
     int64_t runtime = time_evaluation_can_method(method, vf, GRP, upper_limit);
     if (runtime < upper_limit) {
@@ -527,7 +527,7 @@ int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
   int64_t miss_val = std::numeric_limits<int64_t>::max();
   int64_t upper_limit_local = miss_val;
   int64_t upper_limit_global = miss_val;
-  int chosen_method = -1;
+  int chosen_method = CANONIC_STRATEGY__DEFAULT;
   int64_t effective_upper_limit = miss_val;
   std::vector<int64_t> V_runtime;
   for (auto &method : list_considered) {
