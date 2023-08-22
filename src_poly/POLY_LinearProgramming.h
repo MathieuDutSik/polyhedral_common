@@ -450,10 +450,20 @@ LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
 }
 
 template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  T eVal, prov;
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
+  auto is_polytopal=[&]() -> bool {
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (EXT(iRow,0) != 1)
+        return false;
+    }
+    return true;
+  };
+  if (is_polytopal())
+    return EXT;
+  //
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  T eVal, prov;
   MyMatrix<T> nMat(nbRow, nbCol + 1);
   MyMatrix<T> eBasis(nbCol, nbCol);
   MyVector<T> eVect(nbCol + 1);
