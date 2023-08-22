@@ -681,6 +681,11 @@ template <typename T> struct PosRelRes {
   MyVector<T> TheRelat;
 };
 
+
+// Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
+// such that sum_i lambda_i v_i = 0.
+//
+// I need to finish understanding what is the idea below.
 template <typename T>
 PosRelRes<T>
 SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
@@ -752,6 +757,17 @@ struct Constraint {
   std::vector<std::vector<int>> ListSetStrictPositive;
 };
 
+
+// Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
+// such that sum_i lambda_i v_i = 0.
+// We compute the kernel of the space of the equation space of the system.
+// So, if we have a configuration Lambda_1, ...., Lambda_N
+// So we write lambda = y_1 Lambda_1 + ... + y_N Lambda_N.
+// We have the constraint on the y_i.
+//
+// The dimensionality is the following:
+// If we have m vectors in dimension n, then the dimension of NSP is m-n.
+// and the number of constraints is at least m.
 template <typename T>
 PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
                                     Constraint const &eConstraint) {
