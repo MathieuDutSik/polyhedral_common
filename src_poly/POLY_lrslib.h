@@ -127,7 +127,7 @@ template <typename T> inline int64_t sign(T const &a) {
   return 0;
 }
 
-template <typename T> inline int comprod(T Na, T Nb, T Nc, T Nd) {
+template <typename T> inline int comprod(T const& Na, T const& Nb, T const& Nc, T const& Nd) {
   if (Na * Nb > Nc * Nd)
     return 1;
   if (Na * Nb < Nc * Nd)
@@ -1286,53 +1286,6 @@ int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
   return globals::L_FALSE; /*index is no longer cobasic */
 }
 
-template <typename T>
-int64_t checkindex(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
-/* 0 if index is non-redundant inequality */
-/* 1 if index is redundant     inequality */
-/* 2 if index is input linearity          */
-/*NOTE: row is returned all zero if redundant!! */
-{
-  int64_t i, j;
-
-  T **A = P->A;
-  int64_t *Row = P->Row;
-  int64_t *B = P->B;
-  int64_t d = P->d;
-  int64_t m = P->m;
-
-  /* each slack index must be checked for redundancy */
-  /* if in cobasis, it is pivoted out if degenerate */
-  /* else it is non-redundant                       */
-
-  if (checkcobasic(P, Q, index))
-    return 0;
-
-  /* index is basic   */
-  j = 1;
-  while ((j <= m) && (B[j] != index))
-    j++;
-
-  i = Row[j];
-
-  /* copy row i to cost row, and set it to zero */
-
-  for (j = 0; j <= d; j++) {
-    A[0][j] = A[i][j];
-    A[0][j] = -A[0][j];
-    A[i][j] = 0;
-  }
-
-  if (checkredund(P, Q))
-    return 1L;
-
-  /* non-redundant, copy back and change sign */
-
-  for (j = 0; j <= d; j++)
-    A[i][j] = -A[0][j];
-  return 0;
-} /* end of checkindex */
-
 /***************************************************************/
 /*                                                             */
 /*     Routines for caching, allocating etc.                   */
@@ -1631,19 +1584,6 @@ void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
 }
 
 template <typename T>
-int64_t lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* user callable function to solve lp only */
-{
-  T **Lin; /* holds input linearities if any are found             */
-
-  Q->lponly = globals::L_TRUE;
-
-  if (!lrs_getfirstbasis(&P, Q, Lin))
-    return globals::L_FALSE;
-  return globals::L_TRUE;
-} /* end of lrs_solve_lp */
-
-template <typename T>
 int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 /* select pivot indices using dantzig simplex method             */
 /* largest coefficient with lexicographic rule to avoid cycling  */
@@ -1775,11 +1715,11 @@ void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, Face & f) {
   for (int i=0; i<nbRow; i++)
     f[i] = 0;
   for (int i=0; i<P->d; i++) {
-    int idx1 = P->C[i];
-    int idx2 = Q->lastdv;
-    int idx = Q->inequality[idx1 - idx2] - 1;
     int the_col = P->Col[i];
     if (the_col != col) {
+      int idx1 = P->C[i];
+      int idx2 = Q->lastdv;
+      int idx = Q->inequality[idx1 - idx2] - 1;
       f[idx] = 1;
     }
   }
