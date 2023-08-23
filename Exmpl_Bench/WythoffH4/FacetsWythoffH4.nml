@@ -1,0 +1,30 @@
+&DATA
+ NumericalType = "Qsqrt5"
+ EXTfile = "WythoffH4.ext"
+ GRPfile = "WythoffH4.grp"
+ OUTfile = "ListOrbit"
+ OutFormat = "GAP"
+ DeterministicRuntime = F
+ max_runtime = -1
+ AdvancedTerminationCriterion = T
+ /
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "AddiSym.heu"
+ DualDescriptionThompsonFile     = "DualDesc.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
+ ChosenDatabaseFile              = "Bank_canonic.heu"
+ CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
+/
+
+&METHOD
+ Saving = F
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Saving = F
+ Prefix = "./Saving_Bank/"
+/
