@@ -750,8 +750,9 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
       for (int iRow = 0; iRow < nbRow; iRow++)
         eSum += V(iRow) * ListVect(iRow, iCol);
       if (eSum != 0) {
-        std::cerr << "iCol=" << iCol << "\n";
-        std::cerr << "We have eSum=" << eSum << "\n";
+        std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol << "\n";
+        std::cerr << "CheckResult_PositiveRelationSimple : We have eSum=" << eSum << "\n";
+        WriteMatrixFile("CheckResult_PositiveRelationSimple", ListVect);
         throw TerminalException{1};
       }
     }
