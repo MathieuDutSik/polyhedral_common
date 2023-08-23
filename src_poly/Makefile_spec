@@ -14,7 +14,7 @@
 #PROGRAM		= SHORT_ReduceVectorFamilyGAP
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= LATT_canonicalize
-PROGRAM		= POLY_lrs
+#PROGRAM		= POLY_lrs
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
@@ -41,7 +41,7 @@ PROGRAM		= POLY_lrs
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
-#PROGRAM		= POLY_dual_description
+PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming

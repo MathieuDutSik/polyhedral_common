@@ -4,6 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "POLY_DirectDualDesc.h"
 // clang-format on
 
@@ -50,6 +52,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "safe_rational          : rational arithmetic based on int64_t that fails\n";
       std::cerr << "    gracefully on overflowing\n";
+      std::cerr << "cpp_rational           : rational arithmetic based on boost header library\n";
+      std::cerr << "mpq_rational           : rational arithmetic based on boost mpq data type\n";
       std::cerr << "rational               : rational arithmetic on input\n";
       std::cerr << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
@@ -84,6 +88,14 @@ int main(int argc, char *argv[]) {
     auto dual_desc = [&](std::ostream &os) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
+        return process<T>(eFileI, command, choice, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
+        return process<T>(eFileI, command, choice, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
         return process<T>(eFileI, command, choice, os);
       }
       if (arith == "rational") {
