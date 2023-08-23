@@ -104,9 +104,9 @@ SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
           ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
         }
       std::cerr << "nbOrbCompl=" << nbOrbCompl << " LPdim=" << LPdim << "\n";
-      bool eTestExist = TestPositiveRelationSimple(ListVectors);
-      std::cerr << "eTestExist=" << eTestExist << "\n";
-      if (eTestExist == 0)
+      PosRelRes<T> eResult = SearchPositiveRelationSimple(ListVectors);
+      std::cerr << "eTestExist=" << eResult.eTestExist << "\n";
+      if (!eResult.eTestExist)
         TheReturn.push_back(eCand);
     }
   return TheReturn;
@@ -539,12 +539,6 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
       return true;
     }
   }
-}
-
-template <typename T>
-bool TestPositiveRelationSimple(MyMatrix<T> const &ListVect) {
-  PosRelRes<T> eResult = SearchPositiveRelationSimple(ListVect);
-  return eResult.eTestExist;
 }
 
 template <typename Tgroup>

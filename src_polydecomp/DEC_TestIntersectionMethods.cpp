@@ -24,12 +24,21 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> l_FAC;
     //
     auto f_test=[](MyMatrix<T> const& FACtot) -> bool {
-      bool test1 = IsFullDimensional_V1(FACtot);
-      bool test2 = IsFullDimensional(FACtot);
-      if (test1 != test2) {
-        std::cerr << "We have test1=" << test1 << " test2=" << test2 << "\n";
-        std::cerr << "We have a bug to resolve\n";
-        throw TerminalException{1};
+      Face f(4);
+      bool test1 = !SearchPositiveRelationSimple_Direct(FACtot).eTestExist;
+      f[0] = test1;
+      bool test2 = !SearchPositiveRelationSimple_DualMethod(FACtot).eTestExist;
+      f[1] = test2;
+      bool test3 = IsFullDimensional_V1(FACtot);
+      f[2] = test3;
+      bool test4 = IsFullDimensional(FACtot);
+      f[3] = test4;
+      for (int i=0; i<4; i++) {
+        if (f[i] != test1) {
+          std::cerr << "We have i=" << i << " test1=" << test1 << " f[i]=" << f[i] << "\n";
+          std::cerr << "We have a bug to resolve\n";
+          throw TerminalException{1};
+        }
       }
       return test1;
     };
