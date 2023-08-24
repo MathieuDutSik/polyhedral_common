@@ -23,6 +23,13 @@ void process(std::string const &eFileI, std::string const& ansProg, std::string 
     }
     return WriteMatrix(os, FAC);
   }
+  if (choice == "GAP") {
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
+    os << "return ";
+    WriteMatrixGAP(os, FAC);
+    os << ";\n";
+    return;
+  }
   if (choice == "CPP") {
     MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     return WriteMatrix(os, FAC);
@@ -75,6 +82,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "control : the full data set for control and debugging\n";
       std::cerr << "CPP     : the matrix for output (also used in Oscar)\n";
+      std::cerr << "GAP     : returns a GAP readable file (except for algebraic field)\n";
       return -1;
     }
     //

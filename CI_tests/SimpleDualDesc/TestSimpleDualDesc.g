@@ -1,30 +1,16 @@
 Print("Beginning TestSimpleDualDesc\n");
 
-ReadMatrixFile:=function(eFile)
-    local ListLines, TheMat, nRow, nCol, iRow;
-    ListLines:=ReadVectorFile(eFile);
-    TheMat:=ListLines{[2..Length(ListLines)]};
-    nRow:=ListLines[1][1];
-    nCol:=ListLines[1][2];
-    if Length(TheMat)<>nRow then
-        Error("Error in number of rows");
-    fi;
-    for iRow in [1..nRow]
-    do
-        if Length(TheMat[iRow]) <> nCol then
-            Error("Error in number of cols");
-        fi;
-    od;
-    return TheMat;
-end;
-
 WriteMatrixFile:=function(eFile, EXT)
     local output, eEXT;
     output:=OutputTextFile(eFile, true);
     AppendTo(output, Length(EXT), " ", Length(EXT[1]), "\n");
     for eEXT in EXT
     do
-        WriteVector(output, eEXT);
+        for eVal in eEXT
+        do
+            AppendTo(output, " ", eVal);
+        od;
+        AppendTo(output, "\n");
     od;
     CloseStream(output);
 end;
@@ -36,18 +22,18 @@ TestSimpleDD:=function(EXT, command, n_fac)
     FileI:="Test.in";
     FileO:="Test.out";
     #
-    WriteMatrixFile(FileIn, EXT);
+    WriteMatrixFile(FileI, EXT);
     #
     arith:="rational";
-    choice:="CPP";
-    eProg:="../../src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk";
+    choice:="GAP";
+    eProg:="../../src_poly/POLY_dual_description";
     TheCommand:=Concatenation(eProg, " ", arith, " ", command, " ", choice, " ", FileI, " ", FileO);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
-    FAC:=ReadMatrixFile(FileO);
+    FAC:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
     RemoveFile(FileO);
     if Length(FAC)<>n_fac then

@@ -1,4 +1,4 @@
-name: CI of Simple Dual description
+name: CI of Wythoff H4
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -122,12 +122,12 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test dual description
+      - name: Test dual description of WythoffH4
         run: |
-          cd src_poly && make -f Makefile_simple_dual_desc && cd ..
+          cd src_dualdesc && make -f Makefile_CI && cd ..
           pwd
           echo "After compilation of Dual description code"
 
-          cd CI_tests/SimpleDualDesc
-          ../../gap.sh < TestSimpleDualDesc.g
+          cd CI_tests/WythoffH4
+          ../../gap.sh < TestWythoff.g
           cd ../..

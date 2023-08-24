@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BOOST_INCDIR: "/usr/include"
-#      BOOST_LINK: "-lboost_serialization"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
       EIGEN_PATH: /home/runner/work/opt/eigen
       TBB_INCDIR: /usr/include
@@ -45,9 +44,6 @@ jobs:
       GMP_CXX_LINK: "/home/runner/work/opt/gmp-6.2.1/lib/libgmpxx.a /home/runner/work/opt/gmp-6.2.1/lib/libgmp.a"
 
     steps:
-#      - name: Get the version
-#        id: get_version
-#        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
