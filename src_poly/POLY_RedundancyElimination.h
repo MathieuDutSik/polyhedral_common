@@ -197,7 +197,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     auto GetSmallestValue = [&](int const &h) -> int {
       bool FoundUpper = false;
       // CurrUpper : specific value that will stay unused
-      T CurrUpper = -1;
+      T CurrUpper(-1);
       int nbMatch = 0;
       int idxFound = -1;
       for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -421,7 +421,7 @@ MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
 }
 
 template <typename T, typename Tgroup>
-Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
+std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   size_t n_rows = EXT.rows();
@@ -523,7 +523,13 @@ Face GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
       status_orbit[i_orbit] = 0;
     }
   }
-  return status_ret;
+  std::vector<int> ListIrred;
+  for (size_t i_row=0; i_row<n_rows; i_row++) {
+    if (status_ret[i_row] == 1) {
+      ListIrred.push_back(i_row);
+    }
+  }
+  return ListIrred;
 }
 
 // clang-format off

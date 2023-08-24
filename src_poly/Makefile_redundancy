@@ -1,5 +1,4 @@
-PROGRAM		= POLY_redundancy POLY_redundancyClarkson \
-		  POLY_redundancyClarksonGroup POLY_redundancy_Equivariant \
+PROGRAM		= POLY_redundancy POLY_redundancyGroup \
                   GRP_LinPolytope_Automorphism
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
