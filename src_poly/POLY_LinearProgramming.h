@@ -1210,8 +1210,9 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
     return IdentityMat<T>(nbCol);
   } else {
     std::vector<int> ListIdx;
+    MyVector<T> const& TheRelat = *eRes.TheRelat;
     for (int iRow = 0; iRow < nbRow; iRow++)
-      if (eRes.TheRelat(iRow) > 0)
+      if (TheRelat(iRow) > 0)
         ListIdx.push_back(iRow);
     MyMatrix<T> FACred = SelectRow(FAC, ListIdx);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(FACred);
