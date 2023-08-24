@@ -993,8 +993,9 @@ SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
   if (!PRR.eTestExist)
     return {};
   MyVector<T> TheSol(nbVect);
+  MyVector<T> const& V = *PRR.TheRelat;
   for (int iVect = 0; iVect < nbVect; iVect++)
-    TheSol(iVect) = PRR.TheRelat(iVect) / PRR.TheRelat(nbVect);
+    TheSol(iVect) = Vt(iVect) / V(nbVect);
   return TheSol;
 }
 

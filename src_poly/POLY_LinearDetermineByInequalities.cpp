@@ -69,7 +69,6 @@ int main(int argc, char *argv[]) {
     }
     //
     std::cerr << "Reading input\n";
-    using T = mpq_class;
     std::string arith = argv[1];
     std::string FileFAC = argv[2];
     std::string OutFormat = "CPP";
