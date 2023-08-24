@@ -28,7 +28,7 @@ PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const &SHV,
     TestMat.row(iBlock) = ConeClassical.row(iBlock);
   MyVector<T> V = -eMatVect;
   AssignMatrixRow(TestMat, nbBlock, V);
-  return SearchPositiveRelationSimple(TestMat);
+  return SearchPositiveRelationSimple_Direct(TestMat);
 }
 
 template <typename T, typename Tint>
@@ -108,13 +108,14 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
 #endif
     if (eRel.eTestExist) {
+      MyVector<T> const& V = *eRel.TheRelat;
 #ifdef STRICT_POSITIVITY
       std::cerr << "TheRelat=";
-      WriteVectorNoDim(std::cerr, eRel.TheRelat);
+      WriteVectorNoDim(std::cerr, V);
 #endif
       std::vector<int> ListIdx;
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
-        if (eRel.TheRelat(iBlock) != 0)
+        if (V(iBlock) != 0)
           ListIdx.push_back(iBlock);
       }
       int nbIdx = ListIdx.size();
@@ -124,7 +125,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
       for (int iIdx = 0; iIdx < nbIdx; iIdx++) {
         int iBlock = ListIdx[iIdx];
         int iSHV = eNaked.ListBlock[iBlock][0];
-        T eVal = eRel.TheRelat(iBlock) / eRel.TheRelat(nbBlock);
+        T eVal = V(iBlock) / V(nbBlock);
         RealizingFamily.row(iIdx) = eNaked.SHV.row(iSHV);
         eVectRet(iIdx) = eVal;
         for (int u = 0; u < n; u++)

@@ -10,10 +10,11 @@
 template <typename T>
 void process(std::string const &eFileI, std::ostream &os) {
   MyMatrix<T> ListVect = ReadMatrixFile<T>(eFileI);
-  PosRelRes<T> prr = SearchPositiveRelationSimple(ListVect);
+  PosRelRes<T> prr = SearchPositiveRelationSimple_Direct(ListVect);
   if (prr.eTestExist) {
     os << "relation found\n";
-    WriteVector(os, prr.TheRelat);
+    MyVector<T> const& V = *prr.TheRelat;
+    WriteVector(os, V);
   } else {
     os << "no relation found\n";
   }

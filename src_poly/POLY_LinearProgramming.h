@@ -686,6 +686,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
 // TheRelat: The relation between the vectors.
 template <typename T> struct PosRelRes {
   bool eTestExist;
+  bool has_relation;
   bool has_internal_vector;
   std::optional<MyVector<T>> InternalVector;
   std::optional<MyVector<T>> TheRelat;
@@ -721,39 +722,42 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
     }
   }
   // Checking the relation now.
-  if (!pos.eTestExist) {
-    if (pos.TheRelat.has_value()) {
-      std::cerr << "There is no relation for TheRelat while eTestExist is true\n";
-      throw TerminalException{1};
-    }
-  } else {
-    if (!pos.TheRelat.has_value()) {
-      std::cerr << "There is a relation for TheRelat while eTestExist is false\n";
-      throw TerminalException{1};
-    }
-    MyVector<T> const& V = *pos.TheRelat;
-    T sumV(0);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (V(iRow) < 0) {
-        std::cerr << "iRow=" << iRow << "\n";
-        std::cerr << "We have coeff=" << V(iRow) << " < 0\n";
+  if (pos.has_relation) {
+    if (!pos.eTestExist) {
+      if (pos.TheRelat.has_value()) {
+        std::cerr << "There is no relation for TheRelat while eTestExist is true\n";
         throw TerminalException{1};
       }
-      sumV += V(iRow);
-    }
-    if (sumV == 0) {
-      std::cerr << "All the coefficient are 0, which is not allowed\n";
-      throw TerminalException{1};
-    }
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      T eSum(0);
-      for (int iRow = 0; iRow < nbRow; iRow++)
-        eSum += V(iRow) * ListVect(iRow, iCol);
-      if (eSum != 0) {
-        std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol << "\n";
-        std::cerr << "CheckResult_PositiveRelationSimple : We have eSum=" << eSum << "\n";
-        WriteMatrixFile("CheckResult_PositiveRelationSimple", ListVect);
+    } else {
+      if (!pos.TheRelat.has_value()) {
+        std::cerr << "There is a relation for TheRelat while eTestExist is false\n";
         throw TerminalException{1};
+      }
+      MyVector<T> const& V = *pos.TheRelat;
+      T sumV(0);
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        if (V(iRow) < 0) {
+          std::cerr << "iRow=" << iRow << "\n";
+          std::cerr << "We have coeff=" << V(iRow) << " < 0\n";
+          throw TerminalException{1};
+        }
+        sumV += V(iRow);
+      }
+      if (sumV == 0) {
+        std::cerr << "All the coefficient are 0, which is not allowed\n";
+        throw TerminalException{1};
+      }
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        T eSum(0);
+        for (int iRow = 0; iRow < nbRow; iRow++)
+          eSum += V(iRow) * ListVect(iRow, iCol);
+        if (eSum != 0) {
+          std::cerr << "CheckResult_PositiveRelationSimple : error checking TheRelat\n";
+          std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol << "\n";
+          std::cerr << "CheckResult_PositiveRelationSimple : We have eSum=" << eSum << "\n";
+          WriteMatrixFile("CheckResult_PositiveRelationSimple", ListVect);
+          throw TerminalException{1};
+        }
       }
     }
   }
@@ -769,6 +773,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
 template <typename T>
 PosRelRes<T>
 SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
+  std::cerr << "Beginning of SearchPositiveRelationSimple_DualMethod\n";
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
@@ -783,8 +788,8 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     }
   }
   LpSolution<T> eSol = CDD_LinearProgramming(ListVectExt, eMinimize);
-  //  LpSolution<T> eSol=CDD_LinearProgramming_External(ListVectExt, eMinimize);
   PosRelRes<T> eResult;
+  eResult.has_relation = false;
   eResult.has_internal_vector = true;
   bool IsDone = false;
   if (eSol.PrimalDefined && eSol.DualDefined) {
@@ -793,9 +798,34 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     eResult.InternalVector = eSol.DirectSolution;
   }
   if (!eSol.PrimalDefined && eSol.DualDefined) {
+    MyVector<T> const& V = eSol.DualSolution;
     IsDone = true;
     eResult.eTestExist = true;
-    eResult.TheRelat = eSol.DualSolution;
+    eResult.TheRelat = V;
+#ifdef DEBUG_LINEAR_PROGRAM
+    // That seems actually less easy to obtain than we expected.
+    // More work is needed here.
+    T max_V = V(0);
+    T min_V = V(0);
+    for (int iRow=1; iRow<nbRow; iRow++) {
+      if (V(iRow) < min_V) {
+        min_V = V(iRow);
+      }
+      if (V(iRow) > max_V) {
+        max_V = V(iRow);
+      }
+    }
+    double max_V_d = UniversalScalarConversion<double,T>(max_V);
+    double min_V_d = UniversalScalarConversion<double,T>(min_V);
+    std::cerr << "max_V_d=" << max_V_d << " min_V_d=" << min_V_d << "\n";
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      T eSum(0);
+      for (int iRow=0; iRow<nbRow; iRow++) {
+        eSum += V(iRow) * ListVect(iRow,iCol);
+      }
+      std::cerr << "iCol=" << iCol << " eSum=" << eSum << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
+    }
+#endif
   }
   if (!IsDone) {
     std::cerr << "Error. No value assigned\n";
@@ -867,6 +897,7 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
   MyMatrix<T> MatInequalities = MatrixFromVectorFamily(ListInequalities);
   LpSolution<T> eSol = CDD_LinearProgramming(MatInequalities, ToBeMinimized);
   PosRelRes<T> eResult;
+  eResult.has_relation = true;
   eResult.has_internal_vector = false;
   if (eSol.PrimalDefined && eSol.DualDefined) {
     MyVector<T> DirSol = eSol.DirectSolution;
@@ -892,6 +923,7 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
 
 template <typename T>
 PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect) {
+  std::cerr << "Beginning of SearchPositiveRelationSimple_Direct\n";
   int nbVect = ListVect.rows();
   std::vector<int> ListStrictlyPositive;
   std::vector<int> ListPositive(nbVect);
@@ -904,11 +936,19 @@ PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect) {
 }
 
 template <typename T>
-PosRelRes<T> SearchPositiveRelationSimple(MyMatrix<T> const &ListVect) {
+bool TestExistPositiveRelation(MyMatrix<T> const &ListVect) {
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
   int dim_dual = nbCol;
+#ifdef DEBUG_LINEAR_PROGRAM
+  PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect);
+  PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect);
+  if (sol1.eTestExist != sol2.eTestExist) {
+    std::cerr << "We get different result for Direct and DualMethod\n";
+    std::cerr << "Clearly not what we expected\n";
+  }
+#endif
   auto get_solution=[&]() -> PosRelRes<T> {
     // We take the dimensionality as the driving factor for the complexity of the computation.
     if (dim_direct < dim_dual) {
@@ -920,7 +960,7 @@ PosRelRes<T> SearchPositiveRelationSimple(MyMatrix<T> const &ListVect) {
 #ifdef DEBUG_LINEAR_PROGRAM
   CheckResult_PositiveRelationSimple(ListVect, the_sol);
 #endif
-  return the_sol;
+  return the_sol.eTestExist;
 }
 
 
@@ -1204,7 +1244,7 @@ template <typename T>
 MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
-  PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
+  PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC);
   //  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
   if (!eRes.eTestExist) {
     return IdentityMat<T>(nbCol);
@@ -1233,8 +1273,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
 }
 
 template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC) {
-  PosRelRes<T> eRes = SearchPositiveRelationSimple(FAC);
-  return !eRes.eTestExist;
+  return !TestExistPositiveRelation(FAC);
 }
 
 template <typename T>
