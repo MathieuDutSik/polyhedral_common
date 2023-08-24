@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
       for (size_t pos = 0; pos < n_orbit; pos++) {
         Face f = ff.getface(pos);
         bool val = fb.getbit(pos);
-        size_t e_hash = mpi_get_hash(f_res, n_act);
+        size_t e_hash = mpi_get_hash(f, n_act);
         size_t iProcO = e_hash % size_t(NprocO);
         size_t &shift = List_shift[iProcO];
         List_FB[iProcO]->setbit(shift, val);
