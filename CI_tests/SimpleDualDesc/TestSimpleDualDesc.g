@@ -1,7 +1,7 @@
 Print("Beginning TestSimpleDualDesc\n");
 
 WriteMatrixFile:=function(eFile, EXT)
-    local output, eEXT;
+    local output, eEXT, eVal;
     output:=OutputTextFile(eFile, true);
     AppendTo(output, Length(EXT), " ", Length(EXT[1]), "\n");
     for eEXT in EXT
