@@ -69,6 +69,8 @@
 static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
 static const int CANONIC_STRATEGY__STORE = 1;
 static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
+// This is for the constant 500000
+static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 3;
 
 // Those constants are for the default strategy
 static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
@@ -252,6 +254,8 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   if (method_choice == CANONIC_STRATEGY__STORE)
     return GRP.StoreCanonicalImage(f);
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
+    return GRP.CanonicalImageInitialTriv(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
     return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
@@ -353,6 +357,8 @@ Face CanonicalImageGeneralDualDesc(
     return recConvert.ConvertFaceOrbitSize(pair);
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
+    return GRP.CanonicalImageInitialTriv(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
     return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
@@ -481,7 +487,7 @@ std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
   // We put first the CANONIC_STRATEGY__CANONICAL_IMAGE as it is an all around
   // reasonable method on which other methods have to compete with.
   std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE,
-                                      CANONIC_STRATEGY__INITIAL_TRIV};
+                                      CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1};
   if (GRP.size() < 20000) { // We need to exclude that strategy if too large as
                             // that strategy has no chance.
     list_considered.push_back(CANONIC_STRATEGY__STORE);
@@ -567,7 +573,7 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
   if (size < 10000) {
     if (GRP.size() < 200)
       return CANONIC_STRATEGY__STORE;
-    return CANONIC_STRATEGY__INITIAL_TRIV;
+    return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
   }
   int n = EXT.rows();
   vectface vf(n);
@@ -1052,6 +1058,8 @@ public:
       return CANONIC_STRATEGY__CANONICAL_IMAGE;
     if (choice == "canonic_initial_triv")
       return CANONIC_STRATEGY__INITIAL_TRIV;
+    if (choice == "canonic_initial_triv_limited1")
+      return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
     if (choice == "store")
       return CANONIC_STRATEGY__STORE;
     std::cerr << "The value of choice is not an allowed one\n";
@@ -1067,6 +1075,9 @@ public:
       return true;
     }
     if (the_method == CANONIC_STRATEGY__INITIAL_TRIV) {
+      return false;
+    }
+    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
       return false;
     }
     std::cerr << "The value of the_method was not correctly set\n";
