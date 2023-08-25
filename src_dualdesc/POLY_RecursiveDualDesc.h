@@ -252,7 +252,7 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   if (method_choice == CANONIC_STRATEGY__STORE)
     return GRP.StoreCanonicalImage(f);
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
-    return GRP.CanonicalImageInitialTriv(f);
+    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};
@@ -353,7 +353,7 @@ Face CanonicalImageGeneralDualDesc(
     return recConvert.ConvertFaceOrbitSize(pair);
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
-    return GRP.CanonicalImageInitialTriv(f);
+    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};

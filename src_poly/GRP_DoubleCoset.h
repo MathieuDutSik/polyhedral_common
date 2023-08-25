@@ -23,6 +23,7 @@
 # define DEBUG_DOUBLE_COSET
 #endif
 
+static const size_t LIMIT_INITIAL_TRIV = 500000;
 
 template <typename Tgroup> struct FaceOrbitsizeGrpContainer {
 private:
@@ -208,7 +209,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   Tidx n = eList.size();
   vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &f) -> void {
-    Face f_can = SmaGRP.CanonicalImageInitialTriv(f);
+    Face f_can = SmaGRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
     if (SetFace.count(f_can) > 0)
       return;
     CurrList.push_back(f_can);
@@ -216,7 +217,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
     SizeGen += SmaGRP.OrbitSize_OnSets(f);
   };
   auto DoubleCosetInsertEntry_second = [&](Face const &f) -> void {
-    Face f_can = SmaGRP.CanonicalImageInitialTriv(f);
+    Face f_can = SmaGRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
     if (SetFace.count(f_can) > 0)
       return;
     SetFace.insert(f_can);
