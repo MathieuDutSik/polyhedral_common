@@ -14,6 +14,7 @@
 
 #ifdef DEBUG
 # define DEBUG_LINEAR_PROGRAM
+# define DEBUG_SEARCH_POSITIVE_RELATION
 #endif
 
 template <typename T> struct LpSolution {
@@ -798,11 +799,10 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     eResult.InternalVector = eSol.DirectSolution;
   }
   if (!eSol.PrimalDefined && eSol.DualDefined) {
-    MyVector<T> const& V = eSol.DualSolution;
     IsDone = true;
     eResult.eTestExist = true;
-    eResult.TheRelat = V;
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef PRINT_LINEAR_PROGRAM_RESULT
+    MyVector<T> const& V = eSol.DualSolution;
     // That seems actually less easy to obtain than we expected.
     // More work is needed here.
     T max_V = V(0);
@@ -831,7 +831,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     std::cerr << "Error. No value assigned\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef DEBUG_SEARCH_POSITIVE_RELATION
   CheckResult_PositiveRelationSimple(ListVect, eResult);
 #endif
   return eResult;
@@ -941,7 +941,8 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect) {
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
   int dim_dual = nbCol;
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef CHECK_SEARCH_POSITIVE_RELATION
+  // Relatively expensive checks to do
   PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect);
   PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect);
   if (sol1.eTestExist != sol2.eTestExist) {
@@ -957,12 +958,11 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect) {
     return SearchPositiveRelationSimple_DualMethod(ListVect);
   };
   PosRelRes<T> the_sol = get_solution();
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef DEBUG_SEARCH_POSITIVE_RELATION
   CheckResult_PositiveRelationSimple(ListVect, the_sol);
 #endif
   return the_sol.eTestExist;
 }
-
 
 
 template <typename T>
