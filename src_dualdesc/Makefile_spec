@@ -1,5 +1,5 @@
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
+PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
 #PROGRAM		= POLY_MPI_DualDesc
@@ -7,7 +7,7 @@
 #PROGRAM		= Test_face Test_bool
 #PROGRAM		= POLY_DatabaseRestructuration
 #PROGRAM		= POLY_UpgradeDatabase POLY_SerialDualDesc
-PROGRAM		= POLY_UpgradeDatabase
+#PROGRAM		= POLY_UpgradeDatabase
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
@@ -24,13 +24,12 @@ LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
-#CC		= g++-11 -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -Wconversion -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -ggdb
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 # For GCC
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
 # For CLANG
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -ftemplate-backtrace-limit=0
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -pg
 #CC		= clang++ -Wall -Wextra -std=c++17

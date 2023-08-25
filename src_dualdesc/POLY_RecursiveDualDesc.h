@@ -69,6 +69,8 @@
 static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
 static const int CANONIC_STRATEGY__STORE = 1;
 static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
+// This is for the constant 500000
+static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 3;
 
 // Those constants are for the default strategy
 static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
@@ -253,6 +255,8 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
     return GRP.StoreCanonicalImage(f);
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
     return GRP.CanonicalImageInitialTriv(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
+    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};
@@ -354,6 +358,8 @@ Face CanonicalImageGeneralDualDesc(
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
     return GRP.CanonicalImageInitialTriv(f);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
+    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};
@@ -481,7 +487,7 @@ std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
   // We put first the CANONIC_STRATEGY__CANONICAL_IMAGE as it is an all around
   // reasonable method on which other methods have to compete with.
   std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE,
-                                      CANONIC_STRATEGY__INITIAL_TRIV};
+                                      CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1};
   if (GRP.size() < 20000) { // We need to exclude that strategy if too large as
                             // that strategy has no chance.
     list_considered.push_back(CANONIC_STRATEGY__STORE);
@@ -508,7 +514,7 @@ template <typename Tgroup>
 int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP) {
   std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
-  int chosen_method = -1;
+  int chosen_method = CANONIC_STRATEGY__DEFAULT;
   for (auto &method : list_considered) {
     int64_t runtime = time_evaluation_can_method(method, vf, GRP, upper_limit);
     if (runtime < upper_limit) {
@@ -527,7 +533,7 @@ int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
   int64_t miss_val = std::numeric_limits<int64_t>::max();
   int64_t upper_limit_local = miss_val;
   int64_t upper_limit_global = miss_val;
-  int chosen_method = -1;
+  int chosen_method = CANONIC_STRATEGY__DEFAULT;
   int64_t effective_upper_limit = miss_val;
   std::vector<int64_t> V_runtime;
   for (auto &method : list_considered) {
@@ -567,7 +573,7 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
   if (size < 10000) {
     if (GRP.size() < 200)
       return CANONIC_STRATEGY__STORE;
-    return CANONIC_STRATEGY__INITIAL_TRIV;
+    return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
   }
   int n = EXT.rows();
   vectface vf(n);
@@ -1052,6 +1058,8 @@ public:
       return CANONIC_STRATEGY__CANONICAL_IMAGE;
     if (choice == "canonic_initial_triv")
       return CANONIC_STRATEGY__INITIAL_TRIV;
+    if (choice == "canonic_initial_triv_limited1")
+      return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
     if (choice == "store")
       return CANONIC_STRATEGY__STORE;
     std::cerr << "The value of choice is not an allowed one\n";
@@ -1067,6 +1075,9 @@ public:
       return true;
     }
     if (the_method == CANONIC_STRATEGY__INITIAL_TRIV) {
+      return false;
+    }
+    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
       return false;
     }
     std::cerr << "The value of the_method was not correctly set\n";
@@ -2282,6 +2293,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
     bool test_final = RPL.GetTerminationStatus();
 #ifdef TIMINGS
+    os << "test_final=" << test_final << "\n";
     os << "|GetTerminationStatus|=" << time << "\n";
 #endif
     if (test_final)
@@ -2481,6 +2493,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   ListStringValues1_doc["NumericalType"] = "Default: rational\n\
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
+safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic: coordinate in a real algebraic field";

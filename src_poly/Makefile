@@ -5,14 +5,12 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  TEST_PolytopeIntegralPoints TEST_LinPolytopeIntegral_Automorphism \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
-		  POLY_redundancy POLY_redundancyClarkson \
-		  POLY_redundancyClarksonGroup POLY_redundancy_Equivariant \
+		  POLY_redundancy POLY_redundancyGroup \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
 		  POLY_lrs \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_IsPointedCone \
-                  GRP_TestEquivalenceSets \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
                   GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Invariant \

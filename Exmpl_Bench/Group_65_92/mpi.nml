@@ -1,0 +1,31 @@
+
+&DATA
+ EXTfile = "Perfect.ext"
+ GRPfile = "Perfect.grp"
+ OUTfile = "ListOrbit"
+ max_runtime = 86400
+ DeterministicRuntime = F
+ AdvancedTerminationCriterion = T
+ bank_parallelization_method = "bank_mpi"
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "AddiSym.heu"
+ DualDescriptionThompsonFile     = "DualDesc.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank_save.heu"
+ ChosenDatabaseFile              = "Bank_canonic.heu"
+ CheckDatabaseBankFile           = "Bank_check.heu"
+ ChoiceCanonicalizationFile      = "Canonic.heu"
+/
+
+&METHOD
+ Saving = T
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = T
+/

@@ -850,7 +850,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&](Tint *out) -> bool {
+    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P, [[maybe_unused]] lrs::lrs_dat<Tint> *Q, [[maybe_unused]] int const& col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS
         n_iter++;
@@ -917,7 +917,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&](Tint *out) -> bool {
+    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P, [[maybe_unused]] lrs::lrs_dat<Tint> *Q, [[maybe_unused]] int const& col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS
         n_iter++;

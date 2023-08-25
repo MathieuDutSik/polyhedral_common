@@ -61,16 +61,19 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "    gracefully on overflow\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
-                   "field whose description is in FileDesc\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr << "    field whose description is in FileDesc\n";
       std::cerr << "\n";
       std::cerr << "        --- command ---\n";
       std::cerr << "\n";
       std::cerr << "cdd      : the cdd program\n";
       std::cerr << "lrs      : the lrs program\n";
+      std::cerr << "pd_lrs   : the primal dual technique with lrs used for test\n";
       std::cerr << "lrs_ring : the lrs program but reduced to ring computation (remove denominators)\n";
       std::cerr << "glrs     : the external program glrs\n";
       std::cerr << "ppl_ext  : the external program ppl_ext\n";

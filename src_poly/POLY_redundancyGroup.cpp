@@ -8,57 +8,67 @@
 #include "Group.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
+#include "POLY_RedundancyElimination.h"
 #include "Permutation.h"
 // clang-format on
 
 template<typename T, typename Tgroup>
-void process(std::string const& FileEXT, std::string const& FileGRP, std::string const& OutFormat, std::ostream & os) {
+void process(std::string const& FileEXT, std::string const& FileGRP,
+             std::string const& method, std::string const& OutFormat,
+             std::ostream & os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
   std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";
-  vectface vfo = DecomposeOrbitPoint_Full(GRP);
-  size_t n_orbit=vfo.size();
-  std::vector<int> BlockBelong(nbRow);
-  for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-    Face f = vfo[i_orbit];
-    //    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |f|=" << f.size() << "/" << f.count() << "\n";
-    for (size_t i=0; i<nbRow; i++) {
-      if (f[i] == 1) {
-        BlockBelong[i] = i_orbit;
+  auto get_list_irred=[&]() -> std::vector<int> {
+    if (method == "ClarksonBlock") {
+      vectface vfo = DecomposeOrbitPoint_Full(GRP);
+      size_t n_orbit=vfo.size();
+      std::vector<int> BlockBelong(nbRow);
+      for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+        Face f = vfo[i_orbit];
+        //    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |f|=" << f.size() << "/" << f.count() << "\n";
+        for (size_t i=0; i<nbRow; i++) {
+          if (f[i] == 1) {
+            BlockBelong[i] = i_orbit;
+          }
+        }
       }
+      return cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong);
     }
-  }
-  std::vector<int> ListIrred =
-    cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong);
-  auto print_result=[&]() -> void {
-    int nbIrred = ListIrred.size();
-    if (OutFormat == "GAP") {
-      os << "return [";
-      for (int i = 0; i < nbIrred; i++) {
-        if (i > 0)
-          os << ",";
-        int eVal = ListIrred[i] + 1;
-        os << eVal;
-      }
-      os << "];\n";
-      return;
+    if (method == "Equivariant") {
+      return GetNonRedundant_Equivariant(EXT, GRP);
     }
-    if (OutFormat == "MyVector") {
-      os << nbIrred << "\n";
-      for (int i = 0; i < nbIrred; i++) {
-        os << " ";
-        int eVal = ListIrred[i];
-        os << eVal;
-      }
-      return;
-    }
-    std::cerr << "No meaningful choice for OutFormat\n";
-    std::cerr << "Allowed options are GAP and MyVector\n";
+    std::cerr << "Failed to find a relevant method\n";
+    std::cerr << "Allowed ones: ClarksonBlock and Equivariant\n";
     throw TerminalException{1};
   };
-  print_result();
+  std::vector<int> ListIrred = get_list_irred();
+  int nbIrred = ListIrred.size();
+  if (OutFormat == "GAP") {
+    os << "return [";
+    for (int i = 0; i < nbIrred; i++) {
+      if (i > 0)
+        os << ",";
+      int eVal = ListIrred[i] + 1;
+      os << eVal;
+    }
+    os << "];\n";
+    return;
+  }
+  if (OutFormat == "MyVector") {
+    os << nbIrred << "\n";
+    for (int i = 0; i < nbIrred; i++) {
+      os << " ";
+      int eVal = ListIrred[i];
+      os << eVal;
+    }
+    return;
+  }
+  std::cerr << "No meaningful choice for OutFormat\n";
+  std::cerr << "Allowed options are GAP and MyVector\n";
+  throw TerminalException{1};
 }
 
 
@@ -66,26 +76,32 @@ void process(std::string const& FileEXT, std::string const& FileGRP, std::string
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 4 && argc != 6) {
+    if (argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_redundancyClarksonGroup arith [FileEXT] [FileGRP] [OutFormat] [FileOut]\n";
+      std::cerr << "POLY_redundancyGroup method arith [FileEXT] [FileGRP] [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_redundancyClarksonGroup arith [FileEXT] [FileGRP]\n";
+      std::cerr << "POLY_redundancyGroup method arith [FileEXT] [FileGRP]\n";
       std::cerr << "\n";
       std::cerr << "FileEXT   : The polyhedral cone inequalities (or generators of vertices/extreme rays)\n";
       std::cerr << "FileGRP   : The group being used\n";
       std::cerr << "OutFormat : Format for output, GAP or MyVector are allowed\n";
       std::cerr << "DATAOUT   : The list of irredundant facets (if absent then std::cerr)\n";
       std::cerr << "\n";
+      std::cerr << "        --- method ---\n";
+      std::cerr << "\n";
+      std::cerr << "ClarksonBlock : For using Clarkson method wwith blocks\n";
+      std::cerr << "Equivariant   : For using the equivariant method\n";
+      std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "integer  : integer arithmetic on input\n";
+      std::cerr << "safe_rational  : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "    gracefully on overflow\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
-      std::cerr << "field whose description is in FileDesc\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr << "    field whose description is in FileDesc\n";
       return -1;
     }
     using Tidx = uint32_t;
@@ -93,33 +109,34 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;
     //
-    std::string arith = argv[1];
-    std::string FileEXT = argv[2];
-    std::string FileGRP = argv[3];
+    std::string method = argv[1];
+    std::string arith = argv[2];
+    std::string FileEXT = argv[3];
+    std::string FileGRP = argv[4];
     std::string OutFormat = "GAP";
     std::string FileOut = "stderr";
     if (argc == 6) {
-      OutFormat = argv[4];
-      FileOut = argv[5];
+      OutFormat = argv[5];
+      FileOut = argv[6];
     }
     auto compute_redundancy=[&](std::ostream & os) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+        return process<T,Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+        return process<T,Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+        return process<T,Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+        return process<T,Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -135,7 +152,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T,Tgroup>(FileEXT, FileGRP, OutFormat, os);
+        return process<T,Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

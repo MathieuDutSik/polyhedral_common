@@ -1,0 +1,5 @@
+3
+1 incidence <= 50 nosplit
+1 delta <= 11 nosplit
+2 delta <= 15 groupsize < 16 nosplit
+split

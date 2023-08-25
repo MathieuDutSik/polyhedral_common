@@ -199,6 +199,7 @@ bool EvaluationConnectednessCriterion_Kernel(
         fint &= e_vert;
       }
     }
+    os << "fint built\n";
     if (true) {
       os << "  x=(" << x.first << ",[";
       bool IsFirst = true;
@@ -262,8 +263,11 @@ bool EvaluationConnectednessCriterion_Kernel(
       if (!f_recur(x))
         return insert_pfr(x, false);
       // Looking at the facets and maybe we can so conclude
+      os << "After the f_recur\n";
       Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
+      os << "We have |eStab|=" << eStab.size() << "\n";
       vectface vf_span = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
+      os << "We have vf_span\n";
       auto get_value = [&]() -> bool {
         Tint siz_false = 0;
         for (auto &eFace : vf_span) {
@@ -312,7 +316,9 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            const Tgroup &GRP,
                                            const vectface &vf_undone,
                                            std::ostream &os) {
-  return EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
+  bool test = EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
+  os << "EvaluationConnectednessCriterion_PreKernel(field case), test=" << test << "\n";
+  return test;
 }
 
 template <typename T, typename Tgroup>
@@ -323,7 +329,9 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
-  return EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP, vf_undone, os);
+  bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP, vf_undone, os);
+  os << "EvaluationConnectednessCriterion_PreKernel(ring case), test=" << test << "\n";
+  return test;
 }
 
 template <typename TbasicBank>

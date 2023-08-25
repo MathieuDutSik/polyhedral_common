@@ -103,8 +103,10 @@ SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
           int jCol = iCol + nbRowSpann;
           ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
         }
-      bool eTestExist = TestPositiveRelationSimple(ListVectors);
-      if (eTestExist == 0)
+      std::cerr << "nbOrbCompl=" << nbOrbCompl << " LPdim=" << LPdim << "\n";
+      bool test = TestExistPositiveRelation(ListVectors);
+      std::cerr << "test=" << test << "\n";
+      if (!test)
         TheReturn.push_back(eCand);
     }
   return TheReturn;
@@ -526,10 +528,11 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
         T eVal = PreListVectorsB(iElt, jCol);
         ListVectors(iElt, iCol) = eVal;
       }
-    PosRelRes<T> eResult = SearchPositiveRelationSimple(ListVectors);
+    PosRelRes<T> eResult = SearchPositiveRelationSimple_Direct(ListVectors);
     if (eResult.eTestExist) {
+      MyVector<T> const& V = *eResult.TheRelat;
       for (int iElt = 0; iElt < nbEltCompl; iElt++) {
-        T eVal = eResult.TheRelat(iElt);
+        T eVal = V(iElt);
         if (eVal > 0)
           eVectCand[eCandCompl[iElt]] = 1;
       }
@@ -537,12 +540,6 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
       return true;
     }
   }
-}
-
-template <typename T>
-bool TestPositiveRelationSimple(MyMatrix<T> const &ListVect) {
-  PosRelRes<T> eResult = SearchPositiveRelationSimple(ListVect);
-  return eResult.eTestExist;
 }
 
 template <typename Tgroup>
@@ -668,7 +665,7 @@ The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimpli
   ListStringValues1_doc["method_final"] = "Default: all\n\
 Available options are all and stop_nonsimplicial";
   ListStringValues1_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+Other possibilities are safe_rational, Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
   ListIntValues1_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
   ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\

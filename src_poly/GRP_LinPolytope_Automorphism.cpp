@@ -97,12 +97,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "integer  : integer arithmetic on input\n";
-      std::cerr << "rational : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr << "safe_rational           : safe_rational arithmetic on uint64_t\n";
+      std::cerr << "     that fails gracefully\n";
+      std::cerr << "rational                : rational arithmetic on input\n";
+      std::cerr << "Qsqrt2                  : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr << "Qsqrt5                  : arithmetic over the field Q(sqrt(5))\n";
       std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
-      std::cerr << "field whose description is in FileDesc\n";
+      std::cerr << "     field whose description is in FileDesc\n";
       return -1;
     }
     //

@@ -4,6 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "POLY_DirectDualDesc.h"
 // clang-format on
 
@@ -20,6 +22,13 @@ void process(std::string const &eFileI, std::string const& ansProg, std::string 
       os << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count() << "\n";
     }
     return WriteMatrix(os, FAC);
+  }
+  if (choice == "GAP") {
+    MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
+    os << "return ";
+    WriteMatrixGAP(os, FAC);
+    os << ";\n";
+    return;
   }
   if (choice == "CPP") {
     MyMatrix<T> FAC = DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
@@ -48,11 +57,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "rational : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
-                   "field whose description is in FileDesc\n";
+      std::cerr << "safe_rational          : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "    gracefully on overflowing\n";
+      std::cerr << "cpp_rational           : rational arithmetic based on boost header library\n";
+      std::cerr << "mpq_rational           : rational arithmetic based on boost mpq data type\n";
+      std::cerr << "rational               : rational arithmetic on input\n";
+      std::cerr << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr << "RealAlgebraic=FileDesc : For the real algebraic case of a\n";
+      std::cerr << "    field whose description is in FileDesc\n";
       std::cerr << "\n";
       std::cerr << "        --- command ---\n";
       std::cerr << "\n";
@@ -69,6 +82,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "control : the full data set for control and debugging\n";
       std::cerr << "CPP     : the matrix for output (also used in Oscar)\n";
+      std::cerr << "GAP     : returns a GAP readable file (except for algebraic field)\n";
       return -1;
     }
     //
@@ -82,6 +96,14 @@ int main(int argc, char *argv[]) {
     auto dual_desc = [&](std::ostream &os) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
+        return process<T>(eFileI, command, choice, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
+        return process<T>(eFileI, command, choice, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
         return process<T>(eFileI, command, choice, os);
       }
       if (arith == "rational") {

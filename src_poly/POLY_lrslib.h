@@ -88,7 +88,6 @@ template <typename T> struct lrs_dat {
   int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;      /* do convex hull computation if globals::TRUE           */
-  int64_t incidence; /* print all tight inequalities (vertices/rays) */
   int64_t lponly;    /* true if only lp solution wanted              */
   int64_t maxdepth;  /* max depth to search to in treee              */
   int64_t maximize;  /* flag for LP maximization                     */
@@ -97,7 +96,6 @@ template <typename T> struct lrs_dat {
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
-  int64_t printcobasis; /* globals::TRUE if all cobasis should be printed */
   int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
   int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
 
@@ -129,7 +127,7 @@ template <typename T> inline int64_t sign(T const &a) {
   return 0;
 }
 
-template <typename T> inline int comprod(T Na, T Nb, T Nc, T Nd) {
+template <typename T> inline int comprod(T const& Na, T const& Nb, T const& Nc, T const& Nd) {
   if (Na * Nb > Nc * Nd)
     return 1;
   if (Na * Nb < Nc * Nd)
@@ -190,12 +188,10 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
       globals::L_FALSE; /* upper/lower bound on objective function given */
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
-  Q->incidence = globals::L_FALSE;
   Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->nonnegative = globals::L_FALSE;
-  Q->printcobasis = globals::L_FALSE;
   Q->truncate =
       globals::L_FALSE; /* truncate tree when moving from opt vertex        */
   Q->maximize = globals::L_FALSE; /*flag for LP maximization */
@@ -1290,53 +1286,6 @@ int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
   return globals::L_FALSE; /*index is no longer cobasic */
 }
 
-template <typename T>
-int64_t checkindex(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
-/* 0 if index is non-redundant inequality */
-/* 1 if index is redundant     inequality */
-/* 2 if index is input linearity          */
-/*NOTE: row is returned all zero if redundant!! */
-{
-  int64_t i, j;
-
-  T **A = P->A;
-  int64_t *Row = P->Row;
-  int64_t *B = P->B;
-  int64_t d = P->d;
-  int64_t m = P->m;
-
-  /* each slack index must be checked for redundancy */
-  /* if in cobasis, it is pivoted out if degenerate */
-  /* else it is non-redundant                       */
-
-  if (checkcobasic(P, Q, index))
-    return 0;
-
-  /* index is basic   */
-  j = 1;
-  while ((j <= m) && (B[j] != index))
-    j++;
-
-  i = Row[j];
-
-  /* copy row i to cost row, and set it to zero */
-
-  for (j = 0; j <= d; j++) {
-    A[0][j] = A[i][j];
-    A[0][j] = -A[0][j];
-    A[i][j] = 0;
-  }
-
-  if (checkredund(P, Q))
-    return 1L;
-
-  /* non-redundant, copy back and change sign */
-
-  for (j = 0; j <= d; j++)
-    A[i][j] = -A[0][j];
-  return 0;
-} /* end of checkindex */
-
 /***************************************************************/
 /*                                                             */
 /*     Routines for caching, allocating etc.                   */
@@ -1635,19 +1584,6 @@ void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
 }
 
 template <typename T>
-int64_t lrs_solve_lp(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* user callable function to solve lp only */
-{
-  T **Lin; /* holds input linearities if any are found             */
-
-  Q->lponly = globals::L_TRUE;
-
-  if (!lrs_getfirstbasis(&P, Q, Lin))
-    return globals::L_FALSE;
-  return globals::L_TRUE;
-} /* end of lrs_solve_lp */
-
-template <typename T>
 int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 /* select pivot indices using dantzig simplex method             */
 /* largest coefficient with lexicographic rule to avoid cycling  */
@@ -1772,6 +1708,32 @@ template <typename T> void freeLRS(lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   lrs_free_dat(Q);
 }
 
+
+template <typename T>
+void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, Face & f) {
+  int nbRow = Q->m;
+  for (int i=0; i<nbRow; i++)
+    f[i] = 0;
+  for (int i=0; i<P->d; i++) {
+    int the_col = P->Col[i];
+    if (the_col != col) {
+      int idx1 = P->C[i];
+      int idx2 = Q->lastdv;
+      int idx = Q->inequality[idx1 - idx2] - 1;
+      f[idx] = 1;
+    }
+  }
+  for (int i=Q->lastdv+1; i<=P->m; i++) {
+    int iRow = P->Row[i];
+    if (P->A[iRow][0] == 0) {
+      if (col == 0 || P->A[iRow][col] == 0) {
+        int idx = iRow - 1;
+        f[idx] = 1;
+      }
+    }
+  }
+}
+
 template <typename T, typename F>
 void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
@@ -1780,51 +1742,105 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
+  bool is_first = true;
+#ifdef LRS_PRINT_ANALYSIS
+  size_t n_entry = 0;
+  size_t max_n_error = 0;
+#endif
   do {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
-#ifdef PRINT_ANALYSIS
-        size_t nbCol = EXT.cols();
-        size_t nbRow = EXT.rows();
-        std::cerr << "------------ Begin ------------\n";
-        std::cerr << "Incidence =";
-        for (size_t iRow = 0; iRow < nbRow; iRow++) {
-          T eScal = 0;
-          for (size_t iCol = 0; iCol < nbCol; iCol++)
-            eScal += output[iCol] * EXT(iRow, iCol);
-          if (eScal == 0)
-            std::cerr << " " << iRow;
-        }
-        std::cerr << "\n";
-        std::cerr << "col=" << col << "\n";
-        std::cerr << "Col =";
-        for (int i = 0; i < P->d; i++)
-          std::cerr << " " << P->Col[i];
-        std::cerr << "\n";
-        std::cerr << "Row =";
-        for (int i = 0; i < P->m; i++)
-          std::cerr << " " << P->Row[i];
-        std::cerr << "\n";
+        if (!is_first) {
+#ifdef LRS_PRINT_ANALYSIS
+          size_t nbCol = EXT.cols();
+          size_t nbRow = EXT.rows();
+          size_t real_incidence = 0;
+          std::cerr << "------------ Entry " << n_entry << " col=" << col << " ------------\n";
+          std::cerr << "    ScalProd =";
+          Face real_incd(nbRow);
+          for (size_t iRow = 0; iRow < nbRow; iRow++) {
+            T eScal(0);
+            for (size_t iCol = 0; iCol < nbCol; iCol++)
+              eScal += output[iCol] * EXT(iRow, iCol);
+            if (eScal == 0) {
+              std::cerr << " " << iRow;
+              real_incidence += 1;
+              real_incd[iRow] = 1;
+            }
+          }
+          std::cerr << "\n";
+          size_t lrs_incidence = P->d - 1;
+          size_t n_error = 0;
+          size_t n_correct = 0;
+          std::cerr << "    Lrs_Dict =";
+          Face lrs_incd(nbRow);
+          int max_iRow = std::numeric_limits<int>::min();
+          int min_iRow = std::numeric_limits<int>::max();
+          for (int i=0; i<P->d; i++) {
+            int idx1 = P->C[i];
+            int idx2 = Q->lastdv;
+            //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 << "\n";
+            int idx = Q->inequality[idx1 - idx2] - 1;
+            int the_col = P->Col[i];
+            if (the_col != col) {
+              std::cerr << " " << idx;
+              lrs_incd[idx] = 1;
+              if (real_incd[idx] == 1) {
+                n_correct++;
+              } else {
+                n_error++;
+              }
+            }
+          }
+          for (int i=Q->lastdv+1; i<=P->m; i++) {
+            int iRow = P->Row[i];
+            if (iRow < min_iRow)
+              min_iRow = iRow;
+            if (iRow > max_iRow)
+              max_iRow = iRow;
+            if (P->A[iRow][0] == 0) {
+              if (col == 0 || P->A[iRow][col] == 0) {
+                int idx = iRow - 1;
+                std::cerr << " " << idx;
+                lrs_incidence += 1;
+                lrs_incd[idx] = 1;
+                if (real_incd[idx] == 1) {
+                  n_correct++;
+                } else {
+                  n_error++;
+                }
+              }
+            }
+          }
+          if (n_error > max_n_error) {
+            max_n_error = n_error;
+          }
+          std::cerr << "\n";
+          std::cerr << "    real_incidence=" << real_incidence << " n_correct=" << n_correct << " n_error=" << n_error << "\n";
+          std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow << "\n";
+          if (real_incidence != lrs_incidence) {
+            std::cerr << "The incidence are different\n";
+            std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
+            throw TerminalException{1};
+          }
+          if (real_incd != lrs_incd) {
+            std::cerr << "The real_incd is not equal to lrs_incd\n";
+            throw TerminalException{1};
+          }
+          n_entry += 1;
 #endif
-        f(output);
+          f(P, Q, col, output);
+        }
+        is_first = false;
       }
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
+#ifdef LRS_PRINT_ANALYSIS
+  std::cerr << "max_n_error=" << max_n_error << "\n";
+#endif
   delete[] output;
   lrs_free_dic(P, Q);
   lrs_free_dat(Q);
-}
-
-template <typename T, typename F>
-void Kernel_DualDescription_DropFirst(MyMatrix<T> const &EXT, F const &f) {
-  bool IsFirst = true;
-  auto f_first = [&](T *out) -> void {
-    if (!IsFirst) {
-      f(out);
-    }
-    IsFirst = false;
-  };
-  Kernel_DualDescription(EXT, f_first);
 }
 
 template <typename T, typename F>
@@ -1835,13 +1851,17 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   initLRS(EXT, P, Q);
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
+  bool is_first = true;
   do {
     bool is_finished = false;
     for (col = 0; col <= P->d; col++)
       if (lrs_getsolution(P, Q, output, col)) {
-        bool test = f(output);
-        if (!test)
-          is_finished = true;
+        if (!is_first) {
+          bool test = f(P, Q, col, output);
+          if (!test)
+            is_finished = true;
+        }
+        is_first = false;
       }
     if (is_finished)
       break;
@@ -1890,33 +1910,17 @@ std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
 
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
   T eScal;
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
-  auto f = [&](T *out) -> void {
-#ifdef USE_ISINCD
-    auto isincd = [&](size_t iRow) -> bool {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      return eScal == 0;
-    };
-    ListIncd.InsertFace(isincd);
-#else
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      face[iRow] = static_cast<bool>(eScal == 0);
-    }
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> void {
+    set_face(P, Q, col, face);
     ListIncd.push_back(face);
-#endif
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
   return ListIncd;
 }
 
@@ -1927,13 +1931,13 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbCol = EXTwork.cols();
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](T *out) -> void {
-    MyVector<T> V(nbColRed);
+  MyVector<T> V(nbColRed);
+  auto f = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
   return MatrixFromVectorFamily(ListVect);
 }
 
@@ -1947,43 +1951,28 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
-  auto f = [&](T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTwork(iRow, iCol);
-      pair.first[iRow] = static_cast<bool>(eScal == 0);
-    }
+    set_face(P, Q, col, pair.first);
     f_process(pair);
   };
-  Kernel_DualDescription_DropFirst(EXTwork, f);
+  Kernel_DualDescription(EXTwork, f);
 }
 
 template <typename T>
 vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
                                       int const &UpperLimit) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t nbCol = EXTwork.cols();
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
-  bool IsFirst = true;
   T eScal;
   int nbFound = 0;
   Face face(nbRow);
-  auto f = [&](T *out) -> bool {
-    if (!IsFirst) {
-      for (size_t iRow = 0; iRow < nbRow; iRow++) {
-        eScal = 0;
-        for (size_t iCol = 0; iCol < nbCol; iCol++)
-          eScal += out[iCol] * EXTwork(iRow, iCol);
-        face[iRow] = static_cast<bool>(eScal == 0);
-      }
-      ListIncd.push_back(face);
-      nbFound++;
-    }
-    IsFirst = false;
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> bool {
+    set_face(P, Q, col, face);
+    ListIncd.push_back(face);
+    nbFound++;
     return nbFound != UpperLimit;
   };
   Kernel_DualDescription_cond(EXTwork, f);
@@ -2006,16 +1995,11 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   vectface ListIncd(nbRow);
   Tring eScal;
   Face face(nbRow);
-  auto f = [&](Tring *out) -> void {
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTring(iRow, iCol);
-      face[iRow] = static_cast<bool>(eScal == 0);
-    }
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, [[maybe_unused]] Tring *out) -> void {
+    set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
   return ListIncd;
 }
 
@@ -2036,13 +2020,13 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   std::vector<MyVector<T>> ListVect;
-  auto f = [&](Tring *out) -> void {
-    MyVector<T> V(nbColRed);
+  MyVector<T> V(nbColRed);
+  auto f = [&]([[maybe_unused]] lrs_dic<Tring> *P, [[maybe_unused]] lrs_dat<Tring> *Q, [[maybe_unused]] int const& col, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
   return MatrixFromVectorFamily(ListVect);
 }
 
@@ -2064,18 +2048,13 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_proces
   }
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  auto f = [&](Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      eScal = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eScal += out[iCol] * EXTring(iRow, iCol);
-      pair.first[iRow] = static_cast<bool>(eScal == 0);
-    }
+    set_face(P, Q, col, pair.first);
     f_process(pair);
   };
-  Kernel_DualDescription_DropFirst(EXTring, f);
+  Kernel_DualDescription(EXTring, f);
 }
 
 // clang-format off
