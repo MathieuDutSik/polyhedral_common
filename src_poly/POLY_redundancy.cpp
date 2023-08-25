@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     ---- method ----\n";
       std::cerr << "\n";
-      std::cerr << "Charkson  : For the Clarkson method\n";
+      std::cerr << "Clarkson  : For the Clarkson method\n";
       std::cerr << "HitAndRun : For the hit and run method\n";
       std::cerr << "\n";
       std::cerr << "     ---- OutFormat ----\n";
