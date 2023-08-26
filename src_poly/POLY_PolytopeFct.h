@@ -354,10 +354,6 @@ public:
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
-    // F0 should be zero on the ridge
-    MyVector<T> F0(nbCol - 1);
-    for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      F0(iCol) = eSign * out[iCol];
     // The sought inequality is expressed as F0 + beta FacetIneq
     // So for all vectors v in EXT we have F0(v) + beta FacetIneq(v) >= 0
     // beta >= -F0(v) ListInvScal(v) = beta(v)
@@ -369,9 +365,14 @@ public:
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
-        eSum += EXT_red(iRow, iCol) * F0(iCol);
+        eSum += EXT_red(iRow, iCol) * out[iCol];
       T beta = eSum * ListInvScal[pos_row];
-      if (!isAssigned || beta > beta_max) {
+      auto f_comp=[&]() -> bool {
+        if (eSign == 1)
+          return beta > beta_max;
+        return beta < beta_max;
+      };
+      if (!isAssigned || f_comp()) {
         for (int k = 0; k < pos_row; k++)
           f_select[k] = 0;
         beta_max = beta;
@@ -569,12 +570,8 @@ public:
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
-    // F0 should be zero on the ridge
-    MyVector<Tint> F0(nbCol - 1);
-    for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      F0(iCol) = eSign * out[iCol];
-    Tint beta_max_num = 0;
-    Tint beta_max_den = 1;
+    Tint beta_max_num = 0; // Those values are arbitrary and put
+    Tint beta_max_den = 1; // only to avoid compiler warnings.
     bool isAssigned = false;
     Face f_select(e_incd0);
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
@@ -582,9 +579,13 @@ public:
       Tint eSum = 0;
       T const& eScal = ListScal[pos_row];
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
-        eSum += EXT_red(iRow, iCol) * F0(iCol);
-      if (!isAssigned ||
-          eSum * beta_max_den < beta_max_num * eScal) {
+        eSum += EXT_red(iRow, iCol) * out[iCol];
+      auto f_comp=[&]() -> bool {
+        if (eSign == 1)
+          return eSum * beta_max_den < beta_max_num * eScal;
+        return eSum * beta_max_den > beta_max_num * eScal;
+      };
+      if (!isAssigned || f_comp()) {
         for (int k = 0; k < pos_row; k++)
           f_select[k] = 0;
         beta_max_num = eSum;
