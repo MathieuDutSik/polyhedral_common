@@ -859,7 +859,6 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
                                     Constraint const &eConstraint) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   MyMatrix<T> NSP = NullspaceMat(ListVect);
-  std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
   int nbVect = ListVect.rows();
   int nbRelation = NSP.rows();
   std::vector<MyVector<T>> ListInequalities;
@@ -923,7 +922,6 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
 
 template <typename T>
 PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect) {
-  std::cerr << "Beginning of SearchPositiveRelationSimple_Direct\n";
   int nbVect = ListVect.rows();
   std::vector<int> ListStrictlyPositive;
   std::vector<int> ListPositive(nbVect);

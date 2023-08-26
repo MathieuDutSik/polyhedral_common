@@ -239,6 +239,24 @@ int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   return NSP.rows();
 }
 
+template<typename T>
+MyMatrix<T> GetEXT_face(MyMatrix<T> const& EXT, int const& idx_drop, std::vector<int> const& l_idx) {
+  int nbCol = EXT.cols();
+  int e_incd = l_idx.size();
+  MyMatrix<T> EXT_face(e_incd, nbCol - 1);
+  for (int i_row=0; i_row<e_incd; i_row++) {
+    int j_row = l_idx[i_row];
+    int pos = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      if (iCol != idx_drop) {
+        EXT_face(i_row, pos) = EXT(j_row, iCol);
+        pos++;
+      }
+    }
+  }
+  return EXT_face;
+}
+
 std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face const &eList) {
   int len = eList.size();
   std::vector<int> V0;
@@ -319,17 +337,7 @@ public:
     //
     // Now the EXT face that is used by other procedure
     //
-    EXT_face = MyMatrix<T>(e_incd1, nbCol - 1);
-    for (int i_row=0; i_row<e_incd1; i_row++) {
-      int j_row = PairIncs.second[i_row];
-      int pos = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        if (iCol != idx_drop) {
-          EXT_face(i_row, pos) = EXT(j_row, iCol);
-          pos++;
-        }
-      }
-    }
+    EXT_face = GetEXT_face(EXT, idx_drop, PairIncs.second);
   }
   Face InternalFlipFaceIneq(Face const &sInc, const T *out) const {
     // We need to compute a vertex in the facet, but not the ridge
@@ -513,17 +521,7 @@ public:
     //
     // Now the EXT face that is used by other procedure
     //
-    EXT_face = MyMatrix<T>(e_incd1, nbCol - 1);
-    for (int i_row=0; i_row<e_incd1; i_row++) {
-      int j_row = PairIncs.second[i_row];
-      int pos = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        if (iCol != idx_drop) {
-          EXT_face(i_row, pos) = EXT(j_row, iCol);
-          pos++;
-        }
-      }
-    }
+    EXT_face = GetEXT_face(EXT, idx_drop, PairIncs.second);
   }
   MyVector<Tint> RescaleVec(MyVector<T> const &v) const {
     int cols = v.size();
