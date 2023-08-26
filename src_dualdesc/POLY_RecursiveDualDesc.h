@@ -742,8 +742,8 @@ template <typename T, typename Tgroup> struct DataFacet {
   FlippingFramework<T> FF;
   const Tgroup &GRP;
   Tgroup Stab;
-  Face FlipFace(const Face &f) const { return FF.FlipFace(f); }
-  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
+  Face FlipFace(const Face &f) { return FF.FlipFace(f); }
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
     return FF.FlipFaceIneq(pair);
   }
 };
@@ -2058,7 +2058,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert>
 void DUALDESC_AdjacencyDecomposition_and_insert(
-    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> const &df,
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> & df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;

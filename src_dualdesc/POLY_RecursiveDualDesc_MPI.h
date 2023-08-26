@@ -135,7 +135,7 @@ vectface mpi_shuffle(boost::mpi::communicator &comm, vectface &&vf,
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert, typename Fcomm>
 void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
-    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> const &df,
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> & df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     Fcomm f_comm, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;

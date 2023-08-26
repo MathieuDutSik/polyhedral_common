@@ -296,11 +296,12 @@ private:
   int e_incd0;
   int e_incd1;
   std::vector<T> ListInvScal;
+  Face f_select;
 
 public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListInvScal(e_incd0) {
+    : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListInvScal(e_incd0), f_select(e_incd0) {
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
@@ -339,7 +340,7 @@ public:
     //
     EXT_face = GetEXT_face(EXT, idx_drop, PairIncs.second);
   }
-  Face InternalFlipFaceIneq(Face const &sInc, const T *out) const {
+  Face InternalFlipFaceIneq(Face const &sInc, const T *out) {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while (true) {
@@ -360,7 +361,8 @@ public:
     // beta >= max beta(v)
     T beta_max(0);
     bool isAssigned = false;
-    Face f_select(e_incd0);
+    for (int k=0; k<e_incd0; k++)
+      f_select[k];
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
@@ -397,7 +399,7 @@ public:
     // returning the found facet
     return fret;
   }
-  Face FlipFace(Face const &sInc) const {
+  Face FlipFace(Face const &sInc) {
 #ifdef DEBUG_FLIP
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
@@ -415,7 +417,7 @@ public:
     MyMatrix<T> NSP = NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f);
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
-  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
     return InternalFlipFaceIneq(pair.first, pair.second.data());
   }
 };
@@ -459,6 +461,7 @@ private:
   int e_incd0;
   int e_incd1;
   std::vector<mpz_class> ListScal;
+  Face f_select;
 
 public:
   MyMatrix<T> EXT_face;
@@ -466,7 +469,7 @@ public:
     return mpz_sizeinbase(v.get_mpz_t(), 2);
   }
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : try_int(false), OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListScal(e_incd0) {
+    : try_int(false), OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListScal(e_incd0), f_select(e_incd0) {
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
 
     MyMatrix<Tint> EXT_scaled = RescaleRows(EXT);
@@ -555,7 +558,7 @@ public:
     return Mret;
   }
 
-  Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) const {
+  Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = 0;
     while (true) {
@@ -573,7 +576,8 @@ public:
     Tint beta_max_num = 0; // Those values are arbitrary and put
     Tint beta_max_den = 1; // only to avoid compiler warnings.
     bool isAssigned = false;
-    Face f_select(e_incd0);
+    for (int k=0; k<e_incd0; k++)
+      f_select[k];
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
@@ -610,7 +614,7 @@ public:
     }
     return fret;
   }
-  Face FlipFace(Face const &sInc) const {
+  Face FlipFace(Face const &sInc) {
 #ifdef DEBUG_FLIP
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
@@ -701,7 +705,7 @@ public:
     }
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
-  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) const {
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
     MyVector<Tint> out = RescaleVec(pair.second);
     return InternalFlipFaceIneq(pair.first, out.data());
   }
