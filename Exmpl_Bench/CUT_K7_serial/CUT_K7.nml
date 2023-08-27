@@ -7,7 +7,7 @@
 &HEURISTIC
  SplittingHeuristicFile          = "Split.heu"
  AdditionalSymmetryHeuristicFile = "unset.heu"
- DualDescriptionHeuristicFile    = "DualDesc.heu"
+ DualDescriptionThompsonFile     = "DualDesc_heu.ts"
  MethodInitialFacetSetFile       = "InitFacet.heu"
  BankSaveHeuristicFile           = "Bank.heu"
 /

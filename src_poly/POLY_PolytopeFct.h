@@ -98,12 +98,6 @@ T sqr_estimate_maximal_determinant(MyMatrix<T> const& M) {
       sum += M(iRow,iCol) * M(iRow,iCol);
     ListSqr.push_back(sum);
   }
-  /*
-  std::cerr << "ListSqr=";
-  for (auto & eVal : ListSqr)
-    std::cerr << " " << eVal;
-  std::cerr << "\n";
-  */
   std::sort(ListSqr.begin(), ListSqr.end());
   T eProd = 1;
   for (int iRow=nbRow-nbCol; iRow<nbRow; iRow++) {
@@ -151,7 +145,8 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) 
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "Error in rank in Facetness\n";
-    std::cerr << "|NSP|=" << NSP.rows() << "\n";
+    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << " nb=" << nb << "\n";
+    std::cerr << "|NSP|=" << NSP.rows() << " when it should be 1\n";
     throw TerminalException{1};
   }
   int nbPlus = 0;
@@ -297,11 +292,17 @@ private:
   int e_incd1;
   std::vector<T> ListInvScal;
   Face f_select;
+#ifdef DEBUG_FLIP
+  MyMatrix<T> EXT_debug;
+#endif
 
 public:
   MyMatrix<T> EXT_face;
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
     : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListInvScal(e_incd0), f_select(e_incd0) {
+#ifdef DEBUG_FLIP
+    EXT_debug = EXT;
+#endif
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
@@ -362,7 +363,7 @@ public:
     T beta_max(0);
     bool isAssigned = false;
     for (int k=0; k<e_incd0; k++)
-      f_select[k];
+      f_select[k] = 0;
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
@@ -397,6 +398,10 @@ public:
       jRow = sInc.find_next(jRow);
     }
     // returning the found facet
+#ifdef DEBUG_FLIP
+    std::cerr << "FlippingFramework<T> before check\n";
+    FindFacetInequalityCheck(EXT_debug, fret);
+#endif
     return fret;
   }
   Face FlipFace(Face const &sInc) {
@@ -462,6 +467,9 @@ private:
   int e_incd1;
   std::vector<mpz_class> ListScal;
   Face f_select;
+#ifdef DEBUG_FLIP
+  MyMatrix<T> EXT_debug;
+#endif
 
 public:
   MyMatrix<T> EXT_face;
@@ -470,8 +478,10 @@ public:
   }
   FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
     : try_int(false), OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListScal(e_incd0), f_select(e_incd0) {
+#ifdef DEBUG_FLIP
+    EXT_debug = EXT;
+#endif
     PairIncs = Dynamic_bitset_to_vectorints(OneInc);
-
     MyMatrix<Tint> EXT_scaled = RescaleRows(EXT);
     MyVector<Tint> FacetIneq = RescaleVec(FindFacetInequality(EXT, OneInc));
     //
@@ -577,7 +587,7 @@ public:
     Tint beta_max_den = 1; // only to avoid compiler warnings.
     bool isAssigned = false;
     for (int k=0; k<e_incd0; k++)
-      f_select[k];
+      f_select[k] = 0;
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
@@ -612,6 +622,15 @@ public:
       fret[aRow] = 1;
       jRow = sInc.find_next(jRow);
     }
+#ifdef DEBUG_FLIP
+    std::cerr << "|PairIncs|=" << PairIncs.first.size() << " / " << PairIncs.second.size() << "\n";
+    std::cerr << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
+    std::cerr << "f_select=" << f_select.size() << " / " << f_select.count() << "\n";
+    std::cerr << "sInc=" << sInc.size() << " / " << sInc.count() << " eSign=" << eSign << "\n";
+    std::cerr << "beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den << "\n";
+    std::cerr << "FlippingFramework<mpq_class> before check\n";
+    FindFacetInequalityCheck(EXT_debug, fret);
+#endif
     return fret;
   }
   Face FlipFace(Face const &sInc) {
@@ -622,7 +641,7 @@ public:
     }
 #endif
     size_t nb = sInc.count();
-    MyMatrix<Tint> NSP = MyMatrix<Tint>(1, nbCol - 1);
+    MyMatrix<Tint> NSP(1, nbCol - 1);
     bool failed_int = false;
     if (try_int) {
       boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
@@ -643,8 +662,7 @@ public:
         }
       }
       if (allzero) {
-        std::cerr << "NSPint is all zero"
-                  << "\n";
+        std::cerr << "NSPint is all zero\n";
         failed_int = true;
       } else {
         MyVector<long> VZ_long(nbCol - 1);
