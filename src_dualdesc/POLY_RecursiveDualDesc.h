@@ -597,7 +597,7 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
   TripleCanonic<T, Tgroup> eTriple =
       CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat);
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
-  size_t delta = ListOrbitFaceOrbitsize.vfo.size();
+  size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   Telt perm1 = Telt(eTriple.ListIdx);
   Telt ePerm = ~perm1;
   Telt ePermExt = trivial_extension(ePerm, delta);
