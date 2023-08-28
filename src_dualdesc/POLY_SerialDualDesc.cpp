@@ -68,8 +68,14 @@ int main(int argc, char *argv[]) {
       }
       if (NumericalType == "rational") {
         using T = mpq_class;
-        //    using T = boost::multiprecision::cpp_rational;
-        //    using T = boost::multiprecision::mpq_rational;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
         return Process<T>(eFull);
       }
       if (NumericalType == "Qsqrt5") {
