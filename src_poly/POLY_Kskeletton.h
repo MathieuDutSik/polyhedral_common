@@ -734,7 +734,6 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const& l_vf, Tgroup cons
     for (auto& face : vf) {
       for (int i=0; i<n; i++) {
         if (face[i] == 1) {
-          //          std::cerr << "  create edge between i=" << i << " j=" << shift << "\n";
           eGR.AddAdjacent(i, shift);
           eGR.AddAdjacent(shift, i);
         }

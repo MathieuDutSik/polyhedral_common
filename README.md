@@ -103,6 +103,18 @@ equations **Ax = b** by finding sparse solution **x** for sparse matrices
 **A** and **b**. The algorithmic method used is Generalized Approximate
 Message Passing.
 
+Compilation options
+-------------------
+
+There are several environment variables that can be used during runtime.
+* `DEBUG` for making some print statements and making some checks. Those checks have to be fast.
+* `KEY_VALUE` for printing some `KEY(....) VALUE=(....)` that can be used for optimization of the 
+* `CHECK` for making checks that can be expensive to do.
+* `TIMINGS` for printing some runtime information.
+* `SANITY_CHECK` for doing some checks and stopping if incoherence are detected.
+
+If we want more modular checking, then something like `DEBUG_LINEAR_PROGRAM`
+can be used.
 
 Tests
 -----

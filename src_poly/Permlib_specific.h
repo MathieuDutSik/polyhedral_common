@@ -13,6 +13,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_GROUP
+#endif
+
 int OnPoints(int const &i, permlib::Permutation const &elt) {
   return elt.at(i);
 }

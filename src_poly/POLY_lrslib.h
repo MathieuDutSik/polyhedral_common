@@ -30,6 +30,10 @@
 #include <string>
 // clang-format on
 
+#ifdef PRINT
+# define PRINT_LRS_ANALYSIS
+#endif
+
 namespace lrs {
 // some #defines and global variables from the original lrs code
 namespace globals {
@@ -1743,7 +1747,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   T *output = new T[Q->n + 1];
   uint64_t dict_count = 1;
   bool is_first = true;
-#ifdef LRS_PRINT_ANALYSIS
+#ifdef PRINT_LRS_ANALYSIS
   size_t n_entry = 0;
   size_t max_n_error = 0;
 #endif
@@ -1751,7 +1755,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
     for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
         if (!is_first) {
-#ifdef LRS_PRINT_ANALYSIS
+#ifdef PRINT_LRS_ANALYSIS
           size_t nbCol = EXT.cols();
           size_t nbRow = EXT.rows();
           size_t real_incidence = 0;
@@ -1835,7 +1839,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
       }
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
-#ifdef LRS_PRINT_ANALYSIS
+#ifdef PRINT_LRS_ANALYSIS
   std::cerr << "max_n_error=" << max_n_error << "\n";
 #endif
   delete[] output;

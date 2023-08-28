@@ -30,6 +30,14 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_WEIGHT_MATRIX
+#endif
+
+#ifdef TIMINGS
+# define TIMINGS_WEIGHT_MATRIX
+#endif
+
 //
 // The templatized functions
 //
@@ -134,7 +142,7 @@ public:
         weight_ordered(INP_weight_ordered) {}
   template <typename F>
   WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
     TheMat.resize(nbRow * nbRow);
@@ -162,14 +170,14 @@ public:
       std::cerr << "We also need some space for the missing values\n";
       throw TerminalException{1};
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
     std::cerr << "Timing |WeightMatrix(nbRow,f)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
   template <typename F1, typename F2>
   WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2) : nbRow(_nbRow) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
     TheMat.resize(nbRow * nbRow);
@@ -198,7 +206,7 @@ public:
       std::cerr << "We also need some space for the missing values\n";
       throw TerminalException{1};
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
     std::cerr << "Timing |WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
 #endif
     weight_ordered = false;
@@ -988,7 +996,7 @@ template <typename T, typename Tgr, typename Tidx_value>
 inline
     typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
     GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
   MicrosecondTime time;
 #endif
   const bool use_pairs = true;
@@ -1011,7 +1019,7 @@ inline
   GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
                                        Tidx_value, use_pairs>(WMat, f_color,
                                                               f_adj);
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX
   std::cerr << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
 #endif
   return eGR;

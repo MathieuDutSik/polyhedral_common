@@ -12,6 +12,18 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_ELIMINATION_REDUNDANCY
+#endif
+
+#ifdef CHECK
+# define CHECK_ELIMINATION_REDUNDANCY
+#endif
+
+#ifdef PRINT
+# define PRINT_ELIMINATION_REDUNDANCY
+#endif
+
 // Fairly expensive function. But useful for debugging
 template <typename T>
 std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M) {
@@ -86,17 +98,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   auto GetRedundancyInfo =
       [&](std::vector<int> const &ListIRow,
           int const &iRow) -> std::pair<bool, std::vector<int>> {
-#ifdef UNSET_OUTPUT
-    std::cerr << "ListIRow =";
-    for (auto &eVal : ListIRow)
-      std::cerr << " " << eVal;
-    std::cerr << " iRow=" << iRow << "\n";
-#endif
-    //    std::cerr << "|ListIRow|=" << ListIRow.size() << " iRow=" << iRow <<
-    //    "\n";
     MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT, iRow);
-#ifdef UNSET_OUTPUT
+#ifdef PRINT_ELIMINATION_REDUNDANCY
     std::cerr << "-------------------\n";
     std::cerr << "H-representation\n";
     std::cerr << "begin\n";
@@ -127,7 +131,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     //    eSol.OptimalValue << "\n";
     for (int i_row = 0; i_row < n_rows_ineq; i_row++) {
       T e_val = -eSol.DualSolution(i_row);
-#ifdef UNSET_OUTPUT
+#ifdef CHECK_ELIMINATION_REDUNDANCY
       if (e_val < 0) {
         std::cerr << "The coefficient should be non-negative\n";
         for (int j_row = 0; j_row < n_rows_ineq; j_row++) {
@@ -162,7 +166,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   //
   MyVector<T> eVectInterior = GetSpaceInteriorPoint_Basic(EXT_work);
   MyVector<T> ListScalInterior = EXT_work * eVectInterior;
-#ifdef DEBUG_REDUND
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScalInterior(i_row);
     if (eScal <= 0) {
@@ -324,21 +328,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   auto FindOneMoreFacet = [&](int const &i_start) -> void {
     std::vector<int> WorkLIdx{i_start};
     while (true) {
-#ifdef UNSET_OUTPUT
-      std::cerr << "WorkLIdx =";
-      for (auto &eVal : WorkLIdx)
-        std::cerr << " " << eVal;
-      std::cerr << "\n";
-#endif
       std::set<int> NewCand;
       for (auto &eIdx : WorkLIdx) {
         std::pair<bool, std::vector<int>> ePair = DetermineStatusSurely(eIdx);
-#ifdef UNSET_OUTPUT
-        std::cerr << "ePair=" << ePair.first << " V =";
-        for (auto &fIdx : ePair.second)
-          std::cerr << " " << fIdx;
-        std::cerr << "\n";
-#endif
         if (ePair.first) {
           // The facet is redundant
           RedundancyStatus[eIdx] = 0;
@@ -355,7 +347,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
         // Only those unconcluded need to be considered.
         if (RedundancyStatus[eIdx] == -1)
           WorkLIdx.push_back(eIdx);
-#ifdef DEBUG_REDUND
+#ifdef CHECK_ELIMINATION_REDUNDANCY
       if (WorkLIdx.size() == 0) {
         std::cerr << "WorkLIdx is empty. Not allowed\n";
         throw TerminalException{1};
@@ -380,7 +372,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   for (int i_row = 0; i_row < n_rows; i_row++)
     if (RedundancyStatus[i_row] == -1)
       ProcessOnePoint(i_row);
-#ifdef DEBUG_REDUND
+#ifdef CHECK_ELIMINATION_REDUNDANCY
   for (int i_row = 0; i_row < n_rows; i_row++)
     if (RedundancyStatus[i_row] == -1) {
       std::cerr << "The algorithm failed to treat all the points\n";

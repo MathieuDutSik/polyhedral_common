@@ -62,8 +62,12 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
     for (auto & face : vf_myfac) {
       MyVector<T> eFAC = FindFacetInequality(EXT, face);
       MyVector<T> eFACred = ScalarCanonicalizationVector(eFAC);
-      if (SetFAC.count(eFACred) == 0) { // Missing so operation is needed
-        if (!has_violating_facet(eFACred)) { // Check if we already had something matching
+      // Missing so operation is needed
+      if (SetFAC.count(eFACred) == 0) {
+        // Check if we already had something matching. Finding is
+        // expensive, so it has to be done only if we are sure that
+        // it is needed.
+        if (!has_violating_facet(eFACred)) {
           Face face = FindViolatedFace(FAC, eFACred);
           MyVector<T> eEXT = FindFacetInequality(FAC, face);
           f_insert(eEXT);

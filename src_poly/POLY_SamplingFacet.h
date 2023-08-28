@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_SAMPLING_FACET
+#endif
+
 struct recSamplingOption {
   int critlevel;
   int maxnbcall;
@@ -236,6 +240,12 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
   MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXT, eSet));
   os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
             << " rnk=" << RankMat(EXTsel) << "\n";
+#ifdef DEBUG_SAMPLING_FACET
+  if (!IsPolytopal(EXTsel)) {
+    std::cerr << "The configuration EXTsel is not polytopal\n";
+    throw TerminalException{1};
+  }
+#endif
   vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, os);
   os << "We have ListRidge\n";
   FlippingFramework<T> RPLlift(EXT, eSet);
@@ -247,7 +257,7 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
     vf_ret.push_back(eFace);
   }
   os << "We have vf_ret\n";
-#ifdef DEBUG
+#ifdef DEBUG_SAMPLING_FACET
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
   int pos = 0;
   for (auto & face : vf_ret) {

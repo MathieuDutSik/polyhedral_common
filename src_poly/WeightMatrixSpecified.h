@@ -46,6 +46,14 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+# define DEBUG_WEIGHT_MATRIX_SPECIFIED
+#endif
+
+#ifdef TIMINGS
+# define TIMINGS_WEIGHT_MATRIX_SPECIFIED
+#endif
+
 using SignVertex = std::vector<int>;
 
 template <typename T>
@@ -283,16 +291,16 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   VertexPartition<Tidx> VP =
       ComputeInitialVertexPartition<T, Tidx>(nbRow, f1, f2, canonically);
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|ComputeInitialVertexPartition|=" << time << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "After ComputeInitialVertexPartition\n";
   PrintVertexParttionInfo(VP, status);
 #endif
@@ -321,7 +329,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     // First looking at the diagonal
     bool test1 = RefineSpecificVertexPartition<T, Tidx>(VP, iBlock, iBlock, f1,
                                                         f2, canonically);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "iBlock=" << iBlock << " test1=" << test1 << "\n";
 #endif
     if (test1) {
@@ -329,7 +337,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
       size_t len2 = status.size();
       for (size_t i = len2; i < len1; i++)
         status.push_back(0);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       std::cerr << "len1=" << len1 << " len2=" << len2 << "\n";
 #endif
       return true;
@@ -340,7 +348,7 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
       if (iBlock != jBlock) {
         bool test2 = RefineSpecificVertexPartition<T, Tidx>(
             VP, jBlock, iBlock, f1, f2, canonically);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
         std::cerr << "iBlock=" << iBlock << " jBlock=" << jBlock
                   << " test2=" << test2 << "\n";
 #endif
@@ -360,17 +368,17 @@ VertexPartition<Tidx> ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2,
     int iBlock = GetPreferable_iBlock();
     if (iBlock == -1)
       break;
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "iBlock=" << iBlock << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
     MicrosecondTime time;
 #endif
     bool test = DoRefinement(iBlock);
 #ifdef TIMINGS
     std::cerr << "|DoRefinement|=" << time << "\n";
 #endif
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "After Dorefinement\n";
     PrintVertexParttionInfo(VP, status);
     std::cerr << "test=" << test << "\n";
@@ -415,7 +423,7 @@ template <typename T> struct WeightMatrixVertexSignatures {
 template <typename T>
 std::vector<int>
 GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   size_t nbCase = WMVS.ListNbCase.size();
@@ -453,7 +461,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS) {
     }
     return false;
   });
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|GetOrdering_ListIdx|=" << time << "\n";
 #endif
   return ListIdx;
@@ -488,7 +496,7 @@ void PrintWMVS(std::ostream &os, WeightMatrixVertexSignatures<T> const &WMVS) {
 template <typename T, typename F1, typename F2>
 WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
                                                         F2 f2) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   UNORD_MAP_SPECIFIC<T, int> ValueMap_T;
@@ -556,7 +564,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
     int iCase = ListSignatureByVertex[iRow];
     ListNbCase[iCase]++;
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|ComputeVertexSignature|=" << time << "\n";
 #endif
   return {nbRow,
@@ -569,7 +577,7 @@ WeightMatrixVertexSignatures<T> ComputeVertexSignatures(size_t nbRow, F1 f1,
 
 template <typename T>
 void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   // Building the permutation on the weights
@@ -600,7 +608,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
     NewListPossibleSignatures.push_back(newsign);
   }
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|RenormalizeWMVS|=" << time << "\n";
 #endif
 }
@@ -608,7 +616,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS) {
 template <typename T, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2,
                          WeightMatrixVertexSignatures<T> const &WMVS) {
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   size_t nbRow = WMVS.nbRow;
@@ -623,7 +631,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   size_t hS = Pairs_GetNeededN(nbMult);
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = nbVert * hS;
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow
             << " nbVert=" << nbVert << " nbVertTot=" << nbVertTot << "\n";
 #endif
@@ -774,14 +782,14 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     DT.ptn[pos] = 0;
   }
   //
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::vector<int> ListDegExpe1(nbVertTot, 0);
   std::vector<int> ListDegExpe2(nbVertTot, 0);
 #endif
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
     DT.sg1.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     ListDegExpe1[iVert]++;
     ListDegExpe2[jVert]++;
 #endif
@@ -829,7 +837,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
         }
     }
   }
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   int sum_adj = 0;
   int nb_error = 0;
   for (size_t iVert = 0; iVert < nbVertTot; iVert++) {
@@ -854,7 +862,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     throw TerminalException{1};
   }
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|GetDataTraces|=" << time << "\n";
 #endif
   return DT;
@@ -989,21 +997,21 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "Beginning of BlockBreakdown_Heuristic\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
   size_t max_globiter = 1000;
   VertexPartition<Tidx> VP =
       ComputeVertexPartition<T, Tidx>(nbRow, f1, f2, canonically, max_globiter);
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "|ComputeVertexPartition|=" << time << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     int idx = ListIdx[iCase];
     std::cerr << "iCase=" << iCase << " ListIdx[iCase]=" << idx
@@ -1058,7 +1066,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
         CurrentListIdx.push_back(iRow);
     }
     size_t nbRow_res = CurrentListIdx.size();
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
 #endif
     //
@@ -1074,7 +1082,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       auto f2_res = [&](size_t jRow) -> T { return f2(CurrentListIdx[jRow]); };
       WeightMatrixVertexSignatures<T> WMVS_res =
           ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res);
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       std::cerr << "WMVS_res=\n";
       PrintWMVS(std::cerr, WMVS_res);
 #endif
@@ -1132,7 +1140,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
   using Tret1 = std::vector<std::vector<Tidx>>;
@@ -1144,7 +1152,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
                                                              f2_res);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : |ListGen|="
               << ListGen.size() << "\n";
 #endif
@@ -1153,7 +1161,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4) {
   auto fproc3 = [&]([[maybe_unused]] const std::vector<Tidx> &Vsubset,
                     [[maybe_unused]] const Tret1 &ret1,
                     const std::vector<std::vector<Tidx>> &LGenFinal) -> Tret3 {
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : |LGenFinal|="
               << LGenFinal.size() << "\n";
 #endif
@@ -1184,7 +1192,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::cerr << "Beginning of GetGroupCanonicalizationVector_Heuristic\n";
 #endif
   using Tret1 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
@@ -1196,7 +1204,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
                                                             f2_res);
   };
   auto fproc2 = [&](const Tret1 &ePair) -> const Tret2 & {
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : |ListGen|="
               << ePair.second.size() << "\n";
 #endif
@@ -1204,7 +1212,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
   };
   auto fproc3 = [&](const std::vector<Tidx> &Vsubset, const Tret1 &ePair,
                     const std::vector<std::vector<Tidx>> &LGenFinal) -> Tret3 {
-#ifdef DEBUG_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : |LGenFinal|="
               << LGenFinal.size() << "\n";
 #endif

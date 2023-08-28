@@ -559,7 +559,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(
           Tobj fObj = TheAct(gObj, eGen);
           if (SingleOrbit.count(fObj) == 0 && Additional.count(fObj) == 0) {
             if (NewElts.count(fObj) == 0) {
-#ifdef DEBUG
+#ifdef DEBUG_GROUP
               if (ListTotal.count(fObj) > 0) {
                 NewElts.insert(fObj);
                 ListTotal.erase(fObj);

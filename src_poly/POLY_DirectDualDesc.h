@@ -17,6 +17,13 @@
 # define TIMINGS_DUAL_DESC
 #endif
 
+#ifdef DEBUG
+# define DEBUG_DUAL_DESC
+#endif
+
+#ifdef KEY_VALUE
+# define KEY_VALUE_DUAL_DESC
+#endif
 
 template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
   size_t pos = 0;
@@ -215,7 +222,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   if (eCommand == "glrs") {
     size_t headersize = 0;
     while (std::getline(is, line)) {
-      if (line == "end") 
+      if (line == "end")
         break;
       if (line == "begin")
         headersize = iLine+2;
@@ -308,20 +315,23 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
   MyMatrix<Tint> EXT_int = RescaleRows<T, Tint>(EXT);
   MyMatrix<long> EXT_long = MyMatrix<long>(n_row, n_col);
   size_t max_bits = 0;
+  auto f_bit=[&](mpz_class const& val) -> size_t {
+    return mpz_sizeinbase(val.get_mpz_t(), 2);
+  };
   for (size_t iRow = 0; iRow < n_row; iRow++) {
     for (size_t iCol = 0; iCol < n_col; iCol++) {
-      max_bits = std::max(mpz_sizeinbase(EXT_int(iRow, iCol).get_mpz_t(), 2), max_bits); 
+      max_bits = std::max(f_bit(EXT_int(iRow, iCol)), max_bits);
       EXT_long(iRow, iCol) = EXT_int(iRow, iCol).get_si();
     }
   }
-  max_bits += mpz_sizeinbase(n_col_mpz.get_mpz_t(), 2);
+  max_bits += f_bit(n_col_mpz);
   std::vector<long> LVal_long(DimEXT,0);
 
   auto f_insert=[&](std::vector<T> const& LVal) -> void {
     std::vector<Tint> LVal_int = RescaleVec<T,Tint>(LVal);
     size_t max_bits_LVal = 0;
     for( size_t i = shift; i < DimEXT; i++) {
-      max_bits_LVal = std::max(max_bits_LVal, mpz_sizeinbase(LVal_int[i].get_mpz_t(), 2));
+      max_bits_LVal = std::max(max_bits_LVal, f_bit(LVal_int[i]));
       LVal_long[i] = LVal_int[i].get_si();
     }
 
@@ -653,8 +663,10 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   };
   DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
 #ifdef TIMINGS_DUAL_DESC
-  os << "|DualDescription|=" << time << " |ListIncd|=" << ListReturn.size()
-     << "\n";
+  os << "|DualDescription|=" << time << "\n";
+#endif
+#ifdef DEBUG_DUAL_DESC
+  os << "Found  |ListIncd|=" << ListReturn.size() << "\n";
 #endif
   if (ListReturn.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
@@ -665,10 +677,13 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   std::vector<std::pair<Face, MyVector<T>>> TheOutput =
       OrbitSplittingMap(ListReturn, GRP);
-#ifdef TIMINGS_DUAL_DESC
+#ifdef DEBUG_DUAL_DESC
+  os << "|OrbitSplittingMap|=" << time << "\n";
+#endif
+#ifdef KEY_VALUE_DUAL_DESC
   os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
-     << TheOutput.size() << ") VALUE=" << time << "\n";
+     << TheOutput.size() << ") VALUE=(" << time << ")\n";
 #endif
   return TheOutput;
 }

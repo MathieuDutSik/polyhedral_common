@@ -450,17 +450,21 @@ LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
   return eSol1;
 }
 
+template<typename T>
+bool IsPolytopal(MyMatrix<T> const &EXT) {
+  int nbRow = EXT.rows();
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (EXT(iRow,0) != 1)
+      return false;
+  }
+  return true;
+}
+
+
 template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  auto is_polytopal=[&]() -> bool {
-    for (int iRow=0; iRow<nbRow; iRow++) {
-      if (EXT(iRow,0) != 1)
-        return false;
-    }
-    return true;
-  };
-  if (is_polytopal())
+  if (IsPolytopal(EXT))
     return EXT;
   //
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
