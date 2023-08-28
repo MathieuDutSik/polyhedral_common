@@ -1,4 +1,4 @@
 2
-1 incidence < 40 no
-1 incidence < 1000 no
+1 incidence < 100 no
+1 incidence > 3000 no
 yes
