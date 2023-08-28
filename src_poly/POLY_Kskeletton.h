@@ -103,9 +103,9 @@ SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
           int jCol = iCol + nbRowSpann;
           ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
         }
-      std::cerr << "nbOrbCompl=" << nbOrbCompl << " LPdim=" << LPdim << "\n";
+      //      std::cerr << "nbOrbCompl=" << nbOrbCompl << " LPdim=" << LPdim << "\n";
       bool test = TestExistPositiveRelation(ListVectors);
-      std::cerr << "test=" << test << "\n";
+      //      std::cerr << "test=" << test << "\n";
       if (!test)
         TheReturn.push_back(eCand);
     }

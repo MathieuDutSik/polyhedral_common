@@ -20,7 +20,7 @@
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
-PROGRAM		= POLY_LinearDetermineByInequalities
+#PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyClarkson
 #PROGRAM		= POLY_redundancyClarksonGroup
@@ -42,7 +42,7 @@ PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
-#PROGRAM		= POLY_dual_description
+PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming

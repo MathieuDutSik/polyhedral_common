@@ -263,11 +263,11 @@ bool EvaluationConnectednessCriterion_Kernel(
       if (!f_recur(x))
         return insert_pfr(x, false);
       // Looking at the facets and maybe we can so conclude
-      os << "After the f_recur\n";
+      //      os << "After the f_recur\n";
       Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
-      os << "We have |eStab|=" << eStab.size() << "\n";
+      //      os << "We have |eStab|=" << eStab.size() << "\n";
       vectface vf_span = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
-      os << "We have vf_span\n";
+      //      os << "We have vf_span\n";
       auto get_value = [&]() -> bool {
         Tint siz_false = 0;
         for (auto &eFace : vf_span) {

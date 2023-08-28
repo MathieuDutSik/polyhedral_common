@@ -13,31 +13,19 @@
 # define DEBUG_PRIMAL_DUAL
 #endif
 
-template<typename T>
-MyVector<T> AbsoluteRescaleVector(MyVector<T> const& V) {
-  int dim = V.size();
-  T sum(0);
-  for (int i=0; i<dim; i++)
-    sum += T_abs(V(i));
-  if (sum == 0)
-    return ZeroVector<T>(dim);
-  return V / sum;
-}
-
-
 template<typename T, typename Fdual>
 MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual f_dual, std::ostream &os) {
   std::set<MyVector<T>> SetFAC;
   int n_rows_fac = FAC.rows();
   for (int i_row=0; i_row<n_rows_fac; i_row++) {
     MyVector<T> eRow = GetMatrixRow(FAC, i_row);
-    MyVector<T> eRowRed = AbsoluteRescaleVector(eRow);
+    MyVector<T> eRowRed = ScalarCanonicalizationVector(eRow);
     SetFAC.insert(eRowRed);
   }
   std::vector<MyVector<T>> ListEXT;
   std::set<MyVector<T>> SetEXT;
   auto f_insert=[&](MyVector<T> const& eEXT) -> void {
-    MyVector<T> eEXTred = AbsoluteRescaleVector(eEXT);
+    MyVector<T> eEXTred = ScalarCanonicalizationVector(eEXT);
     if (SetEXT.count(eEXTred) == 0) {
       SetEXT.insert(eEXTred);
       ListEXT.push_back(eEXTred);
@@ -73,7 +61,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const& FAC, Fdual
     };
     for (auto & face : vf_myfac) {
       MyVector<T> eFAC = FindFacetInequality(EXT, face);
-      MyVector<T> eFACred = AbsoluteRescaleVector(eFAC);
+      MyVector<T> eFACred = ScalarCanonicalizationVector(eFAC);
       if (SetFAC.count(eFACred) == 0) { // Missing so operation is needed
         if (!has_violating_facet(eFACred)) { // Check if we already had something matching
           Face face = FindViolatedFace(FAC, eFACred);

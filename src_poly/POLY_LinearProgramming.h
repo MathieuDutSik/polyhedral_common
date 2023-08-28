@@ -774,7 +774,6 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
 template <typename T>
 PosRelRes<T>
 SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
-  std::cerr << "Beginning of SearchPositiveRelationSimple_DualMethod\n";
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
