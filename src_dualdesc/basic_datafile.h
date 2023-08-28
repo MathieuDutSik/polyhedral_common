@@ -170,7 +170,7 @@ public:
     }
     // popcnt
     size_t curr_n_ints = n_ent/32;
-    size_t sm = 0; 
+    size_t sm = 0;
     uint32_t* ptr = (uint32_t*)(buffer.data());
     for(size_t i = 0; i < curr_n_ints; i++){
       sm += __builtin_popcount(*(ptr+i));

@@ -29,6 +29,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TIMINGS
+# define TIMINGS_RECURSIVE_DUAL_DESC
+#endif
+
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH
 #define SUBSET_HASH
@@ -1749,7 +1753,7 @@ public:
   void LoadDatabase() {
     if (is_database_present()) {
       os << "Opening existing files (NB, FB, FF)\n";
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       MicrosecondTime time;
 #endif
       FileNumber fn(eFileNB, false);
@@ -1764,7 +1768,7 @@ public:
         bb.InsertListOrbitEntry(f, i_orbit);
         bb.InsertEntryDatabase(eEnt, status, i_orbit);
       }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|Loading Database|=" << time << "\n";
 #endif
     } else {
@@ -1776,7 +1780,7 @@ public:
     vectface vfo(bb.delta + 1);
     if (is_database_present()) {
       os << "Opening existing files (NB, FB, FF)\n";
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       MicrosecondTime time;
 #endif
       FileNumber fn(eFileNB, false);
@@ -1795,7 +1799,7 @@ public:
         f_insert[bb.delta] = status;
         vfo.push_back(f_insert);
       }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|Reading Database|=" << time << "\n";
 #endif
     } else {
@@ -1891,7 +1895,7 @@ public:
   }
   void flush() const {
     os << "Doing the flushing operation\n";
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time;
 #endif
     FileNumber fn(eFileNB, true);
@@ -1909,7 +1913,7 @@ public:
       iter++;
     }
     fb.direct_write(V_status);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|flush|=" << time << "\n";
 #endif
   }
@@ -2067,101 +2071,101 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
       ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_complete;
     MicrosecondTime time_step;
 #endif
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|ansProg|=" << time_step << "\n";
 #endif
     if (df.Stab.size() == 1) {
       auto f_process=[&](std::pair<Face,MyVector<T>> const &pair_face) -> void {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         MicrosecondTime time_loc;
 #endif
         Face eFlipPre = df.FlipFaceIneq(pair_face);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|FlipFaceIneq1|=" << time_loc << "\n";
 #endif
         Face eFlip = bb.operation_face(eFlipPre);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|operation_face1|=" << time_loc << "\n";
 #endif
         f_insert(eFlip);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|insert1|=" << time_loc << "\n";
 #endif
       };
       DirectFacetComputationFaceIneq(df.FF.EXT_face, ansProg, f_process, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|DirectFacetComputationFaceIneq|=" << time_step << "\n";
 #endif
       AllArr.DualDescriptionProgram.pop(os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|pop|=" << time_step << "\n";
 #endif
     } else {
       vectface TheOutput =
         DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|TheOutput|=" << time_step << "\n";
       os << "Number of facets being generated=" << TheOutput.size() << "\n";
 #endif
       AllArr.DualDescriptionProgram.pop(os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|pop|=" << time_step << "\n";
 #endif
       for (auto &eOrb : TheOutput) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         MicrosecondTime time_loc;
 #endif
         Face eFlipPre = df.FlipFace(eOrb);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|FlipFace1|=" << time_loc << "\n";
 #endif
         Face eFlip = bb.operation_face(eFlipPre);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|operation_face1|=" << time_loc << "\n";
 #endif
         f_insert(eFlip);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
         os << "|insert1|=" << time_loc << "\n";
 #endif
       }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|Adjacency processing|=" << time_step << "\n";
 #endif
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|DualDesc+flip+insertion|=" << time_complete << "\n";
 #endif
   } else {
     vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
             TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       MicrosecondTime time;
 #endif
       Face eFlipPre = df.FlipFace(eOrb);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|FlipFace2|=" << time << "\n";
 #endif
       Face eFlip = bb.operation_face(eFlipPre);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|operation_face2|=" << time << "\n";
 #endif
       f_insert(eFlip);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|insert2|=" << time << "\n";
 #endif
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|outputtime|=" << time_full << "\n";
 #endif
   }
@@ -2197,55 +2201,55 @@ Kernel_DUALDESC_AdjacencyDecomposition(
   // The choice only really makes sense for the canonic, for repr no choice is
   // implied.
   auto set_up = [&]() -> void {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time;
 #endif
     std::string ansChoiceCanonic =
         HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|HeuristicEvaluation|=" << time
        << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
     int action = RPL.determine_action_database(ansChoiceCanonic);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|determine_action_database|=" << time << " action=" << action
        << "\n";
 #endif
     auto f_recompute = [&](int const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "n_orbit=" << n_orbit << " |n_orbit|=" << time << "\n";
 #endif
       vectface vfo = RPL.ReadDatabase(n_orbit);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "delta=" << bb.delta << " nbRow=" << bb.nbRow << "\n";
       os << "|vfo|=" << vfo.size() << " / " << vfo.get_n()
          << " |ReadDatabase|=" << time << "\n";
 #endif
       RPL.set_method(method);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|set_method|=" << time << "\n";
 #endif
       vectface_update_method(vfo, bb, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "bb.the_method=" << bb.the_method << " |method update|=" << time
          << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfo));
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|vfo|=" << vfo.size() << " / " << vfo.get_n()
          << " |DirectAppendDatabase|=" << time << "\n";
 #endif
     };
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
       int method = bb.convert_string_method(ansChoiceCanonic);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "Before f_recompute, method=" << method
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
@@ -2253,11 +2257,11 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     }
     if (action == DATABASE_ACTION__GUESS) {
       vectface vf = RPL.get_runtime_testcase();
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|get_runtime_testcase|=" << time << "\n";
 #endif
       int method = RPL.bb.evaluate_method_serial(vf);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "method=" << method << " |evaluate_method_serial|=" << time << "\n";
 #endif
       if (method == bb.the_method) {
@@ -2288,11 +2292,11 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     }
   }
   while (true) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time;
 #endif
     bool test_final = RPL.GetTerminationStatus();
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "test_final=" << test_final << "\n";
     os << "|GetTerminationStatus|=" << time << "\n";
 #endif

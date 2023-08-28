@@ -18,6 +18,10 @@
 #include <atomic>
 // clang-format on
 
+#ifdef TIMINGS
+# define TIMINGS_RECURSIVE_DUAL_DESC_MPI
+#endif
+
 struct message_facet {
   size_t e_hash;
   // vf: List of vectface by the DatabaseBank
@@ -170,7 +174,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
     AllArr.DualDescriptionProgram.pop(os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
@@ -178,19 +182,19 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 
     for (auto &eOrb : TheOutput) {
       Face eFlipPre = df.FlipFace(eOrb);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time;
 #endif
       Face eFlip = bb.operation_face(eFlipPre);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|operation_face1|=" << time << "\n";
 #endif
       f_insert(eFlip);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|insert1|=" << time << "\n";
 #endif
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|outputtime|=" << time_full << "\n";
 #endif
   } else {
@@ -199,30 +203,30 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
               TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time_full;
       os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
       stop_comm_thread();
 
       for (auto &eOrb : TheOutput) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         MicrosecondTime time;
 #endif
         Face eFlipPre = df.FlipFace(eOrb);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         os << "|FlipFace2|=" << time << "\n";
 #endif
         Face eFlip = bb.operation_face(eFlipPre);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         os << "|operation_face2|=" << time << "\n";
 #endif
         f_insert(eFlip);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         os << "|insert2|=" << time << "\n";
 #endif
       }
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|outputtime|=" << time_full << "\n";
 #endif
     } catch (RuntimeException const &e) {
@@ -249,55 +253,55 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   auto set_up = [&]() -> void {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     MicrosecondTime time;
 #endif
     std::string ansChoiceCanonic =
         HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|HeuristicEvaluation|=" << time
        << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
     int action = RPL.determine_action_database(ansChoiceCanonic);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|determine_action_database|=" << time << " action=" << action
        << "\n";
 #endif
     auto f_recompute = [&](int const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|n_orbit|=" << time << "\n";
 #endif
       vectface vfo = RPL.ReadDatabase(n_orbit);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|ReadDatabase|=" << time << "\n";
 #endif
       RPL.set_method(method);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|set_method|=" << time << "\n";
 #endif
       vectface_update_method(vfo, bb, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|method update|=" << time << "\n";
 #endif
       vectface vfb = mpi_shuffle(comm, std::move(vfo), bb.nbRow);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|mpi_shuffle|=" << time << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfb));
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|DirectAppendDatabase|=" << time << "\n";
 #endif
     };
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
       int method = bb.convert_string_method(ansChoiceCanonic);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "Before f_recompute, method=" << method
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
@@ -305,11 +309,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     }
     if (action == DATABASE_ACTION__GUESS) {
       vectface vf = RPL.get_runtime_testcase();
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|get_runtime_testcase|=" << time << "\n";
 #endif
       int method = RPL.bb.evaluate_method_mpi(comm, vf);
-#ifdef TIMINGS
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_serial|=" << time << "\n";
 #endif
       if (method == bb.the_method) {
