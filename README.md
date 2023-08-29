@@ -141,13 +141,12 @@ building the polyheral cone.
 of polyhedral cones.
 * `WythoffH4`: This is for computing the dual description of the facets of
 the orbit of `x W(H4)` for x a random vector (there are 4 orbits).
+* `Redundant`: We test 3 methods for reducing by redundancy.
 
 More needs to be added:
 * Enumerating integral points in polytopes (the 8-dim perfect Delaunay polytopes
 are good examples).
 * Computing the orbits of K-dim faces of polytopes (the G6 and G7 are good examples).
-* Computing the irredundant inequalities of a set of inequality (C-types in dimension 5
-are good examples).
 * Running of the various orbit splitting algorithm.
 * Computing automorphism group of polytope with LinPolytope.
 * Computing automorphism group of skeletton of a polytope.
