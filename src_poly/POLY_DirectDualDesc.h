@@ -504,7 +504,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return lrs::DualDescription_reduction(EXT);
   }
-  //
+  // lrs does not use divisions, so work even if not field.
   eProg = "lrs";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
@@ -629,6 +629,9 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
+#ifdef KEY_VALUE_DUAL_DESC
+  MicrosecondTime time_total;
+#endif
   vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
 #ifdef TIMINGS_DUAL_DESC
   os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
@@ -642,10 +645,10 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
     return ListIncd;
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
-#ifdef TIMINGS_DUAL_DESC
-  os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
+#ifdef KEY_VALUE_DUAL_DESC
+  os << "KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
-     << TheOutput.size() << ") VALUE=" << time << "\n";
+     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
 }
@@ -656,6 +659,9 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                 std::string const &ansProg, std::ostream &os) {
 #ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
+#endif
+#ifdef KEY_VALUE_DUAL_DESC
+  MicrosecondTime time_total;
 #endif
   std::vector<std::pair<Face, MyVector<T>>> ListReturn;
   auto f_process=[&](std::pair<Face,MyVector<T>> const &pair_face) -> void {
@@ -681,9 +687,9 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   os << "|OrbitSplittingMap|=" << time << "\n";
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "KEY=(OrbitSplitting_" << EXT.rows() << "_" << EXT.cols() << "_"
+  os << "KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_" << EXT.cols() << "_"
      << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
-     << TheOutput.size() << ") VALUE=(" << time << ")\n";
+     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
 }

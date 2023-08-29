@@ -16,6 +16,10 @@
 # define DEBUG_SAMPLING_FACET
 #endif
 
+#ifdef TIMINGS
+# define TIMINGS_SAMPLING_FACET
+#endif
+
 struct recSamplingOption {
   int critlevel;
   int maxnbcall;
@@ -149,7 +153,9 @@ template <typename T>
 vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
                                                  std::string const &ansSamp,
                                                  std::ostream &os) {
-  os << "DirectComputationInitialFacetSet ansSamp=" << ansSamp << "\n";
+#ifdef TIMINGS_SAMPLING_FACET
+  MicrosecondTime time;
+#endif
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
   auto get_iter = [&]() -> int {
@@ -199,6 +205,9 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     std::cerr << "We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }
+#ifdef TIMINGS_SAMPLING_FACET
+  os << "|DirectComputationInitialFacetSet|=" << time << "\n";
+#endif
   return ListIncd;
 }
 
@@ -274,10 +283,26 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
 }
 
 template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
+#ifdef TIMINGS_SAMPLING_FACET
+  MicrosecondTime time;
+#endif
   MyMatrix<T> EXT_B = ColumnReduction(EXT);
+#ifdef TIMINGS_SAMPLING_FACET
+  os << "|ColumnReduction|=" << time << "\n";
+#endif
   MyMatrix<T> EXT_C = Polytopization(EXT_B);
+#ifdef TIMINGS_SAMPLING_FACET
+  os << "|Polytopization|=" << time << "\n";
+#endif
   MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
-  return Kernel_GetFullRankFacetSet(EXT_D, os);
+#ifdef TIMINGS_SAMPLING_FACET
+  os << "|SetIsobarycenter|=" << time << "\n";
+#endif
+  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
+#ifdef TIMINGS_SAMPLING_FACET
+  os << "|Kernel_GetFullRankFacetSet|=" << time << "\n";
+#endif
+  return vf;
 }
 
 
