@@ -35,7 +35,8 @@ do
         U2:=ReadAsFunction(eFileIrred2)();
         #
         if U1<>U2 then
-            Error("Inconsistency problem between method 1 and 2");
+            Print("Inconsistency problem between method 1 and 2 at i=", i, "\n");
+            GAP_EXIT_CODE(1);
         fi;
     fi;
     #
@@ -48,7 +49,8 @@ do
         U3:=ReadAsFunction(eFileIrred3)();
         #
         if U1<>U3 then
-            Error("Inconsistency problem between method 1 and 3");
+            Print("Inconsistency problem between method 1 and 3 at i=", i, "\n");
+            GAP_EXIT_CODE(1);
         fi;
     fi;
     #
@@ -61,7 +63,9 @@ do
         U4:=ReadAsFunction(eFileIrred4)();
         #
         if U1<>U4 then
-            Error("Inconsistency problem between method 1 and 4");
+            Print("Inconsistency problem between method 1 and 4 at i=", i, "\n");
+            GAP_EXIT_CODE(1);
         fi;
     fi;
 od;
+GAP_EXIT_CODE(0);

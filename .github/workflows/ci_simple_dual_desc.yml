@@ -7,7 +7,7 @@ name: CI of Simple Dual description
 on:
   # At midnight on every Thursday
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 24 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

@@ -7,7 +7,7 @@ name: release binaries
 on:
   # At 2PM on every Tuesday
   schedule:
-    - cron: "0 14 * * 2"
+    - cron: "0 0 6 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

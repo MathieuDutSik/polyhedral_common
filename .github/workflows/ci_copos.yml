@@ -7,7 +7,7 @@ name: CI of Copositivity code
 on:
   # At midnight on every Tueday
   schedule:
-    - cron: "0 0 * * 2"
+    - cron: "0 0 12 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

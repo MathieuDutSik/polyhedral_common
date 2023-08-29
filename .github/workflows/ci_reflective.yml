@@ -7,7 +7,7 @@ name: CI of Reflective lattices
 on:
   # At midnight on every Thursday
   schedule:
-    - cron: "0 0 * * 4"
+    - cron: "0 0 20 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
