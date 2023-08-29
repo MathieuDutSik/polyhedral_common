@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     std::string FileGRP = argv[4];
     std::string OutFormat = "GAP";
     std::string FileOut = "stderr";
-    if (argc == 6) {
+    if (argc == 7) {
       OutFormat = argv[5];
       FileOut = argv[6];
     }

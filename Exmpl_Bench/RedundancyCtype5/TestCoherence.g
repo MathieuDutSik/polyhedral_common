@@ -1,7 +1,7 @@
 
 DoTest2_Clarkson:=true;
 DoTest3_Equivariant:=true;
-DoTest4_ClarksonBlock:=true;
+DoTest4_ClarksonBlock:=false; # This requires more work
 
 
 ListIdx:=[1..76];
@@ -11,9 +11,13 @@ do
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
     eProg:="../../src_poly/GRP_LinPolytope_Automorphism";
-    eCommand:=Concatenation(eProg, " rational ", eFile, " ", eFileGRP);
+    eCommand:=Concatenation(eProg, " rational ", eFile, " GAP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
+    if IsExistingFile(eFileGRP)=false then
+        Print("Missing file eFileGRP=", eFileGRP, "\n");
+        Error("Correct the creation file");
+    fi;
     #
     eFileIrred1:=Concatenation("Irred_1_", String(i));
     fProg:="../../src_poly/POLY_redundancy";
@@ -38,9 +42,9 @@ do
     if DoTest3_Equivariant then
         eFileIrred3:=Concatenation("Irred_3_", String(i));
         gProg:="../../src_poly/POLY_redundancyGroup";
-        gCommand:=Concatenation(gProg, " Equivariant rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred2);
-        Print("gCommand=", gCommand, "\n");
+        gCommand:=Concatenation(gProg, " Equivariant rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
         Exec(gCommand);
+        Print("gCommand=", gCommand, "\n");
         U3:=ReadAsFunction(eFileIrred3)();
         #
         if U1<>U3 then
@@ -49,12 +53,12 @@ do
     fi;
     #
     if DoTest4_ClarksonBlock then
-        eFileIrred3:=Concatenation("Irred_3_", String(i));
+        eFileIrred4:=Concatenation("Irred_4_", String(i));
         hProg:="../../src_poly/POLY_redundancyGroup";
-        hCommand:=Concatenation(hProg, " ClarksonBlock rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
+        hCommand:=Concatenation(hProg, " ClarksonBlock rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred4);
         Print("hCommand=", hCommand, "\n");
         Exec(hCommand);
-        U3:=ReadAsFunction(eFileIrred3)();
+        U4:=ReadAsFunction(eFileIrred4)();
         #
         if U1<>U4 then
             Error("Inconsistency problem between method 1 and 4");

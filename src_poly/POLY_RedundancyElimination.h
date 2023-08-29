@@ -63,32 +63,55 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
                                      MyMatrix<T> const &BoundingFac) {
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+#endif
   MyMatrix<T> TheSum = ZeroMatrix<T>(1, n_cols);
   for (int i_row = 0; i_row < n_rows; i_row++)
     for (int i_col = 0; i_col < n_cols; i_col++)
       TheSum(0, i_col) += EXT(i_row, i_col);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : TheSum\n";
+#endif
   MyMatrix<T> EXTtot = Concatenate(TheSum, EXT);
-  //  std::cerr << "FacetizationCone\n";
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : EXTtot\n";
+  std::cerr << "|EXTtot|=" << EXTtot.rows() << " / " << EXTtot.cols() << "\n";
+#endif
   MyMatrix<T> EXTbas = RowReduction(EXTtot);
-  //  std::cerr << "EXTbas=\n";
-  //  WriteMatrix(std::cerr, EXTbas);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : EXTbas\n";
+  std::cerr << "|EXTbas|=" << EXTbas.rows() << " / " << EXTbas.cols() << "\n";
+#endif
   MyMatrix<T> eInvMat = Inverse(EXTbas);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : eInvMat\n";
+#endif
   MyMatrix<T> EXT_ret = EXT * eInvMat;
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : EXT_ret\n";
+#endif
   //
   MyMatrix<T> BoundingFac_ret = BoundingFac * TransposedMat(EXTbas);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "FacetizationCone : BoundingFac_ret\n";
+#endif
   return {EXT_ret, BoundingFac_ret};
 }
 
-// #undef DEBUG_REDUND
-// #undef UNSET_OUTPUT
-
 template <typename T>
-std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
+std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin) {
+  MyMatrix<T> EXT = ColumnReduction(EXTin);
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
-  //  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+#endif
   MyMatrix<T> BoundingFac(0, n_cols);
   FacetizationInfo<T> RegCone = FacetizationCone(EXT, BoundingFac);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "We have regCone\n";
+#endif
   MyMatrix<T> EXT_work = RegCone.EXT;
   //  std::cerr << "EXT_work=\n";
   //  WriteMatrix(std::cerr, EXT_work);
@@ -161,6 +184,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     MyVector<T> V = GetMatrixRow(EXT, i_row);
     tool.insert_if_indep(V);
   };
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  std::cerr << "We have RankTool\n";
+#endif
   //
   // Now computing one interior point.
   //
@@ -235,7 +261,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
     int h = 0;
     while (true) {
       bool test = HasOneViolatedFacet(h);
-      //      std::cerr << "h=" << h << "\n";
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+      std::cerr << "HasOneViolatedFacet h=" << h << " test=" << test << "\n";
+#endif
       if (test)
         return GetSmallestValue(h);
       h++;
@@ -269,8 +297,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXT) {
   }
 #endif
   while (true) {
-    //    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred
-    //    << "\n";
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
+#endif
     SetRandomVector();
     int idxFound = GetRandomOutsideVector_and_HitAndRun();
     if (idxFound != -1)
