@@ -132,9 +132,11 @@ template <typename T> inline int64_t sign(T const &a) {
 }
 
 template <typename T> inline int comprod(T const& Na, T const& Nb, T const& Nc, T const& Nd) {
-  if (Na * Nb > Nc * Nd)
+  T prod1 = Na * Nb;
+  T prod2 = Nc * Nd;
+  if (prod1 > prod2)
     return 1;
-  if (Na * Nb < Nc * Nd)
+  if (prod1 < prod2)
     return -1;
   return 0;
 }

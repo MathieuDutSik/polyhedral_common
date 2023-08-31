@@ -266,6 +266,44 @@ std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face c
   return {std::move(V0), std::move(V1)};
 }
 
+template<typename T>
+int get_idx_drop(MyVector<T> const& V) {
+  int idx_drop = 0;
+  while (true) {
+    if (V(idx_drop) != 0)
+      break;
+    idx_drop++;
+  }
+  return idx_drop;
+}
+
+template<typename T>
+MyMatrix<T> DropColumn(MyMatrix<T> const& M, int const& idx_drop) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> Mred(nbRow, nbCol - 1);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    int pos = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      if (iCol != idx_drop) {
+        Mred(iRow, pos) = M(iRow, iCol);
+        pos++;
+      }
+    }
+  }
+  return Mred;
+}
+
+size_t get_pos_outside(Face const& f) {
+  size_t pos_outside = 0;
+  while (true) {
+    if (f[pos_outside] == 0)
+      break;
+    pos_outside++;
+  }
+  return pos_outside;
+}
+
 
 // This is the FlippingFramework for a given facet F of a polytope.
 //
@@ -308,24 +346,10 @@ public:
     //
     // Idx dropping for the projection
     //
-    int idx_drop = 0;
-    while (true) {
-      if (FacetIneq(idx_drop) != 0)
-        break;
-      idx_drop++;
-    }
+    int idx_drop = get_idx_drop(FacetIneq);
     nbRow = EXT.rows();
     nbCol = EXT.cols();
-    EXT_red = MyMatrix<T>(nbRow, nbCol - 1);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      int pos = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        if (iCol != idx_drop) {
-          EXT_red(iRow, pos) = EXT(iRow, iCol);
-          pos++;
-        }
-      }
-    }
+    EXT_red = DropColumn(EXT, idx_drop);
     //
     // Inverse scalar products
     //
@@ -343,12 +367,7 @@ public:
   }
   Face InternalFlipFaceIneq(Face const &sInc, const T *out) {
     // We need to compute a vertex in the facet, but not the ridge
-    size_t pos_outside = 0;
-    while (true) {
-      if (sInc[pos_outside] == 0)
-        break;
-      pos_outside++;
-    }
+    size_t pos_outside = get_pos_outside(sInc);
     int outRow = PairIncs.second[pos_outside];
     T eSum(0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
@@ -453,8 +472,7 @@ private:
   using T = mpq_class;
   using Tint = mpz_class;
   using Tfast = Fp<long, 2147389441>;
-  MyMatrix<T> EXT_redT; // rational type, but scaled to integer
-  MyMatrix<mpz_class> EXT_red;
+  MyMatrix<Tint> EXT_red;
   MyMatrix<Tfast> EXT_fast;
   MyMatrix<long> EXT_long;
   int nbRow;
@@ -487,25 +505,10 @@ public:
     //
     // Idx dropping for the projection
     //
-    int idx_drop = 0;
-    while (true) {
-      if (FacetIneq(idx_drop) != 0)
-        break;
-      idx_drop++;
-    }
+    int idx_drop = get_idx_drop(FacetIneq);
     nbRow = EXT.rows();
     nbCol = EXT.cols();
-    EXT_redT = MyMatrix<T>(nbRow, nbCol - 1);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      int pos = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        if (iCol != idx_drop) {
-          EXT_redT(iRow, pos) = EXT_scaled(iRow, iCol);
-          pos++;
-        }
-      }
-    }
-    EXT_red = UniversalMatrixConversion<Tint, T>(EXT_redT);
+    EXT_red = DropColumn(EXT_scaled, idx_drop);
     //
     // Faster modular version of EXT_red
     //
@@ -570,12 +573,7 @@ public:
 
   Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) {
     // We need to compute a vertex in the facet, but not the ridge
-    size_t pos_outside = 0;
-    while (true) {
-      if (sInc[pos_outside] == 0)
-        break;
-      pos_outside++;
-    }
+    size_t pos_outside = get_pos_outside(sInc);
     int outRow = PairIncs.second[pos_outside];
     Tint eSum = 0;
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
@@ -715,7 +713,8 @@ public:
       auto f = [&](MyMatrix<T> &M, size_t eRank,
                    [[maybe_unused]] size_t iRow) -> void {
         int aRow = PairIncs.second[jRow];
-        M.row(eRank) = EXT_redT.row(aRow);
+        for (int iCol=0; iCol<nbCol-1; iCol++)
+          M(eRank,iCol) = UniversalScalarConversion<T,Tint>(EXT_red(aRow,iCol));
         jRow = sInc.find_next(jRow);
       };
       NSP =
