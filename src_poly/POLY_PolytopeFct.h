@@ -305,6 +305,23 @@ size_t get_pos_outside(Face const& f) {
 }
 
 
+Face get_fret(std::pair<std::vector<int>,std::vector<int>> const& PairIncs, int const& nbRow, Face const& sInc, Face const& f_select) {
+  Face fret(nbRow);
+  for (size_t pos_row=0; pos_row<PairIncs.first.size(); pos_row++) {
+    int iRow = PairIncs.first[pos_row];
+    fret[iRow] = f_select[pos_row];
+  }
+  boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
+  while (jRow != boost::dynamic_bitset<>::npos) {
+    int aRow = PairIncs.second[jRow];
+    fret[aRow] = 1;
+    jRow = sInc.find_next(jRow);
+  }
+  return fret;
+}
+
+
+
 // This is the FlippingFramework for a given facet F of a polytope.
 //
 // After the constructor is built, then we provide a function for
@@ -404,19 +421,7 @@ public:
       }
       isAssigned = true;
     }
-    Face fret(nbRow);
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
-      int iRow = PairIncs.first[pos_row];
-      fret[iRow] = f_select[pos_row];
-    }
-    // Now adding the points from the ridge
-    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-    while (jRow != boost::dynamic_bitset<>::npos) {
-      int aRow = PairIncs.second[jRow];
-      fret[aRow] = 1;
-      jRow = sInc.find_next(jRow);
-    }
-    // returning the found facet
+    Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
     std::cerr << "FlippingFramework<T> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
@@ -608,18 +613,7 @@ public:
       }
       isAssigned = true;
     }
-    // Now putting things together
-    Face fret(nbRow);
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
-      int iRow = PairIncs.first[pos_row];
-      fret[iRow] = f_select[pos_row];
-    }
-    boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-    while (jRow != boost::dynamic_bitset<>::npos) {
-      int aRow = PairIncs.second[jRow];
-      fret[aRow] = 1;
-      jRow = sInc.find_next(jRow);
-    }
+    Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
     std::cerr << "|PairIncs|=" << PairIncs.first.size() << " / " << PairIncs.second.size() << "\n";
     std::cerr << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
