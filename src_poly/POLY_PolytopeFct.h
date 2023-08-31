@@ -478,8 +478,9 @@ private:
   using Tint = mpz_class;
   using Tfast = Fp<long, 2147389441>;
   MyMatrix<Tint> EXT_red;
-  MyMatrix<Tfast> EXT_fast;
-  MyMatrix<long> EXT_long;
+  MyMatrix<Tint> EXT_red_sub;
+  MyMatrix<Tfast> EXT_fast_sub;
+  MyMatrix<long> EXT_long_sub;
   int nbRow;
   int nbCol;
   bool try_int;
@@ -514,18 +515,19 @@ public:
     nbRow = EXT.rows();
     nbCol = EXT.cols();
     EXT_red = DropColumn(EXT_scaled, idx_drop);
+    EXT_red_sub = SelectRow(EXT_red, PairIncs.second);
     //
     // Faster modular version of EXT_red
     //
     max_bits = 0;
-    EXT_fast = MyMatrix<Tfast>(nbRow, nbCol - 1);
-    EXT_long = MyMatrix<long>(nbRow, nbCol - 1);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
+    EXT_fast_sub = MyMatrix<Tfast>(e_incd1, nbCol - 1);
+    EXT_long_sub = MyMatrix<long>(e_incd1, nbCol - 1);
+    for (int iRow = 0; iRow < e_incd1; iRow++) {
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        Tint const& val = EXT_red(iRow, iCol);
+        Tint const& val = EXT_red_sub(iRow, iCol);
         max_bits = std::max(get_bit(val), max_bits);
-        EXT_long(iRow, iCol) = val.get_si();
-        EXT_fast(iRow, iCol) = Tfast(EXT_long(iRow, iCol));
+        EXT_long_sub(iRow, iCol) = val.get_si();
+        EXT_fast_sub(iRow, iCol) = Tfast(EXT_long_sub(iRow, iCol));
       }
     }
     try_int = (max_bits <= 30);
@@ -579,10 +581,9 @@ public:
   Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = get_pos_outside(sInc);
-    int outRow = PairIncs.second[pos_outside];
     Tint eSum = 0;
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      eSum += EXT_red(outRow, iCol) * out[iCol];
+      eSum += EXT_red_sub(pos_outside, iCol) * out[iCol];
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
@@ -639,8 +640,7 @@ public:
       boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
       auto f = [&](MyMatrix<Tfast> &M, size_t eRank,
                    [[maybe_unused]] size_t iRow) -> void {
-        int aRow = PairIncs.second[jRow];
-        M.row(eRank) = EXT_fast.row(aRow);
+        M.row(eRank) = EXT_fast_sub.row(jRow);
         jRow = sInc.find_next(jRow);
       };
       MyMatrix<Tfast> NSP_fastT =
@@ -679,8 +679,7 @@ public:
           // check if part of kernel
           jRow = sInc.find_first();
           for (size_t iRow = 0; iRow < nb; iRow++) {
-            int aRow = PairIncs.second[jRow];
-            auto row = EXT_long.row(aRow);
+            auto row = EXT_long_sub.row(jRow);
             jRow = sInc.find_next(jRow);
             long sm = 0;
             for (int iCol = 0; iCol < nbCol - 1; iCol++) {
@@ -693,8 +692,7 @@ public:
             }
           }
         } else {
-          std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP
-                    << std::endl;
+          std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP << "\n";
           failed_int = true;
         }
       }
@@ -706,9 +704,8 @@ public:
       boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
       auto f = [&](MyMatrix<T> &M, size_t eRank,
                    [[maybe_unused]] size_t iRow) -> void {
-        int aRow = PairIncs.second[jRow];
         for (int iCol=0; iCol<nbCol-1; iCol++)
-          M(eRank,iCol) = UniversalScalarConversion<T,Tint>(EXT_red(aRow,iCol));
+          M(eRank,iCol) = UniversalScalarConversion<T,Tint>(EXT_red_sub(jRow,iCol));
         jRow = sInc.find_next(jRow);
       };
       NSP =
