@@ -152,7 +152,7 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 template <typename T>
 vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
                                                  std::string const &ansSamp,
-                                                 std::ostream &os) {
+                                                 [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   MicrosecondTime time;
 #endif
