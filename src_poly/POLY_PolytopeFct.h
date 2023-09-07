@@ -476,11 +476,12 @@ template <> struct FlippingFramework<mpq_class> {
 private:
   using T = mpq_class;
   using Tint = mpz_class;
-  using Tfast = Fp<long, 2147389441>;
+  using Tlift = int64_t;
+  using Tfast = Fp<Tlift, 2147389441>;
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
   MyMatrix<Tfast> EXT_fast_sub;
-  MyMatrix<long> EXT_long_sub;
+  MyMatrix<Tlift> EXT_lift_sub;
   int nbRow;
   int nbCol;
   bool try_int;
@@ -521,13 +522,13 @@ public:
     //
     max_bits = 0;
     EXT_fast_sub = MyMatrix<Tfast>(e_incd1, nbCol - 1);
-    EXT_long_sub = MyMatrix<long>(e_incd1, nbCol - 1);
+    EXT_lift_sub = MyMatrix<Tlift>(e_incd1, nbCol - 1);
     for (int iRow = 0; iRow < e_incd1; iRow++) {
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
         Tint const& val = EXT_red_sub(iRow, iCol);
         max_bits = std::max(get_bit(val), max_bits);
-        EXT_long_sub(iRow, iCol) = val.get_si();
-        EXT_fast_sub(iRow, iCol) = Tfast(EXT_long_sub(iRow, iCol));
+        EXT_lift_sub(iRow, iCol) = val.get_si();
+        EXT_fast_sub(iRow, iCol) = Tfast(EXT_lift_sub(iRow, iCol));
       }
     }
     try_int = (max_bits <= 30);
@@ -657,21 +658,21 @@ public:
         std::cerr << "NSPint is all zero\n";
         failed_int = true;
       } else {
-        MyVector<long> VZ_long(nbCol - 1);
+        MyVector<Tlift> VZ_lift(nbCol - 1);
 
         // reconstruct
         size_t max_bits_NSP = 0;
-        std::vector<long> nums(nbCol - 1, 0);
-        std::vector<long> dens(nbCol - 1, 1);
+        std::vector<Tlift> nums(nbCol - 1, 0);
+        std::vector<Tlift> dens(nbCol - 1, 1);
         for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          Rational<long> val = NSP_fastT(0, iCol).rational_lift();
-          nums[iCol] = val.get_num();
-          dens[iCol] = val.get_den();
+          std::pair<Tlift,Tlift> val = NSP_fastT(0, iCol).rational_lift();
+          nums[iCol] = val.first;
+          dens[iCol] = val.second;
         }
-        long lcm = LCMlist(dens);
+        Tlift lcm = LCMlist(dens);
         for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          VZ_long(iCol) = nums[iCol] * (lcm / dens[iCol]);
-          NSP(0, iCol) = Tint(VZ_long(iCol));
+          VZ_lift(iCol) = nums[iCol] * (lcm / dens[iCol]);
+          NSP(0, iCol) = UniversalScalarConversion<Tint,Tlift>(VZ_lift(iCol));
           max_bits_NSP = std::max(max_bits_NSP, get_bit(NSP(0, iCol)));
         }
         // check if elements are small enough to do computation in
@@ -679,11 +680,11 @@ public:
           // check if part of kernel
           jRow = sInc.find_first();
           for (size_t iRow = 0; iRow < nb; iRow++) {
-            auto row = EXT_long_sub.row(jRow);
+            auto row = EXT_lift_sub.row(jRow);
             jRow = sInc.find_next(jRow);
-            long sm = 0;
+            Tlift sm = 0;
             for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-              sm += VZ_long(iCol) * row(iCol);
+              sm += VZ_lift(iCol) * row(iCol);
             }
             if (sm != 0) {
               std::cerr << "Not really a kernel vector " << sm << "\n";
@@ -699,8 +700,7 @@ public:
     }
 
     if (failed_int || !try_int) {
-      std::cerr << "Rational<long> strategy failed , retrying with mpq_class"
-                << "\n";
+      std::cerr << "Lifting strategy failed , retrying with mpq_class\n";
       boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
       auto f = [&](MyMatrix<T> &M, size_t eRank,
                    [[maybe_unused]] size_t iRow) -> void {
