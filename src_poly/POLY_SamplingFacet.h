@@ -227,7 +227,8 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
 }
 
-template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
+template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, const MyMatrix<typename underlying_ring<T>::ring_type> &EXT_int, std::ostream& os) {
+  using Tint = typename underlying_ring<T>::ring_type;
   size_t dim = EXT.cols();
   size_t n_rows = EXT.rows();
   if (dim == 2) {
@@ -246,7 +247,11 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
   Face eSet = Kernel_FindSingleVertex(EXT);
   // Here we use a trick that the ColumnReduction will select the first column and so
   // will return a matrix that is polytopal
-  MyMatrix<T> EXTsel = ColumnReduction(SelectRow(EXT, eSet));
+  MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
+  MyMatrix<Tint> EXTsel_pre_int = SelectRow(EXT_int, eSet);
+  std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
+  MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
+  MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
   os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
             << " rnk=" << RankMat(EXTsel) << "\n";
 #ifdef DEBUG_SAMPLING_FACET
@@ -255,9 +260,9 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
     throw TerminalException{1};
   }
 #endif
-  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, os);
+  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
   os << "We have ListRidge\n";
-  FlippingFramework<T> RPLlift(EXT, eSet);
+  FlippingFramework<T> RPLlift(EXT, EXT_int, eSet);
   os << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
@@ -298,7 +303,9 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|SetIsobarycenter|=" << time << "\n";
 #endif
-  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
+  using Tint = typename underlying_ring<T>::ring_type;
+  MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
+  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|Kernel_GetFullRankFacetSet|=" << time << "\n";
 #endif

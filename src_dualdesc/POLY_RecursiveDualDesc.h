@@ -904,8 +904,10 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
+  using Text_int = typename underlying_ring<T>::ring_type;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
+  const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
   using Torbsize = uint16_t;
   using Tidx = typename Telt::Tidx;
@@ -954,9 +956,9 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP,
-                  std::ostream &_os)
-      : EXT(_EXT), GRP(_GRP), foc(GRP), os(_os) {
+  DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const& _EXT_int,
+                  Tgroup const &_GRP, std::ostream &_os)
+      : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), os(_os) {
     the_method = std::numeric_limits<int>::max();
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -1215,7 +1217,7 @@ public:
         std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
         Face const& f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-        return {pos, f, FlippingFramework<T>(EXT, f), GRP, StabRed};
+        return {pos, f, FlippingFramework<T>(EXT, EXT_int, f), GRP, StabRed};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -1338,8 +1340,10 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
+  using Text_int = typename underlying_ring<T>::ring_type;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
+  const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
   using Torbsize = uint16_t;
   using Tidx = typename Telt::Tidx;
@@ -1381,9 +1385,9 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
+  DatabaseRepr(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const& _EXT_int, Tgroup const &_GRP, Frepr f_repr,
                Forbitsize f_orbitsize, Finv f_inv, std::ostream &_os)
-      : EXT(_EXT), GRP(_GRP), foc(GRP), f_repr(f_repr),
+    : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), f_repr(f_repr),
         f_orbitsize(f_orbitsize), f_inv(f_inv), os(_os) {
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -1494,7 +1498,7 @@ public:
     std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
     Face const& f = pair.first;
     Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-    return {pos, f, FlippingFramework<T>(EXT, f), GRP, StabRed};
+    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f), GRP, StabRed};
   }
   void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {
@@ -2143,7 +2147,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   } else {
     vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-            TheBank, df.FF.EXT_face, df.Stab, TheMap, AllArr, ePrefix, os);
+            TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap, AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
@@ -2326,8 +2330,9 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 //
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-    Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    std::map<std::string, typename Tgroup::Tint> &TheMap,
+    Tbank &TheBank, MyMatrix<T> const &EXT,
+    MyMatrix<typename underlying_ring<T>::ring_type> const& EXT_int,
+    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
   using Tgr = GraphListAdj;
@@ -2387,7 +2392,7 @@ vectface DUALDESC_AdjacencyDecomposition(
        << "\n";
     if (ansChosenDatabase == "canonic") {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
-      TbasicBank bb(EXT, TheGRPrelevant, os);
+      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, os);
@@ -2409,7 +2414,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       };
       using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
                                       decltype(f_orbitsize), decltype(f_inv)>;
-      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_orbitsize, f_inv, os);
+      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, f_repr, f_orbitsize, f_inv, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, os);
@@ -2822,9 +2827,11 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
+  using Text_int = typename underlying_ring<T>::ring_type;
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   PolyHeuristicSerial<Tint> AllArr =
       Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, std::cerr);
   //
@@ -2835,13 +2842,13 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
+          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
+          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
     }
     std::cerr
         << "Failed to find a matching entry for bank_parallelization_method\n";
@@ -2860,6 +2867,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
   using Tidx_value = int32_t;
+  using Text_int = typename underlying_ring<T>::ring_type;
   bool BANK_IsSaving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
@@ -2881,12 +2889,12 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   AllArr.Saving = DD_Saving;
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   using Tbank = DataBank<Tkey, Tval>;
   Tbank TheBank(BANK_IsSaving, BANK_Prefix, std::cerr);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
-  return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
+  return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
 }
 
 // clang-format off
