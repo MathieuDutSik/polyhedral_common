@@ -4,7 +4,7 @@
  GRPfile = "COX_H4_grp"
  OUTfile = "ListOrbit"
  OutFormat = "GAP"
- DeterministicRuntime = F
+ DeterministicRuntime = T
  max_runtime = -1
  AdvancedTerminationCriterion = T
  /

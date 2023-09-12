@@ -7,10 +7,9 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "rational.h"
-#ifndef DISABLE_FP_CLASS
 #include "Fp.h"
-#endif
 #include "NumberTheoryGeneric.h"
+#include "MAT_Matrix_SubsetSolver.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -336,15 +335,15 @@ Face get_fret(std::pair<std::vector<int>,std::vector<int>> const& PairIncs, int 
 // 2) FlipFaceIneq for flipping the face and the inequality if it is already
 // known. Normally, the inequality is produce by the various techniques
 // used. But the problem is to store them.
-template <typename T> struct FlippingFramework {
+template <typename T> struct FlippingFramework_Field {
 private:
   MyMatrix<T> EXT_red;
-  int nbRow;
-  int nbCol;
   Face OneInc;
-  std::pair<std::vector<int>,std::vector<int>> PairIncs;
   int e_incd0;
   int e_incd1;
+  int nbRow;
+  int nbCol;
+  std::pair<std::vector<int>,std::vector<int>> PairIncs;
   std::vector<T> ListInvScal;
   Face f_select;
 #ifdef DEBUG_FLIP
@@ -353,19 +352,24 @@ private:
 
 public:
   MyMatrix<T> EXT_face;
-  FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListInvScal(e_incd0), f_select(e_incd0) {
+  FlippingFramework_Field(MyMatrix<T> const &EXT, Face const &_OneInc)
+    : OneInc(_OneInc),
+      e_incd0(OneInc.size() - OneInc.count()),
+      e_incd1(OneInc.count()),
+      nbRow(EXT.rows()),
+      nbCol(EXT.cols()),
+      PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
+      ListInvScal(e_incd0),
+      f_select(e_incd0)
+  {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
-    PairIncs = Dynamic_bitset_to_vectorints(OneInc);
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
     //
     // Idx dropping for the projection
     //
     int idx_drop = get_idx_drop(FacetIneq);
-    nbRow = EXT.rows();
-    nbCol = EXT.cols();
     EXT_red = DropColumn(EXT, idx_drop);
     //
     // Inverse scalar products
@@ -453,86 +457,58 @@ public:
 
 // This is a special solution for computing the solutions.
 //
-// It is a specialization for the mpq_class. It uses special
-// techniques for the computation of the Kernel.
+// It is using a special scheme for computing the solution
+// that uses the Fp class. It essentially works only for the
+// rational case and uses a reduction scheme that is specific
+// for rational.
 //
-// That is we are reducing the solution to a type Fp,
-// that is a finite field computation. That solution
-// is lifted and we check for its correctness.
-//
-// The computation uses the following types:
-// * Tfast = Fp: The finite field type
-// * mpz_class : The type for doing the flips
-// * long: The types used for making the check that
-//    the vector is in the kernel.
-//
-// There is a computation of bits in order to make
-// sure that the computation with long will not
-// overflow.
-//
-// Need to find a better template for the solution
-#ifndef DISABLE_FP_CLASS
-template <> struct FlippingFramework<mpq_class> {
+// The scheme is implemented for the mpq_class and the
+// Rational<SafeInt64>. This scheme cannot be used for the
+// Quadratic field, algebraic fields and so on.
+template <typename T>
+struct FlippingFramework_Accelerate {
 private:
-  using T = mpq_class;
-  using Tint = mpz_class;
-  using Tlift = int64_t;
-  using Tfast = Fp<Tlift, 2147389441>;
-  MyMatrix<Tint> EXT_red;
-  MyMatrix<Tint> EXT_red_sub;
-  MyMatrix<Tfast> EXT_fast_sub;
-  MyMatrix<Tlift> EXT_lift_sub;
-  int nbRow;
-  int nbCol;
-  bool try_int;
+  using Tint = typename underlying_ring<T>::ring_type;
   Face OneInc;
-  size_t max_bits;
-  std::pair<std::vector<int>,std::vector<int>> PairIncs;
   int e_incd0;
   int e_incd1;
-  std::vector<mpz_class> ListScal;
+  int nbRow;
+  int nbCol;
+  std::vector<Tint> ListScal;
   Face f_select;
+  std::pair<std::vector<int>,std::vector<int>> PairIncs;
+  MyMatrix<Tint> EXT_scaled;
+  MyVector<Tint> FacetIneq;
+  int idx_drop;
+  MyMatrix<Tint> EXT_red;
+  MyMatrix<Tint> EXT_red_sub;
+  SubsetRankOneSolver_Acceleration<T> solver;
 #ifdef DEBUG_FLIP
   MyMatrix<T> EXT_debug;
 #endif
 
 public:
   MyMatrix<T> EXT_face;
-  size_t get_bit(mpz_class const& v) const {
-    return mpz_sizeinbase(v.get_mpz_t(), 2);
-  }
-  FlippingFramework(MyMatrix<T> const &EXT, Face const &_OneInc)
-    : try_int(false), OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()), e_incd1(OneInc.count()), ListScal(e_incd0), f_select(e_incd0) {
+  FlippingFramework_Accelerate(MyMatrix<T> const &EXT, Face const &_OneInc)
+    : OneInc(_OneInc),
+      e_incd0(OneInc.size() - OneInc.count()),
+      e_incd1(OneInc.count()),
+      nbRow(EXT.rows()),
+      nbCol(EXT.cols()),
+      ListScal(e_incd0),
+      f_select(e_incd0),
+      PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
+      EXT_scaled(NonUniqueRescaleRowsRing(EXT)),
+      FacetIneq(NonUniqueRescaleVecRing(FindFacetInequality(EXT, OneInc))),
+      idx_drop(get_idx_drop(FacetIneq)),
+      EXT_red(DropColumn(EXT_scaled, idx_drop)),
+      EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
+      solver(SubsetRankOneSolver_Acceleration<T>(EXT_red_sub)),
+      EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second))
+  {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
-    PairIncs = Dynamic_bitset_to_vectorints(OneInc);
-    MyMatrix<Tint> EXT_scaled = RescaleRows(EXT);
-    MyVector<Tint> FacetIneq = RescaleVec(FindFacetInequality(EXT, OneInc));
-    //
-    // Idx dropping for the projection
-    //
-    int idx_drop = get_idx_drop(FacetIneq);
-    nbRow = EXT.rows();
-    nbCol = EXT.cols();
-    EXT_red = DropColumn(EXT_scaled, idx_drop);
-    EXT_red_sub = SelectRow(EXT_red, PairIncs.second);
-    //
-    // Faster modular version of EXT_red
-    //
-    max_bits = 0;
-    EXT_fast_sub = MyMatrix<Tfast>(e_incd1, nbCol - 1);
-    EXT_lift_sub = MyMatrix<Tlift>(e_incd1, nbCol - 1);
-    for (int iRow = 0; iRow < e_incd1; iRow++) {
-      for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        Tint const& val = EXT_red_sub(iRow, iCol);
-        max_bits = std::max(get_bit(val), max_bits);
-        EXT_lift_sub(iRow, iCol) = val.get_si();
-        EXT_fast_sub(iRow, iCol) = Tfast(EXT_lift_sub(iRow, iCol));
-      }
-    }
-    try_int = (max_bits <= 30);
-    max_bits += get_bit(mpz_class(nbCol));
     //
     // Scalar products
     //
@@ -543,48 +519,13 @@ public:
         eSum += FacetIneq(iCol) * EXT_scaled(iRow, iCol);
       ListScal[pos_row] = eSum;
     }
-    //
-    // Now the EXT face that is used by other procedure
-    //
-    EXT_face = GetEXT_face(EXT, idx_drop, PairIncs.second);
   }
-  MyVector<Tint> RescaleVec(MyVector<T> const &v) const {
-    int cols = v.size();
-    std::vector<mpz_class> dens(cols, 1);
-    MyVector<Tint> vret = MyVector<Tint>(cols);
-    for (int iCol = 0; iCol < cols; iCol++) {
-      dens[iCol] = v(iCol).get_den();
-    }
-    mpz_class scale = LCMlist(dens);
-    for (int iCol = 0; iCol < cols; iCol++) {
-      vret(iCol) = (scale / v(iCol).get_den()) * v(iCol).get_num();
-    }
-    return vret;
-  }
-  MyMatrix<Tint> RescaleRows(MyMatrix<T> const &M) const {
-    int rows = M.rows();
-    int cols = M.cols();
-    std::vector<mpz_class> dens(cols, 1);
-    MyMatrix<Tint> Mret(rows, cols);
-    for (int iRow = 0; iRow < rows; iRow++) {
-      for (int iCol = 0; iCol < cols; iCol++) {
-        dens[iCol] = M(iRow, iCol).get_den();
-      }
-      mpz_class scale = LCMlist(dens);
-      for (int iCol = 0; iCol < cols; iCol++) {
-        Mret(iRow, iCol) =
-            (scale / M(iRow, iCol).get_den()) * M(iRow, iCol).get_num();
-      }
-    }
-    return Mret;
-  }
-
-  Face InternalFlipFaceIneq(Face const &sInc, const Tint *out) {
+  Face InternalFlipFaceIneq(Face const &sInc, MyVector<Tint> const& V) {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = get_pos_outside(sInc);
     Tint eSum = 0;
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      eSum += EXT_red_sub(pos_outside, iCol) * out[iCol];
+      eSum += EXT_red_sub(pos_outside, iCol) * V(iCol);
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
@@ -596,9 +537,9 @@ public:
     for (int pos_row=0; pos_row<e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
-      T const& eScal = ListScal[pos_row];
+      Tint const& eScal = ListScal[pos_row];
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
-        eSum += EXT_red(iRow, iCol) * out[iCol];
+        eSum += EXT_red(iRow, iCol) * V(iCol);
       auto f_comp=[&]() -> bool {
         if (eSign == 1)
           return eSum * beta_max_den < beta_max_num * eScal;
@@ -634,91 +575,44 @@ public:
       throw TerminalException{1};
     }
 #endif
-    size_t nb = sInc.count();
-    MyMatrix<Tint> NSP(1, nbCol - 1);
-    bool failed_int = false;
-    if (try_int) {
-      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-      auto f = [&](MyMatrix<Tfast> &M, size_t eRank,
-                   [[maybe_unused]] size_t iRow) -> void {
-        M.row(eRank) = EXT_fast_sub.row(jRow);
-        jRow = sInc.find_next(jRow);
-      };
-      MyMatrix<Tfast> NSP_fastT =
-        NullspaceTrMatTarget_Kernel<Tfast, decltype(f)>(nb, nbCol - 1, 1, f);
-      // check result at full precision in case of overflows
-      bool allzero = true;
-      for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        if (NSP_fastT(0, iCol) != 0) {
-          allzero = false;
-          break;
-        }
-      }
-      if (allzero) {
-        std::cerr << "NSPint is all zero\n";
-        failed_int = true;
-      } else {
-        MyVector<Tlift> VZ_lift(nbCol - 1);
-
-        // reconstruct
-        size_t max_bits_NSP = 0;
-        std::vector<Tlift> nums(nbCol - 1, 0);
-        std::vector<Tlift> dens(nbCol - 1, 1);
-        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          std::pair<Tlift,Tlift> val = NSP_fastT(0, iCol).rational_lift();
-          nums[iCol] = val.first;
-          dens[iCol] = val.second;
-        }
-        Tlift lcm = LCMlist(dens);
-        for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-          VZ_lift(iCol) = nums[iCol] * (lcm / dens[iCol]);
-          NSP(0, iCol) = UniversalScalarConversion<Tint,Tlift>(VZ_lift(iCol));
-          max_bits_NSP = std::max(max_bits_NSP, get_bit(NSP(0, iCol)));
-        }
-        // check if elements are small enough to do computation in
-        if (max_bits + max_bits_NSP <= 60) {
-          // check if part of kernel
-          jRow = sInc.find_first();
-          for (size_t iRow = 0; iRow < nb; iRow++) {
-            auto row = EXT_lift_sub.row(jRow);
-            jRow = sInc.find_next(jRow);
-            Tlift sm = 0;
-            for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-              sm += VZ_lift(iCol) * row(iCol);
-            }
-            if (sm != 0) {
-              std::cerr << "Not really a kernel vector " << sm << "\n";
-              failed_int = true;
-              break;
-            }
-          }
-        } else {
-          std::cerr << "Precision too low" << max_bits << " " << max_bits_NSP << "\n";
-          failed_int = true;
-        }
-      }
-    }
-
-    if (failed_int || !try_int) {
-      std::cerr << "Lifting strategy failed , retrying with mpq_class\n";
-      boost::dynamic_bitset<>::size_type jRow = sInc.find_first();
-      auto f = [&](MyMatrix<T> &M, size_t eRank,
-                   [[maybe_unused]] size_t iRow) -> void {
-        for (int iCol=0; iCol<nbCol-1; iCol++)
-          M(eRank,iCol) = UniversalScalarConversion<T,Tint>(EXT_red_sub(jRow,iCol));
-        jRow = sInc.find_next(jRow);
-      };
-      NSP =
-        RescaleRows(NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f));
-    }
-    return InternalFlipFaceIneq(sInc, NSP.data());
+    MyVector<Tint> Vkernel = solver.GetKernelVector(sInc);
+    return InternalFlipFaceIneq(sInc, Vkernel);
   }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
-    MyVector<Tint> out = RescaleVec(pair.second);
-    return InternalFlipFaceIneq(pair.first, out.data());
+    MyVector<Tint> V = NonUniqueRescaleVecRing(pair.second);
+    return InternalFlipFaceIneq(pair.first, V);
   }
 };
-#endif
+
+template <typename T, typename T2=void> struct flipping_type;
+
+template <typename T>
+struct flipping_type<T, typename std::enable_if<has_reduction_subset_solver<T>::value>::type> {
+    typedef FlippingFramework_Accelerate<T> type;
+};
+
+template <typename T>
+struct flipping_type<T, typename std::enable_if<!has_reduction_subset_solver<T>::value>::type> {
+    typedef FlippingFramework_Field<T> type;
+};
+
+
+template<typename T>
+class FlippingFramework {
+  public:
+  typename flipping_type<T>::type flipping;
+  MyMatrix<T> const& EXT_face;
+  FlippingFramework(MyMatrix<T> const &EXT, Face const &OneInc) : flipping(EXT, OneInc), EXT_face(flipping.EXT_face) {
+  }
+  Face FlipFace(Face const &sInc) {
+    return flipping.FlipFace(sInc);
+  }
+  Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
+    return flipping.FlipFaceIneq(pair);
+  }
+};
+
+
 
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
