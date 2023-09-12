@@ -457,24 +457,14 @@ public:
 
 // This is a special solution for computing the solutions.
 //
-// It is a specialization for the mpq_class. It uses special
-// techniques for the computation of the Kernel.
+// It is using a special scheme for computing the solution
+// that uses the Fp class. It essentially works only for the
+// rational case and uses a reduction scheme that is specific
+// for rational.
 //
-// That is we are reducing the solution to a type Fp,
-// that is a finite field computation. That solution
-// is lifted and we check for its correctness.
-//
-// The computation uses the following types:
-// * Tfast = Fp: The finite field type
-// * mpz_class : The type for doing the flips
-// * long: The types used for making the check that
-//    the vector is in the kernel.
-//
-// There is a computation of bits in order to make
-// sure that the computation with long will not
-// overflow.
-//
-// Need to find a better template for the solution
+// The scheme is implemented for the mpq_class and the
+// Rational<SafeInt64>. This scheme cannot be used for the
+// Quadratic field, algebraic fields and so on.
 template <typename T>
 struct FlippingFramework_Accelerate {
 private:
