@@ -625,7 +625,7 @@ class FlippingFramework {
 
 template<typename T>
 inline typename std::enable_if<!has_reduction_subset_solver<T>::value,MyMatrix<typename underlying_ring<T>::ring_type>>::type
-Get_EXT_int(MyMatrix<T> const& EXT) {
+Get_EXT_int([[maybe_unused]] MyMatrix<T> const& EXT) {
   using Tint = typename underlying_ring<T>::ring_type;
   return MyMatrix<Tint>(0,0);
 }

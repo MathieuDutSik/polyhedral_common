@@ -335,7 +335,7 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
       LVal_long[i] = LVal_int[i].get_si();
     }
 
-    if( max_bits + max_bits_LVal <= 60 ) {
+    if (max_bits + max_bits_LVal <= 60 ) {
       // safe to use long
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         eScal_long = 0;

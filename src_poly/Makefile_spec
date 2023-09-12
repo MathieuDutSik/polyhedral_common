@@ -20,7 +20,7 @@
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
-PROGRAM		= POLY_LinearDetermineByInequalities
+#PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyGroup
 #PROGRAM		= POLY_redundancyGroup GRP_LinPolytope_Automorphism
@@ -49,6 +49,7 @@ PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
+PROGRAM		= POLY_SmallPolytope
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
