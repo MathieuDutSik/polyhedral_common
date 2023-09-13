@@ -2059,6 +2059,7 @@ void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
+    MyMatrix<typename underlying_ring<T>::ring_type> const& EXT_int,
     std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
