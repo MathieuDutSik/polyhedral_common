@@ -23,7 +23,7 @@
 # define DEBUG_DOUBLE_COSET
 #endif
 
-static const size_t LIMIT_INITIAL_TRIV = 500000;
+static const size_t LIMIT_INITIAL_TRIV = 5000;
 
 template <typename Tgroup> struct FaceOrbitsizeGrpContainer {
 private:

@@ -73,8 +73,8 @@
 static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
 static const int CANONIC_STRATEGY__STORE = 1;
 static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
-// This is for the constant 500000
-static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 3;
+// This is for the constant 5000
+static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 4;
 
 // Those constants are for the default strategy
 static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
