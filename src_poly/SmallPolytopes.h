@@ -11,12 +11,16 @@
 // lrs / cdd and the like that would be more
 // expensive.
 
+#ifdef DEBUG
+# define DEBUG_SMALL_POLYTOPE
+#endif
+
 template<typename T>
 vectface Simplicial_Incidence(MyMatrix<T> const& EXT) {
   int n = EXT.cols();
   Face f_full(n);
   for (int i=0; i<n; i++)
-    f[i] = 1;
+    f_full[i] = 1;
   vectface vf(n);
   for (int i=0; i<n; i++) {
     Face f = f_full;
@@ -28,7 +32,6 @@ vectface Simplicial_Incidence(MyMatrix<T> const& EXT) {
 
 template<typename T>
 vectface NearSimplicial_Incidence(MyMatrix<T> const& EXT) {
-  int n = EXT.cols();
   int n_ext = EXT.rows();
   MyMatrix<T> NSP = NullspaceMat(EXT);
 #ifdef DEBUG_SMALL_POLYTOPE
@@ -49,7 +52,7 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const& EXT) {
   }
   Face f_full(n_ext);
   for (int i=0; i<n_ext; i++)
-    f[i] = 1;
+    f_full[i] = 1;
   vectface vf(n_ext);
   for (auto & x_p : V_p) {
     for (auto & x_m : V_m) {

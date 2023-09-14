@@ -9,6 +9,7 @@
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_DualDescription_PrimalDual.h"
+#include "SmallPolytopes.h"
 #include <string>
 #include <vector>
 // clang-format on
@@ -432,6 +433,14 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return lrs::DualDescription_incd_reduction(EXT);
   }
+  //
+  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+    // Small polytopes have special solutions
+    eProg = "small_polytopes";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return SmallPolytope_Incidence(EXT);
+  }
   // It applies to the field case or ring
   eProg = "lrs";
   ListProg.push_back(eProg);
@@ -504,6 +513,14 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return lrs::DualDescription_reduction(EXT);
   }
+  //
+  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+    // Small polytopes have special solutions
+    eProg = "small_polytopes";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return SmallPolytope_Ineq(EXT);
+  }
   // lrs does not use divisions, so work even if not field.
   eProg = "lrs";
   ListProg.push_back(eProg);
@@ -571,6 +588,15 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     ListProg.push_back(eProg);
     if (ansProg == eProg)
       return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
+  }
+  // We need to make it work also for ase without reduction if that makes sense
+  // which is not sure at all.
+  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+    // Small polytopes can have special solutions
+    eProg = "small_polytopes";
+    ListProg.push_back(eProg);
+    if (ansProg == eProg)
+      return SmallPolytope_FaceIneq(EXT, f_process);
   }
   // T can be a field or a ring here
   eProg = "lrs";
