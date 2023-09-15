@@ -1133,6 +1133,10 @@ public:
     os << "FuncInsert : New orbSize=" << orbSize << "\n";
 #endif
     foc.FinishWithOrbSizeAssignation(orbSize);
+#ifdef CHECK_INSERT
+    Tgroup eStab = GRP.Stabilizer_OnSets(face_can);
+    os << "FuncInsert: Inserting a face of size |face_can|=" << face_can.count() << " |eStab|=" << eStab.size() << " f=" << StringFace(face_can) << "\n";
+#endif
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
@@ -1164,6 +1168,9 @@ public:
     std::pair<Face, Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
 #ifdef TRACK_DATABASE
     os << "FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
+#endif
+#ifdef CHECK_INSERT
+    os << "FuncInsertPair: Inserting a face of size |face_can|=" << pair.first.count() << " |O|=" << pair.second << "\n";
 #endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
@@ -2530,6 +2537,11 @@ F: Running again the program will get you something different";
 There is some logging being done in the running of the program. With AppluStdUnit\n\
 T: the output is done character by character which is slower but useful for debugging\n\
 F: the output is buffered which is typically faster";
+  ListBoolValues1_doc["InterceptCtrlC"] = "Default: T\n\
+If a CtrlC command is thrown then the program will handle it and stop and\n\
+leave a usable database that can be rerun afterwards (it seems not to work anymore)\n\
+T: Activate the CtrlC mechanism\n\
+F: Do not activate the interception of CtrlC";
   ListStringValues1_doc["bank_parallelization_method"] = "Default: serial\n\
 The method used for parallelizing the banking system\n\
 serial: Every thread has its own banking system, which may be suboptimal\n\
@@ -2717,6 +2729,13 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   return GRP;
 }
 
+bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, std::ostream &os) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  bool intercept_ctrl_c = BlockDATA.ListBoolValues.at("InterceptCtrlC");
+  os << "intercept_ctrl_c=" << intercept_ctrl_c << "\n";
+  return intercept_ctrl_c;
+}
+
 template <typename T, typename Tint>
 PolyHeuristicSerial<Tint>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
@@ -2741,8 +2760,11 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   bool DeterministicRuntime =
       BlockDATA.ListBoolValues.at("DeterministicRuntime");
   os << "DeterministicRuntime=" << DeterministicRuntime << "\n";
-  if (!DeterministicRuntime)
-    srand_random_set();
+  if (!DeterministicRuntime) {
+    unsigned seed = get_random_seed();
+    os << "seed=" << seed << "\n";
+    srand(seed);
+  }
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   AllArr.OutFormat = OutFormat;
@@ -2820,8 +2842,12 @@ template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   // Setting up the Control C event.
   ExitEvent = false;
-  std::cerr << "Before submission of signal_callback_handler\n";
-  signal(SIGINT, signal_callback_handler);
+  if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
+    std::cerr << "Before submission of signal_callback_handler\n";
+    signal(SIGINT, signal_callback_handler);
+  } else {
+    std::cerr << "Do not capture the CtrlC event\n";
+  }
   //
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;

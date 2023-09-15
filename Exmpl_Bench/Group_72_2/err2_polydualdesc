@@ -1,0 +1,957 @@
+intercept_ctrl_c=0
+Do not capture the CtrlC event
+EXTfile=Perfect.ext
+GRPfile=Perfect.grp
+lstr=
+&PROBABILITY_DISTRIBUTIONS
+ ListName = "distri1" 
+ ListNmax = 100 
+ ListNstart = 100
+ ListNature = "dirac"
+ ListDescription = "1:100"
+/
+
+&THOMPSON_PRIOR
+ ListAnswer = "cdd", "lrs_ring", "ppl_ext"
+ ListName = "only_cdd", "only_ppl"
+ ListDescription = "cdd:distri1", "ppl_ext:distri1"
+/
+
+&KEY_COMPRESSION
+ ListKey = "incidence"
+ ListDescription = "1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity"
+/
+
+&HEURISTIC_PRIOR
+ DefaultPrior = "noprior:10"
+ ListFullCond = "incidence > 70"
+ ListConclusion = "only_ppl"
+/
+
+&IO
+ name = "split"
+ WriteLog = T
+ ProcessExistingDataIfExist = F
+ LogFileToProcess = "input_logfile"
+/
+name=only_cdd desc=cdd:distri1
+SingleThompsonSamplingState, step 1 desc=cdd:distri1
+ledf = LimitedEmpiricalDistributionFunction
+map_name_ledf key=distri1
+map_name_ledf key=empty
+name=only_ppl desc=ppl_ext:distri1
+SingleThompsonSamplingState, step 1 desc=ppl_ext:distri1
+ledf = LimitedEmpiricalDistributionFunction
+map_name_ledf key=distri1
+map_name_ledf key=empty
+m_name_ts = only_cdd only_ppl
+Heu=
+   i=0/1 (incidence > 70) => only_ppl
+      Default=noprior:10
+eOutput=noprior:10
+SingleThompsonSamplingState, step 1 desc=noprior:10
+ledf = LimitedEmpiricalDistributionFunction
+map_name_ledf key=distri1
+map_name_ledf key=empty
+ans=cdd
+ans=lrs_ring
+ans=ppl_ext
+eOutput=only_ppl
+We have AllArr
+OUTfile=ListOrbit
+DeterministicRuntime=1
+OutFormat=GAP
+port_i=1234
+bank_parallelization_method=serial
+NamelistEntFile for heuristic=Split.heu
+SplittingHeuristicFile
+   i=0/2 (delta <= 11) => nosplit
+   i=1/2 (delta <= 15) && (groupsize < 16) => nosplit
+      Default=split
+NamelistEntFile for heuristic=AddiSym.heu
+AdditionalSymmetryHeuristicFile
+   i=0/1 (delta > 11) => yes
+      Default=no
+NamelistEntFile for Thompson sampling=DualDesc.ts
+name=state_glrs desc=glrs:distri1
+SingleThompsonSamplingState, step 1 desc=glrs:distri1
+ledf = LimitedEmpiricalDistributionFunction
+map_name_ledf key=distri1
+map_name_ledf key=empty
+name=state_lrs_ring desc=lrs_ring:distri1
+SingleThompsonSamplingState, step 1 desc=lrs_ring:distri1
+ledf = LimitedEmpiricalDistributionFunction
+map_name_ledf key=distri1
+map_name_ledf key=empty
+m_name_ts = state_glrs state_lrs_ring
+Heu=
+   i=0/1 (delta <= 6) => state_lrs_ring
+      Default=state_glrs
+eOutput=state_glrs
+eOutput=state_lrs_ring
+DualDescriptionThompsonFile
+&HEURISTIC_PRIOR
+  DefaultPrior = "state_glrs"
+  ListConclusion = "state_lrs_ring"
+  ListFullCond = "delta <= 6"
+/
+
+
+&IO
+  ProcessExistingDataIfExist = F
+  WriteLog = F
+  LogFileToProcess = "irrelevant"
+  name = "unset"
+/
+
+
+&KEY_COMPRESSION
+  ListDescription = "superfine"
+  ListKey = "delta"
+/
+
+
+&PROBABILITY_DISTRIBUTIONS
+  ListNmax = 100
+  ListNstart = 100
+  ListDescription = "145.3"
+  ListName = "distri1"
+  ListNature = "dirac"
+/
+
+
+&THOMPSON_PRIOR
+  ListAnswer = "glrs", "lrs_ring"
+  ListDescription = "glrs:distri1", "lrs_ring:distri1"
+  ListName = "state_glrs", "state_lrs_ring"
+/
+
+NamelistEntFile for heuristic=InitFacet.heu
+MethodInitialFacetSetFile
+   i=0/2 (incidence > 71) => specific:001110010111101111110111111111110111110111101111111111111001011111111111
+   i=1/2 (incidence < 100) => lp_cdd:iter_10
+      Default=lp_cdd:iter_20
+NamelistEntFile for heuristic=Bank_save.heu
+BankSaveHeuristicFile
+   i=0/2 (delta <= 11) => no
+   i=1/2 (time >= 600) => yes
+      Default=no
+NamelistEntFile for heuristic=Bank_check.heu
+CheckDatabaseBank
+   i=0/1 (delta <= 11) => no
+      Default=yes
+NamelistEntFile for heuristic=Bank_canonic.heu
+ChosenDatabase
+      Default=canonic
+OrbitSplitTechnique
+   i=0/2 (groupsize_sma < 100) => exhaustive
+   i=1/2 (index < 20) => single_cosets
+      Default=canonic
+CommThreadHeuristicFile
+      Default=no
+NamelistEntFile for heuristic=Canonic.heu
+ChoiceCanonicalizationFile
+      Default=guess
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=3538944 TheDim=45 |EXT|=72
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=72
+No database present
+vectface_update_method n_orbit=0 nbRow=72
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (59,1)
+FuncInsert: Inserting a face of size |face_can|=59 |eStab|=2304 f=001110010111101111110111111111110111110111101111111111111001011111111111
+|EXT|=72/45 |GRP|=3538944 Considering orbit 0 |inc|=59 |stab|=2304
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=1340168547743797189017600000 TheDim=44 |EXT|=59
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=59
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (58,10)
+FuncInsertPair: Inserting a face of size |face_can|=58 |O|=144041768640
+|EXT|=59/44 |GRP|=1340168547743797189017600000 Considering orbit 0 |inc|=58 |stab|=58268197727991182131200000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=58268197727991182131200000 TheDim=43 |EXT|=58
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=58
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (57,10)
+FuncInsertPair: Inserting a face of size |face_can|=57 |O|=22
+|EXT|=58/43 |GRP|=58268197727991182131200000 Considering orbit 0 |inc|=57 |stab|=2648554442181417369600000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=2648554442181417369600000 TheDim=42 |EXT|=57
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=57
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (56,10)
+FuncInsertPair: Inserting a face of size |face_can|=56 |O|=21
+|EXT|=57/42 |GRP|=2648554442181417369600000 Considering orbit 0 |inc|=56 |stab|=126121640103877017600000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=126121640103877017600000 TheDim=41 |EXT|=56
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=56
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (55,10)
+FuncInsertPair: Inserting a face of size |face_can|=55 |O|=20
+|EXT|=56/41 |GRP|=126121640103877017600000 Considering orbit 0 |inc|=55 |stab|=6306082005193850880000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=6306082005193850880000 TheDim=40 |EXT|=55
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=55
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (54,10)
+FuncInsertPair: Inserting a face of size |face_can|=54 |O|=19
+|EXT|=55/40 |GRP|=6306082005193850880000 Considering orbit 0 |inc|=54 |stab|=331899052904939520000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=331899052904939520000 TheDim=39 |EXT|=54
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=54
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (53,10)
+FuncInsertPair: Inserting a face of size |face_can|=53 |O|=18
+|EXT|=54/39 |GRP|=331899052904939520000 Considering orbit 0 |inc|=53 |stab|=18438836272496640000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=18438836272496640000 TheDim=38 |EXT|=53
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=53
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (52,10)
+FuncInsertPair: Inserting a face of size |face_can|=52 |O|=17
+|EXT|=53/38 |GRP|=18438836272496640000 Considering orbit 0 |inc|=52 |stab|=1084637427793920000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=1084637427793920000 TheDim=37 |EXT|=52
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=52
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (51,10)
+FuncInsertPair: Inserting a face of size |face_can|=51 |O|=16
+|EXT|=52/37 |GRP|=1084637427793920000 Considering orbit 0 |inc|=51 |stab|=67789839237120000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=67789839237120000 TheDim=36 |EXT|=51
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=51
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (50,10)
+FuncInsertPair: Inserting a face of size |face_can|=50 |O|=15
+|EXT|=51/36 |GRP|=67789839237120000 Considering orbit 0 |inc|=50 |stab|=4519322615808000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=4519322615808000 TheDim=35 |EXT|=50
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=50
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (49,10)
+FuncInsertPair: Inserting a face of size |face_can|=49 |O|=14
+|EXT|=50/35 |GRP|=4519322615808000 Considering orbit 0 |inc|=49 |stab|=322808758272000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=322808758272000 TheDim=34 |EXT|=49
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=49
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (48,10)
+FuncInsertPair: Inserting a face of size |face_can|=48 |O|=13
+|EXT|=49/34 |GRP|=322808758272000 Considering orbit 0 |inc|=48 |stab|=24831442944000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=24831442944000 TheDim=33 |EXT|=48
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=48
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (47,10)
+FuncInsertPair: Inserting a face of size |face_can|=47 |O|=12
+|EXT|=48/33 |GRP|=24831442944000 Considering orbit 0 |inc|=47 |stab|=2069286912000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=2069286912000 TheDim=32 |EXT|=47
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=47
+No database present
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=1
+Found incidences = (46,10)
+FuncInsertPair: Inserting a face of size |face_can|=46 |O|=11
+|EXT|=47/32 |GRP|=2069286912000 Considering orbit 0 |inc|=46 |stab|=188116992000
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=188116992000 TheDim=31 |EXT|=46
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=46
+No database present
+vectface_update_method n_orbit=0 nbRow=46
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (45,10)
+FuncInsert: Inserting a face of size |face_can|=45 |eStab|=18811699200 f=1111111111111111111111111111111111011111111111
+|EXT|=46/31 |GRP|=188116992000 Considering orbit 0 |inc|=45 |stab|=18811699200
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=18811699200 TheDim=30 |EXT|=45
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=45
+No database present
+vectface_update_method n_orbit=0 nbRow=45
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (44,10)
+FuncInsert: Inserting a face of size |face_can|=44 |eStab|=2090188800 f=111111111111111111111111111111111110111111111
+|EXT|=45/30 |GRP|=18811699200 Considering orbit 0 |inc|=44 |stab|=2090188800
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=2090188800 TheDim=29 |EXT|=44
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=44
+No database present
+vectface_update_method n_orbit=0 nbRow=44
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (43,10)
+FuncInsert: Inserting a face of size |face_can|=43 |eStab|=261273600 f=11111111111111111111111111111111111011111111
+|EXT|=44/29 |GRP|=2090188800 Considering orbit 0 |inc|=43 |stab|=261273600
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=261273600 TheDim=28 |EXT|=43
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=43
+No database present
+vectface_update_method n_orbit=0 nbRow=43
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (42,10)
+FuncInsert: Inserting a face of size |face_can|=42 |eStab|=37324800 f=1111111111111111111111111111111111101111111
+|EXT|=43/28 |GRP|=261273600 Considering orbit 0 |inc|=42 |stab|=37324800
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=37324800 TheDim=27 |EXT|=42
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=42
+No database present
+vectface_update_method n_orbit=0 nbRow=42
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (41,10)
+FuncInsert: Inserting a face of size |face_can|=41 |eStab|=6220800 f=111111111111111111111111111111111110111111
+|EXT|=42/27 |GRP|=37324800 Considering orbit 0 |inc|=41 |stab|=6220800
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=6220800 TheDim=26 |EXT|=41
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42ADM0_D_41
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42ADM0_D_41.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=41
+No database present
+vectface_update_method n_orbit=0 nbRow=41
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (40,10)
+FuncInsert: Inserting a face of size |face_can|=40 |eStab|=1244160 f=11111111111111111111111111111111111011111
+|EXT|=41/26 |GRP|=6220800 Considering orbit 0 |inc|=40 |stab|=1244160
+Beginning of DUALDESC_AdjacencyDecomposition
+Passing by GetDualDesc |ListEnt|=0
+ansSymm=yes
+RESPAWN a new ADM computation |GRP|=1244160 TheDim=25 |EXT|=40
+DUALDESC_ChosenDatabase : ChosenDatabase = canonic
+MainPrefix=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42ADM0_D_41ADM0_D_40
+SavingTrigger=0 eFileMethod=./Saving_Polyhedral/D_72ADM0_D_59ADM0_D_58ADM0_D_57ADM0_D_56ADM0_D_55ADM0_D_54ADM0_D_53ADM0_D_52ADM0_D_51ADM0_D_50ADM0_D_49ADM0_D_48ADM0_D_47ADM0_D_46ADM0_D_45ADM0_D_44ADM0_D_43ADM0_D_42ADM0_D_41ADM0_D_40.method
+read_method val=0
+get_runtime_testcase n_orbit=0 n_target=100 nbRow=40
+No database present
+vectface_update_method n_orbit=0 nbRow=40
+vectface_update_method bb.the_method=4
+Status : orbit=(0,0,0) facet=(0,0,0)
+
+use_f_insert_pair=0
+Found incidences = (32,3) (39,7)
+FuncInsert: Inserting a face of size |face_can|=39 |eStab|=311040 f=1111111111111111111111111111111111101111
+FuncInsert: Inserting a face of size |face_can|=32 |eStab|=9216 f=0000100101011111111111111111111111111111
+|EXT|=40/25 |GRP|=1244160 Considering orbit 1 |inc|=32 |stab|=9216
+order=glrs /tmp/DD_32_24_Ri9IZqEWY6vYSnvRNJ9G.ine > /tmp/DD_32_24_Ri9IZqEWY6vYSnvRNJ9G.ext 2> /tmp/DD_32_24_Ri9IZqEWY6vYSnvRNJ9G.err
+External program terminated
+FileI = /tmp/DD_32_24_Ri9IZqEWY6vYSnvRNJ9G.ine    FileO = /tmp/DD_32_24_Ri9IZqEWY6vYSnvRNJ9G.ext
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=864 f=0000000101111111111111010001111111111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=192 f=0000000011001111100111101111111101111111
+FuncInsert: Inserting a face of size |face_can|=24 |eStab|=96 f=0000000011001111110101001011111101111111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=384 f=0000010101010111110101001111111101011111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=2880 f=0000000000110111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=24 |eStab|=384 f=0000000111001111100101101111011101011111
+FuncInsert: Inserting a face of size |face_can|=24 |eStab|=384 f=0000000011011111000101101110111101111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=27648 f=0001110101011111110101011111111100011111
+FuncInsert: Inserting a face of size |face_can|=24 |eStab|=288 f=0000010011001111100001101111111101110111
+FuncInsert: Inserting a face of size |face_can|=24 |eStab|=480 f=0000000101110011011111010101110011111111
+Status : orbit=(12,1,11) facet=(38128,135,37993)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 4 |inc|=24 |stab|=96
+Status : orbit=(12,2,10) facet=(38128,13095,25033)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 11 |inc|=24 |stab|=480
+Status : orbit=(12,3,9) facet=(38128,15687,22441)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 10 |inc|=24 |stab|=288
+Status : orbit=(12,4,8) facet=(38128,20007,18121)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 8 |inc|=24 |stab|=384
+Status : orbit=(12,5,7) facet=(38128,23247,14881)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 7 |inc|=24 |stab|=384
+Status : orbit=(12,6,6) facet=(38128,26487,11641)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 5 |inc|=25 |stab|=384
+Status : orbit=(12,7,5) facet=(38128,29727,8401)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 3 |inc|=26 |stab|=192
+Status : orbit=(12,8,4) facet=(38128,36207,1921)
+
+|EXT|=40/25 |GRP|=1244160 Considering orbit 2 |inc|=28 |stab|=864
+Status : orbit=(12,9,3) facet=(38128,37647,481)
+
+  We have EXT
+  evaluate_single_entry pfr.first=0 |pfr.second|=40 / 0
+fint built
+  x=(0,[]) |list_vert|=481 |fint|=0 |f|=0
+  Exit 4: nothing works, exiting
+  f_recur n_iter=1
+  evaluate_single_entry pfr.first=1 |pfr.second|=40 / 1
+fint built
+  x=(1,[0]) |list_vert|=334 |fint|=1 |f|=1
+  Exit 4: nothing works, exiting
+  f_recur n_iter=2
+  evaluate_single_entry pfr.first=2 |pfr.second|=40 / 2
+fint built
+  x=(2,[0,1]) |list_vert|=241 |fint|=2 |f|=2
+  Exit 4: nothing works, exiting
+  f_recur n_iter=3
+EvaluationConnectednessCriterion_PreKernel(field case), test=0
+|EXT|=40/25 |GRP|=1244160 Considering orbit 9 |inc|=28 |stab|=27648
+Status : orbit=(12,10,2) facet=(38128,37692,436)
+
+  We have EXT
+  evaluate_single_entry pfr.first=0 |pfr.second|=40 / 0
+fint built
+  x=(0,[]) |list_vert|=436 |fint|=0 |f|=0
+  Exit 4: nothing works, exiting
+  f_recur n_iter=1
+  evaluate_single_entry pfr.first=1 |pfr.second|=40 / 1
+fint built
+  x=(1,[0]) |list_vert|=304 |fint|=1 |f|=1
+  Exit 4: nothing works, exiting
+  f_recur n_iter=2
+  evaluate_single_entry pfr.first=2 |pfr.second|=40 / 2
+fint built
+  x=(2,[0,1]) |list_vert|=220 |fint|=2 |f|=2
+  Exit 4: nothing works, exiting
+  f_recur n_iter=3
+EvaluationConnectednessCriterion_PreKernel(field case), test=0
+|EXT|=40/25 |GRP|=1244160 Considering orbit 6 |inc|=29 |stab|=2880
+Status : orbit=(12,11,1) facet=(38128,38124,4)
+
+Termination by classic Balinski criterion nbUndone=4
+End of computation, nbObj=38128 |EXT|=40/25 time=1s 633ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=1 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=33 |eStab|=46080 f=00001001010111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=4320 f=00000001011111111111110100011111111111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=960 f=00000000110011111001111011111111011111111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=480 f=00000000110011111101010010111111011111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=1920 f=00000101010101111101010011111111010111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=14400 f=00000000001101111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=1920 f=00000001110011111001011011110111010111111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=1920 f=00000000110111110001011011101111011111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=138240 f=00011101010111111101010111111111000111111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=1440 f=00000100110011111000011011111111011110111
+FuncInsert: Inserting a face of size |face_can|=25 |eStab|=2400 f=00000001011100110111110101011100111111111
+Status : orbit=(12,1,11) facet=(38129,5,38124)
+
+Termination by linear programming criterion |eSetUndone|=5
+End of computation, nbObj=38129 |EXT|=41/26 time=2s 206ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=2 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=34 |eStab|=276480 f=000010010101111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=25920 f=000000010111111111111101000111111111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=5760 f=000000001100111110011110111111110111111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=2880 f=000000001100111111010100101111110111111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=11520 f=000001010101011111010100111111110101111111
+FuncInsert: Inserting a face of size |face_can|=31 |eStab|=86400 f=000000000011011111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=11520 f=000000011100111110010110111101110101111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=11520 f=000000001101111100010110111011110111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=829440 f=000111010101111111010101111111110001111111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=8640 f=000001001100111110000110111111110111110111
+FuncInsert: Inserting a face of size |face_can|=26 |eStab|=14400 f=000000010111001101111101010111001111111111
+Status : orbit=(12,1,11) facet=(38130,6,38124)
+
+Termination by linear programming criterion |eSetUndone|=6
+End of computation, nbObj=38130 |EXT|=42/27 time=2s 846ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=2 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=35 |eStab|=1935360 f=0000100101011111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=31 |eStab|=181440 f=0000000101111111111111010001111111111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=40320 f=0000000011001111100111101111111101111111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=20160 f=0000000011001111110101001011111101111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=80640 f=0000010101010111110101001111111101011111111
+FuncInsert: Inserting a face of size |face_can|=32 |eStab|=604800 f=0000000000110111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=80640 f=0000000111001111100101101111011101011111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=80640 f=0000000011011111000101101110111101111111111
+FuncInsert: Inserting a face of size |face_can|=31 |eStab|=5806080 f=0001110101011111110101011111111100011111111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=60480 f=0000010011001111100001101111111101111110111
+FuncInsert: Inserting a face of size |face_can|=27 |eStab|=100800 f=0000000101110011011111010101110011111111111
+Status : orbit=(12,1,11) facet=(38131,7,38124)
+
+Termination by linear programming criterion |eSetUndone|=7
+End of computation, nbObj=38131 |EXT|=43/28 time=3s 535ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=3 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=36 |eStab|=15482880 f=00001001010111111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=32 |eStab|=1451520 f=00000001011111111111110100011111111111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=322560 f=00000000110011111001111011111111011111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=161280 f=00000000110011111101010010111111011111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=645120 f=00000101010101111101010011111111010111111111
+FuncInsert: Inserting a face of size |face_can|=33 |eStab|=4838400 f=00000000001101111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=645120 f=00000001110011111001011011110111010111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=645120 f=00000000110111110001011011101111011111111111
+FuncInsert: Inserting a face of size |face_can|=32 |eStab|=46448640 f=00011101010111111101010111111111000111111111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=483840 f=00000100110011111000011011111111011111110111
+FuncInsert: Inserting a face of size |face_can|=28 |eStab|=806400 f=00000001011100110111110101011100111111111111
+Status : orbit=(12,1,11) facet=(38132,8,38124)
+
+Termination by linear programming criterion |eSetUndone|=8
+End of computation, nbObj=38132 |EXT|=44/29 time=4s 380ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=4 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=37 |eStab|=139345920 f=000010010101111111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=33 |eStab|=13063680 f=000000010111111111111101000111111111111111111
+FuncInsert: Inserting a face of size |face_can|=31 |eStab|=2903040 f=000000001100111110011110111111110111111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=1451520 f=000000001100111111010100101111110111111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=5806080 f=000001010101011111010100111111110101111111111
+FuncInsert: Inserting a face of size |face_can|=34 |eStab|=43545600 f=000000000011011111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=5806080 f=000000011100111110010110111101110101111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=5806080 f=000000001101111100010110111011110111111111111
+FuncInsert: Inserting a face of size |face_can|=33 |eStab|=418037760 f=000111010101111111010101111111110001111111111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=4354560 f=000001001100111110000110111111110111111110111
+FuncInsert: Inserting a face of size |face_can|=29 |eStab|=7257600 f=000000010111001101111101010111001111111111111
+Status : orbit=(12,1,11) facet=(38133,9,38124)
+
+Termination by linear programming criterion |eSetUndone|=9
+End of computation, nbObj=38133 |EXT|=45/30 time=5s 461ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=5 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsert: Inserting a face of size |face_can|=38 |eStab|=1393459200 f=0000100101011111111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=34 |eStab|=130636800 f=0000000101111111111111010001111111111111111111
+FuncInsert: Inserting a face of size |face_can|=32 |eStab|=29030400 f=0000000011001111100111101111111101111111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=14515200 f=0000000011001111110101001011111101111111111111
+FuncInsert: Inserting a face of size |face_can|=31 |eStab|=58060800 f=0000010101010111110101001111111101101111111111
+FuncInsert: Inserting a face of size |face_can|=35 |eStab|=435456000 f=0000000000110111111111111111111111111111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=58060800 f=0000000111001111100101101111011101101111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=58060800 f=0000000011011111000101101110111101111111111111
+FuncInsert: Inserting a face of size |face_can|=34 |eStab|=4180377600 f=0001110101011111110101011111111100101111111111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=43545600 f=0000010011001111100001101111111101111111110111
+FuncInsert: Inserting a face of size |face_can|=30 |eStab|=72576000 f=0000000101110011011111010101110011111111111111
+Status : orbit=(12,1,11) facet=(38134,10,38124)
+
+Termination by linear programming criterion |eSetUndone|=10
+End of computation, nbObj=38134 |EXT|=46/31 time=6s 654ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=6 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=31 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=31 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=31 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=31 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=31 |O|=2592
+Status : orbit=(12,1,11) facet=(38135,11,38124)
+
+Termination by linear programming criterion |eSetUndone|=11
+End of computation, nbObj=38135 |EXT|=47/32 time=7s 932ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=7 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=32 |O|=2592
+Status : orbit=(12,1,11) facet=(38136,12,38124)
+
+Termination by linear programming criterion |eSetUndone|=12
+End of computation, nbObj=38136 |EXT|=48/33 time=9s 394ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=9 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=33 |O|=2592
+Status : orbit=(12,1,11) facet=(38137,13,38124)
+
+Termination by linear programming criterion |eSetUndone|=13
+End of computation, nbObj=38137 |EXT|=49/34 time=11s 87ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=11 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=34 |O|=2592
+Status : orbit=(12,1,11) facet=(38138,14,38124)
+
+Termination by linear programming criterion |eSetUndone|=14
+End of computation, nbObj=38138 |EXT|=50/35 time=12s 903ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=12 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=35 |O|=2592
+Status : orbit=(12,1,11) facet=(38139,15,38124)
+
+Termination by linear programming criterion |eSetUndone|=15
+End of computation, nbObj=38139 |EXT|=51/36 time=14s 994ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=15 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=36 |O|=2592
+Status : orbit=(12,1,11) facet=(38140,16,38124)
+
+Termination by linear programming criterion |eSetUndone|=16
+End of computation, nbObj=38140 |EXT|=52/37 time=17s 313ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=17 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=45 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=37 |O|=2592
+Status : orbit=(12,1,11) facet=(38141,17,38124)
+
+Termination by linear programming criterion |eSetUndone|=17
+End of computation, nbObj=38141 |EXT|=53/38 time=19s 786ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=19 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=46 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=38 |O|=2592
+Status : orbit=(12,1,11) facet=(38142,18,38124)
+
+Termination by linear programming criterion |eSetUndone|=18
+End of computation, nbObj=38142 |EXT|=54/39 time=22s 542ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=22 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=47 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=39 |O|=2592
+Status : orbit=(12,1,11) facet=(38143,19,38124)
+
+Termination by linear programming criterion |eSetUndone|=19
+End of computation, nbObj=38143 |EXT|=55/40 time=25s 456ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=25 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=48 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=45 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=40 |O|=2592
+Status : orbit=(12,1,11) facet=(38144,20,38124)
+
+Termination by linear programming criterion |eSetUndone|=20
+End of computation, nbObj=38144 |EXT|=56/41 time=28s 751ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=28 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=49 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=45 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=46 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=45 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=41 |O|=2592
+Status : orbit=(12,1,11) facet=(38145,21,38124)
+
+Termination by linear programming criterion |eSetUndone|=21
+End of computation, nbObj=38145 |EXT|=57/42 time=32s 320ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=32 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=50 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=46 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=47 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=46 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=42 |O|=2592
+Status : orbit=(12,1,11) facet=(38146,22,38124)
+
+Termination by linear programming criterion |eSetUndone|=22
+End of computation, nbObj=38146 |EXT|=58/43 time=36s 336ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=36 ansBank=no NeedSplit=0
+Before return section
+Returning ListOrbitFaces
+FuncInsertPair: Inserting a face of size |face_can|=51 |O|=135
+FuncInsertPair: Inserting a face of size |face_can|=47 |O|=1440
+FuncInsertPair: Inserting a face of size |face_can|=45 |O|=6480
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=12960
+FuncInsertPair: Inserting a face of size |face_can|=44 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=48 |O|=432
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=3240
+FuncInsertPair: Inserting a face of size |face_can|=47 |O|=45
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=4320
+FuncInsertPair: Inserting a face of size |face_can|=43 |O|=2592
+Status : orbit=(12,1,11) facet=(144041806764,144041768640,38124)
+
+Termination by linear programming criterion |eSetUndone|=23
+End of computation, nbObj=144041806764 |EXT|=59/44 time=40s 614ms
+Clean closing of the DatabaseOrbits
+elapsed_seconds=40 ansBank=no NeedSplit=1
+Before return section
+Before OrbitSplittingListOrbit
+|BigGRP|=1340168547743797189017600000 |SmaGRP|=2304 |vf|=12 method_split=canonic
+CheckSize=23 TotalSize=144041768640
+Clean closing of the DatabaseOrbits
+Something went wrong in the computation, please debug

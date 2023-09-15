@@ -53,6 +53,17 @@ vectface DoubleCosetDescription_Representation(
     typename Tgroup::Tint const &TotalSize, [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
+#ifdef DEBUG_DOUBLE_COSET
+  using Tidx = typename Telt::Tidx;
+  Tidx n = eList.size();
+  Telt id(n);
+  Tgroup TheGRP(BigGens, id);
+  Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
+  if (CheckSize != TotalSize) {
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    throw TerminalException{1};
+  }
+#endif
   //
   struct Local {
     int status;
@@ -132,10 +143,20 @@ vectface DoubleCosetDescription_Canonic(
     std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
+  Tidx n = eList.size();
+#ifdef DEBUG_DOUBLE_COSET
+  using Telt = typename Tgroup::Telt;
+  Telt id(n);
+  Tgroup TheGRP(BigGens, id);
+  Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
+  if (CheckSize != TotalSize) {
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    throw TerminalException{1};
+  }
+#endif
   //
   Tint SizeGen = 0;
   std::unordered_set<Face> SetFace;
-  Tidx n = eList.size();
   vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &testList) -> void {
     std::pair<Face, Tint> pairCan = SmaGRP.OptCanonicalImageOrbitSize(testList);
@@ -178,7 +199,12 @@ vectface DoubleCosetDescription_Canonic(
   //     << " n=" << ListListSet.get_n() << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
-    //    os << "|ListListSet|=" << ListListSet.size() << "\n";
+#ifdef DEBUG_DOUBLE_COSET
+    if (ListListSet.size() == 0) {
+      std::cerr << "|ListListSet|=0 before the pop. It cannot work\n";
+      throw TerminalException{1};
+    }
+#endif
     Face eFace = ListListSet.pop();
     for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
@@ -203,10 +229,20 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
     std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
+  Tidx n = eList.size();
+#ifdef DEBUG_DOUBLE_COSET
+  using Telt = typename Tgroup::Telt;
+  Telt id(n);
+  Tgroup TheGRP(BigGens, id);
+  Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
+  if (CheckSize != TotalSize) {
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    throw TerminalException{1};
+  }
+#endif
   //
   Tint SizeGen = 0;
   std::unordered_set<Face> SetFace;
-  Tidx n = eList.size();
   vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &f) -> void {
     Face f_can = SmaGRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
@@ -273,6 +309,15 @@ vectface DoubleCosetDescription_Exhaustive_T(
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
   Tidx n = eList.size();
+#ifdef DEBUG_DOUBLE_COSET
+  Telt id(n);
+  Tgroup TheGRP(BigGens, id);
+  Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
+  if (CheckSize != TotalSize) {
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    throw TerminalException{1};
+  }
+#endif
   //
   vectface vf(n);
   T_hash_set SetFace;

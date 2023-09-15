@@ -156,6 +156,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
 #ifdef TIMINGS_SAMPLING_FACET
   MicrosecondTime time;
 #endif
+  int n_rows = EXT.rows();
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
   auto get_iter = [&]() -> int {
@@ -166,6 +167,20 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
         std::istringstream(ListStrB[1]) >> iter;
     }
     return iter;
+  };
+  auto get_face = [&]() -> Face {
+    if (ListStr.size() != 2) {
+      std::cerr << "We should have exactly two entries\n";
+      throw TerminalException{1};
+    }
+    Face f(n_rows);
+    std::string face_str = ListStr[1];
+    for (int i_row=0; i_row<n_rows; i_row++) {
+      if (face_str.substr(i_row,1) == "1") {
+        f[i_row] = 1;
+      }
+    }
+    return f;
   };
   auto compute_samp = [&]() -> vectface {
     if (ansOpt == "lp_cdd") {
@@ -196,6 +211,12 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       }
       return lrs::DualDescription_incd_limited(EXT, upperlimit);
     }
+    if (ansOpt == "specific") {
+      Face f = get_face();
+      vectface vf(n_rows);
+      vf.push_back(f);
+      return vf;
+    }
     std::cerr << "No right program found\n";
     std::cerr << "Let us die\n";
     throw TerminalException{1};
@@ -205,6 +226,15 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     std::cerr << "We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }
+  std::map<size_t,size_t> map_incd;
+  for (auto & eFace : ListIncd) {
+    map_incd[eFace.count()] += 1;
+  }
+  os << "Found incidences =";
+  for (auto & kv : map_incd) {
+    os << " (" << kv.first << "," << kv.second << ")";
+  }
+  os << "\n";
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|DirectComputationInitialFacetSet|=" << time << "\n";
 #endif
