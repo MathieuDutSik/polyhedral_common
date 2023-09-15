@@ -909,7 +909,7 @@ public:
   const MyMatrix<T> &EXT;
   const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
-  using Torbsize = uint16_t;
+  using Torbsize = uint32_t;
   using Tidx = typename Telt::Tidx;
   int nbRow;
   int nbCol;
@@ -1352,7 +1352,7 @@ public:
   const MyMatrix<T> &EXT;
   const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
-  using Torbsize = uint16_t;
+  using Torbsize = uint32_t;
   using Tidx = typename Telt::Tidx;
   int nbRow;
   int nbCol;
