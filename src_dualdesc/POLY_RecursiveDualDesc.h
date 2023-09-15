@@ -2683,7 +2683,7 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string NumericalType = BlockDATA.ListStringValues.at("NumericalType");
-  std::vector<std::string> Ltype{"rational", "Qsqrt5", "RealAlgebraic"};
+  std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational", "mpq_rational", "Qsqrt2", "Qsqrt5", "RealAlgebraic"};
   if (PositionVect(Ltype, NumericalType) == -1) {
     std::cerr << "NumericalType=" << NumericalType << "\n";
     std::cerr << "Ltype =";
