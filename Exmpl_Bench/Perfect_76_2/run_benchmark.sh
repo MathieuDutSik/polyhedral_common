@@ -1,6 +1,3 @@
 #!/bin/bash
 
-rm -rf Saving_Bank && mkdir Saving_Bank
-rm -rf Saving_Polyhedral && mkdir Saving_Polyhedral
-
-../../src_dualdesc/POLY_SerialDualDesc Perfect_tl.nml
+time (../../src_dualdesc/POLY_SerialDualDesc Perfect_tl.nml 2>&1 | tee err2_polydualdesc)

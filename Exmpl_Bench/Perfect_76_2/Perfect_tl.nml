@@ -24,6 +24,6 @@
 /
 
 &BANK
- Prefix = "./Saving_Bank/"
  Saving = F
+ Prefix = "./Saving_Bank/"
 /
