@@ -12,16 +12,24 @@
 
 template<typename T>
 std::pair<TypeCtypeExch<T>,int> GetLocalFreenessMinimum(int const& dim) {
+  std::cerr << "GetLocalFreenessMinimum, step 1\n";
   MyMatrix<T> M = GetPrincipalDomain<T>(dim);
+  std::cerr << "M=\n";
+  WriteMatrix(std::cerr, M);
+  std::cerr << "GetLocalFreenessMinimum, step 2\n";
   TypeCtypeExch<T> TheCtypeArr{M};
   int curr_nb_free = dim * (dim + 1) / 2;
   int iter = 0;
+  std::cerr << "GetLocalFreenessMinimum, step 3\n";
+  using Tidx = int32_t;
   while(true) {
+    std::cerr << "GetLocalFreenessMinimum, Before generation of adjacent domains\n";
     bool canonicalize = false;
-    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes(TheCtypeArr, canonicalize);
+    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize);
     std::vector<int> ListNbFree;
     for (auto & eAdj : ListAdj) {
       int nb_free = CTYP_GetNumberFreeVectors(eAdj);
+      //      std::cerr << " nb_free=" << nb_free << "\n";
       ListNbFree.push_back(nb_free);
     }
     int the_min = VectorMin(ListNbFree);
@@ -38,6 +46,7 @@ std::pair<TypeCtypeExch<T>,int> GetLocalFreenessMinimum(int const& dim) {
     int n_min = ListMin.size();
     int pos = random() % n_min;
     std::cerr << "iter=" << iter << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
+    TheCtypeArr = ListAdj[pos];
     iter++;
   }
 

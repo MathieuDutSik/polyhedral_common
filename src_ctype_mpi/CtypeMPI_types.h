@@ -38,7 +38,7 @@ MyMatrix<T> GetPrincipalDomain(int const& n) {
   MyMatrix<T> Mret(n_elt, n);
   int pos = 0;
   MyMatrix<int> M = BuildSet(n, 2);
-  int n_row = Mret.rows();
+  int n_row = M.rows();
   for (int i_row=0; i_row<n_row; i_row++) {
     int esum = 0;
     for (int i=0; i<n; i++)
@@ -48,6 +48,10 @@ MyMatrix<T> GetPrincipalDomain(int const& n) {
         Mret(pos, i) = M(i_row, i);
       pos += 1;
     }
+  }
+  if (pos != n_elt) {
+    std::cerr << "pos=" << pos << " n_elt=" << n_elt << "\n";
+    throw TerminalException{1};
   }
   return Mret;
 }
@@ -265,8 +269,7 @@ template <typename T> std::vector<MyMatrix<T>> CTYP_GetBasis(int n) {
   return ListSymmMat;
 }
 
-using Tidx = int8_t;
-
+template<typename Tidx>
 struct triple {
   Tidx i;
   Tidx j;
@@ -274,17 +277,18 @@ struct triple {
 };
 
 namespace std {
-template <> struct hash<triple> {
-  std::size_t operator()(const triple &et) const {
-    std::vector<int8_t> eV{et.i, et.j, et.k};
-    return std::hash<std::vector<int8_t>>()(eV);
+template<typename Tidx> struct hash<triple<Tidx>> {
+  std::size_t operator()(const triple<Tidx> &et) const {
+    std::vector<Tidx> eV{et.i, et.j, et.k};
+    return std::hash<std::vector<Tidx>>()(eV);
   }
 };
 // clang-format off
 }  // namespace std
 // clang-format on
 
-bool operator==(triple const &obj1, triple const &obj2) {
+template<typename Tidx>
+bool operator==(triple<Tidx> const &obj1, triple<Tidx> const &obj2) {
   return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.j;
 }
 
@@ -312,9 +316,9 @@ template <typename T> bool CheckCoveringParityClasses(MyMatrix<T> const &M) {
   return true;
 }
 
-template <typename T>
+template <typename T, typename Tidx>
 MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
-                             std::vector<triple> const &TheInfo) {
+                             std::vector<triple<Tidx>> const &TheInfo) {
   size_t n_rows = TheCtype.rows();
   size_t n_cols = TheCtype.cols();
   size_t n_rows_ret = n_rows / 2;
@@ -409,8 +413,8 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
   return RetMat;
 }
 
-template <typename T>
-std::pair<std::vector<triple>, std::vector<int8_t>>
+template <typename T, typename Tidx>
+std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>>
 CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
   int n_edge = TheCtype.rows();
   int n_edgered = n_edge / 2;
@@ -418,11 +422,14 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
 #ifdef PRINT_TRIPLE
   std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
 #endif
-  std::vector<triple> ListTriples;
-  std::vector<int8_t> MappingVect(n_edgered * n_edgered, -1);
+  std::vector<triple<Tidx>> ListTriples;
+  std::vector<Tidx> MappingVect(n_edgered * n_edgered, -1);
   T eTwo = 2;
   auto get_position = [&](MyVector<T> const &eV, Tidx start_idx) -> Tidx {
-    auto get_nature = [&](int8_t pos) -> bool {
+    auto get_nature = [&](Tidx pos) -> bool {
+#ifdef PRINT_TRIPLE
+      std::cerr << "get_nature pos=" << pos << "\n";
+#endif
       for (Tidx i_col = 0; i_col < n_cols; i_col++)
         if (TheCtype(pos, i_col) != eV(i_col))
           return false;
@@ -453,23 +460,26 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
       return -1;
     };
     int pos = get_value();
+#ifdef PRINT_TRIPLE
+    std::cerr << "After get_value pos=" << pos << "\n";
+#endif
     if (pos > start_idx)
       return pos;
     return -1;
   };
-  for (int8_t i = 0; i < n_edge; i++)
-    for (int8_t j = i + 1; j < n_edge; j++) {
+  for (Tidx i = 0; i < n_edge; i++)
+    for (Tidx j = i + 1; j < n_edge; j++) {
 #ifdef PRINT_TRIPLE
       std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
                 << "\n";
 #endif
       MyVector<T> eDiff(n_cols);
-      for (int8_t i_col = 0; i_col < n_cols; i_col++)
+      for (Tidx i_col = 0; i_col < n_cols; i_col++)
         eDiff(i_col) = -TheCtype(i, i_col) - TheCtype(j, i_col);
 #ifdef PRINT_TRIPLE
       std::cerr << "We have eDiff\n";
 #endif
-      int8_t k = get_position(eDiff, j);
+      Tidx k = get_position(eDiff, j);
 #ifdef PRINT_TRIPLE
       std::cerr << "k=" << static_cast<int>(k) << "\n";
 #endif
@@ -478,9 +488,9 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
         ListTriples.push_back({j, k, i});
         ListTriples.push_back({k, i, j});
         //
-        int8_t ired = i / 2;
-        int8_t jred = j / 2;
-        int8_t kred = k / 2;
+        Tidx ired = i / 2;
+        Tidx jred = j / 2;
+        Tidx kred = k / 2;
         MappingVect[ired * n_edgered + jred] = kred;
         MappingVect[jred * n_edgered + ired] = kred;
         //
@@ -491,6 +501,9 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
         MappingVect[kred * n_edgered + jred] = ired;
       }
     }
+#ifdef PRINT_TRIPLE
+  std::cerr << "Exiting CTYP_GetListTriple\n";
+#endif
   return {std::move(ListTriples), std::move(MappingVect)};
 }
 
@@ -543,7 +556,7 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M) {
   return Mret;
 }
 
-template <typename T>
+template <typename T, typename Tidx>
 std::vector<TypeCtypeExch<T>>
 CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize) {
 #ifdef TIMINGS
@@ -561,8 +574,8 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
 #endif
-  std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple =
-      CTYP_GetListTriple(TheCtype);
+  std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
+    CTYP_GetListTriple<T,Tidx>(TheCtype);
 
 #ifdef TIMINGS
   std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
@@ -570,34 +583,34 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
 #endif
-  int8_t n = TheCtype.cols();
-  int8_t tot_dim = n * (n + 1) / 2;
+  Tidx n = TheCtype.cols();
+  Tidx tot_dim = n * (n + 1) / 2;
   auto ComputeInequality = [&](MyVector<T> const &V1,
                                MyVector<T> const &V2) -> MyVector<T> {
     MyVector<T> TheVector(tot_dim);
     int idx = 0;
-    for (int8_t i = 0; i < n; i++) {
+    for (Tidx i = 0; i < n; i++) {
       TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
       idx++;
     }
-    for (int8_t i = 0; i < n; i++)
-      for (int8_t j = i + 1; j < n; j++) {
+    for (Tidx i = 0; i < n; i++)
+      for (Tidx j = i + 1; j < n; j++) {
         // Factor 2 removed for simplification and faster code.
         TheVector(idx) = V1(i) * V1(j) - V2(i) * V2(j);
         idx++;
       }
     return TheVector;
   };
-  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_map;
-  auto FuncInsertInequality = [&](int8_t i, int8_t j, int8_t k) -> void {
+  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_map;
+  auto FuncInsertInequality = [&](Tidx i, Tidx j, Tidx k) -> void {
     MyVector<T> V1(n), V2(n);
-    for (int8_t i_col = 0; i_col < n; i_col++) {
+    for (Tidx i_col = 0; i_col < n; i_col++) {
       V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
       V2(i_col) = TheCtype(i, i_col);
     }
     MyVector<T> TheVector = ComputeInequality(V1, V2);
-    triple TheInfo = {i, j, k};
-    std::vector<triple> &list_trip = Tot_map[TheVector];
+    triple<Tidx> TheInfo = {i, j, k};
+    std::vector<triple<Tidx>> &list_trip = Tot_map[TheVector];
     list_trip.push_back(TheInfo);
   };
   for (auto &e_triple : PairTriple.first)
@@ -649,7 +662,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
   }
   int nb_triple = PairTriple.first.size() / 3;
   ;
-  std::unordered_map<triple, int> MapTriple;
+  std::unordered_map<triple<Tidx>, int> MapTriple;
   for (int i_triple = 0; i_triple < nb_triple; i_triple++) {
     MapTriple[PairTriple.first[3 * i_triple]] = i_triple;
   }
@@ -682,14 +695,14 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
   // #define PRINT_GET_ADJ_O
   //  We apply here the 3 dimensional criterion for feasibility of C-type
   //  switches
-  auto TestApplicabilityCriterion_with_e = [&](triple const &e_triple,
-                                               int8_t const &e) -> bool {
+  auto TestApplicabilityCriterion_with_e = [&](triple<Tidx> const &e_triple,
+                                               Tidx const &e) -> bool {
 #ifdef PRINT_GET_ADJ
     nb_pass++;
 #endif
-    int8_t i = e_triple.i / 2;
-    int8_t j = e_triple.j / 2;
-    int8_t k = e_triple.k / 2;
+    Tidx i = e_triple.i / 2;
+    Tidx j = e_triple.j / 2;
+    Tidx k = e_triple.k / 2;
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
               << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e)
@@ -701,7 +714,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
       return false;
     //
     // getting f and testing it
-    int8_t f = PairTriple.second[i * n_edgered + e];
+    Tidx f = PairTriple.second[i * n_edgered + e];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "f=" << static_cast<int>(f) << "\n";
 #endif
@@ -709,7 +722,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
       return false;
     //
     // getting g and testing it
-    int8_t g = PairTriple.second[j * n_edgered + e];
+    Tidx g = PairTriple.second[j * n_edgered + e];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "g=" << static_cast<int>(g) << "\n";
 #endif
@@ -717,7 +730,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
       return false;
     //
     // getting h and testing it
-    int8_t h = PairTriple.second[i * n_edgered + g];
+    Tidx h = PairTriple.second[i * n_edgered + g];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "h=" << static_cast<int>(h) << "\n";
 #endif
@@ -725,7 +738,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
       return false;
     //
     // testing presence of {j,f,h}
-    int8_t h2 = PairTriple.second[j * n_edgered + f];
+    Tidx h2 = PairTriple.second[j * n_edgered + f];
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "h2=" << static_cast<int>(h2) << "\n";
 #endif
@@ -738,18 +751,18 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #endif
     return true;
   };
-  auto TestApplicabilityCriterion = [&](triple const &e_triple) -> bool {
-    for (int8_t e = 0; e < n_edgered; e++)
+  auto TestApplicabilityCriterion = [&](triple<Tidx> const &e_triple) -> bool {
+    for (Tidx e = 0; e < n_edgered; e++)
       if (TestApplicabilityCriterion_with_e(e_triple, e))
         return true;
     return false;
   };
-  std::vector<int8_t> ListResultCriterion(n_edge * n_edge, 0);
+  std::vector<Tidx> ListResultCriterion(n_edge * n_edge, 0);
   for (auto &e_triple : PairTriple.first) {
     if (TestApplicabilityCriterion(e_triple)) {
-      int8_t i = e_triple.i;
-      int8_t j = e_triple.j;
-      int8_t k = e_triple.k;
+      Tidx i = e_triple.i;
+      Tidx j = e_triple.j;
+      Tidx k = e_triple.k;
 #ifdef PRINT_GET_ADJ
       std::cerr << "FOUND i=" << static_cast<int>(i)
                 << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
@@ -764,7 +777,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
     }
   }
   auto TestFeasibilityListTriple =
-      [&](std::vector<triple> const &list_triple) -> bool {
+    [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_ADJ
       std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
@@ -779,7 +792,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #ifdef PRINT_GET_ADJ
   int nb_redund = 0;
 #endif
-  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
+  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_mapB;
   for (auto &kv : Tot_map) {
     if (!TestFeasibilityListTriple(kv.second)) {
 #ifdef PRINT_GET_ADJ
@@ -803,10 +816,10 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #endif
   size_t n_ineq = Tot_mapB.size();
   MyMatrix<T> ListInequalities(n_ineq, tot_dim);
-  std::vector<std::vector<triple>> ListInformations;
+  std::vector<std::vector<triple<Tidx>>> ListInformations;
   size_t i_ineq = 0;
   for (auto &kv : Tot_mapB) {
-    for (int8_t i_col = 0; i_col < tot_dim; i_col++)
+    for (Tidx i_col = 0; i_col < tot_dim; i_col++)
       ListInequalities(i_ineq, i_col) = kv.first(i_col);
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
@@ -862,7 +875,8 @@ template <typename T>
 std::vector<TypeCtypeExch<T>>
 CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
   bool canonicalize = true;
-  return CTYP_Kernel_GetAdjacentCanonicCtypes(TheCtypeArr, canonicalize);
+  using Tidx = int8_t;
+  return CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize);
 }
 
 
@@ -921,41 +935,41 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "|ExpressMatrixForCType|=" << time < "\n";
 #endif
 
-  std::pair<std::vector<triple>, std::vector<int8_t>> PairTriple =
-      CTYP_GetListTriple(TheCtype);
+  std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
+    CTYP_GetListTriple<T,Tidx>(TheCtype);
   int nb_triple = PairTriple.first.size();
 #ifdef TIMINGS
   std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
 #endif
 
-  int8_t n = TheCtype.cols();
-  int8_t tot_dim = n * (n + 1) / 2;
+  Tidx n = TheCtype.cols();
+  Tidx tot_dim = n * (n + 1) / 2;
   auto ComputeInequality = [&](MyVector<T> const &V1,
                                MyVector<T> const &V2) -> MyVector<T> {
     MyVector<T> TheVector(tot_dim);
     int idx = 0;
-    for (int8_t i = 0; i < n; i++) {
+    for (Tidx i = 0; i < n; i++) {
       TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
       idx++;
     }
-    for (int8_t i = 0; i < n; i++)
-      for (int8_t j = i + 1; j < n; j++) {
+    for (Tidx i = 0; i < n; i++)
+      for (Tidx j = i + 1; j < n; j++) {
         // Factor 2 removed for simplification and faster code.
         TheVector(idx) = V1(i) * V1(j) - V2(i) * V2(j);
         idx++;
       }
     return TheVector;
   };
-  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_map;
-  auto FuncInsertInequality = [&](int8_t i, int8_t j, int8_t k) -> void {
+  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_map;
+  auto FuncInsertInequality = [&](Tidx i, Tidx j, Tidx k) -> void {
     MyVector<T> V1(n), V2(n);
-    for (int8_t i_col = 0; i_col < n; i_col++) {
+    for (Tidx i_col = 0; i_col < n; i_col++) {
       V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
       V2(i_col) = TheCtype(i, i_col);
     }
     MyVector<T> TheVector = ComputeInequality(V1, V2);
     triple TheInfo = {i, j, k};
-    std::vector<triple> &list_trip = Tot_map[TheVector];
+    std::vector<triple<Tidx>> &list_trip = Tot_map[TheVector];
     list_trip.push_back(TheInfo);
   };
   for (auto &e_triple : PairTriple.first)
@@ -982,36 +996,36 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
     std::cerr << "\n";
   }
 #endif
-  auto TestApplicabilityCriterion_with_e = [&](triple const &e_triple,
-                                               int8_t const &e) -> bool {
+  auto TestApplicabilityCriterion_with_e = [&](triple<Tidx> const &e_triple,
+                                               Tidx const &e) -> bool {
 #ifdef PRINT_GET_STRUCTINFO
     nb_pass++;
 #endif
-    int8_t i = e_triple.i / 2;
-    int8_t j = e_triple.j / 2;
-    int8_t k = e_triple.k / 2;
+    Tidx i = e_triple.i / 2;
+    Tidx j = e_triple.j / 2;
+    Tidx k = e_triple.k / 2;
     //
     // testing e
     if (e == i || e == j || e == k)
       return false;
     //
     // getting f and testing it
-    int8_t f = PairTriple.second[i * n_edgered + e];
+    Tidx f = PairTriple.second[i * n_edgered + e];
     if (f == -1 || f == j || f == k)
       return false;
     //
     // getting g and testing it
-    int8_t g = PairTriple.second[j * n_edgered + e];
+    Tidx g = PairTriple.second[j * n_edgered + e];
     if (g == -1 || g == f || g == i || g == k)
       return false;
     //
     // getting h and testing it
-    int8_t h = PairTriple.second[i * n_edgered + g];
+    Tidx h = PairTriple.second[i * n_edgered + g];
     if (h == -1 || h == f || h == e || h == j || h == k)
       return false;
     //
     // testing presence of {j,f,h}
-    int8_t h2 = PairTriple.second[j * n_edgered + f];
+    Tidx h2 = PairTriple.second[j * n_edgered + f];
     if (h2 != h)
       return false;
       //
@@ -1021,18 +1035,18 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
     return true;
   };
-  auto TestApplicabilityCriterion = [&](triple const &e_triple) -> bool {
-    for (int8_t e = 0; e < n_edgered; e++)
+  auto TestApplicabilityCriterion = [&](triple<Tidx> const &e_triple) -> bool {
+    for (Tidx e = 0; e < n_edgered; e++)
       if (TestApplicabilityCriterion_with_e(e_triple, e))
         return true;
     return false;
   };
-  std::vector<int8_t> ListResultCriterion(n_edge * n_edge, 0);
+  std::vector<Tidx> ListResultCriterion(n_edge * n_edge, 0);
   for (auto &e_triple : PairTriple.first) {
     if (TestApplicabilityCriterion(e_triple)) {
-      int8_t i = e_triple.i;
-      int8_t j = e_triple.j;
-      int8_t k = e_triple.k;
+      Tidx i = e_triple.i;
+      Tidx j = e_triple.j;
+      Tidx k = e_triple.k;
 #ifdef PRINT_GET_STRUCTINFO
       std::cerr << "FOUND i=" << static_cast<int>(i)
                 << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
@@ -1047,7 +1061,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
     }
   }
   auto TestFeasibilityListTriple =
-      [&](std::vector<triple> const &list_triple) -> bool {
+    [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_STRUCTINFO
       std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
@@ -1062,7 +1076,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef DEBUG
   int nb_redund = 0;
 #endif
-  std::unordered_map<MyVector<T>, std::vector<triple>> Tot_mapB;
+  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_mapB;
   for (auto &kv : Tot_map) {
     if (!TestFeasibilityListTriple(kv.second)) {
 #ifdef DEBUG
