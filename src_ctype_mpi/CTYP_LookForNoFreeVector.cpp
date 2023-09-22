@@ -10,8 +10,24 @@
 #include <unordered_map>
 // clang-format on
 
+
+
 template<typename T>
-std::pair<TypeCtypeExch<T>,int> GetLocalFreenessMinimum(int const& dim) {
+TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const& eMat) {
+  using Tidx = int32_t;
+  TypeCtypeExch<T> WorkT = eMat;
+  for (int iter=0; iter<50; iter++) {
+    bool canonicalize = false;
+    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(WorkT, canonicalize);
+    int n_adj = ListAdj.size();
+    int pos = random() % n_adj;
+    WorkT = ListAdj[pos];
+  }
+  return WorkT;
+}
+
+template<typename T>
+void GetLocalFreenessMinimum(int const& dim, std::string const& Prefix) {
   std::cerr << "GetLocalFreenessMinimum, step 1\n";
   MyMatrix<T> M = GetPrincipalDomain<T>(dim);
   std::cerr << "M=\n";
@@ -33,21 +49,29 @@ std::pair<TypeCtypeExch<T>,int> GetLocalFreenessMinimum(int const& dim) {
       ListNbFree.push_back(nb_free);
     }
     int the_min = VectorMin(ListNbFree);
-    if (the_min >= curr_nb_free) {
-      return {TheCtypeArr,curr_nb_free};
-    }
-    curr_nb_free = the_min;
-    std::vector<TypeCtypeExch<T>> ListMin;
-    for (size_t u=0; u<ListNbFree.size(); u++) {
-      if (ListNbFree[u] == the_min) {
-        ListMin.push_back(ListAdj[u]);
+    if (the_min >= curr_nb_free && curr_nb_free > 0) {
+      TheCtypeArr = RandomWalk(TheCtypeArr);
+      curr_nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
+      std::cerr << "After RandomWalk curr_nb_free=" << curr_nb_free << "\n";
+    } else {
+      curr_nb_free = the_min;
+      std::vector<size_t> ListIdx;
+      for (size_t u=0; u<ListNbFree.size(); u++) {
+        if (ListNbFree[u] == the_min) {
+          ListIdx.push_back(u);
+        }
+      }
+      int n_min = ListIdx.size();
+      int pos = random() % n_min;
+      std::cerr << "iter=" << iter << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
+      TheCtypeArr = ListAdj[ListIdx[pos]];
+      if (curr_nb_free == 0) {
+        std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+        std::ofstream os(FileOut);
+        WriteMatrix(os, TheCtypeArr.eMat);
+        return;
       }
     }
-    int n_min = ListMin.size();
-    int pos = random() % n_min;
-    std::cerr << "iter=" << iter << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
-    TheCtypeArr = ListAdj[pos];
-    iter++;
   }
 
 
@@ -73,25 +97,9 @@ int main(int argc, char *argv[]) {
     }
     int dim = ParseScalar<size_t>(argv[1]);
     size_t n_try = ParseScalar<size_t>(argv[2]);
-    std::string FileOut = argv[3];
-    std::unordered_set<MyMatrix<Tint>> set_mat;
-    std::map<int, size_t> list_mult;
+    std::string Prefix = argv[3];
     for (size_t i_try=0; i_try<n_try; i_try++) {
-      std::pair<TypeCtypeExch<Tint>,int> pair = GetLocalFreenessMinimum<Tint>(dim);
-      MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(pair.first.eMat);
-      set_mat.insert(CanMat);
-      list_mult[pair.second]++;
-    }
-    std::cerr << "list_mult =";
-    for (auto & kv : list_mult)
-      std::cerr << " (" << kv.first << "/" << kv.second << ")";
-    std::cerr << "\n";
-    //
-    std::ofstream os(FileOut);
-    size_t n_sol = set_mat.size();
-    os << n_sol << "\n";
-    for (auto & eMat : set_mat) {
-      WriteMatrix(os, eMat);
+      GetLocalFreenessMinimum<Tint>(dim, Prefix);
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
