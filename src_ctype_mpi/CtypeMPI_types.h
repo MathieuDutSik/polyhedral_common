@@ -2,8 +2,10 @@
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
+// clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
+#include "COMB_Combinatorics_buildset.h"
 #include "MAT_Matrix.h"
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
@@ -14,6 +16,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+// clang-format off
 
 // #define DEBUG
 // #define TIMINGS
