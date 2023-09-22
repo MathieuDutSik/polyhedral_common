@@ -22,6 +22,35 @@
 // #define PRINT_GET_ADJ
 // #define DEBUG_CRITERION_ELIMINATION
 
+// The expression of the vectors is obtained from Section 5 of
+// Dutour Sikiric, Grishukhin, Zonotopes and Parallelotopes,
+// Southeast Asian Bulletin of Mathematics (2017) 41: 197–207
+// That is, it is formed as { \pm e(S) for S \subset {1, ..., n} }.
+template<typename T>
+MyMatrix<T> GetPrincipalDomain(int const& n) {
+  int n_elt = 1;
+  for (int i=0; i<n; i++)
+    n_elt *= 2;
+  n_elt -= 1;
+  MyMatrix<T> Mret(n_elt, n);
+  int pos = 0;
+  MyMatrix<int> M = BuildSet(n, 2);
+  int n_row = Mret.rows();
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int esum = 0;
+    for (int i=0; i<n; i++)
+      esum += M(i_row,i);
+    if (esum > 0) {
+      for (int i=0; i<n; i++)
+        Mret(pos, i) = M(i_row, i);
+      pos += 1;
+    }
+  }
+  return Mret;
+}
+
+
+
 template <typename T> MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int n = M.cols();
@@ -513,7 +542,7 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M) {
 
 template <typename T>
 std::vector<TypeCtypeExch<T>>
-CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
+CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -809,12 +838,12 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto &e_int : ListIrred) {
     MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype, ListInformations[e_int]);
-    //    std::cerr << "FlipMat=\n";
-    //    WriteMatrix(std::cerr, FlipMat);
-    MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
-    //    std::cerr << "CanMat=\n";
-    //    WriteMatrix(std::cerr, CanMat);
-    ListCtype.push_back({std::move(CanMat)});
+    if (canonicalize) {
+      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
+      ListCtype.push_back({std::move(CanMat)});
+    } else {
+      ListCtype.push_back({std::move(FlipMat)});
+    }
   }
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
@@ -825,6 +854,14 @@ CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
   return ListCtype;
 }
+
+template <typename T>
+std::vector<TypeCtypeExch<T>>
+CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
+  bool canonicalize = true;
+  return CTYP_Kernel_GetAdjacentCanonicCtypes(TheCtypeArr, canonicalize);
+}
+
 
 struct StructuralInfo {
   int nb_triple;
