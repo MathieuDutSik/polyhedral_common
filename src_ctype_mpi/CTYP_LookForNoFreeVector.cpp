@@ -98,6 +98,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "FileOut : the file in output\n";
       throw TerminalException{1};
     }
+    unsigned seed = get_random_seed();
+    std::cerr << "seed=" << seed << "\n";
+    srand(seed);
     int dim = ParseScalar<size_t>(argv[1]);
     size_t n_try = ParseScalar<size_t>(argv[2]);
     int max_s = ParseScalar<size_t>(argv[3]);
