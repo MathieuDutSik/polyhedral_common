@@ -1,20 +1,45 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-# include "NumberTheoryBoostGmpInt.h"
-#else
-# include "NumberTheory.h"
-#endif
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheory.h"
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
+
+template<typename T, typename Tfield>
+void process(std::string const& FileExt, std::string const& OutFormat, std::ostream& os) {
+  MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
+  MyMatrix<T> EXTred = RowReduction(EXT);
+  int n_rows = EXT.rows();
+  //
+  MyMatrix<T> Qinv = GetQmatrix(EXTred);
+  std::vector<MyMatrix<T>> ListMat = { Qinv };
+  std::vector<T> Vdiag(n_rows, 0);
+  //
+  size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXTred, ListMat, Vdiag);
+  //
+  if (OutFormat == "GAP") {
+    os << "return " << e_hash << ";\n";
+    return;
+  }
+  if (OutFormat == "CPP") {
+    os << e_hash << "\n";
+    return;
+  }
+  std::cerr << "Failed to find a matching OutFormat\n";
+  throw TerminalException{1};
+}
+
+
 
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 3) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_Invariant [EXTIN] [OutCan]\n";
+      std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT] [OutFormat] [FileOut]\n";
+      std::cerr << "or\n";
+      std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT]\n";
       std::cerr << "\n";
       std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
                    "matter)\n";
@@ -22,30 +47,42 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using T = boost::multiprecision::mpq_rational;
-    using Tfield = T;
-#else
-    using T = mpq_class;
-    using Tfield = T;
-#endif
-    std::string FileExt = argv[1];
-    MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
-    MyMatrix<T> EXTred = RowReduction(EXT);
-    int n_rows = EXT.rows();
-    //
-    MyMatrix<T> Qinv = GetQmatrix(EXTred);
-    std::vector<MyMatrix<T>> ListMat = { Qinv };
-    std::vector<T> Vdiag(n_rows, 0);
-    //
-    size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXTred, ListMat, Vdiag);
-    //
-    std::string FileOut = argv[2];
-    std::ofstream os(FileOut);
-    os << e_hash << "\n";
+    std::string arith = argv[1];
+    std::string FileExt = argv[2];
+    std::string OutFormat = "CPP";
+    std::string FileOut = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      FileOut = argv[4];
+    }
+
+    auto f=[&](std::ostream & os) -> void {
+      if (arith == "rational") {
+        using T = mpq_class;
+        using Tfield = T;
+        return process<T,Tfield>(FileExt, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tfield = T;
+        return process<T,Tfield>(FileExt, OutFormat, os);
+      }
+      std::cerr << "Failed to find a matching arith\n";
+      throw TerminalException{1};
+    };
+    if (FileOut == "stderr") {
+      f(std::cerr);
+    } else {
+      if (FileOut == "stdout") {
+        f(std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        f(os);
+      }
+    }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytope_Canonic\n";
+    std::cerr << "Error in GRP_LinPolytope_Invariant\n";
     exit(e.eVal);
   }
   runtime(time);

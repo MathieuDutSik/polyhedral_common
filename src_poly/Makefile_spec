@@ -38,7 +38,7 @@
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
-PROGRAM		= POLY_IsomorphismReduction
+#PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
 #PROGRAM		= POLY_dual_description
 #PROGRAM		= POLY_dual_description_group
@@ -47,6 +47,7 @@ PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
 #PROGRAM		= POLY_SmallPolytope
