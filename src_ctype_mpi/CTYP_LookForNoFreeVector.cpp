@@ -69,9 +69,9 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
       std::cerr << "iter1=" << iter1 << " iter2=" << iter2 << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
       TheCtypeArr = ListAdj[ListIdx[pos]];
       if (curr_nb_free <= max_s) {
+        MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(TheCtypeArr.eMat);
         std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-        std::ofstream os(FileOut);
-        WriteMatrix(os, TheCtypeArr.eMat);
+        WriteMatrixFile(FileOut, CanMat);
       }
       if (curr_nb_free == 0) {
         return;
