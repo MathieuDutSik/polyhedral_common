@@ -48,7 +48,8 @@ directory can be compiled independently of the others:
   * *src_dualdesc*: for computing dual description on serial computers.
   * *src_ctype_mpi*: for computing C-types. This was done for computing all the C-types in dimension 6.
   * *src_perfect*: for perfect form related computations.
-  * *src_vinberg*: for using the Vinberg algorithm of hyperbolic forms.
+  * *src_indefinite*: for indefinite form reduction.
+  * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
 
 
 Copositivity
@@ -153,3 +154,14 @@ are good examples).
 * Checking for pointedness of cones.
 * The sampling of facets (using the Various CUT polytopes)
 * Short vector enumeration.
+
+Usage
+-----
+
+The primary use of the programs is via the CLI. But this can be relatively impractical.
+
+Therefore, we plan to have interfacing with common Computer Algebra Systems:
+* GAP (Group Algebra Programming) which is an independent system.
+* Oscar which is based on Julia.
+* Sage which is based on Python.
+
