@@ -8,7 +8,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_redundancy POLY_redundancyGroup \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
-		  POLY_lrs \
+		  POLY_lrs POLY_SmallPolytope \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_IsPointedCone \
                   GRP_OrbitSplitting GRP_VectorSplitting \

@@ -844,12 +844,11 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tfield, typename Tidx, bool use_scheme>
+template <typename T, typename Tfield, typename Tidx, bool use_scheme, typename Tidx_value>
 std::vector<Tidx>
-Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
-                               std::vector<MyMatrix<T>> const &ListMat,
-                               std::vector<T> const &Vdiag) {
-  using Tidx_value = uint16_t;
+Canonicalization_ListMat_Vdiag_Tidx_value(MyMatrix<T> const &EXT,
+                                          std::vector<MyMatrix<T>> const &ListMat,
+                                          std::vector<T> const &Vdiag) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
@@ -877,24 +876,41 @@ Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
 }
 
 template <typename T, typename Tfield, typename Tidx, bool use_scheme>
-std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
+std::vector<Tidx>
+Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
+                               std::vector<MyMatrix<T>> const &ListMat,
+                               std::vector<T> const &Vdiag) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint8_t>(EXT, ListMat, Vdiag);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint16_t>(EXT, ListMat, Vdiag);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint32_t>(EXT, ListMat, Vdiag);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint64_t>(EXT, ListMat, Vdiag);
+  }
+  std::cerr << "No matching type for Tidx_value\n";
+  throw TerminalException{1};
+}
+
+template <typename T, typename Tfield, typename Tidx, bool use_scheme, typename Tidx_value>
+std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT1, std::vector<MyMatrix<T>> const &ListMat1,
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2) {
-  using Tidx_value = uint16_t;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
 
-  size_t nbRow1 = EXT1.rows();
-  size_t nbRow2 = EXT2.rows();
-  if (nbRow1 != nbRow2) {
-    // At this point it should be equal, but better to check
-    return {};
-  }
+  size_t nbRow = EXT1.rows();
 
   // Different scenario depending on the size
-  if (nbRow1 < 2000) {
+  if (nbRow < 2000) {
     WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 =
         GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT1, ListMat1,
                                                                    Vdiag1);
@@ -949,13 +965,39 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     }
   }
   const std::vector<Tidx> &eList = IsoInfo->first;
-  Tidx nbRow1_tidx = nbRow1;
-  for (Tidx i1 = 0; i1 < nbRow1_tidx; i1++) {
+  Tidx nbRow_tidx = nbRow;
+  for (Tidx i1 = 0; i1 < nbRow_tidx; i1++) {
     Tidx i2 = eList[i1];
     if (Vdiag1[i1] != Vdiag2[i2])
       return {};
   }
   return eList;
+}
+
+template <typename T, typename Tfield, typename Tidx, bool use_scheme>
+std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
+    MyMatrix<T> const &EXT1, std::vector<MyMatrix<T>> const &ListMat1,
+    std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
+    std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
+  size_t nbRow = EXT1.rows();
+  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return TestEquivalence_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint8_t>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return TestEquivalence_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint16_t>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return TestEquivalence_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint32_t>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return TestEquivalence_ListMat_Vdiag_Tidx_value<T,Tfield,Tidx,use_scheme,uint64_t>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2);
+  }
+  std::cerr << "Failed to find a match for Tidx_value\n";
+  throw TerminalException{1};
 }
 
 //
@@ -1171,11 +1213,10 @@ template <typename T> MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const &M) {
   ---But we may be able to do something better. We still have the signs
   to be assigned.
 */
-template <typename Tint>
+template <typename Tint, typename Tidx_value>
 std::optional<MyMatrix<Tint>>
-LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
-                                                  MyMatrix<Tint> const &Qmat) {
-  using Tidx_value = uint16_t;
+LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(MyMatrix<Tint> const &EXT,
+                                                             MyMatrix<Tint> const &Qmat) {
   using Tgr = GraphBitset;
   size_t nbRow = EXT.rows();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
@@ -1349,9 +1390,30 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
 }
 
 template <typename Tint>
+std::optional<MyMatrix<Tint>>
+LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(MyMatrix<Tint> const &EXT,
+                                                  MyMatrix<Tint> const &Qmat) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<Tint,uint8_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<Tint,uint16_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<Tint,uint32_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<Tint,uint64_t>(EXT, Qmat);
+  }
+  std::cerr << "Failed to match for Tidx_value\n";
+  throw TerminalException{1};
+}
+
+template <typename Tint, typename Tidx_value>
 MyMatrix<Tint>
-LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
-  using Tidx_value = uint16_t;
+LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT) {
   size_t n_rows = EXT.rows();
   size_t n_cols = EXT.cols();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
@@ -1427,10 +1489,31 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
 }
 
 template <typename Tint>
+MyMatrix<Tint>
+LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint,uint8_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint,uint16_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint,uint32_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint,uint64_t>(EXT);
+  }
+  std::cerr << "Failed to find a matching type for Tidx_value\n";
+  throw TerminalException{1};
+}
+
+
+template <typename Tint, typename Tidx_value>
 std::optional<std::vector<std::vector<unsigned int>>>
-LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
-                                                   MyMatrix<Tint> const &Qmat) {
-  using Tidx_value = uint16_t;
+LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(MyMatrix<Tint> const &EXT,
+                                                              MyMatrix<Tint> const &Qmat) {
   using Tgr = GraphBitset;
   size_t nbRow = EXT.rows();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
@@ -1540,10 +1623,31 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
 }
 
 template <typename Tint>
+std::optional<std::vector<std::vector<unsigned int>>>
+LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
+                                                   MyMatrix<Tint> const &Qmat) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<Tint,uint8_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<Tint,uint16_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<Tint,uint32_t>(EXT, Qmat);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<Tint,uint64_t>(EXT, Qmat);
+  }
+  std::cerr << "Failed to find a matching type for Tidx_value\n";
+  throw TerminalException{1};
+}
+
+template <typename Tint, typename Tidx_value>
 std::vector<std::vector<unsigned int>>
-LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT) {
+LinPolytopeAntipodalIntegral_Automorphism_Tidx_value(MyMatrix<Tint> const &EXT) {
   using Tidx = unsigned int;
-  using Tidx_value = uint16_t;
   using Tgr = GraphBitset;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
@@ -1574,6 +1678,27 @@ LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT) {
   std::cerr << "|GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif
   return ListGen;
+}
+
+template <typename Tint>
+std::vector<std::vector<unsigned int>>
+LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint,uint8_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint,uint16_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint,uint32_t>(EXT);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint,uint64_t>(EXT);
+  }
+  std::cerr << "Failed to find a matching type for Tidx_value\n";
+  throw TerminalException{1};
 }
 
 //
