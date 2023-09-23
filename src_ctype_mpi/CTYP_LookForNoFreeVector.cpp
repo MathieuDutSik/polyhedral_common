@@ -4,9 +4,6 @@
 #include "Namelist.h"
 #include "hash_functions.h"
 #include "rational.h"
-#include "sparse-map/include/tsl/sparse_map.h"
-#include <boost/mpi.hpp>
-#include <netcdf>
 #include <unordered_map>
 // clang-format on
 
@@ -69,9 +66,10 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
       std::cerr << "iter1=" << iter1 << " iter2=" << iter2 << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
       TheCtypeArr = ListAdj[ListIdx[pos]];
       if (curr_nb_free <= max_s) {
-        MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(TheCtypeArr.eMat);
+        MyMatrix<mpz_class> eMat_T = UniversalMatrixConversion<mpz_class,T>(TheCtypeArr.eMat);
+        MyMatrix<mpz_class> CanMat_T = LinPolytopeAntipodalIntegral_CanonicForm(eMat_T);
         std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-        WriteMatrixFile(FileOut, CanMat);
+        WriteMatrixFile(FileOut, CanMat_T);
       }
       if (curr_nb_free == 0) {
         return;
@@ -111,7 +109,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs\n";
+    std::cerr << "Error in CTYP_LookForNoFreeVector\n";
     exit(e.eVal);
   }
   runtime(time1);
