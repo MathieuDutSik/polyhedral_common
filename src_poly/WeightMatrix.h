@@ -203,6 +203,7 @@ public:
       std::cerr << "We have |ValueMap|=" << ValueMap.size() << "\n";
       std::cerr << "std::numeric_limits<Tidx_value>::max()="
                 << size_t(std::numeric_limits<Tidx_value>::max()) << "\n";
+      std::cerr << "nbRow=" << nbRow << "\n";
       std::cerr << "We also need some space for the missing values\n";
       throw TerminalException{1};
     }
