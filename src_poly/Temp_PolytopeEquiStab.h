@@ -709,7 +709,6 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
-
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
     GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT, ListMat, Vdiag);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB

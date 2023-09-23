@@ -8,7 +8,7 @@
 template<typename T, typename Tfield>
 void process(std::string const& FileExt, std::string const& OutFormat, std::ostream& os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
-  MyMatrix<T> EXTred = RowReduction(EXT);
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
   int n_rows = EXT.rows();
   //
   MyMatrix<T> Qinv = GetQmatrix(EXTred);
