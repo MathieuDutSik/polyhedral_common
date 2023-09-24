@@ -153,6 +153,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have nb_adjacent\n";
 #endif
     //
+    using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     //    using Tint = mpz_class; // This is defined above
     using Tgroup = permutalib::Group<Telt, Tint>;

@@ -56,8 +56,6 @@ MyMatrix<T> GetPrincipalDomain(int const& n) {
   return Mret;
 }
 
-
-
 template <typename T> MyMatrix<T> ReduceExpandedMatrix(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int n = M.cols();
@@ -557,8 +555,15 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M) {
 }
 
 template <typename T, typename Tidx>
-std::vector<TypeCtypeExch<T>>
-CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize) {
+struct DataCtypeFacet {
+  MyMatrix<T> TheCtype;
+  MyMatrix<T> ListInequalities;
+  std::vector<std::vector<triple<Tidx>>> ListInformations;
+  std::vector<int> ListIrred;
+};
+
+template <typename T, typename Tidx>
+DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -835,8 +840,10 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 #endif
   std::vector<int> ListIrred =
       cbased_cdd::RedundancyReductionClarkson(ListInequalities);
-  //  std::vector<int> ListIrred =
-  //  cdd::RedundancyReductionClarkson(ListInequalities);
+#ifdef TIMINGS
+  std::cerr << "|RedundancyReductionClarkson|=" << time << "\n";
+#endif
+
 #ifdef PRINT_GET_ADJ
   std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
   std::cerr << "ListIrred =";
@@ -847,13 +854,23 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
   std::cerr << "ListInequalitiesIrred=\n";
   WriteMatrix(std::cerr, ListInequalitiesIrred);
 #endif
+  return {std::move(TheCtype), std::move(ListInequalities), std::move(ListInformations), std::move(ListIrred)};
+}
 
+
+template <typename T, typename Tidx>
+std::vector<TypeCtypeExch<T>>
+CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize) {
 #ifdef TIMINGS
-  std::cerr << "|RedundancyReductionClarkson|=" << time << "\n";
+  MicrosecondTime time;
+#endif
+  DataCtypeFacet<T,Tidx> data = CTYP_GetConeInformation<T,Tidx>(TheCtypeArr);
+#ifdef TIMINGS
+  std::cerr << "|data|=" << time << "\n";
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
-  for (auto &e_int : ListIrred) {
-    MyMatrix<T> FlipMat = CTYP_TheFlipping(TheCtype, ListInformations[e_int]);
+  for (auto &e_int : data.ListIrred) {
+    MyMatrix<T> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
     if (canonicalize) {
       MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
       ListCtype.push_back({std::move(CanMat)});
@@ -968,7 +985,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
       V2(i_col) = TheCtype(i, i_col);
     }
     MyVector<T> TheVector = ComputeInequality(V1, V2);
-    triple TheInfo = {i, j, k};
+    triple<Tidx> TheInfo = {i, j, k};
     std::vector<triple<Tidx>> &list_trip = Tot_map[TheVector];
     list_trip.push_back(TheInfo);
   };
