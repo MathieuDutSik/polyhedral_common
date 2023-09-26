@@ -277,8 +277,14 @@ struct triple {
 namespace std {
 template<typename Tidx> struct hash<triple<Tidx>> {
   std::size_t operator()(const triple<Tidx> &et) const {
-    std::vector<Tidx> eV{et.i, et.j, et.k};
-    return std::hash<std::vector<Tidx>>()(eV);
+    size_t seed = 34;
+    auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+      seed ^= new_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    };
+    combine_hash(seed, std::hash<Tidx>()(et.i));
+    combine_hash(seed, std::hash<Tidx>()(et.j));
+    combine_hash(seed, std::hash<Tidx>()(et.k));
+    return seed;
   }
 };
 // clang-format off
@@ -589,17 +595,27 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
 #endif
   Tidx n = TheCtype.cols();
+  uint8_t n_i = static_cast<uint8_t>(n);
   Tidx tot_dim = n * (n + 1) / 2;
+  // The inequality is written as
+  // Q[v_i] <= Q[2 v_k + v_i]  with  v_i + v_j + v_k = 0
+  // Q[v_i] <= Q[v_k - v_j]  with  v_i + v_j + v_k = 0
+  // We have Q[v + w] + Q[v - w] = 2 Q[v] + 2 Q[w]
+  // So, Q[v_i] + Q[v_k - v_j] = 2 Q[v_k] + 2 Q[v_j]
+  // So, the inequality is equivalent to
+  // Q[v_i] <= 2 Q[v_k] + 2 Q[v_j] - Q[v_i]
+  // or Q[v_i] <= Q[v_k] + Q[v_j]
+  // So, yes, we have the right inequality.
   auto ComputeInequality = [&](MyVector<T> const &V1,
                                MyVector<T> const &V2) -> MyVector<T> {
     MyVector<T> TheVector(tot_dim);
     int idx = 0;
-    for (Tidx i = 0; i < n; i++) {
+    for (uint8_t i = 0; i < n_i; i++) {
       TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
       idx++;
     }
-    for (Tidx i = 0; i < n; i++)
-      for (Tidx j = i + 1; j < n; j++) {
+    for (uint8_t i = 0; i < n_i; i++)
+      for (uint8_t j = i + 1; j < n_i; j++) {
         // Factor 2 removed for simplification and faster code.
         TheVector(idx) = V1(i) * V1(j) - V2(i) * V2(j);
         idx++;
@@ -607,8 +623,8 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
     return TheVector;
   };
   std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_map;
+  MyVector<T> V1(n), V2(n);
   auto FuncInsertInequality = [&](Tidx i, Tidx j, Tidx k) -> void {
-    MyVector<T> V1(n), V2(n);
     for (Tidx i_col = 0; i_col < n; i_col++) {
       V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
       V2(i_col) = TheCtype(i, i_col);
@@ -856,6 +872,64 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
 #endif
   return {std::move(TheCtype), std::move(ListInequalities), std::move(ListInformations), std::move(ListIrred)};
 }
+
+template<typename T, typename Tidx>
+MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T,Tidx> const& data) {
+  int n = data.TheCtype.cols();
+  MyVector<T> V = GetSpaceInteriorPoint_Basic(data.ListInequalities);
+  MyMatrix<T> eGram(n, n);
+  int pos = 0;
+  for (int i=0; i<n; i++) {
+    eGram(i, i) = 2*V(pos);
+    pos++;
+  }
+  for (int i = 0; i < n; i++)
+    for (int j = i + 1; j < n; j++) {
+      eGram(i,j) = V(pos);
+      pos++;
+    }
+  return eGram;
+}
+
+
+template<typename T>
+TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
+  int n = eG.rows();
+  int n_elt = 1;
+  for (int i=0; i<n; i++)
+    n_elt *= 2;
+  n_elt -= 1;
+  MyMatrix<T> Mret(n_elt, n);
+  int pos = 0;
+  MyMatrix<int> M = BuildSet(n, 2);
+  int n_row = M.rows();
+  MyVector<T> Vmid(n);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int esum = 0;
+    for (int i=0; i<n; i++)
+      esum += M(i_row,i);
+    if (esum > 0) {
+      for (int i=0; i<n; i++)
+        Vmid(i,0) = M(i_row,i) / 2;
+      resultCVP<T, T> result = CVPVallentinProgram_exact(eG, Vmid);
+      int n_closest = result.ListVect.rows();
+      if (n_closest != 2) {
+        std::cerr << "n_closest=" << n_closest << "\n";
+        std::cerr << "The number of closest vector is not equal to 2\n";
+        throw TerminalException{1};
+      }
+      for (int i=0; i<n; i++)
+        Mret(pos,i) = result.ListVect(1,i) - result.ListVect(0,i);
+      pos += 1;
+    }
+  }
+  if (pos != n_elt) {
+    std::cerr << "pos=" << pos << " n_elt=" << n_elt << "\n";
+    throw TerminalException{1};
+  }
+  return Mret;
+}
+
 
 
 template <typename T, typename Tidx>
