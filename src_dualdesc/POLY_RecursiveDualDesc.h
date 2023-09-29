@@ -33,6 +33,11 @@
 # define TIMINGS_RECURSIVE_DUAL_DESC
 #endif
 
+#ifdef DEBUG
+# define DEBUG_CANONICAL_LIMITED
+#endif
+
+
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH
 #define SUBSET_HASH
@@ -253,14 +258,37 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
 template <typename Tgroup>
 Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
                             Face const &f, std::ostream & os) {
-  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE)
-    return GRP.CanonicalImage(f);
-  if (method_choice == CANONIC_STRATEGY__STORE)
-    return GRP.StoreCanonicalImage(f);
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
-    return GRP.CanonicalImageInitialTriv(f);
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
-    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+#ifdef DEBUG_CANONICAL_LIMITED
+  os << "Beginning of CanonicalImageDualDesc\n";
+#endif
+  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+    Face f_red = GRP.CanonicalImage(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImage\n";
+#endif
+    return f_red;
+  }
+  if (method_choice == CANONIC_STRATEGY__STORE) {
+    Face f_red = GRP.StoreCanonicalImage(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After StoreCanonicalImage\n";
+#endif
+    return f_red;
+  }
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
+    Face f_red = GRP.CanonicalImageInitialTriv(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImageInitialTriv\n";
+#endif
+    return f_red;
+  }
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+    Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImageInitialTrivLimited\n";
+#endif
+    return f_red;
+  }
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};
@@ -352,18 +380,37 @@ Face CanonicalImageGeneralDualDesc(
     int const &method_choice, Tgroup const &GRP,
     DataFaceOrbitSize<Torbsize, Tgroup> &recConvert, Face const &f, std::ostream & os) {
   using Tint = typename Tgroup::Tint;
+#ifdef DEBUG_CANONICAL_LIMITED
+  os << "Beginning of CanonicalImageGeneralDualDesc\n";
+#endif
   if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
     std::pair<Face, Tint> pair = GRP.CanonicalImageOrbitSize(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImageOrbitSize\n";
+#endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
   if (method_choice == CANONIC_STRATEGY__STORE) {
     std::pair<Face, Tint> pair = GRP.StoreCanonicalImageOrbitSize(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After StoreCanonicalImageOrbitSize\n";
+#endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV)
-    return GRP.CanonicalImageInitialTriv(f);
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1)
-    return GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
+    Face f_red = GRP.CanonicalImageInitialTriv(f);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImageInitialTriv\n";
+#endif
+    return f_red;
+  }
+  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+    Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+#ifdef DEBUG_CANONICAL_LIMITED
+    os << "After CanonicalImageInitialTrivLimited\n";
+#endif
+    return f_red;
+  }
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
   throw TerminalException{1};
