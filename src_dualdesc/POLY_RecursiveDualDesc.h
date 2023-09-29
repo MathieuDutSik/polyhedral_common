@@ -257,7 +257,7 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
  */
 template <typename Tgroup>
 Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
-                            Face const &f, std::ostream & os) {
+                            Face const &f, [[maybe_unused]] std::ostream & os) {
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "Beginning of CanonicalImageDualDesc\n";
 #endif
@@ -378,7 +378,8 @@ template <typename Torbsize, typename Tgroup> struct DataFaceOrbitSize {
 template <typename Torbsize, typename Tgroup>
 Face CanonicalImageGeneralDualDesc(
     int const &method_choice, Tgroup const &GRP,
-    DataFaceOrbitSize<Torbsize, Tgroup> &recConvert, Face const &f, std::ostream & os) {
+    DataFaceOrbitSize<Torbsize, Tgroup> &recConvert, Face const &f,
+    [[maybe_unused]] std::ostream & os) {
   using Tint = typename Tgroup::Tint;
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "Beginning of CanonicalImageGeneralDualDesc\n";
