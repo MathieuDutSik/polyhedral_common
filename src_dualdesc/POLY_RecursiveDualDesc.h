@@ -260,6 +260,8 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
                             Face const &f, [[maybe_unused]] std::ostream & os) {
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "Beginning of CanonicalImageDualDesc\n";
+  WriteGroup(os, GRP);
+  os << "f=" << StringFace(f) << "\n";
 #endif
   if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
     Face f_red = GRP.CanonicalImage(f);
@@ -383,6 +385,8 @@ Face CanonicalImageGeneralDualDesc(
   using Tint = typename Tgroup::Tint;
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "Beginning of CanonicalImageGeneralDualDesc\n";
+  WriteGroup(os, GRP);
+  os << "f=" << StringFace(f) << "\n";
 #endif
   if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
     std::pair<Face, Tint> pair = GRP.CanonicalImageOrbitSize(f);
