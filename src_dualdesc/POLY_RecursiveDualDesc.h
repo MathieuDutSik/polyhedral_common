@@ -259,7 +259,7 @@ template <typename Tgroup>
 Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
                             Face const &f, [[maybe_unused]] std::ostream & os) {
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageDualDesc\n";
+  os << "Beginning of CanonicalImageDualDesc method_choice=" << method_choice << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
 #endif
@@ -285,11 +285,17 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
     return f_red;
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
-    Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+    try {
+      Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImageInitialTrivLimited\n";
+      os << "After CanonicalImageInitialTrivLimited\n";
 #endif
-    return f_red;
+      return f_red;
+    }
+    catch (...) {
+      os << "Catching some exception from CanonicalImageInitialTrivLimited\n";
+      throw TerminalException{1};
+    }
   }
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
@@ -384,7 +390,7 @@ Face CanonicalImageGeneralDualDesc(
     [[maybe_unused]] std::ostream & os) {
   using Tint = typename Tgroup::Tint;
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageGeneralDualDesc\n";
+  os << "Beginning of CanonicalImageGeneralDualDesc method_choice=" << method_choice << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
 #endif
@@ -410,11 +416,17 @@ Face CanonicalImageGeneralDualDesc(
     return f_red;
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
-    Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
+    try {
+      Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImageInitialTrivLimited\n";
+      os << "After CanonicalImageInitialTrivLimited\n";
 #endif
-    return f_red;
+      return f_red;
+    }
+    catch (...) {
+      os << "Catching some exception from CanonicalImageInitialTrivLimited\n";
+      throw TerminalException{1};
+    }
   }
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
   std::cerr << "method_choice=" << method_choice << "\n";
