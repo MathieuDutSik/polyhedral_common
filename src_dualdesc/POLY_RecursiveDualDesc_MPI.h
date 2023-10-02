@@ -386,7 +386,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   //
   // Initial invocation of the synchronization code
   //
-  os << "Compute initital\n";
+  os << "Compute initial\n";
   size_t n_orb_max = 0, n_orb_loc = RPL.FuncNumberOrbit();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
@@ -617,10 +617,12 @@ void Reset_Directories(boost::mpi::communicator &comm,
       CreateDirectory(str_ref);
     }
   };
-  if (AllArr.bank_parallelization_method == "serial")
-    update_string(AllArr.BANK_Prefix);
-  else
-    CreateDirectory(AllArr.BANK_Prefix);
+  if (AllArr.BANK_IsSaving) {
+    if (AllArr.bank_parallelization_method == "serial")
+      update_string(AllArr.BANK_Prefix);
+    else
+      CreateDirectory(AllArr.BANK_Prefix);
+  }
   update_string(AllArr.DD_Prefix);
 }
 
