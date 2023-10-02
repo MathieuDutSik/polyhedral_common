@@ -504,13 +504,13 @@ void TreatDelaunayEntry(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   //
-  bool BANK_IsSaving = BlockBANK.ListBoolValues.at("Saving");
+  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
   bool BANK_Memory = BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   CreateDirectory(BANK_Prefix);
   FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
       GetRec_FctsDataBank<T, Tgroup>();
-  DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_IsSaving, BANK_Memory,
+  DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_Saving, BANK_Memory,
                                                BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";

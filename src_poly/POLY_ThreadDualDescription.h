@@ -761,12 +761,12 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
 template <typename T, typename Tgroup>
 void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
-  bool BANK_IsSaving = BlockBANK.ListBoolValues.at("Saving");
+  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
   bool BANK_Memory = BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
       GetRec_FctsDataBank<T, Tgroup>();
-  DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_IsSaving, BANK_Memory,
+  DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_Saving, BANK_Memory,
                                                BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
@@ -806,8 +806,8 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
   std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
-  AllArr.Saving = DD_Saving;
-  AllArr.eMemory = DD_Memory;
+  AllArr.DD_Saving = DD_Saving;
+  AllArr.DD_Memory = DD_Memory;
   //
   int TheLevel = 0;
   vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(

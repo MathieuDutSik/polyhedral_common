@@ -250,7 +250,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string lPrefix = ePrefix + "database";
-  DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.Saving,
+  DatabaseOrbits<TbasicBank> RPL(bb, lPrefix, AllArr.DD_Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   auto set_up = [&]() -> void {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
@@ -617,13 +617,15 @@ void Reset_Directories(boost::mpi::communicator &comm,
       CreateDirectory(str_ref);
     }
   };
-  if (AllArr.BANK_IsSaving) {
+  if (AllArr.BANK_Saving) {
     if (AllArr.bank_parallelization_method == "serial")
       update_string(AllArr.BANK_Prefix);
     else
       CreateDirectory(AllArr.BANK_Prefix);
   }
-  update_string(AllArr.DD_Prefix);
+  if (AllArr.DD_Saving) {
+    update_string(AllArr.DD_Prefix);
+  }
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
@@ -687,7 +689,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, os);
+      Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
           comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
@@ -707,7 +709,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
                                                           Tgroup, Tidx_value>(
             comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
       } else {
-        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_IsSaving,
+        DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_Saving,
                                       AllArr.BANK_Prefix, os);
         return vectface(n_rows);
       }

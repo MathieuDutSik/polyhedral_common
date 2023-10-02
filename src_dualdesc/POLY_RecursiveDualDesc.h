@@ -2274,7 +2274,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
-  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.Saving,
+  DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.DD_Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   // The choice only really makes sense for the canonic, for repr no choice is
   // implied.
@@ -2813,8 +2813,8 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   //
-  bool BANK_IsSaving = BlockBANK.ListBoolValues.at("Saving");
-  AllArr.BANK_IsSaving = BANK_IsSaving;
+  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
+  AllArr.BANK_Saving = BANK_Saving;
   //
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   AllArr.BANK_Prefix = BANK_Prefix;
@@ -2883,7 +2883,7 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   os << "ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  AllArr.Saving = DD_Saving;
+  AllArr.DD_Saving = DD_Saving;
   //
   std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
   AllArr.DD_Prefix = DD_Prefix;
@@ -2933,7 +2933,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(AllArr.BANK_IsSaving, AllArr.BANK_Prefix, std::cerr);
+      Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
     }
@@ -2961,7 +2961,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Tval = TripleStore<Tgroup>;
   using Tidx_value = int32_t;
   using Text_int = typename underlying_ring<T>::ring_type;
-  bool BANK_IsSaving = false;
+  bool BANK_Saving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
   PolyHeuristicSerial<Tint> AllArr =
@@ -2979,12 +2979,12 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   //
   bool DD_Saving = false;
   std::string DD_Prefix = "totally_irrelevant_second";
-  AllArr.Saving = DD_Saving;
+  AllArr.DD_Saving = DD_Saving;
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   using Tbank = DataBank<Tkey, Tval>;
-  Tbank TheBank(BANK_IsSaving, BANK_Prefix, std::cerr);
+  Tbank TheBank(BANK_Saving, BANK_Prefix, std::cerr);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, std::cerr);

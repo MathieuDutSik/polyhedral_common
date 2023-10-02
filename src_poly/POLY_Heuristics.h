@@ -492,13 +492,13 @@ template <typename T> struct PolyHeuristicSerial {
   TheHeuristic<T> OrbitSplitTechnique;
   TheHeuristic<T> CommThread;
   TheHeuristic<T> ChoiceCanonicalization;
-  bool Saving;
+  bool DD_Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
   SingletonTime start;
   int max_runtime;
   short unsigned int port;
-  bool BANK_IsSaving;
+  bool BANK_Saving;
   std::string BANK_Prefix;
   std::string OutFormat;
   std::string OUTfile;
@@ -510,12 +510,12 @@ template <typename T> struct PolyHeuristicSerial {
 template <typename T>
 PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
-  bool Saving = false;
+  bool DD_Saving = false;
   bool AdvancedTerminationCriterion = false;
   bool SimpleExchangeScheme = false;
   int max_runtime = -1;
   short unsigned int port = 1234;
-  bool BANK_IsSaving = false;
+  bool BANK_Saving = false;
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";
   std::string OUTfile = "unset.out";
@@ -532,13 +532,13 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           MethodOrbitSplitTechnique<T>(),
           StandardHeuristicCommThread<T>(),
           MethodChoiceCanonicalization<T>(),
-          Saving,
+          DD_Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,
           SingletonTime(),
           max_runtime,
           port,
-          BANK_IsSaving,
+          BANK_Saving,
           BANK_Prefix,
           OutFormat,
           OUTfile,
