@@ -46,14 +46,16 @@ int main(int argc, char *argv[]) {
     std::cerr << NprocI << " " << dbnameI << std::endl;
     std::cerr << NprocO << " " << dbnameO << std::endl;
     //
-    // Reading the EXT file
+    // Reading the EXT and method file
     //
     std::string eFileEXT; 
+    std::string eFileMethod;
     {
       std::string eDir = DatabaseI;
       if(NprocI > 1)
         update_path_using_nproc_iproc(eDir, NprocI, 0);
       eFileEXT = eDir + dbnameI + ".ext";
+      eFileMethod = eDir + dbnameI + ".method";
     }
     MyMatrix<mpq_class> EXT = ReadMatrixFile<mpq_class>(eFileEXT);
     //
@@ -72,10 +74,12 @@ int main(int argc, char *argv[]) {
       std::string eFileFB = eDir + dbnameO + ".fb";
       std::string eFileFF = eDir + dbnameO + ".ff";
       std::string OFileEXT = eDir + dbnameO + ".ext";
+      std::string OFileMethod = eDir + dbnameO + ".method";
       List_FN[iProc] = new FileNumber(eFileFN, true);
       List_FB[iProc] = new FileBool(eFileFB);
       List_FF[iProc] = new FileFace(eFileFF, delta);
       WriteMatrixFile(OFileEXT, EXT);
+      CopyOperation(eFileMethod, OFileMethod);
     }
     //
     // Now reading process by process and remapping via hash.
