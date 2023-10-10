@@ -19,7 +19,7 @@
 // clang-format on
 
 #ifdef TIMINGS
-# define TIMINGS_RECURSIVE_DUAL_DESC_MPI
+#define TIMINGS_RECURSIVE_DUAL_DESC_MPI
 #endif
 
 struct message_facet {
@@ -139,7 +139,7 @@ vectface mpi_shuffle(boost::mpi::communicator &comm, vectface &&vf,
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert, typename Fcomm>
 void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
-    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> & df,
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> &df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     Fcomm f_comm, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
@@ -202,7 +202,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     try {
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap, AllArr, ePrefix, os);
+              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
+              AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time_full;
       os << "|outputsize|=" << TheOutput.size() << "\n";
@@ -723,7 +724,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
 
   try {
     vectface vf = get_vectface();
-    if(AllArr.bank_parallelization_method == "bank_mpi" and i_rank == proc_bank) {
+    if (AllArr.bank_parallelization_method == "bank_mpi" and
+        i_rank == proc_bank) {
       os << "Closed DataBankMpiServer" << std::endl;
       return;
     }

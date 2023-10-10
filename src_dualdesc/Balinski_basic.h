@@ -316,8 +316,10 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            const Tgroup &GRP,
                                            const vectface &vf_undone,
                                            std::ostream &os) {
-  bool test = EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
-  os << "EvaluationConnectednessCriterion_PreKernel(field case), test=" << test << "\n";
+  bool test =
+      EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
+  os << "EvaluationConnectednessCriterion_PreKernel(field case), test=" << test
+     << "\n";
   return test;
 }
 
@@ -329,8 +331,10 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
-  bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP, vf_undone, os);
-  os << "EvaluationConnectednessCriterion_PreKernel(ring case), test=" << test << "\n";
+  bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP,
+                                                               vf_undone, os);
+  os << "EvaluationConnectednessCriterion_PreKernel(ring case), test=" << test
+     << "\n";
   return test;
 }
 
@@ -350,8 +354,8 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
   // Now explicit building of the set of vertices
   vectface vf_undone = ComputeSetUndone(bb);
   //
-  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP,
-                                                    vf_undone, os);
+  return EvaluationConnectednessCriterion_PreKernel(bb.EXT, bb.GRP, vf_undone,
+                                                    os);
 }
 
 // clang-format off

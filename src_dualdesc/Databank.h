@@ -79,8 +79,7 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   }
   std::cerr << "Read_BankEntry returning for Prefix=" << Prefix
             << " |EXT|=" << EXT.rows() << "/" << EXT.cols()
-            << " |ListFace|=" << ListFace.size()
-            << "\n";
+            << " |ListFace|=" << ListFace.size() << "\n";
   Tval eVal{std::move(GRP), std::move(ListPossOrbsize), std::move(ListFace)};
   return {std::move(EXT), std::move(eVal)};
 }

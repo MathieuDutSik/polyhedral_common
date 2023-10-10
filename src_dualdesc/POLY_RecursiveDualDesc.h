@@ -31,13 +31,12 @@
 // clang-format on
 
 #ifdef TIMINGS
-# define TIMINGS_RECURSIVE_DUAL_DESC
+#define TIMINGS_RECURSIVE_DUAL_DESC
 #endif
 
 #ifdef DEBUG
-# define DEBUG_CANONICAL_LIMITED
+#define DEBUG_CANONICAL_LIMITED
 #endif
-
 
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH
@@ -258,9 +257,10 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
  */
 template <typename Tgroup>
 Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
-                            Face const &f, [[maybe_unused]] std::ostream & os) {
+                            Face const &f, [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageDualDesc method_choice=" << method_choice << "\n";
+  os << "Beginning of CanonicalImageDualDesc method_choice=" << method_choice
+     << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
 #endif
@@ -292,8 +292,7 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
       os << "After CanonicalImageInitialTrivLimited\n";
 #endif
       return f_red;
-    }
-    catch (...) {
+    } catch (...) {
       os << "Catching some exception from CanonicalImageInitialTrivLimited\n";
       throw TerminalException{1};
     }
@@ -388,10 +387,11 @@ template <typename Torbsize, typename Tgroup>
 Face CanonicalImageGeneralDualDesc(
     int const &method_choice, Tgroup const &GRP,
     DataFaceOrbitSize<Torbsize, Tgroup> &recConvert, Face const &f,
-    [[maybe_unused]] std::ostream & os) {
+    [[maybe_unused]] std::ostream &os) {
   using Tint = typename Tgroup::Tint;
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageGeneralDualDesc method_choice=" << method_choice << "\n";
+  os << "Beginning of CanonicalImageGeneralDualDesc method_choice="
+     << method_choice << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
 #endif
@@ -423,8 +423,7 @@ Face CanonicalImageGeneralDualDesc(
       os << "After CanonicalImageInitialTrivLimited\n";
 #endif
       return f_red;
-    }
-    catch (...) {
+    } catch (...) {
       os << "Catching some exception from CanonicalImageInitialTrivLimited\n";
       throw TerminalException{1};
     }
@@ -566,7 +565,8 @@ std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
 
 template <typename Tgroup>
 int64_t time_evaluation_can_method(int const &method, vectface const &vf,
-                                   Tgroup const &GRP, int64_t upper_limit, std::ostream & os) {
+                                   Tgroup const &GRP, int64_t upper_limit,
+                                   std::ostream &os) {
   NanosecondTime time;
   int64_t duration = 0;
   int64_t miss_val = std::numeric_limits<int64_t>::max();
@@ -580,12 +580,14 @@ int64_t time_evaluation_can_method(int const &method, vectface const &vf,
 }
 
 template <typename Tgroup>
-int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP, std::ostream& os) {
+int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP,
+                                     std::ostream &os) {
   std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
   int chosen_method = CANONIC_STRATEGY__DEFAULT;
   for (auto &method : list_considered) {
-    int64_t runtime = time_evaluation_can_method(method, vf, GRP, upper_limit, os);
+    int64_t runtime =
+        time_evaluation_can_method(method, vf, GRP, upper_limit, os);
     if (runtime < upper_limit) {
       chosen_method = method;
       upper_limit = runtime;
@@ -596,7 +598,8 @@ int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP, std:
 
 template <typename Tgroup>
 int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
-                                  vectface const &vf, Tgroup const &GRP, std::ostream & os) {
+                                  vectface const &vf, Tgroup const &GRP,
+                                  std::ostream &os) {
   int n_proc = comm.size();
   std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t miss_val = std::numeric_limits<int64_t>::max();
@@ -612,7 +615,7 @@ int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
       effective_upper_limit = 5 * upper_limit_local;
     }
     int64_t runtime_local =
-      time_evaluation_can_method(method, vf, GRP, effective_upper_limit, os);
+        time_evaluation_can_method(method, vf, GRP, effective_upper_limit, os);
     if (runtime_local < upper_limit_local) {
       upper_limit_local = runtime_local;
     }
@@ -638,7 +641,7 @@ int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
 
 template <typename T, typename Tgroup>
 int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                    size_t size, std::ostream & os) {
+                                    size_t size, std::ostream &os) {
   if (size < 10000) {
     if (GRP.size() < 200)
       return CANONIC_STRATEGY__STORE;
@@ -659,8 +662,8 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
                         WeightMatrix<true, T, Tidx_value> const &WMat,
                         Tgroup const &TheGRPrelevant,
                         FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
-                        &ListOrbitFaceOrbitsize,
-                        std::ostream & os) {
+                            &ListOrbitFaceOrbitsize,
+                        std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   std::vector<Tint> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
@@ -685,7 +688,8 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
     // The used method for canonicalization does not matter, so everything
     // is correct.
     size_t size = ListOrbitFaceOrbitsize.size();
-    int can_method = GetCanonicalizationMethodRandom(EXT, TheGRPrelevant, size, os);
+    int can_method =
+        GetCanonicalizationMethodRandom(EXT, TheGRPrelevant, size, os);
     UNORD_SET<Face> SetFace;
     Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
@@ -708,8 +712,8 @@ void insert_entry_in_bank(
     WeightMatrix<true, T, Tidx_value> const &WMat, Tgroup const &TheGRPrelevant,
     bool const &BankSymmCheck,
     FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
-    &ListOrbitFaceOrbitsize,
-    std::ostream & os) {
+        &ListOrbitFaceOrbitsize,
+    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
@@ -734,8 +738,8 @@ void insert_entry_in_bank(
         std::move(ePair.first),
         {std::move(GrpConj), std::move(ListPossOrbSize), std::move(ListFaceO)});
   } else {
-    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
-      GetCanonicalInformation(EXT, WMat, TheGRPrelevant, ListOrbitFaceOrbitsize, os);
+    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP = GetCanonicalInformation(
+        EXT, WMat, TheGRPrelevant, ListOrbitFaceOrbitsize, os);
     bank.InsertEntry(std::move(eP.first), std::move(eP.second));
   }
 }
@@ -944,10 +948,11 @@ public:
   }
 };
 
-template<typename Tgroup>
-Tgroup StabilizerUsingOrbSize_OnSets(Tgroup const& GRP, std::pair<Face,typename Tgroup::Tint> const& pair) {
+template <typename Tgroup>
+Tgroup StabilizerUsingOrbSize_OnSets(
+    Tgroup const &GRP, std::pair<Face, typename Tgroup::Tint> const &pair) {
   using Tint = typename Tgroup::Tint;
-  Face const& f = pair.first;
+  Face const &f = pair.first;
   Tint orbSize = pair.second;
   // If the orbit is equal to the full group then the stabilizer is trivial
   if (GRP.size() == orbSize) {
@@ -955,8 +960,8 @@ Tgroup StabilizerUsingOrbSize_OnSets(Tgroup const& GRP, std::pair<Face,typename 
     return Tgroup(len);
   }
   // If the orbit is of size 1 then the stabilizer is the full group. However,
-  // we do not test for this because the case is incredibly rare and the Stabilizer_OnSets
-  // would anyway short circuit that.
+  // we do not test for this because the case is incredibly rare and the
+  // Stabilizer_OnSets would anyway short circuit that.
   //
   Tgroup Stab = GRP.Stabilizer_OnSets(f);
   return ReducedGroupAction(Stab, f);
@@ -1023,7 +1028,7 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const& _EXT_int,
+  DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
                   Tgroup const &_GRP, std::ostream &_os)
       : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), os(_os) {
     the_method = std::numeric_limits<int>::max();
@@ -1124,7 +1129,8 @@ public:
     return GetCanonicalizationMethod_MPI(comm, vf, GRP, os);
   }
   Face operation_face(Face const &face) {
-    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face, os);
+    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face,
+                                         os);
   }
   int convert_string_method(std::string const &choice) const {
     if (choice == "canonic")
@@ -1156,9 +1162,7 @@ public:
     std::cerr << "The value of the_method was not correctly set\n";
     throw TerminalException{1};
   }
-  int get_default_strategy() {
-    return CANONIC_STRATEGY__DEFAULT;
-  }
+  int get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -1202,7 +1206,8 @@ public:
     foc.FinishWithOrbSizeAssignation(orbSize);
 #ifdef CHECK_INSERT
     Tgroup eStab = GRP.Stabilizer_OnSets(face_can);
-    os << "FuncInsert: Inserting a face of size |face_can|=" << face_can.count() << " |eStab|=" << eStab.size() << " f=" << StringFace(face_can) << "\n";
+    os << "FuncInsert: Inserting a face of size |face_can|=" << face_can.count()
+       << " |eStab|=" << eStab.size() << " f=" << StringFace(face_can) << "\n";
 #endif
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
@@ -1237,7 +1242,8 @@ public:
     os << "FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
 #endif
 #ifdef CHECK_INSERT
-    os << "FuncInsertPair: Inserting a face of size |face_can|=" << pair.first.count() << " |O|=" << pair.second << "\n";
+    os << "FuncInsertPair: Inserting a face of size |face_can|="
+       << pair.first.count() << " |O|=" << pair.second << "\n";
 #endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
@@ -1289,7 +1295,7 @@ public:
            entry. */
         size_t pos = eEnt.second[0];
         std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
-        Face const& f = pair.first;
+        Face const &f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
         return {pos, f, FlippingFramework<T>(EXT, EXT_int, f), GRP, StabRed};
       }
@@ -1459,9 +1465,10 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseRepr(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const& _EXT_int, Tgroup const &_GRP, Frepr f_repr,
-               Forbitsize f_orbitsize, Finv f_inv, std::ostream &_os)
-    : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), f_repr(f_repr),
+  DatabaseRepr(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
+               Tgroup const &_GRP, Frepr f_repr, Forbitsize f_orbitsize,
+               Finv f_inv, std::ostream &_os)
+      : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), f_repr(f_repr),
         f_orbitsize(f_orbitsize), f_inv(f_inv), os(_os) {
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -1570,7 +1577,7 @@ public:
        first entry. */
     size_t pos = V[0];
     std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
-    Face const& f = pair.first;
+    Face const &f = pair.first;
     Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
     return {pos, f, FlippingFramework<T>(EXT, EXT_int, f), GRP, StabRed};
   }
@@ -1745,13 +1752,13 @@ public:
       return bb.get_default_strategy();
     }
   }
-  bool is_database_present() const { 
-    if(IsExistingFile(eFileEXT)==false) {
+  bool is_database_present() const {
+    if (IsExistingFile(eFileEXT) == false) {
       return false;
-    } 
+    }
     // verify that EXT file is same as bb.EXT
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
-    if (EXT==bb.EXT) {
+    if (EXT == bb.EXT) {
       return true;
     }
     // else database got changed e.g. due to method change
@@ -2133,7 +2140,7 @@ void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    MyMatrix<typename underlying_ring<T>::ring_type> const& EXT_int,
+    MyMatrix<typename underlying_ring<T>::ring_type> const &EXT_int,
     std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
@@ -2141,7 +2148,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert>
 void DUALDESC_AdjacencyDecomposition_and_insert(
-    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> & df,
+    Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> &df,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
     std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
@@ -2159,7 +2166,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|ansProg|=" << time_step << "\n";
 #endif
     if (df.Stab.size() == 1) {
-      auto f_process=[&](std::pair<Face,MyVector<T>> const &pair_face) -> void {
+      auto f_process =
+          [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
         MicrosecondTime time_loc;
 #endif
@@ -2186,7 +2194,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     } else {
       vectface TheOutput =
-        DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|TheOutput|=" << time_step << "\n";
       os << "Number of facets being generated=" << TheOutput.size() << "\n";
@@ -2222,7 +2230,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   } else {
     vectface TheOutput =
         DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-            TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap, AllArr, ePrefix, os);
+            TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
+            AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_full;
     os << "|outputsize|=" << TheOutput.size() << "\n";
@@ -2406,7 +2415,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
-    MyMatrix<typename underlying_ring<T>::ring_type> const& EXT_int,
+    MyMatrix<typename underlying_ring<T>::ring_type> const &EXT_int,
     Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
@@ -2489,7 +2498,8 @@ vectface DUALDESC_AdjacencyDecomposition(
       };
       using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
                                       decltype(f_orbitsize), decltype(f_inv)>;
-      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, f_repr, f_orbitsize, f_inv, os);
+      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, f_repr, f_orbitsize, f_inv,
+                    os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, os);
@@ -2713,7 +2723,7 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
 template <typename T, typename Tgroup>
 void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
                   const vectface &TheOutput, const std::string &OUTfile,
-                  const std::string &OutFormat, std::ostream & os) {
+                  const std::string &OutFormat, std::ostream &os) {
   if (OutFormat == "Magma") {
     return VectVectInt_Magma_PrintFile(OUTfile, TheOutput);
   }
@@ -2732,7 +2742,7 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
     WMat.ReorderingSetWeight();
     FaceOrbitsizeTableContainer<Tint> fotc(TheOutput, GRP);
     std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
-      GetCanonicalInformation(EXT, WMat, GRP, fotc, os);
+        GetCanonicalInformation(EXT, WMat, GRP, fotc, os);
     Write_BankEntry(OUTfile, eP.first, eP.second);
   }
   std::cerr << "No option has been chosen\n";
@@ -2750,7 +2760,9 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string NumericalType = BlockDATA.ListStringValues.at("NumericalType");
-  std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational", "mpq_rational", "Qsqrt2", "Qsqrt5", "RealAlgebraic"};
+  std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
+                                 "mpq_rational",  "Qsqrt2",   "Qsqrt5",
+                                 "RealAlgebraic"};
   if (PositionVect(Ltype, NumericalType) == -1) {
     std::cerr << "NumericalType=" << NumericalType << "\n";
     std::cerr << "Ltype =";
@@ -2936,13 +2948,15 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, std::cerr);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
+          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
+          std::cerr);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix, std::cerr);
+          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
+          std::cerr);
     }
     std::cerr
         << "Failed to find a matching entry for bank_parallelization_method\n";
@@ -2952,7 +2966,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat, std::cerr);
+  OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat,
+               std::cerr);
 }
 
 template <typename T, typename Tgroup>
@@ -2988,7 +3003,8 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   Tbank TheBank(BANK_Saving, BANK_Prefix, std::cerr);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
-  return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
+  return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+      TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
 }
 
 // clang-format off

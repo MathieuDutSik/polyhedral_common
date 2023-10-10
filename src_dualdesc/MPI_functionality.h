@@ -5,8 +5,8 @@
 #include "Balinski_basic.h"
 #include "Boost_bitset_kernel.h"
 #include "MAT_Matrix.h"
-#include "Timings.h"
 #include "MPI_basic.h"
+#include "Timings.h"
 #include <limits>
 #include <string>
 #include <utility>
@@ -67,7 +67,8 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
   return vectface(n_vert, l_n_face, l_V);
 }
 
-vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf, std::string const& ansSamp, std::ostream & os) {
+vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf,
+                            std::string const &ansSamp, std::ostream &os) {
   os << "merge_initial_samp, |vf|=" << vf.size() << "\n";
   vectface vf_gather = my_mpi_allgather(comm, vf);
   os << "merge_initial_samp, |vf_gather|=" << vf_gather.size() << "\n";
@@ -83,8 +84,6 @@ vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf, 
   }
   return vf_gather;
 }
-
-
 
 /*
   For MyMatrix<T>, a little bit more advanced work. We merge the rows together
@@ -169,13 +168,10 @@ T my_mpi_allreduce_sum(boost::mpi::communicator &comm, T const &x) {
   return sum;
 }
 
-
 template <typename T, typename Tgroup>
-bool EvaluationConnectednessCriterion_KernelMPI_field(boost::mpi::communicator &comm,
-                                                      MyMatrix<T> const& FAC,
-                                                      Tgroup const& GRP,
-                                                      vectface const& vf_undone_loc,
-                                                      std::ostream &os) {
+bool EvaluationConnectednessCriterion_KernelMPI_field(
+    boost::mpi::communicator &comm, MyMatrix<T> const &FAC, Tgroup const &GRP,
+    vectface const &vf_undone_loc, std::ostream &os) {
   vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
   MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(FAC, vf_undone_loc);
   os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
@@ -202,23 +198,25 @@ bool EvaluationConnectednessCriterion_KernelMPI_field(boost::mpi::communicator &
 template <typename T, typename Tgroup>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
 EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
-                                           MyMatrix<T> const& FAC,
-                                           Tgroup const& GRP,
-                                           vectface const& vf_undone_loc,
+                                           MyMatrix<T> const &FAC,
+                                           Tgroup const &GRP,
+                                           vectface const &vf_undone_loc,
                                            std::ostream &os) {
-  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FAC, GRP, vf_undone_loc, os);
+  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FAC, GRP,
+                                                          vf_undone_loc, os);
 }
 
 template <typename T, typename Tgroup>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
 EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
-                                           MyMatrix<T> const& FAC,
-                                           Tgroup const& GRP,
-                                           vectface const& vf_undone_loc,
+                                           MyMatrix<T> const &FAC,
+                                           Tgroup const &GRP,
+                                           vectface const &vf_undone_loc,
                                            std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
-  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FACfield, GRP, vf_undone_loc, os);
+  return EvaluationConnectednessCriterion_KernelMPI_field(comm, FACfield, GRP,
+                                                          vf_undone_loc, os);
 }
 
 template <typename TbasicBank>
@@ -247,7 +245,8 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
     return false;
   os << "EvaluationConnectednessCriterion_MPI, step 3\n";
   vectface vf_undone_loc = ComputeSetUndone(bb);
-  return EvaluationConnectednessCriterion_KernelMPI(comm, bb.EXT, bb.GRP, vf_undone_loc, os);
+  return EvaluationConnectednessCriterion_KernelMPI(comm, bb.EXT, bb.GRP,
+                                                    vf_undone_loc, os);
 }
 
 struct request_status_list {
@@ -256,10 +255,9 @@ struct request_status_list {
   std::vector<boost::mpi::request> l_mpi_request;
   std::vector<int> l_mpi_status;
   bool strict;
-  request_status_list(size_t const&n_proc, size_t const &MaxFly)
-    : n_proc(n_proc), MaxFly(MaxFly),
-      l_mpi_request(MaxFly),
-      l_mpi_status(MaxFly, 0) {
+  request_status_list(size_t const &n_proc, size_t const &MaxFly)
+      : n_proc(n_proc), MaxFly(MaxFly), l_mpi_request(MaxFly),
+        l_mpi_status(MaxFly, 0) {
     if (n_proc == MaxFly) {
       strict = true;
     } else {
@@ -285,7 +283,7 @@ struct request_status_list {
     }
     return nb_undone;
   }
-  bool is_ok(size_t const& pos) {
+  bool is_ok(size_t const &pos) {
     if (l_mpi_status[pos] == 0)
       return true;
     return false;
@@ -324,7 +322,7 @@ struct empty_message_management {
   int tag;
   empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
                            int const &tag)
-    : comm(comm), rsl(comm.size(), MaxFly), tag(tag) {
+      : comm(comm), rsl(comm.size(), MaxFly), tag(tag) {
     int expected_value_pre = random();
     expected_value = boost::mpi::all_reduce(comm, expected_value_pre,
                                             boost::mpi::minimum<int>());
@@ -361,7 +359,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
   bool strict;
   buffered_T_exchanges(boost::mpi::communicator &comm, size_t const &MaxFly,
                        int const &tag)
-    : comm(comm), n_proc(comm.size()), rsl(n_proc, MaxFly), tag(tag),
+      : comm(comm), n_proc(comm.size()), rsl(n_proc, MaxFly), tag(tag),
         l_message(n_proc), l_under_cons(MaxFly) {
     if (static_cast<size_t>(n_proc) == MaxFly) {
       strict = true;
@@ -378,7 +376,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     return vf;
   }
   bool clear_one_entry(std::ostream &os) {
-    auto process=[&](int chosen_iproc, int idx) -> bool {
+    auto process = [&](int chosen_iproc, int idx) -> bool {
       if (chosen_iproc == -1)
         return false;
       l_under_cons[idx] = std::move(l_message[chosen_iproc]);
@@ -403,7 +401,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
           }
         }
       }
-      os << "strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      os << "strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
+         << "\n";
       return process(chosen_iproc, chosen_iproc);
     } else {
       size_t idx = rsl.GetFreeIndex(-1); // The dest is unused in that case
@@ -419,7 +418,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
           chosen_iproc = i_proc;
         }
       }
-      os << "no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc << "\n";
+      os << "no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
+         << "\n";
       return process(chosen_iproc, idx);
     }
   }

@@ -33,7 +33,8 @@ public:
   }
 
   ~FileNumber() {
-    //    std::cerr << "Clean destruction of FileNumber associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileNumber associated to file=" <<
+    //    file << "\n";
     std::fclose(fp);
   }
 
@@ -88,7 +89,8 @@ public:
   }
 
   ~FileBool() {
-    //    std::cerr << "Clean destruction of FileBool associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileBool associated to file=" <<
+    //    file << "\n";
     std::fclose(fp);
   }
 
@@ -146,14 +148,15 @@ public:
     n_ent = std::max(n_ent, pos + 1);
   }
 
-  void direct_write(std::vector<uint8_t> const& V) {
+  void direct_write(std::vector<uint8_t> const &V) {
     size_t start_byte = 0;
     std::fseek(fp, start_byte, SEEK_SET);
     size_t len_w = V.size();
     if (len_w > 0) {
       size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
       if (n_write != len_w) {
-        std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+        std::cerr << "Error in direct_write n_write=" << n_write
+                  << " len_w=" << len_w << "\n";
         throw TerminalException{1};
       }
     }
@@ -163,30 +166,29 @@ public:
     size_t curr_n_byte = (n_ent + 7) / 8;
     std::fseek(fp, 0, SEEK_SET);
     std::vector<uint8_t> buffer(curr_n_byte);
-    size_t ret = fread(buffer.data(), curr_n_byte*sizeof(uint8_t), 1, fp);
+    size_t ret = fread(buffer.data(), curr_n_byte * sizeof(uint8_t), 1, fp);
     if (ret != 1) {
       std::cerr << "FileBool: Error in getpopcnt(...)\n";
       throw TerminalException{1};
     }
     // popcnt
-    size_t curr_n_ints = n_ent/32;
+    size_t curr_n_ints = n_ent / 32;
     size_t sm = 0;
-    uint32_t* ptr = (uint32_t*)(buffer.data());
-    for(size_t i = 0; i < curr_n_ints; i++){
-      sm += __builtin_popcount(*(ptr+i));
+    uint32_t *ptr = (uint32_t *)(buffer.data());
+    for (size_t i = 0; i < curr_n_ints; i++) {
+      sm += __builtin_popcount(*(ptr + i));
     }
     // count remainder
-    for(size_t i = 4*curr_n_ints; i < curr_n_byte; i++){
+    for (size_t i = 4 * curr_n_ints; i < curr_n_byte; i++) {
       uint8_t b = buffer[i];
-      for(size_t j = 0; j < 8; j++) {
-        if(8*i+j < n_ent) {
-          sm += (b&(uint8_t(1)<<j)) ? 1 : 0;
+      for (size_t j = 0; j < 8; j++) {
+        if (8 * i + j < n_ent) {
+          sm += (b & (uint8_t(1) << j)) ? 1 : 0;
         }
       }
     }
     return sm;
   }
-
 };
 
 struct FileFace {
@@ -219,7 +221,8 @@ public:
     SetBuffer();
   }
 
-  FileFace(std::string const &file, size_t const &_siz, size_t const &_n_face) : file(file) {
+  FileFace(std::string const &file, size_t const &_siz, size_t const &_n_face)
+      : file(file) {
     if (!IsExistingFile(file)) {
       std::cerr << "FileFace: The file " << file << " should not be missing\n";
       throw TerminalException{1};
@@ -231,13 +234,12 @@ public:
   }
 
   ~FileFace() {
-    //    std::cerr << "Clean destruction of FileFace associated to file=" << file << "\n";
+    //    std::cerr << "Clean destruction of FileFace associated to file=" <<
+    //    file << "\n";
     std::fclose(fp);
   }
 
-  size_t get_size() const {
-    return siz;
-  }
+  size_t get_size() const { return siz; }
 
   // face set/get
   Face getface(size_t const &pos) {
@@ -282,8 +284,7 @@ public:
       len = needed_n_byte - curr_n_byte;
     // We are in the standard case of appending some entries.
     if (len <= ZeroSize && len > 0) {
-      size_t n_write =
-        std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
+      size_t n_write = std::fwrite(ZeroBuffer.data(), sizeof(uint8_t), len, fp);
       if (n_write != len) {
         std::cerr << "Error in setface(..), wrong number of written bytes\n";
         throw TerminalException{1};
@@ -331,7 +332,7 @@ public:
     std::fseek(fp, start_byte, SEEK_SET);
     if (len_rw > 0) {
       size_t n_write =
-        std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
+          std::fwrite(ReadBuffer.data(), sizeof(uint8_t), len_rw, fp);
       if (n_write != len_rw) {
         std::cerr << "Error in setface(..), wrong number of written bytes\n";
         throw TerminalException{1};
@@ -340,14 +341,15 @@ public:
     n_face = std::max(n_face, pos + 1);
   }
 
-  void direct_write(std::vector<uint8_t> const& V) {
+  void direct_write(std::vector<uint8_t> const &V) {
     size_t start_byte = 0;
     std::fseek(fp, start_byte, SEEK_SET);
     size_t len_w = V.size();
     if (len_w > 0) {
       size_t n_write = std::fwrite(V.data(), sizeof(uint8_t), len_w, fp);
       if (n_write != len_w) {
-        std::cerr << "Error in direct_write n_write=" << n_write << " len_w=" << len_w << "\n";
+        std::cerr << "Error in direct_write n_write=" << n_write
+                  << " len_w=" << len_w << "\n";
         throw TerminalException{1};
       }
     }

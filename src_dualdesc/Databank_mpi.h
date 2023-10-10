@@ -17,7 +17,6 @@ static const int tag_mpi_bank_insert = 983;
 static const int tag_mpi_bank_request = 991;
 static const int tag_mpi_bank_reception = 997;
 
-
 // MPI client and server
 
 template <typename Tkey, typename Tval> struct DataBankMpiClient {
