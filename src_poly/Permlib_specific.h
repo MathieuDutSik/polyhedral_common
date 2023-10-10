@@ -14,7 +14,7 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_GROUP
+#define DEBUG_GROUP
 #endif
 
 int OnPoints(int const &i, permlib::Permutation const &elt) {

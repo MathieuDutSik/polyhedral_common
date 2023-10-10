@@ -3,9 +3,9 @@
 #define SRC_PERFECT_TEMP_PERFECTFORM_H_
 
 #include "MatrixGroup.h"
+#include "Parallel_Classes_Types.h"
 #include "Temp_Positivity.h"
 #include "Temp_Tspace_General.h"
-#include "Parallel_Classes_Types.h"
 #include <map>
 #include <string>
 #include <utility>
@@ -452,7 +452,9 @@ Tgroup PERF_Automorphism(LinSpaceMatrix<T> const &LinSpa,
       WMat);
 }
 
-template <typename T, typename Tint> struct SimplePerfect { MyMatrix<T> Gram; };
+template <typename T, typename Tint> struct SimplePerfect {
+  MyMatrix<T> Gram;
+};
 
 template <typename T, typename Tint>
 std::istream &operator>>(std::istream &is, SimplePerfect<T, Tint> &obj) {
@@ -467,7 +469,9 @@ std::ostream &operator<<(std::ostream &os, SimplePerfect<T, Tint> const &obj) {
   return os;
 }
 
-template <typename T> struct SimplePerfectInv { size_t hash; };
+template <typename T> struct SimplePerfectInv {
+  size_t hash;
+};
 
 template <typename T>
 bool operator==(SimplePerfectInv<T> const &x, SimplePerfectInv<T> const &y) {

@@ -850,7 +850,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P, [[maybe_unused]] lrs::lrs_dat<Tint> *Q, [[maybe_unused]] int const& col, Tint *out) -> bool {
+    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P,
+                 [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
+                 [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS
         n_iter++;
@@ -869,8 +871,8 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     lrs::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
-    vectface ListIncd = DirectFacetComputationIncidence(
-        FAC_T, Vtot.DualDescProg, std::cerr);
+    vectface ListIncd =
+        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS
@@ -917,7 +919,9 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P, [[maybe_unused]] lrs::lrs_dat<Tint> *Q, [[maybe_unused]] int const& col, Tint *out) -> bool {
+    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P,
+                 [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
+                 [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS
         n_iter++;
@@ -937,8 +941,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     lrs::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
-    vectface ListIncd = DirectFacetComputationIncidence(
-        FAC_T, Vtot.DualDescProg, std::cerr);
+    vectface ListIncd =
+        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, std::cerr);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS

@@ -31,7 +31,7 @@
 // clang-format on
 
 #ifdef PRINT
-# define PRINT_LRS_ANALYSIS
+#define PRINT_LRS_ANALYSIS
 #endif
 
 namespace lrs {
@@ -91,12 +91,12 @@ template <typename T> struct lrs_dat {
   int64_t getvolume; /* do volume calculation                        */
   int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
-  int64_t hull;      /* do convex hull computation if globals::TRUE           */
-  int64_t lponly;    /* true if only lp solution wanted              */
-  int64_t maxdepth;  /* max depth to search to in treee              */
-  int64_t maximize;  /* flag for LP maximization                     */
-  int64_t minimize;  /* flag for LP minimization                     */
-  int64_t mindepth;  /* do not backtrack above mindepth              */
+  int64_t hull;     /* do convex hull computation if globals::TRUE           */
+  int64_t lponly;   /* true if only lp solution wanted              */
+  int64_t maxdepth; /* max depth to search to in treee              */
+  int64_t maximize; /* flag for LP maximization                     */
+  int64_t minimize; /* flag for LP minimization                     */
+  int64_t mindepth; /* do not backtrack above mindepth              */
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
@@ -131,7 +131,8 @@ template <typename T> inline int64_t sign(T const &a) {
   return 0;
 }
 
-template <typename T> inline int comprod(T const& Na, T const& Nb, T const& Nc, T const& Nd) {
+template <typename T>
+inline int comprod(T const &Na, T const &Nb, T const &Nc, T const &Nd) {
   T prod1 = Na * Nb;
   T prod2 = Nc * Nd;
   if (prod1 > prod2)
@@ -1714,13 +1715,12 @@ template <typename T> void freeLRS(lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   lrs_free_dat(Q);
 }
 
-
 template <typename T>
-void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, Face & f) {
+void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const &col, Face &f) {
   int nbRow = Q->m;
-  for (int i=0; i<nbRow; i++)
+  for (int i = 0; i < nbRow; i++)
     f[i] = 0;
-  for (int i=0; i<P->d; i++) {
+  for (int i = 0; i < P->d; i++) {
     int the_col = P->Col[i];
     if (the_col != col) {
       int idx1 = P->C[i];
@@ -1729,7 +1729,7 @@ void set_face(lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, Face & f) {
       f[idx] = 1;
     }
   }
-  for (int i=Q->lastdv+1; i<=P->m; i++) {
+  for (int i = Q->lastdv + 1; i <= P->m; i++) {
     int iRow = P->Row[i];
     if (P->A[iRow][0] == 0) {
       if (col == 0 || P->A[iRow][col] == 0) {
@@ -1761,7 +1761,8 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           size_t nbCol = EXT.cols();
           size_t nbRow = EXT.rows();
           size_t real_incidence = 0;
-          std::cerr << "------------ Entry " << n_entry << " col=" << col << " ------------\n";
+          std::cerr << "------------ Entry " << n_entry << " col=" << col
+                    << " ------------\n";
           std::cerr << "    ScalProd =";
           Face real_incd(nbRow);
           for (size_t iRow = 0; iRow < nbRow; iRow++) {
@@ -1782,10 +1783,11 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           Face lrs_incd(nbRow);
           int max_iRow = std::numeric_limits<int>::min();
           int min_iRow = std::numeric_limits<int>::max();
-          for (int i=0; i<P->d; i++) {
+          for (int i = 0; i < P->d; i++) {
             int idx1 = P->C[i];
             int idx2 = Q->lastdv;
-            //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 << "\n";
+            //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 <<
+            //          "\n";
             int idx = Q->inequality[idx1 - idx2] - 1;
             int the_col = P->Col[i];
             if (the_col != col) {
@@ -1798,7 +1800,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
               }
             }
           }
-          for (int i=Q->lastdv+1; i<=P->m; i++) {
+          for (int i = Q->lastdv + 1; i <= P->m; i++) {
             int iRow = P->Row[i];
             if (iRow < min_iRow)
               min_iRow = iRow;
@@ -1822,11 +1824,15 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
             max_n_error = n_error;
           }
           std::cerr << "\n";
-          std::cerr << "    real_incidence=" << real_incidence << " n_correct=" << n_correct << " n_error=" << n_error << "\n";
-          std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow << "\n";
+          std::cerr << "    real_incidence=" << real_incidence
+                    << " n_correct=" << n_correct << " n_error=" << n_error
+                    << "\n";
+          std::cerr << "    min_iRow=" << min_iRow << " max_iRow=" << max_iRow
+                    << "\n";
           if (real_incidence != lrs_incidence) {
             std::cerr << "The incidence are different\n";
-            std::cerr << "real_incidence=" << real_incidence << " lrs_incidence=" << lrs_incidence << "\n";
+            std::cerr << "real_incidence=" << real_incidence
+                      << " lrs_incidence=" << lrs_incidence << "\n";
             throw TerminalException{1};
           }
           if (real_incd != lrs_incd) {
@@ -1922,7 +1928,8 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
 #if !defined USE_ISINCD
   Face face(nbRow);
 #endif
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
+               [[maybe_unused]] T *out) -> void {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
@@ -1938,7 +1945,8 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
   MyVector<T> V(nbColRed);
-  auto f = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+  auto f = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q,
+               [[maybe_unused]] int const &col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
@@ -1957,7 +1965,7 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, T *out) -> void {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     set_face(P, Q, col, pair.first);
@@ -1975,7 +1983,8 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
   T eScal;
   int nbFound = 0;
   Face face(nbRow);
-  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const& col, [[maybe_unused]] T *out) -> bool {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
+               [[maybe_unused]] T *out) -> bool {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
     nbFound++;
@@ -2001,7 +2010,8 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   vectface ListIncd(nbRow);
   Tring eScal;
   Face face(nbRow);
-  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, [[maybe_unused]] Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
+               [[maybe_unused]] Tring *out) -> void {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
@@ -2027,7 +2037,9 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   }
   std::vector<MyVector<T>> ListVect;
   MyVector<T> V(nbColRed);
-  auto f = [&]([[maybe_unused]] lrs_dic<Tring> *P, [[maybe_unused]] lrs_dat<Tring> *Q, [[maybe_unused]] int const& col, Tring *out) -> void {
+  auto f = [&]([[maybe_unused]] lrs_dic<Tring> *P,
+               [[maybe_unused]] lrs_dat<Tring> *Q,
+               [[maybe_unused]] int const &col, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
@@ -2037,7 +2049,8 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
 }
 
 template <typename T, typename Fprocess>
-void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_process) {
+void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT,
+                                       Fprocess f_process) {
   std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
   MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
@@ -2054,7 +2067,8 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT, Fprocess f_proces
   }
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
-  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const& col, Tring *out) -> void {
+  auto f = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
+               Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     set_face(P, Q, col, pair.first);

@@ -174,7 +174,8 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   MyMatrix<T> const MatV_red = ColumnReduction(MatV);
   using Tfield = typename overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat,
+                                                                 Vdiag);
   WMat.ReorderingSetWeight();
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,

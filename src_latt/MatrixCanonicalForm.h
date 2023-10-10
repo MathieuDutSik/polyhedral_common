@@ -249,12 +249,12 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
 }
 
 template <typename T>
-std::vector<MyMatrix<T>> ReadListMatrixFile(std::string const& eFile) {
+std::vector<MyMatrix<T>> ReadListMatrixFile(std::string const &eFile) {
   std::ifstream is(eFile);
   int n_mat;
   is >> n_mat;
   std::vector<MyMatrix<T>> ListMat;
-  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     MyMatrix<T> eMat = ReadMatrix<T>(is);
     ListMat.push_back(eMat);
   }

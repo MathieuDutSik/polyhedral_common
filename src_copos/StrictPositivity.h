@@ -108,7 +108,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
 #endif
     if (eRel.eTestExist) {
-      MyVector<T> const& V = *eRel.TheRelat;
+      MyVector<T> const &V = *eRel.TheRelat;
 #ifdef STRICT_POSITIVITY
       std::cerr << "TheRelat=";
       WriteVectorNoDim(std::cerr, V);

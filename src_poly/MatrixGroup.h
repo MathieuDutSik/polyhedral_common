@@ -21,15 +21,15 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_MATRIX_GROUP
+#define DEBUG_MATRIX_GROUP
 #endif
 
 #ifdef TIMINGS
-# define TIMINGS_MATRIX_GROUP
+#define TIMINGS_MATRIX_GROUP
 #endif
 
 #ifdef SANITY_CHECK
-# define SANITY_CHECK_MATRIX_GROUP
+#define SANITY_CHECK_MATRIX_GROUP
 #endif
 
 //
@@ -1104,10 +1104,9 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
       const bool use_scheme = true;
       using Tfield = typename overlying_field<T>::field_type;
       std::vector<std::vector<Tidx>> ListListIdx =
-          GetListGenAutomorphism_ListMat_Vdiag<T,Tfield,Tidx,use_scheme>(SHVbreak, BasisSymmMat, Vdiag);
-      std::vector<MyMatrix<T>> NewListMatr;
-      for (auto &eListIdx : ListListIdx) {
-        std::optional<MyMatrix<T>> opt =
+          GetListGenAutomorphism_ListMat_Vdiag<T,Tfield,Tidx,use_scheme>(SHVbreak,
+BasisSymmMat, Vdiag); std::vector<MyMatrix<T>> NewListMatr; for (auto &eListIdx
+: ListListIdx) { std::optional<MyMatrix<T>> opt =
             FindMatrixTransformationTest(SHVbreak, SHVbreak, eListIdx);
 #ifdef SANITY_CHECK_MATRIX_GROUP
         if (!opt) {
@@ -1124,8 +1123,6 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
   throw TerminalException{1};
 }
 */
-
-
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,

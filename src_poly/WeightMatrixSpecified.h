@@ -47,11 +47,11 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_WEIGHT_MATRIX_SPECIFIED
+#define DEBUG_WEIGHT_MATRIX_SPECIFIED
 #endif
 
 #ifdef TIMINGS
-# define TIMINGS_WEIGHT_MATRIX_SPECIFIED
+#define TIMINGS_WEIGHT_MATRIX_SPECIFIED
 #endif
 
 using SignVertex = std::vector<int>;

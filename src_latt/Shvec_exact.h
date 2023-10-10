@@ -784,8 +784,8 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
 
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
-                                                 const MyVector<T> &eV,
-                                                 const T &norm) {
+                                                  const MyVector<T> &eV,
+                                                  const T &norm) {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
   LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
   const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
@@ -796,7 +796,8 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
   T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
   //
   std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y, [[maybe_unused]] const T &min) -> bool {
+  auto f_insert = [&](const MyVector<Tint> &V_y,
+                      [[maybe_unused]] const T &min) -> bool {
     MyVector<Tint> V_x = Pmat.transpose() * V_y;
     l_vect.push_back(V_x);
     return true;
@@ -804,7 +805,6 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
   (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
   return l_vect;
 }
-
 
 // clang-format off
 #endif  // SRC_LATT_SHVEC_EXACT_H_

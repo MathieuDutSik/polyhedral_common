@@ -12,11 +12,11 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_HYPERPLANE
+#define DEBUG_HYPERPLANE
 #endif
 
 #ifdef SANITY_CHECK
-# define SANITY_CHECK_HYPERPLANE
+#define SANITY_CHECK_HYPERPLANE
 #endif
 
 // The list of region is described by a vector of + and -.

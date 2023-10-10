@@ -13,11 +13,11 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_SAMPLING_FACET
+#define DEBUG_SAMPLING_FACET
 #endif
 
 #ifdef TIMINGS
-# define TIMINGS_SAMPLING_FACET
+#define TIMINGS_SAMPLING_FACET
 #endif
 
 struct recSamplingOption {
@@ -150,9 +150,10 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                                 std::string const &ansSamp,
-                                                 [[maybe_unused]] std::ostream &os) {
+vectface
+Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                        std::string const &ansSamp,
+                                        [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   MicrosecondTime time;
 #endif
@@ -175,8 +176,8 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     }
     Face f(n_rows);
     std::string face_str = ListStr[1];
-    for (int i_row=0; i_row<n_rows; i_row++) {
-      if (face_str.substr(i_row,1) == "1") {
+    for (int i_row = 0; i_row < n_rows; i_row++) {
+      if (face_str.substr(i_row, 1) == "1") {
         f[i_row] = 1;
       }
     }
@@ -226,12 +227,12 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     std::cerr << "We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }
-  std::map<size_t,size_t> map_incd;
-  for (auto & eFace : ListIncd) {
+  std::map<size_t, size_t> map_incd;
+  for (auto &eFace : ListIncd) {
     map_incd[eFace.count()] += 1;
   }
   os << "Found incidences =";
-  for (auto & kv : map_incd) {
+  for (auto &kv : map_incd) {
     os << " (" << kv.first << "," << kv.second << ")";
   }
   os << "\n";
@@ -257,13 +258,18 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
 }
 
-template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, const MyMatrix<typename underlying_ring<T>::ring_type> &EXT_int, std::ostream& os) {
+template <typename T>
+vectface Kernel_GetFullRankFacetSet(
+    const MyMatrix<T> &EXT,
+    const MyMatrix<typename underlying_ring<T>::ring_type> &EXT_int,
+    std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   size_t dim = EXT.cols();
   size_t n_rows = EXT.rows();
   if (dim == 2) {
     if (n_rows != 2) {
-      std::cerr << "In dimension 2, the cone should have exactly two extreme rays\n";
+      std::cerr
+          << "In dimension 2, the cone should have exactly two extreme rays\n";
       throw TerminalException{1};
     }
     vectface vf_ret(2);
@@ -275,15 +281,15 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
     return vf_ret;
   }
   Face eSet = Kernel_FindSingleVertex(EXT);
-  // Here we use a trick that the ColumnReduction will select the first column and so
-  // will return a matrix that is polytopal
+  // Here we use a trick that the ColumnReduction will select the first column
+  // and so will return a matrix that is polytopal
   MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
   MyMatrix<Tint> EXTsel_pre_int = SelectRow(EXT_int, eSet);
   std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
   MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
   MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
   os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
-            << " rnk=" << RankMat(EXTsel) << "\n";
+     << " rnk=" << RankMat(EXTsel) << "\n";
 #ifdef DEBUG_SAMPLING_FACET
   if (!IsPolytopal(EXTsel)) {
     std::cerr << "The configuration EXTsel is not polytopal\n";
@@ -304,7 +310,7 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
 #ifdef DEBUG_SAMPLING_FACET
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
   int pos = 0;
-  for (auto & face : vf_ret) {
+  for (auto &face : vf_ret) {
     MyVector<T> eFAC = FindFacetInequality(EXT, face);
     AssignMatrixRow(FACsamp, pos, eFAC);
     pos++;
@@ -317,7 +323,8 @@ template <typename T> vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT
   return vf_ret;
 }
 
-template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream& os) {
+template <typename T>
+vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   MicrosecondTime time;
 #endif
@@ -341,7 +348,6 @@ template <typename T> vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::
 #endif
   return vf;
 }
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_SAMPLINGFACET_H_

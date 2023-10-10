@@ -60,8 +60,7 @@ template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
 // * "no": Do not create the communication thread.
 // * "yes": Create the communication thread.
 template <typename T> TheHeuristic<T> StandardHeuristicCommThread() {
-  std::vector<std::string> ListString = {"0",
-                                         "no"};
+  std::vector<std::string> ListString = {"0", "no"};
   return HeuristicFromListString<T>(ListString);
 }
 
@@ -275,7 +274,8 @@ template <typename T> TheHeuristic<T> MethodCheckDatabaseBank() {
 // * "load": Load from the database. If info missing then use "canonic"
 //   If database missing
 template <typename T> TheHeuristic<T> MethodChoiceCanonicalization() {
-  std::vector<std::string> ListString = {"1", "1 groupsize < 500 store", "canonic"};
+  std::vector<std::string> ListString = {"1", "1 groupsize < 500 store",
+                                         "canonic"};
   return HeuristicFromListString<T>(ListString);
 }
 

@@ -220,8 +220,9 @@ template <typename T, typename Tint> struct LLLreduction {
 };
 
 template <typename T, typename Tint>
-void CheckLLLreduction(LLLreduction<T,Tint> const& res, MyMatrix<T> const& GramMat) {
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(res.Pmat);
+void CheckLLLreduction(LLLreduction<T, Tint> const &res,
+                       MyMatrix<T> const &GramMat) {
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(res.Pmat);
   MyMatrix<T> prod = Pmat_T * GramMat * Pmat_T.transpose();
   if (prod != res.GramMatRed) {
     std::cerr << "The GramMatRed is not the reduced expression\n";
@@ -434,15 +435,15 @@ LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
 }
 
 template <typename Tmat, typename Tint>
-LLLreduction<Tmat, Tint> LLLreducedGeneral(MyMatrix<Tmat> const &GramMat, std::string const& method) {
+LLLreduction<Tmat, Tint> LLLreducedGeneral(MyMatrix<Tmat> const &GramMat,
+                                           std::string const &method) {
   if (method == "direct")
-    return LLLreducedBasis<Tmat,Tint>(GramMat);
+    return LLLreducedBasis<Tmat, Tint>(GramMat);
   if (method == "dual")
-    return LLLreducedBasisDual<Tmat,Tint>(GramMat);
+    return LLLreducedBasisDual<Tmat, Tint>(GramMat);
   std::cerr << "No matching method\n";
   throw TerminalException{1};
 }
-
 
 // This is for debugging purposes
 template <typename Tmat, typename Tint>
@@ -476,16 +477,18 @@ LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
 }
 
 template <typename T>
-std::pair<MyMatrix<T>,MyMatrix<T>> ReduceVectorFamily(MyMatrix<T> const& M, std::string const& method) {
+std::pair<MyMatrix<T>, MyMatrix<T>>
+ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
   using Tint = typename underlying_ring<T>::ring_type;
-  int nbRow=M.rows();
-  int nbCol=M.cols();
-  auto GetGram=[&](MyMatrix<T> const& VectFamily) {
-    MyMatrix<T> TheGram = ZeroMatrix<T>(nbCol,nbCol);
-    for (int iRow=0; iRow<nbRow; iRow++) {
-      for (int iCol=0; iCol<nbCol; iCol++) {
-        for (int jCol=0; jCol<nbCol; jCol++) {
-          TheGram(iCol,jCol) += VectFamily(iRow,iCol) * VectFamily(iRow,jCol);
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  auto GetGram = [&](MyMatrix<T> const &VectFamily) {
+    MyMatrix<T> TheGram = ZeroMatrix<T>(nbCol, nbCol);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        for (int jCol = 0; jCol < nbCol; jCol++) {
+          TheGram(iCol, jCol) +=
+              VectFamily(iRow, iCol) * VectFamily(iRow, jCol);
         }
       }
     }
@@ -493,13 +496,14 @@ std::pair<MyMatrix<T>,MyMatrix<T>> ReduceVectorFamily(MyMatrix<T> const& M, std:
   };
   MyMatrix<T> TheGram = GetGram(M);
   std::cerr << "ReduceVectorFamily, step 1\n";
-  LLLreduction<T, Tint> res = LLLreducedGeneral<T,Tint>(TheGram, method);
+  LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method);
   std::cerr << "ReduceVectorFamily, step 2\n";
   MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
   std::cerr << "ReduceVectorFamily, step 3\n";
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   std::cerr << "ReduceVectorFamily, step 4\n";
-  std::cerr << "|M|=" << M.rows() << "/" << M.cols() << " |Pmat_T|=" << Pmat_T.rows() << "/" << Pmat_T.cols() << "\n";
+  std::cerr << "|M|=" << M.rows() << "/" << M.cols()
+            << " |Pmat_T|=" << Pmat_T.rows() << "/" << Pmat_T.cols() << "\n";
   MyMatrix<T> Mred = M * Pmat_T;
   std::cerr << "ReduceVectorFamily, step 5\n";
   if (GetGram(Mred) != res.GramMatRed) {

@@ -13,8 +13,8 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_LINEAR_PROGRAM
-# define DEBUG_SEARCH_POSITIVE_RELATION
+#define DEBUG_LINEAR_PROGRAM
+#define DEBUG_SEARCH_POSITIVE_RELATION
 #endif
 
 template <typename T> struct LpSolution {
@@ -34,7 +34,7 @@ template <typename T> struct LpSolution {
 };
 
 template <typename T>
-void PrintLpSolution(LpSolution<T> const& eSol, std::ostream & os) {
+void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "method=" << eSol.method << "\n";
   os << "PrimalDefined=" << eSol.PrimalDefined << "\n";
   os << "DualDefined=" << eSol.DualDefined << "\n";
@@ -450,16 +450,14 @@ LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
   return eSol1;
 }
 
-template<typename T>
-bool IsPolytopal(MyMatrix<T> const &EXT) {
+template <typename T> bool IsPolytopal(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    if (EXT(iRow,0) != 1)
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    if (EXT(iRow, 0) != 1)
       return false;
   }
   return true;
 }
-
 
 template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
@@ -531,8 +529,7 @@ template <typename T> struct SolVertex {
   MyVector<T> eVert;
 };
 
-template <typename T>
-MyMatrix<T> SetIsobarycenter(MyMatrix<T> const& EXT) {
+template <typename T> MyMatrix<T> SetIsobarycenter(MyMatrix<T> const &EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -553,8 +550,7 @@ MyMatrix<T> SetIsobarycenter(MyMatrix<T> const& EXT) {
   return nMat;
 }
 
-template <typename T>
-Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
+template <typename T> Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -591,7 +587,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT) {
 template <typename T>
 vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb) {
   vectface vf(EXT.rows());
-  for (size_t i=0; i<nb; i++) {
+  for (size_t i = 0; i < nb; i++) {
     Face f = Kernel_FindSingleVertex(EXT);
     vf.push_back(f);
   }
@@ -648,22 +644,22 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  MyMatrix<T> EXT_ext(nbRow, nbCol+1);
-  MyVector<T> ToMinimize(nbCol+1);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    EXT_ext(iRow,0);
-    for (int iCol=0; iCol<nbCol; iCol++)
-      EXT_ext(iRow,iCol+1) = EXT(iRow,iCol);
+  MyMatrix<T> EXT_ext(nbRow, nbCol + 1);
+  MyVector<T> ToMinimize(nbCol + 1);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    EXT_ext(iRow, 0);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      EXT_ext(iRow, iCol + 1) = EXT(iRow, iCol);
   }
   ToMinimize(0) = 0;
-  for (int iCol=0; iCol<nbCol; iCol++)
-    ToMinimize(iCol+1) = eVect(iCol);
+  for (int iCol = 0; iCol < nbCol; iCol++)
+    ToMinimize(iCol + 1) = eVect(iCol);
   LpSolution<T> eSol = CDD_LinearProgramming(EXT_ext, ToMinimize);
   Face eFace(nbRow);
-  for (int i_row=0; i_row<nbRow; i_row++) {
+  for (int i_row = 0; i_row < nbRow; i_row++) {
     T sum(0);
-    for (int i_col=0; i_col<nbCol; i_col++) {
-      sum += EXT(i_row,i_col) * eSol.DirectSolution(i_col);
+    for (int i_col = 0; i_col < nbCol; i_col++) {
+      sum += EXT(i_row, i_col) * eSol.DirectSolution(i_col);
     }
     if (sum == 0)
       eFace[i_row] = 1;
@@ -679,16 +675,15 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect) {
   return eFace;
 }
 
-
 // Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
 // such that sum_i lambda_i v_i = 0 with not all lambda_i zero.
-// The existence of such a system of lambda is equivalent to the absence of a vector x
-// such that x.v_i > 0 for all i.
+// The existence of such a system of lambda is equivalent to the absence of a
+// vector x such that x.v_i > 0 for all i.
 //
 // The following data type is the output of making such checks.
-// eTestExist: If true then there exist a configuration of such beta. If false then no.
-// InternalVector: The internal vector that satisfes x.v_i > 0 if existing.
-// TheRelat: The relation between the vectors.
+// eTestExist: If true then there exist a configuration of such beta. If false
+// then no. InternalVector: The internal vector that satisfes x.v_i > 0 if
+// existing. TheRelat: The relation between the vectors.
 template <typename T> struct PosRelRes {
   bool eTestExist;
   bool has_relation;
@@ -698,7 +693,8 @@ template <typename T> struct PosRelRes {
 };
 
 template <typename T>
-void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T> const& pos) {
+void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
+                                        PosRelRes<T> const &pos) {
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
   // Checking the internal vector (if existing of course)
@@ -708,7 +704,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
         std::cerr << "There is an internal vector while eTestExist is true\n";
         throw TerminalException{1};
       }
-      MyVector<T> const& V = *pos.InternalVector;
+      MyVector<T> const &V = *pos.InternalVector;
       for (int iRow = 0; iRow < nbRow; iRow++) {
         T eScal(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
@@ -730,15 +726,17 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
   if (pos.has_relation) {
     if (!pos.eTestExist) {
       if (pos.TheRelat.has_value()) {
-        std::cerr << "There is no relation for TheRelat while eTestExist is true\n";
+        std::cerr
+            << "There is no relation for TheRelat while eTestExist is true\n";
         throw TerminalException{1};
       }
     } else {
       if (!pos.TheRelat.has_value()) {
-        std::cerr << "There is a relation for TheRelat while eTestExist is false\n";
+        std::cerr
+            << "There is a relation for TheRelat while eTestExist is false\n";
         throw TerminalException{1};
       }
-      MyVector<T> const& V = *pos.TheRelat;
+      MyVector<T> const &V = *pos.TheRelat;
       T sumV(0);
       for (int iRow = 0; iRow < nbRow; iRow++) {
         if (V(iRow) < 0) {
@@ -757,9 +755,12 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
         for (int iRow = 0; iRow < nbRow; iRow++)
           eSum += V(iRow) * ListVect(iRow, iCol);
         if (eSum != 0) {
-          std::cerr << "CheckResult_PositiveRelationSimple : error checking TheRelat\n";
-          std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol << "\n";
-          std::cerr << "CheckResult_PositiveRelationSimple : We have eSum=" << eSum << "\n";
+          std::cerr << "CheckResult_PositiveRelationSimple : error checking "
+                       "TheRelat\n";
+          std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol
+                    << "\n";
+          std::cerr << "CheckResult_PositiveRelationSimple : We have eSum="
+                    << eSum << "\n";
           WriteMatrixFile("CheckResult_PositiveRelationSimple", ListVect);
           throw TerminalException{1};
         }
@@ -768,11 +769,10 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect, PosRelRes<T
   }
 }
 
-
 // Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
 // such that sum_i lambda_i v_i = 0.
-// The existence of such a system of lambda is equivalent to the absence of a vector x
-// such that x.v_i > 0 for all i.
+// The existence of such a system of lambda is equivalent to the absence of a
+// vector x such that x.v_i > 0 for all i.
 //
 // I need to finish understanding what is the idea below.
 template <typename T>
@@ -805,12 +805,12 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
     IsDone = true;
     eResult.eTestExist = true;
 #ifdef PRINT_LINEAR_PROGRAM_RESULT
-    MyVector<T> const& V = eSol.DualSolution;
+    MyVector<T> const &V = eSol.DualSolution;
     // That seems actually less easy to obtain than we expected.
     // More work is needed here.
     T max_V = V(0);
     T min_V = V(0);
-    for (int iRow=1; iRow<nbRow; iRow++) {
+    for (int iRow = 1; iRow < nbRow; iRow++) {
       if (V(iRow) < min_V) {
         min_V = V(iRow);
       }
@@ -818,15 +818,16 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect) {
         max_V = V(iRow);
       }
     }
-    double max_V_d = UniversalScalarConversion<double,T>(max_V);
-    double min_V_d = UniversalScalarConversion<double,T>(min_V);
+    double max_V_d = UniversalScalarConversion<double, T>(max_V);
+    double min_V_d = UniversalScalarConversion<double, T>(min_V);
     std::cerr << "max_V_d=" << max_V_d << " min_V_d=" << min_V_d << "\n";
-    for (int iCol=0; iCol<nbCol; iCol++) {
+    for (int iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
-      for (int iRow=0; iRow<nbRow; iRow++) {
-        eSum += V(iRow) * ListVect(iRow,iCol);
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        eSum += V(iRow) * ListVect(iRow, iCol);
       }
-      std::cerr << "iCol=" << iCol << " eSum=" << eSum << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
+      std::cerr << "iCol=" << iCol << " eSum=" << eSum
+                << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
     }
 #endif
   }
@@ -845,7 +846,6 @@ struct Constraint {
   std::vector<int> ListPositive;
   std::vector<std::vector<int>> ListSetStrictPositive;
 };
-
 
 // Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
 // such that sum_i lambda_i v_i = 0.
@@ -951,8 +951,9 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect) {
     std::cerr << "Clearly not what we expected\n";
   }
 #endif
-  auto get_solution=[&]() -> PosRelRes<T> {
-    // We take the dimensionality as the driving factor for the complexity of the computation.
+  auto get_solution = [&]() -> PosRelRes<T> {
+    // We take the dimensionality as the driving factor for the complexity of
+    // the computation.
     if (dim_direct < dim_dual) {
       return SearchPositiveRelationSimple_Direct(ListVect);
     }
@@ -964,7 +965,6 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect) {
 #endif
   return the_sol.eTestExist;
 }
-
 
 template <typename T>
 std::optional<MyVector<T>>
@@ -994,7 +994,7 @@ SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
   if (!PRR.eTestExist)
     return {};
   MyVector<T> TheSol(nbVect);
-  MyVector<T> const& V = *PRR.TheRelat;
+  MyVector<T> const &V = *PRR.TheRelat;
   for (int iVect = 0; iVect < nbVect; iVect++)
     TheSol(iVect) = V(iVect) / V(nbVect);
   return TheSol;
@@ -1252,7 +1252,7 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
     return IdentityMat<T>(nbCol);
   } else {
     std::vector<int> ListIdx;
-    MyVector<T> const& TheRelat = *eRes.TheRelat;
+    MyVector<T> const &TheRelat = *eRes.TheRelat;
     for (int iRow = 0; iRow < nbRow; iRow++)
       if (TheRelat(iRow) > 0)
         ListIdx.push_back(iRow);
@@ -1287,17 +1287,17 @@ MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
 template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
-  MyMatrix<T> FACexp(nbRow,1+nbCol);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    FACexp(iRow,0) = -1;
-    for (int iCol=0; iCol<nbCol; iCol++)
-      FACexp(iRow,1+iCol) = FAC(iRow,iCol);
+  MyMatrix<T> FACexp(nbRow, 1 + nbCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    FACexp(iRow, 0) = -1;
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      FACexp(iRow, 1 + iCol) = FAC(iRow, iCol);
   }
-  MyVector<T> SumIneq(1+nbCol);
-  for (int iCol=0; iCol<=nbCol; iCol++) {
+  MyVector<T> SumIneq(1 + nbCol);
+  for (int iCol = 0; iCol <= nbCol; iCol++) {
     T sum = 0;
-    for (int iRow=0; iRow<nbRow; iRow++)
-      sum += FACexp(iRow,iCol);
+    for (int iRow = 0; iRow < nbRow; iRow++)
+      sum += FACexp(iRow, iCol);
     SumIneq(iCol) = sum;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FACexp, SumIneq);

@@ -16,11 +16,11 @@
 // clang-format on
 
 #ifdef TIMINGS
-# define TIMINGS_GROUP
+#define TIMINGS_GROUP
 #endif
 
 #ifdef DEBUG
-# define DEBUG_DOUBLE_COSET
+#define DEBUG_DOUBLE_COSET
 #endif
 
 static const size_t LIMIT_INITIAL_TRIV = 5000;
@@ -60,7 +60,8 @@ vectface DoubleCosetDescription_Representation(
   Tgroup TheGRP(BigGens, id);
   Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
   if (CheckSize != TotalSize) {
-    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize
+              << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -150,7 +151,8 @@ vectface DoubleCosetDescription_Canonic(
   Tgroup TheGRP(BigGens, id);
   Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
   if (CheckSize != TotalSize) {
-    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize
+              << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -192,10 +194,12 @@ vectface DoubleCosetDescription_Canonic(
       DoubleCosetInsertEntry_first(eFaceImg);
     }
   }
-  //  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << " TotalSize=" << TotalSize << "\n";
-  //  os << "DoubleCosetDescription_Canonic |SetFace|=" << SetFace.size() << "\n";
+  //  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << "
+  //  TotalSize=" << TotalSize << "\n"; os << "DoubleCosetDescription_Canonic
+  //  |SetFace|=" << SetFace.size() << "\n";
   vectface ListListSet = get_list_list_set();
-  //  os << "DoubleCosetDescription_Canonic |ListListSet|=" << ListListSet.size()
+  //  os << "DoubleCosetDescription_Canonic |ListListSet|=" <<
+  //  ListListSet.size()
   //     << " n=" << ListListSet.get_n() << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
@@ -236,7 +240,8 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   Tgroup TheGRP(BigGens, id);
   Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
   if (CheckSize != TotalSize) {
-    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize
+              << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -314,7 +319,8 @@ vectface DoubleCosetDescription_Exhaustive_T(
   Tgroup TheGRP(BigGens, id);
   Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
   if (CheckSize != TotalSize) {
-    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize << "\n";
+    std::cerr << "CheckSize=" << CheckSize << " TotalSize=" << TotalSize
+              << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -378,7 +384,7 @@ vectface DoubleCosetDescription_SingleCoset(
 #ifdef DEBUG_DOUBLE_COSET
   using Tint = typename Tgroup::Tint;
   Tint GenSize = 0;
-  for (auto & f : SetFace) {
+  for (auto &f : SetFace) {
     GenSize += SmaGRP.OrbitSize_OnSets(f);
   }
   if (GenSize != TotalSize) {
@@ -470,9 +476,9 @@ DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     //    Tint orbSize = BigGRP.OrbitSize_OnSets(eSet);
     //    os << "osbSize=" << orbSize << " TotalSize=" << TotalSize << "\n";
     //    if (orbSize != TotalSize) {
-    //      std::cerr << "orbSize=" << orbSize << " TotalSize=" << TotalSize << "\n";
-    //      std::cerr << "Inconsistency in the Size computation\n";
-    //      throw TerminalException{1};
+    //      std::cerr << "orbSize=" << orbSize << " TotalSize=" << TotalSize <<
+    //      "\n"; std::cerr << "Inconsistency in the Size computation\n"; throw
+    //      TerminalException{1};
     //    }
     if (f_terminal())
       break;
@@ -539,14 +545,13 @@ vectface DoubleCosetDescription_Exhaustive_Block_T(
 }
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
-vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(Tgroup const &BigGRP,
-                                                                         Tgroup const &SmaGRP,
-                                                                         const Tface_orbitsize &ListFaceOrbitsize,
-                                                                         typename Tgroup::Tint const& n_limit,
-                                                                         Fterminal f_terminal,
-                                                                         std::ostream &os) {
-  // Generate the full orbit for the big group and then split it using the small group.
-  // To be preferred when SmaGRP is really small.
+vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
+    Tgroup const &BigGRP, Tgroup const &SmaGRP,
+    const Tface_orbitsize &ListFaceOrbitsize,
+    typename Tgroup::Tint const &n_limit, Fterminal f_terminal,
+    std::ostream &os) {
+  // Generate the full orbit for the big group and then split it using the small
+  // group. To be preferred when SmaGRP is really small.
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
@@ -555,18 +560,20 @@ vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(Tgroup 
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   size_t nbOrbit = ListFaceOrbitsize.size();
-  for (size_t i_orbit=0; i_orbit<nbOrbit; i_orbit++) {
-    std::pair<Face,Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
-    Face const& eSet = pair.first;
-    Tint const& TotalSize = pair.second;
-    if (f_terminal()) break;
+  for (size_t i_orbit = 0; i_orbit < nbOrbit; i_orbit++) {
+    std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const &eSet = pair.first;
+    Tint const &TotalSize = pair.second;
+    if (f_terminal())
+      break;
     if (n_limit <= TotalSize) {
       vectface ListListSet =
-        DoubleCosetDescription_Exhaustive_T<Tgroup,T_hash_set>(BigGens, SmaGRP, eSet, TotalSize, os);
+          DoubleCosetDescription_Exhaustive_T<Tgroup, T_hash_set>(
+              BigGens, SmaGRP, eSet, TotalSize, os);
       eListSma.append(ListListSet);
     } else {
-      vectface ListListSet =
-        DoubleCosetDescription_CanonicInitialTriv<Tgroup>(BigGens, SmaGRP, eSet, TotalSize, os);
+      vectface ListListSet = DoubleCosetDescription_CanonicInitialTriv<Tgroup>(
+          BigGens, SmaGRP, eSet, TotalSize, os);
       eListSma.append(ListListSet);
     }
   }
@@ -656,13 +663,14 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
     }
     std::optional<std::string> opt =
-      get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
+        get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
     if (opt) {
-      // In this scheme, we use the exhaustive method when the orbit size is lower than n.
-      // Otherwise, we use the canonic_initial_triv method.
-      std::string const& n_str = *opt;
+      // In this scheme, we use the exhaustive method when the orbit size is
+      // lower than n. Otherwise, we use the canonic_initial_triv method.
+      std::string const &n_str = *opt;
       Tint n = ParseScalar<Tint>(n_str);
-      return DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(BigGRP, SmaGRP, ListFaceOrbitsize, n, f_terminal, os);
+      return DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
+          BigGRP, SmaGRP, ListFaceOrbitsize, n, f_terminal, os);
     }
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};

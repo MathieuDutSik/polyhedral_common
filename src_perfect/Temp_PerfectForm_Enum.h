@@ -2,11 +2,9 @@
 #ifndef SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 #define SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 
-#include "Temp_PerfectForm.h"
 #include "POLY_ThreadDualDescription.h"
 #include "Parallel_Classes.h"
-
-
+#include "Temp_PerfectForm.h"
 
 template <typename T, typename Tint, typename Tgroup> struct ListPerfectForm {
 public:
@@ -202,8 +200,10 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   std::function<void(TrivialBalinski &, SimplePerfect<T, Tint> const &,
                      SimplePerfectInv<T> const &, std::ostream &)>
       UpgradeBalinskiStat =
-          []([[maybe_unused]] TrivialBalinski const &eStat, [[maybe_unused]] SimplePerfect<T, Tint> const &eEnt,
-             [[maybe_unused]] SimplePerfectInv<T> const &eInv, [[maybe_unused]] std::ostream &os) -> void {};
+          []([[maybe_unused]] TrivialBalinski const &eStat,
+             [[maybe_unused]] SimplePerfect<T, Tint> const &eEnt,
+             [[maybe_unused]] SimplePerfectInv<T> const &eInv,
+             [[maybe_unused]] std::ostream &os) -> void {};
   std::function<std::optional<MyMatrix<Tint>>(SimplePerfect<T, Tint> const &,
                                               SimplePerfect<T, Tint> const &)>
       fEquiv =

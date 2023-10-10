@@ -15,15 +15,15 @@
 // clang-format on
 
 #ifdef TIMINGS
-# define TIMINGS_DUAL_DESC
+#define TIMINGS_DUAL_DESC
 #endif
 
 #ifdef DEBUG
-# define DEBUG_DUAL_DESC
+#define DEBUG_DUAL_DESC
 #endif
 
 #ifdef KEY_VALUE
-# define KEY_VALUE_DUAL_DESC
+#define KEY_VALUE_DUAL_DESC
 #endif
 
 template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
@@ -226,7 +226,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
       if (line == "end")
         break;
       if (line == "begin")
-        headersize = iLine+2;
+        headersize = iLine + 2;
       if (headersize != 0 and iLine >= headersize)
         process_line();
       iLine++;
@@ -284,16 +284,19 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
 
 template <typename T, typename Tint>
 std::vector<Tint> RescaleVec(std::vector<T> const &v) {
-  static_assert(is_implementation_of_Q<T>::value, "Requires T to be an implementation of Q");
-  static_assert(is_implementation_of_Q<Tint>::value || is_implementation_of_Z<Tint>::value, "Requires Tint to be an implementation of Z or Q");
+  static_assert(is_implementation_of_Q<T>::value,
+                "Requires T to be an implementation of Q");
+  static_assert(is_implementation_of_Q<Tint>::value ||
+                    is_implementation_of_Z<Tint>::value,
+                "Requires Tint to be an implementation of Z or Q");
   int cols = v.size();
-  std::vector<Tint> dens(cols,1);
+  std::vector<Tint> dens(cols, 1);
   std::vector<Tint> vret = std::vector<Tint>(cols);
-  for( int iCol = 0; iCol < cols; iCol++){
+  for (int iCol = 0; iCol < cols; iCol++) {
     dens[iCol] = v[iCol].get_den();
   }
   Tint scale = LCMlist(dens);
-  for( int iCol = 0; iCol < cols; iCol++) {
+  for (int iCol = 0; iCol < cols; iCol++) {
     vret[iCol] = (scale / v[iCol].get_den()) * v[iCol].get_num();
   }
   return vret;
@@ -310,13 +313,14 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
   mpz_class n_col_mpz(n_col);
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
-  Tint eScal; long eScal_long;
+  Tint eScal;
+  long eScal_long;
   vectface vf(n_row);
   Face f(n_row);
   MyMatrix<Tint> EXT_int = RescaleRows<T, Tint>(EXT);
   MyMatrix<long> EXT_long = MyMatrix<long>(n_row, n_col);
   size_t max_bits = 0;
-  auto f_bit=[&](mpz_class const& val) -> size_t {
+  auto f_bit = [&](mpz_class const &val) -> size_t {
     return mpz_sizeinbase(val.get_mpz_t(), 2);
   };
   for (size_t iRow = 0; iRow < n_row; iRow++) {
@@ -326,17 +330,17 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
     }
   }
   max_bits += f_bit(n_col_mpz);
-  std::vector<long> LVal_long(DimEXT,0);
+  std::vector<long> LVal_long(DimEXT, 0);
 
-  auto f_insert=[&](std::vector<T> const& LVal) -> void {
-    std::vector<Tint> LVal_int = RescaleVec<T,Tint>(LVal);
+  auto f_insert = [&](std::vector<T> const &LVal) -> void {
+    std::vector<Tint> LVal_int = RescaleVec<T, Tint>(LVal);
     size_t max_bits_LVal = 0;
-    for( size_t i = shift; i < DimEXT; i++) {
+    for (size_t i = shift; i < DimEXT; i++) {
       max_bits_LVal = std::max(max_bits_LVal, f_bit(LVal_int[i]));
       LVal_long[i] = LVal_int[i].get_si();
     }
 
-    if (max_bits + max_bits_LVal <= 60 ) {
+    if (max_bits + max_bits_LVal <= 60) {
       // safe to use long
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         eScal_long = 0;
@@ -380,7 +384,8 @@ MyMatrix<T> DualDescExternalProgramIneq(MyMatrix<T> const &EXT,
 
 template <typename T, typename Fprocess>
 void DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
-                                     std::string const &eCommand, Fprocess f_process, std::ostream &os) {
+                                     std::string const &eCommand,
+                                     Fprocess f_process, std::ostream &os) {
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   size_t DimEXT = n_col + 1;
@@ -434,7 +439,8 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
       return lrs::DualDescription_incd_reduction(EXT);
   }
   //
-  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+  if constexpr (is_ring_field<T>::value &&
+                has_reduction_subset_solver<T>::value) {
     // Small polytopes have special solutions
     eProg = "small_polytopes";
     ListProg.push_back(eProg);
@@ -514,7 +520,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
       return lrs::DualDescription_reduction(EXT);
   }
   //
-  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+  if constexpr (is_ring_field<T>::value &&
+                has_reduction_subset_solver<T>::value) {
     // Small polytopes have special solutions
     eProg = "small_polytopes";
     ListProg.push_back(eProg);
@@ -573,7 +580,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
 
 template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
-                                    std::string const &ansProg, Fprocess f_process, std::ostream &os) {
+                                    std::string const &ansProg,
+                                    Fprocess f_process, std::ostream &os) {
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -591,7 +599,8 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   }
   // We need to make it work also for ase without reduction if that makes sense
   // which is not sure at all.
-  if constexpr (is_ring_field<T>::value && has_reduction_subset_solver<T>::value) {
+  if constexpr (is_ring_field<T>::value &&
+                has_reduction_subset_solver<T>::value) {
     // Small polytopes can have special solutions
     eProg = "small_polytopes";
     ListProg.push_back(eProg);
@@ -672,8 +681,8 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols() << "_"
-     << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
+  os << "KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols()
+     << "_" << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
      << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
@@ -690,7 +699,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   MicrosecondTime time_total;
 #endif
   std::vector<std::pair<Face, MyVector<T>>> ListReturn;
-  auto f_process=[&](std::pair<Face,MyVector<T>> const &pair_face) -> void {
+  auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
     ListReturn.push_back(pair_face);
   };
   DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
@@ -713,9 +722,10 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   os << "|OrbitSplittingMap|=" << time << "\n";
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_" << EXT.cols() << "_"
-     << GRP.size() << "_" << ansProg << "_" << ListReturn.size() << "_"
-     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
+  os << "KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_"
+     << EXT.cols() << "_" << GRP.size() << "_" << ansProg << "_"
+     << ListReturn.size() << "_" << TheOutput.size() << ") VALUE=("
+     << time_total << ")\n";
 #endif
   return TheOutput;
 }

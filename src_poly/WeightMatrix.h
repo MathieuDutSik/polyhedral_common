@@ -31,11 +31,11 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_WEIGHT_MATRIX
+#define DEBUG_WEIGHT_MATRIX
 #endif
 
 #ifdef TIMINGS
-# define TIMINGS_WEIGHT_MATRIX
+#define TIMINGS_WEIGHT_MATRIX
 #endif
 
 //
@@ -1186,9 +1186,10 @@ GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow,
   return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
-template<typename Tgr, typename Tidx>
+template <typename Tgr, typename Tidx>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Graph_Kernel(Tgr const& eGR, size_t const& nbRow) {
+GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR,
+                                            size_t const &nbRow) {
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
@@ -1217,9 +1218,6 @@ GetGroupCanonicalizationVector_Graph_Kernel(Tgr const& eGR, size_t const& nbRow)
   throw TerminalException{1};
 }
 
-
-
-
 // This function takes a matrix and returns the vector
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
@@ -1238,7 +1236,7 @@ GetGroupCanonicalizationVector_Kernel(
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
-  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr,Tidx>(eGR, nbRow);
+  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow);
 }
 
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>

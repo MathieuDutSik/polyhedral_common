@@ -13,15 +13,15 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_ELIMINATION_REDUNDANCY
+#define DEBUG_ELIMINATION_REDUNDANCY
 #endif
 
 #ifdef CHECK
-# define CHECK_ELIMINATION_REDUNDANCY
+#define CHECK_ELIMINATION_REDUNDANCY
 #endif
 
 #ifdef PRINT
-# define PRINT_ELIMINATION_REDUNDANCY
+#define PRINT_ELIMINATION_REDUNDANCY
 #endif
 
 // Fairly expensive function. But useful for debugging
@@ -64,7 +64,8 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  std::cerr << "FacetizationCone : n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+  std::cerr << "FacetizationCone : n_rows=" << n_rows << " n_cols=" << n_cols
+            << "\n";
 #endif
   MyMatrix<T> TheSum = ZeroMatrix<T>(1, n_cols);
   for (int i_row = 0; i_row < n_rows; i_row++)
@@ -298,7 +299,8 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin) {
 #endif
   while (true) {
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
+    std::cerr << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred
+              << "\n";
 #endif
     SetRandomVector();
     int idxFound = GetRandomOutsideVector_and_HitAndRun();
@@ -442,7 +444,8 @@ MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
 }
 
 template <typename T, typename Tgroup>
-std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgroup &GRP) {
+std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
+                                             const Tgroup &GRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   size_t n_rows = EXT.rows();
@@ -545,7 +548,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT, const Tgrou
     }
   }
   std::vector<int> ListIrred;
-  for (size_t i_row=0; i_row<n_rows; i_row++) {
+  for (size_t i_row = 0; i_row < n_rows; i_row++) {
     if (status_ret[i_row] == 1) {
       ListIrred.push_back(i_row);
     }

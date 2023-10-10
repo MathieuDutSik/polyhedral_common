@@ -177,8 +177,8 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
   using Tfield = typename overlying_field<Tint>::field_type;
   WeightMatrix<true, std::vector<Tint>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(Concat, ListMat,
-                                                            Vsubset);
+      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(
+          Concat, ListMat, Vsubset);
   WMat.ReorderingSetWeight();
   return {M, Spann, Qmat, std::move(WMat), fd};
 }
@@ -739,26 +739,28 @@ It can be that the cones are union of disjoint cones. In that first process this
   return {std::move(ListBlock), "undefined"};
 }
 
-
-
 template <typename T> struct ConeSimpDesc {
   MyMatrix<T> EXT;
   MyMatrix<T> FAC;
 };
 
-template<typename T>
-std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseIntersection,
-                                                       std::vector<ConeSimpDesc<T>> const& l_cone) {
+template <typename T>
+std::optional<ConeSimpDesc<T>>
+TestPolyhedralPartition(bool const &TestPairwiseIntersection,
+                        std::vector<ConeSimpDesc<T>> const &l_cone) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
   HumanTime time;
   if (TestPairwiseIntersection) {
-    for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
-      std::cerr << "i_cone=" << i_cone << " / " << n_cone << " duration=" << time << "\n";
-      for (size_t j_cone=i_cone+1; j_cone<n_cone; j_cone++) {
-        MyMatrix<T> FACtot = Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
+    for (size_t i_cone = 0; i_cone < n_cone; i_cone++) {
+      std::cerr << "i_cone=" << i_cone << " / " << n_cone
+                << " duration=" << time << "\n";
+      for (size_t j_cone = i_cone + 1; j_cone < n_cone; j_cone++) {
+        MyMatrix<T> FACtot =
+            Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
         if (IsFullDimensional_V1(FACtot)) {
-          std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone << " are overlapping\n";
+          std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone
+                    << " are overlapping\n";
           return {};
         }
       }
@@ -767,12 +769,12 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
   } else {
     std::cerr << "Not doing the pairwise intersection test\n";
   }
-  std::map<MyVector<T>,int> MapEXT;
-  using Tent = std::pair<size_t,int>;
-  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
-    MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
+  std::map<MyVector<T>, int> MapEXT;
+  using Tent = std::pair<size_t, int>;
+  for (size_t i_cone = 0; i_cone < n_cone; i_cone++) {
+    MyMatrix<T> const &EXT = l_cone[i_cone].EXT;
     int n_ext = EXT.rows();
-    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       MyVector<T> V = GetMatrixRow(EXT, i_ext);
       MapEXT[V] = 0;
     }
@@ -781,33 +783,33 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
   std::cerr << "n_ext_tot=" << n_ext_tot << " time=" << time << "\n";
   MyMatrix<T> EXTtot(n_ext_tot, dim);
   int pos = 0;
-  for (auto & kv : MapEXT) {
-    MyVector<T> const& eEXT = kv.first;
-    for (int i=0; i<dim; i++)
+  for (auto &kv : MapEXT) {
+    MyVector<T> const &eEXT = kv.first;
+    for (int i = 0; i < dim; i++)
       EXTtot(pos, i) = eEXT(i);
     pos++;
   }
   std::cerr << "EXTtot built time=" << time << "\n";
-  for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+  for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
     MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
     MapEXT[eEXT] = i_ext_tot;
   }
   std::cerr << "MapEXT built time=" << time << "\n";
   // We match the facets in order to find which ones are
   // contained into just one and so get the facet of our cones.
-  std::map<Face,std::vector<Tent>> FACmult;
-  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
-    MyMatrix<T> const& FAC = l_cone[i_cone].FAC;
-    MyMatrix<T> const& EXT = l_cone[i_cone].EXT;
+  std::map<Face, std::vector<Tent>> FACmult;
+  for (size_t i_cone = 0; i_cone < n_cone; i_cone++) {
+    MyMatrix<T> const &FAC = l_cone[i_cone].FAC;
+    MyMatrix<T> const &EXT = l_cone[i_cone].EXT;
     int n_fac = FAC.rows();
     int n_ext = EXT.rows();
-    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       Face f(n_ext_tot);
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
         int i_ext_tot = MapEXT[eEXT];
         T sum = 0;
-        for (int i=0; i<dim; i++) {
+        for (int i = 0; i < dim; i++) {
           sum += eEXT(i) * FAC(i_fac, i);
         }
         if (sum == 0) {
@@ -818,26 +820,27 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
       FACmult[f].push_back(eEnt);
     }
   }
-  std::cerr << "FACmult built |FACmult|=" << FACmult.size() << " time=" << time << "\n";
+  std::cerr << "FACmult built |FACmult|=" << FACmult.size() << " time=" << time
+            << "\n";
   // We check that the facets matched only once have all
   // the vertices on the right side.
   // At the same time, we build the set of facets (with
   // no duplication)
   std::set<MyVector<T>> SetFAC;
   size_t n_size1 = 0;
-  auto is_matching_facet=[&](MyVector<T> const& eFAC) -> bool {
-    for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+  auto is_matching_facet = [&](MyVector<T> const &eFAC) -> bool {
+    for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
       T sum = 0;
-      for (int i=0; i<dim; i++) {
-        sum += eFAC(i) * EXTtot(i_ext_tot,i);
+      for (int i = 0; i < dim; i++) {
+        sum += eFAC(i) * EXTtot(i_ext_tot, i);
       }
       if (sum < 0)
         return false;
     }
     return true;
   };
-  for (auto & kv: FACmult) {
-    std::vector<Tent> const& eList = kv.second;
+  for (auto &kv : FACmult) {
+    std::vector<Tent> const &eList = kv.second;
     if (eList.size() != 1 && eList.size() != 2) {
       std::cerr << "The length of the list is not 1 or 2\n";
       return {};
@@ -854,15 +857,16 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
       n_size1++;
     }
   }
-  std::cerr << "We have SetFAC n_size1=" << n_size1 << " |SetFAC|=" << SetFAC.size() << " time=" << time << "\n";
+  std::cerr << "We have SetFAC n_size1=" << n_size1
+            << " |SetFAC|=" << SetFAC.size() << " time=" << time << "\n";
   // Building the FAC matrix
   int n_fac_final = SetFAC.size();
   std::cerr << "n_fac_final=" << n_fac_final << "\n";
   MyMatrix<T> FACfinal(n_fac_final, dim);
   std::vector<MyVector<T>> ListFACfinal;
   int pos_fac = 0;
-  for (auto & eFAC : SetFAC) {
-    for (int i=0; i<dim; i++)
+  for (auto &eFAC : SetFAC) {
+    for (int i = 0; i < dim; i++)
       FACfinal(pos_fac, i) = eFAC(i);
     ListFACfinal.push_back(eFAC);
     pos_fac++;
@@ -871,13 +875,13 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
   // Selecting the vertices of the right rank.
   std::vector<MyVector<T>> ListEXT;
   size_t min_len = dim - 1;
-  for (int i_ext_tot=0; i_ext_tot<n_ext_tot; i_ext_tot++) {
+  for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
     std::vector<MyVector<T>> ListIncd;
     MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
-    for (int i_fac_final=0; i_fac_final<n_fac_final; i_fac_final++) {
-      MyVector<T> const& eFAC = ListFACfinal[i_fac_final];
+    for (int i_fac_final = 0; i_fac_final < n_fac_final; i_fac_final++) {
+      MyVector<T> const &eFAC = ListFACfinal[i_fac_final];
       T sum = 0;
-      for (int i=0; i<dim; i++) {
+      for (int i = 0; i < dim; i++) {
         sum += eFAC(i) * eEXT(i);
       }
       if (sum == 0) {
@@ -892,44 +896,47 @@ std::optional<ConeSimpDesc<T>> TestPolyhedralPartition(bool const& TestPairwiseI
     }
   }
   MyMatrix<T> EXTfinal = MatrixFromVectorFamily(ListEXT);
-  std::cerr << "We have EXTfinal |ListEXT|=" << ListEXT.size() << " time=" << time << "\n";
+  std::cerr << "We have EXTfinal |ListEXT|=" << ListEXT.size()
+            << " time=" << time << "\n";
   ConeSimpDesc<T> cone{EXTfinal, FACfinal};
   return cone;
 }
 
-template<typename T>
-std::vector<std::vector<size_t>> ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const& l_cone) {
-  std::map<MyVector<T>,size_t> MapEXT;
+template <typename T>
+std::vector<std::vector<size_t>>
+ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const &l_cone) {
+  std::map<MyVector<T>, size_t> MapEXT;
   int dim = 0;
-  for (auto & e_cone : l_cone) {
+  for (auto &e_cone : l_cone) {
     int n_ext = e_cone.EXT.rows();
     dim = e_cone.EXT.cols();
-    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       MyVector<T> eEXT = GetMatrixRow(e_cone.EXT, i_ext);
       MapEXT[eEXT] = 0;
     }
   }
   size_t pos = 0;
-  for (auto & kv : MapEXT) {
+  for (auto &kv : MapEXT) {
     kv.second = pos;
     pos++;
   }
   size_t n_ext_tot = pos;
-  std::cerr << "Building the full set of vertices n_ext_tot=" << n_ext_tot << "\n";
+  std::cerr << "Building the full set of vertices n_ext_tot=" << n_ext_tot
+            << "\n";
   //
   std::map<Face, std::vector<size_t>> MapFace_idx;
   size_t n_cone = l_cone.size();
-  for (size_t i_cone=0; i_cone<n_cone; i_cone++) {
-    ConeSimpDesc<T> const& e_cone = l_cone.at(i_cone);
+  for (size_t i_cone = 0; i_cone < n_cone; i_cone++) {
+    ConeSimpDesc<T> const &e_cone = l_cone.at(i_cone);
     int n_fac = e_cone.FAC.rows();
     int n_ext = e_cone.EXT.rows();
-    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(e_cone.FAC, i_fac);
       Face f(n_ext_tot);
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         MyVector<T> eEXT = GetMatrixRow(e_cone.EXT, i_ext);
         T scal = 0;
-        for (int i=0; i<dim; i++)
+        for (int i = 0; i < dim; i++)
           scal += eEXT(i) * eFAC(i);
         if (scal == 0) {
           size_t i_ext_tot = MapEXT.at(eEXT);
@@ -942,9 +949,9 @@ std::vector<std::vector<size_t>> ConnectedComponentsPolyhedral(std::vector<ConeS
   std::cerr << "The map has been built\n";
   //
   using Tgr = GraphListAdj;
-  std::vector<std::pair<size_t,size_t>> l_pair;
-  for (auto & kv : MapFace_idx) {
-    std::vector<size_t> const& eList = kv.second;
+  std::vector<std::pair<size_t, size_t>> l_pair;
+  for (auto &kv : MapFace_idx) {
+    std::vector<size_t> const &eList = kv.second;
     if (eList.size() != 1 && eList.size() != 2) {
       std::cerr << "Wrong size for eList\n";
       throw TerminalException{1};
@@ -952,7 +959,7 @@ std::vector<std::vector<size_t>> ConnectedComponentsPolyhedral(std::vector<ConeS
     if (eList.size() == 2) {
       size_t a = eList[0];
       size_t b = eList[1];
-      std::pair<size_t,size_t> epair{a,b};
+      std::pair<size_t, size_t> epair{a, b};
       l_pair.push_back(epair);
     }
   }

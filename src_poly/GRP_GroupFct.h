@@ -18,9 +18,8 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_GROUP
+#define DEBUG_GROUP
 #endif
-
 
 //
 // permutation functions
@@ -158,9 +157,6 @@ void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
   WriteGroup(os, TheGRP);
 }
 
-
-
-
 template <typename Tgroup>
 void WriteGroupMakeUp(std::ostream &os, Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
@@ -211,15 +207,17 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
 }
 
 template <typename Tgroup>
-void WriteGroupFormat(std::string const& FileGroup, std::string const& OutFormat, Tgroup const &TheGRP) {
-  auto f=[&](std::ostream & os) -> void {
+void WriteGroupFormat(std::string const &FileGroup,
+                      std::string const &OutFormat, Tgroup const &TheGRP) {
+  auto f = [&](std::ostream &os) -> void {
     if (OutFormat == "CPP") {
       return WriteGroup(os, TheGRP);
     }
     if (OutFormat == "GAP") {
       return WriteGroupGAP(os, TheGRP);
     }
-    std::cerr << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
+    std::cerr
+        << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
     throw TerminalException{1};
   };
   if (FileGroup == "stderr") {
@@ -231,8 +229,6 @@ void WriteGroupFormat(std::string const& FileGroup, std::string const& OutFormat
   std::ofstream os(FileGroup);
   return f(os);
 }
-
-
 
 //
 // group combinatorial algorithms

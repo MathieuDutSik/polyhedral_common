@@ -266,7 +266,8 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat, Vdiag);
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat,
+                                                                 Vdiag);
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "gen_cuspidal_request_full_info, step 3\n";
 #endif
@@ -1753,7 +1754,9 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
     }
     return false;
   };
-  auto f_isom = [&]([[maybe_unused]] MyMatrix<Tint> const &eP) -> bool { return false; };
+  auto f_isom = [&]([[maybe_unused]] MyMatrix<Tint> const &eP) -> bool {
+    return false;
+  };
   LORENTZ_RunEdgewalkAlgorithm_Kernel<T, Tint, Tgroup, decltype(f_vertex),
                                       decltype(f_isom),
                                       decltype(f_increase_nbdone)>(

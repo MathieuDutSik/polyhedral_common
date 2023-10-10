@@ -17,7 +17,7 @@
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_FLIP
+#define DEBUG_FLIP
 #endif
 
 struct GLPKoption {
@@ -86,38 +86,36 @@ template <typename T> MyMatrix<T> CyclicPolytope(int n, int k) {
 // Compute an upper bound on the determinant of maximal minor
 // The Hadamard bound is
 // We have det(A)^2 <= Pi_{i=1}^n (sum_j x_{ij}^2)
-template<typename T>
-T sqr_estimate_maximal_determinant(MyMatrix<T> const& M) {
+template <typename T> T sqr_estimate_maximal_determinant(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
   std::vector<T> ListSqr;
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (int iRow = 0; iRow < nbRow; iRow++) {
     T sum = 0;
-    for (int iCol=0; iCol<nbCol; iCol++)
-      sum += M(iRow,iCol) * M(iRow,iCol);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      sum += M(iRow, iCol) * M(iRow, iCol);
     ListSqr.push_back(sum);
   }
   std::sort(ListSqr.begin(), ListSqr.end());
   T eProd = 1;
-  for (int iRow=nbRow-nbCol; iRow<nbRow; iRow++) {
+  for (int iRow = nbRow - nbCol; iRow < nbRow; iRow++) {
     eProd *= ListSqr[iRow];
   }
   return eProd;
 }
 
-template<typename T>
-T sqr_estimate_facet_coefficients(MyMatrix<T> const& M) {
+template <typename T> T sqr_estimate_facet_coefficients(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
   T max_coeff = 0;
   MyVector<T> SqrCoeffFacet(nbCol);
-  for (int jCol=0; jCol<nbCol; jCol++) {
-    MyMatrix<T> Mret(nbRow,nbCol-1);
-    for (int iRow=0; iRow<nbRow; iRow++) {
+  for (int jCol = 0; jCol < nbCol; jCol++) {
+    MyMatrix<T> Mret(nbRow, nbCol - 1);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       int pos = 0;
-      for (int iCol=0; iCol<nbCol; iCol++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
         if (iCol != jCol) {
-          Mret(iRow,pos) = M(iRow,iCol);
+          Mret(iRow, pos) = M(iRow, iCol);
           pos++;
         }
       }
@@ -131,7 +129,8 @@ T sqr_estimate_facet_coefficients(MyMatrix<T> const& M) {
 }
 
 template <typename T>
-MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) {
+MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT,
+                                     Face const &eList) {
   int nb = eList.count();
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -144,7 +143,8 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) 
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "Error in rank in Facetness\n";
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << " nb=" << nb << "\n";
+    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << " nb=" << nb
+              << "\n";
     std::cerr << "|NSP|=" << NSP.rows() << " when it should be 1\n";
     throw TerminalException{1};
   }
@@ -160,12 +160,14 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT, Face const &eList) 
       eScal += eVect(iCol) * EXT(iRow, iCol);
     if (eScal == 0) {
       if (eList[iRow] != 1) {
-        std::cerr << "The vertex iRow has a zero scalar product but does not belong to eList\n";
+        std::cerr << "The vertex iRow has a zero scalar product but does not "
+                     "belong to eList\n";
         nbError++;
       }
     } else {
       if (eList[iRow] != 0) {
-        std::cerr << "The vertex iRow has a non-zero scalar product but does belong to eList\n";
+        std::cerr << "The vertex iRow has a non-zero scalar product but does "
+                     "belong to eList\n";
         nbError++;
       }
       if (eScal > 0)
@@ -200,7 +202,8 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
     M.row(eRank) = TheEXT.row(aRow);
     aRow = OneInc.find_next(aRow);
   };
-  MyMatrix<T> NSP = NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol, 1, f);
+  MyMatrix<T> NSP =
+      NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol, 1, f);
   MyVector<T> eVect(nbCol);
   for (size_t iCol = 0; iCol < nbCol; iCol++)
     eVect(iCol) = NSP(0, iCol);
@@ -233,12 +236,13 @@ int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   return NSP.rows();
 }
 
-template<typename T>
-MyMatrix<T> GetEXT_face(MyMatrix<T> const& EXT, int const& idx_drop, std::vector<int> const& l_idx) {
+template <typename T>
+MyMatrix<T> GetEXT_face(MyMatrix<T> const &EXT, int const &idx_drop,
+                        std::vector<int> const &l_idx) {
   int nbCol = EXT.cols();
   int e_incd = l_idx.size();
   MyMatrix<T> EXT_face(e_incd, nbCol - 1);
-  for (int i_row=0; i_row<e_incd; i_row++) {
+  for (int i_row = 0; i_row < e_incd; i_row++) {
     int j_row = l_idx[i_row];
     int pos = 0;
     for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -251,11 +255,12 @@ MyMatrix<T> GetEXT_face(MyMatrix<T> const& EXT, int const& idx_drop, std::vector
   return EXT_face;
 }
 
-std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face const &eList) {
+std::pair<std::vector<int>, std::vector<int>>
+Dynamic_bitset_to_vectorints(Face const &eList) {
   int len = eList.size();
   std::vector<int> V0;
   std::vector<int> V1;
-  for (int i=0; i<len; i++) {
+  for (int i = 0; i < len; i++) {
     if (eList[i]) {
       V1.push_back(i);
     } else {
@@ -265,8 +270,7 @@ std::pair<std::vector<int>,std::vector<int>> Dynamic_bitset_to_vectorints(Face c
   return {std::move(V0), std::move(V1)};
 }
 
-template<typename T>
-int get_idx_drop(MyVector<T> const& V) {
+template <typename T> int get_idx_drop(MyVector<T> const &V) {
   int idx_drop = 0;
   while (true) {
     if (V(idx_drop) != 0)
@@ -276,8 +280,8 @@ int get_idx_drop(MyVector<T> const& V) {
   return idx_drop;
 }
 
-template<typename T>
-MyMatrix<T> DropColumn(MyMatrix<T> const& M, int const& idx_drop) {
+template <typename T>
+MyMatrix<T> DropColumn(MyMatrix<T> const &M, int const &idx_drop) {
   int nbRow = M.rows();
   int nbCol = M.cols();
   MyMatrix<T> Mred(nbRow, nbCol - 1);
@@ -293,7 +297,7 @@ MyMatrix<T> DropColumn(MyMatrix<T> const& M, int const& idx_drop) {
   return Mred;
 }
 
-size_t get_pos_outside(Face const& f) {
+size_t get_pos_outside(Face const &f) {
   size_t pos_outside = 0;
   while (true) {
     if (f[pos_outside] == 0)
@@ -303,10 +307,10 @@ size_t get_pos_outside(Face const& f) {
   return pos_outside;
 }
 
-
-Face get_fret(std::pair<std::vector<int>,std::vector<int>> const& PairIncs, int const& nbRow, Face const& sInc, Face const& f_select) {
+Face get_fret(std::pair<std::vector<int>, std::vector<int>> const &PairIncs,
+              int const &nbRow, Face const &sInc, Face const &f_select) {
   Face fret(nbRow);
-  for (size_t pos_row=0; pos_row<PairIncs.first.size(); pos_row++) {
+  for (size_t pos_row = 0; pos_row < PairIncs.first.size(); pos_row++) {
     int iRow = PairIncs.first[pos_row];
     fret[iRow] = f_select[pos_row];
   }
@@ -318,8 +322,6 @@ Face get_fret(std::pair<std::vector<int>,std::vector<int>> const& PairIncs, int 
   }
   return fret;
 }
-
-
 
 // This is the FlippingFramework for a given facet F of a polytope.
 //
@@ -344,7 +346,7 @@ private:
   int e_incd1;
   int nbRow;
   int nbCol;
-  std::pair<std::vector<int>,std::vector<int>> PairIncs;
+  std::pair<std::vector<int>, std::vector<int>> PairIncs;
   std::vector<T> ListInvScal;
   Face f_select;
 #ifdef DEBUG_FLIP
@@ -354,16 +356,13 @@ private:
 public:
   MyMatrix<T> EXT_face;
   MyMatrix<Tint> EXT_face_int;
-  FlippingFramework_Field(MyMatrix<T> const &EXT, [[maybe_unused]] MyMatrix<Tint> const& EXT_int, Face const &_OneInc)
-    : OneInc(_OneInc),
-      e_incd0(OneInc.size() - OneInc.count()),
-      e_incd1(OneInc.count()),
-      nbRow(EXT.rows()),
-      nbCol(EXT.cols()),
-      PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
-      ListInvScal(e_incd0),
-      f_select(e_incd0)
-  {
+  FlippingFramework_Field(MyMatrix<T> const &EXT,
+                          [[maybe_unused]] MyMatrix<Tint> const &EXT_int,
+                          Face const &_OneInc)
+      : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
+        e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
+        PairIncs(Dynamic_bitset_to_vectorints(OneInc)), ListInvScal(e_incd0),
+        f_select(e_incd0) {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
@@ -376,7 +375,7 @@ public:
     //
     // Inverse scalar products
     //
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+    for (int pos_row = 0; pos_row < e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
@@ -405,15 +404,15 @@ public:
     // beta >= max beta(v)
     T beta_max(0);
     bool isAssigned = false;
-    for (int k=0; k<e_incd0; k++)
+    for (int k = 0; k < e_incd0; k++)
       f_select[k] = 0;
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+    for (int pos_row = 0; pos_row < e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
         eSum += EXT_red(iRow, iCol) * out[iCol];
       T beta = eSum * ListInvScal[pos_row];
-      auto f_comp=[&]() -> bool {
+      auto f_comp = [&]() -> bool {
         if (eSign == 1)
           return beta > beta_max;
         return beta < beta_max;
@@ -452,7 +451,8 @@ public:
       M.row(eRank) = EXT_red.row(aRow);
       jRow = sInc.find_next(jRow);
     };
-    MyMatrix<T> NSP = NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f);
+    MyMatrix<T> NSP =
+        NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol - 1, 1, f);
     return InternalFlipFaceIneq(sInc, NSP.data());
   }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
@@ -470,8 +470,7 @@ public:
 // The scheme is implemented for the mpq_class and the
 // Rational<SafeInt64>. This scheme cannot be used for the
 // Quadratic field, algebraic fields and so on.
-template <typename T>
-struct FlippingFramework_Accelerate {
+template <typename T> struct FlippingFramework_Accelerate {
 private:
   using Tint = typename underlying_ring<T>::ring_type;
   Face OneInc;
@@ -481,7 +480,7 @@ private:
   int nbCol;
   std::vector<Tint> ListScal;
   Face f_select;
-  std::pair<std::vector<int>,std::vector<int>> PairIncs;
+  std::pair<std::vector<int>, std::vector<int>> PairIncs;
   MyVector<Tint> FacetIneq;
   int idx_drop;
   MyMatrix<Tint> EXT_red;
@@ -494,30 +493,27 @@ private:
 public:
   MyMatrix<T> EXT_face;
   MyMatrix<Tint> EXT_face_int;
-  FlippingFramework_Accelerate(MyMatrix<T> const &EXT, MyMatrix<Tint> const& EXT_int, Face const &_OneInc)
-    : OneInc(_OneInc),
-      e_incd0(OneInc.size() - OneInc.count()),
-      e_incd1(OneInc.count()),
-      nbRow(EXT.rows()),
-      nbCol(EXT.cols()),
-      ListScal(e_incd0),
-      f_select(e_incd0),
-      PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
-      FacetIneq(NonUniqueRescaleVecRing(FindFacetInequality(EXT, OneInc))),
-      idx_drop(get_idx_drop(FacetIneq)),
-      EXT_red(DropColumn(EXT_int, idx_drop)),
-      EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
-      solver(SubsetRankOneSolver_Acceleration<T>(EXT_red_sub)),
-      EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
-      EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second))
-  {
+  FlippingFramework_Accelerate(MyMatrix<T> const &EXT,
+                               MyMatrix<Tint> const &EXT_int,
+                               Face const &_OneInc)
+      : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
+        e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
+        ListScal(e_incd0), f_select(e_incd0),
+        PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
+        FacetIneq(NonUniqueRescaleVecRing(FindFacetInequality(EXT, OneInc))),
+        idx_drop(get_idx_drop(FacetIneq)),
+        EXT_red(DropColumn(EXT_int, idx_drop)),
+        EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
+        solver(SubsetRankOneSolver_Acceleration<T>(EXT_red_sub)),
+        EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
+        EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)) {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
     //
     // Scalar products
     //
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+    for (int pos_row = 0; pos_row < e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
       for (int iCol = 0; iCol < nbCol; iCol++)
@@ -525,7 +521,7 @@ public:
       ListScal[pos_row] = eSum;
     }
   }
-  Face InternalFlipFaceIneq(Face const &sInc, MyVector<Tint> const& V) {
+  Face InternalFlipFaceIneq(Face const &sInc, MyVector<Tint> const &V) {
     // We need to compute a vertex in the facet, but not the ridge
     size_t pos_outside = get_pos_outside(sInc);
     Tint eSum = 0;
@@ -538,16 +534,16 @@ public:
     Tint beta_max_den = 1; // only to avoid compiler warnings.
     bool isAssigned = false;
     Tint delta;
-    for (int k=0; k<e_incd0; k++)
+    for (int k = 0; k < e_incd0; k++)
       f_select[k] = 0;
-    for (int pos_row=0; pos_row<e_incd0; pos_row++) {
+    for (int pos_row = 0; pos_row < e_incd0; pos_row++) {
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
-      Tint const& eScal = ListScal[pos_row];
+      Tint const &eScal = ListScal[pos_row];
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
         eSum += EXT_red(iRow, iCol) * V(iCol);
       delta = beta_max_num * eScal - eSum * beta_max_den;
-      auto f_comp=[&]() -> bool {
+      auto f_comp = [&]() -> bool {
         if (eSign == 1)
           return delta > 0;
         return delta < 0;
@@ -567,11 +563,15 @@ public:
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
-    std::cerr << "|PairIncs|=" << PairIncs.first.size() << " / " << PairIncs.second.size() << "\n";
+    std::cerr << "|PairIncs|=" << PairIncs.first.size() << " / "
+              << PairIncs.second.size() << "\n";
     std::cerr << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
-    std::cerr << "f_select=" << f_select.size() << " / " << f_select.count() << "\n";
-    std::cerr << "sInc=" << sInc.size() << " / " << sInc.count() << " eSign=" << eSign << "\n";
-    std::cerr << "beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den << "\n";
+    std::cerr << "f_select=" << f_select.size() << " / " << f_select.count()
+              << "\n";
+    std::cerr << "sInc=" << sInc.size() << " / " << sInc.count()
+              << " eSign=" << eSign << "\n";
+    std::cerr << "beta_max_num=" << beta_max_num
+              << " / beta_max_den=" << beta_max_den << "\n";
     std::cerr << "FlippingFramework_Accelerate<mpq_class> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
@@ -593,51 +593,54 @@ public:
   }
 };
 
-template <typename T, typename T2=void> struct flipping_type;
+template <typename T, typename T2 = void> struct flipping_type;
 
 template <typename T>
-struct flipping_type<T, typename std::enable_if<has_reduction_subset_solver<T>::value>::type> {
-    typedef FlippingFramework_Accelerate<T> type;
+struct flipping_type<
+    T, typename std::enable_if<has_reduction_subset_solver<T>::value>::type> {
+  typedef FlippingFramework_Accelerate<T> type;
 };
 
 template <typename T>
-struct flipping_type<T, typename std::enable_if<!has_reduction_subset_solver<T>::value>::type> {
-    typedef FlippingFramework_Field<T> type;
+struct flipping_type<
+    T, typename std::enable_if<!has_reduction_subset_solver<T>::value>::type> {
+  typedef FlippingFramework_Field<T> type;
 };
 
-
-template<typename T>
-class FlippingFramework {
-  public:
+template <typename T> class FlippingFramework {
+public:
   typename flipping_type<T>::type flipping;
   using Text_int = typename underlying_ring<T>::ring_type;
-  MyMatrix<T> const& EXT_face;
-  MyMatrix<Text_int> const& EXT_face_int;
-  FlippingFramework(MyMatrix<T> const &EXT, MyMatrix<Text_int> const& EXT_int, Face const &OneInc) : flipping(EXT, EXT_int, OneInc), EXT_face(flipping.EXT_face), EXT_face_int(flipping.EXT_face_int) {
-  }
-  Face FlipFace(Face const &sInc) {
-    return flipping.FlipFace(sInc);
-  }
+  MyMatrix<T> const &EXT_face;
+  MyMatrix<Text_int> const &EXT_face_int;
+  FlippingFramework(MyMatrix<T> const &EXT, MyMatrix<Text_int> const &EXT_int,
+                    Face const &OneInc)
+      : flipping(EXT, EXT_int, OneInc), EXT_face(flipping.EXT_face),
+        EXT_face_int(flipping.EXT_face_int) {}
+  Face FlipFace(Face const &sInc) { return flipping.FlipFace(sInc); }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
     return flipping.FlipFaceIneq(pair);
   }
 };
 
-template<typename T>
-inline typename std::enable_if<!has_reduction_subset_solver<T>::value,MyMatrix<typename underlying_ring<T>::ring_type>>::type
-Get_EXT_int(MyMatrix<T> const& EXT) {
+template <typename T>
+inline typename std::enable_if<
+    !has_reduction_subset_solver<T>::value,
+    MyMatrix<typename underlying_ring<T>::ring_type>>::type
+Get_EXT_int(MyMatrix<T> const &EXT) {
   using Tint = typename underlying_ring<T>::ring_type;
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  return ZeroMatrix<Tint>(nbRow,nbCol);
+  return ZeroMatrix<Tint>(nbRow, nbCol);
 }
 
-template<typename T>
-inline typename std::enable_if<has_reduction_subset_solver<T>::value,MyMatrix<typename underlying_ring<T>::ring_type>>::type
-Get_EXT_int(MyMatrix<T> const& EXT) {
+template <typename T>
+inline typename std::enable_if<
+    has_reduction_subset_solver<T>::value,
+    MyMatrix<typename underlying_ring<T>::ring_type>>::type
+Get_EXT_int(MyMatrix<T> const &EXT) {
   return UniqueRescaleRowsRing(EXT);
 }
-
 
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
