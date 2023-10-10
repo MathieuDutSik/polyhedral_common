@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
     std::map<Tidx, int> LFact = GRP.factor_size();
     Tidx n_act = GRP.n_act();
-    if (EXT.rows() != int(n_act)) {
+    if (EXT.rows() != static_cast<int>(n_act)) {
       std::cerr << "We have |EXT|=" << EXT.rows() << "\n";
       std::cerr << "But n_act=" << int(n_act) << "\n";
       std::cerr << "Inconsistency\n";

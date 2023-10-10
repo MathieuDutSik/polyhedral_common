@@ -404,7 +404,7 @@ void PrintDoubleCosetCasesTestProblem(
   std::string strSizeSma = std::to_string(SmaGRP.size());
   std::string strSizeBig = std::to_string(BigGRP.size());
   std::string strLen = std::to_string(nbOrbit);
-  std::string strN = std::to_string(int(BigGRP.n_act()));
+  std::string strN = std::to_string(static_cast<int>(BigGRP.n_act()));
   std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" +
                        strSizeSma + "_vf" + strLen + "_idx";
   std::string FileOut = FindAvailableFileFromPrefix(Prefix);
