@@ -14,9 +14,9 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-
-template<typename T, typename Tgroup>
-void full_process_A(std::string const& eFile, std::string const& OutFormat, std::ostream & os) {
+template <typename T, typename Tgroup>
+void full_process_A(std::string const &eFile, std::string const &OutFormat,
+                    std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
   int nbCol = EXT.cols();
   int nbRow = EXT.rows();
@@ -33,12 +33,15 @@ void full_process_A(std::string const& eFile, std::string const& OutFormat, std:
     WriteGroup(os, GRP);
     return;
   }
-  std::cerr << "GRP_LinPolytope_Automorphism : Failed to find matching entry for OutFormat=" << OutFormat << "\n";
+  std::cerr << "GRP_LinPolytope_Automorphism : Failed to find matching entry "
+               "for OutFormat="
+            << OutFormat << "\n";
   throw TerminalException{1};
 }
 
-template<typename Tgroup>
-void full_process_B(std::string const& arith, std::string const& eFile, std::string const& OutFormat, std::ostream & os) {
+template <typename Tgroup>
+void full_process_B(std::string const &arith, std::string const &eFile,
+                    std::string const &OutFormat, std::ostream &os) {
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
   using Trat = boost::multiprecision::mpq_rational;
 #else
@@ -46,19 +49,19 @@ void full_process_B(std::string const& arith, std::string const& eFile, std::str
 #endif
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
-    return full_process_A<T,Tgroup>(eFile, OutFormat, os);
+    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
   if (arith == "rational") {
     using T = Trat;
-    return full_process_A<T,Tgroup>(eFile, OutFormat, os);
+    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
   if (arith == "Qsqrt5") {
     using T = QuadField<Trat, 5>;
-    return full_process_A<T,Tgroup>(eFile, OutFormat, os);
+    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
   if (arith == "Qsqrt2") {
     using T = QuadField<Trat, 2>;
-    return full_process_A<T,Tgroup>(eFile, OutFormat, os);
+    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -73,13 +76,11 @@ void full_process_B(std::string const& arith, std::string const& eFile, std::str
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return full_process_A<T,Tgroup>(eFile, OutFormat, os);
+    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -87,7 +88,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT] [OutFormat] [FileGRP]\n";
+      std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT] [OutFormat] "
+                   "[FileGRP]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT]\n";
       std::cerr << "\n";
@@ -97,12 +99,16 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational           : safe_rational arithmetic on uint64_t\n";
+      std::cerr
+          << "safe_rational           : safe_rational arithmetic on uint64_t\n";
       std::cerr << "     that fails gracefully\n";
       std::cerr << "rational                : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2                  : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5                  : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
+      std::cerr
+          << "Qsqrt2                  : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr
+          << "Qsqrt5                  : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
       std::cerr << "     field whose description is in FileDesc\n";
       return -1;
     }

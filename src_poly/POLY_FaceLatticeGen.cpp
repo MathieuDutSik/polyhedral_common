@@ -15,21 +15,21 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   std::string arith = BlockPROC.ListStringValues.at("Arithmetic");
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
-    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull);
   }
   if (arith == "rational") {
     using T = mpq_class;
-    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -45,7 +45,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return MainFunctionFaceLattice_A<T,Tgroup>(eFull);
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};

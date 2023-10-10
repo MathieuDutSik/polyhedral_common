@@ -12,9 +12,9 @@ void process(std::string const &eFileI, std::ostream &os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFileI);
   Face f_adj = ComputeSkeletonClarkson(FAC);
   int n_fac = FAC.rows();
-  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     int n_adj = 0;
-    for (int j_fac=0; j_fac<n_fac; j_fac++) {
+    for (int j_fac = 0; j_fac < n_fac; j_fac++) {
       int val = f_adj[j_fac + i_fac * n_fac];
       os << " " << val;
       n_adj += val;
@@ -33,12 +33,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
+                   "fails\n";
       std::cerr << "   gracefully if overflowing\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
       std::cerr << "   field whose description is in FileDesc\n";
       return -1;
     }

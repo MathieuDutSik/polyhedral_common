@@ -8,10 +8,12 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileFAC, std::string const &eFileINEQ, std::ostream &os) {
+void process(std::string const &eFileFAC, std::string const &eFileINEQ,
+             std::ostream &os) {
   MyMatrix<T> ListVect = ReadMatrixFile<T>(eFileFAC);
   MyVector<T> eVect = ReadVectorFile<T>(eFileINEQ);
-  SolutionMatNonnegativeComplete<T> eSol = GetSolutionMatNonnegativeComplete(ListVect, eVect);
+  SolutionMatNonnegativeComplete<T> eSol =
+      GetSolutionMatNonnegativeComplete(ListVect, eVect);
   if (eSol.ExtremeRay) {
     os << "eEXT=" << StringVector(*eSol.ExtremeRay) << "\n";
   } else {
@@ -35,12 +37,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
+                   "fails\n";
       std::cerr << "    gracefully on overflowing\n";
       std::cerr << "rational : rational arithmetic on gmp\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
       std::cerr << "    field whose description is in FileDesc\n";
       return -1;
     }

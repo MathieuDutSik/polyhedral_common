@@ -15,9 +15,11 @@ int main(int argc, char *argv[]) {
     if (argc != 7 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Isomorphism_GramMat [EXT1] [GramMat1] [EXT2] [GramMat2] [OutFormat] [OutEquiv]\n";
+      std::cerr << "GRP_LinPolytope_Isomorphism_GramMat [EXT1] [GramMat1] "
+                   "[EXT2] [GramMat2] [OutFormat] [OutEquiv]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytope_Isomorphism_GramMat [EXT1] [GramMat1] [EXT2] [GramMat2]\n";
+      std::cerr << "GRP_LinPolytope_Isomorphism_GramMat [EXT1] [GramMat1] "
+                   "[EXT2] [GramMat2]\n";
       std::cerr << "\n";
       std::cerr << "OutEquiv : The equivalence information file (otherwise "
                    "printed to screen)\n";
@@ -50,7 +52,8 @@ int main(int argc, char *argv[]) {
     //
     const bool use_scheme = true;
     std::optional<std::vector<Tidx>> equiv =
-      LinPolytope_Isomorphism_GramMat<Tint, Tidx, use_scheme>(EXT1, GramMat1, EXT2, GramMat2);
+        LinPolytope_Isomorphism_GramMat<Tint, Tidx, use_scheme>(EXT1, GramMat1,
+                                                                EXT2, GramMat2);
     //
     auto print_info = [&](std::ostream &os) -> void {
       if (OutFormat == "Oscar") {

@@ -11,10 +11,10 @@
 
 template <typename T>
 void process_A(std::string const &eFileI, std::string const &eFileO,
-               std::string const &method, std::string const& OutFormat) {
+               std::string const &method, std::string const &OutFormat) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
-  auto get_list_irred=[&]() -> std::vector<int> {
+  auto get_list_irred = [&]() -> std::vector<int> {
     if (method == "Clarkson") {
       return cdd::RedundancyReductionClarkson(EXT);
     }
@@ -62,7 +62,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
 }
 
 void process_B(std::string const &eFileI, std::string const &eFileO,
-               std::string const &method, std::string const& OutFormat,
+               std::string const &method, std::string const &OutFormat,
                std::string const &arith) {
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
@@ -110,7 +110,8 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_redundancy method arith [DATAIN] [OutFormat] [DATAOUT]\n";
+      std::cerr
+          << "POLY_redundancy method arith [DATAIN] [OutFormat] [DATAOUT]\n";
       std::cerr << "or\n";
       std::cerr << "POLY_redundancy method arith [DATAIN]\n";
       std::cerr << "\n";
@@ -131,12 +132,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     ---- arith ----\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
+                   "fails\n";
       std::cerr << "    gracefully on overflow\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
       std::cerr << "    field whose description is in FileDesc\n";
       return -1;
     }

@@ -12,7 +12,8 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileFAC, std::string const& eFileIneq, std::string const& OutFormat, std::ostream &os) {
+void process(std::string const &eFileFAC, std::string const &eFileIneq,
+             std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> TheEXT = ReadMatrixFile<T>(eFileFAC);
   MyVector<T> eVect = ReadVectorFile<T>(eFileIneq);
   if (TheEXT.cols() != eVect.size()) {
@@ -65,7 +66,8 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq] [OutFormat] [FileO]\n";
+      std::cerr
+          << "POLY_cdd_lp2 arith [FileFAC] [FileIneq] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq]\n";
       std::cerr << "\n";
@@ -74,15 +76,19 @@ int main(int argc, char *argv[]) {
       std::cerr << "FileFAC   : The list of inequalities\n";
       std::cerr << "FileIneq  : The inequality to be minimized\n";
       std::cerr << "OutFormat : The formatting of the output, GAP or Oscar\n";
-      std::cerr << "DATAOUT   : The file of output (if present, otherwise std::cerr)\n";
+      std::cerr << "DATAOUT   : The file of output (if present, otherwise "
+                   "std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational          : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational          : rational arithmetic based on "
+                   "int64_t that fails\n";
       std::cerr << "    gracefully on overflowing\n";
       std::cerr << "rational               : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr
+          << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr
+          << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
       std::cerr << "RealAlgebraic=FileDesc : For the real algebraic case of a";
       std::cerr << "  field whose description is in FileDesc\n";
       return -1;

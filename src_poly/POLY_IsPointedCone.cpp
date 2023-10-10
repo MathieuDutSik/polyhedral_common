@@ -13,7 +13,7 @@ void process(std::string const &eFileI, std::ostream &os) {
   PosRelRes<T> prr = SearchPositiveRelationSimple_Direct(ListVect);
   if (prr.eTestExist) {
     os << "relation found\n";
-    MyVector<T> const& V = *prr.TheRelat;
+    MyVector<T> const &V = *prr.TheRelat;
     WriteVector(os, V);
   } else {
     os << "no relation found\n";
@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational based on int64_t that fails gracefully of overflowing\n";
+      std::cerr << "safe_rational : rational based on int64_t that fails "
+                   "gracefully of overflowing\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";

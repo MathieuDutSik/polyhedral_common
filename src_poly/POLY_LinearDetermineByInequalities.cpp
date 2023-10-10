@@ -10,7 +10,8 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const& eFile, std::string const& OutFormat, std::ostream& os) {
+void process(std::string const &eFile, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
   //
   MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FAC);
@@ -23,17 +24,18 @@ void process(std::string const& eFile, std::string const& OutFormat, std::ostrea
   if (OutFormat == "CPP") {
     return WriteMatrix(os, LinSpace);
   }
-  std::cerr << "Error in process, missing support for OutFormat=" << OutFormat << "\n";
+  std::cerr << "Error in process, missing support for OutFormat=" << OutFormat
+            << "\n";
   throw TerminalException{1};
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinearDetermineByInequalities arith [DATAFAC] [OutFormat] [OutFile]\n";
+      std::cerr << "POLY_LinearDetermineByInequalities arith [DATAFAC] "
+                   "[OutFormat] [OutFile]\n";
       std::cerr << "   or\n";
       std::cerr << "POLY_LinearDetermineByInequalities arith [DATAFAC]\n";
       std::cerr << "\n";
@@ -41,14 +43,20 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     ------- arith -------\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational          : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational          : rational arithmetic based on "
+                   "int64_t that fails\n";
       std::cerr << "    gracefully on overflowing\n";
-      std::cerr << "cpp_rational           : rational arithmetic based on boost header library\n";
-      std::cerr << "mpq_rational           : rational arithmetic based on boost mpq data type\n";
+      std::cerr << "cpp_rational           : rational arithmetic based on "
+                   "boost header library\n";
+      std::cerr << "mpq_rational           : rational arithmetic based on "
+                   "boost mpq data type\n";
       std::cerr << "rational               : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc : For the real algebraic case of a\n";
+      std::cerr
+          << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
+      std::cerr
+          << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc : For the real algebraic case of a\n";
       std::cerr << "    field whose description is in FileDesc\n";
       std::cerr << "\n";
       std::cerr << "     ------- DATAFAC -------\n";
@@ -64,7 +72,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "stderr : output to std::cerr\n";
       std::cerr << "stdout : output to std::cout\n";
-      std::cerr << "filename : output to filename (if different from stderr / stdout)\n";
+      std::cerr << "filename : output to filename (if different from stderr / "
+                   "stdout)\n";
       return -1;
     }
     //
@@ -78,7 +87,7 @@ int main(int argc, char *argv[]) {
       FileSPA = argv[4];
     }
 
-    auto f=[&](std::ostream & os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
         return process<T>(FileFAC, OutFormat, os);

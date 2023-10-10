@@ -7,10 +7,12 @@
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
-template<typename T>
-void full_process_type(std::string const& FileFAC, std::string const& FileINEQ) {
+template <typename T>
+void full_process_type(std::string const &FileFAC,
+                       std::string const &FileINEQ) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
-  std::cerr << "We have FAC, |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
+  std::cerr << "We have FAC, |FAC|=" << FAC.rows() << " / " << FAC.cols()
+            << "\n";
   MyVector<T> Ineq = ReadVectorFile<T>(FileINEQ);
   //
   std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, Ineq);
@@ -23,9 +25,6 @@ void full_process_type(std::string const& FileFAC, std::string const& FileINEQ) 
   }
 }
 
-
-
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
@@ -36,12 +35,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
+                   "fails\n";
       std::cerr << "    gracefully if overflowing\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
       std::cerr << "    field whose description is in FileDesc\n";
       std::cerr << "\n";
       std::cerr << "FAC : The list of defining inequalities\n";
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string FileFAC = argv[2];
     std::string FileINEQ = argv[3];
-    auto evaluation=[&]() -> void {
+    auto evaluation = [&]() -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
         return full_process_type<T>(FileFAC, FileINEQ);
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
         return full_process_type<T>(FileFAC, FileINEQ);
       }
       std::optional<std::string> opt_realalgebraic =
-        get_postfix(arith, "RealAlgebraic=");
+          get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
         std::string const &FileAlgebraicField = *opt_realalgebraic;
         if (!IsExistingFile(FileAlgebraicField)) {

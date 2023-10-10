@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
       Vdiag[i] = val;
     }
     //
-    size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXT, ListMat, Vdiag);
+    size_t e_hash = GetInvariant_ListMat_Vdiag<T, Tfield>(EXT, ListMat, Vdiag);
     //
     std::ofstream os(argv[2]);
     os << "return " << e_hash << ";\n";

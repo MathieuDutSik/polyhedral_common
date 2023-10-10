@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     }
     MyMatrix<T> Mred = ColumnReduction(M);
 
-    auto print_mat=[&](std::ostream & os) -> void {
+    auto print_mat = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {
         os << "return ";
         WriteMatrixGAP(os, Mred);

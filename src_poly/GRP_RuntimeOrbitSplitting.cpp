@@ -10,19 +10,24 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    std::vector<std::string> ListMethod={"repr", "canonic", "canonic_initial_triv",
-                                         "exhaustive_std", "exhaustive_sparse",
-                                         "exhaustive_robin", "exhaustive_hopscotch",
-                                         "single_cosets"};
+    std::vector<std::string> ListMethod = {"repr",
+                                           "canonic",
+                                           "canonic_initial_triv",
+                                           "exhaustive_std",
+                                           "exhaustive_sparse",
+                                           "exhaustive_robin",
+                                           "exhaustive_hopscotch",
+                                           "single_cosets"};
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "GRP_RuntimeOrbitSplitting [FileDoubleCoset] [method]\n";
       std::cerr << "\n";
-      std::cerr << "with FileDoubleCoset containing the BigGRP, the SmaGRP and the list of orbits\n";
+      std::cerr << "with FileDoubleCoset containing the BigGRP, the SmaGRP and "
+                   "the list of orbits\n";
       std::cerr << "method can be all in which case all methods are used\n";
       std::cerr << "methods =";
-      for (auto & method : ListMethod)
+      for (auto &method : ListMethod)
         std::cerr << " " << method;
       std::cerr << "\n";
       return -1;
@@ -42,27 +47,31 @@ int main(int argc, char *argv[]) {
     std::cerr << "|SmaGRP|=" << SmaGRP.size() << "\n";
     vectface ListFaceBig = ReadListFace(is);
     //
-    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(BigGRP, std::move(ListFaceBig));
+    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(BigGRP,
+                                                 std::move(ListFaceBig));
     //
     std::string str_methods = argv[2];
     if (str_methods != "all") {
       ListMethod = STRING_Split(str_methods, ",");
     }
     std::cerr << "ListMethod =";
-    for (auto & method : ListMethod)
+    for (auto &method : ListMethod)
       std::cerr << " " << method;
     std::cerr << "\n";
     //
     std::set<size_t> SetSizes;
-    for (auto & method : ListMethod) {
+    for (auto &method : ListMethod) {
       HumanTime time;
-      vectface ListFaceSma =
-        OrbitSplittingListOrbit_spec(BigGRP, SmaGRP, ListFaceOrbitsizes, method, std::cerr);
-      std::cerr << "Result for method=" << method << " |ListFaceSma|=" << ListFaceSma.size() << " time=" << time << "\n";
+      vectface ListFaceSma = OrbitSplittingListOrbit_spec(
+          BigGRP, SmaGRP, ListFaceOrbitsizes, method, std::cerr);
+      std::cerr << "Result for method=" << method
+                << " |ListFaceSma|=" << ListFaceSma.size() << " time=" << time
+                << "\n";
       SetSizes.insert(ListFaceSma.size());
     }
     if (SetSizes.size() != 1) {
-      std::cerr << "Incoherency in the orbit splitting computation. Methods give different results\n";
+      std::cerr << "Incoherency in the orbit splitting computation. Methods "
+                   "give different results\n";
       throw TerminalException{1};
     }
     //

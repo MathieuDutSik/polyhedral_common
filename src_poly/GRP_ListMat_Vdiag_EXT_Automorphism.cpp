@@ -11,13 +11,17 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-template<typename Tfield, typename Twork, typename Tgroup>
-void process_inner1(std::string const& FileO, std::string const& OutFormat, MyMatrix<Twork> const& EXT, std::vector<MyMatrix<Twork>> const& ListMat, std::vector<Twork> const& Vdiag) {
+template <typename Tfield, typename Twork, typename Tgroup>
+void process_inner1(std::string const &FileO, std::string const &OutFormat,
+                    MyMatrix<Twork> const &EXT,
+                    std::vector<MyMatrix<Twork>> const &ListMat,
+                    std::vector<Twork> const &Vdiag) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   const bool use_scheme = true;
   std::vector<std::vector<Tidx>> ListGen =
-    GetListGenAutomorphism_ListMat_Vdiag<Twork, Tfield, Tidx, use_scheme>(EXT, ListMat, Vdiag);
+      GetListGenAutomorphism_ListMat_Vdiag<Twork, Tfield, Tidx, use_scheme>(
+          EXT, ListMat, Vdiag);
   //
   std::vector<Telt> LGen;
   for (auto &eList : ListGen)
@@ -25,7 +29,7 @@ void process_inner1(std::string const& FileO, std::string const& OutFormat, MyMa
   int n_rows = EXT.rows();
   Tgroup GRP(LGen, n_rows);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
-  auto f_print=[&](std::ostream & os) -> void {
+  auto f_print = [&](std::ostream &os) -> void {
     if (OutFormat == "GAP") {
       os << "return " << GRP.GapString() << ";\n";
       return;
@@ -49,19 +53,28 @@ void process_inner1(std::string const& FileO, std::string const& OutFormat, MyMa
   }
 }
 
-template<typename Tfield, typename Twork, typename Tinput, typename Tgroup>
-void process_inner2(std::string const& FileO, std::string const& OutFormat, MyMatrix<Tinput> const& EXT, std::vector<MyMatrix<Tinput>> const& ListMat, std::vector<Tinput> const& Vdiag) {
-  MyMatrix<Twork> EXT_T = UniversalMatrixConversion<Twork,Tinput>(EXT);
-  std::vector<MyMatrix<Twork>> ListMat_T = UniversalStdVectorMatrixConversion<Twork,Tinput>(ListMat);
-  std::vector<Twork> Vdiag_T = UniversalStdVectorScalarConversion<Twork,Tinput>(Vdiag);
-  return process_inner1<Tfield, Twork,Tgroup>(FileO, OutFormat, EXT_T, ListMat_T, Vdiag_T);
+template <typename Tfield, typename Twork, typename Tinput, typename Tgroup>
+void process_inner2(std::string const &FileO, std::string const &OutFormat,
+                    MyMatrix<Tinput> const &EXT,
+                    std::vector<MyMatrix<Tinput>> const &ListMat,
+                    std::vector<Tinput> const &Vdiag) {
+  MyMatrix<Twork> EXT_T = UniversalMatrixConversion<Twork, Tinput>(EXT);
+  std::vector<MyMatrix<Twork>> ListMat_T =
+      UniversalStdVectorMatrixConversion<Twork, Tinput>(ListMat);
+  std::vector<Twork> Vdiag_T =
+      UniversalStdVectorScalarConversion<Twork, Tinput>(Vdiag);
+  return process_inner1<Tfield, Twork, Tgroup>(FileO, OutFormat, EXT_T,
+                                               ListMat_T, Vdiag_T);
 }
 
-template<typename Tfield, typename T, typename Tgroup>
-void process_inner3(std::string const& FileO, std::string const& OutFormat, MyMatrix<T> const& EXT, std::vector<MyMatrix<T>> const& ListMat, std::vector<T> const& Vdiag) {
+template <typename Tfield, typename T, typename Tgroup>
+void process_inner3(std::string const &FileO, std::string const &OutFormat,
+                    MyMatrix<T> const &EXT,
+                    std::vector<MyMatrix<T>> const &ListMat,
+                    std::vector<T> const &Vdiag) {
   T Linf_EXT = Linfinity_norm_mat(EXT);
   T max_Linf_norm = 0;
-  for (auto & eMat : ListMat) {
+  for (auto &eMat : ListMat) {
     T norm = Linfinity_norm_mat(eMat);
     max_Linf_norm = T_max(max_Linf_norm, norm);
   }
@@ -69,16 +82,17 @@ void process_inner3(std::string const& FileO, std::string const& OutFormat, MyMa
   T max_val = Linf_EXT * Linf_EXT * max_Linf_norm * dim * dim;
   std::string type = get_matching_types(max_val);
   if (type == "int16_t")
-    return process_inner2<Tfield, int16_t, T, Tgroup>(FileO, OutFormat, EXT, ListMat, Vdiag);
+    return process_inner2<Tfield, int16_t, T, Tgroup>(FileO, OutFormat, EXT,
+                                                      ListMat, Vdiag);
   if (type == "int32_t")
-    return process_inner2<Tfield, int32_t, T, Tgroup>(FileO, OutFormat, EXT, ListMat, Vdiag);
+    return process_inner2<Tfield, int32_t, T, Tgroup>(FileO, OutFormat, EXT,
+                                                      ListMat, Vdiag);
   if (type == "int64_t")
-    return process_inner2<Tfield, int64_t, T, Tgroup>(FileO, OutFormat, EXT, ListMat, Vdiag);
-  return process_inner2<Tfield, T, T, Tgroup>(FileO, OutFormat, EXT, ListMat, Vdiag);
+    return process_inner2<Tfield, int64_t, T, Tgroup>(FileO, OutFormat, EXT,
+                                                      ListMat, Vdiag);
+  return process_inner2<Tfield, T, T, Tgroup>(FileO, OutFormat, EXT, ListMat,
+                                              Vdiag);
 }
-
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -86,7 +100,8 @@ int main(int argc, char *argv[]) {
     if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Vdiag_EXT_Automorphism [FileI] [OutFormat] [FileO]\n";
+      std::cerr
+          << "GRP_ListMat_Vdiag_EXT_Automorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "        or\n";
       std::cerr << "GRP_ListMat_Vdiag_EXT_Automorphism [FileI]\n";
       std::cerr << "\n";

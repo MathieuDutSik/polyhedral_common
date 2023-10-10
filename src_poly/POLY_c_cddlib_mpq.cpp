@@ -5,7 +5,7 @@
 #include "Boost_bitset_kernel.h"
 #include "cdd.h"
 #ifndef DISABLE_MPQ_CLASS
-# include "gmpxx.h"
+#include "gmpxx.h"
 #endif
 #include "setoper.h"
 #include <boost/multiprecision/gmp.hpp>

@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
   try {
     using T = mpq_class;
     if (argc != 3 && argc != 5) {
-      std::cerr << "VectFamily_Reduction [FileI] [method] [OutFormat] [FileO]\n";
+      std::cerr
+          << "VectFamily_Reduction [FileI] [method] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "VectFamily_Reduction [FileI] [method]\n";
       std::cerr << "\n";
@@ -44,9 +45,9 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       FileO = argv[4];
     }
-    auto matrix_measure=[&](MyMatrix<T> const& Minp) -> void {
+    auto matrix_measure = [&](MyMatrix<T> const &Minp) -> void {
       T max_coeff = sqr_estimate_facet_coefficients(Minp);
-      double max_coeff_d = UniversalScalarConversion<double,T>(max_coeff);
+      double max_coeff_d = UniversalScalarConversion<double, T>(max_coeff);
       double sqr_max = sqrt(max_coeff_d);
       double max_int64_d = std::numeric_limits<int64_t>::max();
       T l1_norm = L1_norm_mat(Minp);
@@ -60,10 +61,10 @@ int main(int argc, char *argv[]) {
     };
     std::cerr << "Original complexity measures\n";
     matrix_measure(M);
-    std::pair<MyMatrix<T>,MyMatrix<T>> pair = ReduceVectorFamily(M, method);
+    std::pair<MyMatrix<T>, MyMatrix<T>> pair = ReduceVectorFamily(M, method);
     std::cerr << "Output complexity measures\n";
     matrix_measure(pair.first);
-    auto print_mat=[&](std::ostream & os) -> void {
+    auto print_mat = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {
         os << "return ";
         WriteMatrixGAP(os, pair.first);

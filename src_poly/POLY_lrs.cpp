@@ -20,8 +20,8 @@ void process(std::string const &eFileI, std::string const &choice,
     }
   };
   MyMatrix<T> EXT_pre = read_file();
-  std::pair<MyMatrix<T>,int> pair = lrs::FirstColumnZeroCond(EXT_pre);
-  MyMatrix<T> const& EXT = pair.first;
+  std::pair<MyMatrix<T>, int> pair = lrs::FirstColumnZeroCond(EXT_pre);
+  MyMatrix<T> const &EXT = pair.first;
   int shift = pair.second;
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -31,7 +31,9 @@ void process(std::string const &eFileI, std::string const &choice,
     os << "begin\n";
     os << "****** " << nbCol << " rational\n";
     long nVertices = 0;
-    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                      [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                      [[maybe_unused]] int const &col, T *out) -> void {
       for (int iCol = 0; iCol < nbCol; iCol++)
         os << " " << out[iCol];
       os << "\n";
@@ -45,7 +47,9 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "GAP") {
     os << "return [";
     long nVertices = 0;
-    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                      [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                      [[maybe_unused]] int const &col, T *out) -> void {
       if (nVertices > 0)
         os << ",\n";
       os << "[";
@@ -63,7 +67,9 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "vertex_incidence") {
     std::vector<size_t> VertexIncd(nbRow, 0);
     T eScal;
-    auto fUpdateIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+    auto fUpdateIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                           [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                           [[maybe_unused]] int const &col, T *out) -> void {
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
         for (int iCol = 0; iCol < nbCol; iCol++)
@@ -84,16 +90,19 @@ void process(std::string const &eFileI, std::string const &choice,
   }
   if (choice == "number_facet") {
     size_t nFacets = 0;
-    auto fIncrement = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, [[maybe_unused]] T *out) -> void {
-      nFacets++;
-    };
+    auto fIncrement = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                          [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                          [[maybe_unused]] int const &col,
+                          [[maybe_unused]] T *out) -> void { nFacets++; };
     lrs::Kernel_DualDescription(EXT, fIncrement);
     os << "nFacets=" << nFacets << "\n";
     return;
   }
   if (choice == "qhull_incidence") {
     T eScal;
-    auto fPrintIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+    auto fPrintIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                          [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                          [[maybe_unused]] int const &col, T *out) -> void {
       bool IsFirst = true;
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
@@ -115,7 +124,9 @@ void process(std::string const &eFileI, std::string const &choice,
     std::vector<std::vector<size_t>> VertexIncd(nbRow);
     std::vector<Face> ListFace;
     size_t idx_facet = 0;
-    auto f_insert = [&]([[maybe_unused]] lrs::lrs_dic<T> *P, [[maybe_unused]] lrs::lrs_dat<T> *Q, [[maybe_unused]] int const& col, T *out) -> void {
+    auto f_insert = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
+                        [[maybe_unused]] lrs::lrs_dat<T> *Q,
+                        [[maybe_unused]] int const &col, T *out) -> void {
       std::cerr << "idx_facet=" << idx_facet << "\n";
       std::vector<size_t> eIncd;
       Face f(nbRow);
@@ -165,7 +176,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "choice  : the chosen processing option\n";
       std::cerr << "arith   : the chosen arithmetic\n";
       std::cerr << "DATAIN  : The polyhedral cone inequalities\n";
-      std::cerr << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
+      std::cerr
+          << "DATAOUT : The file of output (if present, otherwise std::cerr)\n";
       std::cerr << "\n";
       std::cerr << "        --- choice ---\n";
       std::cerr << "\n";
@@ -178,15 +190,18 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_integer  : integer arithmetic based on int64_t that fails\n";
+      std::cerr
+          << "safe_integer  : integer arithmetic based on int64_t that fails\n";
       std::cerr << "    gracefully on overflow\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that fails\n";
+      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
+                   "fails\n";
       std::cerr << "    gracefully on overflow\n";
       std::cerr << "integer  : integer arithmetic on input\n";
       std::cerr << "rational : rational arithmetic on input\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
+      std::cerr
+          << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
       std::cerr << "    field whose description is in FileDesc\n";
       return -1;
     }

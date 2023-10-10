@@ -11,7 +11,8 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Isomorphism [EXT1] [EXT2] [OutFormat] [OutEquiv]\n";
+      std::cerr << "GRP_LinPolytope_Isomorphism [EXT1] [EXT2] [OutFormat] "
+                   "[OutEquiv]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Isomorphism [EXT1] [EXT2]\n";
       std::cerr << "\n";

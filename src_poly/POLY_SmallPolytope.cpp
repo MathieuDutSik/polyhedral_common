@@ -25,13 +25,13 @@ int main(int argc, char *argv[]) {
     int k_p = ParseScalar<int>(argv[2]);
     int k_m = ParseScalar<int>(argv[3]);
     //
-    MyMatrix<T> EXT = ZeroMatrix<T>(n+1,n);
-    for (int i=0; i<n; i++)
-      EXT(i,i) = 1;
-    for (int i=0; i<k_p; i++)
-      EXT(n,i) = 1;
-    for (int i=0; i<k_m; i++)
-      EXT(n,i) = -1;
+    MyMatrix<T> EXT = ZeroMatrix<T>(n + 1, n);
+    for (int i = 0; i < n; i++)
+      EXT(i, i) = 1;
+    for (int i = 0; i < k_p; i++)
+      EXT(n, i) = 1;
+    for (int i = 0; i < k_m; i++)
+      EXT(n, i) = -1;
     MyMatrix<T> NSP = NullspaceMat(EXT);
     if (NSP.rows() != 1) {
       std::cerr << "The rank is incorrect\n";
@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     int n_p = 0;
     int n_m = 0;
     int n_z = 0;
-    for (int i=0; i<=n; i++) {
-      T val = NSP(0,i);
+    for (int i = 0; i <= n; i++) {
+      T val = NSP(0, i);
       if (val > 0)
         n_p++;
       if (val < 0)

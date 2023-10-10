@@ -5,17 +5,18 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-template<typename T, typename Tfield>
-void process(std::string const& FileExt, std::string const& OutFormat, std::ostream& os) {
+template <typename T, typename Tfield>
+void process(std::string const &FileExt, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int n_rows = EXT.rows();
   //
   MyMatrix<T> Qinv = GetQmatrix(EXTred);
-  std::vector<MyMatrix<T>> ListMat = { Qinv };
+  std::vector<MyMatrix<T>> ListMat = {Qinv};
   std::vector<T> Vdiag(n_rows, 0);
   //
-  size_t e_hash = GetInvariant_ListMat_Vdiag<T,Tfield>(EXTred, ListMat, Vdiag);
+  size_t e_hash = GetInvariant_ListMat_Vdiag<T, Tfield>(EXTred, ListMat, Vdiag);
   //
   if (OutFormat == "GAP") {
     os << "return " << e_hash << ";\n";
@@ -29,15 +30,14 @@ void process(std::string const& FileExt, std::string const& OutFormat, std::ostr
   throw TerminalException{1};
 }
 
-
-
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT] [OutFormat] [FileOut]\n";
+      std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT] [OutFormat] "
+                   "[FileOut]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT]\n";
       std::cerr << "\n";
@@ -56,16 +56,16 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
 
-    auto f=[&](std::ostream & os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
         using Tfield = T;
-        return process<T,Tfield>(FileExt, OutFormat, os);
+        return process<T, Tfield>(FileExt, OutFormat, os);
       }
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         using Tfield = T;
-        return process<T,Tfield>(FileExt, OutFormat, os);
+        return process<T, Tfield>(FileExt, OutFormat, os);
       }
       std::cerr << "Failed to find a matching arith\n";
       throw TerminalException{1};

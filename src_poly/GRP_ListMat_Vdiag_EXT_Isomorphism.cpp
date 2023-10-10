@@ -15,7 +15,8 @@ int main(int argc, char *argv[]) {
     if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
+      std::cerr
+          << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI]\n";
       std::cerr << "\n";
@@ -143,7 +144,8 @@ int main(int argc, char *argv[]) {
         }
         return;
       }
-      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+                << "\n";
       throw TerminalException{1};
     };
     if (FileO == "stderr") {
