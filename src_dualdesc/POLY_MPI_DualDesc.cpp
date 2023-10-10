@@ -22,8 +22,9 @@ void Process_eFull(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   MPI_MainFunctionDualDesc<T, Tgroup, Tidx_value>(comm, eFull);
 }
 
-template<typename T>
-void Process_eFull_select_type(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+template <typename T>
+void Process_eFull_select_type(boost::mpi::communicator &comm,
+                               FullNamelist const &eFull) {
   MyMatrix<T> EXT = GetEXT_from_efull<T>(eFull);
   //
   if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
@@ -39,8 +40,6 @@ void Process_eFull_select_type(boost::mpi::communicator &comm, FullNamelist cons
   std::cerr << "Failed to find a numeric type that matches\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   // The construction is relatively subtle.
@@ -71,7 +70,7 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     std::string NumericalType = GetNumericalType(eFull);
-    auto process=[&]() -> void {
+    auto process = [&]() -> void {
       if (NumericalType == "safe_rational") {
         using T = Rational<SafeInt64>;
         return Process_eFull_select_type<T>(world, eFull);
@@ -94,7 +93,7 @@ int main(int argc, char *argv[]) {
         using T_rat = mpq_class;
         SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
         std::string FileAlgebraicField =
-          BlockDATA.ListStringValues.at("FileAlgebraicField");
+            BlockDATA.ListStringValues.at("FileAlgebraicField");
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
@@ -114,14 +113,12 @@ int main(int argc, char *argv[]) {
     //    using T = boost::multiprecision::cpp_rational;
     //    using T = boost::multiprecision::mpq_rational;
     //
-    std::cerr << "Normal termination of the program runtime=" << start
-              << "\n";
+    std::cerr << "Normal termination of the program runtime=" << start << "\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of the program runtime=" << start
               << "\n";
     exit(e.eVal);
   } catch (RuntimeException const &e) {
-    std::cerr << "Runtime termination of the program runtime=" << start
-              << "\n";
+    std::cerr << "Runtime termination of the program runtime=" << start << "\n";
   }
 }

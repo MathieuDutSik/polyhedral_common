@@ -45,10 +45,10 @@ int main(int argc, char *argv[]) {
     //
     FileNumber fn(eFileNB, false);
     size_t n_orbit = fn.getval();
-    auto read_vf=[&]() -> vectface {
+    auto read_vf = [&]() -> vectface {
       FileFace ff(eFileFF, n_row, n_orbit);
       vectface vf(n_row);
-      for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
         Face f = ff.getface(i_orbit);
         vf.push_back(f);
       }
@@ -61,18 +61,18 @@ int main(int argc, char *argv[]) {
     size_t n_bit_orbsize = ep.first;
     size_t delta = ep.second;
     std::vector<Tint> ListPossOrbsize = GetAllPossibilities<Tidx, Tint>(LFact);
-    std::unordered_map<Tint,size_t> OrbSize_map;
-    for (size_t i_poss=0; i_poss<ListPossOrbsize.size(); i_poss++) {
+    std::unordered_map<Tint, size_t> OrbSize_map;
+    for (size_t i_poss = 0; i_poss < ListPossOrbsize.size(); i_poss++) {
       OrbSize_map[ListPossOrbsize[i_poss]] = i_poss;
     }
     //
     vectface vfo(delta);
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
       Face f = vf[i_orbit];
       Tint orbSize = GRP.OrbitSize_OnSets(f);
       size_t idx_orb = OrbSize_map[orbSize];
       Face f_full(delta);
-      for (size_t i=0; i<n_row; i++)
+      for (size_t i = 0; i < n_row; i++)
         f_full[i] = f[i];
       size_t work_idx = idx_orb;
       size_t i_acc = n_row;

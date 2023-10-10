@@ -101,11 +101,12 @@ int main(int argc, char *argv[]) {
         if (!status) {
           Face f = ff->getface(i_orbit);
           Face f_red(n_act);
-          for (Tidx i=0; i<n_act; i++)
+          for (Tidx i = 0; i < n_act; i++)
             f_red[i] = f[i];
           int eIncd = f.count();
           if (eIncd >= MinIncd) {
-            std::cerr << "|f_red|=" << f_red.size() << "/" << f_red.count() << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
+            std::cerr << "|f_red|=" << f_red.size() << "/" << f_red.count()
+                      << " |LGen[0]|=" << int(LGen[0].size()) << "\n";
             vectface vf_orbit = OrbitFace(f_red, LGen);
             bool test = EvaluationConnectednessCriterion_PreKernel(
                 EXT, GRP, vf_orbit, std::cerr);

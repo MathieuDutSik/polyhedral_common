@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     std::string NumericalType = GetNumericalType(eFull);
-    auto process=[&]() -> void {
+    auto process = [&]() -> void {
       /*
         if (NumericalType == "integer") {
         using T = mpz_class;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
         using T_rat = mpq_class;
         SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
         std::string FileAlgebraicField =
-          BlockDATA.ListStringValues.at("FileAlgebraicField");
+            BlockDATA.ListStringValues.at("FileAlgebraicField");
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     exit(e.eVal);
   } catch (RuntimeException const &e) {
     std::cerr << "The maximum runtime has been reached, exiting the program\n";
-    //exit(e.eVal);
+    // exit(e.eVal);
   }
   runtime(time1);
 }

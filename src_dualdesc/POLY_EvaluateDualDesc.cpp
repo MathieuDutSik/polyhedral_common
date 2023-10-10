@@ -14,7 +14,8 @@
 int main(int argc, char *argv[]) {
   try {
     if (argc != 6) {
-      std::cerr << "POLY_EvaluateDualDesc [ListOrbit] [FileEXT] [Incidence] [n_case] [ListProg]\n";
+      std::cerr << "POLY_EvaluateDualDesc [ListOrbit] [FileEXT] [Incidence] "
+                   "[n_case] [ListProg]\n";
       return -1;
     }
     std::string FileListOrbit = argv[1];
@@ -30,7 +31,8 @@ int main(int argc, char *argv[]) {
     int n_ext = EXT.rows();
     int n_col = EXT.cols();
     int rnk = RankMat(EXT);
-    std::cerr << "n_ext=" << n_ext << " n_col=" << n_col << " rnk=" << rnk << "\n";
+    std::cerr << "n_ext=" << n_ext << " n_col=" << n_col << " rnk=" << rnk
+              << "\n";
     vectface vf(n_ext);
     //
     {
@@ -40,8 +42,8 @@ int main(int argc, char *argv[]) {
       int pos = 0;
       int min_incd = std::numeric_limits<int>::max();
       int max_incd = std::numeric_limits<int>::min();
-      for (int i_orbit=0; i_orbit<n_orbit; i_orbit++) {
-        std::string eLine = ListLines[1+i_orbit];
+      for (int i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+        std::string eLine = ListLines[1 + i_orbit];
         Face f(n_ext);
         std::vector<int> LVal = STRING_Split_Int(eLine, " ");
         for (auto pos : LVal) {
@@ -62,16 +64,18 @@ int main(int argc, char *argv[]) {
     }
     //
     std::vector<std::string> ListProg = STRING_Split(strListProg, ",");
-    for (auto & eProg : ListProg) {
+    for (auto &eProg : ListProg) {
       size_t tot_size = 0;
       HumanTime time;
-      for (auto & eFace : vf) {
+      for (auto &eFace : vf) {
         MyMatrix<T> EXTface = SelectRow(EXT, eFace);
         MyMatrix<T> EXTfaceRed = ColumnReduction(EXTface);
-        vectface ListIncd = DirectFacetComputationIncidence(EXTfaceRed, eProg, std::cerr);
+        vectface ListIncd =
+            DirectFacetComputationIncidence(EXTfaceRed, eProg, std::cerr);
         tot_size += ListIncd.size();
       }
-      std::cerr << "Result eProg=" << eProg << " tot_size=" << tot_size << " time=" << time << "\n";
+      std::cerr << "Result eProg=" << eProg << " tot_size=" << tot_size
+                << " time=" << time << "\n";
     }
   } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";

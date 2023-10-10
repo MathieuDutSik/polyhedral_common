@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
 #include "basic_datafile.h"
+// clang-format on
 
 void CreateFile(std::string const &eFile, Face f) {
   FileBool fb(eFile);
