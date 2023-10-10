@@ -15,10 +15,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "  ------ opt -------\n";
       std::cerr << "\n";
       std::cerr << "opt can be one of the following:\n";
-      std::cerr << "strategy2_from_high : Compute from the high dimensional to the lower dimensional one\n";
+      std::cerr << "strategy2_from_high : Compute from the high dimensional to "
+                   "the lower dimensional one\n";
       std::cerr << "    --- We span the lower dimensional by extreme rays\n";
-      std::cerr << "    --- We use Plesken-Souvignier like algorithm to decide isomorphism\n";
-      std::cerr << "strategy1_from_low  : Compute from the extreme rays to the full one\n";
+      std::cerr << "    --- We use Plesken-Souvignier like algorithm to decide "
+                   "isomorphism\n";
+      std::cerr << "strategy1_from_low  : Compute from the extreme rays to the "
+                   "full one\n";
       std::cerr << "    --- We span the upper dimensional by the facets\n";
       std::cerr << "    --- We use track of the faces to decide isomorphism\n";
       std::cerr << "strategy1_from_high : Not implemented right now\n";
@@ -33,7 +36,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "  ------ FileO -------\n";
       std::cerr << "\n";
-      std::cerr << "FileO is the output file. If absent then the std::cerr is used\n";
+      std::cerr
+          << "FileO is the output file. If absent then the std::cerr is used\n";
       throw TerminalException{1};
     }
     using T = mpq_class;

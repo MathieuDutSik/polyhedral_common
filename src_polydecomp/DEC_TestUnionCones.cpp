@@ -4,8 +4,8 @@
 #include "Decompositions.h"
 // clang-format on
 
-template<typename T>
-std::vector<ConeSimpDesc<T>> ReadFamilyCones(std::string const& FileI) {
+template <typename T>
+std::vector<ConeSimpDesc<T>> ReadFamilyCones(std::string const &FileI) {
   std::ifstream is(FileI);
   size_t n_domain;
   is >> n_domain;
@@ -24,8 +24,6 @@ std::vector<ConeSimpDesc<T>> ReadFamilyCones(std::string const& FileI) {
   return l_cones;
 }
 
-
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
@@ -43,8 +41,10 @@ int main(int argc, char *argv[]) {
     //
     std::string FileI = BlockPROC.ListStringValues.at("FileI");
     std::string FileO = BlockPROC.ListStringValues.at("FileO");
-    bool TestPairwiseIntersection = BlockPROC.ListBoolValues.at("TestPairwiseIntersection");
-    bool BreakConnectedComponents = BlockPROC.ListBoolValues.at("BreakConnectedComponents");
+    bool TestPairwiseIntersection =
+        BlockPROC.ListBoolValues.at("TestPairwiseIntersection");
+    bool BreakConnectedComponents =
+        BlockPROC.ListBoolValues.at("BreakConnectedComponents");
     //
     // Reading the polyhedral cones.
     //
@@ -55,10 +55,11 @@ int main(int argc, char *argv[]) {
     //
     std::vector<Tcone> ll_cones;
     if (BreakConnectedComponents) {
-      std::vector<std::vector<size_t>> eListList = ConnectedComponentsPolyhedral(l_cones);
-      for (auto & eList : eListList) {
+      std::vector<std::vector<size_t>> eListList =
+          ConnectedComponentsPolyhedral(l_cones);
+      for (auto &eList : eListList) {
         Tcone sing_cone;
-        for (auto & idx : eList) {
+        for (auto &idx : eList) {
           sing_cone.push_back(l_cones[idx]);
         }
         ll_cones.push_back(sing_cone);
@@ -71,21 +72,23 @@ int main(int argc, char *argv[]) {
     // Processing data
     //
     std::vector<ConeSimpDesc<T>> l_big_cone;
-    for (auto & u_cone : ll_cones) {
+    for (auto &u_cone : ll_cones) {
       std::cerr << "|u_cone|=" << u_cone.size() << "\n";
-      std::optional<ConeSimpDesc<T>> opt = TestPolyhedralPartition(TestPairwiseIntersection, u_cone);
+      std::optional<ConeSimpDesc<T>> opt =
+          TestPolyhedralPartition(TestPairwiseIntersection, u_cone);
       if (!opt) {
         std::cerr << "Failed to find the full polyhedral cone\n";
         throw TerminalException{1};
       }
       ConeSimpDesc<T> cone = *opt;
-      std::cerr << "|EXT|=" << cone.EXT.rows() << " |FAC|=" << cone.FAC.rows() << "\n";
+      std::cerr << "|EXT|=" << cone.EXT.rows() << " |FAC|=" << cone.FAC.rows()
+                << "\n";
       l_big_cone.push_back(cone);
     }
     //
     auto do_print = [&](std::ostream &os) -> void {
       os << l_big_cone.size() << "\n";
-      for (auto & cone : l_big_cone) {
+      for (auto &cone : l_big_cone) {
         WriteMatrix(os, cone.EXT);
         WriteMatrix(os, cone.FAC);
       }
