@@ -2,9 +2,12 @@
 #ifndef SRC_SHORT_SHORT_SHORTESTCONFIG_PARALL_H_
 #define SRC_SHORT_SHORT_SHORTESTCONFIG_PARALL_H_
 
-
+// clang-format off
 #include "SHORT_ShortestConfig.h"
 #include "Parallel_Classes.h"
+#include <string>
+#include <vector>
+// clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>

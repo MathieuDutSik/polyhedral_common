@@ -5,6 +5,10 @@
 // clang-format off
 #include "Parallel_Classes_Types.h"
 #include "ThreadManagement.h"
+#include <utility>
+#include <string>
+#include <vector>
+#include <set>
 // clang-format on
 
 // DataBank database for storing known results

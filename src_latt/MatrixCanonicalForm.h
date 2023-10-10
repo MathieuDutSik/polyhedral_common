@@ -9,6 +9,7 @@
 #include "ShortestUniversal.h"
 #include "Temp_PolytopeEquiStab.h"
 #include <utility>
+#include <string>
 #include <vector>
 // clang-format on
 

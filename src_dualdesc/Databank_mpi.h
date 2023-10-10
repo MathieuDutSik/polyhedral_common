@@ -6,6 +6,9 @@
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
+#include <string>
+#include <utility>
+#include <unordered_map>
 // clang-format on
 
 static const int val_mpi_bank_end = 2045;

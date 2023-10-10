@@ -12,8 +12,9 @@
 #include <limits>
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
+#include <utility>
+#include <unordered_set>
 // clang-format on
 
 // We follow here the conventions of SPAN_face_LinearProgramming

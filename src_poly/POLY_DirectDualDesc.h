@@ -10,6 +10,8 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_DualDescription_PrimalDual.h"
 #include "SmallPolytopes.h"
+#include <algorithm>
+#include <utility>
 #include <string>
 #include <vector>
 // clang-format on

@@ -7,6 +7,9 @@
 #include "POLY_SamplingFacet.h"
 #include "POLY_PolytopeFct.h"
 #include "POLY_lrslib.h"
+#include <set>
+#include <vector>
+#include <utility>
 // clang-format on
 
 #ifdef DEBUG

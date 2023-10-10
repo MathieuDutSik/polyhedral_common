@@ -2,9 +2,14 @@
 #ifndef SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 #define SRC_PERFECT_TEMP_PERFECTFORM_ENUM_H_
 
+// clang-format off
 #include "POLY_ThreadDualDescription.h"
 #include "Parallel_Classes.h"
 #include "Temp_PerfectForm.h"
+#include <map>
+#include <string>
+#include <vector>
+// clang-format on
 
 template <typename T, typename Tint, typename Tgroup> struct ListPerfectForm {
 public:

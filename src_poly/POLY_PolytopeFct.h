@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <algorithm>
 // clang-format on
 
 #ifdef DEBUG

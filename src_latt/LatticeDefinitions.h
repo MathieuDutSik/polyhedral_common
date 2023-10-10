@@ -7,6 +7,7 @@
 #include "COMB_Combinatorics.h"
 #include "MAT_Matrix.h"
 #include <utility>
+#include <string>
 #include <vector>
 // clang-format on
 

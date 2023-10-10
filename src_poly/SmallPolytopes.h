@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "POLY_PolytopeFct.h"
+#include <vector>
+#include <utility>
 // clang-format on
 
 // For simplicial and near simplicial polytopes,

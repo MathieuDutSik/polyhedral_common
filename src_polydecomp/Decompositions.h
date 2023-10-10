@@ -11,6 +11,11 @@
 #include "Permutation.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Namelist.h"
+#include <string>
+#include <set>
+#include <map>
+#include <utility>
+#include <vector>
 // clang-format on
 
 // possible strategies for computing isomorphsim

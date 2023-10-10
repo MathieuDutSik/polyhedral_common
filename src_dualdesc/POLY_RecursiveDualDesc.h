@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <algorithm>
 #include <vector>
 // clang-format on
 

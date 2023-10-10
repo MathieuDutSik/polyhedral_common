@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 // clang-format on
 
 size_t get_matching_power(size_t const &val) {

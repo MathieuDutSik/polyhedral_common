@@ -28,6 +28,8 @@
 #include "MAT_MatrixInt.h"
 #include <limits>
 #include <string>
+#include <vector>
+#include <utility>
 // clang-format on
 
 #ifdef PRINT
