@@ -629,6 +629,20 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   return {};
 }
 
+
+template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
+          typename Tgr, bool use_scheme>
+Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT) {
+  using Tfield = typename overlying_field<Tint>::field_type;
+  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T);
+  Tgroup GRP = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom);
+  return GRP;
+}
+
+
+
+
 //
 // The Lorentzian case that cause us so much trouble.
 //

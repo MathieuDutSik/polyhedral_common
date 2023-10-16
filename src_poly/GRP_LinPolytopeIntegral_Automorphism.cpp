@@ -65,14 +65,11 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     //
-    using Tint = mpz_class;
-    //
     std::string arith = argv[1];
-    std::string FileExt1 = argv[2];
-    std::string FileExt2 = argv[3];
+    std::string FileExt = argv[2];
     std::string OutFormat = "GAP";
     std::string FileOut = "stderr";
-    if (argc == 6) {
+    if (argc == 5) {
       OutFormat = argv[4];
       FileOut = argv[5];
     }
@@ -80,11 +77,11 @@ int main(int argc, char *argv[]) {
     auto process_B=[&](std::ostream & os) -> void {
       if (arith == "mpz_class") {
         using Tint = mpz_class;
-        return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
+        return process_A<Tint>(FileExt, OutFormat, os);
       }
       if (arith == "mpq_integer") {
         using Tint = mpz_class;
-        return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
+        return process_A<Tint>(FileExt, OutFormat, os);
       }
       std::cerr << "Failed to find a matching type for arith\n";
       throw TerminalException{1};
