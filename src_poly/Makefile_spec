@@ -33,7 +33,7 @@
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Invariant
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
 #PROGRAM		= GRP_LinearSpace_Equivalence
-#PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
+PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 1PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
@@ -49,7 +49,7 @@
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
-PROGRAM		= GRP_LinPolytope_Invariant
+#PROGRAM		= GRP_LinPolytope_Invariant
 #PROGRAM		= POLY_SmallPolytope
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
