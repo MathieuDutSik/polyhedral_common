@@ -350,6 +350,7 @@ private:
   std::pair<std::vector<int>, std::vector<int>> PairIncs;
   std::vector<T> ListInvScal;
   Face f_select;
+  std::ostream & os;
 #ifdef DEBUG_FLIP
   MyMatrix<T> EXT_debug;
 #endif
@@ -359,11 +360,11 @@ public:
   MyMatrix<Tint> EXT_face_int;
   FlippingFramework_Field(MyMatrix<T> const &EXT,
                           [[maybe_unused]] MyMatrix<Tint> const &EXT_int,
-                          Face const &_OneInc)
+                          Face const &_OneInc, std::ostream& _os)
       : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)), ListInvScal(e_incd0),
-        f_select(e_incd0) {
+        f_select(e_incd0), os(_os) {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
@@ -432,7 +433,7 @@ public:
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
-    std::cerr << "FlippingFramework_Field<T> before check\n";
+    os << "FlippingFramework_Field<T> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
     return fret;
@@ -564,16 +565,16 @@ public:
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
-    std::cerr << "|PairIncs|=" << PairIncs.first.size() << " / "
-              << PairIncs.second.size() << "\n";
-    std::cerr << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
-    std::cerr << "f_select=" << f_select.size() << " / " << f_select.count()
-              << "\n";
-    std::cerr << "sInc=" << sInc.size() << " / " << sInc.count()
-              << " eSign=" << eSign << "\n";
-    std::cerr << "beta_max_num=" << beta_max_num
-              << " / beta_max_den=" << beta_max_den << "\n";
-    std::cerr << "FlippingFramework_Accelerate<mpq_class> before check\n";
+    os << "|PairIncs|=" << PairIncs.first.size() << " / "
+       << PairIncs.second.size() << "\n";
+    os << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
+    os << "f_select=" << f_select.size() << " / " << f_select.count()
+       << "\n";
+    os << "sInc=" << sInc.size() << " / " << sInc.count()
+       << " eSign=" << eSign << "\n";
+    os << "beta_max_num=" << beta_max_num
+       << " / beta_max_den=" << beta_max_den << "\n";
+    os << "FlippingFramework_Accelerate<mpq_class> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
     return fret;

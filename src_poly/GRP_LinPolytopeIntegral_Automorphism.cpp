@@ -27,6 +27,19 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
     os << "return " << GRP.GapString() << ";\n";
     return;
   }
+  if (OutFormat == "RecGAP") {
+    std::string strGAPmatr = "[";
+    bool IsFirst = true;
+    for (auto & eGen : GRP.GeneratorsOfGroup()) {
+      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eGen);
+      if (!IsFirst)
+        strGAPmatr += ",";
+      strGAPmatr += StringMatrixGAP(M);
+    }
+    strGAPmatr += "]";
+    os << "return rec(GAPperm:=" << GRP.GapString() << ", GAPmatr:=" << strGAPmatr << ");";
+    return;
+  }
   if (OutFormat == "Oscar") {
     WriteGroup(os, GRP);
     return;
@@ -55,8 +68,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "         ----- OutFormat ------\n";
       std::cerr << "\n";
-      std::cerr << "GAP  : The output in the GAP readable file\n";
-      std::cerr << "Oscar: The output to the Oscar readable file\n";
+      std::cerr << "GAP    : The permutation group as a GAP readable file\n";
+      std::cerr << "RecGAP : The permutation group and the matrix group as a GAP readable file\n";
+      std::cerr << "Oscar  : The output to the Oscar readable file\n";
       std::cerr << "\n";
       std::cerr << "         ----- FileOut -----\n";
       std::cerr << "\n";

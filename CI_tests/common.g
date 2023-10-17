@@ -12,3 +12,13 @@ WriteMatrixFile:=function(eFile, EXT)
     od;
     CloseStream(output);
 end;
+
+
+
+RemoveFileIfExist:=function(FileName)
+    if IsExistingFile(FileName) then
+        RemoveFile(FileName);
+    fi;
+end;
+
+

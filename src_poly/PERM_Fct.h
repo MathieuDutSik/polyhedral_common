@@ -49,9 +49,10 @@ std::vector<Tidx> SortingPerm(std::vector<T> const &ListV) {
 }
 
 template <typename T, typename Telt>
-MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
-                                       MyMatrix<T> const &EXT2,
-                                       Telt const &ePerm) {
+MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
+                                              MyMatrix<T> const &EXT2,
+                                              Telt const &ePerm) {
+  static_assert(is_ring_field<T>::value, "RepresentVertexPermutation");
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
@@ -94,6 +95,27 @@ MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
 #endif
   return RetMat;
 }
+
+template <typename T, typename Telt>
+inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
+RepresentVertexPermutation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2, Telt const &ePerm) {
+  return RepresentVertexPermutation_Kernel(EXT1, EXT2, ePerm);
+}
+
+template <typename T, typename Telt>
+inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
+RepresentVertexPermutation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2, Telt const &ePerm) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> EXT1_T = UniversalMatrixConversion<Tfield, T>(EXT1);
+  MyMatrix<Tfield> EXT2_T = UniversalMatrixConversion<Tfield, T>(EXT2);
+  MyMatrix<Tfield> RetMat_T = RepresentVertexPermutation_Kernel(EXT1_T, EXT2_T, ePerm);
+  return UniversalMatrixConversion<T, Tfield>(RetMat_T);
+}
+
+
+
+
+
 
 template <typename T, typename Tidx>
 std::optional<std::vector<Tidx>>
