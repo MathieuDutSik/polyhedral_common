@@ -117,6 +117,13 @@ There are several environment variables that can be used during runtime.
 If we want more modular checking, then something like `DEBUG_LINEAR_PROGRAM`
 can be used.
 
+A printout to `std::cerr` should occur if an error has been identified and the program
+will terminate with a call to `TerminalException`. Other print statement should be
+encapsulated in `std::ostream & os` that should be passed by reference from the initial
+case. So typically for serial output we pass the `std::cerr` while for the parallel runs
+we pass a stream to the output of that process. That way we avoid mixing between
+different sources.
+
 Tests
 -----
 
