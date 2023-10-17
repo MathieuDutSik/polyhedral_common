@@ -488,6 +488,7 @@ private:
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
   SubsetRankOneSolver_Acceleration<T> solver;
+  std::ostream & os;
 #ifdef DEBUG_FLIP
   MyMatrix<T> EXT_debug;
 #endif
@@ -497,7 +498,7 @@ public:
   MyMatrix<Tint> EXT_face_int;
   FlippingFramework_Accelerate(MyMatrix<T> const &EXT,
                                MyMatrix<Tint> const &EXT_int,
-                               Face const &_OneInc)
+                               Face const &_OneInc, std::ostream& _os)
       : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         ListScal(e_incd0), f_select(e_incd0),
@@ -508,7 +509,8 @@ public:
         EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
         solver(SubsetRankOneSolver_Acceleration<T>(EXT_red_sub)),
         EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
-        EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)) {
+        EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)),
+        os(_os) {
 #ifdef DEBUG_FLIP
     EXT_debug = EXT;
 #endif
@@ -616,8 +618,8 @@ public:
   MyMatrix<T> const &EXT_face;
   MyMatrix<Text_int> const &EXT_face_int;
   FlippingFramework(MyMatrix<T> const &EXT, MyMatrix<Text_int> const &EXT_int,
-                    Face const &OneInc)
-      : flipping(EXT, EXT_int, OneInc), EXT_face(flipping.EXT_face),
+                    Face const &OneInc, std::ostream& os)
+      : flipping(EXT, EXT_int, OneInc, os), EXT_face(flipping.EXT_face),
         EXT_face_int(flipping.EXT_face_int) {}
   Face FlipFace(Face const &sInc) { return flipping.FlipFace(sInc); }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
@@ -646,11 +648,11 @@ Get_EXT_int(MyMatrix<T> const &EXT) {
 
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
-                     Face const &sInc) {
+                     Face const &sInc, std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
   MyMatrix<T> TheEXT = ColumnReduction(EXT);
   MyMatrix<Tint> TheEXT_int = Get_EXT_int(TheEXT);
-  FlippingFramework TheFram(TheEXT, TheEXT_int, OneInc);
+  FlippingFramework TheFram(TheEXT, TheEXT_int, OneInc, os);
   return TheFram.FlipFace(sInc);
 }
 

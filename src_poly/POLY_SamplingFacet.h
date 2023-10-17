@@ -29,16 +29,14 @@ struct recSamplingOption {
 };
 
 template <typename T>
-vectface Kernel_DUALDESC_SamplingFacetProcedure(
-    MyMatrix<T> const &EXT, recSamplingOption const &eOption, int &nbCall) {
+vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT, recSamplingOption const &eOption, int &nbCall, std::ostream& os) {
   int dim = RankMat(EXT);
   int len = EXT.rows();
   std::string prog = eOption.prog;
   int critlevel = eOption.critlevel;
   int maxnbcall = eOption.maxnbcall;
   int maxnbsize = eOption.maxnbsize;
-  std::cerr << "critlevel=" << critlevel << " prog=" << prog
-            << " maxnbcall=" << maxnbcall << "\n";
+  os << "critlevel=" << critlevel << " prog=" << prog << " maxnbcall=" << maxnbcall << "\n";
   auto IsRecursive = [&]() -> bool {
     if (len < critlevel)
       return false;
@@ -57,7 +55,7 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
     ListFace.push_back(eFace);
     ListStatus.push_back(0);
   };
-  std::cerr << "dim=" << dim << "  len=" << len << "\n";
+  os << "dim=" << dim << "  len=" << len << "\n";
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (prog == "lrs")
@@ -70,7 +68,7 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
     vectface ListIncd = comp_dd();
     for (auto &eFace : ListIncd)
       FuncInsert(eFace);
-    std::cerr << "DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
+    os << "DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
     nbCall++;
     return ListFace;
   }
@@ -88,22 +86,22 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
         Face eFace = ListFace[iC];
         MyMatrix<T> EXTred = SelectRow(EXT, eFace);
         vectface ListRidge =
-            Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall);
+          Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
         for (auto &eRidge : ListRidge) {
-          Face eFlip = ComputeFlipping(EXT, eFace, eRidge);
+          Face eFlip = ComputeFlipping(EXT, eFace, eRidge, os);
           FuncInsert(eFlip);
         }
         if (maxnbsize != -1) {
           int siz = ListFace.size();
           if (maxnbsize > siz) {
-            std::cerr << "Ending by maxsize criterion\n";
-            std::cerr << "siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+            os << "Ending by maxsize criterion\n";
+            os << "siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
             return ListFace;
           }
         }
         if (maxnbcall != -1) {
           if (nbCall > maxnbcall) {
-            std::cerr << "Ending by maxnbcall\n";
+            os << "Ending by maxnbcall\n";
             return ListFace;
           }
         }
@@ -111,14 +109,14 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(
     if (IsFinished)
       break;
   }
-  std::cerr << "RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
+  os << "RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
   return ListFace;
 }
 
 template <typename T>
 vectface
 DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
-                                std::vector<std::string> const &ListOpt) {
+                                std::vector<std::string> const &ListOpt, std::ostream & os) {
   std::string prog = "lrs";
   int critlevel = 50;
   int maxnbcall = -1;
@@ -147,7 +145,7 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   eOption.critlevel = critlevel;
   eOption.maxnbsize = maxnbsize;
   int nbcall = 0;
-  return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbcall);
+  return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbcall, os);
 }
 
 template <typename T>
@@ -201,7 +199,7 @@ Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       int n_ent = ListStr.size();
       for (int i_ent = 1; i_ent < n_ent; i_ent++)
         ListOpt.push_back(ListStr[i_ent]);
-      return DUALDESC_SamplingFacetProcedure(EXT, ListOpt);
+      return DUALDESC_SamplingFacetProcedure(EXT, ListOpt, os);
     }
     if (ansOpt == "lrs_limited") {
       int upperlimit = 100;
@@ -299,7 +297,7 @@ vectface Kernel_GetFullRankFacetSet(
 #endif
   vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
   os << "We have ListRidge\n";
-  FlippingFramework<T> RPLlift(EXT, EXT_int, eSet);
+  FlippingFramework<T> RPLlift(EXT, EXT_int, eSet, os);
   os << "We have FlippingFramework\n";
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
