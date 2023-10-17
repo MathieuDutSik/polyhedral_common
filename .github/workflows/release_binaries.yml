@@ -5,7 +5,7 @@ name: release binaries
 # on: release
 
 on:
-  # At 2PM on every Tuesday
+  # One time per month
   schedule:
     - cron: "0 0 6 * *"
   # Manually triggered

@@ -5,7 +5,7 @@ name: CI of Wythoff H4
 # on: release
 
 on:
-  # At midnight on every Thursday
+  # One time per month
   schedule:
     - cron: "0 0 28 * *"
   # Manually triggered

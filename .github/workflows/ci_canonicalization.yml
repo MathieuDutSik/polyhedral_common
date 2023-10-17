@@ -5,7 +5,7 @@ name: CI of Matrix canonicalization
 # on: release
 
 on:
-  # At midnight on every Monday
+  # One time per month
   schedule:
     - cron: "0 0 4 * *"
   # Manually triggered

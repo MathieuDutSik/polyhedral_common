@@ -5,7 +5,7 @@ name: CI of Reflective lattices
 # on: release
 
 on:
-  # At midnight on every Thursday
+  # One time per month
   schedule:
     - cron: "0 0 20 * *"
   # Manually triggered

@@ -145,6 +145,8 @@ intersection of polyhedral cones.
 * `Copositivity`: This is for checking the copositivity code.
 * `Reflective`: This is for using the edgewalk algorithm of Allcock for
 building the polyheral cone.
+* `IntegralAutomorphy`: Computed the integral automorphism group of a
+configuration of vectors.
 * `SimpleDualDesc`: This is for the code for computing the dual description
 of polyhedral cones.
 * `WythoffH4`: This is for computing the dual description of the facets of

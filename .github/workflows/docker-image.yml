@@ -1,7 +1,7 @@
 name: Docker Image polyhedral_common CI
 
 on:
-  # At 2PM on every Monday
+  # One time per month
   schedule:
     - cron: "0 0 2 * *"
   # Manually triggered

@@ -7,7 +7,7 @@
 name: Lint Code Base Weekly
 
 on:
-  # Every 5th of the month
+  # One time per month
   schedule:
     - cron: "0 0 10 * *"
   # Manually triggered.
