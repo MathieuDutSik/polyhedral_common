@@ -52,12 +52,12 @@ int main(int argc, char *argv[]) {
       }
       return RetMat;
     };
-    MyMatrix<T> EXT1_Can = CanonicalizationPolytope(EXT1);
+    MyMatrix<T> EXT1_Can = CanonicalizationPolytope(EXT1, std::cerr);
     int n_iter = 10;
     for (int i_iter = 0; i_iter < n_iter; i_iter++) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
       MyMatrix<T> EXT2 = get_random_equivalent(EXT1);
-      MyMatrix<T> EXT2_Can = CanonicalizationPolytope(EXT2);
+      MyMatrix<T> EXT2_Can = CanonicalizationPolytope(EXT2, std::cerr);
       if (!TestEqualityMatrix(EXT1_Can, EXT2_Can)) {
         std::cerr << "Inconsistency in the canonical code\n";
         throw TerminalException{1};

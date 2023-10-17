@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       std::vector<T> Vdiag1(n_rows, 0);
       std::vector<T> Vdiag2(n_rows, 0);
       const bool use_scheme = true;
-      std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2);
+      std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, std::cerr);
       if (!opt)
         return {};
       std::optional<MyMatrix<T>> optB = FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);

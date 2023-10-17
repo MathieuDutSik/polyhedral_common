@@ -610,7 +610,7 @@ int main(int argc, char *argv[]) {
           //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject =
-              CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first);
+            CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first, std::cerr);
 #ifdef ERR_LOG
           std::cerr << "We have ListAdjacentObject\n";
 #endif

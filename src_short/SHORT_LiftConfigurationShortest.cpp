@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     //
     std::vector<MyMatrix<Tint>> ListConfOut =
         SHORT_SimplicialEnumeration<T, Tint, Tgroup>(ListConfIn, NPROC,
-                                                     TheMethod);
+                                                     TheMethod, std::cerr);
     //
     std::string eFileOUT(argv[4]);
     WriteListConfigurationShortestVector(eFileOUT, ListConfOut);

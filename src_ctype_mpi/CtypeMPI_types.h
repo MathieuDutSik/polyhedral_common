@@ -934,7 +934,8 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
 
 template <typename T, typename Tidx>
 std::vector<TypeCtypeExch<T>>
-CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize) {
+CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize,
+                                     std::ostream& os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -946,7 +947,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
   for (auto &e_int : data.ListIrred) {
     MyMatrix<T> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
     if (canonicalize) {
-      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat);
+      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
       ListCtype.push_back({std::move(CanMat)});
     } else {
       ListCtype.push_back({std::move(FlipMat)});
@@ -964,10 +965,10 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 
 template <typename T>
 std::vector<TypeCtypeExch<T>>
-CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr) {
+CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
   bool canonicalize = true;
   using Tidx = int8_t;
-  return CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize);
+  return CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize, os);
 }
 
 
@@ -1012,7 +1013,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 }
 
 template <typename T, typename Tgroup>
-StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
+StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
@@ -1194,7 +1195,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr) {
 #endif
 
   std::vector<std::vector<unsigned int>> ListGen =
-      LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat);
+    LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
 #ifdef TIMINGS
   std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
 #endif

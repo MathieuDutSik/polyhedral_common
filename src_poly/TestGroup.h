@@ -28,7 +28,7 @@ void TestPolytopeFace_Stabilizer(MyMatrix<T> const &M, Face const &f) {
   int n_vert = M.rows();
   MyMatrix<T> id_matr = IdentityMat<T>(M.cols());
   std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
-  Tgroup1 GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M);
+  Tgroup1 GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M, std::cerr);
   std::cerr << "We have |GRP1|=" << GRP1.size() << "  n_vert=" << n_vert
             << "\n";
   Face fo = OrbitUnion(GRP1, f);
@@ -133,7 +133,7 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
   int n_vert = M.rows();
   MyMatrix<T> id_matr = IdentityMat<T>(M.cols());
   std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
-  Tgroup1 GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M);
+  Tgroup1 GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M, std::cerr);
   Telt1 elt1 = GRP1.rand();
   Face f2 = permutalib::OnSets(f1, elt1);
   std::cerr << "We have |GRP1|=" << GRP1.size() << "  n_vert=" << n_vert

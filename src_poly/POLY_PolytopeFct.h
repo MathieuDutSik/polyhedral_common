@@ -488,7 +488,6 @@ private:
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
   SubsetRankOneSolver_Acceleration<T> solver;
-  std::ostream & os;
 #ifdef DEBUG_FLIP
   MyMatrix<T> EXT_debug;
 #endif
@@ -496,6 +495,7 @@ private:
 public:
   MyMatrix<T> EXT_face;
   MyMatrix<Tint> EXT_face_int;
+  std::ostream & os;
   FlippingFramework_Accelerate(MyMatrix<T> const &EXT,
                                MyMatrix<Tint> const &EXT_int,
                                Face const &_OneInc, std::ostream& _os)

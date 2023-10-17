@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<Tint> SHV = ReadMatrix<Tint>(is);
     //
     ReplyRealizability<T, Tint> eRes =
-        SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(SHV, TheMethod);
+      SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(SHV, TheMethod, std::cerr);
     //
     std::ofstream os(FileOut);
     if (eRes.reply) {

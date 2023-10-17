@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     //
     const bool use_scheme = true;
     std::optional<std::vector<Tidx>> equiv =
-        LinPolytope_Isomorphism<Tint, Tidx, use_scheme>(EXT1, EXT2);
+      LinPolytope_Isomorphism<Tint, Tidx, use_scheme>(EXT1, EXT2, std::cerr);
     //
     auto print_info = [&](std::ostream &os) -> void {
       if (OutFormat == "Oscar") {

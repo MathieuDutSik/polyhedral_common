@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<Tint>> ListSHV =
         ReadListConfigurationShortestVector<Tint>(FileIn);
     std::pair<std::vector<MyMatrix<Tint>>, std::vector<Tint>> RecRet =
-        SHORT_ReduceByIsomorphism<T, Tint, Tgroup>(ListSHV);
+      SHORT_ReduceByIsomorphism<T, Tint, Tgroup>(ListSHV, std::cerr);
     //
     std::string FileOut = argv[2];
     std::ofstream os(FileOut);

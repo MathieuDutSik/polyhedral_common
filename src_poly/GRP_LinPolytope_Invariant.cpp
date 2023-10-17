@@ -12,11 +12,11 @@ void process(std::string const &FileExt, std::string const &OutFormat,
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int n_rows = EXT.rows();
   //
-  MyMatrix<T> Qinv = GetQmatrix(EXTred);
+  MyMatrix<T> Qinv = GetQmatrix(EXTred, std::cerr);
   std::vector<MyMatrix<T>> ListMat = {Qinv};
   std::vector<T> Vdiag(n_rows, 0);
   //
-  size_t e_hash = GetInvariant_ListMat_Vdiag<T, Tfield>(EXTred, ListMat, Vdiag);
+  size_t e_hash = GetInvariant_ListMat_Vdiag<T, Tfield>(EXTred, ListMat, Vdiag, std::cerr);
   //
   if (OutFormat == "GAP") {
     os << "return " << e_hash << ";\n";

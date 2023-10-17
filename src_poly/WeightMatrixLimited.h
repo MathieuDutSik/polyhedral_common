@@ -170,8 +170,8 @@ private:
 
 public:
   template <typename F1, typename F2>
-  WeightMatrixLimited(size_t const &_nbRow, F1 f1, F2 f2, size_t max_offdiag)
-      : nbRow(_nbRow) {
+  WeightMatrixLimited(size_t const &_nbRow, F1 f1, F2 f2, size_t max_offdiag, std::ostream& os)
+    : nbRow(_nbRow), os(os) {
     // Computing the diagional values
     list_diag_idx.resize(nbRow);
     std::unordered_map<T, size_t> unordmap_value;
@@ -277,8 +277,8 @@ public:
     print_variables();
   }
   template <typename Tgroup>
-  WeightMatrixLimited(const Tgroup &GRP, const size_t &max_offdiag)
-      : nbRow(GRP.n_act()) {
+  WeightMatrixLimited(const Tgroup &GRP, const size_t &max_offdiag, std::ostream& os)
+    : nbRow(GRP.n_act()), os(os) {
     using Telt = typename Tgroup::Telt;
     using Tidx = typename Tgroup::Telt::Tidx;
     std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
@@ -507,6 +507,7 @@ private:
   std::vector<size_t> list_offdiag_sizes;
   std::vector<size_t> list_offdiag_shifts;
   std::vector<size_t> list_offdiag_elements;
+  std::ostream& os;
 };
 
 // clang-format off

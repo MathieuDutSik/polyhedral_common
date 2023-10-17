@@ -15,7 +15,7 @@ TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const& eMat) {
   TypeCtypeExch<T> WorkT = eMat;
   for (int iter=0; iter<50; iter++) {
     bool canonicalize = false;
-    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(WorkT, canonicalize);
+    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(WorkT, canonicalize, std::cerr);
     int n_adj = ListAdj.size();
     int pos = random() % n_adj;
     WorkT = ListAdj[pos];
@@ -39,7 +39,7 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
   while(true) {
     std::cerr << "GetLocalFreenessMinimum, Before generation of adjacent domains\n";
     bool canonicalize = false;
-    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize);
+    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize, std::cerr);
     std::vector<int> ListNbFree;
     for (auto & eAdj : ListAdj) {
       int nb_free = CTYP_GetNumberFreeVectors(eAdj);

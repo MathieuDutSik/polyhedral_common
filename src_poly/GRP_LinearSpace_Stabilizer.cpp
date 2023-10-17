@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};
     std::vector<MyMatrix<T>> LGen =
-        LinearSpace_Stabilizer<T, Tgroup>(ListMatrGen, helper, eLatt);
+      LinearSpace_Stabilizer<T, Tgroup>(ListMatrGen, helper, eLatt, std::cerr);
     //
     {
       if (LGen.size() == 0)

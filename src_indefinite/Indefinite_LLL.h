@@ -205,7 +205,7 @@ ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
+CanonicalizationPermutationSigns(MyMatrix<T> const &M, std::ostream& os) {
   using Tidx_value = uint16_t;
   using Tidx = uint16_t;
   using Tgr = GraphListAdj;
@@ -215,10 +215,10 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
     for (Tidx i_col = 0; i_col < n; i_col++)
       Mabs(i_row, i_col) = T_abs(M(i_row, i_col));
   WeightMatrix<true, T, Tidx_value> WMat =
-      WeightedMatrixFromMyMatrix<true, T, Tidx_value>(Mabs);
+    WeightedMatrixFromMyMatrix<true, T, Tidx_value>(Mabs, os);
   WMat.ReorderingSetWeight();
   std::vector<Tidx> CanonicOrd =
-      GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat)
+    GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, os)
           .first;
   MyMatrix<T> Mreord(n, n);
   MyMatrix<T> MreordAbs(n, n);
@@ -294,14 +294,14 @@ CanonicalizationPermutationSigns(MyMatrix<T> const &M) {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-ComputeReductionIndefinitePermSign(MyMatrix<T> const &M) {
+ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream& os) {
   if (M.rows() == 1) {
     MyMatrix<Tint> eP = IdentityMat<Tint>(1);
     return {std::move(eP), M};
   }
   ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M);
   ResultReduction<T, Tint> RRI_B =
-      CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred);
+    CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
   return {std::move(eP), std::move(RRI_B.Mred)};
 }

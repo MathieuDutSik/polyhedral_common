@@ -45,10 +45,10 @@ int main(int argc, char *argv[]) {
     //
     pair_char ep{
         EXT,
-        WeightedMatrixFromMyMatrix<true, std::vector<T>, Tidx_value>(WMat_EXT)};
+        WeightedMatrixFromMyMatrix<true, std::vector<T>, Tidx_value>(WMat_EXT, std::cerr)};
     std::vector<MyMatrix<T>> LGen =
         LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
-                                             Tidx_value>(ep);
+                                             Tidx_value>(ep, std::cerr);
     std::cerr << "We have LGen\n";
     std::cerr << "|LGen|=" << LGen.size() << "\n";
     //    Tgroup GRP =

@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
       if (ApplyCanonicalization) {
-        MyMatrix<Tint> Mcan = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M);
+        MyMatrix<Tint> Mcan = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M, std::cerr);
         InsertMatrix(Mcan, NbAdj);
       } else {
         InsertMatrix(M, NbAdj);

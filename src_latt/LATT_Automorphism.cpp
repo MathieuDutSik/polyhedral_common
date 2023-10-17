@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     const bool use_scheme = true;
     std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, std::cerr);
 
     std::vector<MyMatrix<Tint>> ListGenEquiv;
     for (auto & eList : ListGen) {

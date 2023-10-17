@@ -338,10 +338,8 @@ vectface DoubleCosetDescription_Exhaustive_T(
   f_insert(eList);
   Face eFaceImg(n);
   size_t pos = 0;
-  //  std::cerr << "TotalSize=" << TotalSize << "\n";
   while (true) {
     Tint SizeGen = total_len;
-    //    std::cerr << "pos=" << pos << " total_len=" << total_len << "\n";
     if (SizeGen == TotalSize)
       break;
     size_t new_pos = total_len;
@@ -437,7 +435,7 @@ vectface DoubleCosetDescription_Representation_Block(
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   WeightMatrix<true, int, Tidx_value> WMat =
-      WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP);
+    WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP, os);
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
@@ -473,13 +471,6 @@ DoubleCosetDescription_Canonic_Block(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
     Face const &eSet = pair.first;
     Tint const &TotalSize = pair.second;
-    //    Tint orbSize = BigGRP.OrbitSize_OnSets(eSet);
-    //    os << "osbSize=" << orbSize << " TotalSize=" << TotalSize << "\n";
-    //    if (orbSize != TotalSize) {
-    //      std::cerr << "orbSize=" << orbSize << " TotalSize=" << TotalSize <<
-    //      "\n"; std::cerr << "Inconsistency in the Size computation\n"; throw
-    //      TerminalException{1};
-    //    }
     if (f_terminal())
       break;
     vectface ListListSet = DoubleCosetDescription_Canonic<Tgroup>(
@@ -765,10 +756,10 @@ vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 template <typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
-                                std::ostream &os3) {
+                                std::ostream &os3, std::ostream & os_err) {
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
-  std::cerr << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
+  os_err << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
             << "\n";
   size_t nb_orbit_big = eListBig.size();
   Tint nb_orbit_sma;
@@ -785,9 +776,9 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
       Tint res = getsetasint<Tint>(eFace);
       os3 << res << "\n";
     }
-    std::cerr << "iInc=" << pos << " / " << nb_orbit_big
-              << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz
-              << "\n";
+    os_err << "iInc=" << pos << " / " << nb_orbit_big
+            << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz
+            << "\n";
   }
   os2 << nb_orbit_sma << "\n";
 }

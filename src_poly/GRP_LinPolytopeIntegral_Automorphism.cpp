@@ -22,7 +22,7 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   //
   //    const bool use_scheme = true;
   const bool use_scheme = false;
-  Tgroup GRP = LinPolytopeIntegral_Automorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT);
+  Tgroup GRP = LinPolytopeIntegral_Automorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
     return;

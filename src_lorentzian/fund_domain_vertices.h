@@ -122,7 +122,7 @@ GetInitialComputation(MyMatrix<T> const &G,
   std::vector<MyMatrix<T>> ListMat{G};
   if (norm == 0) {
     MyMatrix<T> MatRoot_T = UniversalMatrixConversion<T, Tint>(vert.MatRoot);
-    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(MatRoot_T);
+    MyMatrix<T> Qmat = GetQmatrix_NotFullRank(MatRoot_T, std::cerr);
 #ifdef DEBUG_QMAT
     std::cerr << "Qmat=\n";
     WriteMatrix(std::cerr, Qmat);
@@ -175,11 +175,11 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   using Tfield = typename overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat,
-                                                                 Vdiag);
+                                                                 Vdiag, std::cerr);
   WMat.ReorderingSetWeight();
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
-                                            Tidx_value>(WMat);
+                                            Tidx_value>(WMat, std::cerr);
   const std::vector<Tidx> &ListIdx = epair.first;
   const std::vector<std::vector<Tidx>> &ListGen = epair.second;
   WMat.RowColumnReordering(ListIdx);
@@ -503,7 +503,7 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
 #endif
   std::vector<MyMatrix<T>> LGen1_C =
       LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(LGen1_B,
-                                                            Subspace1_proj);
+                                                            Subspace1_proj, std::cerr);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have LGen1_C\n";
 #endif
@@ -536,7 +536,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
 #endif
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
-                                                uint16_t>(vertFull.e_pair_char);
+                                                uint16_t>(vertFull.e_pair_char, std::cerr);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "|GRP1|=" << vertFull.GRP1.size() << "\n";
@@ -547,10 +547,6 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
     std::vector<Telt> LGen1_D =
         FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1);
-    //    MyMatrix<T> Subspace1red = ColumnReduction(Subspace1);
-    //    Tgroup GRPlin =
-    //    LinPolytope_Automorphism<T,false,Tgroup>(Subspace1red);
-
     std::vector<MyMatrix<T>> LGen1 =
         MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
 #ifdef TRACK_INFOS_LOG
@@ -565,7 +561,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
         GeneralMatrixGroupHelper<T, Telt> helper{n};
         return LinearSpace_Stabilizer<T, Tgroup,
                                       GeneralMatrixGroupHelper<T, Telt>>(
-            LGen2, helper, InvInvariantSpace);
+                                                                         LGen2, helper, InvInvariantSpace, std::cerr);
       } else {
         MyVector<T> const &Visotrop = vertFull.vert.gen;
         MyMatrix<T> eProd = Subspace1 * InvInvariantSpace;
@@ -575,7 +571,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
                                                              Visotrop);
         return LinearSpace_Stabilizer<
             T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
-            LGen2, helper, InvInvariantSpace);
+                                                                  LGen2, helper, InvInvariantSpace, std::cerr);
       }
     };
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
@@ -684,7 +680,7 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
 #endif
   std::optional<MyMatrix<T>> opt1 =
       LinPolytopeIntegral_Isomorphism_Subspaces<T, Tgroup>(
-          Subspace1_proj, Subspace2_proj, ListMatrGens2, idRows);
+                                                           Subspace1_proj, Subspace2_proj, ListMatrGens2, idRows, std::cerr);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "FindSubspaceEquivalence, We have opt1\n";
 #endif
@@ -749,7 +745,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
   if (vertFull1.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Isomorphism<T, Tgroup, std::vector<T>,
                                                uint16_t>(vertFull1.e_pair_char,
-                                                         vertFull2.e_pair_char);
+                                                         vertFull2.e_pair_char, std::cerr);
   }
   if (vertFull1.method == "isotropstabequiv_V1" ||
       vertFull1.method == "isotropstabequiv") {
@@ -824,8 +820,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
       if (vertFull1.method == "isotropstabequiv_V1") {
         GeneralMatrixGroupHelper<T, Telt> helper{n};
         return LinearSpace_Equivalence<T, Tgroup,
-                                       GeneralMatrixGroupHelper<T, Telt>>(
-            LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+                                       GeneralMatrixGroupHelper<T, Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv, std::cerr);
       } else {
         MyMatrix<T> eProd = Subspace1 * InvariantSpaceInv;
         MyMatrix<T> G1_new = InvariantSpace * G1 * InvariantSpace.transpose();
@@ -834,8 +829,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
             ComputeFiniteIsotropicMatrixGroupHelper<T, Telt>(G1_new, eProd,
                                                              Visotrop);
         return LinearSpace_Equivalence<
-            T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(
-            LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv);
+            T, Tgroup, FiniteIsotropicMatrixGroupHelper<T, Telt>>(LGen2, helper, InvariantSpaceInv, InvariantSpaceImgInv, std::cerr);
       }
     };
     std::optional<MyMatrix<T>> opt3 = get_opt3();

@@ -25,7 +25,7 @@ void process_A(std::string const& FileExt1, std::string const& FileExt2, std::st
   const bool use_scheme = false;
   std::optional<MyMatrix<Tint>> equiv =
     LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr,
-                                    use_scheme>(EXT1, EXT2);
+                                    use_scheme>(EXT1, EXT2, std::cerr);
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";
@@ -68,8 +68,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "Other output to the designated file name\n";
       return -1;
     }
-    //
-    using Tint = mpz_class;
     //
     std::string arith = argv[1];
     std::string FileExt1 = argv[2];

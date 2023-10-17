@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have vert\n";
     MyMatrix<Tint> MatRootRed = ColumnReduction(MatRoot);
     std::cerr << "We have MatRootRed\n";
-    Tgroup GRP = LinPolytope_Automorphism<Tint, false, Tgroup>(MatRootRed);
+    Tgroup GRP = LinPolytope_Automorphism<Tint, false, Tgroup>(MatRootRed, std::cerr);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     std::string OptionNorms = "all";

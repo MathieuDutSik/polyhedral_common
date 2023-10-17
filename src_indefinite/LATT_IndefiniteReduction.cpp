@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> ResRed =
-          ComputeReductionIndefinitePermSign<T, Tint>(M);
+        ComputeReductionIndefinitePermSign<T, Tint>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       if (T_abs(DeterminantMat(B_T)) != 1) {

@@ -41,10 +41,10 @@ int main(int argc, char *argv[]) {
     auto get_canonicalized_wmat =
         [](MyMatrix<T> const &EXT) -> std::pair<Twmat, Tgroup> {
       size_t n_row = EXT.rows();
-      Twmat WMat = GetWeightMatrix<T, Tidx_value>(EXT);
+      Twmat WMat = GetWeightMatrix<T, Tidx_value>(EXT, std::cerr);
       WMat.ReorderingSetWeight();
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
-          GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat);
+      GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, std::cerr);
       const std::vector<Tidx> &ListIdx = epair.first;
       const std::vector<std::vector<Tidx>> &ListGen = epair.second;
       WMat.RowColumnReordering(ListIdx);

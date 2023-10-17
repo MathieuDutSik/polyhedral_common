@@ -51,7 +51,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   //
   using Tidx_value = int16_t;
   WeightMatrix<true, T, Tidx_value> WMat =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV);
+    T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV, std::cerr);
 #ifdef TIMINGS
   std::cerr << "|WMat|=" << time << "\n";
 #endif
@@ -71,7 +71,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   // Computing the canonicalization of the scalar product matrix
   //
   std::vector<int> CanonicOrd =
-      GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat);
+    GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat, std::cerr);
 #ifdef DEBUG_CANONIC
   std::cerr << "CanonicOrd=";
   for (auto &eV : CanonicOrd)
@@ -131,7 +131,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 #ifdef DEBUG_CANONIC
   WeightMatrix<true, T, Tidx_value> WMat_B =
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(
-          RetMat, TransposedMat(SHVcan_Tint));
+                                                      RetMat, TransposedMat(SHVcan_Tint), std::cerr);
   WMat_B.ReorderingSetWeight();
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
@@ -170,7 +170,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   //
   using Tidx_value = int16_t;
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV);
+    T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, std::cerr);
 #ifdef TIMINGS
   std::cerr << "|WMat|=" << time << "\n";
 #endif
@@ -184,10 +184,9 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   WeightMatrix<true, std::vector<T>, Tidx_value> WMatSymm =
       WMat.GetSymmetricWeightMatrix();
   std::vector<int> CanonicOrdSymm =
-      GetCanonicalizationVector_Kernel<std::vector<T>, GraphBitset, int>(
-          WMatSymm);
+      GetCanonicalizationVector_Kernel<std::vector<T>, GraphBitset, int>(WMatSymm, std::cerr);
   std::vector<int> CanonicOrd =
-      GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
+    GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
 #ifdef TIMINGS
   std::cerr << "|GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif

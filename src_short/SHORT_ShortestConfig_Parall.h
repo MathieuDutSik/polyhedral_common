@@ -12,7 +12,7 @@
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
-                            int const &NPROC, std::string const &TheMethod) {
+                            int const &NPROC, std::string const &TheMethod, std::ostream& os) {
   int nbEnt = ListSHVinp.size();
   int res_np = nbEnt % NPROC;
   int q_np = (nbEnt - res_np) / NPROC;
@@ -29,9 +29,9 @@ SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
   std::function<std::optional<MyMatrix<Tint>>(SHVshortest<T, Tint> const &,
                                               SHVshortest<T, Tint> const &)>
       fEquiv =
-          [](SHVshortest<T, Tint> const &M1,
+          [&](SHVshortest<T, Tint> const &M1,
              SHVshortest<T, Tint> const &M2) -> std::optional<MyMatrix<Tint>> {
-    return SHORT_TestEquivalence<T, Tint, Tgroup>(M1.SHV, M2.SHV);
+    return SHORT_TestEquivalence<T, Tint, Tgroup>(M1.SHV, M2.SHV, os);
   };
   std::function<int(SHVshortest<T, Tint> const &)> fSize =
       []([[maybe_unused]] SHVshortest<T, Tint> const &M) -> int { return 0; };
@@ -44,7 +44,7 @@ SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
     for (int i = ListPos[idx]; i < ListPos[idx + 1]; i++) {
       std::vector<MyMatrix<Tint>> ListSpann =
           SHORT_SpannSimplicial<T, Tint, Tgroup>(ListSHVinp[i], ListSHVinp,
-                                                 TheMethod);
+                                                 TheMethod, os);
       for (auto &eSpann : ListSpann) {
         SHVshortest<T, Tint> eEnt{eSpann};
         SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann);

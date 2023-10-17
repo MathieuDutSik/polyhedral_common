@@ -129,19 +129,19 @@ public:
   using T = T_impl;
   using Tidx_value = Tidx_value_impl;
   // The constructors
-  WeightMatrix() { nbRow = -1; }
-  WeightMatrix(size_t const &inpNbRow) : nbRow(inpNbRow) {
+  WeightMatrix(std::ostream& os) : os(os) { nbRow = -1; }
+  WeightMatrix(size_t const &inpNbRow, std::ostream& os) : nbRow(inpNbRow), os(os) {
     size_t nb = weightmatrix_get_nb<is_symmetric>(nbRow);
     TheMat.resize(nb);
   }
   WeightMatrix(size_t const &INP_nbRow,
                std::vector<Tidx_value> const &INP_TheMat,
                std::vector<T> const &INP_ListWeight,
-               bool const &INP_weight_ordered)
+               bool const &INP_weight_ordered, std::ostream& os)
       : nbRow(INP_nbRow), ListWeight(INP_ListWeight), TheMat(INP_TheMat),
-        weight_ordered(INP_weight_ordered) {}
+        weight_ordered(INP_weight_ordered), os(os) {}
   template <typename F>
-  WeightMatrix(size_t const &_nbRow, F f) : nbRow(_nbRow) {
+  WeightMatrix(size_t const &_nbRow, F f, std::ostream& os) : nbRow(_nbRow), os(os) {
 #ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
@@ -171,12 +171,12 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS_WEIGHT_MATRIX
-    std::cerr << "Timing |WeightMatrix(nbRow,f)|=" << time << "\n";
+    os << "Timing |WeightMatrix(nbRow,f)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
   template <typename F1, typename F2>
-  WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2) : nbRow(_nbRow) {
+  WeightMatrix(size_t const &_nbRow, F1 f1, F2 f2, std::ostream& _os) : nbRow(_nbRow), os(_os) {
 #ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
@@ -208,7 +208,7 @@ public:
       throw TerminalException{1};
     }
 #ifdef TIMINGS_WEIGHT_MATRIX
-    std::cerr << "Timing |WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
+    os << "Timing |WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
@@ -221,7 +221,7 @@ public:
   // https://en.cppreference.com/w/cpp/language/move_constructor )
   WeightMatrix(WeightMatrix<is_symmetric, T, Tidx_value> &&eMat)
       : nbRow(eMat.nbRow), ListWeight(std::move(eMat.ListWeight)),
-        TheMat(std::move(eMat.TheMat)), weight_ordered(eMat.weight_ordered) {}
+        TheMat(std::move(eMat.TheMat)), weight_ordered(eMat.weight_ordered), os(eMat.os) {}
   // move assignment (see
   // https://en.cppreference.com/w/cpp/language/move_assignment )
   WeightMatrix &operator=(WeightMatrix<is_symmetric, T, Tidx_value> &&eMat) {
@@ -233,7 +233,7 @@ public:
   }
   WeightMatrix<is_symmetric, T, Tidx_value> DirectCopy() const {
     return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, TheMat, ListWeight,
-                                                     weight_ordered);
+                                                     weight_ordered, os);
   }
   // The destructor
   ~WeightMatrix() {}
@@ -381,7 +381,7 @@ public:
     }
     bool weight_ordered = false;
     return WeightMatrix<true, T, Tidx_value>(2 * nbRow, RET_TheMat,
-                                             RET_ListWeight, weight_ordered);
+                                             RET_ListWeight, weight_ordered, os);
   }
   friend bool
   operator==(WeightMatrix<is_symmetric, T, Tidx_value> const &obj1,
@@ -421,6 +421,7 @@ private:
   std::vector<T> ListWeight;
   std::vector<Tidx_value> TheMat;
   bool weight_ordered;
+  std::ostream& os;
 };
 
 //
@@ -671,10 +672,10 @@ void PrintWeightedMatrixNoWeight(
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>
-WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is) {
+WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is, std::ostream& os) {
   size_t nbRow;
   is >> nbRow;
-  WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow);
+  WeightMatrix<is_symmetric, T, Tidx_value> WMat(nbRow, os);
   size_t nbEnt = 0;
   Tidx_value eVal;
   for (size_t iRow = 0; iRow < nbRow; iRow++)
@@ -697,10 +698,10 @@ WeightMatrix<is_symmetric, T, Tidx_value> ReadWeightedMatrix(std::istream &is) {
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 WeightMatrix<is_symmetric, T, Tidx_value>
-WeightedMatrixFromMyMatrix(MyMatrix<T> const &M) {
+WeightedMatrixFromMyMatrix(MyMatrix<T> const &M, std::ostream& os) {
   size_t nbRow = M.rows();
   auto f = [&](size_t iRow, size_t iCol) -> T { return M(iRow, iCol); };
-  return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, f);
+  return WeightMatrix<is_symmetric, T, Tidx_value>(nbRow, f, os);
 }
 
 //
@@ -822,7 +823,7 @@ std::vector<int> Pairs_GetListPair(int N, int nb_color) {
 
 template <typename T, typename Tidx_value, bool use_pairs>
 inline typename std::enable_if<use_pairs, size_t>::type
-get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
+get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat, [[maybe_unused]] std::ostream& os) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
   size_t hS = Pairs_GetNeededN(nbMult);
@@ -830,8 +831,8 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = nbVert * hS;
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
-            << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
+  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+     << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
   return nbVertTot;
 }
@@ -840,18 +841,19 @@ template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
 inline typename std::enable_if<use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
-    WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj) {
+                                     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
+                                     [[maybe_unused]] std::ostream& os) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
   size_t hS = Pairs_GetNeededN(nbMult);
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
-            << " e_pow=" << e_pow << "\n";
+  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+     << " e_pow=" << e_pow << "\n";
   for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
-    std::cerr << "i_pow=" << i_pow << "  (" << V[2 * i_pow] << " | "
-              << V[2 * i_pow + 1] << ")\n";
+    os << "i_pow=" << i_pow << "  (" << V[2 * i_pow] << " | "
+       << V[2 * i_pow + 1] << ")\n";
   }
 #endif
   size_t nbRow = WMat.rows();
@@ -905,7 +907,7 @@ GetGraphFromWeightedMatrix_color_adj(
 
 template <typename T, typename Tidx_value, bool use_pairs>
 inline typename std::enable_if<!use_pairs, size_t>::type
-get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
+get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat, [[maybe_unused]] std::ostream& os) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
   size_t hS = GetNeededPower(nbMult);
@@ -913,7 +915,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat) {
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = hS * nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
             << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
   return nbVertTot;
@@ -923,11 +925,12 @@ template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
 inline typename std::enable_if<!use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
-    WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj) {
+                                     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
+                                     [[maybe_unused]] std::ostream& os) {
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
+  os << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
   size_t hS = GetNeededPower(nbMult);
   size_t nbRow = WMat.rows();
@@ -975,9 +978,9 @@ GetGraphFromWeightedMatrix_color_adj(
 
 template <typename T, typename Tidx_value>
 bliss::Graph
-GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
+GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream& os) {
   const bool use_pairs = true;
-  size_t nbVert = get_total_number_vertices<T, Tidx_value, use_pairs>(WMat);
+  size_t nbVert = get_total_number_vertices<T, Tidx_value, use_pairs>(WMat, os);
   bliss::Graph g(nbVert);
   auto f_color = [&](size_t iVert, size_t eColor) -> void {
     g.change_color(iVert, eColor);
@@ -987,28 +990,28 @@ GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
   };
   GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
                                        Tidx_value, use_pairs>(WMat, f_color,
-                                                              f_adj);
+                                                              f_adj, os);
   return g;
 }
 
 #endif
 
 template <typename T, typename Tgr, typename Tidx_value>
-inline
-    typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
-    GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
+inline typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
+GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
+                           std::ostream& os) {
 #ifdef TIMINGS_WEIGHT_MATRIX
   MicrosecondTime time;
 #endif
   const bool use_pairs = true;
   size_t nof_vertices =
-      get_total_number_vertices<T, Tidx_value, use_pairs>(WMat);
+    get_total_number_vertices<T, Tidx_value, use_pairs>(WMat, os);
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nof_vertices=" << nof_vertices << "\n";
+  os << "nof_vertices=" << nof_vertices << "\n";
 #endif
   Tgr eGR(nof_vertices);
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "eGR built\n";
+  os << "eGR built\n";
 #endif
   eGR.SetHasColor(true);
   auto f_color = [&](size_t iVert, size_t eColor) -> void {
@@ -1019,9 +1022,9 @@ inline
   };
   GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
                                        Tidx_value, use_pairs>(WMat, f_color,
-                                                              f_adj);
+                                                              f_adj, os);
 #ifdef TIMINGS_WEIGHT_MATRIX
-  std::cerr << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
+  os << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
 #endif
   return eGR;
 }
@@ -1033,7 +1036,8 @@ inline
 template <typename Tidx, typename TidxIn>
 std::vector<Tidx>
 GetCanonicalizationVector_KernelBis(size_t const &nbRow,
-                                    std::vector<TidxIn> const &cl) {
+                                    std::vector<TidxIn> const &cl,
+                                    [[maybe_unused]] std::ostream& os) {
   size_t nof_vertices = cl.size();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   size_t max_poss_cl = size_t(std::numeric_limits<TidxIn>::max());
@@ -1061,8 +1065,8 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   size_t nbVert = nbRow + 2;
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
-  std::cerr << "nbVert=" << nbVert << " hS=" << hS
-            << " nof_vertices=" << nof_vertices << "\n";
+  os << "nbVert=" << nbVert << " hS=" << hS
+     << " nof_vertices=" << nof_vertices << "\n";
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
     std::cerr << "hS=" << hS << " nbVert=" << nbVert
@@ -1114,14 +1118,15 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
 
 template <typename Tgr, typename Tidx, typename TidxIn>
 std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
-                                                         Tgr const &eGR) {
+                                                         Tgr const &eGR,
+                                                         std::ostream& os) {
 #ifdef USE_BLISS
   std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr, TidxIn>(eGR);
 #endif
 #ifdef USE_TRACES
   std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr, TidxIn>(eGR);
 #endif
-  return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl);
+  return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
 }
 
 // This function takes a matrix and returns the vector
@@ -1129,8 +1134,7 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
-std::vector<Tidx> GetCanonicalizationVector_Kernel(
-    WeightMatrix<true, T, Tidx_value> const &WMat) {
+std::vector<Tidx> GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream& os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1140,28 +1144,28 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(
     throw TerminalException{1};
   }
 
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
     using TidxIn = uint8_t;
     return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow,
-                                                                     eGR);
+                                                                     eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max())) {
     using TidxIn = uint16_t;
     return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow,
-                                                                     eGR);
+                                                                     eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max())) {
     using TidxIn = uint32_t;
     return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow,
-                                                                     eGR);
+                                                                     eGR, os);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max())) {
     using TidxIn = uint64_t;
     return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow,
-                                                                     eGR);
+                                                                     eGR, os);
   }
 #endif
   std::cerr << "Failed to find matching numeric in "
@@ -1172,7 +1176,8 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(
 template <typename Tgr, typename Tidx, typename TidxC>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow,
-                                            Tgr const &eGR) {
+                                            Tgr const &eGR,
+                                            std::ostream& os) {
 #ifdef USE_BLISS
   std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
       BLISS_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow);
@@ -1182,35 +1187,36 @@ GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow,
       TRACES_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow);
 #endif
   std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first);
+    GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first, os);
   return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
 template <typename Tgr, typename Tidx>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR,
-                                            size_t const &nbRow) {
+                                            size_t const &nbRow,
+                                            std::ostream& os) {
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
     return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(nbRow,
-                                                                         eGR);
+                                                                         eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
     return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(nbRow,
-                                                                         eGR);
+                                                                         eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
     return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(nbRow,
-                                                                         eGR);
+                                                                         eGR, os);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
     return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(nbRow,
-                                                                         eGR);
+                                                                         eGR, os);
   }
 #endif
   std::cerr << "Failed to find matching numeric in "
@@ -1224,8 +1230,7 @@ GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR,
 //
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Kernel(
-    WeightMatrix<true, T, Tidx_value> const &WMat) {
+GetGroupCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream& os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1235,13 +1240,12 @@ GetGroupCanonicalizationVector_Kernel(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
-  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
+  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow, os);
 }
 
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
-std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
-    WeightMatrix<true, T, Tidx_value> const &WMat) {
+std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream& os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1250,8 +1254,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat);
-  //  GRAPH_PrintOutputGAP(std::cerr, eGR);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
 
 #ifdef USE_BLISS
   std::vector<std::vector<Tidx>> ListGen =
@@ -1266,11 +1269,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
 
 template <typename T, typename Tgr, typename Tgroup, typename Tidx_value>
 Tgroup
-GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat) {
+GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<std::vector<Tidx>> ListGen =
-      GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat);
+    GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, os);
   size_t nbRow = WMat.rows();
   std::vector<Telt> LGen;
   for (auto &eList : ListGen)
@@ -1341,11 +1344,12 @@ GetCanonicalizationFromSymmetrized(std::vector<Tidx> const &CanonicOrdSymmRev) {
 template <typename T, typename Tidx, typename Tidx_value>
 std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
     WeightMatrix<true, T, Tidx_value> const &WMat1,
-    WeightMatrix<true, T, Tidx_value> const &WMat2) {
+    WeightMatrix<true, T, Tidx_value> const &WMat2,
+    std::ostream& os) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
-  Tgr eGR1 = GetGraphFromWeightedMatrix<T, Tgr>(WMat1);
-  Tgr eGR2 = GetGraphFromWeightedMatrix<T, Tgr>(WMat2);
+  Tgr eGR1 = GetGraphFromWeightedMatrix<T, Tgr>(WMat1, os);
+  Tgr eGR2 = GetGraphFromWeightedMatrix<T, Tgr>(WMat2, os);
   unsigned int nof_vertices1 = eGR1.GetNbVert();
   unsigned int nof_vertices2 = eGR2.GetNbVert();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
@@ -1400,10 +1404,11 @@ std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
 template <typename T, typename Telt, typename Tidx_value>
 std::optional<Telt> TestEquivalenceWeightMatrix_norenorm_perm(
     WeightMatrix<true, T, Tidx_value> const &WMat1,
-    WeightMatrix<true, T, Tidx_value> const &WMat2) {
+    WeightMatrix<true, T, Tidx_value> const &WMat2,
+    std::ostream& os) {
   using Tidx = typename Telt::Tidx;
   std::optional<std::vector<Tidx>> ePair =
-      TestEquivalenceWeightMatrix_norenorm<T, Tidx, Tidx_value>(WMat1, WMat2);
+    TestEquivalenceWeightMatrix_norenorm<T, Tidx, Tidx_value>(WMat1, WMat2, os);
   if (ePair)
     return Telt(*ePair);
   return {};
@@ -1450,11 +1455,12 @@ bool RenormalizeWeightMatrix(
 template <typename T, typename Telt, typename Tidx_value>
 std::optional<Telt>
 TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat1,
-                            WeightMatrix<true, T, Tidx_value> &WMat2) {
+                            WeightMatrix<true, T, Tidx_value> &WMat2,
+                            std::ostream& os) {
   bool test = RenormalizeWeightMatrix(WMat1, WMat2);
   if (!test)
     return {};
-  return TestEquivalenceWeightMatrix_norenorm_perm<T, Telt>(WMat1, WMat2);
+  return TestEquivalenceWeightMatrix_norenorm_perm<T, Telt>(WMat1, WMat2, os);
 }
 
 //
@@ -1484,12 +1490,13 @@ GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const &WMatI) {
 template <typename T, typename Telt, typename Tidx_value>
 std::optional<Telt> GetEquivalenceAsymmetricMatrix(
     WeightMatrix<false, T, Tidx_value> const &WMat1,
-    WeightMatrix<false, T, Tidx_value> const &WMat2) {
+    WeightMatrix<false, T, Tidx_value> const &WMat2,
+    std::ostream& os) {
   using Tidx = typename Telt::Tidx;
   WeightMatrix<true, T, Tidx_value> WMatO1 = WMat1.GetSymmetricWeightMatrix();
   WeightMatrix<true, T, Tidx_value> WMatO2 = WMat2.GetSymmetricWeightMatrix();
   std::optional<Telt> eResEquiv =
-      TestEquivalenceWeightMatrix<T, Telt>(WMatO1, WMatO2);
+    TestEquivalenceWeightMatrix<T, Telt>(WMatO1, WMatO2, os);
   if (!eResEquiv)
     return {};
   size_t nbSHV = WMat1.rows();
@@ -1506,11 +1513,11 @@ std::optional<Telt> GetEquivalenceAsymmetricMatrix(
 
 template <typename Tgroup, typename Tidx_value>
 WeightMatrix<true, int, Tidx_value>
-WeightMatrixFromPairOrbits(Tgroup const &GRP) {
+WeightMatrixFromPairOrbits(Tgroup const &GRP, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
   size_t n = GRP.n_act();
-  WeightMatrix<true, int, Tidx_value> WMat(n);
+  WeightMatrix<true, int, Tidx_value> WMat(n, os);
   for (size_t i = 0; i < n; i++)
     for (size_t j = 0; j < n; j++)
       WMat.intDirectAssign(i, j, miss_val);
