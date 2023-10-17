@@ -70,12 +70,12 @@ int main(int argc, char *argv[]) {
     std::string OutFormat = "GAP";
     std::string FileOut = "stderr";
     if (argc == 5) {
-      OutFormat = argv[4];
-      FileOut = argv[5];
+      OutFormat = argv[3];
+      FileOut = argv[4];
     }
     //
     auto process_B=[&](std::ostream & os) -> void {
-      if (arith == "mpz_class") {
+      if (arith == "rational") {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt, OutFormat, os);
       }
@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
         return process_A<Tint>(FileExt, OutFormat, os);
       }
       std::cerr << "Failed to find a matching type for arith\n";
+      std::cerr << "arith=" << arith << " allowed = rational and mpq_integer\n";
       throw TerminalException{1};
     };
     if (FileOut == "stderr") {
