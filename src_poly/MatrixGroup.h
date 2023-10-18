@@ -1257,14 +1257,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
-  //  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  /*
-  auto TheAction = [&](MyVector<Tmod> const &eClass,
-                       MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
-    MyVector<Tmod> eVect = eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod_mod);
-  };
-  */
   // This is the part of the enumeration where we have problems.
   // We have too many vectors to consider whih sinks the algorithm.
   // The difficulty of the work is that we have to deal with globally

@@ -103,7 +103,7 @@ template <typename T> vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT) {
 }
 
 template <typename T> MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT) {
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   vectface vf = SmallPolytope_Incidence(EXT);
   MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
   SubsetRankOneSolver<T> solver(EXT_int);
@@ -129,7 +129,7 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   std::cerr << "SmallPolytope_FaceIneq, n_row=" << n_row << " n_col=" << n_col
             << "\n";
 #endif
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   vectface vf = SmallPolytope_Incidence(EXT);
   MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
   SubsetRankOneSolver<T> solver(EXT_int);
