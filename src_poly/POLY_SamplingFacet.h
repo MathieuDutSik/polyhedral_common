@@ -260,9 +260,9 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
 template <typename T>
 vectface Kernel_GetFullRankFacetSet(
     const MyMatrix<T> &EXT,
-    const MyMatrix<typename underlying_ring<T>::ring_type> &EXT_int,
+    const MyMatrix<typename SubsetRankOneSolver<T>::Tint> &EXT_int,
     std::ostream &os) {
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   size_t dim = EXT.cols();
   size_t n_rows = EXT.rows();
   if (dim == 2) {
@@ -339,7 +339,7 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|SetIsobarycenter|=" << time << "\n";
 #endif
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
   vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
 #ifdef TIMINGS_SAMPLING_FACET

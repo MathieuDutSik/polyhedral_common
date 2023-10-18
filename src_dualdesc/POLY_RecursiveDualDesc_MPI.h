@@ -637,7 +637,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   int i_rank = comm.rank();
   int n_proc = comm.size();
   int pos_generator = 0;

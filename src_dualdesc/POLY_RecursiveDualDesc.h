@@ -978,7 +978,7 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
   const MyMatrix<Text_int> &EXT_int;
@@ -1422,7 +1422,7 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
   const MyMatrix<Text_int> &EXT_int;
@@ -2143,7 +2143,7 @@ void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
-    MyMatrix<typename underlying_ring<T>::ring_type> const &EXT_int,
+    MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
     std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix);
@@ -2418,7 +2418,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
-    MyMatrix<typename underlying_ring<T>::ring_type> const &EXT_int,
+    MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
     Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
@@ -2936,7 +2936,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
@@ -2979,7 +2979,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
   using Tidx_value = int32_t;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   bool BANK_Saving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //

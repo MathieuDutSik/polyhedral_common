@@ -340,7 +340,7 @@ Face get_fret(std::pair<std::vector<int>, std::vector<int>> const &PairIncs,
 // used. But the problem is to store them.
 template <typename T> struct FlippingFramework_Field {
 private:
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> EXT_red;
   Face OneInc;
   int e_incd0;
@@ -474,7 +474,7 @@ public:
 // Quadratic field, algebraic fields and so on.
 template <typename T> struct FlippingFramework_Accelerate {
 private:
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   Face OneInc;
   int e_incd0;
   int e_incd1;
@@ -614,7 +614,7 @@ struct flipping_type<
 template <typename T> class FlippingFramework {
 public:
   typename flipping_type<T>::type flipping;
-  using Text_int = typename underlying_ring<T>::ring_type;
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> const &EXT_face;
   MyMatrix<Text_int> const &EXT_face_int;
   FlippingFramework(MyMatrix<T> const &EXT, MyMatrix<Text_int> const &EXT_int,
@@ -630,18 +630,15 @@ public:
 template <typename T>
 inline typename std::enable_if<
     !has_reduction_subset_solver<T>::value,
-    MyMatrix<typename underlying_ring<T>::ring_type>>::type
+    MyMatrix<typename SubsetRankOneSolver<T>::Tint>>::type
 Get_EXT_int(MyMatrix<T> const &EXT) {
-  using Tint = typename underlying_ring<T>::ring_type;
-  int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
-  return ZeroMatrix<Tint>(nbRow, nbCol);
+  return EXT;
 }
 
 template <typename T>
 inline typename std::enable_if<
     has_reduction_subset_solver<T>::value,
-    MyMatrix<typename underlying_ring<T>::ring_type>>::type
+    MyMatrix<typename SubsetRankOneSolver<T>::Tint>>::type
 Get_EXT_int(MyMatrix<T> const &EXT) {
   return UniqueRescaleRowsRing(EXT);
 }
@@ -649,7 +646,7 @@ Get_EXT_int(MyMatrix<T> const &EXT) {
 template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
                      Face const &sInc, std::ostream& os) {
-  using Tint = typename underlying_ring<T>::ring_type;
+  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> TheEXT = ColumnReduction(EXT);
   MyMatrix<Tint> TheEXT_int = Get_EXT_int(TheEXT);
   FlippingFramework TheFram(TheEXT, TheEXT_int, OneInc, os);
