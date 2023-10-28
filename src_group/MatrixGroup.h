@@ -1197,11 +1197,12 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
 }
 
 // The space must be defining a finite index subgroup of T^n
-template <typename T, typename Tmod, typename Tgroup, typename Thelper>
+template <typename T, typename Tmod, typename Tgroup, typename Thelper, typename Fstab>
 std::vector<MyMatrix<T>>
 LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
                                Thelper const &helper,
                                MyMatrix<T> const &TheSpace, T const &TheMod,
+                               Fstab f_stab,
                                std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Treturn = typename Thelper::Treturn;
@@ -1319,33 +1320,120 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
        << "\n";
 #endif
 
-    ListMatrRet = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRPwork,
-                                                                helper, eFace, os);
+    ListMatrRet = f_stab(eret, GRPwork, eFace);
     ListMatrRetMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
   }
   return ListMatrRet;
 }
 
-template <typename T, typename Tgroup, typename Thelper>
+template <typename T, typename Tgroup, typename Thelper, typename Fstab>
 std::vector<MyMatrix<T>>
 LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                           Thelper const &helper, MyMatrix<T> const &TheSpace,
-                          T const &TheMod, std::ostream& os) {
+                          T const &TheMod, Fstab f_stab, std::ostream& os) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
-    return LinearSpace_ModStabilizer_Tmod<T, uint8_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, os);
+    return LinearSpace_ModStabilizer_Tmod<T, uint8_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, f_stab, os);
   }
   if (max_size < T(std::numeric_limits<uint16_t>::max())) {
-    return LinearSpace_ModStabilizer_Tmod<T, uint16_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, os);
+    return LinearSpace_ModStabilizer_Tmod<T, uint16_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, f_stab, os);
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
-    return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, os);
+    return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(ListMatr, helper, TheSpace, TheMod, f_stab, os);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
   throw TerminalException{1};
 }
+
+template <typename T, typename Tgroup, typename Thelper, typename Fstab>
+std::vector<MyMatrix<T>>
+LinearSpace_StabilizerGen_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
+                                 Thelper const &helper,
+                                 MyMatrix<T> const &TheSpace,
+                                 Fstab f_stab,
+                                 std::ostream& os) {
+  int n = helper.n;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
+#endif
+  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
+  auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &LMat) -> bool {
+    for (int i = 0; i < n; i++) {
+      MyVector<T> eVect = GetMatrixRow(TheSpace, i);
+      for (auto &eGen : LMat) {
+        MyVector<T> eVectG = eGen.transpose() * eVect;
+        bool test = CanTestSolutionIntMat(eCan, eVectG);
+        if (!test) {
+          return false;
+        }
+      }
+    }
+#ifdef DEBUG_MATRIX_GROUP
+    os << "Leaving IsStabilzing: true\n";
+#endif
+    return true;
+  };
+  if (IsStabilizing(ListMatr))
+    return ListMatr;
+  T LFact = LinearSpace_GetDivisor(TheSpace);
+  std::vector<T> eList = FactorsInt(LFact);
+  int siz = eList.size();
+#ifdef DEBUG_MATRIX_GROUP
+  os << "LFact=" << LFact << " siz=" << siz << "\n";
+#endif
+  std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+  for (int i = 1; i <= siz; i++) {
+    T TheMod = 1;
+    for (int j = 0; j < i; j++)
+      TheMod *= eList[j];
+    ListMatrRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(ListMatrRet, helper, TheSpace, TheMod, f_stab, os);
+    if (IsStabilizing(ListMatrRet))
+      return ListMatrRet;
+  }
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsStabilizing(ListMatrRet)) {
+    std::cerr << "Error in LinearSpace_Stabilizer_Kernel\n";
+    throw TerminalException{1};
+  }
+#endif
+  return ListMatrRet;
+}
+
+template <typename T, typename Tgroup, typename Thelper>
+std::vector<MyMatrix<T>>
+LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
+                              Thelper const &helper,
+                              MyMatrix<T> const &TheSpace,
+                              std::ostream& os) {
+  using Treturn = typename Thelper::Treturn;
+  auto f_stab=[&](Treturn const& eret, Tgroup const& GRP, Face const& eFace) -> std::vector<MyMatrix<T>> {
+    return MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRP, helper, eFace, os);
+  };
+  return LinearSpace_StabilizerGen_Kernel<T,Tgroup,Thelper,decltype(f_stab)>(ListMatr, helper, TheSpace, f_stab, os);
+}
+
+
+template <typename T, typename Tgroup, typename Thelper>
+std::vector<std::vector<MyMatrix<T>>,CosetIterator<T>>
+LinearSpace_Stabilizer_RightCoset_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
+                                         Thelper const &helper,
+                                         MyMatrix<T> const &TheSpace,
+                                         std::ostream& os) {
+  using Treturn = typename Thelper::Treturn;
+  int n = helper.n;
+  CosetIterator<T> coset(n);
+  auto f_stab=[&](Treturn const& eret, Tgroup const& GRP, Face const& eFace) -> std::vector<MyMatrix<T>> {
+    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRP, helper, eFace, os);
+    coset.insert(pair.second);
+    return pair.first;
+  };
+  std::vector<MyMatrix<T>> ListMatrRet = LinearSpace_StabilizerGen_Kernel<T,Tgroup,Thelper,decltype(f_stab)>(ListMatr, helper, TheSpace, f_stab, os);
+  return {ListMatrRet, coset};
+}
+
+
 
 template <typename T>
 using ResultTestModEquivalence =
@@ -1579,60 +1667,6 @@ LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const &ListMatr,
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
   throw TerminalException{1};
-}
-
-template <typename T, typename Tgroup, typename Thelper>
-std::vector<MyMatrix<T>>
-LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
-                              Thelper const &helper,
-                              MyMatrix<T> const &TheSpace,
-                              std::ostream& os) {
-  int n = helper.n;
-#ifdef DEBUG_MATRIX_GROUP
-  os << "det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
-#endif
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
-  auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &LMat) -> bool {
-    for (int i = 0; i < n; i++) {
-      MyVector<T> eVect = GetMatrixRow(TheSpace, i);
-      for (auto &eGen : LMat) {
-        MyVector<T> eVectG = eGen.transpose() * eVect;
-        bool test = CanTestSolutionIntMat(eCan, eVectG);
-        if (!test) {
-          return false;
-        }
-      }
-    }
-#ifdef DEBUG_MATRIX_GROUP
-    os << "Leaving IsStabilzing: true\n";
-#endif
-    return true;
-  };
-  if (IsStabilizing(ListMatr))
-    return ListMatr;
-  T LFact = LinearSpace_GetDivisor(TheSpace);
-  std::vector<T> eList = FactorsInt(LFact);
-  int siz = eList.size();
-#ifdef DEBUG_MATRIX_GROUP
-  os << "LFact=" << LFact << " siz=" << siz << "\n";
-#endif
-  std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
-  for (int i = 1; i <= siz; i++) {
-    T TheMod = 1;
-    for (int j = 0; j < i; j++)
-      TheMod *= eList[j];
-    ListMatrRet = LinearSpace_ModStabilizer<T, Tgroup>(ListMatrRet, helper,
-                                                       TheSpace, TheMod, os);
-    if (IsStabilizing(ListMatrRet))
-      return ListMatrRet;
-  }
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  if (!IsStabilizing(ListMatrRet)) {
-    std::cerr << "Error in LinearSpace_Stabilizer_Kernel\n";
-    throw TerminalException{1};
-  }
-#endif
-  return ListMatrRet;
 }
 
 template <typename T, typename Tgroup, typename Thelper>
