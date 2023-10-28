@@ -150,6 +150,94 @@ TransformHelper(FiniteMatrixGroupHelper<T, Telt> const &helper,
           std::move(MapV_new)};
 }
 
+template<typename Telt>
+struct CosetIterator {
+  Telt id;
+  size_t len;
+  std::vector<std::vector<Telt>> ListListCoset;
+  std::vector<Telt> ListRes;
+  std::vector<size_t> ListLen;
+  std::vector<size_t> ListPos;
+  CosetIterator(Telt const& _id, std::vector<std::vector<Telt>> const& _ListListCoset) : id(_id), len(ListListCoset.size()), ListListCoset(_ListListCoset) {
+    for (auto & eListCoset : ListListCoset) {
+      ListLen.push_back(eListCoset.size());
+      ListPos.push_back(0);
+      ListRes.push_back(id);
+    }
+  }
+  Telt evaluate() const {
+    Telt x;
+    for (size_t u=0; u<ListPos.size(); u++) {
+      x *= ListListCoset[u][ListPos[u]];
+    }
+    return x;
+  }
+  bool increment() {
+    for (size_t u=0; u<len; u++) {
+      if (ListPos[u] < ListLen[u] - 1) {
+        ListPos[u]++;
+        for (size_t i=0; i<u; i++)
+          ListPos[i] = 0;
+        return true;
+      }
+    }
+    len = 0;
+    ListPos.clear();
+    return false;
+  }
+  CosetIterator &operator++() {
+    (void)increment();
+    return *this;
+  }
+  CosetIterator operator++(int) {
+    CosetIterator tmp = *this;
+    (void)increment();
+    return tmp;
+  }
+  const Telt &operator*() const { return evaluate(); }
+  bool operator==(const CosetIterator<Telt> &x) const {
+    if (len != x.len)
+      return false;
+    for (size_t u=0; u<len; u++) {
+      if (ListPos[u] != x.ListPos[u])
+        return false;
+    }
+    return true;
+  }
+  bool operator!=(const CosetIterator<Telt> &x) const {
+    if (len != x.len)
+      return true;
+    for (size_t u=0; u<len; u++) {
+      if (ListPos[u] != x.ListPos[u])
+        return true;
+    }
+    return false;
+  }
+};
+
+template<typename T>
+struct CosetDescription {
+  using iterator = CosetIterator<MyMatrix<T>>;
+  using const_iterator = iterator;
+  int n;
+  std::vector<std::vector<MyMatrix<T>>> ListListCoset;
+  CosetDescription(int const& _n) : n(_n) {
+  }
+  void insert(std::vector<MyMatrix<T>> const& ListCoset) {
+    ListListCoset.push_back(ListCoset);
+  }
+  iterator get_begin() const {
+    return CosetIterator(IdentityMat<T>(n), ListListCoset);
+  }
+  iterator get_end() const {
+    return CosetIterator(IdentityMat<T>(n), {});
+  }
+  const_iterator cbegin() const { return get_begin(); }
+  const_iterator cend() const { return get_end(); }
+  const_iterator begin() const { return get_begin(); }
+  const_iterator end() const { return get_end(); }
+};
+
 //
 
 template <typename T, typename Thelper>
