@@ -1430,14 +1430,14 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
 
 
 template <typename T, typename Tgroup, typename Thelper>
-std::vector<std::vector<MyMatrix<T>>,CosetIterator<T>>
+std::vector<std::vector<MyMatrix<T>>,CosetDescription<T>>
 LinearSpace_Stabilizer_RightCoset_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
                                          Thelper const &helper,
                                          MyMatrix<T> const &TheSpace,
                                          std::ostream& os) {
   using Treturn = typename Thelper::Treturn;
   int n = helper.n;
-  CosetIterator<T> coset(n);
+  CosetDescription<T> coset(n);
   auto f_stab=[&](Treturn const& eret, Tgroup const& GRP, Face const& eFace) -> std::vector<MyMatrix<T>> {
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRP, helper, eFace, os);
     coset.insert(pair.second);
@@ -1465,6 +1465,9 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
   std::vector<MyMatrix<T>> ListMatr_B =
       LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
                                                         TheSpace_C, os);
+  if (ListMatr_B.size() == 0) {
+    ListMatr_B.push_back(IdentityMat<T>(helper.n));
+  }
   std::vector<MyMatrix<T>> ListMatr_C;
   for (auto &eMatr_B : ListMatr_B) {
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
@@ -1474,7 +1477,7 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>, CosetIterator<T>>
+std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>>
 LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
                                   Thelper const &helper, MyMatrix<T> const &TheSpace,
                                   std::ostream& os) {
@@ -1488,15 +1491,18 @@ LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
   MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
   Thelper helper_new = TransformHelper(helper, Pmat_T);
-  std::pair<std::vector<MyMatrix<T>>,CosetIterator<T>> pairB =
-      LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
-                                                        TheSpace_C, os);
+  std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> pairB =
+      LinearSpace_Stabilizer_RightCoset_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
+                                                                   TheSpace_C, os);
   std::vector<MyMatrix<T>> ListMatr_C;
   for (auto &eMatr_B : pairB.first) {
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
     ListMatr_C.push_back(eMatr_C);
   }
-  CosetIterator<T> & coset = pairB.second;
+  if (ListMatr_C.size() == 0) {
+    ListMatr_C.push_back(IdentityMat<T>(helper.n));
+  }
+  CosetDescription<T> & coset = pairB.second;
   coset.conjugate(Pmat_T);
   return {ListMatr_C, coset};
 }
