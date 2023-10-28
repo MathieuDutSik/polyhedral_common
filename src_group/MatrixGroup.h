@@ -423,6 +423,8 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   return M;
 }
 
+
+
 template <typename T, typename Tmod, typename Telt, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                typename Thelper::Treturn>::type
@@ -432,7 +434,7 @@ MatrixIntegral_GeneratePermutationGroup(
     std::vector<MyVector<Tmod>> const &O, T const &TheMod,
     std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "Beginning of MatrixIntegral_GeneratePermutationGroup\n";
+  os << "Beginning of MatrixIntegral_GeneratePermutationGroup (has_determining_ext)\n";
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
@@ -571,7 +573,7 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
                           Tgroup const &GRPperm, Thelper const &helper,
                           Face const &eFace, std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "Beginning of MatrixIntegral_Stabilizer\n";
+  os << "Beginning of MatrixIntegral_Stabilizer (has_determining_ext)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -631,7 +633,7 @@ MatrixIntegral_GeneratePermutationGroup(
     std::vector<MyVector<Tmod>> const &O, T const &TheMod,
     [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "Beginning of MatrixIntegral_GeneratePermutationGroup 2\n";
+  os << "Beginning of MatrixIntegral_GeneratePermutationGroup (!has_determining_ext)\n";
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
@@ -729,7 +731,7 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
                           Thelper const &helper, Face const &eFace,
                           [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "Beginning of MatrixIntegral_Stabilizer 2\n";
+  os << "Beginning of MatrixIntegral_Stabilizer (!has_determining_ext)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
