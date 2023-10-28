@@ -782,6 +782,24 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
       eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
 }
 
+// We compute the stabilizer by applying the Schreier algorithm
+template <typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<!has_determining_ext<Thelper>::value,
+  std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>>>::type
+MatrixIntegral_Stabilizer_RightCoset(typename Thelper::Treturn const &eret,
+                                     [[maybe_unused]] Tgroup const &GRPperm,
+                                     Thelper const &helper, Face const &eFace,
+                                     [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "Beginning of MatrixIntegral_Stabilizer (!has_determining_ext)\n";
+#endif
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
+  return permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
+      eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
+}
+
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::optional<MyMatrix<T>>>::type
