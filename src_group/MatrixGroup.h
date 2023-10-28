@@ -565,6 +565,8 @@ MatrixIntegral_PreImageSubgroup([[maybe_unused]]
   return ListMatrGen;
 }
 
+// We have a finite set on which the group is acting. Therefore, we can apply
+// the partition backtrack algorithms
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
@@ -581,17 +583,56 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
 #ifdef DEBUG_MATRIX_GROUP
   os << "  |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
-  std::vector<MyMatrix<T>> ListMatrGen;
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
-  for (auto &eGen : eStab.GeneratorsOfGroup()) {
+  auto get_matr=[&](Telt const& ePermI) -> MyMatrix<T> {
     std::vector<Tidx> v(nbRow_tidx);
     for (Tidx i = 0; i < nbRow_tidx; i++)
-      v[i] = OnPoints(i, eGen);
+      v[i] = OnPoints(i, ePermI);
     Telt ePerm(std::move(v));
-    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, ePerm, os);
-    ListMatrGen.emplace_back(std::move(eMatr));
+    return RepresentPermutationAsMatrix(helper, ePerm, os);
+  };
+  std::vector<MyMatrix<T>> ListMatrGen;
+  for (auto &eGen : eStab.GeneratorsOfGroup()) {
+    ListMatrGen.emplace_back(std::move(get_matr(eGen)));
   }
   return ListMatrGen;
+}
+
+// We have a finite set on which the group is acting. Therefore, we can apply
+// the partition backtrack algorithms
+template <typename T, typename Tgroup, typename Thelper>
+inline typename std::enable_if<has_determining_ext<Thelper>::value,
+                               std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>>::type
+MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
+                                     typename Thelper::Treturn const &eret,
+                                     Tgroup const &GRPperm, Thelper const &helper,
+                                     Face const &eFace, std::ostream& os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "Beginning of MatrixIntegral_Stabilizer_RightCoset (has_determining_ext)\n";
+#endif
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "  |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
+#endif
+  Tidx nbRow_tidx = helper.EXTfaithful.rows();
+  auto get_matr=[&](Telt const& ePermI) -> MyMatrix<T> {
+    std::vector<Tidx> v(nbRow_tidx);
+    for (Tidx i = 0; i < nbRow_tidx; i++)
+      v[i] = OnPoints(i, ePermI);
+    Telt ePerm(std::move(v));
+    return RepresentPermutationAsMatrix(helper, ePerm, os);
+  };
+  std::vector<MyMatrix<T>> ListMatrGen;
+  for (auto &eGen : eStab.GeneratorsOfGroup()) {
+    ListMatrGen.emplace_back(std::move(get_matr(eGen)));
+  }
+  std::vector<MyMatrix<T>> ListRightCoset;
+  for (auto & eCos : GRPperm.RightTransversal_Direct(eStab)) {
+    ListRightCoset.emplace_back(std::move(get_matr(eCos)));
+  }
+  return {ListMatrGen, ListRightCoset};
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -723,6 +764,7 @@ MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
       eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
 }
 
+// We compute the stabilizer by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
