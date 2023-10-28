@@ -2,15 +2,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   TEST_PermMatrTest_PolyEquivalence TEST_PermMatrTest_PolyStabilizer \
                   TEST_LinPolytope_Canonic TEST_WeightMatrixLimited \
 		  TEST_LinPolytope_WMatCanonic \
-		  TEST_PolytopeIntegralPoints TEST_LinPolytopeIntegral_Automorphism \
-		  POLY_CreateAffineBasis \
-		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
-		  POLY_redundancy POLY_redundancyGroup \
-		  POLY_IntegralPoints POLY_SkelettonClarkson \
-		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
-		  POLY_lrs POLY_SmallPolytope \
-		  POLY_LinearDetermineByInequalities \
-		  POLY_IsPointedCone \
+		  TEST_LinPolytopeIntegral_Automorphism \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
                   GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Invariant \
@@ -18,18 +10,10 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytopeIntegral_Isomorphism GRP_LinPolytopeIntegral_Automorphism \
                   GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
                   GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
-		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
-		  POLY_dual_description POLY_dual_description_group \
-		  POLY_ComputeEngelSymbol \
-		  POLY_GetFullRankFacetSet POLY_sampling_facets \
-		  POLY_IsomorphismReduction VectFamily_Reduction \
+		  POLY_IsomorphismReduction \
 		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat
 
-SRCFILES	= POLY_c_cddlib_mpq.cpp
-
-OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
-
-LINKOBJECTS	= $(SRCFILES:.cpp=.o)
+OBJECTS		= $(PROGRAM:%=%.o)
 
 #CC		= icpc -std=c++17 -Wall -g -O2
 #CC		= clang++ -Weverything -std=c++17
@@ -65,7 +49,7 @@ all:	$(PROGRAM)
 $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
-		$(CC) $(LINKOBJECTS) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
 
 clean:;
 	rm -f *.o

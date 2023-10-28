@@ -2,8 +2,8 @@
 #ifndef SRC_LORENTZIAN_VINBERG_H_
 #define SRC_LORENTZIAN_VINBERG_H_
 
-#include "Shvec_exact.h"
-// #include "MAT_MatrixInt.h"
+// clang-format off
+#include "Shvec_exact_polytope.h"
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #define DEBUG_VINBERG
 

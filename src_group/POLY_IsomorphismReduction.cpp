@@ -1,9 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+
 // clang-format off
 #include "NumberTheory.h"
 #include "GRP_GroupFct.h"
+#include "MAT_Matrix.h"
 #include "Group.h"
-#include "POLY_lrslib.h"
 #include "Permutation.h"
 // clang-format on
 

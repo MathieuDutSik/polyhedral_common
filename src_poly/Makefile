@@ -1,8 +1,4 @@
-PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
-                  TEST_PermMatrTest_PolyEquivalence TEST_PermMatrTest_PolyStabilizer \
-                  TEST_LinPolytope_Canonic TEST_WeightMatrixLimited \
-		  TEST_LinPolytope_WMatCanonic \
-		  TEST_PolytopeIntegralPoints TEST_LinPolytopeIntegral_Automorphism \
+PROGRAM		= TEST_PolytopeIntegralPoints \
 		  POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
 		  POLY_redundancy POLY_redundancyGroup \
@@ -11,19 +7,11 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  POLY_lrs POLY_SmallPolytope \
 		  POLY_LinearDetermineByInequalities \
 		  POLY_IsPointedCone \
-                  GRP_OrbitSplitting GRP_VectorSplitting \
-                  GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
-                  GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Invariant \
-                  GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism \
-                  GRP_LinPolytopeIntegral_Isomorphism GRP_LinPolytopeIntegral_Automorphism \
-                  GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
-                  GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
 		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
 		  POLY_dual_description POLY_dual_description_group \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
-		  POLY_IsomorphismReduction VectFamily_Reduction \
-		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat
+		  VectFamily_Reduction
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
@@ -45,7 +33,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) -I$(TBB_INCDIR) $(GSL_INCLUDE) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC
