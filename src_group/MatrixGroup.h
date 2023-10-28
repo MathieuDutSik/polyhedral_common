@@ -224,7 +224,21 @@ struct CosetDescription {
   CosetDescription(int const& _n) : n(_n) {
   }
   void insert(std::vector<MyMatrix<T>> const& ListCoset) {
-    ListListCoset.push_back(ListCoset);
+    if (ListCoset.size() > 1) {
+      ListListCoset.push_back(ListCoset);
+    }
+  }
+  void conjugate(MyMatrix<T> const& P) {
+    MyMatrix<T> Pinv = Inverse(P);
+    size_t len = ListListCoset.size();
+    for (size_t u=0; u<len; u++) {
+      size_t n_cos = ListListCoset[u].size();
+      for (size_t i_cos=0; i_cos<n_cos; i_cos++) {
+        MyMatrix<T> A = ListListCoset[u][i_cos];
+        MyMatrix<T> A_cj = Pinv * A * P;
+        ListListCoset[u][i_cos] = A_cj;
+      }
+    }
   }
   iterator get_begin() const {
     return CosetIterator(IdentityMat<T>(n), ListListCoset);
@@ -1433,6 +1447,62 @@ LinearSpace_Stabilizer_RightCoset_Kernel(std::vector<MyMatrix<T>> const &ListMat
   return {ListMatrRet, coset};
 }
 
+template <typename T, typename Tgroup, typename Thelper>
+std::vector<MyMatrix<T>>
+LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
+                       Thelper const &helper, MyMatrix<T> const &TheSpace,
+                       std::ostream& os) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
+  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  std::vector<MyMatrix<T>> ListMatr_B =
+      LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
+                                                        TheSpace_C, os);
+  std::vector<MyMatrix<T>> ListMatr_C;
+  for (auto &eMatr_B : ListMatr_B) {
+    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+    ListMatr_C.push_back(eMatr_C);
+  }
+  return ListMatr_C;
+}
+
+template <typename T, typename Tgroup, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>, CosetIterator<T>>
+LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
+                                  Thelper const &helper, MyMatrix<T> const &TheSpace,
+                                  std::ostream& os) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
+  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  std::pair<std::vector<MyMatrix<T>>,CosetIterator<T>> pairB =
+      LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
+                                                        TheSpace_C, os);
+  std::vector<MyMatrix<T>> ListMatr_C;
+  for (auto &eMatr_B : pairB.first) {
+    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+    ListMatr_C.push_back(eMatr_C);
+  }
+  CosetIterator<T> & coset = pairB.second;
+  coset.conjugate(Pmat_T);
+  return {ListMatr_C, coset};
+}
+
+
+
 
 
 template <typename T>
@@ -1667,32 +1737,6 @@ LinearSpace_ModEquivalence(std::vector<MyMatrix<T>> const &ListMatr,
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
   throw TerminalException{1};
-}
-
-template <typename T, typename Tgroup, typename Thelper>
-std::vector<MyMatrix<T>>
-LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
-                       Thelper const &helper, MyMatrix<T> const &TheSpace,
-                       std::ostream& os) {
-  using Tint = typename underlying_ring<T>::ring_type;
-  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
-  Thelper helper_new = TransformHelper(helper, Pmat_T);
-  std::vector<MyMatrix<T>> ListMatr_B =
-      LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
-                                                        TheSpace_C, os);
-  std::vector<MyMatrix<T>> ListMatr_C;
-  for (auto &eMatr_B : ListMatr_B) {
-    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-    ListMatr_C.push_back(eMatr_C);
-  }
-  return ListMatr_C;
 }
 
 template <typename T, typename Tgroup, typename Thelper>
