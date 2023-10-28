@@ -5,6 +5,7 @@
 // clang-format off
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
 #include <utility>
 #include <vector>
 // clang-format on

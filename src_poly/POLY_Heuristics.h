@@ -464,8 +464,8 @@ template <typename T> struct PolyHeuristic {
   TheHeuristic<T> StabEquivFacet;
   TheHeuristic<T> InitialFacetSet;
   TheHeuristic<T> ChoiceCanonicalization;
-  bool Saving;
-  bool eMemory;
+  bool DD_Saving;
+  bool DD_Memory;
 };
 
 template <typename T> PolyHeuristic<T> AllStandardHeuristic() {

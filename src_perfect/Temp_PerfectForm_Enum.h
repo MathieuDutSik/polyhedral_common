@@ -218,7 +218,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
                                                           y.Gram);
   };
   NewEnumerationWork<SimplePerfect<T, Tint>> ListOrbit(
-      AllArr.Saving, AllArr.eMemory, eData.PrefixPerfect, CompFCT,
+      AllArr.DD_Saving, AllArr.DD_Memory, eData.PrefixPerfect, CompFCT,
       UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
   auto FuncInsert = [&](SimplePerfect<T, Tint> const &x,
                         std::ostream &os) -> int {
@@ -270,8 +270,8 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       Tgroup GRPshv =
           SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData, ePERF.Gram, RecSHV);
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
-      CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" +
-                                                IntToString(eEntry) + "/");
+      CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
+                             IntToString(eEntry) + "/");
       vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(
           MProc, MyId, TheBank, eNaked.PerfDomEXT, PerfDomGRP, AllArr,
           eDir.str(), 0);
@@ -504,8 +504,8 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
-  AllArr.Saving = DD_Saving;
-  AllArr.eMemory = DD_Memory;
+  AllArr.DD_Saving = DD_Saving;
+  AllArr.DD_Memory = DD_Memory;
   //
   std::vector<SimplePerfect<T, Tint>> LPerf =
       EnumerationPerfectMatrices<T, Tint>(MProc, TheId, TheBank, eData, AllArr);

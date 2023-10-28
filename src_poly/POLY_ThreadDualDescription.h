@@ -506,10 +506,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           return {eOrbF, eInv};
         };
       }
-      bool Saving = AllArr.Saving;
-      bool eMemory = AllArr.eMemory;
+      bool DD_Saving = AllArr.DD_Saving;
+      bool DD_Memory = AllArr.DD_Memory;
       NewEnumerationWork<SimpleOrbitFacet<T, Tgroup>> ListOrbit(
-          Saving, eMemory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv,
+          DD_Saving, DD_Memory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv,
           MProc.GetO(TheId));
       mpz_class TotalNumberFacet = 0;
       auto FuncInsert = [&](Face const &eOrb, std::ostream &os) -> int {
@@ -578,7 +578,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
              << " |TheGRPrelevant|=" << TheGRPrelevant.size()
              << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
           Tgroup GRPred = ReducedGroupAction(TheStab, eListI);
-          CondTempDirectory eDir(AllArr.Saving,
+          CondTempDirectory eDir(AllArr.DD_Saving,
                                  ePrefix + "ADM" + IntToString(eEntry) + "/");
           vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(
               MProc, MyId, TheBank, EXTredFace, GRPred, AllArr, eDir.str(),
