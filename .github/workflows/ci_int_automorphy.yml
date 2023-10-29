@@ -122,9 +122,9 @@ jobs:
 
       - name: Test integral automorphy
         run: |
-          cd src_poly && make && cd ..
+          cd src_group && make && cd ..
           pwd
-          echo "After compilation of polytope code"
+          echo "After compilation of group code"
 
           cd CI_tests/IntegralAutomorphy
           ../../gap.sh < ProcessExamples.g
