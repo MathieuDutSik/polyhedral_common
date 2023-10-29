@@ -650,7 +650,7 @@ LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT, std::ostr
   using Telt = typename Tgroup::Telt;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
-  std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+  std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Stabilizer_RightCoset_Method8(EXT_T, GRPisom, os);
   return pair;
 }
 

@@ -1936,7 +1936,7 @@ std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> LinPolytopeIntegral_Auto
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
 
   std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> pair =
-    LinearSpace_Stabilizer<T, Tgroup>(ListMatrGens, helper, LattToStab, os);
+    LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGens, helper, LattToStab, os);
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : pair.first) {
     MyMatrix<T> NewGen = InvBasis * eGen * eBasis;

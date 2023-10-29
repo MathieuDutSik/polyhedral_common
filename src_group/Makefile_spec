@@ -13,10 +13,11 @@
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Invariant
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
 #PROGRAM		= GRP_LinearSpace_Equivalence
-PROGRAM		= GRP_LinearSpace_Stabilizer_RightCoset
+#PROGRAM		= GRP_LinearSpace_Stabilizer_RightCoset
+PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism
-1PROGRAM		= GRP_RuntimeOrbitSplitting
+#PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= GRP_IsomorphismReduction
